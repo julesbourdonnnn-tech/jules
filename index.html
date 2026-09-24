@@ -4,96 +4,113 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Nuits Singulières — Les hôtels les plus extraordinaires de France</title>
-  <meta name="description" content="Cabanes perchées, bulles sous les étoiles, phares, châteaux, igloos… Trouvez les hôtels les plus insolites de France, en ville, à la campagne, à la mer ou à la montagne, et près de chez vous.">
+  <meta name="description" content="Cabanes perchées, bulles sous les étoiles, phare, abbaye royale, igloos, hôtel flottant… Les hôtels les plus extraordinaires de France, en ville, à la campagne, à la mer ou à la montagne.">
   <meta property="og:title" content="Nuits Singulières — Hôtels extraordinaires en France">
   <meta property="og:description" content="La sélection des hôtels les plus insolites et magiques de France.">
   <meta property="og:type" content="website">
+  <meta name="theme-color" content="#0f1a17">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✦</text></svg>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,600;1,9..144,300;1,9..144,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body class="home">
   <header id="site-header" class="site-header on-dark"></header>
 
-  <!-- ===== HERO ===== -->
-  <section class="hero">
-    <div class="hero-bg" style="background-image:url('https://images.unsplash.com/photo-1449158743715-0a90ebb6d2d8?auto=format&fit=crop&w=2200&q=80')"></div>
-    <div class="hero-inner">
-      <p class="eyebrow">Cabanes · Bulles · Phares · Châteaux · Igloos</p>
-      <h1>Des nuits qui ne ressemblent<br><em>à aucune autre.</em></h1>
-      <p class="hero-sub">Notre sélection des hôtels les plus extraordinaires de France, choisis un par un.</p>
+  <!-- ===== HERO : diaporama plein écran ===== -->
+  <section class="hero" id="hero">
+    <div class="hero-slides" id="hero-slides"></div>
+    <div class="hero-veil"></div>
 
-      <form class="hero-search" id="hero-search">
-        <label class="field">
-          <span>Destination</span>
-          <input type="text" name="q" placeholder="Ville, région, nom d'hôtel…" autocomplete="off">
+    <div class="hero-inner">
+      <p class="eyebrow reveal">Cabanes · Bulles · Phare · Abbaye · Igloo · Hôtel flottant</p>
+      <h1 class="hero-title reveal">Des nuits qui ne ressemblent<br><em>à aucune autre.</em></h1>
+
+      <form class="hero-search reveal" id="hero-search" autocomplete="off">
+        <label class="field field-grow">
+          <span>Où rêvez-vous de dormir ?</span>
+          <input type="text" name="q" id="hero-q" placeholder="Une ville, une région, un hôtel…">
+          <ul class="suggestions" id="hero-suggestions" role="listbox"></ul>
         </label>
         <label class="field">
           <span>Ambiance</span>
           <select name="env" id="hero-env"><option value="">Toutes</option></select>
         </label>
         <label class="field">
-          <span>Budget / nuit</span>
-          <select name="max">
-            <option value="">Tous les prix</option>
-            <option value="100">Moins de 100 €</option>
-            <option value="150">Moins de 150 €</option>
-            <option value="200">Moins de 200 €</option>
-            <option value="300">Moins de 300 €</option>
-          </select>
+          <span>Budget</span>
+          <select name="budget" id="hero-budget"><option value="">Tous</option></select>
         </label>
-        <button class="btn btn-primary" type="submit">Rechercher</button>
+        <button class="btn btn-primary" type="submit"><span>Explorer</span></button>
       </form>
-      <button class="hero-near" type="button" data-open-near>📍 Voir les hôtels les plus proches de chez moi</button>
+
+      <div class="hero-actions reveal">
+        <button class="chip-glass" type="button" data-open-near>📍 Autour de chez moi</button>
+        <button class="chip-glass" type="button" data-surprise>🎲 Surprenez-moi</button>
+      </div>
     </div>
+
+    <a class="hero-caption" id="hero-caption" href="#"></a>
+    <div class="hero-progress" id="hero-progress"></div>
+    <a class="scroll-cue" href="#destinations" aria-label="Découvrir">↓</a>
   </section>
+
+  <!-- ===== BANDEAU DÉFILANT ===== -->
+  <div class="marquee" aria-hidden="true"><div class="marquee-track" id="marquee"></div></div>
 
   <!-- ===== AMBIANCES ===== -->
   <section class="section container" id="destinations">
-    <div class="section-head">
+    <div class="section-head reveal">
       <p class="eyebrow dark">Quatre façons de s'évader</p>
       <h2>Choisissez votre décor</h2>
     </div>
-    <div class="env-grid" id="env-grid"></div>
+    <div class="env-accordion reveal" id="env-grid"></div>
   </section>
 
   <!-- ===== EXPÉRIENCES ===== -->
-  <section class="section section-tint">
+  <section class="section section-dark" id="experiences">
     <div class="container">
-      <div class="section-head">
-        <p class="eyebrow dark">Expériences</p>
-        <h2>Dormir… où exactement ?</h2>
+      <div class="section-head row reveal">
+        <div>
+          <p class="eyebrow">Expériences</p>
+          <h2>Dormir… où exactement ?</h2>
+        </div>
+        <div class="rail-nav">
+          <button type="button" class="rail-btn" data-rail="type-rail" data-dir="-1" aria-label="Précédent">←</button>
+          <button type="button" class="rail-btn" data-rail="type-rail" data-dir="1" aria-label="Suivant">→</button>
+        </div>
       </div>
-      <div class="type-grid" id="type-grid"></div>
     </div>
+    <div class="rail" id="type-rail"></div>
   </section>
 
-  <!-- ===== COUPS DE CŒUR ===== -->
-  <section class="section container">
-    <div class="section-head row">
-      <div>
-        <p class="eyebrow dark">La sélection</p>
-        <h2>Nos coups de cœur</h2>
-      </div>
-      <a class="link-arrow" href="#explorer">Tout voir →</a>
+  <!-- ===== COUPS DE CŒUR : projecteur ===== -->
+  <section class="section container" id="spotlight">
+    <div class="section-head reveal">
+      <p class="eyebrow dark">La sélection</p>
+      <h2>Nos coups de cœur</h2>
     </div>
-    <div class="featured" id="featured"></div>
+    <div class="spotlight reveal" id="spotlight-box"></div>
   </section>
 
   <!-- ===== EXPLORER ===== -->
   <section class="section container" id="explorer">
-    <div class="section-head">
-      <p class="eyebrow dark">Explorer</p>
-      <h2>Tous nos hôtels extraordinaires</h2>
+    <div class="section-head row reveal">
+      <div>
+        <p class="eyebrow dark">Explorer</p>
+        <h2>Tous nos établissements</h2>
+      </div>
+      <div class="view-toggle" role="tablist">
+        <button type="button" class="active" data-view="grid">▦ Galerie</button>
+        <button type="button" data-view="map">🗺 Carte</button>
+      </div>
     </div>
 
     <div class="near-box" id="near-box">
       <div class="near-text">
         <strong>Les plus proches de chez vous</strong>
-        <span class="muted" id="near-status">Indiquez votre adresse ou votre ville pour trier les hôtels par distance.</span>
+        <span class="muted" id="near-status">Indiquez votre adresse ou votre ville : on trie tout par distance.</span>
       </div>
       <div class="near-form">
         <div class="autocomplete">
@@ -112,53 +129,41 @@
       </div>
     </div>
 
-    <div class="filters">
-      <input type="search" id="f-q" placeholder="Rechercher un hôtel, une ville…" aria-label="Recherche">
-      <div class="pills" id="f-env"></div>
-      <select id="f-type" aria-label="Type d'expérience"><option value="">Toutes les expériences</option></select>
-      <label class="range">
-        <span>Max <strong id="f-max-label"></strong></span>
-        <input type="range" id="f-max" min="50" max="400" step="10">
-      </label>
-      <select id="f-sort" aria-label="Trier">
-        <option value="featured">Recommandés</option>
-        <option value="price-asc">Prix croissant</option>
-        <option value="price-desc">Prix décroissant</option>
-        <option value="distance">Distance</option>
-      </select>
+    <div class="filters" id="filters">
+      <div class="filter-row">
+        <input type="search" id="f-q" placeholder="Rechercher un hôtel, une ville…" aria-label="Recherche">
+        <div class="pills" id="f-env"></div>
+        <div class="pills" id="f-budget"></div>
+        <select id="f-sort" aria-label="Trier">
+          <option value="featured">Recommandés</option>
+          <option value="budget-asc">Budget croissant</option>
+          <option value="budget-desc">Budget décroissant</option>
+          <option value="distance">Distance</option>
+          <option value="name">Nom (A → Z)</option>
+        </select>
+      </div>
+      <div class="type-chips" id="f-type"></div>
     </div>
 
     <div class="results-bar">
       <p id="results-count"></p>
-      <div class="view-toggle" role="tablist">
-        <button type="button" class="active" data-view="grid">▦ Liste</button>
-        <button type="button" data-view="map">🗺 Carte</button>
-      </div>
+      <button class="btn-text" type="button" id="reset-top" hidden>Réinitialiser les filtres</button>
     </div>
 
     <div class="grid" id="results"></div>
-    <div class="map-wrap" id="map-wrap" hidden><div id="map"></div></div>
-    <div class="empty" id="empty" hidden>
-      <p>Aucun hôtel ne correspond à ces critères.</p>
-      <button class="btn btn-ghost" type="button" id="reset">Réinitialiser les filtres</button>
+    <div class="split" id="map-wrap" hidden>
+      <div class="split-list" id="split-list"></div>
+      <div class="split-map"><div id="map"></div></div>
     </div>
-  </section>
-
-  <!-- ===== HÔTELIERS ===== -->
-  <section class="section">
-    <div class="container cta-band">
-      <div>
-        <p class="eyebrow">Hôteliers</p>
-        <h2>Votre établissement sort de l'ordinaire ?</h2>
-        <p>Rejoignez la sélection et touchez des voyageurs qui cherchent exactement ce que vous proposez.</p>
-      </div>
-      <a class="btn btn-light" href="hoteliers.html">Découvrir nos offres</a>
+    <div class="empty" id="empty" hidden>
+      <p>Aucun établissement ne correspond à ces critères.</p>
+      <button class="btn btn-ghost" type="button" id="reset">Réinitialiser les filtres</button>
     </div>
   </section>
 
   <!-- ===== NEWSLETTER ===== -->
   <section class="section section-tint" id="newsletter">
-    <div class="container nl-band">
+    <div class="container nl-band reveal">
       <div>
         <p class="eyebrow dark">Newsletter</p>
         <h2 id="nl-title"></h2>
@@ -170,14 +175,26 @@
 
   <!-- ===== INSTAGRAM ===== -->
   <section class="section container" id="instagram">
-    <div class="section-head row">
+    <div class="section-head row reveal">
       <div>
         <p class="eyebrow dark">Instagram</p>
         <h2>Rêvez avec nous <span id="ig-handle" class="ig-handle"></span></h2>
       </div>
       <a class="link-arrow" id="ig-follow" href="#" target="_blank" rel="noopener">Nous suivre →</a>
     </div>
-    <div class="ig-grid" id="ig-grid"></div>
+    <div class="ig-grid reveal" id="ig-grid"></div>
+  </section>
+
+  <!-- ===== HÔTELIERS ===== -->
+  <section class="section">
+    <div class="container cta-band reveal">
+      <div>
+        <p class="eyebrow">Hôteliers</p>
+        <h2>Votre établissement sort de l'ordinaire ?</h2>
+        <p>Rejoignez la sélection et touchez des voyageurs qui cherchent exactement ce que vous proposez.</p>
+      </div>
+      <a class="btn btn-light" href="hoteliers.html">Découvrir nos offres</a>
+    </div>
   </section>
 
   <footer id="site-footer" class="site-footer"></footer>

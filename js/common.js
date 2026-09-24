@@ -182,6 +182,209 @@
     if (img.tagName === "IMG" && img.src !== FALLBACK) img.src = FALLBACK;
   }, true);
 
+  /* ---------- Photos ----------
+   * Les photos locales existent en 2 tailles : 1.jpg (grande) et 1-sm.jpg (vignette). */
+  function img(url, w) {
+    if (!url) return FALLBACK;
+    if (w && w <= 900 && /^assets\/hotels\/.+\/\d+\.jpg$/.test(url)) return url.replace(/\.jpg$/, "-sm.jpg");
+    if (w && url.includes("images.unsplash.com")) return url.replace(/w=\d+/, `w=${w}`);
+    return url;
+  }
+  const budgetOf = (h) => window.BUDGETS[h.budget] || window.BUDGETS[2];
+  const budgetHtml = (h) => {
+    const b = budgetOf(h);
+    return `<span class="budget" title="${escapeHtml(b.range)}">${"€".repeat(h.budget)}<span class="budget-off">${"€".repeat(4 - h.budget)}</span></span>`;
+  };
+
+  /* ---------- Favoris (mémorisés dans le navigateur) ---------- */
+  const FAV_KEY = "ns-favs";
+  function getFavs() {
+    try { return JSON.parse(localStorage.getItem(FAV_KEY)) || []; } catch { return []; }
+  }
+  function toggleFav(id) {
+    const favs = getFavs();
+    const i = favs.indexOf(id);
+    i >= 0 ? favs.splice(i, 1) : favs.unshift(id);
+    try { localStorage.setItem(FAV_KEY, JSON.stringify(favs)); } catch { /* navigation privée */ }
+    document.dispatchEvent(new CustomEvent("favs:change", { detail: { id, on: i < 0 } }));
+    if (i < 0) track("Favori", { hotel: id });
+    return i < 0;
+  }
+  const isFav = (id) => getFavs().includes(id);
+  const favButton = (h, extra = "") => `
+    <button type="button" class="fav ${extra} ${isFav(h.id) ? "on" : ""}" data-fav="${escapeHtml(h.id)}"
+      aria-pressed="${isFav(h.id)}" aria-label="Ajouter ${escapeHtml(h.name)} à mes coups de cœur">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.6-9.3C.9 8.3 3 4.5 6.7 4.5c2.1 0 3.6 1.2 4.3 2.4.7-1.2 2.2-2.4 4.3-2.4 3.7 0 5.8 3.8 4.3 7.2C19.5 16.4 12 21 12 21z"/></svg>
+    </button>`;
+  document.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-fav]");
+    if (!b) return;
+    e.preventDefault();
+    e.stopPropagation();
+    toggleFav(b.dataset.fav);
+  });
+  document.addEventListener("favs:change", ({ detail }) => {
+    document.querySelectorAll(`[data-fav="${CSS.escape(detail.id)}"]`).forEach((b) => {
+      b.classList.toggle("on", detail.on);
+      b.setAttribute("aria-pressed", detail.on);
+      if (detail.on) { b.classList.remove("pop"); void b.offsetWidth; b.classList.add("pop"); }
+    });
+    updateFavCount();
+    renderFavDrawer();
+  });
+
+  /* ---------- Carte d'hôtel avec mini-diaporama (partagée par toutes les pages) ---------- */
+  function card(h, { dist = null, reveal = true } = {}) {
+    const ENVS = window.ENVIRONMENTS, TYPES = window.TYPES;
+    const url = `hotel.html?id=${encodeURIComponent(h.id)}`;
+    const photos = h.images.slice(0, 5);
+    return `
+      <article class="card ${reveal ? "reveal" : ""}" data-id="${escapeHtml(h.id)}">
+        <div class="card-media">
+          <a class="card-slides" href="${url}" tabindex="-1" aria-hidden="true">
+            ${photos.map((src, i) => `<img src="${img(src, 900)}" alt="" loading="lazy" draggable="false" ${i ? 'decoding="async"' : ""}>`).join("")}
+          </a>
+          ${photos.length > 1 ? `
+            <button type="button" class="card-nav prev" data-slide="-1" aria-label="Photo précédente">‹</button>
+            <button type="button" class="card-nav next" data-slide="1" aria-label="Photo suivante">›</button>
+            <div class="card-dots">${photos.map((_, i) => `<span class="${i ? "" : "on"}"></span>`).join("")}</div>` : ""}
+          <span class="badge">${escapeHtml(ENVS[h.env].label)}</span>
+          ${partnerBadge(h)}
+          ${favButton(h)}
+          ${dist != null ? `<span class="card-dist">📍 ${formatDistance(dist)}</span>` : ""}
+        </div>
+        <a class="card-body" href="${url}">
+          <p class="card-type">${TYPES[h.type].icon} ${escapeHtml(TYPES[h.type].label)}</p>
+          <h3>${escapeHtml(h.name)}</h3>
+          <p class="card-place">${escapeHtml(h.city)} · ${escapeHtml(h.region)}</p>
+          <p class="card-tagline">${escapeHtml(h.tagline)}</p>
+          <p class="card-foot">${budgetHtml(h)}<span class="card-more">Découvrir →</span></p>
+        </a>
+      </article>`;
+  }
+  // Flèches et points du mini-diaporama
+  document.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-slide]");
+    if (!b) return;
+    e.preventDefault();
+    const track = b.closest(".card-media").querySelector(".card-slides");
+    const n = track.children.length;
+    const i = Math.round(track.scrollLeft / track.clientWidth);
+    const next = (i + Number(b.dataset.slide) + n) % n;
+    track.scrollTo({ left: next * track.clientWidth, behavior: "smooth" });
+  });
+  document.addEventListener("scroll", (e) => {
+    const t = e.target;
+    if (!(t instanceof Element) || !t.classList.contains("card-slides")) return;
+    const i = Math.round(t.scrollLeft / t.clientWidth);
+    t.parentElement.querySelectorAll(".card-dots span").forEach((d, k) => d.classList.toggle("on", k === i));
+  }, true);
+
+  /* ---------- Apparition au défilement ---------- */
+  const revealObserver = "IntersectionObserver" in window
+    ? new IntersectionObserver((entries) => entries.forEach((en) => {
+        if (en.isIntersecting) { en.target.classList.add("in"); revealObserver.unobserve(en.target); }
+      }), { rootMargin: "0px 0px -8% 0px", threshold: 0.08 })
+    : null;
+  function observeReveal(root = document) {
+    root.querySelectorAll(".reveal:not(.in)").forEach((el, i) => {
+      el.style.setProperty("--d", `${Math.min(i % 6, 5) * 70}ms`);
+      revealObserver ? revealObserver.observe(el) : el.classList.add("in");
+    });
+  }
+
+  /* ---------- « Surprenez-moi » ---------- */
+  function surprise() {
+    const list = window.HOTELS;
+    let box = document.getElementById("surprise");
+    if (!box) {
+      box = document.createElement("div");
+      box.id = "surprise";
+      box.className = "surprise";
+      box.innerHTML = `
+        <div class="surprise-card" role="dialog" aria-modal="true" aria-label="Un hôtel au hasard">
+          <button type="button" class="surprise-close" aria-label="Fermer">×</button>
+          <div class="surprise-media"><img alt=""></div>
+          <div class="surprise-body">
+            <p class="card-type"></p>
+            <h3></h3>
+            <p class="card-place"></p>
+            <p class="surprise-tagline"></p>
+            <div class="surprise-actions">
+              <a class="btn btn-primary" href="#">Découvrir ce lieu</a>
+              <button type="button" class="btn btn-ghost" data-surprise>🎲 Relancer</button>
+            </div>
+          </div>
+        </div>`;
+      document.body.appendChild(box);
+      box.addEventListener("click", (e) => { if (e.target === box || e.target.closest(".surprise-close")) closeSurprise(); });
+    }
+    box.hidden = false;
+    document.body.classList.add("no-scroll");
+    requestAnimationFrame(() => box.classList.add("open"));
+    const card = box.querySelector(".surprise-card");
+    const image = box.querySelector("img");
+    card.classList.add("rolling");
+    const pick = list[Math.floor(Math.random() * list.length)];
+    // Défilement rapide de photos qui ralentit, comme une machine à sous
+    let step = 0;
+    const steps = 14;
+    const spin = () => {
+      const h = step < steps ? list[Math.floor(Math.random() * list.length)] : pick;
+      image.src = img(h.images[0], 900);
+      if (step++ < steps) setTimeout(spin, 45 + step * step * 1.1);
+      else {
+        const T = window.TYPES[pick.type];
+        card.classList.remove("rolling");
+        box.querySelector(".card-type").textContent = `${T.icon} ${T.label}`;
+        box.querySelector("h3").textContent = pick.name;
+        box.querySelector(".card-place").textContent = `${pick.city} · ${pick.region}`;
+        box.querySelector(".surprise-tagline").textContent = pick.tagline;
+        box.querySelector("a.btn").href = `hotel.html?id=${encodeURIComponent(pick.id)}`;
+      }
+    };
+    spin();
+    track("Surprise", {});
+  }
+  function closeSurprise() {
+    const box = document.getElementById("surprise");
+    if (!box) return;
+    box.classList.remove("open");
+    document.body.classList.remove("no-scroll");
+    setTimeout(() => (box.hidden = true), 250);
+  }
+  document.addEventListener("click", (e) => {
+    if (e.target.closest("[data-surprise]")) { e.preventDefault(); surprise(); }
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") { closeSurprise(); toggleDrawer(false); }
+  });
+
+  /* ---------- Tiroir des favoris ---------- */
+  function updateFavCount() {
+    const n = getFavs().length;
+    document.querySelectorAll(".fav-count").forEach((el) => { el.textContent = n; el.hidden = !n; });
+  }
+  function renderFavDrawer() {
+    const list = document.getElementById("fav-list");
+    if (!list) return;
+    const favs = getFavs().map((id) => window.HOTELS.find((h) => h.id === id)).filter(Boolean);
+    list.innerHTML = favs.length
+      ? favs.map((h) => `
+          <div class="fav-item">
+            <a href="hotel.html?id=${encodeURIComponent(h.id)}"><img src="${img(h.images[0], 400)}" alt=""></a>
+            <a href="hotel.html?id=${encodeURIComponent(h.id)}"><strong>${escapeHtml(h.name)}</strong><span>${escapeHtml(h.city)} · ${escapeHtml(window.TYPES[h.type].label)}</span></a>
+            ${favButton(h, "fav-mini")}
+          </div>`).join("")
+      : `<p class="muted fav-empty">Touchez le ♡ d'un hôtel pour le garder ici. Pratique pour comparer et partager vos envies.</p>`;
+  }
+  function toggleDrawer(open) {
+    const d = document.getElementById("fav-drawer");
+    if (!d) return;
+    if (open) { renderFavDrawer(); d.hidden = false; requestAnimationFrame(() => d.classList.add("open")); document.body.classList.add("no-scroll"); }
+    else if (!d.hidden) { d.classList.remove("open"); document.body.classList.remove("no-scroll"); setTimeout(() => (d.hidden = true), 300); }
+  }
+
   /* ---------- En-tête et pied de page ---------- */
   function renderChrome() {
     const header = document.getElementById("site-header");
@@ -192,14 +395,30 @@
           <span>${escapeHtml(CONFIG.siteName)}</span>
         </a>
         <nav class="nav">
-          <a href="index.html#destinations">Destinations</a>
+          <a href="index.html#destinations">Ambiances</a>
           <a href="index.html#explorer">Tous les hôtels</a>
           <a href="hoteliers.html">Hôteliers</a>
+          <button type="button" class="nav-icon" data-surprise title="Un hôtel au hasard" aria-label="Un hôtel au hasard">🎲</button>
+          <button type="button" class="nav-icon" id="fav-open" title="Mes coups de cœur" aria-label="Mes coups de cœur">♡<span class="fav-count" hidden></span></button>
           <a href="index.html#explorer" class="nav-cta" data-open-near>Près de chez moi</a>
         </nav>`;
       const onScroll = () => header.classList.toggle("scrolled", window.scrollY > 40);
       window.addEventListener("scroll", onScroll, { passive: true });
       onScroll();
+
+      const drawer = document.createElement("aside");
+      drawer.id = "fav-drawer";
+      drawer.className = "drawer";
+      drawer.hidden = true;
+      drawer.innerHTML = `
+        <div class="drawer-panel" role="dialog" aria-modal="true" aria-label="Mes coups de cœur">
+          <div class="drawer-head"><h3>Mes coups de cœur</h3><button type="button" class="drawer-close" aria-label="Fermer">×</button></div>
+          <div id="fav-list" class="fav-list"></div>
+        </div>`;
+      document.body.appendChild(drawer);
+      header.querySelector("#fav-open").addEventListener("click", () => toggleDrawer(true));
+      drawer.addEventListener("click", (e) => { if (e.target === drawer || e.target.closest(".drawer-close")) toggleDrawer(false); });
+      updateFavCount();
     }
     const footer = document.getElementById("site-footer");
     if (footer) {
@@ -229,9 +448,10 @@
           <div><h4>Expériences</h4><ul>${typeLinks}</ul></div>
           <div><h4>Nous suivre</h4><ul>${socials}<li><a href="hoteliers.html">Espace hôteliers</a></li><li><a href="mailto:${escapeHtml(CONFIG.contactEmail)}">${escapeHtml(CONFIG.contactEmail)}</a></li><li><a href="mentions-legales.html">Mentions légales</a></li></ul></div>
         </div>
-        <p class="disclosure">Ce site contient des liens affiliés : si vous réservez via nos liens, nous percevons une commission du site partenaire, sans aucun surcoût pour vous. Les établissements marqués « Partenaire » ont souscrit une offre de mise en avant payante, qui améliore leur position dans le tri « Recommandés ». Les prix affichés sont indicatifs (« à partir de ») ; le tarif final est celui du site de réservation.</p>
+        <p class="disclosure">Ce site contient des liens affiliés : si vous réservez via nos liens, nous percevons une commission du site partenaire, sans aucun surcoût pour vous. Les établissements marqués « Partenaire » ont souscrit une offre de mise en avant payante, qui améliore leur position dans le tri « Recommandés ». Les niveaux de budget sont indicatifs ; le tarif final est celui du site de réservation. Photos : © les établissements.</p>
         <p class="muted small">© ${new Date().getFullYear()} ${escapeHtml(CONFIG.siteName)}</p>`;
     }
+    observeReveal();
   }
 
   window.NS = {
@@ -239,8 +459,8 @@
     bookingLink, partnerLinks, getUserLocation, setUserLocation,
     geocode, locateBrowser, renderChrome, getSource, track,
     planRank, partnerBadge, newsletterForm, socialLinks,
-    // Redimensionne les photos Unsplash ; les autres URLs sont laissées telles quelles
-    img: (url, w) => (w && url.includes("images.unsplash.com") ? url.replace(/w=\d+/, `w=${w}`) : url),
+    img, budgetOf, budgetHtml, card, favButton, getFavs, isFav, toggleFav,
+    observeReveal, surprise,
   };
   document.addEventListener("DOMContentLoaded", renderChrome);
 })();

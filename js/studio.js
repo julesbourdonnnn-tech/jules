@@ -1,6 +1,6 @@
 /* Studio : génère visuels Instagram, légendes, newsletter et rapports hôteliers. */
 (function () {
-  const { CONFIG, escapeHtml, formatPrice, img, planRank } = window.NS;
+  const { CONFIG, escapeHtml, img, planRank } = window.NS;
   const HOTELS = window.HOTELS, ENVS = window.ENVIRONMENTS, TYPES = window.TYPES;
   const $ = (sel) => document.querySelector(sel);
   const byId = (id) => HOTELS.find((h) => h.id === id);
@@ -106,7 +106,7 @@
       ctx.fillText(footer, x, y); y -= 64;
     }
     ctx.font = `400 34px ${SANS}`; ctx.fillStyle = "rgba(255,255,255,.88)";
-    const place = `${h.city} · ${h.department}${showPrice ? `  —  dès ${formatPrice(h.price)} / nuit` : ""}`;
+    const place = `${h.city} · ${h.region}${showPrice ? `  —  ${"€".repeat(h.budget)}` : ""}`;
     ctx.fillText(place, x, y); y -= 70;
     ctx.font = `400 92px ${SERIF}`; ctx.fillStyle = "#fff";
     const lines = wrap(ctx, h.name, maxW);
@@ -154,9 +154,9 @@
     wrap(ctx, h.name, W - 128).forEach((l) => { ctx.fillText(l, 64, y); y += 86; });
     y += 30;
     const rows = [
-      ["📍", `${h.city}, ${h.department}`],
+      ["📍", `${h.city}, ${h.region}`],
       ["🛏", h.rooms],
-      ["💶", `dès ${formatPrice(h.price)} / nuit`],
+      ["💶", `${"€".repeat(h.budget)} · ${window.BUDGETS[h.budget].range}`],
       ...h.highlights.slice(0, 3).map((x) => ["✦", x]),
     ];
     ctx.font = `400 38px ${SANS}`;
@@ -256,7 +256,7 @@
     lines.push(`${TYPES[h.type].icon} ${h.name} — ${h.tagline}`, "");
     lines.push(h.description[0], "");
     h.highlights.forEach((x) => lines.push(`✦ ${x}`));
-    lines.push("", `📍 ${h.city}, ${h.department}`, `💶 dès ${h.price} € la nuit`);
+    lines.push("", `📍 ${h.city}, ${h.region}`, `💶 Budget ${"€".repeat(h.budget)} (${window.BUDGETS[h.budget].range})`);
     if (planRank(h) && h.offer) lines.push(`🎁 ${h.offer}`);
     lines.push("", story ? "👉 Réservation : lien en story" : "👉 Réservation : lien en bio, adresse n°1");
     lines.push("💾 Enregistre ce post pour ton prochain week-end", "💬 Tague la personne avec qui tu y dormirais", "");
@@ -278,7 +278,7 @@
         <p style="margin:0 0 16px;font:15px/1.6 Arial,sans-serif;color:#4a544e">${esc(h.description[0])}</p>
         ${planRank(h) && h.offer ? `<p style="margin:0 0 16px;padding:12px 16px;background:#fbeee6;border-radius:8px;font:14px Arial,sans-serif;color:${COLORS.ink}">🎁 <strong>Offre lecteurs :</strong> ${esc(h.offer)}</p>` : ""}
         <table role="presentation" cellpadding="0" cellspacing="0"><tr>
-          <td style="background:${COLORS.terracotta};border-radius:999px"><a href="${esc(hotelUrl(h, "newsletter"))}" style="display:inline-block;padding:12px 24px;font:600 15px Arial,sans-serif;color:#fff;text-decoration:none">Découvrir · dès ${h.price} € / nuit</a></td>
+          <td style="background:${COLORS.terracotta};border-radius:999px"><a href="${esc(hotelUrl(h, "newsletter"))}" style="display:inline-block;padding:12px 24px;font:600 15px Arial,sans-serif;color:#fff;text-decoration:none">Découvrir ce lieu →</a></td>
         </tr></table>
       </td></tr>`).join("");
 

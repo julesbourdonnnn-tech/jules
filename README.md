@@ -6,16 +6,21 @@ Le site est **100 % statique** (HTML, CSS, JavaScript). Pas de serveur, pas de b
 
 ## Fonctionnalités
 
-- **Accueil** : grande photo, barre de recherche (destination, ambiance, budget)
-- **4 ambiances** : Ville, Campagne, Mer, Montagne
-- **12 types d'expériences** : cabane perchée, bulle, château, troglodyte, phare, igloo, chalet, sur l'eau, yourte/tipi, lieu historique, design, atypique
-- **Filtres** : texte, ambiance, type, budget maximum, tri (recommandés, prix, distance)
-- **« Près de chez moi »** : le visiteur tape son adresse (autocomplétion via le service public d'adresses français, gratuit et sans clé) ou clique sur « Me localiser ». Les hôtels sont alors triés par distance, avec un filtre de rayon (50, 100, 200, 400 km). La position est mémorisée dans le navigateur et la distance s'affiche aussi sur chaque fiche.
-- **Carte interactive** de tous les hôtels (OpenStreetMap), avec les prix sur les repères
-- **Fiche hôtel** : galerie photo avec visionneuse plein écran, description, points forts, équipements, infos pratiques, carte, suggestions d'hôtels similaires, bouton de réservation (fixé en bas d'écran sur mobile)
+- **Accueil immersif** : diaporama plein écran des coups de cœur, barre de recherche avec suggestions (hôtels, régions), bandeau défilant des expériences
+- **4 ambiances** en accordéon animé : Ville, Campagne, Mer, Montagne
+- **Expériences** dans un rail horizontal : cabane perchée, bulle, troglodyte, phare, igloo, refuge, sur l'eau, château, lieu historique, design, pieds dans l'eau, vignes
+- **Coups de cœur** : projecteur animé avec photos, description et miniatures
+- **« Surprenez-moi »** 🎲 : tire un établissement au hasard, avec une animation de machine à sous
+- **Favoris** ♡ : le visiteur garde ses coups de cœur dans un tiroir, mémorisés dans son navigateur
+- **Filtres** : texte, ambiance, expérience, budget (€ à €€€€), tri (recommandés, budget, distance, nom)
+- **Cartes avec mini-diaporama** : on fait défiler les photos de chaque établissement sans quitter la liste
+- **« Près de chez moi »** : le visiteur tape son adresse (autocomplétion via le service public d'adresses français, gratuit et sans clé) ou clique sur « Me localiser ». Les établissements sont alors triés par distance, avec un filtre de rayon (50, 100, 200, 400 km). La distance s'affiche aussi sur chaque fiche.
+- **Carte interactive** (OpenStreetMap) avec la photo de chaque lieu sur son repère, synchronisée avec une liste
+- **Fiche immersive** : photo plein écran avec effet de profondeur, onglets qui suivent la lecture, mosaïque de photos, visionneuse plein écran (glisser sur mobile), carte, partage, suggestions similaires, bouton de réservation fixé en bas sur mobile
+- **Animations** douces à l'apparition des sections (désactivées si le visiteur a demandé moins d'animations)
 - **Affiliation** : ton identifiant Booking est ajouté automatiquement à chaque lien. Tu peux aussi ajouter des boutons Expedia, Hotels.com ou « Site officiel ».
 - **Référencement (SEO)** : titre et description propres à chaque fiche, données structurées `schema.org/Hotel`
-- Liens partageables : les filtres sont dans l'URL (ex. `index.html?env=mer&max=200`)
+- Liens partageables : les filtres sont dans l'URL (ex. `index.html?env=mer&budget=2`)
 
 ### Offres payantes pour les hôteliers (`hoteliers.html`)
 - Page de vente avec 3 offres (Découverte gratuite, Partenaire 29 €/mois, Premium 79 €/mois) et des prestations à la carte, tarifs dans `config.js`
@@ -60,39 +65,45 @@ python3 -m http.server 8000
 
 Autres programmes à ajouter ensuite : Expedia Group (Expedia, Hotels.com, Vrbo), Agoda, Trip.com, ou des plateformes qui regroupent plusieurs marques comme Travelpayouts ou Awin. Pour les hôtels indépendants, négocie directement une commission ou un abonnement mensuel pour une fiche mise en avant.
 
-## Ajouter ou modifier un hôtel
+## Ajouter ou modifier un établissement
 
-⚠️ **Les 24 hôtels fournis sont des exemples fictifs** pour montrer le rendu. Remplace-les par de vrais établissements avant la mise en ligne.
+Les établissements sont de **vrais lieux** en France, décrits à partir de leurs sites officiels et des offices de tourisme (septembre 2026). Vérifie les informations de temps en temps, les hébergements évoluent.
 
 Tout se passe dans `js/hotels.js`. Copie un bloc `{ ... },` et modifie-le :
 
 | Champ | Exemple | Rôle |
 |---|---|---|
-| `id` | `"cabane-du-lac"` | identifiant unique, sans espaces ni accents (sert à l'URL) |
+| `id` | `"cabane-du-lac"` | identifiant unique, sans espaces ni accents (sert à l'URL et au dossier photos) |
 | `name`, `tagline` | | nom et phrase d'accroche |
 | `city`, `department`, `region`, `address` | | localisation affichée |
 | `env` | `"mer"` | `ville`, `campagne`, `mer` ou `montagne` |
 | `type` | `"cabane"` | une clé de la liste `TYPES` en haut du fichier |
-| `price` | `180` | prix « à partir de » par nuit, en € |
-| `featured` | `true` | apparaît dans les « Coups de cœur » |
-| `lat`, `lng` | `44.394`, `-1.163` | coordonnées GPS (clic droit sur Google Maps → cliquer sur les chiffres pour les copier) |
+| `budget` | `2` | 1 à 4 (€ à €€€€), voir `BUDGETS` |
+| `featured` | `true` | apparaît dans le diaporama d'accueil et les « Coups de cœur » |
+| `lat`, `lng` | `44.394`, `-1.163` | coordonnées GPS (clic droit sur Google Maps, puis clic sur les chiffres pour les copier) |
 | `description` | `["Paragraphe 1", "Paragraphe 2"]` | texte de la fiche |
 | `highlights`, `amenities` | `["Spa", "Piscine"]` | points forts et équipements |
-| `rooms`, `checkIn`, `checkOut` | | infos pratiques |
-| `images` | `["https://…jpg", …]` | photos, la première sert de couverture |
+| `rooms`, `season` | | infos pratiques |
+| `photos` | `5` | nombre de photos dans `assets/hotels/<id>/` |
 | `bookingUrl` | `"https://www.booking.com/hotel/fr/xxx.html"` | lien de la fiche Booking ; si vide, le site ouvre une recherche Booking avec le nom de l'hôtel |
-| `partners` | `{ expedia: "https://…", direct: "https://…" }` | boutons de réservation secondaires (optionnels) |
+| `partners` | `{ expedia: "https://…" }` | boutons de réservation secondaires (optionnels) |
 | `plan` | `"partenaire"` ou `"premium"` | offre payée par l'hôtel (absent = gratuit) |
 | `website`, `phone`, `offer` | | affichés seulement si l'hôtel a une offre payante |
 
-### Photos : attention aux droits
+### Photos : récupération automatique
 
-Tu **n'as pas le droit** de copier les photos de Booking ou du site d'un hôtel sans autorisation. Solutions :
-- demander à l'hôtel ses photos presse (ils disent presque toujours oui : c'est de la visibilité gratuite pour eux) ;
-- utiliser l'API de contenu fournie par ton programme d'affiliation une fois accepté ;
-- utiliser tes propres photos.
+Les photos viennent des sites officiels des établissements. C'est une **GitHub Action** (onglet *Actions* du dépôt) qui s'en charge :
 
-Les photos d'exemple viennent d'Unsplash. Si une photo ne charge pas, une image de remplacement s'affiche automatiquement.
+1. Ajoute l'hôtel et l'adresse de ses pages (site officiel, page « chambres » ou « galerie ») dans `data/photo-sources.json`, puis pousse la modification.
+2. L'Action visite ces pages et crée une planche-contact numérotée dans `_review/<id>.jpg`.
+3. Choisis les meilleures photos (dans l'ordre voulu, la 1re sert de couverture) dans `data/photo-selection.json` :
+   ```json
+   { "cabane-du-lac": [3, 1, 7, 12, 5] }
+   ```
+4. Pousse la modification : l'Action télécharge ces photos, les optimise (grande version + vignette) et les range dans `assets/hotels/<id>/`.
+5. Mets `photos: 5` (le nombre choisi) dans la fiche de l'hôtel.
+
+Les photos appartiennent aux établissements. Pour une utilisation durable, demande-leur l'autorisation (ils acceptent presque toujours, c'est de la visibilité gratuite) et crédite-les.
 
 ## Personnaliser
 
