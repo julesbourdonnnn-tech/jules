@@ -1,0 +1,13 @@
+// Configuration Cloudflare (Worker « jules ») : le site est servi comme
+// fichiers statiques depuis la racine du dépôt. Les pages générées
+// (hotels/, guides/, sitemap.xml) sont déjà enregistrées dans le dépôt,
+// aucune commande de build n'est donc nécessaire.
+// Les fichiers internes à ne pas publier sont listés dans .assetsignore.
+{
+  "name": "jules",
+  "compatibility_date": "2025-09-01",
+  "assets": {
+    "directory": ".",
+    "not_found_handling": "404-page"
+  }
+}

@@ -1,0 +1,19 @@
+# Fichiers du dépôt à NE PAS mettre en ligne (outils internes)
+.git
+.github
+.gitignore
+.assetsignore
+.wrangler
+node_modules
+_review
+apercu
+data
+dist
+scripts
+vendor/**/LICENSE
+README.md
+STRATEGIE.md
+netlify.toml
+wrangler.jsonc
+assets/hotels/_done.json
+assets/hotels/*/source.json
