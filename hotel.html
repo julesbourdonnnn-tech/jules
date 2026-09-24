@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Hôtel — Nuits Singulières</title>
+  <meta name="description" content="Découvrez cet hôtel extraordinaire : photos, description, équipements et réservation.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✦</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="detail">
+  <header id="site-header" class="site-header"></header>
+
+  <main id="hotel" class="container detail-main"></main>
+
+  <div class="lightbox" id="lightbox" hidden>
+    <button class="lb-close" type="button" aria-label="Fermer">×</button>
+    <button class="lb-prev" type="button" aria-label="Photo précédente">‹</button>
+    <img alt="">
+    <button class="lb-next" type="button" aria-label="Photo suivante">›</button>
+    <p class="lb-count"></p>
+  </div>
+
+  <footer id="site-footer" class="site-footer"></footer>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/hotels.js"></script>
+  <script src="js/common.js"></script>
+  <script src="js/hotel.js"></script>
+</body>
+</html>

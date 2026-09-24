@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Nuits Singulières — Les hôtels les plus extraordinaires de France</title>
+  <meta name="description" content="Cabanes perchées, bulles sous les étoiles, phares, châteaux, igloos… Trouvez les hôtels les plus insolites de France, en ville, à la campagne, à la mer ou à la montagne, et près de chez vous.">
+  <meta property="og:title" content="Nuits Singulières — Hôtels extraordinaires en France">
+  <meta property="og:description" content="La sélection des hôtels les plus insolites et magiques de France.">
+  <meta property="og:type" content="website">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✦</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="home">
+  <header id="site-header" class="site-header on-dark"></header>
+
+  <!-- ===== HERO ===== -->
+  <section class="hero">
+    <div class="hero-bg" style="background-image:url('https://images.unsplash.com/photo-1449158743715-0a90ebb6d2d8?auto=format&fit=crop&w=2200&q=80')"></div>
+    <div class="hero-inner">
+      <p class="eyebrow">Cabanes · Bulles · Phares · Châteaux · Igloos</p>
+      <h1>Des nuits qui ne ressemblent<br><em>à aucune autre.</em></h1>
+      <p class="hero-sub">Notre sélection des hôtels les plus extraordinaires de France, choisis un par un.</p>
+
+      <form class="hero-search" id="hero-search">
+        <label class="field">
+          <span>Destination</span>
+          <input type="text" name="q" placeholder="Ville, région, nom d'hôtel…" autocomplete="off">
+        </label>
+        <label class="field">
+          <span>Ambiance</span>
+          <select name="env" id="hero-env"><option value="">Toutes</option></select>
+        </label>
+        <label class="field">
+          <span>Budget / nuit</span>
+          <select name="max">
+            <option value="">Tous les prix</option>
+            <option value="100">Moins de 100 €</option>
+            <option value="150">Moins de 150 €</option>
+            <option value="200">Moins de 200 €</option>
+            <option value="300">Moins de 300 €</option>
+          </select>
+        </label>
+        <button class="btn btn-primary" type="submit">Rechercher</button>
+      </form>
+      <button class="hero-near" type="button" data-open-near>📍 Voir les hôtels les plus proches de chez moi</button>
+    </div>
+  </section>
+
+  <!-- ===== AMBIANCES ===== -->
+  <section class="section container" id="destinations">
+    <div class="section-head">
+      <p class="eyebrow dark">Quatre façons de s'évader</p>
+      <h2>Choisissez votre décor</h2>
+    </div>
+    <div class="env-grid" id="env-grid"></div>
+  </section>
+
+  <!-- ===== EXPÉRIENCES ===== -->
+  <section class="section section-tint">
+    <div class="container">
+      <div class="section-head">
+        <p class="eyebrow dark">Expériences</p>
+        <h2>Dormir… où exactement ?</h2>
+      </div>
+      <div class="type-grid" id="type-grid"></div>
+    </div>
+  </section>
+
+  <!-- ===== COUPS DE CŒUR ===== -->
+  <section class="section container">
+    <div class="section-head row">
+      <div>
+        <p class="eyebrow dark">La sélection</p>
+        <h2>Nos coups de cœur</h2>
+      </div>
+      <a class="link-arrow" href="#explorer">Tout voir →</a>
+    </div>
+    <div class="featured" id="featured"></div>
+  </section>
+
+  <!-- ===== EXPLORER ===== -->
+  <section class="section container" id="explorer">
+    <div class="section-head">
+      <p class="eyebrow dark">Explorer</p>
+      <h2>Tous nos hôtels extraordinaires</h2>
+    </div>
+
+    <div class="near-box" id="near-box">
+      <div class="near-text">
+        <strong>Les plus proches de chez vous</strong>
+        <span class="muted" id="near-status">Indiquez votre adresse ou votre ville pour trier les hôtels par distance.</span>
+      </div>
+      <div class="near-form">
+        <div class="autocomplete">
+          <input type="text" id="near-input" placeholder="Votre adresse, ville ou code postal" autocomplete="off" aria-label="Votre adresse">
+          <ul class="suggestions" id="near-suggestions" role="listbox"></ul>
+        </div>
+        <button class="btn btn-ghost" type="button" id="near-locate" title="Utiliser ma position">◎ Me localiser</button>
+        <select id="near-radius" aria-label="Rayon">
+          <option value="">Toute la France</option>
+          <option value="50">Moins de 50 km</option>
+          <option value="100">Moins de 100 km</option>
+          <option value="200">Moins de 200 km</option>
+          <option value="400">Moins de 400 km</option>
+        </select>
+        <button class="btn-text" type="button" id="near-clear" hidden>Effacer</button>
+      </div>
+    </div>
+
+    <div class="filters">
+      <input type="search" id="f-q" placeholder="Rechercher un hôtel, une ville…" aria-label="Recherche">
+      <div class="pills" id="f-env"></div>
+      <select id="f-type" aria-label="Type d'expérience"><option value="">Toutes les expériences</option></select>
+      <label class="range">
+        <span>Max <strong id="f-max-label"></strong></span>
+        <input type="range" id="f-max" min="50" max="400" step="10">
+      </label>
+      <select id="f-sort" aria-label="Trier">
+        <option value="featured">Recommandés</option>
+        <option value="price-asc">Prix croissant</option>
+        <option value="price-desc">Prix décroissant</option>
+        <option value="distance">Distance</option>
+      </select>
+    </div>
+
+    <div class="results-bar">
+      <p id="results-count"></p>
+      <div class="view-toggle" role="tablist">
+        <button type="button" class="active" data-view="grid">▦ Liste</button>
+        <button type="button" data-view="map">🗺 Carte</button>
+      </div>
+    </div>
+
+    <div class="grid" id="results"></div>
+    <div class="map-wrap" id="map-wrap" hidden><div id="map"></div></div>
+    <div class="empty" id="empty" hidden>
+      <p>Aucun hôtel ne correspond à ces critères.</p>
+      <button class="btn btn-ghost" type="button" id="reset">Réinitialiser les filtres</button>
+    </div>
+  </section>
+
+  <!-- ===== HÔTELIERS ===== -->
+  <section class="section">
+    <div class="container cta-band">
+      <div>
+        <p class="eyebrow">Hôteliers</p>
+        <h2>Votre établissement sort de l'ordinaire ?</h2>
+        <p>Rejoignez la sélection et touchez des voyageurs qui cherchent exactement ce que vous proposez.</p>
+      </div>
+      <a class="btn btn-light" id="hotelier-cta" href="#">Proposer mon hôtel</a>
+    </div>
+  </section>
+
+  <footer id="site-footer" class="site-footer"></footer>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/hotels.js"></script>
+  <script src="js/common.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
