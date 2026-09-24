@@ -199,5 +199,125 @@
    "https://lacoorniche.com/en/rooms-suites-hotel-pyla/",
    "https://lacoorniche.com/en/"
   ]
+ },
+ {
+  "id": "pic-du-midi",
+  "pages": [
+   "https://picdumidi.com/en/night-at-the-top",
+   "https://www.n-py.com/fr/pic-du-midi/reservation-billetterie/nuit-au-sommet",
+   "https://www.instantscience.fr/actualite/une-nuit-au-sommet-du-pic-du-midi/",
+   "https://leblogcdiscountvoyages.com/une-nuit-magique-et-insolite-au-sommet-du-pic-du-midi/"
+  ]
+ },
+ {
+  "id": "refuge-du-montenvers",
+  "pages": [
+   "https://en.refugedumontenvers.com/",
+   "https://en.refugedumontenvers.com/hotel"
+  ]
+ },
+ {
+  "id": "refuge-de-la-traye",
+  "pages": [
+   "https://slh.com/hotels/refuge-de-la-traye",
+   "https://www.staysomedays.com/en/hotel/le-refuge-de-la-traye",
+   "https://www.spotlist.fr/hotels/refuge-de-la-traye"
+  ]
+ },
+ {
+  "id": "refuge-chez-la-tante",
+  "pages": [
+   "https://www.refugechezlatante.com/en",
+   "https://www.megeve-tourisme.fr/en/hotel/refuge-chez-la-tante-mont-darbois/",
+   "https://club.yonder.fr/le-refuge-chez-la-tante-mont-d-arbois/"
+  ]
+ },
+ {
+  "id": "molitor",
+  "pages": [
+   "https://www.molitorparis.com/en/hotel",
+   "https://www.molitorparis.com/en/"
+  ]
+ },
+ {
+  "id": "maison-souquet",
+  "pages": [
+   "https://www.maisonsouquet.com/en/",
+   "https://luxe.net/maison-souquet-une-maison-close-parisienne-transformee-en-hotel-de-luxe/"
+  ]
+ },
+ {
+  "id": "intercontinental-lyon-hotel-dieu",
+  "pages": [
+   "https://lyon.intercontinental.com/en/",
+   "https://escapade-mag.fr/intercontinental-lyon-grand-hotel-dieu/",
+   "https://www.yonder.fr/hotels/hotels-du-mois/intercontinental-lyon-hotel-dieu-grand-hotel-de-reference-a-lyon"
+  ]
+ },
+ {
+  "id": "hotel-de-la-cite-carcassonne",
+  "pages": [
+   "https://www.tourisme-carcassonne.fr/hebergement/hotel-de-la-cite/",
+   "https://generationvoyage.fr/hotel-cite-carcassonne/"
+  ]
+ },
+ {
+  "id": "grand-controle-versailles",
+  "pages": [
+   "https://airelles.com/en/destination/chateau-de-versailles-hotel",
+   "https://airelles.com/en/destination/chateau-de-versailles-hotel/suites",
+   "https://www.sortiraparis.com/en/where-to-eat-in-paris/hotel/articles/182847-le-grand-controle-the-magic-hotel-at-the-chateau-de-versailles-that-goes-back-in-time"
+  ]
+ },
+ {
+  "id": "ile-louet",
+  "pages": [
+   "https://www.baiedemorlaix.bzh/fr/s-inspirer/ile-louet-vivre-tel-robinson-sur-son-ile/tout-savoir-ile-louet/",
+   "https://lincartadefrance.com/la-maison-du-gardien-de-phare-sur-lile-louet/",
+   "https://www.alouette.fr/finistere-dormir-dans-la-maison-d-un-gardien-de-phare"
+  ]
+ },
+ {
+  "id": "cap-estel",
+  "pages": [
+   "https://www.capestel.com/en/",
+   "https://www.mrandmrssmith.com/luxury-hotels/cap-estel"
+  ]
+ },
+ {
+  "id": "relais-de-chambord",
+  "pages": [
+   "https://relaisdechambord.com/en/",
+   "https://www.yonder.fr/news/hotels/le-relais-de-chambord-la-toue-cabanee-suite-sur-l-eau-face-au-chateau",
+   "https://www.yonder.fr/hotels/hotels-du-mois/relais-de-chambord-signe-jean-michel-wilmotte"
+  ]
+ },
+ {
+  "id": "cabane-au-bord-du-lac",
+  "pages": [
+   "https://www.guide-des-landes.com/en/tourism/accommodation/holiday-rental/unusual/biscarrosse-44/la-cabane-au-bord-du-lac-1601.html",
+   "https://franceweek-end.com/etablissements/la-cabane-au-bord-du-lac-lodge-de-charme/",
+   "https://www.abracadaroom.com/en/booking-la-cabane-au-bord-du-lac-41/"
+  ]
+ },
+ {
+  "id": "moulin-du-roc",
+  "pages": [
+   "https://www.hotels-insolites.com/en/le-moulin-du-roc.hotel",
+   "https://www.voyageavecvue.com/nos-adresses-avec-vue/hotel-le-moulin-du-roc/"
+  ]
+ },
+ {
+  "id": "toue-cabanee-canal-de-bourgogne",
+  "pages": [
+   "https://leslodgesducanal.fr/la-toue-cabanee/",
+   "https://www.bourgogne-tourisme.com/hebergements-insolites/les-lodges-du-canal-de-bourgogne-la-toue-cabanee"
+  ]
+ },
+ {
+  "id": "bulles-et-une-nuit-obersteinbach",
+  "pages": [
+   "https://www.hebergement-bulles.com/item/bulles-et-une-nuit-obersteinbach-67/"
+  ]
  }
 ]
