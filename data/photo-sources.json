@@ -305,5 +305,95 @@
    "https://leslodgesducanal.fr/la-toue-cabanee/",
    "https://www.bourgogne-tourisme.com/hebergements-insolites/les-lodges-du-canal-de-bourgogne-la-toue-cabanee"
   ]
+ },
+ {
+  "id": "bulles-de-savoie",
+  "pages": [
+   "https://www.lesbullesdesavoie.com/",
+   "https://www.lesbullesdesavoie.com/conceptdanssabulle",
+   "https://www.savoie-mont-blanc.com/hebergements/les-bulles-de-savoie-5363727/"
+  ]
+ },
+ {
+  "id": "folies-de-la-serve",
+  "pages": [
+   "https://www.lesfoliesdelaserve.com/",
+   "https://www.hotels-insolites.com/en/les-folies-de-la-serve.hotel",
+   "https://www.auvergnerhonealpes-tourisme.com/fiches/les-roulottes-de-la-serve/"
+  ]
+ },
+ {
+  "id": "domaine-de-murtoli",
+  "pages": [
+   "https://www.murtoli.com/en",
+   "https://www.murtoli.com/demeures-bergeries-domaine-de-murtoli-2-fr.html",
+   "https://www.murtoli.com/hotel-domaine-de-murtoli-hotel-sartene-90-fr.html"
+  ]
+ },
+ {
+  "id": "gare-de-guiscriff",
+  "pages": [
+   "https://www.lagaredeguiscriff.com/hebergements/train-couchettes/",
+   "https://www.lagaredeguiscriff.com/",
+   "https://www.tourismebretagne.com/offres/hebergements-en-gare-de-guiscriff-guiscriff-fr-4786993/"
+  ]
+ },
+ {
+  "id": "etape-en-foret",
+  "pages": [
+   "https://www.etape-en-foret.com/hebergements.html",
+   "https://www.etape-en-foret.com/"
+  ]
+ },
+ {
+  "id": "cabanes-lacustra",
+  "pages": [
+   "https://www.cabanes-lacustra.fr/hebergement-cabane-sur-eau.php",
+   "https://www.cabanes-lacustra.fr/"
+  ]
+ },
+ {
+  "id": "nids-des-vosges",
+  "pages": [
+   "https://www.cabanesnidsdesvosges.com/",
+   "https://www.tourisme.vosges.fr/sejourner/hebergements-insolites/777002907-cabanes-dans-les-arbres-nids-des-vosges-champdray"
+  ]
+ },
+ {
+  "id": "nids-d-hotes",
+  "pages": [
+   "https://www.lesnidsdhotes.com/",
+   "https://www.lesnidsdhotes.com/6-hebergement-insolite-au-pays-basque-dans-un-arbre-en-acier.html",
+   "https://www.lesnidsdhotes.com/hebergement-insolite-au-pays-basque-dans-un-arbre-en-acier/8-maison-arbre-9m.html"
+  ]
+ },
+ {
+  "id": "ecrin-d-auvergne",
+  "pages": [
+   "https://www.ecrin-auvergne.com/en/accommodations-lodge-auvergne-spa/",
+   "https://www.ecrin-auvergne.com/en/"
+  ]
+ },
+ {
+  "id": "villa-la-coste",
+  "pages": [
+   "https://villalacoste.com/",
+   "https://www.villalacoste.com/en/",
+   "https://chateau-la-coste.com/"
+  ]
+ },
+ {
+  "id": "chateau-de-la-treyne",
+  "pages": [
+   "https://www.chateaudelatreyne.com/en/rooms-and-suites-chateau-hotel-dordogne",
+   "https://www.chateaudelatreyne.com/"
+  ]
+ },
+ {
+  "id": "chateau-des-tilleuls",
+  "pages": [
+   "https://www.chateaudestilleuls.com/glamping-baie-de-somme-locations-insolites.php",
+   "https://www.chateaudestilleuls.com/"
+  ]
  }
 ]
