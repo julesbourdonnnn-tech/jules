@@ -4,6 +4,12 @@
   const CONFIG = window.SITE_CONFIG;
   const { escapeHtml, img } = C;
 
+  // Une seule adresse pour Google : www.nuitsinguliere.com → nuitsinguliere.com
+  if (location.hostname.startsWith("www.")) {
+    location.replace(location.href.replace("//www.", "//"));
+    return;
+  }
+
   /* ---------- Provenance du visiteur ----------
    * Les liens publiés sur Instagram / dans la newsletter portent ?src=instagram
    * ou ?src=newsletter. On la mémorise pour la session et on l'ajoute au

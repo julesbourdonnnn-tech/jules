@@ -9,5 +9,12 @@
   "assets": {
     "directory": ".",
     "not_found_handling": "404-page"
-  }
+  },
+  // Nom de domaine (acheté sur Cloudflare) : branché automatiquement à chaque
+  // déploiement. L'ancienne adresse workers.dev reste active.
+  "routes": [
+    { "pattern": "nuitsinguliere.com", "custom_domain": true },
+    { "pattern": "www.nuitsinguliere.com", "custom_domain": true }
+  ],
+  "workers_dev": true
 }
