@@ -63,8 +63,10 @@ def save(path, data):
 
 
 def get(url, timeout=15):
+    origin = "{0.scheme}://{0.netloc}/".format(urllib.parse.urlsplit(url))
     req = urllib.request.Request(url, headers={
         "User-Agent": UA,
+        "Referer": origin,  # certains sites refusent les images demandées sans page d'origine
         "Accept": "text/html,application/xhtml+xml,image/avif,image/webp,image/*,*/*;q=0.8",
         "Accept-Language": "fr-FR,fr;q=0.9,en;q=0.8",
     })
