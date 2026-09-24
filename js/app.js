@@ -322,10 +322,7 @@
     if (!window.L) return;
     if (!map) {
       map = L.map("map", { scrollWheelZoom: true, zoomControl: true }).setView([46.6, 2.4], 6);
-      L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>',
-        maxZoom: 18,
-      }).addTo(map);
+      window.NS.baseLayer("plan").addTo(map);
     }
     setTimeout(() => map.invalidateSize(), 60);
     Object.values(markers).forEach((m) => m.remove());

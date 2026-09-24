@@ -65,9 +65,7 @@
     const el = document.getElementById("mini-map");
     if (!el || !window.L) return;
     const map = L.map(el, { scrollWheelZoom: false }).setView([h.lat, h.lng], 10);
-    L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>',
-    }).addTo(map);
+    window.NS.baseLayer("plan").addTo(map);
     L.marker([h.lat, h.lng], {
       icon: L.divIcon({ className: "photo-pin big", html: `<span style="background-image:url('${img(h.images[0], 400)}')"></span>`, iconSize: [64, 64], iconAnchor: [32, 32] }),
       alt: h.name,

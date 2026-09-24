@@ -59,6 +59,25 @@
     return root() + (local && w && w <= 900 ? url.replace(/\.jpg$/, "-sm.jpg") : url);
   }
 
+  /* ---------- Fonds de carte (gratuits, sans clé) ----------
+   * plan : OpenStreetMap · satellite : Esri World Imagery · nuit : Esri Dark Gray.
+   * Renvoie un calque Leaflet (ou un groupe de calques pour « nuit »). */
+  const OSM = '&copy; <a href="https://www.openstreetmap.org/copyright">contributeurs OpenStreetMap</a>';
+  const ESRI = "https://server.arcgisonline.com/ArcGIS/rest/services";
+  function baseLayer(style = "plan") {
+    const L = global.L;
+    if (style === "satellite") {
+      return L.tileLayer(`${ESRI}/World_Imagery/MapServer/tile/{z}/{y}/{x}`, { attribution: "Imagerie &copy; Esri, Maxar, Earthstar Geographics", maxZoom: 18 });
+    }
+    if (style === "nuit") {
+      return L.layerGroup([
+        L.tileLayer(`${ESRI}/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}`, { attribution: `&copy; Esri, HERE, Garmin, ${OSM}`, maxZoom: 16 }),
+        L.tileLayer(`${ESRI}/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}`, { maxZoom: 16 }),
+      ]);
+    }
+    return L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { attribution: OSM, maxZoom: 19, className: "tiles-plan" });
+  }
+
   /* ---------- Budget, offres payantes ---------- */
   const budgetOf = (h) => data().BUDGETS[h.budget] || data().BUDGETS[2];
   const budgetHtml = (h) =>
@@ -227,6 +246,6 @@
     data, setRoot, root, page, hotelUrl, guideUrl, escapeHtml, formatPrice, formatDistance, distanceKm,
     FALLBACK, img, budgetOf, budgetHtml, planRank, partnerBadge, bookingLink, partnerLinks,
     favButton, card, newsletterForm, socialLinks, guideHotels, guideTitle, guidesFor, guideCard,
-    header, footer,
+    header, footer, baseLayer,
   };
 });

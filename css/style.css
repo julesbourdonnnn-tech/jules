@@ -939,3 +939,6 @@ body.map-page .site-header { position: relative; flex: none; }
   .reveal { opacity: 1; transform: none; }
   .marquee-track { animation: none; }
 }
+
+/* Fond de carte OpenStreetMap adouci pour s'accorder aux couleurs du site */
+.leaflet-tile.tiles-plan { filter: saturate(.55) sepia(.12) brightness(1.03) contrast(.95); }

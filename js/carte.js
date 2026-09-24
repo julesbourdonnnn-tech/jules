@@ -12,13 +12,8 @@
   const FRANCE = [[41.3, -5.2], [51.2, 9.6]];
   const state = { q: "", env: "", type: "", selected: null, loc: getUserLocation() };
 
-  /* ---------- Fonds de carte ---------- */
-  const ATTR_OSM = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
-  const LAYERS = {
-    plan: () => L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", { attribution: `${ATTR_OSM} &copy; <a href="https://carto.com/">CARTO</a>`, maxZoom: 19, subdomains: "abcd" }),
-    satellite: () => L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", { attribution: "Imagerie &copy; Esri, Maxar, Earthstar Geographics", maxZoom: 18 }),
-    nuit: () => L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", { attribution: `${ATTR_OSM} &copy; <a href="https://carto.com/">CARTO</a>`, maxZoom: 19, subdomains: "abcd" }),
-  };
+  /* ---------- Fonds de carte : voir baseLayer() dans core.js ---------- */
+  const LAYERS = { plan: () => window.NS.baseLayer("plan"), satellite: () => window.NS.baseLayer("satellite"), nuit: () => window.NS.baseLayer("nuit") };
 
   let map, cluster, base, homeMarker;
   const markers = new Map();
@@ -263,7 +258,6 @@
       const b = e.target.closest("button[data-layer]"); if (!b) return;
       map.removeLayer(base);
       base = LAYERS[b.dataset.layer]().addTo(map);
-      base.bringToBack();
       document.querySelectorAll("#atlas-layers button").forEach((x) => { x.classList.toggle("active", x === b); x.setAttribute("aria-checked", x === b); });
       $("#atlas-map").dataset.layer = b.dataset.layer;
     });
