@@ -165,7 +165,7 @@ def open_image(data):
 
 
 def scan(hotel):
-    entry = {"id": hotel["id"], "pages": [], "candidates": []}
+    entry = {"id": hotel["id"], "sources": list(hotel["pages"]), "pages": [], "candidates": []}
     urls, visited = list(hotel["pages"]), set()
     first_domain_pages = 0
     while urls and len(visited) < 7:
@@ -272,7 +272,10 @@ def main():
     report = load(REPORT, {})
     only = set(filter(None, os.environ.get("ONLY", "").split(",")))
 
-    todo = [h for h in sources if h["id"] not in report or h["id"] in only]
+    # À (re)faire : hôtels nouveaux, demandés explicitement, ou dont les pages sources ont changé
+    todo = [h for h in sources
+            if h["id"] not in report or h["id"] in only
+            or report[h["id"]].get("sources", h["pages"]) != h["pages"]]
 
     def work(hotel):
         if time.time() - START > TIME_BUDGET:

@@ -30,6 +30,7 @@
  {
   "id": "alpinest",
   "pages": [
+   "https://www.alpinest.fr/nos-cabanes-arbres-spa",
    "https://www.alpinest.fr/"
   ]
  },
@@ -37,12 +38,6 @@
   "id": "cabanes-du-moulin",
   "pages": [
    "https://www.lescabanesdumoulin.fr/"
-  ]
- },
- {
-  "id": "cabane-et-spa-ardeche",
-  "pages": [
-   "https://www.cabaneetspa.fr/"
   ]
  },
  {
@@ -74,6 +69,7 @@
  {
   "id": "troglododo",
   "pages": [
+   "https://www.troglododo.fr/chambres-hotel-restaurant-azay-le-rideau",
    "https://www.troglododo.fr/"
   ]
  },
@@ -94,13 +90,8 @@
  {
   "id": "hotel-particulier-montmartre",
   "pages": [
-   "https://www.hotel-particulier-montmartre.com/"
-  ]
- },
- {
-  "id": "seven-hotel-paris",
-  "pages": [
-   "https://www.sevenhotelparis.com/"
+   "https://www.hotelparticulier.com/?lng=en",
+   "https://www.hotelparticulier.com/hotel.html?lng=en"
   ]
  },
  {
@@ -114,7 +105,8 @@
  {
   "id": "cour-des-loges",
   "pages": [
-   "https://www.courdesloges.com/"
+   "https://courdesloges.com/en/story-of-cour-des-loges.html",
+   "https://www.radissonhotels.com/en-us/hotels/radisson-collection-cour-des-loges-lyon"
   ]
  },
  {
@@ -133,7 +125,8 @@
  {
   "id": "fermes-de-marie",
   "pages": [
-   "https://www.fermesdemarie.com/"
+   "https://www.fermesdemarie.com/en",
+   "https://en.fermesdemarie.com/rooms-and-suites"
   ]
  },
  {
@@ -152,19 +145,21 @@
  {
   "id": "chateau-de-la-resle",
   "pages": [
-   "https://www.chateaudelaresle.com/"
+   "https://chateaudelaresle.com/en/"
   ]
  },
  {
   "id": "chateau-de-mercues",
   "pages": [
-   "https://www.chateaudemercues.com/"
+   "https://chateaudemercues.com/fr/overview.html",
+   "https://chateaudemercues.com/fr/the-experience.html"
   ]
  },
  {
   "id": "sources-de-caudalie",
   "pages": [
-   "https://www.sources-caudalie.com/"
+   "https://www.sources-caudalie.com/",
+   "https://www.gironde-tourisme.com/en/hotellerie/les-sources-de-caudalie/"
   ]
  },
  {
@@ -182,13 +177,15 @@
  {
   "id": "casadelmar",
   "pages": [
-   "https://www.casadelmar.fr/"
+   "https://www.casadelmar.fr/en/home",
+   "https://www.casadelmar.fr/en/hotel/the-hotel"
   ]
  },
  {
   "id": "la-coorniche",
   "pages": [
-   "https://www.lacoorniche-pyla.com/"
+   "https://lacoorniche.com/en/rooms-suites-hotel-pyla/",
+   "https://lacoorniche.com/en/"
   ]
  }
 ]
