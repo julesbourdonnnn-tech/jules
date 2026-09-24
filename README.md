@@ -17,6 +17,21 @@ Le site est **100 % statique** (HTML, CSS, JavaScript). Pas de serveur, pas de b
 - **Référencement (SEO)** : titre et description propres à chaque fiche, données structurées `schema.org/Hotel`
 - Liens partageables : les filtres sont dans l'URL (ex. `index.html?env=mer&max=200`)
 
+### Offres payantes pour les hôteliers (`hoteliers.html`)
+- Page de vente avec 3 offres (Découverte gratuite, Partenaire 29 €/mois, Premium 79 €/mois) et des prestations à la carte, tarifs dans `config.js`
+- Formulaire de candidature (Netlify Forms), pré-rempli quand on arrive depuis le lien « Vous êtes le propriétaire ? » d'une fiche
+- Les hôtels avec `plan: "partenaire"` ou `"premium"` ont un badge « Partenaire », remontent dans le tri « Recommandés », et leur fiche affiche leur site, leur téléphone et une « Offre spéciale »
+- Les hôtels Premium passent en tête des « Coups de cœur »
+
+### Instagram et newsletter
+- Inscription à la newsletter sur l'accueil, chaque fiche et le pied de page (Netlify Forms)
+- Section Instagram sur l'accueil et page **lien en bio** `liens.html`
+- **Studio** (`studio.html`, outil interne) : génère les carrousels et stories Instagram avec leur légende, l'e-mail HTML de la newsletter et le rapport mensuel à envoyer aux hôteliers
+- **Suivi de provenance** : les liens `?src=instagram` / `?src=newsletter` sont ajoutés au libellé Booking. Ton tableau de bord Booking montre ainsi quel canal rapporte.
+- Statistiques Plausible optionnelles : visites et clics « Réservation », « Site officiel » et « Téléphone » par hôtel
+
+➡️ Le plan d'action complet (outils, calendrier Instagram, e-mails aux hôteliers, règles légales) est dans **[STRATEGIE.md](STRATEGIE.md)**.
+
 ## Voir le site en local
 
 Double-clique sur `index.html`, ou pour que tout fonctionne (géolocalisation comprise) :
@@ -67,6 +82,8 @@ Tout se passe dans `js/hotels.js`. Copie un bloc `{ ... },` et modifie-le :
 | `images` | `["https://…jpg", …]` | photos, la première sert de couverture |
 | `bookingUrl` | `"https://www.booking.com/hotel/fr/xxx.html"` | lien de la fiche Booking ; si vide, le site ouvre une recherche Booking avec le nom de l'hôtel |
 | `partners` | `{ expedia: "https://…", direct: "https://…" }` | boutons de réservation secondaires (optionnels) |
+| `plan` | `"partenaire"` ou `"premium"` | offre payée par l'hôtel (absent = gratuit) |
+| `website`, `phone`, `offer` | | affichés seulement si l'hôtel a une offre payante |
 
 ### Photos : attention aux droits
 
@@ -79,7 +96,7 @@ Les photos d'exemple viennent d'Unsplash. Si une photo ne charge pas, une image 
 
 ## Personnaliser
 
-- **Nom du site, e-mail** : `js/config.js` (et les balises `<title>` dans les fichiers `.html`)
+- **Nom du site, e-mail, domaine, Instagram, tarifs, liens de paiement Stripe** : `js/config.js` (et les balises `<title>` dans les fichiers `.html`)
 - **Couleurs et polices** : variables en haut de `css/style.css`
 - **Ambiances et types d'expériences** : `ENVIRONMENTS` et `TYPES` en haut de `js/hotels.js`
 - **Mentions légales** : complète `mentions-legales.html` (obligatoire en France)
@@ -87,15 +104,21 @@ Les photos d'exemple viennent d'Unsplash. Si une photo ne charge pas, une image 
 ## Structure
 
 ```
-index.html            Accueil + recherche + carte
+index.html            Accueil + recherche + carte + newsletter
 hotel.html            Fiche hôtel (hotel.html?id=...)
+hoteliers.html        Offres payantes et candidature des hôteliers
+liens.html            Page « lien en bio » Instagram
+studio.html           Outil interne : visuels Instagram, newsletter, rapports
 mentions-legales.html
+STRATEGIE.md          Plan d'action idées 1 et 8
 css/style.css
 js/config.js          ← identifiants d'affiliation
 js/hotels.js          ← la liste des hôtels
 js/common.js          liens, géolocalisation, en-tête et pied de page
 js/app.js             logique de l'accueil
 js/hotel.js           logique de la fiche
+js/hoteliers.js       offres et formulaire hôteliers
+js/studio.js          logique du Studio
 ```
 
 ## Prochaines étapes conseillées

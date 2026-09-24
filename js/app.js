@@ -1,6 +1,6 @@
 /* Page d'accueil : catégories, filtres, recherche par proximité, carte. */
 (function () {
-  const { escapeHtml, formatPrice, formatDistance, distanceKm, getUserLocation, setUserLocation, geocode, locateBrowser, img } = window.NS;
+  const { escapeHtml, formatPrice, formatDistance, distanceKm, getUserLocation, setUserLocation, geocode, locateBrowser, img, planRank, partnerBadge, newsletterForm, socialLinks } = window.NS;
   const HOTELS = window.HOTELS, ENVS = window.ENVIRONMENTS, TYPES = window.TYPES;
   const MAX_PRICE = 400;
   const $ = (sel) => document.querySelector(sel);
@@ -38,6 +38,7 @@
         <div class="card-media">
           <img src="${img(h.images[0], 900)}" alt="${escapeHtml(h.name)}" loading="lazy">
           <span class="badge">${escapeHtml(ENVS[h.env].label)}</span>
+          ${partnerBadge(h)}
           ${dist}
         </div>
         <div class="card-body">
@@ -72,9 +73,13 @@
           <span><strong>${escapeHtml(t.label)}</strong><small>${counts("type", k)} hôtel${counts("type", k) > 1 ? "s" : ""}</small></span>
         </a>`).join("");
 
-    $("#featured").innerHTML = HOTELS.filter((h) => h.featured).slice(0, 6).map((h, i) => `
+    // Coups de cœur : les hôtels Premium d'abord, puis la sélection éditoriale
+    const featured = HOTELS.filter((h) => h.plan === "premium")
+      .concat(HOTELS.filter((h) => h.featured && h.plan !== "premium"));
+    $("#featured").innerHTML = featured.slice(0, 6).map((h, i) => `
       <a class="feature ${i === 0 ? "feature-lg" : ""}" href="hotel.html?id=${encodeURIComponent(h.id)}">
         <img src="${img(h.images[0], i === 0 ? 1600 : 900)}" alt="${escapeHtml(h.name)}" loading="lazy">
+        ${partnerBadge(h)}
         <div class="feature-text">
           <p class="card-type">${TYPES[h.type].icon} ${escapeHtml(TYPES[h.type].label)} · ${escapeHtml(h.city)}</p>
           <h3>${escapeHtml(h.name)}</h3>
@@ -89,8 +94,25 @@
     $("#f-env").innerHTML = `<button type="button" data-env="">Tout</button>` +
       Object.entries(ENVS).map(([k, e]) => `<button type="button" data-env="${k}">${escapeHtml(e.label)}</button>`).join("");
 
-    const mail = window.SITE_CONFIG.contactEmail;
-    $("#hotelier-cta").href = `mailto:${mail}?subject=${encodeURIComponent("Proposer mon établissement")}`;
+    // Newsletter
+    const nl = window.SITE_CONFIG.newsletter;
+    $("#nl-title").textContent = nl.title;
+    $("#nl-pitch").textContent = nl.pitch;
+    $("#nl-slot").innerHTML = newsletterForm("accueil");
+
+    // Instagram
+    const ig = socialLinks().find((x) => x.name === "Instagram");
+    const igSection = $("#instagram");
+    if (!ig) igSection.hidden = true;
+    else {
+      $("#ig-handle").textContent = `@${ig.handle}`;
+      $("#ig-follow").href = ig.href;
+      $("#ig-grid").innerHTML = featured.concat(HOTELS).filter((h, i, a) => a.indexOf(h) === i).slice(0, 6).map((h) => `
+        <a class="ig-tile" href="${escapeHtml(ig.href)}" target="_blank" rel="noopener" aria-label="${escapeHtml(h.name)} sur Instagram">
+          <img src="${img(h.images[0], 600)}" alt="" loading="lazy">
+          <span>${escapeHtml(h.city)}</span>
+        </a>`).join("");
+    }
   }
 
   /* ---------- Filtrage ---------- */
@@ -107,7 +129,8 @@
       (!state.loc || !state.radius || h._dist <= Number(state.radius))
     );
     const sorters = {
-      featured: (a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0),
+      // « Recommandés » : offres payantes d'abord (Premium, puis Partenaire), puis coups de cœur
+      featured: (a, b) => planRank(b) - planRank(a) || (b.featured ? 1 : 0) - (a.featured ? 1 : 0),
       "price-asc": (a, b) => a.price - b.price,
       "price-desc": (a, b) => b.price - a.price,
       distance: (a, b) => (a._dist ?? 0) - (b._dist ?? 0),

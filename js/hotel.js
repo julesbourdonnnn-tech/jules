@@ -1,6 +1,6 @@
 /* Fiche détaillée d'un hôtel. */
 (function () {
-  const { escapeHtml, formatPrice, formatDistance, distanceKm, bookingLink, partnerLinks, getUserLocation, img, CONFIG } = window.NS;
+  const { escapeHtml, formatPrice, formatDistance, distanceKm, bookingLink, partnerLinks, getUserLocation, img, CONFIG, planRank, partnerBadge, newsletterForm } = window.NS;
   const ENVS = window.ENVIRONMENTS, TYPES = window.TYPES;
 
   const id = new URLSearchParams(location.search).get("id");
@@ -42,6 +42,8 @@
     const book = bookingLink(h);
     const others = partnerLinks(h);
     const photos = h.images;
+    const paid = planRank(h) > 0;
+    const trk = `data-track="Réservation" data-hotel="${escapeHtml(h.id)}"`;
 
     const similar = window.HOTELS
       .filter((x) => x.id !== h.id)
@@ -59,7 +61,7 @@
       </nav>
 
       <header class="detail-head">
-        <p class="card-type">${TYPES[h.type].icon} ${escapeHtml(TYPES[h.type].label)} · ${escapeHtml(ENVS[h.env].label)}</p>
+        <p class="card-type">${TYPES[h.type].icon} ${escapeHtml(TYPES[h.type].label)} · ${escapeHtml(ENVS[h.env].label)} ${partnerBadge(h)}</p>
         <h1>${escapeHtml(h.name)}</h1>
         <p class="detail-tagline">${escapeHtml(h.tagline)}</p>
         <p class="detail-place">📍 ${escapeHtml(h.city)}, ${escapeHtml(h.department)} — ${escapeHtml(h.region)}
@@ -97,13 +99,22 @@
           <h2>Localisation</h2>
           <div id="mini-map" class="mini-map"></div>
           <p class="small muted"><a href="https://www.google.com/maps/dir/?api=1&destination=${h.lat},${h.lng}" target="_blank" rel="noopener">Itinéraire Google Maps →</a></p>
+
+          <div class="nl-inline">
+            <h3>${escapeHtml(CONFIG.newsletter.title)}</h3>
+            <p class="muted">${escapeHtml(CONFIG.newsletter.pitch)}</p>
+            ${newsletterForm(`fiche-${h.id}`)}
+          </div>
         </article>
 
         <aside class="book-card">
           <p class="book-price">dès <strong>${formatPrice(h.price)}</strong> <span>/ nuit</span></p>
           <p class="small muted">Prix indicatif. Vérifiez les disponibilités et le tarif exact selon vos dates.</p>
-          <a class="btn btn-primary btn-block" href="${escapeHtml(book)}" target="_blank" rel="sponsored noopener">Voir les disponibilités sur Booking.com</a>
-          ${others.map((o) => `<a class="btn btn-ghost btn-block" href="${escapeHtml(o.href)}" target="_blank" rel="sponsored noopener">Comparer sur ${escapeHtml(o.name)}</a>`).join("")}
+          ${paid && h.offer ? `<div class="offer"><strong>Offre spéciale</strong>${escapeHtml(h.offer)}</div>` : ""}
+          <a class="btn btn-primary btn-block" href="${escapeHtml(book)}" target="_blank" rel="sponsored noopener" ${trk}>Voir les disponibilités sur Booking.com</a>
+          ${others.map((o) => `<a class="btn btn-ghost btn-block" href="${escapeHtml(o.href)}" target="_blank" rel="sponsored noopener" data-track="Partenaire" data-hotel="${escapeHtml(h.id)}">Comparer sur ${escapeHtml(o.name)}</a>`).join("")}
+          ${paid && h.website ? `<a class="btn btn-ghost btn-block" href="${escapeHtml(h.website)}" target="_blank" rel="noopener" data-track="Site officiel" data-hotel="${escapeHtml(h.id)}">Réserver en direct sur le site de l'hôtel</a>` : ""}
+          ${paid && h.phone ? `<a class="book-phone" href="tel:${escapeHtml(h.phone.replace(/\s/g, ""))}" data-track="Téléphone" data-hotel="${escapeHtml(h.id)}">☎ ${escapeHtml(h.phone)}</a>` : ""}
           <ul class="book-perks">
             <li>✓ Réservation sécurisée chez notre partenaire</li>
             <li>✓ Aucun frais supplémentaire</li>
@@ -111,6 +122,8 @@
           </ul>
         </aside>
       </div>
+
+      ${paid ? "" : `<p class="owner-note">Vous êtes le propriétaire de cet établissement ? <a href="hoteliers.html?hotel=${encodeURIComponent(h.id)}">Mettez votre fiche en avant →</a></p>`}
 
       <section class="similar">
         <h2>Vous aimerez aussi</h2>
@@ -130,7 +143,7 @@
 
       <div class="mobile-book">
         <span>dès <strong>${formatPrice(h.price)}</strong> / nuit</span>
-        <a class="btn btn-primary" href="${escapeHtml(book)}" target="_blank" rel="sponsored noopener">Réserver</a>
+        <a class="btn btn-primary" href="${escapeHtml(book)}" target="_blank" rel="sponsored noopener" ${trk}>Réserver</a>
       </div>`;
 
     initMap(loc);

@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Studio — Nuits Singulières</title>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✦</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="studio">
+  <!--
+    OUTIL INTERNE (non référencé sur Google, non lié depuis le site).
+    Génère les visuels Instagram et la newsletter à partir de js/hotels.js.
+  -->
+  <header class="studio-head container">
+    <a class="brand" href="index.html"><span class="brand-mark">✦</span><span>Studio</span></a>
+    <div class="tabs" role="tablist">
+      <button type="button" class="active" data-tab="ig">📸 Publication Instagram</button>
+      <button type="button" data-tab="nl">✉️ Newsletter</button>
+      <button type="button" data-tab="report">📊 Rapport hôtelier</button>
+    </div>
+  </header>
+
+  <!-- ===== INSTAGRAM ===== -->
+  <main class="container studio-main" data-panel="ig">
+    <aside class="studio-side">
+      <label>Hôtel<select id="ig-hotel"></select></label>
+      <label>Format
+        <select id="ig-format">
+          <option value="post">Carrousel (1080 × 1350)</option>
+          <option value="story">Story / Reel (1080 × 1920)</option>
+        </select>
+      </label>
+      <label class="check"><input type="checkbox" id="ig-sponsored"> Publication payée par l'hôtel<br><small class="muted">Ajoute la mention obligatoire « Collaboration commerciale »</small></label>
+      <button class="btn btn-primary btn-block" type="button" id="ig-download">Télécharger toutes les images</button>
+      <p class="muted small" id="ig-msg"></p>
+
+      <label>Légende
+        <textarea id="ig-caption" rows="16"></textarea>
+      </label>
+      <button class="btn btn-ghost btn-block" type="button" data-copy="ig-caption">Copier la légende</button>
+
+      <label>Lien suivi (story, bio, DM)
+        <input id="ig-link" readonly>
+      </label>
+      <button class="btn btn-ghost btn-block" type="button" data-copy="ig-link">Copier le lien</button>
+    </aside>
+    <section class="studio-preview" id="ig-slides"></section>
+  </main>
+
+  <!-- ===== NEWSLETTER ===== -->
+  <main class="container studio-main" data-panel="nl" hidden>
+    <aside class="studio-side">
+      <label>Objet de l'e-mail<input id="nl-subject"></label>
+      <label>Introduction<textarea id="nl-intro" rows="5"></textarea></label>
+      <fieldset>
+        <legend>Hôtels à présenter (3 conseillé)</legend>
+        <div id="nl-hotels" class="nl-picks"></div>
+      </fieldset>
+      <button class="btn btn-primary btn-block" type="button" id="nl-copy">Copier le code HTML</button>
+      <button class="btn btn-ghost btn-block" type="button" id="nl-download">Télécharger le fichier .html</button>
+      <p class="muted small">Dans Brevo : Campagnes → Créer → Éditeur « Coller votre code ». Les liens portent <code>src=newsletter</code> pour suivre les réservations.</p>
+    </aside>
+    <section class="studio-preview">
+      <iframe id="nl-frame" title="Aperçu de la newsletter"></iframe>
+    </section>
+  </main>
+
+  <!-- ===== RAPPORT HÔTELIER ===== -->
+  <main class="container studio-main" data-panel="report" hidden>
+    <aside class="studio-side">
+      <label>Hôtel<select id="rp-hotel"></select></label>
+      <label>Mois<input id="rp-month" type="month"></label>
+      <label>Visites de la fiche<input id="rp-views" type="number" min="0" value="0"></label>
+      <label>Clics « Réserver »<input id="rp-book" type="number" min="0" value="0"></label>
+      <label>Clics site officiel<input id="rp-site" type="number" min="0" value="0"></label>
+      <label>Clics téléphone<input id="rp-phone" type="number" min="0" value="0"></label>
+      <label>Portée Instagram (comptes touchés)<input id="rp-ig" type="number" min="0" value="0"></label>
+      <p class="muted small">Chiffres à relever dans Plausible (onglet « Goal conversions », filtrer par hôtel) et dans Instagram (statistiques de la publication).</p>
+      <button class="btn btn-primary btn-block" type="button" data-copy="rp-text">Copier l'e-mail</button>
+    </aside>
+    <section class="studio-preview">
+      <textarea id="rp-text" class="report-text" rows="24"></textarea>
+    </section>
+  </main>
+
+  <script src="js/config.js"></script>
+  <script src="js/hotels.js"></script>
+  <script src="js/common.js"></script>
+  <script src="js/studio.js"></script>
+</body>
+</html>

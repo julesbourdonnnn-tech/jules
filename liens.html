@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Nuits Singulières — Liens</title>
+  <meta name="description" content="Toutes les adresses extraordinaires publiées sur notre Instagram.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✦</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;1,9..144,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="bio">
+  <!--
+    Page à mettre en « lien en bio » sur Instagram / TikTok :
+    https://ton-domaine.fr/liens.html?src=instagram
+    Les hôtels affichés, dans l'ordre : social.bioHotels dans config.js
+    (sinon : Premium puis coups de cœur).
+  -->
+  <main class="bio-main">
+    <header class="bio-head">
+      <span class="bio-avatar">✦</span>
+      <h1 id="bio-name"></h1>
+      <p id="bio-tagline" class="muted"></p>
+    </header>
+
+    <a class="bio-btn bio-btn-main" id="bio-near" href="index.html#explorer">📍 Les hôtels extraordinaires près de chez moi</a>
+    <a class="bio-btn" id="bio-all" href="index.html">✦ Toute la sélection</a>
+
+    <h2 class="bio-title">Vus sur Instagram</h2>
+    <div class="bio-list" id="bio-list"></div>
+
+    <div class="bio-nl">
+      <h2 id="bio-nl-title"></h2>
+      <p class="muted" id="bio-nl-pitch"></p>
+      <div id="bio-nl-slot"></div>
+    </div>
+
+    <a class="bio-btn bio-btn-quiet" href="hoteliers.html">Vous êtes hôtelier ? Rejoignez la sélection</a>
+    <p class="bio-foot muted small">Liens affiliés : nous percevons une commission sur les réservations, sans surcoût pour vous.</p>
+  </main>
+
+  <script src="js/config.js"></script>
+  <script src="js/hotels.js"></script>
+  <script src="js/common.js"></script>
+  <script>
+    (function () {
+      const { CONFIG, escapeHtml, formatPrice, img, newsletterForm, getSource, partnerBadge } = window.NS;
+      const src = getSource() || "instagram";
+      const withSrc = (href) => href.replace(/(#|$)/, (m) => `${href.includes("?") ? "&" : "?"}src=${src}${m}`);
+      document.addEventListener("DOMContentLoaded", () => {
+        document.getElementById("bio-name").textContent = CONFIG.siteName;
+        document.getElementById("bio-tagline").textContent = CONFIG.tagline;
+        document.getElementById("bio-near").href = withSrc("index.html#explorer");
+        document.getElementById("bio-all").href = withSrc("index.html");
+        document.getElementById("bio-nl-title").textContent = CONFIG.newsletter.title;
+        document.getElementById("bio-nl-pitch").textContent = CONFIG.newsletter.pitch;
+        document.getElementById("bio-nl-slot").innerHTML = newsletterForm("lien-en-bio");
+
+        const ids = (CONFIG.social.bioHotels || []);
+        let list = ids.map((id) => window.HOTELS.find((h) => h.id === id)).filter(Boolean);
+        if (!list.length) {
+          list = window.HOTELS.filter((h) => h.plan === "premium")
+            .concat(window.HOTELS.filter((h) => h.featured && h.plan !== "premium"));
+        }
+        document.getElementById("bio-list").innerHTML = list.slice(0, 12).map((h, i) => `
+          <a class="bio-item" href="${withSrc(`hotel.html?id=${encodeURIComponent(h.id)}`)}">
+            <img src="${img(h.images[0], 300)}" alt="" loading="lazy">
+            <span><small>N°${i + 1} · ${escapeHtml(h.city)}</small><strong>${escapeHtml(h.name)}</strong><em>dès ${formatPrice(h.price)} / nuit ${partnerBadge(h)}</em></span>
+          </a>`).join("");
+      });
+    })();
+  </script>
+</body>
+</html>

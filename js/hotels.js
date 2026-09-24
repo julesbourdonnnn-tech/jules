@@ -16,6 +16,12 @@
  *   bookingUrl  lien de la fiche Booking.com de l'hôtel
  *               (laisse "" : le site fera une recherche Booking par nom)
  *   partners    liens optionnels vers d'autres sites (expedia, hotelscom, direct)
+ *
+ *  Champs réservés aux hôtels qui paient une offre (voir plans dans config.js) :
+ *   plan        "partenaire" | "premium"  (absent = fiche gratuite)
+ *   website     site officiel de l'hôtel (réservation directe)
+ *   phone       téléphone affiché sur la fiche
+ *   offer       offre spéciale, ex. "-10 % en réservant en direct avec le code NUITS"
  * ============================================================
  */
 
@@ -61,6 +67,7 @@ window.HOTELS = [
     rooms: "6 cabanes pour 2 à 4 personnes",
     checkIn: "16h00", checkOut: "11h00",
     images: [U("photo-1449158743715-0a90ebb6d2d8"), U("photo-1441974231531-c6227db76b6e"), U("photo-1476514525535-07fb3b4ae5f1"), U("photo-1618773928121-c32242e63f39")],
+    plan: "partenaire", website: "https://www.exemple.fr", phone: "05 58 00 00 03", offer: "-10 % en réservant en direct avec le code NUITS",
     bookingUrl: "", partners: {},
   },
   {
@@ -80,6 +87,7 @@ window.HOTELS = [
     rooms: "4 bulles pour 2 personnes",
     checkIn: "17h00", checkOut: "10h30",
     images: [U("photo-1523987355523-c7b5b0dd90a7"), U("photo-1519681393784-d120267933ba"), U("photo-1504280390367-361c6d9f38f4"), U("photo-1500530855697-b586d89ba3ee")],
+    plan: "premium", website: "https://www.exemple.fr", phone: "04 90 00 00 01", offer: "Bouteille de rosé du Luberon offerte aux lecteurs de Nuits Singulières",
     bookingUrl: "", partners: {},
   },
   {
@@ -175,6 +183,7 @@ window.HOTELS = [
     rooms: "7 suites",
     checkIn: "16h00", checkOut: "11h00",
     images: [U("photo-1464822759023-fed622ff2c3b"), U("photo-1510798831971-661eb04b3739"), U("photo-1618773928121-c32242e63f39"), U("photo-1493246507139-91e8fad9978e")],
+    plan: "premium", website: "https://www.exemple.fr", phone: "04 50 00 00 02", offer: "Accès spa offert pour toute réservation de 2 nuits ou plus",
     bookingUrl: "", partners: {},
   },
   {
@@ -346,6 +355,7 @@ window.HOTELS = [
     rooms: "10 chambres",
     checkIn: "14h00", checkOut: "11h00",
     images: [U("photo-1542314831-068cd1dbfeeb"), U("photo-1582719478250-c89cae4dc85b"), U("photo-1590490360182-c33d57733427")],
+    plan: "partenaire", website: "https://www.exemple.fr", phone: "04 78 00 00 04",
     bookingUrl: "", partners: {},
   },
   {
@@ -403,6 +413,7 @@ window.HOTELS = [
     rooms: "5 roulottes",
     checkIn: "16h00", checkOut: "11h00",
     images: [U("photo-1500530855697-b586d89ba3ee"), U("photo-1518780664697-55e3ad937233"), U("photo-1611892440504-42a792e24d32")],
+    plan: "partenaire", website: "https://www.exemple.fr", phone: "03 80 00 00 05", offer: "Dégustation de 3 grands crus offerte",
     bookingUrl: "", partners: {},
   },
   {

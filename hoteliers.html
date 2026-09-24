@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Espace hôteliers — Nuits Singulières</title>
+  <meta name="description" content="Hôtels insolites, cabanes, bulles, châteaux : rejoignez Nuits Singulières et touchez des voyageurs qui cherchent exactement ce que vous proposez.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✦</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="pro">
+  <header id="site-header" class="site-header"></header>
+
+  <section class="pro-hero">
+    <div class="container pro-hero-inner">
+      <p class="eyebrow dark">Espace hôteliers</p>
+      <h1>Vos chambres sortent de l'ordinaire.<br><em>Vos voyageurs aussi.</em></h1>
+      <p class="lead">Nos visiteurs ne cherchent pas « un hôtel à Lyon » : ils cherchent une cabane perchée, un phare, une bulle sous les étoiles. Ils arrivent chez nous déjà convaincus. Il ne reste qu'à vous trouver.</p>
+      <div class="pro-hero-cta">
+        <a class="btn btn-primary" href="#offres">Voir les offres</a>
+        <a class="btn btn-ghost" href="#candidature">Proposer mon établissement</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="section container">
+    <div class="why-grid">
+      <div><span class="why-icon">🎯</span><h3>Une audience qualifiée</h3><p>Des voyageurs qui recherchent précisément une expérience insolite, par ambiance, par budget ou autour de chez eux.</p></div>
+      <div><span class="why-icon">🔗</span><h3>De la réservation directe</h3><p>Avec une offre payante, votre site et votre téléphone apparaissent sur votre fiche : les réservations directes ne vous coûtent aucune commission.</p></div>
+      <div><span class="why-icon">📸</span><h3>Instagram et newsletter</h3><p>Les établissements Premium sont présentés chaque mois à notre communauté Instagram et à nos abonnés.</p></div>
+      <div><span class="why-icon">📊</span><h3>Des résultats mesurés</h3><p>Chaque mois, vous recevez le nombre de visites de votre fiche et de clics vers la réservation, votre site et votre téléphone.</p></div>
+    </div>
+  </section>
+
+  <section class="section section-tint" id="offres">
+    <div class="container">
+      <div class="section-head center">
+        <p class="eyebrow dark">Offres</p>
+        <h2>Sans engagement, résiliable à tout moment</h2>
+      </div>
+      <div class="plans" id="plans"></div>
+      <div class="extras">
+        <h3>À la carte</h3>
+        <ul id="extras"></ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="section container how">
+    <div class="section-head center">
+      <p class="eyebrow dark">Comment ça marche</p>
+      <h2>En ligne en moins d'une semaine</h2>
+    </div>
+    <ol class="steps">
+      <li><strong>Vous candidatez</strong><span>Remplissez le formulaire ci-dessous, cela prend deux minutes.</span></li>
+      <li><strong>Nous validons</strong><span>Nous vérifions que votre lieu correspond à notre ligne : de l'extraordinaire, rien que de l'extraordinaire.</span></li>
+      <li><strong>Vous êtes en ligne</strong><span>Nous rédigeons votre fiche avec vos photos. Pour une offre payante, vous recevez un lien de paiement sécurisé.</span></li>
+    </ol>
+  </section>
+
+  <section class="section section-tint" id="candidature">
+    <div class="container form-wrap">
+      <div>
+        <p class="eyebrow dark">Candidature</p>
+        <h2>Présentez-nous votre établissement</h2>
+        <p class="lead">Nous répondons sous 48 h. Pas de démarchage, pas de frais cachés.</p>
+        <p class="muted small" id="pay-note"></p>
+      </div>
+      <form class="pro-form" name="hotelier" method="POST" data-netlify="true" netlify-honeypot="bot-field" data-netlify-form
+            data-success="Merci ! Votre candidature est bien envoyée. Nous revenons vers vous sous 48 h.">
+        <input type="hidden" name="form-name" value="hotelier">
+        <p class="nl-hp"><label>Ne pas remplir <input name="bot-field" tabindex="-1" autocomplete="off"></label></p>
+        <label>Nom de l'établissement *<input name="etablissement" required></label>
+        <label>Ville *<input name="ville" required></label>
+        <label>Votre nom *<input name="contact" required autocomplete="name"></label>
+        <label>E-mail *<input type="email" name="email" required autocomplete="email"></label>
+        <label>Téléphone<input type="tel" name="telephone" autocomplete="tel"></label>
+        <label>Site web ou lien Booking<input type="url" name="site" placeholder="https://"></label>
+        <label class="full">Offre souhaitée
+          <select name="offre" id="offre"></select>
+        </label>
+        <label class="full">Qu'est-ce qui rend votre lieu extraordinaire ?<textarea name="message" rows="4"></textarea></label>
+        <input type="hidden" name="fiche" id="fiche">
+        <button class="btn btn-primary full" type="submit">Envoyer ma candidature</button>
+        <p class="form-msg full" role="status"></p>
+      </form>
+    </div>
+  </section>
+
+  <section class="section container faq">
+    <div class="section-head center"><h2>Questions fréquentes</h2></div>
+    <details><summary>Tout le monde peut-il être référencé ?</summary><p>Non, et c'est ce qui fait la valeur du site. Nous ne publions que des lieux réellement singuliers. Si votre établissement ne correspond pas à notre ligne, nous vous le disons franchement et nous ne vous facturons rien.</p></details>
+    <details><summary>Y a-t-il un engagement ?</summary><p>Aucun. L'abonnement est mensuel et résiliable à tout moment, sans frais.</p></details>
+    <details><summary>Prenez-vous une commission sur mes réservations ?</summary><p>Non. Les réservations faites via votre site ou votre téléphone sont 100 % pour vous. Les liens vers Booking.com fonctionnent comme d'habitude : c'est Booking qui nous rémunère, sans surcoût pour vous.</p></details>
+    <details><summary>Les visiteurs savent-ils que je suis partenaire ?</summary><p>Oui : la loi l'impose et c'est une question de confiance. Les fiches payantes portent la mention « Partenaire », et les publications Instagram sponsorisées la mention « Collaboration commerciale ».</p></details>
+    <details><summary>Comment se passe le paiement ?</summary><p>Après validation, vous recevez un lien de paiement sécurisé (carte bancaire ou prélèvement SEPA). Une facture vous est envoyée chaque mois.</p></details>
+  </section>
+
+  <footer id="site-footer" class="site-footer"></footer>
+
+  <script src="js/config.js"></script>
+  <script src="js/hotels.js"></script>
+  <script src="js/common.js"></script>
+  <script src="js/hoteliers.js"></script>
+</body>
+</html>

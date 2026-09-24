@@ -152,11 +152,40 @@
         <h2>Votre établissement sort de l'ordinaire ?</h2>
         <p>Rejoignez la sélection et touchez des voyageurs qui cherchent exactement ce que vous proposez.</p>
       </div>
-      <a class="btn btn-light" id="hotelier-cta" href="#">Proposer mon hôtel</a>
+      <a class="btn btn-light" href="hoteliers.html">Découvrir nos offres</a>
     </div>
   </section>
 
+  <!-- ===== NEWSLETTER ===== -->
+  <section class="section section-tint" id="newsletter">
+    <div class="container nl-band">
+      <div>
+        <p class="eyebrow dark">Newsletter</p>
+        <h2 id="nl-title"></h2>
+        <p class="lead" id="nl-pitch"></p>
+      </div>
+      <div id="nl-slot"></div>
+    </div>
+  </section>
+
+  <!-- ===== INSTAGRAM ===== -->
+  <section class="section container" id="instagram">
+    <div class="section-head row">
+      <div>
+        <p class="eyebrow dark">Instagram</p>
+        <h2>Rêvez avec nous <span id="ig-handle" class="ig-handle"></span></h2>
+      </div>
+      <a class="link-arrow" id="ig-follow" href="#" target="_blank" rel="noopener">Nous suivre →</a>
+    </div>
+    <div class="ig-grid" id="ig-grid"></div>
+  </section>
+
   <footer id="site-footer" class="site-footer"></footer>
+
+  <!-- Formulaires cachés : permettent à Netlify Forms de détecter les formulaires au déploiement -->
+  <form name="newsletter" data-netlify="true" netlify-honeypot="bot-field" hidden>
+    <input name="email"><input name="origine"><input name="bot-field">
+  </form>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
   <script src="js/config.js"></script>
