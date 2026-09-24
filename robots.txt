@@ -3,4 +3,4 @@ Allow: /
 Disallow: /studio.html
 Disallow: /_review/
 
-Sitemap: https://www.exemple.fr/sitemap.xml
+Sitemap: https://nuits-singulieres.pages.dev/sitemap.xml

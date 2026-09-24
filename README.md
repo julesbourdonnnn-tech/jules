@@ -56,6 +56,16 @@ python3 -m http.server 8000
 # puis ouvre http://localhost:8000
 ```
 
+## Mise en ligne sur Cloudflare Pages (automatique)
+
+La GitHub Action « Cloudflare » publie le site sur **https://nuits-singulieres.pages.dev** à chaque modification. À faire une seule fois :
+1. Sur Cloudflare : **My Profile → API Tokens → Create Token**, modèle « Edit Cloudflare Workers » (ou un jeton personnalisé avec la permission *Account → Cloudflare Pages → Edit*). Copie le jeton.
+2. Note ton **Account ID** (colonne de droite de la page d'accueil de ton compte Cloudflare, ou dans l'URL `dash.cloudflare.com/<account-id>`).
+3. Sur GitHub : **Settings → Secrets and variables → Actions → New repository secret** : ajoute `CLOUDFLARE_API_TOKEN` et `CLOUDFLARE_ACCOUNT_ID`.
+4. Onglet **Actions → Cloudflare → Run workflow**.
+
+Seul le dossier `dist/` (préparé par `scripts/dist.js`) est publié : les outils internes (`_review`, `data`, `scripts`) ne sont pas en ligne.
+
 ## Mettre en ligne (gratuit)
 
 - **Netlify** : glisse-dépose le dossier sur <https://app.netlify.com/drop>

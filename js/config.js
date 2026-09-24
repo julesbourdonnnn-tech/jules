@@ -8,7 +8,7 @@ window.SITE_CONFIG = {
   siteName: "Nuits Singulières",
   tagline: "Les hôtels les plus extraordinaires de France",
   contactEmail: "contact@exemple.fr",
-  siteUrl: "https://www.exemple.fr", // ton nom de domaine, sert aux liens générés dans le Studio
+  siteUrl: "https://nuits-singulieres.pages.dev", // ton nom de domaine, sert aux liens générés dans le Studio
 
   // Booking.com Affiliate Partner Programme
   // -> https://www.booking.com/affiliate-program/
