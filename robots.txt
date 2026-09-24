@@ -3,4 +3,4 @@ Allow: /
 Disallow: /studio.html
 Disallow: /_review/
 
-Sitemap: https://jules.jules-bourdonnnn.workers.dev/sitemap.xml
+Sitemap: https://nuitsinguliere.com/sitemap.xml

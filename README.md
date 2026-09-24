@@ -39,7 +39,7 @@ Chaque établissement a sa **vraie page** (`hotels/<id>.html`) et chaque thème 
 Ces pages sont fabriquées par `node scripts/build.js` à partir de `js/hotels.js` et `js/guides.js`. **Tu n'as rien à lancer** : la GitHub Action « Build » les régénère à chaque modification, et Netlify aussi à chaque déploiement.
 
 - **Ajouter un guide** : copie un bloc dans `js/guides.js` (titre, texte d'introduction, conseils, et règle de sélection des établissements).
-- **Avant la mise en ligne** : mets ton vrai nom de domaine dans `siteUrl` (`js/config.js`), puis déclare `https://ton-domaine.fr/sitemap.xml` dans la Google Search Console.
+- **Avant la mise en ligne** : le nom de domaine est dans `siteUrl` (`js/config.js`) ; déclare `https://nuitsinguliere.com/sitemap.xml` dans la Google Search Console.
 
 ## Voir le site en local
 
@@ -50,15 +50,9 @@ python3 -m http.server 8000
 # puis ouvre http://localhost:8000
 ```
 
-## Mise en ligne sur Cloudflare Pages (automatique)
+## Mise en ligne sur Cloudflare (automatique)
 
-La GitHub Action « Cloudflare » publie le site sur **https://jules.jules-bourdonnnn.workers.dev** à chaque modification. À faire une seule fois :
-1. Sur Cloudflare : **My Profile → API Tokens → Create Token**, modèle « Edit Cloudflare Workers » (ou un jeton personnalisé avec la permission *Account → Cloudflare Pages → Edit*). Copie le jeton.
-2. Note ton **Account ID** (colonne de droite de la page d'accueil de ton compte Cloudflare, ou dans l'URL `dash.cloudflare.com/<account-id>`).
-3. Sur GitHub : **Settings → Secrets and variables → Actions → New repository secret** : ajoute `CLOUDFLARE_API_TOKEN` et `CLOUDFLARE_ACCOUNT_ID`.
-4. Onglet **Actions → Cloudflare → Run workflow**.
-
-Seul le dossier `dist/` (préparé par `scripts/dist.js`) est publié : les outils internes (`_review`, `data`, `scripts`) ne sont pas en ligne.
+Le site est publié par le Worker Cloudflare « jules » (configuration : `wrangler.jsonc`) à chaque modification poussée sur GitHub, sur **https://nuitsinguliere.com**.
 
 ## Mettre en ligne (gratuit)
 
