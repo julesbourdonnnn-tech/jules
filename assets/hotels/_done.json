@@ -1,0 +1,176 @@
+{
+ "loire-valley-lodges": [
+  3,
+  9,
+  4,
+  6,
+  12,
+  8
+ ],
+ "phare-de-kerbel": [
+  7,
+  17,
+  2,
+  10,
+  19,
+  24
+ ],
+ "les-roches-rouges": [
+  5,
+  1,
+  9,
+  7,
+  11,
+  6
+ ],
+ "refuge-de-solaise": [
+  5,
+  1,
+  11,
+  8,
+  3,
+  21
+ ],
+ "la-coorniche": [
+  1,
+  19,
+  7,
+  12,
+  22,
+  2
+ ],
+ "hotel-particulier-montmartre": [
+  2,
+  3,
+  6,
+  5,
+  13,
+  16
+ ],
+ "pella-roca": [
+  19,
+  20,
+  2,
+  8,
+  17,
+  23
+ ],
+ "cabanes-des-grands-lacs": [
+  1,
+  10,
+  19,
+  17,
+  24,
+  21
+ ],
+ "alpinest": [
+  1,
+  11,
+  5,
+  8,
+  15,
+  14
+ ],
+ "cabanes-du-moulin": [
+  5,
+  1,
+  6,
+  11,
+  13,
+  14
+ ],
+ "les-hautes-roches": [
+  21,
+  1,
+  23,
+  22,
+  24
+ ],
+ "troglododo": [
+  3,
+  2,
+  13,
+  1,
+  15,
+  8
+ ],
+ "rocaminori": [
+  16,
+  6,
+  21,
+  3,
+  18,
+  12
+ ],
+ "demeure-de-la-vignole": [
+  9,
+  8,
+  7,
+  21,
+  23,
+  5
+ ],
+ "domaine-des-etangs": [
+  1,
+  10,
+  6,
+  3,
+  5,
+  23
+ ],
+ "hotel-le-corbusier": [
+  16,
+  17,
+  5,
+  13,
+  21,
+  22
+ ],
+ "cour-des-loges": [
+  1,
+  6,
+  9,
+  8,
+  11,
+  5
+ ],
+ "chateau-de-la-resle": [
+  1,
+  17,
+  3,
+  4,
+  22,
+  20
+ ],
+ "auberge-saint-pierre": [
+  4,
+  7,
+  3,
+  15,
+  12,
+  17
+ ],
+ "sources-de-caudalie": [
+  11,
+  16,
+  1,
+  2,
+  14,
+  12
+ ],
+ "fermes-de-marie": [
+  1,
+  2,
+  6,
+  5,
+  3,
+  13
+ ],
+ "off-paris-seine": [
+  1,
+  3,
+  4,
+  6,
+  2
+ ]
+}
