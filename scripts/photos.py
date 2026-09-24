@@ -267,6 +267,13 @@ def fetch_selected(hid, picks, report):
     return saved
 
 
+def visited_sources(entry, hotel):
+    """Pages sources utilisées lors du dernier repérage (les premières pages visitées)."""
+    if "sources" in entry:
+        return entry["sources"]
+    return [p["url"] for p in entry.get("pages", [])][:len(hotel["pages"])]
+
+
 def main():
     sources = load(SOURCES, [])
     report = load(REPORT, {})
@@ -275,7 +282,7 @@ def main():
     # À (re)faire : hôtels nouveaux, demandés explicitement, ou dont les pages sources ont changé
     todo = [h for h in sources
             if h["id"] not in report or h["id"] in only
-            or report[h["id"]].get("sources", h["pages"]) != h["pages"]]
+            or visited_sources(report[h["id"]], h) != h["pages"]]
 
     def work(hotel):
         if time.time() - START > TIME_BUDGET:
