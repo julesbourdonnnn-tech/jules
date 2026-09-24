@@ -150,6 +150,7 @@
 
     // Projecteur sur les coups de cœur
     initSpotlight();
+    renderMapTeaser();
 
     // Newsletter
     const nl = window.SITE_CONFIG.newsletter;
@@ -170,6 +171,24 @@
           <span>${escapeHtml(h.name)}</span>
         </a>`).join("");
     }
+  }
+
+  /* ---------- Vitrine de la carte : contour de la France + un point par lieu ---------- */
+  const FRANCE_OUTLINE = [[51.08,2.54],[50.95,1.85],[50.72,1.6],[50.2,1.55],[49.92,1.08],[49.7,0.2],[49.48,0.1],[49.3,-0.3],[49.4,-1.1],[49.65,-1.3],[49.7,-1.95],[49.2,-1.6],[48.65,-1.55],[48.65,-2],[48.85,-3],[48.8,-3.6],[48.7,-4.3],[48.4,-4.8],[48.05,-4.7],[47.8,-4.3],[47.7,-3.4],[47.5,-2.9],[47.25,-2.2],[46.8,-2.1],[46.4,-1.5],[46.1,-1.2],[45.6,-1.2],[45,-1.2],[44.6,-1.25],[43.9,-1.4],[43.45,-1.6],[43.3,-1.8],[43.05,-1.3],[42.8,-0.5],[42.7,0.6],[42.6,1.4],[42.45,2.2],[42.43,3.17],[43,3.05],[43.3,3.5],[43.5,4.2],[43.35,4.9],[43.2,5.4],[43.1,6],[43.2,6.6],[43.5,7],[43.75,7.5],[44.1,7.7],[44.4,6.9],[45.1,6.7],[45.4,7.1],[45.9,6.9],[46.2,6.1],[46.5,6.1],[46.9,6.5],[47.4,7],[47.55,7.6],[48,7.6],[48.6,7.8],[49,8.2],[49.1,7],[49.5,6.4],[49.55,5.8],[49.8,5],[50.1,4.8],[50,4.2],[50.35,3.7],[50.8,2.9]];
+  const CORSICA_OUTLINE = [[43,9.4],[42.7,9.45],[42.4,9.55],[42,9.4],[41.6,9.3],[41.37,9.2],[41.6,8.8],[41.9,8.6],[42.2,8.6],[42.4,8.7],[42.6,8.9],[42.8,9.3]];
+  function renderMapTeaser() {
+    const box = $("#map-teaser-art");
+    if (!box) return;
+    const K = Math.cos((46.5 * Math.PI) / 180), S = 60;
+    const xy = ([lat, lng]) => [((lng + 5.4) * K * S).toFixed(1), ((51.4 - lat) * S).toFixed(1)];
+    const path = (pts) => "M" + pts.map((p) => xy(p).join(",")).join("L") + "Z";
+    const dots = HOTELS.map((h, i) => {
+      const [x, y] = xy([h.lat, h.lng]);
+      return `<circle class="ring" cx="${x}" cy="${y}" r="7" style="animation-delay:${(i * 0.37) % 2.8}s"/><circle class="dot" cx="${x}" cy="${y}" r="6" style="animation-delay:${0.3 + i * 0.04}s"><title>${escapeHtml(h.name)}</title></circle>`;
+    }).join("");
+    const w = (15.2 * K * S).toFixed(0), hgt = (10.4 * S).toFixed(0);
+    box.innerHTML = `<svg viewBox="0 0 ${w} ${hgt}" role="img"><path class="fr" d="${path(FRANCE_OUTLINE)} ${path(CORSICA_OUTLINE)}"/>${dots}</svg>`;
+    $("#map-teaser-text").textContent = `${HOTELS.length} lieux hors du commun, du Finistère à la Corse. Zoomez, explorez, laissez-vous surprendre.`;
   }
 
   function initSpotlight() {

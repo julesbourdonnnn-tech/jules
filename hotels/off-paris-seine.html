@@ -19,7 +19,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,600;1,9..144,300;1,9..144,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+  <link rel="stylesheet" href="../vendor/leaflet/leaflet.css">
   <link rel="stylesheet" href="../css/style.css">
   <script type="application/ld+json">{"@context":"https://schema.org","@type":"Hotel","name":"OFF Paris Seine","description":"Amarré au pied de la gare d'Austerlitz, le OFF est le premier hôtel flottant de Paris. Deux coques surmontées d'une structure de bois, de zinc, de cuivre et de verre abritent des chambres aménagées comme des cabines, les pieds dans l'eau. Au centre, une piscine chauffée semble se jeter dans la Seine. Le soir, le bar sur le pont offre l'une des plus belles vues sur les quais.","url":"https://www.exemple.fr/hotels/off-paris-seine.html","image":["https://www.exemple.fr/assets/hotels/off-paris-seine/1.jpg","https://www.exemple.fr/assets/hotels/off-paris-seine/2.jpg","https://www.exemple.fr/assets/hotels/off-paris-seine/3.jpg","https://www.exemple.fr/assets/hotels/off-paris-seine/4.jpg","https://www.exemple.fr/assets/hotels/off-paris-seine/5.jpg"],"address":{"@type":"PostalAddress","streetAddress":"Port d'Austerlitz, 75013 Paris","addressLocality":"Paris","addressRegion":"Île-de-France","addressCountry":"FR"},"geo":{"@type":"GeoCoordinates","latitude":48.8413,"longitude":2.3698},"priceRange":"€€€","amenityFeature":[{"@type":"LocationFeatureSpecification","name":"Piscine chauffée","value":true},{"@type":"LocationFeatureSpecification","name":"Bar","value":true},{"@type":"LocationFeatureSpecification","name":"Restaurant","value":true},{"@type":"LocationFeatureSpecification","name":"Terrasse sur la Seine","value":true}]}</script>
   <script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Accueil","item":"https://www.exemple.fr/"},{"@type":"ListItem","position":2,"name":"Ville","item":"https://www.exemple.fr/index.html?env=ville"},{"@type":"ListItem","position":3,"name":"OFF Paris Seine","item":"https://www.exemple.fr/hotels/off-paris-seine.html"}]}</script>
@@ -33,6 +33,7 @@
       </a>
       <nav class="nav" aria-label="Navigation principale">
         <a href="../index.html#destinations">Ambiances</a>
+        <a href="../carte.html">La carte</a>
         <a href="../guides/index.html">Guides</a>
         <a href="../index.html#explorer">Tous les lieux</a>
         <a href="../hoteliers.html">Hôteliers</a>
@@ -124,7 +125,7 @@
         
         <section class="in-guides reveal">
           <h2>Cette adresse figure dans nos guides</h2>
-          <ul><li><a href="../guides/hotels-insolites-en-ville.html">4 hôtels insolites en ville : Paris, Lyon, Marseille →</a></li></ul>
+          <ul><li><a href="../guides/hotels-insolites-en-ville.html">9 hôtels insolites en ville : Paris, Lyon, Marseille →</a></li><li><a href="../guides/hotels-insolites-paris.html">5 hôtels insolites à Paris et aux portes de Paris →</a></li></ul>
         </section>
 
         <div class="nl-inline reveal">
@@ -170,6 +171,30 @@
         </div>
       </div>
       <div class="rail rail-cards" id="similar-rail">
+      <article class="card " data-id="maison-souquet">
+        <div class="card-media">
+          <a class="card-slides" href="../hotels/maison-souquet.html" tabindex="-1" aria-hidden="true">
+            <img src="../assets/hotels/maison-souquet/1-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false" width="900" height="675"><img src="../assets/hotels/maison-souquet/2-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false"><img src="../assets/hotels/maison-souquet/3-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false">
+          </a>
+          
+            <button type="button" class="card-nav prev" data-slide="-1" aria-label="Photo précédente">‹</button>
+            <button type="button" class="card-nav next" data-slide="1" aria-label="Photo suivante">›</button>
+            <div class="card-dots"><span class="on"></span><span class=""></span><span class=""></span></div>
+          <span class="badge">Ville</span>
+          
+          
+    <button type="button" class="fav  " data-fav="maison-souquet"
+      aria-pressed="false" aria-label="Ajouter Maison Souquet à mes coups de cœur"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.6-9.3C.9 8.3 3 4.5 6.7 4.5c2.1 0 3.6 1.2 4.3 2.4.7-1.2 2.2-2.4 4.3-2.4 3.7 0 5.8 3.8 4.3 7.2C19.5 16.4 12 21 12 21z"/></svg></button>
+          
+        </div>
+        <a class="card-body" href="../hotels/maison-souquet.html">
+          <p class="card-type">🏛️ Lieu chargé d&#39;histoire</p>
+          <h3>Maison Souquet</h3>
+          <p class="card-place">Paris · Île-de-France</p>
+          <p class="card-tagline">Une ancienne maison close de la Belle Époque, au pied de Montmartre</p>
+          <p class="card-foot"><span class="budget" title="plus de 450 € la nuit">€€€€<span class="budget-off"></span></span><span class="card-more">Découvrir →</span></p>
+        </a>
+      </article>
       <article class="card " data-id="hotel-particulier-montmartre">
         <div class="card-media">
           <a class="card-slides" href="../hotels/hotel-particulier-montmartre.html" tabindex="-1" aria-hidden="true">
@@ -194,6 +219,78 @@
           <p class="card-foot"><span class="budget" title="250 à 450 € la nuit">€€€<span class="budget-off">€</span></span><span class="card-more">Découvrir →</span></p>
         </a>
       </article>
+      <article class="card " data-id="molitor">
+        <div class="card-media">
+          <a class="card-slides" href="../hotels/molitor.html" tabindex="-1" aria-hidden="true">
+            <img src="../assets/hotels/molitor/1-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false" width="900" height="675"><img src="../assets/hotels/molitor/2-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false"><img src="../assets/hotels/molitor/3-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false"><img src="../assets/hotels/molitor/4-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false"><img src="../assets/hotels/molitor/5-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false">
+          </a>
+          
+            <button type="button" class="card-nav prev" data-slide="-1" aria-label="Photo précédente">‹</button>
+            <button type="button" class="card-nav next" data-slide="1" aria-label="Photo suivante">›</button>
+            <div class="card-dots"><span class="on"></span><span class=""></span><span class=""></span><span class=""></span><span class=""></span></div>
+          <span class="badge">Ville</span>
+          
+          
+    <button type="button" class="fav  " data-fav="molitor"
+      aria-pressed="false" aria-label="Ajouter Molitor à mes coups de cœur"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.6-9.3C.9 8.3 3 4.5 6.7 4.5c2.1 0 3.6 1.2 4.3 2.4.7-1.2 2.2-2.4 4.3-2.4 3.7 0 5.8 3.8 4.3 7.2C19.5 16.4 12 21 12 21z"/></svg></button>
+          
+        </div>
+        <a class="card-body" href="../hotels/molitor.html">
+          <p class="card-type">✨ Design &amp; architecture</p>
+          <h3>Molitor</h3>
+          <p class="card-place">Paris · Île-de-France</p>
+          <p class="card-tagline">Dormir autour de la mythique piscine Art déco de Paris</p>
+          <p class="card-foot"><span class="budget" title="plus de 450 € la nuit">€€€€<span class="budget-off"></span></span><span class="card-more">Découvrir →</span></p>
+        </a>
+      </article>
+      <article class="card " data-id="grand-controle-versailles">
+        <div class="card-media">
+          <a class="card-slides" href="../hotels/grand-controle-versailles.html" tabindex="-1" aria-hidden="true">
+            <img src="../assets/hotels/grand-controle-versailles/1-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false" width="900" height="675"><img src="../assets/hotels/grand-controle-versailles/2-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false"><img src="../assets/hotels/grand-controle-versailles/3-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false"><img src="../assets/hotels/grand-controle-versailles/4-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false"><img src="../assets/hotels/grand-controle-versailles/5-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false">
+          </a>
+          
+            <button type="button" class="card-nav prev" data-slide="-1" aria-label="Photo précédente">‹</button>
+            <button type="button" class="card-nav next" data-slide="1" aria-label="Photo suivante">›</button>
+            <div class="card-dots"><span class="on"></span><span class=""></span><span class=""></span><span class=""></span><span class=""></span></div>
+          <span class="badge">Ville</span>
+          
+          
+    <button type="button" class="fav  " data-fav="grand-controle-versailles"
+      aria-pressed="false" aria-label="Ajouter Le Grand Contrôle – Château de Versailles à mes coups de cœur"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.6-9.3C.9 8.3 3 4.5 6.7 4.5c2.1 0 3.6 1.2 4.3 2.4.7-1.2 2.2-2.4 4.3-2.4 3.7 0 5.8 3.8 4.3 7.2C19.5 16.4 12 21 12 21z"/></svg></button>
+          
+        </div>
+        <a class="card-body" href="../hotels/grand-controle-versailles.html">
+          <p class="card-type">🏰 Château</p>
+          <h3>Le Grand Contrôle – Château de Versailles</h3>
+          <p class="card-place">Versailles · Île-de-France</p>
+          <p class="card-tagline">Le seul hôtel dans le domaine du château de Versailles</p>
+          <p class="card-foot"><span class="budget" title="plus de 450 € la nuit">€€€€<span class="budget-off"></span></span><span class="card-more">Découvrir →</span></p>
+        </a>
+      </article>
+      <article class="card " data-id="toue-cabanee-canal-de-bourgogne">
+        <div class="card-media">
+          <a class="card-slides" href="../hotels/toue-cabanee-canal-de-bourgogne.html" tabindex="-1" aria-hidden="true">
+            <img src="../assets/hotels/toue-cabanee-canal-de-bourgogne/1-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false" width="900" height="675"><img src="../assets/hotels/toue-cabanee-canal-de-bourgogne/2-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false"><img src="../assets/hotels/toue-cabanee-canal-de-bourgogne/3-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false"><img src="../assets/hotels/toue-cabanee-canal-de-bourgogne/4-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false"><img src="../assets/hotels/toue-cabanee-canal-de-bourgogne/5-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false">
+          </a>
+          
+            <button type="button" class="card-nav prev" data-slide="-1" aria-label="Photo précédente">‹</button>
+            <button type="button" class="card-nav next" data-slide="1" aria-label="Photo suivante">›</button>
+            <div class="card-dots"><span class="on"></span><span class=""></span><span class=""></span><span class=""></span><span class=""></span></div>
+          <span class="badge">Campagne</span>
+          
+          
+    <button type="button" class="fav  " data-fav="toue-cabanee-canal-de-bourgogne"
+      aria-pressed="false" aria-label="Ajouter La Toue cabanée du Canal de Bourgogne à mes coups de cœur"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.6-9.3C.9 8.3 3 4.5 6.7 4.5c2.1 0 3.6 1.2 4.3 2.4.7-1.2 2.2-2.4 4.3-2.4 3.7 0 5.8 3.8 4.3 7.2C19.5 16.4 12 21 12 21z"/></svg></button>
+          
+        </div>
+        <a class="card-body" href="../hotels/toue-cabanee-canal-de-bourgogne.html">
+          <p class="card-type">🛶 Sur l&#39;eau</p>
+          <h3>La Toue cabanée du Canal de Bourgogne</h3>
+          <p class="card-place">Chassey · Bourgogne-Franche-Comté</p>
+          <p class="card-tagline">Un bateau-cabane amarré devant une maison d&#39;éclusier</p>
+          <p class="card-foot"><span class="budget" title="150 à 250 € la nuit">€€<span class="budget-off">€€</span></span><span class="card-more">Découvrir →</span></p>
+        </a>
+      </article>
       <article class="card " data-id="cour-des-loges">
         <div class="card-media">
           <a class="card-slides" href="../hotels/cour-des-loges.html" tabindex="-1" aria-hidden="true">
@@ -216,102 +313,6 @@
           <p class="card-place">Lyon · Auvergne-Rhône-Alpes</p>
           <p class="card-tagline">Quatre demeures Renaissance reliées par six cours, au cœur du Vieux Lyon</p>
           <p class="card-foot"><span class="budget" title="plus de 450 € la nuit">€€€€<span class="budget-off"></span></span><span class="card-more">Découvrir →</span></p>
-        </a>
-      </article>
-      <article class="card " data-id="hotel-le-corbusier">
-        <div class="card-media">
-          <a class="card-slides" href="../hotels/hotel-le-corbusier.html" tabindex="-1" aria-hidden="true">
-            <img src="../assets/hotels/hotel-le-corbusier/1-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false" width="900" height="675"><img src="../assets/hotels/hotel-le-corbusier/2-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false"><img src="../assets/hotels/hotel-le-corbusier/3-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false"><img src="../assets/hotels/hotel-le-corbusier/4-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false"><img src="../assets/hotels/hotel-le-corbusier/5-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false">
-          </a>
-          
-            <button type="button" class="card-nav prev" data-slide="-1" aria-label="Photo précédente">‹</button>
-            <button type="button" class="card-nav next" data-slide="1" aria-label="Photo suivante">›</button>
-            <div class="card-dots"><span class="on"></span><span class=""></span><span class=""></span><span class=""></span><span class=""></span></div>
-          <span class="badge">Ville</span>
-          
-          
-    <button type="button" class="fav  " data-fav="hotel-le-corbusier"
-      aria-pressed="false" aria-label="Ajouter Hôtel Le Corbusier à mes coups de cœur"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.6-9.3C.9 8.3 3 4.5 6.7 4.5c2.1 0 3.6 1.2 4.3 2.4.7-1.2 2.2-2.4 4.3-2.4 3.7 0 5.8 3.8 4.3 7.2C19.5 16.4 12 21 12 21z"/></svg></button>
-          
-        </div>
-        <a class="card-body" href="../hotels/hotel-le-corbusier.html">
-          <p class="card-type">✨ Design &amp; architecture</p>
-          <h3>Hôtel Le Corbusier</h3>
-          <p class="card-place">Marseille · Provence-Alpes-Côte d&#39;Azur</p>
-          <p class="card-tagline">Dormir dans la Cité radieuse, chef-d&#39;œuvre classé à l&#39;UNESCO</p>
-          <p class="card-foot"><span class="budget" title="moins de 150 € la nuit">€<span class="budget-off">€€€</span></span><span class="card-more">Découvrir →</span></p>
-        </a>
-      </article>
-      <article class="card " data-id="cabanes-du-moulin">
-        <div class="card-media">
-          <a class="card-slides" href="../hotels/cabanes-du-moulin.html" tabindex="-1" aria-hidden="true">
-            <img src="../assets/hotels/cabanes-du-moulin/1-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false" width="900" height="675"><img src="../assets/hotels/cabanes-du-moulin/2-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false"><img src="../assets/hotels/cabanes-du-moulin/3-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false"><img src="../assets/hotels/cabanes-du-moulin/4-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false"><img src="../assets/hotels/cabanes-du-moulin/5-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false">
-          </a>
-          
-            <button type="button" class="card-nav prev" data-slide="-1" aria-label="Photo précédente">‹</button>
-            <button type="button" class="card-nav next" data-slide="1" aria-label="Photo suivante">›</button>
-            <div class="card-dots"><span class="on"></span><span class=""></span><span class=""></span><span class=""></span><span class=""></span></div>
-          <span class="badge">Campagne</span>
-          
-          
-    <button type="button" class="fav  " data-fav="cabanes-du-moulin"
-      aria-pressed="false" aria-label="Ajouter Les Cabanes du Moulin à mes coups de cœur"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.6-9.3C.9 8.3 3 4.5 6.7 4.5c2.1 0 3.6 1.2 4.3 2.4.7-1.2 2.2-2.4 4.3-2.4 3.7 0 5.8 3.8 4.3 7.2C19.5 16.4 12 21 12 21z"/></svg></button>
-          
-        </div>
-        <a class="card-body" href="../hotels/cabanes-du-moulin.html">
-          <p class="card-type">🌳 Cabane perchée</p>
-          <h3>Les Cabanes du Moulin</h3>
-          <p class="card-place">Orly-sur-Morin · Île-de-France</p>
-          <p class="card-tagline">Trois cabanes-spa perchées au bord de la rivière, à 45 minutes de Paris</p>
-          <p class="card-foot"><span class="budget" title="150 à 250 € la nuit">€€<span class="budget-off">€€</span></span><span class="card-more">Découvrir →</span></p>
-        </a>
-      </article>
-      <article class="card " data-id="chateau-de-la-resle">
-        <div class="card-media">
-          <a class="card-slides" href="../hotels/chateau-de-la-resle.html" tabindex="-1" aria-hidden="true">
-            <img src="../assets/hotels/chateau-de-la-resle/1-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false" width="900" height="675"><img src="../assets/hotels/chateau-de-la-resle/2-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false"><img src="../assets/hotels/chateau-de-la-resle/3-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false"><img src="../assets/hotels/chateau-de-la-resle/4-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false"><img src="../assets/hotels/chateau-de-la-resle/5-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false">
-          </a>
-          
-            <button type="button" class="card-nav prev" data-slide="-1" aria-label="Photo précédente">‹</button>
-            <button type="button" class="card-nav next" data-slide="1" aria-label="Photo suivante">›</button>
-            <div class="card-dots"><span class="on"></span><span class=""></span><span class=""></span><span class=""></span><span class=""></span></div>
-          <span class="badge">Campagne</span>
-          
-          
-    <button type="button" class="fav  " data-fav="chateau-de-la-resle"
-      aria-pressed="false" aria-label="Ajouter Château de la Resle à mes coups de cœur"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.6-9.3C.9 8.3 3 4.5 6.7 4.5c2.1 0 3.6 1.2 4.3 2.4.7-1.2 2.2-2.4 4.3-2.4 3.7 0 5.8 3.8 4.3 7.2C19.5 16.4 12 21 12 21z"/></svg></button>
-          
-        </div>
-        <a class="card-body" href="../hotels/chateau-de-la-resle.html">
-          <p class="card-type">🏰 Château</p>
-          <h3>Château de la Resle</h3>
-          <p class="card-place">Montigny-la-Resle · Bourgogne-Franche-Comté</p>
-          <p class="card-tagline">Un château du XVIIe siècle rempli d&#39;art contemporain, près de Chablis</p>
-          <p class="card-foot"><span class="budget" title="250 à 450 € la nuit">€€€<span class="budget-off">€</span></span><span class="card-more">Découvrir →</span></p>
-        </a>
-      </article>
-      <article class="card " data-id="les-hautes-roches">
-        <div class="card-media">
-          <a class="card-slides" href="../hotels/les-hautes-roches.html" tabindex="-1" aria-hidden="true">
-            <img src="../assets/hotels/les-hautes-roches/1-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false" width="900" height="675"><img src="../assets/hotels/les-hautes-roches/2-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false"><img src="../assets/hotels/les-hautes-roches/3-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false"><img src="../assets/hotels/les-hautes-roches/4-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false"><img src="../assets/hotels/les-hautes-roches/5-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false">
-          </a>
-          
-            <button type="button" class="card-nav prev" data-slide="-1" aria-label="Photo précédente">‹</button>
-            <button type="button" class="card-nav next" data-slide="1" aria-label="Photo suivante">›</button>
-            <div class="card-dots"><span class="on"></span><span class=""></span><span class=""></span><span class=""></span><span class=""></span></div>
-          <span class="badge">Campagne</span>
-          
-          
-    <button type="button" class="fav  " data-fav="les-hautes-roches"
-      aria-pressed="false" aria-label="Ajouter Les Hautes Roches à mes coups de cœur"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.6-9.3C.9 8.3 3 4.5 6.7 4.5c2.1 0 3.6 1.2 4.3 2.4.7-1.2 2.2-2.4 4.3-2.4 3.7 0 5.8 3.8 4.3 7.2C19.5 16.4 12 21 12 21z"/></svg></button>
-          
-        </div>
-        <a class="card-body" href="../hotels/les-hautes-roches.html">
-          <p class="card-type">🪨 Troglodyte</p>
-          <h3>Les Hautes Roches</h3>
-          <p class="card-place">Rochecorbon · Centre-Val de Loire</p>
-          <p class="card-tagline">Des chambres creusées dans la falaise, au bord de la Loire</p>
-          <p class="card-foot"><span class="budget" title="250 à 450 € la nuit">€€€<span class="budget-off">€</span></span><span class="card-more">Découvrir →</span></p>
         </a>
       </article></div>
     </section>
@@ -353,13 +354,13 @@
           <p class="muted">Les hôtels les plus extraordinaires de France. Une sélection d'adresses rares, choisies une à une.</p>
         </div>
         <div><h4>Ambiances</h4><ul><li><a href="../index.html?env=ville#explorer">Hôtels insolites en ville</a></li><li><a href="../index.html?env=campagne#explorer">Hôtels insolites à la campagne</a></li><li><a href="../index.html?env=mer#explorer">Hôtels insolites en bord de mer</a></li><li><a href="../index.html?env=montagne#explorer">Hôtels insolites à la montagne</a></li></ul></div>
-        <div><h4>Nos guides</h4><ul><li><a href="../guides/nuit-insolite-en-amoureux.html">Nuits insolites en amoureux</a></li><li><a href="../guides/cabanes-perchees.html">Les plus belles cabanes perchées</a></li><li><a href="../guides/week-end-insolite-pres-de-paris.html">Week-end insolite près de Paris</a></li><li><a href="../guides/hotels-troglodytes.html">Dormir dans un hôtel troglodyte</a></li><li><a href="../guides/spa-jacuzzi-privatif.html">Nuits insolites avec spa privatif</a></li><li><a href="../guides/hotels-insolites-bord-de-mer.html">Hôtels insolites en bord de mer</a></li><li><a href="../guides/hotels-insolites-montagne.html">Hôtels insolites à la montagne</a></li><li><a href="../guides/index.html">Tous les guides →</a></li></ul></div>
+        <div><h4>Nos guides</h4><ul><li><a href="../guides/nuit-insolite-en-amoureux.html">Nuits insolites en amoureux</a></li><li><a href="../guides/cabanes-perchees.html">Les plus belles cabanes perchées</a></li><li><a href="../guides/week-end-insolite-pres-de-paris.html">Week-end insolite près de Paris</a></li><li><a href="../guides/hotels-troglodytes.html">Dormir dans un hôtel troglodyte</a></li><li><a href="../guides/spa-jacuzzi-privatif.html">Nuits insolites avec spa privatif</a></li><li><a href="../guides/hotels-insolites-bord-de-mer.html">Hôtels insolites en bord de mer</a></li><li><a href="../guides/hotels-insolites-montagne.html">Hôtels insolites à la montagne</a></li><li><a href="../guides/index.html">Tous les guides →</a></li><li><a href="../carte.html">La carte interactive →</a></li></ul></div>
         <div><h4>Nous suivre</h4><ul><li><a href="https://www.instagram.com/nuits.singulieres/" target="_blank" rel="noopener">Instagram · @nuits.singulieres</a></li><li><a href="../hoteliers.html">Espace hôteliers</a></li><li><a href="mailto:contact@exemple.fr">contact@exemple.fr</a></li><li><a href="../mentions-legales.html">Mentions légales</a></li></ul></div>
       </div>
       <p class="disclosure">Ce site contient des liens affiliés : si vous réservez via nos liens, nous percevons une commission du site partenaire, sans aucun surcoût pour vous. Les établissements marqués « Partenaire » ont souscrit une offre de mise en avant payante, qui améliore leur position dans le tri « Recommandés ». Les niveaux de budget sont indicatifs ; le tarif final est celui du site de réservation. Photos : © les établissements.</p>
       <p class="muted small">© 2026 Nuits Singulières</p></footer>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+  <script src="../vendor/leaflet/leaflet.js"></script>
   <script src="../js/config.js"></script>
   <script src="../js/hotels.js"></script>
   <script src="../js/guides.js"></script>

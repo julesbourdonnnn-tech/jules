@@ -184,6 +184,7 @@
       </a>
       <nav class="nav" aria-label="Navigation principale">
         <a href="${page("index.html#destinations")}">Ambiances</a>
+        <a href="${page("carte.html")}">La carte</a>
         <a href="${page("guides/index.html")}">Guides</a>
         <a href="${page("index.html#explorer")}">Tous les lieux</a>
         <a href="${page("hoteliers.html")}">Hôteliers</a>
@@ -215,7 +216,7 @@
           <p class="muted">${escapeHtml(CONFIG.tagline)}. Une sélection d'adresses rares, choisies une à une.</p>
         </div>
         <div><h4>Ambiances</h4><ul>${envLinks}</ul></div>
-        <div><h4>Nos guides</h4><ul>${guideLinks}<li><a href="${page("guides/index.html")}">Tous les guides →</a></li></ul></div>
+        <div><h4>Nos guides</h4><ul>${guideLinks}<li><a href="${page("guides/index.html")}">Tous les guides →</a></li><li><a href="${page("carte.html")}">La carte interactive →</a></li></ul></div>
         <div><h4>Nous suivre</h4><ul>${socials}<li><a href="${page("hoteliers.html")}">Espace hôteliers</a></li><li><a href="mailto:${escapeHtml(CONFIG.contactEmail)}">${escapeHtml(CONFIG.contactEmail)}</a></li><li><a href="${page("mentions-legales.html")}">Mentions légales</a></li></ul></div>
       </div>
       <p class="disclosure">Ce site contient des liens affiliés : si vous réservez via nos liens, nous percevons une commission du site partenaire, sans aucun surcoût pour vous. Les établissements marqués « Partenaire » ont souscrit une offre de mise en avant payante, qui améliore leur position dans le tri « Recommandés ». Les niveaux de budget sont indicatifs ; le tarif final est celui du site de réservation. Photos : © les établissements.</p>

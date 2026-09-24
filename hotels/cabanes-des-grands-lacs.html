@@ -19,7 +19,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,600;1,9..144,300;1,9..144,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+  <link rel="stylesheet" href="../vendor/leaflet/leaflet.css">
   <link rel="stylesheet" href="../css/style.css">
   <script type="application/ld+json">{"@context":"https://schema.org","@type":"Hotel","name":"Cabanes des Grands Lacs","description":"Sur 150 hectares de nature préservée, au pied des Vosges, vingt-neuf cabanes se cachent dans les arbres, flottent sur les étangs ou se dressent sur pilotis. On y accède par des escaliers, des passerelles suspendues ou des échelles, entre 4 et 9 mètres de haut. Le matin, la brume se lève sur l'eau ; le soir, seuls les grenouilles et les hiboux troublent le silence. Une adresse idéale en famille comme en amoureux.","url":"https://www.exemple.fr/hotels/cabanes-des-grands-lacs.html","image":["https://www.exemple.fr/assets/hotels/cabanes-des-grands-lacs/1.jpg","https://www.exemple.fr/assets/hotels/cabanes-des-grands-lacs/2.jpg","https://www.exemple.fr/assets/hotels/cabanes-des-grands-lacs/3.jpg","https://www.exemple.fr/assets/hotels/cabanes-des-grands-lacs/4.jpg","https://www.exemple.fr/assets/hotels/cabanes-des-grands-lacs/5.jpg","https://www.exemple.fr/assets/hotels/cabanes-des-grands-lacs/6.jpg"],"address":{"@type":"PostalAddress","streetAddress":"Domaine des Grands Lacs, 70230 Chassey-lès-Montbozon","addressLocality":"Chassey-lès-Montbozon","addressRegion":"Bourgogne-Franche-Comté","addressCountry":"FR"},"geo":{"@type":"GeoCoordinates","latitude":47.5333,"longitude":6.3333},"priceRange":"€€","amenityFeature":[{"@type":"LocationFeatureSpecification","name":"Petit-déjeuner","value":true},{"@type":"LocationFeatureSpecification","name":"Paniers-repas","value":true},{"@type":"LocationFeatureSpecification","name":"Parking","value":true}]}</script>
   <script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Accueil","item":"https://www.exemple.fr/"},{"@type":"ListItem","position":2,"name":"Campagne","item":"https://www.exemple.fr/index.html?env=campagne"},{"@type":"ListItem","position":3,"name":"Cabanes des Grands Lacs","item":"https://www.exemple.fr/hotels/cabanes-des-grands-lacs.html"}]}</script>
@@ -33,6 +33,7 @@
       </a>
       <nav class="nav" aria-label="Navigation principale">
         <a href="../index.html#destinations">Ambiances</a>
+        <a href="../carte.html">La carte</a>
         <a href="../guides/index.html">Guides</a>
         <a href="../index.html#explorer">Tous les lieux</a>
         <a href="../hoteliers.html">Hôteliers</a>
@@ -125,7 +126,7 @@
         
         <section class="in-guides reveal">
           <h2>Cette adresse figure dans nos guides</h2>
-          <ul><li><a href="../guides/cabanes-perchees.html">Les 6 plus belles cabanes perchées de France →</a></li><li><a href="../guides/nuits-insolites-petit-budget.html">11 nuits insolites pour moins de 250 € la nuit →</a></li></ul>
+          <ul><li><a href="../guides/cabanes-perchees.html">Les 6 plus belles cabanes perchées de France →</a></li><li><a href="../guides/nuits-insolites-petit-budget.html">13 nuits insolites pour moins de 250 € la nuit →</a></li></ul>
         </section>
 
         <div class="nl-inline reveal">
@@ -267,6 +268,30 @@
           <p class="card-foot"><span class="budget" title="moins de 150 € la nuit">€<span class="budget-off">€€€</span></span><span class="card-more">Découvrir →</span></p>
         </a>
       </article>
+      <article class="card " data-id="toue-cabanee-canal-de-bourgogne">
+        <div class="card-media">
+          <a class="card-slides" href="../hotels/toue-cabanee-canal-de-bourgogne.html" tabindex="-1" aria-hidden="true">
+            <img src="../assets/hotels/toue-cabanee-canal-de-bourgogne/1-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false" width="900" height="675"><img src="../assets/hotels/toue-cabanee-canal-de-bourgogne/2-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false"><img src="../assets/hotels/toue-cabanee-canal-de-bourgogne/3-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false"><img src="../assets/hotels/toue-cabanee-canal-de-bourgogne/4-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false"><img src="../assets/hotels/toue-cabanee-canal-de-bourgogne/5-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false">
+          </a>
+          
+            <button type="button" class="card-nav prev" data-slide="-1" aria-label="Photo précédente">‹</button>
+            <button type="button" class="card-nav next" data-slide="1" aria-label="Photo suivante">›</button>
+            <div class="card-dots"><span class="on"></span><span class=""></span><span class=""></span><span class=""></span><span class=""></span></div>
+          <span class="badge">Campagne</span>
+          
+          
+    <button type="button" class="fav  " data-fav="toue-cabanee-canal-de-bourgogne"
+      aria-pressed="false" aria-label="Ajouter La Toue cabanée du Canal de Bourgogne à mes coups de cœur"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.6-9.3C.9 8.3 3 4.5 6.7 4.5c2.1 0 3.6 1.2 4.3 2.4.7-1.2 2.2-2.4 4.3-2.4 3.7 0 5.8 3.8 4.3 7.2C19.5 16.4 12 21 12 21z"/></svg></button>
+          
+        </div>
+        <a class="card-body" href="../hotels/toue-cabanee-canal-de-bourgogne.html">
+          <p class="card-type">🛶 Sur l&#39;eau</p>
+          <h3>La Toue cabanée du Canal de Bourgogne</h3>
+          <p class="card-place">Chassey · Bourgogne-Franche-Comté</p>
+          <p class="card-tagline">Un bateau-cabane amarré devant une maison d&#39;éclusier</p>
+          <p class="card-foot"><span class="budget" title="150 à 250 € la nuit">€€<span class="budget-off">€€</span></span><span class="card-more">Découvrir →</span></p>
+        </a>
+      </article>
       <article class="card " data-id="chateau-de-la-resle">
         <div class="card-media">
           <a class="card-slides" href="../hotels/chateau-de-la-resle.html" tabindex="-1" aria-hidden="true">
@@ -288,30 +313,6 @@
           <h3>Château de la Resle</h3>
           <p class="card-place">Montigny-la-Resle · Bourgogne-Franche-Comté</p>
           <p class="card-tagline">Un château du XVIIe siècle rempli d&#39;art contemporain, près de Chablis</p>
-          <p class="card-foot"><span class="budget" title="250 à 450 € la nuit">€€€<span class="budget-off">€</span></span><span class="card-more">Découvrir →</span></p>
-        </a>
-      </article>
-      <article class="card " data-id="alpinest">
-        <div class="card-media">
-          <a class="card-slides" href="../hotels/alpinest.html" tabindex="-1" aria-hidden="true">
-            <img src="../assets/hotels/alpinest/1-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false" width="900" height="675"><img src="../assets/hotels/alpinest/2-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false"><img src="../assets/hotels/alpinest/3-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false"><img src="../assets/hotels/alpinest/4-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false"><img src="../assets/hotels/alpinest/5-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false">
-          </a>
-          
-            <button type="button" class="card-nav prev" data-slide="-1" aria-label="Photo précédente">‹</button>
-            <button type="button" class="card-nav next" data-slide="1" aria-label="Photo suivante">›</button>
-            <div class="card-dots"><span class="on"></span><span class=""></span><span class=""></span><span class=""></span><span class=""></span></div>
-          <span class="badge">Montagne</span>
-          
-          
-    <button type="button" class="fav  " data-fav="alpinest"
-      aria-pressed="false" aria-label="Ajouter Alpinest à mes coups de cœur"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.6-9.3C.9 8.3 3 4.5 6.7 4.5c2.1 0 3.6 1.2 4.3 2.4.7-1.2 2.2-2.4 4.3-2.4 3.7 0 5.8 3.8 4.3 7.2C19.5 16.4 12 21 12 21z"/></svg></button>
-          
-        </div>
-        <a class="card-body" href="../hotels/alpinest.html">
-          <p class="card-type">🌳 Cabane perchée</p>
-          <h3>Alpinest</h3>
-          <p class="card-place">Serres · Provence-Alpes-Côte d&#39;Azur</p>
-          <p class="card-tagline">Des cabanes-spa dans les arbres, entre Alpes et Provence</p>
           <p class="card-foot"><span class="budget" title="250 à 450 € la nuit">€€€<span class="budget-off">€</span></span><span class="card-more">Découvrir →</span></p>
         </a>
       </article></div>
@@ -354,13 +355,13 @@
           <p class="muted">Les hôtels les plus extraordinaires de France. Une sélection d'adresses rares, choisies une à une.</p>
         </div>
         <div><h4>Ambiances</h4><ul><li><a href="../index.html?env=ville#explorer">Hôtels insolites en ville</a></li><li><a href="../index.html?env=campagne#explorer">Hôtels insolites à la campagne</a></li><li><a href="../index.html?env=mer#explorer">Hôtels insolites en bord de mer</a></li><li><a href="../index.html?env=montagne#explorer">Hôtels insolites à la montagne</a></li></ul></div>
-        <div><h4>Nos guides</h4><ul><li><a href="../guides/nuit-insolite-en-amoureux.html">Nuits insolites en amoureux</a></li><li><a href="../guides/cabanes-perchees.html">Les plus belles cabanes perchées</a></li><li><a href="../guides/week-end-insolite-pres-de-paris.html">Week-end insolite près de Paris</a></li><li><a href="../guides/hotels-troglodytes.html">Dormir dans un hôtel troglodyte</a></li><li><a href="../guides/spa-jacuzzi-privatif.html">Nuits insolites avec spa privatif</a></li><li><a href="../guides/hotels-insolites-bord-de-mer.html">Hôtels insolites en bord de mer</a></li><li><a href="../guides/hotels-insolites-montagne.html">Hôtels insolites à la montagne</a></li><li><a href="../guides/index.html">Tous les guides →</a></li></ul></div>
+        <div><h4>Nos guides</h4><ul><li><a href="../guides/nuit-insolite-en-amoureux.html">Nuits insolites en amoureux</a></li><li><a href="../guides/cabanes-perchees.html">Les plus belles cabanes perchées</a></li><li><a href="../guides/week-end-insolite-pres-de-paris.html">Week-end insolite près de Paris</a></li><li><a href="../guides/hotels-troglodytes.html">Dormir dans un hôtel troglodyte</a></li><li><a href="../guides/spa-jacuzzi-privatif.html">Nuits insolites avec spa privatif</a></li><li><a href="../guides/hotels-insolites-bord-de-mer.html">Hôtels insolites en bord de mer</a></li><li><a href="../guides/hotels-insolites-montagne.html">Hôtels insolites à la montagne</a></li><li><a href="../guides/index.html">Tous les guides →</a></li><li><a href="../carte.html">La carte interactive →</a></li></ul></div>
         <div><h4>Nous suivre</h4><ul><li><a href="https://www.instagram.com/nuits.singulieres/" target="_blank" rel="noopener">Instagram · @nuits.singulieres</a></li><li><a href="../hoteliers.html">Espace hôteliers</a></li><li><a href="mailto:contact@exemple.fr">contact@exemple.fr</a></li><li><a href="../mentions-legales.html">Mentions légales</a></li></ul></div>
       </div>
       <p class="disclosure">Ce site contient des liens affiliés : si vous réservez via nos liens, nous percevons une commission du site partenaire, sans aucun surcoût pour vous. Les établissements marqués « Partenaire » ont souscrit une offre de mise en avant payante, qui améliore leur position dans le tri « Recommandés ». Les niveaux de budget sont indicatifs ; le tarif final est celui du site de réservation. Photos : © les établissements.</p>
       <p class="muted small">© 2026 Nuits Singulières</p></footer>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+  <script src="../vendor/leaflet/leaflet.js"></script>
   <script src="../js/config.js"></script>
   <script src="../js/hotels.js"></script>
   <script src="../js/guides.js"></script>

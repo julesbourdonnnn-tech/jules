@@ -19,7 +19,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,600;1,9..144,300;1,9..144,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+  <link rel="stylesheet" href="../vendor/leaflet/leaflet.css">
   <link rel="stylesheet" href="../css/style.css">
   <script type="application/ld+json">{"@context":"https://schema.org","@type":"Hotel","name":"Casadelmar","description":"Caché dans un parc méditerranéen de trois hectares dont les terrasses descendent jusqu'à la mer, Casadelmar est sans doute l'hôtel le plus confidentiel de Corse. L'architecte Jean-François Bodin a orienté chaque lit face à la mer. Les trente-quatre chambres et suites, de 35 à 75 m², s'ouvrent entièrement sur de grandes terrasses. Le soir, la table doublement étoilée prolonge le voyage.","url":"https://www.exemple.fr/hotels/casadelmar.html","image":["https://www.exemple.fr/assets/hotels/casadelmar/1.jpg","https://www.exemple.fr/assets/hotels/casadelmar/2.jpg","https://www.exemple.fr/assets/hotels/casadelmar/3.jpg","https://www.exemple.fr/assets/hotels/casadelmar/4.jpg","https://www.exemple.fr/assets/hotels/casadelmar/5.jpg","https://www.exemple.fr/assets/hotels/casadelmar/6.jpg"],"address":{"@type":"PostalAddress","streetAddress":"20137 Porto-Vecchio","addressLocality":"Porto-Vecchio","addressRegion":"Corse","addressCountry":"FR"},"geo":{"@type":"GeoCoordinates","latitude":41.6166,"longitude":9.3155},"priceRange":"€€€€","amenityFeature":[{"@type":"LocationFeatureSpecification","name":"Plage privée","value":true},{"@type":"LocationFeatureSpecification","name":"Piscine","value":true},{"@type":"LocationFeatureSpecification","name":"Spa","value":true},{"@type":"LocationFeatureSpecification","name":"Restaurant gastronomique","value":true}]}</script>
   <script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Accueil","item":"https://www.exemple.fr/"},{"@type":"ListItem","position":2,"name":"Mer","item":"https://www.exemple.fr/index.html?env=mer"},{"@type":"ListItem","position":3,"name":"Casadelmar","item":"https://www.exemple.fr/hotels/casadelmar.html"}]}</script>
@@ -33,6 +33,7 @@
       </a>
       <nav class="nav" aria-label="Navigation principale">
         <a href="../index.html#destinations">Ambiances</a>
+        <a href="../carte.html">La carte</a>
         <a href="../guides/index.html">Guides</a>
         <a href="../index.html#explorer">Tous les lieux</a>
         <a href="../hoteliers.html">Hôteliers</a>
@@ -125,7 +126,7 @@
         
         <section class="in-guides reveal">
           <h2>Cette adresse figure dans nos guides</h2>
-          <ul><li><a href="../guides/hotels-insolites-bord-de-mer.html">5 hôtels insolites en bord de mer →</a></li></ul>
+          <ul><li><a href="../guides/hotels-insolites-bord-de-mer.html">7 hôtels insolites en bord de mer →</a></li></ul>
         </section>
 
         <div class="nl-inline reveal">
@@ -171,6 +172,30 @@
         </div>
       </div>
       <div class="rail rail-cards" id="similar-rail">
+      <article class="card " data-id="cap-estel">
+        <div class="card-media">
+          <a class="card-slides" href="../hotels/cap-estel.html" tabindex="-1" aria-hidden="true">
+            <img src="../assets/hotels/cap-estel/1-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false" width="900" height="675"><img src="../assets/hotels/cap-estel/2-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false"><img src="../assets/hotels/cap-estel/3-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false"><img src="../assets/hotels/cap-estel/4-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false"><img src="../assets/hotels/cap-estel/5-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false">
+          </a>
+          
+            <button type="button" class="card-nav prev" data-slide="-1" aria-label="Photo précédente">‹</button>
+            <button type="button" class="card-nav next" data-slide="1" aria-label="Photo suivante">›</button>
+            <div class="card-dots"><span class="on"></span><span class=""></span><span class=""></span><span class=""></span><span class=""></span></div>
+          <span class="badge">Mer</span>
+          
+          
+    <button type="button" class="fav  " data-fav="cap-estel"
+      aria-pressed="false" aria-label="Ajouter Cap Estel à mes coups de cœur"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.6-9.3C.9 8.3 3 4.5 6.7 4.5c2.1 0 3.6 1.2 4.3 2.4.7-1.2 2.2-2.4 4.3-2.4 3.7 0 5.8 3.8 4.3 7.2C19.5 16.4 12 21 12 21z"/></svg></button>
+          
+        </div>
+        <a class="card-body" href="../hotels/cap-estel.html">
+          <p class="card-type">🌊 Les pieds dans l&#39;eau</p>
+          <h3>Cap Estel</h3>
+          <p class="card-place">Èze · Provence-Alpes-Côte d&#39;Azur</p>
+          <p class="card-tagline">Une villa sur sa presqu&#39;île privée, entre Nice et Monaco</p>
+          <p class="card-foot"><span class="budget" title="plus de 450 € la nuit">€€€€<span class="budget-off"></span></span><span class="card-more">Découvrir →</span></p>
+        </a>
+      </article>
       <article class="card " data-id="les-roches-rouges">
         <div class="card-media">
           <a class="card-slides" href="../hotels/les-roches-rouges.html" tabindex="-1" aria-hidden="true">
@@ -267,52 +292,28 @@
           <p class="card-foot"><span class="budget" title="plus de 450 € la nuit">€€€€<span class="budget-off"></span></span><span class="card-more">Découvrir →</span></p>
         </a>
       </article>
-      <article class="card " data-id="attrap-reves-allauch">
+      <article class="card " data-id="ile-louet">
         <div class="card-media">
-          <a class="card-slides" href="../hotels/attrap-reves-allauch.html" tabindex="-1" aria-hidden="true">
-            <img src="../assets/hotels/attrap-reves-allauch/1-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false" width="900" height="675"><img src="../assets/hotels/attrap-reves-allauch/2-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false"><img src="../assets/hotels/attrap-reves-allauch/3-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false"><img src="../assets/hotels/attrap-reves-allauch/4-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false"><img src="../assets/hotels/attrap-reves-allauch/5-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false">
+          <a class="card-slides" href="../hotels/ile-louet.html" tabindex="-1" aria-hidden="true">
+            <img src="../assets/hotels/ile-louet/1-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false" width="900" height="675"><img src="../assets/hotels/ile-louet/2-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false"><img src="../assets/hotels/ile-louet/3-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false"><img src="../assets/hotels/ile-louet/4-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false"><img src="../assets/hotels/ile-louet/5-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false">
           </a>
           
             <button type="button" class="card-nav prev" data-slide="-1" aria-label="Photo précédente">‹</button>
             <button type="button" class="card-nav next" data-slide="1" aria-label="Photo suivante">›</button>
             <div class="card-dots"><span class="on"></span><span class=""></span><span class=""></span><span class=""></span><span class=""></span></div>
-          <span class="badge">Campagne</span>
+          <span class="badge">Mer</span>
           
           
-    <button type="button" class="fav  " data-fav="attrap-reves-allauch"
-      aria-pressed="false" aria-label="Ajouter Attrap&#39;Rêves à mes coups de cœur"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.6-9.3C.9 8.3 3 4.5 6.7 4.5c2.1 0 3.6 1.2 4.3 2.4.7-1.2 2.2-2.4 4.3-2.4 3.7 0 5.8 3.8 4.3 7.2C19.5 16.4 12 21 12 21z"/></svg></button>
-          
-        </div>
-        <a class="card-body" href="../hotels/attrap-reves-allauch.html">
-          <p class="card-type">🫧 Bulle sous les étoiles</p>
-          <h3>Attrap&#39;Rêves</h3>
-          <p class="card-place">Allauch · Provence-Alpes-Côte d&#39;Azur</p>
-          <p class="card-tagline">Dormir dans une bulle transparente, sous le ciel de Provence</p>
-          <p class="card-foot"><span class="budget" title="150 à 250 € la nuit">€€<span class="budget-off">€€</span></span><span class="card-more">Découvrir →</span></p>
-        </a>
-      </article>
-      <article class="card " data-id="hotel-le-corbusier">
-        <div class="card-media">
-          <a class="card-slides" href="../hotels/hotel-le-corbusier.html" tabindex="-1" aria-hidden="true">
-            <img src="../assets/hotels/hotel-le-corbusier/1-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false" width="900" height="675"><img src="../assets/hotels/hotel-le-corbusier/2-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false"><img src="../assets/hotels/hotel-le-corbusier/3-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false"><img src="../assets/hotels/hotel-le-corbusier/4-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false"><img src="../assets/hotels/hotel-le-corbusier/5-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false">
-          </a>
-          
-            <button type="button" class="card-nav prev" data-slide="-1" aria-label="Photo précédente">‹</button>
-            <button type="button" class="card-nav next" data-slide="1" aria-label="Photo suivante">›</button>
-            <div class="card-dots"><span class="on"></span><span class=""></span><span class=""></span><span class=""></span><span class=""></span></div>
-          <span class="badge">Ville</span>
-          
-          
-    <button type="button" class="fav  " data-fav="hotel-le-corbusier"
-      aria-pressed="false" aria-label="Ajouter Hôtel Le Corbusier à mes coups de cœur"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.6-9.3C.9 8.3 3 4.5 6.7 4.5c2.1 0 3.6 1.2 4.3 2.4.7-1.2 2.2-2.4 4.3-2.4 3.7 0 5.8 3.8 4.3 7.2C19.5 16.4 12 21 12 21z"/></svg></button>
+    <button type="button" class="fav  " data-fav="ile-louet"
+      aria-pressed="false" aria-label="Ajouter Maison du gardien de phare de l&#39;île Louët à mes coups de cœur"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.6-9.3C.9 8.3 3 4.5 6.7 4.5c2.1 0 3.6 1.2 4.3 2.4.7-1.2 2.2-2.4 4.3-2.4 3.7 0 5.8 3.8 4.3 7.2C19.5 16.4 12 21 12 21z"/></svg></button>
           
         </div>
-        <a class="card-body" href="../hotels/hotel-le-corbusier.html">
-          <p class="card-type">✨ Design &amp; architecture</p>
-          <h3>Hôtel Le Corbusier</h3>
-          <p class="card-place">Marseille · Provence-Alpes-Côte d&#39;Azur</p>
-          <p class="card-tagline">Dormir dans la Cité radieuse, chef-d&#39;œuvre classé à l&#39;UNESCO</p>
-          <p class="card-foot"><span class="budget" title="moins de 150 € la nuit">€<span class="budget-off">€€€</span></span><span class="card-more">Découvrir →</span></p>
+        <a class="card-body" href="../hotels/ile-louet.html">
+          <p class="card-type">🗼 Phare</p>
+          <h3>Maison du gardien de phare de l&#39;île Louët</h3>
+          <p class="card-place">Carantec · Bretagne</p>
+          <p class="card-tagline">Une île rien qu&#39;à vous, au milieu de la baie de Morlaix</p>
+          <p class="card-foot"><span class="budget" title="250 à 450 € la nuit">€€€<span class="budget-off">€</span></span><span class="card-more">Découvrir →</span></p>
         </a>
       </article></div>
     </section>
@@ -354,13 +355,13 @@
           <p class="muted">Les hôtels les plus extraordinaires de France. Une sélection d'adresses rares, choisies une à une.</p>
         </div>
         <div><h4>Ambiances</h4><ul><li><a href="../index.html?env=ville#explorer">Hôtels insolites en ville</a></li><li><a href="../index.html?env=campagne#explorer">Hôtels insolites à la campagne</a></li><li><a href="../index.html?env=mer#explorer">Hôtels insolites en bord de mer</a></li><li><a href="../index.html?env=montagne#explorer">Hôtels insolites à la montagne</a></li></ul></div>
-        <div><h4>Nos guides</h4><ul><li><a href="../guides/nuit-insolite-en-amoureux.html">Nuits insolites en amoureux</a></li><li><a href="../guides/cabanes-perchees.html">Les plus belles cabanes perchées</a></li><li><a href="../guides/week-end-insolite-pres-de-paris.html">Week-end insolite près de Paris</a></li><li><a href="../guides/hotels-troglodytes.html">Dormir dans un hôtel troglodyte</a></li><li><a href="../guides/spa-jacuzzi-privatif.html">Nuits insolites avec spa privatif</a></li><li><a href="../guides/hotels-insolites-bord-de-mer.html">Hôtels insolites en bord de mer</a></li><li><a href="../guides/hotels-insolites-montagne.html">Hôtels insolites à la montagne</a></li><li><a href="../guides/index.html">Tous les guides →</a></li></ul></div>
+        <div><h4>Nos guides</h4><ul><li><a href="../guides/nuit-insolite-en-amoureux.html">Nuits insolites en amoureux</a></li><li><a href="../guides/cabanes-perchees.html">Les plus belles cabanes perchées</a></li><li><a href="../guides/week-end-insolite-pres-de-paris.html">Week-end insolite près de Paris</a></li><li><a href="../guides/hotels-troglodytes.html">Dormir dans un hôtel troglodyte</a></li><li><a href="../guides/spa-jacuzzi-privatif.html">Nuits insolites avec spa privatif</a></li><li><a href="../guides/hotels-insolites-bord-de-mer.html">Hôtels insolites en bord de mer</a></li><li><a href="../guides/hotels-insolites-montagne.html">Hôtels insolites à la montagne</a></li><li><a href="../guides/index.html">Tous les guides →</a></li><li><a href="../carte.html">La carte interactive →</a></li></ul></div>
         <div><h4>Nous suivre</h4><ul><li><a href="https://www.instagram.com/nuits.singulieres/" target="_blank" rel="noopener">Instagram · @nuits.singulieres</a></li><li><a href="../hoteliers.html">Espace hôteliers</a></li><li><a href="mailto:contact@exemple.fr">contact@exemple.fr</a></li><li><a href="../mentions-legales.html">Mentions légales</a></li></ul></div>
       </div>
       <p class="disclosure">Ce site contient des liens affiliés : si vous réservez via nos liens, nous percevons une commission du site partenaire, sans aucun surcoût pour vous. Les établissements marqués « Partenaire » ont souscrit une offre de mise en avant payante, qui améliore leur position dans le tri « Recommandés ». Les niveaux de budget sont indicatifs ; le tarif final est celui du site de réservation. Photos : © les établissements.</p>
       <p class="muted small">© 2026 Nuits Singulières</p></footer>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+  <script src="../vendor/leaflet/leaflet.js"></script>
   <script src="../js/config.js"></script>
   <script src="../js/hotels.js"></script>
   <script src="../js/guides.js"></script>

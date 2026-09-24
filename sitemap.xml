@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://www.exemple.fr/</loc></url>
+  <url><loc>https://www.exemple.fr/carte.html</loc></url>
   <url><loc>https://www.exemple.fr/guides/index.html</loc></url>
   <url><loc>https://www.exemple.fr/guides/nuit-insolite-en-amoureux.html</loc></url>
   <url><loc>https://www.exemple.fr/guides/cabanes-perchees.html</loc></url>
@@ -13,6 +14,8 @@
   <url><loc>https://www.exemple.fr/guides/hotels-insolites-vallee-de-la-loire.html</loc></url>
   <url><loc>https://www.exemple.fr/guides/hotels-insolites-en-ville.html</loc></url>
   <url><loc>https://www.exemple.fr/guides/nuits-insolites-petit-budget.html</loc></url>
+  <url><loc>https://www.exemple.fr/guides/hotels-insolites-paris.html</loc></url>
+  <url><loc>https://www.exemple.fr/guides/dormir-en-altitude.html</loc></url>
   <url><loc>https://www.exemple.fr/hotels/loire-valley-lodges.html</loc></url>
   <url><loc>https://www.exemple.fr/hotels/pella-roca.html</loc></url>
   <url><loc>https://www.exemple.fr/hotels/cabanes-des-grands-lacs.html</loc></url>
@@ -41,5 +44,19 @@
   <url><loc>https://www.exemple.fr/hotels/sources-de-caudalie.html</loc></url>
   <url><loc>https://www.exemple.fr/hotels/casadelmar.html</loc></url>
   <url><loc>https://www.exemple.fr/hotels/la-coorniche.html</loc></url>
+  <url><loc>https://www.exemple.fr/hotels/pic-du-midi.html</loc></url>
+  <url><loc>https://www.exemple.fr/hotels/refuge-du-montenvers.html</loc></url>
+  <url><loc>https://www.exemple.fr/hotels/refuge-de-la-traye.html</loc></url>
+  <url><loc>https://www.exemple.fr/hotels/refuge-chez-la-tante.html</loc></url>
+  <url><loc>https://www.exemple.fr/hotels/molitor.html</loc></url>
+  <url><loc>https://www.exemple.fr/hotels/maison-souquet.html</loc></url>
+  <url><loc>https://www.exemple.fr/hotels/intercontinental-lyon-hotel-dieu.html</loc></url>
+  <url><loc>https://www.exemple.fr/hotels/hotel-de-la-cite-carcassonne.html</loc></url>
+  <url><loc>https://www.exemple.fr/hotels/grand-controle-versailles.html</loc></url>
+  <url><loc>https://www.exemple.fr/hotels/ile-louet.html</loc></url>
+  <url><loc>https://www.exemple.fr/hotels/cap-estel.html</loc></url>
+  <url><loc>https://www.exemple.fr/hotels/relais-de-chambord.html</loc></url>
+  <url><loc>https://www.exemple.fr/hotels/toue-cabanee-canal-de-bourgogne.html</loc></url>
+  <url><loc>https://www.exemple.fr/hotels/moulin-du-roc.html</loc></url>
   <url><loc>https://www.exemple.fr/hoteliers.html</loc></url>
 </urlset>

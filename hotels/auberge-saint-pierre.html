@@ -19,7 +19,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,600;1,9..144,300;1,9..144,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+  <link rel="stylesheet" href="../vendor/leaflet/leaflet.css">
   <link rel="stylesheet" href="../css/style.css">
   <script type="application/ld+json">{"@context":"https://schema.org","@type":"Hotel","name":"Auberge Saint-Pierre","description":"Protégée par les remparts, sur la petite rue qui grimpe vers l'abbaye, cette maison à pans de bois du XVe siècle est inscrite aux monuments historiques. Ses chambres se répartissent dans plusieurs maisons anciennes du village. Dormir sur le Mont, c'est le découvrir quand les visiteurs sont repartis : la baie à marée montante, l'abbaye illuminée, les ruelles désertes au petit matin.","url":"https://www.exemple.fr/hotels/auberge-saint-pierre.html","image":["https://www.exemple.fr/assets/hotels/auberge-saint-pierre/1.jpg","https://www.exemple.fr/assets/hotels/auberge-saint-pierre/2.jpg","https://www.exemple.fr/assets/hotels/auberge-saint-pierre/3.jpg","https://www.exemple.fr/assets/hotels/auberge-saint-pierre/4.jpg","https://www.exemple.fr/assets/hotels/auberge-saint-pierre/5.jpg","https://www.exemple.fr/assets/hotels/auberge-saint-pierre/6.jpg"],"address":{"@type":"PostalAddress","streetAddress":"Grande Rue, 50170 Le Mont-Saint-Michel","addressLocality":"Le Mont-Saint-Michel","addressRegion":"Normandie","addressCountry":"FR"},"geo":{"@type":"GeoCoordinates","latitude":48.6358,"longitude":-1.5105},"priceRange":"€€","amenityFeature":[{"@type":"LocationFeatureSpecification","name":"Restaurant","value":true},{"@type":"LocationFeatureSpecification","name":"Petit-déjeuner","value":true}]}</script>
   <script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Accueil","item":"https://www.exemple.fr/"},{"@type":"ListItem","position":2,"name":"Mer","item":"https://www.exemple.fr/index.html?env=mer"},{"@type":"ListItem","position":3,"name":"Auberge Saint-Pierre","item":"https://www.exemple.fr/hotels/auberge-saint-pierre.html"}]}</script>
@@ -33,6 +33,7 @@
       </a>
       <nav class="nav" aria-label="Navigation principale">
         <a href="../index.html#destinations">Ambiances</a>
+        <a href="../carte.html">La carte</a>
         <a href="../guides/index.html">Guides</a>
         <a href="../index.html#explorer">Tous les lieux</a>
         <a href="../hoteliers.html">Hôteliers</a>
@@ -125,7 +126,7 @@
         
         <section class="in-guides reveal">
           <h2>Cette adresse figure dans nos guides</h2>
-          <ul><li><a href="../guides/week-end-insolite-pres-de-paris.html">Week-end insolite près de Paris : 9 adresses à moins de 300 km →</a></li><li><a href="../guides/hotels-insolites-bord-de-mer.html">5 hôtels insolites en bord de mer →</a></li><li><a href="../guides/dormir-dans-un-chateau.html">Dormir dans un château ou un lieu d&#39;histoire : 6 adresses →</a></li><li><a href="../guides/nuits-insolites-petit-budget.html">11 nuits insolites pour moins de 250 € la nuit →</a></li></ul>
+          <ul><li><a href="../guides/week-end-insolite-pres-de-paris.html">Week-end insolite près de Paris : 12 adresses à moins de 300 km →</a></li><li><a href="../guides/hotels-insolites-bord-de-mer.html">7 hôtels insolites en bord de mer →</a></li><li><a href="../guides/dormir-dans-un-chateau.html">Dormir dans un château ou un lieu d&#39;histoire : 11 adresses →</a></li><li><a href="../guides/nuits-insolites-petit-budget.html">13 nuits insolites pour moins de 250 € la nuit →</a></li></ul>
         </section>
 
         <div class="nl-inline reveal">
@@ -195,6 +196,30 @@
           <p class="card-foot"><span class="budget" title="150 à 250 € la nuit">€€<span class="budget-off">€€</span></span><span class="card-more">Découvrir →</span></p>
         </a>
       </article>
+      <article class="card " data-id="maison-souquet">
+        <div class="card-media">
+          <a class="card-slides" href="../hotels/maison-souquet.html" tabindex="-1" aria-hidden="true">
+            <img src="../assets/hotels/maison-souquet/1-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false" width="900" height="675"><img src="../assets/hotels/maison-souquet/2-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false"><img src="../assets/hotels/maison-souquet/3-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false">
+          </a>
+          
+            <button type="button" class="card-nav prev" data-slide="-1" aria-label="Photo précédente">‹</button>
+            <button type="button" class="card-nav next" data-slide="1" aria-label="Photo suivante">›</button>
+            <div class="card-dots"><span class="on"></span><span class=""></span><span class=""></span></div>
+          <span class="badge">Ville</span>
+          
+          
+    <button type="button" class="fav  " data-fav="maison-souquet"
+      aria-pressed="false" aria-label="Ajouter Maison Souquet à mes coups de cœur"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.6-9.3C.9 8.3 3 4.5 6.7 4.5c2.1 0 3.6 1.2 4.3 2.4.7-1.2 2.2-2.4 4.3-2.4 3.7 0 5.8 3.8 4.3 7.2C19.5 16.4 12 21 12 21z"/></svg></button>
+          
+        </div>
+        <a class="card-body" href="../hotels/maison-souquet.html">
+          <p class="card-type">🏛️ Lieu chargé d&#39;histoire</p>
+          <h3>Maison Souquet</h3>
+          <p class="card-place">Paris · Île-de-France</p>
+          <p class="card-tagline">Une ancienne maison close de la Belle Époque, au pied de Montmartre</p>
+          <p class="card-foot"><span class="budget" title="plus de 450 € la nuit">€€€€<span class="budget-off"></span></span><span class="card-more">Découvrir →</span></p>
+        </a>
+      </article>
       <article class="card " data-id="cour-des-loges">
         <div class="card-media">
           <a class="card-slides" href="../hotels/cour-des-loges.html" tabindex="-1" aria-hidden="true">
@@ -219,6 +244,54 @@
           <p class="card-foot"><span class="budget" title="plus de 450 € la nuit">€€€€<span class="budget-off"></span></span><span class="card-more">Découvrir →</span></p>
         </a>
       </article>
+      <article class="card " data-id="intercontinental-lyon-hotel-dieu">
+        <div class="card-media">
+          <a class="card-slides" href="../hotels/intercontinental-lyon-hotel-dieu.html" tabindex="-1" aria-hidden="true">
+            <img src="../assets/hotels/intercontinental-lyon-hotel-dieu/1-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false" width="900" height="675"><img src="../assets/hotels/intercontinental-lyon-hotel-dieu/2-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false"><img src="../assets/hotels/intercontinental-lyon-hotel-dieu/3-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false"><img src="../assets/hotels/intercontinental-lyon-hotel-dieu/4-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false"><img src="../assets/hotels/intercontinental-lyon-hotel-dieu/5-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false">
+          </a>
+          
+            <button type="button" class="card-nav prev" data-slide="-1" aria-label="Photo précédente">‹</button>
+            <button type="button" class="card-nav next" data-slide="1" aria-label="Photo suivante">›</button>
+            <div class="card-dots"><span class="on"></span><span class=""></span><span class=""></span><span class=""></span><span class=""></span></div>
+          <span class="badge">Ville</span>
+          
+          
+    <button type="button" class="fav  " data-fav="intercontinental-lyon-hotel-dieu"
+      aria-pressed="false" aria-label="Ajouter InterContinental Lyon – Hôtel-Dieu à mes coups de cœur"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.6-9.3C.9 8.3 3 4.5 6.7 4.5c2.1 0 3.6 1.2 4.3 2.4.7-1.2 2.2-2.4 4.3-2.4 3.7 0 5.8 3.8 4.3 7.2C19.5 16.4 12 21 12 21z"/></svg></button>
+          
+        </div>
+        <a class="card-body" href="../hotels/intercontinental-lyon-hotel-dieu.html">
+          <p class="card-type">🏛️ Lieu chargé d&#39;histoire</p>
+          <h3>InterContinental Lyon – Hôtel-Dieu</h3>
+          <p class="card-place">Lyon · Auvergne-Rhône-Alpes</p>
+          <p class="card-tagline">Dormir dans un hôpital de huit siècles, sous le dôme de Soufflot</p>
+          <p class="card-foot"><span class="budget" title="plus de 450 € la nuit">€€€€<span class="budget-off"></span></span><span class="card-more">Découvrir →</span></p>
+        </a>
+      </article>
+      <article class="card " data-id="hotel-de-la-cite-carcassonne">
+        <div class="card-media">
+          <a class="card-slides" href="../hotels/hotel-de-la-cite-carcassonne.html" tabindex="-1" aria-hidden="true">
+            <img src="../assets/hotels/hotel-de-la-cite-carcassonne/1-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false" width="900" height="675"><img src="../assets/hotels/hotel-de-la-cite-carcassonne/2-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false"><img src="../assets/hotels/hotel-de-la-cite-carcassonne/3-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false"><img src="../assets/hotels/hotel-de-la-cite-carcassonne/4-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false"><img src="../assets/hotels/hotel-de-la-cite-carcassonne/5-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false">
+          </a>
+          
+            <button type="button" class="card-nav prev" data-slide="-1" aria-label="Photo précédente">‹</button>
+            <button type="button" class="card-nav next" data-slide="1" aria-label="Photo suivante">›</button>
+            <div class="card-dots"><span class="on"></span><span class=""></span><span class=""></span><span class=""></span><span class=""></span></div>
+          <span class="badge">Ville</span>
+          
+          
+    <button type="button" class="fav  " data-fav="hotel-de-la-cite-carcassonne"
+      aria-pressed="false" aria-label="Ajouter Hôtel de la Cité à mes coups de cœur"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.6-9.3C.9 8.3 3 4.5 6.7 4.5c2.1 0 3.6 1.2 4.3 2.4.7-1.2 2.2-2.4 4.3-2.4 3.7 0 5.8 3.8 4.3 7.2C19.5 16.4 12 21 12 21z"/></svg></button>
+          
+        </div>
+        <a class="card-body" href="../hotels/hotel-de-la-cite-carcassonne.html">
+          <p class="card-type">🏛️ Lieu chargé d&#39;histoire</p>
+          <h3>Hôtel de la Cité</h3>
+          <p class="card-place">Carcassonne · Occitanie</p>
+          <p class="card-tagline">Dormir à l&#39;intérieur des remparts de la Cité médiévale de Carcassonne</p>
+          <p class="card-foot"><span class="budget" title="250 à 450 € la nuit">€€€<span class="budget-off">€</span></span><span class="card-more">Découvrir →</span></p>
+        </a>
+      </article>
       <article class="card " data-id="phare-de-kerbel">
         <div class="card-media">
           <a class="card-slides" href="../hotels/phare-de-kerbel.html" tabindex="-1" aria-hidden="true">
@@ -240,78 +313,6 @@
           <h3>Phare de Kerbel</h3>
           <p class="card-place">Riantec · Bretagne</p>
           <p class="card-tagline">Le seul phare de France où l&#39;on dort tout en haut</p>
-          <p class="card-foot"><span class="budget" title="plus de 450 € la nuit">€€€€<span class="budget-off"></span></span><span class="card-more">Découvrir →</span></p>
-        </a>
-      </article>
-      <article class="card " data-id="la-coorniche">
-        <div class="card-media">
-          <a class="card-slides" href="../hotels/la-coorniche.html" tabindex="-1" aria-hidden="true">
-            <img src="../assets/hotels/la-coorniche/1-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false" width="900" height="675"><img src="../assets/hotels/la-coorniche/2-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false"><img src="../assets/hotels/la-coorniche/3-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false"><img src="../assets/hotels/la-coorniche/4-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false"><img src="../assets/hotels/la-coorniche/5-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false">
-          </a>
-          
-            <button type="button" class="card-nav prev" data-slide="-1" aria-label="Photo précédente">‹</button>
-            <button type="button" class="card-nav next" data-slide="1" aria-label="Photo suivante">›</button>
-            <div class="card-dots"><span class="on"></span><span class=""></span><span class=""></span><span class=""></span><span class=""></span></div>
-          <span class="badge">Mer</span>
-          
-          
-    <button type="button" class="fav  " data-fav="la-coorniche"
-      aria-pressed="false" aria-label="Ajouter La Co(o)rniche à mes coups de cœur"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.6-9.3C.9 8.3 3 4.5 6.7 4.5c2.1 0 3.6 1.2 4.3 2.4.7-1.2 2.2-2.4 4.3-2.4 3.7 0 5.8 3.8 4.3 7.2C19.5 16.4 12 21 12 21z"/></svg></button>
-          
-        </div>
-        <a class="card-body" href="../hotels/la-coorniche.html">
-          <p class="card-type">✨ Design &amp; architecture</p>
-          <h3>La Co(o)rniche</h3>
-          <p class="card-place">Pyla-sur-Mer · Nouvelle-Aquitaine</p>
-          <p class="card-tagline">Un pavillon de chasse revu par Philippe Starck, face à la dune du Pilat</p>
-          <p class="card-foot"><span class="budget" title="plus de 450 € la nuit">€€€€<span class="budget-off"></span></span><span class="card-more">Découvrir →</span></p>
-        </a>
-      </article>
-      <article class="card " data-id="les-roches-rouges">
-        <div class="card-media">
-          <a class="card-slides" href="../hotels/les-roches-rouges.html" tabindex="-1" aria-hidden="true">
-            <img src="../assets/hotels/les-roches-rouges/1-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false" width="900" height="675"><img src="../assets/hotels/les-roches-rouges/2-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false"><img src="../assets/hotels/les-roches-rouges/3-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false"><img src="../assets/hotels/les-roches-rouges/4-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false"><img src="../assets/hotels/les-roches-rouges/5-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false">
-          </a>
-          
-            <button type="button" class="card-nav prev" data-slide="-1" aria-label="Photo précédente">‹</button>
-            <button type="button" class="card-nav next" data-slide="1" aria-label="Photo suivante">›</button>
-            <div class="card-dots"><span class="on"></span><span class=""></span><span class=""></span><span class=""></span><span class=""></span></div>
-          <span class="badge">Mer</span>
-          
-          
-    <button type="button" class="fav  " data-fav="les-roches-rouges"
-      aria-pressed="false" aria-label="Ajouter Les Roches Rouges à mes coups de cœur"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.6-9.3C.9 8.3 3 4.5 6.7 4.5c2.1 0 3.6 1.2 4.3 2.4.7-1.2 2.2-2.4 4.3-2.4 3.7 0 5.8 3.8 4.3 7.2C19.5 16.4 12 21 12 21z"/></svg></button>
-          
-        </div>
-        <a class="card-body" href="../hotels/les-roches-rouges.html">
-          <p class="card-type">🌊 Les pieds dans l&#39;eau</p>
-          <h3>Les Roches Rouges</h3>
-          <p class="card-place">Saint-Raphaël · Provence-Alpes-Côte d&#39;Azur</p>
-          <p class="card-tagline">Une piscine d&#39;eau de mer taillée dans la roche rouge de l&#39;Esterel</p>
-          <p class="card-foot"><span class="budget" title="plus de 450 € la nuit">€€€€<span class="budget-off"></span></span><span class="card-more">Découvrir →</span></p>
-        </a>
-      </article>
-      <article class="card " data-id="casadelmar">
-        <div class="card-media">
-          <a class="card-slides" href="../hotels/casadelmar.html" tabindex="-1" aria-hidden="true">
-            <img src="../assets/hotels/casadelmar/1-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false" width="900" height="675"><img src="../assets/hotels/casadelmar/2-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false"><img src="../assets/hotels/casadelmar/3-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false"><img src="../assets/hotels/casadelmar/4-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false"><img src="../assets/hotels/casadelmar/5-sm.jpg" alt="" loading="lazy" decoding="async" draggable="false">
-          </a>
-          
-            <button type="button" class="card-nav prev" data-slide="-1" aria-label="Photo précédente">‹</button>
-            <button type="button" class="card-nav next" data-slide="1" aria-label="Photo suivante">›</button>
-            <div class="card-dots"><span class="on"></span><span class=""></span><span class=""></span><span class=""></span><span class=""></span></div>
-          <span class="badge">Mer</span>
-          
-          
-    <button type="button" class="fav  " data-fav="casadelmar"
-      aria-pressed="false" aria-label="Ajouter Casadelmar à mes coups de cœur"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.6-9.3C.9 8.3 3 4.5 6.7 4.5c2.1 0 3.6 1.2 4.3 2.4.7-1.2 2.2-2.4 4.3-2.4 3.7 0 5.8 3.8 4.3 7.2C19.5 16.4 12 21 12 21z"/></svg></button>
-          
-        </div>
-        <a class="card-body" href="../hotels/casadelmar.html">
-          <p class="card-type">🌊 Les pieds dans l&#39;eau</p>
-          <h3>Casadelmar</h3>
-          <p class="card-place">Porto-Vecchio · Corse</p>
-          <p class="card-tagline">Bois, pierre et verre face au golfe de Porto-Vecchio</p>
           <p class="card-foot"><span class="budget" title="plus de 450 € la nuit">€€€€<span class="budget-off"></span></span><span class="card-more">Découvrir →</span></p>
         </a>
       </article></div>
@@ -354,13 +355,13 @@
           <p class="muted">Les hôtels les plus extraordinaires de France. Une sélection d'adresses rares, choisies une à une.</p>
         </div>
         <div><h4>Ambiances</h4><ul><li><a href="../index.html?env=ville#explorer">Hôtels insolites en ville</a></li><li><a href="../index.html?env=campagne#explorer">Hôtels insolites à la campagne</a></li><li><a href="../index.html?env=mer#explorer">Hôtels insolites en bord de mer</a></li><li><a href="../index.html?env=montagne#explorer">Hôtels insolites à la montagne</a></li></ul></div>
-        <div><h4>Nos guides</h4><ul><li><a href="../guides/nuit-insolite-en-amoureux.html">Nuits insolites en amoureux</a></li><li><a href="../guides/cabanes-perchees.html">Les plus belles cabanes perchées</a></li><li><a href="../guides/week-end-insolite-pres-de-paris.html">Week-end insolite près de Paris</a></li><li><a href="../guides/hotels-troglodytes.html">Dormir dans un hôtel troglodyte</a></li><li><a href="../guides/spa-jacuzzi-privatif.html">Nuits insolites avec spa privatif</a></li><li><a href="../guides/hotels-insolites-bord-de-mer.html">Hôtels insolites en bord de mer</a></li><li><a href="../guides/hotels-insolites-montagne.html">Hôtels insolites à la montagne</a></li><li><a href="../guides/index.html">Tous les guides →</a></li></ul></div>
+        <div><h4>Nos guides</h4><ul><li><a href="../guides/nuit-insolite-en-amoureux.html">Nuits insolites en amoureux</a></li><li><a href="../guides/cabanes-perchees.html">Les plus belles cabanes perchées</a></li><li><a href="../guides/week-end-insolite-pres-de-paris.html">Week-end insolite près de Paris</a></li><li><a href="../guides/hotels-troglodytes.html">Dormir dans un hôtel troglodyte</a></li><li><a href="../guides/spa-jacuzzi-privatif.html">Nuits insolites avec spa privatif</a></li><li><a href="../guides/hotels-insolites-bord-de-mer.html">Hôtels insolites en bord de mer</a></li><li><a href="../guides/hotels-insolites-montagne.html">Hôtels insolites à la montagne</a></li><li><a href="../guides/index.html">Tous les guides →</a></li><li><a href="../carte.html">La carte interactive →</a></li></ul></div>
         <div><h4>Nous suivre</h4><ul><li><a href="https://www.instagram.com/nuits.singulieres/" target="_blank" rel="noopener">Instagram · @nuits.singulieres</a></li><li><a href="../hoteliers.html">Espace hôteliers</a></li><li><a href="mailto:contact@exemple.fr">contact@exemple.fr</a></li><li><a href="../mentions-legales.html">Mentions légales</a></li></ul></div>
       </div>
       <p class="disclosure">Ce site contient des liens affiliés : si vous réservez via nos liens, nous percevons une commission du site partenaire, sans aucun surcoût pour vous. Les établissements marqués « Partenaire » ont souscrit une offre de mise en avant payante, qui améliore leur position dans le tri « Recommandés ». Les niveaux de budget sont indicatifs ; le tarif final est celui du site de réservation. Photos : © les établissements.</p>
       <p class="muted small">© 2026 Nuits Singulières</p></footer>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+  <script src="../vendor/leaflet/leaflet.js"></script>
   <script src="../js/config.js"></script>
   <script src="../js/hotels.js"></script>
   <script src="../js/guides.js"></script>

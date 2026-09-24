@@ -220,5 +220,41 @@
         "Regardez ce qui est inclus (petit-déjeuner, dîner, activités) avant de comparer les tarifs.",
       ],
     },
+    {
+      slug: "hotels-insolites-paris",
+      kicker: "Paris & alentours",
+      short: "Hôtels insolites à Paris",
+      title: (n) => `${n} hôtels insolites à Paris et aux portes de Paris`,
+      description: "Une piscine Art déco, une ancienne maison close, un hôtel flottant, un jardin secret à Montmartre et le seul hôtel du château de Versailles : les nuits les plus singulières de Paris.",
+      match: (h) => h.region === "Île-de-France" && h.env === "ville",
+      cover: "molitor",
+      intro: [
+        "Paris compte des milliers d'hôtels, mais très peu de lieux vraiment à part. Ceux-ci racontent une histoire : une piscine mythique des années 1930, une maison close de la Belle Époque, un bateau amarré sur la Seine, une maison secrète sur la butte Montmartre, et même le seul hôtel du domaine de Versailles.",
+        "Des adresses pour une nuit exceptionnelle à deux, un anniversaire ou simplement redécouvrir la capitale autrement.",
+      ],
+      tips: [
+        "Les week-ends partent vite : réservez plusieurs semaines à l'avance, surtout au printemps et à l'automne.",
+        "Venez en transports en commun : le stationnement est rare et cher dans Paris.",
+        "Pour Versailles, renseignez-vous sur les visites privées du château réservées aux hôtes.",
+      ],
+    },
+    {
+      slug: "dormir-en-altitude",
+      kicker: "En altitude",
+      short: "Dormir en altitude",
+      title: (n) => `Dormir au-dessus des nuages : ${n} nuits en altitude`,
+      description: "Observatoire du Pic du Midi, refuge au bord de la Mer de Glace, hôtel le plus haut de France, refuges accessibles à ski : les nuits les plus hautes de France.",
+      match: (h) => h.env === "montagne" && /refuge|pic|igloo/i.test(h.id),
+      cover: "pic-du-midi",
+      intro: [
+        "Il y a des nuits qu'on ne passe qu'une fois dans sa vie : au sommet du Pic du Midi, dans un observatoire à 2 877 mètres ; au bord de la Mer de Glace, dans un refuge de 1880 ; dans l'hôtel le plus haut de France ou dans un igloo sur les pistes.",
+        "Leur point commun : quand les remontées ferment, la montagne se vide, et l'on se retrouve seul face aux sommets, au coucher du soleil puis sous un ciel constellé d'étoiles.",
+      ],
+      tips: [
+        "Respectez les horaires d'accès (téléphérique, train, télécabine) : une fois fermés, il est impossible de monter.",
+        "L'altitude fatigue : buvez beaucoup d'eau et évitez les efforts intenses le premier soir.",
+        "Même en été, emportez des vêtements chauds pour la nuit et le lever du soleil.",
+      ],
+    },
   ];
 })(typeof window !== "undefined" ? window : globalThis);

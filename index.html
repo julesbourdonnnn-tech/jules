@@ -22,7 +22,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,600;1,9..144,300;1,9..144,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+  <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body class="home">
@@ -105,6 +105,19 @@
     <div class="spotlight reveal" id="spotlight-box"></div>
   </section>
 
+  <!-- ===== VITRINE DE LA CARTE ===== -->
+  <section class="section container" id="carte">
+    <a class="map-teaser reveal" href="carte.html">
+      <div>
+        <p class="eyebrow">La carte interactive</p>
+        <h2>Toute la France insolite, d'un seul regard</h2>
+        <p id="map-teaser-text">Zoomez, explorez, laissez-vous surprendre : chaque point est une nuit hors du commun.</p>
+        <span class="btn btn-light">Ouvrir la carte →</span>
+      </div>
+      <div class="map-teaser-art" id="map-teaser-art" aria-hidden="true"></div>
+    </a>
+  </section>
+
   <!-- ===== GUIDES (généré par scripts/build.js) ===== -->
   <section class="section section-tint" id="guides">
     <div class="container">
@@ -135,8 +148,8 @@
       <a class="guide-card reveal" href="guides/week-end-insolite-pres-de-paris.html">
         <img src="assets/hotels/cabanes-du-moulin/1-sm.jpg" alt="" loading="lazy" decoding="async">
         <span class="guide-card-text">
-          <small>Près de Paris · 9 adresses</small>
-          <strong>Week-end insolite près de Paris : 9 adresses à moins de 300 km</strong>
+          <small>Près de Paris · 12 adresses</small>
+          <strong>Week-end insolite près de Paris : 12 adresses à moins de 300 km</strong>
           <em>Lire le guide →</em>
         </span>
       </a>
@@ -159,8 +172,8 @@
       <a class="guide-card reveal" href="guides/hotels-insolites-bord-de-mer.html">
         <img src="assets/hotels/phare-de-kerbel/1-sm.jpg" alt="" loading="lazy" decoding="async">
         <span class="guide-card-text">
-          <small>Bord de mer · 5 adresses</small>
-          <strong>5 hôtels insolites en bord de mer</strong>
+          <small>Bord de mer · 7 adresses</small>
+          <strong>7 hôtels insolites en bord de mer</strong>
           <em>Lire le guide →</em>
         </span>
       </a>
@@ -245,48 +258,48 @@
       </div>
       <div class="directory"><!-- build:directory:start -->
         <div class="dir-col">
-          <h3>Auvergne-Rhône-Alpes <span>4</span></h3>
-          <ul><li><a href="hotels/cour-des-loges.html">Cour des Loges</a> <small>Lyon · Lieu chargé d&#39;histoire</small></li><li><a href="hotels/refuge-de-solaise.html">Le Refuge de Solaise</a> <small>Val-d&#39;Isère · Refuge &amp; chalet</small></li><li><a href="hotels/fermes-de-marie.html">Les Fermes de Marie</a> <small>Megève · Refuge &amp; chalet</small></li><li><a href="hotels/village-igloo-val-thorens.html">Village Igloo Val Thorens</a> <small>Val Thorens · Igloo</small></li></ul>
+          <h3>Auvergne-Rhône-Alpes <span>8</span></h3>
+          <ul><li><a href="hotels/cour-des-loges.html">Cour des Loges</a> <small>Lyon · Lieu chargé d&#39;histoire</small></li><li><a href="hotels/intercontinental-lyon-hotel-dieu.html">InterContinental Lyon – Hôtel-Dieu</a> <small>Lyon · Lieu chargé d&#39;histoire</small></li><li><a href="hotels/refuge-de-solaise.html">Le Refuge de Solaise</a> <small>Val-d&#39;Isère · Refuge &amp; chalet</small></li><li><a href="hotels/fermes-de-marie.html">Les Fermes de Marie</a> <small>Megève · Refuge &amp; chalet</small></li><li><a href="hotels/refuge-chez-la-tante.html">Refuge Chez la Tante</a> <small>Saint-Gervais-les-Bains · Refuge &amp; chalet</small></li><li><a href="hotels/refuge-de-la-traye.html">Refuge de la Traye</a> <small>Les Allues (Méribel) · Refuge &amp; chalet</small></li><li><a href="hotels/refuge-du-montenvers.html">Refuge du Montenvers</a> <small>Chamonix-Mont-Blanc · Refuge &amp; chalet</small></li><li><a href="hotels/village-igloo-val-thorens.html">Village Igloo Val Thorens</a> <small>Val Thorens · Igloo</small></li></ul>
         </div>
         <div class="dir-col">
-          <h3>Bourgogne-Franche-Comté <span>2</span></h3>
-          <ul><li><a href="hotels/cabanes-des-grands-lacs.html">Cabanes des Grands Lacs</a> <small>Chassey-lès-Montbozon · Cabane perchée</small></li><li><a href="hotels/chateau-de-la-resle.html">Château de la Resle</a> <small>Montigny-la-Resle · Château</small></li></ul>
+          <h3>Bourgogne-Franche-Comté <span>3</span></h3>
+          <ul><li><a href="hotels/cabanes-des-grands-lacs.html">Cabanes des Grands Lacs</a> <small>Chassey-lès-Montbozon · Cabane perchée</small></li><li><a href="hotels/chateau-de-la-resle.html">Château de la Resle</a> <small>Montigny-la-Resle · Château</small></li><li><a href="hotels/toue-cabanee-canal-de-bourgogne.html">La Toue cabanée du Canal de Bourgogne</a> <small>Chassey · Sur l&#39;eau</small></li></ul>
         </div>
         <div class="dir-col">
-          <h3>Bretagne <span>2</span></h3>
-          <ul><li><a href="hotels/dihan.html">Dihan</a> <small>Ploemel · Cabane perchée</small></li><li><a href="hotels/phare-de-kerbel.html">Phare de Kerbel</a> <small>Riantec · Phare</small></li></ul>
+          <h3>Bretagne <span>3</span></h3>
+          <ul><li><a href="hotels/dihan.html">Dihan</a> <small>Ploemel · Cabane perchée</small></li><li><a href="hotels/ile-louet.html">Maison du gardien de phare de l&#39;île Louët</a> <small>Carantec · Phare</small></li><li><a href="hotels/phare-de-kerbel.html">Phare de Kerbel</a> <small>Riantec · Phare</small></li></ul>
         </div>
         <div class="dir-col">
-          <h3>Centre-Val de Loire <span>3</span></h3>
-          <ul><li><a href="hotels/les-hautes-roches.html">Les Hautes Roches</a> <small>Rochecorbon · Troglodyte</small></li><li><a href="hotels/loire-valley-lodges.html">Loire Valley Lodges</a> <small>Esvres-sur-Indre · Cabane perchée</small></li><li><a href="hotels/troglododo.html">Troglododo</a> <small>Azay-le-Rideau · Troglodyte</small></li></ul>
+          <h3>Centre-Val de Loire <span>4</span></h3>
+          <ul><li><a href="hotels/les-hautes-roches.html">Les Hautes Roches</a> <small>Rochecorbon · Troglodyte</small></li><li><a href="hotels/loire-valley-lodges.html">Loire Valley Lodges</a> <small>Esvres-sur-Indre · Cabane perchée</small></li><li><a href="hotels/relais-de-chambord.html">Relais de Chambord</a> <small>Chambord · Château</small></li><li><a href="hotels/troglododo.html">Troglododo</a> <small>Azay-le-Rideau · Troglodyte</small></li></ul>
         </div>
         <div class="dir-col">
           <h3>Corse <span>1</span></h3>
           <ul><li><a href="hotels/casadelmar.html">Casadelmar</a> <small>Porto-Vecchio · Les pieds dans l&#39;eau</small></li></ul>
         </div>
         <div class="dir-col">
-          <h3>Île-de-France <span>3</span></h3>
-          <ul><li><a href="hotels/hotel-particulier-montmartre.html">Hôtel Particulier Montmartre</a> <small>Paris · Design &amp; architecture</small></li><li><a href="hotels/cabanes-du-moulin.html">Les Cabanes du Moulin</a> <small>Orly-sur-Morin · Cabane perchée</small></li><li><a href="hotels/off-paris-seine.html">OFF Paris Seine</a> <small>Paris · Sur l&#39;eau</small></li></ul>
+          <h3>Île-de-France <span>6</span></h3>
+          <ul><li><a href="hotels/hotel-particulier-montmartre.html">Hôtel Particulier Montmartre</a> <small>Paris · Design &amp; architecture</small></li><li><a href="hotels/grand-controle-versailles.html">Le Grand Contrôle – Château de Versailles</a> <small>Versailles · Château</small></li><li><a href="hotels/cabanes-du-moulin.html">Les Cabanes du Moulin</a> <small>Orly-sur-Morin · Cabane perchée</small></li><li><a href="hotels/maison-souquet.html">Maison Souquet</a> <small>Paris · Lieu chargé d&#39;histoire</small></li><li><a href="hotels/molitor.html">Molitor</a> <small>Paris · Design &amp; architecture</small></li><li><a href="hotels/off-paris-seine.html">OFF Paris Seine</a> <small>Paris · Sur l&#39;eau</small></li></ul>
         </div>
         <div class="dir-col">
           <h3>Normandie <span>1</span></h3>
           <ul><li><a href="hotels/auberge-saint-pierre.html">Auberge Saint-Pierre</a> <small>Le Mont-Saint-Michel · Lieu chargé d&#39;histoire</small></li></ul>
         </div>
         <div class="dir-col">
-          <h3>Nouvelle-Aquitaine <span>3</span></h3>
-          <ul><li><a href="hotels/domaine-des-etangs.html">Domaine des Étangs</a> <small>Massignac · Château</small></li><li><a href="hotels/la-coorniche.html">La Co(o)rniche</a> <small>Pyla-sur-Mer · Design &amp; architecture</small></li><li><a href="hotels/sources-de-caudalie.html">Les Sources de Caudalie</a> <small>Martillac · Au milieu des vignes</small></li></ul>
+          <h3>Nouvelle-Aquitaine <span>4</span></h3>
+          <ul><li><a href="hotels/domaine-des-etangs.html">Domaine des Étangs</a> <small>Massignac · Château</small></li><li><a href="hotels/la-coorniche.html">La Co(o)rniche</a> <small>Pyla-sur-Mer · Design &amp; architecture</small></li><li><a href="hotels/moulin-du-roc.html">Le Moulin du Roc</a> <small>Champagnac-de-Belair · Moulin au fil de l&#39;eau</small></li><li><a href="hotels/sources-de-caudalie.html">Les Sources de Caudalie</a> <small>Martillac · Au milieu des vignes</small></li></ul>
         </div>
         <div class="dir-col">
-          <h3>Occitanie <span>2</span></h3>
-          <ul><li><a href="hotels/chateau-de-mercues.html">Château de Mercuès</a> <small>Mercuès · Château</small></li><li><a href="hotels/pella-roca.html">Pella Roca</a> <small>Quercy Blanc · Cabane perchée</small></li></ul>
+          <h3>Occitanie <span>4</span></h3>
+          <ul><li><a href="hotels/chateau-de-mercues.html">Château de Mercuès</a> <small>Mercuès · Château</small></li><li><a href="hotels/hotel-de-la-cite-carcassonne.html">Hôtel de la Cité</a> <small>Carcassonne · Lieu chargé d&#39;histoire</small></li><li><a href="hotels/pic-du-midi.html">Nuit au sommet du Pic du Midi</a> <small>La Mongie · Nuit sous les étoiles</small></li><li><a href="hotels/pella-roca.html">Pella Roca</a> <small>Quercy Blanc · Cabane perchée</small></li></ul>
         </div>
         <div class="dir-col">
           <h3>Pays de la Loire <span>3</span></h3>
           <ul><li><a href="hotels/fontevraud-l-ermitage.html">Fontevraud L&#39;Ermitage</a> <small>Fontevraud-l&#39;Abbaye · Lieu chargé d&#39;histoire</small></li><li><a href="hotels/demeure-de-la-vignole.html">La Demeure de la Vignole</a> <small>Turquant · Troglodyte</small></li><li><a href="hotels/rocaminori.html">Rocaminori</a> <small>Louresse-Rochemenier · Troglodyte</small></li></ul>
         </div>
         <div class="dir-col">
-          <h3>Provence-Alpes-Côte d&#39;Azur <span>4</span></h3>
-          <ul><li><a href="hotels/alpinest.html">Alpinest</a> <small>Serres · Cabane perchée</small></li><li><a href="hotels/attrap-reves-allauch.html">Attrap&#39;Rêves</a> <small>Allauch · Bulle sous les étoiles</small></li><li><a href="hotels/hotel-le-corbusier.html">Hôtel Le Corbusier</a> <small>Marseille · Design &amp; architecture</small></li><li><a href="hotels/les-roches-rouges.html">Les Roches Rouges</a> <small>Saint-Raphaël · Les pieds dans l&#39;eau</small></li></ul>
+          <h3>Provence-Alpes-Côte d&#39;Azur <span>5</span></h3>
+          <ul><li><a href="hotels/alpinest.html">Alpinest</a> <small>Serres · Cabane perchée</small></li><li><a href="hotels/attrap-reves-allauch.html">Attrap&#39;Rêves</a> <small>Allauch · Bulle sous les étoiles</small></li><li><a href="hotels/cap-estel.html">Cap Estel</a> <small>Èze · Les pieds dans l&#39;eau</small></li><li><a href="hotels/hotel-le-corbusier.html">Hôtel Le Corbusier</a> <small>Marseille · Design &amp; architecture</small></li><li><a href="hotels/les-roches-rouges.html">Les Roches Rouges</a> <small>Saint-Raphaël · Les pieds dans l&#39;eau</small></li></ul>
         </div>
   <!-- build:directory:end -->
       </div>
@@ -337,7 +350,7 @@
     <input name="email"><input name="origine"><input name="bot-field">
   </form>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+  <script src="vendor/leaflet/leaflet.js"></script>
   <script src="js/config.js"></script>
   <script src="js/hotels.js"></script>
   <script src="js/guides.js"></script>

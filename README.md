@@ -15,7 +15,8 @@ Le site est **100 % statique** (HTML, CSS, JavaScript). Pas de serveur, pas de b
 - **Filtres** : texte, ambiance, expérience, budget (€ à €€€€), tri (recommandés, budget, distance, nom)
 - **Cartes avec mini-diaporama** : on fait défiler les photos de chaque établissement sans quitter la liste
 - **« Près de chez moi »** : le visiteur tape son adresse (autocomplétion via le service public d'adresses français, gratuit et sans clé) ou clique sur « Me localiser ». Les établissements sont alors triés par distance, avec un filtre de rayon (50, 100, 200, 400 km). La distance s'affiche aussi sur chaque fiche.
-- **Carte interactive** (OpenStreetMap) avec la photo de chaque lieu sur son repère, synchronisée avec une liste
+- **Carte de France interactive** (`carte.html`) : tous les lieux avec leur photo en médaillon, regroupés quand on dézoome, fonds Plan / Satellite / Nuit, recherche et filtres, aperçu du lieu au clic, lien partageable (`carte.html?h=phare-de-kerbel`), adaptée au mobile. Une vitrine animée (contour de la France avec un point par lieu) y mène depuis l'accueil
+- **Vue carte sur l'accueil** (OpenStreetMap), synchronisée avec une liste
 - **Fiche immersive** : photo plein écran avec effet de profondeur, onglets qui suivent la lecture, mosaïque de photos, visionneuse plein écran (glisser sur mobile), carte, partage, suggestions similaires, bouton de réservation fixé en bas sur mobile
 - **Animations** douces à l'apparition des sections (désactivées si le visiteur a demandé moins d'animations)
 - **Affiliation** : ton identifiant Booking est ajouté automatiquement à chaque lien. Tu peux aussi ajouter des boutons Expedia, Hotels.com ou « Site officiel ».
@@ -142,6 +143,8 @@ js/common.js          favoris, menus, géolocalisation, formulaires
 scripts/build.js      générateur des pages statiques
 js/app.js             logique de l'accueil
 js/hotel.js           interactions de la fiche (carte, photos, partage)
+js/carte.js           carte interactive (carte.html)
+vendor/               Leaflet et Leaflet.markercluster (cartes), licences incluses
 js/hoteliers.js       offres et formulaire hôteliers
 js/studio.js          logique du Studio
 ```

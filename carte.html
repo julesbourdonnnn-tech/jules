@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>La carte des hôtels insolites de France | Nuits Singulières</title>
+  <meta name="description" content="Explorez sur une carte interactive tous les hôtels insolites de notre sélection : cabanes, bulles, phares, châteaux, refuges d'altitude… partout en France.">
+  <meta property="og:site_name" content="Nuits Singulières">
+  <meta property="og:locale" content="fr_FR">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="La carte des hôtels insolites de France">
+  <meta property="og:description" content="Tous nos lieux extraordinaires sur une carte interactive.">
+  <meta name="theme-color" content="#0f1a17">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✦</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,600;1,9..144,300;1,9..144,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+  <link rel="stylesheet" href="vendor/markercluster/MarkerCluster.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="map-page">
+  <header id="site-header" class="site-header"></header>
+
+  <main class="atlas">
+    <div id="atlas-map" class="atlas-map" aria-label="Carte interactive des établissements"></div>
+
+    <!-- Panneau de recherche et liste -->
+    <aside class="atlas-panel" id="atlas-panel" aria-label="Recherche et liste des établissements">
+      <button type="button" class="atlas-handle" id="atlas-handle" aria-label="Afficher ou réduire la liste"><span></span></button>
+      <div class="atlas-head">
+        <p class="eyebrow dark">La carte</p>
+        <h1>Toute la France <em>insolite</em></h1>
+        <p class="atlas-count" id="atlas-count" aria-live="polite"></p>
+      </div>
+      <div class="atlas-filters">
+        <input type="search" id="atlas-q" placeholder="Un lieu, une ville, une région…" aria-label="Rechercher sur la carte">
+        <div class="pills atlas-pills" id="atlas-env" role="group" aria-label="Ambiance"></div>
+        <div class="type-chips atlas-types" id="atlas-types" role="group" aria-label="Expérience"></div>
+      </div>
+      <ol class="atlas-list" id="atlas-list"></ol>
+    </aside>
+
+    <!-- Commandes de la carte -->
+    <div class="atlas-tools" role="toolbar" aria-label="Commandes de la carte">
+      <div class="atlas-layers" id="atlas-layers" role="radiogroup" aria-label="Fond de carte">
+        <button type="button" data-layer="plan" class="active" role="radio" aria-checked="true">Plan</button>
+        <button type="button" data-layer="satellite" role="radio" aria-checked="false">Satellite</button>
+        <button type="button" data-layer="nuit" role="radio" aria-checked="false">Nuit</button>
+      </div>
+      <button type="button" class="atlas-btn" id="atlas-reset" title="Voir toute la France" aria-label="Voir toute la France">⤢</button>
+      <button type="button" class="atlas-btn" id="atlas-locate" title="Autour de moi" aria-label="Centrer autour de moi">◎</button>
+      <button type="button" class="atlas-btn" data-surprise title="Un lieu au hasard" aria-label="Un lieu au hasard">🎲</button>
+    </div>
+
+    <!-- Aperçu du lieu sélectionné -->
+    <article class="atlas-card" id="atlas-card" hidden aria-live="polite"></article>
+  </main>
+
+  <script src="vendor/leaflet/leaflet.js"></script>
+  <script src="vendor/markercluster/leaflet.markercluster.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/hotels.js"></script>
+  <script src="js/guides.js"></script>
+  <script src="js/core.js"></script>
+  <script src="js/common.js"></script>
+  <script src="js/carte.js"></script>
+</body>
+</html>

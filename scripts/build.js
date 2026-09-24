@@ -69,7 +69,7 @@ function head({ title, description, canonical, image, type = "website", ld = [],
   ${image ? `<meta property="og:image" content="${e(image)}">\n  <meta name="twitter:card" content="summary_large_image">` : ""}
   <meta name="theme-color" content="#0f1a17">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✦</text></svg>">${FONTS}
-  ${leaflet ? `<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">` : ""}
+  ${leaflet ? `<link rel="stylesheet" href="../vendor/leaflet/leaflet.css">` : ""}
   <link rel="stylesheet" href="../css/style.css">
   ${ld.map(jsonLd).join("\n  ")}
 </head>`;
@@ -253,7 +253,7 @@ function hotelPage(h) {
 
   <footer id="site-footer" class="site-footer">${C.footer()}</footer>
 
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>${SCRIPTS(`
+  <script src="../vendor/leaflet/leaflet.js"></script>${SCRIPTS(`
   <script src="../js/hotel.js"></script>`)}
 </body>
 </html>
@@ -449,6 +449,7 @@ function inject(file, marker, html) {
 function sitemap() {
   const urls = [
     `${SITE}/`,
+    abs("carte.html"),
     abs("guides/index.html"),
     ...GUIDES.filter((g) => C.guideHotels(g).length).map((g) => abs(`guides/${g.slug}.html`)),
     ...HOTELS.map((h) => abs(`hotels/${h.id}.html`)),
