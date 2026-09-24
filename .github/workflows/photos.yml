@@ -1,0 +1,48 @@
+# Récupère et optimise les photos des hôtels (voir scripts/photos.py).
+# Se lance tout seul quand data/photo-sources.json ou data/photo-selection.json change.
+name: Photos
+
+on:
+  push:
+    paths:
+      - "data/photo-sources.json"
+      - "data/photo-selection.json"
+      - "scripts/photos.py"
+      - ".github/workflows/photos.yml"
+  workflow_dispatch:
+    inputs:
+      only:
+        description: "Ids d'hôtels à re-scanner (séparés par des virgules)"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+concurrency:
+  group: photos-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  photos:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pillow
+      - name: Repérage et téléchargement
+        env:
+          ONLY: ${{ github.event.inputs.only }}
+        run: python scripts/photos.py
+      - name: Enregistrer les résultats
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A _review data assets/hotels || true
+          if git diff --cached --quiet; then echo "Rien de nouveau"; exit 0; fi
+          git commit -m "Photos : mise à jour automatique"
+          git pull --rebase origin "${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
