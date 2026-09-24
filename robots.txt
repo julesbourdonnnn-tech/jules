@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /studio.html
+Disallow: /_review/
+
+Sitemap: https://www.exemple.fr/sitemap.xml

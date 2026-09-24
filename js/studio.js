@@ -5,7 +5,7 @@
   const $ = (sel) => document.querySelector(sel);
   const byId = (id) => HOTELS.find((h) => h.id === id);
   const siteUrl = CONFIG.siteUrl.replace(/\/$/, "");
-  const hotelUrl = (h, src) => `${siteUrl}/hotel.html?id=${encodeURIComponent(h.id)}&src=${src}`;
+  const hotelUrl = (h, src) => `${siteUrl}/hotels/${h.id}.html?src=${src}`;
   const ig = CONFIG.social.instagram;
 
   const COLORS = { ink: "#1d2420", cream: "#f6f1e9", forest: "#2f4a3a", terracotta: "#c0673f", gold: "#b8925a", sand: "#f3d9b1" };

@@ -6,7 +6,7 @@
   } = window.NS;
   const HOTELS = window.HOTELS, ENVS = window.ENVIRONMENTS, TYPES = window.TYPES, BUDGETS = window.BUDGETS;
   const $ = (sel) => document.querySelector(sel);
-  const url = (h) => `hotel.html?id=${encodeURIComponent(h.id)}`;
+  const url = (h) => window.NS.hotelUrl(h);
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   const state = { q: "", env: "", type: "", budget: "", sort: "featured", radius: "", view: "grid", loc: getUserLocation() };
@@ -42,25 +42,31 @@
     const heroes = HOTELS.filter((h) => h.hero).sort((a, b) => a.hero - b.hero);
     const slides = (heroes.length ? heroes : FEATURED).slice(0, 6);
     const box = $("#hero-slides"), prog = $("#hero-progress"), cap = $("#hero-caption");
-    box.innerHTML = slides.map((h, i) => `<div class="hero-slide ${i ? "" : "on"}" style="background-image:url('${h.images[0]}')"></div>`).join("");
+    box.innerHTML = slides.map((h, i) => `<div class="hero-slide ${i ? "" : "on"}" style="background-image:url('${img(h.images[0])}')"></div>`).join("");
     prog.innerHTML = slides.map((h, i) => `<button type="button" data-i="${i}" aria-label="${escapeHtml(h.name)}"><i></i></button>`).join("");
-    let i = 0, timer;
+    let i = 0, timer, capTimer, firstShow = true;
     const DURATION = 6500;
     const show = (n) => {
       i = (n + slides.length) % slides.length;
       box.querySelectorAll(".hero-slide").forEach((s, k) => s.classList.toggle("on", k === i));
       prog.querySelectorAll("button").forEach((b, k) => { b.classList.toggle("on", k === i); b.classList.toggle("done", k < i); });
       const h = slides[i];
-      cap.href = url(h);
-      cap.innerHTML = `<span>${TYPES[h.type].icon} ${escapeHtml(TYPES[h.type].label)}</span><strong>${escapeHtml(h.name)}</strong><em>${escapeHtml(h.city)} · ${escapeHtml(h.region)} →</em>`;
-      cap.classList.remove("swap"); void cap.offsetWidth; cap.classList.add("swap");
+      // La légende change à mi-fondu, pour correspondre à la photo affichée
+      clearTimeout(capTimer);
+      capTimer = setTimeout(() => {
+        cap.href = url(h);
+        cap.setAttribute("aria-label", `Découvrir ${h.name}`);
+        cap.innerHTML = `<span>${TYPES[h.type].icon} ${escapeHtml(TYPES[h.type].label)}</span><strong>${escapeHtml(h.name)}</strong><em>${escapeHtml(h.city)} · ${escapeHtml(h.region)} →</em>`;
+        cap.classList.remove("swap"); void cap.offsetWidth; cap.classList.add("swap");
+      }, firstShow ? 0 : 700);
+      firstShow = false;
       clearTimeout(timer);
       if (!reduceMotion) timer = setTimeout(() => show(i + 1), DURATION);
     };
     prog.addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) show(Number(b.dataset.i)); });
     document.addEventListener("visibilitychange", () => { if (document.hidden) clearTimeout(timer); else show(i); });
     // Précharge les images suivantes
-    slides.slice(1).forEach((h) => { const im = new Image(); im.src = h.images[0]; });
+    slides.slice(1).forEach((h) => { const im = new Image(); im.src = img(h.images[0]); });
     show(0);
 
     // Recherche avec suggestions (hôtels, villes, régions)
@@ -88,7 +94,7 @@
     input.addEventListener("blur", () => setTimeout(() => list.classList.remove("open"), 150));
 
     $("#hero-env").insertAdjacentHTML("beforeend", Object.entries(ENVS).map(([k, e]) => `<option value="${k}">${escapeHtml(e.label)}</option>`).join(""));
-    $("#hero-budget").insertAdjacentHTML("beforeend", Object.entries(BUDGETS).map(([k, b]) => `<option value="${k}">${"€".repeat(k)} — ${escapeHtml(b.range)}</option>`).join(""));
+    $("#hero-budget").insertAdjacentHTML("beforeend", Object.entries(BUDGETS).map(([k, b]) => `<option value="${k}">${"€".repeat(k)}  ·  ${escapeHtml(b.range.replace(" la nuit", ""))}</option>`).join(""));
     $("#hero-search").addEventListener("submit", (e) => {
       e.preventDefault();
       const f = new FormData(e.target);
@@ -111,7 +117,7 @@
       const h = HOTELS.find((x) => x.id === e.cover) || firstOf("env", k);
       return `
         <a class="env-panel ${i === 0 ? "active" : ""}" href="?env=${k}#explorer" data-env="${k}">
-          <img src="${h ? h.images[0] : ""}" alt="" loading="lazy">
+          <img src="${h ? img(h.images[0]) : ""}" alt="" loading="lazy" decoding="async">
           <div class="env-panel-text">
             <span class="env-count">${count("env", k)} adresses</span>
             <h3>${escapeHtml(e.label)}</h3>
@@ -170,7 +176,7 @@
     const list = FEATURED.slice(0, 6);
     const box = $("#spotlight-box");
     box.innerHTML = `
-      <div class="spot-media">${list.map((h, i) => `<img class="${i ? "" : "on"}" src="${h.images[0]}" alt="${escapeHtml(h.name)}" loading="lazy">`).join("")}</div>
+      <div class="spot-media">${list.map((h, i) => `<img class="${i ? "" : "on"}" src="${img(h.images[0])}" alt="${escapeHtml(h.name)}" loading="lazy" decoding="async">`).join("")}</div>
       <div class="spot-body">
         <div class="spot-text" aria-live="polite"></div>
         <div class="spot-thumbs">${list.map((h, i) => `
@@ -411,7 +417,7 @@
     });
     document.querySelectorAll(".view-toggle button").forEach((b) => b.addEventListener("click", () => {
       state.view = b.dataset.view;
-      document.querySelectorAll(".view-toggle button").forEach((x) => x.classList.toggle("active", x === b));
+      document.querySelectorAll(".view-toggle button").forEach((x) => { x.classList.toggle("active", x === b); x.setAttribute("aria-selected", x === b); });
       render();
     }));
     const reset = () => { Object.assign(state, { q: "", env: "", type: "", budget: "", radius: "", sort: state.loc ? "distance" : "featured" }); render(); };

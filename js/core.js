@@ -1,0 +1,231 @@
+/*
+ * Briques d'affichage communes, utilisées à la fois :
+ *  - par le navigateur (accueil, cartes, en-tête…) ;
+ *  - par le générateur de pages statiques (scripts/build.js) pour les fiches
+ *    hôtels et les guides.
+ * Ce fichier ne touche jamais au DOM : il ne fait que produire du HTML.
+ */
+(function (global, factory) {
+  const api = factory(global);
+  if (typeof module === "object" && module.exports) module.exports = api;
+  else global.NSCore = api;
+})(typeof window !== "undefined" ? window : globalThis, function (global) {
+  const data = () => ({
+    CONFIG: global.SITE_CONFIG,
+    HOTELS: global.HOTELS || [],
+    ENVS: global.ENVIRONMENTS,
+    TYPES: global.TYPES,
+    BUDGETS: global.BUDGETS,
+    GUIDES: global.GUIDES || [],
+  });
+
+  /* ---------- Chemins ----------
+   * Les pages situées dans un sous-dossier (hotels/, guides/) portent
+   * <html data-root="../"> : tous les liens et images sont préfixés. */
+  let forcedRoot = null;
+  const setRoot = (r) => { forcedRoot = r; };
+  const root = () => {
+    if (forcedRoot !== null) return forcedRoot;
+    if (typeof document !== "undefined") return document.documentElement.getAttribute("data-root") || "";
+    return "";
+  };
+  const page = (p) => root() + p;
+  const hotelUrl = (h) => `${root()}hotels/${h.id}.html`;
+  const guideUrl = (g) => `${root()}guides/${g.slug}.html`;
+
+  const escapeHtml = (s = "") =>
+    String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+  const formatPrice = (n) => new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(n);
+  const formatDistance = (km) => (km < 10 ? `${km.toFixed(1).replace(".", ",")} km` : `${Math.round(km)} km`);
+
+  // Distance à vol d'oiseau (formule de haversine)
+  function distanceKm(a, b) {
+    const R = 6371, rad = (d) => (d * Math.PI) / 180;
+    const dLat = rad(b.lat - a.lat), dLng = rad(b.lng - a.lng);
+    const x = Math.sin(dLat / 2) ** 2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLng / 2) ** 2;
+    return 2 * R * Math.asin(Math.sqrt(x));
+  }
+
+  /* ---------- Photos ----------
+   * Deux tailles par photo : 1.jpg (grande) et 1-sm.jpg (vignette). */
+  const FALLBACK = "data:image/svg+xml;utf8," + encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#24392f"/><stop offset="1" stop-color="#c29a5b"/></linearGradient></defs><rect width="800" height="600" fill="url(#g)"/><text x="400" y="315" font-family="Georgia,serif" font-size="34" fill="#f4efe6" text-anchor="middle" opacity=".85">Nuits Singulières</text></svg>`
+  );
+  function img(url, w) {
+    if (!url) return FALLBACK;
+    if (/^(https?:|data:)/.test(url)) return url;
+    const local = /^assets\/hotels\/.+\/\d+\.jpg$/.test(url);
+    return root() + (local && w && w <= 900 ? url.replace(/\.jpg$/, "-sm.jpg") : url);
+  }
+
+  /* ---------- Budget, offres payantes ---------- */
+  const budgetOf = (h) => data().BUDGETS[h.budget] || data().BUDGETS[2];
+  const budgetHtml = (h) =>
+    `<span class="budget" title="${escapeHtml(budgetOf(h).range)}">${"€".repeat(h.budget)}<span class="budget-off">${"€".repeat(4 - h.budget)}</span></span>`;
+  const PLAN_RANK = { premium: 2, partenaire: 1 };
+  const planRank = (h) => PLAN_RANK[h.plan] || 0;
+  const partnerBadge = (h) => (planRank(h) ? `<span class="badge-partner" title="Établissement ayant souscrit une offre de mise en avant">Partenaire</span>` : "");
+
+  /* ---------- Liens de réservation ---------- */
+  function bookingLink(h, src = "") {
+    const { CONFIG } = data();
+    let url;
+    try { url = new URL(h.bookingUrl); } catch { url = null; }
+    if (!url) {
+      url = new URL("https://www.booking.com/searchresults.fr.html");
+      url.searchParams.set("ss", `${h.name}, ${h.city}`);
+    }
+    if (CONFIG.booking.aid) url.searchParams.set("aid", CONFIG.booking.aid);
+    if (CONFIG.booking.label) url.searchParams.set("label", [CONFIG.booking.label, src, h.id].filter(Boolean).join("-"));
+    return url.toString();
+  }
+  function partnerLinks(h) {
+    const { CONFIG } = data();
+    return Object.entries(h.partners || {})
+      .filter(([key, href]) => href && CONFIG.partners[key])
+      .map(([key, href]) => {
+        const p = CONFIG.partners[key];
+        const sep = href.includes("?") ? "&" : "?";
+        return { name: p.name, href: p.param ? `${href}${sep}${p.param}` : href };
+      });
+  }
+
+  /* ---------- Petits composants ---------- */
+  const HEART = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.6-9.3C.9 8.3 3 4.5 6.7 4.5c2.1 0 3.6 1.2 4.3 2.4.7-1.2 2.2-2.4 4.3-2.4 3.7 0 5.8 3.8 4.3 7.2C19.5 16.4 12 21 12 21z"/></svg>`;
+  const favButton = (h, extra = "", on = false) => `
+    <button type="button" class="fav ${extra} ${on ? "on" : ""}" data-fav="${escapeHtml(h.id)}"
+      aria-pressed="${on}" aria-label="Ajouter ${escapeHtml(h.name)} à mes coups de cœur">${HEART}</button>`;
+
+  function card(h, { dist = null, reveal = true, fav = false } = {}) {
+    const { ENVS, TYPES } = data();
+    const url = hotelUrl(h);
+    const photos = h.images.slice(0, 5);
+    return `
+      <article class="card ${reveal ? "reveal" : ""}" data-id="${escapeHtml(h.id)}">
+        <div class="card-media">
+          <a class="card-slides" href="${url}" tabindex="-1" aria-hidden="true">
+            ${photos.map((src, i) => `<img src="${img(src, 900)}" alt="" loading="lazy" decoding="async" draggable="false"${i ? "" : ` width="900" height="675"`}>`).join("")}
+          </a>
+          ${photos.length > 1 ? `
+            <button type="button" class="card-nav prev" data-slide="-1" aria-label="Photo précédente">‹</button>
+            <button type="button" class="card-nav next" data-slide="1" aria-label="Photo suivante">›</button>
+            <div class="card-dots">${photos.map((_, i) => `<span class="${i ? "" : "on"}"></span>`).join("")}</div>` : ""}
+          <span class="badge">${escapeHtml(ENVS[h.env].label)}</span>
+          ${partnerBadge(h)}
+          ${favButton(h, "", fav)}
+          ${dist != null ? `<span class="card-dist">📍 ${formatDistance(dist)}</span>` : ""}
+        </div>
+        <a class="card-body" href="${url}">
+          <p class="card-type">${TYPES[h.type].icon} ${escapeHtml(TYPES[h.type].label)}</p>
+          <h3>${escapeHtml(h.name)}</h3>
+          <p class="card-place">${escapeHtml(h.city)} · ${escapeHtml(h.region)}</p>
+          <p class="card-tagline">${escapeHtml(h.tagline)}</p>
+          <p class="card-foot">${budgetHtml(h)}<span class="card-more">Découvrir →</span></p>
+        </a>
+      </article>`;
+  }
+
+  function newsletterForm(origin, variant = "") {
+    const { CONFIG } = data();
+    return `
+      <form class="nl-form ${variant}" name="newsletter" data-nl>
+        <input type="hidden" name="form-name" value="newsletter">
+        <input type="hidden" name="origine" value="${escapeHtml(origin)}">
+        <p class="nl-hp"><label>Ne pas remplir <input name="bot-field" tabindex="-1" autocomplete="off"></label></p>
+        <input type="email" name="email" required placeholder="Votre adresse e-mail" aria-label="Votre adresse e-mail" autocomplete="email">
+        <button class="btn btn-primary" type="submit">Je m'abonne</button>
+        <p class="nl-msg" role="status"></p>
+        <p class="nl-legal">Gratuit, 1 e-mail par semaine, désinscription en un clic. ${escapeHtml(CONFIG.newsletter.title)}.</p>
+      </form>`;
+  }
+
+  const SOCIAL_URL = {
+    instagram: (h) => `https://www.instagram.com/${h}/`,
+    tiktok: (h) => `https://www.tiktok.com/@${h}`,
+    pinterest: (h) => `https://www.pinterest.fr/${h}/`,
+  };
+  const socialLinks = () => Object.entries(data().CONFIG.social || {})
+    .filter(([k, v]) => typeof v === "string" && v && SOCIAL_URL[k])
+    .map(([k, v]) => ({ name: k[0].toUpperCase() + k.slice(1), handle: v, href: SOCIAL_URL[k](v) }));
+
+  /* ---------- Guides ---------- */
+  function guideHotels(g) {
+    const { HOTELS } = data();
+    let list = g.ids ? g.ids.map((id) => HOTELS.find((h) => h.id === id)).filter(Boolean) : HOTELS.filter(g.match);
+    if (g.sort) list = list.slice().sort(g.sort);
+    return list;
+  }
+  const guideTitle = (g, n = guideHotels(g).length) => (typeof g.title === "function" ? g.title(n) : g.title);
+  const guidesFor = (h) => data().GUIDES.filter((g) => guideHotels(g).some((x) => x.id === h.id));
+
+  function guideCard(g) {
+    const list = guideHotels(g);
+    const cover = list.find((h) => h.id === g.cover) || list[0];
+    if (!cover) return "";
+    return `
+      <a class="guide-card reveal" href="${guideUrl(g)}">
+        <img src="${img(cover.images[0], 900)}" alt="" loading="lazy" decoding="async">
+        <span class="guide-card-text">
+          <small>${escapeHtml(g.kicker)} · ${list.length} adresse${list.length > 1 ? "s" : ""}</small>
+          <strong>${escapeHtml(guideTitle(g, list.length))}</strong>
+          <em>Lire le guide →</em>
+        </span>
+      </a>`;
+  }
+
+  /* ---------- En-tête et pied de page ---------- */
+  function header() {
+    const { CONFIG } = data();
+    return `
+      <a class="brand" href="${page("index.html")}">
+        <span class="brand-mark">✦</span>
+        <span>${escapeHtml(CONFIG.siteName)}</span>
+      </a>
+      <nav class="nav" aria-label="Navigation principale">
+        <a href="${page("index.html#destinations")}">Ambiances</a>
+        <a href="${page("guides/index.html")}">Guides</a>
+        <a href="${page("index.html#explorer")}">Tous les lieux</a>
+        <a href="${page("hoteliers.html")}">Hôteliers</a>
+        <button type="button" class="nav-icon" data-surprise title="Un lieu au hasard" aria-label="Un lieu au hasard">🎲</button>
+        <button type="button" class="nav-icon" id="fav-open" title="Mes coups de cœur" aria-label="Mes coups de cœur">♡<span class="fav-count" hidden></span></button>
+        <a href="${page("index.html#explorer")}" class="nav-cta" data-open-near>Près de chez moi</a>
+      </nav>`;
+  }
+
+  function footer() {
+    const { CONFIG, ENVS, GUIDES } = data();
+    const envLinks = Object.entries(ENVS)
+      .map(([k, e]) => `<li><a href="${page(`index.html?env=${k}#explorer`)}">Hôtels insolites ${e.inLabel}</a></li>`).join("");
+    const guideLinks = GUIDES.filter((g) => guideHotels(g).length)
+      .slice(0, 7).map((g) => `<li><a href="${guideUrl(g)}">${escapeHtml(g.short || guideTitle(g))}</a></li>`).join("");
+    const socials = socialLinks()
+      .map((s) => `<li><a href="${escapeHtml(s.href)}" target="_blank" rel="noopener">${escapeHtml(s.name)} · @${escapeHtml(s.handle)}</a></li>`).join("");
+    return `
+      <div class="footer-news">
+        <div>
+          <h3>${escapeHtml(CONFIG.newsletter.title)}</h3>
+          <p class="muted">${escapeHtml(CONFIG.newsletter.pitch)}</p>
+        </div>
+        ${newsletterForm("pied-de-page", "on-dark")}
+      </div>
+      <div class="footer-grid">
+        <div>
+          <a class="brand" href="${page("index.html")}"><span class="brand-mark">✦</span><span>${escapeHtml(CONFIG.siteName)}</span></a>
+          <p class="muted">${escapeHtml(CONFIG.tagline)}. Une sélection d'adresses rares, choisies une à une.</p>
+        </div>
+        <div><h4>Ambiances</h4><ul>${envLinks}</ul></div>
+        <div><h4>Nos guides</h4><ul>${guideLinks}<li><a href="${page("guides/index.html")}">Tous les guides →</a></li></ul></div>
+        <div><h4>Nous suivre</h4><ul>${socials}<li><a href="${page("hoteliers.html")}">Espace hôteliers</a></li><li><a href="mailto:${escapeHtml(CONFIG.contactEmail)}">${escapeHtml(CONFIG.contactEmail)}</a></li><li><a href="${page("mentions-legales.html")}">Mentions légales</a></li></ul></div>
+      </div>
+      <p class="disclosure">Ce site contient des liens affiliés : si vous réservez via nos liens, nous percevons une commission du site partenaire, sans aucun surcoût pour vous. Les établissements marqués « Partenaire » ont souscrit une offre de mise en avant payante, qui améliore leur position dans le tri « Recommandés ». Les niveaux de budget sont indicatifs ; le tarif final est celui du site de réservation. Photos : © les établissements.</p>
+      <p class="muted small">© ${new Date().getFullYear()} ${escapeHtml(CONFIG.siteName)}</p>`;
+  }
+
+  return {
+    data, setRoot, root, page, hotelUrl, guideUrl, escapeHtml, formatPrice, formatDistance, distanceKm,
+    FALLBACK, img, budgetOf, budgetHtml, planRank, partnerBadge, bookingLink, partnerLinks,
+    favButton, card, newsletterForm, socialLinks, guideHotels, guideTitle, guidesFor, guideCard,
+    header, footer,
+  };
+});

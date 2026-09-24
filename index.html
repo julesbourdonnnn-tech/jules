@@ -3,12 +3,21 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Nuits Singulières — Les hôtels les plus extraordinaires de France</title>
+  <title>Nuits Singulières — Les hôtels les plus insolites de France</title>
   <meta name="description" content="Cabanes perchées, bulles sous les étoiles, phare, abbaye royale, igloos, hôtel flottant… Les hôtels les plus extraordinaires de France, en ville, à la campagne, à la mer ou à la montagne.">
-  <meta property="og:title" content="Nuits Singulières — Hôtels extraordinaires en France">
-  <meta property="og:description" content="La sélection des hôtels les plus insolites et magiques de France.">
+  <meta property="og:site_name" content="Nuits Singulières">
+  <meta property="og:locale" content="fr_FR">
   <meta property="og:type" content="website">
+  <meta property="og:title" content="Nuits Singulières — Les hôtels les plus insolites de France">
+  <meta property="og:description" content="La sélection des hôtels les plus insolites et magiques de France.">
+  <meta name="twitter:card" content="summary_large_image">
   <meta name="theme-color" content="#0f1a17">
+  <!-- build:head:start -->
+  <link rel="canonical" href="https://www.exemple.fr/">
+  <meta property="og:url" content="https://www.exemple.fr/">
+  <meta property="og:image" content="https://www.exemple.fr/assets/hotels/la-coorniche/1.jpg">
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"Nuits Singulières","url":"https://www.exemple.fr/","description":"Les hôtels les plus extraordinaires de France","inLanguage":"fr-FR","potentialAction":{"@type":"SearchAction","target":"https://www.exemple.fr/index.html?q={search_term_string}#explorer","query-input":"required name=search_term_string"}}</script>
+  <!-- build:head:end -->
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✦</text></svg>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -17,8 +26,10 @@
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body class="home">
+  <a class="skip" href="#explorer">Aller aux établissements</a>
   <header id="site-header" class="site-header on-dark"></header>
 
+  <main>
   <!-- ===== HERO : diaporama plein écran ===== -->
   <section class="hero" id="hero">
     <div class="hero-slides" id="hero-slides"></div>
@@ -28,20 +39,20 @@
       <p class="eyebrow reveal">Cabanes · Bulles · Phare · Abbaye · Igloo · Hôtel flottant</p>
       <h1 class="hero-title reveal">Des nuits qui ne ressemblent<br><em>à aucune autre.</em></h1>
 
-      <form class="hero-search reveal" id="hero-search" autocomplete="off">
+      <form class="hero-search reveal" id="hero-search" autocomplete="off" role="search">
         <label class="field field-grow">
           <span>Où rêvez-vous de dormir ?</span>
           <input type="text" name="q" id="hero-q" placeholder="Une ville, une région, un hôtel…">
           <ul class="suggestions" id="hero-suggestions" role="listbox"></ul>
         </label>
-        <label class="field">
-          <span>Ambiance</span>
-          <select name="env" id="hero-env"><option value="">Toutes</option></select>
-        </label>
-        <label class="field">
-          <span>Budget</span>
-          <select name="budget" id="hero-budget"><option value="">Tous</option></select>
-        </label>
+        <div class="field">
+          <span id="hero-env-label">Ambiance</span>
+          <select name="env" id="hero-env" data-fancy="in-field" aria-label="Ambiance"><option value="">Toutes</option></select>
+        </div>
+        <div class="field">
+          <span id="hero-budget-label">Budget</span>
+          <select name="budget" id="hero-budget" data-fancy="in-field" aria-label="Budget"><option value="">Tous</option></select>
+        </div>
         <button class="btn btn-primary" type="submit"><span>Explorer</span></button>
       </form>
 
@@ -94,6 +105,70 @@
     <div class="spotlight reveal" id="spotlight-box"></div>
   </section>
 
+  <!-- ===== GUIDES (généré par scripts/build.js) ===== -->
+  <section class="section section-tint" id="guides">
+    <div class="container">
+      <div class="section-head row reveal">
+        <div>
+          <p class="eyebrow dark">Nos guides</p>
+          <h2>Des idées pour chaque envie</h2>
+        </div>
+        <a class="link-arrow" href="guides/index.html">Tous les guides →</a>
+      </div>
+      <div class="guide-grid"><!-- build:guides:start -->
+      <a class="guide-card reveal" href="guides/nuit-insolite-en-amoureux.html">
+        <img src="assets/hotels/attrap-reves-allauch/1-sm.jpg" alt="" loading="lazy" decoding="async">
+        <span class="guide-card-text">
+          <small>En amoureux · 10 adresses</small>
+          <strong>10 nuits insolites pour un week-end en amoureux</strong>
+          <em>Lire le guide →</em>
+        </span>
+      </a>
+      <a class="guide-card reveal" href="guides/cabanes-perchees.html">
+        <img src="assets/hotels/loire-valley-lodges/1-sm.jpg" alt="" loading="lazy" decoding="async">
+        <span class="guide-card-text">
+          <small>Cabanes perchées · 6 adresses</small>
+          <strong>Les 6 plus belles cabanes perchées de France</strong>
+          <em>Lire le guide →</em>
+        </span>
+      </a>
+      <a class="guide-card reveal" href="guides/week-end-insolite-pres-de-paris.html">
+        <img src="assets/hotels/cabanes-du-moulin/1-sm.jpg" alt="" loading="lazy" decoding="async">
+        <span class="guide-card-text">
+          <small>Près de Paris · 9 adresses</small>
+          <strong>Week-end insolite près de Paris : 9 adresses à moins de 300 km</strong>
+          <em>Lire le guide →</em>
+        </span>
+      </a>
+      <a class="guide-card reveal" href="guides/hotels-troglodytes.html">
+        <img src="assets/hotels/demeure-de-la-vignole/1-sm.jpg" alt="" loading="lazy" decoding="async">
+        <span class="guide-card-text">
+          <small>Troglodytes · 4 adresses</small>
+          <strong>Dormir dans la roche : 4 hôtels troglodytes en France</strong>
+          <em>Lire le guide →</em>
+        </span>
+      </a>
+      <a class="guide-card reveal" href="guides/spa-jacuzzi-privatif.html">
+        <img src="assets/hotels/pella-roca/1-sm.jpg" alt="" loading="lazy" decoding="async">
+        <span class="guide-card-text">
+          <small>Spa privatif · 4 adresses</small>
+          <strong>4 nuits insolites avec spa ou jacuzzi privatif</strong>
+          <em>Lire le guide →</em>
+        </span>
+      </a>
+      <a class="guide-card reveal" href="guides/hotels-insolites-bord-de-mer.html">
+        <img src="assets/hotels/phare-de-kerbel/1-sm.jpg" alt="" loading="lazy" decoding="async">
+        <span class="guide-card-text">
+          <small>Bord de mer · 5 adresses</small>
+          <strong>5 hôtels insolites en bord de mer</strong>
+          <em>Lire le guide →</em>
+        </span>
+      </a>
+  <!-- build:guides:end -->
+      </div>
+    </div>
+  </section>
+
   <!-- ===== EXPLORER ===== -->
   <section class="section container" id="explorer">
     <div class="section-head row reveal">
@@ -101,9 +176,9 @@
         <p class="eyebrow dark">Explorer</p>
         <h2>Tous nos établissements</h2>
       </div>
-      <div class="view-toggle" role="tablist">
-        <button type="button" class="active" data-view="grid">▦ Galerie</button>
-        <button type="button" data-view="map">🗺 Carte</button>
+      <div class="view-toggle" role="tablist" aria-label="Affichage">
+        <button type="button" class="active" data-view="grid" role="tab" aria-selected="true">▦ Galerie</button>
+        <button type="button" data-view="map" role="tab" aria-selected="false">🗺 Carte</button>
       </div>
     </div>
 
@@ -118,7 +193,7 @@
           <ul class="suggestions" id="near-suggestions" role="listbox"></ul>
         </div>
         <button class="btn btn-ghost" type="button" id="near-locate" title="Utiliser ma position">◎ Me localiser</button>
-        <select id="near-radius" aria-label="Rayon">
+        <select id="near-radius" aria-label="Rayon de recherche" data-fancy="on-dark">
           <option value="">Toute la France</option>
           <option value="50">Moins de 50 km</option>
           <option value="100">Moins de 100 km</option>
@@ -131,10 +206,10 @@
 
     <div class="filters" id="filters">
       <div class="filter-row">
-        <input type="search" id="f-q" placeholder="Rechercher un hôtel, une ville…" aria-label="Recherche">
-        <div class="pills" id="f-env"></div>
-        <div class="pills" id="f-budget"></div>
-        <select id="f-sort" aria-label="Trier">
+        <input type="search" id="f-q" placeholder="Rechercher…" aria-label="Rechercher un établissement, une ville, une région">
+        <div class="pills" id="f-env" role="group" aria-label="Ambiance"></div>
+        <div class="pills" id="f-budget" role="group" aria-label="Budget"></div>
+        <select id="f-sort" aria-label="Trier par" data-fancy="pill">
           <option value="featured">Recommandés</option>
           <option value="budget-asc">Budget croissant</option>
           <option value="budget-desc">Budget décroissant</option>
@@ -142,11 +217,11 @@
           <option value="name">Nom (A → Z)</option>
         </select>
       </div>
-      <div class="type-chips" id="f-type"></div>
+      <div class="type-chips" id="f-type" role="group" aria-label="Expérience"></div>
     </div>
 
     <div class="results-bar">
-      <p id="results-count"></p>
+      <p id="results-count" aria-live="polite"></p>
       <button class="btn-text" type="button" id="reset-top" hidden>Réinitialiser les filtres</button>
     </div>
 
@@ -161,8 +236,65 @@
     </div>
   </section>
 
+  <!-- ===== ANNUAIRE PAR RÉGION (généré par scripts/build.js) ===== -->
+  <section class="section section-tint" id="annuaire">
+    <div class="container">
+      <div class="section-head reveal">
+        <p class="eyebrow dark">Toutes nos adresses</p>
+        <h2>Par région</h2>
+      </div>
+      <div class="directory"><!-- build:directory:start -->
+        <div class="dir-col">
+          <h3>Auvergne-Rhône-Alpes <span>4</span></h3>
+          <ul><li><a href="hotels/cour-des-loges.html">Cour des Loges</a> <small>Lyon · Lieu chargé d&#39;histoire</small></li><li><a href="hotels/refuge-de-solaise.html">Le Refuge de Solaise</a> <small>Val-d&#39;Isère · Refuge &amp; chalet</small></li><li><a href="hotels/fermes-de-marie.html">Les Fermes de Marie</a> <small>Megève · Refuge &amp; chalet</small></li><li><a href="hotels/village-igloo-val-thorens.html">Village Igloo Val Thorens</a> <small>Val Thorens · Igloo</small></li></ul>
+        </div>
+        <div class="dir-col">
+          <h3>Bourgogne-Franche-Comté <span>2</span></h3>
+          <ul><li><a href="hotels/cabanes-des-grands-lacs.html">Cabanes des Grands Lacs</a> <small>Chassey-lès-Montbozon · Cabane perchée</small></li><li><a href="hotels/chateau-de-la-resle.html">Château de la Resle</a> <small>Montigny-la-Resle · Château</small></li></ul>
+        </div>
+        <div class="dir-col">
+          <h3>Bretagne <span>2</span></h3>
+          <ul><li><a href="hotels/dihan.html">Dihan</a> <small>Ploemel · Cabane perchée</small></li><li><a href="hotels/phare-de-kerbel.html">Phare de Kerbel</a> <small>Riantec · Phare</small></li></ul>
+        </div>
+        <div class="dir-col">
+          <h3>Centre-Val de Loire <span>3</span></h3>
+          <ul><li><a href="hotels/les-hautes-roches.html">Les Hautes Roches</a> <small>Rochecorbon · Troglodyte</small></li><li><a href="hotels/loire-valley-lodges.html">Loire Valley Lodges</a> <small>Esvres-sur-Indre · Cabane perchée</small></li><li><a href="hotels/troglododo.html">Troglododo</a> <small>Azay-le-Rideau · Troglodyte</small></li></ul>
+        </div>
+        <div class="dir-col">
+          <h3>Corse <span>1</span></h3>
+          <ul><li><a href="hotels/casadelmar.html">Casadelmar</a> <small>Porto-Vecchio · Les pieds dans l&#39;eau</small></li></ul>
+        </div>
+        <div class="dir-col">
+          <h3>Île-de-France <span>3</span></h3>
+          <ul><li><a href="hotels/hotel-particulier-montmartre.html">Hôtel Particulier Montmartre</a> <small>Paris · Design &amp; architecture</small></li><li><a href="hotels/cabanes-du-moulin.html">Les Cabanes du Moulin</a> <small>Orly-sur-Morin · Cabane perchée</small></li><li><a href="hotels/off-paris-seine.html">OFF Paris Seine</a> <small>Paris · Sur l&#39;eau</small></li></ul>
+        </div>
+        <div class="dir-col">
+          <h3>Normandie <span>1</span></h3>
+          <ul><li><a href="hotels/auberge-saint-pierre.html">Auberge Saint-Pierre</a> <small>Le Mont-Saint-Michel · Lieu chargé d&#39;histoire</small></li></ul>
+        </div>
+        <div class="dir-col">
+          <h3>Nouvelle-Aquitaine <span>3</span></h3>
+          <ul><li><a href="hotels/domaine-des-etangs.html">Domaine des Étangs</a> <small>Massignac · Château</small></li><li><a href="hotels/la-coorniche.html">La Co(o)rniche</a> <small>Pyla-sur-Mer · Design &amp; architecture</small></li><li><a href="hotels/sources-de-caudalie.html">Les Sources de Caudalie</a> <small>Martillac · Au milieu des vignes</small></li></ul>
+        </div>
+        <div class="dir-col">
+          <h3>Occitanie <span>2</span></h3>
+          <ul><li><a href="hotels/chateau-de-mercues.html">Château de Mercuès</a> <small>Mercuès · Château</small></li><li><a href="hotels/pella-roca.html">Pella Roca</a> <small>Quercy Blanc · Cabane perchée</small></li></ul>
+        </div>
+        <div class="dir-col">
+          <h3>Pays de la Loire <span>3</span></h3>
+          <ul><li><a href="hotels/fontevraud-l-ermitage.html">Fontevraud L&#39;Ermitage</a> <small>Fontevraud-l&#39;Abbaye · Lieu chargé d&#39;histoire</small></li><li><a href="hotels/demeure-de-la-vignole.html">La Demeure de la Vignole</a> <small>Turquant · Troglodyte</small></li><li><a href="hotels/rocaminori.html">Rocaminori</a> <small>Louresse-Rochemenier · Troglodyte</small></li></ul>
+        </div>
+        <div class="dir-col">
+          <h3>Provence-Alpes-Côte d&#39;Azur <span>4</span></h3>
+          <ul><li><a href="hotels/alpinest.html">Alpinest</a> <small>Serres · Cabane perchée</small></li><li><a href="hotels/attrap-reves-allauch.html">Attrap&#39;Rêves</a> <small>Allauch · Bulle sous les étoiles</small></li><li><a href="hotels/hotel-le-corbusier.html">Hôtel Le Corbusier</a> <small>Marseille · Design &amp; architecture</small></li><li><a href="hotels/les-roches-rouges.html">Les Roches Rouges</a> <small>Saint-Raphaël · Les pieds dans l&#39;eau</small></li></ul>
+        </div>
+  <!-- build:directory:end -->
+      </div>
+    </div>
+  </section>
+
   <!-- ===== NEWSLETTER ===== -->
-  <section class="section section-tint" id="newsletter">
+  <section class="section" id="newsletter">
     <div class="container nl-band reveal">
       <div>
         <p class="eyebrow dark">Newsletter</p>
@@ -196,6 +328,7 @@
       <a class="btn btn-light" href="hoteliers.html">Découvrir nos offres</a>
     </div>
   </section>
+  </main>
 
   <footer id="site-footer" class="site-footer"></footer>
 
@@ -207,6 +340,8 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
   <script src="js/config.js"></script>
   <script src="js/hotels.js"></script>
+  <script src="js/guides.js"></script>
+  <script src="js/core.js"></script>
   <script src="js/common.js"></script>
   <script src="js/app.js"></script>
 </body>

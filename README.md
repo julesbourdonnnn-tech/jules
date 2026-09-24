@@ -37,6 +37,15 @@ Le site est **100 % statique** (HTML, CSS, JavaScript). Pas de serveur, pas de b
 
 ➡️ Le plan d'action complet (outils, calendrier Instagram, e-mails aux hôteliers, règles légales) est dans **[STRATEGIE.md](STRATEGIE.md)**.
 
+## Pages pour Google (générées automatiquement)
+
+Chaque établissement a sa **vraie page** (`hotels/<id>.html`) et chaque thème son **guide** (`guides/<slug>.html`), avec titre, description, image de partage et données structurées pour Google. Le plan du site (`sitemap.xml`) et `robots.txt` sont générés aussi.
+
+Ces pages sont fabriquées par `node scripts/build.js` à partir de `js/hotels.js` et `js/guides.js`. **Tu n'as rien à lancer** : la GitHub Action « Build » les régénère à chaque modification, et Netlify aussi à chaque déploiement.
+
+- **Ajouter un guide** : copie un bloc dans `js/guides.js` (titre, texte d'introduction, conseils, et règle de sélection des établissements).
+- **Avant la mise en ligne** : mets ton vrai nom de domaine dans `siteUrl` (`js/config.js`), puis déclare `https://ton-domaine.fr/sitemap.xml` dans la Google Search Console.
+
 ## Voir le site en local
 
 Double-clique sur `index.html`, ou pour que tout fonctionne (géolocalisation comprise) :
@@ -116,7 +125,9 @@ Les photos appartiennent aux établissements. Pour une utilisation durable, dema
 
 ```
 index.html            Accueil + recherche + carte + newsletter
-hotel.html            Fiche hôtel (hotel.html?id=...)
+hotels/<id>.html      Fiche de chaque établissement (générée)
+guides/               Guides thématiques (générés)
+hotel.html            Redirige les anciennes adresses hotel.html?id=…
 hoteliers.html        Offres payantes et candidature des hôteliers
 liens.html            Page « lien en bio » Instagram
 studio.html           Outil interne : visuels Instagram, newsletter, rapports
@@ -125,9 +136,12 @@ STRATEGIE.md          Plan d'action idées 1 et 8
 css/style.css
 js/config.js          ← identifiants d'affiliation
 js/hotels.js          ← la liste des hôtels
-js/common.js          liens, géolocalisation, en-tête et pied de page
+js/core.js            briques d'affichage partagées (site et générateur)
+js/guides.js          ← la liste des guides
+js/common.js          favoris, menus, géolocalisation, formulaires
+scripts/build.js      générateur des pages statiques
 js/app.js             logique de l'accueil
-js/hotel.js           logique de la fiche
+js/hotel.js           interactions de la fiche (carte, photos, partage)
 js/hoteliers.js       offres et formulaire hôteliers
 js/studio.js          logique du Studio
 ```

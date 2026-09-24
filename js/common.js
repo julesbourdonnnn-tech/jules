@@ -1,21 +1,8 @@
-/* Fonctions partagées entre toutes les pages. */
+/* Comportements partagés par toutes les pages (navigateur). */
 (function () {
+  const C = window.NSCore;
   const CONFIG = window.SITE_CONFIG;
-
-  const escapeHtml = (s = "") =>
-    String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-
-  const formatPrice = (n) => new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(n);
-
-  const formatDistance = (km) => (km < 10 ? `${km.toFixed(1).replace(".", ",")} km` : `${Math.round(km)} km`);
-
-  // Distance à vol d'oiseau (formule de haversine)
-  function distanceKm(a, b) {
-    const R = 6371, rad = (d) => (d * Math.PI) / 180;
-    const dLat = rad(b.lat - a.lat), dLng = rad(b.lng - a.lng);
-    const x = Math.sin(dLat / 2) ** 2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLng / 2) ** 2;
-    return 2 * R * Math.asin(Math.sqrt(x));
-  }
+  const { escapeHtml, img } = C;
 
   /* ---------- Provenance du visiteur ----------
    * Les liens publiés sur Instagram / dans la newsletter portent ?src=instagram
@@ -30,22 +17,7 @@
   function getSource() {
     try { return sessionStorage.getItem(SRC_KEY) || ""; } catch { return ""; }
   }
-
-  // Lien de réservation Booking.com avec l'identifiant d'affiliation
-  function bookingLink(hotel) {
-    let url;
-    try { url = new URL(hotel.bookingUrl); } catch { url = null; }
-    if (!url) {
-      url = new URL("https://www.booking.com/searchresults.fr.html");
-      url.searchParams.set("ss", `${hotel.name}, ${hotel.city}`);
-    }
-    if (CONFIG.booking.aid) url.searchParams.set("aid", CONFIG.booking.aid);
-    if (CONFIG.booking.label) {
-      const src = getSource();
-      url.searchParams.set("label", [CONFIG.booking.label, src, hotel.id].filter(Boolean).join("-"));
-    }
-    return url.toString();
-  }
+  const bookingLink = (h) => C.bookingLink(h, getSource());
 
   /* ---------- Statistiques (Plausible) ---------- */
   if (CONFIG.analytics && CONFIG.analytics.plausibleDomain) {
@@ -65,31 +37,12 @@
     if (a) track(a.dataset.track, { hotel: a.dataset.hotel || "", source: getSource() || "direct" });
   });
 
-  /* ---------- Offres payantes ---------- */
-  const PLAN_RANK = { premium: 2, partenaire: 1 };
-  const planRank = (h) => PLAN_RANK[h.plan] || 0;
-  const partnerBadge = (h) => (planRank(h) ? `<span class="badge-partner" title="Établissement ayant souscrit une offre de mise en avant">Partenaire</span>` : "");
-
-  /* ---------- Newsletter ----------
-   * Envoi vers Netlify Forms (le formulaire caché "newsletter" dans index.html
-   * permet à Netlify de le détecter au déploiement). */
+  /* ---------- Formulaires (Netlify Forms) ---------- */
   async function submitForm(form) {
+    if (location.protocol === "file:") throw new Error("hors ligne");
     const body = new URLSearchParams(new FormData(form)).toString();
     const res = await fetch("/", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body });
     if (!res.ok) throw new Error(String(res.status));
-  }
-  function newsletterForm(origin, variant = "") {
-    const nl = CONFIG.newsletter;
-    return `
-      <form class="nl-form ${variant}" name="newsletter" data-nl>
-        <input type="hidden" name="form-name" value="newsletter">
-        <input type="hidden" name="origine" value="${escapeHtml(origin)}">
-        <p class="nl-hp"><label>Ne pas remplir <input name="bot-field" tabindex="-1" autocomplete="off"></label></p>
-        <input type="email" name="email" required placeholder="Votre adresse e-mail" aria-label="Votre adresse e-mail">
-        <button class="btn btn-primary" type="submit">Je m'abonne</button>
-        <p class="nl-msg" role="status"></p>
-        <p class="nl-legal">Gratuit, 1 e-mail par semaine, désinscription en un clic. ${escapeHtml(nl.title)}.</p>
-      </form>`;
   }
   document.addEventListener("submit", async (e) => {
     const form = e.target.closest("[data-nl], [data-netlify-form]");
@@ -102,34 +55,16 @@
       await submitForm(form);
       form.classList.add("sent");
       msg.textContent = form.dataset.success || "Merci ! Vous êtes bien inscrit·e. À dimanche ✦";
-      track(form.name === "newsletter" ? "Newsletter" : "Formulaire", { form: form.name, source: getSource() || "direct" });
+      track(form.getAttribute("name") === "newsletter" ? "Newsletter" : "Formulaire", { source: getSource() || "direct" });
       form.reset();
     } catch {
-      msg.textContent = "Oups, l'envoi a échoué. Réessayez dans un instant.";
+      msg.textContent = location.protocol === "file:"
+        ? "Les formulaires fonctionneront une fois le site mis en ligne."
+        : "Oups, l'envoi a échoué. Réessayez dans un instant.";
     } finally {
       btn.disabled = false;
     }
   });
-
-  const socialUrl = {
-    instagram: (h) => `https://www.instagram.com/${h}/`,
-    tiktok: (h) => `https://www.tiktok.com/@${h}`,
-    pinterest: (h) => `https://www.pinterest.fr/${h}/`,
-  };
-  const socialLinks = () => Object.entries(CONFIG.social || {})
-    .filter(([k, v]) => v && socialUrl[k])
-    .map(([k, v]) => ({ name: k[0].toUpperCase() + k.slice(1), handle: v, href: socialUrl[k](v) }));
-
-  // Liens vers les autres partenaires renseignés sur la fiche
-  function partnerLinks(hotel) {
-    return Object.entries(hotel.partners || {})
-      .filter(([key, href]) => href && CONFIG.partners[key])
-      .map(([key, href]) => {
-        const p = CONFIG.partners[key];
-        const sep = href.includes("?") ? "&" : "?";
-        return { name: p.name, href: p.param ? `${href}${sep}${p.param}` : href };
-      });
-  }
 
   /* ---------- Position de l'utilisateur (mémorisée entre les pages) ---------- */
   const LOC_KEY = "ns-user-location";
@@ -141,17 +76,14 @@
   }
 
   // Géocodage d'adresses françaises via le service public de l'IGN (gratuit, sans clé)
-  const GEOCODERS = [
-    "https://data.geopf.fr/geocodage/search",
-    "https://api-adresse.data.gouv.fr/search/",
-  ];
+  const GEOCODERS = ["https://data.geopf.fr/geocodage/search", "https://api-adresse.data.gouv.fr/search/"];
   async function geocode(query, limit = 5) {
     for (const base of GEOCODERS) {
       try {
         const res = await fetch(`${base}?q=${encodeURIComponent(query)}&limit=${limit}`);
         if (!res.ok) continue;
-        const data = await res.json();
-        return (data.features || []).map((f) => ({
+        const json = await res.json();
+        return (json.features || []).map((f) => ({
           label: f.properties.label,
           city: f.properties.city,
           lat: f.geometry.coordinates[1],
@@ -161,7 +93,6 @@
     }
     return [];
   }
-
   function locateBrowser() {
     return new Promise((resolve, reject) => {
       if (!navigator.geolocation) return reject(new Error("Géolocalisation non disponible"));
@@ -173,49 +104,36 @@
     });
   }
 
-  /* ---------- Photos : image de secours si une photo ne charge pas ---------- */
-  const FALLBACK = "data:image/svg+xml;utf8," + encodeURIComponent(
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2f4a3a"/><stop offset="1" stop-color="#b8925a"/></linearGradient></defs><rect width="800" height="600" fill="url(#g)"/><text x="400" y="315" font-family="Georgia,serif" font-size="34" fill="#f6f1e9" text-anchor="middle" opacity=".85">Nuits Singulières</text></svg>`
-  );
+  /* ---------- Photo de secours si une image ne charge pas ---------- */
   document.addEventListener("error", (e) => {
-    const img = e.target;
-    if (img.tagName === "IMG" && img.src !== FALLBACK) img.src = FALLBACK;
+    const t = e.target;
+    if (t && t.tagName === "IMG" && t.src !== C.FALLBACK) t.src = C.FALLBACK;
   }, true);
-
-  /* ---------- Photos ----------
-   * Les photos locales existent en 2 tailles : 1.jpg (grande) et 1-sm.jpg (vignette). */
-  function img(url, w) {
-    if (!url) return FALLBACK;
-    if (w && w <= 900 && /^assets\/hotels\/.+\/\d+\.jpg$/.test(url)) return url.replace(/\.jpg$/, "-sm.jpg");
-    if (w && url.includes("images.unsplash.com")) return url.replace(/w=\d+/, `w=${w}`);
-    return url;
-  }
-  const budgetOf = (h) => window.BUDGETS[h.budget] || window.BUDGETS[2];
-  const budgetHtml = (h) => {
-    const b = budgetOf(h);
-    return `<span class="budget" title="${escapeHtml(b.range)}">${"€".repeat(h.budget)}<span class="budget-off">${"€".repeat(4 - h.budget)}</span></span>`;
-  };
 
   /* ---------- Favoris (mémorisés dans le navigateur) ---------- */
   const FAV_KEY = "ns-favs";
   function getFavs() {
     try { return JSON.parse(localStorage.getItem(FAV_KEY)) || []; } catch { return []; }
   }
+  const isFav = (id) => getFavs().includes(id);
   function toggleFav(id) {
     const favs = getFavs();
     const i = favs.indexOf(id);
-    i >= 0 ? favs.splice(i, 1) : favs.unshift(id);
+    if (i >= 0) favs.splice(i, 1); else favs.unshift(id);
     try { localStorage.setItem(FAV_KEY, JSON.stringify(favs)); } catch { /* navigation privée */ }
     document.dispatchEvent(new CustomEvent("favs:change", { detail: { id, on: i < 0 } }));
     if (i < 0) track("Favori", { hotel: id });
-    return i < 0;
   }
-  const isFav = (id) => getFavs().includes(id);
-  const favButton = (h, extra = "") => `
-    <button type="button" class="fav ${extra} ${isFav(h.id) ? "on" : ""}" data-fav="${escapeHtml(h.id)}"
-      aria-pressed="${isFav(h.id)}" aria-label="Ajouter ${escapeHtml(h.name)} à mes coups de cœur">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.6-9.3C.9 8.3 3 4.5 6.7 4.5c2.1 0 3.6 1.2 4.3 2.4.7-1.2 2.2-2.4 4.3-2.4 3.7 0 5.8 3.8 4.3 7.2C19.5 16.4 12 21 12 21z"/></svg>
-    </button>`;
+  const favButton = (h, extra = "") => C.favButton(h, extra, isFav(h.id));
+  const card = (h, opts = {}) => C.card(h, { ...opts, fav: isFav(h.id) });
+  function syncFavButtons(scope = document) {
+    const favs = getFavs();
+    scope.querySelectorAll("[data-fav]").forEach((b) => {
+      const on = favs.includes(b.dataset.fav);
+      b.classList.toggle("on", on);
+      b.setAttribute("aria-pressed", on);
+    });
+  }
   document.addEventListener("click", (e) => {
     const b = e.target.closest("[data-fav]");
     if (!b) return;
@@ -224,7 +142,8 @@
     toggleFav(b.dataset.fav);
   });
   document.addEventListener("favs:change", ({ detail }) => {
-    document.querySelectorAll(`[data-fav="${CSS.escape(detail.id)}"]`).forEach((b) => {
+    document.querySelectorAll("[data-fav]").forEach((b) => {
+      if (b.dataset.fav !== detail.id) return;
       b.classList.toggle("on", detail.on);
       b.setAttribute("aria-pressed", detail.on);
       if (detail.on) { b.classList.remove("pop"); void b.offsetWidth; b.classList.add("pop"); }
@@ -233,45 +152,15 @@
     renderFavDrawer();
   });
 
-  /* ---------- Carte d'hôtel avec mini-diaporama (partagée par toutes les pages) ---------- */
-  function card(h, { dist = null, reveal = true } = {}) {
-    const ENVS = window.ENVIRONMENTS, TYPES = window.TYPES;
-    const url = `hotel.html?id=${encodeURIComponent(h.id)}`;
-    const photos = h.images.slice(0, 5);
-    return `
-      <article class="card ${reveal ? "reveal" : ""}" data-id="${escapeHtml(h.id)}">
-        <div class="card-media">
-          <a class="card-slides" href="${url}" tabindex="-1" aria-hidden="true">
-            ${photos.map((src, i) => `<img src="${img(src, 900)}" alt="" loading="lazy" draggable="false" ${i ? 'decoding="async"' : ""}>`).join("")}
-          </a>
-          ${photos.length > 1 ? `
-            <button type="button" class="card-nav prev" data-slide="-1" aria-label="Photo précédente">‹</button>
-            <button type="button" class="card-nav next" data-slide="1" aria-label="Photo suivante">›</button>
-            <div class="card-dots">${photos.map((_, i) => `<span class="${i ? "" : "on"}"></span>`).join("")}</div>` : ""}
-          <span class="badge">${escapeHtml(ENVS[h.env].label)}</span>
-          ${partnerBadge(h)}
-          ${favButton(h)}
-          ${dist != null ? `<span class="card-dist">📍 ${formatDistance(dist)}</span>` : ""}
-        </div>
-        <a class="card-body" href="${url}">
-          <p class="card-type">${TYPES[h.type].icon} ${escapeHtml(TYPES[h.type].label)}</p>
-          <h3>${escapeHtml(h.name)}</h3>
-          <p class="card-place">${escapeHtml(h.city)} · ${escapeHtml(h.region)}</p>
-          <p class="card-tagline">${escapeHtml(h.tagline)}</p>
-          <p class="card-foot">${budgetHtml(h)}<span class="card-more">Découvrir →</span></p>
-        </a>
-      </article>`;
-  }
-  // Flèches et points du mini-diaporama
+  /* ---------- Mini-diaporama des cartes ---------- */
   document.addEventListener("click", (e) => {
     const b = e.target.closest("[data-slide]");
     if (!b) return;
     e.preventDefault();
-    const track = b.closest(".card-media").querySelector(".card-slides");
-    const n = track.children.length;
-    const i = Math.round(track.scrollLeft / track.clientWidth);
-    const next = (i + Number(b.dataset.slide) + n) % n;
-    track.scrollTo({ left: next * track.clientWidth, behavior: "smooth" });
+    const slides = b.closest(".card-media").querySelector(".card-slides");
+    const n = slides.children.length;
+    const i = Math.round(slides.scrollLeft / slides.clientWidth);
+    slides.scrollTo({ left: ((i + Number(b.dataset.slide) + n) % n) * slides.clientWidth, behavior: "smooth" });
   });
   document.addEventListener("scroll", (e) => {
     const t = e.target;
@@ -280,18 +169,176 @@
     t.parentElement.querySelectorAll(".card-dots span").forEach((d, k) => d.classList.toggle("on", k === i));
   }, true);
 
+  /* ---------- Rails horizontaux (flèches) ---------- */
+  document.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-rail]");
+    if (!b) return;
+    const rail = document.getElementById(b.dataset.rail);
+    if (rail) rail.scrollBy({ left: Number(b.dataset.dir) * rail.clientWidth * 0.8, behavior: "smooth" });
+  });
+
   /* ---------- Apparition au défilement ---------- */
   const revealObserver = "IntersectionObserver" in window
     ? new IntersectionObserver((entries) => entries.forEach((en) => {
         if (en.isIntersecting) { en.target.classList.add("in"); revealObserver.unobserve(en.target); }
-      }), { rootMargin: "0px 0px -8% 0px", threshold: 0.08 })
+      }), { rootMargin: "0px 0px -6% 0px", threshold: 0.06 })
     : null;
-  function observeReveal(root = document) {
-    root.querySelectorAll(".reveal:not(.in)").forEach((el, i) => {
+  function observeReveal(scope = document) {
+    scope.querySelectorAll(".reveal:not(.in)").forEach((el, i) => {
       el.style.setProperty("--d", `${Math.min(i % 6, 5) * 70}ms`);
-      revealObserver ? revealObserver.observe(el) : el.classList.add("in");
+      if (revealObserver) revealObserver.observe(el); else el.classList.add("in");
     });
   }
+
+  /* ---------- Menus déroulants sur mesure ----------
+   * Remplace l'apparence des <select data-fancy> tout en gardant le vrai
+   * <select> (caché) : les formulaires et le code existant continuent de
+   * fonctionner, et le clavier (flèches, Entrée, Échap, lettres) est géré. */
+  const CHEVRON = `<svg class="select-chevron" viewBox="0 0 20 20" aria-hidden="true"><path d="M5 7.5l5 5 5-5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  let selectUid = 0;
+  function enhanceSelect(sel) {
+    if (sel.dataset.enhanced) return;
+    sel.dataset.enhanced = "1";
+    const uid = `sel-${++selectUid}`;
+    const wrap = document.createElement("div");
+    wrap.className = `select ${sel.dataset.fancy || ""}`.trim();
+    sel.parentNode.insertBefore(wrap, sel);
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "select-btn";
+    btn.setAttribute("aria-haspopup", "listbox");
+    btn.setAttribute("aria-expanded", "false");
+    btn.setAttribute("aria-controls", `${uid}-list`);
+    const label = sel.getAttribute("aria-label");
+    if (label) btn.setAttribute("aria-label", label);
+    btn.innerHTML = `<span class="select-value"></span>${CHEVRON}`;
+    const list = document.createElement("ul");
+    list.className = "select-list";
+    list.id = `${uid}-list`;
+    list.setAttribute("role", "listbox");
+    list.hidden = true;
+    wrap.append(btn, list);
+    wrap.appendChild(sel);
+    sel.classList.add("select-native");
+    sel.tabIndex = -1;
+    sel.setAttribute("aria-hidden", "true");
+
+    let active = -1;
+    const options = () => [...sel.options];
+    const refresh = () => {
+      const o = sel.options[sel.selectedIndex];
+      btn.querySelector(".select-value").textContent = o ? o.textContent : "";
+      btn.disabled = sel.disabled;
+      wrap.classList.toggle("is-disabled", sel.disabled);
+      wrap.classList.toggle("has-value", !!sel.value);
+    };
+    const renderList = () => {
+      list.innerHTML = options().map((o, i) => `
+        <li role="option" id="${uid}-${i}" data-i="${i}" aria-selected="${o.selected}" class="${o.disabled ? "is-disabled" : ""}${o.selected ? " is-selected" : ""}"${o.disabled ? ' aria-disabled="true"' : ""}>
+          <span>${escapeHtml(o.textContent)}</span>
+        </li>`).join("");
+    };
+    const highlight = (i) => {
+      active = i;
+      list.querySelectorAll("li").forEach((li, k) => li.classList.toggle("is-active", k === i));
+      const li = list.children[i];
+      if (li) { btn.setAttribute("aria-activedescendant", li.id); li.scrollIntoView({ block: "nearest" }); }
+    };
+    const move = (dir) => {
+      const opts = options();
+      let i = active;
+      for (let n = 0; n < opts.length; n++) {
+        i = (i + dir + opts.length) % opts.length;
+        if (!opts[i].disabled) return highlight(i);
+      }
+    };
+    const open = () => {
+      if (sel.disabled || !list.hidden) return;
+      document.querySelectorAll(".select.is-open").forEach((w) => w !== wrap && w._close && w._close());
+      renderList();
+      list.hidden = false;
+      wrap.classList.add("is-open");
+      btn.setAttribute("aria-expanded", "true");
+      const r = btn.getBoundingClientRect();
+      const need = Math.min(list.scrollHeight, 320) + 12;
+      wrap.classList.toggle("drop-up", r.bottom + need > window.innerHeight && r.top > need);
+      highlight(sel.selectedIndex);
+    };
+    const close = () => {
+      if (list.hidden) return;
+      list.hidden = true;
+      wrap.classList.remove("is-open", "drop-up");
+      btn.setAttribute("aria-expanded", "false");
+      btn.removeAttribute("aria-activedescendant");
+    };
+    wrap._close = close;
+    const choose = (i) => {
+      const o = sel.options[i];
+      if (!o || o.disabled) return;
+      const changed = sel.selectedIndex !== i;
+      sel.selectedIndex = i;
+      refresh();
+      close();
+      btn.focus();
+      if (changed) {
+        sel.dispatchEvent(new Event("input", { bubbles: true }));
+        sel.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+    };
+
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      if (list.hidden) open(); else close();
+    });
+    list.addEventListener("mousedown", (e) => e.preventDefault()); // garde le focus sur le bouton
+    list.addEventListener("click", (e) => {
+      e.preventDefault(); // évite qu'un <label> parent ne rouvre le menu
+      e.stopPropagation();
+      const li = e.target.closest("li[data-i]");
+      if (li) choose(Number(li.dataset.i));
+    });
+    list.addEventListener("mousemove", (e) => {
+      const li = e.target.closest("li[data-i]");
+      if (li && Number(li.dataset.i) !== active && !li.classList.contains("is-disabled")) highlight(Number(li.dataset.i));
+    });
+    let typed = "", typedTimer;
+    btn.addEventListener("keydown", (e) => {
+      const isOpen = !list.hidden;
+      if (["ArrowDown", "ArrowUp"].includes(e.key)) {
+        e.preventDefault();
+        if (!isOpen) open(); else move(e.key === "ArrowDown" ? 1 : -1);
+      } else if (e.key === "Home" && isOpen) { e.preventDefault(); active = -1; move(1); }
+      else if (e.key === "End" && isOpen) { e.preventDefault(); active = options().length; move(-1); }
+      else if ((e.key === "Enter" || e.key === " ") && isOpen) { e.preventDefault(); choose(active); }
+      else if (e.key === "Escape" && isOpen) { e.preventDefault(); e.stopPropagation(); close(); }
+      else if (e.key === "Tab") close();
+      else if (e.key.length === 1 && /\S/.test(e.key)) {
+        clearTimeout(typedTimer);
+        typed += e.key.toLowerCase();
+        typedTimer = setTimeout(() => (typed = ""), 600);
+        const norm = (s) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/^[^a-z0-9€]+/, "");
+        const i = options().findIndex((o) => !o.disabled && norm(o.textContent).startsWith(norm(typed)));
+        if (i >= 0) { if (isOpen) highlight(i); else choose(i); }
+      }
+    });
+    document.addEventListener("click", (e) => { if (!wrap.contains(e.target)) close(); });
+    window.addEventListener("resize", close);
+
+    // Mise à jour quand le code modifie la valeur, l'état ou les options du <select>
+    const proto = HTMLSelectElement.prototype;
+    for (const prop of ["value", "selectedIndex", "disabled"]) {
+      const d = Object.getOwnPropertyDescriptor(proto, prop);
+      Object.defineProperty(sel, prop, {
+        configurable: true,
+        get() { return d.get.call(this); },
+        set(v) { d.set.call(this, v); refresh(); },
+      });
+    }
+    new MutationObserver(refresh).observe(sel, { childList: true, subtree: true, attributes: true, attributeFilter: ["disabled", "selected"] });
+    sel.addEventListener("change", refresh);
+    refresh();
+  }
+  const enhanceSelects = (scope = document) => scope.querySelectorAll("select[data-fancy]").forEach(enhanceSelect);
 
   /* ---------- « Surprenez-moi » ---------- */
   function surprise() {
@@ -301,8 +348,9 @@
       box = document.createElement("div");
       box.id = "surprise";
       box.className = "surprise";
+      box.hidden = true;
       box.innerHTML = `
-        <div class="surprise-card" role="dialog" aria-modal="true" aria-label="Un hôtel au hasard">
+        <div class="surprise-card" role="dialog" aria-modal="true" aria-label="Un lieu au hasard">
           <button type="button" class="surprise-close" aria-label="Fermer">×</button>
           <div class="surprise-media"><img alt=""></div>
           <div class="surprise-body">
@@ -322,25 +370,31 @@
     box.hidden = false;
     document.body.classList.add("no-scroll");
     requestAnimationFrame(() => box.classList.add("open"));
-    const card = box.querySelector(".surprise-card");
+    const sCard = box.querySelector(".surprise-card");
     const image = box.querySelector("img");
-    card.classList.add("rolling");
-    const pick = list[Math.floor(Math.random() * list.length)];
+    const cta = box.querySelector("a.btn");
+    sCard.classList.add("rolling");
+    cta.setAttribute("aria-disabled", "true");
+    let pick = list[Math.floor(Math.random() * list.length)];
+    if (list.length > 1 && pick.id === box.dataset.pick) pick = list[(list.indexOf(pick) + 1) % list.length];
+    box.dataset.pick = pick.id;
     // Défilement rapide de photos qui ralentit, comme une machine à sous
     let step = 0;
     const steps = 14;
+    clearTimeout(box._timer);
     const spin = () => {
       const h = step < steps ? list[Math.floor(Math.random() * list.length)] : pick;
       image.src = img(h.images[0], 900);
-      if (step++ < steps) setTimeout(spin, 45 + step * step * 1.1);
+      if (step++ < steps) box._timer = setTimeout(spin, 45 + step * step * 1.1);
       else {
         const T = window.TYPES[pick.type];
-        card.classList.remove("rolling");
+        sCard.classList.remove("rolling");
         box.querySelector(".card-type").textContent = `${T.icon} ${T.label}`;
         box.querySelector("h3").textContent = pick.name;
         box.querySelector(".card-place").textContent = `${pick.city} · ${pick.region}`;
         box.querySelector(".surprise-tagline").textContent = pick.tagline;
-        box.querySelector("a.btn").href = `hotel.html?id=${encodeURIComponent(pick.id)}`;
+        cta.href = C.hotelUrl(pick);
+        cta.removeAttribute("aria-disabled");
       }
     };
     spin();
@@ -348,7 +402,8 @@
   }
   function closeSurprise() {
     const box = document.getElementById("surprise");
-    if (!box) return;
+    if (!box || box.hidden) return;
+    clearTimeout(box._timer);
     box.classList.remove("open");
     document.body.classList.remove("no-scroll");
     setTimeout(() => (box.hidden = true), 250);
@@ -372,36 +427,35 @@
     list.innerHTML = favs.length
       ? favs.map((h) => `
           <div class="fav-item">
-            <a href="hotel.html?id=${encodeURIComponent(h.id)}"><img src="${img(h.images[0], 400)}" alt=""></a>
-            <a href="hotel.html?id=${encodeURIComponent(h.id)}"><strong>${escapeHtml(h.name)}</strong><span>${escapeHtml(h.city)} · ${escapeHtml(window.TYPES[h.type].label)}</span></a>
+            <a href="${C.hotelUrl(h)}"><img src="${img(h.images[0], 400)}" alt=""></a>
+            <a href="${C.hotelUrl(h)}"><strong>${escapeHtml(h.name)}</strong><span>${escapeHtml(h.city)} · ${escapeHtml(window.TYPES[h.type].label)}</span></a>
             ${favButton(h, "fav-mini")}
           </div>`).join("")
-      : `<p class="muted fav-empty">Touchez le ♡ d'un hôtel pour le garder ici. Pratique pour comparer et partager vos envies.</p>`;
+      : `<p class="muted fav-empty">Touchez le ♡ d'un lieu pour le garder ici. Pratique pour comparer et partager vos envies.</p>`;
   }
   function toggleDrawer(open) {
     const d = document.getElementById("fav-drawer");
     if (!d) return;
-    if (open) { renderFavDrawer(); d.hidden = false; requestAnimationFrame(() => d.classList.add("open")); document.body.classList.add("no-scroll"); }
-    else if (!d.hidden) { d.classList.remove("open"); document.body.classList.remove("no-scroll"); setTimeout(() => (d.hidden = true), 300); }
+    if (open) {
+      renderFavDrawer();
+      d.hidden = false;
+      requestAnimationFrame(() => d.classList.add("open"));
+      document.body.classList.add("no-scroll");
+      setTimeout(() => d.querySelector(".drawer-close").focus(), 50);
+    } else if (!d.hidden) {
+      d.classList.remove("open");
+      document.body.classList.remove("no-scroll");
+      setTimeout(() => (d.hidden = true), 300);
+    }
   }
 
-  /* ---------- En-tête et pied de page ---------- */
+  /* ---------- En-tête et pied de page ----------
+   * Les pages générées (fiches, guides) les contiennent déjà : on ne fait
+   * alors qu'activer leurs comportements. */
   function renderChrome() {
     const header = document.getElementById("site-header");
     if (header) {
-      header.innerHTML = `
-        <a class="brand" href="index.html">
-          <span class="brand-mark">✦</span>
-          <span>${escapeHtml(CONFIG.siteName)}</span>
-        </a>
-        <nav class="nav">
-          <a href="index.html#destinations">Ambiances</a>
-          <a href="index.html#explorer">Tous les hôtels</a>
-          <a href="hoteliers.html">Hôteliers</a>
-          <button type="button" class="nav-icon" data-surprise title="Un hôtel au hasard" aria-label="Un hôtel au hasard">🎲</button>
-          <button type="button" class="nav-icon" id="fav-open" title="Mes coups de cœur" aria-label="Mes coups de cœur">♡<span class="fav-count" hidden></span></button>
-          <a href="index.html#explorer" class="nav-cta" data-open-near>Près de chez moi</a>
-        </nav>`;
+      if (!header.children.length) header.innerHTML = C.header();
       const onScroll = () => header.classList.toggle("scrolled", window.scrollY > 40);
       window.addEventListener("scroll", onScroll, { passive: true });
       onScroll();
@@ -416,51 +470,30 @@
           <div id="fav-list" class="fav-list"></div>
         </div>`;
       document.body.appendChild(drawer);
-      header.querySelector("#fav-open").addEventListener("click", () => toggleDrawer(true));
+      const favOpen = header.querySelector("#fav-open");
+      if (favOpen) favOpen.addEventListener("click", () => toggleDrawer(true));
       drawer.addEventListener("click", (e) => { if (e.target === drawer || e.target.closest(".drawer-close")) toggleDrawer(false); });
       updateFavCount();
     }
     const footer = document.getElementById("site-footer");
-    if (footer) {
-      const envLinks = Object.entries(window.ENVIRONMENTS)
-        .map(([k, e]) => `<li><a href="index.html?env=${k}#explorer">Hôtels ${e.inLabel}</a></li>`)
-        .join("");
-      const typeLinks = Object.entries(window.TYPES).slice(0, 6)
-        .map(([k, t]) => `<li><a href="index.html?type=${k}#explorer">${escapeHtml(t.label)}</a></li>`)
-        .join("");
-      const socials = socialLinks()
-        .map((s) => `<li><a href="${escapeHtml(s.href)}" target="_blank" rel="noopener">${escapeHtml(s.name)} · @${escapeHtml(s.handle)}</a></li>`)
-        .join("");
-      footer.innerHTML = `
-        <div class="footer-news">
-          <div>
-            <h3>${escapeHtml(CONFIG.newsletter.title)}</h3>
-            <p class="muted">${escapeHtml(CONFIG.newsletter.pitch)}</p>
-          </div>
-          ${newsletterForm("pied-de-page", "on-dark")}
-        </div>
-        <div class="footer-grid">
-          <div>
-            <a class="brand" href="index.html"><span class="brand-mark">✦</span><span>${escapeHtml(CONFIG.siteName)}</span></a>
-            <p class="muted">${escapeHtml(CONFIG.tagline)}. Une sélection d'adresses rares, choisies une à une.</p>
-          </div>
-          <div><h4>Ambiances</h4><ul>${envLinks}</ul></div>
-          <div><h4>Expériences</h4><ul>${typeLinks}</ul></div>
-          <div><h4>Nous suivre</h4><ul>${socials}<li><a href="hoteliers.html">Espace hôteliers</a></li><li><a href="mailto:${escapeHtml(CONFIG.contactEmail)}">${escapeHtml(CONFIG.contactEmail)}</a></li><li><a href="mentions-legales.html">Mentions légales</a></li></ul></div>
-        </div>
-        <p class="disclosure">Ce site contient des liens affiliés : si vous réservez via nos liens, nous percevons une commission du site partenaire, sans aucun surcoût pour vous. Les établissements marqués « Partenaire » ont souscrit une offre de mise en avant payante, qui améliore leur position dans le tri « Recommandés ». Les niveaux de budget sont indicatifs ; le tarif final est celui du site de réservation. Photos : © les établissements.</p>
-        <p class="muted small">© ${new Date().getFullYear()} ${escapeHtml(CONFIG.siteName)}</p>`;
+    if (footer && !footer.children.length) footer.innerHTML = C.footer();
+
+    // Liens Booking des pages générées : on y ajoute la provenance du visiteur
+    if (getSource()) {
+      document.querySelectorAll("a[data-book]").forEach((a) => {
+        const h = window.HOTELS.find((x) => x.id === a.dataset.book);
+        if (h) a.href = bookingLink(h);
+      });
     }
+    syncFavButtons();
+    enhanceSelects();
     observeReveal();
   }
 
   window.NS = {
-    CONFIG, escapeHtml, formatPrice, formatDistance, distanceKm,
-    bookingLink, partnerLinks, getUserLocation, setUserLocation,
-    geocode, locateBrowser, renderChrome, getSource, track,
-    planRank, partnerBadge, newsletterForm, socialLinks,
-    img, budgetOf, budgetHtml, card, favButton, getFavs, isFav, toggleFav,
-    observeReveal, surprise,
+    ...C,
+    CONFIG, getSource, track, bookingLink, getUserLocation, setUserLocation, geocode, locateBrowser,
+    getFavs, isFav, toggleFav, favButton, card, syncFavButtons, observeReveal, enhanceSelects, surprise,
   };
   document.addEventListener("DOMContentLoaded", renderChrome);
 })();

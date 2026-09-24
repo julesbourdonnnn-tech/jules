@@ -43,6 +43,8 @@
 
   <script src="js/config.js"></script>
   <script src="js/hotels.js"></script>
+  <script src="js/guides.js"></script>
+  <script src="js/core.js"></script>
   <script src="js/common.js"></script>
   <script>
     (function () {
@@ -65,7 +67,7 @@
             .concat(window.HOTELS.filter((h) => h.featured && h.plan !== "premium"));
         }
         document.getElementById("bio-list").innerHTML = list.slice(0, 12).map((h, i) => `
-          <a class="bio-item" href="${withSrc(`hotel.html?id=${encodeURIComponent(h.id)}`)}">
+          <a class="bio-item" href="${withSrc(`hotels/${h.id}.html`)}">
             <img src="${img(h.images[0], 300)}" alt="" loading="lazy">
             <span><small>N°${i + 1} · ${escapeHtml(h.city)}</small><strong>${escapeHtml(h.name)}</strong><em>${escapeHtml(window.TYPES[h.type].label)} · ${"€".repeat(h.budget)} ${partnerBadge(h)}</em></span>
           </a>`).join("");

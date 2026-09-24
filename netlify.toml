@@ -1,0 +1,13 @@
+# Netlify : régénère les pages statiques à chaque déploiement depuis GitHub.
+# (Les pages générées sont aussi enregistrées dans le dépôt : un simple
+#  glisser-déposer du dossier sur app.netlify.com/drop fonctionne également.)
+[build]
+  command = "node scripts/build.js"
+  publish = "."
+
+# Anciennes adresses des fiches : hotel.html?id=xxx → hotels/xxx.html
+[[redirects]]
+  from = "/hotel.html"
+  to = "/hotels/:id.html"
+  query = { id = ":id" }
+  status = 301
