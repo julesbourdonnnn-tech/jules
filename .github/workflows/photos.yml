@@ -42,7 +42,8 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A _review data assets/hotels || true
+          mkdir -p assets/hotels _review
+          git add -A -- _review data assets/hotels
           if git diff --cached --quiet; then echo "Rien de nouveau"; exit 0; fi
           git commit -m "Photos : mise à jour automatique"
           git pull --rebase origin "${GITHUB_REF_NAME}"
