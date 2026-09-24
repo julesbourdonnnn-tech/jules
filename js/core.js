@@ -78,13 +78,10 @@
     return L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { attribution: OSM, maxZoom: 19, className: "tiles-plan" });
   }
 
-  /* ---------- Budget, offres payantes ---------- */
+  /* ---------- Budget ---------- */
   const budgetOf = (h) => data().BUDGETS[h.budget] || data().BUDGETS[2];
   const budgetHtml = (h) =>
     `<span class="budget" title="${escapeHtml(budgetOf(h).range)}">${"€".repeat(h.budget)}<span class="budget-off">${"€".repeat(4 - h.budget)}</span></span>`;
-  const PLAN_RANK = { premium: 2, partenaire: 1 };
-  const planRank = (h) => PLAN_RANK[h.plan] || 0;
-  const partnerBadge = (h) => (planRank(h) ? `<span class="badge-partner" title="Établissement ayant souscrit une offre de mise en avant">Partenaire</span>` : "");
 
   /* ---------- Liens de réservation ---------- */
   function bookingLink(h, src = "") {
@@ -131,7 +128,6 @@
             <button type="button" class="card-nav next" data-slide="1" aria-label="Photo suivante">›</button>
             <div class="card-dots">${photos.map((_, i) => `<span class="${i ? "" : "on"}"></span>`).join("")}</div>` : ""}
           <span class="badge">${escapeHtml(ENVS[h.env].label)}</span>
-          ${partnerBadge(h)}
           ${favButton(h, "", fav)}
           ${dist != null ? `<span class="card-dist">📍 ${formatDistance(dist)}</span>` : ""}
         </div>
@@ -206,7 +202,6 @@
         <a href="${page("carte.html")}">La carte</a>
         <a href="${page("guides/index.html")}">Guides</a>
         <a href="${page("index.html#explorer")}">Tous les lieux</a>
-        <a href="${page("hoteliers.html")}">Hôteliers</a>
         <button type="button" class="nav-icon" data-surprise title="Un lieu au hasard" aria-label="Un lieu au hasard">🎲</button>
         <button type="button" class="nav-icon" id="fav-open" title="Mes coups de cœur" aria-label="Mes coups de cœur">♡<span class="fav-count" hidden></span></button>
         <a href="${page("index.html#explorer")}" class="nav-cta" data-open-near>Près de chez moi</a>
@@ -236,15 +231,15 @@
         </div>
         <div><h4>Ambiances</h4><ul>${envLinks}</ul></div>
         <div><h4>Nos guides</h4><ul>${guideLinks}<li><a href="${page("guides/index.html")}">Tous les guides →</a></li><li><a href="${page("carte.html")}">La carte interactive →</a></li></ul></div>
-        <div><h4>Nous suivre</h4><ul>${socials}<li><a href="${page("hoteliers.html")}">Espace hôteliers</a></li><li><a href="mailto:${escapeHtml(CONFIG.contactEmail)}">${escapeHtml(CONFIG.contactEmail)}</a></li><li><a href="${page("mentions-legales.html")}">Mentions légales</a></li></ul></div>
+        <div><h4>Nous suivre</h4><ul>${socials}<li><a href="mailto:${escapeHtml(CONFIG.contactEmail)}">${escapeHtml(CONFIG.contactEmail)}</a></li><li><a href="${page("mentions-legales.html")}">Mentions légales</a></li></ul></div>
       </div>
-      <p class="disclosure">Ce site contient des liens affiliés : si vous réservez via nos liens, nous percevons une commission du site partenaire, sans aucun surcoût pour vous. Les établissements marqués « Partenaire » ont souscrit une offre de mise en avant payante, qui améliore leur position dans le tri « Recommandés ». Les niveaux de budget sont indicatifs ; le tarif final est celui du site de réservation. Photos : © les établissements.</p>
+      <p class="disclosure">Ce site contient des liens affiliés : si vous réservez via nos liens, nous percevons une commission du site de réservation, sans aucun surcoût pour vous. Notre sélection est indépendante : aucun établissement ne paie pour y figurer. Les niveaux de budget sont indicatifs ; le tarif final est celui du site de réservation. Photos : © les établissements.</p>
       <p class="muted small">© ${new Date().getFullYear()} ${escapeHtml(CONFIG.siteName)}</p>`;
   }
 
   return {
     data, setRoot, root, page, hotelUrl, guideUrl, escapeHtml, formatPrice, formatDistance, distanceKm,
-    FALLBACK, img, budgetOf, budgetHtml, planRank, partnerBadge, bookingLink, partnerLinks,
+    FALLBACK, img, budgetOf, budgetHtml, bookingLink, partnerLinks,
     favButton, card, newsletterForm, socialLinks, guideHotels, guideTitle, guidesFor, guideCard,
     header, footer, baseLayer,
   };

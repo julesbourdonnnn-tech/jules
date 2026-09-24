@@ -19,11 +19,6 @@
  *   hero        1 à 6 : place dans le diaporama plein écran de l'accueil (optionnel)
  *   bookingUrl  lien de la fiche Booking.com (vide = recherche Booking par nom)
  *
- *  Champs réservés aux hôtels qui paient une offre (voir plans dans config.js) :
- *   plan        "partenaire" | "premium"  (absent = fiche gratuite)
- *   website     site officiel de l'hôtel (réservation directe)
- *   phone       téléphone affiché sur la fiche
- *   offer       offre spéciale, ex. "-10 % en réservant en direct avec le code NUITS"
  * ============================================================
  */
 

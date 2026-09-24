@@ -2,7 +2,7 @@
 (function () {
   const {
     escapeHtml, formatDistance, distanceKm, getUserLocation, setUserLocation, geocode, locateBrowser,
-    img, planRank, newsletterForm, socialLinks, card, budgetHtml, budgetOf, observeReveal, favButton,
+    img, newsletterForm, socialLinks, card, budgetHtml, budgetOf, observeReveal, favButton,
   } = window.NS;
   const HOTELS = window.HOTELS, ENVS = window.ENVIRONMENTS, TYPES = window.TYPES, BUDGETS = window.BUDGETS;
   const $ = (sel) => document.querySelector(sel);
@@ -11,9 +11,8 @@
 
   const state = { q: "", env: "", type: "", budget: "", sort: "featured", radius: "", view: "grid", loc: getUserLocation() };
 
-  // Sélection mise en avant : Premium, puis coups de cœur éditoriaux
-  const FEATURED = HOTELS.filter((h) => h.plan === "premium")
-    .concat(HOTELS.filter((h) => h.featured && h.plan !== "premium"));
+  // Sélection mise en avant : nos coups de cœur éditoriaux
+  const FEATURED = HOTELS.filter((h) => h.featured);
   const firstOf = (key, val) => FEATURED.find((h) => h[key] === val) || HOTELS.find((h) => h[key] === val);
   const count = (key, val) => HOTELS.filter((h) => h[key] === val).length;
 
@@ -247,8 +246,8 @@
       (!state.loc || !state.radius || dist <= Number(state.radius))
     );
     const sorters = {
-      // « Recommandés » : offres payantes d'abord (Premium, puis Partenaire), puis coups de cœur
-      featured: (a, b) => planRank(b.h) - planRank(a.h) || (b.h.featured ? 1 : 0) - (a.h.featured ? 1 : 0),
+      // « Recommandés » : nos coups de cœur d'abord
+      featured: (a, b) => (b.h.featured ? 1 : 0) - (a.h.featured ? 1 : 0),
       "budget-asc": (a, b) => a.h.budget - b.h.budget,
       "budget-desc": (a, b) => b.h.budget - a.h.budget,
       distance: (a, b) => (a.dist ?? 0) - (b.dist ?? 0),

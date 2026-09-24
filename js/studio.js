@@ -1,6 +1,6 @@
-/* Studio : génère visuels Instagram, légendes, newsletter et rapports hôteliers. */
+/* Studio : génère visuels Instagram, légendes et newsletter. */
 (function () {
-  const { CONFIG, escapeHtml, img, planRank } = window.NS;
+  const { CONFIG, escapeHtml, img } = window.NS;
   const HOTELS = window.HOTELS, ENVS = window.ENVIRONMENTS, TYPES = window.TYPES;
   const $ = (sel) => document.querySelector(sel);
   const byId = (id) => HOTELS.find((h) => h.id === id);
@@ -14,8 +14,8 @@
 
   const hotelOptions = () => HOTELS
     .slice()
-    .sort((a, b) => planRank(b) - planRank(a) || a.name.localeCompare(b.name, "fr"))
-    .map((h) => `<option value="${h.id}">${planRank(h) ? "★ " : ""}${escapeHtml(h.name)} — ${escapeHtml(h.city)}</option>`)
+    .sort((a, b) => a.name.localeCompare(b.name, "fr"))
+    .map((h) => `<option value="${h.id}">${escapeHtml(h.name)} — ${escapeHtml(h.city)}</option>`)
     .join("");
 
   async function copy(text, btn) {
@@ -116,22 +116,20 @@
     ctx.letterSpacing = "0px";
   }
 
-  async function slideCover(h, W, H, sponsored, story) {
+  async function slideCover(h, W, H, story) {
     const c = canvas(W, H), ctx = c.getContext("2d");
     drawCover(ctx, await loadImage(h.images[0]), W, H);
     shade(ctx, W, H);
     brandMark(ctx, W);
-    if (sponsored) pill(ctx, "Collaboration commerciale", W - 64, 58, { bg: "rgba(255,255,255,.92)", fg: COLORS.ink, align: "right", size: 24 });
     bottomBlock(ctx, W, H, h, { showPrice: story, footer: story ? "Réservation : lien en bio ✦" : "Glisse pour découvrir  →" });
     return c;
   }
 
-  async function slidePhoto(h, W, H, url, text, index, total, sponsored) {
+  async function slidePhoto(h, W, H, url, text, index, total) {
     const c = canvas(W, H), ctx = c.getContext("2d");
     drawCover(ctx, await loadImage(url), W, H);
     shade(ctx, W, H, 0.5);
     brandMark(ctx, W);
-    if (sponsored) pill(ctx, "Collaboration commerciale", W - 64, 58, { bg: "rgba(255,255,255,.92)", fg: COLORS.ink, align: "right", size: 24 });
     ctx.font = `italic 400 64px ${SERIF}`; ctx.fillStyle = "#fff";
     const lines = wrap(ctx, text, W - 128);
     let y = H - 110 - (lines.length - 1) * 76;
@@ -187,7 +185,6 @@
   async function renderInstagram() {
     const h = byId($("#ig-hotel").value);
     const story = $("#ig-format").value === "story";
-    const sponsored = $("#ig-sponsored").checked;
     const W = 1080, H = story ? 1920 : 1350;
     $("#ig-msg").textContent = "Création des visuels…";
 
@@ -196,12 +193,12 @@
       document.fonts.load(`600 28px Inter`), document.fonts.load(`400 34px Inter`),
     ]).catch(() => {});
 
-    const slides = [await slideCover(h, W, H, sponsored, story)];
+    const slides = [await slideCover(h, W, H, story)];
     if (!story) {
       const extra = h.images.slice(1, 4);
       const texts = h.highlights.concat(h.amenities);
       for (let i = 0; i < extra.length; i++) {
-        slides.push(await slidePhoto(h, W, H, extra[i], texts[i] || h.tagline, i + 2, extra.length + 2, sponsored));
+        slides.push(await slidePhoto(h, W, H, extra[i], texts[i] || h.tagline, i + 2, extra.length + 2));
       }
       slides.push(await slideInfo(h, W, H));
     }
@@ -220,7 +217,7 @@
       wrapEl.appendChild(fig);
     });
 
-    $("#ig-caption").value = caption(h, sponsored, story);
+    $("#ig-caption").value = caption(h, story);
     $("#ig-link").value = hotelUrl(h, "instagram");
     $("#ig-msg").textContent = `${slides.length} visuel${slides.length > 1 ? "s" : ""} prêt${slides.length > 1 ? "s" : ""}. Pense à ajouter « ${h.id} » en tête de social.bioHotels dans config.js.`;
   }
@@ -248,16 +245,14 @@
   };
   const ENV_TAGS = { ville: "#citybreak", campagne: "#campagnefrancaise", mer: "#bordsdemer", montagne: "#montagne" };
 
-  function caption(h, sponsored, story) {
+  function caption(h, story) {
     // Quelques hashtags ciblés (Instagram en limite le nombre) : type, niche, région, ambiance
     const tags = [TYPE_TAGS[h.type], "#hotelinsolite", "#weekendinsolite", tag(h.region), ENV_TAGS[h.env]];
     const lines = [];
-    if (sponsored) lines.push(`Collaboration commerciale avec ${h.name}`, "");
     lines.push(`${TYPES[h.type].icon} ${h.name} — ${h.tagline}`, "");
     lines.push(h.description[0], "");
     h.highlights.forEach((x) => lines.push(`✦ ${x}`));
     lines.push("", `📍 ${h.city}, ${h.region}`, `💶 Budget ${"€".repeat(h.budget)} (${window.BUDGETS[h.budget].range})`);
-    if (planRank(h) && h.offer) lines.push(`🎁 ${h.offer}`);
     lines.push("", story ? "👉 Réservation : lien en story" : "👉 Réservation : lien en bio, adresse n°1");
     lines.push("💾 Enregistre ce post pour ton prochain week-end", "💬 Tague la personne avec qui tu y dormirais", "");
     lines.push(tags.join(" "));
@@ -272,11 +267,10 @@
     const blocks = hotels.map((h) => `
       <tr><td style="padding:0 0 40px">
         <a href="${esc(hotelUrl(h, "newsletter"))}"><img src="${esc(img(h.images[0], 1200))}" width="560" alt="${esc(h.name)}" style="display:block;width:100%;max-width:560px;height:auto;border-radius:12px;border:0"></a>
-        <p style="margin:18px 0 6px;font:600 12px Arial,sans-serif;letter-spacing:2px;text-transform:uppercase;color:${COLORS.terracotta}">${esc(TYPES[h.type].label)} · ${esc(h.city)}${planRank(h) ? ` <span style="color:#7b847e">· Partenaire</span>` : ""}</p>
+        <p style="margin:18px 0 6px;font:600 12px Arial,sans-serif;letter-spacing:2px;text-transform:uppercase;color:${COLORS.terracotta}">${esc(TYPES[h.type].label)} · ${esc(h.city)}</p>
         <h2 style="margin:0 0 8px;font:400 28px Georgia,serif;color:${COLORS.ink}">${esc(h.name)}</h2>
         <p style="margin:0 0 12px;font:italic 17px Georgia,serif;color:#4a544e">${esc(h.tagline)}</p>
         <p style="margin:0 0 16px;font:15px/1.6 Arial,sans-serif;color:#4a544e">${esc(h.description[0])}</p>
-        ${planRank(h) && h.offer ? `<p style="margin:0 0 16px;padding:12px 16px;background:#fbeee6;border-radius:8px;font:14px Arial,sans-serif;color:${COLORS.ink}">🎁 <strong>Offre lecteurs :</strong> ${esc(h.offer)}</p>` : ""}
         <table role="presentation" cellpadding="0" cellspacing="0"><tr>
           <td style="background:${COLORS.terracotta};border-radius:999px"><a href="${esc(hotelUrl(h, "newsletter"))}" style="display:inline-block;padding:12px 24px;font:600 15px Arial,sans-serif;color:#fff;text-decoration:none">Découvrir ce lieu →</a></td>
         </tr></table>
@@ -299,8 +293,7 @@
     </td></tr>
   </table>
   <p style="max-width:560px;margin:24px auto 0;font:12px/1.6 Arial,sans-serif;color:#7b847e;text-align:center">
-    ${igLine}<a href="${esc(siteUrl)}/hoteliers.html" style="color:#7b847e">Vous êtes hôtelier ?</a><br>
-    Liens affiliés : nous percevons une commission sur les réservations, sans surcoût pour vous. Les établissements « Partenaire » ont souscrit une offre de visibilité.<br>
+    ${igLine}    Liens affiliés : nous percevons une commission sur les réservations, sans surcoût pour vous.<br>
     <a href="{{ unsubscribe }}" style="color:#7b847e">Se désinscrire</a>
   </p>
 </td></tr></table>
@@ -314,43 +307,6 @@
     const html = newsletterHtml(selectedNlHotels(), $("#nl-intro").value, $("#nl-subject").value);
     $("#nl-frame").srcdoc = html;
     return html;
-  }
-
-  /* ============================================================
-     RAPPORT MENSUEL pour les hôteliers partenaires
-     ============================================================ */
-  function renderReport() {
-    const h = byId($("#rp-hotel").value);
-    const n = (id) => Number($(id).value) || 0;
-    const views = n("#rp-views"), book = n("#rp-book"), site = n("#rp-site"), phone = n("#rp-phone"), reach = n("#rp-ig");
-    const clicks = book + site + phone;
-    const rate = views ? Math.round((clicks / views) * 1000) / 10 : 0;
-    const month = $("#rp-month").value
-      ? new Date($("#rp-month").value + "-01").toLocaleDateString("fr-FR", { month: "long", year: "numeric" })
-      : "ce mois-ci";
-    const plan = CONFIG.plans[h.plan];
-    $("#rp-text").value = [
-      `Objet : ${h.name} — vos résultats ${month} sur ${CONFIG.siteName}`,
-      "",
-      "Bonjour,",
-      "",
-      `Voici le bilan de votre fiche ${h.name} pour ${month}${plan ? ` (offre ${plan.name})` : ""} :`,
-      "",
-      `• ${views} visites de votre fiche`,
-      `• ${book} clics vers la réservation Booking.com`,
-      `• ${site} clics vers votre site officiel (réservations sans commission)`,
-      `• ${phone} clics sur votre numéro de téléphone`,
-      reach ? `• ${reach} personnes touchées sur Instagram` : null,
-      "",
-      `Au total, ${clicks} clics vers une réservation, soit ${String(rate).replace(".", ",")} clics pour 100 visites de votre fiche.`,
-      "",
-      h.offer ? `Votre offre spéciale actuelle : « ${h.offer} ». N'hésitez pas à m'en proposer une nouvelle pour le mois prochain, cela relance l'intérêt.` : "Petite suggestion : une offre réservée à nos lecteurs (un petit-déjeuner, une bouteille, -10 % en direct) augmente nettement les clics.",
-      "",
-      "Belle journée,",
-      "",
-      CONFIG.siteName,
-      CONFIG.contactEmail,
-    ].filter((l) => l !== null).join("\n");
   }
 
   /* ============================================================
@@ -368,18 +324,15 @@
 
     // Instagram
     $("#ig-hotel").innerHTML = hotelOptions();
-    // Les hôtels Premium ont une publication incluse : mention « Collaboration commerciale » cochée par défaut
-    const presetSponsored = () => { $("#ig-sponsored").checked = byId($("#ig-hotel").value).plan === "premium"; };
-    $("#ig-hotel").addEventListener("change", () => { presetSponsored(); renderInstagram(); });
-    ["#ig-format", "#ig-sponsored"].forEach((s) => $(s).addEventListener("change", renderInstagram));
-    presetSponsored();
+    $("#ig-hotel").addEventListener("change", renderInstagram);
+    $("#ig-format").addEventListener("change", renderInstagram);
     $("#ig-download").addEventListener("click", () => currentSlides.forEach((s, i) => setTimeout(() => download(s), i * 400)));
     renderInstagram();
 
-    // Newsletter : Premium en premier, puis coups de cœur
-    const picks = HOTELS.filter((h) => h.plan === "premium").concat(HOTELS.filter((h) => h.plan !== "premium" && h.featured)).slice(0, 3).map((h) => h.id);
+    // Newsletter : trois coups de cœur cochés par défaut
+    const picks = HOTELS.filter((h) => h.featured).slice(0, 3).map((h) => h.id);
     $("#nl-hotels").innerHTML = HOTELS.map((h) => `
-      <label class="check"><input type="checkbox" value="${h.id}" ${picks.includes(h.id) ? "checked" : ""}> ${planRank(h) ? "★ " : ""}${escapeHtml(h.name)} <small class="muted">${escapeHtml(h.city)}</small></label>`).join("");
+      <label class="check"><input type="checkbox" value="${h.id}" ${picks.includes(h.id) ? "checked" : ""}> ${escapeHtml(h.name)} <small class="muted">${escapeHtml(h.city)}</small></label>`).join("");
     const first = byId(picks[0]);
     $("#nl-subject").value = first ? `${TYPES[first.type].icon} Cette semaine : ${first.name} et 2 autres pépites` : "3 nuits extraordinaires pour ce week-end";
     $("#nl-intro").value = "Bonjour,\n\nCette semaine, on vous emmène dormir là où personne ne pense à dormir. Trois adresses rares, choisies une à une, pour s'offrir une vraie parenthèse.";
@@ -394,11 +347,5 @@
       a.click();
     });
 
-    // Rapport hôtelier : partenaires en premier
-    $("#rp-hotel").innerHTML = hotelOptions();
-    $("#rp-month").value = new Date(Date.now() - 15 * 864e5).toISOString().slice(0, 7);
-    document.querySelectorAll('[data-panel="report"] input, [data-panel="report"] select')
-      .forEach((el) => el.addEventListener("input", renderReport));
-    renderReport();
   });
 })();

@@ -20,7 +20,7 @@ for (const f of ["js/config.js", "js/hotels.js", "js/guides.js"]) require(path.j
 const C = require(path.join(ROOT, "js/core.js"));
 
 const { CONFIG, HOTELS, ENVS, TYPES, GUIDES } = C.data();
-const { escapeHtml: e, img, budgetHtml, budgetOf, partnerBadge, planRank, distanceKm } = C;
+const { escapeHtml: e, img, budgetHtml, budgetOf, distanceKm } = C;
 const SITE = CONFIG.siteUrl.replace(/\/$/, "");
 const abs = (p) => `${SITE}/${p}`;
 const absImg = (p) => `${SITE}/${p}`;
@@ -97,7 +97,6 @@ function hotelPage(h) {
   const url = abs(`hotels/${h.id}.html`);
   const book = C.bookingLink(h);
   const others = C.partnerLinks(h);
-  const paid = planRank(h) > 0;
   const trk = `data-track="Réservation" data-hotel="${e(h.id)}" data-book="${e(h.id)}"`;
   const title = `${h.name} : ${T.label.toLowerCase()} à ${h.city} | ${CONFIG.siteName}`;
   const description = clip(`${h.tagline}. ${h.description[0]}`);
@@ -134,7 +133,7 @@ function hotelPage(h) {
           <a href="../index.html?env=${h.env}#explorer">${e(E.label)}</a> ›
           <a href="../index.html?type=${h.type}#explorer">${e(T.label)}</a>
         </nav>
-        <p class="card-type light">${T.icon} ${e(T.label)} · ${e(E.label)} ${partnerBadge(h)}</p>
+        <p class="card-type light">${T.icon} ${e(T.label)} · ${e(E.label)}</p>
         <h1>${e(h.name)}</h1>
         <p class="d-tagline">${e(h.tagline)}</p>
         <div class="d-meta">
@@ -211,11 +210,8 @@ function hotelPage(h) {
       <aside class="book-card" aria-label="Réservation">
         <p class="book-price">${budgetHtml(h)} <span>${e(b.range)}</span></p>
         <p class="small muted">Budget indicatif pour 2 personnes. Vérifiez les disponibilités et le tarif exact selon vos dates.</p>
-        ${paid && h.offer ? `<div class="offer"><strong>Offre spéciale</strong>${e(h.offer)}</div>` : ""}
         <a class="btn btn-primary btn-block" href="${e(book)}" target="_blank" rel="sponsored noopener" ${trk}>Voir les disponibilités sur Booking.com</a>
         ${others.map((o) => `<a class="btn btn-ghost btn-block" href="${e(o.href)}" target="_blank" rel="sponsored noopener" data-track="Partenaire" data-hotel="${e(h.id)}">Comparer sur ${e(o.name)}</a>`).join("")}
-        ${paid && h.website ? `<a class="btn btn-ghost btn-block" href="${e(h.website)}" target="_blank" rel="noopener" data-track="Site officiel" data-hotel="${e(h.id)}">Réserver en direct sur le site de l'hôtel</a>` : ""}
-        ${paid && h.phone ? `<a class="book-phone" href="tel:${e(h.phone.replace(/\s/g, ""))}" data-track="Téléphone" data-hotel="${e(h.id)}">☎ ${e(h.phone)}</a>` : ""}
         <ul class="book-perks">
           <li>✓ Réservation sécurisée chez notre partenaire</li>
           <li>✓ Aucun frais supplémentaire</li>
@@ -223,8 +219,6 @@ function hotelPage(h) {
         </ul>
       </aside>
     </div>
-
-    ${paid ? "" : `<div class="container"><p class="owner-note">Vous êtes le propriétaire de cet établissement ? <a href="../hoteliers.html?hotel=${encodeURIComponent(h.id)}">Mettez votre fiche en avant →</a></p></div>`}
 
     <section class="section section-dark similar">
       <div class="container section-head row">
@@ -294,7 +288,7 @@ function guidePage(g) {
         </div>
         <div class="g-body">
           <p class="g-num">${String(i + 1).padStart(2, "0")}</p>
-          <p class="card-type">${T.icon} ${e(T.label)} · ${e(ENVS[h.env].label)} ${partnerBadge(h)}</p>
+          <p class="card-type">${T.icon} ${e(T.label)} · ${e(ENVS[h.env].label)}</p>
           <h2><a href="${C.hotelUrl(h)}">${e(h.name)}</a></h2>
           <p class="g-place">📍 ${e(h.city)}, ${e(h.department)} · ${budgetHtml(h)}${g.note ? ` · <span class="g-note">${e(g.note(h))}</span>` : ""}</p>
           <p class="g-tagline">${e(h.tagline)}</p>
@@ -453,7 +447,6 @@ function sitemap() {
     abs("guides/index.html"),
     ...GUIDES.filter((g) => C.guideHotels(g).length).map((g) => abs(`guides/${g.slug}.html`)),
     ...HOTELS.map((h) => abs(`hotels/${h.id}.html`)),
-    abs("hoteliers.html"),
   ];
   return `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">

@@ -23,20 +23,14 @@ Le site est **100 % statique** (HTML, CSS, JavaScript). Pas de serveur, pas de b
 - **Référencement (SEO)** : titre et description propres à chaque fiche, données structurées `schema.org/Hotel`
 - Liens partageables : les filtres sont dans l'URL (ex. `index.html?env=mer&budget=2`)
 
-### Offres payantes pour les hôteliers (`hoteliers.html`)
-- Page de vente avec 3 offres (Découverte gratuite, Partenaire 29 €/mois, Premium 79 €/mois) et des prestations à la carte, tarifs dans `config.js`
-- Formulaire de candidature (Netlify Forms), pré-rempli quand on arrive depuis le lien « Vous êtes le propriétaire ? » d'une fiche
-- Les hôtels avec `plan: "partenaire"` ou `"premium"` ont un badge « Partenaire », remontent dans le tri « Recommandés », et leur fiche affiche leur site, leur téléphone et une « Offre spéciale »
-- Les hôtels Premium passent en tête des « Coups de cœur »
-
 ### Instagram et newsletter
 - Inscription à la newsletter sur l'accueil, chaque fiche et le pied de page (Netlify Forms)
 - Section Instagram sur l'accueil et page **lien en bio** `liens.html`
-- **Studio** (`studio.html`, outil interne) : génère les carrousels et stories Instagram avec leur légende, l'e-mail HTML de la newsletter et le rapport mensuel à envoyer aux hôteliers
+- **Studio** (`studio.html`, outil interne) : génère les carrousels et stories Instagram avec leur légende, et l'e-mail HTML de la newsletter
 - **Suivi de provenance** : les liens `?src=instagram` / `?src=newsletter` sont ajoutés au libellé Booking. Ton tableau de bord Booking montre ainsi quel canal rapporte.
 - Statistiques Plausible optionnelles : visites et clics « Réservation », « Site officiel » et « Téléphone » par hôtel
 
-➡️ Le plan d'action complet (outils, calendrier Instagram, e-mails aux hôteliers, règles légales) est dans **[STRATEGIE.md](STRATEGIE.md)**.
+➡️ Le plan d'action complet (affiliation, outils, calendrier Instagram, règles légales) est dans **[STRATEGIE.md](STRATEGIE.md)**.
 
 ## Pages pour Google (générées automatiquement)
 
@@ -83,7 +77,7 @@ Seul le dossier `dist/` (préparé par `scripts/dist.js`) est publié : les outi
 
 > **À savoir sur la « marge »** : avec l'affiliation, tu ne peux pas ajouter ta marge au prix. C'est Booking qui te reverse une partie de sa propre commission sur chaque séjour réalisé (ni annulé, ni no-show). Le client paie le même prix que sur Booking : c'est ce qui rend le modèle honnête et facile à vendre.
 
-Autres programmes à ajouter ensuite : Expedia Group (Expedia, Hotels.com, Vrbo), Agoda, Trip.com, ou des plateformes qui regroupent plusieurs marques comme Travelpayouts ou Awin. Pour les hôtels indépendants, négocie directement une commission ou un abonnement mensuel pour une fiche mise en avant.
+Autres programmes à ajouter ensuite : Expedia Group (Expedia, Hotels.com, Vrbo), Agoda, Trip.com, ou des plateformes qui regroupent plusieurs marques comme Travelpayouts ou Awin. 
 
 ## Ajouter ou modifier un établissement
 
@@ -107,8 +101,6 @@ Tout se passe dans `js/hotels.js`. Copie un bloc `{ ... },` et modifie-le :
 | `photos` | `5` | nombre de photos dans `assets/hotels/<id>/` |
 | `bookingUrl` | `"https://www.booking.com/hotel/fr/xxx.html"` | lien de la fiche Booking ; si vide, le site ouvre une recherche Booking avec le nom de l'hôtel |
 | `partners` | `{ expedia: "https://…" }` | boutons de réservation secondaires (optionnels) |
-| `plan` | `"partenaire"` ou `"premium"` | offre payée par l'hôtel (absent = gratuit) |
-| `website`, `phone`, `offer` | | affichés seulement si l'hôtel a une offre payante |
 
 ### Photos : récupération automatique
 
@@ -139,9 +131,8 @@ index.html            Accueil + recherche + carte + newsletter
 hotels/<id>.html      Fiche de chaque établissement (générée)
 guides/               Guides thématiques (générés)
 hotel.html            Redirige les anciennes adresses hotel.html?id=…
-hoteliers.html        Offres payantes et candidature des hôteliers
 liens.html            Page « lien en bio » Instagram
-studio.html           Outil interne : visuels Instagram, newsletter, rapports
+studio.html           Outil interne : visuels Instagram et newsletter
 mentions-legales.html
 STRATEGIE.md          Plan d'action idées 1 et 8
 css/style.css
@@ -155,7 +146,6 @@ js/app.js             logique de l'accueil
 js/hotel.js           interactions de la fiche (carte, photos, partage)
 js/carte.js           carte interactive (carte.html)
 vendor/               Leaflet et Leaflet.markercluster (cartes), licences incluses
-js/hoteliers.js       offres et formulaire hôteliers
 js/studio.js          logique du Studio
 ```
 

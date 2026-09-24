@@ -21,7 +21,6 @@
     <div class="tabs" role="tablist">
       <button type="button" class="active" data-tab="ig">📸 Publication Instagram</button>
       <button type="button" data-tab="nl">✉️ Newsletter</button>
-      <button type="button" data-tab="report">📊 Rapport hôtelier</button>
     </div>
   </header>
 
@@ -35,7 +34,6 @@
           <option value="story">Story / Reel (1080 × 1920)</option>
         </select>
       </label>
-      <label class="check"><input type="checkbox" id="ig-sponsored"> Publication payée par l'hôtel<br><small class="muted">Ajoute la mention obligatoire « Collaboration commerciale »</small></label>
       <button class="btn btn-primary btn-block" type="button" id="ig-download">Télécharger toutes les images</button>
       <p class="muted small" id="ig-msg"></p>
 
@@ -70,23 +68,6 @@
     </section>
   </main>
 
-  <!-- ===== RAPPORT HÔTELIER ===== -->
-  <main class="container studio-main" data-panel="report" hidden>
-    <aside class="studio-side">
-      <label>Hôtel<select id="rp-hotel"></select></label>
-      <label>Mois<input id="rp-month" type="month"></label>
-      <label>Visites de la fiche<input id="rp-views" type="number" min="0" value="0"></label>
-      <label>Clics « Réserver »<input id="rp-book" type="number" min="0" value="0"></label>
-      <label>Clics site officiel<input id="rp-site" type="number" min="0" value="0"></label>
-      <label>Clics téléphone<input id="rp-phone" type="number" min="0" value="0"></label>
-      <label>Portée Instagram (comptes touchés)<input id="rp-ig" type="number" min="0" value="0"></label>
-      <p class="muted small">Chiffres à relever dans Plausible (onglet « Goal conversions », filtrer par hôtel) et dans Instagram (statistiques de la publication).</p>
-      <button class="btn btn-primary btn-block" type="button" data-copy="rp-text">Copier l'e-mail</button>
-    </aside>
-    <section class="studio-preview">
-      <textarea id="rp-text" class="report-text" rows="24"></textarea>
-    </section>
-  </main>
 
   <script src="js/config.js"></script>
   <script src="js/hotels.js"></script>

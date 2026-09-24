@@ -2,7 +2,7 @@
 (function () {
   const {
     escapeHtml, img, hotelUrl, budgetHtml, budgetOf, favButton, distanceKm, formatDistance,
-    getUserLocation, setUserLocation, locateBrowser, partnerBadge,
+    getUserLocation, setUserLocation, locateBrowser,
   } = window.NS;
   const HOTELS = window.HOTELS, ENVS = window.ENVIRONMENTS, TYPES = window.TYPES;
   const $ = (s) => document.querySelector(s);
@@ -175,7 +175,7 @@
       </a>
       ${favButton(h)}
       <div class="atlas-card-body">
-        <p class="card-type">${T.icon} ${escapeHtml(T.label)} ${partnerBadge(h)}</p>
+        <p class="card-type">${T.icon} ${escapeHtml(T.label)}</p>
         <h2>${escapeHtml(h.name)}</h2>
         <p class="card-place">📍 ${escapeHtml(h.city)}, ${escapeHtml(h.region)}${state.loc ? ` · à ${formatDistance(distanceKm(state.loc, h))}` : ""}</p>
         <p class="atlas-card-tagline">${escapeHtml(h.tagline)}</p>
