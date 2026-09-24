@@ -17,6 +17,7 @@
     return 2 * R * Math.asin(Math.sqrt(x));
   };
   const plural = (n, one, many) => (n > 1 ? many : one);
+  const hasTag = (t) => (h) => (h.tags || []).includes(t);
 
   global.GUIDES = [
     {
@@ -25,7 +26,7 @@
       short: "Nuits insolites en amoureux",
       title: (n) => `${n} nuits insolites pour un week-end en amoureux`,
       description: "Bulle sous les étoiles, phare, cabane avec jacuzzi, jardin secret à Montmartre : notre sélection d'hébergements insolites pour une escapade à deux en France.",
-      ids: ["attrap-reves-allauch", "phare-de-kerbel", "loire-valley-lodges", "pella-roca", "hotel-particulier-montmartre", "les-roches-rouges", "la-coorniche", "alpinest", "cabanes-du-moulin", "les-hautes-roches"],
+      ids: ["attrap-reves-allauch", "phare-de-kerbel", "loire-valley-lodges", "pella-roca", "hotel-particulier-montmartre", "les-roches-rouges", "la-coorniche", "alpinest", "cabanes-du-moulin", "les-hautes-roches", "bulles-de-savoie", "ecrin-d-auvergne"],
       cover: "attrap-reves-allauch",
       intro: [
         "Pour un anniversaire, une demande en mariage ou simplement deux jours rien qu'à deux, rien ne vaut un lieu qui sort de l'ordinaire. On a rassemblé ici nos adresses les plus romantiques : on s'y endort sous les étoiles, au sommet d'un phare ou dans les arbres, loin de tout.",
@@ -99,7 +100,7 @@
       short: "Nuits insolites avec spa privatif",
       title: (n) => `${n} nuits insolites avec spa ou jacuzzi privatif`,
       description: "Cabanes perchées avec jacuzzi, sauna privatif, spa en pleine forêt : les hébergements insolites où l'on profite d'un bain chaud rien qu'à deux.",
-      match: (h) => h.amenities.some((a) => /privatif/i.test(a) && /(spa|jacuzzi|sauna)/i.test(a)),
+      match: (h) => (h.tags || []).includes("spa-prive") || h.amenities.some((a) => /privati/i.test(a) && /(spa|jacuzzi|sauna|bain)/i.test(a)),
       cover: "pella-roca",
       intro: [
         "Un bain chaud sous les arbres, un sauna face à la vallée, un jacuzzi sur sa terrasse perchée : ces adresses offrent un espace bien-être rien que pour vous, sans horaires ni voisins.",
@@ -254,6 +255,226 @@
         "Respectez les horaires d'accès (téléphérique, train, télécabine) : une fois fermés, il est impossible de monter.",
         "L'altitude fatigue : buvez beaucoup d'eau et évitez les efforts intenses le premier soir.",
         "Même en été, emportez des vêtements chauds pour la nuit et le lever du soleil.",
+      ],
+    },
+    /* ---------- Envies et occasions ---------- */
+    {
+      slug: "nuit-insolite-avec-son-chien",
+      kicker: "Avec son chien",
+      short: "Nuits insolites avec son chien",
+      title: (n) => `${n} hôtels d'exception où votre chien est le bienvenu`,
+      description: "Châteaux, moulin, hôtel les pieds dans l'eau, chalets de Megève : les lieux extraordinaires de France qui acceptent les chiens, avec les conditions à connaître.",
+      match: hasTag("chien"),
+      cover: "domaine-des-etangs",
+      intro: [
+        "Partir sans son chien, c'est souvent la moitié du plaisir en moins. Bonne nouvelle : plusieurs de nos adresses les plus remarquables l'accueillent volontiers, parfois avec gamelle, panier et friandise qui l'attendent dans la chambre.",
+        "Châteaux au-dessus de la Dordogne, domaine de 1 000 hectares, hôtel face à la Méditerranée ou chalets au cœur de Megève : de quoi s'offrir un séjour hors du commun, à trois.",
+      ],
+      tips: [
+        "Signalez toujours votre chien au moment de la réservation : un supplément par nuit s'applique souvent, et certains établissements ne l'acceptent que dans certaines chambres.",
+        "Les chiens ne sont généralement pas admis au restaurant, au spa ni autour des piscines : prévoyez de quoi l'occuper pendant ces moments.",
+        "Emportez son panier, sa gamelle et une serviette : les promenades en forêt ou au bord de l'eau finissent rarement propres.",
+      ],
+    },
+    {
+      slug: "nuit-insolite-en-famille",
+      kicker: "En famille",
+      short: "Nuits insolites en famille",
+      title: (n) => `${n} nuits insolites en famille ou entre amis`,
+      description: "Phare, île privée, igloo, cabanes sur l'eau, wagon-lit de 1926 : les hébergements insolites de France où l'on peut dormir à 4, 6, 10 personnes ou plus.",
+      match: hasTag("famille"),
+      cover: "phare-de-kerbel",
+      intro: [
+        "Les plus beaux souvenirs d'enfance se construisent souvent dans des lieux extraordinaires : une nuit dans un igloo, un phare, une cabane qu'on rejoint en canoë ou le compartiment d'un train de légende.",
+        "Toutes les adresses de ce guide accueillent au moins quatre personnes, et plusieurs se privatisent entièrement pour une tribu : parfait pour les vacances en famille, les anniversaires ou les retrouvailles entre amis.",
+      ],
+      tips: [
+        "Vérifiez l'âge minimum : certaines cabanes perchées ou accès en canoë ne conviennent pas aux tout-petits.",
+        "Pour les grandes tribus, les lieux qui se privatisent (phare, île, villa) se réservent souvent très longtemps à l'avance.",
+        "Emportez des lampes de poche et des jeux de société : sans télévision, les soirées deviennent vite les meilleurs moments.",
+      ],
+    },
+    {
+      slug: "nuit-insolite-sans-voiture",
+      kicker: "Sans voiture",
+      short: "Nuits insolites sans voiture",
+      title: (n) => `${n} nuits insolites accessibles en train`,
+      description: "Refuge au bord de la Mer de Glace, igloo sur les pistes, Cité de Carcassonne, Mont-Saint-Michel, hôtel flottant : les nuits insolites que l'on rejoint en train et en transports en commun.",
+      match: hasTag("train"),
+      cover: "refuge-du-montenvers",
+      intro: [
+        "Pas de voiture ? Aucun problème. Ces adresses extraordinaires se rejoignent en train, puis en métro, en bus, en navette ou même… en petit train à crémaillère, comme le refuge du Montenvers au bord de la Mer de Glace.",
+        "Le voyage devient une partie de l'aventure : on arrive reposé, sans chercher de place pour se garer, et l'on repart avec une bonne conscience en prime.",
+      ],
+      tips: [
+        "Achetez vos billets de train tôt : pour les week-ends et les vacances, les prix grimpent vite.",
+        "Vérifiez les horaires de la dernière navette ou du dernier bus : dans les stations et sites isolés, ils s'arrêtent parfois tôt le soir.",
+        "Voyagez léger : certaines adresses (Mont-Saint-Michel, refuges) se rejoignent à pied avec vos bagages.",
+      ],
+    },
+    {
+      slug: "nuit-sous-les-etoiles",
+      kicker: "Sous les étoiles",
+      short: "Dormir sous les étoiles",
+      title: (n) => `Dormir sous les étoiles : ${n} ${plural(n, "nuit", "nuits")} face au ciel`,
+      description: "Bulles transparentes, observatoire du Pic du Midi, bulles étoilées en forêt : les plus belles nuits à la belle étoile, avec le confort d'un vrai lit.",
+      ids: ["pic-du-midi", "attrap-reves-allauch", "bulles-de-savoie", "etape-en-foret", "dihan"],
+      cover: "bulles-de-savoie",
+      intro: [
+        "S'endormir en regardant les étoiles filer, sans quitter la chaleur de sa couette : c'est la promesse des bulles transparentes, et de l'observatoire du Pic du Midi, où l'on observe le ciel au télescope à 2 877 mètres.",
+        "Loin des lumières des villes, le ciel se révèle comme on l'a rarement vu. Il ne reste plus qu'à choisir une nuit sans lune.",
+      ],
+      tips: [
+        "Consultez le calendrier lunaire : autour de la nouvelle lune, le ciel est bien plus noir et les étoiles bien plus nombreuses.",
+        "Les nuits d'août offrent les étoiles filantes des Perséides ; celles de décembre, les Géminides.",
+        "Dans une bulle, emportez un masque de sommeil : le soleil vous réveillera très tôt.",
+      ],
+    },
+    {
+      slug: "demande-en-mariage-lieu-insolite",
+      kicker: "Demande en mariage",
+      short: "Où faire sa demande en mariage",
+      title: (n) => `Demande en mariage : ${n} lieux insolites pour dire « oui »`,
+      description: "Sommet d'un phare, observatoire, bulle sous les étoiles, château au-dessus de la Dordogne : les lieux les plus romantiques de France pour une demande en mariage.",
+      ids: ["phare-de-kerbel", "pic-du-midi", "bulles-de-savoie", "chateau-de-la-treyne", "cap-estel", "grand-controle-versailles", "la-coorniche", "pella-roca"],
+      cover: "phare-de-kerbel",
+      intro: [
+        "Il y a des questions qu'on ne pose qu'une fois. Autant choisir un décor à la hauteur : le sommet d'un phare face à l'océan, un observatoire au-dessus des nuages, une bulle sous les étoiles ou un château suspendu au-dessus d'une rivière.",
+        "Nous avons choisi des lieux où l'intimité est garantie et où le cadre fait déjà la moitié du travail. À vous de trouver les mots.",
+      ],
+      tips: [
+        "Prévenez l'établissement en réservant : beaucoup aiment participer (bouteille au frais, fleurs, table en terrasse, bague glissée au dessert).",
+        "Choisissez l'heure : le coucher du soleil reste imbattable pour la lumière et l'émotion.",
+        "Prévoyez un plan B en cas de pluie ou de brouillard, surtout en montagne et en bord de mer.",
+      ],
+    },
+    {
+      slug: "idee-anniversaire-nuit-insolite",
+      kicker: "Anniversaire",
+      short: "Fêter un anniversaire autrement",
+      title: (n) => `${n} idées de nuit insolite pour un anniversaire`,
+      description: "Voiture-lits de 1926, île privée, igloo, cabane sur l'eau, château de Versailles : les idées de nuits insolites pour fêter un anniversaire, à deux ou en tribu.",
+      ids: ["ile-louet", "gare-de-guiscriff", "village-igloo-val-thorens", "grand-controle-versailles", "loire-valley-lodges", "cabanes-lacustra", "nids-des-vosges", "hotel-particulier-montmartre", "fontevraud-l-ermitage", "refuge-du-montenvers"],
+      cover: "loire-valley-lodges",
+      intro: [
+        "Pour une date qui compte, un dîner au restaurant ne suffit pas toujours. Offrez plutôt une nuit dont on parlera encore dans dix ans : dans le compartiment d'un train de 1926, sur une île rien que pour vous, dans un igloo ou une cabane qu'on rejoint en canoë.",
+        "On a mêlé ici des adresses pour deux et des lieux à partager en famille ou entre amis, pour tous les budgets.",
+      ],
+      tips: [
+        "Pour une surprise, réservez à votre nom et ne dévoilez que la date et la tenue à prévoir.",
+        "Les lieux qui se privatisent pour un groupe (île, wagon, villa) se réservent souvent plusieurs mois à l'avance.",
+        "Demandez si l'établissement peut préparer un gâteau, une bouteille ou une décoration : c'est souvent possible sur demande.",
+      ],
+    },
+    {
+      slug: "offrir-une-nuit-insolite",
+      kicker: "Idée cadeau",
+      short: "Offrir une nuit insolite",
+      gift: true,
+      title: (n) => `Offrir une nuit insolite : ${n} idées cadeaux inoubliables`,
+      description: "Bulle, cabane-spa, phare, observatoire, château : nos idées pour offrir une nuit insolite en France, et comment faire un cadeau réussi (dates, bons cadeaux, coffrets).",
+      ids: ["bulles-de-savoie", "pella-roca", "phare-de-kerbel", "pic-du-midi", "loire-valley-lodges", "ecrin-d-auvergne", "toue-cabanee-canal-de-bourgogne", "nids-des-vosges", "hotel-particulier-montmartre", "gare-de-guiscriff"],
+      cover: "pella-roca",
+      intro: [
+        "Saint-Valentin, fête des mères, anniversaire, Noël : une nuit dans un lieu extraordinaire est l'un des cadeaux qui marquent le plus. On n'offre pas un objet, mais un souvenir à vivre.",
+        "Voici nos idées les plus sûres, pour tous les budgets, et trois façons d'offrir : réserver des dates, demander un bon cadeau à l'établissement, ou choisir un coffret pour laisser le choix.",
+      ],
+      tips: [
+        "Si vous connaissez les disponibilités de la personne, réservez directement des dates : c'est le cadeau le plus simple et le plus fort.",
+        "Sinon, demandez à l'établissement s'il propose un bon cadeau : beaucoup de lieux insolites en vendent, parfois même sur leur site.",
+        "Pour laisser le choix du lieu et des dates, un coffret « séjour insolite » est une bonne solution : vérifiez sa durée de validité et les adresses qu'il inclut.",
+      ],
+    },
+
+    /* ---------- Régions ---------- */
+    {
+      slug: "hotels-insolites-bretagne",
+      kicker: "Bretagne",
+      short: "Hôtels insolites en Bretagne",
+      title: (n) => `Bretagne : ${n} nuits insolites entre phares, îles et forêts`,
+      description: "Dormir au sommet d'un phare, sur une île privée de la baie de Morlaix, dans une cabane près de Carnac ou un wagon-lit de 1926 : les hébergements insolites de Bretagne.",
+      match: (h) => h.region === "Bretagne",
+      cover: "phare-de-kerbel",
+      intro: [
+        "La Bretagne a le goût des lieux habités par les légendes. On y dort au sommet d'un phare face à la rade de Lorient, dans la maison du gardien d'une île de la baie de Morlaix ou dans un compartiment de train des années folles.",
+        "Entre côtes sauvages et forêts de l'intérieur, chaque adresse raconte une histoire, et toutes se prêtent aux longues balades iodées.",
+      ],
+      tips: [
+        "Le temps change vite : emportez toujours un vêtement de pluie, même en plein été.",
+        "Pour l'île Louët, les réservations n'ouvrent qu'une fois par an : surveillez les annonces de l'office de tourisme de la baie de Morlaix.",
+        "La voie verte n° 7 et la côte se découvrent très bien à vélo : pensez à en louer sur place.",
+      ],
+    },
+    {
+      slug: "hotels-insolites-provence-cote-d-azur",
+      kicker: "Provence & Côte d'Azur",
+      short: "Insolite en Provence et sur la Côte d'Azur",
+      title: (n) => `Provence et Côte d'Azur : ${n} adresses insolites et solaires`,
+      description: "Bulle sous le ciel de Provence, Cité radieuse de Le Corbusier, cabanes-spa, vignoble-musée, hôtels les pieds dans la Méditerranée : les lieux insolites du Sud-Est.",
+      match: (h) => h.region === "Provence-Alpes-Côte d'Azur",
+      cover: "les-roches-rouges",
+      intro: [
+        "Sous la lumière du Sud, l'insolite prend mille formes : une bulle transparente au-dessus de Marseille, une chambre dans la Cité radieuse de Le Corbusier, des cabanes-spa entre Alpes et Provence ou une villa au milieu d'un vignoble peuplé d'œuvres d'art.",
+        "Et pour les amoureux de la mer, deux adresses posées au ras de la Méditerranée, entre les roches rouges de l'Esterel et la presqu'île d'Èze.",
+      ],
+      tips: [
+        "En juillet et août, réservez très tôt et privilégiez les séjours en semaine : la Côte d'Azur est prise d'assaut.",
+        "Le printemps et le début de l'automne offrent une lumière superbe, une mer encore chaude et bien moins de monde.",
+        "Pour la Cité radieuse, prenez le temps de visiter le toit-terrasse et les rues intérieures du bâtiment.",
+      ],
+    },
+    {
+      slug: "hotels-insolites-occitanie",
+      kicker: "Occitanie",
+      short: "Hôtels insolites en Occitanie",
+      title: (n) => `Occitanie : ${n} nuits insolites, du Pic du Midi à Carcassonne`,
+      description: "Observatoire du Pic du Midi, Cité médiévale de Carcassonne, châteaux au-dessus du Lot et de la Dordogne, cabanes-spa du Quercy : les lieux insolites d'Occitanie.",
+      match: (h) => h.region === "Occitanie",
+      cover: "pic-du-midi",
+      intro: [
+        "De la haute montagne des Pyrénées aux vallées du Lot, l'Occitanie concentre quelques-unes des nuits les plus spectaculaires de France : un observatoire à 2 877 mètres, une Cité médiévale rien que pour soi le soir, des châteaux perchés au-dessus des rivières.",
+        "Entre causses, vignobles de Cahors et villages classés, chaque adresse est une porte ouverte sur une région de caractère.",
+      ],
+      tips: [
+        "Pour le Pic du Midi, réservez plusieurs mois à l'avance et vérifiez la météo : le téléphérique peut fermer en cas de vent fort.",
+        "Dans le Lot, combinez votre nuit avec Rocamadour, Saint-Cirq-Lapopie et le gouffre de Padirac, tout proches.",
+        "À Carcassonne, profitez de la Cité tôt le matin et le soir, quand les visiteurs sont partis.",
+      ],
+    },
+    {
+      slug: "hotels-insolites-nouvelle-aquitaine",
+      kicker: "Sud-Ouest",
+      short: "Insolite en Nouvelle-Aquitaine",
+      title: (n) => `Nouvelle-Aquitaine : ${n} adresses d'exception, de la dune du Pilat au Périgord`,
+      description: "Face à la dune du Pilat, au milieu des grands crus de Bordeaux, dans un château de conte en Charente ou un moulin du Périgord : les lieux d'exception de Nouvelle-Aquitaine.",
+      match: (h) => h.region === "Nouvelle-Aquitaine",
+      cover: "la-coorniche",
+      intro: [
+        "La Nouvelle-Aquitaine a le goût des belles choses : la dune du Pilat au coucher du soleil, les grands crus de Bordeaux, les rivières du Périgord et les forêts profondes de la Charente limousine.",
+        "Nos adresses y cultivent l'art de vivre : design face à l'océan, vinothérapie au milieu des vignes, château de conte de fées et moulin du XVIIe siècle au fil de l'eau.",
+      ],
+      tips: [
+        "Pour la dune du Pilat, montez au coucher du soleil ou tôt le matin : la lumière est magique et la foule absente.",
+        "Autour de Bordeaux, réservez vos visites de châteaux viticoles à l'avance, surtout le week-end.",
+        "Dans le Périgord, Brantôme et ses bords de Dronne se découvrent très bien en canoë.",
+      ],
+    },
+    {
+      slug: "hotels-insolites-bourgogne-franche-comte",
+      kicker: "Bourgogne-Franche-Comté",
+      short: "Insolite en Bourgogne-Franche-Comté",
+      title: (n) => `Bourgogne-Franche-Comté : ${n} nuits insolites au fil de l'eau`,
+      description: "Cabanes flottantes au milieu des étangs, bateau-cabane sur le canal de Bourgogne, château rempli d'art contemporain près de Chablis : les nuits insolites de Bourgogne-Franche-Comté.",
+      match: (h) => h.region === "Bourgogne-Franche-Comté",
+      cover: "toue-cabanee-canal-de-bourgogne",
+      intro: [
+        "Canaux paisibles, étangs brumeux et vignobles de renom : la Bourgogne-Franche-Comté se vit au rythme lent de l'eau. On y dort dans une cabane flottante, sur un bateau amarré devant une maison d'éclusier ou dans un château du XVIIe siècle transformé en galerie d'art.",
+        "Des adresses parfaites pour ralentir, pédaler le long des chemins de halage et goûter aux grands vins de la région.",
+      ],
+      tips: [
+        "Le canal de Bourgogne se longe à vélo sur des dizaines de kilomètres : c'est la meilleure façon de le découvrir.",
+        "Autour de Chablis, réservez une dégustation chez un vigneron : c'est souvent gratuit sur rendez-vous.",
+        "Au printemps et à l'automne, les brumes matinales sur l'eau sont magnifiques : levez-vous tôt.",
       ],
     },
   ];

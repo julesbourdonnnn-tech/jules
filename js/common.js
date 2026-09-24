@@ -23,7 +23,76 @@
   function getSource() {
     try { return sessionStorage.getItem(SRC_KEY) || ""; } catch { return ""; }
   }
-  const bookingLink = (h) => C.bookingLink(h, getSource());
+
+  /* ---------- Dates de séjour (mémorisées d'une page à l'autre) ----------
+   * Choisies sur une fiche ou un guide, elles sont ajoutées à tous les liens
+   * de réservation : le visiteur arrive directement sur les bons tarifs. */
+  const STAY_KEY = "ns-stay";
+  function getStay() {
+    try { return C.cleanStay(JSON.parse(localStorage.getItem(STAY_KEY))); } catch { return null; }
+  }
+  function setStay(stay) {
+    const s = C.cleanStay(stay);
+    try { s ? localStorage.setItem(STAY_KEY, JSON.stringify(s)) : localStorage.removeItem(STAY_KEY); } catch { /* navigation privée */ }
+    refreshBookLinks();
+    document.dispatchEvent(new CustomEvent("stay:change", { detail: s }));
+  }
+  const bookingLink = (h) => C.bookingLink(h, getSource(), getStay());
+  function refreshBookLinks(scope = document) {
+    const stay = getStay();
+    scope.querySelectorAll("a[data-book]").forEach((a) => {
+      const h = window.HOTELS.find((x) => x.id === a.dataset.book);
+      if (h) a.href = C.bookingLink(h, getSource(), stay);
+    });
+    scope.querySelectorAll("a[data-partner]").forEach((a) => {
+      const h = window.HOTELS.find((x) => x.id === a.dataset.hotel);
+      const p = h && C.partnerLinks(h, stay).find((x) => x.key === a.dataset.partner);
+      if (p) a.href = p.href;
+    });
+  }
+  const DATE_FMT = new Intl.DateTimeFormat("fr-FR", { weekday: "short", day: "numeric", month: "short" });
+  const fmtDate = (iso) => DATE_FMT.format(new Date(`${iso}T12:00:00`));
+  // Formulaires « Vos dates » (fiches et guides)
+  function initStayForms(scope = document) {
+    scope.querySelectorAll("form[data-stay]").forEach((form) => {
+      if (form.dataset.ready) return;
+      form.dataset.ready = "1";
+      const inp = form.elements.checkin, out = form.elements.checkout, adults = form.elements.adults;
+      const note = form.querySelector("[data-stay-note]");
+      const h = form.dataset.hotel ? window.HOTELS.find((x) => x.id === form.dataset.hotel) : null;
+      const today = C.todayIso();
+      const fill = (s) => {
+        inp.min = today;
+        inp.value = s && s.checkin ? s.checkin : "";
+        out.value = s && s.checkout ? s.checkout : "";
+        out.min = C.addDays(inp.value || today, 1);
+        if (adults && s) adults.value = String(s.adults);
+        if (!note) return;
+        if (C.hasDates(s)) {
+          const n = C.nightsOf(s);
+          const est = h ? C.stayEstimate(h, n) : "";
+          note.innerHTML = `<strong>${n} nuit${n > 1 ? "s" : ""}</strong> · du ${escapeHtml(fmtDate(s.checkin))} au ${escapeHtml(fmtDate(s.checkout))}` +
+            (est ? `<br><span>Budget indicatif : ${escapeHtml(est)} pour 2 personnes</span>` : "");
+        } else note.textContent = form.dataset.empty || "Choisissez vos dates : vous arriverez directement sur les tarifs de votre séjour.";
+        form.classList.toggle("has-dates", C.hasDates(s));
+      };
+      form.addEventListener("change", (e) => {
+        if (e.target === inp && inp.value) {
+          if (inp.value < today) inp.value = today;
+          if (!out.value || out.value <= inp.value) out.value = C.addDays(inp.value, 1);
+        }
+        if (e.target === out && out.value && inp.value && out.value <= inp.value) out.value = C.addDays(inp.value, 1);
+        if (e.target === out && out.value && !inp.value) inp.value = C.addDays(out.value, -1) < today ? today : C.addDays(out.value, -1);
+        setStay({ checkin: inp.value, checkout: out.value, adults: adults ? adults.value : 2 });
+        if (C.hasDates(getStay())) track("Dates", { hotel: form.dataset.hotel || "" });
+      });
+      form.addEventListener("submit", (e) => e.preventDefault());
+      const clear = form.querySelector("[data-stay-clear]");
+      if (clear) clear.addEventListener("click", () => setStay({ checkin: "", checkout: "", adults: adults ? adults.value : 2 }));
+      document.addEventListener("stay:change", (e) => fill(e.detail));
+      fill(getStay());
+    });
+  }
 
   /* ---------- Statistiques (Plausible) ---------- */
   if (CONFIG.analytics && CONFIG.analytics.plausibleDomain) {
@@ -156,6 +225,83 @@
     });
     updateFavCount();
     renderFavDrawer();
+  });
+
+  /* ---------- Petit message temporaire ---------- */
+  function toast(msg) {
+    let t = document.getElementById("toast");
+    if (!t) {
+      t = document.createElement("div");
+      t.id = "toast";
+      t.className = "toast";
+      t.setAttribute("role", "status");
+      document.body.appendChild(t);
+    }
+    t.textContent = msg;
+    t.classList.remove("show"); void t.offsetWidth; t.classList.add("show");
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => t.classList.remove("show"), 2600);
+  }
+
+  /* ---------- Comparateur (jusqu'à 3 lieux, mémorisés dans le navigateur) ---------- */
+  const CMP_KEY = "ns-compare", CMP_MAX = 3;
+  function getCompare() {
+    try {
+      const ids = JSON.parse(localStorage.getItem(CMP_KEY)) || [];
+      return ids.filter((id) => window.HOTELS.some((h) => h.id === id)).slice(0, CMP_MAX);
+    } catch { return []; }
+  }
+  function setCompare(ids) {
+    try { localStorage.setItem(CMP_KEY, JSON.stringify(ids.slice(0, CMP_MAX))); } catch { /* navigation privée */ }
+    syncCompare();
+    document.dispatchEvent(new CustomEvent("compare:change", { detail: getCompare() }));
+  }
+  function toggleCompare(id) {
+    const ids = getCompare();
+    const i = ids.indexOf(id);
+    if (i >= 0) { ids.splice(i, 1); setCompare(ids); return; }
+    if (ids.length >= CMP_MAX) { toast(`Le comparateur contient déjà ${CMP_MAX} lieux : retirez-en un pour en ajouter un autre.`); return; }
+    ids.push(id);
+    setCompare(ids);
+    track("Comparateur", { hotel: id });
+    if (ids.length === 1) toast("Ajouté au comparateur. Choisissez un ou deux autres lieux !");
+  }
+  function syncCompare() {
+    const ids = getCompare();
+    document.querySelectorAll("[data-compare]").forEach((b) => {
+      const on = ids.includes(b.dataset.compare);
+      b.classList.toggle("on", on);
+      b.setAttribute("aria-pressed", on);
+    });
+    renderCompareBar(ids);
+  }
+  function renderCompareBar(ids = getCompare()) {
+    if (document.body.classList.contains("compare-page")) return;
+    let bar = document.getElementById("compare-bar");
+    if (!ids.length) { if (bar) bar.hidden = true; document.body.classList.remove("has-compare"); return; }
+    if (!bar) {
+      bar = document.createElement("div");
+      bar.id = "compare-bar";
+      bar.className = "compare-bar";
+      bar.setAttribute("aria-label", "Comparateur");
+      document.body.appendChild(bar);
+      bar.addEventListener("click", (e) => { if (e.target.closest("[data-compare-clear]")) setCompare([]); });
+    }
+    const list = ids.map((id) => window.HOTELS.find((h) => h.id === id));
+    bar.innerHTML = `
+      <div class="compare-thumbs">${list.map((h) => `<img src="${img(h.images[0], 400)}" alt="${escapeHtml(h.name)}" title="${escapeHtml(h.name)}">`).join("")}${"<i></i>".repeat(CMP_MAX - list.length)}</div>
+      <p><strong>${ids.length} lieu${ids.length > 1 ? "x" : ""}</strong> <span>à comparer</span></p>
+      <a class="btn btn-primary" href="${C.page("comparer.html")}">Comparer →</a>
+      <button type="button" class="compare-clear" data-compare-clear aria-label="Vider le comparateur">×</button>`;
+    bar.hidden = false;
+    document.body.classList.add("has-compare");
+  }
+  document.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-compare]");
+    if (!b) return;
+    e.preventDefault();
+    e.stopPropagation();
+    toggleCompare(b.dataset.compare);
   });
 
   /* ---------- Mini-diaporama des cartes ---------- */
@@ -476,6 +622,21 @@
           <div id="fav-list" class="fav-list"></div>
         </div>`;
       document.body.appendChild(drawer);
+      // Menu mobile
+      const menuBtn = header.querySelector("#menu-open"), sheet = header.querySelector("#menu-sheet");
+      if (menuBtn && sheet) {
+        document.body.appendChild(sheet); // hors de l'en-tête (dont le flou crée un nouveau repère)
+        const setMenu = (open) => {
+          menuBtn.setAttribute("aria-expanded", open);
+          menuBtn.setAttribute("aria-label", open ? "Fermer le menu" : "Ouvrir le menu");
+          header.classList.toggle("menu-open", open);
+          if (open) { sheet.hidden = false; requestAnimationFrame(() => sheet.classList.add("open")); }
+          else { sheet.classList.remove("open"); setTimeout(() => { if (!sheet.classList.contains("open")) sheet.hidden = true; }, 300); }
+        };
+        menuBtn.addEventListener("click", () => setMenu(menuBtn.getAttribute("aria-expanded") !== "true"));
+        sheet.addEventListener("click", (e) => { if (e.target === sheet || e.target.closest("a")) setMenu(false); });
+        document.addEventListener("keydown", (e) => { if (e.key === "Escape" && menuBtn.getAttribute("aria-expanded") === "true") { setMenu(false); menuBtn.focus(); } });
+      }
       const favOpen = header.querySelector("#fav-open");
       if (favOpen) favOpen.addEventListener("click", () => toggleDrawer(true));
       drawer.addEventListener("click", (e) => { if (e.target === drawer || e.target.closest(".drawer-close")) toggleDrawer(false); });
@@ -484,13 +645,10 @@
     const footer = document.getElementById("site-footer");
     if (footer && !footer.children.length) footer.innerHTML = C.footer();
 
-    // Liens Booking des pages générées : on y ajoute la provenance du visiteur
-    if (getSource()) {
-      document.querySelectorAll("a[data-book]").forEach((a) => {
-        const h = window.HOTELS.find((x) => x.id === a.dataset.book);
-        if (h) a.href = bookingLink(h);
-      });
-    }
+    // Liens de réservation des pages générées : provenance du visiteur et dates choisies
+    refreshBookLinks();
+    initStayForms();
+    syncCompare();
     syncFavButtons();
     enhanceSelects();
     observeReveal();
@@ -498,8 +656,9 @@
 
   window.NS = {
     ...C,
-    CONFIG, getSource, track, bookingLink, getUserLocation, setUserLocation, geocode, locateBrowser,
+    CONFIG, getSource, track, bookingLink, getStay, setStay, refreshBookLinks, initStayForms, getUserLocation, setUserLocation, geocode, locateBrowser,
     getFavs, isFav, toggleFav, favButton, card, syncFavButtons, observeReveal, enhanceSelects, surprise,
+    toast, getCompare, setCompare, toggleCompare, syncCompare,
   };
   document.addEventListener("DOMContentLoaded", renderChrome);
 })();

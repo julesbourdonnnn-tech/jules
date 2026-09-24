@@ -10,7 +10,7 @@
   const isMobile = () => window.matchMedia("(max-width: 760px)").matches;
 
   const FRANCE = [[41.3, -5.2], [51.2, 9.6]];
-  const state = { q: "", env: "", type: "", selected: null, loc: getUserLocation() };
+  const state = { q: "", env: "", type: "", tag: "", selected: null, loc: getUserLocation() };
 
   /* ---------- Fonds de carte : voir baseLayer() dans core.js ---------- */
   const LAYERS = { plan: () => window.NS.baseLayer("plan"), satellite: () => window.NS.baseLayer("satellite"), nuit: () => window.NS.baseLayer("nuit") };
@@ -24,6 +24,7 @@
     let list = HOTELS.filter((h) =>
       (!state.env || h.env === state.env) &&
       (!state.type || h.type === state.type) &&
+      (!state.tag || window.NS.tagsOf(h).includes(state.tag)) &&
       (!q || norm([h.name, h.city, h.department, h.region, h.tagline, TYPES[h.type].label, ENVS[h.env].label].join(" ")).includes(q)));
     if (state.loc) list = list.slice().sort((a, b) => distanceKm(state.loc, a) - distanceKm(state.loc, b));
     else list = list.slice().sort((a, b) => a.name.localeCompare(b.name, "fr"));
@@ -108,11 +109,14 @@
       Object.entries(ENVS).map(([k, e]) => `<button type="button" data-env="${k}">${escapeHtml(e.label)}</button>`).join("");
     const used = new Set(HOTELS.map((h) => h.type));
     $("#atlas-types").innerHTML = Object.entries(TYPES).filter(([k]) => used.has(k))
-      .map(([k, t]) => `<button type="button" data-type="${k}">${t.icon} ${escapeHtml(t.label)}</button>`).join("");
+      .map(([k, t]) => `<button type="button" data-type="${k}">${t.icon} ${escapeHtml(t.label)}</button>`).join("") +
+      Object.entries(window.TAGS).filter(([k]) => HOTELS.some((h) => window.NS.tagsOf(h).includes(k)))
+        .map(([k, t]) => `<button type="button" class="is-tag" data-tag="${k}">${t.icon} ${escapeHtml(t.short)}</button>`).join("");
   }
   function syncFilters() {
     document.querySelectorAll("#atlas-env button").forEach((b) => b.classList.toggle("active", b.dataset.env === state.env));
-    document.querySelectorAll("#atlas-types button").forEach((b) => b.classList.toggle("active", b.dataset.type === state.type));
+    document.querySelectorAll("#atlas-types button[data-type]").forEach((b) => b.classList.toggle("active", b.dataset.type === state.type));
+    document.querySelectorAll("#atlas-types button[data-tag]").forEach((b) => b.classList.toggle("active", b.dataset.tag === state.tag));
   }
 
   function render({ refit = false } = {}) {
@@ -232,11 +236,13 @@
     });
     $("#atlas-types").addEventListener("click", (e) => {
       const b = e.target.closest("button"); if (!b) return;
-      state.type = state.type === b.dataset.type ? "" : b.dataset.type; render({ refit: true });
+      if ("tag" in b.dataset) state.tag = state.tag === b.dataset.tag ? "" : b.dataset.tag;
+      else state.type = state.type === b.dataset.type ? "" : b.dataset.type;
+      render({ refit: true });
     });
     $("#atlas-list").addEventListener("click", (e) => {
       if (e.target.closest("#atlas-clear")) {
-        Object.assign(state, { q: "", env: "", type: "" });
+        Object.assign(state, { q: "", env: "", type: "", tag: "" });
         $("#atlas-q").value = "";
         render({ refit: true });
         return;

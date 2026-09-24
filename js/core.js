@@ -16,6 +16,7 @@
     ENVS: global.ENVIRONMENTS,
     TYPES: global.TYPES,
     BUDGETS: global.BUDGETS,
+    TAGS: global.TAGS || {},
     GUIDES: global.GUIDES || [],
   });
 
@@ -83,8 +84,46 @@
   const budgetHtml = (h) =>
     `<span class="budget" title="${escapeHtml(budgetOf(h).range)}">${"€".repeat(h.budget)}<span class="budget-off">${"€".repeat(4 - h.budget)}</span></span>`;
 
+  /* ---------- Envies (filtres) ----------
+   * Certaines se déduisent des équipements (spa privatif, bien-être), les
+   * autres sont renseignées à la main dans hotels.js (champ `tags`). */
+  const PRIVATE_SPA = /(jacuzzi|spa|sauna|bain nordique|bains nordiques|bain finlandais|bain à remous).*privati|privati.*(jacuzzi|spa|sauna|bain)/i;
+  const WELLNESS = /spa|jacuzzi|sauna|hammam|bain nordique|bains nordiques|bain finlandais|massage/i;
+  function tagsOf(h) {
+    const t = new Set(h.tags || []);
+    const am = (h.amenities || []).join(" · ");
+    if (PRIVATE_SPA.test(am)) t.add("spa-prive");
+    if (WELLNESS.test(am)) t.add("bien-etre");
+    const TAGS = global.TAGS || {};
+    return Object.keys(TAGS).filter((k) => t.has(k));
+  }
+
+  /* ---------- Séjour (dates et voyageurs) ----------
+   * { checkin: "2026-10-10", checkout: "2026-10-12", adults: 2 } : ajouté aux
+   * liens de réservation pour arriver directement sur les bons tarifs. */
+  const ISO = /^\d{4}-\d{2}-\d{2}$/;
+  const todayIso = () => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  };
+  function addDays(iso, n) {
+    const [y, m, d] = iso.split("-").map(Number);
+    const t = new Date(Date.UTC(y, m - 1, d + n));
+    return t.toISOString().slice(0, 10);
+  }
+  const nightsOf = (stay) => Math.round((Date.parse(stay.checkout) - Date.parse(stay.checkin)) / 864e5);
+  // Renvoie un séjour valide (dates futures, départ après l'arrivée) ou null
+  function cleanStay(stay) {
+    if (!stay) return null;
+    const adults = Math.min(Math.max(parseInt(stay.adults, 10) || 2, 1), 12);
+    if (!ISO.test(stay.checkin || "") || !ISO.test(stay.checkout || "")) return { checkin: "", checkout: "", adults };
+    if (stay.checkin < todayIso() || stay.checkout <= stay.checkin || nightsOf(stay) > 30) return { checkin: "", checkout: "", adults };
+    return { checkin: stay.checkin, checkout: stay.checkout, adults };
+  }
+  const hasDates = (stay) => !!(stay && stay.checkin && stay.checkout);
+
   /* ---------- Liens de réservation ---------- */
-  function bookingLink(h, src = "") {
+  function bookingLink(h, src = "", stay = null) {
     const { CONFIG } = data();
     let url;
     try { url = new URL(h.bookingUrl); } catch { url = null; }
@@ -94,17 +133,66 @@
     }
     if (CONFIG.booking.aid) url.searchParams.set("aid", CONFIG.booking.aid);
     if (CONFIG.booking.label) url.searchParams.set("label", [CONFIG.booking.label, src, h.id].filter(Boolean).join("-"));
+    const s = cleanStay(stay);
+    if (s) {
+      if (hasDates(s)) {
+        url.searchParams.set("checkin", s.checkin);
+        url.searchParams.set("checkout", s.checkout);
+      }
+      url.searchParams.set("group_adults", String(s.adults));
+      url.searchParams.set("no_rooms", "1");
+      url.searchParams.set("group_children", "0");
+    }
     return url.toString();
   }
-  function partnerLinks(h) {
+  /* Autres sites de réservation, pour comparer. Ne s'affichent que lorsque ton
+   * identifiant d'affiliation est renseigné dans config.js (sinon ces liens ne
+   * te rapporteraient rien) ou qu'un lien direct est donné pour l'établissement. */
+  function partnerLinks(h, stay = null) {
     const { CONFIG } = data();
-    return Object.entries(h.partners || {})
-      .filter(([key, href]) => href && CONFIG.partners[key])
-      .map(([key, href]) => {
-        const p = CONFIG.partners[key];
-        const sep = href.includes("?") ? "&" : "?";
-        return { name: p.name, href: p.param ? `${href}${sep}${p.param}` : href };
-      });
+    const s = cleanStay(stay);
+    const out = [];
+    for (const [key, p] of Object.entries(CONFIG.partners || {})) {
+      const direct = h.partners && h.partners[key];
+      let href = "";
+      if (direct) {
+        const sep = direct.includes("?") ? "&" : "?";
+        href = p.param ? `${direct}${sep}${p.param}` : direct;
+      } else if (p.search && p.param) {
+        const u = new URL(p.search);
+        u.searchParams.set("destination", `${h.name}, ${h.city}`);
+        if (hasDates(s)) { u.searchParams.set("startDate", s.checkin); u.searchParams.set("endDate", s.checkout); }
+        u.searchParams.set("adults", String(s ? s.adults : 2));
+        href = `${u}&${p.param}`;
+      }
+      if (href) out.push({ key, name: p.name, href });
+    }
+    return out;
+  }
+
+  /* ---------- Conseil de réservation ----------
+   * Déduit de la capacité de l'établissement et de sa saison. */
+  function capacity(h) {
+    const m = String(h.rooms || "").match(/^(\d+)\s/);
+    return m ? Number(m[1]) : null;
+  }
+  function bookingTip(h) {
+    if (h.bookingTip) return h.bookingTip;
+    const n = capacity(h);
+    if (n && n <= 6) return `Seulement ${n} hébergement${n > 1 ? "s" : ""} : les week-ends et les vacances partent vite, réservez dès que vos dates sont fixées.`;
+    if (h.budget >= 4) return "Adresse très demandée : pour un week-end ou un pont, réservez un à deux mois à l'avance.";
+    return "Les week-ends et les vacances scolaires partent en premier : en semaine, vous aurez plus de choix et souvent de meilleurs prix.";
+  }
+
+  /* ---------- Estimation indicative du séjour ---------- */
+  function stayEstimate(h, nights) {
+    const b = data().BUDGETS[h.budget];
+    if (!b || !b.perNight || !nights) return "";
+    const [min, max] = b.perNight;
+    const f = (n) => formatPrice(n * nights);
+    if (min == null) return `moins de ${f(max)}`;
+    if (max == null) return `plus de ${f(min)}`;
+    return `${f(min)} à ${f(max)}`;
   }
 
   /* ---------- Petits composants ---------- */
@@ -129,6 +217,7 @@
             <div class="card-dots">${photos.map((_, i) => `<span class="${i ? "" : "on"}"></span>`).join("")}</div>` : ""}
           <span class="badge">${escapeHtml(ENVS[h.env].label)}</span>
           ${favButton(h, "", fav)}
+          <button type="button" class="card-compare" data-compare="${escapeHtml(h.id)}" aria-pressed="false" aria-label="Comparer ${escapeHtml(h.name)}" title="Ajouter au comparateur">⇄</button>
           ${dist != null ? `<span class="card-dist">📍 ${formatDistance(dist)}</span>` : ""}
         </div>
         <a class="card-body" href="${url}">
@@ -136,7 +225,7 @@
           <h3>${escapeHtml(h.name)}</h3>
           <p class="card-place">${escapeHtml(h.city)} · ${escapeHtml(h.region)}</p>
           <p class="card-tagline">${escapeHtml(h.tagline)}</p>
-          <p class="card-foot">${budgetHtml(h)}<span class="card-more">Découvrir →</span></p>
+          <p class="card-foot"><span class="card-price">${budgetHtml(h)}<small>${escapeHtml(budgetOf(h).short || "")}</small></span><span class="card-more">Découvrir →</span></p>
         </a>
       </article>`;
   }
@@ -192,20 +281,33 @@
   /* ---------- En-tête et pied de page ---------- */
   function header() {
     const { CONFIG } = data();
+    const links = [
+      ["index.html#destinations", "Ambiances"],
+      ["carte.html", "La carte"],
+      ["guides/index.html", "Guides"],
+      ["quiz.html", "Le quiz"],
+      ["index.html#explorer", "Tous les lieux"],
+    ];
     return `
       <a class="brand" href="${page("index.html")}">
         <span class="brand-mark">✦</span>
         <span>${escapeHtml(CONFIG.siteName)}</span>
       </a>
       <nav class="nav" aria-label="Navigation principale">
-        <a href="${page("index.html#destinations")}">Ambiances</a>
-        <a href="${page("carte.html")}">La carte</a>
-        <a href="${page("guides/index.html")}">Guides</a>
-        <a href="${page("index.html#explorer")}">Tous les lieux</a>
+        ${links.map(([href, label]) => `<a href="${page(href)}">${label}</a>`).join("\n        ")}
         <button type="button" class="nav-icon" data-surprise title="Un lieu au hasard" aria-label="Un lieu au hasard">🎲</button>
         <button type="button" class="nav-icon" id="fav-open" title="Mes coups de cœur" aria-label="Mes coups de cœur">♡<span class="fav-count" hidden></span></button>
         <a href="${page("index.html#explorer")}" class="nav-cta" data-open-near>Près de chez moi</a>
-      </nav>`;
+        <button type="button" class="nav-icon nav-menu" id="menu-open" aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="menu-sheet"><span></span></button>
+      </nav>
+      <div class="menu-sheet" id="menu-sheet" hidden>
+        <nav class="menu-panel" aria-label="Menu">
+          ${links.map(([href, label]) => `<a href="${page(href)}">${label}</a>`).join("\n          ")}
+          <a href="${page("comparer.html")}">Le comparateur</a>
+          <a href="${page("index.html#explorer")}" data-open-near>📍 Près de chez moi</a>
+          <a href="${page("a-propos.html")}" class="menu-small">Qui sommes-nous ?</a>
+        </nav>
+      </div>`;
   }
 
   function footer() {
@@ -231,7 +333,7 @@
         </div>
         <div><h4>Ambiances</h4><ul>${envLinks}</ul></div>
         <div><h4>Nos guides</h4><ul>${guideLinks}<li><a href="${page("guides/index.html")}">Tous les guides →</a></li><li><a href="${page("carte.html")}">La carte interactive →</a></li></ul></div>
-        <div><h4>Nous suivre</h4><ul>${socials}<li><a href="mailto:${escapeHtml(CONFIG.contactEmail)}">${escapeHtml(CONFIG.contactEmail)}</a></li><li><a href="${page("mentions-legales.html")}">Mentions légales</a></li></ul></div>
+        <div><h4>Nuits Singulières</h4><ul><li><a href="${page("quiz.html")}">Le quiz : trouver ma nuit</a></li><li><a href="${page("comparer.html")}">Le comparateur</a></li><li><a href="${page("a-propos.html")}">Qui sommes-nous ?</a></li>${socials}<li><a href="mailto:${escapeHtml(CONFIG.contactEmail)}">${escapeHtml(CONFIG.contactEmail)}</a></li><li><a href="${page("mentions-legales.html")}">Mentions légales</a></li></ul></div>
       </div>
       <p class="disclosure">Ce site contient des liens affiliés : si vous réservez via nos liens, nous percevons une commission du site de réservation, sans aucun surcoût pour vous. Notre sélection est indépendante : aucun établissement ne paie pour y figurer. Les niveaux de budget sont indicatifs ; le tarif final est celui du site de réservation. Photos : © les établissements.</p>
       <p class="muted small">© ${new Date().getFullYear()} ${escapeHtml(CONFIG.siteName)}</p>`;
@@ -239,7 +341,8 @@
 
   return {
     data, setRoot, root, page, hotelUrl, guideUrl, escapeHtml, formatPrice, formatDistance, distanceKm,
-    FALLBACK, img, budgetOf, budgetHtml, bookingLink, partnerLinks,
+    FALLBACK, img, budgetOf, budgetHtml, bookingLink, partnerLinks, bookingTip, stayEstimate, capacity,
+    todayIso, addDays, nightsOf, cleanStay, hasDates, tagsOf,
     favButton, card, newsletterForm, socialLinks, guideHotels, guideTitle, guidesFor, guideCard,
     header, footer, baseLayer,
   };

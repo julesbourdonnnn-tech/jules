@@ -14,18 +14,51 @@
   }
 
   function initParallax() {
-    const bg = document.querySelector(".d-hero-bg");
-    if (!bg || reduceMotion) return;
+    const media = document.querySelector(".d-hero-media");
+    if (!media || reduceMotion) return;
     let ticking = false;
     window.addEventListener("scroll", () => {
       if (ticking) return;
       ticking = true;
       requestAnimationFrame(() => {
         const y = window.scrollY;
-        if (y < window.innerHeight) bg.style.transform = `translate3d(0, ${y * 0.3}px, 0) scale(1.05)`;
+        if (y < window.innerHeight) media.style.transform = `translate3d(0, ${y * 0.3}px, 0)`;
         ticking = false;
       });
     }, { passive: true });
+  }
+
+  // Diaporama lent en fondu (effet « film ») sur les premières photos
+  function initHeroSlides() {
+    const slides = [...document.querySelectorAll(".d-hero-bg")];
+    if (slides.length < 2 || reduceMotion) return;
+    let i = 0, timer;
+    const next = () => {
+      slides[i].classList.remove("on");
+      i = (i + 1) % slides.length;
+      slides[i].classList.add("on");
+      timer = setTimeout(next, 7000);
+    };
+    // On attend que la photo suivante soit chargée avant de lancer le fondu
+    const start = () => { clearTimeout(timer); timer = setTimeout(next, 7000); };
+    slides.slice(1).forEach((im) => { im.loading = "eager"; });
+    document.addEventListener("visibilitychange", () => { if (document.hidden) clearTimeout(timer); else start(); });
+    start();
+  }
+
+  // Boutons « Choisir mes dates » : on descend jusqu'au bloc de réservation
+  function initScrollBook() {
+    document.addEventListener("click", (e) => {
+      const a = e.target.closest("[data-scroll-book]");
+      if (!a) return;
+      const card = document.getElementById("reserver");
+      if (!card) return;
+      e.preventDefault();
+      card.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "center" });
+      card.classList.remove("flash"); void card.offsetWidth; card.classList.add("flash");
+      const input = card.querySelector('input[name="checkin"]');
+      if (input && !input.value) setTimeout(() => input.focus({ preventScroll: true }), 500);
+    });
   }
 
   function initTabs() {
@@ -132,6 +165,8 @@
     const loc = getUserLocation();
     initDistance(loc);
     initParallax();
+    initHeroSlides();
+    initScrollBook();
     initTabs();
     initShare();
     initMap(loc);

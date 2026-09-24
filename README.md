@@ -21,7 +21,15 @@ Le site est **100 % statique** (HTML, CSS, JavaScript). Pas de serveur, pas de b
 - **Animations** douces à l'apparition des sections (désactivées si le visiteur a demandé moins d'animations)
 - **Affiliation** : ton identifiant Booking est ajouté automatiquement à chaque lien. Tu peux aussi ajouter des boutons Expedia, Hotels.com ou « Site officiel ».
 - **Référencement (SEO)** : titre et description propres à chaque fiche, données structurées `schema.org/Hotel`
-- Liens partageables : les filtres sont dans l'URL (ex. `index.html?env=mer&budget=2`)
+- Liens partageables : les filtres sont dans l'URL (ex. `index.html?env=mer&budget=2&envie=chien`)
+- **Choix des dates** : sur chaque fiche (et en haut de chaque guide), le visiteur choisit ses dates et le nombre de voyageurs ; tous les liens de réservation du site les reprennent (Booking arrive directement sur les bons tarifs). Estimation indicative du séjour et conseil de réservation.
+- **Envies** : « Spa privatif » et « Bien-être » (déduits des équipements), « En tribu », « Sans voiture » et « Avec son chien » (champ `tags`, uniquement quand l'information est vérifiée). Filtres sur l'accueil et la carte.
+- **Pour qui ?** : sur chaque fiche, « C'est pour vous si… / Moins pour vous si… » (champs `forYou` et `notForYou`), puis une FAQ générée à partir des informations vérifiées (avec données structurées `FAQPage` pour Google).
+- **Comparateur** (`comparer.html`) : jusqu'à 3 lieux côte à côte (bouton ⇄ sur les cartes et les fiches), lien partageable.
+- **Quiz** (`quiz.html`) : 5 questions, 3 lieux proposés avec le pourcentage de correspondance et les raisons ; résultats partageables.
+- **En ce moment** : une sélection sur l'accueil qui change selon la saison et les fêtes (Saint-Valentin, fête des mères, Noël).
+- **Qui sommes-nous** (`a-propos.html`) : charte de sélection et transparence sur les commissions.
+- **Menu mobile** complet.
 
 ### Instagram et newsletter
 - Inscription à la newsletter sur l'accueil, chaque fiche et le pied de page (Netlify Forms)
@@ -71,7 +79,9 @@ Le site est publié par le Worker Cloudflare « jules » (configuration : `wrang
 
 > **À savoir sur la « marge »** : avec l'affiliation, tu ne peux pas ajouter ta marge au prix. C'est Booking qui te reverse une partie de sa propre commission sur chaque séjour réalisé (ni annulé, ni no-show). Le client paie le même prix que sur Booking : c'est ce qui rend le modèle honnête et facile à vendre.
 
-Autres programmes à ajouter ensuite : Expedia Group (Expedia, Hotels.com, Vrbo), Agoda, Trip.com, ou des plateformes qui regroupent plusieurs marques comme Travelpayouts ou Awin. 
+Autres programmes à ajouter ensuite : Expedia Group (Expedia, Hotels.com, Vrbo), Agoda, Trip.com, ou des plateformes qui regroupent plusieurs marques comme Travelpayouts ou Awin. Pour Expedia et Hotels.com, renseigne ton identifiant dans `partners` (`js/config.js`) : un bouton « Comparer sur … » apparaît alors sur chaque fiche, avec les dates du visiteur.
+
+**Coffrets cadeaux** : colle tes liens affiliés Wonderbox / Smartbox dans `gifts` (`js/config.js`) : ils s'affichent dans le guide « Offrir une nuit insolite ».
 
 ## Ajouter ou modifier un établissement
 
@@ -122,6 +132,9 @@ Les photos appartiennent aux établissements. Pour une utilisation durable, dema
 
 ```
 index.html            Accueil + recherche + carte + newsletter
+quiz.html             Quiz « Quelle nuit insolite est faite pour vous ? »
+comparer.html         Comparateur (jusqu'à 3 lieux)
+a-propos.html         Qui sommes-nous, charte de sélection
 hotels/<id>.html      Fiche de chaque établissement (générée)
 guides/               Guides thématiques (générés)
 hotel.html            Redirige les anciennes adresses hotel.html?id=…
@@ -141,6 +154,8 @@ js/hotel.js           interactions de la fiche (carte, photos, partage)
 js/carte.js           carte interactive (carte.html)
 vendor/               Leaflet et Leaflet.markercluster (cartes), licences incluses
 js/studio.js          logique du Studio
+js/quiz.js            logique du quiz
+js/comparer.js        logique du comparateur
 ```
 
 ## Prochaines étapes conseillées

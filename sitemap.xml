@@ -2,6 +2,8 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://nuitsinguliere.com/</loc></url>
   <url><loc>https://nuitsinguliere.com/carte.html</loc></url>
+  <url><loc>https://nuitsinguliere.com/quiz.html</loc></url>
+  <url><loc>https://nuitsinguliere.com/a-propos.html</loc></url>
   <url><loc>https://nuitsinguliere.com/guides/index.html</loc></url>
   <url><loc>https://nuitsinguliere.com/guides/nuit-insolite-en-amoureux.html</loc></url>
   <url><loc>https://nuitsinguliere.com/guides/cabanes-perchees.html</loc></url>
@@ -16,6 +18,18 @@
   <url><loc>https://nuitsinguliere.com/guides/nuits-insolites-petit-budget.html</loc></url>
   <url><loc>https://nuitsinguliere.com/guides/hotels-insolites-paris.html</loc></url>
   <url><loc>https://nuitsinguliere.com/guides/dormir-en-altitude.html</loc></url>
+  <url><loc>https://nuitsinguliere.com/guides/nuit-insolite-avec-son-chien.html</loc></url>
+  <url><loc>https://nuitsinguliere.com/guides/nuit-insolite-en-famille.html</loc></url>
+  <url><loc>https://nuitsinguliere.com/guides/nuit-insolite-sans-voiture.html</loc></url>
+  <url><loc>https://nuitsinguliere.com/guides/nuit-sous-les-etoiles.html</loc></url>
+  <url><loc>https://nuitsinguliere.com/guides/demande-en-mariage-lieu-insolite.html</loc></url>
+  <url><loc>https://nuitsinguliere.com/guides/idee-anniversaire-nuit-insolite.html</loc></url>
+  <url><loc>https://nuitsinguliere.com/guides/offrir-une-nuit-insolite.html</loc></url>
+  <url><loc>https://nuitsinguliere.com/guides/hotels-insolites-bretagne.html</loc></url>
+  <url><loc>https://nuitsinguliere.com/guides/hotels-insolites-provence-cote-d-azur.html</loc></url>
+  <url><loc>https://nuitsinguliere.com/guides/hotels-insolites-occitanie.html</loc></url>
+  <url><loc>https://nuitsinguliere.com/guides/hotels-insolites-nouvelle-aquitaine.html</loc></url>
+  <url><loc>https://nuitsinguliere.com/guides/hotels-insolites-bourgogne-franche-comte.html</loc></url>
   <url><loc>https://nuitsinguliere.com/hotels/loire-valley-lodges.html</loc></url>
   <url><loc>https://nuitsinguliere.com/hotels/pella-roca.html</loc></url>
   <url><loc>https://nuitsinguliere.com/hotels/cabanes-des-grands-lacs.html</loc></url>
@@ -58,4 +72,13 @@
   <url><loc>https://nuitsinguliere.com/hotels/relais-de-chambord.html</loc></url>
   <url><loc>https://nuitsinguliere.com/hotels/toue-cabanee-canal-de-bourgogne.html</loc></url>
   <url><loc>https://nuitsinguliere.com/hotels/moulin-du-roc.html</loc></url>
+  <url><loc>https://nuitsinguliere.com/hotels/bulles-de-savoie.html</loc></url>
+  <url><loc>https://nuitsinguliere.com/hotels/cabanes-lacustra.html</loc></url>
+  <url><loc>https://nuitsinguliere.com/hotels/chateau-de-la-treyne.html</loc></url>
+  <url><loc>https://nuitsinguliere.com/hotels/ecrin-d-auvergne.html</loc></url>
+  <url><loc>https://nuitsinguliere.com/hotels/etape-en-foret.html</loc></url>
+  <url><loc>https://nuitsinguliere.com/hotels/gare-de-guiscriff.html</loc></url>
+  <url><loc>https://nuitsinguliere.com/hotels/nids-des-vosges.html</loc></url>
+  <url><loc>https://nuitsinguliere.com/hotels/domaine-de-murtoli.html</loc></url>
+  <url><loc>https://nuitsinguliere.com/hotels/villa-la-coste.html</loc></url>
 </urlset>

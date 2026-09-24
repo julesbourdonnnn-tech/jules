@@ -2,14 +2,14 @@
 (function () {
   const {
     escapeHtml, formatDistance, distanceKm, getUserLocation, setUserLocation, geocode, locateBrowser,
-    img, newsletterForm, socialLinks, card, budgetHtml, budgetOf, observeReveal, favButton,
+    img, newsletterForm, socialLinks, card, budgetHtml, budgetOf, observeReveal, favButton, tagsOf, syncCompare,
   } = window.NS;
-  const HOTELS = window.HOTELS, ENVS = window.ENVIRONMENTS, TYPES = window.TYPES, BUDGETS = window.BUDGETS;
+  const HOTELS = window.HOTELS, ENVS = window.ENVIRONMENTS, TYPES = window.TYPES, BUDGETS = window.BUDGETS, TAGS = window.TAGS;
   const $ = (sel) => document.querySelector(sel);
   const url = (h) => window.NS.hotelUrl(h);
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  const state = { q: "", env: "", type: "", budget: "", sort: "featured", radius: "", view: "grid", loc: getUserLocation() };
+  const state = { q: "", env: "", type: "", budget: "", tag: "", sort: "featured", radius: "", view: "grid", loc: getUserLocation() };
 
   // Sélection mise en avant : nos coups de cœur éditoriaux
   const FEATURED = HOTELS.filter((h) => h.featured);
@@ -23,11 +23,13 @@
     state.env = ENVS[p.get("env")] ? p.get("env") : "";
     state.type = TYPES[p.get("type")] ? p.get("type") : "";
     state.budget = BUDGETS[p.get("budget")] ? p.get("budget") : "";
+    state.tag = TAGS[p.get("envie")] ? p.get("envie") : "";
     state.sort = p.get("sort") || (state.loc ? "distance" : "featured");
   }
   function writeUrl() {
     const p = new URLSearchParams();
     ["q", "env", "type", "budget"].forEach((k) => state[k] && p.set(k, state[k]));
+    if (state.tag) p.set("envie", state.tag);
     if (state.sort !== "featured" && state.sort !== "distance") p.set("sort", state.sort);
     const qs = p.toString();
     history.replaceState(null, "", `${location.pathname}${qs ? "?" + qs : ""}${location.hash}`);
@@ -230,6 +232,82 @@
     show(0);
   }
 
+
+  /* ============================================================
+     EN CE MOMENT : une sélection qui change avec le calendrier
+     ============================================================ */
+  const guideBySlug = (slug) => (window.GUIDES || []).find((g) => g.slug === slug);
+  function currentSeason(d = new Date()) {
+    const m = d.getMonth() + 1, day = d.getDate(), y = d.getFullYear();
+    const has = (h, t) => tagsOf(h).includes(t);
+    // Fête des mères : dernier dimanche de mai (sauf Pentecôte : on reste simple)
+    const lastSundayMay = (() => { const x = new Date(y, 4, 31); x.setDate(31 - x.getDay()); return x.getDate(); })();
+    if (m === 2 && day <= 14) return {
+      kicker: "Saint-Valentin", title: "Une nuit inoubliable pour la Saint-Valentin",
+      text: "Bulles sous les étoiles, cabanes avec jacuzzi, phare face à l'océan : nos adresses les plus romantiques. Réservez vite, elles partent en premier.",
+      guide: "nuit-insolite-en-amoureux",
+    };
+    if (m === 5 && day >= 8 && day <= lastSundayMay) return {
+      kicker: "Fête des mères", title: "Offrez-lui une nuit hors du commun",
+      text: "Un cadeau qu'on n'oublie pas : une nuit dans un lieu extraordinaire. Nos idées, et comment l'offrir simplement.",
+      guide: "offrir-une-nuit-insolite",
+    };
+    if (m === 12 && day <= 24) return {
+      kicker: "Noël", title: "Et si vous offriez une nuit insolite ?",
+      text: "Sous le sapin, une nuit dans une bulle, un phare ou une cabane-spa : nos idées cadeaux pour tous les budgets.",
+      guide: "offrir-une-nuit-insolite",
+    };
+    if (m >= 9 && m <= 11) return {
+      kicker: `Automne ${y}`, title: "L'automne au chaud, les pieds dans un bain",
+      text: "Bains nordiques fumants, forêts qui rougissent, cheminées qui crépitent : nos adresses pour savourer la belle saison des cabanes.",
+      guide: "spa-jacuzzi-privatif",
+      // Hors montagne : entre deux saisons, beaucoup de refuges et chalets sont fermés
+      match: (h) => h.env !== "ville" && h.env !== "montagne" && (has(h, "spa-prive") || (has(h, "bien-etre") && ["cabane", "chalet", "chateau", "vignoble"].includes(h.type))),
+    };
+    if (m === 12 || m <= 3) return {
+      kicker: `Hiver ${m === 12 ? y + 1 : y}`, title: "L'hiver au-dessus des nuages",
+      text: "Igloos sur les pistes, refuges qu'on rejoint en raquettes, chalets au coin du feu : la montagne comme on en rêve.",
+      guide: "hotels-insolites-montagne",
+      match: (h) => h.env === "montagne" || h.type === "igloo",
+    };
+    if (m >= 4 && m <= 6) return {
+      kicker: `Printemps ${y}`, title: "Le printemps à la campagne",
+      text: "Châteaux, vignobles, moulins et falaises de tuffeau : les ponts de mai et les longs week-ends de juin se vivent au vert.",
+      guide: "dormir-dans-un-chateau",
+      match: (h) => h.env === "campagne" && ["chateau", "historique", "troglodyte", "vignoble", "moulin", "eau"].includes(h.type),
+    };
+    return {
+      kicker: `Été ${y}`, title: "L'été au bord de l'eau",
+      text: "Piscines taillées dans la roche, îles privées, cabanes sur l'étang, bulles pour les nuits d'étoiles filantes : vive l'été.",
+      guide: "hotels-insolites-bord-de-mer",
+      match: (h) => h.env === "mer" || ["eau", "bulle", "phare"].includes(h.type),
+    };
+  }
+  function renderSeason() {
+    const box = $("#season-grid");
+    if (!box) return;
+    const S = currentSeason();
+    const g = guideBySlug(S.guide);
+    let list = S.match ? HOTELS.filter(S.match) : (g ? window.NS.guideHotels(g) : []);
+    if (list.length < 4 && g) list = list.concat(window.NS.guideHotels(g).filter((h) => !list.includes(h)));
+    // Rotation chaque semaine, coups de cœur d'abord
+    const week = Math.floor(Date.now() / 6048e5);
+    const hash = (s) => [...s].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, week);
+    list = list.slice().sort((a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0) || hash(a.id) - hash(b.id)).slice(0, 4);
+    $("#season-kicker").textContent = S.kicker;
+    $("#season-title").textContent = S.title;
+    $("#season-text").textContent = S.text;
+    if (g) { $("#season-link").href = window.NS.guideUrl(g); $("#season-link").textContent = "Voir tout le guide →"; }
+    box.innerHTML = list.map((h) => card(h, { reveal: true })).join("");
+    syncCompare();
+  }
+  function renderQuizTeaser() {
+    const art = $("#qt-art");
+    if (!art) return;
+    const picks = ["attrap-reves-allauch", "phare-de-kerbel", "pella-roca"].map((id) => HOTELS.find((h) => h.id === id)).filter(Boolean);
+    art.innerHTML = picks.map((h) => `<img src="${img(h.images[0], 900)}" alt="" loading="lazy">`).join("");
+  }
+
   /* ============================================================
      EXPLORATION : filtres, galerie, carte
      ============================================================ */
@@ -242,6 +320,7 @@
       (!state.env || h.env === state.env) &&
       (!state.type || h.type === state.type) &&
       (!state.budget || String(h.budget) === state.budget) &&
+      (!state.tag || tagsOf(h).includes(state.tag)) &&
       (!q || normalize([h.name, h.city, h.department, h.region, h.tagline, TYPES[h.type].label, ENVS[h.env].label].join(" ")).includes(q)) &&
       (!state.loc || !state.radius || dist <= Number(state.radius))
     );
@@ -263,6 +342,9 @@
       Object.entries(BUDGETS).map(([k, b]) => `<button type="button" data-budget="${k}" title="${escapeHtml(b.range)}">${"€".repeat(k)}</button>`).join("");
     $("#f-type").innerHTML = Object.entries(TYPES).filter(([k]) => count("type", k))
       .map(([k, t]) => `<button type="button" data-type="${k}">${t.icon} ${escapeHtml(t.label)}</button>`).join("");
+    $("#f-tags").innerHTML = `<span class="tag-chips-label">Envies</span>` + Object.entries(TAGS)
+      .filter(([k]) => HOTELS.some((h) => tagsOf(h).includes(k)))
+      .map(([k, t]) => `<button type="button" data-tag="${k}" aria-pressed="false">${t.icon} ${escapeHtml(t.short)}</button>`).join("");
   }
 
   function syncControls(n) {
@@ -272,6 +354,7 @@
     document.querySelectorAll("#f-env button").forEach((b) => b.classList.toggle("active", b.dataset.env === state.env));
     document.querySelectorAll("#f-budget button").forEach((b) => b.classList.toggle("active", b.dataset.budget === state.budget));
     document.querySelectorAll("#f-type button").forEach((b) => b.classList.toggle("active", b.dataset.type === state.type));
+    document.querySelectorAll("#f-tags button").forEach((b) => { const on = b.dataset.tag === state.tag; b.classList.toggle("active", on); b.setAttribute("aria-pressed", on); });
     $("#near-radius").value = state.radius;
     $("#near-radius").disabled = !state.loc;
     $("#near-clear").hidden = !state.loc;
@@ -280,10 +363,11 @@
       ? `Triés par distance depuis : ${state.loc.label}`
       : "Indiquez votre adresse ou votre ville : on trie tout par distance.";
     $("#near-box").classList.toggle("active", !!state.loc);
-    const active = state.q || state.env || state.type || state.budget || state.radius;
+    const active = state.q || state.env || state.type || state.budget || state.tag || state.radius;
     $("#reset-top").hidden = !active;
     $("#results-count").innerHTML = `<strong>${n}</strong> établissement${n > 1 ? "s" : ""} extraordinaire${n > 1 ? "s" : ""}` +
-      (state.type ? ` · ${escapeHtml(TYPES[state.type].label)}` : "") + (state.env ? ` · ${escapeHtml(ENVS[state.env].label)}` : "");
+      (state.type ? ` · ${escapeHtml(TYPES[state.type].label)}` : "") + (state.env ? ` · ${escapeHtml(ENVS[state.env].label)}` : "") +
+      (state.tag ? ` · ${escapeHtml(TAGS[state.tag].label)}` : "");
   }
 
   let lastKey = "";
@@ -303,6 +387,7 @@
       const grid = $("#results");
       grid.classList.remove("refresh"); void grid.offsetWidth; grid.classList.add("refresh");
       grid.innerHTML = list.map(({ h, dist }) => card(h, { dist, reveal: false })).join("");
+      syncCompare();
     } else renderMap(list);
   }
 
@@ -428,6 +513,7 @@
       if ("env" in b.dataset) state.env = b.dataset.env;
       if ("budget" in b.dataset) state.budget = b.dataset.budget;
       if ("type" in b.dataset) state.type = state.type === b.dataset.type ? "" : b.dataset.type;
+      if ("tag" in b.dataset) state.tag = state.tag === b.dataset.tag ? "" : b.dataset.tag;
       render();
     });
     document.querySelectorAll(".view-toggle button").forEach((b) => b.addEventListener("click", () => {
@@ -435,7 +521,7 @@
       document.querySelectorAll(".view-toggle button").forEach((x) => { x.classList.toggle("active", x === b); x.setAttribute("aria-selected", x === b); });
       render();
     }));
-    const reset = () => { Object.assign(state, { q: "", env: "", type: "", budget: "", radius: "", sort: state.loc ? "distance" : "featured" }); render(); };
+    const reset = () => { Object.assign(state, { q: "", env: "", type: "", budget: "", tag: "", radius: "", sort: state.loc ? "distance" : "featured" }); render(); };
     $("#reset").addEventListener("click", reset);
     $("#reset-top").addEventListener("click", reset);
 
@@ -444,7 +530,7 @@
       const a = e.target.closest(".env-panel, .type-card");
       if (!a) return;
       e.preventDefault();
-      Object.assign(state, { env: a.dataset.env || "", type: a.dataset.type || "", q: "", budget: "" });
+      Object.assign(state, { env: a.dataset.env || "", type: a.dataset.type || "", q: "", budget: "", tag: "" });
       render();
       $("#explorer").scrollIntoView({ behavior: "smooth" });
     });
@@ -454,6 +540,8 @@
     readUrl();
     initHero();
     renderDiscovery();
+    renderSeason();
+    renderQuizTeaser();
     renderFilterControls();
     initFilters();
     initNear();

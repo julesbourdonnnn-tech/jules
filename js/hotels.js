@@ -18,6 +18,9 @@
  *   lat / lng   coordonnées GPS
  *   hero        1 à 6 : place dans le diaporama plein écran de l'accueil (optionnel)
  *   bookingUrl  lien de la fiche Booking.com (vide = recherche Booking par nom)
+ *   tags        envies vérifiées : "famille", "train", "chien" (voir TAGS)
+ *   forYou / notForYou   « C'est pour vous si… / Moins pour vous si… »
+ *   bookingTip  conseil de réservation (facultatif : sinon déduit automatiquement)
  *
  * ============================================================
  */
@@ -44,13 +47,26 @@ window.TYPES = {
   vignoble:   { label: "Au milieu des vignes",    icon: "🍇" },
   etoiles:    { label: "Nuit sous les étoiles",   icon: "🔭" },
   moulin:     { label: "Moulin au fil de l'eau",  icon: "💧" },
+  train:      { label: "Wagon & gare",            icon: "🚂" },
 };
 
+// Budget indicatif pour 2 personnes et une nuit (le tarif réel dépend des dates)
 window.BUDGETS = {
-  1: { range: "moins de 150 € la nuit" },
-  2: { range: "150 à 250 € la nuit" },
-  3: { range: "250 à 450 € la nuit" },
-  4: { range: "plus de 450 € la nuit" },
+  1: { range: "moins de 150 € la nuit", short: "< 150 €", perNight: [null, 150] },
+  2: { range: "150 à 250 € la nuit", short: "150–250 €", perNight: [150, 250] },
+  3: { range: "250 à 450 € la nuit", short: "250–450 €", perNight: [250, 450] },
+  4: { range: "plus de 450 € la nuit", short: "450 € et +", perNight: [450, null] },
+};
+
+// Envies : « spa-prive » et « bien-etre » se déduisent des équipements ;
+// « famille », « train » et « chien » se renseignent dans le champ `tags`
+// de chaque établissement (uniquement quand l'information est vérifiée).
+window.TAGS = {
+  "spa-prive": { label: "Spa ou jacuzzi privatif", short: "Spa privatif", icon: "♨️" },
+  "bien-etre": { label: "Spa & bien-être", short: "Bien-être", icon: "🌿" },
+  famille:     { label: "En famille ou entre amis", short: "En tribu", icon: "👨‍👩‍👧" },
+  train:       { label: "Accessible en train", short: "Sans voiture", icon: "🚆" },
+  chien:       { label: "Chien bienvenu", short: "Avec son chien", icon: "🐕" },
 };
 
 window.HOTELS = [
@@ -70,6 +86,8 @@ window.HOTELS = [
     highlights: ["Chaque cabane décorée par un artiste", "Jacuzzi privatif sur la terrasse", "Déconnexion totale : ni écran ni Wi-Fi"],
     amenities: ["Jacuzzi privatif", "Piscine de 20 m", "Restaurant", "Bar", "Massages", "Sentier de sculptures"],
     rooms: "18 suites-lodges",
+    forYou: ["Vous rêvez de déconnexion totale, sans écran ni Wi-Fi", "Vous aimez l'art contemporain et la forêt", "Vous voulez un jacuzzi rien qu'à vous"],
+    notForYou: ["Vous ne pouvez pas couper le téléphone de tout un week-end", "Vous cherchez l'animation d'un grand hôtel"],
     photos: 6, bookingUrl: "", partners: {},
   },
   {
@@ -87,6 +105,8 @@ window.HOTELS = [
     highlights: ["Jacuzzi et sauna privatifs", "Vue panoramique sur la vallée", "Domaine de chênes truffiers"],
     amenities: ["Jacuzzi privatif", "Sauna privatif", "Piscine chauffée", "Petit-déjeuner maison", "Paniers-repas", "VTT électriques"],
     rooms: "4 cabanes perchées",
+    forYou: ["Vous cherchez l'intimité absolue, à deux", "Vous rêvez de passer du sauna au jacuzzi face à la vallée"],
+    notForYou: ["Vous voyagez avec des enfants", "Vous voulez des restaurants et commerces à pied"],
     photos: 6, bookingUrl: "", partners: {},
   },
   {
@@ -104,7 +124,9 @@ window.HOTELS = [
     highlights: ["Cabanes flottantes sur les étangs", "Passerelles suspendues", "150 hectares de nature"],
     amenities: ["Petit-déjeuner", "Paniers-repas", "Parking"],
     rooms: "29 cabanes (perchées, flottantes, sur pilotis)",
-    photos: 6, bookingUrl: "", partners: {},
+    forYou: ["Vous voyagez en famille ou entre amis", "Vous aimez l'eau, les passerelles et les grands espaces"],
+    notForYou: ["Vous cherchez le luxe d'un hôtel avec room-service", "Vous avez le vertige"],
+    photos: 6, bookingUrl: "", partners: {}, tags: ["famille"],
   },
   {
     id: "dihan",
@@ -121,7 +143,9 @@ window.HOTELS = [
     highlights: ["32 hébergements tous différents", "Bain finlandais au feu de bois", "Écolabel européen"],
     amenities: ["Petit-déjeuner", "Bains nordiques", "Massages", "Mer à 7 km"],
     rooms: "32 hébergements insolites",
-    photos: 6, bookingUrl: "", partners: {},
+    forYou: ["Vous voulez choisir parmi 32 hébergements tous différents", "Vous aimez l'idée d'un lieu engagé et labellisé", "Vous voulez la mer à quelques minutes"],
+    notForYou: ["Vous voyagez avec votre chien (les animaux ne sont pas acceptés)", "Vous cherchez un hôtel classique"],
+    photos: 6, bookingUrl: "", partners: {}, tags: ["famille", "spa-prive"],
   },
   {
     id: "attrap-reves-allauch",
@@ -138,6 +162,8 @@ window.HOTELS = [
     highlights: ["Vue à 360° sur les étoiles", "Télescope et carte du ciel", "Petit-déjeuner inclus"],
     amenities: ["Salle de bain privative", "Télescope", "Petit-déjeuner inclus", "Serviettes et produits d'accueil"],
     rooms: "Bulles pour 2 personnes, plusieurs ambiances",
+    forYou: ["Vous rêvez de vous endormir en regardant les étoiles", "Vous préparez une surprise romantique"],
+    notForYou: ["Vous tenez à l'intimité d'une chambre fermée", "Vous voyagez à plus de deux"],
     photos: 6, bookingUrl: "", partners: {},
   },
   {
@@ -155,6 +181,8 @@ window.HOTELS = [
     highlights: ["Chambres dans la falaise de tuffeau", "Vue sur la Loire", "Vignoble de Vouvray à deux pas"],
     amenities: ["Restaurant", "Terrasse sur la Loire", "Parking"],
     rooms: "12 chambres troglodytiques",
+    forYou: ["Vous aimez la gastronomie et les vins de Loire", "Vous rêvez de dormir dans la roche, face au fleuve"],
+    notForYou: ["Vous cherchez un lieu isolé en pleine nature", "Vous voulez des chambres très lumineuses"],
     photos: 5, bookingUrl: "", partners: {},
   },
   {
@@ -172,6 +200,8 @@ window.HOTELS = [
     highlights: ["Piscine troglodytique", "4 chambres dans la roche", "Vue sur la Loire"],
     amenities: ["Piscine troglodytique", "Petit-déjeuner", "Parking"],
     rooms: "11 chambres, dont 4 troglodytiques",
+    forYou: ["Vous voulez une piscine vraiment unique", "Vous visitez les châteaux et les vignobles de Saumur"],
+    notForYou: ["Vous cherchez un service de palace", "Vous n'aimez pas les lieux un peu frais et intimistes"],
     photos: 6, bookingUrl: "", partners: {},
   },
   {
@@ -189,6 +219,8 @@ window.HOTELS = [
     highlights: ["Chambres sous la plaine", "Puits de lumière naturels", "Village troglodytique voisin"],
     amenities: ["Petit-déjeuner", "Parking"],
     rooms: "15 chambres troglodytiques",
+    forYou: ["Vous voulez l'expérience troglodyte sans vous ruiner", "Vous êtes curieux d'architecture souterraine"],
+    notForYou: ["Vous avez besoin de beaucoup de lumière naturelle", "Vous cherchez un spa et des activités sur place"],
     photos: 6, bookingUrl: "", partners: {},
   },
   {
@@ -206,6 +238,8 @@ window.HOTELS = [
     highlights: ["Visite de l'abbaye après la fermeture", "Petit-déjeuner dans le cloître", "Hôtel distingué d'une Clé Michelin"],
     amenities: ["Restaurant", "Petit-déjeuner dans le cloître", "Accès à l'abbaye", "Parking"],
     rooms: "54 chambres, dont duplex et chambres mansardées",
+    forYou: ["Vous aimez l'histoire et les lieux habités par le temps", "Vous rêvez de flâner seul dans une abbaye, le soir"],
+    notForYou: ["Vous cherchez une chambre spacieuse et luxueuse", "Vous préférez les lieux isolés en pleine nature"],
     photos: 4, bookingUrl: "", partners: {},
   },
   {
@@ -223,7 +257,9 @@ window.HOTELS = [
     highlights: ["1 000 hectares de nature", "Restaurant étoilé", "Spa dans un ancien moulin"],
     amenities: ["Restaurant étoilé", "Spa", "Piscines intérieure et extérieure", "Tennis", "Barques et vélos"],
     rooms: "Chambres, suites et cottages",
-    photos: 6, bookingUrl: "", partners: {},
+    forYou: ["Vous rêvez de nature à perte de vue et de grand confort", "Vous voyagez en famille ou avec votre chien"],
+    notForYou: ["Vous cherchez une petite adresse à prix doux", "Vous voulez sortir à pied le soir"],
+    photos: 6, bookingUrl: "", partners: {}, tags: ["chien", "famille"],
   },
 
   // ——————————————————— MER ———————————————————
@@ -242,7 +278,9 @@ window.HOTELS = [
     highlights: ["Studio au sommet du phare", "Vue à 360° sur la rade de Lorient", "Piscine chauffée et sauna"],
     amenities: ["Piscine chauffée", "Sauna", "Maison du gardien", "Jardin"],
     rooms: "Studio au sommet, maison du gardien et chambre à l'huile (8 pers. max)",
-    photos: 6, bookingUrl: "", partners: {},
+    forYou: ["Vous voulez vivre un rêve d'enfant : dormir tout en haut d'un phare", "Vous partez en famille ou entre amis (jusqu'à 8)"],
+    notForYou: ["Vous n'aimez pas les escaliers", "Vous cherchez un petit budget"],
+    photos: 6, bookingUrl: "", partners: {}, tags: ["famille"],
   },
   {
     id: "les-roches-rouges",
@@ -259,7 +297,9 @@ window.HOTELS = [
     highlights: ["Piscine d'eau de mer dans la roche", "Toutes les chambres face à la mer", "Face à l'île d'Or"],
     amenities: ["Piscine d'eau de mer", "Piscine d'eau douce chauffée", "Restaurant", "Paddle et kayak", "Cinéma en plein air"],
     rooms: "Chambres et suites avec balcon vue mer",
-    photos: 6, bookingUrl: "", partners: {},
+    forYou: ["Vous rêvez de nager dans l'eau de mer… sans le sable", "Vous aimez le design et l'art de vivre méditerranéen", "Vous voyagez avec votre chien"],
+    notForYou: ["Vous cherchez un lieu isolé loin de la route", "Vous voulez un séjour à petit budget"],
+    photos: 6, bookingUrl: "", partners: {}, tags: ["chien"],
   },
   {
     id: "auberge-saint-pierre",
@@ -276,7 +316,9 @@ window.HOTELS = [
     highlights: ["Dans les remparts du Mont", "Maison du XVe siècle", "La baie au coucher du soleil"],
     amenities: ["Restaurant", "Petit-déjeuner"],
     rooms: "Chambres réparties dans des maisons anciennes",
-    photos: 6, bookingUrl: "", partners: {},
+    forYou: ["Vous voulez vivre le Mont-Saint-Michel le soir, sans la foule", "Vous aimez les vieilles pierres et l'histoire"],
+    notForYou: ["Vous voyagez avec de gros bagages (le Mont se parcourt à pied)", "Vous cherchez des chambres modernes et spacieuses"],
+    photos: 6, bookingUrl: "", partners: {}, tags: ["train"],
   },
 
   // ——————————————————— VILLE ———————————————————
@@ -295,7 +337,9 @@ window.HOTELS = [
     highlights: ["Hôtel flottant sur la Seine", "Piscine qui semble plonger dans le fleuve", "Chambres-cabines vue sur l'eau"],
     amenities: ["Piscine chauffée", "Bar", "Restaurant", "Terrasse sur la Seine"],
     rooms: "54 chambres et 4 suites",
-    photos: 5, bookingUrl: "", partners: {},
+    forYou: ["Vous voulez une adresse parisienne vraiment originale", "Vous aimez les bars et piscines tendance"],
+    notForYou: ["Vous voyagez avec votre chien (les animaux ne sont pas acceptés)", "Vous avez le sommeil très léger"],
+    photos: 5, bookingUrl: "", partners: {}, tags: ["train"],
   },
   {
     id: "hotel-le-corbusier",
@@ -312,7 +356,9 @@ window.HOTELS = [
     highlights: ["Dans un bâtiment classé UNESCO", "Chambres conçues selon le Modulor", "Vue sur la mer"],
     amenities: ["Restaurant", "Toit-terrasse", "Bibliothèque"],
     rooms: "21 chambres",
-    photos: 6, bookingUrl: "", partners: {},
+    forYou: ["Vous êtes passionné d'architecture", "Vous voulez une adresse insolite à petit prix à Marseille"],
+    notForYou: ["Vous cherchez de grandes chambres", "Vous voulez la plage au pied de l'hôtel"],
+    photos: 6, bookingUrl: "", partners: {}, tags: ["train"],
   },
 
   // ——————————————————— MONTAGNE ———————————————————
@@ -331,7 +377,9 @@ window.HOTELS = [
     highlights: ["2 551 m d'altitude", "Accès en télécabine uniquement l'hiver", "Piscine de 25 m face aux sommets"],
     amenities: ["Piscine", "Espace bien-être", "3 restaurants", "Bar", "Ski aux pieds"],
     rooms: "16 chambres, 4 appartements et un dortoir",
-    photos: 6, bookingUrl: "", partners: {},
+    forYou: ["Vous rêvez de dormir au-dessus des nuages", "Vous skiez et voulez être le premier sur les pistes"],
+    notForYou: ["Vous cherchez un budget serré", "Vous n'aimez pas l'altitude"],
+    photos: 6, bookingUrl: "", partners: {}, tags: ["famille"],
   },
   {
     id: "village-igloo-val-thorens",
@@ -349,7 +397,9 @@ window.HOTELS = [
     amenities: ["Dîner savoyard inclus", "Petit-déjeuner inclus", "Balade en raquettes", "Bar de glace"],
     rooms: "4 chambres (2 à 4 personnes)",
     season: "De fin décembre à mi-avril",
-    photos: 6, bookingUrl: "", partners: {},
+    forYou: ["Vous voulez une expérience polaire unique en France", "Vous voyagez en famille ou entre amis"],
+    notForYou: ["Vous êtes frileux", "Vous cherchez le confort d'un hôtel classique"],
+    photos: 6, bookingUrl: "", partners: {}, tags: ["famille", "train"],
   },
   // ——————————————————— SUITE ———————————————————
   {
@@ -367,6 +417,8 @@ window.HOTELS = [
     highlights: ["Spa privatif chauffé toute l'année", "Aucun vis-à-vis", "Dîners du chef livrés à la cabane"],
     amenities: ["Spa privatif", "Dîner livré", "Brunch", "Parking"],
     rooms: "4 cabanes perchées",
+    forYou: ["Vous cherchez l'intimité d'une cabane sans vis-à-vis", "Vous rêvez d'un bain chaud dans les arbres, même l'hiver"],
+    notForYou: ["Vous voyagez avec des enfants", "Vous voulez des restaurants à pied"],
     photos: 6, bookingUrl: "", partners: {},
   },
   {
@@ -384,6 +436,8 @@ window.HOTELS = [
     highlights: ["Jacuzzi perché à 7 mètres", "Au bord de la rivière", "À 45 minutes de Paris"],
     amenities: ["Jacuzzi privatif", "Barque", "Chauffage", "Wi-Fi", "Feu de camp"],
     rooms: "3 cabanes perchées",
+    forYou: ["Vous habitez Paris et voulez vous évader sans faire de route", "Vous rêvez d'un jacuzzi perché au-dessus de la rivière"],
+    notForYou: ["Vous cherchez un hôtel avec services", "Vous avez le vertige"],
     photos: 6, bookingUrl: "", partners: {},
   },
   {
@@ -401,6 +455,8 @@ window.HOTELS = [
     highlights: ["Chambres creusées dans le tuffeau", "Vue sur la vallée de l'Indre", "Château d'Azay-le-Rideau tout proche"],
     amenities: ["Petit-déjeuner", "Parking", "Accès Loire à Vélo"],
     rooms: "14 chambres, dont 6 troglodytiques",
+    forYou: ["Vous voulez dormir dans la roche à petit prix", "Vous visitez les châteaux de la Loire à vélo"],
+    notForYou: ["Vous cherchez un spa ou une piscine", "Vous voulez un service hôtelier complet"],
     photos: 6, bookingUrl: "", partners: {},
   },
   {
@@ -418,7 +474,9 @@ window.HOTELS = [
     highlights: ["Seulement 5 suites d'artistes", "Jardin secret de 900 m²", "Au sommet de Montmartre"],
     amenities: ["Jardin", "Bar à cocktails", "Restaurant"],
     rooms: "5 suites de 35 à 85 m²",
-    photos: 6, bookingUrl: "", partners: {},
+    forYou: ["Vous rêvez d'un Paris secret et romantique", "Vous aimez l'art et les adresses confidentielles"],
+    notForYou: ["Vous cherchez un grand hôtel avec spa", "Vous préférez le centre historique de Paris"],
+    photos: 6, bookingUrl: "", partners: {}, tags: ["train"],
   },
   {
     id: "cour-des-loges",
@@ -435,7 +493,9 @@ window.HOTELS = [
     highlights: ["Demeures des XIVe-XVIe siècles", "Six cours Renaissance", "Spa inspiré des thermes romains"],
     amenities: ["Restaurant gastronomique", "Spa", "Piscine intérieure", "Hammam", "Bar"],
     rooms: "61 chambres et suites",
-    photos: 6, bookingUrl: "", partners: {},
+    forYou: ["Vous voulez dormir au cœur du Vieux Lyon, classé UNESCO", "Vous aimez les demeures chargées d'histoire", "Vous voyagez avec votre chien"],
+    notForYou: ["Vous cherchez la nature et le calme de la campagne", "Vous voyagez avec un petit budget"],
+    photos: 6, bookingUrl: "", partners: {}, tags: ["chien", "train"],
   },
   {
     id: "fermes-de-marie",
@@ -452,7 +512,9 @@ window.HOTELS = [
     highlights: ["Chalets en bois de fermes centenaires", "Spa aux plantes de montagne", "Au cœur de Megève"],
     amenities: ["Spa", "Piscine intérieure", "Sauna et hammam", "Restaurant", "Bar", "Chalet privé"],
     rooms: "Chambres, suites et chalet privé",
-    photos: 6, bookingUrl: "", partners: {},
+    forYou: ["Vous rêvez d'un chalet chaleureux au cœur de Megève", "Vous voyagez en famille ou avec votre chien"],
+    notForYou: ["Vous cherchez une adresse isolée en altitude", "Vous voyagez avec un petit budget"],
+    photos: 6, bookingUrl: "", partners: {}, tags: ["chien", "famille"],
   },
   {
     id: "chateau-de-la-resle",
@@ -469,6 +531,8 @@ window.HOTELS = [
     highlights: ["Art contemporain dans un château", "Seulement 7 chambres et suites", "Vignobles de Chablis à 10 min"],
     amenities: ["Piscine chauffée", "Spa", "Sauna et hammam", "Restaurant", "Jardins"],
     rooms: "2 chambres et 5 suites",
+    forYou: ["Vous aimez l'art contemporain et les lieux intimes", "Vous visitez la Bourgogne et le Chablisien"],
+    notForYou: ["Vous cherchez un grand hôtel animé", "Vous voyagez avec de jeunes enfants"],
     photos: 6, bookingUrl: "", partners: {},
   },
   {
@@ -486,7 +550,9 @@ window.HOTELS = [
     highlights: ["Château du XIIIe siècle", "Vue sur la vallée du Lot", "Chai voûté creusé dans la roche"],
     amenities: ["Restaurant", "Piscine", "Dégustation de vins", "Relais & Châteaux"],
     rooms: "25 chambres et 5 suites",
-    photos: 4, bookingUrl: "", partners: {},
+    forYou: ["Vous aimez le vin et les châteaux perchés", "Vous voyagez avec votre chien"],
+    notForYou: ["Vous cherchez un séjour à petit budget", "Vous voulez un lieu très contemporain"],
+    photos: 4, bookingUrl: "", partners: {}, tags: ["chien"],
   },
   {
     id: "sources-de-caudalie",
@@ -503,7 +569,9 @@ window.HOTELS = [
     highlights: ["Au cœur d'un grand cru classé", "Suite sur pilotis au-dessus de l'eau", "Spa de vinothérapie"],
     amenities: ["Spa", "Piscine", "Restaurant gastronomique", "Bar à vins", "Visites de chai"],
     rooms: "Chambres et suites signature",
-    photos: 6, bookingUrl: "", partners: {},
+    forYou: ["Vous aimez le vin et le bien-être", "Vous rêvez d'une suite sur pilotis au-dessus de l'eau", "Vous voyagez avec votre chien"],
+    notForYou: ["Vous cherchez un petit budget", "Vous préférez les lieux sauvages et isolés"],
+    photos: 6, bookingUrl: "", partners: {}, tags: ["chien"],
   },
   {
     id: "casadelmar",
@@ -520,6 +588,8 @@ window.HOTELS = [
     highlights: ["Chaque lit face à la mer", "Parc de 3 hectares jusqu'à l'eau", "Restaurant deux étoiles"],
     amenities: ["Plage privée", "Piscine", "Spa", "Restaurant gastronomique"],
     rooms: "34 chambres et suites",
+    forYou: ["Vous rêvez de la Corse côté grand luxe", "Vous voulez chaque matin la mer depuis votre lit"],
+    notForYou: ["Vous cherchez un séjour à petit budget", "Vous préférez les lieux rustiques"],
     photos: 6, bookingUrl: "", partners: {},
   },
   {
@@ -537,6 +607,8 @@ window.HOTELS = [
     highlights: ["Face à la dune du Pilat", "Piscine à débordement sur l'océan", "Design Philippe Starck"],
     amenities: ["Piscine à débordement", "Restaurant", "Bar", "Terrasse panoramique"],
     rooms: "29 chambres et suites",
+    forYou: ["Vous rêvez de la dune du Pilat au coucher du soleil", "Vous aimez le design et l'océan"],
+    notForYou: ["Vous cherchez un petit budget", "Vous voulez des plages désertes et sauvages"],
     photos: 6, bookingUrl: "", partners: {},
   },
   // ——————————————————— NOUVELLES ADRESSES ———————————————————
@@ -556,6 +628,8 @@ window.HOTELS = [
     amenities: ["Dîner inclus", "Téléphérique inclus", "Observation guidée des étoiles", "Visite des coupoles scientifiques"],
     rooms: "12 chambres doubles et 3 individuelles",
     season: "À réserver plusieurs mois à l'avance",
+    forYou: ["Vous êtes passionné d'étoiles et d'astronomie", "Vous voulez vivre une nuit vraiment unique au monde"],
+    notForYou: ["Vous supportez mal l'altitude", "Vous ne pouvez pas réserver des mois à l'avance"],
     photos: 6, bookingUrl: "", partners: {},
   },
   {
@@ -573,7 +647,9 @@ window.HOTELS = [
     highlights: ["Au bord de la Mer de Glace", "Accès par le train du Montenvers", "Refuge historique de 1880"],
     amenities: ["Restaurant", "Bar des Glaciers", "Terrasse panoramique", "Salon avec cheminée"],
     rooms: "20 chambres, suites et dortoirs",
-    photos: 6, bookingUrl: "", partners: {},
+    forYou: ["Vous rêvez de haute montagne sans être alpiniste", "Vous voulez venir sans voiture, en petit train"],
+    notForYou: ["Vous cherchez un hôtel de grand luxe", "Vous voyagez avec un petit budget"],
+    photos: 6, bookingUrl: "", partners: {}, tags: ["famille", "train"],
   },
   {
     id: "refuge-de-la-traye",
@@ -590,7 +666,9 @@ window.HOTELS = [
     highlights: ["Accès en raquettes ou à ski", "Au cœur des Trois Vallées", "Spa et bain nordique"],
     amenities: ["Spa", "Sauna et hammam", "Bain nordique", "Restaurant", "Bar", "Transfert des bagages"],
     rooms: "Chambres, suites et appartements",
-    photos: 6, bookingUrl: "", partners: {},
+    forYou: ["Vous rêvez de montagne isolée, avec tout le confort", "Vous skiez dans les Trois Vallées"],
+    notForYou: ["Vous voyagez avec un petit budget", "Vous préférez l'animation d'une station"],
+    photos: 6, bookingUrl: "", partners: {}, tags: ["famille"],
   },
   {
     id: "refuge-chez-la-tante",
@@ -607,6 +685,8 @@ window.HOTELS = [
     highlights: ["Accès en télécabine uniquement", "Vue sur le Mont-Blanc", "Piscine et spa en altitude"],
     amenities: ["Piscine", "Spa", "Restaurant panoramique", "Bowling"],
     rooms: "20 chambres, dont un penthouse",
+    forYou: ["Vous voulez la montagne pour vous seul, face au Mont-Blanc", "Vous skiez et aimez le chalet de luxe"],
+    notForYou: ["Vous voyagez avec un petit budget", "Vous voulez sortir en ville le soir"],
     photos: 6, bookingUrl: "", partners: {},
   },
   {
@@ -624,7 +704,9 @@ window.HOTELS = [
     highlights: ["Piscine Art déco chauffée toute l'année", "Chambres avec vue sur le bassin", "Rooftop l'été"],
     amenities: ["Piscine extérieure chauffée", "Piscine intérieure", "Spa", "Rooftop", "Brasserie", "Bar"],
     rooms: "124 chambres et suites",
-    photos: 6, bookingUrl: "", partners: {},
+    forYou: ["Vous rêvez de nager dans une piscine mythique", "Vous aimez l'art urbain et l'Art déco"],
+    notForYou: ["Vous cherchez le calme d'un petit hôtel", "Vous voulez loger au cœur du Paris historique"],
+    photos: 6, bookingUrl: "", partners: {}, tags: ["train"],
   },
   {
     id: "maison-souquet",
@@ -641,7 +723,9 @@ window.HOTELS = [
     highlights: ["Ancienne maison close de 1905", "Décor de Jacques Garcia", "Salon d'eau privatisable"],
     amenities: ["Spa", "Hammam", "Bar", "Salons"],
     rooms: "Chambres et suites",
-    photos: 3, bookingUrl: "", partners: {},
+    forYou: ["Vous aimez les lieux à l'histoire sulfureuse", "Vous préparez une escapade romantique à Paris"],
+    notForYou: ["Vous cherchez un décor minimaliste", "Vous voyagez avec des enfants"],
+    photos: 3, bookingUrl: "", partners: {}, tags: ["train"],
   },
   {
     id: "intercontinental-lyon-hotel-dieu",
@@ -658,7 +742,9 @@ window.HOTELS = [
     highlights: ["Bar sous un dôme de 32 m", "Monument de huit siècles", "Duplex face au Rhône"],
     amenities: ["Bar sous le dôme", "Restaurant", "Spa", "Salle de sport"],
     rooms: "144 chambres et suites",
-    photos: 6, bookingUrl: "", partners: {},
+    forYou: ["Vous aimez les monuments historiques", "Vous voulez un grand hôtel au cœur de Lyon"],
+    notForYou: ["Vous cherchez une petite adresse intime", "Vous préférez la nature"],
+    photos: 6, bookingUrl: "", partners: {}, tags: ["train"],
   },
   {
     id: "hotel-de-la-cite-carcassonne",
@@ -675,7 +761,9 @@ window.HOTELS = [
     highlights: ["Dans les remparts classés UNESCO", "La Cité rien que pour vous le soir", "Piscine au pied des tours"],
     amenities: ["Piscine", "Jardin", "Restaurant", "Bar"],
     rooms: "Chambres et suites",
-    photos: 6, bookingUrl: "", partners: {},
+    forYou: ["Vous rêvez d'avoir la Cité médiévale pour vous le soir", "Vous voyagez avec votre chien"],
+    notForYou: ["Vous cherchez un décor contemporain", "Vous voyagez avec un petit budget"],
+    photos: 6, bookingUrl: "", partners: {}, tags: ["chien", "train"],
   },
   {
     id: "grand-controle-versailles",
@@ -692,7 +780,9 @@ window.HOTELS = [
     highlights: ["Visites privées du château", "15 chambres seulement", "Vue sur l'Orangerie"],
     amenities: ["Spa", "Piscine", "Restaurant Alain Ducasse", "Visites privées"],
     rooms: "15 chambres et suites",
-    photos: 6, bookingUrl: "", partners: {},
+    forYou: ["Vous rêvez de vivre Versailles comme un invité du roi", "Vous préparez un moment exceptionnel"],
+    notForYou: ["Vous voyagez avec un petit budget", "Vous préférez les lieux simples et décontractés"],
+    photos: 6, bookingUrl: "", partners: {}, tags: ["train"],
   },
   {
     id: "ile-louet",
@@ -710,7 +800,9 @@ window.HOTELS = [
     amenities: ["Cuisine équipée", "Accès en bateau", "Jusqu'à 10 personnes"],
     rooms: "Maison de 4 chambres (10 personnes)",
     season: "Réservations ouvertes une fois par an (office de tourisme de la baie de Morlaix)",
-    photos: 5, bookingUrl: "", partners: {},
+    forYou: ["Vous rêvez d'une île rien qu'à vous", "Vous partez en famille ou entre amis (jusqu'à 10)"],
+    notForYou: ["Vous ne pouvez pas vous organiser longtemps à l'avance", "Vous cherchez un service hôtelier"],
+    photos: 5, bookingUrl: "", partners: {}, tags: ["famille"],
   },
   {
     id: "cap-estel",
@@ -727,7 +819,9 @@ window.HOTELS = [
     highlights: ["Presqu'île privée", "Suites au ras des vagues", "Piscine à débordement sur la mer"],
     amenities: ["Piscine à débordement", "Piscine intérieure", "Spa", "Plage", "Restaurant"],
     rooms: "28 chambres et suites",
-    photos: 6, bookingUrl: "", partners: {},
+    forYou: ["Vous rêvez de la Côte d'Azur les pieds dans l'eau, au calme", "Vous préparez une escapade de prestige"],
+    notForYou: ["Vous voyagez avec un petit budget", "Vous voulez des plages de sable"],
+    photos: 6, bookingUrl: "", partners: {}, tags: ["train"],
   },
   {
     id: "relais-de-chambord",
@@ -744,7 +838,9 @@ window.HOTELS = [
     highlights: ["Vue sur le château de Chambord", "Chambre dans une toue sur l'eau", "Domaine de 5 440 hectares"],
     amenities: ["Restaurant", "Bar", "Sauna et hammam", "Bain extérieur", "Vélos"],
     rooms: "55 chambres et suites, dont une toue cabanée",
-    photos: 6, bookingUrl: "", partners: {},
+    forYou: ["Vous rêvez de vous réveiller face au château de Chambord", "Vous voyagez avec votre chien"],
+    notForYou: ["Vous cherchez un lieu très confidentiel", "Vous voyagez avec un petit budget"],
+    photos: 6, bookingUrl: "", partners: {}, tags: ["chien"],
   },
   {
     id: "toue-cabanee-canal-de-bourgogne",
@@ -761,6 +857,8 @@ window.HOTELS = [
     highlights: ["Dormir sur le canal", "Bain nordique privatif sur le ponton", "Près d'Alésia et Semur-en-Auxois"],
     amenities: ["Bain nordique privatif", "Terrasse sur l'eau", "Kitchenette", "Climatisation"],
     rooms: "1 toue pour 2 personnes",
+    forYou: ["Vous rêvez d'une nuit sur l'eau, rien qu'à deux", "Vous aimez le calme des canaux et le vélo"],
+    notForYou: ["Vous voyagez à plus de deux", "Vous cherchez un restaurant sur place"],
     photos: 6, bookingUrl: "", partners: {},
   },
   {
@@ -777,7 +875,182 @@ window.HOTELS = [
     ],
     highlights: ["Moulin sur la Dronne", "Terrasses au-dessus de l'eau", "Près de Brantôme, la « Venise du Périgord »"],
     amenities: ["Piscine", "Restaurant", "Jardin au bord de l'eau", "Terrasse"],
-    rooms: "Chambres et suites",
+    rooms: "15 chambres",
+    forYou: ["Vous aimez les lieux de charme au bord de l'eau", "Vous explorez le Périgord vert", "Vous voyagez avec votre chien"],
+    notForYou: ["Vous cherchez un design contemporain", "Vous voulez l'animation d'une ville"],
+    photos: 5, bookingUrl: "", partners: {}, tags: ["chien"],
+  },
+  // ——————————————————— NOUVELLES ADRESSES (septembre 2026) ———————————————————
+  {
+    id: "bulles-de-savoie",
+    name: "Les Bulles de Savoie",
+    tagline: "Trois bulles transparentes et leur jacuzzi, sur 300 m² rien que pour vous",
+    city: "Billième", department: "Savoie", region: "Auvergne-Rhône-Alpes",
+    env: "campagne", type: "bulle", budget: 3,
+    lat: 45.7236, lng: 5.7361,
+    address: "212 rue du Château, 73170 Billième",
+    description: [
+      "Dans un petit village savoyard, entre vignes, lacs et montagnes, trois suites-bulles ont chacune leur espace privatif et clos de 300 m². On s'endort sous la voûte étoilée, le lit chauffé, sans croiser personne de tout le séjour.",
+      "Chaque bulle possède son jacuzzi privatif et sa guinguette pour dîner dehors, face aux montagnes. Peignoirs et chaussons sont fournis ; le lac du Bourget est à une demi-heure de route.",
+    ],
+    highlights: ["Jacuzzi privatif sous les étoiles", "300 m² d'intimité par bulle", "Vue sur les montagnes de Savoie"],
+    amenities: ["Jacuzzi privatif", "Guinguette privative", "Lit chauffé", "Peignoirs et chaussons", "Salle de bain privative"],
+    rooms: "3 bulles pour 2 personnes",
+    forYou: ["Vous rêvez d'une nuit sous les étoiles en toute intimité", "Vous voulez un jacuzzi privatif rien qu'à deux"],
+    notForYou: ["Vous voyagez avec des enfants", "Vous tenez aux toilettes classiques (elles sont sèches)"],
+    photos: 6, bookingUrl: "", partners: {},
+  },
+  {
+    id: "cabanes-lacustra",
+    name: "Cabanes Lacustra",
+    tagline: "Des cabanes sur pilotis au milieu d'un étang, accessibles seulement en canoë",
+    city: "Giat", department: "Puy-de-Dôme", region: "Auvergne-Rhône-Alpes",
+    env: "campagne", type: "eau", budget: 1,
+    lat: 45.8300, lng: 2.4400,
+    address: "Étang de la Ramade, 63620 Giat",
+    description: [
+      "Aux confins du Puy-de-Dôme, de la Creuse et de la Corrèze, quatre cabanes en bois se dressent sur pilotis au milieu de l'étang de la Ramade. Pour les rejoindre, on pagaie dix à vingt minutes en canoë, bagages à bord.",
+      "À l'arrivée : une chambre de trois lits, une terrasse avec transats au ras de l'eau, l'électricité pour recharger son téléphone et des toilettes sèches privatives. Puis plus rien que le silence, les brumes du matin et les reflets du couchant.",
+    ],
+    highlights: ["Accès uniquement en canoë", "Au milieu de l'étang", "Une vraie robinsonnade, à petit prix"],
+    amenities: ["Accès en canoë", "Terrasse sur l'eau", "Toilettes sèches privatives", "Restaurant sur le domaine", "Pêche"],
+    rooms: "4 cabanes sur l'eau (3 couchages)",
+    forYou: ["Vous aimez l'aventure et la nature brute", "Vous voulez une nuit insolite à petit prix", "Vous voyagez en famille (3 couchages)"],
+    notForYou: ["Vous tenez à une douche dans la cabane", "Vous n'êtes pas à l'aise en canoë"],
+    photos: 6, bookingUrl: "", partners: {}, tags: ["famille"],
+  },
+  {
+    id: "chateau-de-la-treyne",
+    name: "Château de la Treyne",
+    tagline: "Un château du XIVe siècle suspendu au-dessus de la Dordogne",
+    city: "Lacave", department: "Lot", region: "Occitanie",
+    env: "campagne", type: "chateau", budget: 4,
+    lat: 44.8531, lng: 1.5236,
+    address: "46200 Lacave",
+    description: [
+      "Accroché à une falaise vertigineuse, ce château des XIVe et XVIIe siècles domine un méandre de la Dordogne, entre Souillac et Rocamadour. Ses jardins à la française se prolongent par 120 hectares de forêt.",
+      "Lits à baldaquin, salles de bain dorées, chambres nichées dans la tour : chacune des 18 chambres et suites a son caractère. Le petit-déjeuner se prend à l'ombre des cèdres centenaires, le dîner étoilé dans le salon Louis XIII ou sur la terrasse au-dessus de la rivière.",
+    ],
+    highlights: ["Au-dessus d'un méandre de la Dordogne", "Chambres dans la tour médiévale", "Table étoilée au Guide Michelin"],
+    amenities: ["Restaurant gastronomique", "Piscine chauffée", "Tennis", "Parc de 120 hectares", "Relais & Châteaux"],
+    rooms: "18 chambres et suites",
+    forYou: ["Vous rêvez d'un château de conte au-dessus d'une rivière", "Vous aimez la grande table", "Vous voyagez avec votre chien"],
+    notForYou: ["Vous voyagez avec un petit budget", "Vous cherchez un décor contemporain"],
+    photos: 6, bookingUrl: "", partners: {}, tags: ["chien"],
+  },
+  {
+    id: "ecrin-d-auvergne",
+    name: "Écrin d'Auvergne",
+    tagline: "Des lodges nordiques avec bain chaud sur la terrasse, au cœur des volcans",
+    city: "Champs-sur-Tarentaine-Marchal", department: "Cantal", region: "Auvergne-Rhône-Alpes",
+    env: "campagne", type: "chalet", budget: 3,
+    lat: 45.3958, lng: 2.5686,
+    address: "Le Jagounet, 15270 Champs-sur-Tarentaine-Marchal",
+    description: [
+      "Dans le parc naturel régional des Volcans d'Auvergne, à une trentaine de kilomètres de Super-Besse, des lodges aux allures de cabanes nordiques s'ouvrent sur les prairies et les forêts par de grandes baies vitrées.",
+      "Chacun a son spa privatif sur la terrasse, pour un bain chaud face à la nature, de jour comme de nuit. L'adresse est réservée aux adultes : deux personnes par lodge, et un espace bien-être avec salle de sel de l'Himalaya pour prolonger la détente.",
+    ],
+    highlights: ["Spa privatif sur la terrasse", "Réservé aux adultes", "Au cœur du parc des Volcans d'Auvergne"],
+    amenities: ["Spa privatif", "Espace bien-être", "Salle de sel de l'Himalaya", "Massages"],
+    rooms: "Lodges pour 2 personnes",
+    forYou: ["Vous cherchez un séjour à deux, au calme absolu", "Vous rêvez d'un bain chaud face aux prairies"],
+    notForYou: ["Vous voyagez avec des enfants (réservé aux adultes)", "Vous voulez des restaurants à pied"],
+    photos: 6, bookingUrl: "", partners: {},
+  },
+  {
+    id: "etape-en-foret",
+    name: "L'Étape en Forêt",
+    tagline: "Bulles étoilées, lodges sur pilotis et bains nordiques dans une forêt normande",
+    city: "Saint-Sever-Calvados", department: "Calvados", region: "Normandie",
+    env: "campagne", type: "cabane", budget: 2,
+    lat: 48.8325, lng: -1.0356,
+    address: "Forêt domaniale de Saint-Sever, 14380 Noues de Sienne",
+    description: [
+      "Sur 10 hectares de la forêt domaniale de Saint-Sever, vingt-deux hébergements se cachent sous les hêtres : lodges sur pilotis, bulles étoilées, cabane zen et loges de charbonnier à demi enterrées. Certains ont leur bain nordique privatif.",
+      "Tous sont équipés d'une cuisine, d'une douche et du chauffage, pour deux à six personnes. Sur place, un restaurant de cuisine maison, des parcours dans les arbres et des vélos pour explorer le bocage.",
+    ],
+    highlights: ["Bulles pour dormir sous les étoiles", "Lodges avec bain nordique privatif", "Parcours dans les arbres sur place"],
+    amenities: ["Bain nordique privatif", "Restaurant", "Parcours dans les arbres", "Vélos électriques", "Cuisine équipée"],
+    rooms: "22 hébergements (2 à 6 personnes)",
+    forYou: ["Vous voyagez en famille ou entre amis", "Vous aimez la forêt et les activités en plein air"],
+    notForYou: ["Vous cherchez l'intimité d'une adresse confidentielle", "Vous voulez un service hôtelier complet"],
+    photos: 6, bookingUrl: "", partners: {}, tags: ["famille"],
+  },
+  {
+    id: "gare-de-guiscriff",
+    name: "Train couchettes de la gare de Guiscriff",
+    tagline: "Dormir dans une voiture-lits de luxe de 1926, en pleine campagne bretonne",
+    city: "Guiscriff", department: "Morbihan", region: "Bretagne",
+    env: "campagne", type: "train", budget: 1,
+    lat: 48.0497, lng: -3.6436,
+    address: "Gare de Guiscriff, 56560 Guiscriff",
+    description: [
+      "Au bord de la voie verte n° 7, l'ancienne gare de Guiscriff abrite une pièce de collection : une voiture-lits de première classe du PLM de 1926, restaurée dans sa splendeur d'origine. Il n'en reste que deux au monde ; l'autre est exposée à la Cité du Train de Mulhouse.",
+      "Boiseries de sycomore, marqueterie de nacre et d'acajou : on dort dans l'un des compartiments, comme à bord d'un grand express d'autrefois. Le wagon compte cinq cabines, un salon pour le petit-déjeuner et des douches, et se loue toute l'année.",
+    ],
+    highlights: ["Voiture-lits PLM de 1926", "Marqueterie de nacre et d'acajou", "Au bord de la voie verte, idéal à vélo"],
+    amenities: ["Salon pour le petit-déjeuner", "Douches", "Voie verte à vélo", "Site culturel de la gare"],
+    rooms: "5 compartiments (jusqu'à 11 personnes)",
+    forYou: ["Vous êtes passionné de trains et d'histoire", "Vous voyagez à vélo sur la voie verte", "Vous cherchez une nuit insolite à petit prix"],
+    notForYou: ["Vous tenez à une salle de bain privée", "Vous cherchez le luxe"],
+    photos: 6, bookingUrl: "", partners: {}, tags: ["famille"],
+  },
+  {
+    id: "nids-des-vosges",
+    name: "Cabanes Nids des Vosges",
+    tagline: "Quatorze cabanes dans les frênes et les sapins géants, avec sauna ou bain nordique",
+    city: "Champdray", department: "Vosges", region: "Grand Est",
+    env: "montagne", type: "cabane", budget: 2,
+    lat: 48.1356, lng: 6.7572,
+    address: "88640 Champdray",
+    description: [
+      "Sur un plateau à 700 mètres d'altitude, près de Gérardmer, quatorze cabanes sont nichées dans des frênes centenaires, des sapins géants et des hêtres. Les plus belles ont leur bain nordique chauffé ou leur sauna panoramique sur la terrasse.",
+      "Le petit-déjeuner est livré chaque matin au pied de l'arbre, l'apéritif se hisse à la corde et des paniers-repas de produits vosgiens attendent le soir. Pour les grandes tribus, la Villa Forêt réunit trois cabanes et accueille jusqu'à quinze personnes.",
+    ],
+    highlights: ["Bain nordique ou sauna privatif", "Petit-déjeuner livré au pied de l'arbre", "À quelques minutes de Gérardmer"],
+    amenities: ["Bain nordique privatif", "Sauna privatif", "Petit-déjeuner livré", "Paniers-repas", "Massages", "Cuisine équipée"],
+    rooms: "14 cabanes perchées",
+    forYou: ["Vous rêvez d'une cabane dans les sapins avec bain nordique", "Vous partez en famille ou en tribu (jusqu'à 15 dans la Villa Forêt)"],
+    notForYou: ["Vous avez le vertige", "Vous cherchez un hôtel avec restaurant"],
+    photos: 6, bookingUrl: "", partners: {}, tags: ["famille"],
+  },
+  {
+    id: "domaine-de-murtoli",
+    name: "Domaine de Murtoli",
+    tagline: "Des bergeries du XVIIe siècle sur 2 500 hectares de Corse sauvage, face à la mer",
+    city: "Sartène", department: "Corse-du-Sud", region: "Corse",
+    env: "mer", type: "historique", budget: 4,
+    lat: 41.5260, lng: 8.8560,
+    address: "Vallée de l'Ortolo, 20100 Sartène",
+    description: [
+      "Entre Sartène et Bonifacio, le domaine de Murtoli s'étend sur 2 500 hectares de maquis, d'oliviers et de criques préservées, le long d'une côte restée sauvage. Une vingtaine de bergeries du XVIIe siècle y ont été restaurées, dispersées dans la nature, chacune avec sa piscine privée chauffée.",
+      "On y vit au rythme de la terre : trois restaurants, dont un dîner aux chandelles dans une grotte, une plage réservée au domaine, et un petit hôtel cinq étoiles d'une dizaine de chambres pour ceux qui préfèrent le service à la bergerie. Le domaine est ouvert d'avril à décembre.",
+    ],
+    highlights: ["Bergeries isolées avec piscine privée", "2 500 hectares entre maquis et mer", "Dîner dans une grotte"],
+    amenities: ["Piscine privée chauffée", "Plage réservée", "3 restaurants", "Service hôtelier", "Hammam dans certaines bergeries"],
+    rooms: "Une vingtaine de bergeries et un hôtel d'une dizaine de chambres",
+    season: "Ouvert d'avril à décembre",
+    forYou: ["Vous rêvez d'une Corse secrète, loin de tout", "Vous voulez une maison avec piscine rien qu'à vous", "Vous partez en famille ou entre amis"],
+    notForYou: ["Vous voyagez avec un petit budget", "Vous voulez sortir le soir en ville"],
+    photos: 6, bookingUrl: "", partners: {}, tags: ["famille"],
+  },
+  {
+    id: "villa-la-coste",
+    name: "Villa La Coste",
+    tagline: "Dormir au milieu d'un vignoble-musée, parmi les œuvres de Louise Bourgeois et Tadao Ando",
+    city: "Le Puy-Sainte-Réparade", department: "Bouches-du-Rhône", region: "Provence-Alpes-Côte d'Azur",
+    env: "campagne", type: "vignoble", budget: 4,
+    lat: 43.6397, lng: 5.4069,
+    address: "Château La Coste, 13610 Le Puy-Sainte-Réparade",
+    description: [
+      "Entre Aix-en-Provence et le Luberon, le domaine viticole de Château La Coste s'étend sur 200 hectares cultivés en bio. Une trentaine d'œuvres de grands artistes et architectes y sont installées en plein air : l'araignée de Louise Bourgeois, le centre d'art de Tadao Ando, le chai de Jean Nouvel…",
+      "Au sommet du domaine, les 28 villas-suites de l'hôtel jouent le minimalisme : baies vitrées, bois clair, marbre et pierre brute, terrasse face aux vignes et au Luberon, parfois une piscine privée. La cuisine est confiée à Hélène Darroze.",
+    ],
+    highlights: ["Parc d'art contemporain en plein air", "Villas face aux vignes et au Luberon", "Cuisine signée Hélène Darroze"],
+    amenities: ["Piscine", "Spa", "Restaurants", "Promenade d'art et d'architecture", "Dégustation de vins"],
+    rooms: "28 villas-suites",
+    forYou: ["Vous aimez l'art contemporain et l'architecture", "Vous rêvez de vignes, de Provence et de grande table"],
+    notForYou: ["Vous voyagez avec un petit budget", "Vous cherchez une adresse rustique"],
     photos: 5, bookingUrl: "", partners: {},
   },
 ];

@@ -12,7 +12,7 @@ const path = require("path");
 const ROOT = path.resolve(__dirname, "..");
 const OUT = path.join(ROOT, "dist");
 const INCLUDE = [
-  "index.html", "carte.html", "hotel.html", "404.html", "liens.html", "mentions-legales.html",
+  "index.html", "carte.html", "quiz.html", "comparer.html", "a-propos.html", "hotel.html", "404.html", "liens.html", "mentions-legales.html",
   "studio.html", "sitemap.xml", "robots.txt", "_headers",
   "css", "js", "vendor", "hotels", "guides", "assets",
 ];
