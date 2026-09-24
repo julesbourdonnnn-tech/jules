@@ -20,7 +20,10 @@ import json
 import os
 import re
 import sys
+import threading
+import time
 import urllib.parse
+from concurrent.futures import ThreadPoolExecutor
 import urllib.request
 
 from PIL import Image, ImageDraw, ImageFont, ImageOps
@@ -40,6 +43,9 @@ SKIP = re.compile(r"logo|icon|favicon|picto|sprite|avatar|flag|drapeau|placehold
 GALLERY_LINK = re.compile(r"galer|gallery|photo|chambre|room|suite|cabane|cabin|lodge|"
                           r"hebergement|accommodation|bulle|igloo|decouvr|discover", re.I)
 MAX_CANDIDATES = 24
+TIME_BUDGET = 25 * 60  # secondes : au-delà, on enregistre ce qu'on a
+START = time.time()
+LOCK = threading.Lock()
 
 
 def load(path, default):
@@ -56,7 +62,7 @@ def save(path, data):
         json.dump(data, f, ensure_ascii=False, indent=1)
 
 
-def get(url, timeout=25):
+def get(url, timeout=15):
     req = urllib.request.Request(url, headers={
         "User-Agent": UA,
         "Accept": "text/html,application/xhtml+xml,image/avif,image/webp,image/*,*/*;q=0.8",
@@ -185,19 +191,24 @@ def scan(hotel):
             first_domain_pages += 1
 
     # Téléchargement des candidates pour la planche-contact
-    thumbs, kept, hashes = [], [], set()
-    for u in entry["candidates"]:
-        if len(kept) >= MAX_CANDIDATES:
-            break
+    def download(u):
         try:
-            _, ctype, data = get(u)
+            _, _, data = get(u)
             if len(data) < 25_000:
-                continue
-            h = hashlib.md5(data).hexdigest()
-            if h in hashes:
-                continue
-            im = open_image(data)
+                return None
+            return u, hashlib.md5(data).hexdigest(), open_image(data)
         except Exception:  # noqa: BLE001
+            return None
+
+    with ThreadPoolExecutor(6) as pool:
+        results = list(pool.map(download, entry["candidates"][:60]))
+
+    thumbs, kept, hashes = [], [], set()
+    for res in results:
+        if not res or len(kept) >= MAX_CANDIDATES:
+            continue
+        u, h, im = res
+        if h in hashes:
             continue
         w, hgt = im.size
         if w < 800 or hgt < 450 or not (0.5 <= w / hgt <= 2.6):
@@ -261,13 +272,20 @@ def main():
     report = load(REPORT, {})
     only = set(filter(None, os.environ.get("ONLY", "").split(",")))
 
-    for hotel in sources:
-        if hotel["id"] in report and hotel["id"] not in only:
-            continue
-        print(f"Repérage : {hotel['id']}")
-        report[hotel["id"]] = scan(hotel)
-        print(f"  {len(report[hotel['id']]['candidates'])} photos candidates")
-        save(REPORT, report)
+    todo = [h for h in sources if h["id"] not in report or h["id"] in only]
+
+    def work(hotel):
+        if time.time() - START > TIME_BUDGET:
+            print(f"Temps écoulé, {hotel['id']} sera traité au prochain passage")
+            return
+        entry = scan(hotel)
+        with LOCK:
+            report[hotel["id"]] = entry
+            save(REPORT, report)
+        print(f"Repérage : {hotel['id']} -> {len(entry['candidates'])} photos candidates", flush=True)
+
+    with ThreadPoolExecutor(8) as pool:
+        list(pool.map(work, todo))
 
     selection = load(SELECTION, {})
     done = load(os.path.join(ASSETS_DIR, "_done.json"), {})
