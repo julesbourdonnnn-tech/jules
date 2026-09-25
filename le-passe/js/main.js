@@ -51,23 +51,57 @@
     const io = new IntersectionObserver((entries) => {
       entries.forEach((e) => { if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); } });
     }, { rootMargin: "0px 0px -8% 0px", threshold: 0.06 });
-    $$(".reveal, .step").forEach((el) => io.observe(el));
+    $$(".reveal").forEach((el) => io.observe(el));
   } else {
     $$(".reveal").forEach((el) => el.classList.add("in"));
   }
-
-  /* ---------- Bandeau défilant ---------- */
-  const kinds = ["Bistrots", "Brasseries", "Tables gastronomiques", "Pizzerias", "Bars à vin", "Crêperies", "Food trucks", "Salons de thé", "Traiteurs", "Cuisines du monde", "Caves à manger", "Guinguettes"];
-  const track = $("#marquee");
-  if (track) track.innerHTML = [...kinds, ...kinds].map((k) => `<span>${k}</span>`).join("");
 
   /* ---------- Numéro de bon et heure ---------- */
   const now = new Date();
   const bonNo = String(((now.getMonth() + 1) * 100 + now.getDate()) * 7 % 10000).padStart(4, "0");
   $$("[data-bon-no]").forEach((el) => (el.textContent = bonNo));
+  $$("[data-bon-day]").forEach((el) => (el.textContent = now.toLocaleDateString("fr-FR", { weekday: "short" }).toUpperCase()));
   $$("[data-bon-time]").forEach((el) => (el.textContent = now.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })));
   $$("[data-bon-date]").forEach((el) => (el.textContent = now.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })));
   $$("[data-year]").forEach((el) => (el.textContent = now.getFullYear()));
+
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  /* ---------- Le ticket qui s'imprime, ligne par ligne ---------- */
+  const ticketLines = $$("#ticket [data-print]");
+  const stamp = $("#t-stamp");
+  if (ticketLines.length) {
+    if (reduce) { ticketLines.forEach((l) => l.classList.add("on")); stamp.classList.add("on"); }
+    else {
+      ticketLines.forEach((l, i) => setTimeout(() => l.classList.add("on"), 700 + i * 260));
+      setTimeout(() => stamp.classList.add("on"), 700 + ticketLines.length * 260 + 500);
+    }
+  }
+
+  /* ---------- Samedi, 20 h 47 : le téléphone suit l'histoire ---------- */
+  const screens = $$(".phone .screen");
+  const beats = $$(".beat");
+  if (screens.length && "IntersectionObserver" in window) {
+    const show = (beat) => {
+      beats.forEach((b) => b.classList.toggle("current", b === beat));
+      const n = +beat.dataset.screen;
+      screens.forEach((sc, i) => sc.classList.toggle("on", i === n));
+    };
+    const bo = new IntersectionObserver((entries) => {
+      entries.forEach((e) => { if (e.isIntersecting) show(e.target); });
+    }, { rootMargin: innerWidth < 960 ? "-62% 0px -28% 0px" : "-45% 0px -45% 0px" });
+    beats.forEach((b) => bo.observe(b));
+    show(beats[0]);
+  } else beats.forEach((b) => b.classList.add("current"));
+
+  /* ---------- Mise en place : on coche la liste ---------- */
+  const checks = $$("#checks li");
+  if (checks.length && "IntersectionObserver" in window) {
+    const co = new IntersectionObserver((entries) => {
+      entries.forEach((e) => { if (e.isIntersecting) { setTimeout(() => e.target.classList.add("done"), reduce ? 0 : 250); co.unobserve(e.target); } });
+    }, { rootMargin: "0px 0px -35% 0px" });
+    checks.forEach((c) => co.observe(c));
+  } else checks.forEach((c) => c.classList.add("done"));
 
   /* ---------- Coordonnées (depuis js/config.js) ---------- */
   const icon = {
@@ -113,7 +147,7 @@
 
   /* ---------- Calculette « L'addition » ---------- */
   const OFFERS = {
-    resa: { name: "Le Plat du chef + 12 mois de service", price: 1690 + 12 * 29 },
+    resa: { name: "Plat du chef + 12 mois de service", price: 1690 + 12 * 29 },
     livraison: { name: "Plat du chef + emporter + 12 mois de service", price: 1690 + 590 + 12 * 29 },
   };
   let mode = "resa";
@@ -206,7 +240,7 @@
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(data.email)) return showError("L'adresse e-mail ne semble pas complète.");
     const btn = $("button[type=submit]", form);
     btn.disabled = true;
-    btn.firstChild.textContent = "Envoi… ";
+    btn.textContent = "Envoi…";
     try {
       if (!C.api || location.protocol === "file:") throw new Error("local");
       const res = await fetch(C.api, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
@@ -218,7 +252,7 @@
       else showError("L'envoi n'a pas fonctionné. Réessayez dans un instant.");
     } finally {
       btn.disabled = false;
-      btn.firstChild.textContent = "Envoyer au passe ";
+      btn.textContent = "Envoyer au passe";
     }
   });
 })();
