@@ -34,7 +34,8 @@ Détails soignés : bon de commande en forme de ticket de cuisine, tampon « ENV
 
 Le site a **son propre Worker Cloudflare, « le-passe »**, séparé de Nuits Singulières (le dossier `le-passe/` est exclu de nuitsinguliere.com par le `.assetsignore` à la racine).
 
-- **Automatique** : la GitHub Action « Le Passe » (`.github/workflows/le-passe.yml`) publie le site à chaque modification du dossier `le-passe/` sur la branche principale du dépôt. Elle utilise les mêmes secrets que le reste du dépôt (`CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`). L'adresse provisoire s'affiche dans le journal : `https://le-passe.<ton-compte>.workers.dev`.
+- **Recommandé (comme Nuits Singulières)** : dans Cloudflare → Workers & Pages → Créer → Importer un dépôt Git → `jules`, puis dans les réglages de build : **répertoire racine = `le-passe`**, commande de déploiement `npx wrangler deploy`. Cloudflare publie alors le site à chaque modification, sans clé à configurer dans GitHub.
+- **Autre option** : la GitHub Action « Le Passe » (`.github/workflows/le-passe.yml`) publie le site à chaque modification du dossier `le-passe/` sur la branche principale du dépôt. Elle utilise les mêmes secrets que le reste du dépôt (`CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`). L'adresse provisoire s'affiche dans le journal : `https://le-passe.<ton-compte>.workers.dev`.
 - **À la main** : depuis le dossier `le-passe/`, `npx wrangler deploy`.
 - **Nom de domaine** : une fois acheté sur Cloudflare, retire les `//` devant le bloc `routes` de `wrangler.jsonc`.
 
