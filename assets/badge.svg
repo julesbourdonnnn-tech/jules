@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" width="240" height="240" role="img" aria-label="Sélectionné par Nuits Singulières – hôtels insolites en France">
+  <defs>
+    <path id="top" d="M 38 120 A 82 82 0 0 1 202 120"/>
+    <path id="bottom" d="M 30 120 A 90 90 0 0 0 210 120"/>
+  </defs>
+  <circle cx="120" cy="120" r="118" fill="#172720"/>
+  <circle cx="120" cy="120" r="108" fill="none" stroke="#c29a5b" stroke-width="1.5"/>
+  <circle cx="120" cy="120" r="66" fill="none" stroke="#c29a5b" stroke-width="1" opacity=".6"/>
+  <text font-family="Georgia, 'Times New Roman', serif" font-size="15" letter-spacing="4.2" fill="#efd9b4">
+    <textPath href="#top" startOffset="50%" text-anchor="middle">SÉLECTIONNÉ PAR</textPath>
+  </text>
+  <text font-family="Georgia, 'Times New Roman', serif" font-size="12.5" letter-spacing="3.4" fill="#efd9b4" opacity=".85">
+    <textPath href="#bottom" startOffset="50%" text-anchor="middle">HÔTELS INSOLITES · FRANCE</textPath>
+  </text>
+  <text x="120" y="102" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="26" fill="#c29a5b">✦</text>
+  <text x="120" y="130" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="21" font-style="italic" fill="#f4efe6">Nuits</text>
+  <text x="120" y="154" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="21" font-style="italic" fill="#f4efe6">Singulières</text>
+</svg>

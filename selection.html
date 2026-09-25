@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Badge « Sélectionné par Nuits Singulières » — Espace établissements</title>
+  <meta name="description" content="Votre établissement figure dans la sélection Nuits Singulières ? Affichez le badge sur votre site.">
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#0f1a17">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✦</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;1,9..144,300&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="badge-page">
+  <header id="site-header" class="site-header on-dark"></header>
+  <main>
+    <section class="p-hero">
+      <div class="container">
+        <p class="eyebrow">Espace établissements</p>
+        <h1>Votre lieu fait partie de la sélection</h1>
+        <p class="lead">Nuits Singulières réunit les hébergements les plus extraordinaires de France, choisis un à un et gratuitement. Affichez le badge sur votre site : vos visiteurs sauront que votre adresse a été distinguée.</p>
+      </div>
+    </section>
+
+    <section class="section container badge-layout">
+      <div class="badge-preview">
+        <img src="assets/badge.svg" alt="Sélectionné par Nuits Singulières – hôtels insolites en France" width="220" height="220">
+      </div>
+      <div class="badge-form">
+        <label class="badge-label" for="badge-hotel">1. Choisissez votre établissement</label>
+        <select id="badge-hotel" data-fancy="form" aria-label="Votre établissement"></select>
+        <label class="badge-label" for="badge-size">2. Taille du badge</label>
+        <select id="badge-size" data-fancy="form" aria-label="Taille du badge">
+          <option value="120">Petit (120 px)</option>
+          <option value="160" selected>Moyen (160 px)</option>
+          <option value="220">Grand (220 px)</option>
+        </select>
+        <p class="badge-label">3. Copiez ce code dans votre site (pied de page ou page « Presse / Avis »)</p>
+        <textarea id="badge-code" readonly rows="5" aria-label="Code du badge"></textarea>
+        <div class="badge-actions">
+          <button type="button" class="btn btn-primary" id="badge-copy">Copier le code</button>
+          <a class="btn btn-ghost" id="badge-see" href="#" target="_blank" rel="noopener">Voir notre fiche</a>
+        </div>
+        <p class="small muted">Le badge est gratuit et sans engagement. Une question, une photo à changer, une information à corriger ? Écrivez-nous : <a id="badge-mail" href="#"></a></p>
+      </div>
+    </section>
+  </main>
+  <footer id="site-footer" class="site-footer"></footer>
+
+  <script src="js/config.js"></script>
+  <script src="js/hotels.js"></script>
+  <script src="js/guides.js"></script>
+  <script src="js/core.js"></script>
+  <script src="js/common.js"></script>
+  <script>
+    (function () {
+      const CONFIG = window.SITE_CONFIG, SITE = CONFIG.siteUrl.replace(/\/$/, "");
+      const $ = (id) => document.getElementById(id);
+      const hotels = window.HOTELS.slice().sort((a, b) => a.name.localeCompare(b.name, "fr"));
+      $("badge-hotel").innerHTML = hotels.map((h) => `<option value="${h.id}">${window.NS.escapeHtml(h.name)} — ${window.NS.escapeHtml(h.city)}</option>`).join("");
+      const want = new URLSearchParams(location.search).get("h");
+      if (want && hotels.some((h) => h.id === want)) $("badge-hotel").value = want;
+      function update() {
+        const h = hotels.find((x) => x.id === $("badge-hotel").value);
+        const size = $("badge-size").value;
+        const url = `${SITE}/hotels/${h.id}.html`;
+        $("badge-code").value =
+          `<a href="${url}" title="${h.name} sur Nuits Singulières, les hôtels insolites de France">` +
+          `<img src="${SITE}/assets/badge.svg" alt="Sélectionné par Nuits Singulières – hôtels insolites en France" width="${size}" height="${size}" style="border:0">` +
+          `</a>`;
+        $("badge-see").href = window.NS.hotelUrl(h);
+      }
+      document.addEventListener("DOMContentLoaded", () => {
+        $("badge-mail").href = `mailto:${CONFIG.contactEmail}`;
+        $("badge-mail").textContent = CONFIG.contactEmail;
+        $("badge-hotel").addEventListener("change", update);
+        $("badge-size").addEventListener("change", update);
+        $("badge-copy").addEventListener("click", async () => {
+          try { await navigator.clipboard.writeText($("badge-code").value); window.NS.toast("Code copié ! Collez-le dans votre site."); }
+          catch { $("badge-code").select(); document.execCommand("copy"); window.NS.toast("Code copié !"); }
+        });
+        update();
+      });
+    })();
+  </script>
+</body>
+</html>

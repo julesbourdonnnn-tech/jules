@@ -5,6 +5,7 @@
  *  Chaque guide sélectionne automatiquement les établissements de
  *  js/hotels.js qui correspondent à son thème (match) ou une liste
  *  choisie à la main (ids). Les titres s'adaptent au nombre d'adresses.
+ *  cat : "envie" | "lieu" | "region" (rubrique de la page des guides).
  *  Après modification, les pages sont régénérées par « node scripts/build.js »
  *  (fait automatiquement par la GitHub Action « Build »).
  * ============================================================
@@ -22,6 +23,7 @@
   global.GUIDES = [
     {
       slug: "nuit-insolite-en-amoureux",
+      cat: "envie",
       kicker: "En amoureux",
       short: "Nuits insolites en amoureux",
       title: (n) => `${n} nuits insolites pour un week-end en amoureux`,
@@ -32,6 +34,11 @@
         "Pour un anniversaire, une demande en mariage ou simplement deux jours rien qu'à deux, rien ne vaut un lieu qui sort de l'ordinaire. On a rassemblé ici nos adresses les plus romantiques : on s'y endort sous les étoiles, au sommet d'un phare ou dans les arbres, loin de tout.",
         "Elles cultivent toutes l'intimité, avec un décor qu'on n'oublie pas ; plusieurs offrent un spa ou un jacuzzi privatif.",
       ],
+      faq: [
+        ["Quelle est la nuit insolite la plus romantique de France ?", "Tout dépend de vos envies : une bulle transparente pour s'endormir sous les étoiles, le sommet d'un phare face à l'océan, ou une cabane perchée avec jacuzzi privatif. Les adresses de ce guide ont toutes été choisies pour leur intimité."],
+        ["Combien coûte une nuit insolite en amoureux ?", "Comptez généralement de 150 à 450 € la nuit pour deux selon le lieu et la saison. Chaque fiche indique une fourchette de prix, et le tarif exact s'affiche dès que vous choisissez vos dates."],
+        ["Quand réserver pour la Saint-Valentin ?", "Le plus tôt possible, idéalement un à deux mois avant : ces lieux comptent souvent très peu de chambres ou de cabanes, et les dates clés partent en premier."],
+      ],
       tips: [
         "Réservez tôt pour les dates clés (Saint-Valentin, ponts de mai, week-ends d'été) : ces lieux comptent souvent très peu de chambres.",
         "Demandez à l'établissement s'il propose des attentions à ajouter à la réservation (bouteille, fleurs, dîner livré, massage).",
@@ -40,6 +47,7 @@
     },
     {
       slug: "cabanes-perchees",
+      cat: "lieu",
       kicker: "Cabanes perchées",
       short: "Les plus belles cabanes perchées",
       title: (n) => `Les ${n} plus belles cabanes perchées de France`,
@@ -50,6 +58,11 @@
         "Dormir dans les arbres, c'est retrouver ses rêves d'enfant avec le confort d'aujourd'hui. Les cabanes de notre sélection vont de l'adresse bohème au véritable hôtel de luxe perché, avec baies vitrées, jacuzzi privatif et dîner livré à la cabane.",
         "On y accède par des escaliers, des passerelles suspendues ou des échelles, puis la forêt fait le reste : le chant des oiseaux au réveil, le vent dans les branches, et le silence.",
       ],
+      faq: [
+        ["Peut-on dormir dans une cabane perchée toute l'année ?", "Beaucoup de cabanes de ce guide sont chauffées et ouvertes une grande partie de l'année : vérifiez les dates d'ouverture au moment de réserver. Celles qui ont un bain nordique ou un jacuzzi privatif sont particulièrement agréables en automne et en hiver."],
+        ["Les cabanes perchées conviennent-elles aux enfants ?", "Certaines oui, d'autres sont réservées aux couples ou demandent un âge minimum à cause des escaliers et des passerelles. Vérifiez les conditions sur la fiche et au moment de réserver."],
+        ["Combien coûte une nuit en cabane perchée ?", "De moins de 150 € pour les cabanes les plus simples à plus de 250 € pour les cabanes-spa avec jacuzzi et dîner livré, pour deux personnes."],
+      ],
       tips: [
         "Vérifiez l'accès : certaines cabanes se rejoignent par des passerelles ou des échelles, peu pratiques avec de gros bagages ou de très jeunes enfants.",
         "Pour profiter d'un bain nordique ou d'un jacuzzi en plein air, les nuits de printemps et d'automne sont idéales.",
@@ -58,6 +71,7 @@
     },
     {
       slug: "week-end-insolite-pres-de-paris",
+      cat: "region",
       kicker: "Près de Paris",
       short: "Week-end insolite près de Paris",
       title: (n) => `Week-end insolite près de Paris : ${n} ${plural(n, "adresse", "adresses")} à moins de 300 km`,
@@ -70,6 +84,10 @@
         "Pas besoin de partir loin pour changer d'air. À quelques heures de Paris, on peut dormir dans une cabane au bord d'une rivière, dans une chambre creusée dans la falaise au bord de la Loire ou dans une abbaye royale millénaire.",
         "Les adresses sont classées de la plus proche à la plus éloignée de Paris, avec la distance à vol d'oiseau : de quoi choisir selon le temps dont vous disposez.",
       ],
+      faq: [
+        ["Où passer un week-end insolite près de Paris ?", "Les adresses de ce guide sont classées de la plus proche à la plus éloignée de Paris : cabanes au bord de la rivière en Seine-et-Marne, hôtels troglodytes et abbaye royale en vallée de la Loire, château en Bourgogne…"],
+        ["Peut-on y aller en train ?", "Plusieurs adresses de la vallée de la Loire sont proches des gares de Tours ou de Saumur. Consultez aussi notre guide des nuits insolites accessibles sans voiture."],
+      ],
       tips: [
         "Partez le vendredi en fin de matinée ou le samedi tôt pour éviter les bouchons de sortie de Paris.",
         "La vallée de la Loire est aussi accessible en train : pensez-y pour les adresses proches de Tours ou de Saumur.",
@@ -78,6 +96,7 @@
     },
     {
       slug: "hotels-troglodytes",
+      cat: "lieu",
       kicker: "Troglodytes",
       short: "Dormir dans un hôtel troglodyte",
       title: (n) => `Dormir dans la roche : ${n} hôtels troglodytes en France`,
@@ -96,6 +115,7 @@
     },
     {
       slug: "spa-jacuzzi-privatif",
+      cat: "envie",
       kicker: "Spa privatif",
       short: "Nuits insolites avec spa privatif",
       title: (n) => `${n} nuits insolites avec spa ou jacuzzi privatif`,
@@ -106,6 +126,10 @@
         "Un bain chaud sous les arbres, un sauna face à la vallée, un jacuzzi sur sa terrasse perchée : ces adresses offrent un espace bien-être rien que pour vous, sans horaires ni voisins.",
         "C'est l'une des expériences les plus recherchées pour une nuit insolite, à réserver en priorité pour les saisons fraîches.",
       ],
+      faq: [
+        ["Qu'est-ce qu'un spa privatif ?", "C'est un jacuzzi, un sauna ou un bain nordique réservé à votre seul hébergement, souvent sur la terrasse : vous en profitez à toute heure, sans croiser personne."],
+        ["Le bain nordique est-il chauffé en hiver ?", "Oui : les bains nordiques sont chauffés au feu de bois ou à l'électricité, et c'est justement l'hiver qu'ils sont les plus magiques, sous la neige ou les étoiles."],
+      ],
       tips: [
         "Le bain est souvent chauffé en permanence : pensez à demander l'heure à laquelle il est prêt à votre arrivée.",
         "Emportez un peignoir léger ou des sandales si l'établissement ne les fournit pas.",
@@ -114,6 +138,7 @@
     },
     {
       slug: "hotels-insolites-bord-de-mer",
+      cat: "lieu",
       kicker: "Bord de mer",
       short: "Hôtels insolites en bord de mer",
       title: (n) => `${n} hôtels insolites en bord de mer`,
@@ -132,6 +157,7 @@
     },
     {
       slug: "hotels-insolites-montagne",
+      cat: "lieu",
       kicker: "Montagne",
       short: "Hôtels insolites à la montagne",
       title: (n) => `${n} hôtels insolites à la montagne`,
@@ -150,6 +176,7 @@
     },
     {
       slug: "dormir-dans-un-chateau",
+      cat: "lieu",
       kicker: "Châteaux & histoire",
       short: "Dormir dans un château",
       title: (n) => `Dormir dans un château ou un lieu d'histoire : ${n} adresses`,
@@ -168,6 +195,7 @@
     },
     {
       slug: "hotels-insolites-vallee-de-la-loire",
+      cat: "region",
       kicker: "Val de Loire",
       short: "Hôtels insolites en Val de Loire",
       title: (n) => `Val de Loire : ${n} hébergements insolites entre châteaux et vignes`,
@@ -186,6 +214,7 @@
     },
     {
       slug: "hotels-insolites-en-ville",
+      cat: "lieu",
       kicker: "En ville",
       short: "Hôtels insolites en ville",
       title: (n) => `${n} hôtels insolites en ville : Paris, Lyon, Marseille`,
@@ -204,6 +233,7 @@
     },
     {
       slug: "nuits-insolites-petit-budget",
+      cat: "envie",
       kicker: "Petits budgets",
       short: "Nuits insolites à petit prix",
       title: (n) => `${n} nuits insolites pour moins de 250 € la nuit`,
@@ -215,6 +245,10 @@
         "Une nuit extraordinaire n'est pas forcément hors de prix. Toutes les adresses de ce guide ont un budget indicatif inférieur à 250 € la nuit pour deux, et plusieurs sont sous la barre des 150 €.",
         "Les prix varient selon la saison, le jour de la semaine et le type de chambre : vérifiez toujours le tarif exact pour vos dates.",
       ],
+      faq: [
+        ["Peut-on vivre une nuit insolite pour moins de 150 € ?", "Oui : cabanes sur l'eau qu'on rejoint en canoë, wagon-lit de 1926, chambres troglodytes ou hôtel dans la Cité radieuse de Le Corbusier, plusieurs adresses de ce guide sont sous les 150 € la nuit pour deux."],
+        ["Comment payer moins cher une nuit insolite ?", "Privilégiez la semaine et les ailes de saison (printemps, automne), réservez tôt, et comparez les dates directement depuis la fiche du lieu."],
+      ],
       tips: [
         "Les nuits en semaine et hors vacances scolaires sont souvent nettement moins chères.",
         "Comparez les types de chambres : la différence de prix peut être importante au sein d'un même établissement.",
@@ -223,6 +257,7 @@
     },
     {
       slug: "hotels-insolites-paris",
+      cat: "region",
       kicker: "Paris & alentours",
       short: "Hôtels insolites à Paris",
       title: (n) => `${n} hôtels insolites à Paris et aux portes de Paris`,
@@ -241,6 +276,7 @@
     },
     {
       slug: "dormir-en-altitude",
+      cat: "lieu",
       kicker: "En altitude",
       short: "Dormir en altitude",
       title: (n) => `Dormir au-dessus des nuages : ${n} nuits en altitude`,
@@ -260,6 +296,7 @@
     /* ---------- Envies et occasions ---------- */
     {
       slug: "nuit-insolite-avec-son-chien",
+      cat: "envie",
       kicker: "Avec son chien",
       short: "Nuits insolites avec son chien",
       title: (n) => `${n} hôtels d'exception où votre chien est le bienvenu`,
@@ -278,6 +315,7 @@
     },
     {
       slug: "nuit-insolite-en-famille",
+      cat: "envie",
       kicker: "En famille",
       short: "Nuits insolites en famille",
       title: (n) => `${n} nuits insolites en famille ou entre amis`,
@@ -296,6 +334,7 @@
     },
     {
       slug: "nuit-insolite-sans-voiture",
+      cat: "envie",
       kicker: "Sans voiture",
       short: "Nuits insolites sans voiture",
       title: (n) => `${n} nuits insolites accessibles en train`,
@@ -314,6 +353,7 @@
     },
     {
       slug: "nuit-sous-les-etoiles",
+      cat: "lieu",
       kicker: "Sous les étoiles",
       short: "Dormir sous les étoiles",
       title: (n) => `Dormir sous les étoiles : ${n} ${plural(n, "nuit", "nuits")} face au ciel`,
@@ -332,6 +372,7 @@
     },
     {
       slug: "demande-en-mariage-lieu-insolite",
+      cat: "envie",
       kicker: "Demande en mariage",
       short: "Où faire sa demande en mariage",
       title: (n) => `Demande en mariage : ${n} lieux insolites pour dire « oui »`,
@@ -350,6 +391,7 @@
     },
     {
       slug: "idee-anniversaire-nuit-insolite",
+      cat: "envie",
       kicker: "Anniversaire",
       short: "Fêter un anniversaire autrement",
       title: (n) => `${n} idées de nuit insolite pour un anniversaire`,
@@ -368,6 +410,7 @@
     },
     {
       slug: "offrir-une-nuit-insolite",
+      cat: "envie",
       kicker: "Idée cadeau",
       short: "Offrir une nuit insolite",
       gift: true,
@@ -389,6 +432,7 @@
     /* ---------- Régions ---------- */
     {
       slug: "hotels-insolites-bretagne",
+      cat: "region",
       kicker: "Bretagne",
       short: "Hôtels insolites en Bretagne",
       title: (n) => `Bretagne : ${n} nuits insolites entre phares, îles et forêts`,
@@ -407,6 +451,7 @@
     },
     {
       slug: "hotels-insolites-provence-cote-d-azur",
+      cat: "region",
       kicker: "Provence & Côte d'Azur",
       short: "Insolite en Provence et sur la Côte d'Azur",
       title: (n) => `Provence et Côte d'Azur : ${n} adresses insolites et solaires`,
@@ -425,6 +470,7 @@
     },
     {
       slug: "hotels-insolites-occitanie",
+      cat: "region",
       kicker: "Occitanie",
       short: "Hôtels insolites en Occitanie",
       title: (n) => `Occitanie : ${n} nuits insolites, du Pic du Midi à Carcassonne`,
@@ -443,6 +489,7 @@
     },
     {
       slug: "hotels-insolites-nouvelle-aquitaine",
+      cat: "region",
       kicker: "Sud-Ouest",
       short: "Insolite en Nouvelle-Aquitaine",
       title: (n) => `Nouvelle-Aquitaine : ${n} adresses d'exception, de la dune du Pilat au Périgord`,
@@ -461,6 +508,7 @@
     },
     {
       slug: "hotels-insolites-bourgogne-franche-comte",
+      cat: "region",
       kicker: "Bourgogne-Franche-Comté",
       short: "Insolite en Bourgogne-Franche-Comté",
       title: (n) => `Bourgogne-Franche-Comté : ${n} nuits insolites au fil de l'eau`,

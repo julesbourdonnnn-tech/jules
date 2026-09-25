@@ -2,6 +2,7 @@ User-agent: *
 Allow: /
 Disallow: /studio.html
 Disallow: /comparer.html
+Disallow: /selection.html
 Disallow: /_review/
 
 Sitemap: https://nuitsinguliere.com/sitemap.xml

@@ -1191,3 +1191,26 @@ body.has-compare .site-footer { padding-bottom: 110px; }
   .cmp-actions .btn { padding: 11px 16px; font-size: .9rem; }
   body.detail.has-compare .site-footer { padding-bottom: 190px; }
 }
+
+/* ---------- Référencement : titre de l'accueil et « À savoir » ---------- */
+.hero-h1-kicker { display: block; font: 600 .74rem/1.4 var(--sans); letter-spacing: .22em; text-transform: uppercase; color: var(--sand); text-shadow: none; margin-bottom: 18px; }
+.home-seo-grid { display: grid; grid-template-columns: 1fr 1.15fr; gap: 56px; align-items: start; }
+.home-seo-intro h2 { margin-bottom: 18px; }
+.home-seo-intro p { color: var(--ink-soft); line-height: 1.75; }
+.home-seo a { color: var(--forest); font-weight: 600; text-decoration: underline; text-decoration-color: rgba(36,57,47,.3); text-underline-offset: 3px; }
+.home-seo a:hover { color: var(--terracotta); }
+@media (max-width: 1100px) { .home-seo-grid { grid-template-columns: 1fr; gap: 28px; } }
+.guides-index .guides-lead { max-width: 70ch; margin: 0 0 12px; }
+.guides-cat { font-size: clamp(1.6rem, 3vw, 2.2rem); margin: 48px 0 20px; }
+.g-faq { margin-top: 64px; max-width: 900px; }
+.g-faq h2 { margin-bottom: 20px; }
+
+/* ---------- Espace établissements : badge ---------- */
+.badge-layout { display: grid; grid-template-columns: 320px 1fr; gap: 56px; align-items: start; }
+.badge-preview { display: grid; place-items: center; padding: 40px; border-radius: 28px; background: var(--paper); border: 1px solid var(--line); }
+.badge-preview img { filter: drop-shadow(0 18px 30px rgba(15,26,23,.3)); }
+.badge-form { display: grid; gap: 10px; max-width: 640px; }
+.badge-label { margin: 14px 0 0; font-weight: 600; }
+.badge-form textarea { width: 100%; padding: 14px 16px; border-radius: 14px; border: 1px solid var(--line); background: #fff; font: .85rem/1.5 ui-monospace, Menlo, monospace; resize: vertical; }
+.badge-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+@media (max-width: 760px) { .badge-layout { grid-template-columns: 1fr; gap: 28px; } }

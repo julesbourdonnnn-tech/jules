@@ -114,7 +114,7 @@ function hotelPage(h) {
   const book = C.bookingLink(h);
   const others = C.partnerLinks(h);
   const trk = `data-track="Réservation" data-hotel="${e(h.id)}" data-book="${e(h.id)}"`;
-  const title = `${h.name} : ${T.label.toLowerCase()} à ${h.city} | ${CONFIG.siteName}`;
+  const title = `${h.name} (${h.city}) : nuit insolite, ${T.label.toLowerCase()} | ${CONFIG.siteName}`;
   const description = clip(`${h.tagline}. ${h.description[0]}`);
   const guides = C.guidesFor(h);
   const tags = C.tagsOf(h);
@@ -344,6 +344,11 @@ function guidePage(g) {
     },
     breadcrumbLd([["Accueil", `${SITE}/`], ["Guides", abs("guides/index.html")], [title, url]]),
   ];
+  if (g.faq && g.faq.length) ld.push({
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: g.faq.map(([q, a]) => ({ "@type": "Question", name: q, acceptedAnswer: { "@type": "Answer", text: a } })),
+  });
 
   const items = list.map((h, i) => {
     const T = TYPES[h.type];
@@ -409,6 +414,12 @@ function guidePage(g) {
     <section class="container g-list" id="liste">${items}
     </section>
 ${g.gift ? giftBlock() : ""}
+
+    ${g.faq && g.faq.length ? `
+    <section class="container g-faq reveal">
+      <h2>Questions fréquentes</h2>
+      <div class="faq">${g.faq.map(([q, a], i) => `<details${i ? "" : " open"}><summary>${e(q)}</summary><p>${e(a)}</p></details>`).join("")}</div>
+    </section>` : ""}
 
     <section class="container g-tips reveal">
       <h2>Nos conseils</h2>
@@ -478,8 +489,14 @@ function guidesIndexPage() {
         <p class="d-tagline">Des sélections thématiques pour trouver le lieu parfait, selon l'envie, la saison ou la région.</p>
       </div>
     </section>
-    <section class="section container">
-      <div class="guide-grid">${visible.map(C.guideCard).join("")}</div>
+    <section class="section container guides-index">
+      <p class="lead guides-lead">Hôtels insolites, cabanes perchées, bulles, phares, châteaux ou refuges d'altitude : nos guides rassemblent les adresses les plus extraordinaires de France par envie, par type de lieu et par région, avec des conseils pour bien choisir et bien réserver.</p>
+      ${[["envie", "Par envie et par occasion"], ["lieu", "Par type de lieu"], ["region", "Par région"]].map(([k, label]) => {
+        const list = visible.filter((g) => (g.cat || "envie") === k);
+        return list.length ? `
+      <h2 class="guides-cat">${label}</h2>
+      <div class="guide-grid">${list.map(C.guideCard).join("")}</div>` : "";
+      }).join("")}
     </section>
   </main>
   <footer id="site-footer" class="site-footer">${C.footer()}</footer>${SCRIPTS()}
@@ -511,6 +528,62 @@ function homeDirectory() {
   C.setRoot("../");
   return html;
 }
+/* Accueil : texte « à savoir » et questions fréquentes (mêmes textes pour la
+ * page et pour les données structurées FAQPage lues par Google). */
+function homeFaqData() {
+  const n = HOTELS.length;
+  const small = HOTELS.filter((h) => h.budget === 1).length;
+  const regions = new Set(HOTELS.map((h) => h.region)).size;
+  const g = (slug) => GUIDES.find((x) => x.slug === slug);
+  const link = (slug, label) => (g(slug) && C.guideHotels(g(slug)).length ? `<a href="guides/${slug}.html">${e(label)}</a>` : e(label));
+  return [
+    {
+      q: "Qu'est-ce qu'un hôtel insolite ?",
+      a: `Un hôtel insolite, ou hébergement hors du commun, est un lieu où l'on dort d'une façon qu'on n'oublie pas : dans une cabane perchée, une bulle transparente sous les étoiles, un phare, un château, une chambre creusée dans la roche, un igloo, un refuge d'altitude ou un bateau. Notre sélection réunit ${n} de ces lieux extraordinaires, dans ${regions} régions de France.`,
+      html: `Un hôtel insolite, ou hébergement hors du commun, est un lieu où l'on dort d'une façon qu'on n'oublie pas : dans une ${link("cabanes-perchees", "cabane perchée")}, une ${link("nuit-sous-les-etoiles", "bulle transparente sous les étoiles")}, un phare, un ${link("dormir-dans-un-chateau", "château")}, une ${link("hotels-troglodytes", "chambre creusée dans la roche")}, un igloo, un ${link("dormir-en-altitude", "refuge d'altitude")} ou un bateau. Notre sélection réunit ${n} de ces lieux extraordinaires, dans ${regions} régions de France.`,
+    },
+    {
+      q: "Combien coûte une nuit insolite en France ?",
+      a: `Tous les budgets existent : ${small} de nos adresses coûtent moins de 150 € la nuit pour deux (cabanes sur l'eau, wagon-lit de 1926, chambres troglodytes), tandis que les lieux d'exception dépassent 450 €. Chaque fiche indique une fourchette de prix, et le tarif exact s'affiche dès que vous choisissez vos dates.`,
+      html: `Tous les budgets existent : ${small} de nos adresses coûtent moins de 150 € la nuit pour deux (cabanes sur l'eau, wagon-lit de 1926, chambres troglodytes), tandis que les lieux d'exception dépassent 450 €. Chaque fiche indique une fourchette de prix, et le tarif exact s'affiche dès que vous choisissez vos dates. Voir aussi notre guide des ${link("nuits-insolites-petit-budget", "nuits insolites à petit budget")}.`,
+    },
+    {
+      q: "Où dormir dans un lieu insolite près de chez moi ?",
+      a: "Indiquez votre adresse dans « Près de chez moi » : tous les lieux sont triés par distance, avec un filtre de rayon. La carte interactive montre aussi l'ensemble de la sélection, de la Bretagne à la Corse.",
+      html: `Indiquez votre adresse dans <a href="#explorer">« Près de chez moi »</a> : tous les lieux sont triés par distance, avec un filtre de rayon. La <a href="carte.html">carte interactive</a> montre aussi l'ensemble de la sélection, de la Bretagne à la Corse. Depuis Paris, voir nos ${link("week-end-insolite-pres-de-paris", "week-ends insolites près de Paris")}.`,
+    },
+    {
+      q: "Quels sont les hôtels les plus extraordinaires de France ?",
+      a: "Parmi les plus étonnants : l'observatoire du Pic du Midi, où l'on dort à 2 877 mètres, le Phare de Kerbel, dont on occupe le sommet, une voiture-lits de 1926 en gare de Guiscriff, les cabanes sur pilotis du lac de la Ramade qu'on rejoint en canoë, ou encore une île privée dans la baie de Morlaix.",
+      html: `Parmi les plus étonnants : <a href="hotels/pic-du-midi.html">l'observatoire du Pic du Midi</a>, où l'on dort à 2 877 mètres, le <a href="hotels/phare-de-kerbel.html">Phare de Kerbel</a>, dont on occupe le sommet, une <a href="hotels/gare-de-guiscriff.html">voiture-lits de 1926</a> en gare de Guiscriff, les <a href="hotels/cabanes-lacustra.html">cabanes sur pilotis</a> qu'on rejoint en canoë, ou encore une <a href="hotels/ile-louet.html">île privée dans la baie de Morlaix</a>. Pas d'idée précise ? Faites notre <a href="quiz.html">quiz en 5 questions</a>.`,
+    },
+    {
+      q: "Quand réserver une nuit insolite ?",
+      a: "Le plus tôt possible pour les week-ends, les ponts et les vacances scolaires : beaucoup de lieux insolites ne comptent que quelques cabanes ou chambres. En semaine, le choix est plus large et les prix souvent plus doux.",
+      html: "Le plus tôt possible pour les week-ends, les ponts et les vacances scolaires : beaucoup de lieux insolites ne comptent que quelques cabanes ou chambres. En semaine, le choix est plus large et les prix souvent plus doux.",
+    },
+    {
+      q: "Est-ce plus cher de réserver via Nuits Singulières ?",
+      a: "Non. Le prix est exactement le même que sur le site de réservation : nous touchons une petite commission de sa part, sans aucun surcoût pour vous. Notre sélection reste indépendante : aucun établissement ne paie pour y figurer.",
+      html: `Non. Le prix est exactement le même que sur le site de réservation : nous touchons une petite commission de sa part, sans aucun surcoût pour vous. Notre sélection reste indépendante : aucun établissement ne paie pour y figurer (<a href="a-propos.html">notre charte</a>).`,
+    },
+  ];
+}
+function homeFaq() {
+  const faq = homeFaqData();
+  return `
+    <div class="home-seo-grid">
+      <div class="home-seo-intro reveal">
+        <p class="eyebrow dark">À savoir</p>
+        <h2>Hôtels insolites en France : nos conseils pour une nuit hors du commun</h2>
+        <p class="lead">Dormir dans un lieu extraordinaire, c'est offrir à un week-end la saveur d'un vrai voyage. Cabane dans les arbres, bulle face aux étoiles, phare battu par les vents ou château au-dessus d'une rivière : chaque adresse de Nuits Singulières a été choisie pour ce qu'elle a d'unique, du petit budget au grand luxe.</p>
+        <p>Ville, campagne, mer ou montagne : explorez par <a href="#destinations">ambiance</a>, par <a href="#experiences">expérience</a> ou par <a href="guides/index.html">guide thématique</a>, comparez jusqu'à trois lieux et réservez au meilleur prix, sans frais supplémentaires.</p>
+      </div>
+      <div class="faq home-faq reveal">
+        ${faq.map((f, i) => `<details${i ? "" : " open"}><summary>${e(f.q)}</summary><p>${f.html}</p></details>`).join("\n        ")}
+      </div>
+    </div>`;
+}
 function homeHead() {
   const cover = HOTELS.find((h) => h.hero === 1) || HOTELS[0];
   return `
@@ -525,6 +598,11 @@ function homeHead() {
     description: CONFIG.tagline,
     inLanguage: "fr-FR",
     potentialAction: { "@type": "SearchAction", target: `${SITE}/index.html?q={search_term_string}#explorer`, "query-input": "required name=search_term_string" },
+  })}
+  ${jsonLd({
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: homeFaqData().map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })),
   })}
   `;
 }
@@ -559,6 +637,7 @@ const robots = () => `User-agent: *
 Allow: /
 Disallow: /studio.html
 Disallow: /comparer.html
+Disallow: /selection.html
 Disallow: /_review/
 
 Sitemap: ${SITE}/sitemap.xml
@@ -589,6 +668,9 @@ function main() {
   note("index.html (en-tête)", inject("index.html", "head", homeHead()));
   note("index.html (guides)", inject("index.html", "guides", homeGuides()));
   note("index.html (annuaire)", inject("index.html", "directory", homeDirectory()));
+  C.setRoot("");
+  note("index.html (à savoir)", inject("index.html", "faq", homeFaq()));
+  C.setRoot("../");
   note("sitemap.xml", write("sitemap.xml", sitemap()));
   note("robots.txt", write("robots.txt", robots()));
 
