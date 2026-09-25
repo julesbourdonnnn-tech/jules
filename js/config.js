@@ -42,7 +42,7 @@ window.SITE_CONFIG = {
 
   /* ---------- Réseaux sociaux (idée 8) ---------- */
   social: {
-    instagram: "nuits.singulieres", // ton @ sans le @
+    instagram: "", // ton @ sans le @ (vide = liens Instagram masqués sur le site)
     tiktok: "",
     pinterest: "",
     // Page « lien en bio » (liens.html) : ids des hôtels, du plus récent au plus ancien.
