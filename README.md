@@ -32,7 +32,7 @@ Le site est **100 % statique** (HTML, CSS, JavaScript). Pas de serveur, pas de b
 - **Menu mobile** complet.
 
 ### Instagram et newsletter
-- Inscription à la newsletter sur l'accueil, chaque fiche et le pied de page (Netlify Forms)
+- Inscription à la newsletter sur l'accueil, chaque fiche, le quiz et le pied de page. Les adresses sont enregistrées par le Worker Cloudflare (`worker/index.js`) dans un stockage privé (KV « nuitsinguliere-newsletter »). Pour les récupérer : crée un secret `NEWSLETTER_KEY` dans Cloudflare (Workers → jules → Paramètres → Variables et secrets), puis ouvre `https://nuitsinguliere.com/api/newsletter.csv?key=TON_SECRET` : tu obtiens un fichier CSV à importer dans Brevo.
 - Section Instagram sur l'accueil et page **lien en bio** `liens.html`
 - **Studio** (`studio.html`, outil interne) : génère les carrousels et stories Instagram avec leur légende, et l'e-mail HTML de la newsletter
 - **Suivi de provenance** : les liens `?src=instagram` / `?src=newsletter` sont ajoutés au libellé Booking. Ton tableau de bord Booking montre ainsi quel canal rapporte.
@@ -44,7 +44,7 @@ Le site est **100 % statique** (HTML, CSS, JavaScript). Pas de serveur, pas de b
 
 Chaque établissement a sa **vraie page** (`hotels/<id>.html`) et chaque thème son **guide** (`guides/<slug>.html`), avec titre, description, image de partage et données structurées pour Google. Le plan du site (`sitemap.xml`) et `robots.txt` sont générés aussi.
 
-Ces pages sont fabriquées par `node scripts/build.js` à partir de `js/hotels.js` et `js/guides.js`. **Tu n'as rien à lancer** : la GitHub Action « Build » les régénère à chaque modification, et Netlify aussi à chaque déploiement.
+Ces pages sont fabriquées par `node scripts/build.js` à partir de `js/hotels.js` et `js/guides.js`. **Tu n'as rien à lancer** : la GitHub Action « Build » les régénère à chaque modification.
 
 - **Ajouter un guide** : copie un bloc dans `js/guides.js` (titre, texte d'introduction, conseils, et règle de sélection des établissements).
 - **Avant la mise en ligne** : le nom de domaine est dans `siteUrl` (`js/config.js`) ; déclare `https://nuitsinguliere.com/sitemap.xml` dans la Google Search Console.

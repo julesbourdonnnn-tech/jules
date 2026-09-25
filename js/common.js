@@ -112,30 +112,44 @@
     if (a) track(a.dataset.track, { hotel: a.dataset.hotel || "", source: getSource() || "direct" });
   });
 
-  /* ---------- Formulaires (Netlify Forms) ---------- */
+  /* ---------- Newsletter ----------
+   * Les inscriptions sont envoyées au Worker Cloudflare du site (worker/index.js),
+   * qui les enregistre dans un stockage privé (KV « NEWSLETTER »). */
   async function submitForm(form) {
     if (location.protocol === "file:") throw new Error("hors ligne");
-    const body = new URLSearchParams(new FormData(form)).toString();
-    const res = await fetch("/", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body });
-    if (!res.ok) throw new Error(String(res.status));
+    const data = Object.fromEntries(new FormData(form).entries());
+    data.source = getSource() || "direct";
+    const res = await fetch("/api/newsletter", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    const out = await res.json().catch(() => ({}));
+    if (!res.ok || !out.ok) throw new Error(out.error || String(res.status));
+    return out;
   }
   document.addEventListener("submit", async (e) => {
-    const form = e.target.closest("[data-nl], [data-netlify-form]");
+    const form = e.target.closest("[data-nl]");
     if (!form) return;
     e.preventDefault();
-    const msg = form.querySelector(".nl-msg, .form-msg");
+    const msg = form.querySelector(".nl-msg");
     const btn = form.querySelector('button[type="submit"]');
     btn.disabled = true;
+    msg.textContent = "";
     try {
-      await submitForm(form);
+      const out = await submitForm(form);
       form.classList.add("sent");
-      msg.textContent = form.dataset.success || "Merci ! Vous êtes bien inscrit·e. À dimanche ✦";
-      track(form.getAttribute("name") === "newsletter" ? "Newsletter" : "Formulaire", { source: getSource() || "direct" });
+      msg.textContent = out.already
+        ? "Vous êtes déjà inscrit·e : à dimanche ✦"
+        : "Merci ! Vous êtes bien inscrit·e. À dimanche ✦";
+      track("Newsletter", { source: getSource() || "direct" });
       form.reset();
-    } catch {
+    } catch (err) {
       msg.textContent = location.protocol === "file:"
-        ? "Les formulaires fonctionneront une fois le site mis en ligne."
-        : "Oups, l'envoi a échoué. Réessayez dans un instant.";
+        ? "Les inscriptions fonctionneront une fois le site mis en ligne."
+        : err.message === "invalid_email"
+          ? "Cette adresse e-mail ne semble pas valide."
+          : "Oups, l'inscription a échoué. Réessayez dans un instant.";
     } finally {
       btn.disabled = false;
     }

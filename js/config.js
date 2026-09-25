@@ -51,10 +51,9 @@ window.SITE_CONFIG = {
     bioHotels: [],
   },
 
-  /* ---------- Newsletter (idée 8) ----------
-   * Par défaut, les inscriptions sont recueillies par Netlify Forms
-   * (onglet "Forms" de ton tableau de bord Netlify, export CSV possible
-   * vers Brevo, Mailchimp…). Aucune configuration nécessaire. */
+  /* ---------- Newsletter ----------
+   * Les inscriptions sont enregistrées par le Worker Cloudflare du site
+   * (worker/index.js). Export CSV : voir README.md (« newsletter.csv »). */
   newsletter: {
     title: "La lettre des nuits rares",
     pitch: "Chaque dimanche, 3 adresses extraordinaires et des idées de week-end pour s’évader.",

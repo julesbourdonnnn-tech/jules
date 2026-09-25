@@ -6,10 +6,19 @@
 {
   "name": "jules",
   "compatibility_date": "2025-09-01",
+  // Petit programme pour la newsletter (worker/index.js) : il ne s'exécute
+  // que pour les adresses /api/*, tout le reste est servi directement.
+  "main": "worker/index.js",
   "assets": {
     "directory": ".",
-    "not_found_handling": "404-page"
+    "binding": "ASSETS",
+    "not_found_handling": "404-page",
+    "run_worker_first": ["/api/*"]
   },
+  // Stockage des inscriptions à la newsletter
+  "kv_namespaces": [
+    { "binding": "NEWSLETTER", "id": "288085767e8649c287e48b62d5d71d5b" }
+  ],
   // Nom de domaine (acheté sur Cloudflare) : branché automatiquement à chaque
   // déploiement. L'ancienne adresse workers.dev reste active.
   "routes": [

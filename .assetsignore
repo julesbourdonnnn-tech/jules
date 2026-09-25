@@ -17,3 +17,4 @@ netlify.toml
 wrangler.jsonc
 assets/hotels/_done.json
 assets/hotels/*/source.json
+worker
