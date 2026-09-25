@@ -18,4 +18,6 @@ wrangler.jsonc
 assets/hotels/_done.json
 assets/hotels/*/source.json
 worker
+# Site Le Passe : publié séparément (le-passe/wrangler.jsonc)
+le-passe
 undefined

@@ -34,7 +34,7 @@ jobs:
           else
             FILES=$(git ls-files '*.html')
           fi
-          URLS=$(echo "$FILES" | grep -vE '^(404|studio|comparer|selection)\.html$|^_review/|^apercu/|^dist/|^vendor/' \
+          URLS=$(echo "$FILES" | grep -vE '^(404|studio|comparer|selection)\.html$|^_review/|^apercu/|^dist/|^vendor/|^le-passe/' \
             | sed -e "s#^index\.html\$#/#" -e "s#^\([^/].*\)#/\1#" | sed "s#^#$SITE#" | sed "s#$SITE//#$SITE/#" | sort -u | head -9000)
           if [ -z "$URLS" ]; then echo "Aucune page à signaler"; exit 0; fi
           echo "$URLS"

@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mentions légales · Le Passe</title>
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#16130f">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="fonts/fonts.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="site-header scrolled">
+    <nav class="container nav" aria-label="Navigation">
+      <a class="brand" href="./" aria-label="Le Passe — accueil"><img src="assets/logo.svg" alt="Le Passe" width="180" height="45" style="height:40px;width:auto"></a>
+      <a class="btn btn-ink" href="./#bon">Passer commande</a>
+    </nav>
+  </header>
+  <main class="container page">
+    <div class="prose">
+      <p class="kicker">Informations légales</p>
+      <h1>Mentions légales</h1>
+      <p>Informations prévues par la loi pour la confiance dans l'économie numérique (LCEN) et le Code de la consommation.</p>
+
+      <h2>Éditeur du site</h2>
+      <p>Le Passe, activité de Jules Bourdon, entrepreneur individuel.<br>
+      <span data-legal="siret"></span>
+      Contact : <a data-legal="email" href="#"></a><br>
+      Directeur de la publication : Jules Bourdon</p>
+
+      <h2>Hébergeur</h2>
+      <p>Cloudflare, Inc. — 101 Townsend Street, San Francisco, CA 94107, États-Unis — cloudflare.com</p>
+
+      <h2>Tarifs</h2>
+      <p>Les prix affichés sont des prix de départ, donnés à titre indicatif. Chaque prestation fait l'objet d'un devis gratuit et détaillé, qui seul engage les deux parties une fois signé. <span data-legal="tva"></span></p>
+
+      <h2>Démonstrations</h2>
+      <p>Les sites « Maison Garance » et « Brasa » sont des démonstrations. Ces restaurants, leurs adresses, leurs cartes et leurs équipes sont imaginaires. Aucune commande, réservation ni paiement n'y est réellement enregistré.</p>
+
+      <h2>Données personnelles</h2>
+      <p>Les informations saisies dans le formulaire « Le bon » (nom du restaurant, prénom, coordonnées, message) servent uniquement à répondre à votre demande et à établir un devis. Elles sont conservées de façon sécurisée chez notre hébergeur, au plus trois ans après notre dernier échange, et ne sont jamais revendues ni cédées. Vous pouvez demander l'accès, la rectification ou la suppression de vos données en écrivant à <a data-legal="email" href="#"></a> (RGPD).</p>
+
+      <h2>Cookies et mesure d'audience</h2>
+      <p>Ce site ne dépose aucun cookie publicitaire ni de suivi. Les polices de caractères sont hébergées sur le site lui-même : votre navigateur ne contacte aucun service tiers pour afficher les pages.</p>
+
+      <h2>Propriété intellectuelle</h2>
+      <p>Les textes, le logo, les illustrations et le code de ce site sont la propriété de Jules Bourdon. Les polices utilisées (Bricolage Grotesque, Instrument Serif, DM Mono) sont distribuées sous licence SIL Open Font License.</p>
+    </div>
+  </main>
+  <footer class="site-footer">
+    <div class="container foot-bottom" style="padding-top:0">
+      <span>© <span data-year>2026</span> Le Passe · Jules Bourdon</span>
+      <a href="./">Retour à l'accueil</a>
+    </div>
+  </footer>
+  <script src="js/config.js"></script>
+  <script>
+    (() => {
+      const C = window.LP_CONFIG || {};
+      document.querySelectorAll('[data-legal="email"]').forEach((a) => { a.href = `mailto:${C.email}`; a.textContent = C.email; });
+      const siret = document.querySelector('[data-legal="siret"]');
+      if (C.siret) siret.innerHTML = `SIRET : ${C.siret}<br>`;
+      if (C.address) siret.insertAdjacentHTML("beforeend", `Adresse : ${C.address}<br>`);
+      const tva = document.querySelector('[data-legal="tva"]');
+      if (C.tvaNote) tva.textContent = C.tvaNote;
+      document.querySelectorAll("[data-year]").forEach((el) => (el.textContent = new Date().getFullYear()));
+    })();
+  </script>
+</body>
+</html>

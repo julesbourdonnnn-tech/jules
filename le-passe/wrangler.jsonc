@@ -1,0 +1,30 @@
+// Configuration Cloudflare du site Le Passe (Worker « le-passe »), séparé de
+// Nuits Singulières. Le site est servi tel quel depuis ce dossier.
+// Mise en ligne : GitHub Action « Le Passe » (.github/workflows/le-passe.yml),
+// ou à la main depuis ce dossier : npx wrangler deploy
+{
+  "name": "le-passe",
+  "compatibility_date": "2025-09-01",
+  // Petit programme pour le formulaire « Le bon » (worker/index.js) : il ne
+  // s'exécute que pour les adresses /api/*, tout le reste est servi directement.
+  "main": "worker/index.js",
+  "assets": {
+    "directory": ".",
+    "binding": "ASSETS",
+    "not_found_handling": "404-page",
+    "run_worker_first": ["/api/*"]
+  },
+  // Stockage des demandes reçues par le formulaire. Pour l'activer :
+  // 1. Cloudflare → Stockage et bases de données → KV → Créer « le-passe-demandes »
+  // 2. Copier son identifiant ci-dessous et retirer les // devant les 3 lignes.
+  // Tant que ce n'est pas fait, le formulaire ouvre un e-mail pré-rempli.
+  // "kv_namespaces": [
+  //   { "binding": "LEADS", "id": "COLLE_ICI_L_IDENTIFIANT" }
+  // ],
+  // Nom de domaine : une fois acheté sur Cloudflare, retirer les // ci-dessous.
+  // "routes": [
+  //   { "pattern": "lepasse.studio", "custom_domain": true },
+  //   { "pattern": "www.lepasse.studio", "custom_domain": true }
+  // ],
+  "workers_dev": true
+}

@@ -168,3 +168,7 @@ js/comparer.js        logique du comparateur
 2. Générer une vraie page HTML par hôtel pour un meilleur référencement Google (aujourd'hui les fiches sont construites en JavaScript)
 3. Ajouter des pages « guides » (« 10 cabanes perchées à moins de 2 h de Paris ») : c'est ce qui attire le trafic Google
 4. Ajouter la même chose pour les restaurants
+
+## Autre projet du dépôt : Le Passe
+
+Le dossier **`le-passe/`** contient le site du **Passe**, studio de création de sites web pour restaurants (identité, histoire, offres, démos). Il est publié séparément et n'apparaît pas sur nuitsinguliere.com. Voir [le-passe/README.md](le-passe/README.md).

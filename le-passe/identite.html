@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Identité de marque · Le Passe</title>
+  <meta name="description" content="La charte de marque du Passe : nom, histoire, logo, couleurs, typographies, ton de voix, lexique et applications.">
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#16130f">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="fonts/fonts.css">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .bb-cover { min-height: 86vh; display: grid; place-items: center; text-align: center; padding: 60px 0; position: relative; overflow: hidden; }
+    .bb-cover img { width: min(560px, 86vw); margin: 0 auto 34px; }
+    .bb-cover p { font: 500 .78rem var(--mono); letter-spacing: .24em; text-transform: uppercase; color: var(--muted); margin: 0; }
+    .bb-toc { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 40px; padding: 0; list-style: none; }
+    .bb-toc a { text-decoration: none; font-weight: 600; font-size: .9rem; border: 1.5px solid var(--line); border-radius: 999px; padding: 7px 14px; }
+    .bb-toc a:hover { border-color: var(--ink); }
+    .bb-sec { padding: clamp(64px, 9vw, 120px) 0; border-top: 1px solid var(--line); }
+    .bb-sec.dark { border-top: 0; }
+    .bb-num { font: 500 .78rem var(--mono); color: var(--flame); letter-spacing: .2em; }
+    .bb-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(28px, 5vw, 70px); align-items: start; }
+    .bb-grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+    .bb-grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
+    .bb-card { background: var(--paper-3); border: 1px solid var(--line); border-radius: var(--radius); padding: 26px; }
+    .bb-card h3 { margin-bottom: 10px; }
+    .bb-card p { color: var(--ink-soft); margin: 0; font-size: .97rem; }
+    .dark .bb-card { background: var(--ink-2); border-color: #3a342b; }
+    .dark .bb-card p { color: #cfc6b6; }
+    .bb-big { font-family: var(--serif); font-style: italic; font-size: clamp(1.6rem, 3vw, 2.4rem); line-height: 1.2; }
+    .bb-text { color: var(--ink-soft); font-size: 1.08rem; }
+    .dark .bb-text { color: #cfc6b6; }
+    .logo-box { border-radius: var(--radius); display: grid; place-items: center; padding: 50px 30px; min-height: 240px; position: relative; }
+    .logo-box img { max-width: 100%; }
+    .logo-box figcaption { position: absolute; left: 16px; bottom: 12px; font: 500 .68rem var(--mono); letter-spacing: .12em; text-transform: uppercase; opacity: .7; }
+    .logo-box a { position: absolute; right: 14px; bottom: 10px; font: 500 .68rem var(--mono); letter-spacing: .1em; text-transform: uppercase; }
+    .clearspace { position: relative; display: inline-block; padding: 34px; background: repeating-linear-gradient(45deg, rgba(226,72,45,.12) 0 6px, transparent 6px 12px); outline: 1.5px dashed var(--flame); }
+    .clearspace img { background: var(--paper); }
+    .dont { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+    .dont div { background: var(--paper-3); border: 1px solid var(--line); border-radius: 14px; padding: 18px; display: grid; place-items: center; min-height: 130px; position: relative; overflow: hidden; }
+    .dont div::after { content: "✕"; position: absolute; top: 8px; right: 12px; color: var(--flame); font-weight: 800; }
+    .dont span { font-size: .82rem; color: var(--muted); text-align: center; margin-top: 10px; }
+    .swatches { display: grid; grid-template-columns: 2fr 2fr 1fr 1fr 1fr; gap: 12px; }
+    .sw { border-radius: 16px; min-height: 260px; padding: 18px; display: flex; flex-direction: column; justify-content: flex-end; font: 500 .74rem/1.6 var(--mono); letter-spacing: .04em; border: 1px solid rgba(0,0,0,.08); cursor: pointer; transition: transform .25s var(--ease); }
+    .sw:hover { transform: translateY(-4px); }
+    .sw strong { font: 800 1.4rem var(--display); letter-spacing: -.02em; margin-bottom: 6px; }
+    .ratio { display: flex; height: 18px; border-radius: 999px; overflow: hidden; margin-top: 22px; }
+    .type-spec { border-top: 1.5px solid var(--ink); padding-top: 18px; }
+    .type-spec .sample { line-height: 1; margin: 16px 0 12px; }
+    .type-spec p { color: var(--ink-soft); font-size: .95rem; margin: 0; }
+    .type-spec small { font: 500 .72rem var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--flame); }
+    .tone { width: 100%; border-collapse: collapse; font-size: 1rem; }
+    .tone th { text-align: left; font: 500 .72rem var(--mono); letter-spacing: .14em; text-transform: uppercase; padding: 12px 14px; }
+    .tone th:first-child { color: #5ec27a; }
+    .tone th:last-child { color: var(--flame); }
+    .tone td { padding: 16px 14px; border-top: 1px solid #3a342b; vertical-align: top; width: 50%; color: #e3dbcc; }
+    .tone td:last-child { color: #8f8677; text-decoration: line-through; text-decoration-color: rgba(226,72,45,.6); }
+    .lexique { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; border-top: 1.5px solid var(--ink); }
+    .lexique div { padding: 22px 20px 22px 0; border-bottom: 1px solid var(--line); }
+    .lexique dt { font-weight: 800; font-size: 1.25rem; letter-spacing: -.02em; }
+    .lexique dt em { color: var(--flame); font-size: .95em; }
+    .lexique dd { margin: 6px 0 0; color: var(--ink-soft); font-size: .95rem; }
+    .lexique dd b { color: var(--ink); font-weight: 600; }
+    .bcard { width: 340px; aspect-ratio: 85/55; border-radius: 10px; box-shadow: var(--shadow-lg); padding: 22px; display: flex; flex-direction: column; justify-content: space-between; }
+    .bcard.front { background: var(--ink); color: var(--paper); }
+    .bcard.back { background: var(--paper-3); color: var(--ink); font: 500 .74rem/1.7 var(--mono); }
+    .bcard.back strong { font: 800 1.3rem var(--display); letter-spacing: -.02em; display: block; }
+    .bcard.back em { font-size: 1rem; color: var(--flame); }
+    .cards-row { display: flex; gap: 26px; flex-wrap: wrap; justify-content: center; }
+    .insta { width: 320px; aspect-ratio: 1; border-radius: 12px; overflow: hidden; box-shadow: var(--shadow-lg); background: var(--flame); color: #fff; padding: 26px; display: flex; flex-direction: column; justify-content: space-between; position: relative; }
+    .insta.b { background: var(--paper-3); color: var(--ink); }
+    .insta .q { font-family: var(--serif); font-style: italic; font-size: 1.9rem; line-height: 1.1; }
+    .insta small { font: 500 .66rem var(--mono); letter-spacing: .16em; text-transform: uppercase; }
+    .sig-box { background: #fff; color: #222; border-radius: 12px; padding: 24px; box-shadow: var(--shadow); max-width: 520px; }
+    .code { background: var(--ink); color: #e3dbcc; font: 500 .74rem/1.6 var(--mono); padding: 16px; border-radius: 12px; overflow: auto; max-height: 200px; white-space: pre-wrap; word-break: break-all; margin-top: 14px; }
+    .pitch { border-left: 3px solid var(--flame); padding: 4px 0 4px 22px; margin-bottom: 30px; }
+    .pitch small { font: 500 .72rem var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--flame); }
+    .pitch p { font-size: 1.12rem; margin: 8px 0 0; }
+    @media (max-width: 960px) {
+      .bb-grid2, .bb-grid3 { grid-template-columns: 1fr; }
+      .bb-grid4, .dont { grid-template-columns: 1fr 1fr; }
+      .swatches { grid-template-columns: 1fr 1fr; }
+      .swatches .sw:first-child { grid-column: span 2; }
+      .lexique { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 560px) { .lexique, .bb-grid4 { grid-template-columns: 1fr; } .bcard, .insta { width: 100%; } }
+  </style>
+</head>
+<body>
+  <header class="site-header scrolled">
+    <nav class="container nav" aria-label="Navigation">
+      <a class="brand" href="./" aria-label="Le Passe — accueil"><img src="assets/logo.svg" alt="Le Passe" width="180" height="45" style="height:40px;width:auto"></a>
+      <a class="btn btn-ink" href="./">Voir le site</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="bb-cover">
+      <div class="container">
+        <img src="assets/logo.svg" alt="Le Passe — studio web pour restaurants" width="560" height="141">
+        <p>Charte de marque · version 1 · 2026</p>
+        <ul class="bb-toc">
+          <li><a href="#nom">Le nom</a></li><li><a href="#plateforme">La plateforme</a></li><li><a href="#logo">Le logo</a></li><li><a href="#couleurs">Les couleurs</a></li><li><a href="#typo">La typographie</a></li><li><a href="#ton">Le ton</a></li><li><a href="#lexique">Le lexique</a></li><li><a href="#applications">Les applications</a></li><li><a href="#pitch">Se présenter</a></li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- 01 Le nom -->
+    <section class="bb-sec dark" id="nom">
+      <div class="container bb-grid2">
+        <div>
+          <span class="bb-num">01 · LE NOM</span>
+          <h2 style="margin-top:14px">Le Passe. <em>Et puis&nbsp;: ça marche.</em></h2>
+        </div>
+        <div>
+          <p class="bb-text"><strong style="color:var(--paper)">Le passe</strong>, c'est le comptoir entre la cuisine et la salle, sous les lampes chauffantes. Le dernier endroit où l'assiette est vérifiée avant d'être envoyée au client. Tout le monde en restauration connaît ce mot&nbsp;; presque personne en dehors. C'est un mot de l'intérieur, et c'est exactement ce qu'on veut dire&nbsp;: <em style="color:var(--brass)">celui qui fait votre site est du métier.</em></p>
+          <p class="bb-text">La métaphore tient toute seule&nbsp;: aujourd'hui, le site, la fiche Google et la carte en ligne sont le dernier contrôle avant que le client choisisse votre maison. C'est votre nouveau passe.</p>
+          <p class="bb-text"><strong style="color:var(--paper)">«&nbsp;Ça marche.&nbsp;»</strong> est la signature. En cuisine, c'est la réponse à chaque commande annoncée&nbsp;: j'ai entendu, c'est lancé, tu peux compter sur moi. Hors cuisine, ça veut dire&nbsp;: ça fonctionne. Les deux sens sont la promesse.</p>
+          <p class="bb-text" style="font-size:.95rem;opacity:.8">Écriture&nbsp;: «&nbsp;Le Passe&nbsp;» dans les textes (majuscules à L et P), «&nbsp;le passe&nbsp;» en minuscules dans le logo. Jamais «&nbsp;LePasse&nbsp;» ni «&nbsp;le Passé&nbsp;».</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 02 Plateforme -->
+    <section class="bb-sec" id="plateforme">
+      <div class="container">
+        <span class="bb-num">02 · LA PLATEFORME DE MARQUE</span>
+        <h2 style="margin:14px 0 40px">Ce qu'on fait, <em>et pourquoi.</em></h2>
+        <div class="bb-grid3" style="margin-bottom:18px">
+          <div class="bb-card"><small class="kicker">Mission</small><p class="bb-big" style="color:var(--ink)">Que la première impression d'un restaurant, en ligne, soit à la hauteur de ce qui sort de sa cuisine.</p></div>
+          <div class="bb-card"><small class="kicker">Promesse</small><p class="bb-big" style="color:var(--ink)">Un site qui tient le coup de feu&nbsp;: beau, rapide, trouvé, et mis à jour en deux minutes.</p></div>
+          <div class="bb-card"><small class="kicker">Différence</small><p class="bb-big" style="color:var(--ink)">Fait par quelqu'un du métier, qui parle couverts et pas «&nbsp;conversion&nbsp;».</p></div>
+        </div>
+        <h3 style="margin:50px 0 18px">Les quatre valeurs de la maison</h3>
+        <div class="bb-grid4">
+          <div class="bb-card"><h3>Franc</h3><p>On dit ce qui ne va pas, comme au passe. Pas de promesse qu'on ne peut pas tenir, pas de chiffre inventé.</p></div>
+          <div class="bb-card"><h3>Précis</h3><p>Chaque détail compte&nbsp;: un horaire faux, c'est une table vide. On vérifie avant d'envoyer.</p></div>
+          <div class="bb-card"><h3>Disponible</h3><p>Au rythme d'un restaurateur&nbsp;: jamais pendant le service, toujours entre deux.</p></div>
+          <div class="bb-card"><h3>Généreux</h3><p>Le client repart avec son site, son domaine, ses fichiers. Rien d'enfermé, tout à son nom.</p></div>
+        </div>
+        <h3 style="margin:50px 0 18px">Pour qui</h3>
+        <div class="bb-grid3">
+          <div class="bb-card"><h3>Le bistrot de quartier</h3><p>Propriétaire-exploitant, 30 à 80 couverts, une carte qui change. Il n'a ni le temps ni l'envie de s'occuper d'Internet. Il veut que ça marche. <b>Offre&nbsp;: L'Ardoise ou Le Plat du chef.</b></p></div>
+          <div class="bb-card"><h3>La maison qui ouvre</h3><p>Un chef ou un couple qui lance son restaurant. Tout est à créer, le budget est serré, l'enjeu est énorme. <b>Offre&nbsp;: Le Plat du chef, puis Le Menu dégustation.</b></p></div>
+          <div class="bb-card"><h3>La table ambitieuse</h3><p>Gastronomique, groupe de deux ou trois adresses, bar à cocktails. Elle veut une image forte et vendre en ligne. <b>Offre&nbsp;: Le Menu dégustation.</b></p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 03 Logo -->
+    <section class="bb-sec" id="logo">
+      <div class="container">
+        <span class="bb-num">03 · LE LOGO</span>
+        <h2 style="margin:14px 0 20px">Une cloche <em>qui capte le signal.</em></h2>
+        <p class="lead" style="margin-bottom:40px">Le symbole est une cloche de service, celle qu'on frappe au passe pour dire «&nbsp;c'est prêt&nbsp;». Ses ondes, en rouge, sont aussi celles du Wi-Fi&nbsp;: le restaurant et le web réunis en un seul signe. Le mot «&nbsp;le passe&nbsp;» est composé en Bricolage Grotesque ExtraBold, en minuscules, pour la chaleur.</p>
+        <div class="bb-grid2" style="margin-bottom:18px">
+          <figure class="logo-box" style="background:var(--paper-3);border:1px solid var(--line);margin:0"><img src="assets/logo.svg" alt="Logo principal" width="360"><figcaption>Principal · fond clair</figcaption><a href="assets/logo.svg" download>SVG ↓</a></figure>
+          <figure class="logo-box" style="background:var(--ink);color:var(--paper);margin:0"><img src="assets/logo-blanc.svg" alt="Logo négatif" width="360"><figcaption>Négatif · fond sombre</figcaption><a href="assets/logo-blanc.svg" download>SVG ↓</a></figure>
+        </div>
+        <div class="bb-grid4">
+          <figure class="logo-box" style="background:var(--paper-3);border:1px solid var(--line);margin:0"><img src="assets/symbole.svg" alt="Symbole" width="110"><figcaption>Symbole</figcaption><a href="assets/symbole.svg" download>SVG ↓</a></figure>
+          <figure class="logo-box" style="background:var(--flame);color:#fff;margin:0"><img src="assets/symbole-blanc.svg" alt="Symbole négatif" width="110"><figcaption>Symbole · négatif</figcaption><a href="assets/symbole-blanc.svg" download style="color:#fff">SVG ↓</a></figure>
+          <figure class="logo-box" style="background:var(--paper-2);margin:0"><img src="assets/favicon.svg" alt="Icône" width="96"><figcaption>Icône · réseaux, onglet</figcaption><a href="assets/favicon.svg" download>SVG ↓</a></figure>
+          <figure class="logo-box" style="background:var(--paper-3);border:1px solid var(--line);margin:0"><div class="clearspace"><img src="assets/symbole.svg" alt="" width="64"></div><figcaption>Zone de protection = ½ cloche</figcaption></figure>
+        </div>
+        <h3 style="margin:50px 0 10px">Taille minimale</h3>
+        <p class="bb-text" style="margin-bottom:30px">Logo complet&nbsp;: 120&nbsp;px de large à l'écran, 30&nbsp;mm imprimé. En dessous, utiliser le symbole seul (16&nbsp;px minimum).</p>
+        <h3 style="margin:0 0 18px">À ne pas faire</h3>
+        <div class="dont">
+          <div><img src="assets/logo.svg" alt="" style="width:80%;transform:scaleX(1.5)"><span>Déformer</span></div>
+          <div><img src="assets/logo.svg" alt="" style="width:80%;filter:hue-rotate(160deg)"><span>Changer les couleurs</span></div>
+          <div style="background:linear-gradient(135deg,#6f7a5e,#c9973a)"><img src="assets/logo.svg" alt="" style="width:80%"><span style="color:#fff">Poser sur un fond chargé</span></div>
+          <div><img src="assets/logo.svg" alt="" style="width:80%;transform:rotate(-12deg)"><span>Pivoter</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 04 Couleurs -->
+    <section class="bb-sec" id="couleurs">
+      <div class="container">
+        <span class="bb-num">04 · LES COULEURS</span>
+        <h2 style="margin:14px 0 20px">Les couleurs <em>du service.</em></h2>
+        <p class="lead" style="margin-bottom:34px">Le papier des bons de commande, le charbon du four, le rouge des lampes chauffantes, le laiton de la cloche et la sauge des herbes fraîches. Cliquez sur une couleur pour copier son code.</p>
+        <div class="swatches">
+          <button class="sw" style="background:#f3ede1;color:#16130f" data-hex="#f3ede1"><strong>Papier</strong>#F3EDE1<br>RVB 243 · 237 · 225<br>Fonds, respiration</button>
+          <button class="sw" style="background:#16130f;color:#f3ede1" data-hex="#16130f"><strong>Charbon</strong>#16130F<br>RVB 22 · 19 · 15<br>Texte, fonds sombres</button>
+          <button class="sw" style="background:#e2482d;color:#fff" data-hex="#e2482d"><strong>Flamme</strong>#E2482D<br>RVB 226 · 72 · 45<br>Action, accent</button>
+          <button class="sw" style="background:#c9973a;color:#16130f" data-hex="#c9973a"><strong>Laiton</strong>#C9973A<br>RVB 201 · 151 · 58<br>Accent sur sombre</button>
+          <button class="sw" style="background:#6f7a5e;color:#fff" data-hex="#6f7a5e"><strong>Sauge</strong>#6F7A5E<br>RVB 111 · 122 · 94<br>Illustrations</button>
+        </div>
+        <div class="ratio" aria-label="Proportions : 60 % papier, 25 % charbon, 10 % flamme, 5 % laiton"><span style="flex:60;background:#f3ede1;border:1px solid var(--line)"></span><span style="flex:25;background:#16130f"></span><span style="flex:10;background:#e2482d"></span><span style="flex:5;background:#c9973a"></span></div>
+        <p class="small muted" style="margin-top:10px;font-size:.88rem;color:var(--muted)">Proportions&nbsp;: 60&nbsp;% papier · 25&nbsp;% charbon · 10&nbsp;% flamme · 5&nbsp;% laiton. La flamme se réserve à l'action (boutons, mots-clés) : si tout est rouge, plus rien ne l'est.</p>
+      </div>
+    </section>
+
+    <!-- 05 Typographie -->
+    <section class="bb-sec" id="typo">
+      <div class="container">
+        <span class="bb-num">05 · LA TYPOGRAPHIE</span>
+        <h2 style="margin:14px 0 40px">Trois voix, <em>comme en brigade.</em></h2>
+        <div class="bb-grid3">
+          <div class="type-spec"><small>Titres et texte · la voix du chef</small><div class="sample" style="font-weight:800;font-size:4.4rem;letter-spacing:-.03em">Aa</div><h3>Bricolage Grotesque</h3><p>Généreuse, un peu brute, très lisible. ExtraBold pour les titres, Regular pour le texte. Gratuite (Google Fonts, licence OFL).</p></div>
+          <div class="type-spec"><small>Accent · la voix de la salle</small><div class="sample" style="font-family:var(--serif);font-style:italic;font-size:4.8rem">Aa</div><h3>Instrument Serif Italique</h3><p>Pour l'émotion, la citation, le mot qui chante dans un titre. Jamais plus de quelques mots d'affilée.</p></div>
+          <div class="type-spec"><small>Étiquettes · la voix du bon</small><div class="sample" style="font-family:var(--mono);font-size:3.8rem">Aa</div><h3>DM Mono</h3><p>Celle des tickets de cuisine&nbsp;: numéros, prix, surtitres en capitales espacées, mentions techniques.</p></div>
+        </div>
+        <div class="bb-card" style="margin-top:34px;padding:clamp(24px,4vw,44px)">
+          <p class="kicker">Surtitre en DM Mono</p>
+          <h2>Un titre en Bricolage <em>avec son accent.</em></h2>
+          <p class="lead" style="margin-top:18px">Le texte courant, en Bricolage Grotesque Regular, reste simple et chaleureux&nbsp;: des phrases courtes, qu'on peut lire entre deux commandes.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 06 Ton -->
+    <section class="bb-sec dark" id="ton">
+      <div class="container">
+        <span class="bb-num">06 · LE TON</span>
+        <h2 style="margin:14px 0 20px">On parle <em>comme au passe.</em></h2>
+        <p class="lead" style="margin-bottom:34px">Court, direct, chaleureux. On vouvoie le client, on tutoie jamais sans y être invité. On parle métier (couverts, service, carte) et on traduit le jargon web, toujours.</p>
+        <div style="overflow-x:auto">
+          <table class="tone">
+            <thead><tr><th>On dit</th><th>On ne dit pas</th></tr></thead>
+            <tbody>
+              <tr><td>Votre carte, lisible d'un pouce sur téléphone.</td><td>Une interface responsive optimisée pour le mobile-first.</td></tr>
+              <tr><td>Les clients qui vous cherchent sur Google vous trouvent.</td><td>Nous boostons votre SEO grâce à une stratégie de contenu.</td></tr>
+              <tr><td>Je vous rappelle entre 15 h et 18 h.</td><td>Réservez un créneau dans mon agenda en ligne.</td></tr>
+              <tr><td>Ça marche, c'est en ligne ce soir.</td><td>Votre demande a bien été prise en compte par nos équipes.</td></tr>
+              <tr><td>Avec ces chiffres, un site ne vous fera pas économiser beaucoup de commissions.</td><td>Multipliez votre chiffre d'affaires par 3 grâce au digital&nbsp;!</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- 07 Lexique -->
+    <section class="bb-sec" id="lexique">
+      <div class="container">
+        <span class="bb-num">07 · LE LEXIQUE MAISON</span>
+        <h2 style="margin:14px 0 40px">Les mots <em>de la maison.</em></h2>
+        <dl class="lexique">
+          <div><dt>Le passe</dt><dd>Le comptoir entre cuisine et salle. <b>Pour nous&nbsp;: le site, dernier contrôle avant le client.</b></dd></div>
+          <div><dt>Ça marche <em>!</em></dt><dd>«&nbsp;Bien reçu, c'est lancé.&nbsp;» <b>Notre signature et notre message de confirmation.</b></dd></div>
+          <div><dt>Envoyé <em>!</em></dt><dd>L'assiette part en salle. <b>La mise en ligne d'un site.</b></dd></div>
+          <div><dt>Le bon</dt><dd>Le ticket de commande. <b>Notre formulaire de contact.</b></dd></div>
+          <div><dt>La carte</dt><dd>Le menu. <b>Nos offres et nos tarifs.</b></dd></div>
+          <div><dt>La mise en place</dt><dd>Tout ce qu'on prépare avant le service. <b>Notre méthode, étape par étape.</b></dd></div>
+          <div><dt>L'amuse-bouche</dt><dd>Offert, pour ouvrir l'appétit. <b>L'audit gratuit de 20 minutes.</b></dd></div>
+          <div><dt>La dégustation</dt><dd>On goûte avant de servir. <b>La phase de test du site par le client.</b></dd></div>
+          <div><dt>Le coup de feu</dt><dd>Le rush du service. <b>Ce que le site doit tenir&nbsp;: vitesse, fiabilité.</b></dd></div>
+          <div><dt>L'Ardoise · Le Plat du chef · Le Menu dégustation</dt><dd><b>Les trois offres, de la plus simple à la plus complète.</b></dd></div>
+          <div><dt>Le service continu</dt><dd>La cuisine qui ne ferme pas. <b>L'abonnement d'entretien.</b></dd></div>
+          <div><dt>L'addition</dt><dd>Ce que ça coûte. <b>La calculette des commissions.</b></dd></div>
+        </dl>
+        <p class="bb-text" style="margin-top:24px;font-size:.95rem">Règle d'or&nbsp;: le lexique donne de la couleur, il ne doit jamais gêner la compréhension. Un bouton dit toujours clairement ce qu'il fait («&nbsp;Passer commande&nbsp;», pas «&nbsp;Envoyé&nbsp;!&nbsp;»).</p>
+      </div>
+    </section>
+
+    <!-- 08 Applications -->
+    <section class="bb-sec tint" id="applications">
+      <div class="container">
+        <span class="bb-num">08 · LES APPLICATIONS</span>
+        <h2 style="margin:14px 0 40px">La maison, <em>partout.</em></h2>
+
+        <h3 style="margin-bottom:22px">Carte de visite · 85 × 55 mm</h3>
+        <div class="cards-row" style="margin-bottom:60px">
+          <div class="bcard front"><img src="assets/symbole-blanc.svg" alt="" width="44"><div><img src="assets/logo-blanc.svg" alt="Le Passe" style="width:200px"></div></div>
+          <div class="bcard back"><div><strong>Jules Bourdon</strong>Sites web pour restaurants<br><em>Ça marche.</em></div><div data-card-contact>contact@…<br>lepasse.studio</div></div>
+        </div>
+
+        <h3 style="margin-bottom:22px">Publications Instagram · gabarits</h3>
+        <div class="cards-row" style="margin-bottom:60px">
+          <div class="insta"><small>Le passe · la phrase de la semaine</small><p class="q">«&nbsp;On a mis la carte en PDF. Personne ne l'ouvre.&nbsp;»</p><img src="assets/symbole-blanc.svg" alt="" width="40"></div>
+          <div class="insta b"><small style="color:var(--flame)">Avant · après</small><div><p style="font-weight:800;font-size:2.2rem;line-height:1;letter-spacing:-.02em;margin:0">Une carte lisible <em style="color:var(--flame)">en 1 seconde.</em></p></div><div style="display:flex;justify-content:space-between;align-items:center"><img src="assets/logo.svg" alt="" width="130"><small>Glissez →</small></div></div>
+          <div class="insta" style="background:var(--ink)"><small style="color:var(--brass)">Envoyé !</small><p class="q" style="color:var(--paper)">Nouveau site en ligne pour <span style="color:var(--flame)">[le restaurant]</span>.</p><small>Photo du restaurant en fond</small></div>
+        </div>
+
+        <h3 style="margin-bottom:22px">Signature e-mail</h3>
+        <div class="bb-grid2">
+          <div class="sig-box" id="sig-preview"></div>
+          <div>
+            <p class="bb-text">Copiez le code ci-dessous et collez-le dans les réglages de signature de votre messagerie (Gmail&nbsp;: Paramètres → Signature, en collant l'aperçu).</p>
+            <button class="btn btn-ink" type="button" id="copy-sig">Copier la signature</button>
+            <pre class="code" id="sig-code"></pre>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 09 Pitch -->
+    <section class="bb-sec" id="pitch">
+      <div class="container bb-grid2">
+        <div>
+          <span class="bb-num">09 · SE PRÉSENTER</span>
+          <h2 style="margin:14px 0 20px">L'histoire, <em>en trois temps.</em></h2>
+          <p class="lead">À dire au comptoir, au téléphone ou en tête d'un message. Toujours avec ses mots à soi&nbsp;: ce sont des repères, pas un texte à réciter.</p>
+        </div>
+        <div>
+          <div class="pitch"><small>10 secondes · la phrase</small><p>«&nbsp;Je travaille en restauration et je crée des sites pour les restaurants. Des sites qui tiennent le coup de feu.&nbsp;»</p></div>
+          <div class="pitch"><small>30 secondes · au comptoir</small><p>«&nbsp;Vous connaissez le passe&nbsp;: rien ne sort sans y être vérifié. Aujourd'hui, avant de venir, vos clients passent par votre téléphone&nbsp;: Google, votre site, votre carte. C'est votre nouveau passe, et souvent l'assiette y arrive froide. Moi, je suis du métier et je fais des sites&nbsp;: une carte lisible, des horaires justes, la réservation en direct, et vous changez le plat du jour en deux minutes. Je vous offre un petit audit de vingt minutes, entre deux services, si ça vous dit.&nbsp;»</p></div>
+          <div class="pitch"><small>Le message écrit · premier contact</small><p>«&nbsp;Bonjour [prénom], je m'appelle Jules, je travaille en restauration et je crée des sites pour les restaurants. J'ai regardé [nom du restaurant] en ligne : [une remarque précise et vraie, ex. votre carte n'est qu'en PDF / Google vous indique fermé le dimanche]. Je peux vous faire un point gratuit de vingt minutes, au moment qui vous arrange hors service. Ça vous dit&nbsp;? Jules — Le Passe&nbsp;»</p></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container foot-bottom" style="padding-top:0">
+      <span>Le Passe · Charte de marque v1</span>
+      <a href="./">Retour au site</a>
+    </div>
+  </footer>
+
+  <div class="float-cta" style="display:none"></div>
+  <script src="js/config.js"></script>
+  <script>
+    (() => {
+      const C = window.LP_CONFIG || {};
+      // Couleurs : copie du code au clic
+      document.querySelectorAll(".sw").forEach((b) => b.addEventListener("click", async () => {
+        try { await navigator.clipboard.writeText(b.dataset.hex); } catch {}
+        const s = b.querySelector("strong"), t = s.textContent;
+        s.textContent = "Copié !"; setTimeout(() => (s.textContent = t), 1200);
+      }));
+      // Carte de visite
+      const cc = document.querySelector("[data-card-contact]");
+      cc.innerHTML = [C.email, C.phone, "lepasse.studio"].filter(Boolean).join("<br>");
+      // Signature e-mail (tableau HTML compatible avec toutes les messageries)
+      const site = "https://lepasse.studio";
+      const sig = `<table cellpadding="0" cellspacing="0" style="font-family:Arial,Helvetica,sans-serif;color:#16130f"><tr><td style="padding-right:14px;border-right:3px solid #e2482d;vertical-align:middle"><img src="${site}/assets/favicon.png" width="48" height="48" alt="Le Passe" style="display:block;border-radius:10px"></td><td style="padding-left:14px;vertical-align:middle"><div style="font-size:15px;font-weight:bold">Jules Bourdon</div><div style="font-size:13px;color:#4a443b">Le Passe · sites web pour restaurants</div><div style="font-size:13px;margin-top:4px">${[C.phone, `<a href="${site}" style="color:#e2482d;text-decoration:none">lepasse.studio</a>`].filter(Boolean).join(" · ")}</div><div style="font-size:13px;font-style:italic;color:#e2482d;margin-top:4px">Ça marche.</div></td></tr></table>`;
+      document.getElementById("sig-preview").innerHTML = sig.replace(`${site}/assets/favicon.png`, "assets/favicon.png");
+      document.getElementById("sig-code").textContent = sig;
+      document.getElementById("copy-sig").addEventListener("click", async (e) => {
+        try { await navigator.clipboard.writeText(sig); e.target.textContent = "Copiée !"; } catch { e.target.textContent = "Sélectionnez le code ci-dessous"; }
+        setTimeout(() => (e.target.textContent = "Copier la signature"), 1600);
+      });
+    })();
+  </script>
+</body>
+</html>

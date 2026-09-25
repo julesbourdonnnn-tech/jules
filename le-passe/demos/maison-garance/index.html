@@ -1,0 +1,481 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Maison Garance · Bistrot de saison (démo Le Passe)</title>
+  <meta name="description" content="Démonstration Le Passe : le site d'un bistrot de saison imaginaire, avec ardoise du jour, carte, horaires en direct, version anglaise et réservation.">
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#9b2d24">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><circle cx='32' cy='32' r='30' fill='%239b2d24'/><text x='32' y='44' font-size='34' text-anchor='middle' fill='%23f6f0e4' font-family='Georgia' font-style='italic'>G</text></svg>">
+  <link rel="stylesheet" href="fonts/fonts.css">
+  <style>
+    :root { --garance: #9b2d24; --garance-d: #7c2019; --cream: #f6f0e4; --paper: #fbf7ef; --ink: #2a2320; --soft: #6b605a; --olive: #5e6b3a; --ochre: #d9a441; --line: #e3d8c6; --chalk: #23332c; --serif: "Fraunces", Georgia, serif; --sans: "Figtree", system-ui, sans-serif; }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { margin: 0; background: var(--cream); color: var(--ink); font: 16px/1.6 var(--sans); -webkit-font-smoothing: antialiased; }
+    img, svg { display: block; max-width: 100%; }
+    a { color: inherit; }
+    h1, h2, h3 { font-family: var(--serif); font-weight: 400; line-height: 1.05; margin: 0; letter-spacing: -.02em; }
+    h2 { font-size: clamp(2.1rem, 5vw, 3.4rem); }
+    h2 em, h1 em { color: var(--garance); }
+    .wrap { width: min(1120px, 100% - 32px); margin-inline: auto; }
+    .sec { padding: clamp(60px, 9vw, 110px) 0; }
+    .eyebrow { font-size: .74rem; letter-spacing: .24em; text-transform: uppercase; font-weight: 700; color: var(--garance); margin: 0 0 14px; }
+    .btn { display: inline-flex; align-items: center; gap: 8px; padding: 13px 24px; border-radius: 999px; background: var(--garance); color: #fff; text-decoration: none; font-weight: 700; border: 0; cursor: pointer; transition: background .2s, transform .2s; }
+    .btn:hover { background: var(--garance-d); transform: translateY(-1px); }
+    .btn.ghost { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--ink); }
+    .btn.ghost:hover { background: var(--ink); color: var(--cream); }
+
+    .demo-bar { background: #16130f; color: #f3ede1; font-size: .8rem; text-align: center; padding: 8px 12px; }
+    .demo-bar a { color: #e2482d; font-weight: 700; }
+    .apercu .demo-bar { display: none; }
+
+    header { position: sticky; top: 0; z-index: 50; background: rgba(246, 240, 228, .92); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
+    .nav { display: flex; align-items: center; justify-content: space-between; gap: 16px; height: 68px; }
+    .logo { font-family: var(--serif); font-size: 1.5rem; text-decoration: none; display: flex; align-items: baseline; gap: 8px; }
+    .logo em { color: var(--garance); }
+    .logo small { font: 600 .62rem var(--sans); letter-spacing: .2em; text-transform: uppercase; color: var(--soft); }
+    .nav ul { display: flex; gap: 22px; list-style: none; margin: 0; padding: 0; font-weight: 500; }
+    .nav ul a { text-decoration: none; }
+    .nav ul a:hover { color: var(--garance); }
+    .nav-right { display: flex; align-items: center; gap: 10px; }
+    .lang { display: flex; border-radius: 999px; box-shadow: inset 0 0 0 1.5px var(--line); padding: 3px; }
+    .lang button { border: 0; background: none; font: 700 .74rem var(--sans); padding: 5px 9px; border-radius: 999px; cursor: pointer; color: var(--soft); }
+    .lang button[aria-pressed="true"] { background: var(--ink); color: var(--cream); }
+    .nav .btn { padding: 10px 18px; }
+
+    .hero { padding: clamp(40px, 7vw, 90px) 0 clamp(50px, 7vw, 90px); }
+    .hero-grid { display: grid; grid-template-columns: 1.1fr .9fr; gap: 48px; align-items: center; }
+    .status { display: inline-flex; align-items: center; gap: 9px; background: var(--paper); border: 1px solid var(--line); border-radius: 999px; padding: 7px 14px; font-weight: 600; font-size: .88rem; margin-bottom: 22px; }
+    .status i { width: 9px; height: 9px; border-radius: 50%; background: #3f9b5b; box-shadow: 0 0 0 4px rgba(63, 155, 91, .18); }
+    .status.closed i { background: var(--garance); box-shadow: 0 0 0 4px rgba(155, 45, 36, .15); }
+    .hero h1 { font-size: clamp(2.8rem, 7vw, 5.4rem); }
+    .hero h1 em { font-style: italic; }
+    .hero p.lead { font-size: 1.15rem; color: var(--soft); max-width: 46ch; margin: 22px 0 30px; }
+    .hero-cta { display: flex; gap: 10px; flex-wrap: wrap; }
+    .hero-art { position: relative; aspect-ratio: 1; }
+    .hero-art .plate-big { position: absolute; inset: 4%; animation: turn 60s linear infinite; }
+    @keyframes turn { to { transform: rotate(360deg); } }
+    .hero-art .tag { position: absolute; bottom: 6%; left: -2%; background: var(--paper); border-radius: 14px; padding: 12px 16px; box-shadow: 0 20px 40px -20px rgba(0,0,0,.35); font-size: .88rem; max-width: 210px; }
+    .hero-art .tag strong { font-family: var(--serif); font-size: 1.15rem; display: block; font-weight: 600; }
+
+    .ardoise { background: var(--chalk); color: #eee8dc; border-radius: 18px; padding: clamp(28px, 5vw, 56px); position: relative; overflow: hidden; box-shadow: inset 0 0 0 10px #6b4a2f, inset 0 0 0 12px #533823, 0 30px 60px -30px rgba(0,0,0,.6); }
+    .ardoise::before { content: ""; position: absolute; inset: 0; background: radial-gradient(ellipse at 30% 20%, rgba(255,255,255,.07), transparent 60%), radial-gradient(ellipse at 80% 90%, rgba(255,255,255,.05), transparent 50%); pointer-events: none; }
+    .ardoise h2 { font-family: "Caveat", cursive; font-weight: 700; font-size: clamp(2.6rem, 6vw, 3.8rem); color: #fff; }
+    .ardoise .date { font-family: "Caveat", cursive; font-size: 1.5rem; color: var(--ochre); }
+    .chalk-list { list-style: none; padding: 0; margin: 26px 0 0; display: grid; gap: 16px; font-family: "Caveat", cursive; font-size: clamp(1.45rem, 3vw, 1.8rem); line-height: 1.2; }
+    .chalk-list li { display: flex; justify-content: space-between; gap: 16px; border-bottom: 1px dashed rgba(255,255,255,.18); padding-bottom: 12px; }
+    .chalk-list small { display: block; font-family: var(--sans); font-size: .82rem; color: #b9b3a7; margin-top: 4px; }
+    .chalk-list b { color: var(--ochre); white-space: nowrap; font-weight: 700; }
+    .ardoise .note { font-family: var(--sans); font-size: .82rem; color: #b9b3a7; margin: 22px 0 0; }
+
+    .menu-head { display: flex; justify-content: space-between; align-items: end; gap: 20px; flex-wrap: wrap; margin-bottom: 30px; }
+    .tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+    .tabs button { border: 0; background: var(--paper); box-shadow: inset 0 0 0 1px var(--line); padding: 10px 18px; border-radius: 999px; font-weight: 700; cursor: pointer; font-size: .92rem; }
+    .tabs button[aria-selected="true"] { background: var(--garance); color: #fff; box-shadow: none; }
+    .filters { display: flex; gap: 14px; flex-wrap: wrap; font-size: .9rem; margin: 0 0 26px; }
+    .filters label { display: inline-flex; gap: 7px; align-items: center; cursor: pointer; }
+    .filters input { accent-color: var(--garance); width: 17px; height: 17px; }
+    .dishes { display: grid; grid-template-columns: 1fr 1fr; gap: 0 48px; }
+    .dish { padding: 20px 0; border-bottom: 1px solid var(--line); display: grid; grid-template-columns: 64px 1fr auto; gap: 16px; align-items: start; }
+    .dish svg { width: 64px; height: 64px; }
+    .dish h3 { font-size: 1.28rem; }
+    .dish p { margin: 4px 0 8px; color: var(--soft); font-size: .93rem; }
+    .dish .price { font-family: var(--serif); font-size: 1.25rem; white-space: nowrap; }
+    .badges { display: flex; gap: 6px; flex-wrap: wrap; }
+    .badge { font-size: .7rem; font-weight: 700; letter-spacing: .04em; border-radius: 999px; padding: 3px 9px; background: var(--paper); box-shadow: inset 0 0 0 1px var(--line); color: var(--soft); }
+    .badge.v { color: var(--olive); box-shadow: inset 0 0 0 1px #b8c29a; background: #eef0e2; }
+    .badge.sg { color: #8a6417; box-shadow: inset 0 0 0 1px #e3c98d; background: #f8efd9; }
+    .allerg { margin-top: 26px; font-size: .86rem; color: var(--soft); }
+
+    .maison { background: var(--paper); }
+    .maison-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 56px; align-items: center; }
+    .maison p { color: var(--soft); font-size: 1.05rem; }
+    .maison p.eyebrow { color: var(--garance); font-size: .74rem; }
+    .maison p.quote-chef, .quote-chef { font-family: var(--serif); font-style: italic; font-size: 1.6rem; line-height: 1.3; color: var(--ink); border-left: 3px solid var(--garance); padding-left: 20px; margin: 26px 0; }
+    .mosaic { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .mosaic > div { border-radius: 18px; aspect-ratio: 1; display: grid; place-items: center; overflow: hidden; }
+    .mosaic > div:nth-child(1) { background: #e8d6c1; }
+    .mosaic > div:nth-child(2) { background: var(--garance); transform: translateY(26px); }
+    .mosaic > div:nth-child(3) { background: #d7dcc5; }
+    .mosaic > div:nth-child(4) { background: var(--chalk); transform: translateY(26px); }
+    .mosaic svg { width: 78%; }
+
+    .groups { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 34px; }
+    .group { background: var(--paper); border: 1px solid var(--line); border-radius: 18px; padding: 26px; }
+    .group strong { font-family: var(--serif); font-size: 2rem; font-weight: 400; color: var(--garance); display: block; }
+    .group h3 { font-size: 1.25rem; margin: 6px 0 8px; }
+    .group p { color: var(--soft); font-size: .93rem; margin: 0; }
+
+    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
+    .hours { width: 100%; border-collapse: collapse; font-size: .98rem; }
+    .hours td { padding: 12px 0; border-bottom: 1px solid var(--line); }
+    .hours td:last-child { text-align: right; color: var(--soft); }
+    .hours tr.today td { font-weight: 700; color: var(--garance); }
+    .map { border-radius: 18px; overflow: hidden; background: #e9e1d2; position: relative; min-height: 280px; }
+    .map svg { width: 100%; height: 100%; position: absolute; inset: 0; }
+    .map .pin { position: absolute; left: 50%; top: 46%; transform: translate(-50%, -100%); background: var(--garance); color: #fff; font-weight: 700; font-size: .85rem; padding: 8px 12px; border-radius: 10px; white-space: nowrap; box-shadow: 0 10px 20px -8px rgba(0,0,0,.4); }
+    .map .pin::after { content: ""; position: absolute; left: 50%; bottom: -6px; transform: translateX(-50%) rotate(45deg); width: 12px; height: 12px; background: var(--garance); }
+    .access { list-style: none; padding: 0; margin: 18px 0 0; display: grid; gap: 6px; color: var(--soft); font-size: .95rem; }
+
+    .resa { background: var(--garance); color: #fff; border-radius: 26px; padding: clamp(28px, 5vw, 60px); display: grid; grid-template-columns: .9fr 1.1fr; gap: 40px; }
+    .resa h2 em { color: var(--ochre); }
+    .resa p { color: #f1d9d4; }
+    .resa form { background: var(--paper); color: var(--ink); border-radius: 18px; padding: 24px; display: grid; gap: 16px; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .resa label { font-size: .74rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--soft); display: grid; gap: 6px; }
+    .resa input, .resa select { font: 500 1rem var(--sans); padding: 11px 12px; border-radius: 10px; border: 1.5px solid var(--line); background: #fff; color: var(--ink); width: 100%; }
+    .slots { display: flex; flex-wrap: wrap; gap: 6px; }
+    .slots button { border: 1.5px solid var(--line); background: #fff; border-radius: 8px; padding: 7px 10px; font: 700 .86rem var(--sans); cursor: pointer; }
+    .slots button[aria-pressed="true"] { background: var(--ink); color: #fff; border-color: var(--ink); }
+    .slots button:disabled { opacity: .35; cursor: not-allowed; text-decoration: line-through; }
+    .resa .ok { text-align: center; padding: 30px 10px; }
+    .resa .ok strong { font-family: var(--serif); font-size: 1.8rem; font-weight: 400; display: block; margin-bottom: 8px; color: var(--garance); }
+
+    footer { padding: 50px 0 40px; font-size: .9rem; color: var(--soft); }
+    .foot { display: flex; justify-content: space-between; gap: 20px; flex-wrap: wrap; border-top: 1px solid var(--line); padding-top: 26px; }
+    .made { display: inline-flex; align-items: center; gap: 8px; text-decoration: none; font-weight: 700; color: var(--ink); }
+    .made svg { width: 22px; }
+
+    .reveal { opacity: 0; transform: translateY(18px); transition: opacity .8s ease, transform .8s ease; }
+    .reveal.in { opacity: 1; transform: none; }
+
+    @media (max-width: 860px) {
+      .nav ul { display: none; }
+      .hero-grid, .maison-grid, .info-grid, .resa, .dishes { grid-template-columns: 1fr; }
+      .hero-art { max-width: 380px; margin: 0 auto; width: 100%; }
+      .groups { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 480px) {
+      .logo small { display: none; }
+      .nav .btn { padding: 9px 14px; font-size: .9rem; }
+      .dish { grid-template-columns: 48px 1fr auto; gap: 12px; }
+      .dish svg { width: 48px; height: 48px; }
+      .row { grid-template-columns: 1fr; }
+    }
+    @media (prefers-reduced-motion: reduce) { .hero-art .plate-big { animation: none; } .reveal { opacity: 1; transform: none; } }
+  </style>
+</head>
+<body>
+  <!-- Illustrations d'assiettes vues du dessus (remplacées par vos photos sur un vrai site) -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <symbol id="p-veloute" viewBox="0 0 100 100"><circle cx="50" cy="50" r="48" fill="#fff"/><circle cx="50" cy="50" r="40" fill="#f1ebe0"/><circle cx="50" cy="50" r="33" fill="#e39b3f"/><path d="M34 52c6-10 16 6 24-2s10 4 8 6" stroke="#fbf1dc" stroke-width="3" fill="none" stroke-linecap="round"/><circle cx="44" cy="40" r="2.2" fill="#5e6b3a"/><circle cx="58" cy="60" r="1.8" fill="#5e6b3a"/><circle cx="62" cy="44" r="1.5" fill="#5e6b3a"/></symbol>
+      <symbol id="p-salade" viewBox="0 0 100 100"><circle cx="50" cy="50" r="48" fill="#fff"/><circle cx="50" cy="50" r="40" fill="#f1ebe0"/><ellipse cx="40" cy="42" rx="14" ry="8" fill="#7f9447" transform="rotate(-30 40 42)"/><ellipse cx="60" cy="44" rx="13" ry="7" fill="#5e6b3a" transform="rotate(25 60 44)"/><ellipse cx="50" cy="60" rx="15" ry="8" fill="#93a85a" transform="rotate(8 50 60)"/><circle cx="46" cy="50" r="6" fill="#f6e7c8"/><circle cx="58" cy="57" r="4.5" fill="#9b2d24"/><circle cx="38" cy="58" r="3.5" fill="#9b2d24"/><circle cx="62" cy="36" r="3" fill="#d9a441"/></symbol>
+      <symbol id="p-poisson" viewBox="0 0 100 100"><circle cx="50" cy="50" r="48" fill="#fff"/><circle cx="50" cy="50" r="40" fill="#f1ebe0"/><path d="M22 56c10-4 20-6 30-3" stroke="#d9a441" stroke-width="7" fill="none" stroke-linecap="round" opacity=".7"/><path d="M30 46c10-12 34-12 44 0-10 10-34 10-44 0z" fill="#f4dcc6"/><path d="M36 44l6 4M46 42l6 5M56 42l6 5" stroke="#e2bfa0" stroke-width="2" stroke-linecap="round"/><circle cx="36" cy="64" r="4" fill="#5e6b3a"/><circle cx="46" cy="68" r="3.5" fill="#7f9447"/><circle cx="68" cy="62" r="2.5" fill="#9b2d24"/></symbol>
+      <symbol id="p-viande" viewBox="0 0 100 100"><circle cx="50" cy="50" r="48" fill="#fff"/><circle cx="50" cy="50" r="40" fill="#f1ebe0"/><ellipse cx="48" cy="48" rx="20" ry="15" fill="#7c2f22"/><ellipse cx="48" cy="48" rx="14" ry="9" fill="#9b4a3a"/><path d="M30 64c8 4 30 6 40-2" stroke="#5a1f15" stroke-width="4" fill="none" stroke-linecap="round"/><rect x="62" y="30" width="12" height="7" rx="3" fill="#e9c46a" transform="rotate(20 68 33)"/><rect x="64" y="40" width="12" height="7" rx="3" fill="#e9c46a" transform="rotate(-10 70 43)"/><circle cx="34" cy="36" r="3" fill="#5e6b3a"/></symbol>
+      <symbol id="p-tarte" viewBox="0 0 100 100"><circle cx="50" cy="50" r="48" fill="#fff"/><circle cx="50" cy="50" r="40" fill="#f1ebe0"/><path d="M50 50L22 40a30 30 0 0 1 44-16z" fill="#d9a441"/><path d="M50 50L25 41a27 27 0 0 1 39-14z" fill="#f0c979"/><circle cx="36" cy="37" r="3" fill="#9b2d24"/><circle cx="46" cy="32" r="3" fill="#9b2d24"/><circle cx="55" cy="31" r="3" fill="#9b2d24"/><path d="M58 64c6-2 12 0 14 4" stroke="#fff" stroke-width="5" stroke-linecap="round"/><circle cx="66" cy="60" r="6" fill="#fbf1dc"/></symbol>
+      <symbol id="p-choco" viewBox="0 0 100 100"><circle cx="50" cy="50" r="48" fill="#fff"/><circle cx="50" cy="50" r="40" fill="#f1ebe0"/><circle cx="50" cy="50" r="18" fill="#4a2c20"/><circle cx="50" cy="50" r="12" fill="#5d3a2a"/><path d="M28 70c10-6 34-6 44 0" stroke="#4a2c20" stroke-width="2.5" fill="none" stroke-dasharray="2 5" stroke-linecap="round"/><circle cx="66" cy="34" r="5" fill="#fbf1dc"/><circle cx="36" cy="32" r="2" fill="#9b2d24"/></symbol>
+      <symbol id="p-vin" viewBox="0 0 100 100"><circle cx="50" cy="50" r="48" fill="#fff"/><circle cx="50" cy="50" r="40" fill="#f1ebe0"/><circle cx="50" cy="50" r="22" fill="#fff" stroke="#e3d8c6" stroke-width="2"/><circle cx="50" cy="50" r="15" fill="#7c2019"/><circle cx="45" cy="45" r="4" fill="#a3443a" opacity=".6"/></symbol>
+      <symbol id="p-fromage" viewBox="0 0 100 100"><circle cx="50" cy="50" r="48" fill="#fff"/><circle cx="50" cy="50" r="40" fill="#f1ebe0"/><path d="M30 60l18-28 14 28z" fill="#f2d98f"/><circle cx="44" cy="52" r="2.5" fill="#e3c26c"/><rect x="56" y="36" width="16" height="12" rx="3" fill="#f8f1de" stroke="#e3d8c6"/><circle cx="36" cy="38" r="4" fill="#5e6b3a"/><circle cx="66" cy="62" r="3.5" fill="#7c2019"/><circle cx="72" cy="56" r="3" fill="#7c2019"/></symbol>
+    </defs>
+  </svg>
+
+  <div class="demo-bar">Démo réalisée par <a href="../../">Le Passe</a> · Maison Garance est un restaurant imaginaire.</div>
+
+  <header>
+    <nav class="wrap nav">
+      <a class="logo" href="#"><span>Maison <em>Garance</em></span><small data-i18n="kind">Bistrot de saison</small></a>
+      <ul>
+        <li><a href="#ardoise" data-i18n="nav.ardoise">L'ardoise</a></li>
+        <li><a href="#carte" data-i18n="nav.carte">La carte</a></li>
+        <li><a href="#maison" data-i18n="nav.maison">La maison</a></li>
+        <li><a href="#infos" data-i18n="nav.infos">Horaires &amp; accès</a></li>
+      </ul>
+      <div class="nav-right">
+        <div class="lang" role="group" aria-label="Langue"><button type="button" aria-pressed="true" data-lang="fr">FR</button><button type="button" aria-pressed="false" data-lang="en">EN</button></div>
+        <a class="btn" href="#reserver" data-i18n="cta.book">Réserver</a>
+      </div>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="wrap hero-grid">
+        <div>
+          <span class="status" id="status"><i></i><span id="status-text">…</span></span>
+          <h1 data-i18n-html="hero.title">Le marché du matin, <em>dans l'assiette du soir.</em></h1>
+          <p class="lead" data-i18n="hero.lead">Un bistrot de quartier, une cuisine de saison qui change chaque semaine et une cave de vins vivants choisis chez des vignerons que nous connaissons.</p>
+          <div class="hero-cta">
+            <a class="btn" href="#reserver" data-i18n="cta.table">Réserver une table</a>
+            <a class="btn ghost" href="#carte" data-i18n="cta.menu">Voir la carte</a>
+          </div>
+        </div>
+        <div class="hero-art">
+          <svg class="plate-big" viewBox="0 0 100 100" aria-hidden="true"><use href="#p-poisson"/></svg>
+          <div class="tag"><strong data-i18n="hero.tagTitle">Plat du jour</strong><span id="hero-pdj">Lieu jaune, beurre blanc &amp; poireaux</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="sec" id="ardoise" style="padding-top:0">
+      <div class="wrap">
+        <div class="ardoise reveal">
+          <h2 data-i18n="ardoise.title">L'ardoise du jour</h2>
+          <div class="date" id="ardoise-date"></div>
+          <ul class="chalk-list" id="chalk"></ul>
+          <p class="note" data-i18n="ardoise.note">Mise à jour chaque matin par le chef, depuis son téléphone.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="sec" id="carte" style="padding-top:0">
+      <div class="wrap">
+        <div class="menu-head">
+          <div><p class="eyebrow" data-i18n="carte.kicker">La carte d'automne</p><h2 data-i18n-html="carte.title">Ce qu'on <em>cuisine</em> en ce moment</h2></div>
+          <div class="tabs" role="tablist" id="tabs"></div>
+        </div>
+        <div class="filters">
+          <label><input type="checkbox" id="f-v"> <span data-i18n="filter.v">Végétarien</span></label>
+          <label><input type="checkbox" id="f-sg"> <span data-i18n="filter.sg">Sans gluten</span></label>
+        </div>
+        <div class="dishes" id="dishes"></div>
+        <p class="allerg" data-i18n="carte.allerg">Les allergènes sont indiqués pour chaque plat ; l'équipe vous renseigne volontiers. Viandes : origine France.</p>
+      </div>
+    </section>
+
+    <section class="sec maison" id="maison">
+      <div class="wrap maison-grid">
+        <div class="reveal">
+          <p class="eyebrow" data-i18n="maison.kicker">La maison</p>
+          <h2 data-i18n-html="maison.title">Une petite salle, <em>une grande table.</em></h2>
+          <p class="quote-chef" data-i18n="maison.quote">« Je fais le marché à 7 heures. Ce que je trouve décide de la carte. »</p>
+          <p data-i18n="maison.p1">Garance et Hugo ont ouvert la maison dans un ancien atelier de teinturier, d'où le nom : la garance donnait autrefois le rouge des tissus. Trente-deux couverts, une cuisine ouverte et un comptoir où l'on peut dîner seul.</p>
+          <p data-i18n="maison.p2">Les légumes viennent de deux maraîchers à moins de 40 km, le pain d'un boulanger du quartier, et les vins de vignerons qui travaillent sans artifice.</p>
+        </div>
+        <div class="mosaic reveal" aria-hidden="true">
+          <div><svg viewBox="0 0 100 100"><use href="#p-salade"/></svg></div>
+          <div><svg viewBox="0 0 100 100"><use href="#p-viande"/></svg></div>
+          <div><svg viewBox="0 0 100 100"><use href="#p-tarte"/></svg></div>
+          <div><svg viewBox="0 0 100 100"><use href="#p-vin"/></svg></div>
+        </div>
+      </div>
+      <div class="wrap">
+        <div class="groups">
+          <div class="group reveal"><strong>12</strong><h3 data-i18n="g1.t">La grande table</h3><p data-i18n="g1.p">Pour les anniversaires et les tablées d'amis, menu unique en trois temps.</p></div>
+          <div class="group reveal"><strong>32</strong><h3 data-i18n="g2.t">La maison entière</h3><p data-i18n="g2.p">Privatisation le dimanche soir et le lundi, pour vos fêtes et vos équipes.</p></div>
+          <div class="group reveal"><strong>1</strong><h3 data-i18n="g3.t">Le comptoir</h3><p data-i18n="g3.p">Six places face à la cuisine, sans réservation, pour dîner seul ou à deux.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="sec" id="infos">
+      <div class="wrap info-grid">
+        <div class="reveal">
+          <p class="eyebrow" data-i18n="infos.kicker">Horaires &amp; accès</p>
+          <h2 data-i18n-html="infos.title">Quand venir <em>nous voir</em></h2>
+          <table class="hours" id="hours" style="margin-top:24px"></table>
+        </div>
+        <div class="reveal">
+          <div class="map" aria-label="Plan d'accès (illustration)">
+            <svg viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><rect width="400" height="300" fill="#e9e1d2"/><path d="M-10 210 C 90 180, 160 240, 410 170" stroke="#b9d0d6" stroke-width="26" fill="none"/><g stroke="#fbf7ef" stroke-width="12" fill="none"><path d="M0 90 H400"/><path d="M130 0 V300"/><path d="M270 0 L230 300"/><path d="M0 150 L400 120" stroke-width="7"/></g><g fill="#dcd2bf"><rect x="20" y="10" width="95" height="65" rx="6"/><rect x="146" y="10" width="110" height="65" rx="6"/><rect x="284" y="10" width="110" height="65" rx="6"/><rect x="20" y="106" width="95" height="36" rx="6"/><rect x="146" y="102" width="100" height="36" rx="6"/></g><rect x="290" y="96" width="100" height="34" rx="6" fill="#c9d6b0"/></svg>
+            <span class="pin">Maison Garance</span>
+          </div>
+          <ul class="access">
+            <li data-i18n="acc.1">📍 14 rue des Teinturiers (adresse fictive)</li>
+            <li data-i18n="acc.2">🚇 Métro Halles, 3 minutes à pied</li>
+            <li data-i18n="acc.3">♿ Salle de plain-pied, accessible en fauteuil</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="sec" id="reserver" style="padding-top:0">
+      <div class="wrap">
+        <div class="resa reveal">
+          <div>
+            <p class="eyebrow" style="color:#f7c9bf" data-i18n="resa.kicker">Réservation</p>
+            <h2 data-i18n-html="resa.title">Une table <em>ce soir ?</em></h2>
+            <p data-i18n="resa.p">Réservation confirmée par e-mail. Pour plus de 8 personnes, écrivez-nous : nous préparons un menu pour vous.</p>
+          </div>
+          <form id="resa-form">
+            <div class="row">
+              <label><span data-i18n="resa.date">Date</span><input type="date" id="r-date" required></label>
+              <label><span data-i18n="resa.guests">Couverts</span><select id="r-n"><option>1</option><option selected>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option></select></label>
+            </div>
+            <div><label style="margin-bottom:6px"><span data-i18n="resa.time">Heure</span></label><div class="slots" id="slots"></div></div>
+            <div class="row">
+              <label><span data-i18n="resa.name">Nom</span><input id="r-name" required autocomplete="name"></label>
+              <label><span data-i18n="resa.phone">Téléphone</span><input id="r-phone" type="tel" autocomplete="tel"></label>
+            </div>
+            <button class="btn" type="submit" style="justify-content:center" data-i18n="resa.submit">Demander la table</button>
+          </form>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap foot">
+      <span>© Maison Garance · <span data-i18n="foot.demo">Restaurant imaginaire, site de démonstration</span></span>
+      <a class="made" href="../../"><svg viewBox="0 0 64 64" aria-hidden="true"><path fill="none" stroke="#e2482d" stroke-width="3.6" stroke-linecap="round" d="M25.64 12.64A9 9 0 0 1 38.36 12.64M21.39 8.39A15 15 0 0 1 42.61 8.39"/><rect x="28.5" y="16.5" width="7" height="5" rx="1.6" fill="#16130f"/><path fill="#16130f" d="M10 44a22 22 0 0 1 44 0z"/><rect x="6" y="47" width="52" height="6" rx="3" fill="#16130f"/></svg><span data-i18n="foot.made">Site fait par Le Passe</span></a>
+    </div>
+  </footer>
+
+  <script>
+  (() => {
+    "use strict";
+    if (new URLSearchParams(location.search).has("apercu")) document.body.classList.add("apercu");
+    let lang = "fr";
+
+    const T = {
+      en: {
+        "kind": "Seasonal bistro", "nav.ardoise": "Today's board", "nav.carte": "Menu", "nav.maison": "Our story", "nav.infos": "Hours & access",
+        "cta.book": "Book", "cta.table": "Book a table", "cta.menu": "See the menu",
+        "hero.title": "This morning's market, <em>on tonight's plate.</em>",
+        "hero.lead": "A neighbourhood bistro, seasonal cooking that changes every week, and a cellar of natural wines from winemakers we know personally.",
+        "hero.tagTitle": "Dish of the day", "ardoise.title": "Today's board", "ardoise.note": "Updated every morning by the chef, from his phone.",
+        "carte.kicker": "Autumn menu", "carte.title": "What we're <em>cooking</em> right now", "filter.v": "Vegetarian", "filter.sg": "Gluten-free",
+        "carte.allerg": "Allergens are listed for every dish; our team is happy to help. All meat is from France.",
+        "maison.kicker": "Our story", "maison.title": "A small room, <em>a big table.</em>", "maison.quote": "“I'm at the market by 7 am. What I find decides the menu.”",
+        "maison.p1": "Garance and Hugo opened the bistro in a former dyer's workshop, hence the name: madder (garance) was once used to dye fabric red. Thirty-two seats, an open kitchen and a counter where you can dine alone.",
+        "maison.p2": "Vegetables come from two growers less than 40 km away, bread from a local baker, and wines from winemakers who work without artifice.",
+        "g1.t": "The long table", "g1.p": "For birthdays and groups of friends, a three-course set menu.", "g2.t": "The whole place", "g2.p": "Private hire on Sunday evenings and Mondays, for parties and teams.", "g3.t": "The counter", "g3.p": "Six seats facing the kitchen, no booking needed, for one or two.",
+        "infos.kicker": "Hours & access", "infos.title": "When to <em>come by</em>",
+        "acc.1": "📍 14 rue des Teinturiers (fictional address)", "acc.2": "🚇 Halles metro, 3-minute walk", "acc.3": "♿ Step-free dining room, wheelchair accessible",
+        "resa.kicker": "Booking", "resa.title": "A table <em>tonight?</em>", "resa.p": "Bookings are confirmed by email. For more than 8 guests, write to us: we'll prepare a menu for you.",
+        "resa.date": "Date", "resa.guests": "Guests", "resa.time": "Time", "resa.name": "Name", "resa.phone": "Phone", "resa.submit": "Request the table",
+        "foot.demo": "Fictional restaurant, demo website", "foot.made": "Website by Le Passe",
+      },
+    };
+    const FR = {};
+    document.querySelectorAll("[data-i18n]").forEach((el) => (FR[el.dataset.i18n] = el.textContent));
+    document.querySelectorAll("[data-i18n-html]").forEach((el) => (FR[el.dataset.i18nHtml] = el.innerHTML));
+
+    const W = {
+      fr: { days: ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"], closed: "Fermé", openUntil: (h) => `Ouvert · jusqu'à ${h}`, opensAt: (d, h) => `Fermé · ouvre ${d} à ${h}`, today: "aujourd'hui", tomorrow: "demain", tabs: { entrees: "Entrées", plats: "Plats", desserts: "Desserts", vins: "Vins" }, v: "Végétarien", sg: "Sans gluten", full: "complet", ok: (n, d, h) => `Demande envoyée : ${n} couverts, ${d} à ${h}.`, okSub: "Sur votre vrai site, elle arrive directement dans votre boîte mail ou votre outil de réservation.", pick: "Choisissez une heure.", allergens: "Allergènes" },
+      en: { days: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"], closed: "Closed", openUntil: (h) => `Open · until ${h}`, opensAt: (d, h) => `Closed · opens ${d} at ${h}`, today: "today", tomorrow: "tomorrow", tabs: { entrees: "Starters", plats: "Mains", desserts: "Desserts", vins: "Wines" }, v: "Vegetarian", sg: "Gluten-free", full: "full", ok: (n, d, h) => `Request sent: ${n} guests, ${d} at ${h}.`, okSub: "On your real website, it goes straight to your inbox or booking tool.", pick: "Please choose a time.", allergens: "Allergens" },
+    };
+
+    // Horaires : [ouverture, fermeture] en heures décimales, par jour (0 = dimanche)
+    const HOURS = { 0: [[12, 15]], 1: [], 2: [[12, 14.5], [19, 22.5]], 3: [[12, 14.5], [19, 22.5]], 4: [[12, 14.5], [19, 22.5]], 5: [[12, 14.5], [19, 23]], 6: [[12, 14.5], [19, 23]] };
+    const hh = (x) => { const H = Math.floor(x), M = Math.round((x - H) * 60); return lang === "fr" ? `${H}h${M ? String(M).padStart(2, "0") : ""}` : `${H}:${String(M).padStart(2, "0")}`; };
+    const AL = { "Fruits à coque": "Tree nuts", "Lait": "Milk", "Sulfites": "Sulphites", "Gluten": "Gluten", "Œuf": "Egg", "Moutarde": "Mustard", "Poisson": "Fish", "Céleri": "Celery", "Gluten (pain)": "Gluten (bread)" };
+    const allergens = (a) => (lang === "fr" ? a : a.split(", ").map((x) => AL[x[0].toUpperCase() + x.slice(1)] || x).join(", "));
+
+    const MENU = {
+      entrees: [
+        { i: "p-veloute", fr: ["Velouté de potimarron", "Noisettes torréfiées, huile de sauge"], en: ["Red kuri squash velouté", "Roasted hazelnuts, sage oil"], p: 9, v: 1, sg: 1, a: "Fruits à coque, lait" },
+        { i: "p-salade", fr: ["Salade de betteraves", "Chèvre frais de la ferme, noix, vinaigrette au cidre"], en: ["Beetroot salad", "Fresh farm goat cheese, walnuts, cider dressing"], p: 11, v: 1, sg: 1, a: "Lait, fruits à coque, sulfites" },
+        { i: "p-viande", fr: ["Terrine de campagne maison", "Pickles de légumes, pain au levain"], en: ["Homemade country terrine", "Pickled vegetables, sourdough bread"], p: 10, a: "Gluten, œuf, sulfites, moutarde" },
+        { i: "p-poisson", fr: ["Maquereau mariné", "Pomme verte, raifort, aneth"], en: ["Marinated mackerel", "Green apple, horseradish, dill"], p: 12, sg: 1, a: "Poisson, moutarde" },
+      ],
+      plats: [
+        { i: "p-poisson", fr: ["Lieu jaune de ligne", "Beurre blanc, poireaux fondants"], en: ["Line-caught pollack", "Beurre blanc, melting leeks"], p: 24, sg: 1, a: "Poisson, lait, sulfites" },
+        { i: "p-viande", fr: ["Joue de bœuf confite", "Sept heures au vin rouge, purée à l'huile d'olive"], en: ["Slow-braised beef cheek", "Seven hours in red wine, olive oil mash"], p: 23, sg: 1, a: "Céleri, sulfites" },
+        { i: "p-salade", fr: ["Risotto d'épeautre", "Champignons des bois, parmesan, cerfeuil"], en: ["Spelt risotto", "Wild mushrooms, parmesan, chervil"], p: 19, v: 1, a: "Gluten, lait, céleri" },
+        { i: "p-viande", fr: ["Volaille fermière rôtie", "Jus corsé, légumes racines du marché"], en: ["Roast free-range chicken", "Rich jus, market root vegetables"], p: 22, sg: 1, a: "Céleri, lait" },
+      ],
+      desserts: [
+        { i: "p-tarte", fr: ["Tarte fine aux pommes", "Crème crue de la ferme"], en: ["Thin apple tart", "Raw farm cream"], p: 9, v: 1, a: "Gluten, lait, œuf" },
+        { i: "p-choco", fr: ["Mousse au chocolat noir", "Fleur de sel, huile d'olive"], en: ["Dark chocolate mousse", "Sea salt, olive oil"], p: 8, v: 1, sg: 1, a: "Œuf, lait" },
+        { i: "p-fromage", fr: ["Assiette de fromages affinés", "Choisis par notre fromager"], en: ["Aged cheese plate", "Selected by our cheesemonger"], p: 11, v: 1, a: "Lait, gluten (pain)" },
+      ],
+      vins: [
+        { i: "p-vin", fr: ["Gamay, Beaujolais", "Fruité, léger · le verre / la bouteille"], en: ["Gamay, Beaujolais", "Fruity, light · glass / bottle"], p: "6 / 32", v: 1, sg: 1, a: "Sulfites" },
+        { i: "p-vin", fr: ["Chenin, Anjou", "Minéral, tendu · le verre / la bouteille"], en: ["Chenin, Anjou", "Mineral, crisp · glass / bottle"], p: "7 / 36", v: 1, sg: 1, a: "Sulfites" },
+        { i: "p-vin", fr: ["Syrah, Saint-Joseph", "Épicé, profond · la bouteille"], en: ["Syrah, Saint-Joseph", "Spicy, deep · bottle"], p: 48, v: 1, sg: 1, a: "Sulfites" },
+      ],
+    };
+    const ARDOISE = [
+      { fr: ["Œuf parfait, crème de cèpes", "Entrée du jour"], en: ["Slow-cooked egg, porcini cream", "Starter of the day"], p: 9 },
+      { fr: ["Lieu jaune, beurre blanc & poireaux", "Plat du jour · arrivage de ce matin"], en: ["Pollack, beurre blanc & leeks", "Dish of the day · this morning's catch"], p: 19 },
+      { fr: ["Riz au lait, caramel beurre salé", "Dessert du jour"], en: ["Rice pudding, salted caramel", "Dessert of the day"], p: 7 },
+      { fr: ["Formule entrée + plat + dessert", "Le midi, du mardi au vendredi"], en: ["Starter + main + dessert", "Lunch, Tuesday to Friday"], p: 27 },
+    ];
+
+    let tab = "entrees";
+    const $ = (s) => document.querySelector(s);
+    const price = (p) => `${p} €`;
+
+    function renderMenu() {
+      const w = W[lang];
+      $("#tabs").innerHTML = Object.keys(MENU).map((k) => `<button type="button" role="tab" aria-selected="${k === tab}" data-tab="${k}">${w.tabs[k]}</button>`).join("");
+      const fv = $("#f-v").checked, fsg = $("#f-sg").checked;
+      const list = MENU[tab].filter((d) => (!fv || d.v) && (!fsg || d.sg));
+      $("#dishes").innerHTML = list.map((d) => {
+        const [n, desc] = d[lang];
+        const b = [d.v ? `<span class="badge v">${w.v}</span>` : "", d.sg ? `<span class="badge sg">${w.sg}</span>` : ""].join("");
+        return `<article class="dish"><svg viewBox="0 0 100 100" aria-hidden="true"><use href="#${d.i}"/></svg><div><h3>${n}</h3><p>${desc}</p><div class="badges">${b}<span class="badge" title="${w.allergens}">${w.allergens} : ${allergens(d.a)}</span></div></div><span class="price">${price(d.p)}</span></article>`;
+      }).join("") || `<p style="color:var(--soft)">—</p>`;
+    }
+    document.addEventListener("click", (e) => {
+      const t = e.target.closest("[data-tab]");
+      if (t) { tab = t.dataset.tab; renderMenu(); }
+    });
+    $("#f-v").addEventListener("change", renderMenu);
+    $("#f-sg").addEventListener("change", renderMenu);
+
+    function renderArdoise() {
+      const d = new Date();
+      $("#ardoise-date").textContent = d.toLocaleDateString(lang === "fr" ? "fr-FR" : "en-GB", { weekday: "long", day: "numeric", month: "long" });
+      $("#chalk").innerHTML = ARDOISE.map((a) => `<li><span>${a[lang][0]}<small>${a[lang][1]}</small></span><b>${a.p} €</b></li>`).join("");
+      $("#hero-pdj").textContent = ARDOISE[1][lang][0];
+    }
+
+    function renderStatus() {
+      const w = W[lang];
+      const now = new Date();
+      const day = now.getDay(), h = now.getHours() + now.getMinutes() / 60;
+      const cur = HOURS[day].find(([a, b]) => h >= a && h < b);
+      const st = $("#status");
+      if (cur) { st.classList.remove("closed"); $("#status-text").textContent = w.openUntil(hh(cur[1])); }
+      else {
+        st.classList.add("closed");
+        let next = null;
+        for (let i = 0; i < 8 && !next; i++) {
+          const dd = (day + i) % 7;
+          const s = HOURS[dd].find(([a]) => i > 0 || a > h);
+          if (s) next = { i, dd, a: s[0] };
+        }
+        const label = next.i === 0 ? w.today : next.i === 1 ? w.tomorrow : w.days[next.dd].toLowerCase();
+        $("#status-text").textContent = w.opensAt(label, hh(next.a));
+      }
+      const order = [1, 2, 3, 4, 5, 6, 0];
+      $("#hours").innerHTML = order.map((d) => `<tr class="${d === day ? "today" : ""}"><td>${w.days[d]}</td><td>${HOURS[d].length ? HOURS[d].map(([a, b]) => `${hh(a)} – ${hh(b)}`).join(" · ") : w.closed}</td></tr>`).join("");
+    }
+
+    // Réservation (démo) : créneaux selon le jour choisi
+    let slot = null;
+    function renderSlots() {
+      const v = $("#r-date").value;
+      const d = v ? new Date(v + "T12:00") : new Date();
+      const w = W[lang];
+      const times = [];
+      HOURS[d.getDay()].forEach(([a, b]) => { for (let t = a; t <= b - 1.5; t += 0.5) times.push(t); });
+      const full = (t) => ((d.getDate() * 7 + t * 10) % 9) < 2; // quelques créneaux complets, pour l'exemple
+      $("#slots").innerHTML = times.length ? times.map((t) => `<button type="button" aria-pressed="${slot === t}" data-slot="${t}" ${full(t) ? `disabled title="${w.full}"` : ""}>${hh(t)}</button>`).join("") : `<em style="color:var(--soft)">${w.closed}</em>`;
+    }
+    const today = new Date();
+    const iso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+    $("#r-date").value = iso;
+    $("#r-date").min = iso;
+    $("#r-date").addEventListener("change", () => { slot = null; renderSlots(); });
+    $("#slots").addEventListener("click", (e) => { const b = e.target.closest("[data-slot]"); if (b) { slot = +b.dataset.slot; renderSlots(); } });
+    $("#resa-form").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const w = W[lang];
+      if (slot === null) { alert(w.pick); return; }
+      const d = new Date($("#r-date").value + "T12:00").toLocaleDateString(lang === "fr" ? "fr-FR" : "en-GB", { weekday: "long", day: "numeric", month: "long" });
+      e.target.innerHTML = `<div class="ok"><strong>${lang === "fr" ? "Merci !" : "Thank you!"}</strong>${w.ok($("#r-n").value, d, hh(slot))}<br><small style="color:var(--soft)">${w.okSub}</small></div>`;
+    });
+
+    function setLang(l) {
+      lang = l;
+      document.documentElement.lang = l;
+      document.querySelectorAll("[data-lang]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.lang === l)));
+      document.querySelectorAll("[data-i18n]").forEach((el) => { el.textContent = l === "fr" ? FR[el.dataset.i18n] : (T.en[el.dataset.i18n] || FR[el.dataset.i18n]); });
+      document.querySelectorAll("[data-i18n-html]").forEach((el) => { el.innerHTML = l === "fr" ? FR[el.dataset.i18nHtml] : (T.en[el.dataset.i18nHtml] || FR[el.dataset.i18nHtml]); });
+      renderMenu(); renderArdoise(); renderStatus(); renderSlots();
+    }
+    document.querySelectorAll("[data-lang]").forEach((b) => b.addEventListener("click", () => setLang(b.dataset.lang)));
+    setLang("fr");
+    setInterval(renderStatus, 60000);
+
+    const io = "IntersectionObserver" in window ? new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); } }), { threshold: .1 }) : null;
+    document.querySelectorAll(".reveal").forEach((el) => (io ? io.observe(el) : el.classList.add("in")));
+  })();
+  </script>
+</body>
+</html>
