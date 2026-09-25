@@ -103,8 +103,29 @@
     document.head.appendChild(s);
     window.plausible = window.plausible || function () { (window.plausible.q = window.plausible.q || []).push(arguments); };
   }
+  /* Mesure d'audience maison (worker/index.js → base D1 « nuits-stats ») :
+   * sans cookie ni identifiant, on n'enregistre que la page vue, le site
+   * d'où vient le visiteur, le type d'écran et les clics utiles. */
+  const STATS_ON = /(^|\.)nuitsinguliere\.com$/.test(location.hostname) && !navigator.webdriver;
+  function hit(type, extra = {}) {
+    if (!STATS_ON) return;
+    const body = JSON.stringify({ t: type, p: location.pathname, s: getSource() || "", w: innerWidth, ...extra });
+    try {
+      if (!(navigator.sendBeacon && navigator.sendBeacon("/api/hit", new Blob([body], { type: "application/json" })))) {
+        fetch("/api/hit", { method: "POST", body, headers: { "Content-Type": "application/json" }, keepalive: true }).catch(() => {});
+      }
+    } catch { /* statistiques indisponibles : sans conséquence */ }
+  }
+  (function pageView() {
+    let first = 0;
+    try { if (!sessionStorage.getItem("ns-v")) { sessionStorage.setItem("ns-v", "1"); first = 1; } } catch { /* navigation privée */ }
+    let ref = "";
+    try { const r = new URL(document.referrer); if (r.hostname !== location.hostname) ref = r.hostname; } catch { /* pas de provenance */ }
+    hit("vue", { r: ref, v: first });
+  })();
   function track(event, props) {
     if (typeof window.plausible === "function") window.plausible(event, { props });
+    hit(event, { h: (props && props.hotel) || "" });
   }
   // Tout clic sur un lien marqué data-track est compté (ex. "Réservation", hôtel = …)
   document.addEventListener("click", (e) => {
