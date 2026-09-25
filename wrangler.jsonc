@@ -19,6 +19,10 @@
   "kv_namespaces": [
     { "binding": "NEWSLETTER", "id": "288085767e8649c287e48b62d5d71d5b" }
   ],
+  // Mesure d'audience sans cookie (pages vues, provenance, clics réservation)
+  "d1_databases": [
+    { "binding": "STATS", "database_name": "nuits-stats", "database_id": "0e7197cd-72dd-443f-86e0-fb50cb3162cd" }
+  ],
   // Nom de domaine (acheté sur Cloudflare) : branché automatiquement à chaque
   // déploiement. L'ancienne adresse workers.dev reste active.
   "routes": [
