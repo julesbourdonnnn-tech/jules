@@ -1,0 +1,551 @@
+<!doctype html>
+<html lang="fr" class="no-js">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Le Passe · Sites web pour restaurants, créés par quelqu'un du métier</title>
+  <meta name="description" content="Le Passe crée des sites web pour restaurants, bistrots, brasseries et bars : carte lisible sur mobile et modifiable en deux minutes, réservation, fiche Google, référencement local. Pensés par quelqu'un qui travaille en restauration.">
+  <link rel="canonical" href="https://lepasse.studio/">
+  <meta property="og:site_name" content="Le Passe">
+  <meta property="og:locale" content="fr_FR">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Le Passe · Des sites de restaurant qui tiennent le coup de feu">
+  <meta property="og:description" content="Sites web pour restaurateurs, créés par quelqu'un du métier. Carte modifiable, réservation, Google : ça marche.">
+  <meta property="og:url" content="https://lepasse.studio/">
+  <meta property="og:image" content="https://lepasse.studio/assets/og.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="theme-color" content="#16130f">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+  <link rel="preload" href="fonts/bricolage-grotesque-normal-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="fonts/fonts.css">
+  <link rel="stylesheet" href="css/style.css">
+  <script>document.documentElement.classList.replace("no-js", "js");</script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"ProfessionalService","name":"Le Passe","slogan":"Des sites de restaurant qui tiennent le coup de feu.","description":"Création de sites web pour restaurants, bistrots, brasseries et bars, par un professionnel de la restauration.","url":"https://lepasse.studio/","logo":"https://lepasse.studio/assets/logo.svg","image":"https://lepasse.studio/assets/og.png","founder":{"@type":"Person","name":"Jules Bourdon"},"areaServed":{"@type":"Country","name":"France"},"priceRange":"€€","knowsAbout":["Site web de restaurant","Référencement local","Google Business Profile","Carte en ligne","Réservation en ligne"],"hasOfferCatalog":{"@type":"OfferCatalog","name":"La carte","itemListElement":[{"@type":"Offer","name":"L'Ardoise — site une page","price":"790","priceCurrency":"EUR"},{"@type":"Offer","name":"Le Plat du chef — site complet","price":"1690","priceCurrency":"EUR"},{"@type":"Offer","name":"Le Menu dégustation — sur-mesure","price":"2990","priceCurrency":"EUR"},{"@type":"Offer","name":"Le Service continu — hébergement et mises à jour","price":"29","priceCurrency":"EUR"}]}}</script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Je n'y connais rien en informatique. Je vais m'en sortir ?","acceptedAnswer":{"@type":"Answer","text":"Oui. Vous n'avez rien à installer ni à rédiger : je récupère votre carte, vos horaires et vos photos, j'écris les textes et je m'occupe de la technique. Pour changer un plat ou un prix, c'est aussi simple qu'envoyer un message. Et avec le Service continu, vous m'envoyez la photo de votre ardoise : elle est en ligne le jour même."}},{"@type":"Question","name":"Combien de temps faut-il pour créer le site ?","acceptedAnswer":{"@type":"Answer","text":"Environ 10 jours pour L'Ardoise, 3 semaines pour Le Plat du chef, 4 à 6 semaines pour Le Menu dégustation. Le délai dépend surtout de la rapidité avec laquelle on réunit la carte, les photos et les informations."}},{"@type":"Question","name":"Est-ce que je suis propriétaire de mon site ?","acceptedAnswer":{"@type":"Answer","text":"Oui, entièrement. Le nom de domaine est enregistré à votre nom, les textes et les fichiers vous appartiennent. Si vous arrêtez le Service continu, je vous remets tout, sans frais de sortie."}},{"@type":"Question","name":"Je suis déjà sur Google et sur une plateforme de réservation. Pourquoi un site ?","acceptedAnswer":{"@type":"Answer","text":"Parce que c'est le seul endroit en ligne qui vous appartient : votre ambiance, votre histoire, votre carte à jour, et une réservation directe, sans intermédiaire. Le site ne remplace pas ces outils, il les relie : votre fiche Google renvoie vers lui, et votre bouton de réservation peut rester celui que vous utilisez déjà."}},{"@type":"Question","name":"Pourquoi ne pas faire un site moi-même avec un outil gratuit ?","acceptedAnswer":{"@type":"Answer","text":"Vous pouvez ! Mais il faut du temps, que vous n'avez pas entre deux services, et un site de restaurant a des besoins précis : une carte lisible sur téléphone, les allergènes, des horaires fiables, un référencement local soigné, une vitesse d'affichage irréprochable. C'est exactement ce que je fais, et rien d'autre."}},{"@type":"Question","name":"Je n'ai pas de belles photos. C'est un problème ?","acceptedAnswer":{"@type":"Answer","text":"Non. On peut démarrer avec vos meilleures photos de téléphone : je vous donne quelques conseils simples pour les réussir, en plein jour, près d'une fenêtre. Pour aller plus loin, j'organise une séance avec un photographe culinaire, sur devis."}},{"@type":"Question","name":"Comment se passe le paiement ?","acceptedAnswer":{"@type":"Answer","text":"40 % à la commande, le solde à la mise en ligne, une fois que vous êtes satisfait. Le Service continu se paie au mois, sans engagement. Chaque projet commence par un devis gratuit et détaillé."}}]}</script>
+</head>
+<body>
+  <a class="skip" href="#main">Aller au contenu</a>
+
+  <header class="site-header" id="top">
+    <nav class="container nav" aria-label="Navigation principale">
+      <a class="brand" href="./" aria-label="Le Passe — accueil">
+        <svg viewBox="0 0 64 64" aria-hidden="true"><g class="bell-waves"><path fill="none" stroke="#e2482d" stroke-width="3.6" stroke-linecap="round" d="M25.64 12.64A9 9 0 0 1 38.36 12.64M21.39 8.39A15 15 0 0 1 42.61 8.39"/></g><rect x="28.5" y="16.5" width="7" height="5" rx="1.6" fill="currentColor"/><path fill="currentColor" d="M10 44a22 22 0 0 1 44 0z"/><rect x="6" y="47" width="52" height="6" rx="3" fill="currentColor"/></svg>
+        <svg class="brand-word" viewBox="0 0 153 42" aria-hidden="true"><path fill="currentColor" d="M2.48 31V2.2H8.8V31ZM22.44 31.56Q19.8 31.56 17.72 30.86Q15.64 30.16 14.18 28.8Q12.72 27.44 11.96 25.44Q11.2 23.44 11.2 20.84Q11.2 18.32 11.94 16.2Q12.68 14.08 14.06 12.54Q15.44 11 17.46 10.16Q19.48 9.32 22 9.32Q24.56 9.32 26.5 10.14Q28.44 10.96 29.7 12.56Q30.96 14.16 31.56 16.46Q32.16 18.76 31.96 21.72L15.44 21.84V18.48L28.28 18.36L26 19.92Q26.28 17.92 25.76 16.66Q25.24 15.4 24.24 14.82Q23.24 14.24 22.08 14.24Q20.68 14.24 19.62 15Q18.56 15.76 17.96 17.2Q17.36 18.64 17.36 20.72Q17.36 24 18.78 25.48Q20.2 26.96 22.4 26.96Q23.48 26.96 24.2 26.66Q24.92 26.36 25.38 25.9Q25.84 25.44 26.1 24.88Q26.36 24.32 26.52 23.8L32.12 25Q31.8 26.48 31.1 27.68Q30.4 28.88 29.22 29.76Q28.04 30.64 26.38 31.1Q24.72 31.56 22.44 31.56ZM42 37.76V20.68V9.88H47.28L47.36 15.88L48.08 15.96Q48.44 13.72 49.36 12.24Q50.28 10.76 51.74 10.04Q53.2 9.32 55.08 9.32Q57.88 9.32 59.9 10.68Q61.92 12.04 63 14.56Q64.08 17.08 64.08 20.6Q64.08 23.72 63.14 26.2Q62.2 28.68 60.3 30.12Q58.4 31.56 55.48 31.56Q53.52 31.56 52.16 30.86Q50.8 30.16 49.86 28.8Q48.92 27.44 48.28 25.4H47.52Q47.76 26.48 47.96 27.6Q48.16 28.72 48.3 29.76Q48.44 30.8 48.44 31.76V37.76ZM53.12 26.48Q54.44 26.48 55.38 25.76Q56.32 25.04 56.84 23.72Q57.36 22.4 57.36 20.64Q57.36 18.76 56.82 17.42Q56.28 16.08 55.28 15.34Q54.28 14.6 52.96 14.6Q51.72 14.6 50.86 15.14Q50 15.68 49.46 16.54Q48.92 17.4 48.68 18.36Q48.44 19.32 48.44 20.16V21.04Q48.44 21.8 48.64 22.56Q48.84 23.32 49.24 24.02Q49.64 24.72 50.2 25.28Q50.76 25.84 51.5 26.16Q52.24 26.48 53.12 26.48ZM71.48 31.56Q69.72 31.56 68.36 30.86Q67 30.16 66.24 28.82Q65.48 27.48 65.48 25.56Q65.48 23.76 66.18 22.58Q66.88 21.4 68.22 20.7Q69.56 20 71.44 19.54Q73.32 19.08 75.72 18.72Q76.88 18.52 77.66 18.34Q78.44 18.16 78.84 17.76Q79.24 17.36 79.24 16.6Q79.24 15.6 78.52 14.88Q77.8 14.16 76.2 14.16Q75.08 14.16 74.18 14.56Q73.28 14.96 72.64 15.72Q72 16.48 71.68 17.56L66 15.88Q66.52 14.2 67.46 12.96Q68.4 11.72 69.72 10.9Q71.04 10.08 72.74 9.7Q74.44 9.32 76.36 9.32Q79.56 9.32 81.58 10.34Q83.6 11.36 84.58 13.5Q85.56 15.64 85.56 19V22.24Q85.56 23.68 85.62 25.14Q85.68 26.6 85.78 28.06Q85.88 29.52 86.04 31H80.36Q80.2 30.08 80.04 28.78Q79.88 27.48 79.8 26.12H79.04Q78.48 27.64 77.42 28.9Q76.36 30.16 74.86 30.86Q73.36 31.56 71.48 31.56ZM74.4 27Q75.12 27 75.86 26.74Q76.6 26.48 77.28 26.02Q77.96 25.56 78.52 24.88Q79.08 24.2 79.36 23.4L79.28 20.24L80.16 20.44Q79.4 20.92 78.48 21.2Q77.56 21.48 76.62 21.64Q75.68 21.8 74.78 21.98Q73.88 22.16 73.18 22.44Q72.48 22.72 72.08 23.2Q71.68 23.68 71.68 24.52Q71.68 25.64 72.44 26.32Q73.2 27 74.4 27ZM97.56 31.56Q95.44 31.56 93.72 31.18Q92 30.8 90.72 30.08Q89.44 29.36 88.62 28.34Q87.8 27.32 87.48 26.08L92.28 23.96Q92.56 24.64 93.26 25.34Q93.96 26.04 95.14 26.48Q96.32 26.92 98 26.92Q99.6 26.92 100.5 26.46Q101.4 26 101.4 25.12Q101.4 24.48 100.9 24.1Q100.4 23.72 99.4 23.42Q98.4 23.12 96.92 22.84Q95.4 22.52 93.84 22.1Q92.28 21.68 90.92 20.94Q89.56 20.2 88.74 18.98Q87.92 17.76 87.92 15.88Q87.92 13.92 88.96 12.46Q90 11 92.06 10.16Q94.12 9.32 97.08 9.32Q99.72 9.32 101.72 10Q103.72 10.68 105.06 11.94Q106.4 13.2 106.92 14.96L101.76 16.8Q101.56 15.92 100.94 15.28Q100.32 14.64 99.38 14.3Q98.44 13.96 97.16 13.96Q95.6 13.96 94.74 14.44Q93.88 14.92 93.88 15.72Q93.88 16.36 94.46 16.78Q95.04 17.2 96.12 17.48Q97.2 17.76 98.68 18.08Q100.24 18.4 101.78 18.82Q103.32 19.24 104.58 19.94Q105.84 20.64 106.58 21.78Q107.32 22.92 107.32 24.72Q107.32 26.84 106.2 28.38Q105.08 29.92 102.9 30.74Q100.72 31.56 97.56 31.56ZM118.48 31.56Q116.36 31.56 114.64 31.18Q112.92 30.8 111.64 30.08Q110.36 29.36 109.54 28.34Q108.72 27.32 108.4 26.08L113.2 23.96Q113.48 24.64 114.18 25.34Q114.88 26.04 116.06 26.48Q117.24 26.92 118.92 26.92Q120.52 26.92 121.42 26.46Q122.32 26 122.32 25.12Q122.32 24.48 121.82 24.1Q121.32 23.72 120.32 23.42Q119.32 23.12 117.84 22.84Q116.32 22.52 114.76 22.1Q113.2 21.68 111.84 20.94Q110.48 20.2 109.66 18.98Q108.84 17.76 108.84 15.88Q108.84 13.92 109.88 12.46Q110.92 11 112.98 10.16Q115.04 9.32 118 9.32Q120.64 9.32 122.64 10Q124.64 10.68 125.98 11.94Q127.32 13.2 127.84 14.96L122.68 16.8Q122.48 15.92 121.86 15.28Q121.24 14.64 120.3 14.3Q119.36 13.96 118.08 13.96Q116.52 13.96 115.66 14.44Q114.8 14.92 114.8 15.72Q114.8 16.36 115.38 16.78Q115.96 17.2 117.04 17.48Q118.12 17.76 119.6 18.08Q121.16 18.4 122.7 18.82Q124.24 19.24 125.5 19.94Q126.76 20.64 127.5 21.78Q128.24 22.92 128.24 24.72Q128.24 26.84 127.12 28.38Q126 29.92 123.82 30.74Q121.64 31.56 118.48 31.56ZM140.68 31.56Q138.04 31.56 135.96 30.86Q133.88 30.16 132.42 28.8Q130.96 27.44 130.2 25.44Q129.44 23.44 129.44 20.84Q129.44 18.32 130.18 16.2Q130.92 14.08 132.3 12.54Q133.68 11 135.7 10.16Q137.72 9.32 140.24 9.32Q142.8 9.32 144.74 10.14Q146.68 10.96 147.94 12.56Q149.2 14.16 149.8 16.46Q150.4 18.76 150.2 21.72L133.68 21.84V18.48L146.52 18.36L144.24 19.92Q144.52 17.92 144 16.66Q143.48 15.4 142.48 14.82Q141.48 14.24 140.32 14.24Q138.92 14.24 137.86 15Q136.8 15.76 136.2 17.2Q135.6 18.64 135.6 20.72Q135.6 24 137.02 25.48Q138.44 26.96 140.64 26.96Q141.72 26.96 142.44 26.66Q143.16 26.36 143.62 25.9Q144.08 25.44 144.34 24.88Q144.6 24.32 144.76 23.8L150.36 25Q150.04 26.48 149.34 27.68Q148.64 28.88 147.46 29.76Q146.28 30.64 144.62 31.1Q142.96 31.56 140.68 31.56Z"/></svg>
+      </a>
+      <button class="menu-btn" type="button" aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="nav-links"><span></span></button>
+      <ul class="nav-links" id="nav-links">
+        <li><a href="#histoire">L'histoire</a></li>
+        <li><a href="#assiette">Ce qu'il y a dedans</a></li>
+        <li><a href="#carte">La carte</a></li>
+        <li><a href="#mise-en-place">Mise en place</a></li>
+        <li><a href="#realisations">Réalisations</a></li>
+        <li><a href="#faq">Questions</a></li>
+        <li><a class="btn btn-ink" href="#bon">Passer commande</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main id="main">
+    <!-- ===================== HÉRO ===================== -->
+    <section class="hero">
+      <div class="container hero-grid">
+        <div>
+          <p class="kicker reveal">Studio web pour restaurants · par quelqu'un du métier</p>
+          <h1 class="reveal" style="--d:80ms">Des sites de restaurant qui <em>tiennent le coup&nbsp;de&nbsp;feu.</em></h1>
+          <p class="lead reveal" style="--d:160ms">Je travaille en restauration. Je sais ce que sont un samedi complet, une carte qui change avec le marché et un téléphone qui sonne en plein service. Je crée des sites pour les restaurateurs&nbsp;: beaux, rapides, trouvés sur Google, et que vous mettez à jour en deux minutes, entre deux services.</p>
+          <div class="hero-cta reveal" style="--d:240ms">
+            <a class="btn btn-flame" href="#bon">Passer commande <span class="arrow">→</span></a>
+            <a class="btn btn-line" href="#carte">Voir la carte des offres</a>
+          </div>
+          <ul class="hero-proof reveal" style="--d:320ms">
+            <li>Site à vous, sans frais de sortie</li>
+            <li>Carte modifiable depuis le téléphone</li>
+            <li>Un seul interlocuteur</li>
+          </ul>
+        </div>
+
+        <div class="stage reveal" style="--d:200ms" aria-label="Aperçu : un site de restaurant sur téléphone">
+          <div class="rail" aria-hidden="true"></div>
+          <div class="ticket" aria-hidden="true">
+            <div class="t-head"><b>BON N°<span data-bon-no>0001</span></b><span data-bon-time>11:42</span></div>
+            <div style="margin-bottom:6px">TABLE : VOTRE MAISON</div>
+            <ul>
+              <li style="--i:0"><span>1</span><span>site sur-mesure</span></li>
+              <li style="--i:1"><span>1</span><span>carte à jour</span></li>
+              <li style="--i:2"><span>1</span><span>résa en ligne</span></li>
+              <li style="--i:3"><span>1</span><span>fiche Google</span></li>
+              <li style="--i:4"><span>∞</span><span>salle pleine</span></li>
+            </ul>
+            <div class="t-foot"><span>PASSE →</span><span class="stamp">ENVOYÉ</span></div>
+          </div>
+          <div class="phone">
+            <div class="phone-screen">
+              <iframe src="demos/maison-garance/?apercu=1" title="Démo : site du restaurant imaginaire Maison Garance" loading="lazy" tabindex="-1"></iframe>
+            </div>
+            <span class="phone-hint">↑ démo réelle, faites défiler</span>
+          </div>
+          <div class="note-card" aria-hidden="true"><span class="dot"></span><span><strong>&lt; 1 s</strong>pour afficher votre carte sur un téléphone</span></div>
+        </div>
+      </div>
+    </section>
+
+    <div class="marquee-wrap" aria-hidden="true"><div class="marquee"><div class="marquee-track" id="marquee"></div></div></div>
+
+    <!-- ===================== LE CONSTAT ===================== -->
+    <section class="section" id="constat">
+      <div class="container">
+        <div class="head reveal">
+          <p class="kicker">Le constat</p>
+          <h2>Ce qu'on entend <em>au passe,</em> dans toutes les maisons.</h2>
+          <p class="lead">Des phrases qu'on entend partout, et que j'ai moi-même dites. Aucune n'a de rapport avec la cuisine, et pourtant elles coûtent des couverts tous les soirs.</p>
+        </div>
+        <div class="quotes">
+          <article class="quote reveal"><span class="tag">La carte</span><blockquote>On a mis la carte en PDF. Personne ne l'ouvre sur son téléphone.</blockquote><p><strong>Ce qu'il faut :</strong> une vraie carte en ligne, lisible d'un pouce, avec les prix et les allergènes.</p></article>
+          <article class="quote reveal" style="--d:80ms"><span class="tag">Google</span><blockquote>Google affiche encore nos horaires d'été. On a eu des clients devant la porte fermée.</blockquote><p><strong>Ce qu'il faut :</strong> une fiche Google tenue à jour, qui renvoie vers votre site.</p></article>
+          <article class="quote reveal" style="--d:160ms"><span class="tag">Le vieux site</span><blockquote>Le site a été fait par un cousin il y a six ans. Plus personne n'a le mot de passe.</blockquote><p><strong>Ce qu'il faut :</strong> un site à votre nom, et quelqu'un qui répond quand vous appelez.</p></article>
+          <article class="quote reveal"><span class="tag">Les commissions</span><blockquote>Les plateformes nous prennent un peu sur chaque couvert, sur chaque commande.</blockquote><p><strong>Ce qu'il faut :</strong> un chemin direct, sans commission, pour les clients qui vous cherchent déjà.</p></article>
+          <article class="quote reveal" style="--d:80ms"><span class="tag">Le téléphone</span><blockquote>Ça sonne en plein coup de feu pour demander si on est ouverts le lundi.</blockquote><p><strong>Ce qu'il faut :</strong> les bonnes infos au bon endroit : horaires, accès, réservation.</p></article>
+          <article class="quote reveal" style="--d:160ms"><span class="tag">Les touristes</span><blockquote>La moitié de la terrasse ne comprend pas ce qu'est une « joue confite ».</blockquote><p><strong>Ce qu'il faut :</strong> une carte bilingue, qui donne envie dans toutes les langues.</p></article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== L'HISTOIRE ===================== -->
+    <section class="section dark" id="histoire">
+      <div class="container">
+        <div class="story">
+          <div class="story-aside reveal">
+            <p class="kicker">Pourquoi « Le Passe »</p>
+            <h2>Rien ne sort <em>sans passer par là.</em></h2>
+            <svg class="pass-illu" viewBox="0 0 460 460" role="img" aria-label="Illustration : le passe d'une cuisine, avec ses lampes chauffantes, ses bons de commande et sa cloche">
+              <defs>
+                <radialGradient id="glow" cx="50%" cy="0%" r="90%"><stop offset="0" stop-color="#e2482d" stop-opacity=".55"/><stop offset="1" stop-color="#e2482d" stop-opacity="0"/></radialGradient>
+                <linearGradient id="steel" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#d9dcdb"/><stop offset="1" stop-color="#8d9392"/></linearGradient>
+              </defs>
+              <!-- lampes chauffantes -->
+              <g>
+                <path d="M120 150 L220 150 L300 330 L40 330 Z" fill="url(#glow)" opacity=".8"><animate attributeName="opacity" values=".8;.55;.8" dur="4s" repeatCount="indefinite"/></path>
+                <path d="M280 150 L380 150 L440 330 L200 330 Z" fill="url(#glow)" opacity=".6"><animate attributeName="opacity" values=".6;.85;.6" dur="5s" repeatCount="indefinite"/></path>
+                <line x1="170" y1="0" x2="170" y2="118" stroke="#4a4338" stroke-width="3"/>
+                <line x1="330" y1="0" x2="330" y2="118" stroke="#4a4338" stroke-width="3"/>
+                <path d="M140 118 h60 l22 34 h-104 z" fill="#2c2721" stroke="#4a4338" stroke-width="2"/>
+                <path d="M300 118 h60 l22 34 h-104 z" fill="#2c2721" stroke="#4a4338" stroke-width="2"/>
+                <rect x="126" y="150" width="88" height="6" rx="3" fill="#e2482d"/>
+                <rect x="286" y="150" width="88" height="6" rx="3" fill="#e2482d"/>
+              </g>
+              <!-- barre à bons -->
+              <rect x="28" y="190" width="404" height="10" rx="3" fill="url(#steel)"/>
+              <g font-family="DM Mono, monospace" font-size="9" fill="#16130f">
+                <g transform="rotate(-3 76 196)"><path d="M48 196 h56 v74 l-7 5 -7 -5 -7 5 -7 -5 -7 5 -7 -5 -7 5 -7 -5 z" fill="#f3ede1"/><rect x="55" y="208" width="30" height="3" fill="#16130f"/><rect x="55" y="218" width="42" height="2" fill="#847b6e"/><rect x="55" y="226" width="36" height="2" fill="#847b6e"/><rect x="55" y="234" width="40" height="2" fill="#847b6e"/><rect x="55" y="250" width="22" height="3" fill="#e2482d"/></g>
+                <g transform="rotate(2 146 196)"><path d="M118 196 h56 v62 l-7 5 -7 -5 -7 5 -7 -5 -7 5 -7 -5 -7 5 -7 -5 z" fill="#f3ede1"/><rect x="125" y="208" width="26" height="3" fill="#16130f"/><rect x="125" y="218" width="40" height="2" fill="#847b6e"/><rect x="125" y="226" width="32" height="2" fill="#847b6e"/><rect x="125" y="240" width="18" height="3" fill="#e2482d"/></g>
+                <g transform="rotate(-2 386 196)"><path d="M358 196 h56 v68 l-7 5 -7 -5 -7 5 -7 -5 -7 5 -7 -5 -7 5 -7 -5 z" fill="#f3ede1"/><rect x="365" y="208" width="32" height="3" fill="#16130f"/><rect x="365" y="218" width="38" height="2" fill="#847b6e"/><rect x="365" y="226" width="30" height="2" fill="#847b6e"/><rect x="365" y="234" width="36" height="2" fill="#847b6e"/></g>
+              </g>
+              <!-- le comptoir -->
+              <rect x="0" y="330" width="460" height="22" fill="#c9973a"/>
+              <rect x="0" y="352" width="460" height="108" fill="#221e18"/>
+              <rect x="0" y="352" width="460" height="4" fill="#0d0b09" opacity=".6"/>
+              <!-- assiettes -->
+              <g>
+                <ellipse cx="150" cy="322" rx="62" ry="14" fill="#f3ede1"/>
+                <ellipse cx="150" cy="320" rx="42" ry="9" fill="#e9e2d3"/>
+                <path d="M122 318 q14 -16 34 -8 q18 -12 28 6 q-30 12 -62 2z" fill="#6f7a5e"/>
+                <circle cx="148" cy="312" r="7" fill="#e2482d"/>
+                <circle cx="164" cy="315" r="4" fill="#c9973a"/>
+                <ellipse cx="290" cy="322" rx="56" ry="13" fill="#f3ede1"/>
+                <path d="M246 320 a44 30 0 0 1 88 0 z" fill="url(#steel)"/>
+                <rect x="284" y="282" width="12" height="8" rx="3" fill="#8d9392"/>
+              </g>
+              <!-- cloche de service -->
+              <g transform="translate(372 292)">
+                <g class="ring"><path fill="none" stroke="#e2482d" stroke-width="3" stroke-linecap="round" d="M14 -14 a14 14 0 0 1 20 0 M8 -22 a24 24 0 0 1 32 0"><animate attributeName="opacity" values="0;1;0;0" dur="3s" repeatCount="indefinite"/></path></g>
+                <rect x="20" y="-4" width="8" height="6" rx="2" fill="#f3ede1"/>
+                <path d="M2 30 a22 22 0 0 1 44 0 z" fill="#f3ede1"/>
+                <rect x="-2" y="31" width="52" height="6" rx="3" fill="#f3ede1"/>
+              </g>
+            </svg>
+          </div>
+
+          <div class="story-text reveal" style="--d:120ms">
+            <p>Dans chaque restaurant, il y a un endroit que les clients ne voient jamais&nbsp;: <strong>le passe</strong>. C'est le comptoir entre la cuisine et la salle, sous les lampes chauffantes. L'assiette y est vérifiée, le bord essuyé, la sauce rectifiée une dernière fois. Puis la cloche sonne, quelqu'un lance «&nbsp;Envoyé&nbsp;!&nbsp;», et elle part en salle.</p>
+            <p>C'est le dernier contrôle avant le client. Une assiette parfaite qui reste trop longtemps au passe arrive froide. Une assiette bâclée qui passe quand même, c'est une table déçue.</p>
+            <p class="big">Aujourd'hui, avant de pousser votre porte, vos clients passent par votre téléphone.</p>
+            <p>Ils tapent votre nom sur Google, regardent vos photos, cherchent votre carte, vérifient si vous êtes ouverts ce soir. <strong>Votre site est devenu votre nouveau passe.</strong> Et trop souvent, c'est là que l'assiette arrive froide&nbsp;: une carte en PDF illisible, des horaires faux, un site qui date d'une autre époque. Le client ne vient pas, et vous ne le saurez jamais.</p>
+            <p>Je travaille en restauration, et je fabrique des sites web. J'ai longtemps vu les deux mondes s'ignorer&nbsp;: des maisons magnifiques cachées derrière des sites tristes, et des agences qui parlent «&nbsp;tunnel de conversion&nbsp;» à des gens qui sortent d'un service de 120 couverts.</p>
+            <p>J'ai créé <strong>Le Passe</strong> pour faire le lien. Des sites qui ont le goût de votre maison, pensés pour la façon dont les clients choisissent vraiment un restaurant, et fabriqués par quelqu'un qui comprend quand vous dites «&nbsp;je te rappelle après le coup de feu&nbsp;».</p>
+            <div class="signature">
+              <div><span class="sig-name">Jules Bourdon</span><small>Fondateur du Passe · en salle et derrière l'écran</small></div>
+              <span class="sig-call">Ça marche.</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="lessons">
+          <div class="lesson reveal"><span class="num">LEÇON 01</span><h3>Le client a faim <em>maintenant.</em></h3><p>Il décide en quelques secondes, sur son téléphone, souvent dans la rue. Votre site s'affiche en moins d'une seconde et votre carte est à un pouce.</p></div>
+          <div class="lesson reveal" style="--d:80ms"><span class="num">LEÇON 02</span><h3>La carte change, <em>le site suit.</em></h3><p>Plat du jour, ardoise, fermeture exceptionnelle&nbsp;: vous modifiez vous-même, ou vous m'envoyez une photo. C'est en ligne le jour même.</p></div>
+          <div class="lesson reveal" style="--d:160ms"><span class="num">LEÇON 03</span><h3>On ne vend pas une assiette, <em>on vend une soirée.</em></h3><p>La lumière, le bruit de la salle, l'histoire du chef&nbsp;: le site doit donner envie de réserver, pas seulement informer.</p></div>
+          <div class="lesson reveal" style="--d:240ms"><span class="num">LEÇON 04</span><h3>Pendant le service, <em>on ne décroche pas.</em></h3><p>Je vous appelle quand ça vous arrange&nbsp;: entre 15&nbsp;h et 18&nbsp;h, après le service ou le jour de fermeture. Sans jargon.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== CE QU'IL Y A DANS L'ASSIETTE ===================== -->
+    <section class="section" id="assiette">
+      <div class="container">
+        <div class="head reveal">
+          <p class="kicker">Ce qu'il y a dans l'assiette</p>
+          <h2>Tout ce qu'un site de restaurant doit faire. <em>Rien de superflu.</em></h2>
+          <p class="lead">Pas de gadget ni d'option inutile&nbsp;: les choses qui font vraiment venir des clients, bien faites.</p>
+        </div>
+        <div class="features">
+          <article class="feature reveal"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h11l3 3v15H5z"/><path d="M9 8h6M9 12h6M9 16h4"/></svg></div><h3>Une vraie carte en ligne</h3><p>Lisible sur téléphone, sans PDF à télécharger, avec les prix, les allergènes et les options végétariennes. Google peut la lire et la montrer à ceux qui vous cherchent.</p></article>
+          <article class="feature reveal" style="--d:80ms"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M10 18h4"/><path d="M9.5 9.5l2 2 3.5-4"/></svg></div><h3>Modifiable en deux minutes</h3><p>Le plat du jour, un prix, une fermeture&nbsp;: depuis votre téléphone, sans rien casser. Ou une photo de l'ardoise par message, et je m'en occupe.</p></article>
+          <article class="feature reveal" style="--d:160ms"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/><path d="M8 15l2.5 2.5L16 13"/></svg></div><h3>La réservation en direct</h3><p>Un bouton «&nbsp;Réserver&nbsp;» visible partout, relié à l'outil que vous utilisez déjà, ou un simple formulaire, ou votre téléphone. Vous choisissez.</p></article>
+          <article class="feature reveal"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg></div><h3>Trouvé sur Google, près de chez vous</h3><p>Fiche Google optimisée, référencement local («&nbsp;bistrot + votre ville&nbsp;»), données structurées pour que Google affiche vos horaires, votre carte et vos prix.</p></article>
+          <article class="feature reveal" style="--d:80ms"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L4 14h7l-1 8 9-12h-7z"/></svg></div><h3>Rapide comme un envoi</h3><p>Moins d'une seconde pour s'afficher, même en 4G au fond d'une rue. Pensé d'abord pour le téléphone, là où se choisissent vos clients.</p></article>
+          <article class="feature reveal" style="--d:160ms"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg></div><h3>Bilingue, pour les visiteurs</h3><p>Votre carte et vos infos en anglais (et dans d'autres langues si besoin), avec des traductions qui gardent l'envie&nbsp;: une «&nbsp;joue confite&nbsp;» se traduit, elle ne s'abîme pas.</p></article>
+          <article class="feature reveal"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3h8l-1 7a3 3 0 0 1-6 0z"/><path d="M12 13v8M8 21h8"/></svg></div><h3>Groupes et privatisation</h3><p>Une page qui présente vos salons, vos menus de groupe et un formulaire de demande. Ce sont souvent les plus belles additions de l'année.</p></article>
+          <article class="feature reveal" style="--d:80ms"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="13" rx="2"/><path d="M3 12h18M12 8v13"/><path d="M12 8c-2-4-6-4-6-1.5S10 8 12 8zM12 8c2-4 6-4 6-1.5S14 8 12 8z"/></svg></div><h3>Bons cadeaux et vente à emporter</h3><p>En option&nbsp;: des bons cadeaux vendus en ligne (Noël, fête des pères…) et la commande à emporter, sans la commission des plateformes.</p></article>
+          <article class="feature reveal" style="--d:160ms"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M17 6l3 3M14 9l2 2"/></svg></div><h3>À votre nom, pour de bon</h3><p>Nom de domaine enregistré à votre nom, textes et fichiers vous appartiennent. Pas d'abonnement piège&nbsp;: si vous partez, je vous remets tout.</p></article>
+          <article class="feature wide reveal"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15h16M6 15a6 6 0 0 1 12 0"/><path d="M12 9V7M10 7h4"/><path d="M3 19h18"/></svg></div><div><h3>Et je m'occupe de toute la technique</h3><p>Hébergement, nom de domaine, adresse e-mail professionnelle, sécurité, sauvegardes, mentions légales, statistiques de visite respectueuses de vos clients&nbsp;: vous n'avez jamais à y penser.</p></div><a class="btn" href="#carte">Voir les tarifs <span class="arrow">→</span></a></article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== LA CARTE (tarifs) ===================== -->
+    <section class="section tint" id="carte">
+      <div class="container">
+        <div class="menu-card reveal">
+          <div class="menu-top">
+            <span class="house">Le Passe · Maison fondée en 2026</span>
+            <h2>La carte</h2>
+            <p>Prix clairs, servis sans surprise. Devis gratuit et détaillé.</p>
+          </div>
+
+          <div class="course">
+            <div class="course-label">Entrée</div>
+            <div class="dish-line"><h3>L'Ardoise</h3><span class="dots"></span><span class="price"><small>dès</small>790&nbsp;€</span></div>
+            <p class="dish-desc">Un site d'une page, net et efficace. Pour exister proprement en ligne, vite.</p>
+            <ul class="dish-items">
+              <li>Une page complète&nbsp;: ambiance, carte, horaires, accès</li>
+              <li>Bouton réserver / appeler toujours visible</li>
+              <li>Carte en ligne lisible sur téléphone</li>
+              <li>Fiche Google revue et reliée au site</li>
+              <li>Textes rédigés pour vous</li>
+              <li>Nom de domaine et mise en ligne</li>
+            </ul>
+            <div class="dish-meta"><span>Prêt en 10 jours</span><span>Idéal&nbsp;: food truck, crêperie, petit bistrot</span></div>
+            <div class="choose"><a class="btn btn-line" href="#bon" data-offer="ardoise">Commander l'Ardoise</a></div>
+          </div>
+
+          <div class="course featured">
+            <div class="course-label">Plat <span class="badge">Le plus complet pour la plupart des maisons</span></div>
+            <div class="dish-line"><h3>Le Plat du chef</h3><span class="dots"></span><span class="price"><small>dès</small>1&nbsp;690&nbsp;€</span></div>
+            <p class="dish-desc">Le site complet d'un restaurant qui tourne&nbsp;: tout ce qu'il faut, bien cuit, bien dressé.</p>
+            <ul class="dish-items">
+              <li>Tout l'Ardoise, et en plus&nbsp;:</li>
+              <li>4 à 6 pages (maison, carte, équipe, groupes…)</li>
+              <li>Carte modifiable par vous depuis le téléphone</li>
+              <li>Version anglaise complète</li>
+              <li>Page groupes et privatisation avec formulaire</li>
+              <li>Référencement local et données structurées</li>
+              <li>Galerie photos et liens Instagram</li>
+              <li>Prise en main de 45 min, sur place ou en visio</li>
+            </ul>
+            <div class="dish-meta"><span>Prêt en 3 semaines</span><span>Idéal&nbsp;: bistrot, brasserie, bar à vin, pizzeria</span></div>
+            <div class="choose"><a class="btn btn-flame" href="#bon" data-offer="plat">Commander le Plat du chef <span class="arrow">→</span></a></div>
+          </div>
+
+          <div class="course">
+            <div class="course-label">Dessert</div>
+            <div class="dish-line"><h3>Le Menu dégustation</h3><span class="dots"></span><span class="price"><small>dès</small>2&nbsp;990&nbsp;€</span></div>
+            <p class="dish-desc">Du sur-mesure, de l'identité à la vente en ligne, pour les maisons qui veulent marquer les esprits.</p>
+            <ul class="dish-items">
+              <li>Tout le Plat du chef, et en plus&nbsp;:</li>
+              <li>Création ou refonte du logo et de l'identité</li>
+              <li>Design sur-mesure, animations soignées</li>
+              <li>Bons cadeaux vendus en ligne</li>
+              <li>Commande à emporter (click &amp; collect)</li>
+              <li>Coordination d'une séance photo culinaire</li>
+              <li>Troisième langue au choix</li>
+              <li>Lettre d'information pour vos habitués</li>
+            </ul>
+            <div class="dish-meta"><span>Prêt en 4 à 6 semaines</span><span>Idéal&nbsp;: table gastronomique, groupe, ouverture</span></div>
+            <div class="choose"><a class="btn btn-line" href="#bon" data-offer="degustation">Commander le Menu dégustation</a></div>
+          </div>
+
+          <div class="course">
+            <div class="course-label">Suppléments à la carte</div>
+            <ul class="extras">
+              <li><span>Langue supplémentaire</span><span class="dots"></span><b>190 €</b></li>
+              <li><span>QR codes de table vers la carte</span><span class="dots"></span><b>90 €</b></li>
+              <li><span>Fiche Google seule (création ou remise en état)</span><span class="dots"></span><b>150 €</b></li>
+              <li><span>Page événement ou soirée spéciale</span><span class="dots"></span><b>250 €</b></li>
+              <li><span>Bons cadeaux en ligne</span><span class="dots"></span><b>390 €</b></li>
+              <li><span>Logo et identité visuelle</span><span class="dots"></span><b>490 €</b></li>
+              <li><span>Commande à emporter</span><span class="dots"></span><b>590 €</b></li>
+              <li><span>Séance photo culinaire</span><span class="dots"></span><b>sur devis</b></li>
+            </ul>
+          </div>
+
+          <div class="menu-foot">
+            <p>Paiement en deux fois&nbsp;: 40&nbsp;% à la commande, le solde à la mise en ligne.</p>
+            <p>Prix de départ, ajustés à votre projet dans un devis gratuit et détaillé.</p>
+          </div>
+        </div>
+
+        <div class="subscription reveal">
+          <div>
+            <p class="kicker">Le Service continu · facultatif</p>
+            <h3>Votre site, entretenu comme votre salle.</h3>
+            <p>Hébergement rapide, nom de domaine, sauvegardes et sécurité, et surtout&nbsp;: <strong>vos modifications faites pour vous</strong>. Une photo de l'ardoise par message, elle est en ligne le jour même.</p>
+            <ul class="sub-list"><li>Hébergement et domaine inclus</li><li>Modifications de carte illimitées</li><li>Mise à jour des horaires sur Google</li><li>Petit bilan des visites chaque mois</li><li>Sans engagement</li></ul>
+          </div>
+          <div class="sub-price"><strong>29&nbsp;€</strong><span>par mois, sans engagement</span></div>
+        </div>
+
+        <div class="amuse reveal">
+          <p><strong>L'amuse-bouche, offert.</strong> 20 minutes au téléphone&nbsp;: je regarde votre site, votre fiche Google et votre carte en ligne, et je vous dis franchement ce qui vous fait perdre des clients. Aucun engagement.</p>
+          <a class="btn btn-ink" href="#bon" data-offer="amuse">Réserver mon amuse-bouche</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== MISE EN PLACE ===================== -->
+    <section class="section" id="mise-en-place">
+      <div class="container">
+        <div class="head reveal">
+          <p class="kicker">La mise en place</p>
+          <h2>Comme un service&nbsp;: <em>préparé, cadencé, envoyé.</em></h2>
+          <p class="lead">Vous n'avez rien à rédiger ni à installer, et presque rien à préparer. Votre seul travail&nbsp;: me dire ce qui rend votre maison unique.</p>
+        </div>
+        <ol class="steps">
+          <li class="step reveal"><span class="dot">01</span><span class="time">Jour 1 · 30 min</span><h3>La commande</h3><p>On se parle, au téléphone ou autour d'un café, à l'heure qui vous arrange. Vous me racontez votre maison, je vous pose les bonnes questions.</p><span class="quote-inline">« Entre 15&nbsp;h et 18&nbsp;h, comme il se doit.&nbsp;»</span></li>
+          <li class="step reveal" style="--d:80ms"><span class="dot">02</span><span class="time">Semaine 1</span><h3>La mise en place</h3><p>Je récupère carte, photos et infos pratiques. J'écris les textes, je prépare la fiche Google et je construis le site.</p></li>
+          <li class="step reveal" style="--d:160ms"><span class="dot">03</span><span class="time">Semaine 2</span><h3>La dégustation</h3><p>Vous testez le site sur votre téléphone, avant tout le monde. On ajuste ensemble&nbsp;: deux allers-retours sont inclus.</p></li>
+          <li class="step reveal" style="--d:240ms"><span class="dot">04</span><span class="time">Semaine 3</span><h3>Envoyé&nbsp;!</h3><p>Mise en ligne, branchement de Google, QR codes si besoin, et une prise en main pour que vous soyez autonome.</p></li>
+          <li class="step reveal" style="--d:320ms"><span class="dot">05</span><span class="time">Ensuite</span><h3>Le service continu</h3><p>La carte change, la saison tourne, je suis là. Un message suffit.</p><span class="quote-inline">« Ça marche. »</span></li>
+        </ol>
+        <div class="promise">
+          <div class="reveal"><strong>1 <em>seul</em></strong><span>interlocuteur, du premier café à la mise en ligne. Pas de chef de projet, pas de sous-traitant.</span></div>
+          <div class="reveal" style="--d:80ms"><strong>0 <em>jargon</em></strong><span>On parle couverts, ticket moyen et coup de feu. Je traduis le reste.</span></div>
+          <div class="reveal" style="--d:160ms"><strong>24 <em>h</em></strong><span>pour vous répondre, même en plein rush. Jamais pendant votre service.</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== RÉALISATIONS ===================== -->
+    <section class="section dark" id="realisations">
+      <div class="container">
+        <div class="head reveal">
+          <p class="kicker">Sortis du passe</p>
+          <h2>Des sites à tester <em>sur votre téléphone.</em></h2>
+          <p class="lead">Un site que j'ai conçu, écrit et développé de A à Z, et deux restaurants imaginaires qui montrent ce que le vôtre peut faire. Ouvrez-les, jouez avec, tout fonctionne.</p>
+        </div>
+        <div class="works">
+          <a class="work big reveal" href="https://nuitsinguliere.com" target="_blank" rel="noopener">
+            <div class="browser"><div class="browser-bar"><i></i><i></i><i></i><span>nuitsinguliere.com</span></div><img src="assets/demos/nuits-singulieres.jpg" alt="Page d'accueil du site Nuits Singulières" loading="lazy" width="1200" height="1500"></div>
+            <div class="work-body">
+              <div>
+                <span class="work-tag real">● En ligne · réalisation</span>
+                <h3>Nuits Singulières</h3>
+                <p>Le guide des hôtels les plus insolites de France&nbsp;: 59 lieux, plus de 40 guides, une carte interactive et un quiz. Conçu, rédigé, développé et référencé par mes soins.</p>
+                <ul class="work-facts"><li>Plus de 100 pages</li><li>Carte interactive</li><li>Référencement Google</li><li>Newsletter</li></ul>
+              </div>
+              <span class="work-go" aria-hidden="true">↗</span>
+            </div>
+          </a>
+          <a class="work reveal" style="--d:80ms" href="demos/maison-garance/">
+            <div class="browser"><div class="browser-bar"><i></i><i></i><i></i><span>maison-garance.fr</span></div><img src="assets/demos/maison-garance.jpg" alt="Démo : site du bistrot imaginaire Maison Garance" loading="lazy" width="1200" height="800"></div>
+            <div class="work-body">
+              <div>
+                <span class="work-tag">Démo · bistrot de saison</span>
+                <h3>Maison Garance</h3>
+                <p>Ardoise du jour, carte avec allergènes, «&nbsp;ouvert maintenant&nbsp;», version anglaise, réservation.</p>
+              </div>
+              <span class="work-go" aria-hidden="true">→</span>
+            </div>
+          </a>
+          <a class="work reveal" style="--d:160ms" href="demos/brasa/">
+            <div class="browser"><div class="browser-bar"><i></i><i></i><i></i><span>brasa-grill.fr</span></div><img src="assets/demos/brasa.jpg" alt="Démo : site du grill imaginaire Brasa" loading="lazy" width="1200" height="800"></div>
+            <div class="work-body">
+              <div>
+                <span class="work-tag">Démo · grill et bar à vin</span>
+                <h3>Brasa</h3>
+                <p>Commande à emporter, bons cadeaux, agenda des soirées&nbsp;: un site qui vend, sans commission.</p>
+              </div>
+              <span class="work-go" aria-hidden="true">→</span>
+            </div>
+          </a>
+        </div>
+        <p class="works-note reveal">Maison Garance et Brasa sont des restaurants imaginaires, créés pour la démonstration. Votre site sera, lui, à l'image de votre maison.</p>
+      </div>
+    </section>
+
+    <!-- ===================== L'ADDITION (calculette) ===================== -->
+    <section class="section" id="addition">
+      <div class="container">
+        <div class="head reveal">
+          <p class="kicker">L'addition</p>
+          <h2>Combien vous coûtent <em>les intermédiaires&nbsp;?</em></h2>
+          <p class="lead">Les plateformes apportent de la visibilité, elles ont leur place. Mais les clients qui vous connaissent déjà peuvent réserver ou commander en direct, sans commission. Faites le calcul avec vos propres chiffres.</p>
+        </div>
+        <div class="calc reveal">
+          <div class="calc-in">
+            <div class="calc-tabs" role="tablist">
+              <button type="button" role="tab" aria-selected="true" data-mode="resa">Réservations</button>
+              <button type="button" role="tab" aria-selected="false" data-mode="livraison">Livraison, emporter</button>
+            </div>
+            <div data-panel="resa">
+              <div class="slider"><label for="c-resa">Réservations par mois via une plateforme <output id="o-resa"></output></label><input id="c-resa" type="range" min="10" max="800" step="10" value="150"></div>
+              <div class="slider"><label for="c-couverts">Couverts par réservation <output id="o-couverts"></output></label><input id="c-couverts" type="range" min="1" max="6" step="0.5" value="2.5"></div>
+              <div class="slider"><label for="c-fee">Coût par couvert réservé <output id="o-fee"></output></label><input id="c-fee" type="range" min="0.5" max="5" step="0.25" value="2"><small>Selon votre contrat&nbsp;: regardez une de vos factures.</small></div>
+            </div>
+            <div data-panel="livraison" hidden>
+              <div class="slider"><label for="c-cmd">Commandes par mois via une plateforme <output id="o-cmd"></output></label><input id="c-cmd" type="range" min="10" max="1500" step="10" value="250"></div>
+              <div class="slider"><label for="c-panier">Panier moyen <output id="o-panier"></output></label><input id="c-panier" type="range" min="10" max="80" step="1" value="28"></div>
+              <div class="slider"><label for="c-com">Commission de la plateforme <output id="o-com"></output></label><input id="c-com" type="range" min="5" max="35" step="1" value="25"><small>Selon votre contrat&nbsp;: regardez une de vos factures.</small></div>
+            </div>
+            <div class="slider"><label for="c-part">Part qui pourrait passer en direct <output id="o-part"></output></label><input id="c-part" type="range" min="5" max="60" step="5" value="25"><small>Vos habitués, les clients qui tapent déjà votre nom sur Google…</small></div>
+          </div>
+          <div class="calc-out" aria-live="polite">
+            <div class="receipt-title">L'addition · sur 12 mois</div>
+            <div class="r-line"><span>Payé aux intermédiaires</span><b id="r-today">—</b></div>
+            <div class="r-line"><span>Dont part qui pourrait passer en direct</span><b id="r-direct">—</b></div>
+            <div class="r-line"><span id="r-offer-name">Le Plat du chef + 12 mois de service</span><b id="r-offer">—</b></div>
+            <div class="r-total">
+              <div class="r-line"><span>Économie possible dès la 2<sup>e</sup> année</span><b id="r-save">—</b></div>
+              <div class="r-big" id="r-months">—</div>
+              <p class="r-caption" id="r-caption">—</p>
+            </div>
+            <p class="fine">Estimation indicative, à partir des chiffres que vous indiquez. Elle ne tient pas compte des nouveaux clients que votre site vous apportera aussi.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== FAQ ===================== -->
+    <section class="section tint" id="faq">
+      <div class="container faq-grid">
+        <div class="head reveal">
+          <p class="kicker">Les questions</p>
+          <h2>Celles qu'on me pose <em>au comptoir.</em></h2>
+          <p class="lead">Et si la vôtre n'y est pas&nbsp;: <a class="link" href="#bon">posez-la moi</a>.</p>
+        </div>
+        <div class="faq reveal" style="--d:100ms">
+          <details open><summary>Je n'y connais rien en informatique. Je vais m'en sortir&nbsp;?</summary><div class="answer"><p>Oui. Vous n'avez rien à installer ni à rédiger&nbsp;: je récupère votre carte, vos horaires et vos photos, j'écris les textes et je m'occupe de la technique. Pour changer un plat ou un prix, c'est aussi simple qu'envoyer un message. Et avec le Service continu, vous m'envoyez la photo de votre ardoise&nbsp;: elle est en ligne le jour même.</p></div></details>
+          <details><summary>Combien de temps faut-il pour créer le site&nbsp;?</summary><div class="answer"><p>Environ 10 jours pour L'Ardoise, 3 semaines pour Le Plat du chef, 4 à 6 semaines pour Le Menu dégustation. Le délai dépend surtout de la rapidité avec laquelle on réunit la carte, les photos et les informations.</p></div></details>
+          <details><summary>Est-ce que je suis propriétaire de mon site&nbsp;?</summary><div class="answer"><p>Oui, entièrement. Le nom de domaine est enregistré à votre nom, les textes et les fichiers vous appartiennent. Si vous arrêtez le Service continu, je vous remets tout, sans frais de sortie.</p></div></details>
+          <details><summary>Je suis déjà sur Google et sur une plateforme de réservation. Pourquoi un site&nbsp;?</summary><div class="answer"><p>Parce que c'est le seul endroit en ligne qui vous appartient&nbsp;: votre ambiance, votre histoire, votre carte à jour, et une réservation directe, sans intermédiaire. Le site ne remplace pas ces outils, il les relie&nbsp;: votre fiche Google renvoie vers lui, et votre bouton de réservation peut rester celui que vous utilisez déjà.</p></div></details>
+          <details><summary>Pourquoi ne pas faire un site moi-même avec un outil gratuit&nbsp;?</summary><div class="answer"><p>Vous pouvez&nbsp;! Mais il faut du temps, que vous n'avez pas entre deux services, et un site de restaurant a des besoins précis&nbsp;: une carte lisible sur téléphone, les allergènes, des horaires fiables, un référencement local soigné, une vitesse d'affichage irréprochable. C'est exactement ce que je fais, et rien d'autre.</p></div></details>
+          <details><summary>Je n'ai pas de belles photos. C'est un problème&nbsp;?</summary><div class="answer"><p>Non. On peut démarrer avec vos meilleures photos de téléphone&nbsp;: je vous donne quelques conseils simples pour les réussir, en plein jour, près d'une fenêtre. Pour aller plus loin, j'organise une séance avec un photographe culinaire, sur devis.</p></div></details>
+          <details><summary>Comment se passe le paiement&nbsp;?</summary><div class="answer"><p>40&nbsp;% à la commande, le solde à la mise en ligne, une fois que vous êtes satisfait. Le Service continu se paie au mois, sans engagement. Chaque projet commence par un devis gratuit et détaillé.</p></div></details>
+          <details><summary>Vous travaillez où&nbsp;?</summary><div class="answer"><p data-zone>Partout en France&nbsp;: la plupart des échanges se font par téléphone ou en visio, aux heures qui conviennent à un restaurateur. Et quand c'est possible, je passe vous voir, en dehors du service bien sûr.</p></div></details>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== LE BON (contact) ===================== -->
+    <section class="section dark" id="bon">
+      <div class="container order">
+        <div class="order-side reveal">
+          <p class="kicker">Le bon</p>
+          <h2>À vous <em>d'envoyer.</em></h2>
+          <p class="lead">Remplissez le bon comme en cuisine&nbsp;: court et précis. Je vous rappelle sous 24&nbsp;h, au moment que vous choisissez, jamais pendant le service.</p>
+          <ul class="contact-lines" id="contact-lines"></ul>
+          <p class="hours-note">Je réponds aux messages le matin, entre 15&nbsp;h et 18&nbsp;h, et le soir après le service. Comme vous, en somme.</p>
+        </div>
+
+        <div class="reveal" style="--d:120ms">
+          <form class="bon" id="bon-form" novalidate>
+            <div class="bon-head">
+              <div>Bon de commande<strong>Votre maison</strong></div>
+              <div class="right">N° <span data-bon-no>0001</span><br><span data-bon-date>—</span></div>
+            </div>
+            <div data-form-body>
+              <div class="fgrid">
+                <div class="f"><label for="f-resto">Nom du restaurant</label><input id="f-resto" name="restaurant" required autocomplete="organization" placeholder="Chez…"></div>
+                <div class="f"><label for="f-ville">Ville</label><input id="f-ville" name="ville" autocomplete="address-level2" placeholder="Où êtes-vous ?"></div>
+                <div class="f"><label for="f-nom">Votre prénom</label><input id="f-nom" name="nom" required autocomplete="given-name"></div>
+                <div class="f"><label for="f-tel">Téléphone</label><input id="f-tel" name="telephone" type="tel" autocomplete="tel" inputmode="tel"></div>
+                <div class="f full"><label for="f-mail">E-mail</label><input id="f-mail" name="email" type="email" required autocomplete="email"></div>
+                <div class="f"><label for="f-type">Votre maison</label>
+                  <select id="f-type" name="type"><option value="">Choisir…</option><option>Bistrot, brasserie</option><option>Restaurant traditionnel</option><option>Table gastronomique</option><option>Pizzeria, trattoria</option><option>Bar à vin, bar à cocktails</option><option>Crêperie, salon de thé</option><option>Food truck, traiteur</option><option>Cuisine du monde</option><option>Autre</option></select>
+                </div>
+                <div class="f"><label for="f-now">Aujourd'hui, en ligne</label>
+                  <select id="f-now" name="aujourdhui"><option value="">Choisir…</option><option>Rien du tout</option><option>Juste une fiche Google</option><option>Une page Facebook ou Instagram</option><option>Un vieux site</option><option>Un site correct, à améliorer</option></select>
+                </div>
+                <fieldset class="f full"><legend>Ce qui vous met en appétit</legend>
+                  <div class="chips">
+                    <label class="chip"><input type="radio" name="offre" value="L'amuse-bouche (audit offert)"><span>L'amuse-bouche offert</span></label>
+                    <label class="chip"><input type="radio" name="offre" value="L'Ardoise"><span>L'Ardoise</span></label>
+                    <label class="chip"><input type="radio" name="offre" value="Le Plat du chef"><span>Le Plat du chef</span></label>
+                    <label class="chip"><input type="radio" name="offre" value="Le Menu dégustation"><span>Le Menu dégustation</span></label>
+                    <label class="chip"><input type="radio" name="offre" value="Je ne sais pas encore"><span>Je ne sais pas encore</span></label>
+                  </div>
+                </fieldset>
+                <fieldset class="f full"><legend>Quand vous rappeler&nbsp;?</legend>
+                  <div class="chips">
+                    <label class="chip"><input type="checkbox" name="rappel" value="Le matin"><span>Le matin</span></label>
+                    <label class="chip"><input type="checkbox" name="rappel" value="Entre deux services, 15 h – 18 h" checked><span>Entre deux services</span></label>
+                    <label class="chip"><input type="checkbox" name="rappel" value="Après le service"><span>Après le service</span></label>
+                    <label class="chip"><input type="checkbox" name="rappel" value="Le jour de fermeture"><span>Le jour de fermeture</span></label>
+                  </div>
+                </fieldset>
+                <div class="f full"><label for="f-msg">Un mot pour la cuisine</label><textarea id="f-msg" name="message" placeholder="Votre projet, votre site actuel, une date d'ouverture…"></textarea></div>
+                <input class="hp" type="text" name="bot-field" tabindex="-1" autocomplete="off" aria-hidden="true">
+              </div>
+              <div class="bon-foot">
+                <small>Vos informations servent uniquement à vous répondre. Elles ne sont ni revendues ni partagées.</small>
+                <button class="btn btn-flame" type="submit">Envoyer au passe <span class="arrow">→</span></button>
+              </div>
+              <p class="small" id="bon-error" role="alert" style="color:var(--flame);margin:14px 0 0" hidden></p>
+            </div>
+            <div class="bon-done" data-form-done hidden>
+              <span class="stamp-big">ÇA MARCHE&nbsp;!</span>
+              <h3>Bon bien reçu, <span data-done-name>chef</span>.</h3>
+              <p data-done-text>Je vous rappelle sous 24&nbsp;h, au moment que vous avez choisi.</p>
+            </div>
+          </form>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="foot-top">
+        <div>
+          <img src="assets/logo-blanc.svg" alt="Le Passe — studio web pour restaurants" width="260" height="65">
+          <p class="sig">Ça <em>marche.</em></p>
+        </div>
+        <div>
+          <h4>La maison</h4>
+          <ul>
+            <li><a href="#histoire">L'histoire</a></li>
+            <li><a href="#carte">La carte des offres</a></li>
+            <li><a href="#mise-en-place">La mise en place</a></li>
+            <li><a href="#realisations">Réalisations et démos</a></li>
+            <li><a href="#addition">Calculer l'addition</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>Le passe</h4>
+          <ul id="foot-contact">
+            <li><a href="#bon">Passer commande</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="foot-bottom">
+        <span>© <span data-year>2026</span> Le Passe · Jules Bourdon · Site fait maison, sans cookie publicitaire.</span>
+        <span><a href="mentions-legales.html">Mentions légales</a></span>
+      </div>
+    </div>
+  </footer>
+
+  <div class="float-cta" id="float-cta"><a class="btn btn-flame" href="#bon">Passer commande <span class="arrow">→</span></a></div>
+
+  <script src="js/config.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

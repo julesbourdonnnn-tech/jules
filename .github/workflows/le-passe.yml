@@ -1,0 +1,48 @@
+# Met en ligne le site Le Passe (dossier le-passe/) sur son propre Worker
+# Cloudflare « le-passe », séparé de Nuits Singulières.
+# Utilise les mêmes secrets que le reste du dépôt : CLOUDFLARE_API_TOKEN et
+# CLOUDFLARE_ACCOUNT_ID (GitHub → Settings → Secrets and variables → Actions).
+name: Le Passe
+
+on:
+  push:
+    paths:
+      - "le-passe/**"
+      - ".github/workflows/le-passe.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: le-passe
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    # Uniquement sur la branche principale du dépôt (les branches de travail ne publient rien)
+    if: github.ref_name == github.event.repository.default_branch
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Vérifier les clés Cloudflare
+        id: keys
+        env:
+          TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          if [ -z "$TOKEN" ] || [ -z "$ACCOUNT" ]; then
+            echo "::warning::Clés Cloudflare absentes : ajoute CLOUDFLARE_API_TOKEN et CLOUDFLARE_ACCOUNT_ID dans les secrets du dépôt."
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Mettre en ligne
+        if: steps.keys.outputs.ok == 'true'
+        working-directory: le-passe
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          npx --yes wrangler@4 deploy
+          echo "### 🛎️ Le Passe est en ligne (voir l'adresse workers.dev dans le journal ci-dessus)" >> "$GITHUB_STEP_SUMMARY"

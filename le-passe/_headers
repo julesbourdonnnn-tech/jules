@@ -1,0 +1,19 @@
+# En-têtes HTTP (Cloudflare)
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
+
+# Polices et images : mises en cache longtemps
+/fonts/*
+  Cache-Control: public, max-age=31536000, immutable
+/demos/*/fonts/*
+  Cache-Control: public, max-age=31536000, immutable
+/assets/*
+  Cache-Control: public, max-age=2592000
+
+# Pages internes : jamais indexées
+/identite.html
+  X-Robots-Tag: noindex
+/demos/*
+  X-Robots-Tag: noindex

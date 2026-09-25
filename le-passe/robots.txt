@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /identite.html
+Disallow: /demos/
+
+Sitemap: https://lepasse.studio/sitemap.xml

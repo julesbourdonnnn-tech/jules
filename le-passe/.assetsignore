@@ -1,0 +1,7 @@
+# Fichiers du dossier à NE PAS mettre en ligne
+.assetsignore
+wrangler.jsonc
+worker
+README.md
+HISTOIRE.md
+STRATEGIE.md
