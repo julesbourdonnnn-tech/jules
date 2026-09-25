@@ -375,5 +375,68 @@
    "https://www.chateaudelatreyne.com/en/rooms-and-suites-chateau-hotel-dordogne",
    "https://www.chateaudelatreyne.com/"
   ]
+ },
+ {
+  "id": "lieu-dieu",
+  "pages": [
+   "https://www.lieudieu.com/en/accommodations",
+   "https://www.lieudieu.com/"
+  ]
+ },
+ {
+  "id": "nids-de-chlorofil",
+  "pages": [
+   "https://www.chloro-fil.fr/lesnidsdechlorofil/cabanes/",
+   "https://www.chloro-fil.fr/lesnidsdechlorofil/"
+  ]
+ },
+ {
+  "id": "cabanes-de-blanche",
+  "pages": [
+   "https://www.lescabanesdeblanche.com/",
+   "https://www.lescabanes-deblanche.fr/"
+  ]
+ },
+ {
+  "id": "villa-rene-lalique",
+  "pages": [
+   "https://www.villarenelalique.com/en/",
+   "https://www.villarenelalique.com/"
+  ]
+ },
+ {
+  "id": "domaine-du-chatelet",
+  "pages": [
+   "https://www.domaineduchatelet.com/",
+   "https://www.domaineduchatelet.com/cabanes"
+  ]
+ },
+ {
+  "id": "cabanes-du-goutty",
+  "pages": [
+   "https://www.cabanesdugoutty.fr/nos-cabanes/",
+   "https://www.cabanesdugoutty.fr/"
+  ]
+ },
+ {
+  "id": "cabane-du-perche",
+  "pages": [
+   "https://www.cabane-dans-arbres.com/",
+   "https://www.cabane-dans-arbres.com/la-grande-cabane/"
+  ]
+ },
+ {
+  "id": "landifornia-lodge",
+  "pages": [
+   "https://www.landifornia-lodge.com/",
+   "https://landifornia-lodge.com/en/"
+  ]
+ },
+ {
+  "id": "coco-barn",
+  "pages": [
+   "https://www.cocobarn.fr/",
+   "https://cocobarn.fr/en/"
+  ]
  }
 ]
