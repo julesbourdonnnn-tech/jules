@@ -1214,3 +1214,25 @@ body.has-compare .site-footer { padding-bottom: 110px; }
 .badge-form textarea { width: 100%; padding: 14px 16px; border-radius: 14px; border: 1px solid var(--line); background: #fff; font: .85rem/1.5 ui-monospace, Menlo, monospace; resize: vertical; }
 .badge-actions { display: flex; gap: 10px; flex-wrap: wrap; }
 @media (max-width: 760px) { .badge-layout { grid-template-columns: 1fr; gap: 28px; } }
+
+/* ---------- Guides « près de [ville] » ---------- */
+.in-guides .in-cities { margin: 16px 0 0; color: var(--muted, #6b6b6b); line-height: 1.8; }
+.in-guides .in-cities a { display: inline; padding: 0; border: 0; background: none; border-radius: 0; font-weight: 600; color: var(--ink, inherit); text-decoration: underline; text-decoration-color: var(--terracotta); text-underline-offset: 3px; }
+.in-guides .in-cities a:hover { background: none; color: var(--terracotta); }
+.in-guides .in-cities span { font-size: .9em; }
+.city-links { margin: 28px 0 0; line-height: 2; }
+.city-links a { font-weight: 500; text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--terracotta); }
+.city-links a:hover { color: var(--terracotta); }
+
+/* ---------- Partage ---------- */
+.share-block { margin-top: 40px; padding: 22px 24px; border: 1px solid var(--line); border-radius: 18px; background: var(--paper); }
+.share-title { margin: 0 0 12px; font-family: "Fraunces", Georgia, serif; font-size: 1.25rem; }
+.share-links { display: flex; flex-wrap: wrap; gap: 10px; }
+.share-links a, .share-links button { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 999px; border: 1px solid var(--line); background: #fff; color: var(--ink); font: inherit; font-size: .95rem; font-weight: 500; cursor: pointer; transition: border-color .2s, transform .2s; }
+.share-links a:hover, .share-links button:hover { border-color: var(--terracotta); transform: translateY(-1px); }
+.share-links a::before, .share-links button::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--c, var(--terracotta)); }
+.share-pinterest { --c: #e60023; }
+.share-whatsapp { --c: #25d366; }
+.share-facebook { --c: #1877f2; }
+.share-email { --c: #7d857f; }
+.g-tips .share-block { margin: 28px 0 20px; }

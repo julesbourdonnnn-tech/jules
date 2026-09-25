@@ -13,6 +13,7 @@
 "use strict";
 const fs = require("fs");
 const path = require("path");
+const crypto = require("crypto");
 
 const ROOT = path.resolve(__dirname, "..");
 global.window = global;
@@ -67,6 +68,7 @@ function head({ title, description, canonical, image, type = "website", ld = [],
   <meta property="og:description" content="${e(description)}">
   <meta property="og:url" content="${e(canonical)}">
   ${image ? `<meta property="og:image" content="${e(image)}">\n  <meta name="twitter:card" content="summary_large_image">` : ""}
+  <meta name="robots" content="max-image-preview:large">
   <meta name="theme-color" content="#0f1a17">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✦</text></svg>">${FONTS}
   ${leaflet ? `<link rel="stylesheet" href="../vendor/leaflet/leaflet.css">` : ""}
@@ -116,7 +118,9 @@ function hotelPage(h) {
   const trk = `data-track="Réservation" data-hotel="${e(h.id)}" data-book="${e(h.id)}"`;
   const title = `${h.name} (${h.city}) : nuit insolite, ${T.label.toLowerCase()} | ${CONFIG.siteName}`;
   const description = clip(`${h.tagline}. ${h.description[0]}`);
-  const guides = C.guidesFor(h);
+  const allGuides = C.guidesFor(h);
+  const guides = allGuides.filter((g) => g.cat !== "ville");
+  const cityGuides = allGuides.filter((g) => g.cat === "ville").sort((a, b) => C.distanceKm(a.city, h) - C.distanceKm(b.city, h));
   const tags = C.tagsOf(h);
   const faq = hotelFaq(h);
   const gift = GUIDES.find((g) => g.gift && C.guideHotels(g).length);
@@ -252,10 +256,12 @@ function hotelPage(h) {
           <p class="small muted"><a href="https://www.google.com/maps/dir/?api=1&amp;destination=${h.lat},${h.lng}" target="_blank" rel="noopener">Itinéraire Google Maps →</a></p>
         </section>
 
-        ${guides.length ? `
+        ${C.shareBlock({ url, title: `${h.name} : ${h.tagline}`, image: absImg(h.images[0]) })}
+        ${guides.length || cityGuides.length ? `
         <section class="in-guides reveal">
           <h2>Cette adresse figure dans nos guides</h2>
           <ul>${guides.map((g) => `<li><a href="${C.guideUrl(g)}">${e(C.guideTitle(g))} →</a></li>`).join("")}</ul>
+          ${cityGuides.length ? `<p class="in-cities">Idéal pour un week-end depuis ${cityGuides.map((g) => `<a href="${C.guideUrl(g)}">${e(g.city.name)}</a> <span>(${Math.max(5, Math.round(C.distanceKm(g.city, h) / 5) * 5)} km)</span>`).join(", ")}.</p>` : ""}
         </section>` : ""}
 
         <div class="nl-inline reveal">
@@ -332,7 +338,8 @@ function guidePage(g) {
   const title = C.guideTitle(g, n);
   const url = abs(`guides/${g.slug}.html`);
   const cover = list.find((h) => h.id === g.cover) || list[0];
-  const others = GUIDES.filter((x) => x !== g && C.guideHotels(x).length);
+  const others = GUIDES.filter((x) => x !== g && x.cat !== "ville" && C.guideHotels(x).length);
+  const cities = GUIDES.filter((x) => x !== g && x.cat === "ville" && C.guideHotels(x).length);
   const ld = [
     {
       "@context": "https://schema.org",
@@ -424,6 +431,7 @@ ${g.gift ? giftBlock() : ""}
     <section class="container g-tips reveal">
       <h2>Nos conseils</h2>
       <ul>${g.tips.map((t) => `<li>${e(t)}</li>`).join("")}</ul>
+      ${C.shareBlock({ url, title, image: cover ? absImg(cover.images[0]) : "", heading: "Partager ce guide" })}
       <p class="small muted">Les informations de ce guide sont données à titre indicatif : vérifiez les tarifs, les dates d'ouverture et les conditions directement auprès des établissements ou sur le site de réservation.</p>
     </section>
 
@@ -432,6 +440,7 @@ ${g.gift ? giftBlock() : ""}
       <div class="container">
         <div class="section-head"><p class="eyebrow dark">Continuer la lecture</p><h2>Nos autres guides</h2></div>
         <div class="guide-grid">${others.slice(0, 6).map(C.guideCard).join("")}</div>
+        ${cities.length ? `<p class="city-links"><strong>Nuits insolites près de :</strong> ${cities.map((x) => `<a href="${C.guideUrl(x)}">${e(x.city.name)}</a>`).join(" · ")}</p>` : ""}
       </div>
     </section>` : ""}
   </main>
@@ -491,7 +500,7 @@ function guidesIndexPage() {
     </section>
     <section class="section container guides-index">
       <p class="lead guides-lead">Hôtels insolites, cabanes perchées, bulles, phares, châteaux ou refuges d'altitude : nos guides rassemblent les adresses les plus extraordinaires de France par envie, par type de lieu et par région, avec des conseils pour bien choisir et bien réserver.</p>
-      ${[["envie", "Par envie et par occasion"], ["lieu", "Par type de lieu"], ["region", "Par région"]].map(([k, label]) => {
+      ${[["envie", "Par envie et par occasion"], ["lieu", "Par type de lieu"], ["region", "Par région"], ["ville", "Près de chez vous"]].map(([k, label]) => {
         const list = visible.filter((g) => (g.cat || "envie") === k);
         return list.length ? `
       <h2 class="guides-cat">${label}</h2>
@@ -617,19 +626,42 @@ function inject(file, marker, html) {
 /* ============================================================
    SITEMAP & ROBOTS
    ============================================================ */
+// Date de dernière modification réelle de chaque page (pour Google) :
+// on garde l'empreinte de chaque fichier dans data/lastmod.json et la date
+// ne change que si le contenu de la page a vraiment changé.
+const LASTMOD_FILE = path.join(ROOT, "data", "lastmod.json");
+function lastmods(files) {
+  const prev = fs.existsSync(LASTMOD_FILE) ? JSON.parse(fs.readFileSync(LASTMOD_FILE, "utf8")) : {};
+  const today = new Date().toISOString().slice(0, 10);
+  const next = {};
+  for (const f of files) {
+    const hash = crypto.createHash("sha1").update(fs.readFileSync(path.join(ROOT, f))).digest("hex").slice(0, 12);
+    next[f] = prev[f] && prev[f].hash === hash ? prev[f] : { hash, date: today };
+  }
+  write("data/lastmod.json", JSON.stringify(next, null, 1) + "\n");
+  return next;
+}
+
 function sitemap() {
-  const urls = [
-    `${SITE}/`,
-    abs("carte.html"),
-    abs("quiz.html"),
-    abs("a-propos.html"),
-    abs("guides/index.html"),
-    ...GUIDES.filter((g) => C.guideHotels(g).length).map((g) => abs(`guides/${g.slug}.html`)),
-    ...HOTELS.map((h) => abs(`hotels/${h.id}.html`)),
+  const guides = GUIDES.filter((g) => C.guideHotels(g).length);
+  const pages = [
+    ["index.html", `${SITE}/`, []],
+    ["carte.html", abs("carte.html"), []],
+    ["quiz.html", abs("quiz.html"), []],
+    ["a-propos.html", abs("a-propos.html"), []],
+    ["guides/index.html", abs("guides/index.html"), []],
+    ...guides.map((g) => {
+      const list = C.guideHotels(g);
+      const cover = list.find((h) => h.id === g.cover) || list[0];
+      return [`guides/${g.slug}.html`, abs(`guides/${g.slug}.html`), [[cover.images[0], C.guideTitle(g, list.length)]]];
+    }),
+    ...HOTELS.map((h) => [`hotels/${h.id}.html`, abs(`hotels/${h.id}.html`), h.images.slice(0, 6).map((src) => [src, `${h.name}, ${h.city}`])]),
   ];
+  const mods = lastmods(pages.map(([f]) => f));
+  const imageXml = (imgs) => imgs.map(([src]) => `\n    <image:image><image:loc>${e(absImg(src))}</image:loc></image:image>`).join("");
   return `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${urls.map((u) => `  <url><loc>${e(u)}</loc></url>`).join("\n")}
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+${pages.map(([f, u, imgs]) => `  <url><loc>${e(u)}</loc><lastmod>${mods[f].date}</lastmod>${imageXml(imgs)}${imgs.length ? "\n  " : ""}</url>`).join("\n")}
 </urlset>
 `;
 }

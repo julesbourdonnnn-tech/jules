@@ -242,6 +242,18 @@
   });
 
   /* ---------- Petit message temporaire ---------- */
+  // Bouton « Copier le lien » des blocs de partage
+  document.addEventListener("click", async (ev) => {
+    const btn = ev.target.closest("[data-copy-link]");
+    if (!btn) return;
+    try {
+      await navigator.clipboard.writeText(btn.dataset.copyLink);
+      toast("Lien copié : il ne reste plus qu'à le coller !");
+    } catch {
+      window.prompt("Copiez ce lien :", btn.dataset.copyLink);
+    }
+  });
+
   function toast(msg) {
     let t = document.getElementById("toast");
     if (!t) {

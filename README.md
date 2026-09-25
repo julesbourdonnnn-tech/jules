@@ -47,6 +47,10 @@ Chaque établissement a sa **vraie page** (`hotels/<id>.html`) et chaque thème 
 Ces pages sont fabriquées par `node scripts/build.js` à partir de `js/hotels.js` et `js/guides.js`. **Tu n'as rien à lancer** : la GitHub Action « Build » les régénère à chaque modification.
 
 - **Ajouter un guide** : copie un bloc dans `js/guides.js` (titre, texte d'introduction, conseils, et règle de sélection des établissements).
+- **Guides « près de [ville] »** : générés automatiquement pour les grandes villes (liste `CITIES` en bas de `js/guides.js`). Un guide n'apparaît que s'il compte au moins 5 adresses à moins de 250 km, dont 3 à moins de 150 km : ajouter des lieux dans une région fait apparaître les guides des villes proches tout seuls.
+- **Plan du site** : chaque page y figure avec sa vraie date de mise à jour (`data/lastmod.json`, tenue à jour par le build) et ses photos, pour Google Images.
+- **IndexNow** : à chaque modification, la GitHub Action « IndexNow » prévient Bing (et les moteurs partenaires) des pages changées. La clé est le fichier `<clé>.txt` à la racine : ne le supprime pas.
+- **Partage** : chaque fiche et chaque guide ont des boutons Pinterest, WhatsApp, Facebook, e-mail et « copier le lien ».
 - **Avant la mise en ligne** : le nom de domaine est dans `siteUrl` (`js/config.js`) ; déclare `https://nuitsinguliere.com/sitemap.xml` dans la Google Search Console.
 
 ## Voir le site en local

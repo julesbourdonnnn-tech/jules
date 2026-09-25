@@ -277,6 +277,22 @@
       </a>`;
   }
 
+  /* ---------- Partage (Pinterest, WhatsApp, Facebook, lien) ---------- */
+  function shareBlock({ url, title, image, heading = "Partager cette adresse" }) {
+    const u = encodeURIComponent(url), t = encodeURIComponent(title);
+    const links = [
+      ["pinterest", "Pinterest", `https://pinterest.com/pin/create/button/?url=${u}&media=${encodeURIComponent(image || "")}&description=${t}`],
+      ["whatsapp", "WhatsApp", `https://wa.me/?text=${encodeURIComponent(`${title} ${url}`)}`],
+      ["facebook", "Facebook", `https://www.facebook.com/sharer/sharer.php?u=${u}`],
+      ["email", "E-mail", `mailto:?subject=${t}&body=${encodeURIComponent(`Regarde ça : ${url}`)}`],
+    ];
+    return `
+        <div class="share-block">
+          <p class="share-title">${escapeHtml(heading)}</p>
+          <div class="share-links">${links.map(([k, label, href]) => `<a class="share-${k}" href="${escapeHtml(href)}" target="_blank" rel="noopener" data-track="Partage" data-hotel="${k}">${label}</a>`).join("")}<button type="button" class="share-copy" data-copy-link="${escapeHtml(url)}">Copier le lien</button></div>
+        </div>`;
+  }
+
   /* ---------- En-tête et pied de page ---------- */
   function header() {
     const { CONFIG } = data();
@@ -342,7 +358,7 @@
     data, setRoot, root, page, hotelUrl, guideUrl, escapeHtml, formatPrice, formatDistance, distanceKm,
     FALLBACK, img, budgetOf, budgetHtml, bookingLink, partnerLinks, bookingTip, stayEstimate, capacity,
     todayIso, addDays, nightsOf, cleanStay, hasDates, tagsOf,
-    favButton, card, newsletterForm, socialLinks, guideHotels, guideTitle, guidesFor, guideCard,
+    favButton, card, newsletterForm, socialLinks, guideHotels, guideTitle, guidesFor, guideCard, shareBlock,
     header, footer, baseLayer,
   };
 });

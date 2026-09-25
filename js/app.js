@@ -260,14 +260,14 @@
     if (m >= 9 && m <= 11) return {
       kicker: `Automne ${y}`, title: "L'automne au chaud, les pieds dans un bain",
       text: "Bains nordiques fumants, forêts qui rougissent, cheminées qui crépitent : nos adresses pour savourer la belle saison des cabanes.",
-      guide: "spa-jacuzzi-privatif",
+      guide: "week-end-insolite-en-automne",
       // Hors montagne : entre deux saisons, beaucoup de refuges et chalets sont fermés
       match: (h) => h.env !== "ville" && h.env !== "montagne" && (has(h, "spa-prive") || (has(h, "bien-etre") && ["cabane", "chalet", "chateau", "vignoble"].includes(h.type))),
     };
     if (m === 12 || m <= 3) return {
       kicker: `Hiver ${m === 12 ? y + 1 : y}`, title: "L'hiver au-dessus des nuages",
       text: "Igloos sur les pistes, refuges qu'on rejoint en raquettes, chalets au coin du feu : la montagne comme on en rêve.",
-      guide: "hotels-insolites-montagne",
+      guide: "nuit-insolite-en-hiver",
       match: (h) => h.env === "montagne" || h.type === "igloo",
     };
     if (m >= 4 && m <= 6) return {

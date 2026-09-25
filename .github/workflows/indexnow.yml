@@ -1,0 +1,43 @@
+# Prévient Bing, Yandex, Seznam… (protocole IndexNow) dès qu'une page
+# du site change, pour qu'elle soit explorée en quelques minutes au lieu
+# de plusieurs jours. La clé est le fichier <clé>.txt à la racine du site.
+name: IndexNow
+
+on:
+  push:
+    paths:
+      - "*.html"
+      - "hotels/**"
+      - "guides/**"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Attendre la mise en ligne
+        run: sleep 240
+      - name: Envoyer les pages modifiées
+        env:
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.sha }}
+        run: |
+          SITE="https://nuitsinguliere.com"
+          KEY_FILE=$(ls | grep -E '^[0-9a-f]{32}\.txt$' | head -1)
+          KEY="${KEY_FILE%.txt}"
+          if [ -z "$KEY" ]; then echo "Clé IndexNow introuvable"; exit 0; fi
+          if [ -n "$BEFORE" ] && git cat-file -e "$BEFORE" 2>/dev/null && [ "$BEFORE" != "0000000000000000000000000000000000000000" ]; then
+            FILES=$(git diff --name-only --diff-filter=AM "$BEFORE" "$AFTER" -- '*.html' 'hotels/*.html' 'guides/*.html')
+          else
+            FILES=$(git ls-files '*.html')
+          fi
+          URLS=$(echo "$FILES" | grep -vE '^(404|studio|comparer|selection)\.html$|^_review/|^apercu/|^dist/|^vendor/' \
+            | sed -e "s#^index\.html\$#/#" -e "s#^\([^/].*\)#/\1#" | sed "s#^#$SITE#" | sed "s#$SITE//#$SITE/#" | sort -u | head -9000)
+          if [ -z "$URLS" ]; then echo "Aucune page à signaler"; exit 0; fi
+          echo "$URLS"
+          BODY=$(python3 -c 'import json,sys; urls=[u for u in sys.stdin.read().split() if u]; print(json.dumps({"host":"nuitsinguliere.com","key":sys.argv[1],"keyLocation":"https://nuitsinguliere.com/%s.txt"%sys.argv[1],"urlList":urls}))' "$KEY" <<< "$URLS")
+          curl -sS -o /dev/null -w "IndexNow : HTTP %{http_code}\n" -X POST "https://api.indexnow.org/indexnow" \
+            -H "Content-Type: application/json; charset=utf-8" --data "$BODY"

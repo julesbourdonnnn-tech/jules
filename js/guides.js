@@ -525,5 +525,241 @@
         "Au printemps et à l'automne, les brumes matinales sur l'eau sont magnifiques : levez-vous tôt.",
       ],
     },
+    {
+      slug: "week-end-insolite-en-automne",
+      cat: "envie",
+      kicker: "Automne",
+      short: "Week-end insolite en automne",
+      title: (n) => `Week-end insolite en automne : ${n} adresses pour savourer la saison`,
+      description: "Forêts qui rougissent, vendanges, bains nordiques fumants et cheminées : nos adresses insolites préférées pour un week-end d'automne en France, de la Toussaint à novembre.",
+      ids: ["cabane-du-perche", "loire-valley-lodges", "landifornia-lodge", "cabanes-du-goutty", "lieu-dieu", "sources-de-caudalie", "villa-la-coste", "domaine-des-etangs", "pella-roca", "nids-des-vosges", "domaine-du-chatelet", "dihan"],
+      cover: "cabane-du-perche",
+      intro: [
+        "L'automne est la plus belle saison des cabanes : les forêts se colorent, la lumière devient dorée, et l'on retrouve avec bonheur le crépitement d'un poêle à bois ou la chaleur d'un bain nordique quand l'air fraîchit. C'est aussi le temps des vendanges dans les vignobles et des brumes du matin sur les étangs.",
+        "Nous avons réuni des adresses qui se vivent particulièrement bien d'octobre à novembre : cabanes en forêt, bains chauds en plein air, domaines viticoles et grands parcs aux arbres centenaires. Idéal pour un pont de la Toussaint ou un week-end de novembre, loin de la foule de l'été.",
+      ],
+      faq: [
+        ["Où partir en week-end insolite en automne ?", "En forêt, pour les couleurs, ou dans les vignobles, pour l'ambiance des vendanges. Une cabane avec bain nordique ou spa privatif est idéale : on profite de la nature même quand il fait frais."],
+        ["Les cabanes sont-elles chauffées en automne ?", "La plupart des adresses de ce guide sont chauffées (poêle, chauffage d'appoint ou au sol). Vérifiez sur chaque fiche : certaines cabanes très simples ont seulement un chauffage d'appoint."],
+        ["Les prix sont-ils plus bas en automne ?", "Souvent, oui : hors vacances de la Toussaint, l'automne est une saison plus calme, et les disponibilités sont plus nombreuses le week-end qu'en été."],
+      ],
+      tips: [
+        "Pour la Toussaint, réservez dès septembre : c'est la seule période d'automne vraiment chargée.",
+        "Emportez des vêtements chauds et une lampe frontale : les soirées tombent tôt en forêt.",
+        "Vérifiez les dates d'ouverture : quelques lieux ferment leurs hébergements les plus simples en fin de saison.",
+      ],
+    },
+    {
+      slug: "nuit-insolite-en-hiver",
+      cat: "envie",
+      kicker: "Hiver",
+      short: "Nuit insolite en hiver",
+      title: (n) => `Nuit insolite en hiver : ${n} adresses cocon, entre neige et bain chaud`,
+      description: "Igloo sur les pistes, chalet d'altitude, cabane avec bain nordique sous la neige, marchés de Noël d'Alsace ou Fête des Lumières à Lyon : nos nuits insolites préférées pour l'hiver.",
+      ids: ["village-igloo-val-thorens", "refuge-de-solaise", "fermes-de-marie", "domaine-du-chatelet", "cabane-du-perche", "landifornia-lodge", "villa-rene-lalique", "cour-des-loges"],
+      cover: "village-igloo-val-thorens",
+      intro: [
+        "L'hiver est la saison des nuits cocon : un igloo sculpté dans la neige, un refuge au sommet des pistes, un bain chaud fumant sous les flocons, ou une grande maison au coin du feu. Il suffit d'une nuit pour que la saison froide devienne la plus belle de l'année.",
+        "Notre sélection mêle la haute montagne, pour les amoureux de neige, et des adresses de plaine ouvertes toute l'année, parfaites pour les fêtes : les marchés de Noël d'Alsace autour de la Villa René Lalique, ou la Fête des Lumières de Lyon depuis les cours Renaissance du Vieux Lyon.",
+      ],
+      faq: [
+        ["Où dormir dans un igloo en France ?", "Le Village Igloo de Val Thorens propose des nuits dans des igloos sculptés, au cœur du domaine skiable, de fin décembre à mi-avril environ. Les places sont rares : réservez tôt."],
+        ["Quelle nuit insolite offrir à Noël ?", "Une cabane avec bain nordique ou spa privatif fait toujours plaisir, en toute saison. Pour un cadeau sans date, pensez au bon cadeau de l'établissement ou à un coffret séjour."],
+        ["Peut-on faire un bain nordique quand il neige ?", "Oui, et c'est même le meilleur moment : l'eau est chauffée autour de 38 °C, et le contraste avec l'air froid est un vrai bonheur. Prévoyez un peignoir et des chaussons pour le retour."],
+      ],
+      tips: [
+        "En montagne, vérifiez l'accès : certains lieux se rejoignent en remontée mécanique, en raquettes ou en dameuse, avec des horaires fixes.",
+        "Pour Noël et le Nouvel An, réservez dès l'automne : ces nuits partent en premier.",
+        "Emportez de bonnes chaussures : même en plaine, les chemins de forêt sont boueux en hiver.",
+      ],
+      gift: true,
+    },
+    {
+      slug: "hotels-insolites-auvergne-rhone-alpes",
+      cat: "region",
+      kicker: "Auvergne-Rhône-Alpes",
+      short: "Insolite en Auvergne-Rhône-Alpes",
+      title: (n) => `Auvergne-Rhône-Alpes : ${n} nuits insolites, des volcans aux sommets des Alpes`,
+      description: "Igloos et refuges d'altitude dans les Alpes, bulles en Savoie, cabanes sur pilotis au milieu d'un étang en Auvergne, palais historiques à Lyon : les hébergements insolites d'Auvergne-Rhône-Alpes.",
+      match: (h) => h.region === "Auvergne-Rhône-Alpes",
+      sort: (a, b) => (a.env === "montagne") - (b.env === "montagne") || a.budget - b.budget,
+      cover: "refuge-de-la-traye",
+      intro: [
+        "Aucune région n'offre autant de contrastes : on peut s'endormir dans un igloo à Val Thorens, face à la Mer de Glace dans un refuge historique, dans une bulle au milieu des prairies savoyardes, ou dans une cabane sur pilotis au milieu d'un étang d'Auvergne.",
+        "Lyon ajoute ses adresses chargées d'histoire, entre le Grand Hôtel-Dieu sous le dôme de Soufflot et les demeures Renaissance du Vieux Lyon. De quoi composer un week-end différent à chaque saison.",
+      ],
+      tips: [
+        "En montagne, beaucoup de refuges ne sont ouverts qu'en saison (hiver et été) : vérifiez les dates sur chaque fiche.",
+        "En Auvergne, les lacs et volcans se découvrent très bien à pied : prévoyez une journée de randonnée.",
+        "À Lyon, réservez longtemps à l'avance pour la Fête des Lumières, début décembre.",
+      ],
+    },
+    {
+      slug: "hotels-insolites-grand-est",
+      cat: "region",
+      kicker: "Grand Est",
+      short: "Insolite en Alsace et dans les Vosges",
+      title: (n) => `Alsace et Vosges : ${n} nuits insolites dans le Grand Est`,
+      description: "Cabanes perchées dans les forêts des Vosges, cabane avec spa privatif près de Gérardmer, suites de la villa de René Lalique : les nuits insolites du Grand Est.",
+      match: (h) => h.region === "Grand Est",
+      cover: "cabanes-du-goutty",
+      intro: [
+        "Les forêts des Vosges et d'Alsace sont faites pour les cabanes : on y dort au-dessus d'un ruisseau, face à un étang ou dans les arbres, à moins d'une heure de Strasbourg ou de Colmar.",
+        "Et pour une grande occasion, la villa que René Lalique fit construire en 1920 à Wingen-sur-Moder est devenue un hôtel de six suites, avec une table doublement étoilée.",
+      ],
+      tips: [
+        "En décembre, combinez votre nuit avec les marchés de Noël d'Alsace : réservez très tôt.",
+        "Les cabanes des Vosges sont souvent simples (toilettes sèches, chauffage d'appoint) : lisez bien le descriptif avant de réserver.",
+        "La route des Crêtes, entre les sommets des Vosges, est fermée en hiver : vérifiez avant de partir.",
+      ],
+    },
+    {
+      slug: "hotels-insolites-normandie",
+      cat: "region",
+      kicker: "Normandie",
+      short: "Insolite en Normandie",
+      title: (n) => `Normandie : ${n} nuits insolites, de la forêt au Mont-Saint-Michel`,
+      description: "Cabane dans les arbres avec bain nordique dans le Perche, bulles et lodges en forêt, maison du XVe siècle dans les remparts du Mont-Saint-Michel : les nuits insolites de Normandie.",
+      match: (h) => h.region === "Normandie",
+      cover: "cabane-du-perche",
+      intro: [
+        "À deux heures de Paris, la Normandie cache des nuits insolites loin des foules : cabanes perchées dans les collines du Perche, bulles et lodges sous les hêtres d'une forêt domaniale, ou nuit dans les remparts du Mont-Saint-Michel.",
+        "Une région idéale pour un week-end nature, en toute saison, entre bocage, forêts et côtes.",
+      ],
+      tips: [
+        "Le Perche est à environ deux heures de Paris : parfait pour un départ le samedi matin.",
+        "Autour du Mont-Saint-Michel, consultez les horaires des marées : la baie change complètement d'un moment à l'autre.",
+        "Prévoyez un vêtement de pluie : le climat normand est changeant, même en été.",
+      ],
+    },
+    {
+      slug: "hotels-insolites-hauts-de-france",
+      cat: "region",
+      kicker: "Hauts-de-France",
+      short: "Insolite dans le Nord",
+      title: (n) => `Hauts-de-France : ${n} nuits insolites près de Lille, d'Arras et de la baie de Somme`,
+      description: "Cabanes perchées dans la forêt de Phalempin, bulles avec jacuzzi privatif près d'Arras, cabane flottante avec bain nordique près de la baie de Somme : les nuits insolites des Hauts-de-France.",
+      match: (h) => h.region === "Hauts-de-France",
+      cover: "cabanes-de-blanche",
+      intro: [
+        "Pas besoin d'aller loin pour dormir autrement quand on vit dans le Nord : la forêt de Phalempin est à vingt minutes de Lille, et la campagne de l'Artois ou les étangs aux portes de la baie de Somme offrent un dépaysement complet.",
+        "On y dort perché dans les arbres, dans une bulle transparente sous les étoiles ou dans une cabane qui flotte sur un étang, avec bain nordique privatif.",
+      ],
+      tips: [
+        "Les bulles se réservent surtout d'avril à septembre : pour l'hiver, préférez une cabane chauffée avec bain chaud.",
+        "Autour de la baie de Somme, allez voir les phoques à marée basse, avec un guide.",
+        "Pour un cadeau, plusieurs de ces lieux vendent des bons cadeaux valables un an.",
+      ],
+    },
   ];
+
+  /* ------------------------------------------------------------
+   *  GUIDES « PRÈS DE [VILLE] » (générés automatiquement)
+   *  Les adresses à moins de 250 km, triées par distance (12 au plus).
+   *  Un guide n'est publié que s'il est vraiment utile : au moins
+   *  5 adresses, dont 3 à moins de 150 km hors de Paris intra-muros.
+   * ------------------------------------------------------------ */
+  const CITIES = [
+    { name: "Lyon", slug: "lyon", lat: 45.764, lng: 4.8357, around: "Entre les Alpes, le Beaujolais, les Dombes et les volcans d'Auvergne, Lyon est un point de départ idéal pour une nuit qui sort de l'ordinaire, et la ville elle-même cache quelques adresses d'exception." },
+    { name: "Marseille", slug: "marseille", lat: 43.2965, lng: 5.3698, around: "Des calanques au Luberon, des vignes du pays d'Aix aux criques rouges de l'Estérel, les environs de Marseille regorgent de lieux où dormir autrement, souvent à moins d'une heure de route." },
+    { name: "Bordeaux", slug: "bordeaux", lat: 44.8378, lng: -0.5792, around: "Vignobles, dune du Pilat, Périgord et vallée de la Dordogne : autour de Bordeaux, les idées d'escapade ne manquent pas pour un week-end hors du commun." },
+    { name: "Toulouse", slug: "toulouse", lat: 43.6047, lng: 1.4442, around: "Des Pyrénées au Quercy, de la cité de Carcassonne aux causses du Lot, Toulouse est entourée de paysages spectaculaires, parfaits pour une nuit insolite le temps d'un week-end." },
+    { name: "Nantes", slug: "nantes", lat: 47.2184, lng: -1.5536, around: "Entre la côte bretonne, les bords de Loire et les caves troglodytes du Saumurois, Nantes se trouve au carrefour de quelques-unes des plus belles nuits insolites de l'Ouest." },
+    { name: "Nice", slug: "nice", lat: 43.7102, lng: 7.262, around: "Entre la Méditerranée et les sommets des Alpes du Sud, Nice permet de passer en quelques heures d'une villa les pieds dans l'eau à un refuge d'altitude." },
+    { name: "Rennes", slug: "rennes", lat: 48.1173, lng: -1.6778, around: "Forêt de Brocéliande, golfe du Morbihan, côtes sauvages et vallée de la Loire : depuis Rennes, les nuits insolites se trouvent souvent à une ou deux heures de route." },
+    { name: "Montpellier", slug: "montpellier", lat: 43.6108, lng: 3.8767, around: "Entre Camargue, Provence, Cévennes et pays cathare, Montpellier est idéalement placée pour partir dormir dans un lieu qui change vraiment du quotidien." },
+    { name: "Grenoble", slug: "grenoble", lat: 45.1885, lng: 5.7245, around: "Au pied des massifs de Belledonne, de la Chartreuse et du Vercors, Grenoble ouvre la porte des Alpes : refuges, chalets d'altitude et villages d'igloos ne sont jamais très loin." },
+    { name: "Tours", slug: "tours", lat: 47.3941, lng: 0.6848, around: "Au cœur de la vallée de la Loire, Tours est entourée de châteaux, de caves troglodytes et de forêts : c'est l'une des villes de France les mieux placées pour une nuit insolite." },
+    { name: "Clermont-Ferrand", slug: "clermont-ferrand", lat: 45.7772, lng: 3.087, around: "Volcans, lacs de cratère et grands espaces : autour de Clermont-Ferrand, la nature d'Auvergne se prête parfaitement aux cabanes et aux refuges hors du temps." },
+    { name: "Dijon", slug: "dijon", lat: 47.322, lng: 5.0415, around: "Canal de Bourgogne, grands crus, étangs et forêts du Morvan : autour de Dijon, on dort au fil de l'eau, dans un château ou au milieu des arbres." },
+    { name: "Lille", slug: "lille", lat: 50.6292, lng: 3.0573, around: "Forêts du Nord, bocages de l'Artois et baie de Somme : autour de Lille, il est plus facile qu'on ne le croit de s'offrir une nuit dans les arbres ou au bord de l'eau." },
+    { name: "Strasbourg", slug: "strasbourg", lat: 48.5734, lng: 7.7521, around: "Des Vosges du Nord aux crêtes des Hautes-Vosges, les forêts d'Alsace et de Lorraine abritent des cabanes perchées et des maisons d'exception à peu de distance de Strasbourg." },
+    { name: "Annecy", slug: "annecy", lat: 45.8992, lng: 6.1294, around: "Entre le lac d'Annecy, les Aravis, le Mont-Blanc et la Tarentaise, les nuits d'exception en altitude ne sont qu'à une ou deux heures de route." },
+    { name: "Angers", slug: "angers", lat: 47.4784, lng: -0.5632, around: "Le Saumurois et ses kilomètres de galeries troglodytes, les châteaux de la Loire et les vignobles de l'Anjou font des environs d'Angers un terrain de jeu rêvé pour dormir autrement." },
+    { name: "Orléans", slug: "orleans", lat: 47.903, lng: 1.9093, around: "Entre la Sologne, les châteaux de la Loire et Paris à une heure de train, Orléans est un excellent point de départ pour une nuit insolite, près de chez soi." },
+    { name: "Limoges", slug: "limoges", lat: 45.8336, lng: 1.2611, around: "Charente limousine, Périgord vert, plateau de Millevaches et vallée de la Dordogne : autour de Limoges, la campagne cache des adresses d'exception." },
+  ];
+  const TYPE_WORDS = { cabane: "cabanes perchées", bulle: "bulles", troglodyte: "troglodytes", phare: "phare", igloo: "igloos", chalet: "refuges et chalets", eau: "nuits sur l'eau", chateau: "châteaux", historique: "lieux chargés d'histoire", design: "hôtels design", mer: "adresses les pieds dans l'eau", vignoble: "nuits dans les vignes", etoiles: "nuits sous les étoiles", moulin: "moulins", train: "wagons" };
+  const euro = (n) => `${n} €`;
+  const listFr = (a) => (a.length > 1 ? `${a.slice(0, -1).join(", ")} et ${a[a.length - 1]}` : a[0] || "");
+
+  function cityGuide(c) {
+    const de = /^[AEIOUYÉÈÂ]/i.test(c.name) ? `d'${c.name}` : `de ${c.name}`;
+    const dist = (h) => km(c, h);
+    const round = (h) => Math.max(5, Math.round(dist(h) / 5) * 5);
+    const inCity = (h) => dist(h) < 12;
+    const pick = () => {
+      const all = (global.HOTELS || []).filter((h) => dist(h) <= 250).sort((a, b) => dist(a) - dist(b));
+      const close = all.filter((h) => dist(h) <= 150 && h.city !== "Paris");
+      return all.length >= 5 && close.length >= 3 ? all.slice(0, 12) : [];
+    };
+    const types = (list) => {
+      const count = {};
+      list.forEach((h) => { count[h.type] = (count[h.type] || 0) + 1; });
+      return Object.entries(count).sort((a, b) => b[1] - a[1]).map(([t]) => TYPE_WORDS[t]).filter(Boolean);
+    };
+    const budgets = (list) => {
+      const B = global.BUDGETS || {};
+      const lo = Math.min(...list.map((h) => h.budget)), hi = Math.max(...list.map((h) => h.budget));
+      return [B[lo], B[hi]];
+    };
+    return {
+      slug: `hotel-insolite-pres-de-${c.slug}`,
+      cat: "ville",
+      city: c,
+      kicker: `Autour ${de}`,
+      short: `Nuits insolites près ${de}`,
+      title: (n) => `Hôtels insolites près ${de} : ${n} nuits hors du commun`,
+      get description() {
+        const list = pick();
+        const names = list.filter((h) => !inCity(h)).slice(0, 3).map((h) => h.name);
+        return `Week-end insolite autour ${de} : ${listFr(names)}… ${list.length} lieux extraordinaires classés par distance, avec prix et conseils pour réserver.`;
+      },
+      get ids() { return pick().map((h) => h.id); },
+      // Photos de couverture variées d'une ville à l'autre (parmi les 3 adresses les plus proches)
+      get cover() { const l = pick().filter((h) => !inCity(h)).slice(0, 3); return (l[CITIES.indexOf(c) % Math.max(1, l.length)] || {}).id; },
+      note: (h) => (inCity(h) ? `En plein ${c.name}` : `À ${round(h)} km ${de} à vol d'oiseau`),
+      get intro() {
+        const list = pick();
+        const out = list.filter((h) => !inCity(h));
+        const near = out.filter((h) => dist(h) <= 100);
+        const t = types(list).slice(0, 4);
+        const first = out[0];
+        return [
+          c.around,
+          `Nous avons retenu ${list.length} adresses à moins de ${Math.ceil(dist(list[list.length - 1]) / 50) * 50} km, classées de la plus proche à la plus lointaine : ${listFr(t)}.` +
+            (first ? ` La plus proche hors de la ville, ${first.name}, se trouve à environ ${round(first)} km ${de} à vol d'oiseau` + (near.length > 1 ? `, et ${near.length} lieux sont à moins de 100 km : de quoi partir le samedi matin sans avoir l'impression de passer le week-end sur la route.` : ".") : ""),
+        ];
+      },
+      get faq() {
+        const list = pick();
+        if (!list.length) return [];
+        const out = list.filter((h) => !inCity(h));
+        const first = out[0] || list[0];
+        const [lo, hi] = budgets(list);
+        const cheap = list.filter((h) => h.budget <= 2);
+        const train = list.filter((h) => (h.tags || []).includes("train"));
+        const spa = list.filter((h) => /spa|jacuzzi|bain nordique|sauna/i.test((h.amenities || []).join(" ")));
+        const faq = [
+          [`Quel est l'hébergement insolite le plus proche ${de} ?`, `Parmi notre sélection, ${first.name} (${first.city}) est le plus proche, à environ ${round(first)} km ${de} à vol d'oiseau. ${first.tagline}.`],
+          [`Combien coûte une nuit insolite près ${de} ?`, lo && hi ? `Selon les adresses de ce guide, comptez ${lo === hi ? lo.range : `de ${lo.range.replace(" la nuit", "")} à ${hi.range}`} pour deux personnes, selon le lieu et la saison.` + (cheap.length ? ` Les plus abordables : ${listFr(cheap.slice(0, 3).map((h) => h.name))}.` : "") + " Le prix exact s'affiche dès que vous choisissez vos dates." : "Le prix exact s'affiche dès que vous choisissez vos dates."],
+        ];
+        if (spa.length) faq.push([`Où dormir avec spa ou jacuzzi près ${de} ?`, `${listFr(spa.slice(0, 4).map((h) => `${h.name} (${h.city})`))} proposent un espace bien-être. Vérifiez sur chaque fiche s'il est privatif ou partagé.`]);
+        faq.push(train.length
+          ? [`Peut-on y aller sans voiture depuis ${c.name} ?`, `Oui pour certaines adresses : ${listFr(train.slice(0, 4).map((h) => h.name))} ${train.length > 1 ? "sont accessibles" : "est accessible"} en train (parfois avec un court transfert en taxi ou à vélo). Pour les autres, la voiture reste le plus pratique.`]
+          : [`Faut-il une voiture pour ces adresses autour ${de} ?`, "Dans la plupart des cas, oui : ces lieux sont souvent en pleine nature. Certains établissements peuvent organiser un transfert depuis la gare la plus proche : demandez-leur au moment de réserver."]);
+        return faq;
+      },
+      get tips() {
+        const list = pick();
+        const near = list.filter((h) => !inCity(h) && dist(h) <= 100);
+        return [
+          near.length ? `Pour une seule nuit, visez les adresses à moins de 100 km (${listFr(near.slice(0, 3).map((h) => h.name))}) : vous profitez du lieu dès l'après-midi.` : "La plupart de ces adresses méritent au moins deux nuits : partez le vendredi soir ou posez un jour pour profiter du lieu sans courir.",
+          "Les distances indiquées sont à vol d'oiseau : comptez davantage par la route, surtout en montagne ou en pleine campagne.",
+          "Ces lieux comptent souvent très peu de chambres ou de cabanes : pour un week-end précis, réservez plusieurs semaines à l'avance.",
+        ];
+      },
+    };
+  }
+  global.GUIDES.push(...CITIES.map(cityGuide));
 })(typeof window !== "undefined" ? window : globalThis);
