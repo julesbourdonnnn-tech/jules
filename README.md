@@ -26,6 +26,7 @@ Le site est **100 % statique** (HTML, CSS, JavaScript). Pas de serveur, pas de b
 - **Envies** : « Spa privatif » et « Bien-être » (déduits des équipements), « En tribu », « Sans voiture » et « Avec son chien » (champ `tags`, uniquement quand l'information est vérifiée). Filtres sur l'accueil et la carte.
 - **Pour qui ?** : sur chaque fiche, « C'est pour vous si… / Moins pour vous si… » (champs `forYou` et `notForYou`), puis une FAQ générée à partir des informations vérifiées (avec données structurées `FAQPage` pour Google).
 - **Comparateur** (`comparer.html`) : jusqu'à 3 lieux côte à côte (bouton ⇄ sur les cartes et les fiches), lien partageable.
+- **Carte Blanche** (`jeu.html`) : jeu de cartes à collectionner pour les hôteliers et restaurateurs. Une cloche de 5 cartes toutes les 10 minutes (3 en réserve max), un « Menu du Chef » quotidien avec une Épique garantie, 62 cartes réparties en 7 familles, des versions brillantes (1 sur 25) et des Légendaires Full Art très rares. Les doublons rapportent des pourboires pour fabriquer les cartes manquantes. Progression enregistrée dans le navigateur du joueur ; page non indexée par Google.
 - **Quiz** (`quiz.html`) : 5 questions, 3 lieux proposés avec le pourcentage de correspondance et les raisons ; résultats partageables.
 - **En ce moment** : une sélection sur l'accueil qui change selon la saison et les fêtes (Saint-Valentin, fête des mères, Noël).
 - **Qui sommes-nous** (`a-propos.html`) : charte de sélection et transparence sur les commissions.
