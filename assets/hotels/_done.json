@@ -394,5 +394,66 @@
   16,
   21,
   23
+ ],
+ "lieu-dieu": [
+  16,
+  8,
+  20,
+  6,
+  14,
+  22
+ ],
+ "nids-de-chlorofil": [
+  3,
+  2,
+  1,
+  9
+ ],
+ "cabanes-de-blanche": [
+  17,
+  2,
+  9,
+  18,
+  14,
+  24
+ ],
+ "villa-rene-lalique": [
+  19,
+  1,
+  23,
+  22,
+  4,
+  12
+ ],
+ "domaine-du-chatelet": [
+  5,
+  3,
+  8,
+  7,
+  11
+ ],
+ "cabanes-du-goutty": [
+  6,
+  5,
+  7,
+  11,
+  21,
+  1
+ ],
+ "cabane-du-perche": [
+  19,
+  18,
+  1,
+  15,
+  6,
+  7
+ ],
+ "landifornia-lodge": [
+  2,
+  4,
+  3,
+  13,
+  14,
+  19
  ]
 }
