@@ -20,4 +20,6 @@ assets/hotels/*/source.json
 worker
 # Site Le Passe : publié séparément (le-passe/wrangler.jsonc)
 le-passe
+# Site AlliaForm : publié séparément (alliaform/wrangler.jsonc)
+alliaform
 undefined

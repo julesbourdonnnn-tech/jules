@@ -1,0 +1,32 @@
+# Anciennes adresses du site WordPress → sections de la nouvelle page
+# (évite les pages introuvables et conserve le référencement Google)
+/location-salle-formation-bordeaux                /#salles    301
+/location-salle-formation-bordeaux/               /#salles    301
+/centre-examen-bordeaux                           /#examens   301
+/centre-examen-bordeaux/                          /#examens   301
+/toefl-bordeaux                                   /#examens   301
+/toefl-bordeaux/                                  /#examens   301
+/service-title-1                                  /#examens   301
+/service-title-1/                                 /#examens   301
+/gestion-administrative-logistique-formations     /#services  301
+/gestion-administrative-logistique-formations/    /#services  301
+/informations-utiles                              /#acces     301
+/informations-utiles/                             /#acces     301
+/news                                             /#histoire  301
+/news/                                            /#histoire  301
+/category/*                                       /#histoire  301
+/author/*                                         /           301
+/2012/*                                           /#histoire  301
+/2013/*                                           /#histoire  301
+/2014/*                                           /#histoire  301
+/2015/*                                           /#histoire  301
+/2016/*                                           /#histoire  301
+/2017/*                                           /#histoire  301
+/2018/*                                           /#histoire  301
+/2019/*                                           /#histoire  301
+/2020/*                                           /#histoire  301
+/2021/*                                           /#histoire  301
+/2022/*                                           /#histoire  301
+/2023/*                                           /#histoire  301
+/2024/*                                           /#histoire  301
+/2025/*                                           /#histoire  301
