@@ -49,6 +49,17 @@ Comme la version 1 : site 100 % statique, aucun cookie, polices hébergées sur 
 
 Les mêmes points que la version 1 (voir `alliaform/README.md`) : **tarifs**, **examens proposés**, **accès**, **mentions légales** (numéro de TVA calculé à partir du SIREN). Pour les pages dédiées : que les sessions publiques du **TOEIC** ont bien lieu chez AlliaForm, et que le centre apparaît bien sous le nom « AlliaForm » dans les moteurs de recherche d'ETS, d'ETS Global et de Pearson VUE. Le logo de cette version est purement typographique (« AlliaForm » en Schibsted Grotesk) ; l'icône est un « A. » avec un point vermillon.
 
+## Mise en ligne chez l'hébergeur actuel (le plus simple)
+
+Le site étant entièrement statique, il suffit de remplacer les fichiers de WordPress par ceux-ci, chez l'hébergeur actuel (OVH, Ionos, o2switch…). Le nom de domaine et les e-mails ne changent pas.
+
+1. Sauvegarder le contenu du dossier du site (`www` ou `public_html`) ; `wp-content/uploads` contient les photos de l'ancien site.
+2. Vider ce dossier, puis y déposer : `.htaccess`, les fichiers `.html`, `robots.txt`, `sitemap.xml` et les dossiers `css`, `js`, `fonts`, `assets`. Ne pas déposer `README.md`, `wrangler.jsonc`, `_redirects`, `_headers` ni `.assetsignore`, qui ne servent qu'à Cloudflare.
+3. Le fichier `.htaccess` fait chez Apache ce que font `_redirects` et `_headers` chez Cloudflare : adresses sans `.html`, redirection des anciennes adresses WordPress, page 404, `alliaform.fr` → `www.alliaform.fr`, en-têtes de sécurité et cache. Le passage en https se règle de préférence dans l'espace client de l'hébergeur (un bloc commenté est prévu sinon).
+4. Remplacer l'hébergeur indiqué dans `mentions-legales.html` (Cloudflare) par l'hébergeur réel.
+
+Toute modification de `_redirects` doit être reportée dans `.htaccess`, et inversement.
+
 ## Mise en ligne (Cloudflare)
 
 Cette version a son propre Worker, **« alliaform-v2 »** : on peut publier les deux versions sur des adresses provisoires pour les comparer, puis brancher `alliaform.fr` sur celle qui est retenue.

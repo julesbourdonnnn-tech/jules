@@ -1,0 +1,82 @@
+# ============================================================
+# AlliaForm — réglages pour un hébergement classique (Apache :
+# OVH, o2switch, Ionos, Hostinger…). Même rôle que les fichiers
+# _redirects et _headers utilisés chez Cloudflare.
+# Ce fichier se dépose à la racine du site, à côté d'index.html.
+# ============================================================
+
+Options -Indexes -MultiViews
+DirectoryIndex index.html
+ErrorDocument 404 /404.html
+AddDefaultCharset utf-8
+AddType font/woff2 .woff2
+AddType image/svg+xml .svg
+
+<IfModule mod_rewrite.c>
+RewriteEngine On
+
+# ---------- Adresse unique : alliaform.fr → www.alliaform.fr ----------
+RewriteCond %{HTTP_HOST} ^alliaform\.fr$ [NC]
+RewriteRule ^(.*)$ https://www.alliaform.fr/$1 [R=301,L]
+
+# ---------- Forcer le https ----------
+# La plupart des hébergeurs le proposent dans leur espace client (« Forcer
+# HTTPS ») : c'est la méthode à préférer. Sinon, retirer les # des trois
+# lignes ci-dessous, puis vérifier que le site s'ouvre bien ; en cas de
+# message « trop de redirections », remettre les #.
+# RewriteCond %{HTTPS} !=on
+# RewriteCond %{HTTP:X-Forwarded-Proto} !=https
+# RewriteRule ^(.*)$ https://www.alliaform.fr/$1 [R=301,L]
+
+# ---------- Anciennes adresses du site WordPress ----------
+# Pages qui existent à nouveau (sans la barre finale)
+RewriteRule ^(location-salle-formation-bordeaux|centre-examen-bordeaux|toefl-bordeaux|toeic-bordeaux|gmat-bordeaux|mentions-legales)/$ /$1 [R=301,L]
+# Anciennes pages et articles → nouvelles pages
+RewriteRule ^service-title-1/?$ /centre-examen-bordeaux [R=301,L]
+RewriteRule ^category/toefl/?$ /toefl-bordeaux [R=301,L]
+RewriteRule ^category/examen/?$ /centre-examen-bordeaux [R=301,L]
+RewriteRule ^2012/07/11/toefl-bordeaux/?$ /toefl-bordeaux [R=301,L]
+RewriteRule ^2013/03/27/le-gmat-de-retour-a-bordeaux/?$ /gmat-bordeaux [R=301,L]
+RewriteRule ^2014/04/14/salle-formation-demi-journee/?$ /location-salle-formation-bordeaux [R=301,L]
+RewriteRule ^catalogue/catalogue_prestations_alliaform\.pdf$ /location-salle-formation-bordeaux [R=301,L]
+RewriteRule ^media/plan_acces\.pdf$ /#venir [R=301,L,NE]
+# Anciennes pages → sections de l'accueil
+RewriteRule ^gestion-administrative-logistique-formations/?$ /#organismes [R=301,L,NE]
+RewriteRule ^informations-utiles/?$ /#venir [R=301,L,NE]
+RewriteRule ^news/?$ /#histoire [R=301,L,NE]
+RewriteRule ^catalogue/ / [R=301,L]
+RewriteRule ^category/ /#histoire [R=301,L,NE]
+RewriteRule ^author/ / [R=301,L]
+RewriteRule ^20(1[2-9]|2[0-5])/ /#histoire [R=301,L,NE]
+
+# ---------- Adresses sans « .html » ----------
+# /index.html → /
+RewriteCond %{THE_REQUEST} \s/+index\.html[\s?] [NC]
+RewriteRule ^index\.html$ / [R=301,L]
+# /toefl-bordeaux.html → /toefl-bordeaux
+RewriteCond %{THE_REQUEST} \s/+([^?\s]+)\.html[\s?] [NC]
+RewriteRule ^ /%1 [R=301,L]
+# /toefl-bordeaux affiche toefl-bordeaux.html
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_FILENAME}.html -f
+RewriteRule ^(.+)$ $1.html [L]
+</IfModule>
+
+# ---------- En-têtes de sécurité ----------
+<IfModule mod_headers.c>
+Header always set X-Content-Type-Options "nosniff"
+Header always set Referrer-Policy "strict-origin-when-cross-origin"
+Header always set X-Frame-Options "SAMEORIGIN"
+Header always set Permissions-Policy "camera=(), microphone=(), geolocation=()"
+</IfModule>
+
+# ---------- Cache : polices un an, images un mois ----------
+<IfModule mod_expires.c>
+ExpiresActive On
+ExpiresByType font/woff2 "access plus 1 year"
+ExpiresByType image/svg+xml "access plus 1 month"
+ExpiresByType image/png "access plus 1 month"
+ExpiresByType image/jpeg "access plus 1 month"
+ExpiresByType image/webp "access plus 1 month"
+</IfModule>
