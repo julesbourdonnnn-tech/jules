@@ -354,7 +354,9 @@ select.fill:focus { background-color: rgba(169, 51, 23, .06); }
 @media (max-width: 680px) {
   body { font-size: 18px; }
   .panorama img { height: 230px; object-fit: cover; object-position: 36% 100%; }
-  .hero-facts { grid-template-columns: 1fr; gap: 12px; }
+  .hero-facts { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 34px; }
+  .hero-facts dt { font-size: 11.5px; }
+  .hero-facts dd { font-size: 13.5px; line-height: 1.3; }
   .hero-actions .btn { width: 100%; justify-content: space-between; }
   .moments { grid-template-columns: 1fr; gap: 22px; }
   .chrono { grid-template-columns: repeat(2, minmax(0, 1fr)); }
