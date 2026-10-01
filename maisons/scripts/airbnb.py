@@ -152,25 +152,52 @@ def api_get(url):
         return json.loads(r.read().decode("utf-8", "replace"))
 
 
+KNOWN_HASHES = {  # identifiants connus, utilisés si la recherche échoue
+    "StaysPdpReviewsQuery": ["dec1c8061483e78373602047450322fd474e79ba9afa8d3dbbc27f504030f91d"],
+}
+
+
+def find_hash(js, name):
+    for pat in (r'name:"%s",type:"query",operationId:"([0-9a-f]{64})"',
+                r'"%s"[^{}]{0,400}?operationId["\']?\s*:\s*["\']([0-9a-f]{64})',
+                r'operationId["\']?\s*:\s*["\']([0-9a-f]{64})["\'][^{}]{0,400}?"%s"'):
+        m = re.search(pat % name, js)
+        if m:
+            return m.group(1)
+    return None
+
+
 def operation_hashes(page):
-    """Trouve dans les scripts du site les identifiants des requêtes GraphQL."""
+    """Trouve dans les scripts du site les identifiants des requêtes GraphQL.
+
+    Parcourt les scripts de la page, puis les morceaux de scripts qu'ils
+    chargent à la demande (où se trouve souvent la requête des avis)."""
+    wanted = ("StaysPdpSections", "StaysPdpReviewsQuery")
     found = {}
-    scripts = re.findall(r'src="(https://a0\.muscache\.com/airbnb/static/packages/web/[^"]+\.js)"', page)
-    for u in scripts:
+    base = "https://a0.muscache.com/airbnb/static/"
+    queue = list(dict.fromkeys(re.findall(r'(https://a0\.muscache\.com/airbnb/static/packages/web/[^"\'\s]+?\.js)', page)))
+    seen = set()
+    while queue and len(seen) < 600 and len(found) < len(wanted):
+        u = queue.pop(0)
+        if u in seen:
+            continue
+        seen.add(u)
         try:
-            js = get(u)
+            js = get(u, tries=2)
         except Exception:  # noqa: BLE001
             continue
-        for name in ("StaysPdpSections", "StaysPdpReviewsQuery"):
-            if name in found:
-                continue
-            m = re.search(r'name:"%s",type:"query",operationId:"([0-9a-f]{64})"' % name, js) or \
-                re.search(r"'%s'[^}]{0,200}?operationId:'([0-9a-f]{64})'" % name, js) or \
-                re.search(r'"%s"[^}]{0,300}?"?operationId"?:"([0-9a-f]{64})"' % name, js)
-            if m:
-                found[name] = m.group(1)
-        if len(found) == 2:
-            break
+        for name in wanted:
+            if name not in found and name in js:
+                h = find_hash(js, name)
+                if h:
+                    found[name] = h
+        for rel in re.findall(r'["\'/]((?:packages/web/)[\w./\-]+?\.js)["\']', js):
+            full = base + rel
+            if full not in seen:
+                queue.append(full)
+    print(f"   {len(seen)} scripts parcourus")
+    for name, hs in KNOWN_HASHES.items():
+        found.setdefault(name, hs[0])
     return found
 
 
@@ -215,6 +242,9 @@ def fetch_sections(page, lid, key):
                 print(f"   StaysPdpReviewsQuery : {e}")
                 break
             batch = [d for d in walk(data) if isinstance(d, dict) and "comments" in d and "reviewer" in d]
+            if not batch and offset == 0:
+                with open(os.path.join(raw_dir, f"{key}-reviews-debug.json"), "w") as f:
+                    json.dump(data, f, ensure_ascii=False)
             reviews.extend(batch)
             if len(batch) < 24:
                 break
@@ -225,9 +255,33 @@ def fetch_sections(page, lid, key):
     return out
 
 
+def trim_bars(im):
+    """Retire les bandes noires des captures d'écran de téléphone (haut et bas).
+
+    Ne touche qu'aux images très allongées (format écran de téléphone), pour ne
+    jamais rogner le ciel d'une photo de nuit."""
+    if im.height / im.width < 1.6:
+        return im
+    g = im.convert("L").resize((200, im.height))
+    px = g.load()
+
+    def black(y):
+        return sum(1 for x in range(200) if px[x, y] < 10) >= 140
+
+    top = 0
+    while top < im.height // 3 and black(top):
+        top += 1
+    bottom = im.height
+    while bottom > im.height * 2 // 3 and black(bottom - 1):
+        bottom -= 1
+    if top > 8 or im.height - bottom > 8:
+        return im.crop((0, top + 4 if top > 8 else 0, im.width, bottom - 4 if im.height - bottom > 8 else im.height))
+    return im
+
+
 def save_photo(src, base):
     raw = get(src + "?im_w=2560", binary=True)
-    im = Image.open(io.BytesIO(raw)).convert("RGB")
+    im = trim_bars(Image.open(io.BytesIO(raw)).convert("RGB"))
     for suffix, width, q in (("xl", 2200, 80), ("md", 1100, 78), ("sm", 560, 72)):
         w = min(width, im.width)
         h = round(im.height * w / im.width)
