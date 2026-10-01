@@ -10,3 +10,8 @@
   Cache-Control: public, max-age=31536000, immutable
 /assets/*
   Cache-Control: public, max-age=2592000
+
+# Adresses provisoires en *.workers.dev : pas d'indexation par Google
+# (seul alliaform.fr doit apparaître dans les résultats)
+https://:worker.:subdomain.workers.dev/*
+  X-Robots-Tag: noindex

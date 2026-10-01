@@ -62,6 +62,8 @@ Toute modification de `_redirects` doit être reportée dans `.htaccess`, et inv
 
 ## Mise en ligne (Cloudflare)
 
+Pour un aperçu rapide sans compte ni ligne de commande : déposer le dossier du site (avec `_redirects` et `_headers`, sans `.htaccess`) sur [cloudflare.com/drop](https://cloudflare.com/drop), puis « Claim » pour garder l'adresse. Les adresses en `*.workers.dev` reçoivent un en-tête `X-Robots-Tag: noindex` (fichier `_headers`) : Google ne les indexe pas, seul alliaform.fr doit apparaître dans les résultats.
+
 Cette version a son propre Worker, **« alliaform-v2 »** : on peut publier les deux versions sur des adresses provisoires pour les comparer, puis brancher `alliaform.fr` sur celle qui est retenue.
 
 1. Cloudflare → Workers & Pages → Créer → Importer un dépôt Git → `jules`, **répertoire racine = `alliaform-v2`**, commande de déploiement `npx wrangler deploy`.
