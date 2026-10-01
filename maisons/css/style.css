@@ -507,7 +507,7 @@ body.header-visible .sub-nav { top: 70px; }
 .cal__day[disabled] { color: rgba(28, 26, 23, .28); cursor: default; }
 .cal__day.is-booked { text-decoration: line-through; text-decoration-color: rgba(28, 26, 23, .35); }
 .cal__day.is-today::after { content: ""; position: absolute; bottom: 14%; width: 4px; height: 4px; border-radius: 50%; background: var(--gold); }
-.cal__day.is-range { background: color-mix(in srgb, var(--accent) 12%, transparent); border-radius: 0; }
+.cal__day.is-range { background: rgba(28, 26, 23, .07); background: color-mix(in srgb, var(--accent) 12%, transparent); border-radius: 0; }
 .cal__day.is-start, .cal__day.is-end { background: var(--accent) !important; color: #fff; }
 .cal__day.is-start { border-radius: 50% 0 0 50%; }
 .cal__day.is-end { border-radius: 0 50% 50% 0; }
