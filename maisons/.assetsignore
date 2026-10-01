@@ -1,0 +1,9 @@
+# Fichiers du dossier à NE PAS mettre en ligne
+.wrangler
+node_modules
+data
+scripts
+worker
+README.md
+wrangler.jsonc
+vendor/**/LICENSE

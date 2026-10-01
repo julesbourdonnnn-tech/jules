@@ -3,12 +3,14 @@
 Lancé par la GitHub Action « Maisons — photos Airbnb »
 (.github/workflows/maisons-airbnb.yml). Pour chaque maison de LISTINGS :
   - télécharge la page de l'annonce,
-  - enregistre les données utiles dans data/airbnb/<maison>.json
-    (titre, description, équipements, capacité, avis, liste des photos),
-  - télécharge chaque photo en deux tailles (assets/photos/<maison>/NN-xl.webp
-    et NN-md.webp).
+  - enregistre le détail de l'annonce dans data/airbnb/<maison>.json
+    (description, équipements, couchages, règlement, notes, liste des photos),
+  - enregistre les avis des voyageurs dans data/airbnb/raw/<maison>-reviews.json,
+  - télécharge chaque photo en trois tailles (assets/photos/<maison>/NN-xl.webp,
+    NN-md.webp et NN-sm.webp), en retirant les bandes noires des captures d'écran.
 
-Rien n'est inventé : tout vient de l'annonce. Le site lit ensuite ces fichiers.
+Les textes du site sont dans js/data.js : ils reprennent ces fichiers, sans
+rien inventer. Si l'annonce change, relance l'Action puis mets js/data.js à jour.
 """
 import html as htmlmod
 import io
@@ -76,6 +78,23 @@ def deferred_states(page):
     return out
 
 
+DROP = {"__typename", "loggingEventData", "loggingData", "impressionLoggingEventData", "icon", "iconUrl",
+        "localizedStringWithTranslationPreference", "source", "categoryConfigs", "experiments",
+        "translationButton", "seeAllAmenitiesButton", "seeAllButton", "button", "ctaButton"}
+
+
+def simplify(o):
+    """Allège le JSON d'Airbnb pour qu'il reste lisible (sans perdre de texte)."""
+    if isinstance(o, dict):
+        if isinstance(o.get("localizedString"), str):
+            return o["localizedString"]
+        r = {k: simplify(v) for k, v in o.items() if k not in DROP}
+        return {k: v for k, v in r.items() if v not in (None, [], {}, "")}
+    if isinstance(o, list):
+        return [v for v in (simplify(x) for x in o) if v not in (None, [], {}, "")]
+    return o
+
+
 def clean_url(u):
     return u.split("?")[0]
 
@@ -125,19 +144,15 @@ def extract(page, listing_id):
             photos.append({"src": u, "caption": None, "accessibility": None, "orientation": None})
     info["photos"] = photos
 
-    # Toutes les sections de l'annonce, brutes, pour relecture (description,
-    # équipements, couchages, avis, règlement, emplacement…)
-    sections = []
+    # Détail de l'annonce (description, équipements, couchages, règlement,
+    # emplacement, notes) : c'est la source des textes de js/data.js.
+    keep = ("title", "descriptions", "highlights", "overview", "sleepingArrangements", "amenities",
+            "rules", "safetyAndProperty", "location", "quality", "hostInfo", "accessibilityFeatures")
     for d in (x for s in states for x in walk(s)):
-        if "sectionId" in d and "section" in d:
-            sections.append(d)
-    info["sections"] = sections
-    # Métadonnées (capacité, coordonnées…) quand elles existent
-    for d in (x for s in states for x in walk(s)):
-        if "sharingConfig" in d and isinstance(d["sharingConfig"], dict):
-            info["sharing"] = d["sharingConfig"]
-        if "loggingContext" in d and isinstance(d.get("loggingContext"), dict) and "eventDataLogging" in d["loggingContext"]:
-            info["logging"] = d["loggingContext"]["eventDataLogging"]
+        if isinstance(d.get("pdpPresentation"), dict):
+            pp = d["pdpPresentation"]
+            info["listing"] = {k: simplify(pp.get(k)) for k in keep if pp.get(k)}
+            break
     return info
 
 
@@ -172,7 +187,7 @@ def operation_hashes(page):
 
     Parcourt les scripts de la page, puis les morceaux de scripts qu'ils
     chargent à la demande (où se trouve souvent la requête des avis)."""
-    wanted = ("StaysPdpSections", "StaysPdpReviewsQuery")
+    wanted = ("StaysPdpReviewsQuery",)
     found = {}
     base = "https://a0.muscache.com/airbnb/static/"
     queue = list(dict.fromkeys(re.findall(r'(https://a0\.muscache\.com/airbnb/static/packages/web/[^"\'\s]+?\.js)', page)))
@@ -201,8 +216,8 @@ def operation_hashes(page):
     return found
 
 
-def fetch_sections(page, lid, key):
-    """Sections complètes (équipements, couchages, avis…) via l'API du site."""
+def fetch_reviews(page, lid, key):
+    """Avis des voyageurs, via l'API du site (la page ne contient que la note)."""
     import base64
     import urllib.parse
     out = {}
@@ -210,21 +225,6 @@ def fetch_sections(page, lid, key):
     print(f"   requêtes trouvées : {sorted(hashes)}")
     gid = base64.b64encode(f"StayListing:{lid}".encode()).decode()
     raw_dir = os.path.join(ROOT, "data", "airbnb", "raw")
-    if "StaysPdpSections" in hashes:
-        variables = {"id": gid, "pdpSectionsRequest": {
-            "adults": "1", "layouts": ["SIDEBAR", "SINGLE_COLUMN"], "sectionIds": None,
-            "p3ImpressionId": "p3_0_x", "useNewSectionWrapperApi": False}}
-        q = urllib.parse.urlencode({
-            "operationName": "StaysPdpSections", "locale": "fr", "currency": "EUR",
-            "variables": json.dumps(variables, separators=(",", ":")),
-            "extensions": json.dumps({"persistedQuery": {"version": 1, "sha256Hash": hashes["StaysPdpSections"]}}, separators=(",", ":"))})
-        try:
-            data = api_get(f"https://www.airbnb.fr/api/v3/StaysPdpSections/{hashes['StaysPdpSections']}?{q}")
-            with open(os.path.join(raw_dir, f"{key}-sections.json"), "w") as f:
-                json.dump(data, f, ensure_ascii=False)
-            out["sections"] = True
-        except Exception as e:  # noqa: BLE001
-            print(f"   StaysPdpSections : {e}")
     if "StaysPdpReviewsQuery" in hashes:
         reviews = []
         for offset in range(0, 120, 24):
@@ -265,14 +265,14 @@ def trim_bars(im):
     g = im.convert("L").resize((200, im.height))
     px = g.load()
 
-    def black(y):
-        return sum(1 for x in range(200) if px[x, y] < 10) >= 140
+    def content(y):  # ligne d'image (et non bande noire ou barre du téléphone)
+        return sum(1 for x in range(200) if px[x, y] > 18) >= 120
 
     top = 0
-    while top < im.height // 3 and black(top):
+    while top < im.height // 3 and not content(top):
         top += 1
     bottom = im.height
-    while bottom > im.height * 2 // 3 and black(bottom - 1):
+    while bottom > im.height * 2 // 3 and not content(bottom - 1):
         bottom -= 1
     if top > 8 or im.height - bottom > 8:
         return im.crop((0, top + 4 if top > 8 else 0, im.width, bottom - 4 if im.height - bottom > 8 else im.height))
@@ -307,11 +307,11 @@ def main():
             f.write(page)
         info = extract(page, lid)
         try:
-            info["api"] = fetch_sections(page, lid, key)
+            info["api"] = fetch_reviews(page, lid, key)
         except Exception as e:  # noqa: BLE001
-            print(f"   sections détaillées indisponibles : {e}")
-        print(f"   {len(info['photos'])} photos, {len(info['sections'])} sections")
-        if not info["photos"] and not info["sections"]:
+            print(f"   avis indisponibles : {e}")
+        print(f"   {len(info['photos'])} photos, détail de l'annonce : {'oui' if info.get('listing') else 'non'}")
+        if not info["photos"] and not info.get("listing"):
             # Page vide (protection anti-robots) : on garde un extrait pour diagnostic
             with open(os.path.join(ROOT, "data", "airbnb", f"{key}-debug.html"), "w") as f:
                 f.write(page[:200000])

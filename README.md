@@ -172,3 +172,7 @@ js/comparer.js        logique du comparateur
 ## Autre projet du dépôt : Le Passe
 
 Le dossier **`le-passe/`** contient le site du **Passe**, studio de création de sites web pour restaurants (identité, histoire, offres, démos). Il est publié séparément et n'apparaît pas sur nuitsinguliere.com. Voir [le-passe/README.md](le-passe/README.md).
+
+## Autre projet du dépôt : Sable & Pierre
+
+Le dossier **`maisons/`** contient le site **Sable & Pierre**, qui présente et permet de réserver les deux maisons de famille (la Maison du Lac à Lacanau et la Maison de Pierre à Bordeaux). Il est publié séparément et n'apparaît pas sur nuitsinguliere.com. Voir [maisons/README.md](maisons/README.md).

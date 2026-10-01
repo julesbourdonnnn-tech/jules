@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mentions légales | Sable &amp; Pierre</title>
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="fonts/fonts.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="header header--dark is-solid">
+    <div class="wrap">
+      <a class="brand" href="./"><span>Sable <em>&amp;</em> Pierre</span></a>
+      <nav class="nav" aria-label="Navigation principale"><a href="lacanau.html">Lacanau</a><a href="bordeaux.html">Bordeaux</a></nav>
+    </div>
+  </header>
+  <main class="page" id="main">
+    <div class="wrap wrap--narrow">
+      <span class="eyebrow">Informations</span>
+      <h1 class="h1" style="margin-top:18px">Mentions légales</h1>
+
+      <h2>Éditeur du site</h2>
+      <p>Site édité par <span data-owner>Jules Bourdon</span>, particulier, propriétaire des maisons présentées.<br>
+      Contact : <a class="link" data-email href="#">e-mail</a></p>
+
+      <h2>Hébergement</h2>
+      <p>Cloudflare, Inc., 101 Townsend St, San Francisco, CA 94107, États-Unis — cloudflare.com</p>
+
+      <h2>Réservations</h2>
+      <p>Les réservations en ligne sont effectuées sur Airbnb, selon ses conditions générales et sa politique d'annulation. Les demandes envoyées depuis ce site n'engagent ni le voyageur ni le propriétaire tant qu'elles n'ont pas été confirmées par écrit.</p>
+      <p>Numéro d'enregistrement en mairie de la Maison de Pierre (Bordeaux) : 3306300578621.</p>
+
+      <h2>Données personnelles</h2>
+      <p>Le site ne dépose aucun cookie et n'utilise aucun outil de suivi publicitaire. Les informations saisies dans le formulaire de demande (nom, e-mail, téléphone, message, dates) servent uniquement à répondre à votre demande et ne sont jamais cédées. Elles sont conservées au plus 3 ans après le dernier échange. Vous pouvez demander à les consulter, les corriger ou les supprimer en écrivant à l'adresse ci-dessus. Vous pouvez aussi saisir la CNIL (cnil.fr).</p>
+      <p>Les dates choisies sont mémorisées dans votre navigateur le temps de votre visite, pour ne pas avoir à les saisir à nouveau. La météo est fournie par Open-Meteo et la carte par OpenStreetMap : votre navigateur contacte directement ces services pour les afficher.</p>
+
+      <h2>Photos et textes</h2>
+      <p>Les photos et descriptions des maisons appartiennent à leur propriétaire. Toute reproduction sans autorisation est interdite. Les extraits d'avis proviennent des commentaires publiés par les voyageurs sur Airbnb.</p>
+      <p style="margin-top:48px"><a class="btn btn--ghost" href="./">Retour à l'accueil</a></p>
+    </div>
+  </main>
+  <script src="js/config.js"></script>
+  <script>
+    document.querySelectorAll("[data-email]").forEach(function (a) { a.href = "mailto:" + SITE.email; a.textContent = SITE.email; });
+    document.querySelectorAll("[data-owner]").forEach(function (s) { if (SITE.owner) s.textContent = SITE.owner; });
+  </script>
+</body>
+</html>

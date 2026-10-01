@@ -21,3 +21,5 @@ worker
 # Site Le Passe : publié séparément (le-passe/wrangler.jsonc)
 le-passe
 undefined
+# Site Sable & Pierre (maisons de Lacanau et Bordeaux) : publié séparément (maisons/wrangler.jsonc)
+maisons
