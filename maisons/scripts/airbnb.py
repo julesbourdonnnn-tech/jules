@@ -141,6 +141,90 @@ def extract(page, listing_id):
     return info
 
 
+API_KEY = "d306zoyjsyarp7ifhu67rjxn52tv0t20"  # clé publique du site web Airbnb
+
+
+def api_get(url):
+    req = urllib.request.Request(url, headers={**HEADERS, "Accept": "application/json",
+                                               "X-Airbnb-API-Key": API_KEY,
+                                               "Referer": "https://www.airbnb.fr/"})
+    with urllib.request.urlopen(req, timeout=40) as r:
+        return json.loads(r.read().decode("utf-8", "replace"))
+
+
+def operation_hashes(page):
+    """Trouve dans les scripts du site les identifiants des requêtes GraphQL."""
+    found = {}
+    scripts = re.findall(r'src="(https://a0\.muscache\.com/airbnb/static/packages/web/[^"]+\.js)"', page)
+    for u in scripts:
+        try:
+            js = get(u)
+        except Exception:  # noqa: BLE001
+            continue
+        for name in ("StaysPdpSections", "StaysPdpReviewsQuery"):
+            if name in found:
+                continue
+            m = re.search(r'name:"%s",type:"query",operationId:"([0-9a-f]{64})"' % name, js) or \
+                re.search(r"'%s'[^}]{0,200}?operationId:'([0-9a-f]{64})'" % name, js) or \
+                re.search(r'"%s"[^}]{0,300}?"?operationId"?:"([0-9a-f]{64})"' % name, js)
+            if m:
+                found[name] = m.group(1)
+        if len(found) == 2:
+            break
+    return found
+
+
+def fetch_sections(page, lid, key):
+    """Sections complètes (équipements, couchages, avis…) via l'API du site."""
+    import base64
+    import urllib.parse
+    out = {}
+    hashes = operation_hashes(page)
+    print(f"   requêtes trouvées : {sorted(hashes)}")
+    gid = base64.b64encode(f"StayListing:{lid}".encode()).decode()
+    raw_dir = os.path.join(ROOT, "data", "airbnb", "raw")
+    if "StaysPdpSections" in hashes:
+        variables = {"id": gid, "pdpSectionsRequest": {
+            "adults": "1", "layouts": ["SIDEBAR", "SINGLE_COLUMN"], "sectionIds": None,
+            "p3ImpressionId": "p3_0_x", "useNewSectionWrapperApi": False}}
+        q = urllib.parse.urlencode({
+            "operationName": "StaysPdpSections", "locale": "fr", "currency": "EUR",
+            "variables": json.dumps(variables, separators=(",", ":")),
+            "extensions": json.dumps({"persistedQuery": {"version": 1, "sha256Hash": hashes["StaysPdpSections"]}}, separators=(",", ":"))})
+        try:
+            data = api_get(f"https://www.airbnb.fr/api/v3/StaysPdpSections/{hashes['StaysPdpSections']}?{q}")
+            with open(os.path.join(raw_dir, f"{key}-sections.json"), "w") as f:
+                json.dump(data, f, ensure_ascii=False)
+            out["sections"] = True
+        except Exception as e:  # noqa: BLE001
+            print(f"   StaysPdpSections : {e}")
+    if "StaysPdpReviewsQuery" in hashes:
+        reviews = []
+        for offset in range(0, 120, 24):
+            variables = {"id": gid, "pdpReviewsRequest": {
+                "fieldSelector": "for_p3_translation_only", "forPreview": False, "limit": 24,
+                "offset": str(offset), "showingTranslationButton": False, "first": 24,
+                "sortingPreference": "MOST_RECENT"}}
+            q = urllib.parse.urlencode({
+                "operationName": "StaysPdpReviewsQuery", "locale": "fr", "currency": "EUR",
+                "variables": json.dumps(variables, separators=(",", ":")),
+                "extensions": json.dumps({"persistedQuery": {"version": 1, "sha256Hash": hashes["StaysPdpReviewsQuery"]}}, separators=(",", ":"))})
+            try:
+                data = api_get(f"https://www.airbnb.fr/api/v3/StaysPdpReviewsQuery/{hashes['StaysPdpReviewsQuery']}?{q}")
+            except Exception as e:  # noqa: BLE001
+                print(f"   StaysPdpReviewsQuery : {e}")
+                break
+            batch = [d for d in walk(data) if isinstance(d, dict) and "comments" in d and "reviewer" in d]
+            reviews.extend(batch)
+            if len(batch) < 24:
+                break
+        with open(os.path.join(raw_dir, f"{key}-reviews.json"), "w") as f:
+            json.dump(reviews, f, ensure_ascii=False)
+        out["reviews"] = len(reviews)
+        print(f"   {len(reviews)} avis")
+    return out
+
+
 def save_photo(src, base):
     raw = get(src + "?im_w=2560", binary=True)
     im = Image.open(io.BytesIO(raw)).convert("RGB")
@@ -164,8 +248,14 @@ def main():
             print(f"!! page inaccessible : {e}")
             ok = False
             continue
-        os.makedirs(os.path.join(ROOT, "data", "airbnb"), exist_ok=True)
+        os.makedirs(os.path.join(ROOT, "data", "airbnb", "raw"), exist_ok=True)
+        with open(os.path.join(ROOT, "data", "airbnb", "raw", f"{key}.html"), "w") as f:
+            f.write(page)
         info = extract(page, lid)
+        try:
+            info["api"] = fetch_sections(page, lid, key)
+        except Exception as e:  # noqa: BLE001
+            print(f"   sections détaillées indisponibles : {e}")
         print(f"   {len(info['photos'])} photos, {len(info['sections'])} sections")
         if not info["photos"] and not info["sections"]:
             # Page vide (protection anti-robots) : on garde un extrait pour diagnostic
@@ -176,6 +266,11 @@ def main():
         os.makedirs(outdir, exist_ok=True)
         for i, p in enumerate(info["photos"], 1):
             base = os.path.join(outdir, f"{i:02d}")
+            if os.path.exists(base + "-xl.webp") and not os.environ.get("FORCE_PHOTOS"):
+                with Image.open(base + "-xl.webp") as im:
+                    p["file"] = f"assets/photos/{key}/{i:02d}"
+                    p["w"], p["h"] = im.size
+                continue
             try:
                 p.update(save_photo(p["src"], base))
                 p["file"] = f"assets/photos/{key}/{i:02d}"
