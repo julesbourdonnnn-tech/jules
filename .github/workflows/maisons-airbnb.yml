@@ -1,0 +1,51 @@
+# Récupère les informations et les photos des deux annonces Airbnb
+# (Lacanau et Bordeaux) pour le site des maisons (dossier maisons/).
+# Voir maisons/scripts/airbnb.py. Se lance quand le script change, ou à la main
+# (Actions → « Maisons — photos Airbnb » → Run workflow).
+name: Maisons — photos Airbnb
+
+on:
+  push:
+    paths:
+      - "maisons/scripts/airbnb.py"
+      - ".github/workflows/maisons-airbnb.yml"
+  workflow_dispatch:
+    inputs:
+      only:
+        description: "Maisons à mettre à jour (lacanau, bordeaux), vide = toutes"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+concurrency:
+  group: maisons-airbnb-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  airbnb:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pillow
+      - name: Récupérer les annonces et les photos
+        working-directory: maisons
+        env:
+          ONLY: ${{ github.event.inputs.only }}
+        run: python scripts/airbnb.py
+      - name: Enregistrer les résultats
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          mkdir -p maisons/data maisons/assets
+          git add -A -- maisons/data maisons/assets
+          if git diff --cached --quiet; then echo "Rien de nouveau"; exit 0; fi
+          git commit -m "Maisons : photos et informations Airbnb (mise à jour automatique)"
+          git pull --rebase origin "${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"

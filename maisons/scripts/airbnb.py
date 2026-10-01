@@ -1,0 +1,190 @@
+"""Récupère les informations et les photos des annonces Airbnb des maisons.
+
+Lancé par la GitHub Action « Maisons — photos Airbnb »
+(.github/workflows/maisons-airbnb.yml). Pour chaque maison de LISTINGS :
+  - télécharge la page de l'annonce,
+  - enregistre les données utiles dans data/airbnb/<maison>.json
+    (titre, description, équipements, capacité, avis, liste des photos),
+  - télécharge chaque photo en deux tailles (assets/photos/<maison>/NN-xl.webp
+    et NN-md.webp).
+
+Rien n'est inventé : tout vient de l'annonce. Le site lit ensuite ces fichiers.
+"""
+import html as htmlmod
+import io
+import json
+import os
+import re
+import sys
+import time
+import urllib.request
+
+from PIL import Image
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+LISTINGS = {
+    "lacanau": "662061426615418606",
+    "bordeaux": "50226249",
+}
+UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+      "(KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36")
+HEADERS = {
+    "User-Agent": UA,
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "fr-FR,fr;q=0.9,en;q=0.6",
+}
+IMG_RE = re.compile(r"https://a0\.muscache\.com/im/pictures/[^\"'\s\\?]+\.(?:jpe?g|png|webp)", re.I)
+
+
+def get(url, binary=False, tries=4):
+    last = None
+    for i in range(tries):
+        try:
+            req = urllib.request.Request(url, headers=HEADERS)
+            with urllib.request.urlopen(req, timeout=40) as r:
+                data = r.read()
+                return data if binary else data.decode("utf-8", "replace")
+        except Exception as e:  # noqa: BLE001
+            last = e
+            time.sleep(2 ** (i + 1))
+    raise RuntimeError(f"{url}: {last}")
+
+
+def walk(o):
+    """Parcourt récursivement un objet JSON."""
+    if isinstance(o, dict):
+        yield o
+        for v in o.values():
+            yield from walk(v)
+    elif isinstance(o, list):
+        for v in o:
+            yield from walk(v)
+
+
+def deferred_states(page):
+    out = []
+    for m in re.finditer(r'<script[^>]*id="data-deferred-state-\d+"[^>]*>(.*?)</script>', page, re.S):
+        try:
+            out.append(json.loads(htmlmod.unescape(m.group(1))))
+        except Exception:  # noqa: BLE001
+            pass
+    for m in re.finditer(r'<script[^>]*id="data-injector-instances"[^>]*>(.*?)</script>', page, re.S):
+        try:
+            out.append(json.loads(htmlmod.unescape(m.group(1))))
+        except Exception:  # noqa: BLE001
+            pass
+    return out
+
+
+def clean_url(u):
+    return u.split("?")[0]
+
+
+def extract(page, listing_id):
+    states = deferred_states(page)
+    info = {"id": listing_id, "url": f"https://www.airbnb.fr/rooms/{listing_id}"}
+
+    # Métadonnées de la page (toujours présentes, même si le JSON change)
+    for prop in ("og:title", "og:description", "og:image"):
+        m = re.search(r'<meta[^>]+property="%s"[^>]+content="([^"]*)"' % re.escape(prop), page)
+        if m:
+            info[prop.replace("og:", "og_")] = htmlmod.unescape(m.group(1))
+    m = re.search(r"<title>(.*?)</title>", page, re.S)
+    if m:
+        info["page_title"] = htmlmod.unescape(m.group(1)).strip()
+    m = re.search(r'<meta[^>]+name="description"[^>]+content="([^"]*)"', page)
+    if m:
+        info["meta_description"] = htmlmod.unescape(m.group(1))
+
+    # Photos, dans l'ordre de l'annonce, avec leur légende éventuelle
+    photos, seen = [], set()
+    for d in (x for s in states for x in walk(s)):
+        if isinstance(d.get("mediaItems"), list):
+            for it in d["mediaItems"]:
+                if not isinstance(it, dict):
+                    continue
+                u = it.get("baseUrl") or it.get("url")
+                if not u or "muscache" not in u:
+                    continue
+                u = clean_url(u)
+                if u in seen:
+                    continue
+                seen.add(u)
+                photos.append({
+                    "src": u,
+                    "caption": it.get("imageMetadata", {}).get("caption") if isinstance(it.get("imageMetadata"), dict) else None,
+                    "accessibility": it.get("accessibilityLabel"),
+                    "orientation": it.get("orientation"),
+                })
+    if not photos:  # Plan B : toutes les images de l'annonce dans la page
+        for u in IMG_RE.findall(page):
+            u = clean_url(u)
+            if u in seen or "/user/" in u or "/User" in u or "AirbnbPlatformAssets" in u:
+                continue
+            seen.add(u)
+            photos.append({"src": u, "caption": None, "accessibility": None, "orientation": None})
+    info["photos"] = photos
+
+    # Toutes les sections de l'annonce, brutes, pour relecture (description,
+    # équipements, couchages, avis, règlement, emplacement…)
+    sections = []
+    for d in (x for s in states for x in walk(s)):
+        if "sectionId" in d and "section" in d:
+            sections.append(d)
+    info["sections"] = sections
+    # Métadonnées (capacité, coordonnées…) quand elles existent
+    for d in (x for s in states for x in walk(s)):
+        if "sharingConfig" in d and isinstance(d["sharingConfig"], dict):
+            info["sharing"] = d["sharingConfig"]
+        if "loggingContext" in d and isinstance(d.get("loggingContext"), dict) and "eventDataLogging" in d["loggingContext"]:
+            info["logging"] = d["loggingContext"]["eventDataLogging"]
+    return info
+
+
+def save_photo(src, base):
+    raw = get(src + "?im_w=2560", binary=True)
+    im = Image.open(io.BytesIO(raw)).convert("RGB")
+    for suffix, width, q in (("xl", 2200, 80), ("md", 1100, 78), ("sm", 560, 72)):
+        w = min(width, im.width)
+        h = round(im.height * w / im.width)
+        im.resize((w, h), Image.LANCZOS).save(f"{base}-{suffix}.webp", "WEBP", quality=q, method=6)
+    return {"w": im.width, "h": im.height}
+
+
+def main():
+    only = [s for s in os.environ.get("ONLY", "").split(",") if s.strip()]
+    ok = True
+    for key, lid in LISTINGS.items():
+        if only and key not in only:
+            continue
+        print(f"== {key} ({lid})")
+        try:
+            page = get(f"https://www.airbnb.fr/rooms/{lid}")
+        except Exception as e:  # noqa: BLE001
+            print(f"!! page inaccessible : {e}")
+            ok = False
+            continue
+        os.makedirs(os.path.join(ROOT, "data", "airbnb"), exist_ok=True)
+        info = extract(page, lid)
+        print(f"   {len(info['photos'])} photos, {len(info['sections'])} sections")
+        if not info["photos"] and not info["sections"]:
+            # Page vide (protection anti-robots) : on garde un extrait pour diagnostic
+            with open(os.path.join(ROOT, "data", "airbnb", f"{key}-debug.html"), "w") as f:
+                f.write(page[:200000])
+            ok = False
+        outdir = os.path.join(ROOT, "assets", "photos", key)
+        os.makedirs(outdir, exist_ok=True)
+        for i, p in enumerate(info["photos"], 1):
+            base = os.path.join(outdir, f"{i:02d}")
+            try:
+                p.update(save_photo(p["src"], base))
+                p["file"] = f"assets/photos/{key}/{i:02d}"
+            except Exception as e:  # noqa: BLE001
+                print(f"   photo {i} : {e}")
+        with open(os.path.join(ROOT, "data", "airbnb", f"{key}.json"), "w") as f:
+            json.dump(info, f, ensure_ascii=False, indent=1)
+    sys.exit(0 if ok else 1)
+
+
+if __name__ == "__main__":
+    main()
