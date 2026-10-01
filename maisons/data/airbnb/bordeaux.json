@@ -1,0 +1,2491 @@
+{
+ "id": "50226249",
+ "url": "https://www.airbnb.fr/rooms/50226249",
+ "og_title": "Maison de ville · Bordeaux · ★4,88 · 5 chambres · 5 lits · 2 salles de bain",
+ "og_description": "Maison de ville, avec 5 chambres",
+ "og_image": "https://a0.muscache.com/im/pictures/hosting/Hosting-50226249/original/c719eb93-cd0a-4570-8dfb-258d8f5d8eba.jpeg?im_w=720&width=720&quality=70&auto=webp",
+ "page_title": "Maison de ville, avec 5 chambres - Maisons de ville à louer à Bordeaux, Nouvelle-Aquitaine, France - Airbnb",
+ "meta_description": "1 oct. 2026 · Logement entier : maison de ville · Ma maison est composée de 5 chambres, dont 3 chambres, une salle de bain et un wc au rdc et 2chambres en sous sol, ainsi qu’une salle d’eau et un w...",
+ "photos": [
+  {
+   "src": "https://a0.muscache.com/im/pictures/hosting/Hosting-50226249/original/c719eb93-cd0a-4570-8dfb-258d8f5d8eba.jpeg",
+   "caption": null,
+   "accessibility": "Image du logement 1",
+   "orientation": "PORTRAIT",
+   "w": 2560,
+   "h": 3413,
+   "file": "assets/photos/bordeaux/01"
+  },
+  {
+   "src": "https://a0.muscache.com/im/pictures/9657aa69-e71b-4b36-8dcb-700ea47052d3.jpg",
+   "caption": null,
+   "accessibility": "Image du logement 2",
+   "orientation": "LANDSCAPE",
+   "w": 2560,
+   "h": 1920,
+   "file": "assets/photos/bordeaux/02"
+  },
+  {
+   "src": "https://a0.muscache.com/im/pictures/59655058-44b5-4150-982a-1590ef888eb2.jpg",
+   "caption": null,
+   "accessibility": "Image du logement 3",
+   "orientation": "LANDSCAPE",
+   "w": 2560,
+   "h": 1920,
+   "file": "assets/photos/bordeaux/03"
+  },
+  {
+   "src": "https://a0.muscache.com/im/pictures/350d613f-3e81-449b-b86c-92d4996faa56.jpg",
+   "caption": null,
+   "accessibility": "Image du logement 4",
+   "orientation": "PORTRAIT",
+   "w": 2560,
+   "h": 3413,
+   "file": "assets/photos/bordeaux/04"
+  },
+  {
+   "src": "https://a0.muscache.com/im/pictures/fcc95ef6-59ea-47c1-a303-d420e1db7665.jpg",
+   "caption": null,
+   "accessibility": "Image du logement 5",
+   "orientation": "PORTRAIT",
+   "w": 2560,
+   "h": 3413,
+   "file": "assets/photos/bordeaux/05"
+  },
+  {
+   "src": "https://a0.muscache.com/im/pictures/dcf4c8c6-1606-404b-8d52-ba9a4492f078.jpg",
+   "caption": null,
+   "accessibility": "Image du logement 6",
+   "orientation": "PORTRAIT",
+   "w": 2560,
+   "h": 3413,
+   "file": "assets/photos/bordeaux/06"
+  },
+  {
+   "src": "https://a0.muscache.com/im/pictures/0e313787-692e-4540-9b8b-82ecd51dd37d.jpg",
+   "caption": null,
+   "accessibility": "Image du logement 7",
+   "orientation": "LANDSCAPE",
+   "w": 2560,
+   "h": 1920,
+   "file": "assets/photos/bordeaux/07"
+  },
+  {
+   "src": "https://a0.muscache.com/im/pictures/1ec32736-1e2b-4d5f-93c2-d7e7229085a9.jpg",
+   "caption": null,
+   "accessibility": "Image du logement 8",
+   "orientation": "LANDSCAPE",
+   "w": 2560,
+   "h": 1920,
+   "file": "assets/photos/bordeaux/08"
+  },
+  {
+   "src": "https://a0.muscache.com/im/pictures/1504dd0a-e3d0-4e24-9a75-571305ebf387.jpg",
+   "caption": null,
+   "accessibility": "Image du logement 9",
+   "orientation": "PORTRAIT",
+   "w": 2560,
+   "h": 3413,
+   "file": "assets/photos/bordeaux/09"
+  },
+  {
+   "src": "https://a0.muscache.com/im/pictures/4e6f1cf8-fa00-4630-a3c8-8e61904a9c0c.jpg",
+   "caption": null,
+   "accessibility": "Image du logement 10",
+   "orientation": "LANDSCAPE",
+   "w": 2560,
+   "h": 1920,
+   "file": "assets/photos/bordeaux/10"
+  },
+  {
+   "src": "https://a0.muscache.com/im/pictures/e3162e21-0845-46fc-be9e-de722d194991.jpg",
+   "caption": null,
+   "accessibility": "Image du logement 11",
+   "orientation": "PORTRAIT",
+   "w": 2560,
+   "h": 3413,
+   "file": "assets/photos/bordeaux/11"
+  },
+  {
+   "src": "https://a0.muscache.com/im/pictures/1327e9a2-9842-4ec6-8362-dec0122c2d81.jpg",
+   "caption": null,
+   "accessibility": "Image du logement 12",
+   "orientation": "PORTRAIT",
+   "w": 2560,
+   "h": 3413,
+   "file": "assets/photos/bordeaux/12"
+  },
+  {
+   "src": "https://a0.muscache.com/im/pictures/b40ed491-ffc6-4bbd-93c6-ac6f3a507431.jpg",
+   "caption": null,
+   "accessibility": "Image du logement 13",
+   "orientation": "LANDSCAPE",
+   "w": 2560,
+   "h": 1920,
+   "file": "assets/photos/bordeaux/13"
+  },
+  {
+   "src": "https://a0.muscache.com/im/pictures/c25635a9-782a-40b3-8bb1-502fd345174d.jpg",
+   "caption": null,
+   "accessibility": "Image du logement 14",
+   "orientation": "LANDSCAPE",
+   "w": 2560,
+   "h": 1920,
+   "file": "assets/photos/bordeaux/14"
+  },
+  {
+   "src": "https://a0.muscache.com/im/pictures/26564d77-ee13-4474-9ab7-b65dfbd87e96.jpg",
+   "caption": null,
+   "accessibility": "Image du logement 15",
+   "orientation": "PORTRAIT",
+   "w": 2560,
+   "h": 3413,
+   "file": "assets/photos/bordeaux/15"
+  },
+  {
+   "src": "https://a0.muscache.com/im/pictures/e9efd83d-39ca-4b82-b672-a52eec33ce1b.jpg",
+   "caption": null,
+   "accessibility": "Image du logement 16",
+   "orientation": "PORTRAIT",
+   "w": 2560,
+   "h": 3413,
+   "file": "assets/photos/bordeaux/16"
+  },
+  {
+   "src": "https://a0.muscache.com/im/pictures/hosting/Hosting-50226249/original/6bf14b94-3837-449f-9151-29541577609e.jpeg",
+   "caption": null,
+   "accessibility": "Image du logement 17",
+   "orientation": "PORTRAIT",
+   "w": 2560,
+   "h": 3413,
+   "file": "assets/photos/bordeaux/17"
+  },
+  {
+   "src": "https://a0.muscache.com/im/pictures/hosting/Hosting-50226249/original/3e3be8f2-c5ce-4d68-83f4-070c03c6e478.jpeg",
+   "caption": null,
+   "accessibility": "Image du logement 18",
+   "orientation": "PORTRAIT",
+   "w": 2560,
+   "h": 3413,
+   "file": "assets/photos/bordeaux/18"
+  },
+  {
+   "src": "https://a0.muscache.com/im/pictures/hosting/Hosting-50226249/original/efbaee3a-7096-466c-9f9a-97e3d8991e19.jpeg",
+   "caption": null,
+   "accessibility": "Image du logement 19",
+   "orientation": "PORTRAIT",
+   "w": 2560,
+   "h": 3413,
+   "file": "assets/photos/bordeaux/19"
+  },
+  {
+   "src": "https://a0.muscache.com/im/pictures/hosting/Hosting-50226249/original/e1d18a00-c4d5-421a-bcd8-5b938c1b4a60.jpeg",
+   "caption": null,
+   "accessibility": "Image du logement 20",
+   "orientation": "PORTRAIT",
+   "w": 2560,
+   "h": 3413,
+   "file": "assets/photos/bordeaux/20"
+  },
+  {
+   "src": "https://a0.muscache.com/im/pictures/hosting/Hosting-50226249/original/42d587f9-7716-4bbf-90dc-1a5434d96506.jpeg",
+   "caption": null,
+   "accessibility": "Image du logement 21",
+   "orientation": "PORTRAIT",
+   "w": 2560,
+   "h": 3413,
+   "file": "assets/photos/bordeaux/21"
+  },
+  {
+   "src": "https://a0.muscache.com/im/pictures/hosting/Hosting-50226249/original/8e8f9093-b5da-4000-9eae-134d7501aedb.jpeg",
+   "caption": null,
+   "accessibility": "Image du logement 22",
+   "orientation": "PORTRAIT",
+   "w": 2560,
+   "h": 3413,
+   "file": "assets/photos/bordeaux/22"
+  },
+  {
+   "src": "https://a0.muscache.com/im/pictures/hosting/Hosting-50226249/original/2ee25342-4799-409f-af89-31f1673f9af8.jpeg",
+   "caption": null,
+   "accessibility": "Image du logement 23",
+   "orientation": "PORTRAIT",
+   "w": 2560,
+   "h": 3413,
+   "file": "assets/photos/bordeaux/23"
+  },
+  {
+   "src": "https://a0.muscache.com/im/pictures/hosting/Hosting-50226249/original/bab9eb0d-f2b0-4c45-92d1-cef8d5443472.jpeg",
+   "caption": null,
+   "accessibility": "Image du logement 24",
+   "orientation": "PORTRAIT",
+   "w": 2560,
+   "h": 3413,
+   "file": "assets/photos/bordeaux/24"
+  },
+  {
+   "src": "https://a0.muscache.com/im/pictures/hosting/Hosting-50226249/original/593eab6b-26e8-451a-b1bf-ff574dd0d10a.jpeg",
+   "caption": null,
+   "accessibility": "Image du logement 25",
+   "orientation": "PORTRAIT",
+   "w": 2560,
+   "h": 3413,
+   "file": "assets/photos/bordeaux/25"
+  },
+  {
+   "src": "https://a0.muscache.com/im/pictures/hosting/Hosting-50226249/original/d5897ecf-655e-4163-9773-41b36ecf7164.jpeg",
+   "caption": null,
+   "accessibility": "Image du logement 26",
+   "orientation": "PORTRAIT",
+   "w": 2560,
+   "h": 3413,
+   "file": "assets/photos/bordeaux/26"
+  },
+  {
+   "src": "https://a0.muscache.com/im/pictures/hosting/Hosting-50226249/original/c96b3016-f0ab-432f-804f-61c6c876c8ec.jpeg",
+   "caption": null,
+   "accessibility": "Image du logement 27",
+   "orientation": "PORTRAIT",
+   "w": 2560,
+   "h": 3413,
+   "file": "assets/photos/bordeaux/27"
+  }
+ ],
+ "sections": [
+  {
+   "__typename": "SectionContainer",
+   "id": "U2VjdGlvbkNvbnRhaW5lcjotMzE1NTIzNTMxOTE1NTY3NDk1Mg==",
+   "sectionComponentType": "BOOK_IT_FLOATING_FOOTER",
+   "sectionContentStatus": "NOT_COMPLETE",
+   "sectionId": "BOOK_IT_FLOATING_FOOTER",
+   "errors": null,
+   "sectionDependencies": [
+    "BOOKING"
+   ],
+   "enableDependencies": null,
+   "disableDependencies": null,
+   "loggingData": {
+    "__typename": "LoggingEventData",
+    "loggingId": "pdp_platform.book_it_floating_footer",
+    "experiments": [],
+    "eventData": null,
+    "eventDataSchemaName": null,
+    "section": null,
+    "component": null
+   },
+   "e2eLoggingSession": null,
+   "mutationMetadata": null,
+   "pluginPointId": "BOOK_IT_FLOATING_FOOTER",
+   "section": {
+    "__typename": "BookItSection",
+    "subpageIdToOpen": null,
+    "showPriceBreakdown": false,
+    "cancellationPolicyLoggingEventData": null,
+    "calendarTitle": null,
+    "calendarSubtitle": null,
+    "descriptionItems": null,
+    "discountCopy": null,
+    "maxGuestCapacity": null,
+    "maxPlusValue": null,
+    "tripDetailsLoggingEventData": null,
+    "reviewItem": {
+     "__typename": "BasicListItem",
+     "accessibilityLabel": "Évaluation de 4,88 sur 5 sur la base de 41 commentaires.",
+     "action": null,
+     "icon": "COMPACT_STAR",
+     "subtitle": null,
+     "title": "4,88"
+    },
+    "available": null,
+    "structuredDisplayPrice": null,
+    "discountData": null,
+    "bookItButtonByPlacement": null,
+    "cancellationPolicies": null,
+    "cancellationPolicyForDisplay": null,
+    "localizedUnavailabilityMessage": null,
+    "localizedUnavailabilityMessagePositionString": null,
+    "selectedDatesLink": null,
+    "selectedNights": null,
+    "bookItButtonLayout": null,
+    "productItemDetail": null,
+    "ratePlanLoggingEventData": null,
+    "ratePlanTitle": null,
+    "promotionBanner": null,
+    "guestDisclaimer": null,
+    "petsAllowed": null,
+    "petDetails": null,
+    "adultsPicker": null,
+    "childrenPicker": null,
+    "infantsPicker": null,
+    "canInstantBook": null,
+    "highlightBanner": null,
+    "integratedPillMessageType": null,
+    "integratedPill": null,
+    "initialPillMessageType": null,
+    "initialPill": null,
+    "priceDetailPills": [],
+    "availabilityPriceDetailEntry": null,
+    "priceDetailLoggingEventData": null,
+    "vPoint": null,
+    "bookItPlacement": "FLOATING_FOOTER",
+    "priceMerchandisingMessage": null
+   }
+  },
+  {
+   "__typename": "SectionContainer",
+   "id": "U2VjdGlvbkNvbnRhaW5lcjo3Njg0ODI1NDc3MjUwOTMzODc2",
+   "sectionComponentType": "POLICIES_DEFAULT",
+   "sectionContentStatus": "NOT_COMPLETE",
+   "sectionId": "POLICIES_DEFAULT",
+   "errors": null,
+   "sectionDependencies": [
+    "CHECK_IN",
+    "CHECK_OUT",
+    "TRANSLATE_UGC",
+    "BOOKING"
+   ],
+   "enableDependencies": null,
+   "disableDependencies": null,
+   "loggingData": {
+    "__typename": "LoggingEventData",
+    "loggingId": "pdp_platform.policies_default",
+    "experiments": [],
+    "eventData": null,
+    "eventDataSchemaName": null,
+    "section": null,
+    "component": null
+   },
+   "e2eLoggingSession": null,
+   "mutationMetadata": null,
+   "pluginPointId": "POLICIES_DEFAULT",
+   "section": {
+    "__typename": "PoliciesSection"
+   }
+  },
+  {
+   "__typename": "SectionContainer",
+   "id": "U2VjdGlvbkNvbnRhaW5lcjotNzYyOTAwNzAwNjQ5MTg0MjAzMQ==",
+   "sectionComponentType": "PDP_DESCRIPTION_MODAL",
+   "sectionContentStatus": "COMPLETE",
+   "sectionId": "DESCRIPTION_MODAL",
+   "errors": null,
+   "sectionDependencies": [],
+   "enableDependencies": null,
+   "disableDependencies": null,
+   "loggingData": {
+    "__typename": "LoggingEventData",
+    "loggingId": "pdp_platform.description_modal",
+    "experiments": null,
+    "eventData": null,
+    "eventDataSchemaName": null,
+    "section": null,
+    "component": null
+   },
+   "e2eLoggingSession": null,
+   "mutationMetadata": null,
+   "pluginPointId": "DESCRIPTION_MODAL",
+   "section": {
+    "__typename": "GeneralListContentSection",
+    "buttons": null,
+    "caption": null,
+    "ctaButton": null,
+    "flip": null,
+    "headingLevel": null,
+    "items": [
+     {
+      "__typename": "BasicListItem",
+      "action": null,
+      "anchor": null,
+      "accessibilityLabel": null,
+      "button": null,
+      "icon": null,
+      "html": {
+       "__typename": "Html",
+       "htmlText": "Ma maison est composée de 5 chambres, dont 3 chambres, une salle de bain et un wc au rdc et 2chambres en sous sol, ainsi qu’une salle d’eau et un wc, la pièce de vie et la terrasse se trouvent à l’étage. <br />La maison est baignée de lumière, au calme, et à proximité directe de l’hyper centre.<br />C’est une maison en pierre de taille récemment rénovée.",
+       "readMoreButton": null,
+       "textStyle": null,
+       "recommendedNumberOfLines": null,
+       "minimumNumberOfLinesForTruncation": null
+      },
+      "image": null,
+      "kicker": null,
+      "loggingEventData": null,
+      "media": null,
+      "subtitle": null,
+      "subtitleStyle": null,
+      "title": null,
+      "titleStyle": null
+     },
+     {
+      "__typename": "BasicListItem",
+      "action": null,
+      "anchor": null,
+      "accessibilityLabel": null,
+      "button": null,
+      "icon": null,
+      "html": {
+       "__typename": "Html",
+       "htmlText": "Ma maison est un lieu de bonheur, tout est à disposition, sel poivre huile, nous y vivons avec mes enfants, donc vous y trouverez tout ce dont vous avez besoin!",
+       "readMoreButton": null,
+       "textStyle": null,
+       "recommendedNumberOfLines": null,
+       "minimumNumberOfLinesForTruncation": null
+      },
+      "image": null,
+      "kicker": null,
+      "loggingEventData": null,
+      "media": null,
+      "subtitle": null,
+      "subtitleStyle": null,
+      "title": "Le logement",
+      "titleStyle": null
+     },
+     {
+      "__typename": "BasicListItem",
+      "action": null,
+      "anchor": null,
+      "accessibilityLabel": null,
+      "button": null,
+      "icon": null,
+      "html": {
+       "__typename": "Html",
+       "htmlText": "Toutes les pièces sont ouvertes aux voyageurs",
+       "readMoreButton": null,
+       "textStyle": null,
+       "recommendedNumberOfLines": null,
+       "minimumNumberOfLinesForTruncation": null
+      },
+      "image": null,
+      "kicker": null,
+      "loggingEventData": null,
+      "media": null,
+      "subtitle": null,
+      "subtitleStyle": null,
+      "title": "Accès des voyageurs",
+      "titleStyle": null
+     },
+     {
+      "__typename": "BasicListItem",
+      "action": null,
+      "anchor": null,
+      "accessibilityLabel": null,
+      "button": null,
+      "icon": null,
+      "html": {
+       "__typename": "Html",
+       "htmlText": "La maison ne peut recevoir d’animaux à cause des allergies familiales!",
+       "readMoreButton": null,
+       "textStyle": null,
+       "recommendedNumberOfLines": null,
+       "minimumNumberOfLinesForTruncation": null
+      },
+      "image": null,
+      "kicker": null,
+      "loggingEventData": null,
+      "media": null,
+      "subtitle": null,
+      "subtitleStyle": null,
+      "title": "Autres remarques",
+      "titleStyle": null
+     },
+     {
+      "__typename": "BasicListItem",
+      "action": null,
+      "anchor": null,
+      "accessibilityLabel": null,
+      "button": null,
+      "icon": null,
+      "html": {
+       "__typename": "Html",
+       "htmlText": "3306300578621",
+       "readMoreButton": null,
+       "textStyle": null,
+       "recommendedNumberOfLines": null,
+       "minimumNumberOfLinesForTruncation": null
+      },
+      "image": null,
+      "kicker": null,
+      "loggingEventData": null,
+      "media": null,
+      "subtitle": null,
+      "subtitleStyle": null,
+      "title": "Détails de l'enregistrement",
+      "titleStyle": null
+     }
+    ],
+    "kickerString": null,
+    "logoData": null,
+    "mediaItems": null,
+    "subtitle": null,
+    "subtitleStyle": null,
+    "title": "À propos de ce logement",
+    "titleStyle": null
+   }
+  },
+  {
+   "__typename": "SectionContainer",
+   "id": "U2VjdGlvbkNvbnRhaW5lcjoxMDAxNDAxODg2ODYxNjE4ODYz",
+   "sectionComponentType": "PDP_DESCRIPTION_MODAL",
+   "sectionContentStatus": "COMPLETE",
+   "sectionId": "INDIVIDUAL_HOST_PROMPT_MODAL",
+   "errors": null,
+   "sectionDependencies": [],
+   "enableDependencies": null,
+   "disableDependencies": null,
+   "loggingData": {
+    "__typename": "LoggingEventData",
+    "loggingId": "pdp_platform.individual_host_prompt_modal",
+    "experiments": [],
+    "eventData": null,
+    "eventDataSchemaName": null,
+    "section": null,
+    "component": null
+   },
+   "e2eLoggingSession": null,
+   "mutationMetadata": null,
+   "pluginPointId": "INDIVIDUAL_HOST_PROMPT_MODAL",
+   "section": {
+    "__typename": "GeneralListContentSection",
+    "buttons": null,
+    "caption": null,
+    "ctaButton": null,
+    "flip": null,
+    "headingLevel": null,
+    "items": [
+     {
+      "__typename": "BasicListItem",
+      "action": null,
+      "anchor": null,
+      "accessibilityLabel": null,
+      "button": null,
+      "icon": null,
+      "html": {
+       "__typename": "Html",
+       "htmlText": "Charlene est entièrement responsable de la proposition de ce logement sur Airbnb et exerce l'activité d'hôte en tant que particulier.<br /><br />Les lois sur la protection des consommateurs ne s'appliquent pas aux réservations effectuées auprès de particuliers, mais chaque réservation sur Airbnb bénéficie d'une assistance utilisateurs disponible 24h/24, 7j/7. Pour plus d'informations, rendez-vous dans le <a href=\"https://www.airbnb.fr/help/article/3866\">Centre d'aide</a>.",
+       "readMoreButton": null,
+       "textStyle": null,
+       "recommendedNumberOfLines": null,
+       "minimumNumberOfLinesForTruncation": null
+      },
+      "image": null,
+      "kicker": null,
+      "loggingEventData": null,
+      "media": null,
+      "subtitle": null,
+      "subtitleStyle": null,
+      "title": null,
+      "titleStyle": null
+     }
+    ],
+    "kickerString": null,
+    "logoData": null,
+    "mediaItems": null,
+    "subtitle": null,
+    "subtitleStyle": null,
+    "title": "Ce qu'il faut savoir sur les logements proposés par des particuliers",
+    "titleStyle": null
+   }
+  },
+  {
+   "__typename": "SectionContainer",
+   "id": "U2VjdGlvbkNvbnRhaW5lcjotODk3Mzc1ODA1ODQxNzE0MTk4MQ==",
+   "sectionComponentType": "PHOTO_TOUR_SCROLLABLE",
+   "sectionContentStatus": "COMPLETE",
+   "sectionId": "PHOTO_TOUR_SCROLLABLE_MODAL",
+   "errors": null,
+   "sectionDependencies": null,
+   "enableDependencies": null,
+   "disableDependencies": null,
+   "loggingData": {
+    "__typename": "LoggingEventData",
+    "loggingId": "pdp_platform.photo_tour_scrollable_modal",
+    "experiments": [],
+    "eventData": null,
+    "eventDataSchemaName": null,
+    "section": null,
+    "component": null
+   },
+   "e2eLoggingSession": null,
+   "mutationMetadata": null,
+   "pluginPointId": null,
+   "section": {
+    "__typename": "PhotoTourModalSection",
+    "title": null,
+    "mediaItems": [
+     {
+      "__typename": "Image",
+      "id": "2166308996",
+      "aspectRatio": 0.75,
+      "orientation": "PORTRAIT",
+      "onPressAction": null,
+      "accessibilityLabel": "Image du logement 1",
+      "baseUrl": "https://a0.muscache.com/im/pictures/hosting/Hosting-50226249/original/c719eb93-cd0a-4570-8dfb-258d8f5d8eba.jpeg",
+      "displayAspectRatio": null,
+      "imageMetadata": {
+       "__typename": "ImageMetadata",
+       "caption": null,
+       "imageType": null,
+       "isProfessional": false,
+       "isVerified": null,
+       "localizedCaption": null
+      },
+      "overlay": null,
+      "loggingEventData": null
+     },
+     {
+      "__typename": "Image",
+      "id": "1200246515",
+      "aspectRatio": 1.3333333333333333,
+      "orientation": "LANDSCAPE",
+      "onPressAction": null,
+      "accessibilityLabel": "Image du logement 2",
+      "baseUrl": "https://a0.muscache.com/im/pictures/9657aa69-e71b-4b36-8dcb-700ea47052d3.jpg",
+      "displayAspectRatio": null,
+      "imageMetadata": {
+       "__typename": "ImageMetadata",
+       "caption": null,
+       "imageType": null,
+       "isProfessional": false,
+       "isVerified": null,
+       "localizedCaption": null
+      },
+      "overlay": null,
+      "loggingEventData": null
+     },
+     {
+      "__typename": "Image",
+      "id": "1501775474",
+      "aspectRatio": 1.3333333333333333,
+      "orientation": "LANDSCAPE",
+      "onPressAction": null,
+      "accessibilityLabel": "Image du logement 3",
+      "baseUrl": "https://a0.muscache.com/im/pictures/59655058-44b5-4150-982a-1590ef888eb2.jpg",
+      "displayAspectRatio": null,
+      "imageMetadata": {
+       "__typename": "ImageMetadata",
+       "caption": null,
+       "imageType": null,
+       "isProfessional": false,
+       "isVerified": null,
+       "localizedCaption": null
+      },
+      "overlay": null,
+      "loggingEventData": null
+     },
+     {
+      "__typename": "Image",
+      "id": "1210112539",
+      "aspectRatio": 0.75,
+      "orientation": "PORTRAIT",
+      "onPressAction": null,
+      "accessibilityLabel": "Image du logement 4",
+      "baseUrl": "https://a0.muscache.com/im/pictures/350d613f-3e81-449b-b86c-92d4996faa56.jpg",
+      "displayAspectRatio": null,
+      "imageMetadata": {
+       "__typename": "ImageMetadata",
+       "caption": null,
+       "imageType": null,
+       "isProfessional": false,
+       "isVerified": null,
+       "localizedCaption": null
+      },
+      "overlay": null,
+      "loggingEventData": null
+     },
+     {
+      "__typename": "Image",
+      "id": "1192845111",
+      "aspectRatio": 0.75,
+      "orientation": "PORTRAIT",
+      "onPressAction": null,
+      "accessibilityLabel": "Image du logement 5",
+      "baseUrl": "https://a0.muscache.com/im/pictures/fcc95ef6-59ea-47c1-a303-d420e1db7665.jpg",
+      "displayAspectRatio": null,
+      "imageMetadata": {
+       "__typename": "ImageMetadata",
+       "caption": null,
+       "imageType": null,
+       "isProfessional": false,
+       "isVerified": null,
+       "localizedCaption": null
+      },
+      "overlay": null,
+      "loggingEventData": null
+     },
+     {
+      "__typename": "Image",
+      "id": "1501769339",
+      "aspectRatio": 0.75,
+      "orientation": "PORTRAIT",
+      "onPressAction": null,
+      "accessibilityLabel": "Image du logement 6",
+      "baseUrl": "https://a0.muscache.com/im/pictures/dcf4c8c6-1606-404b-8d52-ba9a4492f078.jpg",
+      "displayAspectRatio": null,
+      "imageMetadata": {
+       "__typename": "ImageMetadata",
+       "caption": null,
+       "imageType": null,
+       "isProfessional": false,
+       "isVerified": null,
+       "localizedCaption": null
+      },
+      "overlay": null,
+      "loggingEventData": null
+     },
+     {
+      "__typename": "Image",
+      "id": "1223205992",
+      "aspectRatio": 1.3333333333333333,
+      "orientation": "LANDSCAPE",
+      "onPressAction": null,
+      "accessibilityLabel": "Image du logement 7",
+      "baseUrl": "https://a0.muscache.com/im/pictures/0e313787-692e-4540-9b8b-82ecd51dd37d.jpg",
+      "displayAspectRatio": null,
+      "imageMetadata": {
+       "__typename": "ImageMetadata",
+       "caption": null,
+       "imageType": null,
+       "isProfessional": false,
+       "isVerified": null,
+       "localizedCaption": null
+      },
+      "overlay": null,
+      "loggingEventData": null
+     },
+     {
+      "__typename": "Image",
+      "id": "1223206034",
+      "aspectRatio": 1.3333333333333333,
+      "orientation": "LANDSCAPE",
+      "onPressAction": null,
+      "accessibilityLabel": "Image du logement 8",
+      "baseUrl": "https://a0.muscache.com/im/pictures/1ec32736-1e2b-4d5f-93c2-d7e7229085a9.jpg",
+      "displayAspectRatio": null,
+      "imageMetadata": {
+       "__typename": "ImageMetadata",
+       "caption": null,
+       "imageType": null,
+       "isProfessional": false,
+       "isVerified": null,
+       "localizedCaption": null
+      },
+      "overlay": null,
+      "loggingEventData": null
+     },
+     {
+      "__typename": "Image",
+      "id": "1223206209",
+      "aspectRatio": 0.75,
+      "orientation": "PORTRAIT",
+      "onPressAction": null,
+      "accessibilityLabel": "Image du logement 9",
+      "baseUrl": "https://a0.muscache.com/im/pictures/1504dd0a-e3d0-4e24-9a75-571305ebf387.jpg",
+      "displayAspectRatio": null,
+      "imageMetadata": {
+       "__typename": "ImageMetadata",
+       "caption": null,
+       "imageType": null,
+       "isProfessional": false,
+       "isVerified": null,
+       "localizedCaption": null
+      },
+      "overlay": null,
+      "loggingEventData": null
+     },
+     {
+      "__typename": "Image",
+      "id": "1501769566",
+      "aspectRatio": 1.3333333333333333,
+      "orientation": "LANDSCAPE",
+      "onPressAction": null,
+      "accessibilityLabel": "Image du logement 10",
+      "baseUrl": "https://a0.muscache.com/im/pictures/4e6f1cf8-fa00-4630-a3c8-8e61904a9c0c.jpg",
+      "displayAspectRatio": null,
+      "imageMetadata": {
+       "__typename": "ImageMetadata",
+       "caption": null,
+       "imageType": null,
+       "isProfessional": false,
+       "isVerified": null,
+       "localizedCaption": null
+      },
+      "overlay": null,
+      "loggingEventData": null
+     },
+     {
+      "__typename": "Image",
+      "id": "1501769569",
+      "aspectRatio": 0.75,
+      "orientation": "PORTRAIT",
+      "onPressAction": null,
+      "accessibilityLabel": "Image du logement 11",
+      "baseUrl": "https://a0.muscache.com/im/pictures/e3162e21-0845-46fc-be9e-de722d194991.jpg",
+      "displayAspectRatio": null,
+      "imageMetadata": {
+       "__typename": "ImageMetadata",
+       "caption": null,
+       "imageType": null,
+       "isProfessional": false,
+       "isVerified": null,
+       "localizedCaption": null
+      },
+      "overlay": null,
+      "loggingEventData": null
+     },
+     {
+      "__typename": "Image",
+      "id": "1501772673",
+      "aspectRatio": 0.75,
+      "orientation": "PORTRAIT",
+      "onPressAction": null,
+      "accessibilityLabel": "Image du logement 12",
+      "baseUrl": "https://a0.muscache.com/im/pictures/1327e9a2-9842-4ec6-8362-dec0122c2d81.jpg",
+      "displayAspectRatio": null,
+      "imageMetadata": {
+       "__typename": "ImageMetadata",
+       "caption": null,
+       "imageType": null,
+       "isProfessional": false,
+       "isVerified": null,
+       "localizedCaption": null
+      },
+      "overlay": null,
+      "loggingEventData": null
+     },
+     {
+      "__typename": "Image",
+      "id": "1501775694",
+      "aspectRatio": 1.3333333333333333,
+      "orientation": "LANDSCAPE",
+      "onPressAction": null,
+      "accessibilityLabel": "Image du logement 13",
+      "baseUrl": "https://a0.muscache.com/im/pictures/b40ed491-ffc6-4bbd-93c6-ac6f3a507431.jpg",
+      "displayAspectRatio": null,
+      "imageMetadata": {
+       "__typename": "ImageMetadata",
+       "caption": null,
+       "imageType": null,
+       "isProfessional": false,
+       "isVerified": null,
+       "localizedCaption": null
+      },
+      "overlay": null,
+      "loggingEventData": null
+     },
+     {
+      "__typename": "Image",
+      "id": "1501776381",
+      "aspectRatio": 1.3333333333333333,
+      "orientation": "LANDSCAPE",
+      "onPressAction": null,
+      "accessibilityLabel": "Image du logement 14",
+      "baseUrl": "https://a0.muscache.com/im/pictures/c25635a9-782a-40b3-8bb1-502fd345174d.jpg",
+      "displayAspectRatio": null,
+      "imageMetadata": {
+       "__typename": "ImageMetadata",
+       "caption": null,
+       "imageType": null,
+       "isProfessional": false,
+       "isVerified": null,
+       "localizedCaption": null
+      },
+      "overlay": null,
+      "loggingEventData": null
+     },
+     {
+      "__typename": "Image",
+      "id": "1501776489",
+      "aspectRatio": 0.75,
+      "orientation": "PORTRAIT",
+      "onPressAction": null,
+      "accessibilityLabel": "Image du logement 15",
+      "baseUrl": "https://a0.muscache.com/im/pictures/26564d77-ee13-4474-9ab7-b65dfbd87e96.jpg",
+      "displayAspectRatio": null,
+      "imageMetadata": {
+       "__typename": "ImageMetadata",
+       "caption": null,
+       "imageType": null,
+       "isProfessional": false,
+       "isVerified": null,
+       "localizedCaption": null
+      },
+      "overlay": null,
+      "loggingEventData": null
+     },
+     {
+      "__typename": "Image",
+      "id": "1501776543",
+      "aspectRatio": 0.75,
+      "orientation": "PORTRAIT",
+      "onPressAction": null,
+      "accessibilityLabel": "Image du logement 16",
+      "baseUrl": "https://a0.muscache.com/im/pictures/e9efd83d-39ca-4b82-b672-a52eec33ce1b.jpg",
+      "displayAspectRatio": null,
+      "imageMetadata": {
+       "__typename": "ImageMetadata",
+       "caption": null,
+       "imageType": null,
+       "isProfessional": false,
+       "isVerified": null,
+       "localizedCaption": null
+      },
+      "overlay": null,
+      "loggingEventData": null
+     },
+     {
+      "__typename": "Image",
+      "id": "2166309008",
+      "aspectRatio": 0.75,
+      "orientation": "PORTRAIT",
+      "onPressAction": null,
+      "accessibilityLabel": "Image du logement 17",
+      "baseUrl": "https://a0.muscache.com/im/pictures/hosting/Hosting-50226249/original/6bf14b94-3837-449f-9151-29541577609e.jpeg",
+      "displayAspectRatio": null,
+      "imageMetadata": {
+       "__typename": "ImageMetadata",
+       "caption": null,
+       "imageType": null,
+       "isProfessional": false,
+       "isVerified": null,
+       "localizedCaption": null
+      },
+      "overlay": null,
+      "loggingEventData": null
+     },
+     {
+      "__typename": "Image",
+      "id": "2419170339",
+      "aspectRatio": 0.75,
+      "orientation": "PORTRAIT",
+      "onPressAction": null,
+      "accessibilityLabel": "Image du logement 18",
+      "baseUrl": "https://a0.muscache.com/im/pictures/hosting/Hosting-50226249/original/3e3be8f2-c5ce-4d68-83f4-070c03c6e478.jpeg",
+      "displayAspectRatio": null,
+      "imageMetadata": {
+       "__typename": "ImageMetadata",
+       "caption": null,
+       "imageType": null,
+       "isProfessional": false,
+       "isVerified": null,
+       "localizedCaption": null
+      },
+      "overlay": null,
+      "loggingEventData": null
+     },
+     {
+      "__typename": "Image",
+      "id": "2419170353",
+      "aspectRatio": 0.75,
+      "orientation": "PORTRAIT",
+      "onPressAction": null,
+      "accessibilityLabel": "Image du logement 19",
+      "baseUrl": "https://a0.muscache.com/im/pictures/hosting/Hosting-50226249/original/efbaee3a-7096-466c-9f9a-97e3d8991e19.jpeg",
+      "displayAspectRatio": null,
+      "imageMetadata": {
+       "__typename": "ImageMetadata",
+       "caption": null,
+       "imageType": null,
+       "isProfessional": false,
+       "isVerified": null,
+       "localizedCaption": null
+      },
+      "overlay": null,
+      "loggingEventData": null
+     },
+     {
+      "__typename": "Image",
+      "id": "2419170953",
+      "aspectRatio": 0.75,
+      "orientation": "PORTRAIT",
+      "onPressAction": null,
+      "accessibilityLabel": "Image du logement 20",
+      "baseUrl": "https://a0.muscache.com/im/pictures/hosting/Hosting-50226249/original/e1d18a00-c4d5-421a-bcd8-5b938c1b4a60.jpeg",
+      "displayAspectRatio": null,
+      "imageMetadata": {
+       "__typename": "ImageMetadata",
+       "caption": null,
+       "imageType": null,
+       "isProfessional": false,
+       "isVerified": null,
+       "localizedCaption": null
+      },
+      "overlay": null,
+      "loggingEventData": null
+     },
+     {
+      "__typename": "Image",
+      "id": "2419170955",
+      "aspectRatio": 0.75,
+      "orientation": "PORTRAIT",
+      "onPressAction": null,
+      "accessibilityLabel": "Image du logement 21",
+      "baseUrl": "https://a0.muscache.com/im/pictures/hosting/Hosting-50226249/original/42d587f9-7716-4bbf-90dc-1a5434d96506.jpeg",
+      "displayAspectRatio": null,
+      "imageMetadata": {
+       "__typename": "ImageMetadata",
+       "caption": null,
+       "imageType": null,
+       "isProfessional": false,
+       "isVerified": null,
+       "localizedCaption": null
+      },
+      "overlay": null,
+      "loggingEventData": null
+     },
+     {
+      "__typename": "Image",
+      "id": "2419171338",
+      "aspectRatio": 0.75,
+      "orientation": "PORTRAIT",
+      "onPressAction": null,
+      "accessibilityLabel": "Image du logement 22",
+      "baseUrl": "https://a0.muscache.com/im/pictures/hosting/Hosting-50226249/original/8e8f9093-b5da-4000-9eae-134d7501aedb.jpeg",
+      "displayAspectRatio": null,
+      "imageMetadata": {
+       "__typename": "ImageMetadata",
+       "caption": null,
+       "imageType": null,
+       "isProfessional": false,
+       "isVerified": null,
+       "localizedCaption": null
+      },
+      "overlay": null,
+      "loggingEventData": null
+     },
+     {
+      "__typename": "Image",
+      "id": "2419172031",
+      "aspectRatio": 0.75,
+      "orientation": "PORTRAIT",
+      "onPressAction": null,
+      "accessibilityLabel": "Image du logement 23",
+      "baseUrl": "https://a0.muscache.com/im/pictures/hosting/Hosting-50226249/original/2ee25342-4799-409f-af89-31f1673f9af8.jpeg",
+      "displayAspectRatio": null,
+      "imageMetadata": {
+       "__typename": "ImageMetadata",
+       "caption": null,
+       "imageType": null,
+       "isProfessional": false,
+       "isVerified": null,
+       "localizedCaption": null
+      },
+      "overlay": null,
+      "loggingEventData": null
+     },
+     {
+      "__typename": "Image",
+      "id": "2419186909",
+      "aspectRatio": 0.75,
+      "orientation": "PORTRAIT",
+      "onPressAction": null,
+      "accessibilityLabel": "Image du logement 24",
+      "baseUrl": "https://a0.muscache.com/im/pictures/hosting/Hosting-50226249/original/bab9eb0d-f2b0-4c45-92d1-cef8d5443472.jpeg",
+      "displayAspectRatio": null,
+      "imageMetadata": {
+       "__typename": "ImageMetadata",
+       "caption": null,
+       "imageType": null,
+       "isProfessional": false,
+       "isVerified": null,
+       "localizedCaption": null
+      },
+      "overlay": null,
+      "loggingEventData": null
+     },
+     {
+      "__typename": "Image",
+      "id": "2419186911",
+      "aspectRatio": 0.75,
+      "orientation": "PORTRAIT",
+      "onPressAction": null,
+      "accessibilityLabel": "Image du logement 25",
+      "baseUrl": "https://a0.muscache.com/im/pictures/hosting/Hosting-50226249/original/593eab6b-26e8-451a-b1bf-ff574dd0d10a.jpeg",
+      "displayAspectRatio": null,
+      "imageMetadata": {
+       "__typename": "ImageMetadata",
+       "caption": null,
+       "imageType": null,
+       "isProfessional": false,
+       "isVerified": null,
+       "localizedCaption": null
+      },
+      "overlay": null,
+      "loggingEventData": null
+     },
+     {
+      "__typename": "Image",
+      "id": "2419187883",
+      "aspectRatio": 0.75,
+      "orientation": "PORTRAIT",
+      "onPressAction": null,
+      "accessibilityLabel": "Image du logement 26",
+      "baseUrl": "https://a0.muscache.com/im/pictures/hosting/Hosting-50226249/original/d5897ecf-655e-4163-9773-41b36ecf7164.jpeg",
+      "displayAspectRatio": null,
+      "imageMetadata": {
+       "__typename": "ImageMetadata",
+       "caption": null,
+       "imageType": null,
+       "isProfessional": false,
+       "isVerified": null,
+       "localizedCaption": null
+      },
+      "overlay": null,
+      "loggingEventData": null
+     },
+     {
+      "__typename": "Image",
+      "id": "2419188242",
+      "aspectRatio": 0.75,
+      "orientation": "PORTRAIT",
+      "onPressAction": null,
+      "accessibilityLabel": "Image du logement 27",
+      "baseUrl": "https://a0.muscache.com/im/pictures/hosting/Hosting-50226249/original/c96b3016-f0ab-432f-804f-61c6c876c8ec.jpeg",
+      "displayAspectRatio": null,
+      "imageMetadata": {
+       "__typename": "ImageMetadata",
+       "caption": null,
+       "imageType": null,
+       "isProfessional": false,
+       "isVerified": null,
+       "localizedCaption": null
+      },
+      "overlay": null,
+      "loggingEventData": null
+     }
+    ],
+    "gridImageLoggingEventData": {
+     "__typename": "LoggingEventData",
+     "loggingId": "pdp.photoTour.gridImage",
+     "experiments": null,
+     "eventData": null,
+     "eventDataSchemaName": null,
+     "section": "photoTour",
+     "component": "gridImage"
+    },
+    "carouselImageNavigationLoggingEventData": {
+     "__typename": "LoggingEventData",
+     "loggingId": "pdp.photoTour.carouselImageNavigation",
+     "experiments": null,
+     "eventData": null,
+     "eventDataSchemaName": null,
+     "section": "photoTour",
+     "component": "carouselImageNavigation"
+    },
+    "shareSave": {
+     "__typename": "ShareSave",
+     "entityType": "STAY",
+     "shareButton": {
+      "__typename": "BasicListItem",
+      "title": "Partager",
+      "subtitle": null,
+      "loggingEventData": {
+       "__typename": "LoggingEventData",
+       "loggingId": "pdp.photoTour.share",
+       "experiments": [],
+       "eventData": null,
+       "eventDataSchemaName": null,
+       "section": "photoTour",
+       "component": "share"
+      }
+     },
+     "saveButton": {
+      "__typename": "BasicListItem",
+      "title": "Enregistrer",
+      "subtitle": null,
+      "loggingEventData": {
+       "__typename": "LoggingEventData",
+       "loggingId": "pdp.photoTour.save",
+       "experiments": [],
+       "eventData": null,
+       "eventDataSchemaName": null,
+       "section": "photoTour",
+       "component": "save"
+      }
+     },
+     "unsaveButton": {
+      "__typename": "BasicListItem",
+      "title": "Enregistré",
+      "subtitle": null,
+      "loggingEventData": {
+       "__typename": "LoggingEventData",
+       "loggingId": "pdp.photoTour.unsave",
+       "experiments": [],
+       "eventData": null,
+       "eventDataSchemaName": null,
+       "section": "photoTour",
+       "component": "unsave"
+      }
+     },
+     "embedData": {
+      "__typename": "StayEmbedData",
+      "id": "50226249",
+      "name": "Maison de ville, avec 5 chambres",
+      "personCapacity": 8,
+      "pictureUrl": "https://a0.muscache.com/im/pictures/hosting/Hosting-50226249/original/c719eb93-cd0a-4570-8dfb-258d8f5d8eba.jpeg",
+      "propertyType": "Logement entier : maison de ville",
+      "url": null,
+      "reviewCount": 41,
+      "starRating": 4.88
+     },
+     "sharingConfig": {
+      "__typename": "PdpSharingConfig",
+      "title": "Maison de ville · Bordeaux · ★4,88 · 5 chambres · 5 lits · 2 salles de bain"
+     }
+    },
+    "closeButton": {
+     "__typename": "BasicListItem",
+     "title": "Fermer",
+     "anchor": null,
+     "icon": null,
+     "loggingEventData": {
+      "__typename": "LoggingEventData",
+      "loggingId": "pdp.photoTour.close",
+      "experiments": null,
+      "eventData": null,
+      "eventDataSchemaName": null,
+      "section": "photoTour",
+      "component": "close"
+     },
+     "action": null
+    },
+    "imageNavigationLoggingEventData": null,
+    "recommendedNumberOfHighlights": null,
+    "roomTourLayoutInfos": [
+     {
+      "__typename": "RoomTourLayoutInfo",
+      "roomTourItems": [
+       {
+        "__typename": "RoomTourItem",
+        "title": null,
+        "imageIds": [
+         "2166308996",
+         "1200246515",
+         "1501775474",
+         "1210112539",
+         "1192845111",
+         "1501769339",
+         "1223205992",
+         "1223206034",
+         "1223206209",
+         "1501769566",
+         "1501769569",
+         "1501772673",
+         "1501775694",
+         "1501776381",
+         "1501776489",
+         "1501776543",
+         "2166309008",
+         "2419170339",
+         "2419170353",
+         "2419170953",
+         "2419170955",
+         "2419171338",
+         "2419172031",
+         "2419186909",
+         "2419186911",
+         "2419187883",
+         "2419188242"
+        ],
+        "mediaBlocks": [
+         {
+          "__typename": "MediaBlockContainer",
+          "flip": "DEFAULT",
+          "format": "ONE_PORTRAIT_TWO_LANDSCAPES",
+          "mediaBlock": {
+           "__typename": "OnePortraitTwoLandscapesMediaBlock",
+           "lowerLandscapeId": "1501775474",
+           "portraitId": "2166308996",
+           "upperLandscapeId": "1200246515"
+          }
+         },
+         {
+          "__typename": "MediaBlockContainer",
+          "flip": "DEFAULT",
+          "format": "THREE_PORTRAITS_TALL",
+          "mediaBlock": {
+           "__typename": "ThreePortraitsTallMediaBlock",
+           "leftPortraitId": "1210112539",
+           "lowerRightPortraitId": "1501769339",
+           "upperRightPortraitId": "1192845111"
+          }
+         },
+         {
+          "__typename": "MediaBlockContainer",
+          "flip": "HORIZONTAL_FLIP",
+          "format": "ONE_PORTRAIT_TWO_LANDSCAPES",
+          "mediaBlock": {
+           "__typename": "OnePortraitTwoLandscapesMediaBlock",
+           "lowerLandscapeId": "1223206034",
+           "portraitId": "1223206209",
+           "upperLandscapeId": "1223205992"
+          }
+         },
+         {
+          "__typename": "MediaBlockContainer",
+          "flip": "DEFAULT",
+          "format": "ONE_LANDSCAPE",
+          "mediaBlock": {
+           "__typename": "OneLandscapeMediaBlock",
+           "landscapeId": "1501769566"
+          }
+         },
+         {
+          "__typename": "MediaBlockContainer",
+          "flip": "DEFAULT",
+          "format": "TWO_PORTRAITS",
+          "mediaBlock": {
+           "__typename": "TwoPortraitsMediaBlock",
+           "leftPortraitId": "1501769569",
+           "rightPortraitId": "1501772673"
+          }
+         },
+         {
+          "__typename": "MediaBlockContainer",
+          "flip": "HORIZONTAL_FLIP",
+          "format": "ONE_PORTRAIT_TWO_LANDSCAPES",
+          "mediaBlock": {
+           "__typename": "OnePortraitTwoLandscapesMediaBlock",
+           "lowerLandscapeId": "1501776381",
+           "portraitId": "1501776489",
+           "upperLandscapeId": "1501775694"
+          }
+         },
+         {
+          "__typename": "MediaBlockContainer",
+          "flip": "DEFAULT",
+          "format": "THREE_PORTRAITS_TALL",
+          "mediaBlock": {
+           "__typename": "ThreePortraitsTallMediaBlock",
+           "leftPortraitId": "1501776543",
+           "lowerRightPortraitId": "2419170339",
+           "upperRightPortraitId": "2166309008"
+          }
+         },
+         {
+          "__typename": "MediaBlockContainer",
+          "flip": "DEFAULT",
+          "format": "THREE_PORTRAITS_TALL",
+          "mediaBlock": {
+           "__typename": "ThreePortraitsTallMediaBlock",
+           "leftPortraitId": "2419170353",
+           "lowerRightPortraitId": "2419170955",
+           "upperRightPortraitId": "2419170953"
+          }
+         },
+         {
+          "__typename": "MediaBlockContainer",
+          "flip": "DEFAULT",
+          "format": "THREE_PORTRAITS_TALL",
+          "mediaBlock": {
+           "__typename": "ThreePortraitsTallMediaBlock",
+           "leftPortraitId": "2419171338",
+           "lowerRightPortraitId": "2419186909",
+           "upperRightPortraitId": "2419172031"
+          }
+         },
+         {
+          "__typename": "MediaBlockContainer",
+          "flip": "DEFAULT",
+          "format": "THREE_PORTRAITS_TALL",
+          "mediaBlock": {
+           "__typename": "ThreePortraitsTallMediaBlock",
+           "leftPortraitId": "2419186911",
+           "lowerRightPortraitId": "2419188242",
+           "upperRightPortraitId": "2419187883"
+          }
+         }
+        ],
+        "highlights": []
+       }
+      ]
+     }
+    ],
+    "translationDisclaimer": {
+     "__typename": "BasicListItem",
+     "title": null,
+     "subtitle": "Traduire en Français",
+     "icon": "COMPACT_NO_TRANSLATION",
+     "loggingEventData": {
+      "__typename": "LoggingEventData",
+      "loggingId": "pdp.photoTour.translateCaption",
+      "experiments": null,
+      "eventData": null,
+      "eventDataSchemaName": null,
+      "section": "photoTour",
+      "component": "translateCaption"
+     }
+    },
+    "showOriginalDisclaimer": {
+     "__typename": "BasicListItem",
+     "title": "Traduit automatiquement.",
+     "subtitle": "Afficher le texte d'origine",
+     "icon": "COMPACT_TRANSLATE",
+     "loggingEventData": {
+      "__typename": "LoggingEventData",
+      "loggingId": "pdp.photoTour.untranslateCaption",
+      "experiments": null,
+      "eventData": null,
+      "eventDataSchemaName": null,
+      "section": "photoTour",
+      "component": "untranslateCaption"
+     }
+    },
+    "isAutoTranslatedOn": true
+   }
+  },
+  {
+   "__typename": "SectionContainer",
+   "id": "U2VjdGlvbkNvbnRhaW5lcjo4NjM3MTIxMTQ1MjM1ODU5NzEw",
+   "sectionComponentType": "REVIEWS_DEFAULT",
+   "sectionContentStatus": "COMPLETE",
+   "sectionId": "REVIEWS_DEFAULT",
+   "errors": null,
+   "sectionDependencies": [],
+   "enableDependencies": null,
+   "disableDependencies": null,
+   "loggingData": {
+    "__typename": "LoggingEventData",
+    "loggingId": "pdp_platform.reviews_default",
+    "experiments": [],
+    "eventData": null,
+    "eventDataSchemaName": null,
+    "section": null,
+    "component": null
+   },
+   "e2eLoggingSession": null,
+   "mutationMetadata": null,
+   "pluginPointId": "REVIEWS_DEFAULT",
+   "section": {
+    "__typename": "StayPdpReviewsSection"
+   }
+  },
+  {
+   "__typename": "SectionContainer",
+   "id": "U2VjdGlvbkNvbnRhaW5lcjotMjQ5MzUzMjg0Mjk1NTYwODg5Mw==",
+   "sectionComponentType": "LOCATION_PDP",
+   "sectionContentStatus": "COMPLETE",
+   "sectionId": "LOCATION_DEFAULT",
+   "errors": null,
+   "sectionDependencies": [
+    "TRANSLATE_UGC",
+    "CHECK_IN",
+    "CHECK_OUT"
+   ],
+   "enableDependencies": null,
+   "disableDependencies": null,
+   "loggingData": {
+    "__typename": "LoggingEventData",
+    "loggingId": "pdp_platform.location_default",
+    "experiments": [
+     {
+      "__typename": "Experiment",
+      "experiment": "map_category_button_experiment_v2_desktop",
+      "treatment": "treatment",
+      "dontLogOnFormFactor": null
+     }
+    ],
+    "eventData": null,
+    "eventDataSchemaName": null,
+    "section": null,
+    "component": null
+   },
+   "e2eLoggingSession": {
+    "__typename": "UniversalLoggingData",
+    "eventData": "{}",
+    "eventDataSchema": "Pdp.v1.PdpLocationSectionViewportPresentationSession"
+   },
+   "mutationMetadata": null,
+   "pluginPointId": "LOCATION_DEFAULT",
+   "section": {
+    "__typename": "LocationSection"
+   }
+  },
+  {
+   "__typename": "SectionContainer",
+   "id": "U2VjdGlvbkNvbnRhaW5lcjotNjIzMjIwMjg4OTM5ODc4MDQ1OA==",
+   "sectionComponentType": "MEET_YOUR_HOST",
+   "sectionContentStatus": "COMPLETE",
+   "sectionId": "MEET_YOUR_HOST",
+   "errors": null,
+   "sectionDependencies": [],
+   "enableDependencies": null,
+   "disableDependencies": null,
+   "loggingData": {
+    "__typename": "LoggingEventData",
+    "loggingId": "pdp.meetYourHost",
+    "experiments": [
+     {
+      "__typename": "Experiment",
+      "experiment": "meet_your_host_white_background",
+      "treatment": "treatment",
+      "dontLogOnFormFactor": null
+     }
+    ],
+    "eventData": null,
+    "eventDataSchemaName": null,
+    "section": null,
+    "component": null
+   },
+   "e2eLoggingSession": null,
+   "mutationMetadata": null,
+   "pluginPointId": null,
+   "section": {
+    "__typename": "MeetYourHostSection"
+   }
+  },
+  {
+   "__typename": "SectionContainer",
+   "id": "U2VjdGlvbkNvbnRhaW5lcjotODcxMjIwNzYwOTYyMzQ1MTM2OA==",
+   "sectionComponentType": "SBUI_SENTINEL",
+   "sectionContentStatus": "COMPLETE",
+   "sectionId": "SIMILAR_LISTINGS_CAROUSEL",
+   "errors": null,
+   "sectionDependencies": null,
+   "enableDependencies": null,
+   "disableDependencies": null,
+   "loggingData": null,
+   "e2eLoggingSession": null,
+   "mutationMetadata": null,
+   "pluginPointId": null,
+   "section": {
+    "__typename": "SBUISentinelSection"
+   }
+  },
+  {
+   "__typename": "SectionContainer",
+   "id": "U2VjdGlvbkNvbnRhaW5lcjotNDY0NzMyNzUxMjkzMTg2MTc1Mg==",
+   "sectionComponentType": "SEO_LINKS_DEFAULT",
+   "sectionContentStatus": "COMPLETE",
+   "sectionId": "SEO_LINKS_DEFAULT",
+   "errors": null,
+   "sectionDependencies": [],
+   "enableDependencies": null,
+   "disableDependencies": null,
+   "loggingData": null,
+   "e2eLoggingSession": null,
+   "mutationMetadata": null,
+   "pluginPointId": null,
+   "section": {
+    "__typename": "SeoLinksSection"
+   }
+  },
+  {
+   "__typename": "SectionContainer",
+   "id": "U2VjdGlvbkNvbnRhaW5lcjoxMTYwMzc0NjQ5ODI5NjQ5MTQy",
+   "sectionComponentType": "BOOK_IT_SIDEBAR",
+   "sectionContentStatus": "NOT_COMPLETE",
+   "sectionId": "BOOK_IT_SIDEBAR",
+   "errors": null,
+   "sectionDependencies": [
+    "BOOKING"
+   ],
+   "enableDependencies": null,
+   "disableDependencies": null,
+   "loggingData": {
+    "__typename": "LoggingEventData",
+    "loggingId": "pdp_platform.book_it_sidebar",
+    "experiments": [],
+    "eventData": null,
+    "eventDataSchemaName": null,
+    "section": null,
+    "component": null
+   },
+   "e2eLoggingSession": null,
+   "mutationMetadata": null,
+   "pluginPointId": "BOOK_IT_SIDEBAR",
+   "section": {
+    "__typename": "BookItSection",
+    "subpageIdToOpen": null,
+    "showPriceBreakdown": true,
+    "cancellationPolicyLoggingEventData": {
+     "__typename": "LoggingEventData",
+     "loggingId": "pdp.bookItSidebar.cancellationPolicyInput",
+     "experiments": null,
+     "eventData": null,
+     "eventDataSchemaName": null,
+     "section": null,
+     "component": null
+    },
+    "calendarTitle": "Sélectionnez les dates",
+    "calendarSubtitle": "Ajoutez vos dates de voyage pour connaître le prix exact",
+    "descriptionItems": null,
+    "discountCopy": null,
+    "maxGuestCapacity": 8,
+    "maxPlusValue": 16,
+    "tripDetailsLoggingEventData": {
+     "__typename": "CalendarLoggingEventData",
+     "clearDatesButton": {
+      "__typename": "BasicListItem",
+      "title": "Effacer les dates",
+      "loggingEventData": {
+       "__typename": "LoggingEventData",
+       "loggingId": "pdp.bookItSidebar.clearDates",
+       "experiments": null,
+       "eventData": null,
+       "eventDataSchemaName": null,
+       "section": "bookItSidebar",
+       "component": "clearDates"
+      }
+     },
+     "saveDatesButton": {
+      "__typename": "BasicListItem",
+      "title": "Fermer",
+      "loggingEventData": {
+       "__typename": "LoggingEventData",
+       "loggingId": "pdp.bookItSidebar.saveDates",
+       "experiments": null,
+       "eventData": null,
+       "eventDataSchemaName": null,
+       "section": "bookItSidebar",
+       "component": "saveDates"
+      }
+     },
+     "datesInputLoggingEventData": null,
+     "selectDateLoggingEventData": {
+      "__typename": "LoggingEventData",
+      "loggingId": "pdp.bookItSidebar.selectDate",
+      "experiments": null,
+      "eventData": null,
+      "eventDataSchemaName": null,
+      "section": "bookItSidebar",
+      "component": "selectDate"
+     },
+     "previousMonthLoggingEventData": {
+      "__typename": "LoggingEventData",
+      "loggingId": "pdp.bookItSidebar.monthsNavPrevious",
+      "experiments": null,
+      "eventData": null,
+      "eventDataSchemaName": null,
+      "section": "bookItSidebar",
+      "component": "monthsNavPrevious"
+     },
+     "nextMonthLoggingEventData": {
+      "__typename": "LoggingEventData",
+      "loggingId": "pdp.bookItSidebar.monthsNavNext",
+      "experiments": null,
+      "eventData": null,
+      "eventDataSchemaName": null,
+      "section": "bookItSidebar",
+      "component": "monthsNavNext"
+     },
+     "checkInDateInputLoggingEventData": {
+      "__typename": "LoggingEventData",
+      "loggingId": "pdp.bookItSidebar.checkInInput",
+      "experiments": null,
+      "eventData": null,
+      "eventDataSchemaName": null,
+      "section": "bookItSidebar",
+      "component": "checkInInput"
+     },
+     "checkOutDateInputLoggingEventData": {
+      "__typename": "LoggingEventData",
+      "loggingId": "pdp.bookItSidebar.checkOutInput",
+      "experiments": null,
+      "eventData": null,
+      "eventDataSchemaName": null,
+      "section": "bookItSidebar",
+      "component": "checkOutInput"
+     },
+     "guestInputLoggingEventData": {
+      "__typename": "LoggingEventData",
+      "loggingId": "pdp.bookItSidebar.guestInput",
+      "experiments": null,
+      "eventData": null,
+      "eventDataSchemaName": null,
+      "section": "bookItSidebar",
+      "component": "guestInput"
+     },
+     "cancellationPolicyLoggingEventData": null,
+     "changeDatesButtonLoggingEventData": {
+      "__typename": "LoggingEventData",
+      "loggingId": "pdp.bookItSidebar.changeDatesButton",
+      "experiments": null,
+      "eventData": null,
+      "eventDataSchemaName": null,
+      "section": "bookItSidebar",
+      "component": "changeDatesButton"
+     },
+     "selectCheckOutOnlyDateLoggingEventData": {
+      "__typename": "LoggingEventData",
+      "loggingId": "pdp.bookItSidebar.selectCheckOutOnlyDate",
+      "experiments": null,
+      "eventData": null,
+      "eventDataSchemaName": null,
+      "section": "bookItSidebar",
+      "component": "selectCheckOutOnlyDate"
+     },
+     "selectMaxNightsViolationDateLoggingEventData": {
+      "__typename": "LoggingEventData",
+      "loggingId": "pdp.bookItSidebar.selectMaxNightsViolationDate",
+      "experiments": null,
+      "eventData": null,
+      "eventDataSchemaName": null,
+      "section": "bookItSidebar",
+      "component": "selectMaxNightsViolationDate"
+     },
+     "selectMinNightsViolationDateLoggingEventData": {
+      "__typename": "LoggingEventData",
+      "loggingId": "pdp.bookItSidebar.selectMinNightsViolationDate",
+      "experiments": null,
+      "eventData": null,
+      "eventDataSchemaName": null,
+      "section": "bookItSidebar",
+      "component": "selectMinNightsViolationDate"
+     },
+     "selectUnavailableForCheckInDateLoggingEventData": {
+      "__typename": "LoggingEventData",
+      "loggingId": "pdp.bookItSidebar.selectUnavailableForCheckInDate",
+      "experiments": null,
+      "eventData": null,
+      "eventDataSchemaName": null,
+      "section": "bookItSidebar",
+      "component": "selectUnavailableForCheckInDate"
+     },
+     "selectUnavailableForCheckoutDateLoggingEventData": {
+      "__typename": "LoggingEventData",
+      "loggingId": "pdp.bookItSidebar.selectUnavailableForCheckoutDate",
+      "experiments": null,
+      "eventData": null,
+      "eventDataSchemaName": null,
+      "section": "bookItSidebar",
+      "component": "selectUnavailableForCheckoutDate"
+     }
+    },
+    "reviewItem": null,
+    "available": null,
+    "structuredDisplayPrice": null,
+    "discountData": null,
+    "bookItButtonByPlacement": null,
+    "cancellationPolicies": null,
+    "cancellationPolicyForDisplay": null,
+    "localizedUnavailabilityMessage": null,
+    "localizedUnavailabilityMessagePositionString": null,
+    "selectedDatesLink": null,
+    "selectedNights": null,
+    "bookItButtonLayout": null,
+    "productItemDetail": null,
+    "ratePlanLoggingEventData": {
+     "__typename": "LoggingEventData",
+     "loggingId": "pdp.bookItSidebar.ratePlanInput",
+     "experiments": null,
+     "eventData": null,
+     "eventDataSchemaName": null,
+     "section": null,
+     "component": null
+    },
+    "ratePlanTitle": null,
+    "promotionBanner": null,
+    "guestDisclaimer": null,
+    "petsAllowed": null,
+    "petDetails": null,
+    "adultsPicker": {
+     "__typename": "GuestPickerSection",
+     "title": "Adultes",
+     "subtitle": "18 ans et plus"
+    },
+    "childrenPicker": {
+     "__typename": "GuestPickerSection",
+     "title": "Enfants",
+     "subtitle": "De 2 à 17 ans"
+    },
+    "infantsPicker": {
+     "__typename": "GuestPickerSection",
+     "title": "Bébés",
+     "subtitle": "- de 2 ans"
+    },
+    "canInstantBook": null,
+    "highlightBanner": null,
+    "integratedPillMessageType": null,
+    "integratedPill": null,
+    "initialPillMessageType": null,
+    "initialPill": null,
+    "priceDetailPills": [],
+    "availabilityPriceDetailEntry": null,
+    "priceDetailLoggingEventData": null,
+    "vPoint": null,
+    "bookItPlacement": "SIDEBAR",
+    "priceMerchandisingMessage": null
+   }
+  },
+  {
+   "__typename": "SectionContainer",
+   "id": "U2VjdGlvbkNvbnRhaW5lcjotNzA3NDkwNDc4NjE4NjE4MjY1Ng==",
+   "sectionComponentType": "REPORT_TO_AIRBNB",
+   "sectionContentStatus": "COMPLETE",
+   "sectionId": "REPORT_TO_AIRBNB",
+   "errors": null,
+   "sectionDependencies": [],
+   "enableDependencies": null,
+   "disableDependencies": null,
+   "loggingData": {
+    "__typename": "LoggingEventData",
+    "loggingId": "pdp_platform.report_to_airbnb",
+    "experiments": [],
+    "eventData": null,
+    "eventDataSchemaName": null,
+    "section": null,
+    "component": null
+   },
+   "e2eLoggingSession": null,
+   "mutationMetadata": null,
+   "pluginPointId": "REPORT_TO_AIRBNB",
+   "section": {
+    "__typename": "ReportToAirbnbSection"
+   }
+  },
+  {
+   "__typename": "SectionContainer",
+   "id": "U2VjdGlvbkNvbnRhaW5lcjoxMDUwMzA3OTUzMDIyNzQzMjI=",
+   "sectionComponentType": "NAV_DEFAULT",
+   "sectionContentStatus": "COMPLETE",
+   "sectionId": "NAV_DEFAULT",
+   "errors": null,
+   "sectionDependencies": [],
+   "enableDependencies": null,
+   "disableDependencies": null,
+   "loggingData": {
+    "__typename": "LoggingEventData",
+    "loggingId": "pdp_platform.nav_default",
+    "experiments": [],
+    "eventData": null,
+    "eventDataSchemaName": null,
+    "section": null,
+    "component": null
+   },
+   "e2eLoggingSession": null,
+   "mutationMetadata": null,
+   "pluginPointId": "NAV_DEFAULT",
+   "section": {
+    "__typename": "NavSection"
+   }
+  },
+  {
+   "__typename": "SectionContainer",
+   "id": "U2VjdGlvbkNvbnRhaW5lcjotNTg5Mzk4NzQwMzExNjY4ODAyNw==",
+   "sectionComponentType": "BOOK_IT_NAV",
+   "sectionContentStatus": "NOT_COMPLETE",
+   "sectionId": "BOOK_IT_NAV",
+   "errors": null,
+   "sectionDependencies": [
+    "BOOKING"
+   ],
+   "enableDependencies": null,
+   "disableDependencies": null,
+   "loggingData": {
+    "__typename": "LoggingEventData",
+    "loggingId": "pdp_platform.book_it_nav",
+    "experiments": [],
+    "eventData": null,
+    "eventDataSchemaName": null,
+    "section": null,
+    "component": null
+   },
+   "e2eLoggingSession": null,
+   "mutationMetadata": null,
+   "pluginPointId": "BOOK_IT_NAV",
+   "section": {
+    "__typename": "BookItSection",
+    "subpageIdToOpen": null,
+    "showPriceBreakdown": false,
+    "cancellationPolicyLoggingEventData": null,
+    "calendarTitle": null,
+    "calendarSubtitle": null,
+    "descriptionItems": null,
+    "discountCopy": null,
+    "maxGuestCapacity": null,
+    "maxPlusValue": null,
+    "tripDetailsLoggingEventData": null,
+    "reviewItem": {
+     "__typename": "BasicListItem",
+     "accessibilityLabel": "Évaluation de 4,88 sur 5 sur la base de 41 commentaires.",
+     "action": null,
+     "icon": "COMPACT_STAR",
+     "subtitle": "41 commentaires",
+     "title": "4,88 ·"
+    },
+    "available": null,
+    "structuredDisplayPrice": null,
+    "discountData": null,
+    "bookItButtonByPlacement": null,
+    "cancellationPolicies": null,
+    "cancellationPolicyForDisplay": null,
+    "localizedUnavailabilityMessage": null,
+    "localizedUnavailabilityMessagePositionString": null,
+    "selectedDatesLink": null,
+    "selectedNights": null,
+    "bookItButtonLayout": null,
+    "productItemDetail": null,
+    "ratePlanLoggingEventData": null,
+    "ratePlanTitle": null,
+    "promotionBanner": null,
+    "guestDisclaimer": null,
+    "petsAllowed": null,
+    "petDetails": null,
+    "adultsPicker": null,
+    "childrenPicker": null,
+    "infantsPicker": null,
+    "canInstantBook": null,
+    "highlightBanner": null,
+    "integratedPillMessageType": null,
+    "integratedPill": null,
+    "initialPillMessageType": null,
+    "initialPill": null,
+    "priceDetailPills": null,
+    "availabilityPriceDetailEntry": null,
+    "priceDetailLoggingEventData": null,
+    "vPoint": null,
+    "bookItPlacement": "NAV",
+    "priceMerchandisingMessage": null
+   }
+  },
+  {
+   "__typename": "SectionContainer",
+   "id": "U2VjdGlvbkNvbnRhaW5lcjotMjY5MTc0NTUyOTk2OTM3NjIxMQ==",
+   "sectionComponentType": "SBUI_SENTINEL",
+   "sectionContentStatus": "COMPLETE",
+   "sectionId": "OVERVIEW_DEFAULT_V2",
+   "errors": null,
+   "sectionDependencies": null,
+   "enableDependencies": null,
+   "disableDependencies": null,
+   "loggingData": null,
+   "e2eLoggingSession": null,
+   "mutationMetadata": null,
+   "pluginPointId": null,
+   "section": {
+    "__typename": "SBUISentinelSection"
+   }
+  },
+  {
+   "__typename": "SectionContainer",
+   "id": "U2VjdGlvbkNvbnRhaW5lcjo1MzkzOTExMTc4NDI2MjQ2NjA4",
+   "sectionComponentType": "SBUI_SENTINEL",
+   "sectionContentStatus": "COMPLETE",
+   "sectionId": "GUEST_FAVORITE_BANNER",
+   "errors": null,
+   "sectionDependencies": null,
+   "enableDependencies": null,
+   "disableDependencies": null,
+   "loggingData": null,
+   "e2eLoggingSession": null,
+   "mutationMetadata": null,
+   "pluginPointId": null,
+   "section": {
+    "__typename": "SBUISentinelSection"
+   }
+  },
+  {
+   "__typename": "SectionContainer",
+   "id": "U2VjdGlvbkNvbnRhaW5lcjo1ODMwNDE5MDc4NjE1ODIyOTE5",
+   "sectionComponentType": "MESSAGE_BANNER",
+   "sectionContentStatus": "SHOULD_HIDE",
+   "sectionId": "MESSAGE_BANNER",
+   "errors": null,
+   "sectionDependencies": [
+    "CHECK_IN",
+    "CHECK_OUT",
+    "BOOKING"
+   ],
+   "enableDependencies": null,
+   "disableDependencies": null,
+   "loggingData": {
+    "__typename": "LoggingEventData",
+    "loggingId": "pdp_platform.message_banner",
+    "experiments": [],
+    "eventData": null,
+    "eventDataSchemaName": null,
+    "section": null,
+    "component": null
+   },
+   "e2eLoggingSession": null,
+   "mutationMetadata": null,
+   "pluginPointId": "MESSAGE_BANNER",
+   "section": null
+  },
+  {
+   "__typename": "SectionContainer",
+   "id": "U2VjdGlvbkNvbnRhaW5lcjotODY5NTY3NzkyNjk2NjU1NDU2",
+   "sectionComponentType": "SBUI_SENTINEL",
+   "sectionContentStatus": "COMPLETE",
+   "sectionId": "HOST_OVERVIEW_DEFAULT",
+   "errors": null,
+   "sectionDependencies": null,
+   "enableDependencies": null,
+   "disableDependencies": null,
+   "loggingData": null,
+   "e2eLoggingSession": null,
+   "mutationMetadata": null,
+   "pluginPointId": null,
+   "section": {
+    "__typename": "SBUISentinelSection"
+   }
+  },
+  {
+   "__typename": "SectionContainer",
+   "id": "U2VjdGlvbkNvbnRhaW5lcjotNzg5MzI2Njg2MTIzNjM3MzMyNw==",
+   "sectionComponentType": "HIGHLIGHTS_DEFAULT",
+   "sectionContentStatus": "COMPLETE",
+   "sectionId": "HIGHLIGHTS_DEFAULT",
+   "errors": null,
+   "sectionDependencies": [
+    "BOOKING"
+   ],
+   "enableDependencies": null,
+   "disableDependencies": null,
+   "loggingData": {
+    "__typename": "LoggingEventData",
+    "loggingId": "pdp_platform.highlights_default",
+    "experiments": null,
+    "eventData": null,
+    "eventDataSchemaName": null,
+    "section": null,
+    "component": null
+   },
+   "e2eLoggingSession": null,
+   "mutationMetadata": null,
+   "pluginPointId": "HIGHLIGHTS_DEFAULT",
+   "section": {
+    "__typename": "PdpHighlightsSection"
+   }
+  },
+  {
+   "__typename": "SectionContainer",
+   "id": "U2VjdGlvbkNvbnRhaW5lcjotNjc4NDA2NjcwMjk2MDg4ODY0OA==",
+   "sectionComponentType": "DESCRIPTION_DEFAULT",
+   "sectionContentStatus": "COMPLETE",
+   "sectionId": "DESCRIPTION_DEFAULT",
+   "errors": null,
+   "sectionDependencies": [
+    "TRANSLATE_UGC"
+   ],
+   "enableDependencies": null,
+   "disableDependencies": null,
+   "loggingData": {
+    "__typename": "LoggingEventData",
+    "loggingId": "pdp_platform.description_default",
+    "experiments": null,
+    "eventData": null,
+    "eventDataSchemaName": null,
+    "section": null,
+    "component": null
+   },
+   "e2eLoggingSession": null,
+   "mutationMetadata": null,
+   "pluginPointId": "DESCRIPTION_DEFAULT",
+   "section": {
+    "__typename": "PdpDescriptionSection"
+   }
+  },
+  {
+   "__typename": "SectionContainer",
+   "id": "SLEEPING_ARRANGEMENT_WITH_IMAGES",
+   "sectionComponentType": "SLEEPING_ARRANGEMENT_IMAGES",
+   "sectionContentStatus": "COMPLETE",
+   "sectionId": "SLEEPING_ARRANGEMENT_WITH_IMAGES",
+   "errors": [],
+   "sectionDependencies": [],
+   "enableDependencies": [],
+   "disableDependencies": [],
+   "loggingData": {
+    "__typename": "LoggingEventData",
+    "loggingId": "pdp_platform.sleeping_arrangement_with_images",
+    "experiments": [],
+    "eventData": null,
+    "eventDataSchemaName": null,
+    "section": null,
+    "component": null
+   },
+   "e2eLoggingSession": null,
+   "mutationMetadata": null,
+   "pluginPointId": "SLEEPING_ARRANGEMENT_WITH_IMAGES",
+   "section": {
+    "__typename": "SleepingArrangementSection"
+   }
+  },
+  {
+   "__typename": "SectionContainer",
+   "id": "U2VjdGlvbkNvbnRhaW5lcjotNjkxMzg2OTAxODEyNDM4Njc3Ng==",
+   "sectionComponentType": "AMENITIES_DEFAULT",
+   "sectionContentStatus": "COMPLETE",
+   "sectionId": "AMENITIES_DEFAULT",
+   "errors": null,
+   "sectionDependencies": [
+    "AMENITIES"
+   ],
+   "enableDependencies": null,
+   "disableDependencies": null,
+   "loggingData": {
+    "__typename": "LoggingEventData",
+    "loggingId": "pdp_platform.amenities_default",
+    "experiments": [],
+    "eventData": null,
+    "eventDataSchemaName": null,
+    "section": null,
+    "component": null
+   },
+   "e2eLoggingSession": null,
+   "mutationMetadata": null,
+   "pluginPointId": "AMENITIES_DEFAULT",
+   "section": {
+    "__typename": "AmenitiesSection"
+   }
+  },
+  {
+   "__typename": "SectionContainer",
+   "id": "U2VjdGlvbkNvbnRhaW5lcjotODA1Mjk1NTMzOTU3Mjc3NDU1OQ==",
+   "sectionComponentType": "STAYS_PDP_AVAILABILITY_CALENDAR_INLINE",
+   "sectionContentStatus": "COMPLETE",
+   "sectionId": "AVAILABILITY_CALENDAR_INLINE",
+   "errors": null,
+   "sectionDependencies": [],
+   "enableDependencies": null,
+   "disableDependencies": null,
+   "loggingData": {
+    "__typename": "LoggingEventData",
+    "loggingId": "pdp_platform.availability_calendar_inline",
+    "experiments": [],
+    "eventData": null,
+    "eventDataSchemaName": null,
+    "section": null,
+    "component": null
+   },
+   "e2eLoggingSession": null,
+   "mutationMetadata": null,
+   "pluginPointId": "AVAILABILITY_CALENDAR_INLINE",
+   "section": {
+    "__typename": "AvailabilityCalendarSection"
+   }
+  },
+  {
+   "__typename": "SectionContainer",
+   "id": "U2VjdGlvbkNvbnRhaW5lcjotODgyMTEyMjQxODc2OTE3NTIzMw==",
+   "sectionComponentType": "TITLE_DEFAULT",
+   "sectionContentStatus": "COMPLETE",
+   "sectionId": "TITLE_DEFAULT",
+   "errors": null,
+   "sectionDependencies": [
+    "TRANSLATE_UGC"
+   ],
+   "enableDependencies": null,
+   "disableDependencies": null,
+   "loggingData": {
+    "__typename": "LoggingEventData",
+    "loggingId": "pdp_platform.title_default",
+    "experiments": [],
+    "eventData": null,
+    "eventDataSchemaName": null,
+    "section": null,
+    "component": null
+   },
+   "e2eLoggingSession": null,
+   "mutationMetadata": null,
+   "pluginPointId": "TITLE_DEFAULT",
+   "section": {
+    "__typename": "PdpTitleSection"
+   }
+  },
+  {
+   "__typename": "SectionContainer",
+   "id": "U2VjdGlvbkNvbnRhaW5lcjo0Mjg0MDc4MTg3NTMwNzg0Mjk=",
+   "sectionComponentType": "HERO_DEFAULT",
+   "sectionContentStatus": "COMPLETE",
+   "sectionId": "HERO_DEFAULT",
+   "errors": null,
+   "sectionDependencies": [],
+   "enableDependencies": null,
+   "disableDependencies": null,
+   "loggingData": {
+    "__typename": "LoggingEventData",
+    "loggingId": "pdp_platform.hero_default",
+    "experiments": null,
+    "eventData": null,
+    "eventDataSchemaName": null,
+    "section": null,
+    "component": null
+   },
+   "e2eLoggingSession": null,
+   "mutationMetadata": null,
+   "pluginPointId": "HERO_DEFAULT",
+   "section": {
+    "__typename": "PdpHeroSection"
+   }
+  },
+  {
+   "__typename": "SectionContainer",
+   "id": "U2VjdGlvbkNvbnRhaW5lcjoyMzgxNDU4NDM4NTM1MjQ0NjYy",
+   "sectionComponentType": "NAV_MOBILE",
+   "sectionContentStatus": "COMPLETE",
+   "sectionId": "NAV_MOBILE",
+   "errors": [],
+   "sectionDependencies": [],
+   "enableDependencies": [],
+   "disableDependencies": [],
+   "loggingData": {
+    "__typename": "LoggingEventData",
+    "loggingId": "pdp_platform.nav_mobile",
+    "experiments": [],
+    "eventData": null,
+    "eventDataSchemaName": null,
+    "section": null,
+    "component": null
+   },
+   "e2eLoggingSession": null,
+   "mutationMetadata": null,
+   "pluginPointId": "NAV_MOBILE",
+   "section": {
+    "__typename": "NavMobileSection"
+   }
+  },
+  {
+   "__typename": "SectionContainer",
+   "id": "U2VjdGlvbkNvbnRhaW5lcjotNTk0MzAxODc0NTQ4MTcwNzkxMg==",
+   "sectionComponentType": "SBUI_SENTINEL",
+   "sectionContentStatus": "COMPLETE",
+   "sectionId": "ASK_PDP",
+   "errors": null,
+   "sectionDependencies": null,
+   "enableDependencies": null,
+   "disableDependencies": null,
+   "loggingData": null,
+   "e2eLoggingSession": null,
+   "mutationMetadata": null,
+   "pluginPointId": null,
+   "section": {
+    "__typename": "SBUISentinelSection"
+   }
+  },
+  {
+   "__typename": "SectionContainer",
+   "id": "U2VjdGlvbkNvbnRhaW5lcjotODY5MzAyMjc0Nzk4MjMxMzgyMQ==",
+   "sectionComponentType": "WHAT_COUNTS_AS_A_PET",
+   "sectionContentStatus": "COMPLETE",
+   "sectionId": "WHAT_COUNTS_AS_A_PET_MODAL",
+   "errors": null,
+   "sectionDependencies": [],
+   "enableDependencies": null,
+   "disableDependencies": null,
+   "loggingData": {
+    "__typename": "LoggingEventData",
+    "loggingId": "pdp_platform.service_animal_disclosure",
+    "experiments": [],
+    "eventData": null,
+    "eventDataSchemaName": null,
+    "section": null,
+    "component": null
+   },
+   "e2eLoggingSession": null,
+   "mutationMetadata": null,
+   "pluginPointId": "WHAT_COUNTS_AS_A_PET_MODAL",
+   "section": {
+    "__typename": "GeneralContentSection",
+    "button": null,
+    "BasicButtonFragment": null,
+    "icon": null,
+    "mediaItem": {
+     "__typename": "Image",
+     "id": "SW1hZ2U6d2hhdF9jb3VudHNfYXNfYV9wZXQ=",
+     "aspectRatio": null,
+     "orientation": null,
+     "onPressAction": null,
+     "accessibilityLabel": "Un voyageur avec un animal d'assistance est accueilli par son hôte",
+     "baseUrl": "https://a0.muscache.com/pictures/adafb11b-41e9-49d3-908e-049dfd6934b6.jpg",
+     "displayAspectRatio": null,
+     "imageMetadata": null,
+     "overlay": null,
+     "loggingEventData": null
+    },
+    "subtitle": null,
+    "subtitleStyle": null,
+    "title": "Animaux d'assistance",
+    "titleStyle": null,
+    "headingLevel": null,
+    "html": {
+     "__typename": "Html",
+     "htmlText": "Les animaux d'assistance ne sont pas des animaux de compagnie. Il n'est donc pas nécessaire de les ajouter ici.<br><br>Vous voyagez avec un animal de soutien émotionnel ? Consultez notre <a href=\"https://www.airbnb.com/help/article/1869/assistance-animals\" target=\"_blank\">politique en matière d'accessibilité</a>.",
+     "readMoreButton": null,
+     "textStyle": null,
+     "recommendedNumberOfLines": null,
+     "minimumNumberOfLinesForTruncation": null
+    },
+    "kickerBadge": null
+   }
+  },
+  {
+   "__typename": "SectionContainer",
+   "id": "U2VjdGlvbkNvbnRhaW5lcjo4NzIyMTYyMTA2MDQ1Mzc5MTA3",
+   "sectionComponentType": "AVAILABILITY_CALENDAR_DEFAULT",
+   "sectionContentStatus": "COMPLETE",
+   "sectionId": "AVAILABILITY_CALENDAR_DEFAULT",
+   "errors": null,
+   "sectionDependencies": [],
+   "enableDependencies": null,
+   "disableDependencies": null,
+   "loggingData": {
+    "__typename": "LoggingEventData",
+    "loggingId": "pdp_platform.availability_calendar_default",
+    "experiments": [],
+    "eventData": null,
+    "eventDataSchemaName": null,
+    "section": null,
+    "component": null
+   },
+   "e2eLoggingSession": null,
+   "mutationMetadata": null,
+   "pluginPointId": "AVAILABILITY_CALENDAR_DEFAULT",
+   "section": {
+    "__typename": "AvailabilityCalendarSection"
+   }
+  },
+  {
+   "__typename": "SectionContainer",
+   "id": "U2VjdGlvbkNvbnRhaW5lcjozMDcxNTUzOTg3OTMyMjY3Mzky",
+   "sectionComponentType": "BOOK_IT_CALENDAR_SHEET",
+   "sectionContentStatus": "NOT_COMPLETE",
+   "sectionId": "BOOK_IT_CALENDAR_SHEET",
+   "errors": null,
+   "sectionDependencies": [
+    "BOOKING"
+   ],
+   "enableDependencies": null,
+   "disableDependencies": null,
+   "loggingData": {
+    "__typename": "LoggingEventData",
+    "loggingId": "pdp_platform.book_it_calendar_sheet",
+    "experiments": [],
+    "eventData": null,
+    "eventDataSchemaName": null,
+    "section": null,
+    "component": null
+   },
+   "e2eLoggingSession": null,
+   "mutationMetadata": null,
+   "pluginPointId": "BOOK_IT_CALENDAR_SHEET",
+   "section": {
+    "__typename": "BookItSection",
+    "subpageIdToOpen": null,
+    "showPriceBreakdown": false,
+    "cancellationPolicyLoggingEventData": null,
+    "calendarTitle": null,
+    "calendarSubtitle": null,
+    "descriptionItems": null,
+    "discountCopy": null,
+    "maxGuestCapacity": null,
+    "maxPlusValue": null,
+    "tripDetailsLoggingEventData": null,
+    "reviewItem": {
+     "__typename": "BasicListItem",
+     "accessibilityLabel": "Évaluation de 4,88 sur 5 sur la base de 41 commentaires.",
+     "action": null,
+     "icon": "COMPACT_STAR",
+     "subtitle": null,
+     "title": "4,88"
+    },
+    "available": null,
+    "structuredDisplayPrice": null,
+    "discountData": null,
+    "bookItButtonByPlacement": null,
+    "cancellationPolicies": null,
+    "cancellationPolicyForDisplay": null,
+    "localizedUnavailabilityMessage": null,
+    "localizedUnavailabilityMessagePositionString": null,
+    "selectedDatesLink": null,
+    "selectedNights": null,
+    "bookItButtonLayout": null,
+    "productItemDetail": null,
+    "ratePlanLoggingEventData": null,
+    "ratePlanTitle": null,
+    "promotionBanner": null,
+    "guestDisclaimer": null,
+    "petsAllowed": null,
+    "petDetails": null,
+    "adultsPicker": null,
+    "childrenPicker": null,
+    "infantsPicker": null,
+    "canInstantBook": null,
+    "highlightBanner": null,
+    "integratedPillMessageType": null,
+    "integratedPill": null,
+    "initialPillMessageType": null,
+    "initialPill": null,
+    "priceDetailPills": null,
+    "availabilityPriceDetailEntry": null,
+    "priceDetailLoggingEventData": null,
+    "vPoint": null,
+    "bookItPlacement": "CALENDAR_SHEET",
+    "priceMerchandisingMessage": null
+   }
+  },
+  {
+   "__typename": "SectionContainer",
+   "id": "U2VjdGlvbkNvbnRhaW5lcjotNDUzNjAyNTkzMzU3NTAwNzM5Ng==",
+   "sectionComponentType": "CANCELLATION_POLICY_PICKER_MODAL",
+   "sectionContentStatus": "NOT_COMPLETE",
+   "sectionId": "CANCELLATION_POLICY_PICKER_MODAL",
+   "errors": null,
+   "sectionDependencies": [
+    "CHECK_IN",
+    "CHECK_OUT",
+    "BOOKING"
+   ],
+   "enableDependencies": null,
+   "disableDependencies": null,
+   "loggingData": {
+    "__typename": "LoggingEventData",
+    "loggingId": "pdp_platform.cancellation_policy_picker_modal",
+    "experiments": [],
+    "eventData": {
+     "productId": "U3RheUxpc3Rpbmc6NTAyMjYyNDk=",
+     "pdpImpressionId": "p3_1790860321_P3-x2t_zlDWJC2jK",
+     "pdpContext": {}
+    },
+    "eventDataSchemaName": "Pdp.v5.ClientEventData",
+    "section": null,
+    "component": null
+   },
+   "e2eLoggingSession": null,
+   "mutationMetadata": null,
+   "pluginPointId": "CANCELLATION_POLICY_PICKER_MODAL",
+   "section": {
+    "__typename": "CancellationPolicyPickerSection"
+   }
+  }
+ ],
+ "sharing": {
+  "__typename": "DemandStayListingPdpPresentationSharingConfig",
+  "imageUrl": "https://a0.muscache.com/im/pictures/hosting/Hosting-50226249/original/c719eb93-cd0a-4570-8dfb-258d8f5d8eba.jpeg",
+  "propertyType": "Logement entier : maison de ville",
+  "ugcTitle": {
+   "__typename": "PdpUGCText",
+   "content": {
+    "__typename": "UGCText",
+    "localizedStringWithTranslationPreference": "Maison de ville · Bordeaux · ★4,88 · 5 chambres · 5 lits · 2 salles de bain",
+    "localizedString": "Maison de ville · Bordeaux · ★4,88 · 5 chambres · 5 lits · 2 salles de bain",
+    "source": "Maison de ville · Bordeaux · ★4,88 · 5 chambres · 5 lits · 2 salles de bain"
+   }
+  },
+  "shareUrl": "https://www.airbnb.fr/rooms/50226249?unique_share_id=b0007a00-d4b4-4627-a029-4c782ea076a9&viralityEntryPoint=1&s=76"
+ },
+ "logging": {
+  "__typename": "PdpEventData",
+  "listingId": "50226249",
+  "page": "p3",
+  "pdpPageType": 1,
+  "listingLat": 44.83796,
+  "listingLng": -0.59192,
+  "homeTier": 1,
+  "roomType": "Entire home/apt",
+  "personCapacity": 8,
+  "descriptionLanguage": "fr",
+  "isSuperhost": true,
+  "amenities": [],
+  "accuracyRating": 4.95,
+  "checkinRating": 5,
+  "cleanlinessRating": 4.8,
+  "communicationRating": 5,
+  "locationRating": 4.9,
+  "valueRating": 4.63,
+  "guestSatisfactionOverall": 4.88,
+  "visibleReviewCount": "41",
+  "propertyId": null
+ }
+}
