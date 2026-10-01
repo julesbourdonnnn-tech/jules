@@ -254,582 +254,10 @@
  "sections": [
   {
    "__typename": "SectionContainer",
-   "id": "U2VjdGlvbkNvbnRhaW5lcjo4NjUxODYwMzI3NDUzODE0MDYx",
-   "sectionComponentType": "REVIEWS_DEFAULT",
-   "sectionContentStatus": "COMPLETE",
-   "sectionId": "REVIEWS_DEFAULT",
-   "errors": null,
-   "sectionDependencies": [],
-   "enableDependencies": null,
-   "disableDependencies": null,
-   "loggingData": {
-    "__typename": "LoggingEventData",
-    "loggingId": "pdp_platform.reviews_default",
-    "experiments": [],
-    "eventData": null,
-    "eventDataSchemaName": null,
-    "section": null,
-    "component": null
-   },
-   "e2eLoggingSession": null,
-   "mutationMetadata": null,
-   "pluginPointId": "REVIEWS_DEFAULT",
-   "section": {
-    "__typename": "StayPdpReviewsSection"
-   }
-  },
-  {
-   "__typename": "SectionContainer",
-   "id": "U2VjdGlvbkNvbnRhaW5lcjo1NTA0NzI2MTAyMjk1ODExNDMz",
-   "sectionComponentType": "LOCATION_PDP",
-   "sectionContentStatus": "COMPLETE",
-   "sectionId": "LOCATION_DEFAULT",
-   "errors": null,
-   "sectionDependencies": [
-    "TRANSLATE_UGC",
-    "CHECK_IN",
-    "CHECK_OUT"
-   ],
-   "enableDependencies": null,
-   "disableDependencies": null,
-   "loggingData": {
-    "__typename": "LoggingEventData",
-    "loggingId": "pdp_platform.location_default",
-    "experiments": [
-     {
-      "__typename": "Experiment",
-      "experiment": "map_category_button_experiment_v2_desktop",
-      "treatment": "treatment",
-      "dontLogOnFormFactor": null
-     }
-    ],
-    "eventData": null,
-    "eventDataSchemaName": null,
-    "section": null,
-    "component": null
-   },
-   "e2eLoggingSession": {
-    "__typename": "UniversalLoggingData",
-    "eventData": "{}",
-    "eventDataSchema": "Pdp.v1.PdpLocationSectionViewportPresentationSession"
-   },
-   "mutationMetadata": null,
-   "pluginPointId": "LOCATION_DEFAULT",
-   "section": {
-    "__typename": "LocationSection"
-   }
-  },
-  {
-   "__typename": "SectionContainer",
-   "id": "U2VjdGlvbkNvbnRhaW5lcjotNDE2NDg2NzM4MzczNzMwMjcxMA==",
-   "sectionComponentType": "MEET_YOUR_HOST",
-   "sectionContentStatus": "COMPLETE",
-   "sectionId": "MEET_YOUR_HOST",
-   "errors": null,
-   "sectionDependencies": [],
-   "enableDependencies": null,
-   "disableDependencies": null,
-   "loggingData": {
-    "__typename": "LoggingEventData",
-    "loggingId": "pdp.meetYourHost",
-    "experiments": [
-     {
-      "__typename": "Experiment",
-      "experiment": "meet_your_host_white_background",
-      "treatment": "treatment",
-      "dontLogOnFormFactor": null
-     }
-    ],
-    "eventData": null,
-    "eventDataSchemaName": null,
-    "section": null,
-    "component": null
-   },
-   "e2eLoggingSession": null,
-   "mutationMetadata": null,
-   "pluginPointId": null,
-   "section": {
-    "__typename": "MeetYourHostSection"
-   }
-  },
-  {
-   "__typename": "SectionContainer",
-   "id": "U2VjdGlvbkNvbnRhaW5lcjotMjA3NjA0MjE4NDYxNjkyNzQ3MQ==",
-   "sectionComponentType": "POLICIES_DEFAULT",
+   "id": "U2VjdGlvbkNvbnRhaW5lcjoyODgyOTQ5Njc2OTEwOTM2Mjkz",
+   "sectionComponentType": "CANCELLATION_POLICY_PICKER_MODAL",
    "sectionContentStatus": "NOT_COMPLETE",
-   "sectionId": "POLICIES_DEFAULT",
-   "errors": null,
-   "sectionDependencies": [
-    "CHECK_IN",
-    "CHECK_OUT",
-    "TRANSLATE_UGC",
-    "BOOKING"
-   ],
-   "enableDependencies": null,
-   "disableDependencies": null,
-   "loggingData": {
-    "__typename": "LoggingEventData",
-    "loggingId": "pdp_platform.policies_default",
-    "experiments": [],
-    "eventData": null,
-    "eventDataSchemaName": null,
-    "section": null,
-    "component": null
-   },
-   "e2eLoggingSession": null,
-   "mutationMetadata": null,
-   "pluginPointId": "POLICIES_DEFAULT",
-   "section": {
-    "__typename": "PoliciesSection"
-   }
-  },
-  {
-   "__typename": "SectionContainer",
-   "id": "U2VjdGlvbkNvbnRhaW5lcjo3NTI1NTMyNTY5MzI3NjcxNDQ4",
-   "sectionComponentType": "SBUI_SENTINEL",
-   "sectionContentStatus": "COMPLETE",
-   "sectionId": "SIMILAR_LISTINGS_CAROUSEL",
-   "errors": null,
-   "sectionDependencies": null,
-   "enableDependencies": null,
-   "disableDependencies": null,
-   "loggingData": null,
-   "e2eLoggingSession": null,
-   "mutationMetadata": null,
-   "pluginPointId": null,
-   "section": {
-    "__typename": "SBUISentinelSection"
-   }
-  },
-  {
-   "__typename": "SectionContainer",
-   "id": "U2VjdGlvbkNvbnRhaW5lcjo4MTUzMDQ0ODkwMjg4Nzg4ODAy",
-   "sectionComponentType": "SEO_LINKS_DEFAULT",
-   "sectionContentStatus": "COMPLETE",
-   "sectionId": "SEO_LINKS_DEFAULT",
-   "errors": null,
-   "sectionDependencies": [],
-   "enableDependencies": null,
-   "disableDependencies": null,
-   "loggingData": null,
-   "e2eLoggingSession": null,
-   "mutationMetadata": null,
-   "pluginPointId": null,
-   "section": {
-    "__typename": "SeoLinksSection"
-   }
-  },
-  {
-   "__typename": "SectionContainer",
-   "id": "U2VjdGlvbkNvbnRhaW5lcjotMTIyOTc2NTE2NzUyNzUyMTk5OQ==",
-   "sectionComponentType": "BOOK_IT_SIDEBAR",
-   "sectionContentStatus": "NOT_COMPLETE",
-   "sectionId": "BOOK_IT_SIDEBAR",
-   "errors": null,
-   "sectionDependencies": [
-    "BOOKING"
-   ],
-   "enableDependencies": null,
-   "disableDependencies": null,
-   "loggingData": {
-    "__typename": "LoggingEventData",
-    "loggingId": "pdp_platform.book_it_sidebar",
-    "experiments": [],
-    "eventData": null,
-    "eventDataSchemaName": null,
-    "section": null,
-    "component": null
-   },
-   "e2eLoggingSession": null,
-   "mutationMetadata": null,
-   "pluginPointId": "BOOK_IT_SIDEBAR",
-   "section": {
-    "__typename": "BookItSection",
-    "subpageIdToOpen": null,
-    "showPriceBreakdown": true,
-    "cancellationPolicyLoggingEventData": {
-     "__typename": "LoggingEventData",
-     "loggingId": "pdp.bookItSidebar.cancellationPolicyInput",
-     "experiments": null,
-     "eventData": null,
-     "eventDataSchemaName": null,
-     "section": null,
-     "component": null
-    },
-    "calendarTitle": "Sélectionnez les dates",
-    "calendarSubtitle": "Ajoutez vos dates de voyage pour connaître le prix exact",
-    "descriptionItems": null,
-    "discountCopy": null,
-    "maxGuestCapacity": 8,
-    "maxPlusValue": 16,
-    "tripDetailsLoggingEventData": {
-     "__typename": "CalendarLoggingEventData",
-     "clearDatesButton": {
-      "__typename": "BasicListItem",
-      "title": "Effacer les dates",
-      "loggingEventData": {
-       "__typename": "LoggingEventData",
-       "loggingId": "pdp.bookItSidebar.clearDates",
-       "experiments": null,
-       "eventData": null,
-       "eventDataSchemaName": null,
-       "section": "bookItSidebar",
-       "component": "clearDates"
-      }
-     },
-     "saveDatesButton": {
-      "__typename": "BasicListItem",
-      "title": "Fermer",
-      "loggingEventData": {
-       "__typename": "LoggingEventData",
-       "loggingId": "pdp.bookItSidebar.saveDates",
-       "experiments": null,
-       "eventData": null,
-       "eventDataSchemaName": null,
-       "section": "bookItSidebar",
-       "component": "saveDates"
-      }
-     },
-     "datesInputLoggingEventData": null,
-     "selectDateLoggingEventData": {
-      "__typename": "LoggingEventData",
-      "loggingId": "pdp.bookItSidebar.selectDate",
-      "experiments": null,
-      "eventData": null,
-      "eventDataSchemaName": null,
-      "section": "bookItSidebar",
-      "component": "selectDate"
-     },
-     "previousMonthLoggingEventData": {
-      "__typename": "LoggingEventData",
-      "loggingId": "pdp.bookItSidebar.monthsNavPrevious",
-      "experiments": null,
-      "eventData": null,
-      "eventDataSchemaName": null,
-      "section": "bookItSidebar",
-      "component": "monthsNavPrevious"
-     },
-     "nextMonthLoggingEventData": {
-      "__typename": "LoggingEventData",
-      "loggingId": "pdp.bookItSidebar.monthsNavNext",
-      "experiments": null,
-      "eventData": null,
-      "eventDataSchemaName": null,
-      "section": "bookItSidebar",
-      "component": "monthsNavNext"
-     },
-     "checkInDateInputLoggingEventData": {
-      "__typename": "LoggingEventData",
-      "loggingId": "pdp.bookItSidebar.checkInInput",
-      "experiments": null,
-      "eventData": null,
-      "eventDataSchemaName": null,
-      "section": "bookItSidebar",
-      "component": "checkInInput"
-     },
-     "checkOutDateInputLoggingEventData": {
-      "__typename": "LoggingEventData",
-      "loggingId": "pdp.bookItSidebar.checkOutInput",
-      "experiments": null,
-      "eventData": null,
-      "eventDataSchemaName": null,
-      "section": "bookItSidebar",
-      "component": "checkOutInput"
-     },
-     "guestInputLoggingEventData": {
-      "__typename": "LoggingEventData",
-      "loggingId": "pdp.bookItSidebar.guestInput",
-      "experiments": null,
-      "eventData": null,
-      "eventDataSchemaName": null,
-      "section": "bookItSidebar",
-      "component": "guestInput"
-     },
-     "cancellationPolicyLoggingEventData": null,
-     "changeDatesButtonLoggingEventData": {
-      "__typename": "LoggingEventData",
-      "loggingId": "pdp.bookItSidebar.changeDatesButton",
-      "experiments": null,
-      "eventData": null,
-      "eventDataSchemaName": null,
-      "section": "bookItSidebar",
-      "component": "changeDatesButton"
-     },
-     "selectCheckOutOnlyDateLoggingEventData": {
-      "__typename": "LoggingEventData",
-      "loggingId": "pdp.bookItSidebar.selectCheckOutOnlyDate",
-      "experiments": null,
-      "eventData": null,
-      "eventDataSchemaName": null,
-      "section": "bookItSidebar",
-      "component": "selectCheckOutOnlyDate"
-     },
-     "selectMaxNightsViolationDateLoggingEventData": {
-      "__typename": "LoggingEventData",
-      "loggingId": "pdp.bookItSidebar.selectMaxNightsViolationDate",
-      "experiments": null,
-      "eventData": null,
-      "eventDataSchemaName": null,
-      "section": "bookItSidebar",
-      "component": "selectMaxNightsViolationDate"
-     },
-     "selectMinNightsViolationDateLoggingEventData": {
-      "__typename": "LoggingEventData",
-      "loggingId": "pdp.bookItSidebar.selectMinNightsViolationDate",
-      "experiments": null,
-      "eventData": null,
-      "eventDataSchemaName": null,
-      "section": "bookItSidebar",
-      "component": "selectMinNightsViolationDate"
-     },
-     "selectUnavailableForCheckInDateLoggingEventData": {
-      "__typename": "LoggingEventData",
-      "loggingId": "pdp.bookItSidebar.selectUnavailableForCheckInDate",
-      "experiments": null,
-      "eventData": null,
-      "eventDataSchemaName": null,
-      "section": "bookItSidebar",
-      "component": "selectUnavailableForCheckInDate"
-     },
-     "selectUnavailableForCheckoutDateLoggingEventData": {
-      "__typename": "LoggingEventData",
-      "loggingId": "pdp.bookItSidebar.selectUnavailableForCheckoutDate",
-      "experiments": null,
-      "eventData": null,
-      "eventDataSchemaName": null,
-      "section": "bookItSidebar",
-      "component": "selectUnavailableForCheckoutDate"
-     }
-    },
-    "reviewItem": null,
-    "available": null,
-    "structuredDisplayPrice": null,
-    "discountData": null,
-    "bookItButtonByPlacement": null,
-    "cancellationPolicies": null,
-    "cancellationPolicyForDisplay": null,
-    "localizedUnavailabilityMessage": null,
-    "localizedUnavailabilityMessagePositionString": null,
-    "selectedDatesLink": null,
-    "selectedNights": null,
-    "bookItButtonLayout": null,
-    "productItemDetail": null,
-    "ratePlanLoggingEventData": {
-     "__typename": "LoggingEventData",
-     "loggingId": "pdp.bookItSidebar.ratePlanInput",
-     "experiments": null,
-     "eventData": null,
-     "eventDataSchemaName": null,
-     "section": null,
-     "component": null
-    },
-    "ratePlanTitle": null,
-    "promotionBanner": null,
-    "guestDisclaimer": null,
-    "petsAllowed": null,
-    "petDetails": null,
-    "adultsPicker": {
-     "__typename": "GuestPickerSection",
-     "title": "Adultes",
-     "subtitle": "18 ans et plus"
-    },
-    "childrenPicker": {
-     "__typename": "GuestPickerSection",
-     "title": "Enfants",
-     "subtitle": "De 2 à 17 ans"
-    },
-    "infantsPicker": {
-     "__typename": "GuestPickerSection",
-     "title": "Bébés",
-     "subtitle": "- de 2 ans"
-    },
-    "canInstantBook": null,
-    "highlightBanner": null,
-    "integratedPillMessageType": null,
-    "integratedPill": null,
-    "initialPillMessageType": null,
-    "initialPill": null,
-    "priceDetailPills": [],
-    "availabilityPriceDetailEntry": null,
-    "priceDetailLoggingEventData": null,
-    "vPoint": null,
-    "bookItPlacement": "SIDEBAR",
-    "priceMerchandisingMessage": null
-   }
-  },
-  {
-   "__typename": "SectionContainer",
-   "id": "U2VjdGlvbkNvbnRhaW5lcjotNDEwMTMzNzk2MjgxMDI5NjYyMA==",
-   "sectionComponentType": "REPORT_TO_AIRBNB",
-   "sectionContentStatus": "COMPLETE",
-   "sectionId": "REPORT_TO_AIRBNB",
-   "errors": null,
-   "sectionDependencies": [],
-   "enableDependencies": null,
-   "disableDependencies": null,
-   "loggingData": {
-    "__typename": "LoggingEventData",
-    "loggingId": "pdp_platform.report_to_airbnb",
-    "experiments": [],
-    "eventData": null,
-    "eventDataSchemaName": null,
-    "section": null,
-    "component": null
-   },
-   "e2eLoggingSession": null,
-   "mutationMetadata": null,
-   "pluginPointId": "REPORT_TO_AIRBNB",
-   "section": {
-    "__typename": "ReportToAirbnbSection"
-   }
-  },
-  {
-   "__typename": "SectionContainer",
-   "id": "U2VjdGlvbkNvbnRhaW5lcjo0NTAyODE4NjMwMjgyOTA5NzMy",
-   "sectionComponentType": "NAV_DEFAULT",
-   "sectionContentStatus": "COMPLETE",
-   "sectionId": "NAV_DEFAULT",
-   "errors": null,
-   "sectionDependencies": [],
-   "enableDependencies": null,
-   "disableDependencies": null,
-   "loggingData": {
-    "__typename": "LoggingEventData",
-    "loggingId": "pdp_platform.nav_default",
-    "experiments": [],
-    "eventData": null,
-    "eventDataSchemaName": null,
-    "section": null,
-    "component": null
-   },
-   "e2eLoggingSession": null,
-   "mutationMetadata": null,
-   "pluginPointId": "NAV_DEFAULT",
-   "section": {
-    "__typename": "NavSection"
-   }
-  },
-  {
-   "__typename": "SectionContainer",
-   "id": "U2VjdGlvbkNvbnRhaW5lcjotMzU2ODY2Mjg4NDQ1MTkyNjA1OQ==",
-   "sectionComponentType": "BOOK_IT_NAV",
-   "sectionContentStatus": "NOT_COMPLETE",
-   "sectionId": "BOOK_IT_NAV",
-   "errors": null,
-   "sectionDependencies": [
-    "BOOKING"
-   ],
-   "enableDependencies": null,
-   "disableDependencies": null,
-   "loggingData": {
-    "__typename": "LoggingEventData",
-    "loggingId": "pdp_platform.book_it_nav",
-    "experiments": [],
-    "eventData": null,
-    "eventDataSchemaName": null,
-    "section": null,
-    "component": null
-   },
-   "e2eLoggingSession": null,
-   "mutationMetadata": null,
-   "pluginPointId": "BOOK_IT_NAV",
-   "section": {
-    "__typename": "BookItSection",
-    "subpageIdToOpen": null,
-    "showPriceBreakdown": false,
-    "cancellationPolicyLoggingEventData": null,
-    "calendarTitle": null,
-    "calendarSubtitle": null,
-    "descriptionItems": null,
-    "discountCopy": null,
-    "maxGuestCapacity": null,
-    "maxPlusValue": null,
-    "tripDetailsLoggingEventData": null,
-    "reviewItem": {
-     "__typename": "BasicListItem",
-     "accessibilityLabel": "Évaluation de 4,88 sur 5 sur la base de 41 commentaires.",
-     "action": null,
-     "icon": "COMPACT_STAR",
-     "subtitle": "41 commentaires",
-     "title": "4,88 ·"
-    },
-    "available": null,
-    "structuredDisplayPrice": null,
-    "discountData": null,
-    "bookItButtonByPlacement": null,
-    "cancellationPolicies": null,
-    "cancellationPolicyForDisplay": null,
-    "localizedUnavailabilityMessage": null,
-    "localizedUnavailabilityMessagePositionString": null,
-    "selectedDatesLink": null,
-    "selectedNights": null,
-    "bookItButtonLayout": null,
-    "productItemDetail": null,
-    "ratePlanLoggingEventData": null,
-    "ratePlanTitle": null,
-    "promotionBanner": null,
-    "guestDisclaimer": null,
-    "petsAllowed": null,
-    "petDetails": null,
-    "adultsPicker": null,
-    "childrenPicker": null,
-    "infantsPicker": null,
-    "canInstantBook": null,
-    "highlightBanner": null,
-    "integratedPillMessageType": null,
-    "integratedPill": null,
-    "initialPillMessageType": null,
-    "initialPill": null,
-    "priceDetailPills": null,
-    "availabilityPriceDetailEntry": null,
-    "priceDetailLoggingEventData": null,
-    "vPoint": null,
-    "bookItPlacement": "NAV",
-    "priceMerchandisingMessage": null
-   }
-  },
-  {
-   "__typename": "SectionContainer",
-   "id": "U2VjdGlvbkNvbnRhaW5lcjotMTc1Mjg4NTcwNjY0Mzk5NTM5Mg==",
-   "sectionComponentType": "SBUI_SENTINEL",
-   "sectionContentStatus": "COMPLETE",
-   "sectionId": "OVERVIEW_DEFAULT_V2",
-   "errors": null,
-   "sectionDependencies": null,
-   "enableDependencies": null,
-   "disableDependencies": null,
-   "loggingData": null,
-   "e2eLoggingSession": null,
-   "mutationMetadata": null,
-   "pluginPointId": null,
-   "section": {
-    "__typename": "SBUISentinelSection"
-   }
-  },
-  {
-   "__typename": "SectionContainer",
-   "id": "U2VjdGlvbkNvbnRhaW5lcjo4OTkzMDI3NDI3NzIwOTI3MTU0",
-   "sectionComponentType": "SBUI_SENTINEL",
-   "sectionContentStatus": "COMPLETE",
-   "sectionId": "GUEST_FAVORITE_BANNER",
-   "errors": null,
-   "sectionDependencies": null,
-   "enableDependencies": null,
-   "disableDependencies": null,
-   "loggingData": null,
-   "e2eLoggingSession": null,
-   "mutationMetadata": null,
-   "pluginPointId": null,
-   "section": {
-    "__typename": "SBUISentinelSection"
-   }
-  },
-  {
-   "__typename": "SectionContainer",
-   "id": "U2VjdGlvbkNvbnRhaW5lcjo0ODU0MjkxNTU5NjIxNDI1OTg=",
-   "sectionComponentType": "MESSAGE_BANNER",
-   "sectionContentStatus": "SHOULD_HIDE",
-   "sectionId": "MESSAGE_BANNER",
+   "sectionId": "CANCELLATION_POLICY_PICKER_MODAL",
    "errors": null,
    "sectionDependencies": [
     "CHECK_IN",
@@ -840,159 +268,37 @@
    "disableDependencies": null,
    "loggingData": {
     "__typename": "LoggingEventData",
-    "loggingId": "pdp_platform.message_banner",
+    "loggingId": "pdp_platform.cancellation_policy_picker_modal",
     "experiments": [],
-    "eventData": null,
-    "eventDataSchemaName": null,
+    "eventData": {
+     "productId": "U3RheUxpc3Rpbmc6NTAyMjYyNDk=",
+     "pdpImpressionId": "p3_1790860741_P3yaDIv9BYWymceY",
+     "pdpContext": {}
+    },
+    "eventDataSchemaName": "Pdp.v5.ClientEventData",
     "section": null,
     "component": null
    },
    "e2eLoggingSession": null,
    "mutationMetadata": null,
-   "pluginPointId": "MESSAGE_BANNER",
-   "section": null
-  },
-  {
-   "__typename": "SectionContainer",
-   "id": "U2VjdGlvbkNvbnRhaW5lcjotNDQ5ODk2MDc5OTgxMDg0NTE5MA==",
-   "sectionComponentType": "SBUI_SENTINEL",
-   "sectionContentStatus": "COMPLETE",
-   "sectionId": "HOST_OVERVIEW_DEFAULT",
-   "errors": null,
-   "sectionDependencies": null,
-   "enableDependencies": null,
-   "disableDependencies": null,
-   "loggingData": null,
-   "e2eLoggingSession": null,
-   "mutationMetadata": null,
-   "pluginPointId": null,
+   "pluginPointId": "CANCELLATION_POLICY_PICKER_MODAL",
    "section": {
-    "__typename": "SBUISentinelSection"
+    "__typename": "CancellationPolicyPickerSection"
    }
   },
   {
    "__typename": "SectionContainer",
-   "id": "U2VjdGlvbkNvbnRhaW5lcjoyMzMyNTU5NTc4OTUzNTE1Mjc3",
-   "sectionComponentType": "HIGHLIGHTS_DEFAULT",
+   "id": "U2VjdGlvbkNvbnRhaW5lcjo0ODQ4MzkwMTI3ODE3NDIwODE1",
+   "sectionComponentType": "AVAILABILITY_CALENDAR_DEFAULT",
    "sectionContentStatus": "COMPLETE",
-   "sectionId": "HIGHLIGHTS_DEFAULT",
-   "errors": null,
-   "sectionDependencies": [
-    "BOOKING"
-   ],
-   "enableDependencies": null,
-   "disableDependencies": null,
-   "loggingData": {
-    "__typename": "LoggingEventData",
-    "loggingId": "pdp_platform.highlights_default",
-    "experiments": null,
-    "eventData": null,
-    "eventDataSchemaName": null,
-    "section": null,
-    "component": null
-   },
-   "e2eLoggingSession": null,
-   "mutationMetadata": null,
-   "pluginPointId": "HIGHLIGHTS_DEFAULT",
-   "section": {
-    "__typename": "PdpHighlightsSection"
-   }
-  },
-  {
-   "__typename": "SectionContainer",
-   "id": "U2VjdGlvbkNvbnRhaW5lcjotNDk2NTA4MjEyNTg2Njc4Mjc2Mw==",
-   "sectionComponentType": "DESCRIPTION_DEFAULT",
-   "sectionContentStatus": "COMPLETE",
-   "sectionId": "DESCRIPTION_DEFAULT",
-   "errors": null,
-   "sectionDependencies": [
-    "TRANSLATE_UGC"
-   ],
-   "enableDependencies": null,
-   "disableDependencies": null,
-   "loggingData": {
-    "__typename": "LoggingEventData",
-    "loggingId": "pdp_platform.description_default",
-    "experiments": null,
-    "eventData": null,
-    "eventDataSchemaName": null,
-    "section": null,
-    "component": null
-   },
-   "e2eLoggingSession": null,
-   "mutationMetadata": null,
-   "pluginPointId": "DESCRIPTION_DEFAULT",
-   "section": {
-    "__typename": "PdpDescriptionSection"
-   }
-  },
-  {
-   "__typename": "SectionContainer",
-   "id": "SLEEPING_ARRANGEMENT_WITH_IMAGES",
-   "sectionComponentType": "SLEEPING_ARRANGEMENT_IMAGES",
-   "sectionContentStatus": "COMPLETE",
-   "sectionId": "SLEEPING_ARRANGEMENT_WITH_IMAGES",
-   "errors": [],
-   "sectionDependencies": [],
-   "enableDependencies": [],
-   "disableDependencies": [],
-   "loggingData": {
-    "__typename": "LoggingEventData",
-    "loggingId": "pdp_platform.sleeping_arrangement_with_images",
-    "experiments": [],
-    "eventData": null,
-    "eventDataSchemaName": null,
-    "section": null,
-    "component": null
-   },
-   "e2eLoggingSession": null,
-   "mutationMetadata": null,
-   "pluginPointId": "SLEEPING_ARRANGEMENT_WITH_IMAGES",
-   "section": {
-    "__typename": "SleepingArrangementSection"
-   }
-  },
-  {
-   "__typename": "SectionContainer",
-   "id": "U2VjdGlvbkNvbnRhaW5lcjotNjU4MjcwNjcwNDAzNzEzODY4Ng==",
-   "sectionComponentType": "AMENITIES_DEFAULT",
-   "sectionContentStatus": "COMPLETE",
-   "sectionId": "AMENITIES_DEFAULT",
-   "errors": null,
-   "sectionDependencies": [
-    "AMENITIES"
-   ],
-   "enableDependencies": null,
-   "disableDependencies": null,
-   "loggingData": {
-    "__typename": "LoggingEventData",
-    "loggingId": "pdp_platform.amenities_default",
-    "experiments": [],
-    "eventData": null,
-    "eventDataSchemaName": null,
-    "section": null,
-    "component": null
-   },
-   "e2eLoggingSession": null,
-   "mutationMetadata": null,
-   "pluginPointId": "AMENITIES_DEFAULT",
-   "section": {
-    "__typename": "AmenitiesSection"
-   }
-  },
-  {
-   "__typename": "SectionContainer",
-   "id": "U2VjdGlvbkNvbnRhaW5lcjotNDIzNjAyMDg4MTE1MzA0MjYxOA==",
-   "sectionComponentType": "STAYS_PDP_AVAILABILITY_CALENDAR_INLINE",
-   "sectionContentStatus": "COMPLETE",
-   "sectionId": "AVAILABILITY_CALENDAR_INLINE",
+   "sectionId": "AVAILABILITY_CALENDAR_DEFAULT",
    "errors": null,
    "sectionDependencies": [],
    "enableDependencies": null,
    "disableDependencies": null,
    "loggingData": {
     "__typename": "LoggingEventData",
-    "loggingId": "pdp_platform.availability_calendar_inline",
+    "loggingId": "pdp_platform.availability_calendar_default",
     "experiments": [],
     "eventData": null,
     "eventDataSchemaName": null,
@@ -1001,71 +307,17 @@
    },
    "e2eLoggingSession": null,
    "mutationMetadata": null,
-   "pluginPointId": "AVAILABILITY_CALENDAR_INLINE",
+   "pluginPointId": "AVAILABILITY_CALENDAR_DEFAULT",
    "section": {
     "__typename": "AvailabilityCalendarSection"
    }
   },
   {
    "__typename": "SectionContainer",
-   "id": "U2VjdGlvbkNvbnRhaW5lcjotMTAzNzUzMjA1NjcyODU5ODQzNQ==",
-   "sectionComponentType": "TITLE_DEFAULT",
-   "sectionContentStatus": "COMPLETE",
-   "sectionId": "TITLE_DEFAULT",
-   "errors": null,
-   "sectionDependencies": [
-    "TRANSLATE_UGC"
-   ],
-   "enableDependencies": null,
-   "disableDependencies": null,
-   "loggingData": {
-    "__typename": "LoggingEventData",
-    "loggingId": "pdp_platform.title_default",
-    "experiments": [],
-    "eventData": null,
-    "eventDataSchemaName": null,
-    "section": null,
-    "component": null
-   },
-   "e2eLoggingSession": null,
-   "mutationMetadata": null,
-   "pluginPointId": "TITLE_DEFAULT",
-   "section": {
-    "__typename": "PdpTitleSection"
-   }
-  },
-  {
-   "__typename": "SectionContainer",
-   "id": "U2VjdGlvbkNvbnRhaW5lcjotNzY4MzI1NzA3NjYyMzk1NDc3MA==",
-   "sectionComponentType": "HERO_DEFAULT",
-   "sectionContentStatus": "COMPLETE",
-   "sectionId": "HERO_DEFAULT",
-   "errors": null,
-   "sectionDependencies": [],
-   "enableDependencies": null,
-   "disableDependencies": null,
-   "loggingData": {
-    "__typename": "LoggingEventData",
-    "loggingId": "pdp_platform.hero_default",
-    "experiments": null,
-    "eventData": null,
-    "eventDataSchemaName": null,
-    "section": null,
-    "component": null
-   },
-   "e2eLoggingSession": null,
-   "mutationMetadata": null,
-   "pluginPointId": "HERO_DEFAULT",
-   "section": {
-    "__typename": "PdpHeroSection"
-   }
-  },
-  {
-   "__typename": "SectionContainer",
-   "id": "U2VjdGlvbkNvbnRhaW5lcjoyNTIwNzQ3NDgwMTQ0ODgzNDE0",
-   "sectionComponentType": "BOOK_IT_FLOATING_FOOTER",
+   "id": "U2VjdGlvbkNvbnRhaW5lcjoxMzg0MzU2NTAxNDc2MjA2MjU=",
+   "sectionComponentType": "BOOK_IT_CALENDAR_SHEET",
    "sectionContentStatus": "NOT_COMPLETE",
-   "sectionId": "BOOK_IT_FLOATING_FOOTER",
+   "sectionId": "BOOK_IT_CALENDAR_SHEET",
    "errors": null,
    "sectionDependencies": [
     "BOOKING"
@@ -1074,7 +326,7 @@
    "disableDependencies": null,
    "loggingData": {
     "__typename": "LoggingEventData",
-    "loggingId": "pdp_platform.book_it_floating_footer",
+    "loggingId": "pdp_platform.book_it_calendar_sheet",
     "experiments": [],
     "eventData": null,
     "eventDataSchemaName": null,
@@ -1083,7 +335,7 @@
    },
    "e2eLoggingSession": null,
    "mutationMetadata": null,
-   "pluginPointId": "BOOK_IT_FLOATING_FOOTER",
+   "pluginPointId": "BOOK_IT_CALENDAR_SHEET",
    "section": {
     "__typename": "BookItSection",
     "subpageIdToOpen": null,
@@ -1131,61 +383,17 @@
     "integratedPill": null,
     "initialPillMessageType": null,
     "initialPill": null,
-    "priceDetailPills": [],
+    "priceDetailPills": null,
     "availabilityPriceDetailEntry": null,
     "priceDetailLoggingEventData": null,
     "vPoint": null,
-    "bookItPlacement": "FLOATING_FOOTER",
+    "bookItPlacement": "CALENDAR_SHEET",
     "priceMerchandisingMessage": null
    }
   },
   {
    "__typename": "SectionContainer",
-   "id": "U2VjdGlvbkNvbnRhaW5lcjotMTQzMDc2NDMxNzMwMDYxNDAxMw==",
-   "sectionComponentType": "NAV_MOBILE",
-   "sectionContentStatus": "COMPLETE",
-   "sectionId": "NAV_MOBILE",
-   "errors": [],
-   "sectionDependencies": [],
-   "enableDependencies": [],
-   "disableDependencies": [],
-   "loggingData": {
-    "__typename": "LoggingEventData",
-    "loggingId": "pdp_platform.nav_mobile",
-    "experiments": [],
-    "eventData": null,
-    "eventDataSchemaName": null,
-    "section": null,
-    "component": null
-   },
-   "e2eLoggingSession": null,
-   "mutationMetadata": null,
-   "pluginPointId": "NAV_MOBILE",
-   "section": {
-    "__typename": "NavMobileSection"
-   }
-  },
-  {
-   "__typename": "SectionContainer",
-   "id": "U2VjdGlvbkNvbnRhaW5lcjotMjYzNzczMzI2NTkyMDkxODUxNA==",
-   "sectionComponentType": "SBUI_SENTINEL",
-   "sectionContentStatus": "COMPLETE",
-   "sectionId": "ASK_PDP",
-   "errors": null,
-   "sectionDependencies": null,
-   "enableDependencies": null,
-   "disableDependencies": null,
-   "loggingData": null,
-   "e2eLoggingSession": null,
-   "mutationMetadata": null,
-   "pluginPointId": null,
-   "section": {
-    "__typename": "SBUISentinelSection"
-   }
-  },
-  {
-   "__typename": "SectionContainer",
-   "id": "U2VjdGlvbkNvbnRhaW5lcjo0OTUyMTEwODU4MzgxNDgzNjM2",
+   "id": "U2VjdGlvbkNvbnRhaW5lcjotMTEwNjYxODY5ODU5NDkzNDE3Mg==",
    "sectionComponentType": "PHOTO_TOUR_SCROLLABLE",
    "sectionContentStatus": "COMPLETE",
    "sectionId": "PHOTO_TOUR_SCROLLABLE_MODAL",
@@ -2032,7 +1240,7 @@
   },
   {
    "__typename": "SectionContainer",
-   "id": "U2VjdGlvbkNvbnRhaW5lcjoxODEwMzMxNjY2MjE3ODQ0OTgw",
+   "id": "U2VjdGlvbkNvbnRhaW5lcjo2MDMyODEwMjMzMzA2MDk4NDc1",
    "sectionComponentType": "PDP_DESCRIPTION_MODAL",
    "sectionContentStatus": "COMPLETE",
    "sectionId": "DESCRIPTION_MODAL",
@@ -2192,7 +1400,994 @@
   },
   {
    "__typename": "SectionContainer",
-   "id": "U2VjdGlvbkNvbnRhaW5lcjo4MDQ4MTc5MDEwMjMwNTY1MjE0",
+   "id": "U2VjdGlvbkNvbnRhaW5lcjo1MDQwNjAxMzYyOTIwOTIzMjcw",
+   "sectionComponentType": "REVIEWS_DEFAULT",
+   "sectionContentStatus": "COMPLETE",
+   "sectionId": "REVIEWS_DEFAULT",
+   "errors": null,
+   "sectionDependencies": [],
+   "enableDependencies": null,
+   "disableDependencies": null,
+   "loggingData": {
+    "__typename": "LoggingEventData",
+    "loggingId": "pdp_platform.reviews_default",
+    "experiments": [],
+    "eventData": null,
+    "eventDataSchemaName": null,
+    "section": null,
+    "component": null
+   },
+   "e2eLoggingSession": null,
+   "mutationMetadata": null,
+   "pluginPointId": "REVIEWS_DEFAULT",
+   "section": {
+    "__typename": "StayPdpReviewsSection"
+   }
+  },
+  {
+   "__typename": "SectionContainer",
+   "id": "U2VjdGlvbkNvbnRhaW5lcjo1MTQxODEwNjc4ODMwMzUyMTQ2",
+   "sectionComponentType": "LOCATION_PDP",
+   "sectionContentStatus": "COMPLETE",
+   "sectionId": "LOCATION_DEFAULT",
+   "errors": null,
+   "sectionDependencies": [
+    "TRANSLATE_UGC",
+    "CHECK_IN",
+    "CHECK_OUT"
+   ],
+   "enableDependencies": null,
+   "disableDependencies": null,
+   "loggingData": {
+    "__typename": "LoggingEventData",
+    "loggingId": "pdp_platform.location_default",
+    "experiments": [
+     {
+      "__typename": "Experiment",
+      "experiment": "map_category_button_experiment_v2_desktop",
+      "treatment": "treatment",
+      "dontLogOnFormFactor": null
+     }
+    ],
+    "eventData": null,
+    "eventDataSchemaName": null,
+    "section": null,
+    "component": null
+   },
+   "e2eLoggingSession": {
+    "__typename": "UniversalLoggingData",
+    "eventData": "{}",
+    "eventDataSchema": "Pdp.v1.PdpLocationSectionViewportPresentationSession"
+   },
+   "mutationMetadata": null,
+   "pluginPointId": "LOCATION_DEFAULT",
+   "section": {
+    "__typename": "LocationSection"
+   }
+  },
+  {
+   "__typename": "SectionContainer",
+   "id": "U2VjdGlvbkNvbnRhaW5lcjotNDU4MDE1MzQ2MTMxMzI0MDE2Mw==",
+   "sectionComponentType": "MEET_YOUR_HOST",
+   "sectionContentStatus": "COMPLETE",
+   "sectionId": "MEET_YOUR_HOST",
+   "errors": null,
+   "sectionDependencies": [],
+   "enableDependencies": null,
+   "disableDependencies": null,
+   "loggingData": {
+    "__typename": "LoggingEventData",
+    "loggingId": "pdp.meetYourHost",
+    "experiments": [
+     {
+      "__typename": "Experiment",
+      "experiment": "meet_your_host_white_background",
+      "treatment": "treatment",
+      "dontLogOnFormFactor": null
+     }
+    ],
+    "eventData": null,
+    "eventDataSchemaName": null,
+    "section": null,
+    "component": null
+   },
+   "e2eLoggingSession": null,
+   "mutationMetadata": null,
+   "pluginPointId": null,
+   "section": {
+    "__typename": "MeetYourHostSection"
+   }
+  },
+  {
+   "__typename": "SectionContainer",
+   "id": "U2VjdGlvbkNvbnRhaW5lcjo4OTM3ODEwOTUxNDM2NzAxNDA3",
+   "sectionComponentType": "POLICIES_DEFAULT",
+   "sectionContentStatus": "NOT_COMPLETE",
+   "sectionId": "POLICIES_DEFAULT",
+   "errors": null,
+   "sectionDependencies": [
+    "CHECK_IN",
+    "CHECK_OUT",
+    "TRANSLATE_UGC",
+    "BOOKING"
+   ],
+   "enableDependencies": null,
+   "disableDependencies": null,
+   "loggingData": {
+    "__typename": "LoggingEventData",
+    "loggingId": "pdp_platform.policies_default",
+    "experiments": [],
+    "eventData": null,
+    "eventDataSchemaName": null,
+    "section": null,
+    "component": null
+   },
+   "e2eLoggingSession": null,
+   "mutationMetadata": null,
+   "pluginPointId": "POLICIES_DEFAULT",
+   "section": {
+    "__typename": "PoliciesSection"
+   }
+  },
+  {
+   "__typename": "SectionContainer",
+   "id": "U2VjdGlvbkNvbnRhaW5lcjotODIxOTg2NDc2NDE0OTAyMTIxMQ==",
+   "sectionComponentType": "SBUI_SENTINEL",
+   "sectionContentStatus": "COMPLETE",
+   "sectionId": "SIMILAR_LISTINGS_CAROUSEL",
+   "errors": null,
+   "sectionDependencies": null,
+   "enableDependencies": null,
+   "disableDependencies": null,
+   "loggingData": null,
+   "e2eLoggingSession": null,
+   "mutationMetadata": null,
+   "pluginPointId": null,
+   "section": {
+    "__typename": "SBUISentinelSection"
+   }
+  },
+  {
+   "__typename": "SectionContainer",
+   "id": "U2VjdGlvbkNvbnRhaW5lcjozNzQxODk5NjI0Njk1ODQ5NDUz",
+   "sectionComponentType": "SEO_LINKS_DEFAULT",
+   "sectionContentStatus": "COMPLETE",
+   "sectionId": "SEO_LINKS_DEFAULT",
+   "errors": null,
+   "sectionDependencies": [],
+   "enableDependencies": null,
+   "disableDependencies": null,
+   "loggingData": null,
+   "e2eLoggingSession": null,
+   "mutationMetadata": null,
+   "pluginPointId": null,
+   "section": {
+    "__typename": "SeoLinksSection"
+   }
+  },
+  {
+   "__typename": "SectionContainer",
+   "id": "U2VjdGlvbkNvbnRhaW5lcjotOTAwMTQ3NjI4NjE3MjczODkyMw==",
+   "sectionComponentType": "BOOK_IT_SIDEBAR",
+   "sectionContentStatus": "NOT_COMPLETE",
+   "sectionId": "BOOK_IT_SIDEBAR",
+   "errors": null,
+   "sectionDependencies": [
+    "BOOKING"
+   ],
+   "enableDependencies": null,
+   "disableDependencies": null,
+   "loggingData": {
+    "__typename": "LoggingEventData",
+    "loggingId": "pdp_platform.book_it_sidebar",
+    "experiments": [],
+    "eventData": null,
+    "eventDataSchemaName": null,
+    "section": null,
+    "component": null
+   },
+   "e2eLoggingSession": null,
+   "mutationMetadata": null,
+   "pluginPointId": "BOOK_IT_SIDEBAR",
+   "section": {
+    "__typename": "BookItSection",
+    "subpageIdToOpen": null,
+    "showPriceBreakdown": true,
+    "cancellationPolicyLoggingEventData": {
+     "__typename": "LoggingEventData",
+     "loggingId": "pdp.bookItSidebar.cancellationPolicyInput",
+     "experiments": null,
+     "eventData": null,
+     "eventDataSchemaName": null,
+     "section": null,
+     "component": null
+    },
+    "calendarTitle": "Sélectionnez les dates",
+    "calendarSubtitle": "Ajoutez vos dates de voyage pour connaître le prix exact",
+    "descriptionItems": null,
+    "discountCopy": null,
+    "maxGuestCapacity": 8,
+    "maxPlusValue": 16,
+    "tripDetailsLoggingEventData": {
+     "__typename": "CalendarLoggingEventData",
+     "clearDatesButton": {
+      "__typename": "BasicListItem",
+      "title": "Effacer les dates",
+      "loggingEventData": {
+       "__typename": "LoggingEventData",
+       "loggingId": "pdp.bookItSidebar.clearDates",
+       "experiments": null,
+       "eventData": null,
+       "eventDataSchemaName": null,
+       "section": "bookItSidebar",
+       "component": "clearDates"
+      }
+     },
+     "saveDatesButton": {
+      "__typename": "BasicListItem",
+      "title": "Fermer",
+      "loggingEventData": {
+       "__typename": "LoggingEventData",
+       "loggingId": "pdp.bookItSidebar.saveDates",
+       "experiments": null,
+       "eventData": null,
+       "eventDataSchemaName": null,
+       "section": "bookItSidebar",
+       "component": "saveDates"
+      }
+     },
+     "datesInputLoggingEventData": null,
+     "selectDateLoggingEventData": {
+      "__typename": "LoggingEventData",
+      "loggingId": "pdp.bookItSidebar.selectDate",
+      "experiments": null,
+      "eventData": null,
+      "eventDataSchemaName": null,
+      "section": "bookItSidebar",
+      "component": "selectDate"
+     },
+     "previousMonthLoggingEventData": {
+      "__typename": "LoggingEventData",
+      "loggingId": "pdp.bookItSidebar.monthsNavPrevious",
+      "experiments": null,
+      "eventData": null,
+      "eventDataSchemaName": null,
+      "section": "bookItSidebar",
+      "component": "monthsNavPrevious"
+     },
+     "nextMonthLoggingEventData": {
+      "__typename": "LoggingEventData",
+      "loggingId": "pdp.bookItSidebar.monthsNavNext",
+      "experiments": null,
+      "eventData": null,
+      "eventDataSchemaName": null,
+      "section": "bookItSidebar",
+      "component": "monthsNavNext"
+     },
+     "checkInDateInputLoggingEventData": {
+      "__typename": "LoggingEventData",
+      "loggingId": "pdp.bookItSidebar.checkInInput",
+      "experiments": null,
+      "eventData": null,
+      "eventDataSchemaName": null,
+      "section": "bookItSidebar",
+      "component": "checkInInput"
+     },
+     "checkOutDateInputLoggingEventData": {
+      "__typename": "LoggingEventData",
+      "loggingId": "pdp.bookItSidebar.checkOutInput",
+      "experiments": null,
+      "eventData": null,
+      "eventDataSchemaName": null,
+      "section": "bookItSidebar",
+      "component": "checkOutInput"
+     },
+     "guestInputLoggingEventData": {
+      "__typename": "LoggingEventData",
+      "loggingId": "pdp.bookItSidebar.guestInput",
+      "experiments": null,
+      "eventData": null,
+      "eventDataSchemaName": null,
+      "section": "bookItSidebar",
+      "component": "guestInput"
+     },
+     "cancellationPolicyLoggingEventData": null,
+     "changeDatesButtonLoggingEventData": {
+      "__typename": "LoggingEventData",
+      "loggingId": "pdp.bookItSidebar.changeDatesButton",
+      "experiments": null,
+      "eventData": null,
+      "eventDataSchemaName": null,
+      "section": "bookItSidebar",
+      "component": "changeDatesButton"
+     },
+     "selectCheckOutOnlyDateLoggingEventData": {
+      "__typename": "LoggingEventData",
+      "loggingId": "pdp.bookItSidebar.selectCheckOutOnlyDate",
+      "experiments": null,
+      "eventData": null,
+      "eventDataSchemaName": null,
+      "section": "bookItSidebar",
+      "component": "selectCheckOutOnlyDate"
+     },
+     "selectMaxNightsViolationDateLoggingEventData": {
+      "__typename": "LoggingEventData",
+      "loggingId": "pdp.bookItSidebar.selectMaxNightsViolationDate",
+      "experiments": null,
+      "eventData": null,
+      "eventDataSchemaName": null,
+      "section": "bookItSidebar",
+      "component": "selectMaxNightsViolationDate"
+     },
+     "selectMinNightsViolationDateLoggingEventData": {
+      "__typename": "LoggingEventData",
+      "loggingId": "pdp.bookItSidebar.selectMinNightsViolationDate",
+      "experiments": null,
+      "eventData": null,
+      "eventDataSchemaName": null,
+      "section": "bookItSidebar",
+      "component": "selectMinNightsViolationDate"
+     },
+     "selectUnavailableForCheckInDateLoggingEventData": {
+      "__typename": "LoggingEventData",
+      "loggingId": "pdp.bookItSidebar.selectUnavailableForCheckInDate",
+      "experiments": null,
+      "eventData": null,
+      "eventDataSchemaName": null,
+      "section": "bookItSidebar",
+      "component": "selectUnavailableForCheckInDate"
+     },
+     "selectUnavailableForCheckoutDateLoggingEventData": {
+      "__typename": "LoggingEventData",
+      "loggingId": "pdp.bookItSidebar.selectUnavailableForCheckoutDate",
+      "experiments": null,
+      "eventData": null,
+      "eventDataSchemaName": null,
+      "section": "bookItSidebar",
+      "component": "selectUnavailableForCheckoutDate"
+     }
+    },
+    "reviewItem": null,
+    "available": null,
+    "structuredDisplayPrice": null,
+    "discountData": null,
+    "bookItButtonByPlacement": null,
+    "cancellationPolicies": null,
+    "cancellationPolicyForDisplay": null,
+    "localizedUnavailabilityMessage": null,
+    "localizedUnavailabilityMessagePositionString": null,
+    "selectedDatesLink": null,
+    "selectedNights": null,
+    "bookItButtonLayout": null,
+    "productItemDetail": null,
+    "ratePlanLoggingEventData": {
+     "__typename": "LoggingEventData",
+     "loggingId": "pdp.bookItSidebar.ratePlanInput",
+     "experiments": null,
+     "eventData": null,
+     "eventDataSchemaName": null,
+     "section": null,
+     "component": null
+    },
+    "ratePlanTitle": null,
+    "promotionBanner": null,
+    "guestDisclaimer": null,
+    "petsAllowed": null,
+    "petDetails": null,
+    "adultsPicker": {
+     "__typename": "GuestPickerSection",
+     "title": "Adultes",
+     "subtitle": "18 ans et plus"
+    },
+    "childrenPicker": {
+     "__typename": "GuestPickerSection",
+     "title": "Enfants",
+     "subtitle": "De 2 à 17 ans"
+    },
+    "infantsPicker": {
+     "__typename": "GuestPickerSection",
+     "title": "Bébés",
+     "subtitle": "- de 2 ans"
+    },
+    "canInstantBook": null,
+    "highlightBanner": null,
+    "integratedPillMessageType": null,
+    "integratedPill": null,
+    "initialPillMessageType": null,
+    "initialPill": null,
+    "priceDetailPills": [],
+    "availabilityPriceDetailEntry": null,
+    "priceDetailLoggingEventData": null,
+    "vPoint": null,
+    "bookItPlacement": "SIDEBAR",
+    "priceMerchandisingMessage": null
+   }
+  },
+  {
+   "__typename": "SectionContainer",
+   "id": "U2VjdGlvbkNvbnRhaW5lcjo1NzQ1NTQ2NjEzNzg2NjgyMjM4",
+   "sectionComponentType": "REPORT_TO_AIRBNB",
+   "sectionContentStatus": "COMPLETE",
+   "sectionId": "REPORT_TO_AIRBNB",
+   "errors": null,
+   "sectionDependencies": [],
+   "enableDependencies": null,
+   "disableDependencies": null,
+   "loggingData": {
+    "__typename": "LoggingEventData",
+    "loggingId": "pdp_platform.report_to_airbnb",
+    "experiments": [],
+    "eventData": null,
+    "eventDataSchemaName": null,
+    "section": null,
+    "component": null
+   },
+   "e2eLoggingSession": null,
+   "mutationMetadata": null,
+   "pluginPointId": "REPORT_TO_AIRBNB",
+   "section": {
+    "__typename": "ReportToAirbnbSection"
+   }
+  },
+  {
+   "__typename": "SectionContainer",
+   "id": "U2VjdGlvbkNvbnRhaW5lcjo0NTgwODAxNTU2NzcyMDE2MTY4",
+   "sectionComponentType": "NAV_DEFAULT",
+   "sectionContentStatus": "COMPLETE",
+   "sectionId": "NAV_DEFAULT",
+   "errors": null,
+   "sectionDependencies": [],
+   "enableDependencies": null,
+   "disableDependencies": null,
+   "loggingData": {
+    "__typename": "LoggingEventData",
+    "loggingId": "pdp_platform.nav_default",
+    "experiments": [],
+    "eventData": null,
+    "eventDataSchemaName": null,
+    "section": null,
+    "component": null
+   },
+   "e2eLoggingSession": null,
+   "mutationMetadata": null,
+   "pluginPointId": "NAV_DEFAULT",
+   "section": {
+    "__typename": "NavSection"
+   }
+  },
+  {
+   "__typename": "SectionContainer",
+   "id": "U2VjdGlvbkNvbnRhaW5lcjotNjM3MjA4MzE0MjczNDkxMjA3Nw==",
+   "sectionComponentType": "BOOK_IT_NAV",
+   "sectionContentStatus": "NOT_COMPLETE",
+   "sectionId": "BOOK_IT_NAV",
+   "errors": null,
+   "sectionDependencies": [
+    "BOOKING"
+   ],
+   "enableDependencies": null,
+   "disableDependencies": null,
+   "loggingData": {
+    "__typename": "LoggingEventData",
+    "loggingId": "pdp_platform.book_it_nav",
+    "experiments": [],
+    "eventData": null,
+    "eventDataSchemaName": null,
+    "section": null,
+    "component": null
+   },
+   "e2eLoggingSession": null,
+   "mutationMetadata": null,
+   "pluginPointId": "BOOK_IT_NAV",
+   "section": {
+    "__typename": "BookItSection",
+    "subpageIdToOpen": null,
+    "showPriceBreakdown": false,
+    "cancellationPolicyLoggingEventData": null,
+    "calendarTitle": null,
+    "calendarSubtitle": null,
+    "descriptionItems": null,
+    "discountCopy": null,
+    "maxGuestCapacity": null,
+    "maxPlusValue": null,
+    "tripDetailsLoggingEventData": null,
+    "reviewItem": {
+     "__typename": "BasicListItem",
+     "accessibilityLabel": "Évaluation de 4,88 sur 5 sur la base de 41 commentaires.",
+     "action": null,
+     "icon": "COMPACT_STAR",
+     "subtitle": "41 commentaires",
+     "title": "4,88 ·"
+    },
+    "available": null,
+    "structuredDisplayPrice": null,
+    "discountData": null,
+    "bookItButtonByPlacement": null,
+    "cancellationPolicies": null,
+    "cancellationPolicyForDisplay": null,
+    "localizedUnavailabilityMessage": null,
+    "localizedUnavailabilityMessagePositionString": null,
+    "selectedDatesLink": null,
+    "selectedNights": null,
+    "bookItButtonLayout": null,
+    "productItemDetail": null,
+    "ratePlanLoggingEventData": null,
+    "ratePlanTitle": null,
+    "promotionBanner": null,
+    "guestDisclaimer": null,
+    "petsAllowed": null,
+    "petDetails": null,
+    "adultsPicker": null,
+    "childrenPicker": null,
+    "infantsPicker": null,
+    "canInstantBook": null,
+    "highlightBanner": null,
+    "integratedPillMessageType": null,
+    "integratedPill": null,
+    "initialPillMessageType": null,
+    "initialPill": null,
+    "priceDetailPills": null,
+    "availabilityPriceDetailEntry": null,
+    "priceDetailLoggingEventData": null,
+    "vPoint": null,
+    "bookItPlacement": "NAV",
+    "priceMerchandisingMessage": null
+   }
+  },
+  {
+   "__typename": "SectionContainer",
+   "id": "U2VjdGlvbkNvbnRhaW5lcjo4MDM0NjI1MDcwMDEzMzQ5MzM1",
+   "sectionComponentType": "SBUI_SENTINEL",
+   "sectionContentStatus": "COMPLETE",
+   "sectionId": "OVERVIEW_DEFAULT_V2",
+   "errors": null,
+   "sectionDependencies": null,
+   "enableDependencies": null,
+   "disableDependencies": null,
+   "loggingData": null,
+   "e2eLoggingSession": null,
+   "mutationMetadata": null,
+   "pluginPointId": null,
+   "section": {
+    "__typename": "SBUISentinelSection"
+   }
+  },
+  {
+   "__typename": "SectionContainer",
+   "id": "U2VjdGlvbkNvbnRhaW5lcjotMTk1MDYwMDAzMzU3MjczNzg0Mg==",
+   "sectionComponentType": "SBUI_SENTINEL",
+   "sectionContentStatus": "COMPLETE",
+   "sectionId": "GUEST_FAVORITE_BANNER",
+   "errors": null,
+   "sectionDependencies": null,
+   "enableDependencies": null,
+   "disableDependencies": null,
+   "loggingData": null,
+   "e2eLoggingSession": null,
+   "mutationMetadata": null,
+   "pluginPointId": null,
+   "section": {
+    "__typename": "SBUISentinelSection"
+   }
+  },
+  {
+   "__typename": "SectionContainer",
+   "id": "U2VjdGlvbkNvbnRhaW5lcjo4Njg0MDM2MTkyNzk3NTQ2ODg0",
+   "sectionComponentType": "MESSAGE_BANNER",
+   "sectionContentStatus": "SHOULD_HIDE",
+   "sectionId": "MESSAGE_BANNER",
+   "errors": null,
+   "sectionDependencies": [
+    "CHECK_IN",
+    "CHECK_OUT",
+    "BOOKING"
+   ],
+   "enableDependencies": null,
+   "disableDependencies": null,
+   "loggingData": {
+    "__typename": "LoggingEventData",
+    "loggingId": "pdp_platform.message_banner",
+    "experiments": [],
+    "eventData": null,
+    "eventDataSchemaName": null,
+    "section": null,
+    "component": null
+   },
+   "e2eLoggingSession": null,
+   "mutationMetadata": null,
+   "pluginPointId": "MESSAGE_BANNER",
+   "section": null
+  },
+  {
+   "__typename": "SectionContainer",
+   "id": "U2VjdGlvbkNvbnRhaW5lcjoyNzk2OTU2NzAzNTc5MDk2Njcw",
+   "sectionComponentType": "SBUI_SENTINEL",
+   "sectionContentStatus": "COMPLETE",
+   "sectionId": "HOST_OVERVIEW_DEFAULT",
+   "errors": null,
+   "sectionDependencies": null,
+   "enableDependencies": null,
+   "disableDependencies": null,
+   "loggingData": null,
+   "e2eLoggingSession": null,
+   "mutationMetadata": null,
+   "pluginPointId": null,
+   "section": {
+    "__typename": "SBUISentinelSection"
+   }
+  },
+  {
+   "__typename": "SectionContainer",
+   "id": "U2VjdGlvbkNvbnRhaW5lcjo3Njk3NjMxNjM2ODk2NzI0NzU5",
+   "sectionComponentType": "HIGHLIGHTS_DEFAULT",
+   "sectionContentStatus": "COMPLETE",
+   "sectionId": "HIGHLIGHTS_DEFAULT",
+   "errors": null,
+   "sectionDependencies": [
+    "BOOKING"
+   ],
+   "enableDependencies": null,
+   "disableDependencies": null,
+   "loggingData": {
+    "__typename": "LoggingEventData",
+    "loggingId": "pdp_platform.highlights_default",
+    "experiments": null,
+    "eventData": null,
+    "eventDataSchemaName": null,
+    "section": null,
+    "component": null
+   },
+   "e2eLoggingSession": null,
+   "mutationMetadata": null,
+   "pluginPointId": "HIGHLIGHTS_DEFAULT",
+   "section": {
+    "__typename": "PdpHighlightsSection"
+   }
+  },
+  {
+   "__typename": "SectionContainer",
+   "id": "U2VjdGlvbkNvbnRhaW5lcjotNDAyNzIwNDM2NTQ1OTQ1ODA5Ng==",
+   "sectionComponentType": "DESCRIPTION_DEFAULT",
+   "sectionContentStatus": "COMPLETE",
+   "sectionId": "DESCRIPTION_DEFAULT",
+   "errors": null,
+   "sectionDependencies": [
+    "TRANSLATE_UGC"
+   ],
+   "enableDependencies": null,
+   "disableDependencies": null,
+   "loggingData": {
+    "__typename": "LoggingEventData",
+    "loggingId": "pdp_platform.description_default",
+    "experiments": null,
+    "eventData": null,
+    "eventDataSchemaName": null,
+    "section": null,
+    "component": null
+   },
+   "e2eLoggingSession": null,
+   "mutationMetadata": null,
+   "pluginPointId": "DESCRIPTION_DEFAULT",
+   "section": {
+    "__typename": "PdpDescriptionSection"
+   }
+  },
+  {
+   "__typename": "SectionContainer",
+   "id": "SLEEPING_ARRANGEMENT_WITH_IMAGES",
+   "sectionComponentType": "SLEEPING_ARRANGEMENT_IMAGES",
+   "sectionContentStatus": "COMPLETE",
+   "sectionId": "SLEEPING_ARRANGEMENT_WITH_IMAGES",
+   "errors": [],
+   "sectionDependencies": [],
+   "enableDependencies": [],
+   "disableDependencies": [],
+   "loggingData": {
+    "__typename": "LoggingEventData",
+    "loggingId": "pdp_platform.sleeping_arrangement_with_images",
+    "experiments": [],
+    "eventData": null,
+    "eventDataSchemaName": null,
+    "section": null,
+    "component": null
+   },
+   "e2eLoggingSession": null,
+   "mutationMetadata": null,
+   "pluginPointId": "SLEEPING_ARRANGEMENT_WITH_IMAGES",
+   "section": {
+    "__typename": "SleepingArrangementSection"
+   }
+  },
+  {
+   "__typename": "SectionContainer",
+   "id": "U2VjdGlvbkNvbnRhaW5lcjotODgzNDg1MDk5NTI0ODIzNDIyMg==",
+   "sectionComponentType": "AMENITIES_DEFAULT",
+   "sectionContentStatus": "COMPLETE",
+   "sectionId": "AMENITIES_DEFAULT",
+   "errors": null,
+   "sectionDependencies": [
+    "AMENITIES"
+   ],
+   "enableDependencies": null,
+   "disableDependencies": null,
+   "loggingData": {
+    "__typename": "LoggingEventData",
+    "loggingId": "pdp_platform.amenities_default",
+    "experiments": [],
+    "eventData": null,
+    "eventDataSchemaName": null,
+    "section": null,
+    "component": null
+   },
+   "e2eLoggingSession": null,
+   "mutationMetadata": null,
+   "pluginPointId": "AMENITIES_DEFAULT",
+   "section": {
+    "__typename": "AmenitiesSection"
+   }
+  },
+  {
+   "__typename": "SectionContainer",
+   "id": "U2VjdGlvbkNvbnRhaW5lcjotMjY5ODg3NTkyMzk2MDUyMTY2MA==",
+   "sectionComponentType": "STAYS_PDP_AVAILABILITY_CALENDAR_INLINE",
+   "sectionContentStatus": "COMPLETE",
+   "sectionId": "AVAILABILITY_CALENDAR_INLINE",
+   "errors": null,
+   "sectionDependencies": [],
+   "enableDependencies": null,
+   "disableDependencies": null,
+   "loggingData": {
+    "__typename": "LoggingEventData",
+    "loggingId": "pdp_platform.availability_calendar_inline",
+    "experiments": [],
+    "eventData": null,
+    "eventDataSchemaName": null,
+    "section": null,
+    "component": null
+   },
+   "e2eLoggingSession": null,
+   "mutationMetadata": null,
+   "pluginPointId": "AVAILABILITY_CALENDAR_INLINE",
+   "section": {
+    "__typename": "AvailabilityCalendarSection"
+   }
+  },
+  {
+   "__typename": "SectionContainer",
+   "id": "U2VjdGlvbkNvbnRhaW5lcjotNzk3ODM4NzcwMjgzMjg1OTUyMA==",
+   "sectionComponentType": "TITLE_DEFAULT",
+   "sectionContentStatus": "COMPLETE",
+   "sectionId": "TITLE_DEFAULT",
+   "errors": null,
+   "sectionDependencies": [
+    "TRANSLATE_UGC"
+   ],
+   "enableDependencies": null,
+   "disableDependencies": null,
+   "loggingData": {
+    "__typename": "LoggingEventData",
+    "loggingId": "pdp_platform.title_default",
+    "experiments": [],
+    "eventData": null,
+    "eventDataSchemaName": null,
+    "section": null,
+    "component": null
+   },
+   "e2eLoggingSession": null,
+   "mutationMetadata": null,
+   "pluginPointId": "TITLE_DEFAULT",
+   "section": {
+    "__typename": "PdpTitleSection"
+   }
+  },
+  {
+   "__typename": "SectionContainer",
+   "id": "U2VjdGlvbkNvbnRhaW5lcjo4NDE3MDc4Nzg1NDMxMTI1MDAx",
+   "sectionComponentType": "HERO_DEFAULT",
+   "sectionContentStatus": "COMPLETE",
+   "sectionId": "HERO_DEFAULT",
+   "errors": null,
+   "sectionDependencies": [],
+   "enableDependencies": null,
+   "disableDependencies": null,
+   "loggingData": {
+    "__typename": "LoggingEventData",
+    "loggingId": "pdp_platform.hero_default",
+    "experiments": null,
+    "eventData": null,
+    "eventDataSchemaName": null,
+    "section": null,
+    "component": null
+   },
+   "e2eLoggingSession": null,
+   "mutationMetadata": null,
+   "pluginPointId": "HERO_DEFAULT",
+   "section": {
+    "__typename": "PdpHeroSection"
+   }
+  },
+  {
+   "__typename": "SectionContainer",
+   "id": "U2VjdGlvbkNvbnRhaW5lcjotODE2MDAxNjQwNTExODg0OTI3Ng==",
+   "sectionComponentType": "BOOK_IT_FLOATING_FOOTER",
+   "sectionContentStatus": "NOT_COMPLETE",
+   "sectionId": "BOOK_IT_FLOATING_FOOTER",
+   "errors": null,
+   "sectionDependencies": [
+    "BOOKING"
+   ],
+   "enableDependencies": null,
+   "disableDependencies": null,
+   "loggingData": {
+    "__typename": "LoggingEventData",
+    "loggingId": "pdp_platform.book_it_floating_footer",
+    "experiments": [],
+    "eventData": null,
+    "eventDataSchemaName": null,
+    "section": null,
+    "component": null
+   },
+   "e2eLoggingSession": null,
+   "mutationMetadata": null,
+   "pluginPointId": "BOOK_IT_FLOATING_FOOTER",
+   "section": {
+    "__typename": "BookItSection",
+    "subpageIdToOpen": null,
+    "showPriceBreakdown": false,
+    "cancellationPolicyLoggingEventData": null,
+    "calendarTitle": null,
+    "calendarSubtitle": null,
+    "descriptionItems": null,
+    "discountCopy": null,
+    "maxGuestCapacity": null,
+    "maxPlusValue": null,
+    "tripDetailsLoggingEventData": null,
+    "reviewItem": {
+     "__typename": "BasicListItem",
+     "accessibilityLabel": "Évaluation de 4,88 sur 5 sur la base de 41 commentaires.",
+     "action": null,
+     "icon": "COMPACT_STAR",
+     "subtitle": null,
+     "title": "4,88"
+    },
+    "available": null,
+    "structuredDisplayPrice": null,
+    "discountData": null,
+    "bookItButtonByPlacement": null,
+    "cancellationPolicies": null,
+    "cancellationPolicyForDisplay": null,
+    "localizedUnavailabilityMessage": null,
+    "localizedUnavailabilityMessagePositionString": null,
+    "selectedDatesLink": null,
+    "selectedNights": null,
+    "bookItButtonLayout": null,
+    "productItemDetail": null,
+    "ratePlanLoggingEventData": null,
+    "ratePlanTitle": null,
+    "promotionBanner": null,
+    "guestDisclaimer": null,
+    "petsAllowed": null,
+    "petDetails": null,
+    "adultsPicker": null,
+    "childrenPicker": null,
+    "infantsPicker": null,
+    "canInstantBook": null,
+    "highlightBanner": null,
+    "integratedPillMessageType": null,
+    "integratedPill": null,
+    "initialPillMessageType": null,
+    "initialPill": null,
+    "priceDetailPills": [],
+    "availabilityPriceDetailEntry": null,
+    "priceDetailLoggingEventData": null,
+    "vPoint": null,
+    "bookItPlacement": "FLOATING_FOOTER",
+    "priceMerchandisingMessage": null
+   }
+  },
+  {
+   "__typename": "SectionContainer",
+   "id": "U2VjdGlvbkNvbnRhaW5lcjotMjM5MzYwOTAzMjQ0OTE3ODc5Mg==",
+   "sectionComponentType": "NAV_MOBILE",
+   "sectionContentStatus": "COMPLETE",
+   "sectionId": "NAV_MOBILE",
+   "errors": [],
+   "sectionDependencies": [],
+   "enableDependencies": [],
+   "disableDependencies": [],
+   "loggingData": {
+    "__typename": "LoggingEventData",
+    "loggingId": "pdp_platform.nav_mobile",
+    "experiments": [],
+    "eventData": null,
+    "eventDataSchemaName": null,
+    "section": null,
+    "component": null
+   },
+   "e2eLoggingSession": null,
+   "mutationMetadata": null,
+   "pluginPointId": "NAV_MOBILE",
+   "section": {
+    "__typename": "NavMobileSection"
+   }
+  },
+  {
+   "__typename": "SectionContainer",
+   "id": "U2VjdGlvbkNvbnRhaW5lcjotMTMzMTc0NTcyNzE0Mzk3OTAzNA==",
+   "sectionComponentType": "SBUI_SENTINEL",
+   "sectionContentStatus": "COMPLETE",
+   "sectionId": "ASK_PDP",
+   "errors": null,
+   "sectionDependencies": null,
+   "enableDependencies": null,
+   "disableDependencies": null,
+   "loggingData": null,
+   "e2eLoggingSession": null,
+   "mutationMetadata": null,
+   "pluginPointId": null,
+   "section": {
+    "__typename": "SBUISentinelSection"
+   }
+  },
+  {
+   "__typename": "SectionContainer",
+   "id": "U2VjdGlvbkNvbnRhaW5lcjozNzY2Mzk0Mzc0OTc0MzkyMjcy",
+   "sectionComponentType": "WHAT_COUNTS_AS_A_PET",
+   "sectionContentStatus": "COMPLETE",
+   "sectionId": "WHAT_COUNTS_AS_A_PET_MODAL",
+   "errors": null,
+   "sectionDependencies": [],
+   "enableDependencies": null,
+   "disableDependencies": null,
+   "loggingData": {
+    "__typename": "LoggingEventData",
+    "loggingId": "pdp_platform.service_animal_disclosure",
+    "experiments": [],
+    "eventData": null,
+    "eventDataSchemaName": null,
+    "section": null,
+    "component": null
+   },
+   "e2eLoggingSession": null,
+   "mutationMetadata": null,
+   "pluginPointId": "WHAT_COUNTS_AS_A_PET_MODAL",
+   "section": {
+    "__typename": "GeneralContentSection",
+    "button": null,
+    "BasicButtonFragment": null,
+    "icon": null,
+    "mediaItem": {
+     "__typename": "Image",
+     "id": "SW1hZ2U6d2hhdF9jb3VudHNfYXNfYV9wZXQ=",
+     "aspectRatio": null,
+     "orientation": null,
+     "onPressAction": null,
+     "accessibilityLabel": "Un voyageur avec un animal d'assistance est accueilli par son hôte",
+     "baseUrl": "https://a0.muscache.com/pictures/adafb11b-41e9-49d3-908e-049dfd6934b6.jpg",
+     "displayAspectRatio": null,
+     "imageMetadata": null,
+     "overlay": null,
+     "loggingEventData": null
+    },
+    "subtitle": null,
+    "subtitleStyle": null,
+    "title": "Animaux d'assistance",
+    "titleStyle": null,
+    "headingLevel": null,
+    "html": {
+     "__typename": "Html",
+     "htmlText": "Les animaux d'assistance ne sont pas des animaux de compagnie. Il n'est donc pas nécessaire de les ajouter ici.<br><br>Vous voyagez avec un animal de soutien émotionnel ? Consultez notre <a href=\"https://www.airbnb.com/help/article/1869/assistance-animals\" target=\"_blank\">politique en matière d'accessibilité</a>.",
+     "readMoreButton": null,
+     "textStyle": null,
+     "recommendedNumberOfLines": null,
+     "minimumNumberOfLinesForTruncation": null
+    },
+    "kickerBadge": null
+   }
+  },
+  {
+   "__typename": "SectionContainer",
+   "id": "U2VjdGlvbkNvbnRhaW5lcjozMDQ4OTU5NzkwMTA0NTM0NDA3",
    "sectionComponentType": "PDP_DESCRIPTION_MODAL",
    "sectionContentStatus": "COMPLETE",
    "sectionId": "INDIVIDUAL_HOST_PROMPT_MODAL",
@@ -2253,201 +2448,6 @@
     "title": "Ce qu'il faut savoir sur les logements proposés par des particuliers",
     "titleStyle": null
    }
-  },
-  {
-   "__typename": "SectionContainer",
-   "id": "U2VjdGlvbkNvbnRhaW5lcjo0NTU0Mzg4MzMxNTIwODIzOTUw",
-   "sectionComponentType": "WHAT_COUNTS_AS_A_PET",
-   "sectionContentStatus": "COMPLETE",
-   "sectionId": "WHAT_COUNTS_AS_A_PET_MODAL",
-   "errors": null,
-   "sectionDependencies": [],
-   "enableDependencies": null,
-   "disableDependencies": null,
-   "loggingData": {
-    "__typename": "LoggingEventData",
-    "loggingId": "pdp_platform.service_animal_disclosure",
-    "experiments": [],
-    "eventData": null,
-    "eventDataSchemaName": null,
-    "section": null,
-    "component": null
-   },
-   "e2eLoggingSession": null,
-   "mutationMetadata": null,
-   "pluginPointId": "WHAT_COUNTS_AS_A_PET_MODAL",
-   "section": {
-    "__typename": "GeneralContentSection",
-    "button": null,
-    "BasicButtonFragment": null,
-    "icon": null,
-    "mediaItem": {
-     "__typename": "Image",
-     "id": "SW1hZ2U6d2hhdF9jb3VudHNfYXNfYV9wZXQ=",
-     "aspectRatio": null,
-     "orientation": null,
-     "onPressAction": null,
-     "accessibilityLabel": "Un voyageur avec un animal d'assistance est accueilli par son hôte",
-     "baseUrl": "https://a0.muscache.com/pictures/adafb11b-41e9-49d3-908e-049dfd6934b6.jpg",
-     "displayAspectRatio": null,
-     "imageMetadata": null,
-     "overlay": null,
-     "loggingEventData": null
-    },
-    "subtitle": null,
-    "subtitleStyle": null,
-    "title": "Animaux d'assistance",
-    "titleStyle": null,
-    "headingLevel": null,
-    "html": {
-     "__typename": "Html",
-     "htmlText": "Les animaux d'assistance ne sont pas des animaux de compagnie. Il n'est donc pas nécessaire de les ajouter ici.<br><br>Vous voyagez avec un animal de soutien émotionnel ? Consultez notre <a href=\"https://www.airbnb.com/help/article/1869/assistance-animals\" target=\"_blank\">politique en matière d'accessibilité</a>.",
-     "readMoreButton": null,
-     "textStyle": null,
-     "recommendedNumberOfLines": null,
-     "minimumNumberOfLinesForTruncation": null
-    },
-    "kickerBadge": null
-   }
-  },
-  {
-   "__typename": "SectionContainer",
-   "id": "U2VjdGlvbkNvbnRhaW5lcjozNTEyOTgyNTUyMzcyNjU5MjEx",
-   "sectionComponentType": "CANCELLATION_POLICY_PICKER_MODAL",
-   "sectionContentStatus": "NOT_COMPLETE",
-   "sectionId": "CANCELLATION_POLICY_PICKER_MODAL",
-   "errors": null,
-   "sectionDependencies": [
-    "CHECK_IN",
-    "CHECK_OUT",
-    "BOOKING"
-   ],
-   "enableDependencies": null,
-   "disableDependencies": null,
-   "loggingData": {
-    "__typename": "LoggingEventData",
-    "loggingId": "pdp_platform.cancellation_policy_picker_modal",
-    "experiments": [],
-    "eventData": {
-     "productId": "U3RheUxpc3Rpbmc6NTAyMjYyNDk=",
-     "pdpImpressionId": "p3_1790860597_P3-xjY-7Xk5V7Zht",
-     "pdpContext": {}
-    },
-    "eventDataSchemaName": "Pdp.v5.ClientEventData",
-    "section": null,
-    "component": null
-   },
-   "e2eLoggingSession": null,
-   "mutationMetadata": null,
-   "pluginPointId": "CANCELLATION_POLICY_PICKER_MODAL",
-   "section": {
-    "__typename": "CancellationPolicyPickerSection"
-   }
-  },
-  {
-   "__typename": "SectionContainer",
-   "id": "U2VjdGlvbkNvbnRhaW5lcjotOTY2OTg3ODE2OTQ2NzU4MDU4",
-   "sectionComponentType": "AVAILABILITY_CALENDAR_DEFAULT",
-   "sectionContentStatus": "COMPLETE",
-   "sectionId": "AVAILABILITY_CALENDAR_DEFAULT",
-   "errors": null,
-   "sectionDependencies": [],
-   "enableDependencies": null,
-   "disableDependencies": null,
-   "loggingData": {
-    "__typename": "LoggingEventData",
-    "loggingId": "pdp_platform.availability_calendar_default",
-    "experiments": [],
-    "eventData": null,
-    "eventDataSchemaName": null,
-    "section": null,
-    "component": null
-   },
-   "e2eLoggingSession": null,
-   "mutationMetadata": null,
-   "pluginPointId": "AVAILABILITY_CALENDAR_DEFAULT",
-   "section": {
-    "__typename": "AvailabilityCalendarSection"
-   }
-  },
-  {
-   "__typename": "SectionContainer",
-   "id": "U2VjdGlvbkNvbnRhaW5lcjotNDQ2MzI0Nzk5OTQ2OTg0MjI3Nw==",
-   "sectionComponentType": "BOOK_IT_CALENDAR_SHEET",
-   "sectionContentStatus": "NOT_COMPLETE",
-   "sectionId": "BOOK_IT_CALENDAR_SHEET",
-   "errors": null,
-   "sectionDependencies": [
-    "BOOKING"
-   ],
-   "enableDependencies": null,
-   "disableDependencies": null,
-   "loggingData": {
-    "__typename": "LoggingEventData",
-    "loggingId": "pdp_platform.book_it_calendar_sheet",
-    "experiments": [],
-    "eventData": null,
-    "eventDataSchemaName": null,
-    "section": null,
-    "component": null
-   },
-   "e2eLoggingSession": null,
-   "mutationMetadata": null,
-   "pluginPointId": "BOOK_IT_CALENDAR_SHEET",
-   "section": {
-    "__typename": "BookItSection",
-    "subpageIdToOpen": null,
-    "showPriceBreakdown": false,
-    "cancellationPolicyLoggingEventData": null,
-    "calendarTitle": null,
-    "calendarSubtitle": null,
-    "descriptionItems": null,
-    "discountCopy": null,
-    "maxGuestCapacity": null,
-    "maxPlusValue": null,
-    "tripDetailsLoggingEventData": null,
-    "reviewItem": {
-     "__typename": "BasicListItem",
-     "accessibilityLabel": "Évaluation de 4,88 sur 5 sur la base de 41 commentaires.",
-     "action": null,
-     "icon": "COMPACT_STAR",
-     "subtitle": null,
-     "title": "4,88"
-    },
-    "available": null,
-    "structuredDisplayPrice": null,
-    "discountData": null,
-    "bookItButtonByPlacement": null,
-    "cancellationPolicies": null,
-    "cancellationPolicyForDisplay": null,
-    "localizedUnavailabilityMessage": null,
-    "localizedUnavailabilityMessagePositionString": null,
-    "selectedDatesLink": null,
-    "selectedNights": null,
-    "bookItButtonLayout": null,
-    "productItemDetail": null,
-    "ratePlanLoggingEventData": null,
-    "ratePlanTitle": null,
-    "promotionBanner": null,
-    "guestDisclaimer": null,
-    "petsAllowed": null,
-    "petDetails": null,
-    "adultsPicker": null,
-    "childrenPicker": null,
-    "infantsPicker": null,
-    "canInstantBook": null,
-    "highlightBanner": null,
-    "integratedPillMessageType": null,
-    "integratedPill": null,
-    "initialPillMessageType": null,
-    "initialPill": null,
-    "priceDetailPills": null,
-    "availabilityPriceDetailEntry": null,
-    "priceDetailLoggingEventData": null,
-    "vPoint": null,
-    "bookItPlacement": "CALENDAR_SHEET",
-    "priceMerchandisingMessage": null
-   }
   }
  ],
  "sharing": {
@@ -2463,7 +2463,7 @@
     "source": "Maison de ville · Bordeaux · ★4,88 · 5 chambres · 5 lits · 2 salles de bain"
    }
   },
-  "shareUrl": "https://www.airbnb.fr/rooms/50226249?unique_share_id=b838ae1a-48c7-452f-833f-787a4901b849&viralityEntryPoint=1&s=76"
+  "shareUrl": "https://www.airbnb.fr/rooms/50226249?unique_share_id=bfdc9aae-4e75-4b66-a382-e1bedd997560&viralityEntryPoint=1&s=76"
  },
  "logging": {
   "__typename": "PdpEventData",
@@ -2489,6 +2489,6 @@
   "propertyId": null
  },
  "api": {
-  "sections": true
+  "reviews": 41
  }
 }
