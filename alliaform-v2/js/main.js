@@ -159,9 +159,26 @@
       return res;
     };
 
+    // L'estimation défile jusqu'au nouveau montant
+    var shown = null, raf = 0;
+    var calm = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    var showTotal = function (to) {
+      cancelAnimationFrame(raf);
+      if (to === null) { shown = null; total.textContent = "Sur devis"; return; }
+      var from = shown === null ? to : shown;
+      if (calm || from === to) { shown = to; total.textContent = eur(to) + " HT"; return; }
+      var t0 = performance.now();
+      (function step(now) {
+        var p = Math.min(1, (now - t0) / 550), v = Math.round(from + (to - from) * (1 - Math.pow(1 - p, 3)));
+        shown = v;
+        total.textContent = eur(v) + " HT";
+        if (p < 1) raf = requestAnimationFrame(step);
+      })(t0);
+    };
+
     var render = function () {
       var r = compute();
-      total.textContent = r.total === null ? "Sur devis" : eur(r.total) + " HT";
+      showTotal(r.total);
       detail.textContent = r.info;
     };
 
