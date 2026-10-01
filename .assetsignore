@@ -22,4 +22,5 @@ worker
 le-passe
 # Site AlliaForm : publié séparément (alliaform/wrangler.jsonc)
 alliaform
+alliaform-v2
 undefined

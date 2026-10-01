@@ -1,0 +1,20 @@
+// Configuration Cloudflare du site AlliaForm, version 2 (Worker « alliaform-v2 »).
+// Le site est servi tel quel depuis ce dossier : uniquement des fichiers statiques.
+// Mise en ligne : Cloudflare → Workers & Pages → Importer le dépôt « jules » avec
+// le répertoire racine « alliaform-v2 », ou à la main depuis ce dossier :
+// npx wrangler deploy
+{
+  "name": "alliaform-v2",
+  "compatibility_date": "2025-09-01",
+  "assets": {
+    "directory": ".",
+    "not_found_handling": "404-page"
+  },
+  // Si cette version est retenue : retirer les // ci-dessous une fois
+  // alliaform.fr géré par Cloudflare (et ne pas les activer sur l'autre version).
+  // "routes": [
+  //   { "pattern": "alliaform.fr", "custom_domain": true },
+  //   { "pattern": "www.alliaform.fr", "custom_domain": true }
+  // ],
+  "workers_dev": true
+}
