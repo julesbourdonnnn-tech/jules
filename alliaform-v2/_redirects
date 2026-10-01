@@ -1,32 +1,51 @@
-# Anciennes adresses du site WordPress → sections de la nouvelle page
-# (évite les pages introuvables et conserve le référencement Google)
-/location-salle-formation-bordeaux                /#salles    301
-/location-salle-formation-bordeaux/               /#salles    301
-/centre-examen-bordeaux                           /#examens   301
-/centre-examen-bordeaux/                          /#examens   301
-/toefl-bordeaux                                   /#examens   301
-/toefl-bordeaux/                                  /#examens   301
-/service-title-1                                  /#examens   301
-/service-title-1/                                 /#examens   301
-/gestion-administrative-logistique-formations     /#services  301
-/gestion-administrative-logistique-formations/    /#services  301
-/informations-utiles                              /#acces     301
-/informations-utiles/                             /#acces     301
-/news                                             /#histoire  301
-/news/                                            /#histoire  301
-/category/*                                       /#histoire  301
-/author/*                                         /           301
-/2012/*                                           /#histoire  301
-/2013/*                                           /#histoire  301
-/2014/*                                           /#histoire  301
-/2015/*                                           /#histoire  301
-/2016/*                                           /#histoire  301
-/2017/*                                           /#histoire  301
-/2018/*                                           /#histoire  301
-/2019/*                                           /#histoire  301
-/2020/*                                           /#histoire  301
-/2021/*                                           /#histoire  301
-/2022/*                                           /#histoire  301
-/2023/*                                           /#histoire  301
-/2024/*                                           /#histoire  301
-/2025/*                                           /#histoire  301
+# Anciennes adresses du site WordPress → pages et sections du nouveau site
+# (évite les pages introuvables et conserve le référencement Google).
+# Les règles précises passent avant les règles générales (avec *).
+
+# Pages qui existent à nouveau, à la même adresse (sans la barre finale)
+/location-salle-formation-bordeaux/               /location-salle-formation-bordeaux   301
+/centre-examen-bordeaux/                          /centre-examen-bordeaux              301
+/toefl-bordeaux/                                  /toefl-bordeaux                      301
+/toeic-bordeaux/                                  /toeic-bordeaux                      301
+/gmat-bordeaux/                                   /gmat-bordeaux                       301
+
+# Anciennes pages et articles → nouvelles pages
+/service-title-1                                  /centre-examen-bordeaux              301
+/service-title-1/                                 /centre-examen-bordeaux              301
+/category/toefl                                   /toefl-bordeaux                      301
+/category/toefl/                                  /toefl-bordeaux                      301
+/category/examen                                  /centre-examen-bordeaux              301
+/category/examen/                                 /centre-examen-bordeaux              301
+/2012/07/11/toefl-bordeaux                        /toefl-bordeaux                      301
+/2012/07/11/toefl-bordeaux/                       /toefl-bordeaux                      301
+/2013/03/27/le-gmat-de-retour-a-bordeaux          /gmat-bordeaux                       301
+/2013/03/27/le-gmat-de-retour-a-bordeaux/         /gmat-bordeaux                       301
+/2014/04/14/salle-formation-demi-journee          /location-salle-formation-bordeaux   301
+/2014/04/14/salle-formation-demi-journee/         /location-salle-formation-bordeaux   301
+/catalogue/catalogue_prestations_alliaform.pdf    /location-salle-formation-bordeaux   301
+/media/plan_acces.pdf                             /#venir                              301
+
+# Anciennes pages → sections de l'accueil
+/gestion-administrative-logistique-formations     /#organismes  301
+/gestion-administrative-logistique-formations/    /#organismes  301
+/informations-utiles                              /#venir       301
+/informations-utiles/                             /#venir       301
+/news                                             /#histoire    301
+/news/                                            /#histoire    301
+/catalogue/*                                      /             301
+/category/*                                       /#histoire    301
+/author/*                                         /             301
+/2012/*                                           /#histoire    301
+/2013/*                                           /#histoire    301
+/2014/*                                           /#histoire    301
+/2015/*                                           /#histoire    301
+/2016/*                                           /#histoire    301
+/2017/*                                           /#histoire    301
+/2018/*                                           /#histoire    301
+/2019/*                                           /#histoire    301
+/2020/*                                           /#histoire    301
+/2021/*                                           /#histoire    301
+/2022/*                                           /#histoire    301
+/2023/*                                           /#histoire    301
+/2024/*                                           /#histoire    301
+/2025/*                                           /#histoire    301

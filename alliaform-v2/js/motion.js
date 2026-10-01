@@ -113,9 +113,15 @@
   stagger(".faq > div", 70);
   stagger(".letter > p, .letter > .letter-foot", 60);
   stagger(".contact-direct > *", 100);
+  // Pages dédiées
+  stagger(".formats > div", 140);
+  stagger(".sec .page-body > *", 60);
+  stagger(".steps > li", 90);
+  stagger(".steps-note", 0);
+  stagger(".cta-actions > *", 90);
 
   // ---------- Les grands numéros des salles comptent jusqu'à 12 et 25 ----------
-  $$(".room-num").forEach(function (el) {
+  $$(".room-num, .formats-num").forEach(function (el) {
     var to = parseInt(el.textContent, 10);
     if (!animate || isNaN(to)) return;
     el.textContent = "0";

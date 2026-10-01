@@ -27,11 +27,27 @@ Ne pas ressembler à un site « généré » : pas de cartes arrondies, d'ombres
 | 08 Questions | Les questions fréquentes, toutes visibles |
 | 09 Contact | **Une lettre à compléter** : « Je m'appelle…, je cherche… pour… ». L'estimation se calcule en direct et la lettre devient un e-mail prêt à envoyer |
 
+## Les pages dédiées
+
+Pour que Google trouve AlliaForm sur les recherches précises (« location salle de formation Bordeaux », « passer le TOEFL à Bordeaux »…), le site compte aussi cinq pages, chacune centrée sur une recherche :
+
+| Adresse | Recherche visée | Contenu |
+|---|---|---|
+| `/location-salle-formation-bordeaux` | location de salle de formation à Bordeaux | Les deux formats, ce qui est compris, les tarifs, pour qui, l'accès, les questions |
+| `/centre-examen-bordeaux` | centre d'examen à Bordeaux, Pearson VUE | Les examens proposés, les conditions de passage, les certifications Pearson VUE, l'organisation d'examens pour les écoles et les entreprises |
+| `/toefl-bordeaux` | passer le TOEFL à Bordeaux | L'examen, l'inscription en quatre étapes, le jour J (clavier QWERTY, casque), pourquoi en centre |
+| `/toeic-bordeaux` | passer le TOEIC à Bordeaux | L'épreuve, l'inscription aux sessions d'ETS Global, les passages en groupe |
+| `/gmat-bordeaux` | passer le GMAT à Bordeaux | L'examen, l'inscription sur mba.com, pourquoi en centre |
+
+Chaque page a son titre et sa description pour Google, un fil d'Ariane, ses questions fréquentes (avec les données structurées correspondantes) et des liens vers les autres pages. Les anciennes adresses du site WordPress qui portaient ces noms (`/toefl-bordeaux`, `/centre-examen-bordeaux`, `/location-salle-formation-bordeaux`) affichent de nouveau une vraie page, et les anciens articles sur le TOEFL, le GMAT ou la demi-journée redirigent vers la page qui leur correspond (fichier `_redirects`).
+
+Les modalités des examens (prix, format, pièces d'identité) sont fixées par ETS, ETS Global et GMAC et peuvent changer : les pages renvoient toujours vers le site officiel pour l'inscription et ne donnent pas de prix.
+
 Comme la version 1 : site 100 % statique, aucun cookie, polices hébergées sur le site, accessibilité vérifiée (axe : 0 erreur), données structurées Google, redirection des anciennes adresses WordPress.
 
 ## ✅ À vérifier avant la mise en ligne
 
-Les mêmes points que la version 1 (voir `alliaform/README.md`) : **tarifs**, **examens proposés**, **accès**, **mentions légales** (numéro de TVA calculé à partir du SIREN). Le logo de cette version est purement typographique (« AlliaForm » en Schibsted Grotesk) ; l'icône est un « A. » avec un point vermillon.
+Les mêmes points que la version 1 (voir `alliaform/README.md`) : **tarifs**, **examens proposés**, **accès**, **mentions légales** (numéro de TVA calculé à partir du SIREN). Pour les pages dédiées : que les sessions publiques du **TOEIC** ont bien lieu chez AlliaForm, et que le centre apparaît bien sous le nom « AlliaForm » dans les moteurs de recherche d'ETS, d'ETS Global et de Pearson VUE. Le logo de cette version est purement typographique (« AlliaForm » en Schibsted Grotesk) ; l'icône est un « A. » avec un point vermillon.
 
 ## Mise en ligne (Cloudflare)
 
@@ -46,16 +62,19 @@ Cette version a son propre Worker, **« alliaform-v2 »** : on peut publier les 
 
 ```bash
 cd alliaform-v2
-python3 -m http.server 8000
+npx http-server -p 8000
 # puis ouvre http://localhost:8000
 ```
+
+`http-server` sert `toefl-bordeaux.html` à l'adresse `/toefl-bordeaux`, comme Cloudflare. Pour vérifier aussi les redirections : `npx wrangler dev`.
 
 ## Modifier
 
 | Quoi | Où |
 |---|---|
-| Textes, questions, coordonnées | `index.html` |
-| Tarifs | section « Tarifs » de `index.html`, les « À partir de » des deux salles, les `Offer` des données structurées, et `js/main.js` (constantes `ROOMS` et `LUNCH`) |
+| Textes, questions, coordonnées | `index.html` (et les pages dédiées, qui reprennent les coordonnées, les tarifs et les questions) |
+| Tarifs | section « Tarifs » de `index.html`, les « À partir de » des deux salles, les `Offer` des données structurées, `js/main.js` (constantes `ROOMS` et `LUNCH`) et `location-salle-formation-bordeaux.html` (tarifs, questions et données structurées) |
+| Pages dédiées | les fichiers `location-salle-formation-bordeaux.html`, `centre-examen-bordeaux.html`, `toefl-bordeaux.html`, `toeic-bordeaux.html`, `gmat-bordeaux.html` ; une nouvelle page s'ajoute aussi à `sitemap.xml` et à la liste de liens du pied de page |
 | Couleurs, polices, grille | variables en haut de `css/style.css` |
 | Dessin des quais | intégré dans `index.html` (copie dans `assets/quais-gravure.svg`) |
 | Plans des salles | dessins SVG directement dans `index.html` ; les prix des boutons d'équipement sont dans leurs attributs `data-price` |

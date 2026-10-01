@@ -272,7 +272,7 @@
   // ---------- Barre mobile et année ----------
   var year = $("#year");
   if (year) year.textContent = String(new Date().getFullYear());
-  var quick = $("#quick"), hero = $(".hero"), contact = $("#contact");
+  var quick = $("#quick"), hero = $(".hero, .page-hero"), contact = $("#contact, .cta");
   if (quick && hero && "IntersectionObserver" in window) {
     var heroIn = true, contactIn = false;
     var upd = function () { quick.classList.toggle("show", !heroIn && !contactIn); };
