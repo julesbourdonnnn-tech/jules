@@ -9,7 +9,7 @@ Ne pas ressembler à un site « généré » : pas de cartes arrondies, d'ombres
 - **Une grille de 12 colonnes et des filets** : chaque section commence par un trait fin, son numéro et son nom dans la marge, son titre à droite.
 - **Deux polices qui se répondent** : Schibsted Grotesk, une linéale de presse, pour les titres ; Newsreader, une serif de lecture, pour les textes.
 - **Encre, pierre et une seule couleur**, le vermillon : le soleil du dessin, les numéros de section, les heures.
-- **Un dessin à l'encre fait pour le lieu** : les façades des quais des Chartrons, le tram, la Garonne et, au loin, le pont Chaban-Delmas.
+- **Un dessin à l'encre fait pour le lieu** : les façades des quais des Chartrons, la Garonne et, au loin, le pont Chaban-Delmas. Quand on arrive sur le dessin, le tram entre doucement en station (immobile si le visiteur a demandé moins d'animations).
 - **Le concret plutôt que les slogans** : les plans des salles, le détail coté d'une place (« un mètre de table par personne »), le déroulé d'une journée, les prix alignés comme sur une carte.
 
 ## Ce que contient la page
@@ -17,7 +17,7 @@ Ne pas ressembler à un site « généré » : pas de cartes arrondies, d'ombres
 | Section | Contenu |
 |---|---|
 | Accueil | « Quatre salles pour former à Bordeaux. », adresse, tram, date d'ouverture, le dessin des quais |
-| 01 Les salles | Les deux formats (12 et 25 places) en très grands chiffres, leurs plans, puis la fiche technique et le détail coté d'une place |
+| 01 Les salles | Les deux formats (12 et 25 places) en très grands chiffres et leurs plans. On choisit l'équipement (sans ordinateur, 6, 12 ou 25 ordinateurs) : les ordinateurs apparaissent sur le plan et le prix se met à jour. Puis la fiche technique et le détail coté d'une place |
 | 02 Une journée ici | La frise de la journée (8 h – 18 h). Un repère indique l'heure qu'il est à Bordeaux, en semaine |
 | 03 Tarifs | La carte des prix, avec la demi-journée et la formule déjeuner |
 | 04 Centre d'examen | TOEFL, TOEIC, GMAT et certifications Pearson VUE, avec les liens d'inscription officiels |
@@ -57,5 +57,5 @@ python3 -m http.server 8000
 | Textes, questions, coordonnées | `index.html` |
 | Tarifs | section « Tarifs » de `index.html`, les « À partir de » des deux salles, les `Offer` des données structurées, et `js/main.js` (constantes `ROOMS` et `LUNCH`) |
 | Couleurs, polices, grille | variables en haut de `css/style.css` |
-| Dessin des quais | `assets/quais-gravure.svg` |
-| Plans des salles | dessins SVG directement dans `index.html` |
+| Dessin des quais | intégré dans `index.html` (copie dans `assets/quais-gravure.svg`) |
+| Plans des salles | dessins SVG directement dans `index.html` ; les prix des boutons d'équipement sont dans leurs attributs `data-price` |

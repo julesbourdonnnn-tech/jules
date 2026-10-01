@@ -68,6 +68,35 @@
     text.hidden = false;
   })();
 
+  // ---------- Les salles : équipement et ordinateurs sur le plan ----------
+  $$(".room-config").forEach(function (group) {
+    var plan = document.getElementById(group.getAttribute("data-plan"));
+    var room = group.closest(".room");
+    var out = $(".price-out", room), what = $(".price-what", room), fig = $(".room-plan", room);
+    if (plan) $$(".p-pc", plan).forEach(function (pc, i) { pc.style.transitionDelay = (i * 22) + "ms"; });
+    $$("button", group).forEach(function (b) {
+      b.addEventListener("click", function () {
+        var pcs = parseInt(b.getAttribute("data-pcs"), 10);
+        $$("button", group).forEach(function (x) { x.setAttribute("aria-pressed", String(x === b)); });
+        if (plan) plan.setAttribute("data-pcs", String(pcs));
+        if (fig) fig.classList.toggle("has-pcs", pcs > 0);
+        if (out) out.textContent = eur(parseInt(b.getAttribute("data-price"), 10));
+        if (what) what.textContent = pcs ? ", avec " + pcs + " ordinateurs" : ", sans ordinateur";
+      });
+    });
+  });
+
+  // ---------- Le tram entre dans le dessin des quais ----------
+  var pano = $(".panorama");
+  if (pano) {
+    if ("IntersectionObserver" in window) {
+      var tramIo = new IntersectionObserver(function (en) {
+        if (en[en.length - 1].isIntersecting) { pano.classList.add("go"); tramIo.disconnect(); }
+      }, { threshold: 0.6 });
+      tramIo.observe(pano);
+    } else pano.classList.add("go");
+  }
+
   // ---------- Formulaire « lettre » ----------
   var form = $("#quote");
   if (form) {
@@ -139,6 +168,9 @@
     f.salle.addEventListener("change", function () { fillPc(); fitAll(); render(); });
     [f.pc, f.duree, f.dej].forEach(function (s) { s.addEventListener("change", function () { fit(s); render(); }); });
     f.nb.addEventListener("input", render);
+    // La zone de texte s'agrandit avec le message (lignes de la lettre comprises)
+    var grow = function () { f.msg.style.height = "auto"; f.msg.style.height = Math.max(f.msg.scrollHeight, f.msg.clientHeight) + "px"; };
+    f.msg.addEventListener("input", grow);
     [f.nom, f.email].forEach(function (el) { el.addEventListener("input", function () { el.removeAttribute("aria-invalid"); errorBox.hidden = true; }); });
 
     var dateFr = function (v) {
