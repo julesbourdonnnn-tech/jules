@@ -1,5 +1,4 @@
-"""Sonde temporaire : retrouve comment la page Airbnb obtient le prix d'un séjour.
-Enregistre dans data/airbnb/sonde/ le contexte des requêtes trouvées dans les scripts."""
+"""Sonde temporaire (2) : interroge la requête de prix d'Airbnb."""
 import json, os, re, sys, base64, urllib.parse, urllib.request
 sys.path.insert(0, os.path.dirname(__file__))
 from airbnb import get, HEADERS, API_KEY, ROOT, LISTINGS
@@ -7,34 +6,50 @@ from airbnb import get, HEADERS, API_KEY, ROOT, LISTINGS
 OUT = os.path.join(ROOT, "data", "airbnb", "sonde")
 os.makedirs(OUT, exist_ok=True)
 log = []
-page = get(f"https://www.airbnb.fr/rooms/{LISTINGS['bordeaux']}?check_in=2027-03-12&check_out=2027-03-14&adults=2")
-open(f"{OUT}/page.html", "w").write(page)
-scripts = list(dict.fromkeys(re.findall(r'(https://a0\.muscache\.com/[^"\'\s]+?\.js)', page)))
-log.append(f"{len(scripts)} scripts dans la page")
-names = ["StaysPdpSections", "stayCheckout", "StaysPdpBookIt", "BookItQuery", "PdpPlatformRoute", "priceDetails", "StayCheckout"]
-ctx = {}
-seen = set()
-queue = scripts[:]
-while queue and len(seen) < 500:
-    u = queue.pop(0)
-    if u in seen: continue
-    seen.add(u)
-    try: js = get(u, tries=1)
-    except Exception: continue
-    for n in names:
-        for m in re.finditer(n, js):
-            ctx.setdefault(n, [])
-            if len(ctx[n]) < 6:
-                ctx[n].append({"url": u, "ctx": js[max(0, m.start() - 300): m.end() + 300]})
-    for rel in re.findall(r'["\'(]((?:https://a0\.muscache\.com/)?(?:airbnb/static/)?packages/web/[\w./\-]+?\.js)', js):
-        full = rel if rel.startswith("http") else "https://a0.muscache.com/airbnb/static/" + rel.split("airbnb/static/")[-1]
-        if full not in seen: queue.append(full)
-log.append(f"{len(seen)} scripts parcourus ; trouvés : " + ", ".join(f"{k}×{len(v)}" for k, v in ctx.items()))
-json.dump(ctx, open(f"{OUT}/contexte.json", "w"), ensure_ascii=False, indent=1)
-# Toutes les opérations GraphQL repérées dans la page elle-même
-ops = sorted(set(re.findall(r'"operationName"\s*:\s*"(\w+)"', page)) | set(re.findall(r'api/v3/(\w+)/', page)))
-log.append("opérations dans la page : " + ", ".join(ops))
-hashes = re.findall(r'(\w+)[^a-zA-Z0-9]{1,40}([0-9a-f]{64})', page)
-log.append("hash dans la page : " + json.dumps(hashes[:20]))
+route = "https://a0.muscache.com/airbnb/static/packages/web/fr/frontend/gp-stays-pdp-route/routes/PdpPlatformRoute.2be632ebc1.js"
+page = get(f"https://www.airbnb.fr/rooms/{LISTINGS['bordeaux']}")
+cands = [u for u in re.findall(r'(https://a0\.muscache\.com/[^"\'\s]+?PdpPlatformRoute[^"\'\s]*?\.js)', page)]
+if cands: route = cands[0]
+js = get(route)
+open(f"{OUT}/route.js", "w").write(js)
+ops = dict(re.findall(r"name:'(\w+)',type:'query',operationId:'([0-9a-f]{64})'", js))
+log.append(f"opérations : {sorted(ops)}")
+# Contexte d'utilisation de la requête de prix (variables)
+for m in re.finditer(r"StaysPdpBookItQuery|BookItQuery", js):
+    pass
+idx = [m.start() for m in re.finditer(r"pdpSectionsRequest", js)][:6]
+for i in idx: log.append("CTX: " + js[max(0, i - 250): i + 400].replace("\n", " "))
+
+def call(op, variables):
+    h = ops[op]
+    q = urllib.parse.urlencode({"operationName": op, "locale": "fr", "currency": "EUR",
+        "variables": json.dumps(variables, separators=(",", ":")),
+        "extensions": json.dumps({"persistedQuery": {"version": 1, "sha256Hash": h}}, separators=(",", ":"))})
+    req = urllib.request.Request(f"https://www.airbnb.fr/api/v3/{op}/{h}?{q}", headers={**HEADERS, "Accept": "application/json", "X-Airbnb-API-Key": API_KEY, "Referer": "https://www.airbnb.fr/", "X-Airbnb-GraphQL-Platform": "web", "X-Airbnb-GraphQL-Platform-Client": "minimalist-niobe"})
+    try:
+        with urllib.request.urlopen(req, timeout=40) as r: return json.loads(r.read().decode())
+    except urllib.error.HTTPError as e: return {"http": e.code, "body": e.read().decode()[:500]}
+
+lid = LISTINGS["bordeaux"]
+gid = base64.b64encode(f"StayListing:{lid}".encode()).decode()
+dgid = base64.b64encode(f"DemandStayListing:{lid}".encode()).decode()
+req = {"adults": "2", "categoryTag": None, "causeId": None, "children": None, "disasterId": None, "discountedGuestFeeVersion": None,
+       "displayExtensions": None, "federatedSearchId": None, "forceBoostPriorityMessageType": None, "infants": None, "interactionType": None,
+       "layouts": ["SIDEBAR", "SINGLE_COLUMN"], "pets": 0, "pdpTypeOverride": None, "photoId": None, "preview": False,
+       "previousStateCheckIn": None, "previousStateCheckOut": None, "priceDropSource": None, "privateBooking": False, "promotionUuid": None,
+       "relaxedAmenityIds": None, "searchId": None, "selectedCancellationPolicyId": None, "selectedRatePlanId": None, "splitStays": None,
+       "staysBookingMigrationEnabled": False, "translateUgc": None, "useNewSectionWrapperApi": False,
+       "sectionIds": None, "checkIn": "2027-03-12", "checkOut": "2027-03-14", "p3ImpressionId": "p3_1_x"}
+tries = []
+for op in ("StaysPdpBookItQuery", "StaysPdpSections"):
+    if op not in ops: continue
+    for name, v in (("A", {"id": gid, "pdpSectionsRequest": req}), ("B", {"id": dgid, "pdpSectionsRequest": req}),
+                    ("C", {"id": gid, "demandStayListingId": dgid, "pdpSectionsRequest": req, "includeGpReviewsFragment": False, "includePdpMigrationReviewsFragment": False, "includePdpMigrationHighlightsFragment": False}),
+                    ("D", {"id": dgid, "pdpSectionsRequest": dict(req, sectionIds=["BOOK_IT_SIDEBAR"])})):
+        d = call(op, v)
+        txt = json.dumps(d, ensure_ascii=False)
+        prices = re.findall(r'"(?:price|qualifier|discountedPrice|originalPrice|accessibilityLabel)"\s*:\s*"([^"]*€[^"]*)"', txt)[:10]
+        log.append(f"{op} {name}: erreurs={json.dumps(d.get('errors') if isinstance(d, dict) else None, ensure_ascii=False)[:300]} http={d.get('http') if isinstance(d, dict) else ''} prix={prices}")
+        if prices: json.dump(d, open(f"{OUT}/prix-{op}-{name}.json", "w"), ensure_ascii=False)
 open(f"{OUT}/log.txt", "w").write("\n".join(log))
 print("\n".join(log))
