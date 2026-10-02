@@ -121,20 +121,22 @@
               <option value="bordeaux">Bordeaux · la Maison de Pierre</option>
             </select>
           </div>
-          <div class="search__field">
-            <label for="s-in">Arrivée</label>
-            <input id="s-in" type="date" required>
+          <div class="search__field search__field--btn">
+            <span class="search__lbl" id="l-in">Arrivée</span>
+            <button type="button" class="search__val" id="s-in" data-dp="in" aria-labelledby="l-in s-in" aria-haspopup="dialog" aria-expanded="false" aria-controls="dp">Ajouter une date</button>
           </div>
-          <div class="search__field">
-            <label for="s-out">Départ</label>
-            <input id="s-out" type="date" required>
+          <div class="search__field search__field--btn">
+            <span class="search__lbl" id="l-out">Départ</span>
+            <button type="button" class="search__val" id="s-out" data-dp="out" aria-labelledby="l-out s-out" aria-haspopup="dialog" aria-expanded="false" aria-controls="dp">Ajouter une date</button>
           </div>
-          <div class="search__field search__field--small">
-            <label for="s-guests">Voyageurs</label>
-            <select id="s-guests"></select>
+          <div class="search__field search__field--btn search__field--small">
+            <span class="search__lbl" id="l-guests">Voyageurs</span>
+            <button type="button" class="search__val" id="s-guests" aria-labelledby="l-guests s-guests" aria-haspopup="dialog" aria-expanded="false" aria-controls="gp">2 voyageurs</button>
           </div>
           <button class="btn btn--accent search__go" type="submit">Voir les disponibilités</button>
         </form>
+        <div class="dp" id="dp" role="dialog" aria-label="Choisir vos dates" hidden></div>
+        <div class="gp" id="gp" role="dialog" aria-label="Nombre de voyageurs" hidden></div>
         <div class="search__results" id="search-results" aria-live="polite"></div>
       </div>
     </section>
