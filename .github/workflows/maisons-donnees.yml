@@ -1,0 +1,61 @@
+# Données du site Sable & Pierre, mises à jour automatiquement :
+#  - disponibilités réelles des deux maisons (calendrier Airbnb), toutes les 4 heures ;
+#  - climat mois par mois (relevés Open-Meteo), quand le fichier n'existe pas encore
+#    ou à la demande (Actions → « Maisons — données » → Run workflow → climat = oui).
+# Chaque changement est enregistré dans le dépôt, puis le site est republié.
+name: Maisons — données
+
+on:
+  schedule:
+    - cron: "17 */4 * * *"
+  push:
+    paths:
+      - "maisons/scripts/disponibilites.py"
+      - "maisons/scripts/climat.py"
+      - ".github/workflows/maisons-donnees.yml"
+  workflow_dispatch:
+    inputs:
+      climat:
+        description: "Recalculer aussi le climat (oui / non)"
+        required: false
+        default: "non"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: maisons-donnees-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  donnees:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pillow
+      - name: Disponibilités Airbnb
+        working-directory: maisons
+        run: python scripts/disponibilites.py
+      - name: Climat (si besoin)
+        working-directory: maisons
+        if: always()
+        run: |
+          if [ ! -f js/climat.js ] || [ "${{ github.event.inputs.climat }}" = "oui" ] || git diff --name-only HEAD~1 HEAD 2>/dev/null | grep -q "scripts/climat.py"; then
+            python scripts/climat.py
+          else
+            echo "Climat déjà calculé."
+          fi
+      - name: Enregistrer
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A -- maisons/js/disponibilites.js maisons/js/climat.js maisons/data/climat.json 2>/dev/null || true
+          if git diff --cached --quiet; then echo "Rien de nouveau"; exit 0; fi
+          git commit -m "Maisons : disponibilités et climat (mise à jour automatique)"
+          git pull --rebase origin "${GITHUB_REF_NAME}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
