@@ -1,0 +1,6 @@
+lacanau page 2027-06-12: 3 sections, 0 prix trouvés : []
+lacanau page 2026-11-14: 3 sections, 0 prix trouvés : []
+lacanau calendrier: 365 jours, exemple [{"__typename": "MerlinCalendarDay", "calendarDate": "2026-10-01", "available": false, "maxNights": 17, "minNights": 3, "availableForCheckin": false, "availableForCheckout": false, "bookable": null, "price": {"__typename": "MerlinCalendarDayPrice", "localPriceFormatted": null}}, {"__typename": "MerlinCalendarDay", "calendarDate": "2026-10-02", "available": false, "maxNights": 17, "minNights": 3, "
+bordeaux page 2027-06-12: 3 sections, 0 prix trouvés : []
+bordeaux page 2026-11-14: 3 sections, 0 prix trouvés : []
+bordeaux calendrier: 365 jours, exemple [{"__typename": "MerlinCalendarDay", "calendarDate": "2026-10-01", "available": false, "maxNights": 12, "minNights": 2, "availableForCheckin": false, "availableForCheckout": false, "bookable": null, "price": {"__typename": "MerlinCalendarDayPrice", "localPriceFormatted": null}}, {"__typename": "MerlinCalendarDay", "calendarDate": "2026-10-02", "available": false, "maxNights": 12, "minNights": 2, "

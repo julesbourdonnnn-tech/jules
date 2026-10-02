@@ -1,0 +1,408 @@
+{
+ "sections": [
+  {
+   "__typename": "SectionContainer",
+   "id": "U2VjdGlvbkNvbnRhaW5lcjo1ODgyNTE1MzUyNTc4MjA4ODgy",
+   "sectionComponentType": "BOOK_IT_SIDEBAR",
+   "sectionContentStatus": "NOT_COMPLETE",
+   "sectionId": "BOOK_IT_SIDEBAR",
+   "errors": null,
+   "sectionDependencies": [
+    "BOOKING"
+   ],
+   "enableDependencies": null,
+   "disableDependencies": null,
+   "loggingData": {
+    "__typename": "LoggingEventData",
+    "loggingId": "pdp_platform.book_it_sidebar",
+    "experiments": [],
+    "eventData": null,
+    "eventDataSchemaName": null,
+    "section": null,
+    "component": null
+   },
+   "e2eLoggingSession": null,
+   "mutationMetadata": null,
+   "pluginPointId": "BOOK_IT_SIDEBAR",
+   "section": {
+    "__typename": "BookItSection",
+    "subpageIdToOpen": null,
+    "showPriceBreakdown": true,
+    "cancellationPolicyLoggingEventData": {
+     "__typename": "LoggingEventData",
+     "loggingId": "pdp.bookItSidebar.cancellationPolicyInput",
+     "experiments": null,
+     "eventData": null,
+     "eventDataSchemaName": null,
+     "section": null,
+     "component": null
+    },
+    "calendarTitle": "Sélectionnez les dates",
+    "calendarSubtitle": "Ajoutez vos dates de voyage pour connaître le prix exact",
+    "descriptionItems": null,
+    "discountCopy": null,
+    "maxGuestCapacity": 8,
+    "maxPlusValue": 16,
+    "tripDetailsLoggingEventData": {
+     "__typename": "CalendarLoggingEventData",
+     "clearDatesButton": {
+      "__typename": "BasicListItem",
+      "title": "Effacer les dates",
+      "loggingEventData": {
+       "__typename": "LoggingEventData",
+       "loggingId": "pdp.bookItSidebar.clearDates",
+       "experiments": null,
+       "eventData": null,
+       "eventDataSchemaName": null,
+       "section": "bookItSidebar",
+       "component": "clearDates"
+      }
+     },
+     "saveDatesButton": {
+      "__typename": "BasicListItem",
+      "title": "Fermer",
+      "loggingEventData": {
+       "__typename": "LoggingEventData",
+       "loggingId": "pdp.bookItSidebar.saveDates",
+       "experiments": null,
+       "eventData": null,
+       "eventDataSchemaName": null,
+       "section": "bookItSidebar",
+       "component": "saveDates"
+      }
+     },
+     "datesInputLoggingEventData": null,
+     "selectDateLoggingEventData": {
+      "__typename": "LoggingEventData",
+      "loggingId": "pdp.bookItSidebar.selectDate",
+      "experiments": null,
+      "eventData": null,
+      "eventDataSchemaName": null,
+      "section": "bookItSidebar",
+      "component": "selectDate"
+     },
+     "previousMonthLoggingEventData": {
+      "__typename": "LoggingEventData",
+      "loggingId": "pdp.bookItSidebar.monthsNavPrevious",
+      "experiments": null,
+      "eventData": null,
+      "eventDataSchemaName": null,
+      "section": "bookItSidebar",
+      "component": "monthsNavPrevious"
+     },
+     "nextMonthLoggingEventData": {
+      "__typename": "LoggingEventData",
+      "loggingId": "pdp.bookItSidebar.monthsNavNext",
+      "experiments": null,
+      "eventData": null,
+      "eventDataSchemaName": null,
+      "section": "bookItSidebar",
+      "component": "monthsNavNext"
+     },
+     "checkInDateInputLoggingEventData": {
+      "__typename": "LoggingEventData",
+      "loggingId": "pdp.bookItSidebar.checkInInput",
+      "experiments": null,
+      "eventData": null,
+      "eventDataSchemaName": null,
+      "section": "bookItSidebar",
+      "component": "checkInInput"
+     },
+     "checkOutDateInputLoggingEventData": {
+      "__typename": "LoggingEventData",
+      "loggingId": "pdp.bookItSidebar.checkOutInput",
+      "experiments": null,
+      "eventData": null,
+      "eventDataSchemaName": null,
+      "section": "bookItSidebar",
+      "component": "checkOutInput"
+     },
+     "guestInputLoggingEventData": {
+      "__typename": "LoggingEventData",
+      "loggingId": "pdp.bookItSidebar.guestInput",
+      "experiments": null,
+      "eventData": null,
+      "eventDataSchemaName": null,
+      "section": "bookItSidebar",
+      "component": "guestInput"
+     },
+     "cancellationPolicyLoggingEventData": null,
+     "changeDatesButtonLoggingEventData": {
+      "__typename": "LoggingEventData",
+      "loggingId": "pdp.bookItSidebar.changeDatesButton",
+      "experiments": null,
+      "eventData": null,
+      "eventDataSchemaName": null,
+      "section": "bookItSidebar",
+      "component": "changeDatesButton"
+     },
+     "selectCheckOutOnlyDateLoggingEventData": {
+      "__typename": "LoggingEventData",
+      "loggingId": "pdp.bookItSidebar.selectCheckOutOnlyDate",
+      "experiments": null,
+      "eventData": null,
+      "eventDataSchemaName": null,
+      "section": "bookItSidebar",
+      "component": "selectCheckOutOnlyDate"
+     },
+     "selectMaxNightsViolationDateLoggingEventData": {
+      "__typename": "LoggingEventData",
+      "loggingId": "pdp.bookItSidebar.selectMaxNightsViolationDate",
+      "experiments": null,
+      "eventData": null,
+      "eventDataSchemaName": null,
+      "section": "bookItSidebar",
+      "component": "selectMaxNightsViolationDate"
+     },
+     "selectMinNightsViolationDateLoggingEventData": {
+      "__typename": "LoggingEventData",
+      "loggingId": "pdp.bookItSidebar.selectMinNightsViolationDate",
+      "experiments": null,
+      "eventData": null,
+      "eventDataSchemaName": null,
+      "section": "bookItSidebar",
+      "component": "selectMinNightsViolationDate"
+     },
+     "selectUnavailableForCheckInDateLoggingEventData": {
+      "__typename": "LoggingEventData",
+      "loggingId": "pdp.bookItSidebar.selectUnavailableForCheckInDate",
+      "experiments": null,
+      "eventData": null,
+      "eventDataSchemaName": null,
+      "section": "bookItSidebar",
+      "component": "selectUnavailableForCheckInDate"
+     },
+     "selectUnavailableForCheckoutDateLoggingEventData": {
+      "__typename": "LoggingEventData",
+      "loggingId": "pdp.bookItSidebar.selectUnavailableForCheckoutDate",
+      "experiments": null,
+      "eventData": null,
+      "eventDataSchemaName": null,
+      "section": "bookItSidebar",
+      "component": "selectUnavailableForCheckoutDate"
+     }
+    },
+    "reviewItem": null,
+    "available": null,
+    "structuredDisplayPrice": null,
+    "discountData": null,
+    "bookItButtonByPlacement": null,
+    "cancellationPolicies": null,
+    "cancellationPolicyForDisplay": null,
+    "localizedUnavailabilityMessage": null,
+    "localizedUnavailabilityMessagePositionString": null,
+    "selectedDatesLink": null,
+    "selectedNights": null,
+    "bookItButtonLayout": null,
+    "productItemDetail": null,
+    "ratePlanLoggingEventData": {
+     "__typename": "LoggingEventData",
+     "loggingId": "pdp.bookItSidebar.ratePlanInput",
+     "experiments": null,
+     "eventData": null,
+     "eventDataSchemaName": null,
+     "section": null,
+     "component": null
+    },
+    "ratePlanTitle": null,
+    "promotionBanner": null,
+    "guestDisclaimer": null,
+    "petsAllowed": null,
+    "petDetails": null,
+    "adultsPicker": {
+     "__typename": "GuestPickerSection",
+     "title": "Adultes",
+     "subtitle": "18 ans et plus"
+    },
+    "childrenPicker": {
+     "__typename": "GuestPickerSection",
+     "title": "Enfants",
+     "subtitle": "De 2 à 17 ans"
+    },
+    "infantsPicker": {
+     "__typename": "GuestPickerSection",
+     "title": "Bébés",
+     "subtitle": "- de 2 ans"
+    },
+    "canInstantBook": null,
+    "highlightBanner": null,
+    "integratedPillMessageType": null,
+    "integratedPill": null,
+    "initialPillMessageType": null,
+    "initialPill": null,
+    "priceDetailPills": [],
+    "availabilityPriceDetailEntry": null,
+    "priceDetailLoggingEventData": null,
+    "vPoint": null,
+    "bookItPlacement": "SIDEBAR",
+    "priceMerchandisingMessage": null
+   }
+  },
+  {
+   "__typename": "SectionContainer",
+   "id": "U2VjdGlvbkNvbnRhaW5lcjo1NzYzMTU1NTMxMjQ4NDk0ODc1",
+   "sectionComponentType": "BOOK_IT_NAV",
+   "sectionContentStatus": "NOT_COMPLETE",
+   "sectionId": "BOOK_IT_NAV",
+   "errors": null,
+   "sectionDependencies": [
+    "BOOKING"
+   ],
+   "enableDependencies": null,
+   "disableDependencies": null,
+   "loggingData": {
+    "__typename": "LoggingEventData",
+    "loggingId": "pdp_platform.book_it_nav",
+    "experiments": [],
+    "eventData": null,
+    "eventDataSchemaName": null,
+    "section": null,
+    "component": null
+   },
+   "e2eLoggingSession": null,
+   "mutationMetadata": null,
+   "pluginPointId": "BOOK_IT_NAV",
+   "section": {
+    "__typename": "BookItSection",
+    "subpageIdToOpen": null,
+    "showPriceBreakdown": false,
+    "cancellationPolicyLoggingEventData": null,
+    "calendarTitle": null,
+    "calendarSubtitle": null,
+    "descriptionItems": null,
+    "discountCopy": null,
+    "maxGuestCapacity": null,
+    "maxPlusValue": null,
+    "tripDetailsLoggingEventData": null,
+    "reviewItem": {
+     "__typename": "BasicListItem",
+     "accessibilityLabel": "Évaluation de 4,88 sur 5 sur la base de 41 commentaires.",
+     "action": null,
+     "icon": "COMPACT_STAR",
+     "subtitle": "41 commentaires",
+     "title": "4,88 ·"
+    },
+    "available": null,
+    "structuredDisplayPrice": null,
+    "discountData": null,
+    "bookItButtonByPlacement": null,
+    "cancellationPolicies": null,
+    "cancellationPolicyForDisplay": null,
+    "localizedUnavailabilityMessage": null,
+    "localizedUnavailabilityMessagePositionString": null,
+    "selectedDatesLink": null,
+    "selectedNights": null,
+    "bookItButtonLayout": null,
+    "productItemDetail": null,
+    "ratePlanLoggingEventData": null,
+    "ratePlanTitle": null,
+    "promotionBanner": null,
+    "guestDisclaimer": null,
+    "petsAllowed": null,
+    "petDetails": null,
+    "adultsPicker": null,
+    "childrenPicker": null,
+    "infantsPicker": null,
+    "canInstantBook": null,
+    "highlightBanner": null,
+    "integratedPillMessageType": null,
+    "integratedPill": null,
+    "initialPillMessageType": null,
+    "initialPill": null,
+    "priceDetailPills": null,
+    "availabilityPriceDetailEntry": null,
+    "priceDetailLoggingEventData": null,
+    "vPoint": null,
+    "bookItPlacement": "NAV",
+    "priceMerchandisingMessage": null
+   }
+  },
+  {
+   "__typename": "SectionContainer",
+   "id": "U2VjdGlvbkNvbnRhaW5lcjotMjc0MjUyOTk5NzkxNDkzNjMwNw==",
+   "sectionComponentType": "BOOK_IT_FLOATING_FOOTER",
+   "sectionContentStatus": "NOT_COMPLETE",
+   "sectionId": "BOOK_IT_FLOATING_FOOTER",
+   "errors": null,
+   "sectionDependencies": [
+    "BOOKING"
+   ],
+   "enableDependencies": null,
+   "disableDependencies": null,
+   "loggingData": {
+    "__typename": "LoggingEventData",
+    "loggingId": "pdp_platform.book_it_floating_footer",
+    "experiments": [],
+    "eventData": null,
+    "eventDataSchemaName": null,
+    "section": null,
+    "component": null
+   },
+   "e2eLoggingSession": null,
+   "mutationMetadata": null,
+   "pluginPointId": "BOOK_IT_FLOATING_FOOTER",
+   "section": {
+    "__typename": "BookItSection",
+    "subpageIdToOpen": null,
+    "showPriceBreakdown": false,
+    "cancellationPolicyLoggingEventData": null,
+    "calendarTitle": null,
+    "calendarSubtitle": null,
+    "descriptionItems": null,
+    "discountCopy": null,
+    "maxGuestCapacity": null,
+    "maxPlusValue": null,
+    "tripDetailsLoggingEventData": null,
+    "reviewItem": null,
+    "available": null,
+    "structuredDisplayPrice": null,
+    "discountData": null,
+    "bookItButtonByPlacement": null,
+    "cancellationPolicies": null,
+    "cancellationPolicyForDisplay": null,
+    "localizedUnavailabilityMessage": null,
+    "localizedUnavailabilityMessagePositionString": null,
+    "selectedDatesLink": {
+     "__typename": "BasicListItem",
+     "title": "14–16 nov.",
+     "action": {
+      "__typename": "OpenAvailabilityCalendarAction",
+      "loggingData": {
+       "__typename": "LoggingEventData",
+       "loggingId": "pdp.bookItFooter.selectedDatesLink",
+       "eventData": null,
+       "eventDataSchemaName": null,
+       "section": null,
+       "component": null
+      }
+     }
+    },
+    "selectedNights": null,
+    "bookItButtonLayout": "RIGHT_ALIGNED",
+    "productItemDetail": null,
+    "ratePlanLoggingEventData": null,
+    "ratePlanTitle": null,
+    "promotionBanner": null,
+    "guestDisclaimer": null,
+    "petsAllowed": null,
+    "petDetails": null,
+    "adultsPicker": null,
+    "childrenPicker": null,
+    "infantsPicker": null,
+    "canInstantBook": null,
+    "highlightBanner": null,
+    "integratedPillMessageType": null,
+    "integratedPill": null,
+    "initialPillMessageType": null,
+    "initialPill": null,
+    "priceDetailPills": [],
+    "availabilityPriceDetailEntry": null,
+    "priceDetailLoggingEventData": null,
+    "vPoint": null,
+    "bookItPlacement": "FLOATING_FOOTER",
+    "priceMerchandisingMessage": null
+   }
+  }
+ ],
+ "price_strings": []
+}
