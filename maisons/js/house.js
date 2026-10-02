@@ -768,7 +768,7 @@
     const p = priceOf();
     if (p && p.ready) {
       pr.hidden = false;
-      pr.innerHTML = `${p.lines.map((l) => `<p${l.cents < 0 ? ' class="is-off"' : ""}><span>${esc(l.label)}</span><span>${EUR(l.cents)}</span></p>`).join("")}<p class="booking__total"><span>Total en direct</span><strong>${p.remise ? `<s>${EUR(p.sansRemiseTotal)}</s> ` : ""}${EUR(p.cents)}</strong></p>${p.remise ? `<p class="booking__save">Vous économisez ${EUR(p.remise)} en réservant ici</p>` : ""}`;
+      pr.innerHTML = `${p.lines.map((l) => `<p${l.cents < 0 ? ' class="is-off"' : ""}><span>${esc(l.label)}</span><span>${EUR(l.cents)}</span></p>`).join("")}<p class="booking__total"><span>Total en direct</span><strong>${p.remise ? `<s title="Prix Airbnb">${EUR(p.sansRemiseTotal)}</s> ` : ""}${EUR(p.cents)}</strong></p>${p.remise ? `<p class="booking__save">Vous économisez ${EUR(p.sansRemiseTotal - p.cents)} ${p.source === "airbnb" ? "par rapport au prix Airbnb" : "en réservant ici"}</p>` : ""}`;
     } else if (state.in && state.out) {
       pr.hidden = false;
       pr.innerHTML = `<p class="small">Le prix de ce séjour vous est confirmé par e-mail avec votre réservation.</p>`;
