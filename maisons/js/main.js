@@ -42,6 +42,8 @@
     whatsapp: `<svg viewBox="0 0 24 24" ${P}><path d="M3.5 20.5l1.3-4.3A8.5 8.5 0 1 1 8 19.4z"/><path d="M9 8.5c0 3.5 3 6.5 6.5 6.5l1-1.6-2-1-1 .8c-1-.5-2-1.5-2.6-2.6l.8-1-1-2z"/></svg>`,
     external: `<svg viewBox="0 0 24 24" ${P}><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg>`,
     wind: `<svg viewBox="0 0 24 24" ${P}><path d="M3 8h11a3 3 0 1 0-3-3M3 12h16a3 3 0 1 1-3 3M3 16h8"/></svg>`,
+    share: `<svg viewBox="0 0 24 24" ${P}><path d="M12 15V3M7 8l5-5 5 5M5 12v8a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-8"/></svg>`,
+    search: `<svg viewBox="0 0 24 24" ${P}><circle cx="11" cy="11" r="6.5"/><path d="M16 16l5 5"/></svg>`,
   };
   const icon = (name) => ICONS[name] || ICONS.check;
 
@@ -286,6 +288,151 @@
     } catch (e) {
       box.hidden = true;
     }
+  };
+
+  /* ---------- Dates ---------- */
+  const DAY = 86400000;
+  const today0 = () => { const t = new Date(); t.setHours(0, 0, 0, 0); return t; };
+  const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const parseISO = (s) => { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d); };
+  const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
+  const nights = (a, b) => Math.round((b - a) / DAY);
+  SP.dates = { DAY, today0, iso, parseISO, addDays, nights };
+
+  /* ---------- Disponibilités ----------
+     Sources : js/disponibilites.js (calendrier Airbnb, mis à jour toutes les
+     4 heures par GitHub) et, si elle est réglée, la synchronisation iCal du
+     serveur (/api/calendrier). Une date hors de la période connue est considérée
+     comme libre : Airbnb confirme de toute façon à l'étape suivante. */
+  SP.availability = (key) => {
+    const A = (window.AVAILABILITY || {})[key];
+    const from = A ? parseISO(A.from) : null;
+    const extra = new Set(); // nuits prises selon la synchronisation iCal
+    const info = (d) => {
+      if (!A) return null;
+      const i = Math.round((d - from) / DAY);
+      if (i < 0 || i >= A.flags.length) return null;
+      const f = Number(A.flags[i]);
+      return { night: !!(f & 1), in: !!(f & 2), out: !!(f & 4), min: A.min[i] || 1, max: A.max[i] || 0 };
+    };
+    const api = {
+      known: !!A,
+      updated: window.AVAILABILITY && window.AVAILABILITY.updated,
+      addBooked(list) { list.forEach((d) => extra.add(d)); },
+      info,
+      nightFree(d) { if (extra.has(iso(d))) return false; const x = info(d); return x ? x.night : true; },
+      canIn(d) { if (d < today0() || !api.nightFree(d)) return false; const x = info(d); return x ? x.in : true; },
+      minNights(ci) { const x = info(ci); return x ? Math.max(1, x.min) : 1; },
+      maxNights(ci) { const x = info(ci); return x ? x.max : 0; },
+      // Raison pour laquelle on ne peut pas partir ce jour-là (null = possible)
+      outProblem(ci, d) {
+        if (d <= ci) return "before";
+        for (let x = new Date(ci); x < d; x = addDays(x, 1)) if (!api.nightFree(x)) return "taken";
+        const n = nights(ci, d);
+        if (n < api.minNights(ci)) return "short";
+        const mx = api.maxNights(ci);
+        if (mx && n > mx) return "long";
+        const x = info(d);
+        if (x && !x.out) return "noout";
+        return null;
+      },
+      canStay(ci, co) { return api.canIn(ci) && !api.outProblem(ci, co); },
+      // Prochains séjours possibles commençant un vendredi (week-ends libres)
+      nextWeekends(count = 3) {
+        const res = [];
+        let d = today0();
+        d = addDays(d, (5 - d.getDay() + 7) % 7 || 7);
+        for (let i = 0; i < 60 && res.length < count; i++, d = addDays(d, 7)) {
+          if (!api.canIn(d)) continue;
+          const n = Math.max(2, api.minNights(d));
+          const co = addDays(d, n);
+          if (!api.outProblem(d, co)) res.push([d, co]);
+        }
+        return res;
+      },
+    };
+    return api;
+  };
+
+  /* ---------- Climat mois par mois (graphique) ---------- */
+  const MONTHS = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."];
+  const MONTHS_LONG = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
+  SP.MONTHS_LONG = MONTHS_LONG;
+  const deg = (v) => `${Math.round(v)}°`;
+  SP.climate = (box, key, startMonth) => {
+    const C = window.CLIMATE && window.CLIMATE[key];
+    if (!box || !C) { const sec = box && box.closest("[data-climate-section]"); if (sec) sec.hidden = true; return; }
+    const hasSea = Array.isArray(C.sea);
+    let m = typeof startMonth === "number" ? startMonth : new Date().getMonth();
+    const W = 720, H = 220, padL = 34, padB = 28, padT = 16;
+    const all = C.tmax.concat(hasSea ? C.sea : []);
+    const top = Math.ceil(Math.max(...all) / 5) * 5 + 5;
+    const y = (v) => padT + (H - padT - padB) * (1 - v / top);
+    const bw = (W - padL - 8) / 12;
+    const ticks = [];
+    for (let t = 0; t <= top; t += 10) ticks.push(t);
+    box.innerHTML = `
+      <div class="clim__months" role="tablist" aria-label="Choisir un mois">${MONTHS.map((n, i) => `<button type="button" role="tab" data-m="${i}" aria-selected="${i === m}">${n}</button>`).join("")}</div>
+      <div class="clim__grid">
+        <div class="clim__stats" aria-live="polite"></div>
+        <figure class="clim__chart">
+          <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Températures moyennes mois par mois">
+            ${ticks.map((t) => `<line class="clim__tick" x1="${padL}" x2="${W}" y1="${y(t)}" y2="${y(t)}"/><text class="clim__lbl" x="${padL - 8}" y="${y(t) + 4}" text-anchor="end">${t}°</text>`).join("")}
+            ${C.tmax.map((v, i) => `<rect class="clim__bar" data-m="${i}" x="${padL + i * bw + bw * 0.22}" y="${y(v)}" width="${bw * 0.56}" height="${y(0) - y(v)}" rx="3"/>`).join("")}
+            ${hasSea ? `<polyline class="clim__sea" points="${C.sea.map((v, i) => `${padL + i * bw + bw / 2},${y(v)}`).join(" ")}"/>${C.sea.map((v, i) => `<circle class="clim__dot" data-m="${i}" cx="${padL + i * bw + bw / 2}" cy="${y(v)}" r="4.5"/>`).join("")}` : ""}
+            ${MONTHS.map((n, i) => `<text class="clim__lbl" x="${padL + i * bw + bw / 2}" y="${H - 8}" text-anchor="middle">${n.slice(0, 1).toUpperCase()}</text>`).join("")}
+            ${MONTHS.map((n, i) => `<rect class="clim__hit" data-m="${i}" x="${padL + i * bw}" y="0" width="${bw}" height="${H}"><title>${MONTHS_LONG[i]} : ${deg(C.tmax[i])} l'après-midi${hasSea ? `, océan ${deg(C.sea[i])}` : ""}</title></rect>`).join("")}
+          </svg>
+          <figcaption class="clim__legend"><span><i class="clim__key clim__key--bar"></i>Température maximale moyenne</span>${hasSea ? `<span><i class="clim__key clim__key--sea"></i>Température de l'océan</span>` : ""}</figcaption>
+        </figure>
+      </div>
+      <p class="clim__src">Moyennes ${esc(window.CLIMATE.period)}, relevés ${esc(window.CLIMATE.source)}.</p>`;
+    const stats = box.querySelector(".clim__stats");
+    const show = (i) => {
+      m = i;
+      box.querySelectorAll("[data-m]").forEach((el) => {
+        const on = Number(el.dataset.m) === i;
+        if (el.getAttribute("role") === "tab") el.setAttribute("aria-selected", String(on));
+        else el.classList.toggle("is-on", on);
+      });
+      stats.innerHTML = `
+        <p class="clim__month">${MONTHS_LONG[i]}</p>
+        <div class="clim__big"><b class="num">${deg(C.tmax[i])}</b><span>l'après-midi</span></div>
+        <dl>
+          <div><dt>Le matin</dt><dd>${deg(C.tmin[i])}</dd></div>
+          ${hasSea ? `<div><dt>L'océan</dt><dd>${deg(C.sea[i])}</dd></div>` : ""}
+          <div><dt>Jours de pluie</dt><dd>${Math.round(C.rainDays[i])} sur ${new Date(2025, i + 1, 0).getDate()}</dd></div>
+        </dl>`;
+    };
+    box.addEventListener("click", (e) => { const t = e.target.closest("[data-m]"); if (t) show(Number(t.dataset.m)); });
+    box.addEventListener("mouseover", (e) => { const t = e.target.closest(".clim__hit"); if (t) show(Number(t.dataset.m)); });
+    box.querySelector(".clim__months").addEventListener("keydown", (e) => {
+      if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+      e.preventDefault();
+      const n = (m + (e.key === "ArrowRight" ? 1 : -1) + 12) % 12;
+      show(n);
+      box.querySelector(`.clim__months [data-m="${n}"]`).focus();
+    });
+    show(m);
+    return { show };
+  };
+
+  /* ---------- Partage ---------- */
+  SP.toast = (text) => {
+    let t = document.querySelector(".toast");
+    if (!t) { t = document.createElement("div"); t.className = "toast"; t.setAttribute("role", "status"); document.body.appendChild(t); }
+    t.textContent = text;
+    t.classList.add("is-on");
+    clearTimeout(t._h);
+    t._h = setTimeout(() => t.classList.remove("is-on"), 2600);
+  };
+  SP.share = async (title) => {
+    const url = location.href.split("#")[0];
+    if (navigator.share) {
+      try { await navigator.share({ title, url }); return; } catch (e) { if (e && e.name === "AbortError") return; }
+    }
+    try { await navigator.clipboard.writeText(url); SP.toast("Lien copié : vous pouvez le coller dans un message."); }
+    catch (e) { window.prompt("Copiez ce lien :", url); }
   };
 
   /* ---------- Coordonnées dans le pied de page ---------- */

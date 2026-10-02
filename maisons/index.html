@@ -58,7 +58,7 @@
         <a href="bordeaux.html">Bordeaux</a>
         <a href="#destinations">Les environs</a>
         <a href="#questions">Questions</a>
-        <a class="btn" href="#maisons">Réserver</a>
+        <a class="btn" href="#recherche">Réserver</a>
         <button class="burger" type="button" aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="menu"><span></span><span></span></button>
       </nav>
     </div>
@@ -103,6 +103,37 @@
       </a>
       <div class="split__center" aria-hidden="true">Deux<b>maisons</b>une heure</div>
       <a class="scroll-cue" href="#manifeste" aria-label="Faire défiler"><i></i>Défiler</a>
+    </section>
+
+    <!-- Recherche de dates -->
+    <section class="search" id="recherche" aria-labelledby="search-title">
+      <div class="wrap">
+        <form class="search__bar" id="search" novalidate>
+          <h2 class="sr-only" id="search-title">Vérifier les disponibilités</h2>
+          <div class="search__field">
+            <label for="s-house">Maison</label>
+            <select id="s-house">
+              <option value="all">Les deux maisons</option>
+              <option value="lacanau">Lacanau · la Maison du Lac</option>
+              <option value="bordeaux">Bordeaux · la Maison de Pierre</option>
+            </select>
+          </div>
+          <div class="search__field">
+            <label for="s-in">Arrivée</label>
+            <input id="s-in" type="date" required>
+          </div>
+          <div class="search__field">
+            <label for="s-out">Départ</label>
+            <input id="s-out" type="date" required>
+          </div>
+          <div class="search__field search__field--small">
+            <label for="s-guests">Voyageurs</label>
+            <select id="s-guests"></select>
+          </div>
+          <button class="btn btn--accent search__go" type="submit">Voir les disponibilités</button>
+        </form>
+        <div class="search__results" id="search-results" aria-live="polite"></div>
+      </div>
     </section>
 
     <!-- Manifeste -->
@@ -204,6 +235,22 @@
           <button type="button" role="tab" id="tab-bordeaux" aria-controls="panel-bordeaux" aria-selected="false" data-tab="bordeaux" tabindex="-1">Bordeaux</button>
         </div>
         <div id="dest-panels"></div>
+      </div>
+    </section>
+
+    <!-- Quand venir -->
+    <section class="quand" id="quand" data-climate-section aria-labelledby="quand-title">
+      <div class="wrap">
+        <div class="section-head">
+          <div><span class="eyebrow">Quand venir</span><h2 class="h2" id="quand-title">Le temps <em>qu'il fait</em></h2></div>
+          <p>Températures, pluie et température de l'océan, mois par mois, d'après dix ans de relevés. Choisissez une ville et un mois.</p>
+        </div>
+        <div class="dest-tabs dest-tabs--clim" role="tablist" aria-label="Choisir une ville">
+          <span class="dest-tabs__pill" aria-hidden="true"></span>
+          <button type="button" role="tab" id="ctab-lacanau" aria-controls="clim" aria-selected="true" data-ctab="lacanau">Lacanau</button>
+          <button type="button" role="tab" id="ctab-bordeaux" aria-controls="clim" aria-selected="false" data-ctab="bordeaux" tabindex="-1">Bordeaux</button>
+        </div>
+        <div class="clim" id="clim" role="tabpanel"></div>
       </div>
     </section>
 
@@ -314,6 +361,8 @@
 
   <script src="js/config.js"></script>
   <script src="js/data.js"></script>
+  <script src="js/disponibilites.js"></script>
+  <script src="js/climat.js"></script>
   <script src="js/main.js"></script>
   <script src="js/home.js"></script>
 </body>

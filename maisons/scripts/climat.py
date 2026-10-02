@@ -3,13 +3,13 @@
 Moyennes calculées sur dix années complètes de relevés (2015 à 2024), à partir
 des archives météo Open-Meteo (réanalyse ERA5, données libres) :
   - température maximale et minimale moyennes,
-  - heures de soleil par jour,
   - nombre de jours de pluie (au moins 1 mm),
   - température de l'océan au large de Lacanau.
 
 Écrit js/climat.js (lu par le site) et data/climat.json (copie lisible).
 Lancé par la GitHub Action « Maisons — données » ; il suffit de le relancer une
 fois par an, les moyennes bougent très peu.
+(Les heures de soleil de cette source sont surestimées : on ne les affiche pas.)
 """
 import json
 import os
@@ -51,7 +51,7 @@ def main():
     for key, p in PLACES.items():
         q = urllib.parse.urlencode({
             "latitude": p["lat"], "longitude": p["lng"], "start_date": START, "end_date": END,
-            "daily": "temperature_2m_max,temperature_2m_min,sunshine_duration,precipitation_sum",
+            "daily": "temperature_2m_max,temperature_2m_min,precipitation_sum",
             "timezone": "Europe/Paris",
         })
         d = get_json(f"https://archive-api.open-meteo.com/v1/archive?{q}")["daily"]
@@ -61,7 +61,6 @@ def main():
         res = {
             "tmax": monthly(days, d["temperature_2m_max"]),
             "tmin": monthly(days, d["temperature_2m_min"]),
-            "sun": monthly(days, [None if v is None else v / 3600 for v in d["sunshine_duration"]]),
             "rainDays": [round(x * 1, 0) for x in monthly(days, rain, agg=lambda xs: sum(xs) / years)],
         }
         if p["sea"]:

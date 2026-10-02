@@ -38,7 +38,12 @@ window.HOUSES = {
       ["Propreté", "5,0"], ["Précision", "5,0"], ["Arrivée", "5,0"],
       ["Communication", "5,0"], ["Emplacement", "5,0"], ["Qualité-prix", "4,8"],
     ],
-    reviewTags: ["Hospitalité", "Piscine", "Décoration", "Famille", "Emplacement", "Espaces extérieurs", "Calme"],
+    // Sujets les plus cités dans les avis (nombre d'avis qui en parlent, selon Airbnb)
+    reviewTags: [["Hospitalité", 11], ["Piscine", 7], ["Décoration", 7], ["Famille", 6], ["Emplacement", 6], ["Espaces extérieurs", 5], ["Espaces intérieurs", 5], ["À proximité", 4], ["Calme", 3], ["Plage", 2]],
+    // Répartition des notes (5, 4, 3, 2, 1 étoiles), en %
+    ratingDistribution: [100, 0, 0, 0, 0],
+    // Prix indicatif « à partir de … € la nuit ». Laisse null pour ne rien afficher.
+    priceFrom: null,
     checkIn: "À partir de 16 h",
     checkOut: "Avant 10 h",
     // Coordonnées : position publiée par Airbnb. Sur la carte, on montre
@@ -96,6 +101,23 @@ window.HOUSES = {
       "Bon à savoir": ["Piscine sans clôture ni verrou : surveillance des enfants indispensable", "Lac à proximité", "La maison comprend des escaliers", "Caméras de surveillance extérieures présentes", "Détecteur de fumée installé"],
     },
     registration: null,
+    // La maison niveau par niveau (d'après la description de l'annonce)
+    levels: [
+      { name: "Le jardin", short: "Extérieur", photo: 20, items: ["Piscine privée, ouverte d'avril à octobre", "Jardin sans vis-à-vis", "Patio, salon et salle à manger d'extérieur", "Chaises longues", "Le lac à 50 mètres"] },
+      { name: "Le rez-de-chaussée", short: "Rez-de-chaussée", photo: 4, items: ["Salon et salle à manger ouverts sur le jardin et la piscine", "Cuisine entièrement équipée, ouverte sur l'espace de vie", "2 chambres de plain-pied", "1 salle de bain", "Espace de travail"] },
+      { name: "L'étage", short: "Étage", photo: 10, items: ["4 chambres", "Au total dans la maison : 6 chambres, 7 lits, 2 salles de bain et 4 WC"] },
+    ],
+    // Repères autour de la maison (distances à vol d'oiseau calculées sur la carte)
+    poi: [
+      ["beach", "Plage centrale de Lacanau-Océan", 45.0012, -1.2036],
+      ["city", "Bordeaux, place de la Comédie", 44.8425, -0.5741],
+      ["wine", "Margaux, route des grands vins", 45.0399, -0.6757],
+      ["wine", "Pauillac", 45.1990, -0.7480],
+      ["beach", "Cap Ferret", 44.6262, -1.2489],
+      ["beach", "Dune du Pilat", 44.5893, -1.2132],
+      ["travel", "Aéroport de Bordeaux-Mérignac", 44.8283, -0.7156],
+      ["travel", "Gare de Bordeaux-Saint-Jean", 44.8256, -0.5560],
+    ],
     photos: [
       [18, "La maison et la piscine"],
       [1, "Le salon"],
@@ -155,7 +177,9 @@ window.HOUSES = {
       ["Propreté", "4,8"], ["Précision", "5,0"], ["Arrivée", "5,0"],
       ["Communication", "5,0"], ["Emplacement", "4,9"], ["Qualité-prix", "4,6"],
     ],
-    reviewTags: ["Hospitalité", "Emplacement", "Espaces intérieurs", "Décoration", "Se déplacer", "Accessibilité à pied", "Calme"],
+    reviewTags: [["Hospitalité", 29], ["Emplacement", 23], ["Espaces intérieurs", 19], ["Décoration", 15], ["Se déplacer", 9], ["Accessibilité à pied", 8], ["Arrivée", 6], ["Départ", 6], ["Qualité du sommeil", 4], ["Calme", 3]],
+    ratingDistribution: [90, 7, 2, 0, 0],
+    priceFrom: null,
     checkIn: "Arrivée autonome, horaire flexible",
     checkOut: "Avant 12 h",
     // Position approximative publiée par Airbnb (l'adresse exacte est
@@ -212,6 +236,25 @@ window.HOUSES = {
     },
     // Numéro d'enregistrement de la mairie de Bordeaux (obligatoire sur toute annonce)
     registration: "3306300578621",
+    levels: [
+      { name: "L'étage", short: "Étage", photo: 2, items: ["La pièce de vie sous verrière : salon, cuisine et salle à manger", "La terrasse", "TV HD 83 pouces et son Bang & Olufsen"] },
+      { name: "Le rez-de-chaussée", short: "Rez-de-chaussée", photo: 24, items: ["3 chambres", "1 salle de bain avec baignoire", "1 WC", "L'entrée"] },
+      { name: "Le sous-sol", short: "Sous-sol", photo: null, items: ["2 chambres", "1 salle d'eau", "1 WC", "La buanderie"] },
+    ],
+    poi: [
+      ["walk", "Place Gambetta", 44.8410, -0.5800],
+      ["walk", "Place de la Comédie et Grand-Théâtre", 44.8425, -0.5741],
+      ["walk", "Cathédrale Saint-André", 44.8378, -0.5777],
+      ["walk", "Jardin public", 44.8487, -0.5776],
+      ["walk", "Place de la Bourse et Miroir d'eau", 44.8413, -0.5694],
+      ["walk", "Marché des Capucins", 44.8309, -0.5677],
+      ["walk", "Quartier des Chartrons", 44.8550, -0.5700],
+      ["wine", "La Cité du Vin", 44.8625, -0.5503],
+      ["travel", "Gare de Bordeaux-Saint-Jean", 44.8256, -0.5560],
+      ["travel", "Aéroport de Bordeaux-Mérignac", 44.8283, -0.7156],
+      ["wine", "Saint-Émilion", 44.8940, -0.1550],
+      ["beach", "Lacanau-Océan", 45.0012, -1.2036],
+    ],
     photos: [
       [2, "La pièce de vie sous verrière"],
       [4, "La terrasse"],
@@ -285,6 +328,9 @@ window.REVIEWS = {
     ["The house felt like a real luxurious stay and the location was perfect for both Lacanau Lake and also Lacanau Ocean.", "Alan", "août 2023"],
     ["L'extérieur et la piscine invitent à la détente et au farniente. Un véritable havre de paix !", "Damien", "juillet 2023"],
     ["Un ameublement très complet et une décoration raffinée et harmonieuse… nous a permis de jouir d'un confort de vie exceptionnel.", "Gaspard", "juillet 2022"],
+    ["The house was spotless, beautifully decorated, and had all the little touches that made it feel like home.", "Gareth", "juillet 2025"],
+    ["The lake is so close that it makes for a very relaxed holiday in this beautiful part of the world.", "Hannah", "août 2024"],
+    ["C'est une maison chaleureuse, décorée avec goût par les propriétaires et très fonctionnelle. Je vous la recommande les yeux fermés.", "Auriane", "décembre 2022"],
   ],
   bordeaux: [
     ["C'est super agréable d'être accueillis dans une « vraie » maison habitée et pas seulement meublée pour être louée. La double exposition est un vrai plus et l'emplacement est parfait.", "Marion", "mars 2026"],
@@ -292,5 +338,8 @@ window.REVIEWS = {
     ["The house exceeded our expectations and the terrace was the icing on the cake!", "Kellie", "avril 2026"],
     ["Décoré avec beaucoup de goût dans un style contemporain et chaleureux. On s'y sent extrêmement bien.", "Thierry", "mai 2024"],
     ["On était 8 et on ne se marchait pas dessus. La pièce de vie est spacieuse, lumineuse et bien équipée pour passer des temps conviviaux.", "Xavier", "mars 2024"],
+    ["The photos don't do the house justice, it is beautiful and really well furnished.", "Aisling", "novembre 2025"],
+    ["Parfait pour un groupe, avec la possibilité de visiter Bordeaux facilement mais aussi de profiter de la belle pièce de vie.", "Cyrille", "novembre 2024"],
+    ["Le plus du logement est le petit patio très agréable pour prendre son petit déjeuner en groupe.", "Hervé", "août 2021"],
   ],
 };

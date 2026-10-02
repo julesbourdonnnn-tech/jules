@@ -113,8 +113,8 @@
         </ol>
       </div>`).join("");
 
-    const tabs = $$('[role="tab"]');
-    const pill = $(".dest-tabs__pill");
+    const tabs = $$('#destinations [role="tab"]');
+    const pill = $("#destinations .dest-tabs__pill");
     const section = $("#destinations");
     const weatherDone = {};
     const loadWeather = (k) => {
@@ -186,6 +186,125 @@
     stage.addEventListener("mouseenter", () => clearInterval(timer));
     stage.addEventListener("mouseleave", play);
     play();
+  }
+
+
+  /* Recherche de dates : disponibilités des deux maisons en direct */
+  const sForm = $("#search");
+  if (sForm) {
+    const { today0, iso, parseISO, addDays, nights } = SP.dates;
+    const today = today0();
+    const sIn = $("#s-in");
+    const sOut = $("#s-out");
+    const sHouse = $("#s-house");
+    const sGuests = $("#s-guests");
+    const out = $("#search-results");
+    const fmt = new Intl.DateTimeFormat("fr-FR", { weekday: "short", day: "numeric", month: "short" });
+    const maxG = Math.max(H.lacanau.guests, H.bordeaux.guests);
+    sGuests.innerHTML = Array.from({ length: maxG }, (_, i) => `<option value="${i + 1}"${i === 1 ? " selected" : ""}>${i + 1}</option>`).join("");
+    sIn.min = iso(today);
+    sOut.min = iso(addDays(today, 1));
+    sIn.addEventListener("change", () => {
+      const a = sIn.value && parseISO(sIn.value);
+      if (!a) return;
+      sOut.min = iso(addDays(a, 1));
+      if (!sOut.value || parseISO(sOut.value) <= a) sOut.value = iso(addDays(a, 3));
+    });
+    const plural = (n, w) => `${n} ${w}${n > 1 ? "s" : ""}`;
+    const card = (k, ok, text, link, label) => `
+      <article class="result${ok ? " is-ok" : ""}" data-house="${k}">
+        <img src="${SP.photo(k, H[k].cover, "sm")}" alt="" loading="lazy">
+        <div class="result__body">
+          <span class="eyebrow eyebrow--plain">${esc(H[k].place)}</span>
+          <h3>${esc(H[k].name)}</h3>
+          <p class="result__state">${icon(ok ? "check" : "calendar")}<span>${text}</span></p>
+        </div>
+        <a class="btn ${ok ? "btn--accent" : "btn--ghost"}" href="${link}">${label}</a>
+      </article>`;
+    const check = (k, a, b, g) => {
+      const av = SP.availability(k);
+      const url = (x, y) => `${H[k].page}?arrivee=${iso(x)}&depart=${iso(y)}&voyageurs=${Math.min(g, H[k].guests)}#reserver`;
+      if (g > H[k].guests) return card(k, false, `Jusqu'à ${H[k].guests} voyageurs dans cette maison.`, `${H[k].page}#reserver`, "Voir la maison");
+      if (!av.canIn(a)) {
+        const alt = nextFrom(av, a, nights(a, b));
+        return card(k, false, `Arrivée impossible le ${fmt.format(a)}.${alt ? ` Prochaine possibilité : du ${fmt.format(alt[0])} au ${fmt.format(alt[1])}.` : ""}`, alt ? url(alt[0], alt[1]) : `${H[k].page}#reserver`, alt ? "Voir ces dates" : "Voir le calendrier");
+      }
+      const p = av.outProblem(a, b);
+      if (p === "short") return card(k, false, `Séjour de ${av.minNights(a)} nuits minimum à ces dates.`, url(a, addDays(a, av.minNights(a))), `Voir ${av.minNights(a)} nuits`);
+      if (p) {
+        const alt = nextFrom(av, a, nights(a, b));
+        return card(k, false, `Ces dates ne sont pas toutes libres.${alt ? ` Prochaine possibilité : du ${fmt.format(alt[0])} au ${fmt.format(alt[1])}.` : ""}`, alt ? url(alt[0], alt[1]) : `${H[k].page}#reserver`, alt ? "Voir ces dates" : "Voir le calendrier");
+      }
+      return card(k, true, `Libre du ${fmt.format(a)} au ${fmt.format(b)} · ${plural(nights(a, b), "nuit")} · ${plural(g, "voyageur")}`, url(a, b), "Réserver ces dates");
+    };
+    // Premier séjour de même durée possible après la date demandée
+    function nextFrom(av, a, n) {
+      for (let i = 1; i < 120; i++) {
+        const x = addDays(a, i);
+        if (!av.canIn(x)) continue;
+        const len = Math.max(n, av.minNights(x));
+        const y = addDays(x, len);
+        if (!av.outProblem(x, y)) return [x, y];
+      }
+      return null;
+    }
+    sForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const a = /^\d{4}-\d{2}-\d{2}$/.test(sIn.value) ? parseISO(sIn.value) : null;
+      const b = /^\d{4}-\d{2}-\d{2}$/.test(sOut.value) ? parseISO(sOut.value) : null;
+      if (!a || !b || b <= a || a < today) {
+        out.innerHTML = `<p class="search__error">Choisissez une date d'arrivée (à partir d'aujourd'hui) puis une date de départ plus tardive.</p>`;
+        (!a || a < today ? sIn : sOut).focus();
+        return;
+      }
+      const g = Number(sGuests.value) || 1;
+      const keys = sHouse.value === "all" ? ["lacanau", "bordeaux"] : [sHouse.value];
+      out.innerHTML = keys.map((k) => check(k, a, b, g)).join("");
+      try { sessionStorage.setItem("sp-search", JSON.stringify({ a: sIn.value, b: sOut.value, g, h: sHouse.value })); } catch (err) { /* ignoré */ }
+    });
+    try {
+      const prev = JSON.parse(sessionStorage.getItem("sp-search") || "null");
+      if (prev && prev.a && parseISO(prev.a) >= today) {
+        sIn.value = prev.a; sOut.value = prev.b; sGuests.value = String(prev.g); sHouse.value = prev.h;
+      }
+    } catch (err) { /* ignoré */ }
+  }
+
+  /* Quand venir : climat de Lacanau ou de Bordeaux */
+  const climBox = $("#clim");
+  if (climBox) {
+    const ctabs = $$("[data-ctab]");
+    const cpill = $(".dest-tabs--clim .dest-tabs__pill");
+    let month;
+    const csel = (t, focus) => {
+      ctabs.forEach((x) => { const on = x === t; x.setAttribute("aria-selected", String(on)); x.tabIndex = on ? 0 : -1; });
+      $("#quand").dataset.house = t.dataset.ctab;
+      climBox.setAttribute("aria-labelledby", t.id);
+      cpill.style.width = `${t.offsetWidth}px`;
+      cpill.style.transform = `translateX(${t.offsetLeft - 5}px)`;
+      const sel = climBox.querySelector('.clim__months [aria-selected="true"]');
+      if (sel) month = Number(sel.dataset.m);
+      SP.climate(climBox, t.dataset.ctab, month);
+      if (focus) t.focus();
+    };
+    ctabs.forEach((t, i) => {
+      t.addEventListener("click", () => csel(t));
+      t.addEventListener("keydown", (e) => {
+        if (e.key === "ArrowRight" || e.key === "ArrowLeft") { e.preventDefault(); csel(ctabs[(i + 1) % 2], true); }
+      });
+    });
+    const cinit = () => csel(ctabs.find((t) => t.getAttribute("aria-selected") === "true") || ctabs[0]);
+    window.addEventListener("resize", () => {
+      const t = ctabs.find((x) => x.getAttribute("aria-selected") === "true");
+      cpill.style.width = `${t.offsetWidth}px`;
+      cpill.style.transform = `translateX(${t.offsetLeft - 5}px)`;
+    });
+    cinit();
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => {
+      const t = ctabs.find((x) => x.getAttribute("aria-selected") === "true");
+      cpill.style.width = `${t.offsetWidth}px`;
+      cpill.style.transform = `translateX(${t.offsetLeft - 5}px)`;
+    });
   }
 
   SP.parallax();
