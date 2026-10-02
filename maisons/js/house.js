@@ -189,7 +189,7 @@
       </div>
       <div class="mosaic-more">
         ${(window.REVIEWS[key] || []).length > 6 ? `<button type="button" class="btn btn--ghost" id="more-reviews">Plus d'avis</button>` : ""}
-        <a class="btn btn--ghost" href="${h.airbnbUrl}#reviews" target="_blank" rel="noopener">Les ${h.reviewsCount} avis sur Airbnb ${icon("external")}</a>
+        <a class="btn btn--ghost" href="${h.airbnbUrl}#reviews" target="_blank" rel="noopener">Lire les ${h.reviewsCount} avis ${icon("external")}</a>
       </div>
       <p class="small" style="margin-top:18px;text-align:center">Extraits fidèles d'avis publiés par les voyageurs sur Airbnb (seule l'orthographe a été corrigée).</p>
     </div>
@@ -199,7 +199,7 @@
     <div class="wrap">
       <div class="section-head">
         <div><span class="eyebrow">Disponibilités</span><h2 class="h2">Choisissez <em>vos dates</em></h2></div>
-        <p>Les dates grisées sont déjà prises. Sélectionnez votre arrivée puis votre départ : vous réservez ensuite en ligne sur Airbnb, ou vous nous envoyez une demande directe.</p>
+        <p>Les dates grisées sont déjà prises. Sélectionnez votre arrivée puis votre départ : le prix s'affiche, et vous réservez directement ici, sans frais de plateforme.</p>
       </div>
       <div class="book-grid">
         <div class="cal" id="cal">
@@ -230,14 +230,12 @@
             ${stepper("infants", "Bébés", key === "bordeaux" ? "La maison ne convient pas aux moins de 2 ans" : "Moins de 2 ans")}
           </div></div>
           <div class="booking__summary" id="summary" hidden></div>
-          <a class="btn btn--accent btn--block" id="go-airbnb" href="${h.airbnbUrl}" target="_blank" rel="noopener">Voir le prix et réserver ${icon("external")}</a>
-          <div class="booking__alt">
-            <button type="button" class="btn btn--ghost btn--block" id="go-direct">${icon("mail")} Demande de réservation directe</button>
-          </div>
+          <div class="booking__price" id="price" hidden></div>
+          <button type="button" class="btn btn--accent btn--block" id="go-book">Réserver</button>
           <p class="booking__msg" id="book-msg" aria-live="polite"></p>
           <button type="button" class="link booking__clear" id="clear-dates" hidden>Effacer les dates</button>
           <ul class="booking__trust">
-            <li>${icon("shield")}<span>Réservation et paiement sécurisés par Airbnb, prix exact affiché pour vos dates</span></li>
+            <li>${icon("shield")}<span>Réservation en direct, sans frais de plateforme. Paiement sécurisé par carte : rien n'est débité avant notre confirmation</span></li>
             <li>${icon("award")}<span>Hôte Superhôte, logement « Coup de cœur voyageurs »</span></li>
             <li>${icon("calendar")}<span>${key === "lacanau" ? "Arrivée dès 16 h, départ avant 10 h" : "Arrivée autonome et flexible, départ avant 12 h"}</span></li>
           </ul>
@@ -326,16 +324,16 @@
       <button type="button" class="dialog__close" data-close aria-label="Fermer">${icon("close")}</button>
       <div id="dlg-form">
         <span class="eyebrow eyebrow--plain">${esc(h.name)}</span>
-        <h2 class="h3" id="dlg-title" style="margin-top:12px">Demande de réservation</h2>
-        <p class="small" style="margin-top:10px">Nous vous répondons personnellement avec le prix et la confirmation des dates. Rien n'est réservé ni payé à cette étape.</p>
+        <h2 class="h3" id="dlg-title" style="margin-top:12px">Votre réservation</h2>
+        <div class="form__recap" id="recap"></div>
         <form class="form" id="form" novalidate>
-          <p class="form__recap" id="recap"></p>
           <div class="field"><label for="d-name">Nom et prénom</label><input id="d-name" name="nom" autocomplete="name" required maxlength="80"></div>
           <div class="field"><label for="d-phone">Téléphone</label><input id="d-phone" name="telephone" type="tel" autocomplete="tel" maxlength="30"></div>
           <div class="field full"><label for="d-email">E-mail</label><input id="d-email" name="email" type="email" autocomplete="email" required maxlength="254"></div>
-          <div class="field full"><label for="d-msg">Votre message</label><textarea id="d-msg" name="message" maxlength="2000" placeholder="L'occasion de votre séjour, une arrivée tardive, vos questions…"></textarea></div>
+          <div class="field full"><label for="d-msg">Un mot pour nous (facultatif)</label><textarea id="d-msg" name="message" maxlength="2000" placeholder="L'occasion de votre séjour, une heure d'arrivée, vos questions…"></textarea></div>
+          <label class="check full"><input type="checkbox" id="d-cgv" name="conditions" required> <span>J'accepte les <a href="conditions.html" target="_blank" rel="noopener">conditions de réservation</a> et le règlement de la maison.</span></label>
           <input class="hp" type="text" name="bot-field" tabindex="-1" autocomplete="off" aria-hidden="true">
-          <div class="full"><button type="submit" class="btn btn--accent btn--block">Envoyer ma demande</button><p class="booking__msg" id="form-msg" aria-live="polite"></p></div>
+          <div class="full"><button type="submit" class="btn btn--accent btn--block" id="d-submit">Continuer</button><p class="booking__msg" id="form-msg" aria-live="polite"></p><p class="small" id="d-note" style="margin-top:12px"></p></div>
         </form>
       </div>
       <div class="form__done" id="dlg-done" hidden>
@@ -725,18 +723,9 @@
     update();
   }));
 
-  const airbnbLink = () => {
-    const u = new URL(h.airbnbUrl);
-    if (state.in && state.out) {
-      u.searchParams.set("check_in", iso(state.in));
-      u.searchParams.set("check_out", iso(state.out));
-    }
-    u.searchParams.set("adults", state.adults);
-    if (state.children) u.searchParams.set("children", state.children);
-    if (state.infants) u.searchParams.set("infants", state.infants);
-    u.searchParams.set("guests", state.adults + state.children);
-    return u.toString();
-  };
+  // Prix du séjour (js/tarifs.js) : affiché ici, recalculé par le serveur au paiement
+  const priceOf = () => (state.in && state.out && window.SP_PRICE ? window.SP_PRICE(key, iso(state.in), iso(state.out), state.adults) : null);
+  const EUR = (c) => window.SP_EUR(c);
   const guestsText = () => {
     const n = state.adults + state.children;
     let t = plural(n, "voyageur");
@@ -762,7 +751,16 @@
       sum.hidden = false;
       sum.innerHTML = `<p><span>Séjour</span><strong>${plural(n, "nuit")}</strong></p><p><span>Arrivée</span><span>${esc(fmtLong.format(state.in))}${key === "lacanau" ? ", dès 16 h" : ""}</span></p><p><span>Départ</span><span>${esc(fmtLong.format(state.out))}${key === "lacanau" ? ", avant 10 h" : ", avant 12 h"}</span></p>${av.known ? `<p class="ok">${icon("check")}<span>Ces dates sont libres dans le calendrier</span></p>` : ""}`;
     } else sum.hidden = true;
-    $("#go-airbnb").href = airbnbLink();
+    const pr = $("#price");
+    const p = priceOf();
+    if (p && p.ready) {
+      pr.hidden = false;
+      pr.innerHTML = `${p.lines.map((l) => `<p><span>${esc(l.label)}</span><span>${EUR(l.cents)}</span></p>`).join("")}<p class="booking__total"><span>Total</span><strong>${EUR(p.cents)}</strong></p>`;
+    } else if (state.in && state.out) {
+      pr.hidden = false;
+      pr.innerHTML = `<p class="small">Le prix de ce séjour vous est confirmé par e-mail avec votre réservation.</p>`;
+    } else pr.hidden = true;
+    $("#go-book").textContent = state.in && state.out ? (p && p.ready ? `Réserver · ${EUR(p.cents)}` : "Demander ces dates") : "Choisir mes dates";
     const msg = $("#book-msg");
     msg.classList.remove("is-error");
     msg.textContent = state.in && !state.out ? `Choisissez maintenant votre date de départ${av.minNights(state.in) > 1 ? ` (${av.minNights(state.in)} nuits minimum)` : ""}.` : "";
@@ -779,14 +777,14 @@
   const setStatus = () => {
     if (av.known && av.updated) {
       const d = new Date(av.updated);
-      status.textContent = `Disponibilités synchronisées avec le calendrier Airbnb (mise à jour du ${new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" }).format(d)}). Airbnb confirme vos dates à l'étape suivante.`;
-    } else status.textContent = "Airbnb confirme vos dates à l'étape suivante.";
+      status.textContent = `Disponibilités mises à jour le ${new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" }).format(d)}. Vos dates sont vérifiées à nouveau au moment de réserver.`;
+    } else status.textContent = "Vos dates sont vérifiées au moment de réserver.";
   };
   setStatus();
   const minAll = av.known ? av.minNights(today) : 0;
   if (minAll > 1) $("#cal-min").innerHTML = `<i class="lg lg--min"></i>${minAll} nuits minimum`;
   // Synchronisation iCal du serveur (si elle est réglée) : on l'ajoute
-  fetch(`api/calendrier/${key}`, { headers: { Accept: "application/json" } })
+  fetch(`api/disponibilites/${key}`, { headers: { Accept: "application/json" } })
     .then((r) => (r.ok ? r.json() : null))
     .then((data) => {
       if (!data || !data.ok || !Array.isArray(data.booked)) return;
@@ -798,9 +796,11 @@
     })
     .catch(() => {});
 
-  $("#go-airbnb").addEventListener("click", () => {
-    if (!state.in || !state.out) $("#book-msg").textContent = "Astuce : choisissez vos dates pour voir directement le prix exact.";
-  });
+  // Retour depuis le paiement annulé
+  if (/[?&]annule=1/.test(location.search)) {
+    const m = $("#book-msg");
+    m.textContent = "Le paiement a été annulé : rien n'a été débité. Vos dates sont toujours sélectionnées.";
+  }
 
   /* ======================= Demande directe ======================= */
   const dlg = $("#dialog");
@@ -813,7 +813,12 @@
       return;
     }
     dlgReturn = document.activeElement;
-    $("#recap").innerHTML = `<strong>${esc(h.name)}</strong><br>${esc(stayText())}<br>${esc(guestsText())}`;
+    const p = priceOf();
+    $("#recap").innerHTML = `<p><strong>${esc(h.name)}</strong></p><p>${esc(stayText())}</p><p>${esc(guestsText())}</p>${p && p.ready ? `<div class="recap__price">${p.lines.map((l) => `<p><span>${esc(l.label)}</span><span>${EUR(l.cents)}</span></p>`).join("")}<p class="booking__total"><span>Total</span><strong>${EUR(p.cents)}</strong></p></div>` : ""}`;
+    $("#d-submit").textContent = p && p.ready ? `Continuer vers le paiement · ${EUR(p.cents)}` : "Envoyer ma demande";
+    $("#d-note").textContent = p && p.ready
+      ? "Vous allez être redirigé vers la page de paiement sécurisée Stripe. Votre carte n'est pas débitée tout de suite : le montant est seulement réservé, puis débité quand nous confirmons votre séjour (sous 24 h). Sans confirmation, il est libéré."
+      : "Nous vous répondons personnellement par e-mail sous 24 h avec le prix et la confirmation. Rien n'est payé à cette étape.";
     $("#dlg-form").hidden = false;
     $("#dlg-done").hidden = true;
     dlg.classList.add("is-open");
@@ -827,7 +832,15 @@
     document.body.classList.remove("is-locked");
     if (dlgReturn) dlgReturn.focus();
   };
-  $("#go-direct").addEventListener("click", openDlg);
+  $("#go-book").addEventListener("click", () => {
+    if (!state.in || !state.out) {
+      $("#cal").scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "center" });
+      const m = $("#book-msg");
+      m.textContent = state.in ? "Choisissez maintenant votre date de départ." : "Choisissez votre date d'arrivée dans le calendrier.";
+      return;
+    }
+    openDlg();
+  });
   $$("[data-close]", dlg).forEach((b) => b.addEventListener("click", closeDlg));
   const trap = (box, e) => {
     if (e.key !== "Tab") return;
@@ -855,26 +868,45 @@
     msg.textContent = "Envoi en cours…";
     const btn = $('button[type="submit"]', form);
     btn.disabled = true;
-    const payload = Object.assign({}, fd, {
-      maison: h.name, arrivee: iso(state.in), depart: iso(state.out), nuits: nightsBetween(state.in, state.out),
-      adultes: state.adults, enfants: state.children, bebes: state.infants, page: location.pathname,
-    });
-    let sent = false;
-    try {
-      const r = await fetch("api/demande", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
-      sent = r.ok;
-    } catch (err) { sent = false; }
-    btn.disabled = false;
-    msg.textContent = "";
-    if (!sent) {
-      // Pas de serveur (ou indisponible) : on prépare un e-mail, aucune demande n'est perdue
-      const body = `Bonjour,\n\nJe souhaite réserver ${h.name} ${stayText()}, pour ${guestsText()}.\n\n${fd.message ? `${fd.message}\n\n` : ""}${fd.nom}\n${fd.email}${fd.telephone ? `\n${fd.telephone}` : ""}`;
-      location.href = `mailto:${S.email}?subject=${encodeURIComponent(`Demande de réservation — ${h.name}`)}&body=${encodeURIComponent(body)}`;
-      $("#done-text").innerHTML = `Votre messagerie s'ouvre avec la demande pré-remplie : il ne vous reste qu'à l'envoyer. Si rien ne s'ouvre, écrivez-nous à <strong>${esc(S.email)}</strong>.`;
-    } else {
-      $("#done-text").textContent = `Votre demande est bien partie. Nous vous répondons très vite à ${fd.email.trim()}.`;
-      form.reset();
+    if (!$("#d-cgv").checked) {
+      btn.disabled = false;
+      msg.textContent = "Merci d'accepter les conditions de réservation.";
+      msg.classList.add("is-error");
+      $("#d-cgv").focus();
+      return;
     }
+    const payload = Object.assign({}, fd, {
+      maison: key, arrivee: iso(state.in), depart: iso(state.out), conditions: true,
+      adultes: state.adults, enfants: state.children, bebes: state.infants,
+    });
+    let res = null;
+    let net = true;
+    try {
+      const r = await fetch("api/reservation", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+      res = await r.json().catch(() => null);
+      if (r.status === 404 || r.status === 503 || r.status === 405) net = false;
+    } catch (err) { net = false; }
+    btn.disabled = false;
+    if (res && res.ok && res.mode === "paiement" && res.url) {
+      msg.textContent = "Redirection vers le paiement sécurisé…";
+      location.href = res.url;
+      return;
+    }
+    if (res && res.ok) {
+      location.href = res.url;
+      return;
+    }
+    if (net && res && res.message) {
+      msg.textContent = res.message;
+      msg.classList.add("is-error");
+      if (res.error === "pris") { av.addBooked([]); }
+      return;
+    }
+    msg.textContent = "";
+    // Serveur indisponible (ex. site ouvert depuis l'ordinateur) : e-mail pré-rempli, rien n'est perdu
+    const body = `Bonjour,\n\nJe souhaite réserver ${h.name} ${stayText()}, pour ${guestsText()}.\n\n${fd.message ? `${fd.message}\n\n` : ""}${fd.nom}\n${fd.email}${fd.telephone ? `\n${fd.telephone}` : ""}`;
+    location.href = `mailto:${S.email}?subject=${encodeURIComponent(`Demande de réservation — ${h.name}`)}&body=${encodeURIComponent(body)}`;
+    $("#done-text").innerHTML = `Votre messagerie s'ouvre avec la demande pré-remplie : il ne vous reste qu'à l'envoyer. Si rien ne s'ouvre, écrivez-nous à <strong>${esc(S.email)}</strong>.`;
     $("#dlg-form").hidden = true;
     $("#dlg-done").hidden = false;
     $("#dlg-done .btn").focus();

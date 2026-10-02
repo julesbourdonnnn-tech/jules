@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Conditions de réservation | Sable &amp; Pierre</title>
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+  <link rel="stylesheet" href="fonts/fonts.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="header header--dark is-solid">
+    <div class="wrap">
+      <a class="brand" href="./"><span>Sable <em>&amp;</em> Pierre</span></a>
+      <nav class="nav" aria-label="Navigation principale"><a href="lacanau.html">Lacanau</a><a href="bordeaux.html">Bordeaux</a></nav>
+    </div>
+  </header>
+  <main class="page" id="main">
+    <div class="wrap wrap--narrow">
+      <span class="eyebrow">Réservation directe</span>
+      <h1 class="h1" style="margin-top:18px">Conditions de réservation</h1>
+
+      <h2>Réservation et paiement</h2>
+      <p>Vous choisissez vos dates et le nombre de voyageurs, puis vous payez par carte sur la page sécurisée de notre prestataire de paiement, Stripe. Votre carte n'est pas débitée immédiatement : le montant est réservé (empreinte bancaire), puis débité lorsque nous confirmons votre séjour, en général sous 24 heures. Si nous ne pouvons pas confirmer, le montant est libéré et rien n'est débité.</p>
+      <p>Le prix affiché comprend la location, le ménage et la taxe de séjour lorsqu'elle s'applique. Il n'y a aucun frais de service.</p>
+
+      <h2>Annulation</h2>
+      <ul id="annulation"></ul>
+      <p>Pour annuler, écrivez-nous à l'adresse ci-dessous en indiquant votre numéro de réservation.</p>
+
+      <h2>Pendant le séjour</h2>
+      <p>Le nombre de voyageurs ne peut pas dépasser celui indiqué lors de la réservation ni la capacité de la maison. Le règlement de chaque maison (horaires d'arrivée et de départ, animaux, fêtes, tabac, calme) est détaillé sur sa page et s'applique pendant tout le séjour. Le logement doit être rendu dans l'état où il a été trouvé.</p>
+      <p id="caution"></p>
+
+      <h2>Données personnelles</h2>
+      <p>Vos coordonnées servent uniquement à gérer votre réservation. Le paiement est traité par Stripe : nous n'avons jamais accès à vos numéros de carte. Voir aussi les <a class="link" href="mentions-legales.html">mentions légales</a>.</p>
+
+      <h2>Contact</h2>
+      <p><a class="link" data-email href="#">e-mail</a></p>
+      <p style="margin-top:48px"><a class="btn btn--ghost" href="./">Retour à l'accueil</a></p>
+    </div>
+  </main>
+  <script src="js/config.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/tarifs.js"></script>
+  <script>
+    document.querySelectorAll("[data-email]").forEach(function (a) { a.href = "mailto:" + SITE.email; a.textContent = SITE.email; });
+    document.getElementById("annulation").innerHTML = TARIFS.annulation.map(function (t) { return "<li>" + t.replace(/</g, "&lt;") + "</li>"; }).join("");
+    var c = ["lacanau", "bordeaux"].filter(function (k) { return TARIFS[k].caution; }).map(function (k) { return HOUSES[k].name + " : " + TARIFS[k].caution.toLocaleString("fr-FR") + " €"; });
+    document.getElementById("caution").textContent = c.length ? "Caution (non prélevée, demandée à l'arrivée) — " + c.join(" · ") + "." : "";
+  </script>
+</body>
+</html>

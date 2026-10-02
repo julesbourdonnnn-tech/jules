@@ -13,15 +13,12 @@
     "directory": ".",
     "binding": "ASSETS",
     "not_found_handling": "404-page",
-    "run_worker_first": ["/api/*", "/", "/*.html", "/lacanau", "/bordeaux", "/mentions-legales"]
+    "run_worker_first": ["/api/*", "/", "/*.html", "/lacanau", "/bordeaux", "/mentions-legales", "/conditions"]
   },
-  // Stockage des demandes de réservation directe. Pour l'activer :
-  // 1. Cloudflare → Stockage et bases de données → KV → Créer « sable-et-pierre-demandes »
-  // 2. Copier son identifiant ci-dessous et retirer les // devant les 3 lignes.
-  // Tant que ce n'est pas fait, le formulaire ouvre un e-mail pré-rempli.
-  // "kv_namespaces": [
-  //   { "binding": "DEMANDES", "id": "COLLE_ICI_L_IDENTIFIANT" }
-  // ],
+  // Stockage des réservations directes (créé le 2 octobre 2026)
+  "kv_namespaces": [
+    { "binding": "RESERVATIONS", "id": "740e12d73b574596957cb3fb964f72c9" }
+  ],
   // Nom de domaine : une fois acheté sur Cloudflare, retirer les // ci-dessous.
   // "routes": [
   //   { "pattern": "mon-domaine.fr", "custom_domain": true },

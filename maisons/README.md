@@ -25,18 +25,36 @@ Comme les autres sites du dépôt, il est **100 % statique** (HTML, CSS, JavaScr
 
 Détails : polices hébergées sur le site, aucun cookie, accessible au clavier et aux lecteurs d'écran (audit automatique sans erreur), compatible avec les anciens Safari, animations désactivées si le visiteur le demande, barre « Réserver » qui suit la lecture, **images de partage** soignées pour WhatsApp, Messages et Facebook, icône pour l'écran d'accueil du téléphone, données structurées Google (`VacationRental`).
 
-### Comment on réserve
+### Réservation directe (sans Airbnb)
 
-Sur chaque fiche, le visiteur choisit ses dates dans le calendrier (les nuits déjà prises sont grisées, la durée minimale de séjour est respectée, les prochains week-ends libres sont proposés en un clic) et le nombre de voyageurs, puis :
+Le voyageur réserve **directement sur le site, sans frais de plateforme** :
 
-- **« Voir le prix et réserver »** ouvre l'annonce Airbnb **avec les dates et les voyageurs déjà remplis** : il voit le prix exact et réserve avec le paiement sécurisé d'Airbnb.
-- **« Demande de réservation directe »** : un formulaire (nom, e-mail, téléphone, message) qui t'envoie la demande avec les dates. Sans réglage, il ouvre un e-mail pré-rempli chez le visiteur ; avec le stockage activé (voir plus bas), la demande arrive directement et sonne sur ton téléphone.
+1. Il choisit ses dates (les nuits prises sont grisées, la durée minimale est respectée) et ses voyageurs : **le prix détaillé s'affiche** (nuits selon la saison, ménage, taxe de séjour).
+2. Il indique ses coordonnées, accepte les **conditions de réservation** (`conditions.html`) et paie par carte sur la page sécurisée **Stripe**. Sa carte n'est **pas débitée** : le montant est seulement réservé (empreinte bancaire). Les dates sont bloquées sur le site pendant le paiement.
+3. Tu reçois une alerte sur ton téléphone (si `NOTIFY_URL` est réglé). Dans ton **espace propriétaire** (`/admin.html`), tu cliques **Accepter** (la carte est débitée, Stripe envoie le reçu au voyageur, et un e-mail de confirmation pré-rempli s'ouvre pour toi) ou **Refuser** (l'empreinte est libérée, rien n'est débité).
+4. Le voyageur suit sa réservation sur sa page personnelle (`/reservation.html?id=…`).
 
-Les dates choisies sont gardées pendant la visite, et une adresse comme `bordeaux.html?arrivee=2026-12-24&depart=2026-12-27&voyageurs=6` pré-remplit le calendrier (pratique à envoyer à quelqu'un).
+⚠️ Une empreinte bancaire reste valable **7 jours** : valide les réservations dans ce délai (idéalement sous 24 h).
+
+Tant que les tarifs ou la clé Stripe ne sont pas renseignés, le site fonctionne en **demande de réservation** : le voyageur envoie ses dates et ses coordonnées sans payer, tu la retrouves dans l'espace propriétaire et tu lui réponds.
+
+#### Mise en route (une seule fois)
+
+1. **Tes tarifs** dans `js/tarifs.js` : prix de la nuit, prix par saison, ménage, taxe de séjour, caution, conditions d'annulation. (Ou donne-les à Claude.)
+2. **Stripe** : crée un compte sur stripe.com (gratuit, avec ton IBAN), puis Développeurs → Clés API → copie la **clé secrète** (`sk_live_…`). Pour essayer d'abord sans vrai paiement, utilise la clé de test (`sk_test_…`) et la carte 4242 4242 4242 4242.
+3. Dans **Cloudflare → Workers & Pages → lacanau → Settings → Variables and secrets**, ajoute (type « Secret ») :
+   - `STRIPE_SECRET_KEY` : la clé Stripe ;
+   - `ADMIN_KEY` : un mot de passe long, pour entrer dans `/admin.html` ;
+   - `NOTIFY_URL` (conseillé) : installe l'app gratuite **ntfy**, abonne-toi à un sujet au nom difficile à deviner (ex. `sable-pierre-7k2p9x`), et mets `https://ntfy.sh/sable-pierre-7k2p9x`. Chaque réservation sonne sur ton téléphone.
+4. **Éviter les doubles réservations avec Airbnb** :
+   - Airbnb → site : déjà automatique (calendrier lu toutes les 4 h, voir plus bas).
+   - Site → Airbnb : dans `/admin.html`, ouvre « Synchroniser avec Airbnb », copie le lien de chaque maison, puis dans Airbnb : calendrier de l'annonce → Disponibilités → Connecter des calendriers → **Importer un calendrier**. Airbnb bloquera les dates réservées ici.
+
+Le stockage des réservations (« sable-et-pierre-reservations ») est déjà créé et branché.
 
 ### Afficher un prix « à partir de »
 
-Airbnb ne permet pas de lire les prix automatiquement. Si tu veux afficher un prix indicatif (« À partir de 450 € la nuit ») sur la fiche, dans la réservation et sur l'accueil, renseigne `priceFrom` pour chaque maison dans `js/data.js` (par exemple `priceFrom: 450,`). Laisse `null` pour ne rien afficher.
+Pour afficher un prix indicatif (« À partir de 450 € la nuit ») sur l'accueil et en haut des fiches, renseigne `priceFrom` pour chaque maison dans `js/data.js`. Laisse `null` pour ne rien afficher.
 
 ## Ce qui se met à jour tout seul
 
@@ -72,12 +90,6 @@ Les disponibilités sont déjà mises à jour toutes les 4 heures (voir plus hau
 2. Dans Cloudflare : **Workers → lacanau → Paramètres → Variables et secrets**, ajoute un secret `ICAL_LACANAU` avec le lien de Lacanau, et `ICAL_BORDEAUX` avec celui de Bordeaux.
 
 Les nuits prises selon ce lien s'ajoutent à celles du fichier automatique.
-
-### Recevoir les demandes de réservation directe
-
-1. **Stockage** : Cloudflare → Stockage et bases de données → KV → créer `sable-et-pierre-demandes`, puis coller son identifiant dans `wrangler.jsonc` (bloc `kv_namespaces`, retirer les `//`).
-2. **Alerte sur ton téléphone** (conseillé) : installe l'application gratuite **ntfy**, abonne-toi à un sujet au nom difficile à deviner (ex. `sable-pierre-jules-7k2p`), puis ajoute dans les variables du Worker `NOTIFY_URL` = `https://ntfy.sh/sable-pierre-jules-7k2p`. (Une adresse de webhook Discord ou Slack fonctionne aussi.)
-3. **Export** : ajoute un secret `DEMANDES_KEY` (un mot de passe), puis ouvre `https://<ton-site>/api/demandes.csv?key=<DEMANDES_KEY>` : toutes les demandes dans un fichier Excel.
 
 ## Voir le site en local
 
