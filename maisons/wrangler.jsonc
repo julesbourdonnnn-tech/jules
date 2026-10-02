@@ -6,13 +6,14 @@
   "name": "sable-et-pierre",
   "compatibility_date": "2025-09-01",
   // Petit programme pour le calendrier et les demandes (worker/index.js) :
-  // il ne s'exécute que pour les adresses /api/*, le reste est servi directement.
+  // il s'exécute pour les adresses /api/* et les pages (images de partage),
+  // le reste (photos, styles, scripts) est servi directement.
   "main": "worker/index.js",
   "assets": {
     "directory": ".",
     "binding": "ASSETS",
     "not_found_handling": "404-page",
-    "run_worker_first": ["/api/*"]
+    "run_worker_first": ["/api/*", "/", "/*.html", "/lacanau", "/bordeaux", "/mentions-legales"]
   },
   // Stockage des demandes de réservation directe. Pour l'activer :
   // 1. Cloudflare → Stockage et bases de données → KV → Créer « sable-et-pierre-demandes »

@@ -12,6 +12,9 @@
  *                                 téléphone si NOTIFY_URL est renseigné.
  *  GET  /api/demandes.csv?key=…   export des demandes (clé secrète DEMANDES_KEY).
  *
+ * Il ajoute aussi aux pages l'adresse complète de l'image de partage (og:image),
+ * indispensable aux aperçus WhatsApp et Facebook.
+ *
  * Sans réglage, /api/calendrier répond { ok: false } (le calendrier reste
  * utilisable, les dates sont vérifiées sur Airbnb) et /api/demande répond 503
  * (le formulaire ouvre alors un e-mail pré-rempli : aucune demande perdue).
@@ -133,6 +136,15 @@ export default {
     }
     if (url.pathname === "/api/demandes.csv") return exportCsv(url, env);
     if (url.pathname.startsWith("/api/")) return new Response("Not found", { status: 404 });
-    return env.ASSETS.fetch(request);
+    const res = await env.ASSETS.fetch(request);
+    // Pages : adresses complètes pour les aperçus de partage (WhatsApp, Facebook…)
+    if ((res.headers.get("Content-Type") || "").includes("text/html")) {
+      const abs = (v) => (v && !/^https?:/.test(v) ? new URL(v, url.origin + "/").toString() : v);
+      return new HTMLRewriter()
+        .on('meta[property="og:image"]', { element(el) { el.setAttribute("content", abs(el.getAttribute("content"))); } })
+        .on("head", { element(el) { el.append(`<meta property="og:url" content="${url.origin}${url.pathname}">`, { html: true }); } })
+        .transform(res);
+    }
+    return res;
   },
 };

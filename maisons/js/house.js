@@ -265,7 +265,7 @@
         </div>
       </div>
       <ol class="dest-list" style="margin-top:72px">
-        ${D.places.map(([t, dist, body]) => `<li><details><summary><h4>${esc(t)}</h4><span class="dist">${esc(dist)}</span><span class="plus" aria-hidden="true"></span></summary><p>${esc(body)}</p></details></li>`).join("")}
+        ${D.places.map(([t, dist, body]) => `<li><details><summary><h3>${esc(t)}</h3><span class="dist">${esc(dist)}</span><span class="plus" aria-hidden="true"></span></summary><p>${esc(body)}</p></details></li>`).join("")}
       </ol>
     </div>
   </section>
@@ -606,7 +606,7 @@
         const sel = cls.includes("is-start") || cls.includes("is-end");
         cells.push(`<button type="button" class="${cls.join(" ")}" data-date="${iso(date)}" aria-label="${label}" title="${why ? why.charAt(0).toUpperCase() + why.slice(1) : ""}"${disabled ? ' aria-disabled="true" data-off' : ""}${sel ? ' aria-pressed="true"' : ""} tabindex="-1">${d}</button>`);
       }
-      html.push(`<div class="cal__month"><h4>${fmtMonth.format(first)}</h4><div class="cal__grid">${cells.join("")}</div></div>`);
+      html.push(`<div class="cal__month"><h3>${fmtMonth.format(first)}</h3><div class="cal__grid">${cells.join("")}</div></div>`);
     }
     monthsBox.innerHTML = html.join("");
     // Un seul jour atteignable à la tabulation : le jour actif, sinon le premier possible
@@ -892,8 +892,9 @@
     const km = dist(h.lat, h.lng, lat, lng);
     return { i, cat, name, lat, lng, km };
   }).sort((a, b) => a.km - b.km);
-  const kmTxt = (km) => (km < 1 ? `${Math.round(km * 10) * 100} m` : `${km < 10 ? fr(km.toFixed(1)) : Math.round(km)} km`);
-  const walkTxt = (km) => (km < 3 ? ` · environ ${Math.max(5, Math.round((km * 1.3) / 4.5 * 60 / 5) * 5)} min à pied` : "");
+  const kmTxt = (km) => (km < 0.95 ? `${Math.round(km * 10) * 100} m` : `${km < 10 ? fr(km.toFixed(1)) : Math.round(km)} km`);
+  // Temps de marche indicatif : distance à vol d'oiseau majorée de 20 %, à 5 km/h
+  const walkTxt = (km) => (km < 3 ? ` · environ ${Math.max(5, Math.round((km * 1.2) / 5 * 60 / 5) * 5)} min à pied` : "");
   const cats = Object.keys(POI_CATS).filter((c) => pois.some((p) => p.cat === c));
   let poiCat = key === "bordeaux" ? "walk" : "all";
   $(".poi-filter").innerHTML = [`<button type="button" class="chip" data-poi="all" aria-pressed="${poiCat === "all"}">Tout</button>`]
