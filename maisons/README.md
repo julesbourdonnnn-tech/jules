@@ -58,7 +58,8 @@ Tout vient **des deux annonces Airbnb**, sans rien inventer :
 
 Le site a **son propre Worker Cloudflare, « lacanau »**, séparé de Nuits Singulières et du Passe (le dossier `maisons/` est exclu de nuitsinguliere.com par le `.assetsignore` à la racine).
 
-- **Recommandé (comme pour les autres sites)** : Cloudflare → Workers & Pages → Créer → Importer un dépôt Git → `jules`, puis dans les réglages de build : **répertoire racine = `maisons`**, commande de déploiement `npx wrangler deploy`. Cloudflare publie le site à chaque modification.
+- **En place** : le projet Cloudflare « lacanau » est relié au dépôt `jules` (répertoire racine `maisons`, commande de déploiement `npx wrangler deploy`). Chaque modification poussée sur sa branche de production republie le site.
+- **Pour le créer à nouveau (comme pour les autres sites)** : Cloudflare → Workers & Pages → Créer → Importer un dépôt Git → `jules`, puis dans les réglages de build : **répertoire racine = `maisons`**, commande de déploiement `npx wrangler deploy`. Cloudflare publie le site à chaque modification.
 - **Autre option** : la GitHub Action « Sable & Pierre » (`.github/workflows/maisons.yml`) publie le site à chaque modification du dossier `maisons/` sur la branche principale, avec les secrets déjà utilisés par le dépôt (`CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`). Adresse provisoire : `https://lacanau.<ton-compte>.workers.dev`.
 - **À la main** : depuis le dossier `maisons/`, `npx wrangler deploy`.
 - **Nom de domaine** : une fois acheté sur Cloudflare, retire les `//` devant le bloc `routes` de `wrangler.jsonc` (en y mettant ton domaine), et renseigne `url` dans `js/config.js`.
