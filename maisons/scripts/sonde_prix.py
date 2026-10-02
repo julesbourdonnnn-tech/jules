@@ -33,23 +33,30 @@ def call(op, variables):
 lid = LISTINGS["bordeaux"]
 gid = base64.b64encode(f"StayListing:{lid}".encode()).decode()
 dgid = base64.b64encode(f"DemandStayListing:{lid}".encode()).decode()
-req = {"adults": "2", "categoryTag": None, "causeId": None, "children": None, "disasterId": None, "discountedGuestFeeVersion": None,
-       "displayExtensions": None, "federatedSearchId": None, "forceBoostPriorityMessageType": None, "infants": None, "interactionType": None,
-       "layouts": ["SIDEBAR", "SINGLE_COLUMN"], "pets": 0, "pdpTypeOverride": None, "photoId": None, "preview": False,
-       "previousStateCheckIn": None, "previousStateCheckOut": None, "priceDropSource": None, "privateBooking": False, "promotionUuid": None,
-       "relaxedAmenityIds": None, "searchId": None, "selectedCancellationPolicyId": None, "selectedRatePlanId": None, "splitStays": None,
-       "staysBookingMigrationEnabled": False, "translateUgc": None, "useNewSectionWrapperApi": False,
-       "sectionIds": None, "checkIn": "2027-03-12", "checkOut": "2027-03-14", "p3ImpressionId": "p3_1_x"}
-tries = []
+flags = sorted(set(re.findall(r"include[A-Z]\w+", js)))
+ci, co = "2027-03-12", "2027-03-14"
+psr = {"adults": "2", "amenityFilters": None, "bypassTargetings": False, "categoryTag": None, "causeId": None, "children": None,
+       "disasterId": None, "discountedGuestFeeVersion": None, "federatedSearchId": None, "forceBoostPriorityMessageType": None,
+       "guestAges": None, "hostPreview": False, "infants": None, "interactionType": None, "layouts": ["SIDEBAR", "SINGLE_COLUMN"],
+       "omniPageId": None, "omniVersionId": None, "pets": 0, "pdpTypeOverride": None, "photoId": None, "preview": False,
+       "previousStateCheckIn": None, "previousStateCheckOut": None, "priceDropSource": None, "partner": None, "partnerProgram": None,
+       "directBookingParams": None, "privateBooking": False, "promotionUuid": None, "relaxedAmenityIds": None, "searchId": None,
+       "selectedCancellationPolicyId": None, "selectedRatePlanId": None, "splitStays": None, "staysBookingMigrationEnabled": False,
+       "translateUgc": None, "useNewSectionWrapperApi": False, "sectionIds": None, "checkIn": ci, "checkOut": co, "p3ImpressionId": "p3_1700000000_P3abcdef"}
+base = {"id": gid, "demandStayListingId": dgid, "pdpSectionsRequest": psr, "categoryTag": None, "federatedSearchId": None,
+        "federatedSearchSessionId": None, "p3ImpressionId": "p3_1700000000_P3abcdef", "photoId": None, "amenityIds": None, "causeId": None,
+        "dateRange": {"startDate": ci, "endDate": co}, "guestCounts": {"numberOfAdults": 2}, "numberOfChildren": None,
+        "numberOfInfants": None, "numberOfPets": None}
+for f in flags:
+    if f in ("includeGp", "includePdpMigration"): continue
+    base[f] = f.startswith("includeGp")
+log.append("drapeaux : " + ", ".join(f"{f}={base.get(f)}" for f in flags))
 for op in ("StaysPdpBookItQuery", "StaysPdpSections"):
-    if op not in ops: continue
-    for name, v in (("A", {"id": gid, "pdpSectionsRequest": req}), ("B", {"id": dgid, "pdpSectionsRequest": req}),
-                    ("C", {"id": gid, "demandStayListingId": dgid, "pdpSectionsRequest": req, "includeGpReviewsFragment": False, "includePdpMigrationReviewsFragment": False, "includePdpMigrationHighlightsFragment": False}),
-                    ("D", {"id": dgid, "pdpSectionsRequest": dict(req, sectionIds=["BOOK_IT_SIDEBAR"])})):
+    for name, v in (("A", base), ("B", dict(base, pdpSectionsRequest=dict(psr, sectionIds=["BOOK_IT_SIDEBAR", "BOOK_IT_FLOATING_FOOTER"])))):
         d = call(op, v)
         txt = json.dumps(d, ensure_ascii=False)
-        prices = re.findall(r'"(?:price|qualifier|discountedPrice|originalPrice|accessibilityLabel)"\s*:\s*"([^"]*€[^"]*)"', txt)[:10]
-        log.append(f"{op} {name}: erreurs={json.dumps(d.get('errors') if isinstance(d, dict) else None, ensure_ascii=False)[:300]} http={d.get('http') if isinstance(d, dict) else ''} prix={prices}")
-        if prices: json.dump(d, open(f"{OUT}/prix-{op}-{name}.json", "w"), ensure_ascii=False)
+        prices = re.findall(r'"(?:price|qualifier|discountedPrice|originalPrice|accessibilityLabel|description|title)"\s*:\s*"([^"]*€[^"]*)"', txt)[:14]
+        log.append(f"{op} {name}: erreurs={json.dumps(d.get('errors') if isinstance(d, dict) else None, ensure_ascii=False)[:400]} http={d.get('http') if isinstance(d, dict) else ''} taille={len(txt)} prix={prices}")
+        json.dump(d, open(f"{OUT}/rep-{op}-{name}.json", "w"), ensure_ascii=False)
 open(f"{OUT}/log.txt", "w").write("\n".join(log))
 print("\n".join(log))
