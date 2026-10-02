@@ -4,6 +4,13 @@
   const { $, $$, esc, icon, img, reduced } = window.SP;
   const H = window.HOUSES;
 
+  /* Prix indicatif « à partir de » (si renseigné dans js/data.js) */
+  ["lacanau", "bordeaux"].forEach((k) => {
+    if (!H[k].priceFrom) return;
+    const ul = $(`.house-feature[data-house="${k}"] .facts`);
+    if (ul) ul.insertAdjacentHTML("beforeend", `<li data-icon="calendar">À partir de ${H[k].priceFrom.toLocaleString("fr-FR")} € la nuit</li>`);
+  });
+
   /* Icônes des listes « facts » */
   $$("[data-icon]").forEach((li) => li.insertAdjacentHTML("afterbegin", icon(li.dataset.icon)));
 
@@ -235,7 +242,7 @@
         const alt = nextFrom(av, a, nights(a, b));
         return card(k, false, `Ces dates ne sont pas toutes libres.${alt ? ` Prochaine possibilité : du ${fmt.format(alt[0])} au ${fmt.format(alt[1])}.` : ""}`, alt ? url(alt[0], alt[1]) : `${H[k].page}#reserver`, alt ? "Voir ces dates" : "Voir le calendrier");
       }
-      return card(k, true, `Libre du ${fmt.format(a)} au ${fmt.format(b)} · ${plural(nights(a, b), "nuit")} · ${plural(g, "voyageur")}`, url(a, b), "Réserver ces dates");
+      return card(k, true, `Libre du ${fmt.format(a)} au ${fmt.format(b)} · ${plural(nights(a, b), "nuit")} · ${plural(g, "voyageur")}${H[k].priceFrom ? ` · à partir de ${H[k].priceFrom.toLocaleString("fr-FR")} € la nuit` : ""}`, url(a, b), "Réserver ces dates");
     };
     // Premier séjour de même durée possible après la date demandée
     function nextFrom(av, a, n) {
