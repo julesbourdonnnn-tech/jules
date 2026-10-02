@@ -13,35 +13,58 @@ def api(url):
     with urllib.request.urlopen(req, timeout=40) as r:
         return json.loads(r.read().decode())
 
-for key, lid in LISTINGS.items():
-    # 1. Page avec dates : le bloc de réservation contient-il un prix ?
-    for ci, co in (("2027-06-12", "2027-06-19"), ("2026-11-14", "2026-11-16")):
-        try:
-            page = get(f"https://www.airbnb.fr/rooms/{lid}?check_in={ci}&check_out={co}&adults=2")
-            m = re.search(r'id="data-deferred-state-0"[^>]*>(.*?)</script>', page, re.S)
-            st = json.loads(H.unescape(m.group(1))) if m else {}
-            found = []
-            for d in walk(st):
-                if isinstance(d, dict) and d.get("sectionId") in ("BOOK_IT_SIDEBAR", "BOOK_IT_FLOATING_FOOTER", "BOOK_IT_NAV") and d.get("section"):
-                    found.append(d)
-            prices = re.findall(r'[0-9][0-9\s  .,]*\s?€[^"<]{0,60}', page)[:40]
-            json.dump({"sections": found, "price_strings": prices}, open(f"{OUT}/{key}-page-{ci}.json", "w"), ensure_ascii=False, indent=1)
-            log.append(f"{key} page {ci}: {len(found)} sections, {len(prices)} prix trouvés : {prices[:6]}")
-        except Exception as e:
-            log.append(f"{key} page {ci}: erreur {e}")
-    # 2. Calendrier de disponibilités
-    for h in ("8f08e03c7bd16fcad3c92a3592c19a8b559a0d0855a84028d1163d4733ed9ade",):
-        v = {"request": {"count": 12, "listingId": lid, "month": 10, "year": 2026}}
-        q = urllib.parse.urlencode({"operationName": "PdpAvailabilityCalendar", "locale": "fr", "currency": "EUR",
-                                    "variables": json.dumps(v, separators=(",", ":")),
-                                    "extensions": json.dumps({"persistedQuery": {"version": 1, "sha256Hash": h}}, separators=(",", ":"))})
-        try:
-            data = api(f"https://www.airbnb.fr/api/v3/PdpAvailabilityCalendar/{h}?{q}")
-            json.dump(data, open(f"{OUT}/{key}-calendar.json", "w"), ensure_ascii=False)
-            days = [d for d in walk(data) if isinstance(d, dict) and "calendarDate" in d]
-            log.append(f"{key} calendrier: {len(days)} jours, exemple {json.dumps(days[:2], ensure_ascii=False)[:400]}")
-        except Exception as e:
-            log.append(f"{key} calendrier: erreur {e}")
+from airbnb import find_hash
+import re as _re
 
-open(f"{OUT}/log.txt", "w").write("\n".join(log))
+def find_ops(page, names):
+    found = {}
+    base = "https://a0.muscache.com/airbnb/static/"
+    queue = list(dict.fromkeys(_re.findall(r'(https://a0\.muscache\.com/airbnb/static/packages/web/[^"\'\s]+?\.js)', page)))
+    seen = set()
+    while queue and len(seen) < 700 and len(found) < len(names):
+        u = queue.pop(0)
+        if u in seen: continue
+        seen.add(u)
+        try: js = get(u, tries=2)
+        except Exception: continue
+        for n in names:
+            if n not in found and n in js:
+                h = find_hash(js, n)
+                if h: found[n] = h
+        for rel in _re.findall(r'["\'/]((?:packages/web/)[\w./\-]+?\.js)["\']', js):
+            if base + rel not in seen: queue.append(base + rel)
+    return found
+
+key, lid = "bordeaux", LISTINGS["bordeaux"]
+page = get(f"https://www.airbnb.fr/rooms/{lid}")
+ops = find_ops(page, ["StaysPdpSections", "StaysPdpBookItQuery", "PdpBookItQuery", "StaysCheckoutQuery", "stayCheckout"])
+log.append(f"opérations trouvées : {ops}")
+gid = base64.b64encode(f"StayListing:{lid}".encode()).decode()
+base_req = {"adults": "2", "bypassTargetings": False, "categoryTag": None, "causeId": None, "children": None,
+    "disasterId": None, "discountedGuestFeeVersion": None, "displayExtensions": None, "federatedSearchId": None,
+    "forceBoostPriorityMessageType": None, "infants": None, "interactionType": None, "layouts": ["SIDEBAR", "SINGLE_COLUMN"],
+    "pets": 0, "pdpTypeOverride": None, "photoId": None, "preview": False, "previousStateCheckIn": None,
+    "previousStateCheckOut": None, "priceDropSource": None, "privateBooking": False, "promotionUuid": None,
+    "relaxedAmenityIds": None, "searchId": None, "selectedCancellationPolicyId": None, "selectedRatePlanId": None,
+    "splitStays": None, "staysBookingMigrationEnabled": False, "translateUgc": None, "useNewSectionWrapperApi": False,
+    "sectionIds": ["BOOK_IT_SIDEBAR", "BOOK_IT_FLOATING_FOOTER"], "checkIn": "2027-03-12", "checkOut": "2027-03-14"}
+if "StaysPdpSections" in ops:
+    h = ops["StaysPdpSections"]
+    for name, variables in (
+        ("v1", {"id": gid, "pdpSectionsRequest": base_req}),
+        ("v2", {"id": gid, "pdpSectionsRequest": {**base_req, "sectionIds": None}}),
+        ("v3", {"id": gid, "demandStayListingId": gid, "pdpSectionsRequest": base_req}),
+    ):
+        q = urllib.parse.urlencode({"operationName": "StaysPdpSections", "locale": "fr", "currency": "EUR",
+            "variables": json.dumps(variables, separators=(",", ":")),
+            "extensions": json.dumps({"persistedQuery": {"version": 1, "sha256Hash": h}}, separators=(",", ":"))})
+        try:
+            data = api(f"https://www.airbnb.fr/api/v3/StaysPdpSections/{h}?{q}")
+            json.dump(data, open(f"{OUT}/prix-{name}.json", "w"), ensure_ascii=False)
+            prices = [d for d in walk(data) if isinstance(d, dict) and d.get("__typename", "").endswith("DisplayPriceLine")][:5]
+            log.append(f"{name}: erreurs={json.dumps(data.get('errors'))[:300]} prix={json.dumps(prices, ensure_ascii=False)[:600]}")
+        except Exception as e:
+            log.append(f"{name}: erreur {e}")
+
+open(f"{OUT}/log2.txt", "w").write("\n".join(log))
 print("\n".join(log))
