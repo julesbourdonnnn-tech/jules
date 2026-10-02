@@ -1,5 +1,6 @@
 # Données du site Sable & Pierre, mises à jour automatiquement :
 #  - disponibilités réelles des deux maisons (calendrier Airbnb), toutes les 4 heures ;
+#  - prix Airbnb des deux maisons pour 12 mois, une fois par jour (base du prix en direct) ;
 #  - climat mois par mois (relevés Open-Meteo), quand le fichier n'existe pas encore
 #    ou à la demande (Actions → « Maisons — données » → Run workflow → climat = oui).
 # Chaque changement est enregistré dans le dépôt, puis le site est republié.
@@ -12,6 +13,7 @@ on:
     paths:
       - "maisons/scripts/disponibilites.py"
       - "maisons/scripts/climat.py"
+      - "maisons/scripts/prix_airbnb.py"
       - ".github/workflows/maisons-donnees.yml"
   workflow_dispatch:
     inputs:
@@ -30,7 +32,7 @@ concurrency:
 jobs:
   donnees:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -40,6 +42,15 @@ jobs:
       - name: Disponibilités Airbnb
         working-directory: maisons
         run: python scripts/disponibilites.py
+      - name: Prix Airbnb (une fois par jour)
+        working-directory: maisons
+        if: always()
+        run: |
+          if ! grep -q "periodes" js/tarifs-airbnb.js 2>/dev/null || ! grep -q "\"updated\": \"$(date -u +%F)\"" js/tarifs-airbnb.js || [ "${{ github.event_name }}" != "schedule" ]; then
+            python scripts/prix_airbnb.py
+          else
+            echo "Prix déjà relevés aujourd'hui."
+          fi
       - name: Climat (si besoin)
         working-directory: maisons
         if: always()
@@ -54,8 +65,8 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A -- maisons/js/disponibilites.js maisons/js/climat.js maisons/data/climat.json 2>/dev/null || true
+          git add -A -- maisons/js/disponibilites.js maisons/js/tarifs-airbnb.js maisons/js/climat.js maisons/data/climat.json 2>/dev/null || true
           if git diff --cached --quiet; then echo "Rien de nouveau"; exit 0; fi
-          git commit -m "Maisons : disponibilités et climat (mise à jour automatique)"
+          git commit -m "Maisons : disponibilités, prix et climat (mise à jour automatique)"
           git pull --rebase origin "${GITHUB_REF_NAME}"
           git push origin "HEAD:${GITHUB_REF_NAME}"

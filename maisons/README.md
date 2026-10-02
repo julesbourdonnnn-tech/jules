@@ -29,7 +29,7 @@ Détails : polices hébergées sur le site, aucun cookie, accessible au clavier 
 
 Le voyageur réserve **directement sur le site, sans frais de plateforme** :
 
-1. Il choisit ses dates (les nuits prises sont grisées, la durée minimale est respectée) et ses voyageurs : **le prix détaillé s'affiche** (nuits selon la saison, ménage, taxe de séjour).
+1. Il choisit ses dates (les nuits prises sont grisées, la durée minimale est respectée) et ses voyageurs : **le prix détaillé s'affiche** : le prix Airbnb de ces dates, **moins 10 %** (remise réservation directe), à côté du bouton « Réserver sur Airbnb » pour comparer.
 2. Il indique ses coordonnées, accepte les **conditions de réservation** (`conditions.html`) et paie par carte sur la page sécurisée **Stripe**. Sa carte n'est **pas débitée** : le montant est seulement réservé (empreinte bancaire). Les dates sont bloquées sur le site pendant le paiement.
 3. Tu reçois une alerte sur ton téléphone (si `NOTIFY_URL` est réglé). Dans ton **espace propriétaire** (`/admin.html`), tu cliques **Accepter** (la carte est débitée, Stripe envoie le reçu au voyageur, et un e-mail de confirmation pré-rempli s'ouvre pour toi) ou **Refuser** (l'empreinte est libérée, rien n'est débité).
 4. Le voyageur suit sa réservation sur sa page personnelle (`/reservation.html?id=…`).
@@ -40,7 +40,7 @@ Tant que les tarifs ou la clé Stripe ne sont pas renseignés, le site fonctionn
 
 #### Mise en route (une seule fois)
 
-1. **Tes tarifs** dans `js/tarifs.js` : prix de la nuit, prix par saison, ménage, taxe de séjour, caution, conditions d'annulation. (Ou donne-les à Claude.)
+1. **Les prix** sont ceux d'Airbnb, relevés automatiquement chaque jour (voir plus bas) : rien à faire. Dans `js/tarifs.js` tu règles la remise (`remiseDirecte`, 10 %), la caution et les conditions d'annulation. Si un jour tu veux tes propres prix, renseigne `nuit` (et `saisons`, `menage`, `taxeSejour`) : ils remplacent alors les prix Airbnb.
 2. **Stripe** : crée un compte sur stripe.com (gratuit, avec ton IBAN), puis Développeurs → Clés API → copie la **clé secrète** (`sk_live_…`). Pour essayer d'abord sans vrai paiement, utilise la clé de test (`sk_test_…`) et la carte 4242 4242 4242 4242.
 3. Dans **Cloudflare → Workers & Pages → lacanau → Settings → Variables and secrets**, ajoute (type « Secret ») :
    - `STRIPE_SECRET_KEY` : la clé Stripe ;
@@ -52,15 +52,16 @@ Tant que les tarifs ou la clé Stripe ne sont pas renseignés, le site fonctionn
 
 Le stockage des réservations (« sable-et-pierre-reservations ») est déjà créé et branché.
 
-### Afficher un prix « à partir de »
+### Prix « à partir de »
 
-Pour afficher un prix indicatif (« À partir de 450 € la nuit ») sur l'accueil et en haut des fiches, renseigne `priceFrom` pour chaque maison dans `js/data.js`. Laisse `null` pour ne rien afficher.
+L'accueil et le haut des fiches affichent « À partir de … € la nuit en direct » : le prix de nuit Airbnb le plus bas des 12 prochains mois, remise déduite. Pour imposer un autre chiffre, renseigne `priceFrom` dans `js/data.js`.
 
 ## Ce qui se met à jour tout seul
 
 La GitHub Action **« Maisons — données »** (`.github/workflows/maisons-donnees.yml`) tourne toutes les 4 heures, une fois la branche fusionnée dans `main` :
 
 - **Disponibilités** (`scripts/disponibilites.py` → `js/disponibilites.js`) : pour les 12 prochains mois, les nuits libres, les jours d'arrivée et de départ possibles et la durée minimale de séjour, lus dans le calendrier Airbnb de chaque annonce. **Rien à régler.** Quand tu bloques des dates sur Airbnb, le site suit dans les 4 heures.
+- **Prix** (`scripts/prix_airbnb.py` → `js/tarifs-airbnb.js`), une fois par jour : pour chaque quinzaine des 12 prochains mois, le prix affiché par Airbnb (nuit, frais du séjour, taxes). Quand tu changes tes prix sur Airbnb, le site suit le lendemain, toujours avec la remise de 10 %. Si un relevé échoue, les prix précédents sont gardés.
 - **Climat** (`scripts/climat.py` → `js/climat.js`) : moyennes 2015–2024 (températures, jours de pluie, température de l'océan à Lacanau), calculées une fois à partir des archives Open-Meteo. Pour les recalculer : Actions → « Maisons — données » → Run workflow → climat = oui.
 
 ## D'où viennent les textes et les photos

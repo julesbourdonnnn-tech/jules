@@ -18,7 +18,8 @@
   const ratingTxt = h.rating % 1 === 0 ? fr(h.rating.toFixed(1)) : fr(h.rating);
   const arrow = icon("arrow");
   const pct = Number((window.TARIFS || {}).remiseDirecte) || 0;
-  const price = h.priceFrom ? `À partir de ${h.priceFrom.toLocaleString("fr-FR")} € la nuit` : "";
+  const from = window.SP_FROM ? window.SP_FROM(key) : h.priceFrom;
+  const price = from ? `À partir de ${from.toLocaleString("fr-FR")} € la nuit en direct` : "";
   const firstWord = h.name.replace(/ (du|de) .*/, "");
   const lastWords = h.name.replace(/^La Maison /, "");
   const av = SP.availability(key);

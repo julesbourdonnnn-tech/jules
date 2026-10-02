@@ -4,11 +4,12 @@
   const { $, $$, esc, icon, img, reduced } = window.SP;
   const H = window.HOUSES;
 
-  /* Prix indicatif « à partir de » (si renseigné dans js/data.js) */
+  /* Prix indicatif « à partir de » en réservation directe (js/data.js, sinon prix Airbnb relevé) */
+  const from = (k) => (window.SP_FROM ? window.SP_FROM(k) : H[k].priceFrom);
   ["lacanau", "bordeaux"].forEach((k) => {
-    if (!H[k].priceFrom) return;
+    if (!from(k)) return;
     const ul = $(`.house-feature[data-house="${k}"] .facts`);
-    if (ul) ul.insertAdjacentHTML("beforeend", `<li data-icon="calendar">À partir de ${H[k].priceFrom.toLocaleString("fr-FR")} € la nuit</li>`);
+    if (ul) ul.insertAdjacentHTML("beforeend", `<li data-icon="calendar">À partir de ${from(k).toLocaleString("fr-FR")} € la nuit en direct</li>`);
   });
 
   /* Remise réservation directe (js/tarifs.js) */
@@ -459,7 +460,7 @@
         return card(k, false, `Ces dates ne sont pas toutes libres.${alt ? ` Prochaine possibilité : du ${fmt.format(alt[0])} au ${fmt.format(alt[1])}.` : ""}`, alt ? url(alt[0], alt[1]) : `${H[k].page}#reserver`, alt ? "Voir ces dates" : "Voir le calendrier");
       }
       const pct = Number((window.TARIFS || {}).remiseDirecte) || 0;
-      return card(k, true, `Libre du ${fmt.format(a)} au ${fmt.format(b)} · ${plural(nights(a, b), "nuit")} · ${plural(g, "voyageur")}${pct ? ` · −${pct} % en réservant en direct` : ""}${H[k].priceFrom ? ` · à partir de ${H[k].priceFrom.toLocaleString("fr-FR")} € la nuit` : ""}`, url(a, b), "Réserver ces dates");
+      return card(k, true, `Libre du ${fmt.format(a)} au ${fmt.format(b)} · ${plural(nights(a, b), "nuit")} · ${plural(g, "voyageur")}${pct ? ` · −${pct} % en réservant en direct` : ""}${from(k) ? ` · à partir de ${from(k).toLocaleString("fr-FR")} € la nuit` : ""}`, url(a, b), "Réserver ces dates");
     };
     sForm.addEventListener("submit", (e) => {
       e.preventDefault();

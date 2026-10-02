@@ -25,6 +25,7 @@
 import "./shim.js";
 import "../js/data.js";
 import "../js/tarifs.js";
+import "../js/tarifs-airbnb.js";
 import "../js/prix.js";
 
 const H = globalThis.HOUSES;
