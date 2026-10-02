@@ -35,15 +35,25 @@ globalThis.SP_PRICE = function (house, arrivee, depart, adultes) {
     res.lines.push({ label: `${g.price.toLocaleString("fr-FR")} € × ${g.count} nuit${g.count > 1 ? "s" : ""}`, cents: amount });
   });
   if (T.menage) { cents += eur(T.menage); res.lines.push({ label: "Ménage", cents: eur(T.menage) }); }
+  // Remise réservation directe (sur les nuits et le ménage)
+  const pct = Number((globalThis.TARIFS || {}).remiseDirecte) || 0;
+  res.sansRemise = cents;
+  if (pct > 0) {
+    const off = Math.round((cents * pct) / 100);
+    cents -= off;
+    res.remise = off;
+    res.lines.push({ label: `Remise réservation directe (−${pct} %)`, cents: -off });
+  }
   const ad = Math.max(1, Number(adultes) || 1);
   if (T.taxeSejour) {
     const tax = eur(T.taxeSejour) * ad * n;
     cents += tax;
     res.lines.push({ label: `Taxe de séjour (${ad} adulte${ad > 1 ? "s" : ""} × ${n} nuit${n > 1 ? "s" : ""})`, cents: tax });
   }
+  res.sansRemiseTotal = cents + (res.remise || 0); // total sans la remise (pour comparer)
   res.ready = true;
   res.cents = cents;
   res.total = cents / 100;
   return res;
 };
-globalThis.SP_EUR = (cents) => `${(cents / 100).toLocaleString("fr-FR", { minimumFractionDigits: cents % 100 ? 2 : 0, maximumFractionDigits: 2 })} €`;
+globalThis.SP_EUR = (cents) => `${cents < 0 ? "−" : ""}${(Math.abs(cents) / 100).toLocaleString("fr-FR", { minimumFractionDigits: Math.abs(cents) % 100 ? 2 : 0, maximumFractionDigits: 2 })} €`;

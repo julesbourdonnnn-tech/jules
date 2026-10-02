@@ -1045,3 +1045,15 @@ body.header-visible .sub-nav { top: 70px; }
 .admin-card dd .link, .resa .small .link { text-transform: none; letter-spacing: 0; font: inherit; }
 html { background: var(--ivory); }
 .page { min-height: 100vh; min-height: 100svh; }
+
+/* Remise réservation directe */
+.deal { display: flex; gap: 12px; align-items: flex-start; margin: 0 0 14px; padding: 12px 14px; background: color-mix(in srgb, var(--accent) 9%, var(--paper)); background-color: var(--ivory); border: 1px dashed var(--accent); font-size: .88rem; color: var(--ink-soft); }
+.deal svg { width: 20px; height: 20px; flex: none; color: var(--accent); }
+.deal strong { color: var(--accent); }
+.booking__or { display: flex; align-items: center; gap: 14px; margin: 12px 0; font: 600 .62rem/1 var(--sans); letter-spacing: .2em; text-transform: uppercase; color: var(--muted); }
+.booking__or::before, .booking__or::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+.booking__price .is-off, .recap__price .is-off { color: var(--accent); font-weight: 600; }
+.booking__total s { font: 400 1rem/1 var(--sans); color: var(--muted); margin-right: 6px; }
+.booking__save { margin: 8px 0 0 !important; justify-content: flex-end !important; font-size: .82rem; color: var(--accent); font-weight: 600; }
+.search__deal { margin: 12px 0 0; text-align: center; font-size: .9rem; color: var(--ink-soft); }
+.search__deal strong { color: var(--ink); }

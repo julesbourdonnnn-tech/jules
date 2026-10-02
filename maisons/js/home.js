@@ -11,6 +11,14 @@
     if (ul) ul.insertAdjacentHTML("beforeend", `<li data-icon="calendar">À partir de ${H[k].priceFrom.toLocaleString("fr-FR")} € la nuit</li>`);
   });
 
+  /* Remise réservation directe (js/tarifs.js) */
+  const deal = $(".search__deal");
+  if (deal) {
+    const pct = Number((window.TARIFS || {}).remiseDirecte) || 0;
+    if (pct) deal.innerHTML = `<strong>−${pct} % sur tout le séjour</strong> en réservant directement sur ce site.`;
+    else deal.remove();
+  }
+
   /* Icônes des listes « facts » */
   $$("[data-icon]").forEach((li) => li.insertAdjacentHTML("afterbegin", icon(li.dataset.icon)));
 
@@ -450,7 +458,8 @@
         const alt = nextFrom(av, a, nights(a, b));
         return card(k, false, `Ces dates ne sont pas toutes libres.${alt ? ` Prochaine possibilité : du ${fmt.format(alt[0])} au ${fmt.format(alt[1])}.` : ""}`, alt ? url(alt[0], alt[1]) : `${H[k].page}#reserver`, alt ? "Voir ces dates" : "Voir le calendrier");
       }
-      return card(k, true, `Libre du ${fmt.format(a)} au ${fmt.format(b)} · ${plural(nights(a, b), "nuit")} · ${plural(g, "voyageur")}${H[k].priceFrom ? ` · à partir de ${H[k].priceFrom.toLocaleString("fr-FR")} € la nuit` : ""}`, url(a, b), "Réserver ces dates");
+      const pct = Number((window.TARIFS || {}).remiseDirecte) || 0;
+      return card(k, true, `Libre du ${fmt.format(a)} au ${fmt.format(b)} · ${plural(nights(a, b), "nuit")} · ${plural(g, "voyageur")}${pct ? ` · −${pct} % en réservant en direct` : ""}${H[k].priceFrom ? ` · à partir de ${H[k].priceFrom.toLocaleString("fr-FR")} € la nuit` : ""}`, url(a, b), "Réserver ces dates");
     };
     sForm.addEventListener("submit", (e) => {
       e.preventDefault();

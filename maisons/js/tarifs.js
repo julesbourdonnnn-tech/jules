@@ -29,6 +29,8 @@ globalThis.TARIFS = {
     taxeSejour: 0,
     caution: null,
   },
+  // Remise accordée aux réservations directes, en % (nuits et ménage ; la taxe de séjour n'est pas remisée)
+  remiseDirecte: 10,
   // Conditions d'annulation (affichées avant le paiement, à adapter)
   annulation: [
     "Annulation gratuite jusqu'à 30 jours avant l'arrivée : remboursement intégral.",

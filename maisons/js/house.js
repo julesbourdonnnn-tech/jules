@@ -17,6 +17,7 @@
   const fr = (x) => String(x).replace(".", ",");
   const ratingTxt = h.rating % 1 === 0 ? fr(h.rating.toFixed(1)) : fr(h.rating);
   const arrow = icon("arrow");
+  const pct = Number((window.TARIFS || {}).remiseDirecte) || 0;
   const price = h.priceFrom ? `À partir de ${h.priceFrom.toLocaleString("fr-FR")} € la nuit` : "";
   const firstWord = h.name.replace(/ (du|de) .*/, "");
   const lastWords = h.name.replace(/^La Maison /, "");
@@ -231,11 +232,14 @@
           </div></div>
           <div class="booking__summary" id="summary" hidden></div>
           <div class="booking__price" id="price" hidden></div>
-          <button type="button" class="btn btn--accent btn--block" id="go-book">Réserver</button>
+          ${pct ? `<p class="deal">${icon("award")}<span><strong>−${pct} % en réservant en direct</strong> sur tout le séjour</span></p>` : ""}
+          <button type="button" class="btn btn--accent btn--block" id="go-book">Réserver en direct</button>
+          <div class="booking__or"><span>ou</span></div>
+          <a class="btn btn--ghost btn--block" id="go-airbnb" href="${h.airbnbUrl}" target="_blank" rel="noopener">Réserver sur Airbnb ${icon("external")}</a>
           <p class="booking__msg" id="book-msg" aria-live="polite"></p>
           <button type="button" class="link booking__clear" id="clear-dates" hidden>Effacer les dates</button>
           <ul class="booking__trust">
-            <li>${icon("shield")}<span>Réservation en direct, sans frais de plateforme. Paiement sécurisé par carte : rien n'est débité avant notre confirmation</span></li>
+            <li>${icon("shield")}<span>En direct : paiement sécurisé par carte, rien n'est débité avant notre confirmation</span></li>
             <li>${icon("award")}<span>Hôte Superhôte, logement « Coup de cœur voyageurs »</span></li>
             <li>${icon("calendar")}<span>${key === "lacanau" ? "Arrivée dès 16 h, départ avant 10 h" : "Arrivée autonome et flexible, départ avant 12 h"}</span></li>
           </ul>
@@ -726,6 +730,14 @@
   // Prix du séjour (js/tarifs.js) : affiché ici, recalculé par le serveur au paiement
   const priceOf = () => (state.in && state.out && window.SP_PRICE ? window.SP_PRICE(key, iso(state.in), iso(state.out), state.adults) : null);
   const EUR = (c) => window.SP_EUR(c);
+  const airbnbLink = () => {
+    const u = new URL(h.airbnbUrl);
+    if (state.in && state.out) { u.searchParams.set("check_in", iso(state.in)); u.searchParams.set("check_out", iso(state.out)); }
+    u.searchParams.set("adults", state.adults);
+    if (state.children) u.searchParams.set("children", state.children);
+    if (state.infants) u.searchParams.set("infants", state.infants);
+    return u.toString();
+  };
   const guestsText = () => {
     const n = state.adults + state.children;
     let t = plural(n, "voyageur");
@@ -755,12 +767,13 @@
     const p = priceOf();
     if (p && p.ready) {
       pr.hidden = false;
-      pr.innerHTML = `${p.lines.map((l) => `<p><span>${esc(l.label)}</span><span>${EUR(l.cents)}</span></p>`).join("")}<p class="booking__total"><span>Total</span><strong>${EUR(p.cents)}</strong></p>`;
+      pr.innerHTML = `${p.lines.map((l) => `<p${l.cents < 0 ? ' class="is-off"' : ""}><span>${esc(l.label)}</span><span>${EUR(l.cents)}</span></p>`).join("")}<p class="booking__total"><span>Total en direct</span><strong>${p.remise ? `<s>${EUR(p.sansRemiseTotal)}</s> ` : ""}${EUR(p.cents)}</strong></p>${p.remise ? `<p class="booking__save">Vous économisez ${EUR(p.remise)} en réservant ici</p>` : ""}`;
     } else if (state.in && state.out) {
       pr.hidden = false;
       pr.innerHTML = `<p class="small">Le prix de ce séjour vous est confirmé par e-mail avec votre réservation.</p>`;
     } else pr.hidden = true;
-    $("#go-book").textContent = state.in && state.out ? (p && p.ready ? `Réserver · ${EUR(p.cents)}` : "Demander ces dates") : "Choisir mes dates";
+    $("#go-book").textContent = state.in && state.out ? (p && p.ready ? `Réserver en direct · ${EUR(p.cents)}` : `Réserver en direct${pct ? ` (−${pct} %)` : ""}`) : "Choisir mes dates";
+    $("#go-airbnb").href = airbnbLink();
     const msg = $("#book-msg");
     msg.classList.remove("is-error");
     msg.textContent = state.in && !state.out ? `Choisissez maintenant votre date de départ${av.minNights(state.in) > 1 ? ` (${av.minNights(state.in)} nuits minimum)` : ""}.` : "";
@@ -814,11 +827,11 @@
     }
     dlgReturn = document.activeElement;
     const p = priceOf();
-    $("#recap").innerHTML = `<p><strong>${esc(h.name)}</strong></p><p>${esc(stayText())}</p><p>${esc(guestsText())}</p>${p && p.ready ? `<div class="recap__price">${p.lines.map((l) => `<p><span>${esc(l.label)}</span><span>${EUR(l.cents)}</span></p>`).join("")}<p class="booking__total"><span>Total</span><strong>${EUR(p.cents)}</strong></p></div>` : ""}`;
+    $("#recap").innerHTML = `<p><strong>${esc(h.name)}</strong></p><p>${esc(stayText())}</p><p>${esc(guestsText())}</p>${p && p.ready ? `<div class="recap__price">${p.lines.map((l) => `<p${l.cents < 0 ? ' class="is-off"' : ""}><span>${esc(l.label)}</span><span>${EUR(l.cents)}</span></p>`).join("")}<p class="booking__total"><span>Total</span><strong>${EUR(p.cents)}</strong></p></div>` : ""}`;
     $("#d-submit").textContent = p && p.ready ? `Continuer vers le paiement · ${EUR(p.cents)}` : "Envoyer ma demande";
     $("#d-note").textContent = p && p.ready
       ? "Vous allez être redirigé vers la page de paiement sécurisée Stripe. Votre carte n'est pas débitée tout de suite : le montant est seulement réservé, puis débité quand nous confirmons votre séjour (sous 24 h). Sans confirmation, il est libéré."
-      : "Nous vous répondons personnellement par e-mail sous 24 h avec le prix et la confirmation. Rien n'est payé à cette étape.";
+      : `Nous vous répondons personnellement par e-mail sous 24 h avec le prix${pct ? ` (remise de ${pct} % incluse)` : ""} et la confirmation. Rien n'est payé à cette étape.`;
     $("#dlg-form").hidden = false;
     $("#dlg-done").hidden = true;
     dlg.classList.add("is-open");

@@ -24,7 +24,7 @@
 
       <h2>Réservation et paiement</h2>
       <p>Vous choisissez vos dates et le nombre de voyageurs, puis vous payez par carte sur la page sécurisée de notre prestataire de paiement, Stripe. Votre carte n'est pas débitée immédiatement : le montant est réservé (empreinte bancaire), puis débité lorsque nous confirmons votre séjour, en général sous 24 heures. Si nous ne pouvons pas confirmer, le montant est libéré et rien n'est débité.</p>
-      <p>Le prix affiché comprend la location, le ménage et la taxe de séjour lorsqu'elle s'applique. Il n'y a aucun frais de service.</p>
+      <p>Le prix affiché comprend la location, le ménage et la taxe de séjour lorsqu'elle s'applique. Il n'y a aucun frais de service. <span id="remise"></span></p>
 
       <h2>Annulation</h2>
       <ul id="annulation"></ul>
@@ -47,6 +47,7 @@
   <script src="js/tarifs.js"></script>
   <script>
     document.querySelectorAll("[data-email]").forEach(function (a) { a.href = "mailto:" + SITE.email; a.textContent = SITE.email; });
+    if (TARIFS.remiseDirecte) document.getElementById("remise").textContent = "Les réservations faites sur ce site bénéficient d'une remise de " + TARIFS.remiseDirecte + " % sur la location et le ménage (la taxe de séjour, reversée à la commune, n'est pas remisée).";
     document.getElementById("annulation").innerHTML = TARIFS.annulation.map(function (t) { return "<li>" + t.replace(/</g, "&lt;") + "</li>"; }).join("");
     var c = ["lacanau", "bordeaux"].filter(function (k) { return TARIFS[k].caution; }).map(function (k) { return HOUSES[k].name + " : " + TARIFS[k].caution.toLocaleString("fr-FR") + " €"; });
     document.getElementById("caution").textContent = c.length ? "Caution (non prélevée, demandée à l'arrivée) — " + c.join(" · ") + "." : "";
