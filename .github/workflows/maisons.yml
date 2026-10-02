@@ -1,5 +1,5 @@
 # Met en ligne le site Sable & Pierre (dossier maisons/) sur son propre Worker
-# Cloudflare « sable-et-pierre », séparé de Nuits Singulières.
+# Cloudflare « lacanau », séparé de Nuits Singulières.
 # Utilise les mêmes secrets que le reste du dépôt : CLOUDFLARE_API_TOKEN et
 # CLOUDFLARE_ACCOUNT_ID (GitHub → Settings → Secrets and variables → Actions).
 name: Sable & Pierre

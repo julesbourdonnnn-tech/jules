@@ -1,9 +1,9 @@
-// Configuration Cloudflare du site Sable & Pierre (Worker « sable-et-pierre »),
+// Configuration Cloudflare du site Sable & Pierre (Worker « lacanau »),
 // séparé de Nuits Singulières. Le site est servi tel quel depuis ce dossier.
 // Mise en ligne : voir README.md (Cloudflare Workers Builds, répertoire racine
 // « maisons »), ou à la main depuis ce dossier : npx wrangler deploy
 {
-  "name": "sable-et-pierre",
+  "name": "lacanau",
   "compatibility_date": "2025-09-01",
   // Petit programme pour le calendrier et les demandes (worker/index.js) :
   // il s'exécute pour les adresses /api/* et les pages (images de partage),
