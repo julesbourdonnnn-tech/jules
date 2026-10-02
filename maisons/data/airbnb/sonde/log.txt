@@ -1,0 +1,4 @@
+46 scripts dans la page
+46 scripts parcourus ; trouvés : PdpPlatformRoute×6, priceDetails×1, StaysPdpSections×1, StaysPdpBookIt×1, BookItQuery×1
+opérations dans la page : 
+hash dans la page : []
