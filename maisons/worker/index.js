@@ -19,6 +19,7 @@
  *  STRIPE_SECRET_KEY  clé secrète Stripe (sk_live_… ou sk_test_… pour essayer)
  *  ADMIN_KEY          ton mot de passe pour admin.html
  *  NOTIFY_URL         (facultatif) alerte sur téléphone : https://ntfy.sh/ton-sujet
+ *  NOTIFY_TOKEN       (facultatif) jeton d'accès d'un compte ntfy.sh (sinon le quota gratuit, partagé, peut être épuisé)
  *  ICAL_LACANAU / ICAL_BORDEAUX (facultatif) liens iCal d'export Airbnb
  * Stockage : KV « RESERVATIONS » (wrangler.jsonc).
  */
@@ -262,7 +263,9 @@ async function sendAlerts(env, title, text, link) {
         // ntfy : envoi en JSON (les accents ne passent pas dans les en-têtes). Accepte « https://ntfy.sh/sujet », « ntfy.sh/sujet » ou « sujet ».
         const u = new URL(/^https?:\/\//.test(url) ? url : url.includes("/") ? `https://${url}` : `https://ntfy.sh/${url}`);
         const topic = u.pathname.replace(/^\/+|\/+$/g, "");
-        r = await fetch(`${u.origin}/`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ topic, title, message: text, tags: ["house"], priority: 4, ...(link ? { click: link } : {}) }) });
+        // NOTIFY_TOKEN (jeton d'un compte ntfy gratuit) : le quota devient celui du compte, pas celui de l'adresse partagée de Cloudflare
+        const auth = env.NOTIFY_TOKEN ? { Authorization: `Bearer ${env.NOTIFY_TOKEN.trim()}` } : {};
+        r = await fetch(`${u.origin}/`, { method: "POST", headers: { "Content-Type": "application/json", ...auth }, body: JSON.stringify({ topic, title, message: text, tags: ["house"], priority: 4, ...(link ? { click: link } : {}) }) });
       }
       out.telephone = r.ok ? "envoyée" : `erreur ${r.status} : ${(await r.text()).slice(0, 160)}`;
     } catch (e) { out.telephone = `erreur : ${e.message}`; }
