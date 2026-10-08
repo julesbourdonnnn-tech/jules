@@ -98,6 +98,13 @@ Les disponibilités sont déjà mises à jour toutes les 4 heures (voir plus hau
 
 Les nuits prises selon ce lien s'ajoutent à celles du fichier automatique.
 
+## Référencement (Google, Bing)
+
+- Chaque page a un titre et une description pensés pour les recherches (« location maison avec piscine Lacanau 12 personnes », « location maison Bordeaux centre 8 personnes », « vacances en famille »…), une adresse canonique et des données structurées (`VacationRental`, `FAQPage`, fil d'Ariane).
+- **Guides** : `vacances-famille-lacanau.html` et `vacances-famille-bordeaux.html`, des pages de conseils pour les familles qui renvoient vers les maisons.
+- `sitemap.xml` (plan du site) et `robots.txt`.
+- Le contenu des fiches (`lacanau.html`, `bordeaux.html`) est aussi écrit en HTML simple, lisible par tous les moteurs. **Après une modification de `js/data.js` ou l'ajout d'une page**, relance `node scripts/seo.mjs` (met à jour ce contenu et le plan du site).
+
 ## Voir le site en local
 
 ```bash

@@ -266,7 +266,7 @@ const skipStats = (request) => {
   const purpose = request.headers.get("Sec-Purpose") || request.headers.get("Purpose") || "";
   return /prefetch|prerender/i.test(purpose);
 };
-const PAGES = { "/": "/", "/index.html": "/", "/lacanau": "/lacanau", "/lacanau.html": "/lacanau", "/bordeaux": "/bordeaux", "/bordeaux.html": "/bordeaux", "/conditions": "/conditions", "/conditions.html": "/conditions", "/mentions-legales": "/mentions-legales", "/mentions-legales.html": "/mentions-legales" };
+const PAGES = { "/vacances-famille-lacanau": "/vacances-famille-lacanau", "/vacances-famille-lacanau.html": "/vacances-famille-lacanau", "/vacances-famille-bordeaux": "/vacances-famille-bordeaux", "/vacances-famille-bordeaux.html": "/vacances-famille-bordeaux", "/": "/", "/index.html": "/", "/lacanau": "/lacanau", "/lacanau.html": "/lacanau", "/bordeaux": "/bordeaux", "/bordeaux.html": "/bordeaux", "/conditions": "/conditions", "/conditions.html": "/conditions", "/mentions-legales": "/mentions-legales", "/mentions-legales.html": "/mentions-legales" };
 async function trackHit(request, env, url) {
   if (!env.STATS || request.method !== "GET" || skipStats(request)) return;
   const path = PAGES[url.pathname];
@@ -594,7 +594,6 @@ export default {
       const abs = (v) => (v && !/^https?:/.test(v) ? new URL(v, `${origin}/`).toString() : v);
       return new HTMLRewriter()
         .on('meta[property="og:image"]', { element(el) { el.setAttribute("content", abs(el.getAttribute("content"))); } })
-        .on("head", { element(el) { el.append(`<meta property="og:url" content="${origin}${p}">`, { html: true }); } })
         .transform(res);
     }
     return res;

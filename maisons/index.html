@@ -3,15 +3,17 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Sable &amp; Pierre — Maisons de vacances à Lacanau et Bordeaux</title>
-  <meta name="description" content="Deux maisons de famille à louer en Gironde : la Maison du Lac à Lacanau (12 voyageurs, piscine, lac à 50 m, océan à 10 min) et la Maison de Pierre à Bordeaux (8 voyageurs, pierre de taille, hypercentre à pied).">
+  <title>Location maisons de vacances en famille à Lacanau et Bordeaux | Sable &amp; Pierre</title>
+  <meta name="description" content="Deux grandes maisons de famille à louer en Gironde : à Lacanau, maison avec piscine privée pour 12 personnes à 50 m du lac et 10 min de l&#39;océan ; à Bordeaux, maison de ville pour 8 personnes à 10 min à pied du centre. −10 % en réservant en direct.">
   <meta name="theme-color" content="#1c1a17">
+  <link rel="canonical" href="https://sable-et-pierre.com/">
+  <meta property="og:url" content="https://sable-et-pierre.com/">
   <meta property="og:type" content="website">
   <meta property="og:locale" content="fr_FR">
   <meta property="og:site_name" content="Sable & Pierre">
   <meta property="og:title" content="Sable & Pierre — Lacanau & Bordeaux">
   <meta property="og:description" content="L'océan ou la ville : deux maisons de famille en Gironde, à une heure l'une de l'autre.">
-  <meta property="og:image" content="assets/og-accueil.jpg">
+  <meta property="og:image" content="https://sable-et-pierre.com/assets/og-accueil.jpg">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta name="twitter:card" content="summary_large_image">
@@ -27,7 +29,91 @@
     "@context": "https://schema.org",
     "@graph": [
       {
+          "@type": "WebSite",
+          "name": "Sable & Pierre",
+          "url": "https://sable-et-pierre.com/",
+          "inLanguage": "fr-FR"
+        },
+        {
+          "@type": "FAQPage",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "Comment réserver ?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Deux possibilités. En direct sur ce site, avec 10 % de remise sur tout le séjour : choisissez vos dates dans le calendrier de la maison, indiquez vos coordonnées et réglez par carte sur la page de paiement sécurisée Stripe ; votre carte n'est débitée qu'au moment où nous confirmons votre séjour, en général sous 24 heures (voir les conditions de réservation). Ou bien sur Airbnb, aux conditions d'Airbnb : le bouton est sur la fiche de chaque maison."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Le linge de maison est-il fourni ?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Oui, dans les deux maisons : serviettes, draps et linge de lit, ainsi que savon, papier toilette et les produits de base pour cuisiner (huile, sel, poivre)."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "À quelle heure arrive-t-on et part-on ?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Lacanau : arrivée à partir de 16 h, départ avant 10 h. Bordeaux : arrivée autonome et flexible grâce à une boîte à clé sécurisée, départ avant 12 h. Dans les deux maisons, vous pouvez déposer vos bagages en cas d'arrivée anticipée ou de départ tardif."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Quand la piscine de Lacanau est-elle ouverte ?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "La piscine extérieure privée est disponible d'avril à octobre. Elle n'a ni clôture ni verrou : la surveillance des enfants est indispensable."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Peut-on venir avec un animal ?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Non, les animaux ne sont acceptés dans aucune des deux maisons (à Bordeaux, en raison d'allergies dans la famille). Les animaux d'assistance relèvent des règles d'Airbnb."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Où se gare-t-on ?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Lacanau : une place privée gratuite, et des places gratuites dans la rue à 20 mètres. Bordeaux : pas de place sur place ; stationnement payant dans la rue ou dans un parking, et le tram à 4 minutes à pied pour se passer de voiture."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Les maisons sont-elles climatisées ?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Non. La Maison du Lac a le chauffage central, la Maison de Pierre un chauffage radiant ; les chambres ont des stores ou rideaux occultants."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Peut-on venir avec un bébé ?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "La Maison de Pierre ne convient pas aux bébés de moins de 2 ans (la maison comprend des escaliers). Pour la Maison du Lac, écrivez-nous : nous vous dirons ce qui est possible."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Quelle distance entre les deux maisons ?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Environ une heure de route. Beaucoup de voyageurs aiment combiner quelques jours à Bordeaux et quelques jours au bord de l'eau."
+              }
+            }
+          ]
+        },
+      {
         "@type": "VacationRental",
+        "url": "https://sable-et-pierre.com/lacanau",
         "name": "La Maison du Lac — Lacanau",
         "description": "Grande maison de famille avec piscine privée, au bord du lac de Lacanau (Le Moutchic), à 10 minutes de l'océan.",
         "address": { "@type": "PostalAddress", "addressLocality": "Lacanau", "addressRegion": "Nouvelle-Aquitaine", "addressCountry": "FR" },
@@ -36,6 +122,7 @@
       },
       {
         "@type": "VacationRental",
+        "url": "https://sable-et-pierre.com/bordeaux",
         "name": "La Maison de Pierre — Bordeaux",
         "description": "Maison de ville en pierre de taille récemment rénovée, à 10 minutes à pied de l'hypercentre de Bordeaux.",
         "address": { "@type": "PostalAddress", "addressLocality": "Bordeaux", "addressRegion": "Nouvelle-Aquitaine", "addressCountry": "FR" },
@@ -76,14 +163,14 @@
       <a href="#questions"><small>05</small>Questions</a>
       <p class="menu__foot">Lacanau &amp; Bordeaux · Gironde</p>
     </div>
-    <div class="menu__visual"><img src="assets/photos/lacanau/21-md.webp" alt="" loading="lazy"></div>
+    <div class="menu__visual"><img src="https://sable-et-pierre.com/assets/photos/lacanau/21-md.webp" alt="" loading="lazy"></div>
   </div>
 
   <main id="main">
     <!-- Écran d'ouverture : l'océan / la ville -->
     <section class="split" aria-label="Choisir sa maison">
       <a class="split__panel" href="lacanau.html" data-house="lacanau">
-        <img src="assets/photos/lacanau/18-md.webp" srcset="assets/photos/lacanau/18-sm.webp 560w, assets/photos/lacanau/18-md.webp 1100w, assets/photos/lacanau/18-xl.webp 2200w" sizes="(max-width: 900px) 100vw, 65vw" alt="La Maison du Lac à Lacanau : la piscine devant la maison couverte de vigne vierge" fetchpriority="high">
+        <img src="https://sable-et-pierre.com/assets/photos/lacanau/18-md.webp" srcset="https://sable-et-pierre.com/assets/photos/lacanau/18-sm.webp 560w, assets/photos/lacanau/18-md.webp 1100w, assets/photos/lacanau/18-xl.webp 2200w" sizes="(max-width: 900px) 100vw, 65vw" alt="La Maison du Lac à Lacanau : la piscine devant la maison couverte de vigne vierge" fetchpriority="high">
         <div class="split__content">
           <span class="split__kicker">L'océan · Lacanau</span>
           <h1 class="split__title"><span class="split-line"><span>La Maison</span></span><span class="split-line"><span>du Lac</span></span><span class="split-line"><span><em>piscine, lac &amp; océan</em></span></span></h1>
@@ -94,7 +181,7 @@
         </div>
       </a>
       <a class="split__panel" href="bordeaux.html" data-house="bordeaux">
-        <img src="assets/photos/bordeaux/02-md.webp" srcset="assets/photos/bordeaux/02-sm.webp 560w, assets/photos/bordeaux/02-md.webp 1100w, assets/photos/bordeaux/02-xl.webp 2200w" sizes="(max-width: 900px) 100vw, 65vw" alt="La Maison de Pierre à Bordeaux : la pièce de vie lumineuse sous la verrière" fetchpriority="high">
+        <img src="https://sable-et-pierre.com/assets/photos/bordeaux/02-md.webp" srcset="https://sable-et-pierre.com/assets/photos/bordeaux/02-sm.webp 560w, assets/photos/bordeaux/02-md.webp 1100w, assets/photos/bordeaux/02-xl.webp 2200w" sizes="(max-width: 900px) 100vw, 65vw" alt="La Maison de Pierre à Bordeaux : la pièce de vie lumineuse sous la verrière" fetchpriority="high">
         <div class="split__content">
           <span class="split__kicker">La ville · Bordeaux</span>
           <p class="split__title" role="heading" aria-level="1"><span class="split-line"><span>La Maison</span></span><span class="split-line"><span>de Pierre</span></span><span class="split-line"><span><em>lumière &amp; pierre blonde</em></span></span></p>
@@ -162,9 +249,9 @@
         <article class="house-feature" data-house="lacanau">
           <div class="house-feature__media">
             <a class="house-feature__img reveal-img" href="lacanau.html" tabindex="-1" aria-hidden="true">
-              <img data-parallax="0.14" src="assets/photos/lacanau/20-md.webp" srcset="assets/photos/lacanau/20-sm.webp 560w, assets/photos/lacanau/20-md.webp 1100w, assets/photos/lacanau/20-xl.webp 2200w" sizes="(max-width: 1100px) 100vw, 58vw" alt="" loading="lazy">
+              <img data-parallax="0.14" src="https://sable-et-pierre.com/assets/photos/lacanau/20-md.webp" srcset="https://sable-et-pierre.com/assets/photos/lacanau/20-sm.webp 560w, assets/photos/lacanau/20-md.webp 1100w, assets/photos/lacanau/20-xl.webp 2200w" sizes="(max-width: 1100px) 100vw, 58vw" alt="" loading="lazy">
             </a>
-            <div class="house-feature__inset reveal" data-delay="2"><img src="assets/photos/lacanau/27-md.webp" alt="Le ponton sur le lac de Lacanau, au coucher du soleil" loading="lazy"></div>
+            <div class="house-feature__inset reveal" data-delay="2"><img src="https://sable-et-pierre.com/assets/photos/lacanau/27-md.webp" alt="Le ponton sur le lac de Lacanau, au coucher du soleil" loading="lazy"></div>
           </div>
           <div class="house-feature__body reveal">
             <span class="house-feature__index">01 — L'océan</span>
@@ -184,9 +271,9 @@
         <article class="house-feature house-feature--rev" data-house="bordeaux">
           <div class="house-feature__media">
             <a class="house-feature__img reveal-img" href="bordeaux.html" tabindex="-1" aria-hidden="true">
-              <img data-parallax="0.14" src="assets/photos/bordeaux/01-md.webp" srcset="assets/photos/bordeaux/01-sm.webp 560w, assets/photos/bordeaux/01-md.webp 1100w, assets/photos/bordeaux/01-xl.webp 2200w" sizes="(max-width: 1100px) 100vw, 58vw" alt="" loading="lazy">
+              <img data-parallax="0.14" src="https://sable-et-pierre.com/assets/photos/bordeaux/01-md.webp" srcset="https://sable-et-pierre.com/assets/photos/bordeaux/01-sm.webp 560w, assets/photos/bordeaux/01-md.webp 1100w, assets/photos/bordeaux/01-xl.webp 2200w" sizes="(max-width: 1100px) 100vw, 58vw" alt="" loading="lazy">
             </a>
-            <div class="house-feature__inset reveal" data-delay="2"><img src="assets/photos/bordeaux/04-md.webp" alt="La terrasse de la Maison de Pierre" loading="lazy"></div>
+            <div class="house-feature__inset reveal" data-delay="2"><img src="https://sable-et-pierre.com/assets/photos/bordeaux/04-md.webp" alt="La terrasse de la Maison de Pierre" loading="lazy"></div>
           </div>
           <div class="house-feature__body reveal">
             <span class="house-feature__index">02 — La ville</span>
@@ -241,6 +328,7 @@
           <button type="button" role="tab" id="tab-bordeaux" aria-controls="panel-bordeaux" aria-selected="false" data-tab="bordeaux" tabindex="-1">Bordeaux</button>
         </div>
         <div id="dest-panels"></div>
+        <p class="dest-guides">Nos guides pour préparer le séjour : <a class="link" href="vacances-famille-lacanau.html">vacances en famille à Lacanau</a> · <a class="link" href="vacances-famille-bordeaux.html">Bordeaux en famille</a></p>
       </div>
     </section>
 
@@ -301,7 +389,7 @@
 
     <!-- Appel -->
     <section class="cta-banner" aria-labelledby="cta-title">
-      <img data-parallax="0.18" src="assets/photos/lacanau/21-md.webp" srcset="assets/photos/lacanau/21-sm.webp 560w, assets/photos/lacanau/21-md.webp 1100w, assets/photos/lacanau/21-xl.webp 2200w" sizes="100vw" alt="" loading="lazy">
+      <img data-parallax="0.18" src="https://sable-et-pierre.com/assets/photos/lacanau/21-md.webp" srcset="https://sable-et-pierre.com/assets/photos/lacanau/21-sm.webp 560w, assets/photos/lacanau/21-md.webp 1100w, assets/photos/lacanau/21-xl.webp 2200w" sizes="100vw" alt="" loading="lazy">
       <div class="wrap">
         <span class="eyebrow reveal">Et pourquoi pas les deux ?</span>
         <h2 class="display reveal" id="cta-title">Le matin à l'océan, <em>le soir à Bordeaux</em></h2>
@@ -348,6 +436,10 @@
         <div>
           <h3>Les maisons</h3>
           <ul><li><a href="lacanau.html">Lacanau</a></li><li><a href="bordeaux.html">Bordeaux</a></li><li><a href="#comparer">Comparer</a></li></ul>
+        </div>
+        <div>
+          <h3>Guides</h3>
+          <ul><li><a href="vacances-famille-lacanau.html">Lacanau en famille</a></li><li><a href="vacances-famille-bordeaux.html">Bordeaux en famille</a></li></ul>
         </div>
         <div>
           <h3>Contact</h3>

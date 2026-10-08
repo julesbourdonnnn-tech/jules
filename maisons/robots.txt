@@ -2,3 +2,6 @@ User-agent: *
 Allow: /
 Disallow: /admin.html
 Disallow: /reservation.html
+Disallow: /api/
+
+Sitemap: https://sable-et-pierre.com/sitemap.xml

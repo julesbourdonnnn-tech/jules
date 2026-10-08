@@ -13,7 +13,7 @@
     "directory": ".",
     "binding": "ASSETS",
     "not_found_handling": "404-page",
-    "run_worker_first": ["/api/*", "/", "/*.html", "/lacanau", "/bordeaux", "/mentions-legales", "/conditions"]
+    "run_worker_first": ["/api/*", "/", "/*.html", "/lacanau", "/bordeaux", "/mentions-legales", "/conditions", "/vacances-famille-lacanau", "/vacances-famille-bordeaux"]
   },
   // Stockage des réservations directes (créé le 2 octobre 2026)
   "kv_namespaces": [
