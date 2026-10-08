@@ -19,6 +19,10 @@
   "kv_namespaces": [
     { "binding": "RESERVATIONS", "id": "740e12d73b574596957cb3fb964f72c9" }
   ],
+  // E-mail au propriétaire à chaque réservation (Cloudflare Email Routing, adresse vérifiée)
+  "send_email": [
+    { "name": "MAILER", "destination_address": "contact.sablepierre@gmail.com" }
+  ],
   // Nom de domaine (acheté sur Cloudflare le 8 octobre 2026) ; www renvoie vers l'adresse sans www
   "routes": [
     { "pattern": "sable-et-pierre.com", "custom_domain": true },
