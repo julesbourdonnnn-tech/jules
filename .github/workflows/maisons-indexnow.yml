@@ -1,0 +1,38 @@
+# Sable & Pierre : prévient Bing, Yandex, Seznam, Naver… (protocole IndexNow)
+# à chaque mise à jour des pages, pour qu'elles soient explorées en quelques
+# minutes. Bing alimente aussi DuckDuckGo, Ecosia, Qwant et Yahoo.
+# La clé est le fichier maisons/<clé>.txt, servi à la racine du site.
+name: Maisons — IndexNow
+
+on:
+  push:
+    paths:
+      - "maisons/*.html"
+      - "maisons/sitemap.xml"
+      - ".github/workflows/maisons-indexnow.yml"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Attendre la mise en ligne
+        run: sleep 240
+      - name: Envoyer les pages du plan du site
+        working-directory: maisons
+        run: |
+          SITE="https://sable-et-pierre.com"
+          KEY_FILE=$(ls | grep -E '^[0-9a-f]{32}\.txt$' | head -1)
+          KEY="${KEY_FILE%.txt}"
+          if [ -z "$KEY" ]; then echo "Clé IndexNow introuvable"; exit 0; fi
+          curl -sS -o /dev/null -w "Clé en ligne : HTTP %{http_code}\n" "$SITE/$KEY.txt"
+          BODY=$(python3 - "$KEY" <<'PY'
+          import json, re, sys
+          urls = re.findall(r"<loc>([^<]+)</loc>", open("sitemap.xml").read())
+          print(json.dumps({"host": "sable-et-pierre.com", "key": sys.argv[1], "keyLocation": f"https://sable-et-pierre.com/{sys.argv[1]}.txt", "urlList": urls}))
+          PY
+          )
+          echo "$BODY"
+          curl -sS -w "\nIndexNow : HTTP %{http_code}\n" -X POST "https://api.indexnow.org/indexnow" \
+            -H "Content-Type: application/json; charset=utf-8" --data "$BODY"

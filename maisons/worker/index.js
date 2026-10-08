@@ -266,7 +266,7 @@ const skipStats = (request) => {
   const purpose = request.headers.get("Sec-Purpose") || request.headers.get("Purpose") || "";
   return /prefetch|prerender/i.test(purpose);
 };
-const PAGES = { "/vacances-famille-lacanau": "/vacances-famille-lacanau", "/vacances-famille-lacanau.html": "/vacances-famille-lacanau", "/vacances-famille-bordeaux": "/vacances-famille-bordeaux", "/vacances-famille-bordeaux.html": "/vacances-famille-bordeaux", "/": "/", "/index.html": "/", "/lacanau": "/lacanau", "/lacanau.html": "/lacanau", "/bordeaux": "/bordeaux", "/bordeaux.html": "/bordeaux", "/conditions": "/conditions", "/conditions.html": "/conditions", "/mentions-legales": "/mentions-legales", "/mentions-legales.html": "/mentions-legales" };
+const PAGES = { "/guide-plages-lacanau": "/guide-plages-lacanau", "/guide-plages-lacanau.html": "/guide-plages-lacanau", "/guide-semaine-gironde-famille": "/guide-semaine-gironde-famille", "/guide-semaine-gironde-famille.html": "/guide-semaine-gironde-famille", "/vacances-famille-lacanau": "/vacances-famille-lacanau", "/vacances-famille-lacanau.html": "/vacances-famille-lacanau", "/vacances-famille-bordeaux": "/vacances-famille-bordeaux", "/vacances-famille-bordeaux.html": "/vacances-famille-bordeaux", "/": "/", "/index.html": "/", "/lacanau": "/lacanau", "/lacanau.html": "/lacanau", "/bordeaux": "/bordeaux", "/bordeaux.html": "/bordeaux", "/conditions": "/conditions", "/conditions.html": "/conditions", "/mentions-legales": "/mentions-legales", "/mentions-legales.html": "/mentions-legales" };
 async function trackHit(request, env, url) {
   if (!env.STATS || request.method !== "GET" || skipStats(request)) return;
   const path = PAGES[url.pathname];

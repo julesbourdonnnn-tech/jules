@@ -19,7 +19,10 @@ const { HOUSES, DESTINATIONS, REVIEWS } = globalThis;
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const para = (t) => esc(t).split("\n").filter(Boolean).map((l) => `<p>${l}</p>`).join("");
 const strip = (s) => String(s).replace(/<[^>]+>/g, "");
-const GUIDE = { lacanau: ["vacances-famille-lacanau", "Vacances en famille à Lacanau : le guide"], bordeaux: ["vacances-famille-bordeaux", "Bordeaux en famille : le guide"] };
+const GUIDES = {
+  lacanau: [["vacances-famille-lacanau", "Vacances en famille à Lacanau : le guide"], ["guide-plages-lacanau", "Les plages de Lacanau en famille"], ["guide-semaine-gironde-famille", "Une semaine en Gironde en famille"]],
+  bordeaux: [["vacances-famille-bordeaux", "Bordeaux en famille : le guide"], ["guide-semaine-gironde-famille", "Une semaine en Gironde en famille"]],
+};
 
 function houseBlock(k) {
   const h = HOUSES[k];
@@ -47,7 +50,7 @@ function houseBlock(k) {
       <p>${esc(h.neighbourhood)} ${esc(h.gettingAround)}</p>
       <p>${esc(D.intro)}</p>
       <ul>${D.places.map(([n, dist, t]) => `<li><strong>${esc(n)}</strong> (${esc(dist)}) : ${esc(t)}</li>`).join("")}</ul>
-      <p><a href="${GUIDE[k][0]}">${esc(GUIDE[k][1])}</a></p>
+      <p>Nos guides : ${GUIDES[k].map(([u, t]) => `<a href="${u}">${esc(t)}</a>`).join(" · ")}</p>
       <h2>Règlement et informations utiles</h2>
       ${Object.entries(h.rules).map(([cat, list]) => `<h3>${esc(cat)}</h3><ul>${list.map((r) => `<li>${esc(r)}</li>`).join("")}</ul>`).join("")}
       <h2>Avis des voyageurs</h2>
@@ -68,12 +71,19 @@ for (const k of ["lacanau", "bordeaux"]) {
   console.log(`${k}.html : contenu prérendu (${strip(houseBlock(k)).replace(/\s+/g, " ").length} caractères)`);
 }
 
-// Plan du site
+// Plan du site (avec les photos, pour Google Images)
 const today = new Date().toISOString().slice(0, 10);
-const pages = [["/", "1.0", "weekly"], ["/lacanau", "0.9", "weekly"], ["/bordeaux", "0.9", "weekly"], ["/vacances-famille-lacanau", "0.8", "monthly"], ["/vacances-famille-bordeaux", "0.8", "monthly"]];
+const img = (k, n, cap) => `<image:image><image:loc>${SITE}/assets/photos/${k}/${String(n).padStart(2, "0")}-xl.webp</image:loc><image:title>${esc(`${HOUSES[k].name} — ${cap}`)}</image:title></image:image>`;
+const photosOf = (k) => HOUSES[k].photos.map(([n, cap]) => img(k, n, cap)).join("");
+const pages = [
+  ["/", "1.0", "weekly", img("lacanau", HOUSES.lacanau.cover, "la maison et la piscine") + img("bordeaux", HOUSES.bordeaux.cover, "la pièce de vie")],
+  ["/lacanau", "0.9", "weekly", photosOf("lacanau")],
+  ["/bordeaux", "0.9", "weekly", photosOf("bordeaux")],
+  ...fs.readdirSync(ROOT).filter((f) => /^vacances-.*\.html$|^guide-.*\.html$/.test(f)).sort().map((f) => [`/${f.replace(/\.html$/, "")}`, "0.8", "monthly", ""]),
+];
 const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-${pages.map(([p, prio, freq]) => `  <url><loc>${SITE}${p}</loc><lastmod>${today}</lastmod><changefreq>${freq}</changefreq><priority>${prio}</priority></url>`).join("\n")}
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+${pages.map(([p, prio, freq, im]) => `  <url><loc>${SITE}${p}</loc><lastmod>${today}</lastmod><changefreq>${freq}</changefreq><priority>${prio}</priority>${im}</url>`).join("\n")}
 </urlset>
 `;
 fs.writeFileSync(path.join(ROOT, "sitemap.xml"), sitemap);

@@ -101,7 +101,9 @@ Les nuits prises selon ce lien s'ajoutent à celles du fichier automatique.
 ## Référencement (Google, Bing)
 
 - Chaque page a un titre et une description pensés pour les recherches (« location maison avec piscine Lacanau 12 personnes », « location maison Bordeaux centre 8 personnes », « vacances en famille »…), une adresse canonique et des données structurées (`VacationRental`, `FAQPage`, fil d'Ariane).
-- **Guides** : `vacances-famille-lacanau.html` et `vacances-famille-bordeaux.html`, des pages de conseils pour les familles qui renvoient vers les maisons.
+- **Guides** : `vacances-famille-lacanau.html`, `vacances-famille-bordeaux.html`, `guide-plages-lacanau.html` et `guide-semaine-gironde-famille.html`, des pages de conseils pour les familles qui renvoient vers les maisons.
+- **IndexNow** : la GitHub Action « Maisons — IndexNow » prévient Bing (et DuckDuckGo, Ecosia, Qwant, Yahoo) à chaque mise à jour des pages. Clé : le fichier `<clé>.txt` du dossier.
+- **Kit de diffusion** : `KIT-DIFFUSION.md`, les textes prêts à publier (Search Console, Instagram, Facebook, Pinterest, Leboncoin, offices de tourisme).
 - `sitemap.xml` (plan du site) et `robots.txt`.
 - Le contenu des fiches (`lacanau.html`, `bordeaux.html`) est aussi écrit en HTML simple, lisible par tous les moteurs. **Après une modification de `js/data.js` ou l'ajout d'une page**, relance `node scripts/seo.mjs` (met à jour ce contenu et le plan du site).
 

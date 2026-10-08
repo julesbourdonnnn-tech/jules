@@ -7,3 +7,4 @@ worker
 README.md
 wrangler.jsonc
 vendor/**/LICENSE
+KIT-DIFFUSION.md
