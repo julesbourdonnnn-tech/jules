@@ -104,6 +104,17 @@
     enter();
   });
   $("#refresh").addEventListener("click", refresh);
+  $("#test-alerts").addEventListener("click", async () => {
+    const m = $("#test-msg");
+    m.classList.remove("is-error");
+    m.textContent = "Envoi des alertes de test…";
+    try {
+      const d = await api("test-alertes", "POST");
+      const r = d.resultat || {};
+      m.textContent = `Téléphone : ${r.telephone} · E-mail : ${r.email}`;
+      if (/erreur/.test(`${r.telephone} ${r.email}`)) m.classList.add("is-error");
+    } catch (err) { if (err.message !== "auth") { m.textContent = err.message; m.classList.add("is-error"); } }
+  });
   $$("[data-f]").forEach((b) => b.addEventListener("click", () => {
     filter = b.dataset.f;
     $$("[data-f]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));

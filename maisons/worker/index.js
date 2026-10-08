@@ -249,13 +249,44 @@ async function adminCodes(request, env, code) {
 }
 
 /* ===================== Alertes ===================== */
-function notify(env, ctx, title, text) {
-  if (!env.NOTIFY_URL) return;
-  const isDiscord = env.NOTIFY_URL.includes("discord.com");
-  const isSlack = env.NOTIFY_URL.includes("hooks.slack.com");
-  const body = isDiscord ? JSON.stringify({ content: `**${title}**\n${text}` }) : isSlack ? JSON.stringify({ text: `*${title}*\n${text}` }) : text;
-  const headers = isDiscord || isSlack ? { "Content-Type": "application/json" } : { Title: title, Tags: "house", Priority: "high" };
-  ctx.waitUntil(fetch(env.NOTIFY_URL, { method: "POST", headers, body }).catch(() => {}));
+// Alerte téléphone (ntfy, Discord ou Slack via NOTIFY_URL) + e-mail au propriétaire (Cloudflare Email Routing, binding MAILER)
+async function sendAlerts(env, title, text, link) {
+  const out = {};
+  const url = (env.NOTIFY_URL || "").trim();
+  if (url) {
+    try {
+      let r;
+      if (url.includes("discord.com")) r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ content: `**${title}**\n${text}${link ? `\n${link}` : ""}` }) });
+      else if (url.includes("hooks.slack.com")) r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: `*${title}*\n${text}${link ? `\n${link}` : ""}` }) });
+      else {
+        // ntfy : envoi en JSON (les accents ne passent pas dans les en-têtes). Accepte « https://ntfy.sh/sujet », « ntfy.sh/sujet » ou « sujet ».
+        const u = new URL(/^https?:\/\//.test(url) ? url : url.includes("/") ? `https://${url}` : `https://ntfy.sh/${url}`);
+        const topic = u.pathname.replace(/^\/+|\/+$/g, "");
+        r = await fetch(`${u.origin}/`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ topic, title, message: text, tags: ["house"], priority: 4, ...(link ? { click: link } : {}) }) });
+      }
+      out.telephone = r.ok ? "envoyée" : `erreur ${r.status} : ${(await r.text()).slice(0, 160)}`;
+    } catch (e) { out.telephone = `erreur : ${e.message}`; }
+  } else out.telephone = "NOTIFY_URL non réglé";
+  if (env.MAILER) {
+    try {
+      const { EmailMessage } = await import("cloudflare:email");
+      const from = env.EMAIL_FROM || "reservations@sable-et-pierre.com";
+      const to = env.EMAIL_TO || (globalThis.SITE && globalThis.SITE.email) || "contact.sablepierre@gmail.com";
+      const b64 = (str) => { const bytes = new TextEncoder().encode(str); let bin = ""; bytes.forEach((x) => { bin += String.fromCharCode(x); }); return btoa(bin); };
+      const raw = [
+        `From: "Sable et Pierre" <${from}>`, `To: ${to}`, `Subject: =?UTF-8?B?${b64(title)}?=`,
+        `Message-ID: <${rand(8)}@${from.split("@")[1]}>`, `Date: ${new Date().toUTCString()}`,
+        "MIME-Version: 1.0", "Content-Type: text/plain; charset=UTF-8", "Content-Transfer-Encoding: base64", "",
+        b64(`${text}${link ? `\n\n${link}` : ""}\n`).replace(/.{76}/g, "$&\r\n"),
+      ].join("\r\n");
+      await env.MAILER.send(new EmailMessage(from, to, raw));
+      out.email = `envoyé à ${to}`;
+    } catch (e) { out.email = `erreur : ${e.message}`; }
+  } else out.email = "envoi d'e-mails pas encore activé";
+  return out;
+}
+function notify(env, ctx, title, text, link) {
+  ctx.waitUntil(sendAlerts(env, title, text, link).catch(() => {}));
 }
 const summary = (b) => `${H[b.maison].name} · du ${fmtDate(b.arrivee)} au ${fmtDate(b.depart)} (${b.nuits} nuits) · ${b.adultes} adulte(s)${b.enfants ? `, ${b.enfants} enfant(s)` : ""}${b.bebes ? `, ${b.bebes} bébé(s)` : ""}\n${b.nom} · ${b.telephone || "pas de tél."} · ${b.email}${b.total ? `\nMontant : ${EUR(b.cents)}${b.code ? ` (code ${b.code})` : ""}` : ""}${b.message ? `\n« ${b.message} »` : ""}`;
 
@@ -334,16 +365,16 @@ async function createBooking(request, env, ctx, origin) {
   b.statut = "a_valider";
   b.paiement = "à organiser";
   await save(env, b);
-  notify(env, ctx, "Nouvelle demande de réservation", summary(b));
+  notify(env, ctx, "Nouvelle demande de réservation", summary(b), `${origin}/admin.html`);
   return json({ ok: true, mode: "demande", id: b.id, url: `/reservation.html?id=${b.id}&t=${b.token}` });
 }
 
-async function bookingStatus(env, ctx, id, token) {
+async function bookingStatus(env, ctx, origin, id, token) {
   if (!store(env)) return json({ ok: false }, 503);
   let b = await load(env, id);
   if (!b || b.token !== token) return json({ ok: false, error: "introuvable" }, 404);
   b = await syncStripe(env, b);
-  if (b._nouveau) notify(env, ctx, "Réservation à valider (paiement autorisé)", summary(b));
+  if (b._nouveau) notify(env, ctx, "Réservation à valider (paiement autorisé)", summary(b), `${origin}/admin.html`);
   const h = H[b.maison];
   return json({ ok: true, reservation: {
     id: b.id, maison: b.maison, nomMaison: h.name, page: h.page, statut: b.statut, paiement: b.paiement || "",
@@ -365,9 +396,9 @@ async function icalToken(env, house) {
   const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`${env.ADMIN_KEY}:ical:${house}`));
   return Array.from(new Uint8Array(buf), (x) => x.toString(16).padStart(2, "0")).join("").slice(0, 32);
 }
-async function adminList(env, origin) {
+async function adminList(env, ctx, origin) {
   const list = await allBookings(env);
-  for (const b of list) if (b.statut === "paiement") await syncStripe(env, b);
+  for (const b of list) if (b.statut === "paiement") { await syncStripe(env, b); if (b._nouveau) { notify(env, ctx, "Réservation à valider (paiement autorisé)", summary(b), `${origin}/admin.html`); delete b._nouveau; } }
   const feeds = {};
   for (const k of KEYS) feeds[k] = `${origin}/api/ical/${k}.ics?k=${await icalToken(env, k)}`;
   return json({ ok: true, stripe: !!env.STRIPE_SECRET_KEY, notify: !!env.NOTIFY_URL, feeds, reservations: list.map((b) => { const c = Object.assign({}, b); delete c.token; return c; }) });
@@ -445,13 +476,14 @@ export default {
       return json({ ok: true, booked: await bookedRanges(m[1], env), updated: new Date().toISOString() }, 200, { "Cache-Control": "public, max-age=60" });
     }
     if (p === "/api/reservation" && request.method === "POST") return createBooking(request, env, ctx, origin);
-    if ((m = /^\/api\/reservation\/([A-Z0-9]{4,20})$/.exec(p))) return bookingStatus(env, ctx, m[1], url.searchParams.get("t") || "");
+    if ((m = /^\/api\/reservation\/([A-Z0-9]{4,20})$/.exec(p))) return bookingStatus(env, ctx, origin, m[1], url.searchParams.get("t") || "");
     if (p === "/api/promo" && request.method === "POST") return checkPromo(request, env);
     if ((m = /^\/api\/ical\/(lacanau|bordeaux)\.ics$/.exec(p))) return icalFeed(env, m[1], url.searchParams.get("k") || "");
     if (p.startsWith("/api/admin/")) {
       if (!store(env)) return json({ ok: false, message: "Stockage non configuré." }, 503);
       if (!authorized(request, env)) return json({ ok: false, error: "auth", message: env.ADMIN_KEY ? "Mot de passe incorrect." : "Ajoute d'abord le secret ADMIN_KEY dans Cloudflare." }, 401);
-      if (p === "/api/admin/reservations" && request.method === "GET") return adminList(env, origin);
+      if (p === "/api/admin/reservations" && request.method === "GET") return adminList(env, ctx, origin);
+      if (p === "/api/admin/test-alertes" && request.method === "POST") return json({ ok: true, resultat: await sendAlerts(env, "Test des alertes Sable & Pierre", "Si tu lis ceci, les alertes de réservation fonctionnent.", `${origin}/admin.html`) });
       if ((m = /^\/api\/admin\/codes(?:\/([A-Za-z0-9-]{1,30}))?$/.exec(p))) return adminCodes(request, env, m[1]);
       if ((m = /^\/api\/admin\/reservations\/([A-Z0-9]{4,20})\/(accepter|refuser|annuler)$/.exec(p)) && request.method === "POST") return adminAction(env, ctx, origin, m[1], m[2]);
       return json({ ok: false }, 404);

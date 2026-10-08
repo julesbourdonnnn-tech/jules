@@ -1070,3 +1070,4 @@ html { background: var(--ivory); }
 .admin-codes { list-style: none; padding: 0; margin: 10px 0 0; display: grid; gap: 8px; }
 .admin-codes li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; padding: 12px 14px; background: var(--paper); border: 1px solid var(--line); }
 .admin-codes li span { flex: 1 1 220px; color: var(--ink-soft); font-size: .9rem; }
+.admin-bar__btns { display: flex; flex-wrap: wrap; gap: 10px; }
