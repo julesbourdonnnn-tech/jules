@@ -172,6 +172,82 @@ async function syncStripe(env, b) {
   return b;
 }
 
+/* ===================== Codes promo ===================== */
+// Stockés dans KV (« promo:CODE »), créés depuis admin.html. Types :
+//  - pourcent : −X % sur le total ;  - prix : le séjour coûte X € au total (ex. 1 € pour un essai).
+const PROMO_RE = /^[A-Z0-9-]{3,30}$/;
+const normCode = (v) => clean(v, 30).toUpperCase().replace(/\s+/g, "");
+async function loadPromo(env, code) {
+  const kv = store(env);
+  if (!kv || !PROMO_RE.test(code)) return null;
+  const v = await kv.get(`promo:${code}`);
+  const c = v ? JSON.parse(v) : null;
+  if (!c || !c.actif) return null;
+  if (c.max && (await promoUses(env))[c.code] >= c.max) return null;
+  return c;
+}
+// Utilisations = réservations en cours de paiement, à valider ou confirmées (un paiement abandonné ou refusé ne compte pas)
+async function promoUses(env) {
+  const n = {};
+  for (const b of await allBookings(env)) {
+    if (!b.code) continue;
+    const live = b.statut === "a_valider" || b.statut === "confirmee" || (b.statut === "paiement" && Date.now() - Date.parse(b.cree) < HOLD_MIN * 60000);
+    if (live) n[b.code] = (n[b.code] || 0) + 1;
+  }
+  return n;
+}
+// Applique un code à un prix calculé par SP_PRICE (ne descend jamais sous 1 €, minimum Stripe)
+function applyPromo(p, c) {
+  if (!p.ready || !c) return p;
+  const before = p.cents;
+  let target = c.type === "prix" ? Math.round(c.valeur * 100) : Math.round(before * (1 - c.valeur / 100));
+  target = Math.max(100, Math.min(before, target));
+  const off = before - target;
+  if (off <= 0) return p;
+  const q = Object.assign({}, p, { lines: p.lines.slice() });
+  q.lines.push({ label: c.type === "prix" ? `Code ${c.code}` : `Code ${c.code} (−${c.valeur} %)`, cents: -off });
+  q.cents = target;
+  q.total = target / 100;
+  q.code = c.code;
+  return q;
+}
+async function checkPromo(request, env) {
+  let d;
+  try { d = await request.json(); } catch { return json({ ok: false }, 400); }
+  const house = clean(d.maison, 20);
+  const c = await loadPromo(env, normCode(d.code));
+  if (!c || (c.maison && c.maison !== house)) return json({ ok: false, message: "Ce code n'est pas valable." }, 404);
+  const a = clean(d.arrivee, 10), b = clean(d.depart, 10);
+  if (!H[house] || !DATE.test(a) || !DATE.test(b)) return json({ ok: false, message: "Choisissez d'abord vos dates." }, 400);
+  const p = applyPromo(PRICE(house, a, b, Math.max(1, parseInt(d.adultes, 10) || 1)), c);
+  return json({ ok: true, code: c.code, price: p.ready ? { lines: p.lines, cents: p.cents } : null });
+}
+async function adminCodes(request, env, code) {
+  const kv = store(env);
+  if (request.method === "GET") {
+    const page = await kv.list({ prefix: "promo:" });
+    const uses = await promoUses(env);
+    const list = (await Promise.all(page.keys.map((k) => kv.get(k.name)))).filter(Boolean).map((v) => Object.assign(JSON.parse(v), { utilisations: 0 }));
+    list.forEach((c) => { c.utilisations = uses[c.code] || 0; });
+    return json({ ok: true, codes: list.sort((x, y) => (x.cree < y.cree ? 1 : -1)) });
+  }
+  if (request.method === "DELETE" && code) { await kv.delete(`promo:${normCode(code)}`); return json({ ok: true }); }
+  if (request.method === "POST") {
+    let d;
+    try { d = await request.json(); } catch { return json({ ok: false }, 400); }
+    const c = {
+      code: normCode(d.code), type: d.type === "prix" ? "prix" : "pourcent", valeur: Number(d.valeur),
+      maison: KEYS.includes(d.maison) ? d.maison : "", max: Math.max(0, parseInt(d.max, 10) || 0),
+      actif: true, cree: new Date().toISOString(),
+    };
+    if (!PROMO_RE.test(c.code)) return json({ ok: false, message: "Le code doit faire 3 à 30 caractères (lettres, chiffres, tirets)." }, 400);
+    if (!(c.valeur > 0) || (c.type === "pourcent" && c.valeur > 100) || (c.type === "prix" && c.valeur < 1)) return json({ ok: false, message: c.type === "prix" ? "Le prix doit être d'au moins 1 €." : "La réduction doit être entre 1 et 100 %." }, 400);
+    await kv.put(`promo:${c.code}`, JSON.stringify(c));
+    return json({ ok: true, code: c });
+  }
+  return json({ ok: false }, 405);
+}
+
 /* ===================== Alertes ===================== */
 function notify(env, ctx, title, text) {
   if (!env.NOTIFY_URL) return;
@@ -181,7 +257,7 @@ function notify(env, ctx, title, text) {
   const headers = isDiscord || isSlack ? { "Content-Type": "application/json" } : { Title: title, Tags: "house", Priority: "high" };
   ctx.waitUntil(fetch(env.NOTIFY_URL, { method: "POST", headers, body }).catch(() => {}));
 }
-const summary = (b) => `${H[b.maison].name} · du ${fmtDate(b.arrivee)} au ${fmtDate(b.depart)} (${b.nuits} nuits) · ${b.adultes} adulte(s)${b.enfants ? `, ${b.enfants} enfant(s)` : ""}${b.bebes ? `, ${b.bebes} bébé(s)` : ""}\n${b.nom} · ${b.telephone || "pas de tél."} · ${b.email}${b.total ? `\nMontant : ${EUR(b.cents)}` : ""}${b.message ? `\n« ${b.message} »` : ""}`;
+const summary = (b) => `${H[b.maison].name} · du ${fmtDate(b.arrivee)} au ${fmtDate(b.depart)} (${b.nuits} nuits) · ${b.adultes} adulte(s)${b.enfants ? `, ${b.enfants} enfant(s)` : ""}${b.bebes ? `, ${b.bebes} bébé(s)` : ""}\n${b.nom} · ${b.telephone || "pas de tél."} · ${b.email}${b.total ? `\nMontant : ${EUR(b.cents)}${b.code ? ` (code ${b.code})` : ""}` : ""}${b.message ? `\n« ${b.message} »` : ""}`;
 
 /* ===================== Voyageurs ===================== */
 const ERR = {
@@ -213,7 +289,15 @@ async function createBooking(request, env, ctx, origin) {
   const problem = await checkStay(house, b.arrivee, b.depart, env, origin);
   if (problem) return json({ ok: false, error: problem, message: ERR[problem] }, 409);
 
-  const p = PRICE(house, b.arrivee, b.depart, b.adultes);
+  let p = PRICE(house, b.arrivee, b.depart, b.adultes);
+  const codeIn = normCode(d.code);
+  let promo = null;
+  if (codeIn) {
+    promo = await loadPromo(env, codeIn);
+    if (!promo || (promo.maison && promo.maison !== house)) return json({ ok: false, error: "code", message: "Ce code promo n'est pas valable." }, 400);
+    p = applyPromo(p, promo);
+    if (p.code) b.code = p.code;
+  }
   b.nuits = Math.round((toDay(b.depart) - toDay(b.arrivee)) / DAY);
   b.id = `SP${Date.now().toString(36).toUpperCase().slice(-5)}${rand(2).toUpperCase()}`;
   b.token = rand(12);
@@ -362,11 +446,13 @@ export default {
     }
     if (p === "/api/reservation" && request.method === "POST") return createBooking(request, env, ctx, origin);
     if ((m = /^\/api\/reservation\/([A-Z0-9]{4,20})$/.exec(p))) return bookingStatus(env, ctx, m[1], url.searchParams.get("t") || "");
+    if (p === "/api/promo" && request.method === "POST") return checkPromo(request, env);
     if ((m = /^\/api\/ical\/(lacanau|bordeaux)\.ics$/.exec(p))) return icalFeed(env, m[1], url.searchParams.get("k") || "");
     if (p.startsWith("/api/admin/")) {
       if (!store(env)) return json({ ok: false, message: "Stockage non configuré." }, 503);
       if (!authorized(request, env)) return json({ ok: false, error: "auth", message: env.ADMIN_KEY ? "Mot de passe incorrect." : "Ajoute d'abord le secret ADMIN_KEY dans Cloudflare." }, 401);
       if (p === "/api/admin/reservations" && request.method === "GET") return adminList(env, origin);
+      if ((m = /^\/api\/admin\/codes(?:\/([A-Za-z0-9-]{1,30}))?$/.exec(p))) return adminCodes(request, env, m[1]);
       if ((m = /^\/api\/admin\/reservations\/([A-Z0-9]{4,20})\/(accepter|refuser|annuler)$/.exec(p)) && request.method === "POST") return adminAction(env, ctx, origin, m[1], m[2]);
       return json({ ok: false }, 404);
     }

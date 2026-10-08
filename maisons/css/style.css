@@ -565,6 +565,12 @@ body.header-visible .sub-nav { top: 70px; }
 .field input, .field textarea, .field select { width: 100%; padding: 14px 16px; border: 1px solid var(--line-strong); background: var(--paper); border-radius: var(--radius); transition: border-color .2s; }
 .field input:focus, .field textarea:focus { outline: none; border-color: var(--ink); }
 .field textarea { min-height: 120px; resize: vertical; }
+.promo__row { display: flex; gap: 10px; }
+.promo__row input { flex: 1; min-width: 0; text-transform: uppercase; letter-spacing: .08em; }
+.promo__row .btn { flex: none; padding-left: 20px; padding-right: 20px; }
+.promo__msg { margin-top: 8px; min-height: 0; }
+.promo__msg:empty { display: none; }
+.promo__msg.is-error { color: var(--wine); }
 .form__recap { grid-column: 1 / -1; padding: 16px 18px; background: var(--sand); font-size: .9rem; }
 .form__done { text-align: center; padding: 20px 0; }
 .form__done svg { width: 56px; height: 56px; color: var(--accent); margin: 0 auto 18px; }
@@ -1057,3 +1063,10 @@ html { background: var(--ivory); }
 .booking__save { margin: 8px 0 0 !important; justify-content: flex-end !important; font-size: .82rem; color: var(--accent); font-weight: 600; }
 .search__deal { margin: 12px 0 0; text-align: center; font-size: .9rem; color: var(--ink-soft); }
 .search__deal strong { color: var(--ink); }
+/* Codes promo (espace propriétaire) */
+.admin-code { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; align-items: end; margin: 16px 0; }
+.admin-code .btn { min-height: 50px; }
+.admin-code .booking__msg { grid-column: 1 / -1; margin: 0; }
+.admin-codes { list-style: none; padding: 0; margin: 10px 0 0; display: grid; gap: 8px; }
+.admin-codes li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; padding: 12px 14px; background: var(--paper); border: 1px solid var(--line); }
+.admin-codes li span { flex: 1 1 220px; color: var(--ink-soft); font-size: .9rem; }

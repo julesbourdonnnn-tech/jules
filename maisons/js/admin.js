@@ -12,7 +12,7 @@
   let filter = "a_valider";
   try { key = sessionStorage.getItem("sp-admin") || ""; } catch (e) { /* ignoré */ }
 
-  const api = (path, method = "GET") => fetch(`api/admin/${path}`, { method, headers: { Authorization: `Bearer ${key}` } }).then(async (r) => {
+  const api = (path, method = "GET", body) => fetch(`api/admin/${path}`, { method, headers: Object.assign({ Authorization: `Bearer ${key}` }, body ? { "Content-Type": "application/json" } : {}), body: body ? JSON.stringify(body) : undefined }).then(async (r) => {
     const d = await r.json().catch(() => ({}));
     if (r.status === 401) { logout(d.message); throw new Error("auth"); }
     if (!r.ok || !d.ok) throw new Error(d.message || "Erreur");
@@ -48,7 +48,7 @@
         <div><dt>Voyageur</dt><dd>${esc(b.nom)}${b.pays ? ` (${esc(b.pays)})` : ""}</dd></div>
         <div><dt>E-mail</dt><dd><a class="link" href="mailto:${esc(b.email)}">${esc(b.email)}</a></dd></div>
         <div><dt>Téléphone</dt><dd>${b.telephone ? `<a class="link" href="tel:${esc(b.telephone)}">${esc(b.telephone)}</a>` : "—"}</dd></div>
-        <div><dt>Montant</dt><dd>${b.cents ? SP_EUR(b.cents) : "à définir"}${b.paiement ? ` · ${esc(b.paiement)}` : ""}</dd></div>
+        <div><dt>Montant</dt><dd>${b.cents ? SP_EUR(b.cents) : "à définir"}${b.code ? ` (code ${esc(b.code)})` : ""}${b.paiement ? ` · ${esc(b.paiement)}` : ""}</dd></div>
       </dl>
       ${b.message ? `<blockquote class="admin-card__msg">${esc(b.message)}</blockquote>` : ""}
       <div class="admin-card__actions">${actions}</div>
@@ -67,7 +67,34 @@
     $("#alerts").innerHTML = alerts.map((a) => `<p class="admin-alert">${esc(a)}</p>`).join("");
     $("#feeds").innerHTML = Object.keys(data.feeds).map((k) => `<p><strong>${esc(HOUSES[k].name)}</strong><br><input class="admin-feed" readonly value="${esc(data.feeds[k])}" aria-label="Lien du calendrier ${esc(HOUSES[k].name)}"> <button type="button" class="link" data-copy="${esc(data.feeds[k])}">Copier</button></p>`).join("");
   };
-  const refresh = () => api("reservations").then((d) => { data = d; render(); }).catch((e) => { if (e.message !== "auth") $("#list").innerHTML = `<p class="booking__msg is-error">${esc(e.message)}</p>`; });
+  // Codes promo
+  const renderCodes = (codes) => {
+    $("#codes").innerHTML = codes.length
+      ? `<ul class="admin-codes">${codes.map((c) => `<li><strong>${esc(c.code)}</strong><span>${c.type === "prix" ? `séjour à ${SP_EUR(c.valeur * 100)}` : `−${c.valeur} %`} · ${c.maison ? esc(HOUSES[c.maison].name) : "les deux maisons"} · utilisé ${c.utilisations || 0}${c.max ? ` / ${c.max}` : ""} fois${c.max && (c.utilisations || 0) >= c.max ? " (épuisé)" : ""}</span><button type="button" class="link" data-del-code="${esc(c.code)}">Supprimer</button></li>`).join("")}</ul>`
+      : `<p class="small">Aucun code pour le moment.</p>`;
+  };
+  const loadCodes = () => api("codes").then((d) => renderCodes(d.codes)).catch(() => {});
+  $("#code-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const msg = $("#code-msg");
+    msg.classList.remove("is-error");
+    msg.textContent = "Création…";
+    try {
+      const d = await api("codes", "POST", { code: $("#c-code").value, type: $("#c-type").value, valeur: $("#c-val").value, maison: $("#c-house").value, max: $("#c-max").value });
+      msg.textContent = `Code ${d.code.code} créé.`;
+      $("#code-form").reset();
+      loadCodes();
+    } catch (err) {
+      if (err.message !== "auth") { msg.textContent = err.message; msg.classList.add("is-error"); }
+    }
+  });
+  document.addEventListener("click", async (e) => {
+    const b = e.target.closest("[data-del-code]");
+    if (!b || !window.confirm(`Supprimer le code ${b.dataset.delCode} ?`)) return;
+    try { await api(`codes/${encodeURIComponent(b.dataset.delCode)}`, "DELETE"); loadCodes(); } catch (err) { /* ignoré */ }
+  });
+
+  const refresh = () => { loadCodes(); return api("reservations").then((d) => { data = d; render(); }).catch((e) => { if (e.message !== "auth") $("#list").innerHTML = `<p class="booking__msg is-error">${esc(e.message)}</p>`; }); };
   const enter = () => { $("#login").hidden = true; $("#admin").hidden = false; refresh(); };
 
   $("#login").addEventListener("submit", (e) => {

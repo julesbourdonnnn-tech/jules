@@ -34,6 +34,8 @@ Le voyageur réserve **directement sur le site, sans frais de plateforme** :
 3. Tu reçois une alerte sur ton téléphone (si `NOTIFY_URL` est réglé). Dans ton **espace propriétaire** (`/admin.html`), tu cliques **Accepter** (la carte est débitée, Stripe envoie le reçu au voyageur, et un e-mail de confirmation pré-rempli s'ouvre pour toi) ou **Refuser** (l'empreinte est libérée, rien n'est débité).
 4. Le voyageur suit sa réservation sur sa page personnelle (`/reservation.html?id=…`).
 
+**Codes promo** : dans `/admin.html` → « Codes promo », crée un code (réduction en %, ou prix total fixe, ex. 1 € pour un essai), pour une maison ou les deux, avec un nombre d'utilisations maximum. Le voyageur le saisit au moment de réserver ; le serveur vérifie le code et recalcule le prix (minimum 1 €). Un paiement abandonné ou une réservation refusée ne consomme pas le code.
+
 ⚠️ Une empreinte bancaire reste valable **7 jours** : valide les réservations dans ce délai (idéalement sous 24 h).
 
 Tant que les tarifs ou la clé Stripe ne sont pas renseignés, le site fonctionne en **demande de réservation** : le voyageur envoie ses dates et ses coordonnées sans payer, tu la retrouves dans l'espace propriétaire et tu lui réponds.

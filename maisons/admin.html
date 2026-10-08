@@ -37,6 +37,20 @@
         </div>
         <div id="alerts"></div>
         <div class="admin-list" id="list" aria-live="polite"></div>
+        <details class="admin-help" id="codes-box">
+          <summary>Codes promo</summary>
+          <p>Le voyageur saisit le code au moment de réserver ; le prix est recalculé par le serveur. Pour un essai à petit prix, crée par exemple un code « Prix total fixe » de 1 € limité à 1 utilisation.</p>
+          <form class="admin-code" id="code-form">
+            <div class="field"><label for="c-code">Code</label><input id="c-code" required maxlength="30" autocomplete="off" placeholder="ex. ESSAI-7K2P"></div>
+            <div class="field"><label for="c-type">Type</label><select id="c-type"><option value="pourcent">Réduction en %</option><option value="prix">Prix total fixe (€)</option></select></div>
+            <div class="field"><label for="c-val">Valeur</label><input id="c-val" type="number" min="1" step="1" required inputmode="numeric"></div>
+            <div class="field"><label for="c-house">Maison</label><select id="c-house"><option value="">Les deux</option><option value="lacanau">Lacanau</option><option value="bordeaux">Bordeaux</option></select></div>
+            <div class="field"><label for="c-max">Utilisations max.</label><input id="c-max" type="number" min="0" step="1" value="1" inputmode="numeric"></div>
+            <button class="btn btn--accent" type="submit">Créer le code</button>
+            <p class="booking__msg" id="code-msg" aria-live="polite"></p>
+          </form>
+          <div id="codes"></div>
+        </details>
         <details class="admin-help">
           <summary>Synchroniser avec Airbnb (à faire une fois)</summary>
           <p>Pour qu'Airbnb bloque automatiquement les dates réservées ici, ajoute ce lien dans Airbnb : Calendrier de l'annonce → Disponibilités → Connecter des calendriers → Importer un calendrier.</p>

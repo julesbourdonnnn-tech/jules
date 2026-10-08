@@ -336,6 +336,7 @@
           <div class="field"><label for="d-phone">Téléphone</label><input id="d-phone" name="telephone" type="tel" autocomplete="tel" maxlength="30"></div>
           <div class="field full"><label for="d-email">E-mail</label><input id="d-email" name="email" type="email" autocomplete="email" required maxlength="254"></div>
           <div class="field full"><label for="d-msg">Un mot pour nous (facultatif)</label><textarea id="d-msg" name="message" maxlength="2000" placeholder="L'occasion de votre séjour, une heure d'arrivée, vos questions…"></textarea></div>
+          <div class="field full promo" id="promo-box"><label for="d-code">Code promo (facultatif)</label><div class="promo__row"><input id="d-code" name="code" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="30"><button type="button" class="btn btn--small" id="d-code-go">Appliquer</button></div><p class="small promo__msg" id="d-code-msg" aria-live="polite"></p></div>
           <label class="check full"><input type="checkbox" id="d-cgv" name="conditions" required> <span>J'accepte les <a href="conditions.html" target="_blank" rel="noopener">conditions de réservation</a> et le règlement de la maison.</span></label>
           <input class="hp" type="text" name="bot-field" tabindex="-1" autocomplete="off" aria-hidden="true">
           <div class="full"><button type="submit" class="btn btn--accent btn--block" id="d-submit">Continuer</button><p class="booking__msg" id="form-msg" aria-live="polite"></p><p class="small" id="d-note" style="margin-top:12px"></p></div>
@@ -828,8 +829,8 @@
     }
     dlgReturn = document.activeElement;
     const p = priceOf();
-    $("#recap").innerHTML = `<p><strong>${esc(h.name)}</strong></p><p>${esc(stayText())}</p><p>${esc(guestsText())}</p>${p && p.ready ? `<div class="recap__price">${p.lines.map((l) => `<p${l.cents < 0 ? ' class="is-off"' : ""}><span>${esc(l.label)}</span><span>${EUR(l.cents)}</span></p>`).join("")}<p class="booking__total"><span>Total</span><strong>${EUR(p.cents)}</strong></p></div>` : ""}`;
-    $("#d-submit").textContent = p && p.ready ? `Continuer vers le paiement · ${EUR(p.cents)}` : "Envoyer ma demande";
+    renderRecap();
+    $("#promo-box").hidden = !(p && p.ready);
     $("#d-note").textContent = p && p.ready
       ? "Vous allez être redirigé vers la page de paiement sécurisée Stripe. Votre carte n'est pas débitée tout de suite : le montant est seulement réservé, puis débité quand nous confirmons votre séjour (sous 24 h). Sans confirmation, il est libéré."
       : `Nous vous répondons personnellement par e-mail sous 24 h avec le prix${pct ? ` (remise de ${pct} % incluse)` : ""} et la confirmation. Rien n'est payé à cette étape.`;
@@ -840,6 +841,48 @@
     document.body.classList.add("is-locked");
     setTimeout(() => $("#d-name").focus(), 80);
   };
+  // Code promo : vérifié par le serveur, qui recalcule le prix
+  let promo = null; // { code, price, stay }
+  const stayKey = () => `${iso(state.in)}|${iso(state.out)}|${state.adults}`;
+  const shownPrice = () => {
+    const p = priceOf();
+    if (promo && promo.stay === stayKey() && promo.price) return Object.assign({}, p, promo.price, { ready: true });
+    return p;
+  };
+  function renderRecap() {
+    const p = shownPrice();
+    $("#recap").innerHTML = `<p><strong>${esc(h.name)}</strong></p><p>${esc(stayText())}</p><p>${esc(guestsText())}</p>${p && p.ready ? `<div class="recap__price">${p.lines.map((l) => `<p${l.cents < 0 ? ' class="is-off"' : ""}><span>${esc(l.label)}</span><span>${EUR(l.cents)}</span></p>`).join("")}<p class="booking__total"><span>Total</span><strong>${EUR(p.cents)}</strong></p></div>` : ""}`;
+    $("#d-submit").textContent = p && p.ready ? `Continuer vers le paiement · ${EUR(p.cents)}` : "Envoyer ma demande";
+  }
+  async function applyCode() {
+    const input = $("#d-code");
+    const out = $("#d-code-msg");
+    const code = input.value.trim().toUpperCase();
+    out.classList.remove("is-error");
+    if (!code) { promo = null; out.textContent = ""; renderRecap(); return true; }
+    out.textContent = "Vérification…";
+    try {
+      const r = await fetch("api/promo", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code, maison: key, arrivee: iso(state.in), depart: iso(state.out), adultes: state.adults }) });
+      const res = await r.json().catch(() => null);
+      if (r.ok && res && res.ok) {
+        promo = { code: res.code, price: res.price, stay: stayKey() };
+        out.textContent = `Code ${res.code} appliqué.`;
+        renderRecap();
+        return true;
+      }
+      promo = null;
+      out.textContent = (res && res.message) || "Ce code n'est pas valable.";
+    } catch (err) {
+      promo = null;
+      out.textContent = "Impossible de vérifier le code pour le moment.";
+    }
+    out.classList.add("is-error");
+    renderRecap();
+    return false;
+  }
+  $("#d-code-go").addEventListener("click", applyCode);
+  $("#d-code").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); applyCode(); } });
+
   const closeDlg = () => {
     dlg.classList.remove("is-open");
     dlg.setAttribute("aria-hidden", "true");
@@ -888,6 +931,10 @@
       msg.classList.add("is-error");
       $("#d-cgv").focus();
       return;
+    }
+    const typed = (fd.code || "").trim().toUpperCase();
+    if (typed && !(promo && promo.code === typed && promo.stay === stayKey())) {
+      if (!(await applyCode())) { btn.disabled = false; msg.textContent = ""; $("#d-code").focus(); return; }
     }
     const payload = Object.assign({}, fd, {
       maison: key, arrivee: iso(state.in), depart: iso(state.out), conditions: true,
