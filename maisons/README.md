@@ -9,7 +9,7 @@ Comme les autres sites du dépôt, il est **100 % statique** (HTML, CSS, JavaScr
 
 ## ✅ À faire avant de mettre en ligne
 
-1. **Ton e-mail** dans `js/config.js` (`email`) : c'est là qu'arrivent les demandes de réservation directe. Il est provisoirement réglé sur `contact@nuitsinguliere.com`.
+1. **E-mail du site** : `contact.sablepierre@gmail.com`, réglé dans `js/config.js` (`email`) : c'est là qu'arrivent les demandes de réservation directe.
 2. **Téléphone, WhatsApp, Instagram** dans `js/config.js` (facultatif : laissés vides, ils ne s'affichent pas).
 3. **Le nom du site** : « Sable & Pierre » (le sable de Lacanau, la pierre blonde de Bordeaux) et les noms des maisons (« la Maison du Lac », « la Maison de Pierre ») sont des propositions. Pour les changer : `js/config.js`, `js/data.js` (champ `name`) et les titres des fichiers `.html`.
 4. **Les disponibilités en direct** (fortement conseillé, voir plus bas) : 5 minutes de réglage.

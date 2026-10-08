@@ -9,8 +9,7 @@ window.SITE = {
   url: "https://sable-et-pierre.com",
 
   // Où arrivent les demandes de réservation directe.
-  // ⚠️ À remplacer par ton adresse (provisoire : celle de Nuits Singulières).
-  email: "contact@nuitsinguliere.com",
+  email: "contact.sablepierre@gmail.com",
   // Téléphone et WhatsApp au format international, sans espaces (ex. "33612345678").
   // Laisse vide pour ne pas les afficher.
   phone: "",
