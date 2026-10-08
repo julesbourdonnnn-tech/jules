@@ -37,7 +37,7 @@
           <div><dt>Au nom de</dt><dd>${esc(r.nom)}</dd></div>
           <div><dt>E-mail</dt><dd>${esc(r.email)}</dd></div>
         </dl>
-        ${r.cents ? `<div class="booking__price">${r.lignes.map((l) => `<p><span>${esc(l.label)}</span><span>${SP_EUR(l.cents)}</span></p>`).join("")}<p class="booking__total"><span>Total</span><strong>${SP_EUR(r.cents)}</strong></p></div>` : ""}
+        ${r.cents ? `<div class="booking__price">${r.lignes.map((l) => `<p><span>${esc(window.SP_LABEL ? SP_LABEL(l.label) : l.label)}</span><span>${SP_EUR(l.cents)}</span></p>`).join("")}<p class="booking__total"><span>Total</span><strong>${SP_EUR(r.cents)}</strong></p></div>` : ""}
       </div>
       <p class="small">Gardez cette page : son adresse vous permet de suivre votre réservation. Une question ? Écrivez-nous à <a class="link" href="mailto:${esc(email)}">${esc(email)}</a> en indiquant le numéro ${esc(r.id)}.</p>
       <p style="margin-top:36px"><a class="btn btn--ghost" href="${esc(r.page)}">Revoir la maison</a></p>`;

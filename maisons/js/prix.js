@@ -95,3 +95,15 @@ globalThis.SP_FROM = function (house) {
   const pct = Number((globalThis.TARIFS || {}).remiseDirecte) || 0;
   return Math.round((Math.min(...nights) * (100 - pct)) / 100);
 };
+// Libellés du prix renvoyés par le serveur (toujours en français) -> langue de la page.
+// Les recherches sont des expressions régulières (non traduites), les remplacements sont traduits avec le site.
+globalThis.SP_LABEL = function (s) {
+  return String(s)
+    .replace(/ × (\d+) nuits?$/, (m, n) => ` × ${n} ${Number(n) > 1 ? "nuits" : "nuit"}`)
+    .replace(/^Ménage et frais$/, "Ménage et frais")
+    .replace(/^Ménage$/, "Ménage")
+    .replace(/^Remise réservation directe/, "Remise réservation directe")
+    .replace(/^Taxe de séjour \((\d+) adultes? × (\d+) nuits?\)$/, (m, a, n) => `Taxe de séjour (${a} ${Number(a) > 1 ? "adultes" : "adulte"} × ${n} ${Number(n) > 1 ? "nuits" : "nuit"})`)
+    .replace(/^Taxe de séjour$/, "Taxe de séjour")
+    .replace(/^Code (\S+)/, (m, c) => `Code ${c}`);
+};

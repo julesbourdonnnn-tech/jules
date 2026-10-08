@@ -1,0 +1,1266 @@
+{
+ "Fermer le menu": [
+  "Close menu",
+  "Cerrar el menú"
+ ],
+ "Ouvrir le menu": [
+  "Open menu",
+  "Abrir el menú"
+ ],
+ "Photos": [
+  "Photos",
+  "Fotos"
+ ],
+ "Fermer la visionneuse": [
+  "Close viewer",
+  "Cerrar el visor"
+ ],
+ "Photo précédente": [
+  "Previous photo",
+  "Foto anterior"
+ ],
+ "Photo suivante": [
+  "Next photo",
+  "Foto siguiente"
+ ],
+ "Grand soleil": [
+  "Sunny",
+  "Despejado"
+ ],
+ "Plutôt ensoleillé": [
+  "Mostly sunny",
+  "Mayormente soleado"
+ ],
+ "Éclaircies": [
+  "Sunny spells",
+  "Intervalos de sol"
+ ],
+ "Couvert": [
+  "Overcast",
+  "Nublado"
+ ],
+ "Brouillard": [
+  "Fog",
+  "Niebla"
+ ],
+ "Brouillard givrant": [
+  "Freezing fog",
+  "Niebla helada"
+ ],
+ "Bruine légère": [
+  "Light drizzle",
+  "Llovizna ligera"
+ ],
+ "Bruine": [
+  "Drizzle",
+  "Llovizna"
+ ],
+ "Bruine dense": [
+  "Heavy drizzle",
+  "Llovizna intensa"
+ ],
+ "Pluie faible": [
+  "Light rain",
+  "Lluvia débil"
+ ],
+ "Pluie": [
+  "Rain",
+  "Lluvia"
+ ],
+ "Forte pluie": [
+  "Heavy rain",
+  "Lluvia fuerte"
+ ],
+ "Pluie verglaçante": [
+  "Freezing rain",
+  "Lluvia helada"
+ ],
+ "Neige faible": [
+  "Light snow",
+  "Nieve débil"
+ ],
+ "Neige": [
+  "Snow",
+  "Nieve"
+ ],
+ "Forte neige": [
+  "Heavy snow",
+  "Nieve fuerte"
+ ],
+ "Grains de neige": [
+  "Snow grains",
+  "Granizo de nieve"
+ ],
+ "Averses": [
+  "Showers",
+  "Chubascos"
+ ],
+ "Fortes averses": [
+  "Heavy showers",
+  "Chubascos fuertes"
+ ],
+ "Averses de neige": [
+  "Snow showers",
+  "Chubascos de nieve"
+ ],
+ "Orage": [
+  "Thunderstorm",
+  "Tormenta"
+ ],
+ "À": [
+  "In",
+  "En"
+ ],
+ ", maintenant": [
+  ", now",
+  ", ahora"
+ ],
+ "Maximale du jour": [
+  "Today's high",
+  "Máxima del día"
+ ],
+ "Coucher du soleil": [
+  "Sunset",
+  "Puesta de sol"
+ ],
+ "Vagues :": [
+  "Waves:",
+  "Olas:"
+ ],
+ "Vent": [
+  "Wind",
+  "Viento"
+ ],
+ "Choisir un mois": [
+  "Choose a month",
+  "Elige un mes"
+ ],
+ "Températures moyennes mois par mois": [
+  "Average temperatures month by month",
+  "Temperaturas medias mes a mes"
+ ],
+ "l'après-midi": [
+  "in the afternoon",
+  "por la tarde"
+ ],
+ ", océan": [
+  ", ocean",
+  ", océano"
+ ],
+ "Température maximale moyenne": [
+  "Average high temperature",
+  "Temperatura máxima media"
+ ],
+ "Température de l'océan": [
+  "Ocean temperature",
+  "Temperatura del océano"
+ ],
+ "Moyennes": [
+  "Averages",
+  "Medias"
+ ],
+ ", relevés": [
+  ", data",
+  ", datos"
+ ],
+ "Le matin": [
+  "Morning",
+  "Por la mañana"
+ ],
+ "L'océan": [
+  "The ocean",
+  "El océano"
+ ],
+ "Jours de pluie": [
+  "Rainy days",
+  "Días de lluvia"
+ ],
+ "Lien copié : vous pouvez le coller dans un message.": [
+  "Link copied: you can paste it into a message.",
+  "Enlace copiado: puedes pegarlo en un mensaje."
+ ],
+ "Copiez ce lien :": [
+  "Copy this link:",
+  "Copia este enlace:"
+ ],
+ "À partir de": [
+  "From",
+  "Desde"
+ ],
+ "€ la nuit en direct": [
+  "€ a night when booking direct",
+  "€ la noche reservando directamente"
+ ],
+ "% sur tout le séjour": [
+  "% on your whole stay",
+  "% en toda la estancia"
+ ],
+ "en réservant directement sur ce site.": [
+  "when you book directly on this site.",
+  "reservando directamente en esta web."
+ ],
+ "Météo en direct · Open-Meteo": [
+  "Live weather · Open-Meteo",
+  "Tiempo en directo · Open-Meteo"
+ ],
+ "séjour de": [
+  "stay of",
+  "estancia de"
+ ],
+ "nuits minimum": [
+  "nights minimum",
+  "noches mínimo"
+ ],
+ "nuits maximum": [
+  "nights maximum",
+  "noches máximo"
+ ],
+ "déjà pris": [
+  "already booked",
+  "ya reservado"
+ ],
+ "Choisissez votre arrivée": [
+  "Choose your arrival date",
+  "Elige tu llegada"
+ ],
+ "Choisissez votre départ": [
+  "Choose your departure date",
+  "Elige tu salida"
+ ],
+ "Déjà pris": [
+  "Already booked",
+  "Ya reservado"
+ ],
+ "dans les deux maisons": [
+  "in both houses",
+  "en las dos casas"
+ ],
+ "Ajouter une date": [
+  "Add a date",
+  "Añadir una fecha"
+ ],
+ "18 ans et plus": [
+  "Aged 18 and over",
+  "18 años o más"
+ ],
+ "De 2 à 17 ans": [
+  "Aged 2 to 17",
+  "De 2 a 17 años"
+ ],
+ "La Maison du Lac accueille jusqu'à": [
+  "La Maison du Lac sleeps up to",
+  "La Maison du Lac tiene capacidad para"
+ ],
+ "voyageurs, la Maison de Pierre jusqu'à": [
+  "guests, La Maison de Pierre up to",
+  "viajeros, la Maison de Pierre para"
+ ],
+ "Jusqu'à": [
+  "Up to",
+  "Hasta"
+ ],
+ "voyageurs dans cette maison.": [
+  "guests in this house.",
+  "viajeros en esta casa."
+ ],
+ "Voir la maison": [
+  "See the house",
+  "Ver la casa"
+ ],
+ "Arrivée impossible le": [
+  "Arrival not possible on",
+  "No es posible llegar el"
+ ],
+ "Prochaine possibilité : du": [
+  "Next option: from",
+  "Próxima opción: del"
+ ],
+ "Voir ces dates": [
+  "See these dates",
+  "Ver estas fechas"
+ ],
+ "Séjour de": [
+  "Stays of",
+  "Estancia de"
+ ],
+ "nuits minimum à ces dates.": [
+  "nights minimum on these dates.",
+  "noches mínimo en estas fechas."
+ ],
+ "Ces dates ne sont pas toutes libres.": [
+  "Not all of these dates are available.",
+  "No todas estas fechas están libres."
+ ],
+ "% en réservant en direct": [
+  "% when booking direct",
+  "% reservando directamente"
+ ],
+ "· à partir de": [
+  "· from",
+  "· desde"
+ ],
+ "€ la nuit": [
+  "€ a night",
+  "€ la noche"
+ ],
+ "Réserver ces dates": [
+  "Book these dates",
+  "Reservar estas fechas"
+ ],
+ "Choisissez d'abord vos dates d'arrivée et de départ.": [
+  "First choose your arrival and departure dates.",
+  "Elige primero tus fechas de llegada y salida."
+ ],
+ "Effacer": [
+  "Clear",
+  "Borrar"
+ ],
+ "Valider": [
+  "Done",
+  "Aceptar"
+ ],
+ "Adultes": [
+  "Adults",
+  "Adultos"
+ ],
+ "Retirer un adulte": [
+  "Remove an adult",
+  "Quitar un adulto"
+ ],
+ "Ajouter un adulte": [
+  "Add an adult",
+  "Añadir un adulto"
+ ],
+ "Enfants": [
+  "Children",
+  "Niños"
+ ],
+ "Retirer un enfant": [
+  "Remove a child",
+  "Quitar un niño"
+ ],
+ "Ajouter un enfant": [
+  "Add a child",
+  "Añadir un niño"
+ ],
+ "Voir le calendrier": [
+  "See the calendar",
+  "Ver el calendario"
+ ],
+ "Voir": [
+  "See",
+  "Ver"
+ ],
+ "Libre du": [
+  "Available from",
+  "Libre del"
+ ],
+ "du": [
+  "from",
+  "del"
+ ],
+ "au": [
+  "to",
+  "al"
+ ],
+ "Chambres": [
+  "Bedrooms",
+  "Dormitorios"
+ ],
+ "Pièces de vie": [
+  "Living spaces",
+  "Zonas de estar"
+ ],
+ "voyageurs ·": [
+  "guests ·",
+  "viajeros ·"
+ ],
+ "chambres ·": [
+  "bedrooms ·",
+  "dormitorios ·"
+ ],
+ "lits ·": [
+  "beds ·",
+  "camas ·"
+ ],
+ "salles de bain": [
+  "bathrooms",
+  "baños"
+ ],
+ "avis · Coup de cœur voyageurs": [
+  "reviews · Guest favourite",
+  "reseñas · Favorito de los viajeros"
+ ],
+ "Choisir une photo": [
+  "Choose a photo",
+  "Elegir una foto"
+ ],
+ "Les": [
+  "All",
+  "Las"
+ ],
+ "photos": [
+  "photos",
+  "fotos"
+ ],
+ "Partager cette maison": [
+  "Share this house",
+  "Compartir esta casa"
+ ],
+ "Sections de la page": [
+  "Page sections",
+  "Secciones de la página"
+ ],
+ "La maison": [
+  "The house",
+  "La casa"
+ ],
+ "Équipements": [
+  "Amenities",
+  "Equipamiento"
+ ],
+ "Avis": [
+  "Reviews",
+  "Reseñas"
+ ],
+ "Disponibilités": [
+  "Availability",
+  "Disponibilidad"
+ ],
+ "Le quartier": [
+  "The area",
+  "El barrio"
+ ],
+ "Quand venir": [
+  "When to come",
+  "Cuándo venir"
+ ],
+ "Infos pratiques": [
+  "Practical info",
+  "Información práctica"
+ ],
+ "Réserver": [
+  "Book",
+  "Reservar"
+ ],
+ "voyageurs": [
+  "guests",
+  "viajeros"
+ ],
+ "chambres": [
+  "bedrooms",
+  "dormitorios"
+ ],
+ "lits": [
+  "beds",
+  "camas"
+ ],
+ "Le mot de vos hôtes": [
+  "A word from your hosts",
+  "Unas palabras de tus anfitriones"
+ ],
+ "Lire la suite": [
+  "Read more",
+  "Leer más"
+ ],
+ "Coup de cœur voyageurs": [
+  "Guest favourite",
+  "Favorito de los viajeros"
+ ],
+ "L'un des logements préférés des voyageurs sur Airbnb · hôte Superhôte": [
+  "One of the most loved homes on Airbnb · Superhost",
+  "Uno de los alojamientos favoritos de los viajeros en Airbnb · Superanfitrión"
+ ],
+ "Plan de la maison": [
+  "House plan",
+  "Plano de la casa"
+ ],
+ "Niveau": [
+  "Floor",
+  "Planta"
+ ],
+ "par niveau": [
+  "by floor",
+  "por planta"
+ ],
+ "Choisissez un niveau pour voir ce qu'il contient.": [
+  "Choose a floor to see what's on it.",
+  "Elige una planta para ver qué hay en ella."
+ ],
+ "Niveaux de la maison": [
+  "Floors of the house",
+  "Plantas de la casa"
+ ],
+ "En images": [
+  "In pictures",
+  "En imágenes"
+ ],
+ "Entrez,": [
+  "Come in,",
+  "Pasa,"
+ ],
+ "c'est ouvert": [
+  "the door's open",
+  "está abierto"
+ ],
+ "Cliquez sur une photo pour l'agrandir, puis faites défiler avec les flèches du clavier ou en glissant le doigt.": [
+  "Click a photo to enlarge it, then browse with the arrow keys or by swiping.",
+  "Haz clic en una foto para ampliarla y desplázate con las flechas del teclado o deslizando el dedo."
+ ],
+ "Visiter pièce par pièce ·": [
+  "Room-by-room tour ·",
+  "Visita estancia por estancia ·"
+ ],
+ "Où vous dormirez": [
+  "Where you'll sleep",
+  "Dónde dormirás"
+ ],
+ "chambres,": [
+  "bedrooms,",
+  "dormitorios,"
+ ],
+ "Deux chambres et une salle de bain de plain-pied, les quatre autres chambres à l'étage.": [
+  "Two bedrooms and a bathroom on the ground floor, the other four bedrooms upstairs.",
+  "Dos dormitorios y un baño en la planta baja, los otros cuatro dormitorios en la planta superior."
+ ],
+ "Trois chambres, une salle de bain et un WC au rez-de-chaussée ; deux chambres, une salle d'eau et un WC en sous-sol ; la pièce de vie et la terrasse à l'étage.": [
+  "Three bedrooms, a bathroom and a toilet on the ground floor; two bedrooms, a shower room and a toilet on the lower floor; the living area and the terrace upstairs.",
+  "Tres dormitorios, un baño y un aseo en la planta baja; dos dormitorios, un baño con ducha y un aseo en el semisótano; la sala de estar y la terraza en la planta superior."
+ ],
+ "Agrandir la photo :": [
+  "Enlarge photo:",
+  "Ampliar la foto:"
+ ],
+ "Ce que propose la maison": [
+  "What the house offers",
+  "Lo que ofrece la casa"
+ ],
+ "Tout est": [
+  "Everything is",
+  "Todo está"
+ ],
+ "prévu": [
+  "taken care of",
+  "previsto"
+ ],
+ "La liste complète des équipements, telle qu'elle figure sur l'annonce.": [
+  "The full list of amenities, as shown on the listing.",
+  "La lista completa del equipamiento, tal como figura en el anuncio."
+ ],
+ "Voir tous les équipements": [
+  "See all amenities",
+  "Ver todo el equipamiento"
+ ],
+ "avis vérifiés sur Airbnb": [
+  "verified reviews on Airbnb",
+  "reseñas verificadas en Airbnb"
+ ],
+ "Les notes en détail": [
+  "Ratings in detail",
+  "Las puntuaciones en detalle"
+ ],
+ "Répartition": [
+  "Breakdown",
+  "Distribución"
+ ],
+ "Les sujets dont parlent les voyageurs": [
+  "What guests talk about",
+  "Los temas que mencionan los viajeros"
+ ],
+ "Ce dont parlent les voyageurs :": [
+  "What guests mention:",
+  "Lo que mencionan los viajeros:"
+ ],
+ "Plus d'avis": [
+  "More reviews",
+  "Más reseñas"
+ ],
+ "Lire les": [
+  "Read the",
+  "Leer las"
+ ],
+ "avis": [
+  "reviews",
+  "reseñas"
+ ],
+ "Extraits fidèles d'avis publiés par les voyageurs sur Airbnb (seule l'orthographe a été corrigée).": [
+  "Excerpts from reviews posted by guests on Airbnb (French reviews translated).",
+  "Extractos de reseñas publicadas por los viajeros en Airbnb (traducidas)."
+ ],
+ "Choisissez": [
+  "Choose",
+  "Elige"
+ ],
+ "vos dates": [
+  "your dates",
+  "tus fechas"
+ ],
+ "Les dates grisées sont déjà prises. Sélectionnez votre arrivée puis votre départ : le prix s'affiche, et vous réservez directement ici, sans frais de plateforme.": [
+  "Greyed-out dates are already booked. Select your arrival, then your departure: the price appears, and you book directly here, with no platform fees.",
+  "Las fechas en gris ya están reservadas. Selecciona tu llegada y luego tu salida: aparece el precio y reservas directamente aquí, sin comisiones de plataforma."
+ ],
+ "Mois précédent": [
+  "Previous month",
+  "Mes anterior"
+ ],
+ "Choisissez votre date d'arrivée": [
+  "Choose your arrival date",
+  "Elige tu fecha de llegada"
+ ],
+ "Mois suivant": [
+  "Next month",
+  "Mes siguiente"
+ ],
+ "Calendrier des disponibilités": [
+  "Availability calendar",
+  "Calendario de disponibilidad"
+ ],
+ "Votre séjour": [
+  "Your stay",
+  "Tu estancia"
+ ],
+ "Aujourd'hui": [
+  "Today",
+  "Hoy"
+ ],
+ "Prochains week-ends libres :": [
+  "Next free weekends:",
+  "Próximos fines de semana libres:"
+ ],
+ "· jusqu'à": [
+  "· up to",
+  "· hasta"
+ ],
+ "Arrivée": [
+  "Arrival",
+  "Llegada"
+ ],
+ "Départ": [
+  "Departure",
+  "Salida"
+ ],
+ "Voyageurs": [
+  "Guests",
+  "Viajeros"
+ ],
+ "1 voyageur": [
+  "1 guest",
+  "1 viajero"
+ ],
+ "Bébés": [
+  "Infants",
+  "Bebés"
+ ],
+ "La maison ne convient pas aux moins de 2 ans": [
+  "The house is not suitable for under-2s",
+  "La casa no es adecuada para menores de 2 años"
+ ],
+ "Moins de 2 ans": [
+  "Under 2",
+  "Menores de 2 años"
+ ],
+ "sur tout le séjour": [
+  "on your whole stay",
+  "en toda la estancia"
+ ],
+ "Réserver en direct": [
+  "Book direct",
+  "Reservar directamente"
+ ],
+ "ou": [
+  "or",
+  "o"
+ ],
+ "Réserver sur Airbnb": [
+  "Book on Airbnb",
+  "Reservar en Airbnb"
+ ],
+ "Effacer les dates": [
+  "Clear dates",
+  "Borrar las fechas"
+ ],
+ "En direct : paiement sécurisé par carte, rien n'est débité avant notre confirmation": [
+  "Direct booking: secure card payment, nothing is charged until we confirm",
+  "Reserva directa: pago seguro con tarjeta, no se cobra nada hasta nuestra confirmación"
+ ],
+ "Hôte Superhôte, logement « Coup de cœur voyageurs »": [
+  "Superhost, \"Guest favourite\" home",
+  "Superanfitrión, alojamiento «Favorito de los viajeros»"
+ ],
+ "Arrivée dès 16 h, départ avant 10 h": [
+  "Check-in from 4 pm, check-out before 10 am",
+  "Llegada desde las 16 h, salida antes de las 10 h"
+ ],
+ "Arrivée autonome et flexible, départ avant 12 h": [
+  "Flexible self check-in, check-out before 12 noon",
+  "Llegada autónoma y flexible, salida antes de las 12 h"
+ ],
+ "Filtrer les repères": [
+  "Filter landmarks",
+  "Filtrar los puntos de interés"
+ ],
+ "Carte du quartier de": [
+  "Map of the area around",
+  "Mapa de la zona de"
+ ],
+ "Le cercle indique le secteur de la maison : l'adresse exacte vous est communiquée à la réservation.": [
+  "The circle shows the area of the house: the exact address is given when you book.",
+  "El círculo indica la zona de la casa: la dirección exacta se comunica al reservar."
+ ],
+ "Le cercle indique le secteur de la maison (emplacement approximatif) : l'adresse exacte vous est communiquée à la réservation.": [
+  "The circle shows the area of the house (approximate location): the exact address is given when you book.",
+  "El círculo indica la zona de la casa (ubicación aproximada): la dirección exacta se comunica al reservar."
+ ],
+ "Distances à vol d'oiseau.": [
+  "Distances as the crow flies.",
+  "Distancias en línea recta."
+ ],
+ "Le temps": [
+  "The weather",
+  "El tiempo"
+ ],
+ "qu'il fait": [
+  "month by month",
+  "que hace"
+ ],
+ "Les températures et la pluie mois par mois à": [
+  "Temperatures and rainfall month by month in",
+  "Temperaturas y lluvia mes a mes en"
+ ],
+ "Lacanau, avec la température de l'océan": [
+  "Lacanau, with the ocean temperature",
+  "Lacanau, con la temperatura del océano"
+ ],
+ ", d'après dix ans de relevés. Survolez ou choisissez un mois.": [
+  ", based on ten years of data. Hover over or choose a month.",
+  ", según diez años de datos. Pasa el ratón o elige un mes."
+ ],
+ "Le règlement": [
+  "House",
+  "Las normas"
+ ],
+ "de la maison": [
+  "rules",
+  "de la casa"
+ ],
+ "Vous allez séjourner dans une maison de famille : merci d'en prendre soin et de respecter les lieux.": [
+  "You'll be staying in a family home: please take good care of it.",
+  "Vas a alojarte en una casa familiar: cuídala y respeta el lugar, por favor."
+ ],
+ "Numéro d'enregistrement en mairie :": [
+  "Town hall registration number:",
+  "Número de registro municipal:"
+ ],
+ "L'autre maison ·": [
+  "The other house ·",
+  "La otra casa ·"
+ ],
+ "avis ·": [
+  "reviews ·",
+  "reseñas ·"
+ ],
+ "Voir les dates": [
+  "See dates",
+  "Ver fechas"
+ ],
+ "Toutes les photos": [
+  "All photos",
+  "Todas las fotos"
+ ],
+ "Pièces": [
+  "Rooms",
+  "Estancias"
+ ],
+ "Tout ·": [
+  "All ·",
+  "Todo ·"
+ ],
+ "Fermer": [
+  "Close",
+  "Cerrar"
+ ],
+ "Votre réservation": [
+  "Your booking",
+  "Tu reserva"
+ ],
+ "Nom et prénom": [
+  "Full name",
+  "Nombre y apellidos"
+ ],
+ "Téléphone": [
+  "Phone",
+  "Teléfono"
+ ],
+ "E-mail": [
+  "Email",
+  "Correo electrónico"
+ ],
+ "Un mot pour nous (facultatif)": [
+  "A note for us (optional)",
+  "Unas palabras para nosotros (opcional)"
+ ],
+ "L'occasion de votre séjour, une heure d'arrivée, vos questions…": [
+  "The occasion for your stay, your arrival time, any questions…",
+  "El motivo de tu estancia, la hora de llegada, tus preguntas…"
+ ],
+ "Code promo (facultatif)": [
+  "Promo code (optional)",
+  "Código promocional (opcional)"
+ ],
+ "Appliquer": [
+  "Apply",
+  "Aplicar"
+ ],
+ "J'accepte les": [
+  "I accept the",
+  "Acepto las"
+ ],
+ "conditions de réservation": [
+  "booking terms",
+  "condiciones de reserva"
+ ],
+ "et le règlement de la maison.": [
+  "and the house rules.",
+  "y las normas de la casa."
+ ],
+ "Continuer": [
+  "Continue",
+  "Continuar"
+ ],
+ "Merci !": [
+  "Thank you!",
+  "¡Gracias!"
+ ],
+ "Votre demande est bien partie. Nous vous répondons très vite.": [
+  "Your request has been sent. We'll get back to you very soon.",
+  "Tu solicitud se ha enviado. Te responderemos muy pronto."
+ ],
+ "Coupe schématique de la maison": [
+  "Cross-section of the house",
+  "Sección esquemática de la casa"
+ ],
+ "jardin": [
+  "garden",
+  "jardín"
+ ],
+ "verrière": [
+  "glass roof",
+  "cristalera"
+ ],
+ "Réduire": [
+  "Show less",
+  "Mostrar menos"
+ ],
+ "Voir moins": [
+  "Show less",
+  "Ver menos"
+ ],
+ "nuit déjà prise dans la période": [
+  "a night in this period is already booked",
+  "una noche del periodo ya está reservada"
+ ],
+ "séjour trop court": [
+  "stay too short",
+  "estancia demasiado corta"
+ ],
+ "séjour trop long": [
+  "stay too long",
+  "estancia demasiado larga"
+ ],
+ "départ impossible ce jour-là": [
+  "no departures on this day",
+  "no se puede salir este día"
+ ],
+ "arrivée impossible ce jour-là": [
+  "no arrivals on this day",
+  "no se puede llegar este día"
+ ],
+ "nuits minimum)": [
+  "nights minimum)",
+  "noches mínimo)"
+ ],
+ "sélectionnée": [
+  "selected",
+  "seleccionada"
+ ],
+ "sélectionnées": [
+  "selected",
+  "seleccionadas"
+ ],
+ "Le séjour minimum est de": [
+  "The minimum stay is",
+  "La estancia mínima es de"
+ ],
+ "nuits à partir de cette date.": [
+  "nights from this date.",
+  "noches a partir de esta fecha."
+ ],
+ "voyageur": [
+  "guest",
+  "viajero"
+ ],
+ "nuit": [
+  "night",
+  "noche"
+ ],
+ "bébé": [
+  "infant",
+  "bebé"
+ ],
+ "dates à définir": [
+  "dates to be chosen",
+  "fechas por definir"
+ ],
+ "Séjour": [
+  "Stay",
+  "Estancia"
+ ],
+ ", dès 16 h": [
+  ", from 4 pm",
+  ", desde las 16 h"
+ ],
+ ", avant 10 h": [
+  ", before 10 am",
+  ", antes de las 10 h"
+ ],
+ ", avant 12 h": [
+  ", before 12 noon",
+  ", antes de las 12 h"
+ ],
+ "Ces dates sont libres dans le calendrier": [
+  "These dates are free in the calendar",
+  "Estas fechas están libres en el calendario"
+ ],
+ "Total en direct": [
+  "Direct total",
+  "Total directo"
+ ],
+ "Prix Airbnb": [
+  "Airbnb price",
+  "Precio en Airbnb"
+ ],
+ "Vous économisez": [
+  "You save",
+  "Ahorras"
+ ],
+ "par rapport au prix Airbnb": [
+  "compared with the Airbnb price",
+  "respecto al precio de Airbnb"
+ ],
+ "en réservant ici": [
+  "by booking here",
+  "reservando aquí"
+ ],
+ "Le prix de ce séjour vous est confirmé par e-mail avec votre réservation.": [
+  "The price of this stay will be confirmed by email with your booking.",
+  "El precio de esta estancia se te confirmará por correo con tu reserva."
+ ],
+ "Réserver en direct ·": [
+  "Book direct ·",
+  "Reservar directamente ·"
+ ],
+ "Choisir mes dates": [
+  "Choose my dates",
+  "Elegir mis fechas"
+ ],
+ "Choisissez maintenant votre date de départ": [
+  "Now choose your departure date",
+  "Ahora elige tu fecha de salida"
+ ],
+ "Disponibilités mises à jour le": [
+  "Availability updated on",
+  "Disponibilidad actualizada el"
+ ],
+ ". Vos dates sont vérifiées à nouveau au moment de réserver.": [
+  ". Your dates are checked again when you book.",
+  ". Tus fechas se vuelven a comprobar al reservar."
+ ],
+ "Vos dates sont vérifiées au moment de réserver.": [
+  "Your dates are checked when you book.",
+  "Tus fechas se comprueban al reservar."
+ ],
+ "Le paiement a été annulé : rien n'a été débité. Vos dates sont toujours sélectionnées.": [
+  "Payment was cancelled: nothing has been charged. Your dates are still selected.",
+  "El pago se ha cancelado: no se ha cobrado nada. Tus fechas siguen seleccionadas."
+ ],
+ "Choisissez d'abord vos dates d'arrivée et de départ dans le calendrier.": [
+  "First choose your arrival and departure dates in the calendar.",
+  "Elige primero tus fechas de llegada y salida en el calendario."
+ ],
+ "Total": [
+  "Total",
+  "Total"
+ ],
+ "Continuer vers le paiement ·": [
+  "Continue to payment ·",
+  "Continuar al pago ·"
+ ],
+ "Envoyer ma demande": [
+  "Send my request",
+  "Enviar mi solicitud"
+ ],
+ "Vous allez être redirigé vers la page de paiement sécurisée Stripe. Votre carte n'est pas débitée tout de suite : le montant est seulement réservé, puis débité quand nous confirmons votre séjour (sous 24 h). Sans confirmation, il est libéré.": [
+  "You'll be redirected to Stripe's secure payment page. Your card is not charged straight away: the amount is only held, then charged when we confirm your stay (within 24 hours). Without confirmation, it is released.",
+  "Serás redirigido a la página de pago segura de Stripe. No se cobra a tu tarjeta de inmediato: el importe solo se retiene y se cobra cuando confirmamos tu estancia (en 24 h). Sin confirmación, se libera."
+ ],
+ "Nous vous répondons personnellement par e-mail sous 24 h avec le prix": [
+  "We'll reply to you personally by email within 24 hours with the price",
+  "Te responderemos personalmente por correo en 24 h con el precio"
+ ],
+ "(remise de": [
+  "(including a",
+  "(con un descuento del"
+ ],
+ "% incluse)": [
+  "% discount)",
+  "% incluido)"
+ ],
+ "et la confirmation. Rien n'est payé à cette étape.": [
+  "and the confirmation. Nothing is paid at this stage.",
+  "y la confirmación. No se paga nada en este paso."
+ ],
+ "Vérification…": [
+  "Checking…",
+  "Comprobando…"
+ ],
+ "Code": [
+  "Code",
+  "Código"
+ ],
+ "appliqué.": [
+  "applied.",
+  "aplicado."
+ ],
+ "Ce code n'est pas valable.": [
+  "This code is not valid.",
+  "Este código no es válido."
+ ],
+ "Impossible de vérifier le code pour le moment.": [
+  "The code cannot be checked right now.",
+  "No se puede comprobar el código en este momento."
+ ],
+ "Choisissez maintenant votre date de départ.": [
+  "Now choose your departure date.",
+  "Ahora elige tu fecha de salida."
+ ],
+ "Choisissez votre date d'arrivée dans le calendrier.": [
+  "Choose your arrival date in the calendar.",
+  "Elige tu fecha de llegada en el calendario."
+ ],
+ "Merci d'indiquer votre nom et une adresse e-mail valide.": [
+  "Please enter your name and a valid email address.",
+  "Indica tu nombre y un correo electrónico válido."
+ ],
+ "Envoi en cours…": [
+  "Sending…",
+  "Enviando…"
+ ],
+ "Merci d'accepter les conditions de réservation.": [
+  "Please accept the booking terms.",
+  "Acepta las condiciones de reserva."
+ ],
+ "Redirection vers le paiement sécurisé…": [
+  "Redirecting to secure payment…",
+  "Redirigiendo al pago seguro…"
+ ],
+ "Bonjour,\\n\\nJe souhaite réserver": [
+  "Hello,\\n\\nI would like to book",
+  "Hola:\\n\\nMe gustaría reservar"
+ ],
+ ", pour": [
+  ", for",
+  ", para"
+ ],
+ "Demande de réservation —": [
+  "Booking request —",
+  "Solicitud de reserva —"
+ ],
+ "Votre messagerie s'ouvre avec la demande pré-remplie : il ne vous reste qu'à l'envoyer. Si rien ne s'ouvre, écrivez-nous à": [
+  "Your email app opens with the request already filled in: all you have to do is send it. If nothing opens, write to us at",
+  "Tu aplicación de correo se abre con la solicitud ya rellenada: solo tienes que enviarla. Si no se abre nada, escríbenos a"
+ ],
+ "À pied": [
+  "On foot",
+  "A pie"
+ ],
+ "Plages": [
+  "Beaches",
+  "Playas"
+ ],
+ "Vignobles": [
+  "Vineyards",
+  "Viñedos"
+ ],
+ "Ville": [
+  "City",
+  "Ciudad"
+ ],
+ "Gare et aéroport": [
+  "Station and airport",
+  "Estación y aeropuerto"
+ ],
+ "· environ": [
+  "· about",
+  "· unos"
+ ],
+ "min à pied": [
+  "min on foot",
+  "min a pie"
+ ],
+ "Votre paiement n'a pas encore été finalisé. Si vous avez fermé la page de paiement, revenez sur la fiche de la maison pour recommencer.": [
+  "Your payment has not been completed yet. If you closed the payment page, go back to the house page to start again.",
+  "Tu pago aún no se ha completado. Si cerraste la página de pago, vuelve a la ficha de la casa para empezar de nuevo."
+ ],
+ "Paiement en cours": [
+  "Payment in progress",
+  "Pago en curso"
+ ],
+ "Demande reçue": [
+  "Request received",
+  "Solicitud recibida"
+ ],
+ "Merci ! Nous vérifions votre réservation et vous confirmons votre séjour par e-mail, en général sous 24 heures.": [
+  "Thank you! We are checking your booking and will confirm your stay by email, usually within 24 hours.",
+  "¡Gracias! Estamos comprobando tu reserva y te confirmaremos la estancia por correo, normalmente en 24 horas."
+ ],
+ "Séjour confirmé": [
+  "Stay confirmed",
+  "Estancia confirmada"
+ ],
+ "Votre réservation est confirmée. Nous avons hâte de vous accueillir ! Les informations d'arrivée vous sont envoyées par e-mail avant le séjour.": [
+  "Your booking is confirmed. We look forward to welcoming you! Arrival information will be emailed to you before your stay.",
+  "Tu reserva está confirmada. ¡Estamos deseando recibirte! Te enviaremos la información de llegada por correo antes de la estancia."
+ ],
+ "Réservation non confirmée": [
+  "Booking not confirmed",
+  "Reserva no confirmada"
+ ],
+ "Nous ne pouvons malheureusement pas confirmer ce séjour. Rien n'a été débité : l'empreinte sur votre carte est libérée.": [
+  "Unfortunately we cannot confirm this stay. Nothing has been charged: the hold on your card has been released.",
+  "Lamentablemente no podemos confirmar esta estancia. No se ha cobrado nada: la retención en tu tarjeta se ha liberado."
+ ],
+ "Réservation annulée": [
+  "Booking cancelled",
+  "Reserva cancelada"
+ ],
+ "Cette réservation a été annulée.": [
+  "This booking has been cancelled.",
+  "Esta reserva ha sido cancelada."
+ ],
+ "Paiement non finalisé": [
+  "Payment not completed",
+  "Pago no completado"
+ ],
+ "Le délai de paiement est dépassé et les dates ont été libérées. Vous pouvez refaire une réservation depuis la fiche de la maison.": [
+  "The payment time limit has passed and the dates have been released. You can book again from the house page.",
+  "Se ha superado el plazo de pago y las fechas se han liberado. Puedes volver a reservar desde la ficha de la casa."
+ ],
+ "Réservation": [
+  "Booking",
+  "Reserva"
+ ],
+ "| Sable & Pierre": [
+  "| Sable & Pierre",
+  "| Sable & Pierre"
+ ],
+ "Au nom de": [
+  "Name",
+  "A nombre de"
+ ],
+ "autorisé": [
+  "authorised",
+  "autorizado"
+ ],
+ "Le montant est réservé sur votre carte mais pas encore débité : il le sera au moment de notre confirmation.": [
+  "The amount is held on your card but not yet charged: it will be charged when we confirm.",
+  "El importe está retenido en tu tarjeta pero aún no se ha cobrado: se cobrará cuando confirmemos."
+ ],
+ "Rien n'a été payé à cette étape : nous vous indiquons par e-mail comment régler votre séjour.": [
+  "Nothing has been paid at this stage: we will email you how to pay for your stay.",
+  "No se ha pagado nada en este paso: te indicaremos por correo cómo pagar tu estancia."
+ ],
+ "en indiquant le numéro": [
+  "quoting the reference",
+  "indicando el número"
+ ],
+ "Revoir la maison": [
+  "Back to the house",
+  "Volver a la casa"
+ ],
+ "Réservation introuvable": [
+  "Booking not found",
+  "Reserva no encontrada"
+ ],
+ "Ménage et frais": [
+  "Cleaning and fees",
+  "Limpieza y gastos"
+ ],
+ "Ménage": [
+  "Cleaning",
+  "Limpieza"
+ ],
+ "Remise réservation directe (−": [
+  "Direct booking discount (−",
+  "Descuento por reserva directa (−"
+ ],
+ "Taxe de séjour": [
+  "Tourist tax",
+  "Tasa turística"
+ ],
+ "Taxe de séjour (": [
+  "Tourist tax (",
+  "Tasa turística ("
+ ],
+ "Annulation gratuite jusqu'à 30 jours avant l'arrivée : remboursement intégral.": [
+  "Free cancellation up to 30 days before arrival: full refund.",
+  "Cancelación gratuita hasta 30 días antes de la llegada: reembolso íntegro."
+ ],
+ "Entre 30 et 14 jours avant l'arrivée : remboursement de 50 %.": [
+  "Between 30 and 14 days before arrival: 50% refund.",
+  "Entre 30 y 14 días antes de la llegada: reembolso del 50 %."
+ ],
+ "Moins de 14 jours avant l'arrivée : aucun remboursement.": [
+  "Less than 14 days before arrival: no refund.",
+  "Menos de 14 días antes de la llegada: sin reembolso."
+ ],
+ "Gardez cette page : son adresse vous permet de suivre votre réservation. Une question ? Écrivez-nous à": [
+  "Keep this page: its address lets you follow your booking. Any questions? Write to us at",
+  "Guarda esta página: su dirección te permite seguir tu reserva. ¿Alguna pregunta? Escríbenos a"
+ ],
+ "Le lien est peut-être incomplet. Écrivez-nous à": [
+  "The link may be incomplete. Write to us at",
+  "Puede que el enlace esté incompleto. Escríbenos a"
+ ],
+ "Retirer :": [
+  "Remove:",
+  "Quitar:"
+ ],
+ "Ajouter :": [
+  "Add:",
+  "Añadir:"
+ ],
+ "Agrandir :": [
+  "Enlarge:",
+  "Ampliar:"
+ ],
+ "Wifi": [
+  "Wi-Fi",
+  "Wifi"
+ ],
+ "Stationnement gratuit": [
+  "Free parking",
+  "Aparcamiento gratuito"
+ ],
+ "Terrasse": [
+  "Terrace",
+  "Terraza"
+ ],
+ "e-mail": [
+  "email",
+  "correo electrónico"
+ ],
+ "Remise réservation directe": [
+  "Direct booking discount",
+  "Descuento por reserva directa"
+ ]
+}

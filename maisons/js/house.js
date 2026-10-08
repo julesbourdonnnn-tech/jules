@@ -31,7 +31,8 @@
     ["bath", "Salles de bain", /salle de bain|salle d'eau/i],
     ["live", "Pièces de vie", /./],
   ];
-  const catOf = (cap) => CATS.find((c) => c[2].test(cap))[0];
+  // (3e élément de la photo : catégorie déjà calculée, pour les versions traduites)
+  const catOf = (cap, cat) => cat || CATS.find((c) => c[2].test(cap))[0];
 
   /* ======================= Rendu de la page ======================= */
   main.innerHTML = `
@@ -314,12 +315,12 @@
     <div class="tour__bar">
       <div class="tour__chips" role="group" aria-label="Pièces">
         <button type="button" class="chip" data-cat="all" aria-pressed="true">Tout · ${gallery.length}</button>
-        ${CATS.map(([id, name]) => { const n = h.photos.filter((p) => catOf(p[1]) === id).length; return n ? `<button type="button" class="chip" data-cat="${id}" aria-pressed="false">${name} · ${n}</button>` : ""; }).join("")}
+        ${CATS.map(([id, name]) => { const n = h.photos.filter((p) => catOf(p[1], p[2]) === id).length; return n ? `<button type="button" class="chip" data-cat="${id}" aria-pressed="false">${name} · ${n}</button>` : ""; }).join("")}
       </div>
       <button type="button" class="round-btn" data-close-tour aria-label="Fermer">${icon("close")}</button>
     </div>
     <div class="tour__grid" id="tour-grid">
-      ${h.photos.map(([n, cap], i) => `<button type="button" class="tour__item" data-cat="${catOf(cap)}" data-open-gallery="${i}" aria-label="Agrandir : ${esc(cap)}"><img src="${photo(key, n, "md")}" alt="${esc(cap)}" loading="lazy"><span>${esc(cap)}</span></button>`).join("")}
+      ${h.photos.map(([n, cap, cat], i) => `<button type="button" class="tour__item" data-cat="${catOf(cap, cat)}" data-open-gallery="${i}" aria-label="Agrandir : ${esc(cap)}"><img src="${photo(key, n, "md")}" alt="${esc(cap)}" loading="lazy"><span>${esc(cap)}</span></button>`).join("")}
     </div>
   </div>
 
@@ -621,7 +622,7 @@
     const minN = state.in ? av.minNights(state.in) : 0;
     hint.textContent = !state.in ? "Choisissez votre date d'arrivée"
       : !state.out ? `Choisissez votre départ${minN > 1 ? ` (${minN} nuits minimum)` : ""}`
-        : `${plural(nightsBetween(state.in, state.out), "nuit")} sélectionnée${nightsBetween(state.in, state.out) > 1 ? "s" : ""}`;
+        : `${plural(nightsBetween(state.in, state.out), "nuit")} ${nightsBetween(state.in, state.out) > 1 ? "sélectionnées" : "sélectionnée"}`;
   };
 
   const pick = (d) => {
@@ -769,7 +770,7 @@
     const p = priceOf();
     if (p && p.ready) {
       pr.hidden = false;
-      pr.innerHTML = `${p.lines.map((l) => `<p${l.cents < 0 ? ' class="is-off"' : ""}><span>${esc(l.label)}</span><span>${EUR(l.cents)}</span></p>`).join("")}<p class="booking__total"><span>Total en direct</span><strong>${p.remise ? `<s title="Prix Airbnb">${EUR(p.sansRemiseTotal)}</s> ` : ""}${EUR(p.cents)}</strong></p>${p.remise ? `<p class="booking__save">Vous économisez ${EUR(p.sansRemiseTotal - p.cents)} ${p.source === "airbnb" ? "par rapport au prix Airbnb" : "en réservant ici"}</p>` : ""}`;
+      pr.innerHTML = `${p.lines.map((l) => `<p${l.cents < 0 ? ' class="is-off"' : ""}><span>${esc(window.SP_LABEL ? SP_LABEL(l.label) : l.label)}</span><span>${EUR(l.cents)}</span></p>`).join("")}<p class="booking__total"><span>Total en direct</span><strong>${p.remise ? `<s title="Prix Airbnb">${EUR(p.sansRemiseTotal)}</s> ` : ""}${EUR(p.cents)}</strong></p>${p.remise ? `<p class="booking__save">Vous économisez ${EUR(p.sansRemiseTotal - p.cents)} ${p.source === "airbnb" ? "par rapport au prix Airbnb" : "en réservant ici"}</p>` : ""}`;
     } else if (state.in && state.out) {
       pr.hidden = false;
       pr.innerHTML = `<p class="small">Le prix de ce séjour vous est confirmé par e-mail avec votre réservation.</p>`;
@@ -851,7 +852,7 @@
   };
   function renderRecap() {
     const p = shownPrice();
-    $("#recap").innerHTML = `<p><strong>${esc(h.name)}</strong></p><p>${esc(stayText())}</p><p>${esc(guestsText())}</p>${p && p.ready ? `<div class="recap__price">${p.lines.map((l) => `<p${l.cents < 0 ? ' class="is-off"' : ""}><span>${esc(l.label)}</span><span>${EUR(l.cents)}</span></p>`).join("")}<p class="booking__total"><span>Total</span><strong>${EUR(p.cents)}</strong></p></div>` : ""}`;
+    $("#recap").innerHTML = `<p><strong>${esc(h.name)}</strong></p><p>${esc(stayText())}</p><p>${esc(guestsText())}</p>${p && p.ready ? `<div class="recap__price">${p.lines.map((l) => `<p${l.cents < 0 ? ' class="is-off"' : ""}><span>${esc(window.SP_LABEL ? SP_LABEL(l.label) : l.label)}</span><span>${EUR(l.cents)}</span></p>`).join("")}<p class="booking__total"><span>Total</span><strong>${EUR(p.cents)}</strong></p></div>` : ""}`;
     $("#d-submit").textContent = p && p.ready ? `Continuer vers le paiement · ${EUR(p.cents)}` : "Envoyer ma demande";
   }
   async function applyCode() {
@@ -862,7 +863,7 @@
     if (!code) { promo = null; out.textContent = ""; renderRecap(); return true; }
     out.textContent = "Vérification…";
     try {
-      const r = await fetch("api/promo", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code, maison: key, arrivee: iso(state.in), depart: iso(state.out), adultes: state.adults }) });
+      const r = await fetch("api/promo", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code, maison: key, arrivee: iso(state.in), depart: iso(state.out), adultes: state.adults, lang: document.documentElement.lang }) });
       const res = await r.json().catch(() => null);
       if (r.ok && res && res.ok) {
         promo = { code: res.code, price: res.price, stay: stayKey() };
@@ -941,7 +942,7 @@
       if (!(await applyCode())) { btn.disabled = false; msg.textContent = ""; $("#d-code").focus(); return; }
     }
     const payload = Object.assign({}, fd, {
-      maison: key, arrivee: iso(state.in), depart: iso(state.out), conditions: true,
+      maison: key, arrivee: iso(state.in), depart: iso(state.out), conditions: true, lang: document.documentElement.lang,
       adultes: state.adults, enfants: state.children, bebes: state.infants,
     });
     let res = null;

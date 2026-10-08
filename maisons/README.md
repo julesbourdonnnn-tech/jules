@@ -107,6 +107,15 @@ Les nuits prises selon ce lien s'ajoutent à celles du fichier automatique.
 - `sitemap.xml` (plan du site) et `robots.txt`.
 - Le contenu des fiches (`lacanau.html`, `bordeaux.html`) est aussi écrit en HTML simple, lisible par tous les moteurs. **Après une modification de `js/data.js` ou l'ajout d'une page**, relance `node scripts/seo.mjs` (met à jour ce contenu et le plan du site).
 
+## Versions anglaise et espagnole
+
+- Le site existe en anglais (`/en/`) et en espagnol (`/es/`) : les dossiers `en/` et `es/` sont **générés** à partir des pages françaises, ne les modifie pas à la main.
+- Les traductions sont dans `i18n/traductions/*.json` (phrases entières) et `i18n/segments/*.json` (morceaux de texte), au format `"texte français": ["anglais", "espagnol"]`.
+- **Après toute modification d'une page ou de `js/data.js`** :
+  1. `node scripts/seo.mjs`
+  2. `python3 scripts/i18n.py build` (il signale les textes encore non traduits dans `i18n/manquant-en.json` / `manquant-es.json` ; complète-les dans `i18n/` puis relance).
+- Les voyageurs étrangers paient sur Stripe dans leur langue ; l'alerte reçue indique « [anglais] » ou « [espagnol] » et l'e-mail préparé dans l'admin est rédigé dans leur langue.
+
 ## Voir le site en local
 
 ```bash

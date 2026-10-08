@@ -8,6 +8,8 @@ on:
   push:
     paths:
       - "maisons/*.html"
+      - "maisons/en/*.html"
+      - "maisons/es/*.html"
       - "maisons/sitemap.xml"
       - ".github/workflows/maisons-indexnow.yml"
   workflow_dispatch:

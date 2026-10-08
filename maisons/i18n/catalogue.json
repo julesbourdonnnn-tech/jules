@@ -1,0 +1,5090 @@
+[
+ {
+  "fr": "La Maison du Lac",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Lacanau · Le Moutchic",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Gironde, côte atlantique",
+  "ou": "data.js"
+ },
+ {
+  "fr": "L'océan",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Piscine, jardin et lac à cinquante mètres",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Maison de famille avec piscine, au bord du lac de Lacanau",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Grande maison au bord du lac, spacieuse et confortable.",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Une maison de famille couverte de vigne vierge, ouverte sur le jardin et la piscine, à cinquante mètres du lac de Lacanau et à dix minutes de l'océan.",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Maison entière",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Propreté",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Précision",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Arrivée",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Communication",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Emplacement",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Qualité-prix",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Hospitalité",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Piscine",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Décoration",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Famille",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Espaces extérieurs",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Espaces intérieurs",
+  "ou": "data.js"
+ },
+ {
+  "fr": "À proximité",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Calme",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Plage",
+  "ou": "data.js"
+ },
+ {
+  "fr": "À partir de 16 h",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Avant 10 h",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Le logement",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Notre maison est une maison de famille. Elle est un vrai havre de paix ! Nous y passons des moments merveilleux et de pur bonheur. Calme, et sans vis-à-vis. Les pièces de vie donnent sur le jardin et la piscine. 2 chambres et une salle de bain sont de plain-pied. La cuisine est entièrement équipée, et est ouverte sur l'espace de vie. Les 4 autres chambres sont en étage. La maison a également 4 WC, pratique lorsque l'on est nombreux.",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Accès des voyageurs",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Toute la maison est accessible aux voyageurs. Vous pouvez garer 1 voiture dans un espace dédié, et à 20 m, vous avez des stationnements gratuits.",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Piscine privée",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Extérieure, disponible d'avril à octobre.",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Le lac à 50 mètres",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Au Moutchic, avec quelques restaurants à 3 minutes à pied au bord de l'eau.",
+  "ou": "data.js"
+ },
+ {
+  "fr": "L'océan à 10 minutes",
+  "ou": "data.js"
+ },
+ {
+  "fr": "En voiture, ou 20 minutes à vélo.",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Calme, sans vis-à-vis",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Les pièces de vie donnent sur le jardin et la piscine.",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Nous sommes au Moutchic, la maison est à 50 m du lac, 10 min en voiture de l'océan (ou 20 min à vélo), 3 min en voiture du golf et 7 min en voiture du supermarché. Quelques restaurants sont à 3 min à pied au bord du lac.",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Lacanau ville et Lacanau-Océan sont à 10 min en voiture.",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Chambre 1",
+  "ou": "data.js"
+ },
+ {
+  "fr": "1 lit king size",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Chambre 2",
+  "ou": "data.js"
+ },
+ {
+  "fr": "1 lit double",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Chambre 3",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Chambre 4",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Chambre 5",
+  "ou": "data.js"
+ },
+ {
+  "fr": "1 lit double et 1 lit simple",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Chambre 6",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Extérieur",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Piscine extérieure privée (d'avril à octobre)",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Jardin, vue sur le jardin",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Patio privé",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Mobilier d'extérieur",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Espace repas en plein air",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Chaises longues",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Au bord de l'eau, juste à côté d'un plan d'eau",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Accès au lac par un sentier ou un quai",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Accès à une plage à proximité",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Cuisine et salle à manger",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Cuisine entièrement équipée, ouverte sur l'espace de vie",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Réfrigérateur, mini réfrigérateur et congélateur",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Lave-vaisselle",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Four en acier inoxydable et four à micro-ondes",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Plaques de cuisson",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Cafetière filtre et machine à expresso",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Bouilloire électrique, grille-pain",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Verres à vin, vaisselle et couverts",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Tout le nécessaire pour cuisiner (casseroles, poêles, huile, sel, poivre)",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Table à manger",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Chambres et linge",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Linge de lit en coton",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Serviettes, draps, savon et papier toilette",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Stores ou rideaux occultants",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Dressing et placards",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Cintres, fer à repasser, étendoir à linge",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Lave-linge",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Salles de bain",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Baignoire",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Sèche-cheveux",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Shampoing, gel douche, savon",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Eau chaude",
+  "ou": "data.js"
+ },
+ {
+  "fr": "4 WC dans la maison",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Vivre et travailler",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Wifi et connexion Ethernet",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Espace de travail dédié",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Télévision",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Système audio Bluetooth",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Livres et jeux de société",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Chauffage central",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Pratique",
+  "ou": "data.js"
+ },
+ {
+  "fr": "1 place de stationnement privée, gratuite",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Stationnement gratuit dans la rue, à 20 m",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Dépôt de bagages possible",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Climatisation",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Sèche-linge",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Détecteur de monoxyde de carbone",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Arrivée à partir de 16 h",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Départ avant 10 h",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Arrivée et départ",
+  "ou": "data.js"
+ },
+ {
+  "fr": "12 voyageurs maximum",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Pas d'animaux",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Pas de fête ni de soirée",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Non fumeur",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Calme de 23 h à 7 h",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Pendant le séjour",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Piscine sans clôture ni verrou : surveillance des enfants indispensable",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Lac à proximité",
+  "ou": "data.js"
+ },
+ {
+  "fr": "La maison comprend des escaliers",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Caméras de surveillance extérieures présentes",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Détecteur de fumée installé",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Bon à savoir",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Le jardin",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Piscine privée, ouverte d'avril à octobre",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Jardin sans vis-à-vis",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Patio, salon et salle à manger d'extérieur",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Le rez-de-chaussée",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Rez-de-chaussée",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Salon et salle à manger ouverts sur le jardin et la piscine",
+  "ou": "data.js"
+ },
+ {
+  "fr": "2 chambres de plain-pied",
+  "ou": "data.js"
+ },
+ {
+  "fr": "1 salle de bain",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Espace de travail",
+  "ou": "data.js"
+ },
+ {
+  "fr": "L'étage",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Étage",
+  "ou": "data.js"
+ },
+ {
+  "fr": "4 chambres",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Au total dans la maison : 6 chambres, 7 lits, 2 salles de bain et 4 WC",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Plage centrale de Lacanau-Océan",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Bordeaux, place de la Comédie",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Margaux, route des grands vins",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Pauillac",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Cap Ferret",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Dune du Pilat",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Aéroport de Bordeaux-Mérignac",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Gare de Bordeaux-Saint-Jean",
+  "ou": "data.js"
+ },
+ {
+  "fr": "La maison et la piscine",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Le salon",
+  "ou": "data.js"
+ },
+ {
+  "fr": "La piscine",
+  "ou": "data.js"
+ },
+ {
+  "fr": "La salle à manger, ouverte sur la piscine",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Coucher de soleil sur la piscine",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Le patio",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Le salon d'extérieur",
+  "ou": "data.js"
+ },
+ {
+  "fr": "La cuisine",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Le ponton, sur le lac",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Bord de piscine",
+  "ou": "data.js"
+ },
+ {
+  "fr": "La maison, le soir",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Le salon, côté cheminée",
+  "ou": "data.js"
+ },
+ {
+  "fr": "La salle à manger",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Salle de bain",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Entrée",
+  "ou": "data.js"
+ },
+ {
+  "fr": "La Maison de Pierre",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Bordeaux · Centre",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Gironde, ville classée à l'Unesco",
+  "ou": "data.js"
+ },
+ {
+  "fr": "La ville",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Pierre de taille, lumière et hypercentre à pied",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Maison de ville en pierre de taille, à dix minutes à pied de l'hypercentre",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Une maison en pierre de taille récemment rénovée, baignée de lumière, au calme.",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Une maison bordelaise en pierre de taille, récemment rénovée : grande pièce de vie sous verrière à l'étage, terrasse, cinq chambres, et l'hypercentre à dix minutes à pied.",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Maison de ville entière",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Se déplacer",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Accessibilité à pied",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Départ",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Qualité du sommeil",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Arrivée autonome, horaire flexible",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Avant 12 h",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Ma maison est composée de 5 chambres, dont 3 chambres, une salle de bain et un WC au rez-de-chaussée et 2 chambres en sous-sol, ainsi qu'une salle d'eau et un WC ; la pièce de vie et la terrasse se trouvent à l'étage. La maison est baignée de lumière, au calme, et à proximité directe de l'hypercentre. C'est une maison en pierre de taille récemment rénovée.",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Ma maison est un lieu de bonheur, tout est à disposition, sel, poivre, huile, nous y vivons avec mes enfants, donc vous y trouverez tout ce dont vous avez besoin !",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Toutes les pièces sont ouvertes aux voyageurs.",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Autres remarques",
+  "ou": "data.js"
+ },
+ {
+  "fr": "La maison ne peut recevoir d'animaux à cause des allergies familiales !",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Arrivée autonome",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Avec une boîte à clé sécurisée, à l'heure qui vous convient.",
+  "ou": "data.js"
+ },
+ {
+  "fr": "L'hypercentre à 10 minutes à pied",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Tram et bus à 4 minutes à pied de la maison.",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Baignée de lumière",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Pièce de vie sous verrière et terrasse, à l'étage.",
+  "ou": "data.js"
+ },
+ {
+  "fr": "TV HD 83 pouces avec Netflix",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Et un système audio Bluetooth Bang & Olufsen.",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Le tramway et le bus sont à 4 min à pied de la maison ! Et l'hypercentre à 10 min à pied.",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Tram et bus à 4 min à pied.",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Vivre",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Pièce de vie et terrasse à l'étage",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Patio privé et jardin",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Système audio Bluetooth Bang & Olufsen",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Appareils de fitness",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Livres et de quoi lire",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Chauffage radiant",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Cuisine équipée",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Cuisinière à induction et four",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Four à micro-ondes",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Réfrigérateur et congélateur",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Cafetière filtre et Nespresso",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Linge de lit",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Espace de rangement pour les vêtements",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Lave-linge et sèche-linge",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Une salle de bain avec baignoire et une salle d'eau",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Shampoing, après-shampoing, gel douche, savon",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Famille et travail",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Livres et jouets pour enfants (5 à 10 ans)",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Jeux de société",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Arrivée autonome avec boîte à clé sécurisée",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Stationnement payant dans la rue et parking payant",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Laverie automatique à proximité",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Trousse de premiers secours",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Détecteur de fumée",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Stationnement privé",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Arrivée flexible, en autonomie (boîte à clé sécurisée)",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Départ avant 12 h",
+  "ou": "data.js"
+ },
+ {
+  "fr": "8 voyageurs maximum",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Pas d'animaux (allergies familiales)",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Sortir les poubelles dans les bacs devant la maison",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Défaire les lits, déposer draps et serviettes dans la buanderie",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Éteindre les lumières et les appareils, tout verrouiller",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Avant de partir",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Ne convient pas aux bébés (moins de 2 ans)",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Pas de stationnement sur place",
+  "ou": "data.js"
+ },
+ {
+  "fr": "La pièce de vie sous verrière : salon, cuisine et salle à manger",
+  "ou": "data.js"
+ },
+ {
+  "fr": "La terrasse",
+  "ou": "data.js"
+ },
+ {
+  "fr": "TV HD 83 pouces et son Bang & Olufsen",
+  "ou": "data.js"
+ },
+ {
+  "fr": "3 chambres",
+  "ou": "data.js"
+ },
+ {
+  "fr": "1 salle de bain avec baignoire",
+  "ou": "data.js"
+ },
+ {
+  "fr": "1 WC",
+  "ou": "data.js"
+ },
+ {
+  "fr": "L'entrée",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Le sous-sol",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Sous-sol",
+  "ou": "data.js"
+ },
+ {
+  "fr": "2 chambres",
+  "ou": "data.js"
+ },
+ {
+  "fr": "1 salle d'eau",
+  "ou": "data.js"
+ },
+ {
+  "fr": "La buanderie",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Place Gambetta",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Place de la Comédie et Grand-Théâtre",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Cathédrale Saint-André",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Jardin public",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Place de la Bourse et Miroir d'eau",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Marché des Capucins",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Quartier des Chartrons",
+  "ou": "data.js"
+ },
+ {
+  "fr": "La Cité du Vin",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Saint-Émilion",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Lacanau-Océan",
+  "ou": "data.js"
+ },
+ {
+  "fr": "La pièce de vie sous verrière",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Le séjour",
+  "ou": "data.js"
+ },
+ {
+  "fr": "La verrière, le soir",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Chambre",
+  "ou": "data.js"
+ },
+ {
+  "fr": "L'îlot",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Détail",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Salle d'eau",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Entrée et escalier",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Lacanau, <em>entre lac et océan</em>",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Sur la côte médocaine, Lacanau réunit deux mondes : un grand lac d'eau douce bordé de pins, idéal pour les enfants, la voile et le paddle, et l'océan, ses plages de sable fin et ses vagues réputées des surfeurs. La maison est au Moutchic, côté lac, à dix minutes de la plage.",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Le lac de Lacanau",
+  "ou": "data.js"
+ },
+ {
+  "fr": "50 m à pied",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Baignade en eau calme, voile, paddle, kayak, pique-niques à l'ombre des pins. Quelques restaurants vous attendent au bord de l'eau, à 3 minutes à pied de la maison.",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Les plages de Lacanau-Océan",
+  "ou": "data.js"
+ },
+ {
+  "fr": "10 min en voiture",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Des kilomètres de sable face à l'Atlantique, des plages surveillées en saison et l'un des spots de surf les plus connus de la côte. Les couchers de soleil y sont spectaculaires.",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Les pistes cyclables",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Un réseau de pistes cyclables traverse la forêt de pins entre le lac et l'océan : comptez une vingtaine de minutes à vélo jusqu'à la plage.",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Le golf",
+  "ou": "data.js"
+ },
+ {
+  "fr": "3 min en voiture",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Pour les amateurs, un parcours au milieu des pins, tout près de la maison.",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Les grands vins du Médoc",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Environ 45 min",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Les châteaux de la route des vins (Margaux, Pauillac, Saint-Julien…) se visitent sur rendez-vous, pour une journée de dégustations.",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Bordeaux",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Environ 1 h de route",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Et la Maison de Pierre, pour combiner océan et ville dans le même voyage.",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Bordeaux, <em>la belle endormie réveillée</em>",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Façades de pierre blonde, quais réaménagés le long de la Garonne, marchés, bars à vin et tables de chefs : Bordeaux se vit à pied ou en tram. Une partie de la ville, le « Port de la Lune », est inscrite au patrimoine mondial de l'Unesco. Depuis la maison, l'hypercentre est à dix minutes à pied.",
+  "ou": "data.js"
+ },
+ {
+  "fr": "L'hypercentre",
+  "ou": "data.js"
+ },
+ {
+  "fr": "10 min à pied",
+  "ou": "data.js"
+ },
+ {
+  "fr": "La rue Sainte-Catherine, la place de la Comédie et le Grand-Théâtre, les terrasses du quartier Saint-Pierre.",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Le tram et le bus",
+  "ou": "data.js"
+ },
+ {
+  "fr": "4 min à pied",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Pour rejoindre les quais, la gare Saint-Jean ou les Chartrons sans prendre la voiture.",
+  "ou": "data.js"
+ },
+ {
+  "fr": "La place de la Bourse et le Miroir d'eau",
+  "ou": "data.js"
+ },
+ {
+  "fr": "En tram ou à pied",
+  "ou": "data.js"
+ },
+ {
+  "fr": "La façade la plus photographiée de Bordeaux, qui se reflète dans l'un des plus grands miroirs d'eau du monde.",
+  "ou": "data.js"
+ },
+ {
+  "fr": "En tram",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Un musée immersif consacré aux vins du monde, avec une vue sur la Garonne depuis le belvédère.",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Village médiéval classé à l'Unesco, au milieu des vignes : accessible en voiture ou en train depuis la gare Saint-Jean.",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Lacanau et l'océan",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Et la Maison du Lac, pour finir le séjour les pieds dans l'eau.",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Nous parcourons parfois des centaines voire des milliers de kilomètres pour nous dépayser, j'ai juste fait quelques kilomètres pour me retrouver dans un havre de paix.",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Sandrine",
+  "ou": "data.js"
+ },
+ {
+  "fr": "août 2022",
+  "ou": "data.js"
+ },
+ {
+  "fr": "La maison est superbe, décorée avec beaucoup de goût, très confortable et spacieuse… Vous traversez la route et vous êtes au lac…",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Fanny",
+  "ou": "data.js"
+ },
+ {
+  "fr": "The house felt like a real luxurious stay and the location was perfect for both Lacanau Lake and also Lacanau Ocean.",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Alan",
+  "ou": "data.js"
+ },
+ {
+  "fr": "août 2023",
+  "ou": "data.js"
+ },
+ {
+  "fr": "L'extérieur et la piscine invitent à la détente et au farniente. Un véritable havre de paix !",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Damien",
+  "ou": "data.js"
+ },
+ {
+  "fr": "juillet 2023",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Un ameublement très complet et une décoration raffinée et harmonieuse… nous a permis de jouir d'un confort de vie exceptionnel.",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Gaspard",
+  "ou": "data.js"
+ },
+ {
+  "fr": "juillet 2022",
+  "ou": "data.js"
+ },
+ {
+  "fr": "The house was spotless, beautifully decorated, and had all the little touches that made it feel like home.",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Gareth",
+  "ou": "data.js"
+ },
+ {
+  "fr": "juillet 2025",
+  "ou": "data.js"
+ },
+ {
+  "fr": "The lake is so close that it makes for a very relaxed holiday in this beautiful part of the world.",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Hannah",
+  "ou": "data.js"
+ },
+ {
+  "fr": "août 2024",
+  "ou": "data.js"
+ },
+ {
+  "fr": "C'est une maison chaleureuse, décorée avec goût par les propriétaires et très fonctionnelle. Je vous la recommande les yeux fermés.",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Auriane",
+  "ou": "data.js"
+ },
+ {
+  "fr": "décembre 2022",
+  "ou": "data.js"
+ },
+ {
+  "fr": "C'est super agréable d'être accueillis dans une « vraie » maison habitée et pas seulement meublée pour être louée. La double exposition est un vrai plus et l'emplacement est parfait.",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Marion",
+  "ou": "data.js"
+ },
+ {
+  "fr": "mars 2026",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Très très belle maison avec une décoration et un charme vraiment incroyables. On a eu du mal à quitter la maison pour se balader tellement on s'y sentait bien !",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Bénédicte",
+  "ou": "data.js"
+ },
+ {
+  "fr": "mai 2024",
+  "ou": "data.js"
+ },
+ {
+  "fr": "The house exceeded our expectations and the terrace was the icing on the cake!",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Kellie",
+  "ou": "data.js"
+ },
+ {
+  "fr": "avril 2026",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Décoré avec beaucoup de goût dans un style contemporain et chaleureux. On s'y sent extrêmement bien.",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Thierry",
+  "ou": "data.js"
+ },
+ {
+  "fr": "On était 8 et on ne se marchait pas dessus. La pièce de vie est spacieuse, lumineuse et bien équipée pour passer des temps conviviaux.",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Xavier",
+  "ou": "data.js"
+ },
+ {
+  "fr": "mars 2024",
+  "ou": "data.js"
+ },
+ {
+  "fr": "The photos don't do the house justice, it is beautiful and really well furnished.",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Aisling",
+  "ou": "data.js"
+ },
+ {
+  "fr": "novembre 2025",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Parfait pour un groupe, avec la possibilité de visiter Bordeaux facilement mais aussi de profiter de la belle pièce de vie.",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Cyrille",
+  "ou": "data.js"
+ },
+ {
+  "fr": "novembre 2024",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Le plus du logement est le petit patio très agréable pour prendre son petit déjeuner en groupe.",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Hervé",
+  "ou": "data.js"
+ },
+ {
+  "fr": "août 2021",
+  "ou": "data.js"
+ },
+ {
+  "fr": "use strict",
+  "ou": "main.js"
+ },
+ {
+  "fr": "(prefers-reduced-motion: reduce)",
+  "ou": "main.js"
+ },
+ {
+  "fr": "fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"",
+  "ou": "main.js"
+ },
+ {
+  "fr": "<svg viewBox=\"0 0 24 24\"",
+  "ou": "main.js"
+ },
+ {
+  "fr": "><path d=\"M4 12h16M14 6l6 6-6 6\"/></svg>",
+  "ou": "main.js"
+ },
+ {
+  "fr": "><path d=\"M20 12H4M10 6l-6 6 6 6\"/></svg>",
+  "ou": "main.js"
+ },
+ {
+  "fr": "><path d=\"M5 5l14 14M19 5L5 19\"/></svg>",
+  "ou": "main.js"
+ },
+ {
+  "fr": "<svg viewBox=\"0 0 24 24\" fill=\"currentColor\"><path d=\"M12 2.8l2.7 6 6.5.6-4.9 4.3 1.5 6.4L12 16.8 6.2 20.1l1.5-6.4L2.8 9.4l6.5-.6z\"/></svg>",
+  "ou": "main.js"
+ },
+ {
+  "fr": "><circle cx=\"9\" cy=\"8\" r=\"3.2\"/><path d=\"M3 20c0-3.4 2.7-6 6-6s6 2.6 6 6\"/><circle cx=\"17\" cy=\"9\" r=\"2.4\"/><path d=\"M16 14.2c2.8.2 5 2.5 5 5.8\"/></svg>",
+  "ou": "main.js"
+ },
+ {
+  "fr": "><path d=\"M3 18V6M3 14h18v4M21 14v-3a3 3 0 0 0-3-3h-7v6\"/><circle cx=\"7\" cy=\"11\" r=\"1.8\"/></svg>",
+  "ou": "main.js"
+ },
+ {
+  "fr": "><path d=\"M3 12h18v3a5 5 0 0 1-5 5H8a5 5 0 0 1-5-5zM6 12V5.5A2.5 2.5 0 0 1 8.5 3c1.2 0 2.2.8 2.4 2M7 20l-1 2M17 20l1 2\"/></svg>",
+  "ou": "main.js"
+ },
+ {
+  "fr": "><path d=\"M5 21V4a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v17M3 21h18\"/><circle cx=\"15\" cy=\"12\" r=\".8\" fill=\"currentColor\"/></svg>",
+  "ou": "main.js"
+ },
+ {
+  "fr": "><path d=\"M2 17c2 0 2-1.4 4-1.4s2 1.4 4 1.4 2-1.4 4-1.4 2 1.4 4 1.4 2-1.4 4-1.4M2 21c2 0 2-1.4 4-1.4s2 1.4 4 1.4 2-1.4 4-1.4 2 1.4 4 1.4 2-1.4 4-1.4M8 14V5a2 2 0 0 1 4 0M16 14V5a2 2 0 0 0-4 0M8 8h8M8 11h8\"/></svg>",
+  "ou": "main.js"
+ },
+ {
+  "fr": "><path d=\"M2 15c2.5 0 2.5-1.5 5-1.5s2.5 1.5 5 1.5 2.5-1.5 5-1.5 2.5 1.5 5 1.5M2 19c2.5 0 2.5-1.5 5-1.5s2.5 1.5 5 1.5 2.5-1.5 5-1.5 2.5 1.5 5 1.5M6 11l3-6 3 6M14 11l2.5-4 2.5 4\"/></svg>",
+  "ou": "main.js"
+ },
+ {
+  "fr": "><path d=\"M2 16c3 0 3-3 6-3 2.3 0 3 1.6 4.6 1.6C15 14.6 14 9 18.5 9c1.4 0 2.5.6 3.5 1.5M2 20c2.5 0 2.5-1.5 5-1.5s2.5 1.5 5 1.5 2.5-1.5 5-1.5 2.5 1.5 5 1.5\"/><circle cx=\"17\" cy=\"4.5\" r=\"1.8\"/></svg>",
+  "ou": "main.js"
+ },
+ {
+  "fr": "><path d=\"M5 19C5 10 10 4 20 4c0 10-6 15-15 15zM5 19l8-8\"/></svg>",
+  "ou": "main.js"
+ },
+ {
+  "fr": "><circle cx=\"8\" cy=\"15\" r=\"4\"/><path d=\"M11 12l9-9M17 6l2 2M15 8l2 2\"/></svg>",
+  "ou": "main.js"
+ },
+ {
+  "fr": "><circle cx=\"13\" cy=\"4\" r=\"1.8\"/><path d=\"M10 21l2-6 3 3v3M9 12l2-4 4 1 2 3M12 15l-1-4M7 11l2-3\"/></svg>",
+  "ou": "main.js"
+ },
+ {
+  "fr": "><circle cx=\"12\" cy=\"12\" r=\"4\"/><path d=\"M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4\"/></svg>",
+  "ou": "main.js"
+ },
+ {
+  "fr": "><rect x=\"2\" y=\"5\" width=\"20\" height=\"13\" rx=\"1\"/><path d=\"M8 21h8M12 18v3\"/></svg>",
+  "ou": "main.js"
+ },
+ {
+  "fr": "><path d=\"M4 12.5l5 5L20 6.5\"/></svg>",
+  "ou": "main.js"
+ },
+ {
+  "fr": "><path d=\"M12 21s-7-6.2-7-11.5A7 7 0 0 1 19 9.5C19 14.8 12 21 12 21z\"/><circle cx=\"12\" cy=\"9.5\" r=\"2.5\"/></svg>",
+  "ou": "main.js"
+ },
+ {
+  "fr": "><path d=\"M12 3l8 3v6c0 5-3.4 8-8 9-4.6-1-8-4-8-9V6z\"/><path d=\"M8.5 12l2.5 2.5 4.5-5\"/></svg>",
+  "ou": "main.js"
+ },
+ {
+  "fr": "><circle cx=\"12\" cy=\"9\" r=\"6\"/><path d=\"M8.5 14L7 22l5-3 5 3-1.5-8\"/></svg>",
+  "ou": "main.js"
+ },
+ {
+  "fr": "><rect x=\"3\" y=\"5\" width=\"18\" height=\"16\" rx=\"1\"/><path d=\"M3 10h18M8 3v4M16 3v4\"/></svg>",
+  "ou": "main.js"
+ },
+ {
+  "fr": "><rect x=\"3\" y=\"3\" width=\"7\" height=\"7\"/><rect x=\"14\" y=\"3\" width=\"7\" height=\"7\"/><rect x=\"3\" y=\"14\" width=\"7\" height=\"7\"/><rect x=\"14\" y=\"14\" width=\"7\" height=\"7\"/></svg>",
+  "ou": "main.js"
+ },
+ {
+  "fr": "><rect x=\"3\" y=\"5\" width=\"18\" height=\"14\" rx=\"1\"/><path d=\"M3 7l9 6 9-6\"/></svg>",
+  "ou": "main.js"
+ },
+ {
+  "fr": "><path d=\"M5 3h4l2 5-2.5 1.5a11 11 0 0 0 6 6L16 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 5a2 2 0 0 1 2-2z\"/></svg>",
+  "ou": "main.js"
+ },
+ {
+  "fr": "><path d=\"M3.5 20.5l1.3-4.3A8.5 8.5 0 1 1 8 19.4z\"/><path d=\"M9 8.5c0 3.5 3 6.5 6.5 6.5l1-1.6-2-1-1 .8c-1-.5-2-1.5-2.6-2.6l.8-1-1-2z\"/></svg>",
+  "ou": "main.js"
+ },
+ {
+  "fr": "><path d=\"M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5\"/></svg>",
+  "ou": "main.js"
+ },
+ {
+  "fr": "><path d=\"M3 8h11a3 3 0 1 0-3-3M3 12h16a3 3 0 1 1-3 3M3 16h8\"/></svg>",
+  "ou": "main.js"
+ },
+ {
+  "fr": "><path d=\"M12 15V3M7 8l5-5 5 5M5 12v8a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-8\"/></svg>",
+  "ou": "main.js"
+ },
+ {
+  "fr": "><circle cx=\"11\" cy=\"11\" r=\"6.5\"/><path d=\"M16 16l5 5\"/></svg>",
+  "ou": "main.js"
+ },
+ {
+  "fr": "<img src=\"",
+  "ou": "main.js"
+ },
+ {
+  "fr": "\" srcset=\"",
+  "ou": "main.js"
+ },
+ {
+  "fr": "\" sizes=\"",
+  "ou": "main.js"
+ },
+ {
+  "fr": "\" alt=\"",
+  "ou": "main.js"
+ },
+ {
+  "fr": "loading=\"lazy\" decoding=\"async\"",
+  "ou": "main.js"
+ },
+ {
+  "fr": "Fermer le menu",
+  "ou": "main.js"
+ },
+ {
+  "fr": "Ouvrir le menu",
+  "ou": "main.js"
+ },
+ {
+  "fr": "Escape",
+  "ou": "main.js"
+ },
+ {
+  "fr": "IntersectionObserver",
+  "ou": "main.js"
+ },
+ {
+  "fr": "0px 0px -8% 0px",
+  "ou": "main.js"
+ },
+ {
+  "fr": ".reveal, .reveal-img",
+  "ou": "main.js"
+ },
+ {
+  "fr": "translate3d(0, calc(-50% +",
+  "ou": "main.js"
+ },
+ {
+  "fr": "px), 0)",
+  "ou": "main.js"
+ },
+ {
+  "fr": "Photos",
+  "ou": "main.js"
+ },
+ {
+  "fr": "<div class=\"lb__top\"><span class=\"lb__count\" aria-live=\"polite\"></span> <button type=\"button\" class=\"lb__close\" aria-label=\"Fermer la visionneuse\">",
+  "ou": "main.js"
+ },
+ {
+  "fr": "</button></div> <div class=\"lb__stage\"> <button type=\"button\" class=\"round-btn lb__prev\" aria-label=\"Photo précédente\">",
+  "ou": "main.js"
+ },
+ {
+  "fr": "</button> <img class=\"lb__img\" alt=\"\"> <button type=\"button\" class=\"round-btn lb__next\" aria-label=\"Photo suivante\">",
+  "ou": "main.js"
+ },
+ {
+  "fr": "</button> </div> <p class=\"lb__cap\"></p> <div class=\"lb__thumbs\" role=\"list\"></div>",
+  "ou": "main.js"
+ },
+ {
+  "fr": "ArrowLeft",
+  "ou": "main.js"
+ },
+ {
+  "fr": "ArrowRight",
+  "ou": "main.js"
+ },
+ {
+  "fr": "Tab",
+  "ou": "main.js"
+ },
+ {
+  "fr": ".lb__thumbs button",
+  "ou": "main.js"
+ },
+ {
+  "fr": "<button type=\"button\" role=\"listitem\" aria-label=\"Photo",
+  "ou": "main.js"
+ },
+ {
+  "fr": "\"><img src=\"",
+  "ou": "main.js"
+ },
+ {
+  "fr": "\" alt=\"\" loading=\"lazy\"></button>",
+  "ou": "main.js"
+ },
+ {
+  "fr": "Grand soleil",
+  "ou": "main.js"
+ },
+ {
+  "fr": "Plutôt ensoleillé",
+  "ou": "main.js"
+ },
+ {
+  "fr": "Éclaircies",
+  "ou": "main.js"
+ },
+ {
+  "fr": "Couvert",
+  "ou": "main.js"
+ },
+ {
+  "fr": "Brouillard",
+  "ou": "main.js"
+ },
+ {
+  "fr": "Brouillard givrant",
+  "ou": "main.js"
+ },
+ {
+  "fr": "Bruine légère",
+  "ou": "main.js"
+ },
+ {
+  "fr": "Bruine",
+  "ou": "main.js"
+ },
+ {
+  "fr": "Bruine dense",
+  "ou": "main.js"
+ },
+ {
+  "fr": "Pluie faible",
+  "ou": "main.js"
+ },
+ {
+  "fr": "Pluie",
+  "ou": "main.js"
+ },
+ {
+  "fr": "Forte pluie",
+  "ou": "main.js"
+ },
+ {
+  "fr": "Pluie verglaçante",
+  "ou": "main.js"
+ },
+ {
+  "fr": "Neige faible",
+  "ou": "main.js"
+ },
+ {
+  "fr": "Neige",
+  "ou": "main.js"
+ },
+ {
+  "fr": "Forte neige",
+  "ou": "main.js"
+ },
+ {
+  "fr": "Grains de neige",
+  "ou": "main.js"
+ },
+ {
+  "fr": "Averses",
+  "ou": "main.js"
+ },
+ {
+  "fr": "Fortes averses",
+  "ou": "main.js"
+ },
+ {
+  "fr": "Averses de neige",
+  "ou": "main.js"
+ },
+ {
+  "fr": "Orage",
+  "ou": "main.js"
+ },
+ {
+  "fr": "<div class=\"weather__cell\"><span>",
+  "ou": "main.js"
+ },
+ {
+  "fr": "</span><b class=\"num\">",
+  "ou": "main.js"
+ },
+ {
+  "fr": ", maintenant",
+  "ou": "main.js"
+ },
+ {
+  "fr": "Maximale du jour",
+  "ou": "main.js"
+ },
+ {
+  "fr": "Coucher du soleil",
+  "ou": "main.js"
+ },
+ {
+  "fr": "Vagues :",
+  "ou": "main.js"
+ },
+ {
+  "fr": "Vent",
+  "ou": "main.js"
+ },
+ {
+  "fr": "févr.",
+  "ou": "main.js"
+ },
+ {
+  "fr": "août",
+  "ou": "main.js"
+ },
+ {
+  "fr": "déc.",
+  "ou": "main.js"
+ },
+ {
+  "fr": "février",
+  "ou": "main.js"
+ },
+ {
+  "fr": "décembre",
+  "ou": "main.js"
+ },
+ {
+  "fr": "<div class=\"clim__months\" role=\"tablist\" aria-label=\"Choisir un mois\">",
+  "ou": "main.js"
+ },
+ {
+  "fr": "<button type=\"button\" role=\"tab\" data-m=\"",
+  "ou": "main.js"
+ },
+ {
+  "fr": "\" aria-selected=\"",
+  "ou": "main.js"
+ },
+ {
+  "fr": "</div> <div class=\"clim__grid\"> <div class=\"clim__stats\" aria-live=\"polite\"></div> <figure class=\"clim__chart\"> <svg viewBox=\"0 0",
+  "ou": "main.js"
+ },
+ {
+  "fr": "\" role=\"img\" aria-label=\"Températures moyennes mois par mois\">",
+  "ou": "main.js"
+ },
+ {
+  "fr": "<line class=\"clim__tick\" x1=\"",
+  "ou": "main.js"
+ },
+ {
+  "fr": "\"/><text class=\"clim__lbl\" x=\"",
+  "ou": "main.js"
+ },
+ {
+  "fr": "\" text-anchor=\"end\">",
+  "ou": "main.js"
+ },
+ {
+  "fr": "<rect class=\"clim__bar\" data-m=\"",
+  "ou": "main.js"
+ },
+ {
+  "fr": "\" width=\"",
+  "ou": "main.js"
+ },
+ {
+  "fr": "\" height=\"",
+  "ou": "main.js"
+ },
+ {
+  "fr": "\" rx=\"3\"/>",
+  "ou": "main.js"
+ },
+ {
+  "fr": "<polyline class=\"clim__sea\" points=\"",
+  "ou": "main.js"
+ },
+ {
+  "fr": "<circle class=\"clim__dot\" data-m=\"",
+  "ou": "main.js"
+ },
+ {
+  "fr": "\" cx=\"",
+  "ou": "main.js"
+ },
+ {
+  "fr": "\" cy=\"",
+  "ou": "main.js"
+ },
+ {
+  "fr": "<text class=\"clim__lbl\" x=\"",
+  "ou": "main.js"
+ },
+ {
+  "fr": "\" text-anchor=\"middle\">",
+  "ou": "main.js"
+ },
+ {
+  "fr": "<rect class=\"clim__hit\" data-m=\"",
+  "ou": "main.js"
+ },
+ {
+  "fr": "\" y=\"0\" width=\"",
+  "ou": "main.js"
+ },
+ {
+  "fr": "l'après-midi",
+  "ou": "main.js"
+ },
+ {
+  "fr": ", océan",
+  "ou": "main.js"
+ },
+ {
+  "fr": "</svg> <figcaption class=\"clim__legend\"><span><i class=\"clim__key clim__key--bar\"></i>Température maximale moyenne</span>",
+  "ou": "main.js"
+ },
+ {
+  "fr": "<span><i class=\"clim__key clim__key--sea\"></i>Température de l'océan</span>",
+  "ou": "main.js"
+ },
+ {
+  "fr": "</figcaption> </figure> </div> <p class=\"clim__src\">Moyennes",
+  "ou": "main.js"
+ },
+ {
+  "fr": ", relevés",
+  "ou": "main.js"
+ },
+ {
+  "fr": "<p class=\"clim__month\">",
+  "ou": "main.js"
+ },
+ {
+  "fr": "</p> <div class=\"clim__big\"><b class=\"num\">",
+  "ou": "main.js"
+ },
+ {
+  "fr": "</b><span>l'après-midi</span></div> <dl> <div><dt>Le matin</dt><dd>",
+  "ou": "main.js"
+ },
+ {
+  "fr": "<div><dt>L'océan</dt><dd>",
+  "ou": "main.js"
+ },
+ {
+  "fr": "<div><dt>Jours de pluie</dt><dd>",
+  "ou": "main.js"
+ },
+ {
+  "fr": "</dd></div> </dl>",
+  "ou": "main.js"
+ },
+ {
+  "fr": ".clim__months [data-m=\"",
+  "ou": "main.js"
+ },
+ {
+  "fr": "AbortError",
+  "ou": "main.js"
+ },
+ {
+  "fr": "Lien copié : vous pouvez le coller dans un message.",
+  "ou": "main.js"
+ },
+ {
+  "fr": "Copiez ce lien :",
+  "ou": "main.js"
+ },
+ {
+  "fr": "DOMContentLoaded",
+  "ou": "main.js"
+ },
+ {
+  "fr": "\"] .facts",
+  "ou": "home.js"
+ },
+ {
+  "fr": "<li data-icon=\"calendar\">À partir de",
+  "ou": "home.js"
+ },
+ {
+  "fr": "€ la nuit en direct</li>",
+  "ou": "home.js"
+ },
+ {
+  "fr": "% sur tout le séjour</strong> en réservant directement sur ce site.",
+  "ou": "home.js"
+ },
+ {
+  "fr": "<span class=\"w\">",
+  "ou": "home.js"
+ },
+ {
+  "fr": "<figure class=\"reel__item\"> <button type=\"button\" data-house=\"",
+  "ou": "home.js"
+ },
+ {
+  "fr": "\" data-index=\"",
+  "ou": "home.js"
+ },
+ {
+  "fr": "\" aria-label=\"Agrandir :",
+  "ou": "home.js"
+ },
+ {
+  "fr": "(max-width: 600px) 76vw, 30vw",
+  "ou": "home.js"
+ },
+ {
+  "fr": "</button> <figcaption><span>",
+  "ou": "home.js"
+ },
+ {
+  "fr": "Lacanau",
+  "ou": "home.js"
+ },
+ {
+  "fr": "</span></figcaption> </figure>",
+  "ou": "home.js"
+ },
+ {
+  "fr": ".reel__progress i",
+  "ou": "home.js"
+ },
+ {
+  "fr": "<div class=\"dest-panel",
+  "ou": "home.js"
+ },
+ {
+  "fr": "\" id=\"panel-",
+  "ou": "home.js"
+ },
+ {
+  "fr": "\" role=\"tabpanel\" aria-labelledby=\"tab-",
+  "ou": "home.js"
+ },
+ {
+  "fr": "\" data-house=\"",
+  "ou": "home.js"
+ },
+ {
+  "fr": "> <div class=\"dest-intro\"> <h3 class=\"h3\">",
+  "ou": "home.js"
+ },
+ {
+  "fr": "</h3> <p style=\"margin-top:22px\">",
+  "ou": "home.js"
+ },
+ {
+  "fr": "</p> <div class=\"weather\" data-weather=\"",
+  "ou": "home.js"
+ },
+ {
+  "fr": "\" hidden></div> <p class=\"weather-note\" hidden>Météo en direct · Open-Meteo</p> <a class=\"btn btn--accent\" style=\"margin-top:32px\" href=\"",
+  "ou": "home.js"
+ },
+ {
+  "fr": "</a> </div> <ol class=\"dest-list\">",
+  "ou": "home.js"
+ },
+ {
+  "fr": "> <summary><h4>",
+  "ou": "home.js"
+ },
+ {
+  "fr": "</h4><span class=\"dist\">",
+  "ou": "home.js"
+ },
+ {
+  "fr": "</span><span class=\"plus\" aria-hidden=\"true\"></span></summary> <p>",
+  "ou": "home.js"
+ },
+ {
+  "fr": "</p> </details></li>",
+  "ou": "home.js"
+ },
+ {
+  "fr": "</ol> </div>",
+  "ou": "home.js"
+ },
+ {
+  "fr": "#destinations [role=\"tab\"]",
+  "ou": "home.js"
+ },
+ {
+  "fr": "#destinations .dest-tabs__pill",
+  "ou": "home.js"
+ },
+ {
+  "fr": "<figure class=\"quote",
+  "ou": "home.js"
+ },
+ {
+  "fr": "> <blockquote>",
+  "ou": "home.js"
+ },
+ {
+  "fr": "</blockquote> <figcaption>",
+  "ou": "home.js"
+ },
+ {
+  "fr": "</figcaption> </figure>",
+  "ou": "home.js"
+ },
+ {
+  "fr": "<button type=\"button\" aria-label=\"Avis",
+  "ou": "home.js"
+ },
+ {
+  "fr": "\" aria-current=\"",
+  "ou": "home.js"
+ },
+ {
+  "fr": "<span class=\"dp__dow\" aria-hidden=\"true\">",
+  "ou": "home.js"
+ },
+ {
+  "fr": "séjour de",
+  "ou": "home.js"
+ },
+ {
+  "fr": "nuits minimum",
+  "ou": "home.js"
+ },
+ {
+  "fr": "nuits maximum",
+  "ou": "home.js"
+ },
+ {
+  "fr": "déjà pris",
+  "ou": "home.js"
+ },
+ {
+  "fr": "<button type=\"button\" class=\"",
+  "ou": "home.js"
+ },
+ {
+  "fr": "\" data-d=\"",
+  "ou": "home.js"
+ },
+ {
+  "fr": "\" aria-label=\"",
+  "ou": "home.js"
+ },
+ {
+  "fr": "<div class=\"dp__month\"><h3>",
+  "ou": "home.js"
+ },
+ {
+  "fr": "</h3><div class=\"dp__grid\">",
+  "ou": "home.js"
+ },
+ {
+  "fr": "<div class=\"dp__head\"> <button type=\"button\" class=\"round-btn\" data-nav=\"-1\" aria-label=\"Mois précédent\"",
+  "ou": "home.js"
+ },
+ {
+  "fr": "</button> <p class=\"dp__hint\" aria-live=\"polite\">",
+  "ou": "home.js"
+ },
+ {
+  "fr": "Choisissez votre arrivée",
+  "ou": "home.js"
+ },
+ {
+  "fr": "Choisissez votre départ",
+  "ou": "home.js"
+ },
+ {
+  "fr": "</p> <button type=\"button\" class=\"round-btn\" data-nav=\"1\" aria-label=\"Mois suivant\"",
+  "ou": "home.js"
+ },
+ {
+  "fr": "</button> </div> <div class=\"dp__months\">",
+  "ou": "home.js"
+ },
+ {
+  "fr": "</div> <div class=\"dp__foot\"> <span class=\"dp__legend\"><i class=\"dp__k dp__k--off\"></i>Déjà pris",
+  "ou": "home.js"
+ },
+ {
+  "fr": "dans les deux maisons",
+  "ou": "home.js"
+ },
+ {
+  "fr": "</span> <div class=\"dp__actions\"> <button type=\"button\" class=\"link\" data-clear>Effacer</button> <button type=\"button\" class=\"btn btn--accent\" data-done",
+  "ou": "home.js"
+ },
+ {
+  "fr": ">Valider</button> </div> </div>",
+  "ou": "home.js"
+ },
+ {
+  "fr": "Ajouter une date",
+  "ou": "home.js"
+ },
+ {
+  "fr": "<div class=\"stepper\"><div><b>Adultes</b><span>18 ans et plus</span></div><div class=\"stepper__ctl\"><button type=\"button\" data-g=\"adults\" data-v=\"-1\" aria-label=\"Retirer un adulte\"",
+  "ou": "home.js"
+ },
+ {
+  "fr": "</output><button type=\"button\" data-g=\"adults\" data-v=\"1\" aria-label=\"Ajouter un adulte\"",
+  "ou": "home.js"
+ },
+ {
+  "fr": ">+</button></div></div> <div class=\"stepper\"><div><b>Enfants</b><span>De 2 à 17 ans</span></div><div class=\"stepper__ctl\"><button type=\"button\" data-g=\"children\" data-v=\"-1\" aria-label=\"Retirer un enfant\"",
+  "ou": "home.js"
+ },
+ {
+  "fr": "</output><button type=\"button\" data-g=\"children\" data-v=\"1\" aria-label=\"Ajouter un enfant\"",
+  "ou": "home.js"
+ },
+ {
+  "fr": ">+</button></div></div> <p class=\"gp__note\">La Maison du Lac accueille jusqu'à",
+  "ou": "home.js"
+ },
+ {
+  "fr": "voyageurs, la Maison de Pierre jusqu'à",
+  "ou": "home.js"
+ },
+ {
+  "fr": "<article class=\"result",
+  "ou": "home.js"
+ },
+ {
+  "fr": "\"> <img src=\"",
+  "ou": "home.js"
+ },
+ {
+  "fr": "\" alt=\"\" loading=\"lazy\"> <div class=\"result__body\"> <span class=\"eyebrow eyebrow--plain\">",
+  "ou": "home.js"
+ },
+ {
+  "fr": "</span> <h3>",
+  "ou": "home.js"
+ },
+ {
+  "fr": "</h3> <p class=\"result__state\">",
+  "ou": "home.js"
+ },
+ {
+  "fr": "</span></p> </div> <a class=\"btn",
+  "ou": "home.js"
+ },
+ {
+  "fr": "\" href=\"",
+  "ou": "home.js"
+ },
+ {
+  "fr": "</a> </article>",
+  "ou": "home.js"
+ },
+ {
+  "fr": "Jusqu'à",
+  "ou": "home.js"
+ },
+ {
+  "fr": "voyageurs dans cette maison.",
+  "ou": "home.js"
+ },
+ {
+  "fr": "Voir la maison",
+  "ou": "home.js"
+ },
+ {
+  "fr": "Arrivée impossible le",
+  "ou": "home.js"
+ },
+ {
+  "fr": "Prochaine possibilité : du",
+  "ou": "home.js"
+ },
+ {
+  "fr": "Voir ces dates",
+  "ou": "home.js"
+ },
+ {
+  "fr": "Voir le calendrier",
+  "ou": "home.js"
+ },
+ {
+  "fr": "Séjour de",
+  "ou": "home.js"
+ },
+ {
+  "fr": "nuits minimum à ces dates.",
+  "ou": "home.js"
+ },
+ {
+  "fr": "Voir",
+  "ou": "home.js"
+ },
+ {
+  "fr": "Ces dates ne sont pas toutes libres.",
+  "ou": "home.js"
+ },
+ {
+  "fr": "Libre du",
+  "ou": "home.js"
+ },
+ {
+  "fr": "% en réservant en direct",
+  "ou": "home.js"
+ },
+ {
+  "fr": "· à partir de",
+  "ou": "home.js"
+ },
+ {
+  "fr": "€ la nuit",
+  "ou": "home.js"
+ },
+ {
+  "fr": "Réserver ces dates",
+  "ou": "home.js"
+ },
+ {
+  "fr": "<p class=\"search__error\">Choisissez d'abord vos dates d'arrivée et de départ.</p>",
+  "ou": "home.js"
+ },
+ {
+  "fr": ".dest-tabs--clim .dest-tabs__pill",
+  "ou": "home.js"
+ },
+ {
+  "fr": ".clim__months [aria-selected=\"true\"]",
+  "ou": "home.js"
+ },
+ {
+  "fr": "À partir de",
+  "ou": "house.js"
+ },
+ {
+  "fr": "€ la nuit en direct",
+  "ou": "house.js"
+ },
+ {
+  "fr": "Chambres",
+  "ou": "house.js"
+ },
+ {
+  "fr": "Pièces de vie",
+  "ou": "house.js"
+ },
+ {
+  "fr": "<section class=\"hero\" aria-label=\"",
+  "ou": "house.js"
+ },
+ {
+  "fr": "\"> <div class=\"hero__slides\">",
+  "ou": "house.js"
+ },
+ {
+  "fr": "<div class=\"hero__slide",
+  "ou": "house.js"
+ },
+ {
+  "fr": "\" sizes=\"100vw\" alt=\"",
+  "ou": "house.js"
+ },
+ {
+  "fr": "</div> <div class=\"hero__content\"> <div class=\"wrap\"> <div> <p class=\"hero__kicker\"><span>",
+  "ou": "house.js"
+ },
+ {
+  "fr": "</span></p> <h1><span class=\"split-line\"><span>",
+  "ou": "house.js"
+ },
+ {
+  "fr": "</span></span><span class=\"split-line\"><span><em>",
+  "ou": "house.js"
+ },
+ {
+  "fr": "</em></span></span></h1> <p class=\"hero__facts\">",
+  "ou": "house.js"
+ },
+ {
+  "fr": "voyageurs ·",
+  "ou": "house.js"
+ },
+ {
+  "fr": "chambres ·",
+  "ou": "house.js"
+ },
+ {
+  "fr": "lits ·",
+  "ou": "house.js"
+ },
+ {
+  "fr": "salles de bain</p> </div> <div class=\"hero__side\"> <p class=\"hero__count\"><b>",
+  "ou": "house.js"
+ },
+ {
+  "fr": "avis · Coup de cœur voyageurs</p>",
+  "ou": "house.js"
+ },
+ {
+  "fr": "<p class=\"hero__price\">",
+  "ou": "house.js"
+ },
+ {
+  "fr": "<div class=\"hero__bars\" role=\"group\" aria-label=\"Choisir une photo\">",
+  "ou": "house.js"
+ },
+ {
+  "fr": "<button type=\"button\" aria-label=\"Photo",
+  "ou": "house.js"
+ },
+ {
+  "fr": "</div> <div class=\"hero__btns\"> <button type=\"button\" class=\"btn btn--outline-light\" data-open-tour>",
+  "ou": "house.js"
+ },
+ {
+  "fr": "Les",
+  "ou": "house.js"
+ },
+ {
+  "fr": "photos</button> <button type=\"button\" class=\"round-btn round-btn--light\" data-share aria-label=\"Partager cette maison\">",
+  "ou": "house.js"
+ },
+ {
+  "fr": "</button> </div> </div> </div> </div> </section> <nav class=\"sub-nav\" aria-label=\"Sections de la page\"> <div class=\"wrap\"> <div class=\"sub-nav__links\"> <a href=\"#maison\">La maison</a><a href=\"#photos\">Photos</a><a href=\"#chambres\">Chambres</a><a href=\"#equipements\">Équipements</a><a href=\"#avis\">Avis</a><a href=\"#reserver\">Disponibilités</a><a href=\"#quartier\">Le quartier</a><a href=\"#quand\">Quand venir</a><a href=\"#infos\">Infos pratiques</a> </div> <a class=\"btn btn--accent\" href=\"#reserver\">Réserver</a> </div> </nav> <section class=\"section\" id=\"maison\"> <div class=\"wrap\"> <div class=\"intro-grid\"> <div> <span class=\"eyebrow reveal\">",
+  "ou": "house.js"
+ },
+ {
+  "fr": "</span> <h2 class=\"h2 reveal\" style=\"margin-top:18px\">",
+  "ou": "house.js"
+ },
+ {
+  "fr": "</h2> <div class=\"keyfacts reveal\"> <div><b class=\"num\">",
+  "ou": "house.js"
+ },
+ {
+  "fr": "</b><span>voyageurs</span></div> <div><b class=\"num\">",
+  "ou": "house.js"
+ },
+ {
+  "fr": "</b><span>chambres</span></div> <div><b class=\"num\">",
+  "ou": "house.js"
+ },
+ {
+  "fr": "</b><span>lits</span></div> <div><b class=\"num\">",
+  "ou": "house.js"
+ },
+ {
+  "fr": "</b><span>salles de bain</span></div> </div> <p class=\"lead reveal\">",
+  "ou": "house.js"
+ },
+ {
+  "fr": "</p> <h3 class=\"eyebrow eyebrow--plain reveal\" style=\"margin:34px 0 14px\">Le mot de vos hôtes</h3> <div class=\"prose readmore reveal\" id=\"desc\">",
+  "ou": "house.js"
+ },
+ {
+  "fr": "</div> <button type=\"button\" class=\"link\" id=\"desc-more\" style=\"margin-top:18px\" aria-controls=\"desc\" aria-expanded=\"false\">Lire la suite</button> </div> <aside> <ul class=\"highlights\">",
+  "ou": "house.js"
+ },
+ {
+  "fr": "<li class=\"reveal\" data-delay=\"",
+  "ou": "house.js"
+ },
+ {
+  "fr": "</ul> <div class=\"host-card reveal\"> <span class=\"avatar\" aria-hidden=\"true\">",
+  "ou": "house.js"
+ },
+ {
+  "fr": "</span> <div><b>Coup de cœur voyageurs</b><span>L'un des logements préférés des voyageurs sur Airbnb · hôte Superhôte</span></div> </div> </aside> </div> </div> </section> <section class=\"section section--paper levels-section\" id=\"niveaux\" aria-labelledby=\"lv-title\"> <div class=\"wrap\"> <div class=\"section-head\"> <div><span class=\"eyebrow\">Plan de la maison</span><h2 class=\"h2\" id=\"lv-title\">Niveau <em>par niveau</em></h2></div> <p>Choisissez un niveau pour voir ce qu'il contient.</p> </div> <div class=\"levels\"> <div class=\"levels__plan\">",
+  "ou": "house.js"
+ },
+ {
+  "fr": "</div> <div class=\"levels__info\"> <div class=\"levels__tabs\" role=\"tablist\" aria-label=\"Niveaux de la maison\">",
+  "ou": "house.js"
+ },
+ {
+  "fr": "<button type=\"button\" role=\"tab\" id=\"lv-tab-",
+  "ou": "house.js"
+ },
+ {
+  "fr": "\" aria-controls=\"lv-panel\" aria-selected=\"",
+  "ou": "house.js"
+ },
+ {
+  "fr": "\" data-level=\"",
+  "ou": "house.js"
+ },
+ {
+  "fr": "</div> <div class=\"levels__panel\" id=\"lv-panel\" role=\"tabpanel\" aria-live=\"polite\"></div> </div> </div> </div> </section> <section class=\"section\" id=\"photos\"> <div class=\"wrap\"> <div class=\"section-head\"> <div><span class=\"eyebrow\">En images</span><h2 class=\"h2\">Entrez, <em>c'est ouvert</em></h2></div> <p>Cliquez sur une photo pour l'agrandir, puis faites défiler avec les flèches du clavier ou en glissant le doigt.</p> </div> <div class=\"mosaic\">",
+  "ou": "house.js"
+ },
+ {
+  "fr": "<button type=\"button\" class=\"reveal-img\" data-open-gallery=\"",
+  "ou": "house.js"
+ },
+ {
+  "fr": "\" data-label=\"",
+  "ou": "house.js"
+ },
+ {
+  "fr": "(max-width: 900px) 100vw, 50vw",
+  "ou": "house.js"
+ },
+ {
+  "fr": "</div> <div class=\"mosaic-more\"><button type=\"button\" class=\"btn btn--ghost\" data-open-tour>",
+  "ou": "house.js"
+ },
+ {
+  "fr": "Visiter pièce par pièce ·",
+  "ou": "house.js"
+ },
+ {
+  "fr": "photos</button></div> </div> </section> <section class=\"section section--paper\" id=\"chambres\"> <div class=\"wrap\"> <div class=\"section-head\"> <div><span class=\"eyebrow\">Où vous dormirez</span><h2 class=\"h2\">",
+  "ou": "house.js"
+ },
+ {
+  "fr": "chambres, <em>",
+  "ou": "house.js"
+ },
+ {
+  "fr": "lits</em></h2></div> <p>",
+  "ou": "house.js"
+ },
+ {
+  "fr": "Deux chambres et une salle de bain de plain-pied, les quatre autres chambres à l'étage.",
+  "ou": "house.js"
+ },
+ {
+  "fr": "Trois chambres, une salle de bain et un WC au rez-de-chaussée ; deux chambres, une salle d'eau et un WC en sous-sol ; la pièce de vie et la terrasse à l'étage.",
+  "ou": "house.js"
+ },
+ {
+  "fr": "</p> </div> <div class=\"beds\">",
+  "ou": "house.js"
+ },
+ {
+  "fr": "<article class=\"bed reveal\" data-delay=\"",
+  "ou": "house.js"
+ },
+ {
+  "fr": "\"> <button type=\"button\" class=\"bed__img\" data-open-gallery=\"",
+  "ou": "house.js"
+ },
+ {
+  "fr": "\" aria-label=\"Agrandir la photo :",
+  "ou": "house.js"
+ },
+ {
+  "fr": "(max-width: 600px) 100vw, 33vw",
+  "ou": "house.js"
+ },
+ {
+  "fr": "</button> <div class=\"bed__body\">",
+  "ou": "house.js"
+ },
+ {
+  "fr": "</span></div> </article>",
+  "ou": "house.js"
+ },
+ {
+  "fr": "</div> </div> </section> <section class=\"section\" id=\"equipements\"> <div class=\"wrap\"> <div class=\"section-head\"> <div><span class=\"eyebrow\">Ce que propose la maison</span><h2 class=\"h2\">Tout est <em>prévu</em></h2></div> <p>La liste complète des équipements, telle qu'elle figure sur l'annonce.</p> </div> <div class=\"amenities\">",
+  "ou": "house.js"
+ },
+ {
+  "fr": "<div class=\"amenity-group reveal\"",
+  "ou": "house.js"
+ },
+ {
+  "fr": "data-more hidden",
+  "ou": "house.js"
+ },
+ {
+  "fr": "</h3> <ul>",
+  "ou": "house.js"
+ },
+ {
+  "fr": "</ul> </div>",
+  "ou": "house.js"
+ },
+ {
+  "fr": "<div class=\"mosaic-more\"><button type=\"button\" class=\"btn btn--ghost\" id=\"amen-more\" aria-expanded=\"false\">Voir tous les équipements</button></div>",
+  "ou": "house.js"
+ },
+ {
+  "fr": "</div> </section> <section class=\"section section--paper\" id=\"avis\"> <div class=\"wrap\"> <div class=\"reviews-top\"> <div class=\"score reveal\"> <b class=\"score__num num\">",
+  "ou": "house.js"
+ },
+ {
+  "fr": "</b> <span class=\"score__stars\" aria-hidden=\"true\">★★★★★</span> <span class=\"score__count\">",
+  "ou": "house.js"
+ },
+ {
+  "fr": "avis vérifiés sur Airbnb</span> <span class=\"score__badge\">",
+  "ou": "house.js"
+ },
+ {
+  "fr": "Coup de cœur voyageurs</span> </div> <div class=\"reveal\" data-delay=\"1\"> <h2 class=\"h3\">Les notes en détail</h2> <div class=\"ratings\">",
+  "ou": "house.js"
+ },
+ {
+  "fr": "<p class=\"rating-row\"><span>",
+  "ou": "house.js"
+ },
+ {
+  "fr": "</span><i style=\"--v:",
+  "ou": "house.js"
+ },
+ {
+  "fr": "</div> </div> <div class=\"reveal\" data-delay=\"2\"> <h2 class=\"h3\">Répartition</h2> <div class=\"ratings\">",
+  "ou": "house.js"
+ },
+ {
+  "fr": "<p class=\"rating-row rating-row--dist\"><span>",
+  "ou": "house.js"
+ },
+ {
+  "fr": "★</span><i style=\"--v:",
+  "ou": "house.js"
+ },
+ {
+  "fr": "</div> </div> </div> <div class=\"tags reveal\" aria-label=\"Les sujets dont parlent les voyageurs\"> <span class=\"small\">Ce dont parlent les voyageurs :</span>",
+  "ou": "house.js"
+ },
+ {
+  "fr": "<span class=\"tag\">",
+  "ou": "house.js"
+ },
+ {
+  "fr": "</div> <div class=\"quote-grid\" id=\"quote-grid\">",
+  "ou": "house.js"
+ },
+ {
+  "fr": "<figure class=\"quote-card reveal\" data-delay=\"",
+  "ou": "house.js"
+ },
+ {
+  "fr": "data-more-review hidden",
+  "ou": "house.js"
+ },
+ {
+  "fr": "</blockquote><figcaption><span class=\"avatar-sm\" aria-hidden=\"true\">",
+  "ou": "house.js"
+ },
+ {
+  "fr": "</div> <div class=\"mosaic-more\">",
+  "ou": "house.js"
+ },
+ {
+  "fr": "<button type=\"button\" class=\"btn btn--ghost\" id=\"more-reviews\">Plus d'avis</button>",
+  "ou": "house.js"
+ },
+ {
+  "fr": "<a class=\"btn btn--ghost\" href=\"",
+  "ou": "house.js"
+ },
+ {
+  "fr": "#reviews\" target=\"_blank\" rel=\"noopener\">Lire les",
+  "ou": "house.js"
+ },
+ {
+  "fr": "</a> </div> <p class=\"small\" style=\"margin-top:18px;text-align:center\">Extraits fidèles d'avis publiés par les voyageurs sur Airbnb (seule l'orthographe a été corrigée).</p> </div> </section> <section class=\"section section--sand\" id=\"reserver\"> <div class=\"wrap\"> <div class=\"section-head\"> <div><span class=\"eyebrow\">Disponibilités</span><h2 class=\"h2\">Choisissez <em>vos dates</em></h2></div> <p>Les dates grisées sont déjà prises. Sélectionnez votre arrivée puis votre départ : le prix s'affiche, et vous réservez directement ici, sans frais de plateforme.</p> </div> <div class=\"book-grid\"> <div class=\"cal\" id=\"cal\"> <div class=\"cal__head\"> <button type=\"button\" class=\"round-btn\" data-cal=\"-1\" aria-label=\"Mois précédent\">",
+  "ou": "house.js"
+ },
+ {
+  "fr": "</button> <span class=\"cal__hint\" id=\"cal-hint\" aria-live=\"polite\">Choisissez votre date d'arrivée</span> <button type=\"button\" class=\"round-btn\" data-cal=\"1\" aria-label=\"Mois suivant\">",
+  "ou": "house.js"
+ },
+ {
+  "fr": "</button> </div> <div class=\"cal__months\" id=\"cal-months\" role=\"group\" aria-label=\"Calendrier des disponibilités\"></div> <div class=\"cal__legend\"><span><i class=\"lg lg--sel\"></i>Votre séjour</span><span><i class=\"lg lg--off\"></i>Déjà pris</span><span><i class=\"lg lg--today\"></i>Aujourd'hui</span><span id=\"cal-min\"></span></div> <div class=\"quick\" id=\"quick\" hidden><span class=\"small\">Prochains week-ends libres :</span><div class=\"quick__list\" id=\"quick-list\"></div></div> <p class=\"cal__status\" id=\"cal-status\"></p> </div> <aside class=\"booking\" aria-labelledby=\"book-title\"> <div class=\"booking__head\"> <h3 id=\"book-title\">",
+  "ou": "house.js"
+ },
+ {
+  "fr": "</h3> <span class=\"booking__rate\">★",
+  "ou": "house.js"
+ },
+ {
+  "fr": "avis</span> </div> <p class=\"small\">",
+  "ou": "house.js"
+ },
+ {
+  "fr": "· jusqu'à",
+  "ou": "house.js"
+ },
+ {
+  "fr": "voyageurs</p> <div class=\"booking__fields\"> <button type=\"button\" class=\"booking__field\" data-focus-cal><small>Arrivée</small><b id=\"f-in\">Ajouter une date</b></button> <button type=\"button\" class=\"booking__field\" data-focus-cal><small>Départ</small><b id=\"f-out\">Ajouter une date</b></button> <button type=\"button\" class=\"booking__field booking__field--full\" id=\"f-guests-btn\" aria-expanded=\"false\" aria-controls=\"guests-pop\"><small>Voyageurs</small><b id=\"f-guests\">1 voyageur</b></button> </div> <div class=\"guests-pop\" id=\"guests-pop\"><div>",
+  "ou": "house.js"
+ },
+ {
+  "fr": "Adultes",
+  "ou": "house.js"
+ },
+ {
+  "fr": "18 ans et plus",
+  "ou": "house.js"
+ },
+ {
+  "fr": "Enfants",
+  "ou": "house.js"
+ },
+ {
+  "fr": "De 2 à 17 ans",
+  "ou": "house.js"
+ },
+ {
+  "fr": "Bébés",
+  "ou": "house.js"
+ },
+ {
+  "fr": "La maison ne convient pas aux moins de 2 ans",
+  "ou": "house.js"
+ },
+ {
+  "fr": "Moins de 2 ans",
+  "ou": "house.js"
+ },
+ {
+  "fr": "</div></div> <div class=\"booking__summary\" id=\"summary\" hidden></div> <div class=\"booking__price\" id=\"price\" hidden></div>",
+  "ou": "house.js"
+ },
+ {
+  "fr": "<p class=\"deal\">",
+  "ou": "house.js"
+ },
+ {
+  "fr": "% en réservant en direct</strong> sur tout le séjour</span></p>",
+  "ou": "house.js"
+ },
+ {
+  "fr": "<button type=\"button\" class=\"btn btn--accent btn--block\" id=\"go-book\">Réserver en direct</button> <div class=\"booking__or\"><span>ou</span></div> <a class=\"btn btn--ghost btn--block\" id=\"go-airbnb\" href=\"",
+  "ou": "house.js"
+ },
+ {
+  "fr": "\" target=\"_blank\" rel=\"noopener\">Réserver sur Airbnb",
+  "ou": "house.js"
+ },
+ {
+  "fr": "</a> <p class=\"booking__msg\" id=\"book-msg\" aria-live=\"polite\"></p> <button type=\"button\" class=\"link booking__clear\" id=\"clear-dates\" hidden>Effacer les dates</button> <ul class=\"booking__trust\"> <li>",
+  "ou": "house.js"
+ },
+ {
+  "fr": "<span>En direct : paiement sécurisé par carte, rien n'est débité avant notre confirmation</span></li> <li>",
+  "ou": "house.js"
+ },
+ {
+  "fr": "<span>Hôte Superhôte, logement « Coup de cœur voyageurs »</span></li> <li>",
+  "ou": "house.js"
+ },
+ {
+  "fr": "Arrivée dès 16 h, départ avant 10 h",
+  "ou": "house.js"
+ },
+ {
+  "fr": "Arrivée autonome et flexible, départ avant 12 h",
+  "ou": "house.js"
+ },
+ {
+  "fr": "</span></li> </ul> </aside> </div> </div> </section> <section class=\"section\" id=\"quartier\"> <div class=\"wrap\"> <div class=\"map-wrap\"> <div> <span class=\"eyebrow\">Le quartier</span> <h2 class=\"h2\" style=\"margin-top:18px\">",
+  "ou": "house.js"
+ },
+ {
+  "fr": "</h2> <p class=\"lead\" style=\"margin-top:22px\">",
+  "ou": "house.js"
+ },
+ {
+  "fr": "</p> <p class=\"prose\">",
+  "ou": "house.js"
+ },
+ {
+  "fr": "</p> <div class=\"weather\" data-weather hidden></div> <p class=\"weather-note\" hidden>Météo en direct · Open-Meteo</p> </div> <div> <div class=\"poi-filter\" role=\"group\" aria-label=\"Filtrer les repères\"></div> <div class=\"map\" id=\"map\" role=\"img\" aria-label=\"Carte du quartier de",
+  "ou": "house.js"
+ },
+ {
+  "fr": "\"></div> <p class=\"map-note\">",
+  "ou": "house.js"
+ },
+ {
+  "fr": "Le cercle indique le secteur de la maison : l'adresse exacte vous est communiquée à la réservation.",
+  "ou": "house.js"
+ },
+ {
+  "fr": "Le cercle indique le secteur de la maison (emplacement approximatif) : l'adresse exacte vous est communiquée à la réservation.",
+  "ou": "house.js"
+ },
+ {
+  "fr": "Distances à vol d'oiseau.</p> <ol class=\"poi-list\" id=\"poi-list\"></ol> </div> </div> <ol class=\"dest-list\" style=\"margin-top:72px\">",
+  "ou": "house.js"
+ },
+ {
+  "fr": "</h3><span class=\"dist\">",
+  "ou": "house.js"
+ },
+ {
+  "fr": "</span><span class=\"plus\" aria-hidden=\"true\"></span></summary><p>",
+  "ou": "house.js"
+ },
+ {
+  "fr": "</ol> </div> </section> <section class=\"section section--paper\" id=\"quand\" data-climate-section aria-labelledby=\"quand-title\"> <div class=\"wrap\"> <div class=\"section-head\"> <div><span class=\"eyebrow\">Quand venir</span><h2 class=\"h2\" id=\"quand-title\">Le temps <em>qu'il fait</em></h2></div> <p>Les températures et la pluie mois par mois à",
+  "ou": "house.js"
+ },
+ {
+  "fr": "Lacanau, avec la température de l'océan",
+  "ou": "house.js"
+ },
+ {
+  "fr": ", d'après dix ans de relevés. Survolez ou choisissez un mois.</p> </div> <div class=\"clim\" id=\"clim\"></div> </div> </section> <section class=\"section\" id=\"infos\"> <div class=\"wrap\"> <div class=\"section-head\"> <div><span class=\"eyebrow\">Infos pratiques</span><h2 class=\"h2\">Le règlement <em>de la maison</em></h2></div> <p>Vous allez séjourner dans une maison de famille : merci d'en prendre soin et de respecter les lieux.</p> </div> <div class=\"rules\">",
+  "ou": "house.js"
+ },
+ {
+  "fr": "<div class=\"reveal\"><h3>",
+  "ou": "house.js"
+ },
+ {
+  "fr": "<p class=\"small\" style=\"margin-top:40px\">Numéro d'enregistrement en mairie :",
+  "ou": "house.js"
+ },
+ {
+  "fr": "</div> </section> <a class=\"other\" href=\"",
+  "ou": "house.js"
+ },
+ {
+  "fr": "\" sizes=\"100vw\" alt=\"\" loading=\"lazy\" data-parallax=\"0.1\"> <div class=\"wrap\"> <span class=\"eyebrow\">L'autre maison ·",
+  "ou": "house.js"
+ },
+ {
+  "fr": "</span> <h2 class=\"display\">",
+  "ou": "house.js"
+ },
+ {
+  "fr": "</em></h2> <span class=\"link\">",
+  "ou": "house.js"
+ },
+ {
+  "fr": "</span> </div> </a> <div class=\"mbar\" id=\"mbar\"> <div><b>",
+  "ou": "house.js"
+ },
+ {
+  "fr": "</b><span id=\"mbar-sub\">★",
+  "ou": "house.js"
+ },
+ {
+  "fr": "avis ·",
+  "ou": "house.js"
+ },
+ {
+  "fr": "voyageurs</span></div> <a class=\"btn btn--accent\" href=\"#reserver\" id=\"mbar-btn\">Voir les dates</a> </div> <div class=\"tour\" id=\"tour\" role=\"dialog\" aria-modal=\"true\" aria-label=\"Toutes les photos\" hidden> <div class=\"tour__bar\"> <div class=\"tour__chips\" role=\"group\" aria-label=\"Pièces\"> <button type=\"button\" class=\"chip\" data-cat=\"all\" aria-pressed=\"true\">Tout ·",
+  "ou": "house.js"
+ },
+ {
+  "fr": "<button type=\"button\" class=\"chip\" data-cat=\"",
+  "ou": "house.js"
+ },
+ {
+  "fr": "\" aria-pressed=\"false\">",
+  "ou": "house.js"
+ },
+ {
+  "fr": "</div> <button type=\"button\" class=\"round-btn\" data-close-tour aria-label=\"Fermer\">",
+  "ou": "house.js"
+ },
+ {
+  "fr": "</button> </div> <div class=\"tour__grid\" id=\"tour-grid\">",
+  "ou": "house.js"
+ },
+ {
+  "fr": "<button type=\"button\" class=\"tour__item\" data-cat=\"",
+  "ou": "house.js"
+ },
+ {
+  "fr": "\" data-open-gallery=\"",
+  "ou": "house.js"
+ },
+ {
+  "fr": "\" loading=\"lazy\"><span>",
+  "ou": "house.js"
+ },
+ {
+  "fr": "</div> </div> <div class=\"dialog\" id=\"dialog\" aria-hidden=\"true\"> <div class=\"dialog__bg\" data-close></div> <div class=\"dialog__box\" role=\"dialog\" aria-modal=\"true\" aria-labelledby=\"dlg-title\"> <button type=\"button\" class=\"dialog__close\" data-close aria-label=\"Fermer\">",
+  "ou": "house.js"
+ },
+ {
+  "fr": "</button> <div id=\"dlg-form\"> <span class=\"eyebrow eyebrow--plain\">",
+  "ou": "house.js"
+ },
+ {
+  "fr": "</span> <h2 class=\"h3\" id=\"dlg-title\" style=\"margin-top:12px\">Votre réservation</h2> <div class=\"form__recap\" id=\"recap\"></div> <form class=\"form\" id=\"form\" novalidate> <div class=\"field\"><label for=\"d-name\">Nom et prénom</label><input id=\"d-name\" name=\"nom\" autocomplete=\"name\" required maxlength=\"80\"></div> <div class=\"field\"><label for=\"d-phone\">Téléphone</label><input id=\"d-phone\" name=\"telephone\" type=\"tel\" autocomplete=\"tel\" maxlength=\"30\"></div> <div class=\"field full\"><label for=\"d-email\">E-mail</label><input id=\"d-email\" name=\"email\" type=\"email\" autocomplete=\"email\" required maxlength=\"254\"></div> <div class=\"field full\"><label for=\"d-msg\">Un mot pour nous (facultatif)</label><textarea id=\"d-msg\" name=\"message\" maxlength=\"2000\" placeholder=\"L'occasion de votre séjour, une heure d'arrivée, vos questions…\"></textarea></div> <div class=\"field full promo\" id=\"promo-box\"><label for=\"d-code\">Code promo (facultatif)</label><div class=\"promo__row\"><input id=\"d-code\" name=\"code\" autocomplete=\"off\" autocapitalize=\"characters\" spellcheck=\"false\" maxlength=\"30\"><button type=\"button\" class=\"btn btn--small\" id=\"d-code-go\">Appliquer</button></div><p class=\"small promo__msg\" id=\"d-code-msg\" aria-live=\"polite\"></p></div> <label class=\"check full\"><input type=\"checkbox\" id=\"d-cgv\" name=\"conditions\" required> <span>J'accepte les <a href=\"conditions.html\" target=\"_blank\" rel=\"noopener\">conditions de réservation</a> et le règlement de la maison.</span></label> <input class=\"hp\" type=\"text\" name=\"bot-field\" tabindex=\"-1\" autocomplete=\"off\" aria-hidden=\"true\"> <div class=\"full\"><button type=\"submit\" class=\"btn btn--accent btn--block\" id=\"d-submit\">Continuer</button><p class=\"booking__msg\" id=\"form-msg\" aria-live=\"polite\"></p><p class=\"small\" id=\"d-note\" style=\"margin-top:12px\"></p></div> </form> </div> <div class=\"form__done\" id=\"dlg-done\" hidden>",
+  "ou": "house.js"
+ },
+ {
+  "fr": "<h2 class=\"h3\">Merci !</h2> <p id=\"done-text\" style=\"margin-top:12px\">Votre demande est bien partie. Nous vous répondons très vite.</p> <button type=\"button\" class=\"btn\" data-close style=\"margin-top:18px\">Fermer</button> </div> </div> </div>",
+  "ou": "house.js"
+ },
+ {
+  "fr": "<div class=\"stepper\"><div><b>",
+  "ou": "house.js"
+ },
+ {
+  "fr": "</span></div> <div class=\"stepper__ctl\"><button type=\"button\" data-step=\"",
+  "ou": "house.js"
+ },
+ {
+  "fr": "\" data-d=\"-1\" aria-label=\"Retirer :",
+  "ou": "house.js"
+ },
+ {
+  "fr": "\">−</button><output id=\"n-",
+  "ou": "house.js"
+ },
+ {
+  "fr": "\" aria-live=\"polite\">0</output><button type=\"button\" data-step=\"",
+  "ou": "house.js"
+ },
+ {
+  "fr": "\" data-d=\"1\" aria-label=\"Ajouter :",
+  "ou": "house.js"
+ },
+ {
+  "fr": "<g class=\"plan__lvl\" data-level=\"",
+  "ou": "house.js"
+ },
+ {
+  "fr": "\" tabindex=\"-1\"> <rect x=\"70\" y=\"",
+  "ou": "house.js"
+ },
+ {
+  "fr": "\" width=\"280\" height=\"",
+  "ou": "house.js"
+ },
+ {
+  "fr": "\" rx=\"2\"/> <text x=\"210\" y=\"",
+  "ou": "house.js"
+ },
+ {
+  "fr": "<path class=\"plan__roof\" d=\"M56",
+  "ou": "house.js"
+ },
+ {
+  "fr": "<path class=\"plan__roof\" d=\"M70",
+  "ou": "house.js"
+ },
+ {
+  "fr": "\"/><text class=\"plan__note\" x=\"240\" y=\"",
+  "ou": "house.js"
+ },
+ {
+  "fr": "\" text-anchor=\"middle\">verrière</text>",
+  "ou": "house.js"
+ },
+ {
+  "fr": "<g class=\"plan__lvl plan__lvl--ext\" data-level=\"",
+  "ou": "house.js"
+ },
+ {
+  "fr": "\" tabindex=\"-1\"><path d=\"M0",
+  "ou": "house.js"
+ },
+ {
+  "fr": "\"/><rect x=\"368\" y=\"",
+  "ou": "house.js"
+ },
+ {
+  "fr": "\" width=\"46\" height=\"18\" rx=\"2\" class=\"plan__pool\"/><text x=\"391\" y=\"",
+  "ou": "house.js"
+ },
+ {
+  "fr": "\" text-anchor=\"middle\">jardin</text></g>",
+  "ou": "house.js"
+ },
+ {
+  "fr": "<svg viewBox=\"0 0",
+  "ou": "house.js"
+ },
+ {
+  "fr": "\" role=\"img\" aria-label=\"Coupe schématique de la maison\">",
+  "ou": "house.js"
+ },
+ {
+  "fr": "<line class=\"plan__ground\" x1=\"0\" x2=\"",
+  "ou": "house.js"
+ },
+ {
+  "fr": ".levels__tabs [role=tab]",
+  "ou": "house.js"
+ },
+ {
+  "fr": "<button type=\"button\" class=\"levels__photo\" data-open-gallery=\"",
+  "ou": "house.js"
+ },
+ {
+  "fr": "(max-width: 900px) 100vw, 40vw",
+  "ou": "house.js"
+ },
+ {
+  "fr": "<h3 class=\"h3\">",
+  "ou": "house.js"
+ },
+ {
+  "fr": "</h3> <ul class=\"levels__list\">",
+  "ou": "house.js"
+ },
+ {
+  "fr": ".hero__bars button",
+  "ou": "house.js"
+ },
+ {
+  "fr": ".tour__chips .chip",
+  "ou": "house.js"
+ },
+ {
+  "fr": "Réduire",
+  "ou": "house.js"
+ },
+ {
+  "fr": "Lire la suite",
+  "ou": "house.js"
+ },
+ {
+  "fr": "Voir moins",
+  "ou": "house.js"
+ },
+ {
+  "fr": "Voir tous les équipements",
+  "ou": "house.js"
+ },
+ {
+  "fr": ".sub-nav__links a",
+  "ou": "house.js"
+ },
+ {
+  "fr": "-45% 0px -50% 0px",
+  "ou": "house.js"
+ },
+ {
+  "fr": "nuit déjà prise dans la période",
+  "ou": "house.js"
+ },
+ {
+  "fr": "séjour trop court",
+  "ou": "house.js"
+ },
+ {
+  "fr": "séjour trop long",
+  "ou": "house.js"
+ },
+ {
+  "fr": "départ impossible ce jour-là",
+  "ou": "house.js"
+ },
+ {
+  "fr": "<span class=\"cal__dow\" aria-hidden=\"true\">",
+  "ou": "house.js"
+ },
+ {
+  "fr": "arrivée impossible ce jour-là",
+  "ou": "house.js"
+ },
+ {
+  "fr": "\" data-date=\"",
+  "ou": "house.js"
+ },
+ {
+  "fr": "\" title=\"",
+  "ou": "house.js"
+ },
+ {
+  "fr": "aria-disabled=\"true\" data-off",
+  "ou": "house.js"
+ },
+ {
+  "fr": "<div class=\"cal__month\"><h3>",
+  "ou": "house.js"
+ },
+ {
+  "fr": "</h3><div class=\"cal__grid\">",
+  "ou": "house.js"
+ },
+ {
+  "fr": "Choisissez votre date d'arrivée",
+  "ou": "house.js"
+ },
+ {
+  "fr": "nuits minimum)",
+  "ou": "house.js"
+ },
+ {
+  "fr": "sélectionnées",
+  "ou": "house.js"
+ },
+ {
+  "fr": "sélectionnée",
+  "ou": "house.js"
+ },
+ {
+  "fr": "Le séjour minimum est de",
+  "ou": "house.js"
+ },
+ {
+  "fr": "nuits à partir de cette date.",
+  "ou": "house.js"
+ },
+ {
+  "fr": "PageDown",
+  "ou": "house.js"
+ },
+ {
+  "fr": "PageUp",
+  "ou": "house.js"
+ },
+ {
+  "fr": "Home",
+  "ou": "house.js"
+ },
+ {
+  "fr": "End",
+  "ou": "house.js"
+ },
+ {
+  "fr": "<button type=\"button\" class=\"chip\" data-quick=\"",
+  "ou": "house.js"
+ },
+ {
+  "fr": "bébé",
+  "ou": "house.js"
+ },
+ {
+  "fr": "dates à définir",
+  "ou": "house.js"
+ },
+ {
+  "fr": "<p><span>Séjour</span><strong>",
+  "ou": "house.js"
+ },
+ {
+  "fr": "</strong></p><p><span>Arrivée</span><span>",
+  "ou": "house.js"
+ },
+ {
+  "fr": ", dès 16 h",
+  "ou": "house.js"
+ },
+ {
+  "fr": "</span></p><p><span>Départ</span><span>",
+  "ou": "house.js"
+ },
+ {
+  "fr": ", avant 10 h",
+  "ou": "house.js"
+ },
+ {
+  "fr": ", avant 12 h",
+  "ou": "house.js"
+ },
+ {
+  "fr": "<p class=\"ok\">",
+  "ou": "house.js"
+ },
+ {
+  "fr": "<span>Ces dates sont libres dans le calendrier</span></p>",
+  "ou": "house.js"
+ },
+ {
+  "fr": "<p class=\"booking__total\"><span>Total en direct</span><strong>",
+  "ou": "house.js"
+ },
+ {
+  "fr": "<s title=\"Prix Airbnb\">",
+  "ou": "house.js"
+ },
+ {
+  "fr": "<p class=\"booking__save\">Vous économisez",
+  "ou": "house.js"
+ },
+ {
+  "fr": "par rapport au prix Airbnb",
+  "ou": "house.js"
+ },
+ {
+  "fr": "en réservant ici",
+  "ou": "house.js"
+ },
+ {
+  "fr": "<p class=\"small\">Le prix de ce séjour vous est confirmé par e-mail avec votre réservation.</p>",
+  "ou": "house.js"
+ },
+ {
+  "fr": "Réserver en direct ·",
+  "ou": "house.js"
+ },
+ {
+  "fr": "Réserver en direct",
+  "ou": "house.js"
+ },
+ {
+  "fr": "Choisir mes dates",
+  "ou": "house.js"
+ },
+ {
+  "fr": "Choisissez maintenant votre date de départ",
+  "ou": "house.js"
+ },
+ {
+  "fr": "Réserver",
+  "ou": "house.js"
+ },
+ {
+  "fr": "Voir les dates",
+  "ou": "house.js"
+ },
+ {
+  "fr": "Disponibilités mises à jour le",
+  "ou": "house.js"
+ },
+ {
+  "fr": ". Vos dates sont vérifiées à nouveau au moment de réserver.",
+  "ou": "house.js"
+ },
+ {
+  "fr": "Vos dates sont vérifiées au moment de réserver.",
+  "ou": "house.js"
+ },
+ {
+  "fr": "<i class=\"lg lg--min\"></i>",
+  "ou": "house.js"
+ },
+ {
+  "fr": "Le paiement a été annulé : rien n'a été débité. Vos dates sont toujours sélectionnées.",
+  "ou": "house.js"
+ },
+ {
+  "fr": "Choisissez d'abord vos dates d'arrivée et de départ dans le calendrier.",
+  "ou": "house.js"
+ },
+ {
+  "fr": "Vous allez être redirigé vers la page de paiement sécurisée Stripe. Votre carte n'est pas débitée tout de suite : le montant est seulement réservé, puis débité quand nous confirmons votre séjour (sous 24 h). Sans confirmation, il est libéré.",
+  "ou": "house.js"
+ },
+ {
+  "fr": "Nous vous répondons personnellement par e-mail sous 24 h avec le prix",
+  "ou": "house.js"
+ },
+ {
+  "fr": "(remise de",
+  "ou": "house.js"
+ },
+ {
+  "fr": "% incluse)",
+  "ou": "house.js"
+ },
+ {
+  "fr": "et la confirmation. Rien n'est payé à cette étape.",
+  "ou": "house.js"
+ },
+ {
+  "fr": "<div class=\"recap__price\">",
+  "ou": "house.js"
+ },
+ {
+  "fr": "<p class=\"booking__total\"><span>Total</span><strong>",
+  "ou": "house.js"
+ },
+ {
+  "fr": "Continuer vers le paiement ·",
+  "ou": "house.js"
+ },
+ {
+  "fr": "Envoyer ma demande",
+  "ou": "house.js"
+ },
+ {
+  "fr": "Vérification…",
+  "ou": "house.js"
+ },
+ {
+  "fr": "POST",
+  "ou": "house.js"
+ },
+ {
+  "fr": "Content-Type",
+  "ou": "house.js"
+ },
+ {
+  "fr": "Code",
+  "ou": "house.js"
+ },
+ {
+  "fr": "appliqué.",
+  "ou": "house.js"
+ },
+ {
+  "fr": "Ce code n'est pas valable.",
+  "ou": "house.js"
+ },
+ {
+  "fr": "Impossible de vérifier le code pour le moment.",
+  "ou": "house.js"
+ },
+ {
+  "fr": "Enter",
+  "ou": "house.js"
+ },
+ {
+  "fr": "Choisissez maintenant votre date de départ.",
+  "ou": "house.js"
+ },
+ {
+  "fr": "Choisissez votre date d'arrivée dans le calendrier.",
+  "ou": "house.js"
+ },
+ {
+  "fr": "button, a[href], input:not(.hp), textarea",
+  "ou": "house.js"
+ },
+ {
+  "fr": "Merci d'indiquer votre nom et une adresse e-mail valide.",
+  "ou": "house.js"
+ },
+ {
+  "fr": "Envoi en cours…",
+  "ou": "house.js"
+ },
+ {
+  "fr": "Merci d'accepter les conditions de réservation.",
+  "ou": "house.js"
+ },
+ {
+  "fr": "Redirection vers le paiement sécurisé…",
+  "ou": "house.js"
+ },
+ {
+  "fr": "Bonjour,\\n\\nJe souhaite réserver",
+  "ou": "house.js"
+ },
+ {
+  "fr": ", pour",
+  "ou": "house.js"
+ },
+ {
+  "fr": "Demande de réservation —",
+  "ou": "house.js"
+ },
+ {
+  "fr": "Votre messagerie s'ouvre avec la demande pré-remplie : il ne vous reste qu'à l'envoyer. Si rien ne s'ouvre, écrivez-nous à <strong>",
+  "ou": "house.js"
+ },
+ {
+  "fr": "#dlg-done .btn",
+  "ou": "house.js"
+ },
+ {
+  "fr": "À pied",
+  "ou": "house.js"
+ },
+ {
+  "fr": "Plages",
+  "ou": "house.js"
+ },
+ {
+  "fr": "Vignobles",
+  "ou": "house.js"
+ },
+ {
+  "fr": "Ville",
+  "ou": "house.js"
+ },
+ {
+  "fr": "Gare et aéroport",
+  "ou": "house.js"
+ },
+ {
+  "fr": "· environ",
+  "ou": "house.js"
+ },
+ {
+  "fr": "min à pied",
+  "ou": "house.js"
+ },
+ {
+  "fr": "<button type=\"button\" class=\"chip\" data-poi=\"all\" aria-pressed=\"",
+  "ou": "house.js"
+ },
+ {
+  "fr": "<button type=\"button\" class=\"chip\" data-poi=\"",
+  "ou": "house.js"
+ },
+ {
+  "fr": "\" aria-pressed=\"",
+  "ou": "house.js"
+ },
+ {
+  "fr": "<li><button type=\"button\" data-poi-id=\"",
+  "ou": "house.js"
+ },
+ {
+  "fr": ".poi-filter .chip",
+  "ou": "house.js"
+ },
+ {
+  "fr": "&copy; <a href=\"https://www.openstreetmap.org/copyright\">OpenStreetMap</a>",
+  "ou": "house.js"
+ },
+ {
+  "fr": "Paiement en cours",
+  "ou": "reservation.js"
+ },
+ {
+  "fr": "Votre paiement n'a pas encore été finalisé. Si vous avez fermé la page de paiement, revenez sur la fiche de la maison pour recommencer.",
+  "ou": "reservation.js"
+ },
+ {
+  "fr": "Demande reçue",
+  "ou": "reservation.js"
+ },
+ {
+  "fr": "Merci ! Nous vérifions votre réservation et vous confirmons votre séjour par e-mail, en général sous 24 heures.",
+  "ou": "reservation.js"
+ },
+ {
+  "fr": "Séjour confirmé",
+  "ou": "reservation.js"
+ },
+ {
+  "fr": "Votre réservation est confirmée. Nous avons hâte de vous accueillir ! Les informations d'arrivée vous sont envoyées par e-mail avant le séjour.",
+  "ou": "reservation.js"
+ },
+ {
+  "fr": "Réservation non confirmée",
+  "ou": "reservation.js"
+ },
+ {
+  "fr": "Nous ne pouvons malheureusement pas confirmer ce séjour. Rien n'a été débité : l'empreinte sur votre carte est libérée.",
+  "ou": "reservation.js"
+ },
+ {
+  "fr": "Réservation annulée",
+  "ou": "reservation.js"
+ },
+ {
+  "fr": "Cette réservation a été annulée.",
+  "ou": "reservation.js"
+ },
+ {
+  "fr": "Paiement non finalisé",
+  "ou": "reservation.js"
+ },
+ {
+  "fr": "Le délai de paiement est dépassé et les dates ont été libérées. Vous pouvez refaire une réservation depuis la fiche de la maison.",
+  "ou": "reservation.js"
+ },
+ {
+  "fr": "Réservation",
+  "ou": "reservation.js"
+ },
+ {
+  "fr": "autorisé",
+  "ou": "reservation.js"
+ },
+ {
+  "fr": "Le montant est réservé sur votre carte mais pas encore débité : il le sera au moment de notre confirmation.",
+  "ou": "reservation.js"
+ },
+ {
+  "fr": "Rien n'a été payé à cette étape : nous vous indiquons par e-mail comment régler votre séjour.",
+  "ou": "reservation.js"
+ },
+ {
+  "fr": "| Sable & Pierre",
+  "ou": "reservation.js"
+ },
+ {
+  "fr": "<span class=\"eyebrow\">Réservation",
+  "ou": "reservation.js"
+ },
+ {
+  "fr": "</span> <h1 class=\"h1 resa__title\" style=\"margin-top:18px\">",
+  "ou": "reservation.js"
+ },
+ {
+  "fr": "</h1> <p class=\"lead\" style=\"margin-top:20px\">",
+  "ou": "reservation.js"
+ },
+ {
+  "fr": "<div class=\"resa__card\"> <h2 class=\"h3\">",
+  "ou": "reservation.js"
+ },
+ {
+  "fr": "</h2> <dl> <div><dt>Arrivée</dt><dd>",
+  "ou": "reservation.js"
+ },
+ {
+  "fr": "</dd></div> <div><dt>Départ</dt><dd>",
+  "ou": "reservation.js"
+ },
+ {
+  "fr": "</dd></div> <div><dt>Séjour</dt><dd>",
+  "ou": "reservation.js"
+ },
+ {
+  "fr": "</dd></div> <div><dt>Voyageurs</dt><dd>",
+  "ou": "reservation.js"
+ },
+ {
+  "fr": "</dd></div> <div><dt>Au nom de</dt><dd>",
+  "ou": "reservation.js"
+ },
+ {
+  "fr": "</dd></div> <div><dt>E-mail</dt><dd>",
+  "ou": "reservation.js"
+ },
+ {
+  "fr": "<div class=\"booking__price\">",
+  "ou": "reservation.js"
+ },
+ {
+  "fr": "</div> <p class=\"small\">Gardez cette page : son adresse vous permet de suivre votre réservation. Une question ? Écrivez-nous à <a class=\"link\" href=\"mailto:",
+  "ou": "reservation.js"
+ },
+ {
+  "fr": "</a> en indiquant le numéro",
+  "ou": "reservation.js"
+ },
+ {
+  "fr": ".</p> <p style=\"margin-top:36px\"><a class=\"btn btn--ghost\" href=\"",
+  "ou": "reservation.js"
+ },
+ {
+  "fr": "\">Revoir la maison</a></p>",
+  "ou": "reservation.js"
+ },
+ {
+  "fr": "<h1 class=\"h1\">Réservation introuvable</h1><p class=\"lead\" style=\"margin-top:20px\">Le lien est peut-être incomplet. Écrivez-nous à <a class=\"link\" href=\"mailto:",
+  "ou": "reservation.js"
+ },
+ {
+  "fr": "<h1 class=\"h1\">Réservation introuvable</h1>",
+  "ou": "reservation.js"
+ },
+ {
+  "fr": "Ménage et frais",
+  "ou": "prix.js"
+ },
+ {
+  "fr": "Ménage",
+  "ou": "prix.js"
+ },
+ {
+  "fr": "Remise réservation directe (−",
+  "ou": "prix.js"
+ },
+ {
+  "fr": "Taxe de séjour",
+  "ou": "prix.js"
+ },
+ {
+  "fr": "Taxe de séjour (",
+  "ou": "prix.js"
+ },
+ {
+  "fr": "Annulation gratuite jusqu'à 30 jours avant l'arrivée : remboursement intégral.",
+  "ou": "tarifs.js"
+ },
+ {
+  "fr": "Entre 30 et 14 jours avant l'arrivée : remboursement de 50 %.",
+  "ou": "tarifs.js"
+ },
+ {
+  "fr": "Moins de 14 jours avant l'arrivée : aucun remboursement.",
+  "ou": "tarifs.js"
+ },
+ {
+  "fr": "Location maisons de vacances en famille à Lacanau et Bordeaux | Sable & Pierre",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Deux grandes maisons de famille à louer en Gironde : à Lacanau, maison avec piscine privée pour 12 personnes à 50 m du lac et 10 min de l'océan ; à Bordeaux, maison de ville pour 8 personnes à 10 min à pied du centre. −10 % en réservant en direct.",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Sable & Pierre — Lacanau & Bordeaux",
+  "ou": "index.html"
+ },
+ {
+  "fr": "L'océan ou la ville : deux maisons de famille en Gironde, à une heure l'une de l'autre.",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Aller au contenu",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Sable <em>&amp;</em> Pierre",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Les environs",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Questions",
+  "ou": "index.html"
+ },
+ {
+  "fr": "<small>01</small>La Maison du Lac",
+  "ou": "index.html"
+ },
+ {
+  "fr": "<small>02</small>La Maison de Pierre",
+  "ou": "index.html"
+ },
+ {
+  "fr": "<small>03</small>Les environs",
+  "ou": "index.html"
+ },
+ {
+  "fr": "<small>04</small>Ils y ont séjourné",
+  "ou": "index.html"
+ },
+ {
+  "fr": "<small>05</small>Questions",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Lacanau &amp; Bordeaux · Gironde",
+  "ou": "index.html"
+ },
+ {
+  "fr": "L'océan · Lacanau",
+  "ou": "index.html"
+ },
+ {
+  "fr": "La Maison",
+  "ou": "index.html"
+ },
+ {
+  "fr": "du Lac",
+  "ou": "index.html"
+ },
+ {
+  "fr": "piscine, lac &amp; océan",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Une maison de famille pour 12, ouverte sur le jardin et la piscine, à 50 mètres du lac et à 10 minutes des plages de l'Atlantique.",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Découvrir la maison <svg fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.4\" viewbox=\"0 0 24 24\"><path d=\"M4 12h16M14 6l6 6-6 6\"></path></svg>",
+  "ou": "index.html"
+ },
+ {
+  "fr": "La ville · Bordeaux",
+  "ou": "index.html"
+ },
+ {
+  "fr": "de Pierre",
+  "ou": "index.html"
+ },
+ {
+  "fr": "lumière &amp; pierre blonde",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Une maison de ville en pierre de taille pour 8, sa verrière, sa terrasse, et l'hypercentre de Bordeaux à dix minutes à pied.",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Deux<b>maisons</b>une heure",
+  "ou": "index.html"
+ },
+ {
+  "fr": "<i></i>Défiler",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Vérifier les disponibilités",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Maison",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Les deux maisons",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Lacanau · la Maison du Lac",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Bordeaux · la Maison de Pierre",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Voyageurs",
+  "ou": "index.html"
+ },
+ {
+  "fr": "2 voyageurs",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Voir les disponibilités",
+  "ou": "index.html"
+ },
+ {
+  "fr": "<strong>−10 % sur tout le séjour</strong> en réservant directement sur ce site.",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Gironde · côte atlantique",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Deux maisons de famille, à une heure l'une de l'autre. D'un côté, le lac, la piscine et l'océan à dix minutes. De l'autre, la pierre blonde de Bordeaux, une verrière baignée de lumière et la ville à pied. Choisissez votre escapade, ou vivez les deux.",
+  "ou": "index.html"
+ },
+ {
+  "fr": "voyageurs au total",
+  "ou": "index.html"
+ },
+ {
+  "fr": "chambres",
+  "ou": "index.html"
+ },
+ {
+  "fr": "avis de voyageurs",
+  "ou": "index.html"
+ },
+ {
+  "fr": "entre les deux",
+  "ou": "index.html"
+ },
+ {
+  "fr": "01 — L'océan",
+  "ou": "index.html"
+ },
+ {
+  "fr": "La Maison <em>du Lac</em>",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Une maison de famille couverte de vigne vierge, calme et sans vis-à-vis. Les pièces de vie s'ouvrent sur le jardin et la piscine ; le lac est à cinquante mètres, l'océan à dix minutes.",
+  "ou": "index.html"
+ },
+ {
+  "fr": "12 voyageurs",
+  "ou": "index.html"
+ },
+ {
+  "fr": "6 chambres",
+  "ou": "index.html"
+ },
+ {
+  "fr": "5,0 · 13 avis",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Découvrir la maison",
+  "ou": "index.html"
+ },
+ {
+  "fr": "02 — La ville",
+  "ou": "index.html"
+ },
+ {
+  "fr": "La Maison <em>de Pierre</em>",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Une maison bordelaise en pierre de taille, récemment rénovée et baignée de lumière. À l'étage, la grande pièce de vie sous verrière et la terrasse ; l'hypercentre est à dix minutes à pied.",
+  "ou": "index.html"
+ },
+ {
+  "fr": "8 voyageurs",
+  "ou": "index.html"
+ },
+ {
+  "fr": "5 chambres",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Centre à 10 min à pied",
+  "ou": "index.html"
+ },
+ {
+  "fr": "4,88 · 41 avis",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Pierre de taille",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Verrière &amp; terrasse",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Bordeaux à pied",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Coup de cœur voyageurs",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Superhôte",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Avant d'arriver",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Un avant-goût <em>des lieux</em>",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Le soleil, l'eau <em>&amp; la ville</em>",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Nos guides pour préparer le séjour : <a class=\"link\" href=\"vacances-famille-lacanau.html\">vacances en famille à Lacanau</a> · <a class=\"link\" href=\"vacances-famille-bordeaux.html\">Bordeaux en famille</a> · <a class=\"link\" href=\"guide-plages-lacanau.html\">les plages de Lacanau</a> · <a class=\"link\" href=\"guide-semaine-gironde-famille.html\">une semaine en Gironde</a>",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Quand venir",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Le temps <em>qu'il fait</em>",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Températures, pluie et température de l'océan, mois par mois, d'après dix ans de relevés. Choisissez une ville et un mois.",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Côte à côte",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Laquelle <em>vous ressemble ?</em>",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Deux maisons très différentes, avec le même soin du détail. Comparez l'essentiel en un coup d'œil.",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Critère",
+  "ou": "index.html"
+ },
+ {
+  "fr": "<small>L'océan</small>La Maison du Lac",
+  "ou": "index.html"
+ },
+ {
+  "fr": "<small>La ville</small>La Maison de Pierre",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Jusqu'à 12",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Jusqu'à 8",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Couchages",
+  "ou": "index.html"
+ },
+ {
+  "fr": "6 chambres, 7 lits (dont 1 king size)",
+  "ou": "index.html"
+ },
+ {
+  "fr": "5 chambres, 5 lits doubles",
+  "ou": "index.html"
+ },
+ {
+  "fr": "2 salles de bain, 4 WC",
+  "ou": "index.html"
+ },
+ {
+  "fr": "1 salle de bain et 1 salle d'eau, 2 WC",
+  "ou": "index.html"
+ },
+ {
+  "fr": "L'atout",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Piscine privée (avril à octobre), jardin, lac à 50 m",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Pièce de vie sous verrière, terrasse, centre à pied",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Pour aller à la plage",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Lac à pied, océan à 10 min en voiture",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Lacanau à environ 1 h de route",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Arrivée · départ",
+  "ou": "index.html"
+ },
+ {
+  "fr": "À partir de 16 h · avant 10 h",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Autonome, flexible · avant 12 h",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Stationnement",
+  "ou": "index.html"
+ },
+ {
+  "fr": "1 place privée gratuite",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Payant dans la rue ou en parking",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Note des voyageurs",
+  "ou": "index.html"
+ },
+ {
+  "fr": "★ 5,0 · 13 avis",
+  "ou": "index.html"
+ },
+ {
+  "fr": "★ 4,88 · 41 avis",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Ils y ont séjourné",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Avis des voyageurs",
+  "ou": "index.html"
+ },
+ {
+  "fr": "<span aria-hidden=\"true\">★</span> Les deux maisons sont « Coup de cœur voyageurs » sur Airbnb",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Et pourquoi pas les deux ?",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Le matin à l'océan, <em>le soir à Bordeaux</em>",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Réserver Lacanau",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Réserver Bordeaux",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Vos <em>questions</em>",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Une autre question ? <a class=\"link\" data-email=\"\" href=\"#\">Écrivez-nous</a>",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Comment réserver ?<i aria-hidden=\"true\"></i>",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Deux possibilités. <strong>En direct sur ce site, avec 10 % de remise sur tout le séjour</strong> : choisissez vos dates dans le calendrier de la maison, indiquez vos coordonnées et réglez par carte sur la page de paiement sécurisée Stripe ; votre carte n'est débitée qu'au moment où nous confirmons votre séjour, en général sous 24 heures (voir les <a class=\"link\" href=\"conditions.html\">conditions de réservation</a>). Ou bien <strong>sur Airbnb</strong>, aux conditions d'Airbnb : le bouton est sur la fiche de chaque maison.",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Le linge de maison est-il fourni ?<i aria-hidden=\"true\"></i>",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Oui, dans les deux maisons : serviettes, draps et linge de lit, ainsi que savon, papier toilette et les produits de base pour cuisiner (huile, sel, poivre).",
+  "ou": "index.html"
+ },
+ {
+  "fr": "À quelle heure arrive-t-on et part-on ?<i aria-hidden=\"true\"></i>",
+  "ou": "index.html"
+ },
+ {
+  "fr": "<strong>Lacanau</strong> : arrivée à partir de 16 h, départ avant 10 h. <strong>Bordeaux</strong> : arrivée autonome et flexible grâce à une boîte à clé sécurisée, départ avant 12 h. Dans les deux maisons, vous pouvez déposer vos bagages en cas d'arrivée anticipée ou de départ tardif.",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Quand la piscine de Lacanau est-elle ouverte ?<i aria-hidden=\"true\"></i>",
+  "ou": "index.html"
+ },
+ {
+  "fr": "La piscine extérieure privée est disponible d'avril à octobre. Elle n'a ni clôture ni verrou : la surveillance des enfants est indispensable.",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Peut-on venir avec un animal ?<i aria-hidden=\"true\"></i>",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Non, les animaux ne sont acceptés dans aucune des deux maisons (à Bordeaux, en raison d'allergies dans la famille). Les animaux d'assistance relèvent des règles d'Airbnb.",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Où se gare-t-on ?<i aria-hidden=\"true\"></i>",
+  "ou": "index.html"
+ },
+ {
+  "fr": "<strong>Lacanau</strong> : une place privée gratuite, et des places gratuites dans la rue à 20 mètres. <strong>Bordeaux</strong> : pas de place sur place ; stationnement payant dans la rue ou dans un parking, et le tram à 4 minutes à pied pour se passer de voiture.",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Les maisons sont-elles climatisées ?<i aria-hidden=\"true\"></i>",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Non. La Maison du Lac a le chauffage central, la Maison de Pierre un chauffage radiant ; les chambres ont des stores ou rideaux occultants.",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Peut-on venir avec un bébé ?<i aria-hidden=\"true\"></i>",
+  "ou": "index.html"
+ },
+ {
+  "fr": "La Maison de Pierre ne convient pas aux bébés de moins de 2 ans (la maison comprend des escaliers). Pour la Maison du Lac, écrivez-nous : nous vous dirons ce qui est possible.",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Quelle distance entre les deux maisons ?<i aria-hidden=\"true\"></i>",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Environ une heure de route. Beaucoup de voyageurs aiment combiner quelques jours à Bordeaux et quelques jours au bord de l'eau.",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Deux maisons en Gironde",
+  "ou": "index.html"
+ },
+ {
+  "fr": "La Maison du Lac à Lacanau et la Maison de Pierre à Bordeaux, à une heure l'une de l'autre.",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Les maisons",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Comparer",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Guides",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Lacanau en famille",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Les plages de Lacanau",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Bordeaux en famille",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Une semaine en Gironde",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Contact",
+  "ou": "index.html"
+ },
+ {
+  "fr": "E-mail",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Téléphone",
+  "ou": "index.html"
+ },
+ {
+  "fr": "WhatsApp",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Instagram",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Conditions de réservation",
+  "ou": "index.html"
+ },
+ {
+  "fr": "© <span data-year=\"\">2026</span> Sable &amp; Pierre",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Mentions légales",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Sable & Pierre, accueil",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Navigation principale",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Choisir sa maison",
+  "ou": "index.html"
+ },
+ {
+  "fr": "La Maison du Lac à Lacanau : la piscine devant la maison couverte de vigne vierge",
+  "ou": "index.html"
+ },
+ {
+  "fr": "La Maison de Pierre à Bordeaux : la pièce de vie lumineuse sous la verrière",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Faire défiler",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Choisir vos dates",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Nombre de voyageurs",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Le ponton sur le lac de Lacanau, au coucher du soleil",
+  "ou": "index.html"
+ },
+ {
+  "fr": "La terrasse de la Maison de Pierre",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Photos précédentes",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Photos suivantes",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Photos des deux maisons, à faire défiler",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Choisir une destination",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Choisir une ville",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Choisir un avis",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Sable & Pierre",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Comment réserver ?",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Deux possibilités. En direct sur ce site, avec 10 % de remise sur tout le séjour : choisissez vos dates dans le calendrier de la maison, indiquez vos coordonnées et réglez par carte sur la page de paiement sécurisée Stripe ; votre carte n'est débitée qu'au moment où nous confirmons votre séjour, en général sous 24 heures (voir les conditions de réservation). Ou bien sur Airbnb, aux conditions d'Airbnb : le bouton est sur la fiche de chaque maison.",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Le linge de maison est-il fourni ?",
+  "ou": "index.html"
+ },
+ {
+  "fr": "À quelle heure arrive-t-on et part-on ?",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Lacanau : arrivée à partir de 16 h, départ avant 10 h. Bordeaux : arrivée autonome et flexible grâce à une boîte à clé sécurisée, départ avant 12 h. Dans les deux maisons, vous pouvez déposer vos bagages en cas d'arrivée anticipée ou de départ tardif.",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Quand la piscine de Lacanau est-elle ouverte ?",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Peut-on venir avec un animal ?",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Où se gare-t-on ?",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Lacanau : une place privée gratuite, et des places gratuites dans la rue à 20 mètres. Bordeaux : pas de place sur place ; stationnement payant dans la rue ou dans un parking, et le tram à 4 minutes à pied pour se passer de voiture.",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Les maisons sont-elles climatisées ?",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Peut-on venir avec un bébé ?",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Quelle distance entre les deux maisons ?",
+  "ou": "index.html"
+ },
+ {
+  "fr": "La Maison du Lac — Lacanau",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Grande maison de famille avec piscine privée, au bord du lac de Lacanau (Le Moutchic), à 10 minutes de l'océan.",
+  "ou": "index.html"
+ },
+ {
+  "fr": "La Maison de Pierre — Bordeaux",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Maison de ville en pierre de taille récemment rénovée, à 10 minutes à pied de l'hypercentre de Bordeaux.",
+  "ou": "index.html"
+ },
+ {
+  "fr": "Location maison avec piscine à Lacanau pour 12 personnes, au bord du lac | Sable & Pierre",
+  "ou": "lacanau.html"
+ },
+ {
+  "fr": "Maison de vacances pour 12 personnes avec piscine privée à Lacanau (Le Moutchic) : 6 chambres, jardin, lac à 50 m, plages de l'océan à 10 min. Idéale en famille. Note 5,0/5. −10 % en réservant en direct.",
+  "ou": "lacanau.html"
+ },
+ {
+  "fr": "Piscine privée, jardin, le lac à 50 m et l'océan à 10 min. 6 chambres, 12 voyageurs.",
+  "ou": "lacanau.html"
+ },
+ {
+  "fr": "<small>00</small>Accueil",
+  "ou": "lacanau.html"
+ },
+ {
+  "fr": "<small>03</small>Disponibilités",
+  "ou": "lacanau.html"
+ },
+ {
+  "fr": "<small>04</small>Questions",
+  "ou": "lacanau.html"
+ },
+ {
+  "fr": "Grande maison au bord du lac, spacieuse et confortable. Maison de famille avec piscine privée au Moutchic, à 50 m du lac de Lacanau et à 10 min de l'océan.",
+  "ou": "lacanau.html"
+ },
+ {
+  "fr": "Wifi",
+  "ou": "lacanau.html"
+ },
+ {
+  "fr": "Stationnement gratuit",
+  "ou": "lacanau.html"
+ },
+ {
+  "fr": "Location maison à Bordeaux centre pour 8 personnes, 5 chambres | Sable & Pierre",
+  "ou": "bordeaux.html"
+ },
+ {
+  "fr": "Maison de ville en pierre de taille pour 8 personnes à Bordeaux : 5 chambres, terrasse, verrière, tram à 4 min et hypercentre à 10 min à pied. Idéale en famille ou entre amis. Note 4,88/5. −10 % en réservant en direct.",
+  "ou": "bordeaux.html"
+ },
+ {
+  "fr": "Pierre de taille, verrière, terrasse et l'hypercentre à 10 min à pied. 5 chambres, 8 voyageurs.",
+  "ou": "bordeaux.html"
+ },
+ {
+  "fr": "Maison de ville en pierre de taille récemment rénovée, baignée de lumière, au calme, à proximité directe de l'hypercentre de Bordeaux.",
+  "ou": "bordeaux.html"
+ },
+ {
+  "fr": "Terrasse",
+  "ou": "bordeaux.html"
+ },
+ {
+  "fr": "Conditions de réservation | Sable & Pierre",
+  "ou": "conditions.html"
+ },
+ {
+  "fr": "Réservation directe",
+  "ou": "conditions.html"
+ },
+ {
+  "fr": "Réservation et paiement",
+  "ou": "conditions.html"
+ },
+ {
+  "fr": "Vous choisissez vos dates et le nombre de voyageurs, puis vous payez par carte sur la page sécurisée de notre prestataire de paiement, Stripe. Votre carte n'est pas débitée immédiatement : le montant est réservé (empreinte bancaire), puis débité lorsque nous confirmons votre séjour, en général sous 24 heures. Si nous ne pouvons pas confirmer, le montant est libéré et rien n'est débité.",
+  "ou": "conditions.html"
+ },
+ {
+  "fr": "Le prix affiché comprend la location, le ménage et la taxe de séjour lorsqu'elle s'applique. Il n'y a aucun frais de service. <span id=\"remise\"></span>",
+  "ou": "conditions.html"
+ },
+ {
+  "fr": "Annulation",
+  "ou": "conditions.html"
+ },
+ {
+  "fr": "Pour annuler, écrivez-nous à l'adresse ci-dessous en indiquant votre numéro de réservation.",
+  "ou": "conditions.html"
+ },
+ {
+  "fr": "Le nombre de voyageurs ne peut pas dépasser celui indiqué lors de la réservation ni la capacité de la maison. Le règlement de chaque maison (horaires d'arrivée et de départ, animaux, fêtes, tabac, calme) est détaillé sur sa page et s'applique pendant tout le séjour. Le logement doit être rendu dans l'état où il a été trouvé.",
+  "ou": "conditions.html"
+ },
+ {
+  "fr": "Données personnelles",
+  "ou": "conditions.html"
+ },
+ {
+  "fr": "Vos coordonnées servent uniquement à gérer votre réservation. Le paiement est traité par Stripe : nous n'avons jamais accès à vos numéros de carte. Voir aussi les <a class=\"link\" href=\"mentions-legales.html\">mentions légales</a>.",
+  "ou": "conditions.html"
+ },
+ {
+  "fr": "e-mail",
+  "ou": "conditions.html"
+ },
+ {
+  "fr": "Retour à l'accueil",
+  "ou": "conditions.html"
+ },
+ {
+  "fr": "Les réservations faites sur ce site bénéficient d'une remise de",
+  "ou": "conditions.html"
+ },
+ {
+  "fr": "% sur la location et le ménage (la taxe de séjour, reversée à la commune, n'est pas remisée).",
+  "ou": "conditions.html"
+ },
+ {
+  "fr": "Caution (non prélevée, demandée à l'arrivée) —",
+  "ou": "conditions.html"
+ },
+ {
+  "fr": "Votre réservation | Sable & Pierre",
+  "ou": "reservation.html"
+ },
+ {
+  "fr": "Chargement de votre réservation…",
+  "ou": "reservation.html"
+ },
+ {
+  "fr": "Vacances en famille à Lacanau : activités, plages, quand venir et où dormir | Sable & Pierre",
+  "ou": "vacances-famille-lacanau.html"
+ },
+ {
+  "fr": "Le guide des vacances en famille à Lacanau : baignade au lac pour les petits, plages surveillées de l'océan, vélo, surf, météo mois par mois et location d'une grande maison avec piscine pour 12 personnes, à 50 m du lac.",
+  "ou": "vacances-famille-lacanau.html"
+ },
+ {
+  "fr": "Vacances en famille à Lacanau : le guide",
+  "ou": "vacances-famille-lacanau.html"
+ },
+ {
+  "fr": "Lac pour les petits, océan pour les grands, vélo pour tout le monde : nos conseils pour des vacances en famille réussies à Lacanau.",
+  "ou": "vacances-famille-lacanau.html"
+ },
+ {
+  "fr": "<a href=\"./\">Accueil</a> › <a href=\"lacanau.html\">La Maison du Lac</a> › <span>Vacances en famille à Lacanau</span>",
+  "ou": "vacances-famille-lacanau.html"
+ },
+ {
+  "fr": "Le guide · Lacanau",
+  "ou": "vacances-famille-lacanau.html"
+ },
+ {
+  "fr": "Vacances en famille à Lacanau",
+  "ou": "vacances-famille-lacanau.html"
+ },
+ {
+  "fr": "Un grand lac calme pour les petits, l'océan et ses vagues pour les grands, des pistes cyclables à travers les pins pour tout le monde : Lacanau est l'une des destinations familiales les plus complètes de la côte atlantique. Voici nos conseils, depuis notre maison de famille du Moutchic.",
+  "ou": "vacances-famille-lacanau.html"
+ },
+ {
+  "fr": "La Maison du Lac, au Moutchic : jardin et piscine privée, le lac à 50 mètres.",
+  "ou": "vacances-famille-lacanau.html"
+ },
+ {
+  "fr": "Pourquoi Lacanau plaît tant aux familles",
+  "ou": "vacances-famille-lacanau.html"
+ },
+ {
+  "fr": "Lacanau, sur la côte du Médoc, a la particularité de réunir deux plans d'eau très différents à quelques kilomètres l'un de l'autre.",
+  "ou": "vacances-famille-lacanau.html"
+ },
+ {
+  "fr": "<strong>Le lac de Lacanau</strong> : un grand lac d'eau douce bordé de pins, sans vagues ni courant. L'eau se réchauffe vite et les plages en pente douce sont parfaites pour les tout-petits. On y pratique aussi la voile, le paddle et le kayak.",
+  "ou": "vacances-famille-lacanau.html"
+ },
+ {
+  "fr": "<strong>Les plages de l'océan</strong>, à Lacanau-Océan : des kilomètres de sable fin, des plages surveillées en saison et des vagues réputées. Les adolescents y trouvent des écoles de surf ; les couchers de soleil sur l'Atlantique font l'unanimité.",
+  "ou": "vacances-famille-lacanau.html"
+ },
+ {
+  "fr": "<strong>La forêt de pins et les pistes cyclables</strong> : un réseau de pistes sécurisées relie le lac, la forêt et l'océan. Depuis le Moutchic, comptez une vingtaine de minutes à vélo pour rejoindre la plage.",
+  "ou": "vacances-famille-lacanau.html"
+ },
+ {
+  "fr": "Que faire à Lacanau avec des enfants ?",
+  "ou": "vacances-famille-lacanau.html"
+ },
+ {
+  "fr": "Avec les tout-petits",
+  "ou": "vacances-famille-lacanau.html"
+ },
+ {
+  "fr": "Privilégiez les plages du lac : l'eau y est calme et peu profonde près du bord, et l'ombre des pins n'est jamais loin pour la sieste ou le pique-nique. La <strong>plage du Moutchic</strong>, sur le lac, est surveillée en été et labellisée Handiplage (voir <a href=\"guide-plages-lacanau.html\">notre guide des plages de Lacanau</a>). Au Moutchic, quelques restaurants au bord de l'eau permettent de dîner face au lac sans prendre la voiture.",
+  "ou": "vacances-famille-lacanau.html"
+ },
+ {
+  "fr": "Avec les enfants et les adolescents",
+  "ou": "vacances-famille-lacanau.html"
+ },
+ {
+  "fr": "<strong>Initiation au surf ou au bodyboard</strong> avec une école de Lacanau-Océan : les cours se font en petits groupes, encadrés par des moniteurs diplômés.",
+  "ou": "vacances-famille-lacanau.html"
+ },
+ {
+  "fr": "<strong>Voile, paddle ou kayak sur le lac</strong>, plus faciles qu'en mer pour débuter.",
+  "ou": "vacances-famille-lacanau.html"
+ },
+ {
+  "fr": "<strong>Balades à vélo</strong> en famille, sur les pistes cyclables à travers la forêt.",
+  "ou": "vacances-famille-lacanau.html"
+ },
+ {
+  "fr": "<strong>Le golf</strong>, à 3 minutes en voiture de la maison, pour les amateurs.",
+  "ou": "vacances-famille-lacanau.html"
+ },
+ {
+  "fr": "Pour les parents",
+  "ou": "vacances-famille-lacanau.html"
+ },
+ {
+  "fr": "Les grands châteaux du Médoc (Margaux, Saint-Julien, Pauillac) sont à environ 45 minutes : beaucoup proposent des visites et dégustations sur rendez-vous. Et Bordeaux n'est qu'à une heure de route pour une journée en ville.",
+  "ou": "vacances-famille-lacanau.html"
+ },
+ {
+  "fr": "Baignade à l'océan : les bons réflexes",
+  "ou": "vacances-famille-lacanau.html"
+ },
+ {
+  "fr": "L'océan Atlantique est magnifique mais puissant. En famille, baignez-vous uniquement sur les <strong>plages surveillées</strong>, pendant les heures de surveillance et dans la zone délimitée par les drapeaux. Renseignez-vous auprès des sauveteurs sur les courants (les « baïnes ») et gardez toujours les enfants à portée de main. Pour les plus petits, le lac reste le choix le plus serein.",
+  "ou": "vacances-famille-lacanau.html"
+ },
+ {
+  "fr": "Quand partir à Lacanau en famille ?",
+  "ou": "vacances-famille-lacanau.html"
+ },
+ {
+  "fr": "Moyennes relevées entre 2015 et 2024 (source : Open-Meteo) :",
+  "ou": "vacances-famille-lacanau.html"
+ },
+ {
+  "fr": "Mois",
+  "ou": "vacances-famille-lacanau.html"
+ },
+ {
+  "fr": "Température l'après-midi",
+  "ou": "vacances-famille-lacanau.html"
+ },
+ {
+  "fr": "Eau de l'océan",
+  "ou": "vacances-famille-lacanau.html"
+ },
+ {
+  "fr": "Jours de pluie",
+  "ou": "vacances-famille-lacanau.html"
+ },
+ {
+  "fr": "Mai",
+  "ou": "vacances-famille-lacanau.html"
+ },
+ {
+  "fr": "Juin",
+  "ou": "vacances-famille-lacanau.html"
+ },
+ {
+  "fr": "Juillet",
+  "ou": "vacances-famille-lacanau.html"
+ },
+ {
+  "fr": "Août",
+  "ou": "vacances-famille-lacanau.html"
+ },
+ {
+  "fr": "Septembre",
+  "ou": "vacances-famille-lacanau.html"
+ },
+ {
+  "fr": "Octobre",
+  "ou": "vacances-famille-lacanau.html"
+ },
+ {
+  "fr": "<strong>Juillet et août</strong> sont les mois les plus chauds et les plus animés. <strong>Juin et septembre</strong> sont souvent le meilleur compromis en famille (avec des enfants pas encore scolarisés) : moins de monde, des journées douces et une eau déjà bonne. Les vacances de printemps et de la Toussaint conviennent bien aux balades à vélo et en forêt.",
+  "ou": "vacances-famille-lacanau.html"
+ },
+ {
+  "fr": "Où loger à Lacanau en famille ?",
+  "ou": "vacances-famille-lacanau.html"
+ },
+ {
+  "fr": "Pour une grande famille ou plusieurs familles réunies, une maison entière change tout : chacun a sa chambre, on cuisine ensemble et les enfants profitent du jardin. C'est l'esprit de <a href=\"lacanau.html\">la Maison du Lac</a>, notre maison de famille au Moutchic :",
+  "ou": "vacances-famille-lacanau.html"
+ },
+ {
+  "fr": "<strong>Jusqu'à 12 personnes</strong> : 6 chambres (dont 2 de plain-pied avec une salle de bain), 2 salles de bain et 4 WC, bien pratique quand on est nombreux.",
+  "ou": "vacances-famille-lacanau.html"
+ },
+ {
+  "fr": "<strong>Piscine privée</strong> d'avril à octobre, jardin, patio et espace repas en plein air.",
+  "ou": "vacances-famille-lacanau.html"
+ },
+ {
+  "fr": "<strong>Le lac à 50 mètres</strong>, à pied, et les plages de l'océan à 10 minutes en voiture (20 minutes à vélo).",
+  "ou": "vacances-famille-lacanau.html"
+ },
+ {
+  "fr": "Cuisine entièrement équipée, lave-linge, livres et jeux de société, wifi, une place de stationnement privée.",
+  "ou": "vacances-famille-lacanau.html"
+ },
+ {
+  "fr": "<strong>Note de 5,0 sur 5</strong> sur 13 avis ; « famille » est l'un des mots qui reviennent le plus souvent dans les commentaires.",
+  "ou": "vacances-famille-lacanau.html"
+ },
+ {
+  "fr": "<strong>Important pour les parents :</strong> la piscine n'a ni clôture ni verrou, et le lac est tout proche. La surveillance des enfants par un adulte est indispensable à tout moment. La maison comprend des escaliers.",
+  "ou": "vacances-famille-lacanau.html"
+ },
+ {
+  "fr": "Voir les disponibilités de la Maison du Lac",
+  "ou": "vacances-famille-lacanau.html"
+ },
+ {
+  "fr": "−10 % sur tout le séjour en réservant directement sur ce site.",
+  "ou": "vacances-famille-lacanau.html"
+ },
+ {
+  "fr": "Venir à Lacanau",
+  "ou": "vacances-famille-lacanau.html"
+ },
+ {
+  "fr": "Lacanau est à <strong>environ une heure de route de Bordeaux</strong>. Pour un séjour en train ou en avion, la gare de Bordeaux-Saint-Jean et l'aéroport de Bordeaux-Mérignac sont les points d'arrivée les plus pratiques ; une voiture reste ensuite le moyen le plus simple pour profiter du lac, de l'océan et des alentours.",
+  "ou": "vacances-famille-lacanau.html"
+ },
+ {
+  "fr": "Envie de combiner mer et ville ? Notre seconde maison, <a href=\"bordeaux.html\">la Maison de Pierre à Bordeaux</a> (8 personnes), est à une heure de là. Voir aussi notre <a href=\"vacances-famille-bordeaux.html\">guide de Bordeaux en famille</a> et notre itinéraire <a href=\"guide-semaine-gironde-famille.html\">une semaine en Gironde en famille</a>.",
+  "ou": "vacances-famille-lacanau.html"
+ },
+ {
+  "fr": "Questions fréquentes",
+  "ou": "vacances-famille-lacanau.html"
+ },
+ {
+  "fr": "Lacanau est-il adapté aux vacances avec de jeunes enfants ?<i aria-hidden=\"true\"></i>",
+  "ou": "vacances-famille-lacanau.html"
+ },
+ {
+  "fr": "Oui. Le lac de Lacanau, en eau douce et sans vagues, est idéal pour la baignade des petits, tandis que les plages de l'océan, surveillées en saison, plaisent aux plus grands. Un réseau de pistes cyclables relie le lac, la forêt et l'océan.",
+  "ou": "vacances-famille-lacanau.html"
+ },
+ {
+  "fr": "Quand partir à Lacanau en famille ?<i aria-hidden=\"true\"></i>",
+  "ou": "vacances-famille-lacanau.html"
+ },
+ {
+  "fr": "Juillet et août sont les mois les plus chauds (environ 25 °C l'après-midi et une eau de l'océan autour de 20 à 22 °C). Juin et septembre sont plus calmes, avec des journées encore douces (environ 23 °C) et une eau autour de 19 à 21 °C.",
+  "ou": "vacances-famille-lacanau.html"
+ },
+ {
+  "fr": "Où loger à Lacanau avec une grande famille ?<i aria-hidden=\"true\"></i>",
+  "ou": "vacances-famille-lacanau.html"
+ },
+ {
+  "fr": "La Maison du Lac accueille jusqu'à 12 personnes : 6 chambres, 4 WC, un jardin et une piscine privée (d'avril à octobre), au Moutchic, à 50 m du lac et à 10 minutes en voiture des plages de l'océan.",
+  "ou": "vacances-famille-lacanau.html"
+ },
+ {
+  "fr": "La piscine de la Maison du Lac est-elle sécurisée pour les enfants ?<i aria-hidden=\"true\"></i>",
+  "ou": "vacances-famille-lacanau.html"
+ },
+ {
+  "fr": "La piscine n'a ni clôture ni verrou : la surveillance des enfants par un adulte est indispensable à tout moment.",
+  "ou": "vacances-famille-lacanau.html"
+ },
+ {
+  "fr": "Combien de temps faut-il pour aller de Bordeaux à Lacanau ?<i aria-hidden=\"true\"></i>",
+  "ou": "vacances-famille-lacanau.html"
+ },
+ {
+  "fr": "Environ une heure de route depuis Bordeaux, selon la circulation.",
+  "ou": "vacances-famille-lacanau.html"
+ },
+ {
+  "fr": "Découvrir la Maison du Lac",
+  "ou": "vacances-famille-lacanau.html"
+ },
+ {
+  "fr": "© 2026 Sable &amp; Pierre",
+  "ou": "vacances-famille-lacanau.html"
+ },
+ {
+  "fr": "Fil d'Ariane",
+  "ou": "vacances-famille-lacanau.html"
+ },
+ {
+  "fr": "La Maison du Lac à Lacanau : la maison, le jardin et la piscine",
+  "ou": "vacances-famille-lacanau.html"
+ },
+ {
+  "fr": "La piscine privée de la Maison du Lac",
+  "ou": "vacances-famille-lacanau.html"
+ },
+ {
+  "fr": "Le ponton, sur le lac de Lacanau",
+  "ou": "vacances-famille-lacanau.html"
+ },
+ {
+  "fr": "Accueil",
+  "ou": "vacances-famille-lacanau.html"
+ },
+ {
+  "fr": "Lacanau est-il adapté aux vacances avec de jeunes enfants ?",
+  "ou": "vacances-famille-lacanau.html"
+ },
+ {
+  "fr": "Où loger à Lacanau avec une grande famille ?",
+  "ou": "vacances-famille-lacanau.html"
+ },
+ {
+  "fr": "La piscine de la Maison du Lac est-elle sécurisée pour les enfants ?",
+  "ou": "vacances-famille-lacanau.html"
+ },
+ {
+  "fr": "Combien de temps faut-il pour aller de Bordeaux à Lacanau ?",
+  "ou": "vacances-famille-lacanau.html"
+ },
+ {
+  "fr": "Bordeaux en famille : que faire avec des enfants, quand venir et où loger | Sable & Pierre",
+  "ou": "vacances-famille-bordeaux.html"
+ },
+ {
+  "fr": "Le guide de Bordeaux en famille : Miroir d'eau, quais, Cap Sciences, Muséum, Bassins des Lumières, escapades à Arcachon et Saint-Émilion, météo mois par mois et location d'une maison pour 8 personnes à 10 min à pied du centre.",
+  "ou": "vacances-famille-bordeaux.html"
+ },
+ {
+  "fr": "Bordeaux en famille : le guide",
+  "ou": "vacances-famille-bordeaux.html"
+ },
+ {
+  "fr": "Que faire à Bordeaux avec des enfants, quand venir et où loger à plusieurs : nos conseils depuis notre maison du centre.",
+  "ou": "vacances-famille-bordeaux.html"
+ },
+ {
+  "fr": "<a href=\"./\">Accueil</a> › <a href=\"bordeaux.html\">La Maison de Pierre</a> › <span>Bordeaux en famille</span>",
+  "ou": "vacances-famille-bordeaux.html"
+ },
+ {
+  "fr": "Le guide · Bordeaux",
+  "ou": "vacances-famille-bordeaux.html"
+ },
+ {
+  "fr": "Des quais où l'on roule sans voitures, un miroir d'eau géant où les enfants courent pieds nus, des musées qui se touchent et se manipulent : Bordeaux est une grande ville à taille de famille. Nos conseils, depuis notre maison du centre.",
+  "ou": "vacances-famille-bordeaux.html"
+ },
+ {
+  "fr": "La Maison de Pierre : la grande pièce de vie sous verrière, à l'étage.",
+  "ou": "vacances-famille-bordeaux.html"
+ },
+ {
+  "fr": "Que faire à Bordeaux avec des enfants ?",
+  "ou": "vacances-famille-bordeaux.html"
+ },
+ {
+  "fr": "<strong>Le Miroir d'eau, place de la Bourse</strong> : face à la façade la plus photographiée de Bordeaux, une immense dalle recouverte de quelques centimètres d'eau, avec des brumes rafraîchissantes. Aux beaux jours, les enfants adorent y jouer.",
+  "ou": "vacances-famille-bordeaux.html"
+ },
+ {
+  "fr": "<strong>Les quais de la Garonne</strong> : plusieurs kilomètres de promenade sans voitures, parfaits pour le vélo, la trottinette ou les rollers, avec des aires de jeux en chemin.",
+  "ou": "vacances-famille-bordeaux.html"
+ },
+ {
+  "fr": "<strong>Cap Sciences</strong>, sur les quais : un centre de sciences avec des expositions interactives, pensées pour être manipulées.",
+  "ou": "vacances-famille-bordeaux.html"
+ },
+ {
+  "fr": "<strong>Le Muséum de Bordeaux – sciences et nature</strong>, au bord du Jardin public : animaux naturalisés, collections spectaculaires et un espace dédié aux plus jeunes.",
+  "ou": "vacances-famille-bordeaux.html"
+ },
+ {
+  "fr": "<strong>Le Jardin public</strong> : un grand parc au cœur de la ville, ses pelouses, ses canards et ses aires de jeux.",
+  "ou": "vacances-famille-bordeaux.html"
+ },
+ {
+  "fr": "<strong>Les Bassins des Lumières</strong> : des expositions d'art numérique immersives, projetées dans l'ancienne base sous-marine.",
+  "ou": "vacances-famille-bordeaux.html"
+ },
+ {
+  "fr": "<strong>La Cité du Vin</strong>, plutôt pour les parents, avec un belvédère qui offre une belle vue sur la Garonne.",
+  "ou": "vacances-famille-bordeaux.html"
+ },
+ {
+  "fr": "Depuis la maison, l'hypercentre (rue Sainte-Catherine, place de la Comédie, quartier Saint-Pierre) est à <strong>10 minutes à pied</strong>, et le tram et le bus à <strong>4 minutes</strong> pour rejoindre les quais, les Chartrons ou la gare Saint-Jean.",
+  "ou": "vacances-famille-bordeaux.html"
+ },
+ {
+  "fr": "Les escapades d'une journée",
+  "ou": "vacances-famille-bordeaux.html"
+ },
+ {
+  "fr": "<strong>Arcachon et la dune du Pilat</strong>, à environ une heure : la plus haute dune d'Europe, le bassin d'Arcachon et ses plages calmes, idéales avec des enfants.",
+  "ou": "vacances-famille-bordeaux.html"
+ },
+ {
+  "fr": "<strong>Saint-Émilion</strong>, à environ 45 minutes : un village médiéval classé à l'Unesco au milieu des vignes, accessible en voiture ou en train depuis la gare Saint-Jean.",
+  "ou": "vacances-famille-bordeaux.html"
+ },
+ {
+  "fr": "<strong>Lacanau</strong>, à environ une heure : le lac pour les petits, l'océan pour les grands. Et notre <a href=\"lacanau.html\">Maison du Lac</a> pour y prolonger le séjour (voir notre <a href=\"vacances-famille-lacanau.html\">guide de Lacanau en famille</a> et notre itinéraire <a href=\"guide-semaine-gironde-famille.html\">une semaine en Gironde en famille</a>).",
+  "ou": "vacances-famille-bordeaux.html"
+ },
+ {
+  "fr": "Quand visiter Bordeaux en famille ?",
+  "ou": "vacances-famille-bordeaux.html"
+ },
+ {
+  "fr": "Température le matin",
+  "ou": "vacances-famille-bordeaux.html"
+ },
+ {
+  "fr": "Avril",
+  "ou": "vacances-famille-bordeaux.html"
+ },
+ {
+  "fr": "Le <strong>printemps</strong> et <strong>septembre</strong> sont idéaux pour marcher et visiter. En <strong>juillet et août</strong>, il fait chaud : profitez des matinées pour les visites, du Miroir d'eau l'après-midi, et pensez à une journée à l'océan.",
+  "ou": "vacances-famille-bordeaux.html"
+ },
+ {
+  "fr": "Où loger à Bordeaux en famille ?",
+  "ou": "vacances-famille-bordeaux.html"
+ },
+ {
+  "fr": "À huit, une chambre d'hôtel par famille revient vite cher et sépare tout le monde. <a href=\"bordeaux.html\">La Maison de Pierre</a>, notre maison de ville en pierre de taille récemment rénovée, a été pensée pour y vivre à plusieurs :",
+  "ou": "vacances-famille-bordeaux.html"
+ },
+ {
+  "fr": "<strong>Jusqu'à 8 personnes</strong> dans <strong>5 chambres</strong> avec lit double, 1 salle de bain et 1 salle d'eau.",
+  "ou": "vacances-famille-bordeaux.html"
+ },
+ {
+  "fr": "Une <strong>grande pièce de vie sous verrière</strong> et une <strong>terrasse</strong> à l'étage, un patio et un jardin.",
+  "ou": "vacances-famille-bordeaux.html"
+ },
+ {
+  "fr": "Livres et jouets pour les enfants de 5 à 10 ans, jeux de société, TV 83 pouces avec Netflix.",
+  "ou": "vacances-famille-bordeaux.html"
+ },
+ {
+  "fr": "Cuisine équipée, lave-linge et sèche-linge, wifi, arrivée autonome à l'heure qui vous convient.",
+  "ou": "vacances-famille-bordeaux.html"
+ },
+ {
+  "fr": "<strong>Note de 4,88 sur 5</strong> sur 41 avis.",
+  "ou": "vacances-famille-bordeaux.html"
+ },
+ {
+  "fr": "<strong>Bon à savoir :</strong> la maison ne convient pas aux bébés de moins de 2 ans (elle comprend des escaliers). Pas de stationnement sur place : stationnement payant dans la rue et parkings payants à proximité, mais le tram vous dispense de la voiture. Pas de climatisation.",
+  "ou": "vacances-famille-bordeaux.html"
+ },
+ {
+  "fr": "Voir les disponibilités de la Maison de Pierre",
+  "ou": "vacances-famille-bordeaux.html"
+ },
+ {
+  "fr": "Que faire à Bordeaux avec des enfants ?<i aria-hidden=\"true\"></i>",
+  "ou": "vacances-famille-bordeaux.html"
+ },
+ {
+  "fr": "Jouer dans le Miroir d'eau face à la place de la Bourse aux beaux jours, se promener à vélo ou à trottinette le long des quais, découvrir les expositions interactives de Cap Sciences, le Muséum de Bordeaux – sciences et nature, les Bassins des Lumières, et profiter des pelouses et aires de jeux du Jardin public.",
+  "ou": "vacances-famille-bordeaux.html"
+ },
+ {
+  "fr": "Quand visiter Bordeaux en famille ?<i aria-hidden=\"true\"></i>",
+  "ou": "vacances-famille-bordeaux.html"
+ },
+ {
+  "fr": "Le printemps (avril à juin) et septembre offrent des journées agréables, entre 18 et 25 °C l'après-midi. Juillet et août sont les mois les plus chauds, autour de 27 à 28 °C.",
+  "ou": "vacances-famille-bordeaux.html"
+ },
+ {
+  "fr": "Où loger à Bordeaux avec une famille nombreuse ?<i aria-hidden=\"true\"></i>",
+  "ou": "vacances-famille-bordeaux.html"
+ },
+ {
+  "fr": "La Maison de Pierre accueille jusqu'à 8 personnes dans 5 chambres, avec une grande pièce de vie sous verrière et une terrasse, à 10 minutes à pied de l'hypercentre et à 4 minutes du tram.",
+  "ou": "vacances-famille-bordeaux.html"
+ },
+ {
+  "fr": "La Maison de Pierre convient-elle aux bébés ?<i aria-hidden=\"true\"></i>",
+  "ou": "vacances-famille-bordeaux.html"
+ },
+ {
+  "fr": "Non, elle ne convient pas aux bébés de moins de 2 ans (la maison comprend des escaliers). Elle est en revanche équipée de livres et de jouets pour les enfants de 5 à 10 ans.",
+  "ou": "vacances-famille-bordeaux.html"
+ },
+ {
+  "fr": "Faut-il une voiture pour visiter Bordeaux ?<i aria-hidden=\"true\"></i>",
+  "ou": "vacances-famille-bordeaux.html"
+ },
+ {
+  "fr": "Non : le centre se visite à pied et en tram. La Maison de Pierre n'a pas de stationnement sur place (stationnement payant dans la rue et parkings payants à proximité).",
+  "ou": "vacances-famille-bordeaux.html"
+ },
+ {
+  "fr": "Découvrir la Maison de Pierre",
+  "ou": "vacances-famille-bordeaux.html"
+ },
+ {
+  "fr": "La Maison de Pierre à Bordeaux : la pièce de vie sous verrière",
+  "ou": "vacances-famille-bordeaux.html"
+ },
+ {
+  "fr": "La verrière de la Maison de Pierre, le soir",
+  "ou": "vacances-famille-bordeaux.html"
+ },
+ {
+  "fr": "Où loger à Bordeaux avec une famille nombreuse ?",
+  "ou": "vacances-famille-bordeaux.html"
+ },
+ {
+  "fr": "La Maison de Pierre convient-elle aux bébés ?",
+  "ou": "vacances-famille-bordeaux.html"
+ },
+ {
+  "fr": "Faut-il une voiture pour visiter Bordeaux ?",
+  "ou": "vacances-famille-bordeaux.html"
+ },
+ {
+  "fr": "Plages de Lacanau en famille : lac ou océan, plages surveillées et conseils | Sable & Pierre",
+  "ou": "guide-plages-lacanau.html"
+ },
+ {
+  "fr": "Quelle plage choisir à Lacanau avec des enfants ? Les plages du lac (Moutchic, Grande Escoure) et de l'océan (Centrale, Nord, Sud, Super-Sud), la surveillance en été, les baïnes et nos conseils de parents.",
+  "ou": "guide-plages-lacanau.html"
+ },
+ {
+  "fr": "Les plages de Lacanau en famille",
+  "ou": "guide-plages-lacanau.html"
+ },
+ {
+  "fr": "Lac ou océan ? Les plages surveillées de Lacanau et nos conseils pour se baigner en famille.",
+  "ou": "guide-plages-lacanau.html"
+ },
+ {
+  "fr": "<a href=\"./\">Accueil</a> › <a href=\"vacances-famille-lacanau.html\">Vacances en famille à Lacanau</a> › <span>Les plages</span>",
+  "ou": "guide-plages-lacanau.html"
+ },
+ {
+  "fr": "À Lacanau, on a le choix entre deux mondes : les plages calmes d'un grand lac d'eau douce, et les plages océanes de l'Atlantique. Voici comment choisir, selon l'âge des enfants, et les règles à connaître pour se baigner sereinement.",
+  "ou": "guide-plages-lacanau.html"
+ },
+ {
+  "fr": "Le lac ou l'océan ?",
+  "ou": "guide-plages-lacanau.html"
+ },
+ {
+  "fr": "Le lac",
+  "ou": "guide-plages-lacanau.html"
+ },
+ {
+  "fr": "Eau",
+  "ou": "guide-plages-lacanau.html"
+ },
+ {
+  "fr": "Douce, sans vagues ni courant de marée",
+  "ou": "guide-plages-lacanau.html"
+ },
+ {
+  "fr": "Salée, vagues et courants",
+  "ou": "guide-plages-lacanau.html"
+ },
+ {
+  "fr": "Idéal pour",
+  "ou": "guide-plages-lacanau.html"
+ },
+ {
+  "fr": "Tout-petits, premières baignades, paddle et kayak",
+  "ou": "guide-plages-lacanau.html"
+ },
+ {
+  "fr": "Enfants nageurs et adolescents, bodyboard, surf",
+  "ou": "guide-plages-lacanau.html"
+ },
+ {
+  "fr": "Ambiance",
+  "ou": "guide-plages-lacanau.html"
+ },
+ {
+  "fr": "Ombre des pins, pique-nique",
+  "ou": "guide-plages-lacanau.html"
+ },
+ {
+  "fr": "Grandes plages de sable, couchers de soleil",
+  "ou": "guide-plages-lacanau.html"
+ },
+ {
+  "fr": "Les plages du lac",
+  "ou": "guide-plages-lacanau.html"
+ },
+ {
+  "fr": "Le lac de Lacanau, l'un des grands lacs d'eau douce de la côte médocaine (environ 2 000 hectares), est bordé de plages de sable et de pinèdes.",
+  "ou": "guide-plages-lacanau.html"
+ },
+ {
+  "fr": "<strong>La plage du Moutchic</strong> : surveillée en été et labellisée <strong>Handiplage</strong>. Abritée, avec une eau qui se réchauffe vite, c'est la plage familiale par excellence. Elle se trouve dans le quartier du Moutchic, celui de notre <a href=\"lacanau.html\">Maison du Lac</a>.",
+  "ou": "guide-plages-lacanau.html"
+ },
+ {
+  "fr": "<strong>La plage de la Grande Escoure</strong> : également surveillée en saison, avec un poste de secours. Elle est proche de la route : gardez les enfants à l'œil en arrivant et en repartant.",
+  "ou": "guide-plages-lacanau.html"
+ },
+ {
+  "fr": "Sur le lac, on pratique aussi la voile, le paddle et le kayak, plus faciles qu'en mer pour débuter.",
+  "ou": "guide-plages-lacanau.html"
+ },
+ {
+  "fr": "Les plages de l'océan, à Lacanau-Océan",
+  "ou": "guide-plages-lacanau.html"
+ },
+ {
+  "fr": "À une dizaine de minutes en voiture du lac (une vingtaine à vélo par les pistes cyclables), Lacanau-Océan compte plusieurs plages surveillées en saison :",
+  "ou": "guide-plages-lacanau.html"
+ },
+ {
+  "fr": "<strong>La plage Centrale</strong>, au cœur de la station, près des commerces et des restaurants.",
+  "ou": "guide-plages-lacanau.html"
+ },
+ {
+  "fr": "<strong>La plage Nord</strong>, plus étendue, vers Carcans.",
+  "ou": "guide-plages-lacanau.html"
+ },
+ {
+  "fr": "<strong>La plage Sud</strong>, labellisée Handiplage, avec des sanitaires en haut de la dune.",
+  "ou": "guide-plages-lacanau.html"
+ },
+ {
+  "fr": "<strong>La plage Super-Sud</strong>, plus sauvage, surveillée elle aussi en été.",
+  "ou": "guide-plages-lacanau.html"
+ },
+ {
+  "fr": "La surveillance a lieu surtout <strong>en juillet et août</strong> ; les dates et horaires changent chaque année et peuvent être plus courts sur les plages éloignées du centre. Vérifiez toujours le panneau à l'entrée de la plage.",
+  "ou": "guide-plages-lacanau.html"
+ },
+ {
+  "fr": "Se baigner à l'océan avec des enfants : les règles d'or",
+  "ou": "guide-plages-lacanau.html"
+ },
+ {
+  "fr": "<strong>Uniquement sur une plage surveillée</strong>, pendant les horaires de surveillance, et <strong>dans la zone délimitée par les drapeaux</strong> (rouge et jaune) posés par les sauveteurs.",
+  "ou": "guide-plages-lacanau.html"
+ },
+ {
+  "fr": "<strong>Regardez la couleur du drapeau</strong> : vert, baignade surveillée sans danger particulier ; jaune, baignade dangereuse mais surveillée ; rouge, baignade interdite.",
+  "ou": "guide-plages-lacanau.html"
+ },
+ {
+  "fr": "<strong>Méfiez-vous des baïnes</strong> : ces cuvettes de sable parallèles à la plage se vident à marée descendante en créant un courant vers le large. Si vous êtes emporté, ne nagez pas contre le courant : laissez-vous porter, faites signe, puis revenez par le côté.",
+  "ou": "guide-plages-lacanau.html"
+ },
+ {
+  "fr": "<strong>Gardez les enfants à portée de main</strong>, même avec des brassards, et demandez conseil aux sauveteurs à votre arrivée.",
+  "ou": "guide-plages-lacanau.html"
+ },
+ {
+  "fr": "<strong>Notre conseil :</strong> le matin au lac avec les petits, l'après-midi à l'océan pour les plus grands, et le coucher de soleil sur la plage Centrale. Avec des enfants qui ne nagent pas encore, le lac reste le choix le plus serein.",
+  "ou": "guide-plages-lacanau.html"
+ },
+ {
+  "fr": "Où loger pour profiter des deux ?",
+  "ou": "guide-plages-lacanau.html"
+ },
+ {
+  "fr": "Le quartier du Moutchic, côté lac, permet d'aller à la plage du lac à pied et à l'océan en dix minutes. C'est là que se trouve <a href=\"lacanau.html\">la Maison du Lac</a> : maison de famille pour 12 personnes, 6 chambres, piscine privée d'avril à octobre (sans clôture : surveillance des enfants indispensable), le lac à 50 mètres.",
+  "ou": "guide-plages-lacanau.html"
+ },
+ {
+  "fr": "À lire aussi : <a href=\"vacances-famille-lacanau.html\">notre guide des vacances en famille à Lacanau</a> et <a href=\"guide-semaine-gironde-famille.html\">une semaine en Gironde en famille, entre Bordeaux et Lacanau</a>.",
+  "ou": "guide-plages-lacanau.html"
+ },
+ {
+  "fr": "Quelle plage de Lacanau choisir avec de jeunes enfants ?<i aria-hidden=\"true\"></i>",
+  "ou": "guide-plages-lacanau.html"
+ },
+ {
+  "fr": "Les plages du lac, en eau douce et sans vagues. La plage du Moutchic, sur le lac, est surveillée en été et labellisée Handiplage.",
+  "ou": "guide-plages-lacanau.html"
+ },
+ {
+  "fr": "Les plages de Lacanau-Océan sont-elles surveillées ?<i aria-hidden=\"true\"></i>",
+  "ou": "guide-plages-lacanau.html"
+ },
+ {
+  "fr": "Oui, en saison (principalement en juillet et août) : la plage Centrale, la plage Nord, la plage Sud et la plage Super-Sud. Les dates et horaires changent chaque année : vérifiez les panneaux à l'entrée de la plage.",
+  "ou": "guide-plages-lacanau.html"
+ },
+ {
+  "fr": "Qu'est-ce qu'une baïne ?<i aria-hidden=\"true\"></i>",
+  "ou": "guide-plages-lacanau.html"
+ },
+ {
+  "fr": "Une cuvette dans le sable, parallèle à la plage, qui se remplit à marée montante et se vide à marée descendante en créant un courant vers le large. Baignez-vous uniquement dans la zone surveillée, entre les drapeaux.",
+  "ou": "guide-plages-lacanau.html"
+ },
+ {
+  "fr": "Informations données à titre indicatif : renseignez-vous auprès de l'office de tourisme Médoc Atlantique ou de la mairie de Lacanau pour les dates et horaires de surveillance de l'année.",
+  "ou": "guide-plages-lacanau.html"
+ },
+ {
+  "fr": "Quelle plage de Lacanau choisir avec de jeunes enfants ?",
+  "ou": "guide-plages-lacanau.html"
+ },
+ {
+  "fr": "Les plages de Lacanau-Océan sont-elles surveillées ?",
+  "ou": "guide-plages-lacanau.html"
+ },
+ {
+  "fr": "Qu'est-ce qu'une baïne ?",
+  "ou": "guide-plages-lacanau.html"
+ },
+ {
+  "fr": "Une semaine en Gironde en famille : Bordeaux et Lacanau, l'itinéraire jour par jour | Sable & Pierre",
+  "ou": "guide-semaine-gironde-famille.html"
+ },
+ {
+  "fr": "Notre itinéraire pour une semaine de vacances en famille en Gironde : trois jours à Bordeaux (Miroir d'eau, quais, musées), puis quatre jours à Lacanau entre lac, océan et pistes cyclables. Où loger, quand partir, combien de temps de route.",
+  "ou": "guide-semaine-gironde-famille.html"
+ },
+ {
+  "fr": "Une semaine en Gironde en famille : Bordeaux et Lacanau",
+  "ou": "guide-semaine-gironde-famille.html"
+ },
+ {
+  "fr": "La ville puis l'océan : notre itinéraire jour par jour pour une semaine en famille en Gironde.",
+  "ou": "guide-semaine-gironde-famille.html"
+ },
+ {
+  "fr": "<a href=\"./\">Accueil</a> › <span>Une semaine en Gironde en famille</span>",
+  "ou": "guide-semaine-gironde-famille.html"
+ },
+ {
+  "fr": "Le guide · Itinéraire",
+  "ou": "guide-semaine-gironde-famille.html"
+ },
+ {
+  "fr": "Une semaine en Gironde en famille",
+  "ou": "guide-semaine-gironde-famille.html"
+ },
+ {
+  "fr": "La ville puis l'océan : en une semaine, la Gironde offre aux familles le meilleur des deux mondes. Trois jours à Bordeaux pour la pierre blonde, les quais et les musées ; quatre jours à Lacanau pour le lac, les vagues et les balades à vélo. Voici notre itinéraire, jour par jour.",
+  "ou": "guide-semaine-gironde-famille.html"
+ },
+ {
+  "fr": "Jours 1 à 3 : Bordeaux",
+  "ou": "guide-semaine-gironde-famille.html"
+ },
+ {
+  "fr": "Jour 1 · Les quais et le Miroir d'eau",
+  "ou": "guide-semaine-gironde-famille.html"
+ },
+ {
+  "fr": "Installation, puis direction les quais de la Garonne, à pied ou en tram. Les enfants courent dans le Miroir d'eau face à la place de la Bourse (aux beaux jours), avant une balade à vélo ou à trottinette le long du fleuve, sans voitures.",
+  "ou": "guide-semaine-gironde-famille.html"
+ },
+ {
+  "fr": "Jour 2 · Sciences, nature et lumières",
+  "ou": "guide-semaine-gironde-famille.html"
+ },
+ {
+  "fr": "Le matin, Cap Sciences et ses expositions interactives, ou le Muséum de Bordeaux – sciences et nature et le Jardin public juste à côté. L'après-midi, les expositions immersives des Bassins des Lumières, dans l'ancienne base sous-marine. Le soir, dîner dans le quartier Saint-Pierre.",
+  "ou": "guide-semaine-gironde-famille.html"
+ },
+ {
+  "fr": "Jour 3 · Une escapade au choix",
+  "ou": "guide-semaine-gironde-famille.html"
+ },
+ {
+  "fr": "<strong>La dune du Pilat et le bassin d'Arcachon</strong> (environ une heure) : la plus haute dune d'Europe, puis la baignade dans les eaux calmes du bassin.",
+  "ou": "guide-semaine-gironde-famille.html"
+ },
+ {
+  "fr": "<strong>Saint-Émilion</strong> (environ 45 minutes) : village médiéval classé à l'Unesco, au milieu des vignes.",
+  "ou": "guide-semaine-gironde-famille.html"
+ },
+ {
+  "fr": "<strong>Où loger :</strong> <a href=\"bordeaux.html\">la Maison de Pierre</a>, maison de ville en pierre de taille pour 8 personnes (5 chambres), à 10 minutes à pied de l'hypercentre et à 4 minutes du tram. Elle ne convient pas aux bébés de moins de 2 ans. Plus d'idées dans notre <a href=\"vacances-famille-bordeaux.html\">guide de Bordeaux en famille</a>.",
+  "ou": "guide-semaine-gironde-famille.html"
+ },
+ {
+  "fr": "Trajet : Bordeaux → Lacanau (environ 1 h)",
+  "ou": "guide-semaine-gironde-famille.html"
+ },
+ {
+  "fr": "Une petite heure de route à travers les pins. Si vous avez le temps, un détour par la route des grands vins du Médoc (Margaux, Saint-Julien, Pauillac) se fait sur rendez-vous dans les châteaux.",
+  "ou": "guide-semaine-gironde-famille.html"
+ },
+ {
+  "fr": "Jours 4 à 7 : Lacanau",
+  "ou": "guide-semaine-gironde-famille.html"
+ },
+ {
+  "fr": "Jour 4 · Le lac",
+  "ou": "guide-semaine-gironde-famille.html"
+ },
+ {
+  "fr": "Arrivée au Moutchic, côté lac. Première baignade à la plage du Moutchic, sur le lac, surveillée en été : eau douce, pas de vagues, parfaite pour les petits. Fin de journée sur le ponton, au bord de l'eau.",
+  "ou": "guide-semaine-gironde-famille.html"
+ },
+ {
+  "fr": "Jour 5 · L'océan",
+  "ou": "guide-semaine-gironde-famille.html"
+ },
+ {
+  "fr": "Direction Lacanau-Océan (10 minutes en voiture, une vingtaine à vélo) : baignade sur une plage surveillée, entre les drapeaux, et pourquoi pas une première leçon de surf ou de bodyboard en école pour les plus grands. Voir notre <a href=\"guide-plages-lacanau.html\">guide des plages de Lacanau</a>.",
+  "ou": "guide-semaine-gironde-famille.html"
+ },
+ {
+  "fr": "Jour 6 · Vélo et paddle",
+  "ou": "guide-semaine-gironde-famille.html"
+ },
+ {
+  "fr": "Balade à vélo sur les pistes cyclables qui traversent la forêt de pins, puis paddle ou kayak sur le lac l'après-midi. Les amateurs peuvent faire un parcours de golf, à 3 minutes de la maison.",
+  "ou": "guide-semaine-gironde-famille.html"
+ },
+ {
+  "fr": "Jour 7 · Farniente",
+  "ou": "guide-semaine-gironde-famille.html"
+ },
+ {
+  "fr": "Une dernière journée entre la piscine, le jardin et le lac, avant de repartir par Bordeaux (gare Saint-Jean ou aéroport de Mérignac).",
+  "ou": "guide-semaine-gironde-famille.html"
+ },
+ {
+  "fr": "<strong>Où loger :</strong> <a href=\"lacanau.html\">la Maison du Lac</a>, maison de famille pour 12 personnes (6 chambres, 4 WC), avec piscine privée d'avril à octobre (sans clôture : surveillance des enfants indispensable), à 50 mètres du lac. Plus d'idées dans notre <a href=\"vacances-famille-lacanau.html\">guide de Lacanau en famille</a>.",
+  "ou": "guide-semaine-gironde-famille.html"
+ },
+ {
+  "fr": "Quand partir ?",
+  "ou": "guide-semaine-gironde-famille.html"
+ },
+ {
+  "fr": "De <strong>juin à septembre</strong> pour la baignade : en juillet et août, comptez environ 27 °C l'après-midi à Bordeaux et 25 °C à Lacanau, avec une eau de l'océan autour de 20 à 22 °C (moyennes 2015-2024, source Open-Meteo). <strong>Juin et septembre</strong> sont plus calmes et souvent très agréables. Au printemps, l'itinéraire fonctionne aussi très bien, en remplaçant la baignade à l'océan par des balades.",
+  "ou": "guide-semaine-gironde-famille.html"
+ },
+ {
+  "fr": "Réserver les deux maisons",
+  "ou": "guide-semaine-gironde-famille.html"
+ },
+ {
+  "fr": "Les deux maisons se réservent directement sur ce site, avec <strong>10 % de remise sur tout le séjour</strong> par rapport à Airbnb. Choisissez vos dates à Bordeaux, puis à Lacanau : les calendriers affichent les disponibilités en temps réel.",
+  "ou": "guide-semaine-gironde-famille.html"
+ },
+ {
+  "fr": "Dates à Bordeaux",
+  "ou": "guide-semaine-gironde-famille.html"
+ },
+ {
+  "fr": "Dates à Lacanau",
+  "ou": "guide-semaine-gironde-famille.html"
+ },
+ {
+  "fr": "Combien de temps faut-il entre Bordeaux et Lacanau ?<i aria-hidden=\"true\"></i>",
+  "ou": "guide-semaine-gironde-famille.html"
+ },
+ {
+  "fr": "Environ une heure de route, selon la circulation.",
+  "ou": "guide-semaine-gironde-famille.html"
+ },
+ {
+  "fr": "Comment organiser une semaine en famille en Gironde ?<i aria-hidden=\"true\"></i>",
+  "ou": "guide-semaine-gironde-famille.html"
+ },
+ {
+  "fr": "Commencez par trois jours à Bordeaux pour visiter la ville à pied et en tram, puis passez quatre jours à Lacanau entre le lac, l'océan et les pistes cyclables, avant de repartir par Bordeaux (gare Saint-Jean ou aéroport de Mérignac).",
+  "ou": "guide-semaine-gironde-famille.html"
+ },
+ {
+  "fr": "Peut-on louer une maison à Bordeaux et une maison à Lacanau pour le même séjour ?<i aria-hidden=\"true\"></i>",
+  "ou": "guide-semaine-gironde-famille.html"
+ },
+ {
+  "fr": "Oui : la Maison de Pierre à Bordeaux (8 personnes) et la Maison du Lac à Lacanau (12 personnes) se réservent directement sur sable-et-pierre.com, avec 10 % de remise sur chaque séjour.",
+  "ou": "guide-semaine-gironde-famille.html"
+ },
+ {
+  "fr": "La Maison du Lac à Lacanau : la maison et la piscine",
+  "ou": "guide-semaine-gironde-famille.html"
+ },
+ {
+  "fr": "Combien de temps faut-il entre Bordeaux et Lacanau ?",
+  "ou": "guide-semaine-gironde-famille.html"
+ },
+ {
+  "fr": "Comment organiser une semaine en famille en Gironde ?",
+  "ou": "guide-semaine-gironde-famille.html"
+ },
+ {
+  "fr": "Peut-on louer une maison à Bordeaux et une maison à Lacanau pour le même séjour ?",
+  "ou": "guide-semaine-gironde-famille.html"
+ }
+]

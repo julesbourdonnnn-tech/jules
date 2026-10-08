@@ -1,0 +1,178 @@
+{
+ "janv.": [
+  "Jan",
+  "ene."
+ ],
+ "févr.": [
+  "Feb",
+  "feb."
+ ],
+ "mars": [
+  "Mar",
+  "mar."
+ ],
+ "avr.": [
+  "Apr",
+  "abr."
+ ],
+ "mai": [
+  "May",
+  "may."
+ ],
+ "juin": [
+  "Jun",
+  "jun."
+ ],
+ "juil.": [
+  "Jul",
+  "jul."
+ ],
+ "août": [
+  "Aug",
+  "ago."
+ ],
+ "sept.": [
+  "Sep",
+  "sept."
+ ],
+ "oct.": [
+  "Oct",
+  "oct."
+ ],
+ "nov.": [
+  "Nov",
+  "nov."
+ ],
+ "déc.": [
+  "Dec",
+  "dic."
+ ],
+ "janvier": [
+  "January",
+  "enero"
+ ],
+ "février": [
+  "February",
+  "febrero"
+ ],
+ "avril": [
+  "April",
+  "abril"
+ ],
+ "juillet": [
+  "July",
+  "julio"
+ ],
+ "septembre": [
+  "September",
+  "septiembre"
+ ],
+ "octobre": [
+  "October",
+  "octubre"
+ ],
+ "novembre": [
+  "November",
+  "noviembre"
+ ],
+ "décembre": [
+  "December",
+  "diciembre"
+ ],
+ "voyageur": [
+  "guest",
+  "viajero"
+ ],
+ "nuit": [
+  "night",
+  "noche"
+ ],
+ "bébé": [
+  "infant",
+  "bebé"
+ ],
+ "Lacanau-Océan": [
+  "Lacanau-Océan",
+  "Lacanau-Océan"
+ ],
+ "Saint-Émilion": [
+  "Saint-Émilion",
+  "Saint-Émilion"
+ ],
+ "La Maison du Lac": [
+  "La Maison du Lac",
+  "La Maison du Lac"
+ ],
+ "La Maison de Pierre": [
+  "La Maison de Pierre",
+  "La Maison de Pierre"
+ ],
+ "Lacanau ville et Lacanau-Océan sont à 10 min en voiture.": [
+  "Lacanau town and Lacanau-Océan are a 10-minute drive away.",
+  "El pueblo de Lacanau y Lacanau-Océan están a 10 min en coche."
+ ],
+ "Plage centrale de Lacanau-Océan": [
+  "Lacanau-Océan main beach",
+  "Playa central de Lacanau-Océan"
+ ],
+ "Bordeaux, place de la Comédie": [
+  "Bordeaux, Place de la Comédie",
+  "Burdeos, plaza de la Comédie"
+ ],
+ "Aéroport de Bordeaux-Mérignac": [
+  "Bordeaux-Mérignac airport",
+  "Aeropuerto de Burdeos-Mérignac"
+ ],
+ "Place de la Comédie et Grand-Théâtre": [
+  "Place de la Comédie and Grand-Théâtre",
+  "Plaza de la Comédie y Gran Teatro"
+ ],
+ "Cathédrale Saint-André": [
+  "Saint-André Cathedral",
+  "Catedral de Saint-André"
+ ],
+ "La Cité du Vin": [
+  "La Cité du Vin",
+  "La Cité du Vin"
+ ],
+ "Bénédicte": [
+  "Bénédicte",
+  "Bénédicte"
+ ],
+ "Hervé": [
+  "Hervé",
+  "Hervé"
+ ],
+ "voyageurs": [
+  "guests",
+  "viajeros"
+ ],
+ "sur": [
+  "of",
+  "de"
+ ],
+ "avis": [
+  "reviews",
+  "reseñas"
+ ],
+ "chambres": [
+  "bedrooms",
+  "dormitorios"
+ ],
+ "lits": [
+  "beds",
+  "camas"
+ ],
+ "nuits": [
+  "nights",
+  "noches"
+ ],
+ "adultes": [
+  "adults",
+  "adultos"
+ ],
+ "adulte": [
+  "adult",
+  "adulto"
+ ]
+}

@@ -26,12 +26,34 @@
     $("#login-msg").textContent = msg || "";
     $("#login-msg").classList.toggle("is-error", !!msg);
   };
+  // E-mail au voyageur, dans sa langue (celle de la page où il a réservé)
+  const fmtL = (iso, lang) => { const [y, m, d] = iso.split("-").map(Number); return new Intl.DateTimeFormat({ en: "en-GB", es: "es-ES" }[lang] || "fr-FR", { weekday: "short", day: "numeric", month: "short", year: "numeric" }).format(new Date(y, m - 1, d)); };
   const mailto = (b, kind) => {
     const h = HOUSES[b.maison];
-    const subject = kind === "ok" ? `Votre séjour à ${h.name} est confirmé (${b.id})` : `Votre demande pour ${h.name} (${b.id})`;
-    const body = kind === "ok"
-      ? `Bonjour ${b.nom},\n\nNous avons le plaisir de vous confirmer votre séjour à ${h.name}, du ${fmt(b.arrivee)} au ${fmt(b.depart)}.\n${b.cents ? `Le montant de ${SP_EUR(b.cents)} a été débité.\n` : ""}\nArrivée : ${h.checkIn}. Départ : ${h.checkOut}.\nNous vous enverrons l'adresse exacte et les informations d'arrivée quelques jours avant votre venue.\n\nÀ très bientôt,\n${(window.SITE && SITE.owner) || ""}`
-      : `Bonjour ${b.nom},\n\nMerci pour votre demande pour ${h.name} du ${fmt(b.arrivee)} au ${fmt(b.depart)}. Nous ne pouvons malheureusement pas confirmer ce séjour.${b.paymentIntent ? " Rien n'a été débité : l'empreinte sur votre carte est libérée." : ""}\n\nBien cordialement,\n${(window.SITE && SITE.owner) || ""}`;
+    const lang = b.lang === "en" || b.lang === "es" ? b.lang : "fr";
+    const sign = (window.SITE && SITE.owner) || "Sable & Pierre";
+    const a = fmtL(b.arrivee, lang);
+    const z = fmtL(b.depart, lang);
+    const amount = b.cents ? SP_EUR(b.cents) : "";
+    const T = {
+      fr: {
+        okS: `Votre séjour à ${h.name} est confirmé (${b.id})`, noS: `Votre demande pour ${h.name} (${b.id})`,
+        ok: `Bonjour ${b.nom},\n\nNous avons le plaisir de vous confirmer votre séjour à ${h.name}, du ${a} au ${z}.\n${amount ? `Le montant de ${amount} a été débité.\n` : ""}\nArrivée : ${h.checkIn}. Départ : ${h.checkOut}.\nNous vous enverrons l'adresse exacte et les informations d'arrivée quelques jours avant votre venue.\n\nÀ très bientôt,\n${sign}`,
+        no: `Bonjour ${b.nom},\n\nMerci pour votre demande pour ${h.name} du ${a} au ${z}. Nous ne pouvons malheureusement pas confirmer ce séjour.${b.paymentIntent ? " Rien n'a été débité : l'empreinte sur votre carte est libérée." : ""}\n\nBien cordialement,\n${sign}`,
+      },
+      en: {
+        okS: `Your stay at ${h.name} is confirmed (${b.id})`, noS: `Your request for ${h.name} (${b.id})`,
+        ok: `Hello ${b.nom},\n\nWe are delighted to confirm your stay at ${h.name}, from ${a} to ${z}.\n${amount ? `The amount of ${amount} has been charged.\n` : ""}\nCheck-in: ${b.maison === "lacanau" ? "from 4 pm" : "self check-in, flexible"}. Check-out: ${b.maison === "lacanau" ? "before 10 am" : "before 12 noon"}.\nWe will send you the exact address and arrival information a few days before your stay.\n\nSee you very soon,\n${sign}`,
+        no: `Hello ${b.nom},\n\nThank you for your request for ${h.name} from ${a} to ${z}. Unfortunately we are unable to confirm this stay.${b.paymentIntent ? " Nothing has been charged: the hold on your card has been released." : ""}\n\nKind regards,\n${sign}`,
+      },
+      es: {
+        okS: `Tu estancia en ${h.name} está confirmada (${b.id})`, noS: `Tu solicitud para ${h.name} (${b.id})`,
+        ok: `Hola, ${b.nom}:\n\nNos complace confirmarte tu estancia en ${h.name}, del ${a} al ${z}.\n${amount ? `Se ha cobrado el importe de ${amount}.\n` : ""}\nLlegada: ${b.maison === "lacanau" ? "a partir de las 16 h" : "autónoma, horario flexible"}. Salida: ${b.maison === "lacanau" ? "antes de las 10 h" : "antes de las 12 h"}.\nTe enviaremos la dirección exacta y la información de llegada unos días antes de tu estancia.\n\n¡Hasta muy pronto!\n${sign}`,
+        no: `Hola, ${b.nom}:\n\nGracias por tu solicitud para ${h.name} del ${a} al ${z}. Lamentablemente no podemos confirmar esta estancia.${b.paymentIntent ? " No se ha cobrado nada: la retención en tu tarjeta se ha liberado." : ""}\n\nUn cordial saludo,\n${sign}`,
+      },
+    }[lang];
+    const subject = kind === "ok" ? T.okS : T.noS;
+    const body = kind === "ok" ? T.ok : T.no;
     return `mailto:${encodeURIComponent(b.email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   };
   const card = (b) => {
@@ -45,7 +67,7 @@
       <h2 class="h3">${esc(h.name)}</h2>
       <p class="admin-card__dates">${fmt(b.arrivee)} → ${fmt(b.depart)} · ${b.nuits} nuit${b.nuits > 1 ? "s" : ""} · ${b.adultes + b.enfants} voyageur${b.adultes + b.enfants > 1 ? "s" : ""}${b.bebes ? ` + ${b.bebes} bébé(s)` : ""}</p>
       <dl class="admin-card__who">
-        <div><dt>Voyageur</dt><dd>${esc(b.nom)}${b.pays ? ` (${esc(b.pays)})` : ""}</dd></div>
+        <div><dt>Voyageur</dt><dd>${esc(b.nom)}${b.pays ? ` (${esc(b.pays)})` : ""}${b.lang && b.lang !== "fr" ? ` · parle ${b.lang === "en" ? "anglais" : "espagnol"}` : ""}</dd></div>
         <div><dt>E-mail</dt><dd><a class="link" href="mailto:${esc(b.email)}">${esc(b.email)}</a></dd></div>
         <div><dt>Téléphone</dt><dd>${b.telephone ? `<a class="link" href="tel:${esc(b.telephone)}">${esc(b.telephone)}</a>` : "—"}</dd></div>
         <div><dt>Montant</dt><dd>${b.cents ? SP_EUR(b.cents) : "à définir"}${b.code ? ` (code ${esc(b.code)})` : ""}${b.paiement ? ` · ${esc(b.paiement)}` : ""}</dd></div>
@@ -242,7 +264,7 @@
       </div>
       <div class="stat-lists">
         ${ranked("D'où viennent les visiteurs", merge(d.sources || [], srcName), visits)}
-        ${ranked("Pages les plus vues", (d.pages || []).map((x) => ({ k: PAGE_NAMES[x.k] || x.k, v: x.v })), visits)}
+        ${ranked("Pages les plus vues", (d.pages || []).map((x) => { const m = /^\/(en|es)(\/.*)$/.exec(x.k); const n = PAGE_NAMES[m ? m[2] : x.k] || x.k; return { k: m ? `${n} (${m[1] === "en" ? "anglais" : "espagnol"})` : n, v: x.v }; }), visits)}
         ${ranked("Pays", merge(d.pays || [], regionName), visits)}
         ${ranked("Appareils", (d.appareils || []).map((x) => ({ k: x.k.charAt(0).toUpperCase() + x.k.slice(1), v: x.v })), visits)}
       </div>

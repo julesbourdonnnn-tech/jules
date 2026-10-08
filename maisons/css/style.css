@@ -1189,3 +1189,16 @@ button.ev:hover, button.ev:focus-visible { filter: brightness(.95); outline: 2px
 .guide article p a, .guide article li a { color: var(--ink); text-decoration: underline; text-decoration-color: var(--gold); text-underline-offset: 3px; }
 .guide article p a:hover, .guide article li a:hover { text-decoration-thickness: 2px; }
 @media (max-width: 900px) { .header--dark .nav .btn { display: inline-flex; } }
+/* Choix de la langue (FR · EN · ES) */
+.langs { display: inline-flex; align-items: center; gap: 2px; }
+.nav .langs a:not(.btn) { padding: 6px 6px; font: 600 .66rem/1 var(--sans); letter-spacing: .14em; opacity: .6; transition: opacity .2s; }
+.nav .langs a:not(.btn):hover, .nav .langs a[aria-current]:not(.btn) { opacity: 1; }
+.nav .langs a:not(.btn)::after { left: 6px; right: 6px; }
+.nav .langs a[aria-current]:not(.btn)::after { transform: scaleX(1); }
+.menu__links .langs { margin-top: 26px; gap: 6px; }
+.menu__links .langs a { font: 600 .78rem/1 var(--sans); letter-spacing: .2em; padding: 10px 10px 10px 0; color: inherit; }
+.menu__links .langs a[aria-current] { color: var(--gold); }
+@media (max-width: 900px) {
+  .nav .langs a:not(.btn) { display: inline-block; padding: 8px 5px; }
+  .header .nav { gap: 10px; }
+}

@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1, viewport-fit=cover" name="viewport"/>
+<title>Booking terms | Sable &amp; Pierre</title><link href="https://sable-et-pierre.com/conditions" hreflang="fr" rel="alternate"/><link href="https://sable-et-pierre.com/en/conditions" hreflang="en" rel="alternate"/><link href="https://sable-et-pierre.com/es/conditions" hreflang="es" rel="alternate"/><link href="https://sable-et-pierre.com/conditions" hreflang="x-default" rel="alternate"/>
+<!-- langues --><!-- /langues -->
+<meta content="noindex" name="robots"/>
+<link href="../assets/favicon.svg" rel="icon" type="image/svg+xml"/>
+<link href="../assets/apple-touch-icon.png" rel="apple-touch-icon"/>
+<link href="../fonts/fonts.css" rel="stylesheet"/>
+<link href="../css/style.css" rel="stylesheet"/>
+</head>
+<body>
+<header class="header header--dark is-solid">
+<div class="wrap">
+<a class="brand" href="./"><span>Sable <em>&amp;</em> Pierre</span></a>
+<nav aria-label="Main navigation" class="nav"><a href="lacanau.html">Lacanau</a><a href="bordeaux.html">Bordeaux</a><span class="langs" translate="no"><a href="../conditions.html" hreflang="fr" lang="fr">FR</a><a aria-current="true" href="conditions.html" hreflang="en" lang="en">EN</a><a href="../es/conditions.html" hreflang="es" lang="es">ES</a></span></nav>
+</div>
+</header>
+<main class="page" id="main">
+<div class="wrap wrap--narrow">
+<span class="eyebrow">Direct booking</span>
+<h1 class="h1" style="margin-top:18px">Booking terms</h1>
+<h2>Booking and payment</h2>
+<p>You choose your dates and the number of guests, then pay by card on the secure page of our payment provider, Stripe. Your card is not charged immediately: the amount is held (pre-authorisation), then charged when we confirm your stay, usually within 24 hours. If we cannot confirm, the amount is released and nothing is charged.</p>
+<p>The price shown includes the rental, cleaning and the tourist tax where applicable. There are no service fees. <span id="remise"></span></p>
+<h2>Cancellation</h2>
+<ul id="annulation"></ul>
+<p>To cancel, write to us at the address below, quoting your booking reference.</p>
+<h2>During your stay</h2>
+<p>The number of guests may not exceed the number given when booking or the capacity of the house. Each house's rules (check-in and check-out times, pets, parties, smoking, quiet hours) are set out on its page and apply throughout your stay. The house must be left in the condition in which it was found.</p>
+<p id="caution"></p>
+<h2>Personal data</h2>
+<p>Your details are used only to manage your booking. Payment is handled by Stripe: we never have access to your card numbers. See also the <a class="link" href="../mentions-legales.html">legal notice (in French)</a>.</p>
+<h2>Contact</h2>
+<p><a class="link" data-email="" href="#">email</a></p>
+<p style="margin-top:48px"><a class="btn btn--ghost" href="./">Back to home page</a></p>
+</div>
+</main>
+<script src="../js/config.js"></script>
+<script src="js/data.js"></script>
+<script src="js/tarifs.js"></script>
+<script src="../js/tarifs-airbnb.js"></script>
+<script>
+    document.querySelectorAll("[data-email]").forEach(function (a) { a.href = "mailto:" + SITE.email; a.textContent = SITE.email; });
+    if (TARIFS.remiseDirecte) document.getElementById("remise").textContent = "Bookings made on this site receive a discount of " + TARIFS.remiseDirecte + " % on the rental and cleaning (the tourist tax, paid to the local council, is not discounted).";
+    document.getElementById("annulation").innerHTML = TARIFS.annulation.map(function (t) { return "<li>" + t.replace(/</g, "&lt;") + "</li>"; }).join("");
+    var c = ["lacanau", "bordeaux"].filter(function (k) { return TARIFS[k].caution; }).map(function (k) { return HOUSES[k].name + " : " + TARIFS[k].caution.toLocaleString("en-GB") + " €"; });
+    document.getElementById("caution").textContent = c.length ? "Security deposit (not charged, requested on arrival) — " + c.join(" · ") + "." : "";
+  </script>
+</body>
+</html>

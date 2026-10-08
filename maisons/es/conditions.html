@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+
+<html lang="es">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1, viewport-fit=cover" name="viewport"/>
+<title>Condiciones de reserva | Sable &amp; Pierre</title><link href="https://sable-et-pierre.com/conditions" hreflang="fr" rel="alternate"/><link href="https://sable-et-pierre.com/en/conditions" hreflang="en" rel="alternate"/><link href="https://sable-et-pierre.com/es/conditions" hreflang="es" rel="alternate"/><link href="https://sable-et-pierre.com/conditions" hreflang="x-default" rel="alternate"/>
+<!-- langues --><!-- /langues -->
+<meta content="noindex" name="robots"/>
+<link href="../assets/favicon.svg" rel="icon" type="image/svg+xml"/>
+<link href="../assets/apple-touch-icon.png" rel="apple-touch-icon"/>
+<link href="../fonts/fonts.css" rel="stylesheet"/>
+<link href="../css/style.css" rel="stylesheet"/>
+</head>
+<body>
+<header class="header header--dark is-solid">
+<div class="wrap">
+<a class="brand" href="./"><span>Sable <em>&amp;</em> Pierre</span></a>
+<nav aria-label="Navegación principal" class="nav"><a href="lacanau.html">Lacanau</a><a href="bordeaux.html">Burdeos</a><span class="langs" translate="no"><a href="../conditions.html" hreflang="fr" lang="fr">FR</a><a href="../en/conditions.html" hreflang="en" lang="en">EN</a><a aria-current="true" href="conditions.html" hreflang="es" lang="es">ES</a></span></nav>
+</div>
+</header>
+<main class="page" id="main">
+<div class="wrap wrap--narrow">
+<span class="eyebrow">Reserva directa</span>
+<h1 class="h1" style="margin-top:18px">Condiciones de reserva</h1>
+<h2>Reserva y pago</h2>
+<p>Eliges tus fechas y el número de viajeros y pagas con tarjeta en la página segura de nuestro proveedor de pagos, Stripe. No se cobra a tu tarjeta de inmediato: el importe se retiene (preautorización) y se cobra cuando confirmamos tu estancia, normalmente en 24 horas. Si no podemos confirmarla, el importe se libera y no se cobra nada.</p>
+<p>El precio indicado incluye el alquiler, la limpieza y la tasa turística cuando se aplica. No hay gastos de servicio. <span id="remise"></span></p>
+<h2>Cancelación</h2>
+<ul id="annulation"></ul>
+<p>Para cancelar, escríbenos a la dirección indicada abajo con tu número de reserva.</p>
+<h2>Durante la estancia</h2>
+<p>El número de viajeros no puede superar el indicado al reservar ni la capacidad de la casa. Las normas de cada casa (horarios de llegada y salida, animales, fiestas, tabaco, silencio) se detallan en su página y se aplican durante toda la estancia. El alojamiento debe dejarse en el estado en que se encontró.</p>
+<p id="caution"></p>
+<h2>Datos personales</h2>
+<p>Tus datos solo se utilizan para gestionar tu reserva. El pago lo gestiona Stripe: nunca tenemos acceso a los números de tu tarjeta. Consulta también el <a class="link" href="../mentions-legales.html">aviso legal (en francés)</a>.</p>
+<h2>Contacto</h2>
+<p><a class="link" data-email="" href="#">correo electrónico</a></p>
+<p style="margin-top:48px"><a class="btn btn--ghost" href="./">Volver al inicio</a></p>
+</div>
+</main>
+<script src="../js/config.js"></script>
+<script src="js/data.js"></script>
+<script src="js/tarifs.js"></script>
+<script src="../js/tarifs-airbnb.js"></script>
+<script>
+    document.querySelectorAll("[data-email]").forEach(function (a) { a.href = "mailto:" + SITE.email; a.textContent = SITE.email; });
+    if (TARIFS.remiseDirecte) document.getElementById("remise").textContent = "Las reservas realizadas en esta web tienen un descuento del " + TARIFS.remiseDirecte + " % en el alquiler y la limpieza (la tasa turística, que se abona al ayuntamiento, no tiene descuento).";
+    document.getElementById("annulation").innerHTML = TARIFS.annulation.map(function (t) { return "<li>" + t.replace(/</g, "&lt;") + "</li>"; }).join("");
+    var c = ["lacanau", "bordeaux"].filter(function (k) { return TARIFS[k].caution; }).map(function (k) { return HOUSES[k].name + " : " + TARIFS[k].caution.toLocaleString("es-ES") + " €"; });
+    document.getElementById("caution").textContent = c.length ? "Fianza (no se cobra, se solicita a la llegada) — " + c.join(" · ") + "." : "";
+  </script>
+</body>
+</html>

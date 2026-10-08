@@ -216,10 +216,11 @@ async function checkPromo(request, env) {
   let d;
   try { d = await request.json(); } catch { return json({ ok: false }, 400); }
   const house = clean(d.maison, 20);
+  const M = MSG[langOf(d.lang)];
   const c = await loadPromo(env, normCode(d.code));
-  if (!c || (c.maison && c.maison !== house)) return json({ ok: false, message: "Ce code n'est pas valable." }, 404);
+  if (!c || (c.maison && c.maison !== house)) return json({ ok: false, message: M.codeShort }, 404);
   const a = clean(d.arrivee, 10), b = clean(d.depart, 10);
-  if (!H[house] || !DATE.test(a) || !DATE.test(b)) return json({ ok: false, message: "Choisissez d'abord vos dates." }, 400);
+  if (!H[house] || !DATE.test(a) || !DATE.test(b)) return json({ ok: false, message: M.dates }, 400);
   const p = applyPromo(PRICE(house, a, b, Math.max(1, parseInt(d.adultes, 10) || 1)), c);
   return json({ ok: true, code: c.code, price: p.ready ? { lines: p.lines, cents: p.cents } : null });
 }
@@ -269,8 +270,10 @@ const skipStats = (request) => {
 const PAGES = { "/guide-plages-lacanau": "/guide-plages-lacanau", "/guide-plages-lacanau.html": "/guide-plages-lacanau", "/guide-semaine-gironde-famille": "/guide-semaine-gironde-famille", "/guide-semaine-gironde-famille.html": "/guide-semaine-gironde-famille", "/vacances-famille-lacanau": "/vacances-famille-lacanau", "/vacances-famille-lacanau.html": "/vacances-famille-lacanau", "/vacances-famille-bordeaux": "/vacances-famille-bordeaux", "/vacances-famille-bordeaux.html": "/vacances-famille-bordeaux", "/": "/", "/index.html": "/", "/lacanau": "/lacanau", "/lacanau.html": "/lacanau", "/bordeaux": "/bordeaux", "/bordeaux.html": "/bordeaux", "/conditions": "/conditions", "/conditions.html": "/conditions", "/mentions-legales": "/mentions-legales", "/mentions-legales.html": "/mentions-legales" };
 async function trackHit(request, env, url) {
   if (!env.STATS || request.method !== "GET" || skipStats(request)) return;
-  const path = PAGES[url.pathname];
-  if (!path) return;
+  const lm = /^\/(en|es)(\/.*)$/.exec(url.pathname); // versions anglaise et espagnole
+  const base = PAGES[lm ? lm[2] : url.pathname];
+  if (!base) return;
+  const path = lm ? `/${lm[1]}${base === "/" ? "/" : base}` : base;
   let src = clean(url.searchParams.get("utm_source") || "", 40).toLowerCase();
   if (!src) {
     try {
@@ -382,7 +385,7 @@ async function sendAlerts(env, title, text, link) {
 function notify(env, ctx, title, text, link) {
   ctx.waitUntil(sendAlerts(env, title, text, link).catch(() => {}));
 }
-const summary = (b) => `${H[b.maison].name} · du ${fmtDate(b.arrivee)} au ${fmtDate(b.depart)} (${b.nuits} nuits) · ${b.adultes} adulte(s)${b.enfants ? `, ${b.enfants} enfant(s)` : ""}${b.bebes ? `, ${b.bebes} bébé(s)` : ""}\n${b.nom} · ${b.telephone || "pas de tél."} · ${b.email}${b.total ? `\nMontant : ${EUR(b.cents)}${b.code ? ` (code ${b.code})` : ""}` : ""}${b.message ? `\n« ${b.message} »` : ""}`;
+const summary = (b) => `${b.lang && b.lang !== "fr" ? `[${b.lang === "en" ? "anglais" : "espagnol"}] ` : ""}${H[b.maison].name} · du ${fmtDate(b.arrivee)} au ${fmtDate(b.depart)} (${b.nuits} nuits) · ${b.adultes} adulte(s)${b.enfants ? `, ${b.enfants} enfant(s)` : ""}${b.bebes ? `, ${b.bebes} bébé(s)` : ""}\n${b.nom} · ${b.telephone || "pas de tél."} · ${b.email}${b.total ? `\nMontant : ${EUR(b.cents)}${b.code ? ` (code ${b.code})` : ""}` : ""}${b.message ? `\n« ${b.message} »` : ""}`;
 
 /* ===================== Voyageurs ===================== */
 const ERR = {
@@ -393,6 +396,18 @@ const ERR = {
   court: "Le séjour est trop court pour ces dates.",
   long: "Le séjour est trop long pour ces dates.",
 };
+/* Messages aux voyageurs selon la langue de la page (fr, en, es) */
+const LANGS = ["fr", "en", "es"];
+const langOf = (v) => (LANGS.includes(v) ? v : "fr");
+const prefixOf = (lang) => (lang === "fr" ? "" : `${lang}/`);
+const MSG = {
+  fr: { invalid: "Merci de vérifier vos dates, votre nom et votre e-mail.", conditions: "Merci d'accepter les conditions de réservation.", capacite: (n) => `Cette maison accueille jusqu'à ${n} voyageurs.`, bebes: "La Maison de Pierre ne convient pas aux bébés de moins de 2 ans.", code: "Ce code promo n'est pas valable.", codeShort: "Ce code n'est pas valable.", dates: "Choisissez d'abord vos dates.", stripe: "Le paiement en ligne est momentanément indisponible. Réessayez dans un instant.", ...ERR, nights: (n) => `${n} nuit${n > 1 ? "s" : ""}`, line: (a, b, g, id) => `Du ${a} au ${b} · ${g} voyageur(s) · réservation ${id}` },
+  en: { invalid: "Please check your dates, your name and your email address.", conditions: "Please accept the booking terms.", capacite: (n) => `This house sleeps up to ${n} guests.`, bebes: "La Maison de Pierre is not suitable for babies under 2.", code: "This promo code is not valid.", codeShort: "This code is not valid.", dates: "Please choose your dates first.", stripe: "Online payment is temporarily unavailable. Please try again in a moment.", passe: "The arrival date has already passed.", pris: "These dates are no longer available. Please choose other dates.", depart: "Departure is not possible on that day. Please choose another day.", court: "The stay is too short for these dates.", long: "The stay is too long for these dates.", nights: (n) => `${n} night${n > 1 ? "s" : ""}`, line: (a, b, g, id) => `From ${a} to ${b} · ${g} guest(s) · booking ${id}` },
+  es: { invalid: "Comprueba tus fechas, tu nombre y tu correo electrónico.", conditions: "Acepta las condiciones de reserva.", capacite: (n) => `Esta casa tiene capacidad para ${n} viajeros como máximo.`, bebes: "La Maison de Pierre no es adecuada para bebés menores de 2 años.", code: "Este código promocional no es válido.", codeShort: "Este código no es válido.", dates: "Elige primero tus fechas.", stripe: "El pago en línea no está disponible en este momento. Vuelve a intentarlo dentro de un instante.", passe: "La fecha de llegada ya ha pasado.", pris: "Estas fechas ya no están disponibles. Elige otras fechas.", depart: "No es posible salir ese día. Elige otro día.", court: "La estancia es demasiado corta para estas fechas.", long: "La estancia es demasiado larga para estas fechas.", nights: (n) => `${n} noche${n > 1 ? "s" : ""}`, line: (a, b, g, id) => `Del ${a} al ${b} · ${g} viajero(s) · reserva ${id}` },
+};
+// Dates « 21 août 2027 » dans la langue du voyageur
+const fmtDateL = (s, lang) => new Intl.DateTimeFormat({ fr: "fr-FR", en: "en-GB", es: "es-ES" }[lang], { weekday: "short", day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(toDay(s)));
+
 async function createBooking(request, env, ctx, origin) {
   const kv = store(env);
   if (!kv) return json({ ok: false, error: "storage_not_configured" }, 503);
@@ -402,24 +417,27 @@ async function createBooking(request, env, ctx, origin) {
   if (d["bot-field"]) return json({ ok: false, error: "invalid" }, 400);
   const house = clean(d.maison, 20);
   const h = H[house];
+  const lang = langOf(d.lang);
+  const M = MSG[lang];
   const b = {
+    lang,
     maison: house, arrivee: clean(d.arrivee, 10), depart: clean(d.depart, 10),
     adultes: Math.max(1, parseInt(d.adultes, 10) || 1), enfants: Math.max(0, parseInt(d.enfants, 10) || 0), bebes: Math.max(0, parseInt(d.bebes, 10) || 0),
     nom: clean(d.nom, 80), email: clean(d.email, 254).toLowerCase(), telephone: clean(d.telephone, 30), message: clean(d.message, 2000),
   };
-  if (!h || !DATE.test(b.arrivee) || !DATE.test(b.depart) || b.depart <= b.arrivee || !b.nom || !EMAIL.test(b.email)) return json({ ok: false, error: "invalid", message: "Merci de vérifier vos dates, votre nom et votre e-mail." }, 400);
-  if (!d.conditions) return json({ ok: false, error: "conditions", message: "Merci d'accepter les conditions de réservation." }, 400);
-  if (b.adultes + b.enfants > h.guests) return json({ ok: false, error: "capacite", message: `Cette maison accueille jusqu'à ${h.guests} voyageurs.` }, 400);
-  if (house === "bordeaux" && b.bebes > 0) return json({ ok: false, error: "bebes", message: "La Maison de Pierre ne convient pas aux bébés de moins de 2 ans." }, 400);
+  if (!h || !DATE.test(b.arrivee) || !DATE.test(b.depart) || b.depart <= b.arrivee || !b.nom || !EMAIL.test(b.email)) return json({ ok: false, error: "invalid", message: M.invalid }, 400);
+  if (!d.conditions) return json({ ok: false, error: "conditions", message: M.conditions }, 400);
+  if (b.adultes + b.enfants > h.guests) return json({ ok: false, error: "capacite", message: M.capacite(h.guests) }, 400);
+  if (house === "bordeaux" && b.bebes > 0) return json({ ok: false, error: "bebes", message: M.bebes }, 400);
   const problem = await checkStay(house, b.arrivee, b.depart, env, origin);
-  if (problem) return json({ ok: false, error: problem, message: ERR[problem] }, 409);
+  if (problem) return json({ ok: false, error: problem, message: M[problem] || ERR[problem] }, 409);
 
   let p = PRICE(house, b.arrivee, b.depart, b.adultes);
   const codeIn = normCode(d.code);
   let promo = null;
   if (codeIn) {
     promo = await loadPromo(env, codeIn);
-    if (!promo || (promo.maison && promo.maison !== house)) return json({ ok: false, error: "code", message: "Ce code promo n'est pas valable." }, 400);
+    if (!promo || (promo.maison && promo.maison !== house)) return json({ ok: false, error: "code", message: M.code }, 400);
     p = applyPromo(p, promo);
     if (p.code) b.code = p.code;
   }
@@ -433,17 +451,17 @@ async function createBooking(request, env, ctx, origin) {
   // Paiement en ligne possible : tarifs renseignés et clé Stripe en place
   if (p.ready && env.STRIPE_SECRET_KEY) {
     b.statut = "paiement";
-    const back = `${origin}/reservation.html?id=${b.id}&t=${b.token}`;
+    const back = `${origin}/${prefixOf(lang)}reservation.html?id=${b.id}&t=${b.token}`;
     try {
       const s = await stripe(env, "POST", "checkout/sessions", {
         mode: "payment",
-        locale: "fr",
+        locale: lang,
         customer_email: b.email,
         client_reference_id: b.id,
         expires_at: Math.floor(Date.now() / 1000) + 31 * 60,
         success_url: back,
-        cancel_url: `${origin}/${h.page}?arrivee=${b.arrivee}&depart=${b.depart}&voyageurs=${b.adultes + b.enfants}&annule=1#reserver`,
-        line_items: { 0: { quantity: 1, price_data: { currency: "eur", unit_amount: b.cents, product_data: { name: `${h.name} — ${b.nuits} nuit${b.nuits > 1 ? "s" : ""}`, description: `Du ${fmtDate(b.arrivee)} au ${fmtDate(b.depart)} · ${b.adultes + b.enfants} voyageur(s) · réservation ${b.id}` } } } },
+        cancel_url: `${origin}/${prefixOf(lang)}${h.page}?arrivee=${b.arrivee}&depart=${b.depart}&voyageurs=${b.adultes + b.enfants}&annule=1#reserver`,
+        line_items: { 0: { quantity: 1, price_data: { currency: "eur", unit_amount: b.cents, product_data: { name: `${h.name} — ${M.nights(b.nuits)}`, description: M.line(fmtDateL(b.arrivee, lang), fmtDateL(b.depart, lang), b.adultes + b.enfants, b.id) } } } },
         // Empreinte bancaire : le montant n'est débité que lorsque tu acceptes la réservation
         payment_intent_data: { capture_method: "manual", description: `Réservation ${b.id} — ${h.name}`, receipt_email: b.email, metadata: { reservation: b.id } },
         metadata: { reservation: b.id, maison: house },
@@ -452,7 +470,7 @@ async function createBooking(request, env, ctx, origin) {
       await save(env, b);
       return json({ ok: true, mode: "paiement", url: s.url, id: b.id });
     } catch (e) {
-      return json({ ok: false, error: "stripe", message: "Le paiement en ligne est momentanément indisponible. Réessayez dans un instant." }, 502);
+      return json({ ok: false, error: "stripe", message: M.stripe }, 502);
     }
   }
   // Sinon : demande de réservation, sans paiement (le prix est confirmé par e-mail)
@@ -460,7 +478,7 @@ async function createBooking(request, env, ctx, origin) {
   b.paiement = "à organiser";
   await save(env, b);
   notify(env, ctx, "Nouvelle demande de réservation", summary(b), `${origin}/admin.html`);
-  return json({ ok: true, mode: "demande", id: b.id, url: `/reservation.html?id=${b.id}&t=${b.token}` });
+  return json({ ok: true, mode: "demande", id: b.id, url: `/${prefixOf(lang)}reservation.html?id=${b.id}&t=${b.token}` });
 }
 
 async function bookingStatus(env, ctx, origin, id, token) {
