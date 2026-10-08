@@ -165,8 +165,118 @@
     if (card) { card.scrollIntoView({ behavior: "smooth", block: "center" }); card.classList.remove("is-flash"); void card.offsetWidth; card.classList.add("is-flash"); }
   });
 
-  const refresh = () => { loadCodes(); return api("reservations").then((d) => { data = d; render(); }).catch((e) => { if (e.message !== "auth") $("#list").innerHTML = `<p class="booking__msg is-error">${esc(e.message)}</p>`; }); };
-  const enter = () => { $("#login").hidden = true; $("#admin").hidden = false; refresh(); };
+  const refresh = () => { loadCodes(); loadStats(); return api("reservations").then((d) => { data = d; render(); }).catch((e) => { if (e.message !== "auth") $("#list").innerHTML = `<p class="booking__msg is-error">${esc(e.message)}</p>`; }); };
+  /* Statistiques : visites (anonymes, sans cookie), sources, clics et réservations */
+  let statDays = 30;
+  const nf = new Intl.NumberFormat("fr-FR");
+  const pct = (a, b) => (b ? `${(Math.round((a / b) * 1000) / 10).toLocaleString("fr-FR")} %` : "—");
+  const regionName = (() => { try { const dn = new Intl.DisplayNames(["fr"], { type: "region" }); return (c) => (c ? dn.of(c) : "Inconnu"); } catch (e) { return (c) => c || "Inconnu"; } })();
+  const SRC = [[/google\./, "Google"], [/bing\./, "Bing"], [/duckduckgo/, "DuckDuckGo"], [/ecosia/, "Ecosia"], [/qwant/, "Qwant"], [/yahoo/, "Yahoo"], [/instagram/, "Instagram"], [/facebook|^fb\b/, "Facebook"], [/airbnb/, "Airbnb"], [/whatsapp|wa\.me/, "WhatsApp"], [/^t\.co$|twitter|x\.com/, "X (Twitter)"], [/linkedin|lnkd/, "LinkedIn"], [/pinterest/, "Pinterest"], [/tiktok/, "TikTok"], [/chatgpt|openai/, "ChatGPT"], [/claude\.ai|perplexity/, "Assistants IA"]];
+  const srcName = (h) => { if (!h) return "Accès direct"; const m = SRC.find(([r]) => r.test(h)); return m ? m[1] : h; };
+  const PAGE_NAMES = { "/": "Accueil", "/lacanau": "La Maison du Lac (Lacanau)", "/bordeaux": "La Maison de Pierre (Bordeaux)", "/conditions": "Conditions", "/mentions-legales": "Mentions légales" };
+  const merge = (rows, name) => { const m = new Map(); rows.forEach((r) => { const k = name(r.k); m.set(k, (m.get(k) || 0) + r.v); }); return [...m].map(([k, v]) => ({ k, v })).sort((a, b) => b.v - a.v); };
+  const ranked = (title, rows, total) => {
+    if (!rows.length) return `<div class="stat-list"><h3>${title}</h3><p class="small">Pas encore de données.</p></div>`;
+    const max = Math.max(...rows.map((r) => r.v));
+    return `<div class="stat-list"><h3>${title}</h3><ol>${rows.map((r) => `<li><span class="stat-list__k">${esc(r.k)}</span><span class="stat-list__v">${nf.format(r.v)}<small>${pct(r.v, total)}</small></span><i style="width:${Math.max(2, (r.v / max) * 100)}%"></i></li>`).join("")}</ol></div>`;
+  };
+  const tile = (label, value, sub) => `<div class="stat-tile"><span class="stat-tile__label">${label}</span><strong class="stat-tile__value">${value}</strong>${sub ? `<span class="stat-tile__sub">${sub}</span>` : ""}</div>`;
+  const chart = (d) => {
+    // Visites par jour (ou par mois sur 12 mois), une seule série
+    const byDay = new Map((d.jour || []).map((r) => [r.day, r]));
+    let pts = [];
+    if (d.jours > 90) {
+      const m = new Map();
+      (d.jour || []).forEach((r) => { const k = r.day.slice(0, 7); const o = m.get(k) || { v: 0, p: 0 }; o.v += r.v; o.p += r.p; m.set(k, o); });
+      const [y0, m0] = d.du.split("-").map(Number);
+      for (let i = 0; i < 12; i++) { const dt = new Date(y0, m0 - 1 + i + 1, 1); const k = `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}`; const o = m.get(k) || { v: 0, p: 0 }; pts.push({ k, label: new Intl.DateTimeFormat("fr-FR", { month: "short", year: "2-digit" }).format(dt), full: new Intl.DateTimeFormat("fr-FR", { month: "long", year: "numeric" }).format(dt), v: o.v, p: o.p }); }
+    } else {
+      const [y, mo, da] = d.du.split("-").map(Number);
+      for (let i = 0; i < d.jours; i++) { const dt = new Date(y, mo - 1, da + i); const k = isoOf(dt); const o = byDay.get(k) || { v: 0, p: 0 }; pts.push({ k, label: new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "short" }).format(dt), full: new Intl.DateTimeFormat("fr-FR", { weekday: "long", day: "numeric", month: "long" }).format(dt), v: o.v, p: o.p }); }
+    }
+    const max = Math.max(4, ...pts.map((x) => x.v));
+    const step = Math.pow(10, Math.floor(Math.log10(max)));
+    const top = Math.ceil(max / step) * step;
+    // Dessiné à la largeur réelle de l'écran : textes nets et lisibles sur téléphone
+    const W = Math.max(280, Math.round(($("#stats-body") || {}).clientWidth || 1000)), H = W < 600 ? 180 : 220, L = 34, B = 26, gap = (W - 34) / pts.length < 8 ? 1 : 2;
+    const bw = (W - L) / pts.length;
+    const y = (v) => H - B - (v / top) * (H - B - 10);
+    const ticks = [0, top / 2, top];
+    const every = Math.ceil(pts.length / Math.max(3, Math.floor(W / 110)));
+    const bars = pts.map((pt, i) => {
+      const x = L + i * bw + gap / 2;
+      const h = Math.max(pt.v ? 2 : 0, H - B - y(pt.v));
+      const r = Math.min(4, (bw - gap) / 2, h);
+      const path = h ? `M${x},${H - B} v${-(h - r)} q0,${-r} ${r},${-r} h${bw - gap - 2 * r} q${r},0 ${r},${r} v${h - r} z` : "";
+      return `<g class="bar" data-i="${i}"><rect class="bar__hit" x="${L + i * bw}" y="0" width="${bw}" height="${H - B}"></rect>${path ? `<path d="${path}"></path>` : ""}${i % every === 0 ? `<text x="${x + (bw - gap) / 2}" y="${H - 8}" text-anchor="middle">${esc(pt.label)}</text>` : ""}</g>`;
+    }).join("");
+    const grid = ticks.map((t) => `<line x1="${L}" x2="${W}" y1="${y(t)}" y2="${y(t)}"></line><text x="${L - 6}" y="${y(t) + 4}" text-anchor="end">${nf.format(t)}</text>`).join("");
+    const table = `<details class="stat-table"><summary>Voir les chiffres</summary><table><thead><tr><th>${d.jours > 90 ? "Mois" : "Jour"}</th><th>Visites</th><th>Pages vues</th></tr></thead><tbody>${pts.slice().reverse().map((pt) => `<tr><td>${esc(pt.full)}</td><td>${nf.format(pt.v)}</td><td>${nf.format(pt.p)}</td></tr>`).join("")}</tbody></table></details>`;
+    return { html: `<figure class="stat-chart"><figcaption>Visites ${d.jours > 90 ? "par mois" : "par jour"}</figcaption><div class="stat-chart__plot"><svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="Visites ${d.jours > 90 ? "par mois" : "par jour"} sur la période"><g class="grid">${grid}</g>${bars}</svg><div class="stat-tip" hidden></div></div></figure>${table}`, pts };
+  };
+  const renderStats = (d) => {
+    const body = $("#stats-body");
+    const r = d.reservations || { demandes: 0, confirmees: 0, chiffre: 0, nuits: 0, parMaison: {} };
+    const visits = (d.jour || []).reduce((t, x) => t + x.v, 0);
+    const views = (d.jour || []).reduce((t, x) => t + x.p, 0);
+    const prev = (d.precedent || {}).v || 0;
+    const delta = prev ? Math.round(((visits - prev) / prev) * 100) : null;
+    const ev = (name, house) => (d.evenements || []).filter((e) => e.name === name && (!house || e.house === house)).reduce((t, e) => t + e.n, 0);
+    const pageV = (path) => ((d.pages || []).find((x) => x.k === path) || { v: 0 }).v;
+    const c = chart(d);
+    body.innerHTML = `
+      ${d.stats ? "" : `<p class="admin-alert">La mesure d'audience n'est pas encore active (base STATS). Elle démarre automatiquement à la prochaine mise à jour du site.</p>`}
+      <div class="stat-tiles">
+        ${tile("Visites", nf.format(visits), delta == null ? "" : `${delta >= 0 ? "▲" : "▼"} ${Math.abs(delta)} % vs période précédente`)}
+        ${tile("Pages vues", nf.format(views), visits ? `${(Math.round((views / visits) * 10) / 10).toLocaleString("fr-FR")} par visite` : "")}
+        ${tile("En ce moment", nf.format(d.enCeMoment || 0), "visiteurs, 5 dernières min.")}
+        ${tile("Demandes de réservation", nf.format(r.demandes), `taux : ${pct(r.demandes, visits)} des visites`)}
+        ${tile("Réservations confirmées", nf.format(r.confirmees), `${nf.format(r.nuits)} nuit${r.nuits > 1 ? "s" : ""}`)}
+        ${tile("Chiffre d'affaires direct", SP_EUR(r.chiffre), "réservations confirmées, sans commission")}
+      </div>
+      ${c.html}
+      <div class="stat-funnel">
+        <h3>Du clic à la réservation</h3>
+        <table><thead><tr><th></th><th>Visites de la fiche</th><th>Clics « Réserver en direct »</th><th>Paiements lancés</th><th>Confirmées</th><th>Clics « Réserver sur Airbnb »</th></tr></thead>
+        <tbody>${["lacanau", "bordeaux"].map((k) => `<tr><th>${esc(HOUSES[k].name)}</th><td>${nf.format(pageV(`/${k}`))}</td><td>${nf.format(ev("reserver", k))}</td><td>${nf.format(ev("paiement", k))}</td><td>${nf.format((r.parMaison[k] || {}).confirmees || 0)}</td><td>${nf.format(ev("airbnb", k))}</td></tr>`).join("")}</tbody></table>
+      </div>
+      <div class="stat-lists">
+        ${ranked("D'où viennent les visiteurs", merge(d.sources || [], srcName), visits)}
+        ${ranked("Pages les plus vues", (d.pages || []).map((x) => ({ k: PAGE_NAMES[x.k] || x.k, v: x.v })), visits)}
+        ${ranked("Pays", merge(d.pays || [], regionName), visits)}
+        ${ranked("Appareils", (d.appareils || []).map((x) => ({ k: x.k.charAt(0).toUpperCase() + x.k.slice(1), v: x.v })), visits)}
+      </div>
+      <p class="small stat-note">Mesure anonyme, sans cookie : un visiteur est compté une fois par jour, sans que l'on puisse savoir qui il est. Les robots et tes propres visites (depuis cet appareil) ne sont pas comptés.</p>`;
+    // Info-bulle au survol / au toucher des barres
+    const plot = $(".stat-chart__plot", body);
+    const tip = $(".stat-tip", body);
+    const show = (g) => {
+      const pt = c.pts[Number(g.dataset.i)];
+      $$(".bar", plot).forEach((x) => x.classList.toggle("is-on", x === g));
+      tip.innerHTML = `<strong>${esc(pt.full)}</strong><span>${nf.format(pt.v)} visite${pt.v > 1 ? "s" : ""}</span><span>${nf.format(pt.p)} page${pt.p > 1 ? "s" : ""} vue${pt.p > 1 ? "s" : ""}</span>`;
+      tip.hidden = false;
+      const box = plot.getBoundingClientRect();
+      const gb = g.getBoundingClientRect();
+      const left = Math.min(box.width - tip.offsetWidth - 4, Math.max(4, gb.left - box.left + gb.width / 2 - tip.offsetWidth / 2));
+      tip.style.left = `${left}px`;
+    };
+    plot.addEventListener("pointerover", (e) => { const g = e.target.closest(".bar"); if (g) show(g); });
+    plot.addEventListener("pointerleave", () => { tip.hidden = true; $$(".bar", plot).forEach((x) => x.classList.remove("is-on")); });
+  };
+  let lastStats = null;
+  let rz;
+  window.addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(() => { if (lastStats) renderStats(lastStats); }, 200); });
+  const loadStats = () => api(`stats?jours=${statDays}`).then((d) => { lastStats = d; renderStats(d); }).catch((e) => { if (e.message !== "auth") $("#stats-body").innerHTML = `<p class="booking__msg is-error">${esc(e.message)}</p>`; });
+  $$("[data-days]").forEach((b) => b.addEventListener("click", () => {
+    statDays = Number(b.dataset.days);
+    $$("[data-days]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+    $("#stats-body").style.opacity = ".5";
+    loadStats().then(() => { $("#stats-body").style.opacity = ""; });
+  }));
+
+  const enter = () => {
+    // Le propriétaire ne compte pas dans les statistiques (sur cet appareil)
+    try { document.cookie = "sp_owner=1; max-age=31536000; path=/; SameSite=Lax; Secure"; } catch (e) { /* ignoré */ } $("#login").hidden = true; $("#admin").hidden = false; refresh(); };
 
   $("#login").addEventListener("submit", (e) => {
     e.preventDefault();

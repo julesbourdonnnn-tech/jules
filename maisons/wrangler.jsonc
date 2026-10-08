@@ -19,6 +19,10 @@
   "kv_namespaces": [
     { "binding": "RESERVATIONS", "id": "740e12d73b574596957cb3fb964f72c9" }
   ],
+  // Mesure d'audience anonyme (visites, sources, clics) affichée dans admin.html
+  "d1_databases": [
+    { "binding": "STATS", "database_name": "sable-et-pierre-stats", "database_id": "749aadc7-2bdd-4425-8459-ddc62a6c8d43" }
+  ],
   // E-mail au propriétaire à chaque réservation (Cloudflare Email Routing, adresse vérifiée)
   "send_email": [
     { "name": "MAILER", "destination_address": "contact.sablepierre@gmail.com" }

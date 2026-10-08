@@ -27,6 +27,7 @@
         <p class="booking__msg" id="login-msg" aria-live="polite"></p>
       </form>
       <div id="admin" hidden>
+        <nav class="admin-jump" aria-label="Aller à"><a href="#cal-title">Calendrier</a><a href="#list">Réservations</a><a href="#stats">Statistiques</a><a href="#codes-box">Codes promo</a></nav>
         <div class="admin-bar">
           <div class="admin-tabs" role="tablist" aria-label="Filtrer">
             <button type="button" class="chip" data-f="a_valider" aria-pressed="true">À valider</button>
@@ -61,6 +62,18 @@
           </ul>
         </section>
         <div class="admin-list" id="list" aria-live="polite"></div>
+        <section class="admin-stats" id="stats" aria-labelledby="stats-title">
+          <div class="admin-cal__head">
+            <h2 class="h3" id="stats-title">Fréquentation et résultats</h2>
+            <div class="admin-tabs" role="group" aria-label="Période">
+              <button type="button" class="chip" data-days="7" aria-pressed="false">7 jours</button>
+              <button type="button" class="chip" data-days="30" aria-pressed="true">30 jours</button>
+              <button type="button" class="chip" data-days="90" aria-pressed="false">90 jours</button>
+              <button type="button" class="chip" data-days="365" aria-pressed="false">12 mois</button>
+            </div>
+          </div>
+          <div id="stats-body"><p class="small">Chargement…</p></div>
+        </section>
         <details class="admin-help" id="codes-box">
           <summary>Codes promo</summary>
           <p>Le voyageur saisit le code au moment de réserver ; le prix est recalculé par le serveur. Pour un essai à petit prix, crée par exemple un code « Prix total fixe » de 1 € limité à 1 utilisation.</p>

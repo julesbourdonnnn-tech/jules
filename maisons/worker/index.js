@@ -249,6 +249,97 @@ async function adminCodes(request, env, code) {
   return json({ ok: false }, 405);
 }
 
+/* ===================== Mesure d'audience (sans cookie, anonyme) ===================== */
+// Base D1 « STATS ». Un visiteur = empreinte du jour (adresse IP + navigateur + date, hachées avec un secret) :
+// rien ne permet de retrouver qui il est, et elle change chaque jour. Pas de cookie, pas de bandeau.
+const BOT = /bot|crawl|spider|slurp|facebookexternalhit|whatsapp|telegram|preview|headless|lighthouse|python|curl|wget|monitor|uptime|scan|fetch|http-client|axios|go-http|java\//i;
+const parisDay = (t = Date.now()) => new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Paris", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(t));
+async function visitorId(request, env, day) {
+  const raw = `${day}|${request.headers.get("CF-Connecting-IP") || ""}|${request.headers.get("User-Agent") || ""}|${env.ADMIN_KEY || "sable-et-pierre"}`;
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(raw));
+  return Array.from(new Uint8Array(buf).slice(0, 8), (x) => x.toString(16).padStart(2, "0")).join("");
+}
+const skipStats = (request) => {
+  const ua = request.headers.get("User-Agent") || "";
+  if (!ua || BOT.test(ua)) return true;
+  if (/(?:^|;\s*)sp_owner=1/.test(request.headers.get("Cookie") || "")) return true; // le propriétaire ne se compte pas
+  const purpose = request.headers.get("Sec-Purpose") || request.headers.get("Purpose") || "";
+  return /prefetch|prerender/i.test(purpose);
+};
+const PAGES = { "/": "/", "/index.html": "/", "/lacanau": "/lacanau", "/lacanau.html": "/lacanau", "/bordeaux": "/bordeaux", "/bordeaux.html": "/bordeaux", "/conditions": "/conditions", "/conditions.html": "/conditions", "/mentions-legales": "/mentions-legales", "/mentions-legales.html": "/mentions-legales" };
+async function trackHit(request, env, url) {
+  if (!env.STATS || request.method !== "GET" || skipStats(request)) return;
+  const path = PAGES[url.pathname];
+  if (!path) return;
+  let src = clean(url.searchParams.get("utm_source") || "", 40).toLowerCase();
+  if (!src) {
+    try {
+      const ref = new URL(request.headers.get("Referer") || "");
+      if (ref.hostname.replace(/^www\./, "") === url.hostname.replace(/^www\./, "")) src = "="; // navigation interne
+      else if (ref.hostname) src = ref.hostname.replace(/^www\.|^m\.|^l\.|^lm\./, "");
+    } catch (e) { /* accès direct */ }
+  }
+  const ua = request.headers.get("User-Agent") || "";
+  const device = /iPad|Tablet/i.test(ua) ? "tablette" : /Mobi|Android|iPhone/i.test(ua) ? "mobile" : "ordinateur";
+  const day = parisDay();
+  const vid = await visitorId(request, env, day);
+  await env.STATS.prepare("INSERT INTO hits (day, ts, path, src, country, device, vid) VALUES (?, ?, ?, ?, ?, ?, ?)")
+    .bind(day, Date.now(), path, src, (request.cf && request.cf.country) || "", device, vid).run();
+}
+const EVENTS = ["reserver", "airbnb", "paiement"];
+async function trackEvent(request, env) {
+  if (!env.STATS || skipStats(request)) return new Response(null, { status: 204 });
+  let d;
+  try { d = JSON.parse(await request.text()); } catch { return new Response(null, { status: 204 }); }
+  const name = String(d.e || "");
+  const house = KEYS.includes(d.h) ? d.h : "";
+  if (!EVENTS.includes(name)) return new Response(null, { status: 204 });
+  const day = parisDay();
+  await env.STATS.prepare("INSERT INTO events (day, ts, name, house, vid) VALUES (?, ?, ?, ?, ?)").bind(day, Date.now(), name, house, await visitorId(request, env, day)).run();
+  return new Response(null, { status: 204 });
+}
+async function adminStats(env, ctx, url) {
+  const days = Math.min(400, Math.max(1, parseInt(url.searchParams.get("jours"), 10) || 30));
+  const today = parisDay();
+  const since = parisDay(Date.now() - (days - 1) * DAY);
+  const before = parisDay(Date.now() - (2 * days - 1) * DAY);
+  const out = { ok: true, jours: days, du: since, au: today, stats: !!env.STATS };
+  if (env.STATS) {
+    const q = (sql, ...args) => env.STATS.prepare(sql).bind(...args);
+    const [daily, prev, pages, sources, countries, devices, events, live] = await env.STATS.batch([
+      q("SELECT day, COUNT(DISTINCT vid) AS v, COUNT(*) AS p FROM hits WHERE day >= ? GROUP BY day ORDER BY day", since),
+      q("SELECT COUNT(DISTINCT day || vid) AS v, COUNT(*) AS p FROM hits WHERE day >= ? AND day < ?", before, since),
+      q("SELECT path AS k, COUNT(DISTINCT day || vid) AS v, COUNT(*) AS p FROM hits WHERE day >= ? GROUP BY path ORDER BY v DESC LIMIT 10", since),
+      q("SELECT src AS k, COUNT(DISTINCT day || vid) AS v FROM hits WHERE day >= ? AND src != '=' GROUP BY src ORDER BY v DESC LIMIT 12", since),
+      q("SELECT country AS k, COUNT(DISTINCT day || vid) AS v FROM hits WHERE day >= ? GROUP BY country ORDER BY v DESC LIMIT 10", since),
+      q("SELECT device AS k, COUNT(DISTINCT day || vid) AS v FROM hits WHERE day >= ? GROUP BY device ORDER BY v DESC", since),
+      q("SELECT name, house, COUNT(DISTINCT day || vid) AS n FROM events WHERE day >= ? GROUP BY name, house", since),
+      q("SELECT COUNT(DISTINCT vid) AS v FROM hits WHERE ts > ?", Date.now() - 5 * 60000),
+    ]);
+    out.jour = daily.results;
+    out.precedent = prev.results[0] || { v: 0, p: 0 };
+    out.pages = pages.results;
+    out.sources = sources.results;
+    out.pays = countries.results;
+    out.appareils = devices.results;
+    out.evenements = events.results;
+    out.enCeMoment = (live.results[0] || {}).v || 0;
+    // Ménage : on ne garde que 13 mois de relevés
+    ctx.waitUntil(env.STATS.batch([q("DELETE FROM hits WHERE day < ?", parisDay(Date.now() - 400 * DAY)), q("DELETE FROM events WHERE day < ?", parisDay(Date.now() - 400 * DAY))]).catch(() => {}));
+  }
+  // Réservations directes sur la période
+  const list = (await allBookings(env)).filter((b) => parisDay(Date.parse(b.cree)) >= since);
+  const demandes = list.filter((b) => b.statut !== "paiement" && b.statut !== "expiree");
+  const conf = list.filter((b) => b.statut === "confirmee");
+  out.reservations = {
+    demandes: demandes.length, confirmees: conf.length, abandonnees: list.filter((b) => b.statut === "expiree").length,
+    chiffre: conf.reduce((t, b) => t + (b.cents || 0), 0),
+    nuits: conf.reduce((t, b) => t + (b.nuits || 0), 0),
+    parMaison: Object.fromEntries(KEYS.map((k) => [k, { demandes: demandes.filter((b) => b.maison === k).length, confirmees: conf.filter((b) => b.maison === k).length, chiffre: conf.filter((b) => b.maison === k).reduce((t, b) => t + (b.cents || 0), 0) }])),
+  };
+  return json(out);
+}
+
 /* ===================== Alertes ===================== */
 // Alerte téléphone (ntfy, Discord ou Slack via NOTIFY_URL) + e-mail au propriétaire (Cloudflare Email Routing, binding MAILER)
 async function sendAlerts(env, title, text, link) {
@@ -481,11 +572,13 @@ export default {
     if (p === "/api/reservation" && request.method === "POST") return createBooking(request, env, ctx, origin);
     if ((m = /^\/api\/reservation\/([A-Z0-9]{4,20})$/.exec(p))) return bookingStatus(env, ctx, origin, m[1], url.searchParams.get("t") || "");
     if (p === "/api/promo" && request.method === "POST") return checkPromo(request, env);
+    if (p === "/api/evt" && request.method === "POST") return trackEvent(request, env).catch(() => new Response(null, { status: 204 }));
     if ((m = /^\/api\/ical\/(lacanau|bordeaux)\.ics$/.exec(p))) return icalFeed(env, m[1], url.searchParams.get("k") || "");
     if (p.startsWith("/api/admin/")) {
       if (!store(env)) return json({ ok: false, message: "Stockage non configuré." }, 503);
       if (!authorized(request, env)) return json({ ok: false, error: "auth", message: env.ADMIN_KEY ? "Mot de passe incorrect." : "Ajoute d'abord le secret ADMIN_KEY dans Cloudflare." }, 401);
       if (p === "/api/admin/reservations" && request.method === "GET") return adminList(env, ctx, origin);
+      if (p === "/api/admin/stats" && request.method === "GET") return adminStats(env, ctx, url);
       if (p === "/api/admin/test-alertes" && request.method === "POST") return json({ ok: true, resultat: await sendAlerts(env, "Test des alertes Sable & Pierre", "Si tu lis ceci, les alertes de réservation fonctionnent.", `${origin}/admin.html`) });
       if ((m = /^\/api\/admin\/codes(?:\/([A-Za-z0-9-]{1,30}))?$/.exec(p))) return adminCodes(request, env, m[1]);
       if ((m = /^\/api\/admin\/reservations\/([A-Z0-9]{4,20})\/(accepter|refuser|annuler)$/.exec(p)) && request.method === "POST") return adminAction(env, ctx, origin, m[1], m[2]);
@@ -495,6 +588,7 @@ export default {
     if (p.startsWith("/api/")) return new Response("Not found", { status: 404 });
 
     const res = await env.ASSETS.fetch(request);
+    if (res.status === 200) ctx.waitUntil(trackHit(request, env, url).catch(() => {}));
     // Pages : adresses complètes pour les aperçus de partage (WhatsApp, Facebook…)
     if ((res.headers.get("Content-Type") || "").includes("text/html")) {
       const abs = (v) => (v && !/^https?:/.test(v) ? new URL(v, `${origin}/`).toString() : v);

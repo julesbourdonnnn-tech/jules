@@ -889,7 +889,11 @@
     document.body.classList.remove("is-locked");
     if (dlgReturn) dlgReturn.focus();
   };
+  // Mesure d'audience anonyme : intérêt pour la réservation (affiché dans l'espace propriétaire)
+  const track = (e) => { try { navigator.sendBeacon("api/evt", new Blob([JSON.stringify({ e, h: key })], { type: "application/json" })); } catch (err) { /* ignoré */ } };
+  $("#go-airbnb").addEventListener("click", () => track("airbnb"));
   $("#go-book").addEventListener("click", () => {
+    if (state.in && state.out) track("reserver");
     if (!state.in || !state.out) {
       $("#cal").scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "center" });
       const m = $("#book-msg");
@@ -948,6 +952,7 @@
       if (r.status === 404 || r.status === 503 || r.status === 405) net = false;
     } catch (err) { net = false; }
     btn.disabled = false;
+    if (res && res.ok) track("paiement");
     if (res && res.ok && res.mode === "paiement" && res.url) {
       msg.textContent = "Redirection vers le paiement sécurisé…";
       location.href = res.url;
