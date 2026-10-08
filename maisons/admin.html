@@ -27,7 +27,7 @@
         <p class="booking__msg" id="login-msg" aria-live="polite"></p>
       </form>
       <div id="admin" hidden>
-        <nav class="admin-jump" aria-label="Aller à"><a href="#cal-title">Calendrier</a><a href="#list">Réservations</a><a href="#stats">Statistiques</a><a href="#codes-box">Codes promo</a></nav>
+        <nav class="admin-jump" aria-label="Aller à"><a href="#cal-title">Calendrier</a><a href="#list">Réservations</a><a href="#prix">Prix</a><a href="#stats">Statistiques</a><a href="#codes-box">Codes promo</a></nav>
         <div class="admin-bar">
           <div class="admin-tabs" role="tablist" aria-label="Filtrer">
             <button type="button" class="chip" data-f="a_valider" aria-pressed="true">À valider</button>
@@ -62,6 +62,16 @@
           </ul>
         </section>
         <div class="admin-list" id="list" aria-live="polite"></div>
+        <section class="admin-prix" id="prix" aria-labelledby="prix-title">
+          <div class="admin-cal__head">
+            <h2 class="h3" id="prix-title">Prix</h2>
+            <div class="admin-tabs" role="group" aria-label="Maison">
+              <button type="button" class="chip" data-px="lacanau" aria-pressed="true">Lacanau</button>
+              <button type="button" class="chip" data-px="bordeaux" aria-pressed="false">Bordeaux</button>
+            </div>
+          </div>
+          <div id="px-body"><p class="small">Chargement…</p></div>
+        </section>
         <section class="admin-stats" id="stats" aria-labelledby="stats-title">
           <div class="admin-cal__head">
             <h2 class="h3" id="stats-title">Fréquentation et résultats</h2>
@@ -99,6 +109,9 @@
   <script src="js/config.js"></script>
   <script src="js/data.js"></script>
   <script src="js/disponibilites.js"></script>
+  <script src="js/tarifs.js"></script>
+  <script src="js/tarifs-airbnb.js"></script>
+  <script src="js/evenements.js"></script>
   <script src="js/prix.js"></script>
   <script src="js/admin.js"></script>
 </body>

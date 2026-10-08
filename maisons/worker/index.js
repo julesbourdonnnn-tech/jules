@@ -221,7 +221,7 @@ async function checkPromo(request, env) {
   if (!c || (c.maison && c.maison !== house)) return json({ ok: false, message: M.codeShort }, 404);
   const a = clean(d.arrivee, 10), b = clean(d.depart, 10);
   if (!H[house] || !DATE.test(a) || !DATE.test(b)) return json({ ok: false, message: M.dates }, 400);
-  const p = applyPromo(PRICE(house, a, b, Math.max(1, parseInt(d.adultes, 10) || 1)), c);
+  const p = applyPromo(PRICE(house, a, b, Math.max(1, parseInt(d.adultes, 10) || 1), await loadTarifs(env)), c);
   return json({ ok: true, code: c.code, price: p.ready ? { lines: p.lines, cents: p.cents } : null });
 }
 async function adminCodes(request, env, code) {
@@ -246,6 +246,67 @@ async function adminCodes(request, env, code) {
     if (!(c.valeur > 0) || (c.type === "pourcent" && c.valeur > 100) || (c.type === "prix" && c.valeur < 1)) return json({ ok: false, message: c.type === "prix" ? "Le prix doit être d'au moins 1 €." : "La réduction doit être entre 1 et 100 %." }, 400);
     await kv.put(`promo:${c.code}`, JSON.stringify(c));
     return json({ ok: true, code: c });
+  }
+  return json({ ok: false }, 405);
+}
+
+/* ===================== Prix (espace propriétaire) ===================== */
+// Réglages enregistrés dans le KV (clé « tarifs ») : pour chaque maison, prix automatiques (Airbnb ± x %)
+// ou prix fixés à la main, plus des prix pour des dates précises (événements, vacances…).
+// Ils sont injectés dans chaque page (globalThis.TARIFS_LIVE) et utilisés par le serveur pour le paiement.
+let tarifsCache = { t: 0, v: null };
+async function loadTarifs(env) {
+  if (Date.now() - tarifsCache.t < 15000 && tarifsCache.v) return tarifsCache.v;
+  const kv = store(env);
+  let v = {};
+  try { v = (kv && JSON.parse((await kv.get("tarifs")) || "{}")) || {}; } catch { v = {}; }
+  tarifsCache = { t: Date.now(), v };
+  return v;
+}
+const num = (v, min, max) => { const n = Math.round(Number(v)); return v === "" || v == null || !Number.isFinite(n) ? null : n >= min && n <= max ? n : NaN; };
+function checkTarifs(d) {
+  const out = { remise: num(d.remise, 0, 50) };
+  if (out.remise == null) out.remise = 10;
+  if (Number.isNaN(out.remise)) return "La remise doit être entre 0 et 50 %.";
+  for (const k of KEYS) {
+    const x = d[k] || {};
+    const h = {
+      mode: x.mode === "manuel" ? "manuel" : "auto",
+      ajust: num(x.ajust, -50, 100) ?? 0, nuit: num(x.nuit, 20, 10000), weekend: num(x.weekend, 20, 10000), menage: num(x.menage, 0, 2000),
+      dates: [],
+    };
+    const name = H[k].name;
+    if (Number.isNaN(h.ajust)) return `${name} : l'ajustement doit être entre −50 et +100 %.`;
+    if ([h.nuit, h.weekend].some(Number.isNaN)) return `${name} : un prix de nuit doit être entre 20 et 10 000 €.`;
+    if (Number.isNaN(h.menage)) return `${name} : le ménage doit être entre 0 et 2 000 €.`;
+    if (h.mode === "manuel" && !h.nuit) return `${name} : indique le prix de la nuit (ou repasse en prix automatiques).`;
+    const list = Array.isArray(x.dates) ? x.dates.slice(0, 200) : [];
+    for (const r of list) {
+      const e = { du: clean(r.du, 10), au: clean(r.au, 10), nuit: num(r.nuit, 20, 10000), pct: num(r.pct, -50, 200), nom: clean(r.nom, 80) };
+      if (!DATE.test(e.du) || !DATE.test(e.au) || e.au < e.du) return `${name} : dates incorrectes pour « ${e.nom || "prix fixé"} ».`;
+      if (Number.isNaN(e.nuit)) return `${name} : le prix pour « ${e.nom || e.du} » doit être entre 20 et 10 000 €.`;
+      if (Number.isNaN(e.pct)) return `${name} : la variation pour « ${e.nom || e.du} » doit être entre −50 et +200 %.`;
+      if (!e.nuit && !e.pct) return `${name} : indique un prix ou un pourcentage pour « ${e.nom || e.du} ».`;
+      if (e.nuit) delete e.pct; else delete e.nuit;
+      h.dates.push(e);
+    }
+    h.dates.sort((a, b) => (a.du < b.du ? -1 : 1));
+    out[k] = h;
+  }
+  out.maj = new Date().toISOString();
+  return out;
+}
+async function adminTarifs(request, env) {
+  const kv = store(env);
+  if (request.method === "GET") return json({ ok: true, tarifs: await loadTarifs(env), airbnb: globalThis.TARIFS_AIRBNB || {} });
+  if (request.method === "POST") {
+    let d;
+    try { d = await request.json(); } catch { return json({ ok: false }, 400); }
+    const t = checkTarifs(d || {});
+    if (typeof t === "string") return json({ ok: false, message: t }, 400);
+    await kv.put("tarifs", JSON.stringify(t));
+    tarifsCache = { t: Date.now(), v: t };
+    return json({ ok: true, tarifs: t });
   }
   return json({ ok: false }, 405);
 }
@@ -432,7 +493,7 @@ async function createBooking(request, env, ctx, origin) {
   const problem = await checkStay(house, b.arrivee, b.depart, env, origin);
   if (problem) return json({ ok: false, error: problem, message: M[problem] || ERR[problem] }, 409);
 
-  let p = PRICE(house, b.arrivee, b.depart, b.adultes);
+  let p = PRICE(house, b.arrivee, b.depart, b.adultes, await loadTarifs(env));
   const codeIn = normCode(d.code);
   let promo = null;
   if (codeIn) {
@@ -598,6 +659,7 @@ export default {
       if (p === "/api/admin/reservations" && request.method === "GET") return adminList(env, ctx, origin);
       if (p === "/api/admin/stats" && request.method === "GET") return adminStats(env, ctx, url);
       if (p === "/api/admin/test-alertes" && request.method === "POST") return json({ ok: true, resultat: await sendAlerts(env, "Test des alertes Sable & Pierre", "Si tu lis ceci, les alertes de réservation fonctionnent.", `${origin}/admin.html`) });
+      if (p === "/api/admin/tarifs") return adminTarifs(request, env);
       if ((m = /^\/api\/admin\/codes(?:\/([A-Za-z0-9-]{1,30}))?$/.exec(p))) return adminCodes(request, env, m[1]);
       if ((m = /^\/api\/admin\/reservations\/([A-Z0-9]{4,20})\/(accepter|refuser|annuler)$/.exec(p)) && request.method === "POST") return adminAction(env, ctx, origin, m[1], m[2]);
       return json({ ok: false }, 404);
@@ -610,8 +672,11 @@ export default {
     // Pages : adresses complètes pour les aperçus de partage (WhatsApp, Facebook…)
     if ((res.headers.get("Content-Type") || "").includes("text/html")) {
       const abs = (v) => (v && !/^https?:/.test(v) ? new URL(v, `${origin}/`).toString() : v);
+      // Prix réglés dans l'espace propriétaire, lus par js/prix.js
+      const live = `globalThis.TARIFS_LIVE=${JSON.stringify(await loadTarifs(env)).replace(/</g, "\\u003c")};`;
       return new HTMLRewriter()
         .on('meta[property="og:image"]', { element(el) { el.setAttribute("content", abs(el.getAttribute("content"))); } })
+        .on("head", { element(el) { el.append(`<script>${live}</script>`, { html: true }); } })
         .transform(res);
     }
     return res;

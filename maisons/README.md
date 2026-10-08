@@ -107,6 +107,16 @@ Les nuits prises selon ce lien s'ajoutent à celles du fichier automatique.
 - `sitemap.xml` (plan du site) et `robots.txt`.
 - Le contenu des fiches (`lacanau.html`, `bordeaux.html`) est aussi écrit en HTML simple, lisible par tous les moteurs. **Après une modification de `js/data.js` ou l'ajout d'une page**, relance `node scripts/seo.mjs` (met à jour ce contenu et le plan du site).
 
+## Prix (espace propriétaire → Prix)
+
+- **Prix automatiques** (interrupteur activé) : chaque nuit suit le prix Airbnb relevé chaque jour, avec un ajustement facultatif (−15 % à +20 %, ou une valeur libre).
+- **Prix manuels** (interrupteur désactivé) : un prix de nuit en semaine, un prix pour les vendredis et samedis, et le ménage.
+- **Prix pour des dates précises** : touche une date puis une autre dans le calendrier des prix, puis indique un prix fixe ou une variation en %. Ils passent avant tout le reste.
+- **Moments où il y a du monde** : vacances scolaires, ponts et grands événements (`js/evenements.js`), avec un bouton pour augmenter les prix de ces nuits.
+- La remise « réservation directe » (10 % par défaut) se règle au même endroit. Les prix saisis sont des prix avant remise ; le calendrier montre ce que paie le voyageur.
+- « Enregistrer et mettre en ligne » : les réglages sont gardés sur le serveur (stockage RESERVATIONS, clé `tarifs`) et visibles par les voyageurs en moins d'une minute, sans republier le site. Le serveur recalcule toujours le montant payé avec ces réglages.
+- Pour ajouter un événement, modifie `js/evenements.js` (dates de la première à la dernière nuit).
+
 ## Versions anglaise et espagnole
 
 - Le site existe en anglais (`/en/`) et en espagnol (`/es/`) : les dossiers `en/` et `es/` sont **générés** à partir des pages françaises, ne les modifie pas à la main.

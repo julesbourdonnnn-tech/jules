@@ -187,7 +187,201 @@
     if (card) { card.scrollIntoView({ behavior: "smooth", block: "center" }); card.classList.remove("is-flash"); void card.offsetWidth; card.classList.add("is-flash"); }
   });
 
-  const refresh = () => { loadCodes(); loadStats(); return api("reservations").then((d) => { data = d; render(); }).catch((e) => { if (e.message !== "auth") $("#list").innerHTML = `<p class="booking__msg is-error">${esc(e.message)}</p>`; }); };
+  /* Prix : automatiques (Airbnb ± x %) ou fixés à la main, prix pour des dates précises, événements */
+  let px = null; // réglages en cours de modification
+  let pxSaved = ""; // dernière version enregistrée
+  let pxHouse = "lacanau";
+  let pxMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  let pxSel = null; // dates choisies dans le calendrier des prix : { du, au, picking }
+  const pxDef = () => ({ mode: "auto", ajust: 0, nuit: null, weekend: null, menage: null, dates: [] });
+  const isoAdd = (iso, n) => { const [y, m, d] = iso.split("-").map(Number); return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10); };
+  const dShort = (iso) => { const [y, m, d] = iso.split("-").map(Number); return new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "short", year: y !== now.getFullYear() ? "numeric" : undefined }).format(new Date(y, m - 1, d)); };
+  const nNights = (du, au) => Math.round((Date.parse(au) - Date.parse(du)) / DAYMS) + 1;
+  const plural = (n, w) => `${n} ${w}${n > 1 ? "s" : ""}`;
+  const pxNight = (iso) => SP_NIGHT(pxHouse, iso, px); // prix de la nuit avant remise
+  const pxGuest = (v) => (v > 0 ? Math.round((v * (100 - SP_REMISE(px))) / 100) : null); // payé par le voyageur
+  const pxAirbnb = (iso) => { const A = (window.TARIFS_AIRBNB || {})[pxHouse]; if (!A || !A.periodes || !A.periodes.length) return null; return (A.periodes.filter((x) => x.du <= iso).pop() || A.periodes[0]).nuit; };
+  const pxEvents = (iso) => (window.EVENEMENTS || []).filter((e) => e.maisons.includes(pxHouse) && e.du <= iso && iso <= e.au);
+  const pxRule = (iso) => px[pxHouse].dates.find((x) => x.du <= iso && iso <= x.au && (x.nuit > 0 || x.pct));
+  const ruleTxt = (r) => (r.nuit ? `${r.nuit.toLocaleString("fr-FR")} € la nuit` : `${r.pct > 0 ? "+" : "−"}${Math.abs(r.pct)} %`);
+  const dots = (n) => `<span class="px-impact px-impact--${n}" title="${["", "Un peu plus de demande", "Forte demande", "Très forte demande"][n]}">${"●".repeat(n)}${"○".repeat(3 - n)}</span>`;
+  const range = (du, au) => { const v = []; for (let d = du; d <= au; d = isoAdd(d, 1)) v.push(pxGuest(pxNight(d))); const ok = v.filter((x) => x > 0); if (!ok.length) return "prix sur demande"; const a = Math.min(...ok), b = Math.max(...ok); return a === b ? `${a.toLocaleString("fr-FR")} €` : `${a.toLocaleString("fr-FR")} à ${b.toLocaleString("fr-FR")} €`; };
+
+  const renderPrix = () => {
+    if (!px) return;
+    const H = px[pxHouse];
+    const todayIso = isoOf(now);
+    const rem = SP_REMISE(px);
+    const dirty = JSON.stringify(px) !== pxSaved;
+    const A = window.TARIFS_AIRBNB || {};
+    const auto = H.mode !== "manuel";
+    const hint = (v) => (v > 0 ? `<span class="px-hint">soit ${pxGuest(v).toLocaleString("fr-FR")} € la nuit sur ton site</span>` : "");
+    let html = `<div class="px-top">
+      <label class="px-switch"><input type="checkbox" id="px-auto"${auto ? " checked" : ""}><span class="px-switch__ui" aria-hidden="true"></span>
+        <span><strong>Prix automatiques</strong><span class="small">${auto ? `Basés sur les prix Airbnb, relevés chaque jour${A.updated ? ` (dernier relevé : ${dShort(A.updated)})` : ""}.` : "Désactivés : tu fixes toi-même le prix de la nuit."}</span></span></label>
+      <div class="field px-remise"><label for="px-rem">Remise réservation directe</label><div class="px-unit"><input id="px-rem" type="number" min="0" max="50" step="1" inputmode="numeric" value="${rem}"><span>%</span></div></div>
+    </div>`;
+    if (auto) {
+      html += `<div class="px-panel"><p class="px-label">Ajustement par rapport à Airbnb</p>
+        <div class="admin-tabs px-adj">${[-15, -10, -5, 0, 5, 10, 15, 20].map((v) => `<button type="button" class="chip" data-adj="${v}" aria-pressed="${Number(H.ajust) === v}">${v > 0 ? "+" : v < 0 ? "−" : ""}${Math.abs(v)} %</button>`).join("")}
+        <div class="px-unit px-unit--sm"><input id="px-adj" type="number" min="-50" max="100" step="1" inputmode="numeric" value="${Number(H.ajust) || 0}" aria-label="Ajustement personnalisé en %"><span>%</span></div></div>
+        <p class="small">Le prix de chaque nuit suit Airbnb${Number(H.ajust) ? ` ${H.ajust > 0 ? "+" : "−"}${Math.abs(H.ajust)} %` : ""}, puis la remise de ${rem} % s'applique. Ménage et taxe de séjour : comme sur Airbnb.</p></div>`;
+    } else {
+      html += `<div class="px-panel px-manual">
+        <div class="field"><label for="px-nuit">Prix de la nuit (dimanche → jeudi)</label><div class="px-unit"><input id="px-nuit" type="number" min="20" step="5" inputmode="numeric" value="${H.nuit || ""}" required><span>€</span></div>${hint(H.nuit)}</div>
+        <div class="field"><label for="px-we">Nuits du vendredi et du samedi</label><div class="px-unit"><input id="px-we" type="number" min="20" step="5" inputmode="numeric" value="${H.weekend || ""}" placeholder="${H.nuit || ""}"><span>€</span></div>${hint(H.weekend || H.nuit)}</div>
+        <div class="field"><label for="px-men">Ménage et frais (par séjour)</label><div class="px-unit"><input id="px-men" type="number" min="0" step="5" inputmode="numeric" value="${H.menage != null ? H.menage : ""}" placeholder="${(A[pxHouse] || {}).fixe || ""}"><span>€</span></div></div>
+        <p class="small">Prix avant la remise de ${rem} %. Les prix fixés pour des dates précises (plus bas) passent toujours en priorité.${(() => { const v = Array.from({ length: 365 }, (x, i) => pxAirbnb(isoAdd(todayIso, i + 1))).filter(Boolean); return v.length ? ` <strong>Repère : sur Airbnb, la nuit va de ${Math.min(...v).toLocaleString("fr-FR")} à ${Math.max(...v).toLocaleString("fr-FR")} € selon la saison</strong> — pense à monter les prix de l'été et des vacances (bouton « Augmenter » ou dates précises).` : ""; })()}</p></div>`;
+    }
+    // Calendrier des prix
+    const title = new Intl.DateTimeFormat("fr-FR", { month: "long", year: "numeric" }).format(pxMonth);
+    const first = new Date(pxMonth);
+    const start = new Date(first);
+    start.setDate(1 - ((first.getDay() + 6) % 7));
+    let grid = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"].map((d) => `<div class="admin-cal__dow">${d}</div>`).join("");
+    for (let i = 0; i < 42; i++) {
+      const d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
+      if (i === 35 && d.getMonth() !== pxMonth.getMonth()) break;
+      const iso = isoOf(d);
+      const past = iso < todayIso;
+      const v = pxGuest(pxNight(iso));
+      const evs = pxEvents(iso);
+      const imp = Math.max(0, ...evs.map((e) => e.impact));
+      const rule = pxRule(iso);
+      const sel = pxSel && pxSel.du <= iso && iso <= pxSel.au;
+      const tip = [`${dShort(iso)} : ${v ? `${v} € la nuit sur ton site` : "prix sur demande"}`, pxAirbnb(iso) ? `Airbnb : ${pxAirbnb(iso)} €` : "", rule ? `Prix fixé : ${rule.nom || ruleTxt(rule)}` : "", ...evs.map((e) => e.nom)].filter(Boolean).join("\n");
+      grid += `<button type="button" class="px-day${d.getMonth() !== pxMonth.getMonth() ? " is-other" : ""}${past ? " is-past" : ""}${iso === todayIso ? " is-today" : ""}${rule ? " is-fixed" : ""}${sel ? " is-sel" : ""}${imp ? ` is-hot${imp}` : ""}" data-pxday="${iso}"${past ? " disabled" : ""} title="${esc(tip)}">
+        <span class="admin-cal__num">${d.getDate()}</span><strong>${v ? v.toLocaleString("fr-FR") : "—"}</strong>${evs.length ? `<i class="px-evdot">${esc(evs.sort((a, b) => b.impact - a.impact || nNights(a.du, a.au) - nNights(b.du, b.au))[0].nom)}</i>` : ""}</button>`;
+    }
+    html += `<div class="px-cal">
+      <div class="admin-cal__nav"><button type="button" class="admin-cal__arrow" data-pxm="-1" aria-label="Mois précédent">‹</button><h3 class="h3">${title.charAt(0).toUpperCase() + title.slice(1)}</h3><button type="button" class="admin-cal__arrow" data-pxm="1" aria-label="Mois suivant">›</button></div>
+      <p class="small">Prix d'une nuit payé sur ton site (remise déduite, hors ménage et taxe). Touche une date puis une autre pour changer le prix de ces nuits.</p>
+      <div class="admin-cal__grid px-grid">${grid}</div>
+      <ul class="admin-cal__legend"><li><i class="px-lg px-lg--hot1"></i>Un peu plus de demande</li><li><i class="px-lg px-lg--hot2"></i>Forte demande</li><li><i class="px-lg px-lg--hot3"></i>Très forte demande</li><li><i class="px-lg px-lg--fixed"></i>Prix fixé par toi</li></ul>
+    </div>`;
+    // Sélection : changer le prix de ces nuits
+    if (pxSel) {
+      const evs = (window.EVENEMENTS || []).filter((e) => e.maisons.includes(pxHouse) && e.du <= pxSel.au && pxSel.du <= e.au);
+      html += `<form class="px-selform" id="px-selform">
+        <p><strong>${pxSel.du === pxSel.au ? `Nuit du ${dShort(pxSel.du)}` : `Du ${dShort(pxSel.du)} au ${dShort(pxSel.au)} (${plural(nNights(pxSel.du, pxSel.au), "nuit")}, départ le ${dShort(isoAdd(pxSel.au, 1))})`}</strong>
+        <span class="small">${pxSel.picking ? "Touche la dernière nuit pour choisir plusieurs dates. " : ""}Aujourd'hui : ${range(pxSel.du, pxSel.au)} la nuit sur ton site${evs.length ? ` · ${evs.map((e) => esc(e.nom)).join(", ")}` : ""}.</span></p>
+        <div class="px-selform__row">
+          <div class="field"><label for="px-s-type">Changer</label><select id="px-s-type"><option value="pct">de x %</option><option value="nuit">pour un prix fixe</option></select></div>
+          <div class="field"><label for="px-s-val">Valeur</label><div class="px-unit"><input id="px-s-val" type="number" step="1" inputmode="numeric" required placeholder="ex. 20"><span id="px-s-unit">%</span></div></div>
+          <div class="field"><label for="px-s-nom">Nom (facultatif)</label><input id="px-s-nom" maxlength="80" value="${esc(evs[0] ? evs[0].nom : "")}"></div>
+          <button class="btn btn--accent" type="submit">Appliquer</button>
+          <button class="link" type="button" id="px-s-cancel">Annuler</button>
+        </div>
+      </form>`;
+    }
+    // Prix fixés pour des dates précises
+    const rules = H.dates.map((r, i) => ({ r, i })).filter(({ r }) => r.au >= todayIso);
+    html += `<div class="px-block"><h3 class="h3">Prix pour des dates précises</h3>${rules.length ? `<ul class="admin-codes">${rules.map(({ r, i }) => `<li><strong>${esc(r.nom || "Prix fixé")}</strong><span>${dShort(r.du)} → ${dShort(isoAdd(r.au, 1))} (${plural(nNights(r.du, r.au), "nuit")}) · ${ruleTxt(r)} · ${range(r.du, r.au)} la nuit sur ton site</span><button type="button" class="link" data-pxdel="${i}">Retirer</button></li>`).join("")}</ul>` : `<p class="small">Aucun pour l'instant : choisis des dates dans le calendrier, ou applique une hausse sur un événement ci-dessous.</p>`}</div>`;
+    // Événements
+    const evs = (window.EVENEMENTS || []).map((e, i) => ({ e, i })).filter(({ e }) => e.maisons.includes(pxHouse) && e.au >= todayIso);
+    html += `<div class="px-block"><h3 class="h3">Moments où il y a du monde</h3><p class="small">Vacances, ponts et grands événements ${pxHouse === "lacanau" ? "à Lacanau et dans le Médoc" : "à Bordeaux"}. La hausse proposée s'ajoute au prix habituel de ces nuits.</p>
+      <ul class="px-events">${evs.map(({ e, i }) => {
+        const done = H.dates.find((r) => r.du === e.du && r.au === e.au);
+        return `<li class="px-ev"><div class="px-ev__head">${dots(e.impact)}<strong>${esc(e.nom)}</strong>${e.confirme ? "" : `<span class="tag">dates à confirmer</span>`}</div>
+          <span class="small">${dShort(e.du)} → ${dShort(isoAdd(e.au, 1))} · ${plural(nNights(e.du, e.au), "nuit")} · aujourd'hui ${range(e.du, e.au)}${e.info ? ` · ${esc(e.info)}` : ""}</span>
+          ${done ? `<span class="px-ev__done">Appliqué : ${ruleTxt(done)}</span>` : `<button type="button" class="btn btn--ghost" data-pxev="${i}">Augmenter de ${e.hausse} %</button>`}</li>`;
+      }).join("")}</ul></div>`;
+    html += `<div class="px-save${dirty ? " is-dirty" : ""}"><span>${dirty ? "Modifications pas encore en ligne" : "Ces prix sont en ligne"}</span><button type="button" class="btn btn--accent" id="px-save"${dirty ? "" : " disabled"}>Enregistrer et mettre en ligne</button><p class="booking__msg" id="px-msg" aria-live="polite"></p></div>`;
+    $("#px-body").innerHTML = html;
+  };
+  const loadPrix = () => api("tarifs").then((d) => {
+    const t = d.tarifs || {};
+    px = { remise: t.remise != null ? t.remise : SP_REMISE({}), lacanau: Object.assign(pxDef(), t.lacanau), bordeaux: Object.assign(pxDef(), t.bordeaux) };
+    if (t.maj) px.maj = t.maj;
+    pxSaved = JSON.stringify(px);
+    renderPrix();
+  }).catch((e) => { if (e.message !== "auth") $("#px-body").innerHTML = `<p class="booking__msg is-error">${esc(e.message)}</p>`; });
+  $$("[data-px]").forEach((b) => b.addEventListener("click", () => {
+    pxHouse = b.dataset.px;
+    pxSel = null;
+    $$("[data-px]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+    renderPrix();
+  }));
+  const pxVal = (v) => (v === "" ? null : Number(v));
+  $("#px-body").addEventListener("change", (e) => {
+    const H = px[pxHouse];
+    const t = e.target;
+    if (t.id === "px-auto") {
+      H.mode = t.checked ? "auto" : "manuel";
+      if (H.mode === "manuel" && !H.nuit) {
+        // On part des prix Airbnb des prochaines semaines
+        const soon = Array.from({ length: 30 }, (x, i) => pxAirbnb(isoAdd(isoOf(now), i + 1))).filter(Boolean);
+        if (soon.length) H.nuit = Math.round(Math.min(...soon) / 5) * 5;
+        if (H.menage == null && (window.TARIFS_AIRBNB || {})[pxHouse]) H.menage = TARIFS_AIRBNB[pxHouse].fixe || null;
+      }
+    } else if (t.id === "px-rem") px.remise = Math.max(0, Math.min(50, Number(t.value) || 0));
+    else if (t.id === "px-adj") H.ajust = Math.max(-50, Math.min(100, Math.round(Number(t.value) || 0)));
+    else if (t.id === "px-nuit") H.nuit = pxVal(t.value);
+    else if (t.id === "px-we") H.weekend = pxVal(t.value);
+    else if (t.id === "px-men") H.menage = pxVal(t.value);
+    else if (t.id === "px-s-type") { $("#px-s-unit").textContent = t.value === "nuit" ? "€" : "%"; $("#px-s-val").placeholder = t.value === "nuit" ? "ex. 550" : "ex. 20"; return; } else return;
+    renderPrix();
+  });
+  $("#px-body").addEventListener("click", (e) => {
+    const H = px[pxHouse];
+    const t = e.target.closest("button");
+    if (!t) return;
+    if (t.dataset.adj != null) { H.ajust = Number(t.dataset.adj); renderPrix(); return; }
+    if (t.dataset.pxm) { pxMonth = new Date(pxMonth.getFullYear(), pxMonth.getMonth() + Number(t.dataset.pxm), 1); renderPrix(); return; }
+    if (t.dataset.pxday) {
+      const iso = t.dataset.pxday;
+      if (pxSel && pxSel.picking) pxSel = { du: iso < pxSel.du ? iso : pxSel.du, au: iso < pxSel.du ? pxSel.du : iso, picking: false };
+      else pxSel = { du: iso, au: iso, picking: true };
+      renderPrix();
+      const f = $("#px-selform");
+      if (f && !pxSel.picking) f.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      return;
+    }
+    if (t.id === "px-s-cancel") { pxSel = null; renderPrix(); return; }
+    if (t.dataset.pxdel != null) { H.dates.splice(Number(t.dataset.pxdel), 1); renderPrix(); return; }
+    if (t.dataset.pxev != null) {
+      const ev = EVENEMENTS[Number(t.dataset.pxev)];
+      H.dates.push({ du: ev.du, au: ev.au, pct: ev.hausse, nom: ev.nom });
+      H.dates.sort((a, b) => (a.du < b.du ? -1 : 1));
+      renderPrix();
+      return;
+    }
+    if (t.id === "px-save") {
+      const m = $("#px-msg");
+      t.disabled = true;
+      m.classList.remove("is-error");
+      m.textContent = "Enregistrement…";
+      api("tarifs", "POST", px).then((d) => {
+        const s = d.tarifs;
+        px = { remise: s.remise, lacanau: Object.assign(pxDef(), s.lacanau), bordeaux: Object.assign(pxDef(), s.bordeaux), maj: s.maj };
+        pxSaved = JSON.stringify(px);
+        renderPrix();
+        $("#px-msg").textContent = "C'est en ligne : les voyageurs voient les nouveaux prix (moins d'une minute).";
+      }).catch((err) => { if (err.message !== "auth") { m.textContent = err.message; m.classList.add("is-error"); t.disabled = false; } });
+    }
+  });
+  $("#px-body").addEventListener("submit", (e) => {
+    if (e.target.id !== "px-selform") return;
+    e.preventDefault();
+    const type = $("#px-s-type").value;
+    const val = Math.round(Number($("#px-s-val").value));
+    if (!val) return;
+    const H = px[pxHouse];
+    // Les dates choisies remplacent les prix déjà fixés sur ces nuits
+    const out = [];
+    H.dates.forEach((r) => {
+      if (r.au < pxSel.du || r.du > pxSel.au) { out.push(r); return; }
+      if (r.du < pxSel.du) out.push(Object.assign({}, r, { au: isoAdd(pxSel.du, -1) }));
+      if (r.au > pxSel.au) out.push(Object.assign({}, r, { du: isoAdd(pxSel.au, 1) }));
+    });
+    out.push(Object.assign({ du: pxSel.du, au: pxSel.au, nom: $("#px-s-nom").value.trim() }, type === "nuit" ? { nuit: val } : { pct: val }));
+    H.dates = out.sort((a, b) => (a.du < b.du ? -1 : 1));
+    pxSel = null;
+    renderPrix();
+  });
+  window.addEventListener("beforeunload", (e) => { if (px && JSON.stringify(px) !== pxSaved) { e.preventDefault(); e.returnValue = ""; } });
+
+  const refresh = () => { loadCodes(); loadStats(); if (!px || JSON.stringify(px) === pxSaved) loadPrix(); return api("reservations").then((d) => { data = d; render(); }).catch((e) => { if (e.message !== "auth") $("#list").innerHTML = `<p class="booking__msg is-error">${esc(e.message)}</p>`; }); };
   /* Statistiques : visites (anonymes, sans cookie), sources, clics et réservations */
   let statDays = 30;
   const nf = new Intl.NumberFormat("fr-FR");

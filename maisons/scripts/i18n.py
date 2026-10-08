@@ -403,7 +403,9 @@ def fr_links(src, page):
         else:
             h2 = re.sub(r"</nav>", sw + "</nav>", h, count=1)
         src = src.replace(h, h2, 1)
-    src = src.replace('<p class="menu__foot">', sw + '\n      <p class="menu__foot">', 1)
+    # (lignes vides laissées par la version précédente du sélecteur : supprimées, pour un résultat identique à chaque fois)
+    src = re.sub(r'(?:\n[ \t]*)+(<p class="menu__foot">)', r'\n      \1', src, count=1)
+    src = src.replace('\n      <p class="menu__foot">', '\n      ' + sw + '\n      <p class="menu__foot">', 1)
     alt = "\n  <!-- langues -->" + "".join(f'<link rel="alternate" hreflang="{l}" href="{page_url(l, page)}">' for l in ["fr", "en", "es"]) + f'<link rel="alternate" hreflang="x-default" href="{page_url("fr", page)}"><!-- /langues -->'
     m = re.search(r'<link rel="canonical"[^>]*>', src)
     if m:
