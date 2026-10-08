@@ -350,6 +350,10 @@ async function legacyRequest(request, env, ctx) {
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    if (url.hostname.startsWith("www.")) {
+      url.hostname = url.hostname.slice(4);
+      return Response.redirect(url.toString(), 301);
+    }
     const p = url.pathname;
     const origin = url.origin;
     let m;

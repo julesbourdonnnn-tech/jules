@@ -6,7 +6,7 @@ window.SITE = {
   name: "Sable & Pierre",
   // Adresse du site une fois en ligne, sans / final (ex. "https://sableetpierre.fr").
   // Sert aux liens de partage. Vide = adresse de la page actuelle.
-  url: "",
+  url: "https://sable-et-pierre.com",
 
   // Où arrivent les demandes de réservation directe.
   // ⚠️ À remplacer par ton adresse (provisoire : celle de Nuits Singulières).

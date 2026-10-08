@@ -81,7 +81,7 @@ Le site a **son propre Worker Cloudflare, « lacanau »**, séparé de Nuits Sin
 - **Pour le créer à nouveau (comme pour les autres sites)** : Cloudflare → Workers & Pages → Créer → Importer un dépôt Git → `jules`, puis dans les réglages de build : **répertoire racine = `maisons`**, commande de déploiement `npx wrangler deploy`. Cloudflare publie le site à chaque modification.
 - **Autre option** : la GitHub Action « Sable & Pierre » (`.github/workflows/maisons.yml`) publie le site à chaque modification du dossier `maisons/` sur la branche principale, avec les secrets déjà utilisés par le dépôt (`CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`). Adresse provisoire : `https://lacanau.<ton-compte>.workers.dev`.
 - **À la main** : depuis le dossier `maisons/`, `npx wrangler deploy`.
-- **Nom de domaine** : une fois acheté sur Cloudflare, retire les `//` devant le bloc `routes` de `wrangler.jsonc` (en y mettant ton domaine), et renseigne `url` dans `js/config.js`.
+- **Nom de domaine** : **https://sable-et-pierre.com** (acheté sur Cloudflare, branché par le bloc `routes` de `wrangler.jsonc` ; `www.sable-et-pierre.com` renvoie vers l'adresse sans www). L'adresse `lacanau.….workers.dev` continue de fonctionner.
 
 ### Disponibilités encore plus fraîches (facultatif)
 

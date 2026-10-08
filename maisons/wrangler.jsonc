@@ -19,10 +19,10 @@
   "kv_namespaces": [
     { "binding": "RESERVATIONS", "id": "740e12d73b574596957cb3fb964f72c9" }
   ],
-  // Nom de domaine : une fois acheté sur Cloudflare, retirer les // ci-dessous.
-  // "routes": [
-  //   { "pattern": "mon-domaine.fr", "custom_domain": true },
-  //   { "pattern": "www.mon-domaine.fr", "custom_domain": true }
-  // ],
+  // Nom de domaine (acheté sur Cloudflare le 8 octobre 2026) ; www renvoie vers l'adresse sans www
+  "routes": [
+    { "pattern": "sable-et-pierre.com", "custom_domain": true },
+    { "pattern": "www.sable-et-pierre.com", "custom_domain": true }
+  ],
   "workers_dev": true
 }
