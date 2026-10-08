@@ -37,6 +37,29 @@
         </div>
         <p class="booking__msg" id="test-msg" aria-live="polite"></p>
         <div id="alerts"></div>
+        <section class="admin-cal" aria-labelledby="cal-title">
+          <div class="admin-cal__head">
+            <div class="admin-cal__nav">
+              <button type="button" class="admin-cal__arrow" id="cal-prev" aria-label="Mois précédent">‹</button>
+              <h2 class="h3" id="cal-title">Calendrier</h2>
+              <button type="button" class="admin-cal__arrow" id="cal-next" aria-label="Mois suivant">›</button>
+              <button type="button" class="link" id="cal-today">Aujourd'hui</button>
+            </div>
+            <div class="admin-tabs" role="group" aria-label="Maison">
+              <button type="button" class="chip" data-ch="" aria-pressed="true">Les deux</button>
+              <button type="button" class="chip" data-ch="lacanau" aria-pressed="false">Lacanau</button>
+              <button type="button" class="chip" data-ch="bordeaux" aria-pressed="false">Bordeaux</button>
+            </div>
+          </div>
+          <div class="admin-cal__grid" id="cal-grid"></div>
+          <ul class="admin-cal__legend">
+            <li><i class="ev ev--a_valider"></i>À valider</li>
+            <li><i class="ev ev--confirmee"></i>Confirmée</li>
+            <li><i class="ev ev--paiement"></i>Paiement en cours</li>
+            <li><i class="ev ev--airbnb"></i>Pris sur Airbnb (ou bloqué)</li>
+            <li><b class="hl hl--lacanau">L</b>Lacanau <b class="hl hl--bordeaux">B</b>Bordeaux</li>
+          </ul>
+        </section>
         <div class="admin-list" id="list" aria-live="polite"></div>
         <details class="admin-help" id="codes-box">
           <summary>Codes promo</summary>
@@ -62,6 +85,7 @@
   </main>
   <script src="js/config.js"></script>
   <script src="js/data.js"></script>
+  <script src="js/disponibilites.js"></script>
   <script src="js/prix.js"></script>
   <script src="js/admin.js"></script>
 </body>

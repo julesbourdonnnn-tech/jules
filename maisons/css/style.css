@@ -1071,3 +1071,51 @@ html { background: var(--ivory); }
 .admin-codes li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; padding: 12px 14px; background: var(--paper); border: 1px solid var(--line); }
 .admin-codes li span { flex: 1 1 220px; color: var(--ink-soft); font-size: .9rem; }
 .admin-bar__btns { display: flex; flex-wrap: wrap; gap: 10px; }
+/* Calendrier de l'espace propriétaire */
+.admin-cal { margin: 10px 0 34px; padding: clamp(16px, 2.6vw, 28px); background: var(--paper); border: 1px solid var(--line); }
+.admin-cal__head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 14px; margin-bottom: 18px; }
+.admin-cal__nav { display: flex; align-items: center; gap: 10px; }
+.admin-cal__nav .h3 { min-width: 9.5em; text-align: center; margin: 0; }
+.admin-cal__arrow { width: 40px; height: 40px; border: 1px solid var(--line-strong); border-radius: 50%; background: transparent; font-size: 1.4rem; line-height: 1; color: var(--ink); cursor: pointer; }
+.admin-cal__arrow:hover { border-color: var(--ink); }
+.admin-cal__grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border-top: 1px solid var(--line); border-left: 1px solid var(--line); }
+.admin-cal__dow { padding: 8px 6px; font: 700 .6rem/1 var(--sans); letter-spacing: .16em; text-transform: uppercase; color: var(--muted); border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); background: var(--ivory); }
+.admin-cal__day { min-height: 92px; padding: 4px 0 6px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.admin-cal__day.is-other { background: var(--ivory); }
+.admin-cal__day.is-other .admin-cal__num { opacity: .45; }
+.admin-cal__day.is-past { background: repeating-linear-gradient(135deg, transparent 0 6px, rgba(28, 26, 23, .025) 6px 12px); }
+.admin-cal__num { font-size: .78rem; font-weight: 600; padding: 0 6px; color: var(--ink-soft); }
+.admin-cal__day.is-today .admin-cal__num { color: var(--paper); background: var(--ink); border-radius: 10px; align-self: flex-start; margin-left: 4px; padding: 1px 7px; }
+.ev { display: flex; align-items: center; gap: 4px; min-height: 22px; padding: 2px 5px; margin: 0; border: 0; font: 600 .7rem/1.2 var(--sans); text-align: left; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-radius: 0; }
+button.ev { cursor: pointer; width: 100%; }
+.ev span { overflow: hidden; text-overflow: ellipsis; }
+.ev--start { margin-left: 4px; border-top-left-radius: 6px; border-bottom-left-radius: 6px; }
+.ev--end { margin-right: 4px; border-top-right-radius: 6px; border-bottom-right-radius: 6px; }
+button.ev--start, button.ev--end { width: auto; }
+.ev--a_valider { background: #fbe6bb; color: #5c3f07; }
+.ev--confirmee { background: #cfe8d5; color: #1a4a2a; }
+.ev--paiement { background: #e6e1d8; color: var(--ink-soft); }
+.ev--airbnb { background: repeating-linear-gradient(135deg, #f0e3e6 0 5px, #f7eef0 5px 10px); color: #7a2a3a; }
+button.ev:hover, button.ev:focus-visible { filter: brightness(.95); outline: 2px solid var(--ink); outline-offset: -2px; }
+.hl { display: inline-grid; place-items: center; flex: none; width: 15px; height: 15px; border-radius: 50%; font: 700 .55rem/1 var(--sans); color: #fff; }
+.hl--lacanau { background: var(--ocean); }
+.hl--bordeaux { background: var(--wine); }
+.admin-cal__legend { list-style: none; display: flex; flex-wrap: wrap; gap: 10px 22px; padding: 0; margin: 16px 0 0; font-size: .82rem; color: var(--ink-soft); }
+.admin-cal__legend li { display: flex; align-items: center; gap: 7px; }
+.admin-cal__legend .ev { width: 22px; min-height: 12px; padding: 0; border-radius: 3px; }
+.admin-cal__legend .hl { margin-left: 4px; }
+.admin-card.is-flash { animation: resaflash 1.6s ease; }
+@keyframes resaflash { 0%, 40% { box-shadow: 0 0 0 3px var(--gold); } 100% { box-shadow: 0 0 0 0 transparent; } }
+@media (max-width: 640px) {
+  .admin-cal__nav { width: 100%; flex-wrap: wrap; }
+  .admin-cal__nav .h3 { min-width: 0; flex: 1; font-size: 1.5rem; }
+  .admin-cal__nav .admin-cal__arrow:first-child { order: 0; }
+  .admin-cal__nav .h3 { order: 1; }
+  #cal-next { order: 2; }
+  .admin-cal__nav::after { content: ""; order: 2; flex-basis: 100%; }
+  #cal-today { order: 3; margin: 0 auto; }
+  .admin-cal__day { min-height: 64px; }
+  .ev span { display: none; }
+  .ev { justify-content: center; padding: 2px; }
+  .admin-cal__dow { font-size: .5rem; letter-spacing: .05em; padding: 6px 2px; }
+}

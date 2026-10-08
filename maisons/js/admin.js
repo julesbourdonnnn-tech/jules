@@ -40,7 +40,7 @@
       ? `<button type="button" class="btn btn--accent" data-act="accepter" data-id="${b.id}">Accepter${b.paymentIntent ? " et débiter" : ""}</button><button type="button" class="btn btn--ghost" data-act="refuser" data-id="${b.id}">Refuser</button>`
       : b.statut === "confirmee" ? `<a class="btn btn--ghost" href="${mailto(b, "ok")}">Écrire la confirmation</a><button type="button" class="link" data-act="annuler" data-id="${b.id}">Annuler la réservation</button>`
         : b.statut === "refusee" ? `<a class="btn btn--ghost" href="${mailto(b, "no")}">Écrire au voyageur</a>` : "";
-    return `<article class="admin-card" data-house="${b.maison}">
+    return `<article class="admin-card" id="resa-${esc(b.id)}" data-house="${b.maison}">
       <div class="admin-card__head"><span class="tag admin-tag admin-tag--${b.statut}">${LABEL[b.statut] || b.statut}</span><span class="small">${esc(b.id)} · reçue le ${when(b.cree)}</span></div>
       <h2 class="h3">${esc(h.name)}</h2>
       <p class="admin-card__dates">${fmt(b.arrivee)} → ${fmt(b.depart)} · ${b.nuits} nuit${b.nuits > 1 ? "s" : ""} · ${b.adultes + b.enfants} voyageur${b.adultes + b.enfants > 1 ? "s" : ""}${b.bebes ? ` + ${b.bebes} bébé(s)` : ""}</p>
@@ -61,6 +61,7 @@
     const n = data.reservations.filter((b) => b.statut === "a_valider").length;
     $('[data-f="a_valider"]').textContent = `À valider${n ? ` (${n})` : ""}`;
     $("#list").innerHTML = list.length ? list.map(card).join("") : `<p class="lead">Aucune réservation ici pour le moment.</p>`;
+    renderCal();
     const alerts = [];
     if (!data.stripe) alerts.push("Le paiement par carte n'est pas encore activé : ajoute la clé STRIPE_SECRET_KEY dans Cloudflare. En attendant, les voyageurs envoient des demandes sans payer.");
     if (!data.notify) alerts.push("Astuce : ajoute NOTIFY_URL dans Cloudflare pour être prévenu sur ton téléphone à chaque nouvelle réservation.");
@@ -92,6 +93,76 @@
     const b = e.target.closest("[data-del-code]");
     if (!b || !window.confirm(`Supprimer le code ${b.dataset.delCode} ?`)) return;
     try { await api(`codes/${encodeURIComponent(b.dataset.delCode)}`, "DELETE"); loadCodes(); } catch (err) { /* ignoré */ }
+  });
+
+  /* Calendrier : demandes, réservations confirmées et nuits prises sur Airbnb */
+  const DAYMS = 86400000;
+  const isoOf = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const now = new Date();
+  let calMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  let calHouse = "";
+  const AV = window.AVAILABILITY || {};
+  const airbnbTaken = (k, iso) => {
+    const a = AV[k];
+    if (!a || !a.flags) return false;
+    const [y, m, d] = a.from.split("-").map(Number);
+    const [y2, m2, d2] = iso.split("-").map(Number);
+    const i = Math.round((Date.UTC(y2, m2 - 1, d2) - Date.UTC(y, m - 1, d)) / DAYMS);
+    if (i < 0 || i >= a.flags.length) return false;
+    return !(Number(a.flags[i]) & 1);
+  };
+  const liveStatus = (b) => b.statut === "a_valider" || b.statut === "confirmee" || (b.statut === "paiement" && Date.now() - Date.parse(b.cree) < 35 * 60000);
+  const renderCal = () => {
+    if (!data) return;
+    const houses = calHouse ? [calHouse] : ["lacanau", "bordeaux"];
+    const title = new Intl.DateTimeFormat("fr-FR", { month: "long", year: "numeric" }).format(calMonth);
+    $("#cal-title").textContent = title.charAt(0).toUpperCase() + title.slice(1);
+    const first = new Date(calMonth);
+    const start = new Date(first);
+    start.setDate(1 - ((first.getDay() + 6) % 7)); // lundi
+    const todayIso = isoOf(now);
+    const books = data.reservations.filter(liveStatus).filter((b) => houses.includes(b.maison)).sort((a, b) => (a.maison === b.maison ? (a.arrivee < b.arrivee ? -1 : 1) : a.maison < b.maison ? 1 : -1));
+    let html = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"].map((d) => `<div class="admin-cal__dow">${d}</div>`).join("");
+    for (let i = 0; i < 42; i++) {
+      const d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
+      if (i === 35 && d.getMonth() !== calMonth.getMonth()) break;
+      const iso = isoOf(d);
+      const monday = d.getDay() === 1;
+      const evs = [];
+      houses.forEach((k) => {
+        const mine = books.filter((b) => b.maison === k && b.arrivee <= iso && iso < b.depart);
+        mine.forEach((b) => {
+          const label = b.arrivee === iso || monday || d.getDate() === 1;
+          evs.push(`<button type="button" class="ev ev--${b.statut}${b.arrivee === iso ? " ev--start" : ""}${isoOf(new Date(d.getTime() + DAYMS)) === b.depart ? " ev--end" : ""}" data-goto="${esc(b.id)}" data-st="${b.statut}" title="${esc(`${HOUSES[k].name} · ${b.nom} · ${fmt(b.arrivee)} → ${fmt(b.depart)} · ${LABEL[b.statut]}`)}"><b class="hl hl--${k}">${k === "lacanau" ? "L" : "B"}</b>${label ? `<span>${esc(b.nom)}</span>` : ""}</button>`);
+        });
+        if (!mine.length && iso >= todayIso && airbnbTaken(k, iso)) {
+          const prev = isoOf(new Date(d.getTime() - DAYMS));
+          const label = monday || d.getDate() === 1 || !airbnbTaken(k, prev);
+          evs.push(`<span class="ev ev--airbnb" title="${esc(HOUSES[k].name)} : nuit prise sur Airbnb ou bloquée"><b class="hl hl--${k}">${k === "lacanau" ? "L" : "B"}</b>${label ? "<span>Airbnb</span>" : ""}</span>`);
+        }
+      });
+      const other = d.getMonth() !== calMonth.getMonth();
+      html += `<div class="admin-cal__day${other ? " is-other" : ""}${iso === todayIso ? " is-today" : ""}${iso < todayIso ? " is-past" : ""}"><span class="admin-cal__num">${d.getDate()}</span>${evs.join("")}</div>`;
+    }
+    $("#cal-grid").innerHTML = html;
+  };
+  $("#cal-prev").addEventListener("click", () => { calMonth = new Date(calMonth.getFullYear(), calMonth.getMonth() - 1, 1); renderCal(); });
+  $("#cal-next").addEventListener("click", () => { calMonth = new Date(calMonth.getFullYear(), calMonth.getMonth() + 1, 1); renderCal(); });
+  $("#cal-today").addEventListener("click", () => { calMonth = new Date(now.getFullYear(), now.getMonth(), 1); renderCal(); });
+  $$("[data-ch]").forEach((b) => b.addEventListener("click", () => {
+    calHouse = b.dataset.ch;
+    $$("[data-ch]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+    renderCal();
+  }));
+  // Clic sur une réservation du calendrier : on affiche sa fiche dans la liste
+  $("#cal-grid").addEventListener("click", (e) => {
+    const ev = e.target.closest("[data-goto]");
+    if (!ev) return;
+    filter = ev.dataset.st === "confirmee" ? "confirmee" : ev.dataset.st === "a_valider" ? "a_valider" : "autres";
+    $$("[data-f]").forEach((x) => x.setAttribute("aria-pressed", String(x.dataset.f === filter)));
+    render();
+    const card = document.getElementById(`resa-${ev.dataset.goto}`);
+    if (card) { card.scrollIntoView({ behavior: "smooth", block: "center" }); card.classList.remove("is-flash"); void card.offsetWidth; card.classList.add("is-flash"); }
   });
 
   const refresh = () => { loadCodes(); return api("reservations").then((d) => { data = d; render(); }).catch((e) => { if (e.message !== "auth") $("#list").innerHTML = `<p class="booking__msg is-error">${esc(e.message)}</p>`; }); };

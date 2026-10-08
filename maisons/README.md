@@ -34,6 +34,8 @@ Le voyageur réserve **directement sur le site, sans frais de plateforme** :
 3. Tu reçois un **e-mail** sur contact.sablepierre@gmail.com (envoyé par reservations@sable-et-pierre.com via Cloudflare Email Routing) et, si `NOTIFY_URL` est réglé, une alerte ntfy. Bouton « Tester les alertes » dans `/admin.html` pour vérifier. Dans ton **espace propriétaire** (`/admin.html`), tu cliques **Accepter** (la carte est débitée, Stripe envoie le reçu au voyageur, et un e-mail de confirmation pré-rempli s'ouvre pour toi) ou **Refuser** (l'empreinte est libérée, rien n'est débité).
 4. Le voyageur suit sa réservation sur sa page personnelle (`/reservation.html?id=…`).
 
+**Calendrier** : en haut de `/admin.html`, un calendrier mois par mois montre les demandes à valider, les réservations confirmées et les nuits prises sur Airbnb, pour une maison ou les deux. Un clic sur une réservation ouvre sa fiche.
+
 **Codes promo** : dans `/admin.html` → « Codes promo », crée un code (réduction en %, ou prix total fixe, ex. 1 € pour un essai), pour une maison ou les deux, avec un nombre d'utilisations maximum. Le voyageur le saisit au moment de réserver ; le serveur vérifie le code et recalcule le prix (minimum 1 €). Un paiement abandonné ou une réservation refusée ne consomme pas le code.
 
 ⚠️ Une empreinte bancaire reste valable **7 jours** : valide les réservations dans ce délai (idéalement sous 24 h).
