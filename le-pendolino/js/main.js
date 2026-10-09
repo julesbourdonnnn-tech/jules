@@ -530,20 +530,18 @@
     var row = $('.hours tr[data-day="' + now.day + '"]');
     row.classList.add('is-today');
     var slot = row.getAttribute('data-open'), status = $('.board-status', row), live = $('.board-live');
-    var state, line, pill;
-    if (!slot) { state = 'Repos'; line = 'Aujourd’hui, le four se repose'; pill = 'Fermé aujourd’hui'; }
+    var state, line;
+    if (!slot) { state = 'Repos'; line = 'Aujourd’hui, le four se repose'; }
     else {
       var r = slot.split('-'), o = toMin(r[0]), c = toMin(r[1]);
-      if (now.min < o) { state = 'Ce soir'; line = 'Ouverture ce soir à ' + fmt(r[0]); pill = 'Ouvert ce soir dès ' + fmt(r[0]); }
-      else if (now.min < c) { state = 'En cuisson'; line = 'Ouvert : le four tourne jusqu’à ' + fmt(r[1]); pill = 'Ouvert jusqu’à ' + fmt(r[1]); }
-      else { state = 'Terminé'; line = 'Fermé pour ce soir, à demain !'; pill = 'Fermé pour ce soir'; }
+      if (now.min < o) { state = 'Ce soir'; line = 'Ouverture ce soir à ' + fmt(r[0]); }
+      else if (now.min < c) { state = 'En cuisson'; line = 'Ouvert : le four tourne jusqu’à ' + fmt(r[1]); }
+      else { state = 'Terminé'; line = 'Fermé pour ce soir, à demain !'; }
     }
     var openNow = state === 'En cuisson';
     status.innerHTML = '<span class="' + (openNow ? 'text-[#9BE39B]' : 'text-copper') + '">' + state + '</span>';
     live.innerHTML = '<span class="flicker h-2.5 w-2.5 rounded-full ' + (openNow ? 'bg-[#6BD66B]' : 'bg-tomato') + '"></span>' + line;
     live.hidden = false;
-    $('.today-text').textContent = pill;
-    $('.today-dot').className = 'today-dot h-2 w-2 rounded-full ' + (openNow ? 'bg-[#3FA34D] flicker' : 'bg-tomato');
 
     var clock = $('.board-clock');
     var tick = function () { var n = parisNow(); if (n) clock.innerHTML = n.h + '<span class="flicker">:</span>' + n.m; };
