@@ -2,81 +2,176 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ------------------------------------------------------------------
+   Le Pendolino — une trattoria de village : papier de menu, nappe
+   vichy, notes écrites à la main, tableau des départs pour les horaires.
+   ------------------------------------------------------------------ */
+
 @layer base {
-  html { scroll-behavior: smooth; scroll-padding-top: 5rem; -webkit-text-size-adjust: 100%; }
-  body { @apply bg-cream text-charcoal font-sans antialiased; }
-  ::selection { @apply bg-tomato text-white; }
+  html { scroll-behavior: smooth; scroll-padding-top: 6rem; -webkit-text-size-adjust: 100%; }
+  body { @apply bg-cream font-sans text-charcoal antialiased; }
+  ::selection { @apply bg-tomato text-mozza; }
   [hidden] { display: none !important; }
-  :focus-visible { @apply outline-none ring-2 ring-tomato ring-offset-2 ring-offset-cream; }
+  :focus-visible { outline: 3px solid #C8322B; outline-offset: 3px; border-radius: 4px; }
+  h1, h2, h3 { text-wrap: balance; }
+}
+
+/* Grain de papier sur toute la page */
+body::before {
+  content: ''; position: fixed; inset: 0; z-index: 70; pointer-events: none; opacity: .07; mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .35 0 0 0 0 .22 0 0 0 0 .1 0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
 @layer components {
-  /* Boutons */
-  .btn { @apply inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 text-sm font-semibold tracking-wide transition duration-300 ease-out will-change-transform; }
-  .btn:hover { transform: translateY(-2px); }
-  .btn:active { transform: translateY(0) scale(.98); }
-  .btn-primary { @apply btn bg-tomato text-white shadow-lg shadow-tomato/25 hover:bg-tomato-dark hover:shadow-xl hover:shadow-tomato/30; }
-  .btn-ghost { @apply btn border border-white/60 text-white backdrop-blur-sm hover:bg-white hover:text-charcoal; }
-  .btn-outline { @apply btn border border-basil/20 text-basil hover:border-basil hover:bg-basil hover:text-cream; }
+  /* ---------- Boutons ---------- */
+  .btn {
+    @apply relative inline-flex items-center justify-center gap-2.5 rounded-full px-7 py-3.5 text-[15px] font-bold tracking-wide;
+    transition: transform .35s cubic-bezier(.34,1.56,.64,1), box-shadow .3s ease, background-color .3s ease, color .3s ease;
+  }
+  .btn:hover { transform: translateY(-3px) rotate(-1.5deg); }
+  .btn:active { transform: translateY(0) scale(.97); }
+  .btn-tomato { @apply bg-tomato text-mozza; box-shadow: 0 4px 0 #8E211B; }
+  .btn-tomato:hover { @apply bg-tomato-dark; box-shadow: 0 7px 0 #7A1C17; }
+  .btn-basil { @apply bg-basil text-cream; box-shadow: 0 4px 0 #0F1F16; }
+  .btn-basil:hover { box-shadow: 0 7px 0 #0F1F16; }
+  .btn-line { @apply border-2 border-basil bg-transparent text-basil; }
+  .btn-line:hover { @apply bg-basil text-cream; }
+  .btn-cream { @apply bg-cream text-tomato-dark; box-shadow: 0 4px 0 rgba(26,26,26,.25); }
+  .btn-cream:hover { box-shadow: 0 7px 0 rgba(26,26,26,.25); }
 
-  /* Titres de section */
-  .eyebrow { @apply inline-flex items-center gap-3 text-xs font-bold uppercase tracking-[.25em] text-tomato; }
-  .eyebrow::before { content: ''; @apply h-px w-8 bg-copper; }
-  .section-title { @apply font-display text-4xl font-semibold leading-tight text-basil sm:text-5xl; }
+  /* ---------- Écriture à la main ---------- */
+  .hand { @apply font-hand font-bold leading-none; }
+  .note-arrow { @apply pointer-events-none absolute text-basil; }
 
-  /* Onglets de la carte */
-  .tab { @apply relative whitespace-nowrap rounded-full px-5 py-2.5 text-sm font-semibold text-basil/80 transition duration-300 hover:text-basil; }
-  .tab[aria-selected='true'] { @apply bg-basil text-cream shadow-md; }
+  /* ---------- Bandeaux ---------- */
+  .vichy {
+    background-color: #FAF7F2;
+    background-image:
+      linear-gradient(90deg, rgba(200,50,43,.55) 50%, transparent 50%),
+      linear-gradient(rgba(200,50,43,.55) 50%, transparent 50%);
+    background-size: 28px 28px;
+  }
+  .scallop-down { height: 18px; background: radial-gradient(circle at 14px 0, var(--sc) 13px, transparent 14px) repeat-x; background-size: 28px 18px; }
+  .scallop-up { height: 18px; background: radial-gradient(circle at 14px 18px, var(--sc) 13px, transparent 14px) repeat-x; background-size: 28px 18px; }
 
-  /* Cartes du menu */
-  .menu-card { @apply relative flex flex-col rounded-2xl border border-charcoal/[.06] bg-white p-6 shadow-card transition duration-500 ease-out; }
-  .menu-card:hover { @apply -translate-y-1 border-copper/50 shadow-lift; }
-  .menu-card::after { content: ''; @apply pointer-events-none absolute inset-x-6 bottom-0 h-0.5 origin-left scale-x-0 rounded-full bg-tomato transition-transform duration-500; }
-  .menu-card:hover::after { @apply scale-x-100; }
-  .menu-card h3 { @apply font-display text-xl font-semibold text-basil transition-colors duration-300; }
-  .menu-card:hover h3 { @apply text-tomato; }
-  .menu-card p { @apply mt-2 text-sm leading-relaxed text-charcoal/70; }
-  .price { @apply shrink-0 font-display text-xl font-semibold text-tomato; }
-  .dots { @apply mx-3 mb-1.5 flex-1 border-b border-dotted border-charcoal/20; }
+  .marquee { @apply flex overflow-hidden whitespace-nowrap; }
+  .marquee__track { @apply flex shrink-0 items-center gap-8 pr-8; animation: marquee 38s linear infinite; }
+  .marquee:hover .marquee__track { animation-play-state: paused; }
 
-  /* Badges */
-  .badge { @apply inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider; }
-  .badge-house { @apply badge bg-copper/20 text-copper-dark; }
-  .badge-star { @apply badge bg-tomato/10 text-tomato-dark; }
-  .badge-veg { @apply badge bg-basil/10 text-basil; }
+  /* ---------- Tampons et étiquettes ---------- */
+  .stamp {
+    @apply inline-flex items-center gap-1 rounded-md border-2 px-2 py-0.5 font-board text-[11px] font-medium uppercase tracking-[.14em];
+    transform: rotate(-2deg);
+  }
+  .stamp-house { @apply border-copper-dark text-copper-dark; }
+  .stamp-star { @apply border-tomato text-tomato; }
+  .stamp-veg { @apply border-basil text-basil; }
 
-  /* Emplacements photo : fond chaleureux visible tant que l'image charge (ou si elle manque) */
-  .photo { @apply relative overflow-hidden bg-gradient-to-br from-copper/40 via-cream-dark to-tomato/20; }
-  .photo img { @apply h-full w-full object-cover; }
-  .photo.is-missing img { display: none; }
-  .photo.is-missing::before { content: '🍕'; @apply absolute inset-0 grid place-items-center text-4xl opacity-40; }
+  /* ---------- Onglets façon billets ---------- */
+  .ticket {
+    @apply relative shrink-0 cursor-pointer border-2 border-dashed border-basil/40 bg-mozza px-5 py-3 text-left transition;
+    border-radius: 6px;
+  }
+  .ticket::before, .ticket::after { content: ''; @apply absolute top-1/2 h-4 w-4 -translate-y-1/2 rounded-full bg-cream; }
+  .ticket::before { left: -9px; } .ticket::after { right: -9px; }
+  .ticket:hover { transform: translateY(-2px) rotate(-1deg); @apply border-basil; }
+  .ticket[aria-selected='true'] { @apply border-solid border-basil bg-basil text-cream; transform: rotate(-1.5deg); }
+  .ticket[aria-selected='true'] .ticket-sub { @apply text-copper-light; }
+  .ticket-sub { @apply block font-board text-[10px] uppercase tracking-[.2em] text-tomato; }
+  .ticket-name { @apply mt-0.5 block font-display text-lg font-bold leading-none; }
+
+  /* ---------- Feuille de menu ---------- */
+  .menu-sheet {
+    @apply relative rounded-[4px] bg-mozza;
+    box-shadow: 0 1px 0 rgba(26,26,26,.04), 0 30px 60px -30px rgba(80,45,20,.35), 0 0 0 1px rgba(140,94,52,.12);
+  }
+  .menu-sheet::before { content: ''; @apply pointer-events-none absolute inset-3 rounded-[2px] border border-copper/40 sm:inset-4; }
+  .dish { @apply relative grid grid-cols-[3.5rem_1fr] gap-4 rounded-xl p-3 transition-colors duration-300 sm:grid-cols-[4.5rem_1fr] sm:p-4; }
+  .dish:hover { background: rgba(212,163,115,.14); }
+  .dish canvas { @apply h-14 w-14 sm:h-[4.5rem] sm:w-[4.5rem]; transition: transform .8s cubic-bezier(.34,1.56,.64,1); }
+  .dish:hover canvas { transform: rotate(80deg) scale(1.06); }
+  .dish-name { @apply font-display text-xl font-bold text-basil transition-colors sm:text-[1.4rem]; }
+  .dish:hover .dish-name { @apply text-tomato; }
+  .dish-leader { @apply mx-2 mb-[.4em] min-w-[1.5rem] flex-1 border-b-2 border-dotted border-copper/60; }
+  .dish-price { @apply font-display text-xl font-bold italic text-tomato tabular-nums sm:text-[1.4rem]; transition: transform .4s cubic-bezier(.34,1.56,.64,1); }
+  .dish:hover .dish-price { transform: scale(1.12) rotate(-4deg); }
+  .dish-desc { @apply mt-1 text-[15px] leading-relaxed text-charcoal/75; }
+  .dish-icon { @apply grid h-14 w-14 place-items-center rounded-full bg-cream-deep text-2xl sm:h-[4.5rem] sm:w-[4.5rem]; }
+
+  /* ---------- Polaroïds ---------- */
+  .polaroid { @apply relative bg-mozza p-2.5 pb-12 sm:p-3 sm:pb-14; box-shadow: 0 18px 40px -18px rgba(26,26,26,.45), 0 2px 6px rgba(26,26,26,.08); transition: transform .6s cubic-bezier(.34,1.56,.64,1); }
+  .polaroid:hover { transform: rotate(0deg) scale(1.04) !important; z-index: 5; }
+  .polaroid figcaption { @apply absolute inset-x-0 bottom-2 text-center font-hand text-xl font-bold text-basil sm:bottom-3 sm:text-2xl; }
+  .tape { @apply absolute -top-3 left-1/2 h-7 w-24 -translate-x-1/2 bg-copper-light/70; transform: translateX(-50%) rotate(-4deg); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+
+  /* Emplacement photo : si la photo manque, une pizza dessinée la remplace */
+  .shot { @apply relative overflow-hidden bg-cream-deep; }
+  .shot > img { @apply h-full w-full object-cover; }
+  .shot > canvas { @apply absolute inset-0 h-full w-full; }
+
+  /* ---------- Avis ---------- */
+  .review-note { @apply relative w-[82%] shrink-0 snap-center bg-mozza p-7 pt-9 sm:w-[46%] lg:w-[31%]; box-shadow: 0 20px 40px -24px rgba(80,45,20,.45), 0 0 0 1px rgba(140,94,52,.1); transition: transform .5s cubic-bezier(.34,1.56,.64,1); }
+  .review-note:nth-child(odd) { transform: rotate(-1.2deg); }
+  .review-note:nth-child(even) { transform: rotate(1.4deg); }
+  .review-note:hover { transform: rotate(0) translateY(-6px); }
+
+  /* ---------- Tableau des départs (horaires) ---------- */
+  .board { @apply relative rounded-2xl bg-[#111] p-4 text-cream sm:p-6; box-shadow: inset 0 0 0 1px rgba(255,255,255,.06), 0 30px 60px -30px rgba(0,0,0,.6); }
+  .board-row { @apply grid grid-cols-[1fr_auto] items-center gap-3 border-b border-white/[.07] py-2.5 last:border-0 sm:grid-cols-[11rem_1fr_auto]; }
+  .flap { @apply inline-flex gap-px sm:gap-[2px]; }
+  .flap span {
+    @apply relative inline-grid h-6 w-[.85rem] place-items-center rounded-[3px] bg-[#232323] font-board text-[13px] font-medium uppercase text-[#F5E6C8] sm:h-8 sm:w-[1.2rem] sm:text-base;
+    box-shadow: inset 0 -1px 0 rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.05);
+  }
+  .flap span { isolation: isolate; }
+  .flap span::after { content: ''; z-index: -1; @apply absolute inset-x-0 top-1/2 h-px bg-black/60; }
+  .flap span.is-space { @apply bg-transparent shadow-none; }
+  .flap span.is-space::after { display: none; }
+  .board-row.is-today .flap span { @apply bg-copper-dark/60 text-mozza; }
+  .board-status { @apply font-board text-xs uppercase tracking-[.18em]; }
 }
 
 @layer utilities {
   .no-scrollbar { scrollbar-width: none; }
   .no-scrollbar::-webkit-scrollbar { display: none; }
-  .text-balance { text-wrap: balance; }
+  .text-outline { -webkit-text-stroke: 2px #C8322B; color: transparent; }
 }
 
-/* Apparition douce des blocs au défilement (désactivée si le visiteur préfère moins d'animations) */
-.reveal { opacity: 0; transform: translateY(24px); transition: opacity .8s cubic-bezier(.2,.7,.2,1), transform .8s cubic-bezier(.2,.7,.2,1); }
-.reveal.is-visible { opacity: 1; transform: none; }
-.no-js .reveal { opacity: 1; transform: none; }
+/* ---------- Mouvements ---------- */
+@keyframes marquee { to { transform: translateX(-100%); } }
+@keyframes spin-slow { to { transform: rotate(360deg); } }
+@keyframes rise { from { opacity: 0; transform: translateY(26px); } to { opacity: 1; transform: none; } }
+@keyframes pop { 0% { opacity: 0; transform: scale(.6) rotate(-14deg); } 70% { transform: scale(1.06) rotate(-6deg); } 100% { opacity: 1; transform: scale(1) rotate(-8deg); } }
+@keyframes wiggle { 0%,100% { transform: rotate(-8deg); } 50% { transform: rotate(-3deg); } }
+@keyframes flicker { 0%,100% { opacity: .9; } 50% { opacity: .55; } }
 
-/* En-tête : transparent sur la photo d'accueil, plein après défilement */
-.site-header.is-scrolled { background: rgba(250,247,242,.92); box-shadow: 0 1px 0 rgba(26,26,26,.06), 0 8px 24px -16px rgba(26,26,26,.2); -webkit-backdrop-filter: saturate(1.4) blur(12px); backdrop-filter: saturate(1.4) blur(12px); }
-.site-header.is-scrolled .nav-link, .site-header.is-scrolled .brand, .site-header.is-scrolled .burger { color: #1E3A2B; }
+.spin-slow { animation: spin-slow 90s linear infinite; }
+.spin-mid { animation: spin-slow 24s linear infinite; }
+.rise { animation: rise .9s cubic-bezier(.2,.7,.2,1) both; }
+.pop { animation: pop .8s cubic-bezier(.34,1.56,.64,1) both; }
+.sticker { animation: wiggle 5s ease-in-out infinite; }
+.sticker:hover { animation-play-state: paused; }
+.flicker { animation: flicker 1.6s ease-in-out infinite; }
 
-.nav-link { position: relative; }
-.nav-link::after { content: ''; position: absolute; left: 0; right: 0; bottom: -4px; height: 2px; background: #D4A373; transform: scaleX(0); transform-origin: right; transition: transform .35s ease; }
-.nav-link:hover::after { transform: scaleX(1); transform-origin: left; }
+/* Apparition au défilement : le contenu reste lisible même sans script */
+.reveal { transition: transform .9s cubic-bezier(.2,.7,.2,1), opacity .9s ease; }
+.js .reveal:not(.is-visible) { transform: translateY(28px); opacity: .001; }
 
-/* Lent zoom de la photo d'accueil */
-.hero-img { animation: hero-zoom 18s ease-out both; }
-@keyframes hero-zoom { from { transform: scale(1.12); } to { transform: scale(1); } }
+/* En-tête */
+.site-header { transition: background-color .4s ease, box-shadow .4s ease, transform .4s ease; }
+.site-header.is-scrolled { background: rgba(250,247,242,.94); box-shadow: 0 1px 0 rgba(140,94,52,.18); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+.nav-link { position: relative; padding: .25rem 0; }
+.nav-link::after { content: ''; position: absolute; left: -4%; right: -4%; bottom: -2px; height: 8px; opacity: 0; transform: scaleX(.3); transition: transform .35s ease, opacity .35s ease;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 8' preserveAspectRatio='none'%3E%3Cpath d='M1 5 Q 25 1 50 4 T 99 3' fill='none' stroke='%23C8322B' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat center/100% 100%; }
+.nav-link:hover::after { opacity: 1; transform: none; }
+
+/* Soulignement « coup de pinceau » des mots mis en avant */
+.brush { position: relative; white-space: nowrap; }
+.brush::after { content: ''; position: absolute; left: -2%; right: -2%; bottom: .02em; height: .32em; z-index: -1;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 20' preserveAspectRatio='none'%3E%3Cpath d='M3 13 C 50 5, 120 4, 197 9 L 196 16 C 130 13, 60 15, 4 18 Z' fill='%23D4A373' opacity='.75'/%3E%3C/svg%3E") no-repeat center/100% 100%; }
 
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
-  .reveal { opacity: 1; transform: none; }
+  .js .reveal:not(.is-visible) { transform: none; opacity: 1; }
 }
