@@ -1,0 +1,12 @@
+// Configuration Cloudflare du site Le Pendolino (Worker « le-pendolino »),
+// séparé de Nuits Singulières. Site 100 % statique servi depuis ce dossier.
+// Mise en ligne à la main depuis ce dossier : npx wrangler deploy
+{
+  "name": "le-pendolino",
+  "compatibility_date": "2025-09-01",
+  "assets": {
+    "directory": ".",
+    "not_found_handling": "404-page"
+  },
+  "workers_dev": true
+}

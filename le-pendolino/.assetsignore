@@ -1,0 +1,6 @@
+# Fichiers à ne pas mettre en ligne
+src
+tailwind.config.js
+wrangler.jsonc
+README.md
+.assetsignore

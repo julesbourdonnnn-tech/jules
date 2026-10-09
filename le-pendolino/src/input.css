@@ -1,0 +1,82 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html { scroll-behavior: smooth; scroll-padding-top: 5rem; -webkit-text-size-adjust: 100%; }
+  body { @apply bg-cream text-charcoal font-sans antialiased; }
+  ::selection { @apply bg-tomato text-white; }
+  [hidden] { display: none !important; }
+  :focus-visible { @apply outline-none ring-2 ring-tomato ring-offset-2 ring-offset-cream; }
+}
+
+@layer components {
+  /* Boutons */
+  .btn { @apply inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 text-sm font-semibold tracking-wide transition duration-300 ease-out will-change-transform; }
+  .btn:hover { transform: translateY(-2px); }
+  .btn:active { transform: translateY(0) scale(.98); }
+  .btn-primary { @apply btn bg-tomato text-white shadow-lg shadow-tomato/25 hover:bg-tomato-dark hover:shadow-xl hover:shadow-tomato/30; }
+  .btn-ghost { @apply btn border border-white/60 text-white backdrop-blur-sm hover:bg-white hover:text-charcoal; }
+  .btn-outline { @apply btn border border-basil/20 text-basil hover:border-basil hover:bg-basil hover:text-cream; }
+
+  /* Titres de section */
+  .eyebrow { @apply inline-flex items-center gap-3 text-xs font-bold uppercase tracking-[.25em] text-tomato; }
+  .eyebrow::before { content: ''; @apply h-px w-8 bg-copper; }
+  .section-title { @apply font-display text-4xl font-semibold leading-tight text-basil sm:text-5xl; }
+
+  /* Onglets de la carte */
+  .tab { @apply relative whitespace-nowrap rounded-full px-5 py-2.5 text-sm font-semibold text-basil/80 transition duration-300 hover:text-basil; }
+  .tab[aria-selected='true'] { @apply bg-basil text-cream shadow-md; }
+
+  /* Cartes du menu */
+  .menu-card { @apply relative flex flex-col rounded-2xl border border-charcoal/[.06] bg-white p-6 shadow-card transition duration-500 ease-out; }
+  .menu-card:hover { @apply -translate-y-1 border-copper/50 shadow-lift; }
+  .menu-card::after { content: ''; @apply pointer-events-none absolute inset-x-6 bottom-0 h-0.5 origin-left scale-x-0 rounded-full bg-tomato transition-transform duration-500; }
+  .menu-card:hover::after { @apply scale-x-100; }
+  .menu-card h3 { @apply font-display text-xl font-semibold text-basil transition-colors duration-300; }
+  .menu-card:hover h3 { @apply text-tomato; }
+  .menu-card p { @apply mt-2 text-sm leading-relaxed text-charcoal/70; }
+  .price { @apply shrink-0 font-display text-xl font-semibold text-tomato; }
+  .dots { @apply mx-3 mb-1.5 flex-1 border-b border-dotted border-charcoal/20; }
+
+  /* Badges */
+  .badge { @apply inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider; }
+  .badge-house { @apply badge bg-copper/20 text-copper-dark; }
+  .badge-star { @apply badge bg-tomato/10 text-tomato-dark; }
+  .badge-veg { @apply badge bg-basil/10 text-basil; }
+
+  /* Emplacements photo : fond chaleureux visible tant que l'image charge (ou si elle manque) */
+  .photo { @apply relative overflow-hidden bg-gradient-to-br from-copper/40 via-cream-dark to-tomato/20; }
+  .photo img { @apply h-full w-full object-cover; }
+  .photo.is-missing img { display: none; }
+  .photo.is-missing::before { content: '🍕'; @apply absolute inset-0 grid place-items-center text-4xl opacity-40; }
+}
+
+@layer utilities {
+  .no-scrollbar { scrollbar-width: none; }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .text-balance { text-wrap: balance; }
+}
+
+/* Apparition douce des blocs au défilement (désactivée si le visiteur préfère moins d'animations) */
+.reveal { opacity: 0; transform: translateY(24px); transition: opacity .8s cubic-bezier(.2,.7,.2,1), transform .8s cubic-bezier(.2,.7,.2,1); }
+.reveal.is-visible { opacity: 1; transform: none; }
+.no-js .reveal { opacity: 1; transform: none; }
+
+/* En-tête : transparent sur la photo d'accueil, plein après défilement */
+.site-header.is-scrolled { background: rgba(250,247,242,.92); box-shadow: 0 1px 0 rgba(26,26,26,.06), 0 8px 24px -16px rgba(26,26,26,.2); -webkit-backdrop-filter: saturate(1.4) blur(12px); backdrop-filter: saturate(1.4) blur(12px); }
+.site-header.is-scrolled .nav-link, .site-header.is-scrolled .brand, .site-header.is-scrolled .burger { color: #1E3A2B; }
+
+.nav-link { position: relative; }
+.nav-link::after { content: ''; position: absolute; left: 0; right: 0; bottom: -4px; height: 2px; background: #D4A373; transform: scaleX(0); transform-origin: right; transition: transform .35s ease; }
+.nav-link:hover::after { transform: scaleX(1); transform-origin: left; }
+
+/* Lent zoom de la photo d'accueil */
+.hero-img { animation: hero-zoom 18s ease-out both; }
+@keyframes hero-zoom { from { transform: scale(1.12); } to { transform: scale(1); } }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+  .reveal { opacity: 1; transform: none; }
+}

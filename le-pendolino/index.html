@@ -1,0 +1,535 @@
+<!doctype html>
+<html lang="fr" class="no-js">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Le Pendolino · Pizzeria artisanale à Montmeyran (Drôme)</title>
+  <meta name="description" content="Le Pendolino, pizzeria artisanale à Montmeyran : pâte pétrie chaque jour et longuement maturée, ingrédients frais et italiens. Sur place et à emporter, 70 Grande Rue.">
+  <meta name="theme-color" content="#1E3A2B">
+  <link rel="canonical" href="https://lependolino.fr/">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+
+  <!-- Partage sur les réseaux -->
+  <meta property="og:type" content="restaurant">
+  <meta property="og:locale" content="fr_FR">
+  <meta property="og:site_name" content="Le Pendolino">
+  <meta property="og:title" content="Le Pendolino · Pizzeria artisanale à Montmeyran">
+  <meta property="og:description" content="Pâtes pétries chaque jour, ingrédients frais et passion italienne. Sur place et à emporter.">
+  <meta property="og:image" content="https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=1200&h=630&q=80">
+  <meta name="twitter:card" content="summary_large_image">
+
+  <!-- Polices -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://images.unsplash.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap">
+
+  <!-- Photo d'accueil chargée en priorité -->
+  <link rel="preload" as="image" fetchpriority="high"
+        imagesrcset="https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=800&q=70 800w, https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=1400&q=70 1400w, https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=2000&q=70 2000w"
+        imagesizes="100vw">
+
+  <link rel="stylesheet" href="css/style.css">
+  <script>document.documentElement.classList.remove('no-js')</script>
+
+  <!-- Référencement local (Google) : À COMPLÉTER — téléphone et horaires réels -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Restaurant",
+    "name": "Le Pendolino",
+    "description": "Pizzeria artisanale : pâte pétrie chaque jour, ingrédients frais et italiens. Sur place et à emporter.",
+    "url": "https://lependolino.fr/",
+    "image": "https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=1200&q=80",
+    "telephone": "+33475000000",
+    "servesCuisine": ["Pizza", "Italienne"],
+    "priceRange": "€€",
+    "acceptsReservations": "True",
+    "hasMenu": "https://lependolino.fr/#menu",
+    "address": {
+      "@type": "PostalAddress",
+      "streetAddress": "70 Grande Rue",
+      "postalCode": "26120",
+      "addressLocality": "Montmeyran",
+      "addressRegion": "Drôme",
+      "addressCountry": "FR"
+    },
+    "openingHoursSpecification": [
+      { "@type": "OpeningHoursSpecification", "dayOfWeek": ["Tuesday", "Wednesday", "Thursday"], "opens": "18:00", "closes": "21:30" },
+      { "@type": "OpeningHoursSpecification", "dayOfWeek": ["Friday", "Saturday"], "opens": "18:00", "closes": "22:00" },
+      { "@type": "OpeningHoursSpecification", "dayOfWeek": "Sunday", "opens": "18:00", "closes": "21:00" }
+    ],
+    "sameAs": ["https://www.instagram.com/lependolino/"]
+  }
+  </script>
+</head>
+
+<body class="pb-20 md:pb-0">
+  <a href="#contenu" class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[60] focus:rounded-full focus:bg-tomato focus:px-4 focus:py-2 focus:text-white">Aller au contenu</a>
+
+  <!-- ===================== A. EN-TÊTE ===================== -->
+  <header id="top" class="site-header fixed inset-x-0 top-0 z-50 transition-all duration-500">
+    <nav class="mx-auto flex h-20 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8" aria-label="Navigation principale">
+      <a href="#top" class="brand group flex items-center gap-3 text-cream transition-colors">
+        <span class="grid h-10 w-10 place-items-center rounded-full border border-copper/70 font-display text-lg italic text-copper transition-transform duration-500 group-hover:rotate-[20deg]" aria-hidden="true">P</span>
+        <span class="leading-none">
+          <span class="block font-display text-xl font-semibold tracking-wide">Le Pendolino</span>
+          <span class="mt-1 block text-[10px] font-semibold uppercase tracking-[.3em] opacity-70">Pizzeria artisanale</span>
+        </span>
+      </a>
+
+      <ul class="hidden items-center gap-9 text-sm font-medium md:flex">
+        <li><a class="nav-link text-cream transition-colors" href="#menu">Menu</a></li>
+        <li><a class="nav-link text-cream transition-colors" href="#pizzeria">La Pizzeria</a></li>
+        <li><a class="nav-link text-cream transition-colors" href="#avis">Avis</a></li>
+        <li><a class="nav-link text-cream transition-colors" href="#contact">Contact</a></li>
+      </ul>
+
+      <div class="flex items-center gap-2">
+        <!-- À COMPLÉTER : numéro réel (ou lien vers un système de commande en ligne) -->
+        <a href="tel:+33475000000" class="btn-primary hidden !px-5 !py-2.5 sm:inline-flex" data-track="cta-header">
+          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 0 0 2.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293a1.125 1.125 0 0 1-1.21.38 12.035 12.035 0 0 1-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 0 0-1.091-.852H4.5A2.25 2.25 0 0 0 2.25 4.5v2.25Z"/></svg>
+          Commander / Réserver
+        </a>
+        <button type="button" class="burger grid h-11 w-11 place-items-center rounded-full text-cream transition-colors md:hidden" aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="mobile-nav">
+          <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" d="M4 7h16M4 12h16M4 17h10"/></svg>
+        </button>
+      </div>
+    </nav>
+
+    <!-- Menu mobile -->
+    <div id="mobile-nav" class="pointer-events-none fixed inset-0 z-40 bg-basil opacity-0 transition-opacity duration-300 md:hidden" hidden>
+      <div class="flex h-full flex-col px-6 pb-10 pt-24">
+        <button type="button" class="close-nav absolute right-4 top-5 grid h-11 w-11 place-items-center rounded-full text-cream" aria-label="Fermer le menu">
+          <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path stroke-linecap="round" d="M6 6l12 12M18 6 6 18"/></svg>
+        </button>
+        <ul class="space-y-2 font-display text-4xl text-cream">
+          <li><a class="block py-2 transition-colors hover:text-copper" href="#menu">Menu</a></li>
+          <li><a class="block py-2 transition-colors hover:text-copper" href="#pizzeria">La Pizzeria</a></li>
+          <li><a class="block py-2 transition-colors hover:text-copper" href="#avis">Avis</a></li>
+          <li><a class="block py-2 transition-colors hover:text-copper" href="#contact">Contact</a></li>
+        </ul>
+        <div class="mt-auto space-y-3">
+          <a href="tel:+33475000000" class="btn-primary w-full !py-4 text-base">Commander / Réserver</a>
+          <a href="https://www.instagram.com/lependolino/" target="_blank" rel="noopener" class="btn-ghost w-full">Instagram @lependolino</a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main id="contenu">
+    <!-- ===================== B. ACCUEIL ===================== -->
+    <section class="relative isolate flex min-h-[100svh] items-end overflow-hidden bg-charcoal text-cream" aria-labelledby="hero-title">
+      <div class="absolute inset-0 -z-10">
+        <img class="hero-img h-full w-full object-cover"
+             src="https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=1400&q=70"
+             srcset="https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=800&q=70 800w, https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=1400&q=70 1400w, https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=2000&q=70 2000w"
+             sizes="100vw" alt="Pizza artisanale à la pâte alvéolée, tout juste sortie du four" fetchpriority="high" decoding="async">
+        <div class="absolute inset-0 bg-gradient-to-t from-charcoal via-charcoal/60 to-charcoal/20"></div>
+        <div class="absolute inset-0 bg-gradient-to-r from-basil/60 to-transparent"></div>
+      </div>
+
+      <div class="mx-auto w-full max-w-7xl px-4 pb-20 pt-32 sm:px-6 sm:pb-28 lg:px-8">
+        <div class="max-w-3xl">
+          <p class="eyebrow animate-fade-up !text-copper">70 Grande Rue · Montmeyran</p>
+          <h1 id="hero-title" class="mt-6 animate-fade-up font-display text-[2.6rem] font-semibold leading-[1.05] text-balance [animation-delay:.1s] sm:text-6xl lg:text-7xl">
+            L’authenticité de la pizza artisanale <em class="font-medium italic text-copper">à Montmeyran.</em>
+          </h1>
+          <p class="mt-6 max-w-xl animate-fade-up text-lg leading-relaxed text-cream/85 [animation-delay:.2s] sm:text-xl">
+            Pâtes pétries chaque jour, ingrédients frais et passion italienne.
+          </p>
+          <div class="mt-10 flex animate-fade-up flex-col gap-3 [animation-delay:.3s] sm:flex-row">
+            <a href="#menu" class="btn-primary group !px-8 !py-4 text-base">
+              Voir le Menu
+              <svg class="h-4 w-4 transition-transform duration-300 group-hover:translate-y-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14m0 0 6-6m-6 6-6-6"/></svg>
+            </a>
+            <a href="tel:+33475000000" class="btn-ghost !px-8 !py-4 text-base" data-track="cta-hero">
+              <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 0 0 2.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293a1.125 1.125 0 0 1-1.21.38 12.035 12.035 0 0 1-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 0 0-1.091-.852H4.5A2.25 2.25 0 0 0 2.25 4.5v2.25Z"/></svg>
+              Appeler pour commander
+            </a>
+          </div>
+
+          <ul class="mt-14 grid max-w-xl animate-fade-up grid-cols-3 gap-4 border-t border-cream/15 pt-6 text-sm [animation-delay:.4s]">
+            <li><span class="block font-display text-2xl text-copper">100 %</span><span class="text-cream/70">fait maison</span></li>
+            <li><span class="block font-display text-2xl text-copper">Lente</span><span class="text-cream/70">maturation de la pâte</span></li>
+            <li><span class="block font-display text-2xl text-copper">Sur place</span><span class="text-cream/70">& à emporter</span></li>
+          </ul>
+        </div>
+      </div>
+
+      <a href="#menu" class="absolute bottom-6 left-1/2 hidden -translate-x-1/2 flex-col items-center gap-2 text-[10px] uppercase tracking-[.3em] text-cream/60 transition-colors hover:text-cream sm:flex" aria-label="Défiler vers le menu">
+        Défiler
+        <span class="h-10 w-px animate-pulse bg-gradient-to-b from-copper to-transparent"></span>
+      </a>
+    </section>
+
+    <!-- ===================== C. LA CARTE ===================== -->
+    <!-- À COMPLÉTER : la carte et les prix ci-dessous sont des exemples à remplacer par la carte réelle. -->
+    <section id="menu" class="py-24 sm:py-32" aria-labelledby="menu-title">
+      <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div class="reveal mx-auto max-w-2xl text-center">
+          <p class="eyebrow justify-center">La carte</p>
+          <h2 id="menu-title" class="section-title mt-4">Nos pizzas, cuites à la minute</h2>
+          <p class="mt-5 text-lg text-charcoal/70">Une pâte légère et croustillante, une sauce tomate italienne, des fromages choisis. Simple, généreux, sincère.</p>
+        </div>
+
+        <div class="reveal mt-12 flex justify-center">
+          <div class="no-scrollbar -mx-4 flex max-w-[calc(100%+2rem)] gap-1 overflow-x-auto px-4 sm:mx-0 sm:rounded-full sm:border sm:border-basil/10 sm:bg-white sm:p-1.5 sm:shadow-card" role="tablist" aria-label="Catégories de la carte">
+            <button class="tab" role="tab" id="tab-rouges" aria-controls="panel-rouges" aria-selected="true">Pizzas Rouges <span class="ml-1 hidden text-xs font-normal opacity-70 sm:inline">base tomate</span></button>
+            <button class="tab" role="tab" id="tab-blanches" aria-controls="panel-blanches" aria-selected="false" tabindex="-1">Pizzas Blanches <span class="ml-1 hidden text-xs font-normal opacity-70 sm:inline">base crème</span></button>
+            <button class="tab" role="tab" id="tab-desserts" aria-controls="panel-desserts" aria-selected="false" tabindex="-1">Desserts</button>
+            <button class="tab" role="tab" id="tab-boissons" aria-controls="panel-boissons" aria-selected="false" tabindex="-1">Boissons</button>
+          </div>
+        </div>
+
+        <!-- Pizzas rouges -->
+        <div id="panel-rouges" class="menu-panel mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3" role="tabpanel" aria-labelledby="tab-rouges" tabindex="0">
+          <article class="menu-card">
+            <div class="flex items-end"><h3>Margherita</h3><span class="dots"></span><span class="price">10 €</span></div>
+            <p>Sauce tomate San Marzano, fior di latte, basilic frais, huile d’olive extra vierge.</p>
+            <div class="mt-auto flex flex-wrap gap-2 pt-5"><span class="badge-star">★ Incontournable</span><span class="badge-veg">Végétarien</span></div>
+          </article>
+          <article class="menu-card">
+            <div class="flex items-end"><h3>Regina</h3><span class="dots"></span><span class="price">12 €</span></div>
+            <p>Sauce tomate, mozzarella, jambon blanc italien, champignons de Paris, origan.</p>
+            <div class="mt-auto flex flex-wrap gap-2 pt-5"><span class="badge-house">Fait Maison</span></div>
+          </article>
+          <article class="menu-card">
+            <div class="flex items-end"><h3>Diavola</h3><span class="dots"></span><span class="price">13 €</span></div>
+            <p>Sauce tomate, mozzarella, spianata piccante, piment de Calabre, olives noires.</p>
+            <div class="mt-auto flex flex-wrap gap-2 pt-5"><span class="badge-star">★ Incontournable</span></div>
+          </article>
+          <article class="menu-card">
+            <div class="flex items-end"><h3>Napolitaine</h3><span class="dots"></span><span class="price">11,50 €</span></div>
+            <p>Sauce tomate, mozzarella, anchois de Cantabrique, câpres, olives, origan.</p>
+            <div class="mt-auto flex flex-wrap gap-2 pt-5"><span class="badge-house">Fait Maison</span></div>
+          </article>
+          <article class="menu-card">
+            <div class="flex items-end"><h3>Ortolana</h3><span class="dots"></span><span class="price">12,50 €</span></div>
+            <p>Sauce tomate, mozzarella, aubergines et courgettes grillées, poivrons, pesto au basilic.</p>
+            <div class="mt-auto flex flex-wrap gap-2 pt-5"><span class="badge-veg">Végétarien</span><span class="badge-house">Fait Maison</span></div>
+          </article>
+          <article class="menu-card">
+            <div class="flex items-end"><h3>Calzone</h3><span class="dots"></span><span class="price">13,50 €</span></div>
+            <p>Chausson garni : sauce tomate, mozzarella, jambon, champignons, œuf, ricotta.</p>
+            <div class="mt-auto flex flex-wrap gap-2 pt-5"><span class="badge-house">Fait Maison</span></div>
+          </article>
+        </div>
+
+        <!-- Pizzas blanches -->
+        <div id="panel-blanches" class="menu-panel mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3" role="tabpanel" aria-labelledby="tab-blanches" tabindex="0" hidden>
+          <article class="menu-card">
+            <div class="flex items-end"><h3>Quattro Formaggi</h3><span class="dots"></span><span class="price">13,50 €</span></div>
+            <p>Crème fraîche, mozzarella, gorgonzola, parmigiano reggiano, taleggio, noix.</p>
+            <div class="mt-auto flex flex-wrap gap-2 pt-5"><span class="badge-star">★ Incontournable</span><span class="badge-veg">Végétarien</span></div>
+          </article>
+          <article class="menu-card">
+            <div class="flex items-end"><h3>Chèvre & Miel</h3><span class="dots"></span><span class="price">13 €</span></div>
+            <p>Crème fraîche, mozzarella, chèvre de la Drôme, miel local, thym, roquette.</p>
+            <div class="mt-auto flex flex-wrap gap-2 pt-5"><span class="badge-veg">Végétarien</span></div>
+          </article>
+          <article class="menu-card">
+            <div class="flex items-end"><h3>Mortadella & Burrata</h3><span class="dots"></span><span class="price">15 €</span></div>
+            <p>Crème, fior di latte, mortadelle à la pistache, burrata entière, pistaches torréfiées.</p>
+            <div class="mt-auto flex flex-wrap gap-2 pt-5"><span class="badge-star">★ Incontournable</span></div>
+          </article>
+          <article class="menu-card">
+            <div class="flex items-end"><h3>Tartufo</h3><span class="dots"></span><span class="price">15,50 €</span></div>
+            <p>Crème à la truffe, fior di latte, champignons, jambon cru, copeaux de parmesan.</p>
+            <div class="mt-auto flex flex-wrap gap-2 pt-5"><span class="badge-house">Fait Maison</span></div>
+          </article>
+          <article class="menu-card">
+            <div class="flex items-end"><h3>Montagnarde</h3><span class="dots"></span><span class="price">14 €</span></div>
+            <p>Crème fraîche, mozzarella, pommes de terre, lardons, oignons, fromage à raclette.</p>
+            <div class="mt-auto flex flex-wrap gap-2 pt-5"><span class="badge-house">Fait Maison</span></div>
+          </article>
+          <article class="menu-card">
+            <div class="flex items-end"><h3>Salmone</h3><span class="dots"></span><span class="price">14,50 €</span></div>
+            <p>Crème citronnée, mozzarella, saumon fumé, aneth, oignons rouges, câpres.</p>
+            <div class="mt-auto flex flex-wrap gap-2 pt-5"></div>
+          </article>
+        </div>
+
+        <!-- Desserts -->
+        <div id="panel-desserts" class="menu-panel mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3" role="tabpanel" aria-labelledby="tab-desserts" tabindex="0" hidden>
+          <article class="menu-card">
+            <div class="flex items-end"><h3>Tiramisu</h3><span class="dots"></span><span class="price">6 €</span></div>
+            <p>La recette de la nonna : mascarpone, biscuits imbibés de café, cacao amer.</p>
+            <div class="mt-auto flex flex-wrap gap-2 pt-5"><span class="badge-house">Fait Maison</span><span class="badge-star">★ Incontournable</span></div>
+          </article>
+          <article class="menu-card">
+            <div class="flex items-end"><h3>Panna cotta</h3><span class="dots"></span><span class="price">5,50 €</span></div>
+            <p>Crème vanillée, coulis de fruits rouges de saison.</p>
+            <div class="mt-auto flex flex-wrap gap-2 pt-5"><span class="badge-house">Fait Maison</span></div>
+          </article>
+          <article class="menu-card">
+            <div class="flex items-end"><h3>Pizza Nutella</h3><span class="dots"></span><span class="price">8 €</span></div>
+            <p>Pâte à pizza dorée, pâte à tartiner aux noisettes, sucre glace. À partager.</p>
+            <div class="mt-auto flex flex-wrap gap-2 pt-5"></div>
+          </article>
+          <article class="menu-card">
+            <div class="flex items-end"><h3>Affogato</h3><span class="dots"></span><span class="price">5 €</span></div>
+            <p>Boule de glace vanille noyée sous un espresso bien serré.</p>
+            <div class="mt-auto flex flex-wrap gap-2 pt-5"></div>
+          </article>
+        </div>
+
+        <!-- Boissons -->
+        <div id="panel-boissons" class="menu-panel mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3" role="tabpanel" aria-labelledby="tab-boissons" tabindex="0" hidden>
+          <article class="menu-card">
+            <div class="flex items-end"><h3>Sodas</h3><span class="dots"></span><span class="price">3 €</span></div>
+            <p>Coca-Cola, Coca-Cola zéro, Orangina, Ice Tea (33 cl).</p>
+          </article>
+          <article class="menu-card">
+            <div class="flex items-end"><h3>San Pellegrino</h3><span class="dots"></span><span class="price">3,50 €</span></div>
+            <p>Limonata, Aranciata rossa, ou eau pétillante (50 cl).</p>
+          </article>
+          <article class="menu-card">
+            <div class="flex items-end"><h3>Bière italienne</h3><span class="dots"></span><span class="price">4,50 €</span></div>
+            <p>Birra Moretti ou Peroni Nastro Azzurro (33 cl).</p>
+          </article>
+          <article class="menu-card">
+            <div class="flex items-end"><h3>Vin au verre</h3><span class="dots"></span><span class="price">4,50 €</span></div>
+            <p>Sélection du moment : Côtes-du-Rhône, Chianti, rosé de Provence (12 cl).</p>
+          </article>
+          <article class="menu-card">
+            <div class="flex items-end"><h3>Limoncello</h3><span class="dots"></span><span class="price">4 €</span></div>
+            <p>Bien frais, pour terminer à l’italienne.</p>
+          </article>
+          <article class="menu-card">
+            <div class="flex items-end"><h3>Café</h3><span class="dots"></span><span class="price">2 €</span></div>
+            <p>Espresso italien, ristretto ou lungo.</p>
+          </article>
+        </div>
+
+        <div class="reveal mt-14 flex flex-col items-center gap-4 text-center">
+          <p class="text-sm text-charcoal/60">Liste des allergènes disponible sur demande · Prix nets, service compris.</p>
+          <a href="tel:+33475000000" class="btn-primary !px-8 !py-4" data-track="cta-menu">Commander par téléphone</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== D. LA PIZZERIA / SAVOIR-FAIRE ===================== -->
+    <section id="pizzeria" class="relative overflow-hidden bg-basil py-24 text-cream sm:py-32" aria-labelledby="about-title">
+      <div class="pointer-events-none absolute -right-32 -top-32 h-96 w-96 rounded-full border border-copper/20"></div>
+      <div class="pointer-events-none absolute -right-16 -top-16 h-64 w-64 rounded-full border border-copper/10"></div>
+
+      <div class="relative mx-auto grid max-w-7xl items-center gap-16 px-4 sm:px-6 lg:grid-cols-2 lg:px-8">
+        <!-- Photos -->
+        <div class="reveal relative order-2 lg:order-1">
+          <div class="photo aspect-[4/5] w-[85%] rounded-3xl shadow-2xl">
+            <img src="https://images.unsplash.com/photo-1571407970349-bc81e7e96d47?auto=format&fit=crop&w=900&q=70" alt="Pizzaiolo enfournant une pizza dans le four" loading="lazy" decoding="async" width="900" height="1125">
+          </div>
+          <div class="photo absolute -bottom-10 right-0 aspect-square w-[52%] rounded-3xl border-[6px] border-basil shadow-2xl">
+            <img src="https://images.unsplash.com/photo-1574071318508-1cdbab80d002?auto=format&fit=crop&w=600&q=70" alt="Pizza margherita au basilic frais" loading="lazy" decoding="async" width="600" height="600">
+          </div>
+          <div class="absolute left-[70%] top-8 hidden rotate-6 rounded-2xl bg-copper px-5 py-4 text-center text-charcoal shadow-xl sm:block">
+            <span class="block font-display text-3xl font-semibold leading-none">Fait</span>
+            <span class="text-xs font-bold uppercase tracking-widest">maison</span>
+          </div>
+        </div>
+
+        <!-- Texte -->
+        <div class="reveal order-1 lg:order-2">
+          <p class="eyebrow !text-copper">La pizzeria</p>
+          <h2 id="about-title" class="mt-4 font-display text-4xl font-semibold leading-tight sm:text-5xl">Le temps, l’ingrédient <em class="italic text-copper">secret.</em></h2>
+          <p class="mt-6 text-lg leading-relaxed text-cream/80">
+            Au Pendolino, chaque pizza commence la veille. Notre pâte est pétrie chaque jour puis laissée à maturer lentement : elle devient légère, digeste, et se pare au four de cette croûte alvéolée et dorée qui fait toute la différence.
+          </p>
+
+          <ul class="mt-10 space-y-6">
+            <li class="flex gap-5">
+              <span class="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-cream/10 text-copper ring-1 ring-copper/30" aria-hidden="true">
+                <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path stroke-linecap="round" d="M12 7v5l3 2"/></svg>
+              </span>
+              <div><h3 class="font-display text-xl font-semibold">Maturation lente</h3><p class="mt-1 text-cream/70">Une pâte qui prend son temps : farine italienne, eau, sel, très peu de levure. Rien d’autre.</p></div>
+            </li>
+            <li class="flex gap-5">
+              <span class="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-cream/10 text-copper ring-1 ring-copper/30" aria-hidden="true">
+                <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21c-4-3-7-6.5-7-10.5A7 7 0 0 1 12 3.5a7 7 0 0 1 7 7c0 4-3 7.5-7 10.5Z"/><circle cx="12" cy="10.5" r="2.5"/></svg>
+              </span>
+              <div><h3 class="font-display text-xl font-semibold">Local & importé d’Italie</h3><p class="mt-1 text-cream/70">Tomates, charcuteries et fromages venus d’Italie ; légumes, chèvre et miel de producteurs drômois.</p></div>
+            </li>
+            <li class="flex gap-5">
+              <span class="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-cream/10 text-copper ring-1 ring-copper/30" aria-hidden="true">
+                <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3c1 3 4 4.5 4 8.5a4 4 0 1 1-8 0c0-2 1-3 1.5-4 .5 1.5 1.5 2 2.5 2 0-2.5-.5-4.5 0-6.5Z"/></svg>
+              </span>
+              <div><h3 class="font-display text-xl font-semibold">Cuite à la minute</h3><p class="mt-1 text-cream/70">Chaque pizza est façonnée à la main et enfournée à la commande, pour être dégustée au meilleur moment.</p></div>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Grille Instagram -->
+      <!-- Photos d'illustration : remplacer par les photos du compte @lependolino (voir README). -->
+      <div class="relative mx-auto mt-32 max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div class="reveal flex flex-col items-start justify-between gap-6 sm:flex-row sm:items-end">
+          <div>
+            <p class="eyebrow !text-copper">Sur Instagram</p>
+            <h3 class="mt-3 font-display text-3xl font-semibold sm:text-4xl">Dans les coulisses du four</h3>
+          </div>
+          <a href="https://www.instagram.com/lependolino/" target="_blank" rel="noopener" class="btn border border-copper/50 text-cream hover:border-copper hover:bg-copper hover:text-charcoal">
+            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg>
+            Suivre @lependolino
+          </a>
+        </div>
+
+        <ul class="reveal no-scrollbar -mx-4 mt-10 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 sm:mx-0 sm:grid sm:grid-cols-3 sm:overflow-visible sm:px-0 lg:grid-cols-6">
+          <li class="w-[42vw] shrink-0 snap-start sm:w-auto"><a class="ig-tile photo group block aspect-square rounded-2xl" href="https://www.instagram.com/lependolino/" target="_blank" rel="noopener" aria-label="Voir sur Instagram"><img src="https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?auto=format&fit=crop&w=400&h=400&q=65" alt="Pizza garnie vue de dessus" loading="lazy" decoding="async" width="400" height="400" class="transition duration-700 group-hover:scale-110"><span class="absolute inset-0 grid place-items-center bg-tomato/70 opacity-0 transition duration-300 group-hover:opacity-100"><svg class="h-8 w-8 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg></span></a></li>
+          <li class="w-[42vw] shrink-0 snap-start sm:w-auto"><a class="ig-tile photo group block aspect-square rounded-2xl" href="https://www.instagram.com/lependolino/" target="_blank" rel="noopener" aria-label="Voir sur Instagram"><img src="https://images.unsplash.com/photo-1555072956-7758afb20e8f?auto=format&fit=crop&w=400&h=400&q=65" alt="Four à pizza en pleine chauffe" loading="lazy" decoding="async" width="400" height="400" class="transition duration-700 group-hover:scale-110"><span class="absolute inset-0 grid place-items-center bg-tomato/70 opacity-0 transition duration-300 group-hover:opacity-100"><svg class="h-8 w-8 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg></span></a></li>
+          <li class="w-[42vw] shrink-0 snap-start sm:w-auto"><a class="ig-tile photo group block aspect-square rounded-2xl" href="https://www.instagram.com/lependolino/" target="_blank" rel="noopener" aria-label="Voir sur Instagram"><img src="https://images.unsplash.com/photo-1604382354936-07c5d9983bd3?auto=format&fit=crop&w=400&h=400&q=65" alt="Pizza au pepperoni fraîchement cuite" loading="lazy" decoding="async" width="400" height="400" class="transition duration-700 group-hover:scale-110"><span class="absolute inset-0 grid place-items-center bg-tomato/70 opacity-0 transition duration-300 group-hover:opacity-100"><svg class="h-8 w-8 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg></span></a></li>
+          <li class="w-[42vw] shrink-0 snap-start sm:w-auto"><a class="ig-tile photo group block aspect-square rounded-2xl" href="https://www.instagram.com/lependolino/" target="_blank" rel="noopener" aria-label="Voir sur Instagram"><img src="https://images.unsplash.com/photo-1593560708920-61dd98c46a4e?auto=format&fit=crop&w=400&h=400&q=65" alt="Pizza aux légumes sur planche en bois" loading="lazy" decoding="async" width="400" height="400" class="transition duration-700 group-hover:scale-110"><span class="absolute inset-0 grid place-items-center bg-tomato/70 opacity-0 transition duration-300 group-hover:opacity-100"><svg class="h-8 w-8 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg></span></a></li>
+          <li class="w-[42vw] shrink-0 snap-start sm:w-auto"><a class="ig-tile photo group block aspect-square rounded-2xl" href="https://www.instagram.com/lependolino/" target="_blank" rel="noopener" aria-label="Voir sur Instagram"><img src="https://images.unsplash.com/photo-1590947132387-155cc02f3212?auto=format&fit=crop&w=400&h=400&q=65" alt="Pizza napolitaine à la croûte gonflée" loading="lazy" decoding="async" width="400" height="400" class="transition duration-700 group-hover:scale-110"><span class="absolute inset-0 grid place-items-center bg-tomato/70 opacity-0 transition duration-300 group-hover:opacity-100"><svg class="h-8 w-8 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg></span></a></li>
+          <li class="w-[42vw] shrink-0 snap-start sm:w-auto"><a class="ig-tile photo group block aspect-square rounded-2xl" href="https://www.instagram.com/lependolino/" target="_blank" rel="noopener" aria-label="Voir sur Instagram"><img src="https://images.unsplash.com/photo-1579751626657-72bc17010498?auto=format&fit=crop&w=400&h=400&q=65" alt="Part de pizza au fromage filant" loading="lazy" decoding="async" width="400" height="400" class="transition duration-700 group-hover:scale-110"><span class="absolute inset-0 grid place-items-center bg-tomato/70 opacity-0 transition duration-300 group-hover:opacity-100"><svg class="h-8 w-8 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg></span></a></li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ===================== E. AVIS ===================== -->
+    <!-- À COMPLÉTER AVANT MISE EN LIGNE : ces avis sont des EXEMPLES de mise en page.
+         Les remplacer par de vrais avis Google / TripAdvisor (texte copié, prénom + initiale avec l'accord du client). -->
+    <section id="avis" class="py-24 sm:py-32" aria-labelledby="reviews-title">
+      <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div class="reveal flex flex-col justify-between gap-8 md:flex-row md:items-end">
+          <div class="max-w-xl">
+            <p class="eyebrow">Avis clients</p>
+            <h2 id="reviews-title" class="section-title mt-4">Ils en parlent mieux que nous</h2>
+          </div>
+          <div class="flex items-center gap-3">
+            <button type="button" class="review-prev grid h-12 w-12 place-items-center rounded-full border border-basil/20 text-basil transition hover:-translate-x-0.5 hover:border-basil hover:bg-basil hover:text-cream" aria-label="Avis précédent">
+              <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M15 18 9 12l6-6"/></svg>
+            </button>
+            <button type="button" class="review-next grid h-12 w-12 place-items-center rounded-full border border-basil/20 text-basil transition hover:translate-x-0.5 hover:border-basil hover:bg-basil hover:text-cream" aria-label="Avis suivant">
+              <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m9 18 6-6-6-6"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="reviews no-scrollbar -mx-4 mt-12 flex snap-x snap-mandatory gap-5 overflow-x-auto scroll-smooth px-4 pb-4 sm:mx-0 sm:px-0" tabindex="0" aria-label="Avis clients, faire défiler horizontalement">
+          <figure class="review w-[85%] shrink-0 snap-start rounded-3xl bg-white p-8 shadow-card transition duration-500 hover:-translate-y-1 hover:shadow-lift sm:w-[calc(50%-.625rem)] lg:w-[calc(33.333%-.84rem)]">
+            <div class="flex items-center justify-between"><div class="flex gap-0.5 text-copper" aria-label="5 étoiles sur 5">★★★★★</div><span class="text-xs font-semibold uppercase tracking-wider text-charcoal/60">Google</span></div>
+            <blockquote class="mt-5 font-display text-lg leading-relaxed text-basil">« Une pâte incroyablement légère et bien cuite, on sent le travail derrière. Les produits sont top. Notre nouvelle adresse pizza ! »</blockquote>
+            <figcaption class="mt-6 flex items-center gap-3 border-t border-charcoal/10 pt-5"><span class="grid h-10 w-10 place-items-center rounded-full bg-tomato/10 font-semibold text-tomato-dark">C</span><span><span class="block text-sm font-semibold">Client Google</span><span class="text-xs text-charcoal/60">Qualité de la pâte</span></span></figcaption>
+          </figure>
+          <figure class="review w-[85%] shrink-0 snap-start rounded-3xl bg-white p-8 shadow-card transition duration-500 hover:-translate-y-1 hover:shadow-lift sm:w-[calc(50%-.625rem)] lg:w-[calc(33.333%-.84rem)]">
+            <div class="flex items-center justify-between"><div class="flex gap-0.5 text-copper" aria-label="5 étoiles sur 5">★★★★★</div><span class="text-xs font-semibold uppercase tracking-wider text-charcoal/60">Google</span></div>
+            <blockquote class="mt-5 font-display text-lg leading-relaxed text-basil">« Accueil chaleureux et souriant, on se sent comme à la maison. Les conseils sur les pizzas du moment étaient parfaits. »</blockquote>
+            <figcaption class="mt-6 flex items-center gap-3 border-t border-charcoal/10 pt-5"><span class="grid h-10 w-10 place-items-center rounded-full bg-basil/10 font-semibold text-basil">C</span><span><span class="block text-sm font-semibold">Client Google</span><span class="text-xs text-charcoal/60">Accueil</span></span></figcaption>
+          </figure>
+          <figure class="review w-[85%] shrink-0 snap-start rounded-3xl bg-white p-8 shadow-card transition duration-500 hover:-translate-y-1 hover:shadow-lift sm:w-[calc(50%-.625rem)] lg:w-[calc(33.333%-.84rem)]">
+            <div class="flex items-center justify-between"><div class="flex gap-0.5 text-copper" aria-label="5 étoiles sur 5">★★★★★</div><span class="text-xs font-semibold uppercase tracking-wider text-charcoal/60">TripAdvisor</span></div>
+            <blockquote class="mt-5 font-display text-lg leading-relaxed text-basil">« Commandé par téléphone, prêt à l’heure pile et encore bien chaud à l’arrivée. Service rapide et efficace. »</blockquote>
+            <figcaption class="mt-6 flex items-center gap-3 border-t border-charcoal/10 pt-5"><span class="grid h-10 w-10 place-items-center rounded-full bg-copper/20 font-semibold text-copper-dark">C</span><span><span class="block text-sm font-semibold">Client TripAdvisor</span><span class="text-xs text-charcoal/60">Rapidité du service</span></span></figcaption>
+          </figure>
+          <figure class="review w-[85%] shrink-0 snap-start rounded-3xl bg-white p-8 shadow-card transition duration-500 hover:-translate-y-1 hover:shadow-lift sm:w-[calc(50%-.625rem)] lg:w-[calc(33.333%-.84rem)]">
+            <div class="flex items-center justify-between"><div class="flex gap-0.5 text-copper" aria-label="5 étoiles sur 5">★★★★★</div><span class="text-xs font-semibold uppercase tracking-wider text-charcoal/60">Google</span></div>
+            <blockquote class="mt-5 font-display text-lg leading-relaxed text-basil">« La croûte est alvéolée et croustillante comme en Italie. Mention spéciale pour le tiramisu maison. »</blockquote>
+            <figcaption class="mt-6 flex items-center gap-3 border-t border-charcoal/10 pt-5"><span class="grid h-10 w-10 place-items-center rounded-full bg-tomato/10 font-semibold text-tomato-dark">C</span><span><span class="block text-sm font-semibold">Client Google</span><span class="text-xs text-charcoal/60">Authenticité</span></span></figcaption>
+          </figure>
+          <figure class="review w-[85%] shrink-0 snap-start rounded-3xl bg-white p-8 shadow-card transition duration-500 hover:-translate-y-1 hover:shadow-lift sm:w-[calc(50%-.625rem)] lg:w-[calc(33.333%-.84rem)]">
+            <div class="flex items-center justify-between"><div class="flex gap-0.5 text-copper" aria-label="5 étoiles sur 5">★★★★★</div><span class="text-xs font-semibold uppercase tracking-wider text-charcoal/60">Google</span></div>
+            <blockquote class="mt-5 font-display text-lg leading-relaxed text-basil">« Des ingrédients frais et généreux, une équipe passionnée. On revient chaque semaine en famille. »</blockquote>
+            <figcaption class="mt-6 flex items-center gap-3 border-t border-charcoal/10 pt-5"><span class="grid h-10 w-10 place-items-center rounded-full bg-basil/10 font-semibold text-basil">C</span><span><span class="block text-sm font-semibold">Client Google</span><span class="text-xs text-charcoal/60">Fidélité</span></span></figcaption>
+          </figure>
+        </div>
+        <div class="review-dots mt-6 flex justify-center gap-2" aria-hidden="true"></div>
+      </div>
+    </section>
+
+    <!-- Bandeau d'appel -->
+    <section class="px-4 sm:px-6 lg:px-8" aria-label="Commander">
+      <div class="reveal relative mx-auto max-w-7xl overflow-hidden rounded-[2rem] bg-tomato px-6 py-14 text-center text-white sm:px-12 sm:py-20">
+        <div class="pointer-events-none absolute -left-20 -top-20 h-64 w-64 rounded-full bg-white/10"></div>
+        <div class="pointer-events-none absolute -bottom-24 -right-10 h-72 w-72 rounded-full bg-charcoal/10"></div>
+        <h2 class="relative font-display text-3xl font-semibold text-balance sm:text-5xl">Une envie de pizza ce soir ?</h2>
+        <p class="relative mx-auto mt-4 max-w-lg text-white/90">Appelez-nous pour commander à emporter ou réserver votre table. On s’occupe du reste.</p>
+        <div class="relative mt-8 flex flex-col justify-center gap-3 sm:flex-row">
+          <a href="tel:+33475000000" class="btn bg-white !px-8 !py-4 text-base text-tomato-dark shadow-xl hover:bg-cream" data-track="cta-banner">04 75 00 00 00</a>
+          <a href="https://www.google.com/maps/dir/?api=1&destination=Le+Pendolino+70+Grande+Rue+26120+Montmeyran" target="_blank" rel="noopener" class="btn-ghost !px-8 !py-4 text-base">Lancer l’itinéraire</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ===================== F. PIED DE PAGE / INFOS PRATIQUES ===================== -->
+  <footer id="contact" class="mt-24 bg-charcoal text-cream sm:mt-32" aria-labelledby="contact-title">
+    <div class="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
+      <div class="grid gap-14 lg:grid-cols-12">
+        <div class="lg:col-span-4">
+          <p class="eyebrow !text-copper">Infos pratiques</p>
+          <h2 id="contact-title" class="mt-4 font-display text-4xl font-semibold">Venez nous voir</h2>
+
+          <address class="mt-8 not-italic">
+            <span class="block text-xs font-bold uppercase tracking-[.2em] text-copper">Adresse</span>
+            <span class="mt-2 block text-lg leading-relaxed">Le Pendolino<br>70 Grande Rue<br>26120 Montmeyran</span>
+          </address>
+          <a href="https://www.google.com/maps/dir/?api=1&destination=Le+Pendolino+70+Grande+Rue+26120+Montmeyran" target="_blank" rel="noopener" class="btn-primary mt-6">
+            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m3 11 18-8-8 18-2-8-8-2Z"/></svg>
+            Lancer l’itinéraire Google Maps
+          </a>
+
+          <div class="mt-10">
+            <span class="block text-xs font-bold uppercase tracking-[.2em] text-copper">Téléphone</span>
+            <!-- À COMPLÉTER : numéro réel -->
+            <a href="tel:+33475000000" class="mt-2 inline-block font-display text-3xl transition-colors hover:text-copper" data-track="cta-footer">04 75 00 00 00</a>
+          </div>
+
+          <div class="mt-10">
+            <span class="block text-xs font-bold uppercase tracking-[.2em] text-copper">Suivez-nous</span>
+            <a href="https://www.instagram.com/lependolino/" target="_blank" rel="noopener" class="group mt-3 inline-flex items-center gap-3 text-cream/90 transition-colors hover:text-copper">
+              <span class="grid h-11 w-11 place-items-center rounded-full border border-cream/20 transition duration-300 group-hover:rotate-6 group-hover:border-copper group-hover:bg-copper group-hover:text-charcoal">
+                <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg>
+              </span>
+              @lependolino
+            </a>
+          </div>
+        </div>
+
+        <!-- Horaires : À COMPLÉTER avec les horaires réels (et mettre à jour le bloc JSON-LD en haut de page) -->
+        <div class="lg:col-span-4">
+          <h3 class="text-xs font-bold uppercase tracking-[.2em] text-copper">Horaires d’ouverture</h3>
+          <p class="open-status mt-3 inline-flex items-center gap-2 rounded-full bg-cream/10 px-3 py-1 text-sm" hidden></p>
+          <table class="hours mt-5 w-full text-left">
+            <caption class="sr-only">Horaires d’ouverture par jour</caption>
+            <tbody class="divide-y divide-cream/10">
+              <tr data-day="1"><th scope="row" class="py-3 font-medium">Lundi</th><td class="py-3 text-right text-cream/60">Fermé</td></tr>
+              <tr data-day="2" data-open="18:00-21:30"><th scope="row" class="py-3 font-medium">Mardi</th><td class="py-3 text-right">18h00 – 21h30</td></tr>
+              <tr data-day="3" data-open="18:00-21:30"><th scope="row" class="py-3 font-medium">Mercredi</th><td class="py-3 text-right">18h00 – 21h30</td></tr>
+              <tr data-day="4" data-open="18:00-21:30"><th scope="row" class="py-3 font-medium">Jeudi</th><td class="py-3 text-right">18h00 – 21h30</td></tr>
+              <tr data-day="5" data-open="18:00-22:00"><th scope="row" class="py-3 font-medium">Vendredi</th><td class="py-3 text-right">18h00 – 22h00</td></tr>
+              <tr data-day="6" data-open="18:00-22:00"><th scope="row" class="py-3 font-medium">Samedi</th><td class="py-3 text-right">18h00 – 22h00</td></tr>
+              <tr data-day="0" data-open="18:00-21:00"><th scope="row" class="py-3 font-medium">Dimanche</th><td class="py-3 text-right">18h00 – 21h00</td></tr>
+            </tbody>
+          </table>
+          <p class="mt-4 text-sm text-cream/60">Sur place et à emporter. Pensez à commander à l’avance le week-end.</p>
+        </div>
+
+        <!-- Carte (chargée seulement quand on approche, pour garder la page rapide) -->
+        <div class="lg:col-span-4">
+          <h3 class="text-xs font-bold uppercase tracking-[.2em] text-copper">Nous trouver</h3>
+          <div class="photo mt-5 aspect-[4/3] overflow-hidden rounded-2xl ring-1 ring-cream/10 lg:aspect-auto lg:h-[calc(100%-2.25rem)]">
+            <iframe title="Plan d’accès au Pendolino, 70 Grande Rue à Montmeyran" class="h-full w-full grayscale-[.3]" loading="lazy" referrerpolicy="no-referrer-when-downgrade"
+                    src="https://www.google.com/maps?q=70+Grande+Rue,+26120+Montmeyran&z=16&output=embed"></iframe>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-16 flex flex-col items-center justify-between gap-4 border-t border-cream/10 pt-8 text-sm text-cream/60 sm:flex-row">
+        <p>© <span class="year">2026</span> Le Pendolino · Pizzeria artisanale à Montmeyran (Drôme)</p>
+        <a href="#top" class="inline-flex items-center gap-2 transition-colors hover:text-copper">Retour en haut ↑</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Barre d'actions fixe sur mobile -->
+  <div class="fixed inset-x-0 bottom-0 z-40 grid grid-cols-2 gap-2 border-t border-charcoal/10 bg-cream/95 p-3 backdrop-blur md:hidden" style="padding-bottom:max(.75rem,env(safe-area-inset-bottom))">
+    <a href="tel:+33475000000" class="btn-primary !py-3.5" data-track="cta-mobile-bar">
+      <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 0 0 2.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293a1.125 1.125 0 0 1-1.21.38 12.035 12.035 0 0 1-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 0 0-1.091-.852H4.5A2.25 2.25 0 0 0 2.25 4.5v2.25Z"/></svg>
+      Commander
+    </a>
+    <a href="https://www.google.com/maps/dir/?api=1&destination=Le+Pendolino+70+Grande+Rue+26120+Montmeyran" target="_blank" rel="noopener" class="btn-outline !py-3.5">Itinéraire</a>
+  </div>
+
+  <script src="js/main.js" defer></script>
+</body>
+</html>

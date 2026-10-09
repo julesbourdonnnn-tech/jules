@@ -23,3 +23,5 @@ le-passe
 undefined
 # Site Sable & Pierre (maisons de Lacanau et Bordeaux) : publié séparément (maisons/wrangler.jsonc)
 maisons
+# Site Le Pendolino (pizzeria de Montmeyran) : publié séparément (le-pendolino/wrangler.jsonc)
+le-pendolino
