@@ -39,6 +39,11 @@
         </dl>
         ${r.cents ? `<div class="booking__price">${r.lignes.map((l) => `<p><span>${esc(window.SP_LABEL ? SP_LABEL(l.label) : l.label)}</span><span>${SP_EUR(l.cents)}</span></p>`).join("")}<p class="booking__total"><span>Total</span><strong>${SP_EUR(r.cents)}</strong></p></div>` : ""}
       </div>
+      ${r.caution && (r.statut === "confirmee" || r.statut === "a_valider") ? `<div class="resa__caution">
+        <h2 class="h3">Caution : ${SP_EUR(r.caution.montant * 100)}</h2>
+        <p>${r.caution.etat === "bloquee" ? "La caution est bloquée sur votre carte (empreinte bancaire, rien n'est débité). Elle sera libérée automatiquement 48 heures après votre départ." : r.caution.etat === "liberee" ? "La caution a été libérée." : r.caution.etat === "lien" ? "Votre banque demande une confirmation pour la caution : merci de la valider avant votre arrivée (rien n'est débité)." : "La caution est bloquée sur votre carte la veille de votre arrivée (empreinte bancaire, rien n'est débité), puis libérée automatiquement 48 heures après votre départ."}</p>
+        ${r.caution.url ? `<p><a class="btn btn--accent" href="${esc(r.caution.url)}">Valider la caution</a></p>` : ""}
+      </div>` : ""}
       <p class="small">Gardez cette page : son adresse vous permet de suivre votre réservation. Une question ? Écrivez-nous à <a class="link" href="mailto:${esc(email)}">${esc(email)}</a> en indiquant le numéro ${esc(r.id)}.</p>
       <p style="margin-top:36px"><a class="btn btn--ghost" href="${esc(r.page)}">Revoir la maison</a></p>`;
   };

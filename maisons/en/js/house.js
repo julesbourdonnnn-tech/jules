@@ -637,7 +637,7 @@
   };
   function renderRecap() {
     const p = shownPrice();
-    $("#recap").innerHTML = `<p><strong>${esc(h.name)}</strong></p><p>${esc(stayText())}</p><p>${esc(guestsText())}</p>${p && p.ready ? `<div class="recap__price">${p.lines.map((l) => `<p${l.cents < 0 ? ' class="is-off"' : ""}><span>${esc(window.SP_LABEL ? SP_LABEL(l.label) : l.label)}</span><span>${EUR(l.cents)}</span></p>`).join("")}<p class="booking__total"><span>Total</span><strong>${EUR(p.cents)}</strong></p></div>` : ""}`;
+    $("#recap").innerHTML = `<p><strong>${esc(h.name)}</strong></p><p>${esc(stayText())}</p><p>${esc(guestsText())}</p>${p && p.ready ? `<div class="recap__price">${p.lines.map((l) => `<p${l.cents < 0 ? ' class="is-off"' : ""}><span>${esc(window.SP_LABEL ? SP_LABEL(l.label) : l.label)}</span><span>${EUR(l.cents)}</span></p>`).join("")}<p class="booking__total"><span>Total</span><strong>${EUR(p.cents)}</strong></p></div>` : ""}${window.SP_CAUTION && SP_CAUTION(key) ? `<p class="small recap__caution">Security deposit: ${EUR(SP_CAUTION(key) * 100)}, held on your card the day before arrival (nothing is charged) and released 48 hours after departure.</p>` : ""}`;
     $("#d-submit").textContent = p && p.ready ? `Continue to payment · ${EUR(p.cents)}` : "Send my request";
   }
   async function applyCode() {

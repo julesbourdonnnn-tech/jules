@@ -3100,6 +3100,14 @@
   "ou": "house.js"
  },
  {
+  "fr": "<p class=\"small recap__caution\">Caution :",
+  "ou": "house.js"
+ },
+ {
+  "fr": ", bloqués sur votre carte la veille de l'arrivée (rien n'est débité) et libérés 48 h après le départ.</p>",
+  "ou": "house.js"
+ },
+ {
   "fr": "Continuer vers le paiement ·",
   "ou": "house.js"
  },
@@ -3352,7 +3360,35 @@
   "ou": "reservation.js"
  },
  {
-  "fr": "</div> <p class=\"small\">Gardez cette page : son adresse vous permet de suivre votre réservation. Une question ? Écrivez-nous à <a class=\"link\" href=\"mailto:",
+  "fr": "<div class=\"resa__caution\"> <h2 class=\"h3\">Caution :",
+  "ou": "reservation.js"
+ },
+ {
+  "fr": "La caution est bloquée sur votre carte (empreinte bancaire, rien n'est débité). Elle sera libérée automatiquement 48 heures après votre départ.",
+  "ou": "reservation.js"
+ },
+ {
+  "fr": "La caution a été libérée.",
+  "ou": "reservation.js"
+ },
+ {
+  "fr": "Votre banque demande une confirmation pour la caution : merci de la valider avant votre arrivée (rien n'est débité).",
+  "ou": "reservation.js"
+ },
+ {
+  "fr": "La caution est bloquée sur votre carte la veille de votre arrivée (empreinte bancaire, rien n'est débité), puis libérée automatiquement 48 heures après votre départ.",
+  "ou": "reservation.js"
+ },
+ {
+  "fr": "<p><a class=\"btn btn--accent\" href=\"",
+  "ou": "reservation.js"
+ },
+ {
+  "fr": "\">Valider la caution</a></p>",
+  "ou": "reservation.js"
+ },
+ {
+  "fr": "<p class=\"small\">Gardez cette page : son adresse vous permet de suivre votre réservation. Une question ? Écrivez-nous à <a class=\"link\" href=\"mailto:",
   "ou": "reservation.js"
  },
  {
@@ -3393,6 +3429,10 @@
  },
  {
   "fr": "Taxe de séjour (",
+  "ou": "prix.js"
+ },
+ {
+  "fr": "Remise réservation directe",
   "ou": "prix.js"
  },
  {
@@ -4208,7 +4248,11 @@
   "ou": "conditions.html"
  },
  {
-  "fr": "Caution (non prélevée, demandée à l'arrivée) —",
+  "fr": "Caution (",
+  "ou": "conditions.html"
+ },
+ {
+  "fr": ") : la veille de l'arrivée, ce montant est bloqué sur la carte utilisée pour la réservation (empreinte bancaire : rien n'est débité). Il est libéré automatiquement 48 heures après le départ. En cas de dégradation ou de casse constatée, le coût des réparations peut être prélevé dans la limite de la caution, après vous en avoir informé, justificatifs à l'appui. Si votre banque demande une confirmation, un lien vous est envoyé par e-mail.",
   "ou": "conditions.html"
  },
  {

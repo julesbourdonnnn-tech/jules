@@ -27,7 +27,7 @@
         <p class="booking__msg" id="login-msg" aria-live="polite"></p>
       </form>
       <div id="admin" hidden>
-        <nav class="admin-jump" aria-label="Aller à"><a href="#cal-title">Calendrier</a><a href="#list">Réservations</a><a href="#prix">Prix</a><a href="#stats">Statistiques</a><a href="#codes-box">Codes promo</a></nav>
+        <nav class="admin-jump" aria-label="Aller à"><a href="#cal-title">Calendrier</a><a href="#list">Réservations</a><a href="#prix">Prix</a><a href="#infos">E-mails</a><a href="#stats">Statistiques</a><a href="#codes-box">Codes promo</a></nav>
         <div class="admin-bar">
           <div class="admin-tabs" role="tablist" aria-label="Filtrer">
             <button type="button" class="chip" data-f="a_valider" aria-pressed="true">À valider</button>
@@ -71,6 +71,12 @@
             </div>
           </div>
           <div id="px-body"><p class="small">Chargement…</p></div>
+        </section>
+        <section class="admin-prix" id="infos" aria-labelledby="infos-title">
+          <div class="admin-cal__head">
+            <h2 class="h3" id="infos-title">E-mails aux voyageurs</h2>
+          </div>
+          <div id="infos-body"><p class="small">Chargement…</p></div>
         </section>
         <section class="admin-stats" id="stats" aria-labelledby="stats-title">
           <div class="admin-cal__head">

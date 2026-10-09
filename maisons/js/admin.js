@@ -56,6 +56,18 @@
     const body = kind === "ok" ? T.ok : T.no;
     return `mailto:${encodeURIComponent(b.email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   };
+  const MAIL_NAMES = { recue: "demande reçue", confirmee: "confirmation", refusee: "refus", annulee: "annulation", rappel: "infos d'arrivée", avis: "demande d'avis", caution_lien: "lien de caution" };
+  const isoPlus = (iso, n) => { const [y, m, d] = iso.split("-").map(Number); return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10); };
+  const cautionTxt = (b) => {
+    const c = b.caution || {};
+    if (c.etat === "bloquee") return `bloquée sur sa carte le ${when(c.le)}, libérée automatiquement le ${fmt(isoPlus(b.depart, 2))} (sauf si tu l'encaisses)${c.alerte ? ` · <span class="is-error">${esc(c.alerte)}</span>` : ""}`;
+    if (c.etat === "lien") return `sa banque demande une validation : lien envoyé au voyageur le ${when(c.le)} <button type="button" class="link" data-copy="${esc(c.url)}">copier le lien</button>`;
+    if (c.etat === "liberee") return `libérée le ${when(c.libereeLe)}`;
+    if (c.etat === "encaissee") return `${SP_EUR(c.encaisse)} encaissés le ${when(c.encaisseeLe)}`;
+    if (c.etat === "expire") return "le voyageur n'a pas validé le lien : nouvel essai demain matin";
+    if (c.etat === "echec") return `<span class="is-error">impossible : ${esc(c.raison || "")}</span>`;
+    return `sera bloquée automatiquement le ${fmt(isoPlus(b.arrivee, -1))} (veille de l'arrivée)`;
+  };
   const card = (b) => {
     const h = HOUSES[b.maison] || { name: b.maison };
     const actions = b.statut === "a_valider"
@@ -73,7 +85,9 @@
         <div><dt>Montant</dt><dd>${b.cents ? SP_EUR(b.cents) : "à définir"}${b.code ? ` (code ${esc(b.code)})` : ""}${b.paiement ? ` · ${esc(b.paiement)}` : ""}</dd></div>
       </dl>
       ${b.message ? `<blockquote class="admin-card__msg">${esc(b.message)}</blockquote>` : ""}
-      <div class="admin-card__actions">${actions}</div>
+      ${b.cautionMontant && (b.statut === "confirmee" || b.statut === "a_valider") ? `<p class="admin-card__caution"><strong>Caution ${b.cautionMontant.toLocaleString("fr-FR")} €</strong> · ${cautionTxt(b)}</p>` : ""}
+      ${b.mails || b.mailErreur ? `<p class="small">E-mails envoyés : ${Object.entries(b.mails || {}).map(([k, v]) => `${MAIL_NAMES[k] || k} (${when(v)})`).join(", ") || "aucun"}${b.mailErreur ? ` · <span class="is-error">échec ${esc(b.mailErreur)}</span>` : ""}</p>` : ""}
+      <div class="admin-card__actions">${actions}${b.caution && b.caution.etat === "bloquee" ? `<button type="button" class="btn btn--ghost" data-cau="encaisser" data-id="${b.id}">Encaisser la caution…</button><button type="button" class="link" data-cau="liberer" data-id="${b.id}">Libérer la caution</button>` : ""}</div>
       <p class="booking__msg" data-msg="${b.id}" aria-live="polite"></p>
     </article>`;
   };
@@ -193,7 +207,7 @@
   let pxHouse = "lacanau";
   let pxMonth = new Date(now.getFullYear(), now.getMonth(), 1);
   let pxSel = null; // dates choisies dans le calendrier des prix : { du, au, picking }
-  const pxDef = () => ({ mode: "auto", ajust: 0, nuit: null, weekend: null, menage: null, dates: [] });
+  const pxDef = () => ({ mode: "auto", ajust: 0, nuit: null, weekend: null, menage: null, caution: null, dates: [] });
   const isoAdd = (iso, n) => { const [y, m, d] = iso.split("-").map(Number); return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10); };
   const dShort = (iso) => { const [y, m, d] = iso.split("-").map(Number); return new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "short", year: y !== now.getFullYear() ? "numeric" : undefined }).format(new Date(y, m - 1, d)); };
   const nNights = (du, au) => Math.round((Date.parse(au) - Date.parse(du)) / DAYMS) + 1;
@@ -219,7 +233,8 @@
     let html = `<div class="px-top">
       <label class="px-switch"><input type="checkbox" id="px-auto"${auto ? " checked" : ""}><span class="px-switch__ui" aria-hidden="true"></span>
         <span><strong>Prix automatiques</strong><span class="small">${auto ? `Basés sur les prix Airbnb, relevés chaque jour${A.updated ? ` (dernier relevé : ${dShort(A.updated)})` : ""}.` : "Désactivés : tu fixes toi-même le prix de la nuit."}</span></span></label>
-      <div class="field px-remise"><label for="px-rem">Remise réservation directe</label><div class="px-unit"><input id="px-rem" type="number" min="0" max="50" step="1" inputmode="numeric" value="${rem}"><span>%</span></div></div>
+      <div class="px-top__fields"><div class="field px-remise"><label for="px-rem">Remise réservation directe</label><div class="px-unit"><input id="px-rem" type="number" min="0" max="50" step="1" inputmode="numeric" value="${rem}"><span>%</span></div></div>
+      <div class="field px-remise"><label for="px-cau">Caution ${pxHouse === "lacanau" ? "Lacanau" : "Bordeaux"}</label><div class="px-unit"><input id="px-cau" type="number" min="0" max="5000" step="50" inputmode="numeric" value="${SP_CAUTION(pxHouse, px)}"><span>€</span></div></div></div>
     </div>`;
     if (auto) {
       html += `<div class="px-panel"><p class="px-label">Ajustement par rapport à Airbnb</p>
@@ -315,6 +330,7 @@
         if (H.menage == null && (window.TARIFS_AIRBNB || {})[pxHouse]) H.menage = TARIFS_AIRBNB[pxHouse].fixe || null;
       }
     } else if (t.id === "px-rem") px.remise = Math.max(0, Math.min(50, Number(t.value) || 0));
+    else if (t.id === "px-cau") H.caution = Math.max(0, Math.min(5000, Math.round(Number(t.value) || 0)));
     else if (t.id === "px-adj") H.ajust = Math.max(-50, Math.min(100, Math.round(Number(t.value) || 0)));
     else if (t.id === "px-nuit") H.nuit = pxVal(t.value);
     else if (t.id === "px-we") H.weekend = pxVal(t.value);
@@ -381,7 +397,49 @@
   });
   window.addEventListener("beforeunload", (e) => { if (px && JSON.stringify(px) !== pxSaved) { e.preventDefault(); e.returnValue = ""; } });
 
-  const refresh = () => { loadCodes(); loadStats(); if (!px || JSON.stringify(px) === pxSaved) loadPrix(); return api("reservations").then((d) => { data = d; render(); }).catch((e) => { if (e.message !== "auth") $("#list").innerHTML = `<p class="booking__msg is-error">${esc(e.message)}</p>`; }); };
+  /* E-mails aux voyageurs : adresse et infos d'arrivée (envoyées 7 jours avant), lien pour les avis */
+  let infos = null;
+  const renderInfos = (mails) => {
+    const I = infos;
+    const house = (k) => {
+      const x = I[k] || {};
+      return `<fieldset class="inf-house"><legend class="h3">${esc(HOUSES[k].name)}</legend>
+        <div class="field"><label for="inf-${k}-adr">Adresse exacte</label><input id="inf-${k}-adr" data-inf="${k}.adresse" maxlength="200" value="${esc(x.adresse || "")}" placeholder="${k === "lacanau" ? "ex. 12 allée des Pins, 33680 Lacanau" : "ex. 8 rue Notre-Dame, 33000 Bordeaux"}"></div>
+        <div class="field"><label for="inf-${k}-fr">Infos d'arrivée (français)</label><textarea id="inf-${k}-fr" data-inf="${k}.fr" maxlength="4000" placeholder="Boîte à clés, code, parking, wifi, poubelles, numéro à appeler…">${esc(x.fr || "")}</textarea></div>
+        <details class="inf-more"${x.en || x.es ? " open" : ""}><summary>Versions anglaise et espagnole (facultatif)</summary>
+          <div class="field"><label for="inf-${k}-en">Anglais</label><textarea id="inf-${k}-en" data-inf="${k}.en" maxlength="4000">${esc(x.en || "")}</textarea></div>
+          <div class="field"><label for="inf-${k}-es">Espagnol</label><textarea id="inf-${k}-es" data-inf="${k}.es" maxlength="4000">${esc(x.es || "")}</textarea></div>
+          <p class="small">Sans traduction, les voyageurs étrangers reçoivent le texte anglais (ou français s'il n'y en a pas).</p>
+        </details></fieldset>`;
+    };
+    $("#infos-body").innerHTML = `
+      <p class="inf-status ${mails ? "is-on" : "is-off"}">${mails ? "E-mails automatiques activés." : "E-mails automatiques pas encore activés : ajoute la clé RESEND_API_KEY dans Cloudflare (voir le mode d'emploi). En attendant, rien n'est envoyé automatiquement : utilise les boutons « Écrire » des réservations."}</p>
+      <p class="small">Envoyés tout seuls, dans la langue du voyageur : demande reçue, confirmation (quand tu acceptes), refus ou annulation, <strong>infos d'arrivée 7 jours avant</strong> (avec l'adresse et le texte ci-dessous), lien de caution si sa banque le demande, et <strong>demande d'avis</strong> le lendemain du départ. Les réponses arrivent sur contact.sablepierre@gmail.com.</p>
+      <div class="inf-grid">${house("lacanau")}${house("bordeaux")}</div>
+      <div class="field"><label for="inf-avis">Lien pour laisser un avis (facultatif)</label><input id="inf-avis" data-inf="avisUrl" maxlength="300" value="${esc(I.avisUrl || "")}" placeholder="ex. lien de ta fiche Google · sans lien, le voyageur répond par e-mail"></div>
+      <div class="inf-actions"><button type="button" class="btn btn--accent" id="inf-save">Enregistrer</button><button type="button" class="btn btn--ghost" id="inf-test"${mails ? "" : " disabled"}>M'envoyer un e-mail de test</button></div>
+      <p class="booking__msg" id="inf-msg" aria-live="polite"></p>`;
+  };
+  const loadInfos = () => api("infos").then((d) => { infos = d.infos || {}; renderInfos(d.mails); }).catch((e) => { if (e.message !== "auth") $("#infos-body").innerHTML = `<p class="booking__msg is-error">${esc(e.message)}</p>`; });
+  $("#infos-body").addEventListener("input", (e) => {
+    const f = e.target.dataset.inf;
+    if (!f) return;
+    const [k, field] = f.split(".");
+    if (field) { infos[k] = infos[k] || {}; infos[k][field] = e.target.value; } else infos[k] = e.target.value;
+  });
+  $("#infos-body").addEventListener("click", async (e) => {
+    const m = $("#inf-msg");
+    const say = (t, err) => { m.textContent = t; m.classList.toggle("is-error", !!err); };
+    if (e.target.id === "inf-save") {
+      say("Enregistrement…");
+      try { const d = await api("infos", "POST", infos); infos = d.infos; say("Enregistré. Ces informations ne sont jamais affichées sur le site : elles partent seulement par e-mail, 7 jours avant l'arrivée."); } catch (err) { if (err.message !== "auth") say(err.message, true); }
+    } else if (e.target.id === "inf-test") {
+      say("Envoi…");
+      try { const d = await api("test-mail", "POST"); say(d.message); } catch (err) { if (err.message !== "auth") say(err.message, true); }
+    }
+  });
+
+  const refresh = () => { loadCodes(); loadStats(); if (!px || JSON.stringify(px) === pxSaved) loadPrix(); if (!infos) loadInfos(); return api("reservations").then((d) => { data = d; render(); }).catch((e) => { if (e.message !== "auth") $("#list").innerHTML = `<p class="booking__msg is-error">${esc(e.message)}</p>`; }); };
   /* Statistiques : visites (anonymes, sans cookie), sources, clics et réservations */
   let statDays = 30;
   const nf = new Intl.NumberFormat("fr-FR");
@@ -519,7 +577,25 @@
   }));
   document.addEventListener("click", async (e) => {
     const c = e.target.closest("[data-copy]");
-    if (c) { try { await navigator.clipboard.writeText(c.dataset.copy); c.textContent = "Copié"; } catch (err) { c.previousElementSibling.select(); } return; }
+    if (c) { try { await navigator.clipboard.writeText(c.dataset.copy); c.textContent = "Copié"; } catch (err) { const i = c.previousElementSibling; if (i && i.select) i.select(); } return; }
+    const cb = e.target.closest("[data-cau]");
+    if (cb) {
+      const r = data.reservations.find((x) => x.id === cb.dataset.id);
+      const body = { action: cb.dataset.cau };
+      if (body.action === "encaisser") {
+        const v = window.prompt(`Montant à encaisser sur la caution (jusqu'à ${r.caution.montant} €). Le reste sera libéré.`, String(r.caution.montant));
+        if (v == null) return;
+        body.montant = Number(String(v).replace(",", ".").replace(/[^\d.]/g, ""));
+        if (!window.confirm(`Encaisser ${body.montant} € sur la carte de ${r.nom} ?`)) return;
+      } else if (!window.confirm("Libérer la caution maintenant ?")) return;
+      const m = $(`[data-msg="${cb.dataset.id}"]`);
+      try {
+        const d = await api(`reservations/${cb.dataset.id}/caution`, "POST", body);
+        data.reservations[data.reservations.findIndex((x) => x.id === d.reservation.id)] = d.reservation;
+        render();
+      } catch (err) { if (err.message !== "auth" && m) { m.textContent = err.message; m.classList.add("is-error"); } }
+      return;
+    }
     const b = e.target.closest("[data-act]");
     if (!b) return;
     const act = b.dataset.act;
@@ -533,7 +609,9 @@
       const i = data.reservations.findIndex((x) => x.id === d.reservation.id);
       data.reservations[i] = d.reservation;
       render();
-      if (act === "accepter") window.location.href = mailto(d.reservation, "ok");
+      const m2 = $(`[data-msg="${b.dataset.id}"]`);
+      if (d.mail === "envoyé") { if (m2) m2.textContent = "C'est fait : le voyageur a reçu un e-mail automatique."; }
+      else if (act === "accepter") window.location.href = mailto(d.reservation, "ok");
     } catch (err) {
       if (err.message !== "auth") { msg.textContent = err.message; msg.classList.add("is-error"); }
     }

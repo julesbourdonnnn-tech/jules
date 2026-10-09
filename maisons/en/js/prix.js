@@ -111,6 +111,12 @@ globalThis.SP_PRICE = function (house, arrivee, depart, adultes, live) {
   res.total = cents / 100;
   return res;
 };
+// Caution d'une maison (en €) : réglage de l'espace propriétaire, sinon js/tarifs.js
+globalThis.SP_CAUTION = function (house, live) {
+  const L = (live || globalThis.TARIFS_LIVE || {})[house] || {};
+  const v = L.caution != null ? L.caution : ((globalThis.TARIFS || {})[house] || {}).caution;
+  return Math.max(0, Math.round(Number(v) || 0));
+};
 globalThis.SP_EUR = (cents) => `${cents < 0 ? "−" : ""}${(Math.abs(cents) / 100).toLocaleString("en-GB", { minimumFractionDigits: Math.abs(cents) % 100 ? 2 : 0, maximumFractionDigits: 2 })} €`;
 // Prix indicatif « à partir de » (par nuit, remise directe déduite) : priceFrom de js/data.js, sinon prix Airbnb relevé
 globalThis.SP_FROM = function (house) {

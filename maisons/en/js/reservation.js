@@ -31,7 +31,12 @@
         <h2 class="h3">${esc(r.nomMaison)}</h2> <dl> <div><dt>Arrival</dt><dd>${esc(fmt(r.arrivee))}</dd></div> <div><dt>Departure</dt><dd>${esc(fmt(r.depart))}</dd></div> <div><dt>Stay</dt><dd>${r.nuits} night${r.nuits > 1 ? "s" : ""}</dd></div> <div><dt>Guests</dt><dd>${r.adultes + r.enfants}${r.bebes ? ` + ${r.bebes} infant${r.bebes > 1 ? "s" : ""}` : ""}</dd></div> <div><dt>Name</dt><dd>${esc(r.nom)}</dd></div> <div><dt>Email</dt><dd>${esc(r.email)}</dd></div>
         </dl>
         ${r.cents ? `<div class="booking__price">${r.lignes.map((l) => `<p><span>${esc(window.SP_LABEL ? SP_LABEL(l.label) : l.label)}</span><span>${SP_EUR(l.cents)}</span></p>`).join("")}<p class="booking__total"><span>Total</span><strong>${SP_EUR(r.cents)}</strong></p></div>` : ""}
-      </div> <p class="small">Keep this page: its address lets you follow your booking. Any questions? Write to us at <a class="link" href="mailto:${esc(email)}">${esc(email)}</a> quoting the reference ${esc(r.id)}.</p>
+      </div>
+      ${r.caution && (r.statut === "confirmee" || r.statut === "a_valider") ? `<div class="resa__caution"> <h2 class="h3">Security deposit: ${SP_EUR(r.caution.montant * 100)}</h2>
+        <p>${r.caution.etat === "bloquee" ? "The security deposit is held on your card (a pre-authorisation, nothing is charged). It will be released automatically 48 hours after you leave." : r.caution.etat === "liberee" ? "The security deposit has been released." : r.caution.etat === "lien" ? "Your bank needs a confirmation for the security deposit: please confirm it before you arrive (nothing is charged)." : "The security deposit is held on your card the day before you arrive (a pre-authorisation, nothing is charged), then released automatically 48 hours after you leave."}</p>
+        ${r.caution.url ? `<p><a class="btn btn--accent" href="${esc(r.caution.url)}">Confirm the deposit</a></p>` : ""}
+      </div>` : ""}
+      <p class="small">Keep this page: its address lets you follow your booking. Any questions? Write to us at <a class="link" href="mailto:${esc(email)}">${esc(email)}</a> quoting the reference ${esc(r.id)}.</p>
       <p style="margin-top:36px"><a class="btn btn--ghost" href="${esc(r.page)}">Back to the house</a></p>`;
   };
   const load = (tries) => {

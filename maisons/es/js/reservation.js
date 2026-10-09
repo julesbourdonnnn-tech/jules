@@ -31,7 +31,12 @@
         <h2 class="h3">${esc(r.nomMaison)}</h2> <dl> <div><dt>Llegada</dt><dd>${esc(fmt(r.arrivee))}</dd></div> <div><dt>Salida</dt><dd>${esc(fmt(r.depart))}</dd></div> <div><dt>Estancia</dt><dd>${r.nuits} noche${r.nuits > 1 ? "s" : ""}</dd></div> <div><dt>Viajeros</dt><dd>${r.adultes + r.enfants}${r.bebes ? ` + ${r.bebes} bebé${r.bebes > 1 ? "s" : ""}` : ""}</dd></div> <div><dt>A nombre de</dt><dd>${esc(r.nom)}</dd></div> <div><dt>Correo electrónico</dt><dd>${esc(r.email)}</dd></div>
         </dl>
         ${r.cents ? `<div class="booking__price">${r.lignes.map((l) => `<p><span>${esc(window.SP_LABEL ? SP_LABEL(l.label) : l.label)}</span><span>${SP_EUR(l.cents)}</span></p>`).join("")}<p class="booking__total"><span>Total</span><strong>${SP_EUR(r.cents)}</strong></p></div>` : ""}
-      </div> <p class="small">Guarda esta página: su dirección te permite seguir tu reserva. ¿Alguna pregunta? Escríbenos a <a class="link" href="mailto:${esc(email)}">${esc(email)}</a> indicando el número ${esc(r.id)}.</p>
+      </div>
+      ${r.caution && (r.statut === "confirmee" || r.statut === "a_valider") ? `<div class="resa__caution"> <h2 class="h3">Fianza: ${SP_EUR(r.caution.montant * 100)}</h2>
+        <p>${r.caution.etat === "bloquee" ? "La fianza está bloqueada en tu tarjeta (una preautorización, no se cobra nada). Se liberará automáticamente 48 horas después de tu salida." : r.caution.etat === "liberee" ? "La fianza se ha liberado." : r.caution.etat === "lien" ? "Tu banco necesita una confirmación para la fianza: confírmala antes de tu llegada (no se cobra nada)." : "La fianza se bloquea en tu tarjeta el día antes de tu llegada (una preautorización, no se cobra nada) y se libera automáticamente 48 horas después de tu salida."}</p>
+        ${r.caution.url ? `<p><a class="btn btn--accent" href="${esc(r.caution.url)}">Confirmar la fianza</a></p>` : ""}
+      </div>` : ""}
+      <p class="small">Guarda esta página: su dirección te permite seguir tu reserva. ¿Alguna pregunta? Escríbenos a <a class="link" href="mailto:${esc(email)}">${esc(email)}</a> indicando el número ${esc(r.id)}.</p>
       <p style="margin-top:36px"><a class="btn btn--ghost" href="${esc(r.page)}">Volver a la casa</a></p>`;
   };
   const load = (tries) => {

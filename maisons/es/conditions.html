@@ -47,8 +47,10 @@
     document.querySelectorAll("[data-email]").forEach(function (a) { a.href = "mailto:" + SITE.email; a.textContent = SITE.email; });
     if (TARIFS.remiseDirecte) document.getElementById("remise").textContent = "Las reservas realizadas en esta web tienen un descuento del " + TARIFS.remiseDirecte + " % en el alquiler y la limpieza (la tasa turística, que se abona al ayuntamiento, no tiene descuento).";
     document.getElementById("annulation").innerHTML = TARIFS.annulation.map(function (t) { return "<li>" + t.replace(/</g, "&lt;") + "</li>"; }).join("");
-    var c = ["lacanau", "bordeaux"].filter(function (k) { return TARIFS[k].caution; }).map(function (k) { return HOUSES[k].name + " : " + TARIFS[k].caution.toLocaleString("es-ES") + " €"; });
-    document.getElementById("caution").textContent = c.length ? "Fianza (no se cobra, se solicita a la llegada) — " + c.join(" · ") + "." : "";
+    var L = window.TARIFS_LIVE || {};
+    var cau = function (k) { var v = L[k] && L[k].caution != null ? L[k].caution : TARIFS[k].caution; return Math.round(Number(v) || 0); };
+    var c = ["lacanau", "bordeaux"].filter(function (k) { return cau(k) > 0; }).map(function (k) { return HOUSES[k].name + " : " + cau(k).toLocaleString("es-ES") + " €"; });
+    document.getElementById("caution").textContent = c.length ? "Fianza (" + c.join(" · ") + "): el día antes de la llegada, este importe se bloquea en la tarjeta utilizada para la reserva (preautorización: no se cobra nada). Se libera automáticamente 48 horas después de la salida. En caso de daños o roturas, el coste de las reparaciones puede cobrarse hasta el importe de la fianza, tras informarte y con justificantes. Si tu banco pide una confirmación, te enviamos un enlace por correo." : "";
   </script>
 </body>
 </html>

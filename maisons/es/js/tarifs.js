@@ -18,8 +18,9 @@ globalThis.TARIFS = {
     menage: null,
     // Taxe de séjour, par adulte (18 ans et plus) et par nuit (voir la mairie de Lacanau)
     taxeSejour: 0,
-    // Caution (information affichée, non prélevée)
-    caution: null,
+    // Caution en € : empreinte bancaire (bloquée, non débitée) la veille de l'arrivée,
+    // libérée 48 h après le départ. Se règle aussi dans l'espace propriétaire (Prix). 0 = pas de caution.
+    caution: 1000,
   },
   bordeaux: {
     nuit: null,
@@ -27,7 +28,7 @@ globalThis.TARIFS = {
     menage: null,
     // Taxe de séjour, par adulte et par nuit (voir Bordeaux Métropole)
     taxeSejour: 0,
-    caution: null,
+    caution: 1000,
   },
   // Remise accordée aux réservations directes, en % (nuits et ménage ; la taxe de séjour n'est pas remisée)
   remiseDirecte: 10,

@@ -47,8 +47,10 @@
     document.querySelectorAll("[data-email]").forEach(function (a) { a.href = "mailto:" + SITE.email; a.textContent = SITE.email; });
     if (TARIFS.remiseDirecte) document.getElementById("remise").textContent = "Bookings made on this site receive a discount of " + TARIFS.remiseDirecte + " % on the rental and cleaning (the tourist tax, paid to the local council, is not discounted).";
     document.getElementById("annulation").innerHTML = TARIFS.annulation.map(function (t) { return "<li>" + t.replace(/</g, "&lt;") + "</li>"; }).join("");
-    var c = ["lacanau", "bordeaux"].filter(function (k) { return TARIFS[k].caution; }).map(function (k) { return HOUSES[k].name + " : " + TARIFS[k].caution.toLocaleString("en-GB") + " €"; });
-    document.getElementById("caution").textContent = c.length ? "Security deposit (not charged, requested on arrival) — " + c.join(" · ") + "." : "";
+    var L = window.TARIFS_LIVE || {};
+    var cau = function (k) { var v = L[k] && L[k].caution != null ? L[k].caution : TARIFS[k].caution; return Math.round(Number(v) || 0); };
+    var c = ["lacanau", "bordeaux"].filter(function (k) { return cau(k) > 0; }).map(function (k) { return HOUSES[k].name + " : " + cau(k).toLocaleString("en-GB") + " €"; });
+    document.getElementById("caution").textContent = c.length ? "Security deposit (" + c.join(" · ") + "): the day before arrival, this amount is held on the card used for the booking (a pre-authorisation: nothing is charged). It is released automatically 48 hours after departure. If damage or breakage is found, the cost of repairs may be charged up to the amount of the deposit, after informing you and with supporting documents. If your bank asks for a confirmation, a link is sent to you by email." : "";
   </script>
 </body>
 </html>

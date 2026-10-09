@@ -637,7 +637,7 @@
   };
   function renderRecap() {
     const p = shownPrice();
-    $("#recap").innerHTML = `<p><strong>${esc(h.name)}</strong></p><p>${esc(stayText())}</p><p>${esc(guestsText())}</p>${p && p.ready ? `<div class="recap__price">${p.lines.map((l) => `<p${l.cents < 0 ? ' class="is-off"' : ""}><span>${esc(window.SP_LABEL ? SP_LABEL(l.label) : l.label)}</span><span>${EUR(l.cents)}</span></p>`).join("")}<p class="booking__total"><span>Total</span><strong>${EUR(p.cents)}</strong></p></div>` : ""}`;
+    $("#recap").innerHTML = `<p><strong>${esc(h.name)}</strong></p><p>${esc(stayText())}</p><p>${esc(guestsText())}</p>${p && p.ready ? `<div class="recap__price">${p.lines.map((l) => `<p${l.cents < 0 ? ' class="is-off"' : ""}><span>${esc(window.SP_LABEL ? SP_LABEL(l.label) : l.label)}</span><span>${EUR(l.cents)}</span></p>`).join("")}<p class="booking__total"><span>Total</span><strong>${EUR(p.cents)}</strong></p></div>` : ""}${window.SP_CAUTION && SP_CAUTION(key) ? `<p class="small recap__caution">Fianza: ${EUR(SP_CAUTION(key) * 100)}, bloqueados en tu tarjeta el día antes de la llegada (no se cobra nada) y liberados 48 h después de la salida.</p>` : ""}`;
     $("#d-submit").textContent = p && p.ready ? `Continuar al pago · ${EUR(p.cents)}` : "Enviar mi solicitud";
   }
   async function applyCode() {

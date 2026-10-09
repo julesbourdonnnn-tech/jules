@@ -21,6 +21,11 @@
  *  NOTIFY_URL         (facultatif) alerte sur téléphone : https://ntfy.sh/ton-sujet
  *  NOTIFY_TOKEN       (facultatif) jeton d'accès d'un compte ntfy.sh (sinon le quota gratuit, partagé, peut être épuisé)
  *  ICAL_LACANAU / ICAL_BORDEAUX (facultatif) liens iCal d'export Airbnb
+ *  RESEND_API_KEY     (facultatif) clé Resend : e-mails automatiques aux voyageurs (confirmation,
+ *                     rappel J-7 avec l'adresse, demande d'avis, caution)
+ *
+ * Chaque matin (Cron Trigger, wrangler.jsonc) : rappels J-7, demandes d'avis, caution
+ * (empreinte bancaire la veille de l'arrivée, renouvelée si besoin, libérée 48 h après le départ).
  * Stockage : KV « RESERVATIONS » (wrangler.jsonc).
  */
 import "./shim.js";
@@ -28,6 +33,7 @@ import "../js/data.js";
 import "../js/tarifs.js";
 import "../js/tarifs-airbnb.js";
 import "../js/prix.js";
+import { mailText, mailHtml, hoursOf } from "./mails.js";
 
 const H = globalThis.HOUSES;
 const PRICE = globalThis.SP_PRICE;
@@ -150,7 +156,7 @@ async function stripe(env, method, path, params) {
     body: params ? form(params) : undefined,
   });
   const data = await r.json();
-  if (!r.ok) throw new Error((data.error && data.error.message) || `Stripe ${r.status}`);
+  if (!r.ok) throw Object.assign(new Error((data.error && data.error.message) || `Stripe ${r.status}`), { code: data.error && (data.error.decline_code || data.error.code) });
   return data;
 }
 // Met à jour une réservation d'après Stripe (paiement autorisé, expiré…)
@@ -163,8 +169,12 @@ async function syncStripe(env, b) {
       b.statut = "a_valider";
       b.paymentIntent = pi.id;
       b.paiement = pi.status === "succeeded" ? "débité" : "autorisé";
+      // Carte enregistrée chez Stripe (pour l'empreinte de caution la veille de l'arrivée)
+      if (pi.customer) b.customer = typeof pi.customer === "string" ? pi.customer : pi.customer.id;
+      if (pi.payment_method) b.paymentMethod = typeof pi.payment_method === "string" ? pi.payment_method : pi.payment_method.id;
       await save(env, b);
       b._nouveau = true;
+      await sendGuestMail(env, b, "recue");
     } else if (s.status === "expired") {
       b.statut = "expiree";
       await save(env, b);
@@ -273,12 +283,14 @@ function checkTarifs(d) {
     const h = {
       mode: x.mode === "manuel" ? "manuel" : "auto",
       ajust: num(x.ajust, -50, 100) ?? 0, nuit: num(x.nuit, 20, 10000), weekend: num(x.weekend, 20, 10000), menage: num(x.menage, 0, 2000),
+      caution: num(x.caution, 0, 5000),
       dates: [],
     };
     const name = H[k].name;
     if (Number.isNaN(h.ajust)) return `${name} : l'ajustement doit être entre −50 et +100 %.`;
     if ([h.nuit, h.weekend].some(Number.isNaN)) return `${name} : un prix de nuit doit être entre 20 et 10 000 €.`;
     if (Number.isNaN(h.menage)) return `${name} : le ménage doit être entre 0 et 2 000 €.`;
+    if (Number.isNaN(h.caution)) return `${name} : la caution doit être entre 0 et 5 000 €.`;
     if (h.mode === "manuel" && !h.nuit) return `${name} : indique le prix de la nuit (ou repasse en prix automatiques).`;
     const list = Array.isArray(x.dates) ? x.dates.slice(0, 200) : [];
     for (const r of list) {
@@ -508,6 +520,7 @@ async function createBooking(request, env, ctx, origin) {
   b.cree = new Date().toISOString();
   b.pays = (request.cf && request.cf.country) || "";
   if (p.ready) { b.cents = p.cents; b.total = p.total; b.lignes = p.lines; }
+  b.cautionMontant = await cautionOf(env, house);
 
   // Paiement en ligne possible : tarifs renseignés et clé Stripe en place
   if (p.ready && env.STRIPE_SECRET_KEY) {
@@ -524,7 +537,10 @@ async function createBooking(request, env, ctx, origin) {
         cancel_url: `${origin}/${prefixOf(lang)}${h.page}?arrivee=${b.arrivee}&depart=${b.depart}&voyageurs=${b.adultes + b.enfants}&annule=1#reserver`,
         line_items: { 0: { quantity: 1, price_data: { currency: "eur", unit_amount: b.cents, product_data: { name: `${h.name} — ${M.nights(b.nuits)}`, description: M.line(fmtDateL(b.arrivee, lang), fmtDateL(b.depart, lang), b.adultes + b.enfants, b.id) } } } },
         // Empreinte bancaire : le montant n'est débité que lorsque tu acceptes la réservation
-        payment_intent_data: { capture_method: "manual", description: `Réservation ${b.id} — ${h.name}`, receipt_email: b.email, metadata: { reservation: b.id } },
+        payment_intent_data: { capture_method: "manual", description: `Réservation ${b.id} — ${h.name}`, receipt_email: b.email, metadata: { reservation: b.id },
+          // Carte gardée par Stripe pour l'empreinte de caution (la veille de l'arrivée)
+          setup_future_usage: b.cautionMontant ? "off_session" : undefined },
+        customer_creation: b.cautionMontant ? "always" : undefined,
         metadata: { reservation: b.id, maison: house },
       });
       b.stripeSession = s.id;
@@ -539,6 +555,7 @@ async function createBooking(request, env, ctx, origin) {
   b.paiement = "à organiser";
   await save(env, b);
   notify(env, ctx, "Nouvelle demande de réservation", summary(b), `${origin}/admin.html`);
+  ctx.waitUntil(sendGuestMail(env, b, "recue").catch(() => {}));
   return json({ ok: true, mode: "demande", id: b.id, url: `/${prefixOf(lang)}reservation.html?id=${b.id}&t=${b.token}` });
 }
 
@@ -548,12 +565,229 @@ async function bookingStatus(env, ctx, origin, id, token) {
   if (!b || b.token !== token) return json({ ok: false, error: "introuvable" }, 404);
   b = await syncStripe(env, b);
   if (b._nouveau) notify(env, ctx, "Réservation à valider (paiement autorisé)", summary(b), `${origin}/admin.html`);
+  if (b.caution && b.caution.etat === "lien") await syncCautionLink(env, ctx, b);
   const h = H[b.maison];
+  const c = b.caution || {};
   return json({ ok: true, reservation: {
     id: b.id, maison: b.maison, nomMaison: h.name, page: h.page, statut: b.statut, paiement: b.paiement || "",
     arrivee: b.arrivee, depart: b.depart, nuits: b.nuits, adultes: b.adultes, enfants: b.enfants, bebes: b.bebes,
     nom: b.nom, email: b.email, cents: b.cents || 0, lignes: b.lignes || [],
+    caution: b.cautionMontant ? { montant: b.cautionMontant, etat: c.etat || "a_venir", url: c.etat === "lien" ? c.url : undefined } : null,
   } });
+}
+
+/* ===================== Séjour : e-mails automatiques et caution ===================== */
+const SITE = "https://sable-et-pierre.com";
+const REPLY = "contact.sablepierre@gmail.com";
+const CAUTION_JOURS = 2; // la caution est libérée 2 jours après le départ
+const daysBetween = (a, b) => Math.round((toDay(b) - toDay(a)) / DAY);
+const money = (cents, lang) => new Intl.NumberFormat({ fr: "fr-FR", en: "en-GB", es: "es-ES" }[lang] || "fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: cents % 100 ? 2 : 0 }).format(cents / 100);
+const statusLink = (b) => `${SITE}/${prefixOf(langOf(b.lang))}reservation.html?id=${b.id}&t=${b.token}`;
+
+// Montant de la caution d'une maison : réglé dans l'espace propriétaire (Prix), sinon js/tarifs.js
+async function cautionOf(env, house) {
+  const t = (await loadTarifs(env))[house] || {};
+  const v = t.caution != null ? t.caution : (globalThis.TARIFS[house] || {}).caution;
+  return Math.max(0, Math.round(Number(v) || 0));
+}
+// Informations d'arrivée (privées : jamais affichées sur le site, envoyées 7 jours avant)
+async function loadInfos(env) {
+  try { return JSON.parse((await store(env).get("infos")) || "{}") || {}; } catch { return {}; }
+}
+async function adminInfos(request, env) {
+  if (request.method === "GET") return json({ ok: true, infos: await loadInfos(env), mails: !!env.RESEND_API_KEY });
+  if (request.method !== "POST") return json({ ok: false }, 405);
+  let d;
+  try { d = await request.json(); } catch { return json({ ok: false }, 400); }
+  const out = { avisUrl: clean(d.avisUrl, 300) };
+  if (out.avisUrl && !/^https:\/\//.test(out.avisUrl)) return json({ ok: false, message: "Le lien pour les avis doit commencer par https://" }, 400);
+  for (const k of KEYS) {
+    const x = d[k] || {};
+    const txt = (v) => String(v ?? "").replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, "").trim().slice(0, 4000);
+    out[k] = { adresse: clean(x.adresse, 200), fr: txt(x.fr), en: txt(x.en), es: txt(x.es) };
+  }
+  await store(env).put("infos", JSON.stringify(out));
+  return json({ ok: true, infos: out });
+}
+
+async function sendMail(env, to, subject, text) {
+  const r = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ from: env.MAIL_FROM || "Sable & Pierre <reservations@sable-et-pierre.com>", to: [to], reply_to: REPLY, subject, text, html: mailHtml(text) }),
+  });
+  if (!r.ok) throw new Error(`Resend ${r.status} : ${(await r.text()).slice(0, 200)}`);
+}
+// E-mail au voyageur (une seule fois par type, noté dans la réservation). Renvoie "envoyé", "déjà envoyé", "désactivé" ou l'erreur.
+async function sendGuestMail(env, b, type, extra = {}) {
+  if (!type) return "";
+  if (!env.RESEND_API_KEY) return "désactivé";
+  b.mails = b.mails || {};
+  if (b.mails[type] && !extra.encore) return "déjà envoyé";
+  const lang = langOf(b.lang);
+  const h = H[b.maison];
+  const infos = type === "rappel" ? await loadInfos(env) : {};
+  const I = infos[b.maison] || {};
+  const hrs = hoursOf(b.maison, lang, h);
+  const x = {
+    maison: h.name, du: fmtDateL(b.arrivee, lang), au: fmtDateL(b.depart, lang), lien: statusLink(b),
+    montant: b.cents ? money(b.cents, lang) : "", caution: b.cautionMontant ? money(b.cautionMontant * 100, lang) : "",
+    arrivee: hrs.arrivee, depart: hrs.depart, adresse: I.adresse || "",
+    infos: I[lang] || (lang === "es" && I.en) || I.fr || "", avisUrl: infos.avisUrl || (await loadInfos(env)).avisUrl || "",
+    cautionUrl: (b.caution || {}).url || "",
+  };
+  const m = mailText(type, b, x);
+  try {
+    await sendMail(env, b.email, m.subject, m.text);
+    b.mails[type] = new Date().toISOString();
+    delete b.mailErreur;
+    await save(env, b);
+    return "envoyé";
+  } catch (e) {
+    b.mailErreur = `${type} : ${e.message}`;
+    await save(env, b);
+    return `erreur (${e.message})`;
+  }
+}
+async function testMail(env) {
+  if (!env.RESEND_API_KEY) return json({ ok: false, message: "Ajoute d'abord le secret RESEND_API_KEY dans Cloudflare." }, 400);
+  const m = mailText("test", { nom: "Jules", lang: "fr" }, {});
+  try { await sendMail(env, REPLY, m.subject, m.text); } catch (e) { return json({ ok: false, message: e.message }, 502); }
+  return json({ ok: true, message: `E-mail de test envoyé à ${REPLY}.` });
+}
+
+// Caution : empreinte bancaire (montant bloqué, non débité) sur la carte enregistrée lors du paiement.
+async function placeCaution(env, ctx, b, renew) {
+  const h = H[b.maison];
+  const lang = langOf(b.lang);
+  const old = b.caution || {};
+  try {
+    if (!b.customer || !b.paymentMethod) throw Object.assign(new Error("pas de carte enregistrée"), { code: "no_card" });
+    const pi = await stripe(env, "POST", "payment_intents", {
+      amount: b.cautionMontant * 100, currency: "eur", customer: b.customer, payment_method: b.paymentMethod,
+      off_session: "true", confirm: "true", capture_method: "manual",
+      description: `Caution ${b.id} — ${h.name}`, metadata: { reservation: b.id, caution: "1" },
+    });
+    if (pi.status !== "requires_capture") throw new Error(`état ${pi.status}`);
+    if (renew && old.pi) await stripe(env, "POST", `payment_intents/${old.pi}/cancel`, {}).catch(() => {});
+    b.caution = { montant: b.cautionMontant, etat: "bloquee", pi: pi.id, le: new Date().toISOString(), renouvelee: renew ? (old.renouvelee || 0) + 1 : 0 };
+    await save(env, b);
+    return "bloquée";
+  } catch (e) {
+    if (renew) {
+      // L'ancienne empreinte reste valable encore un jour : on prévient le propriétaire
+      notify(env, ctx, "Caution : renouvellement impossible", `${summary(b)}\nL'empreinte de caution n'a pas pu être renouvelée (${e.message}). Elle expire bientôt : décide si tu la gardes (encaisser) ou la libères.`, `${SITE}/admin.html`);
+      b.caution.alerte = e.message;
+      await save(env, b);
+      return "renouvellement impossible";
+    }
+    // La banque veut une validation du voyageur : on lui envoie un lien de paiement Stripe (empreinte seulement)
+    try {
+      const sess = await stripe(env, "POST", "checkout/sessions", {
+        mode: "payment", locale: lang, customer: b.customer || undefined, customer_email: b.customer ? undefined : b.email,
+        expires_at: Math.floor(Date.now() / 1000) + 23 * 3600,
+        success_url: statusLink(b), cancel_url: statusLink(b),
+        line_items: { 0: { quantity: 1, price_data: { currency: "eur", unit_amount: b.cautionMontant * 100, product_data: { name: `Caution — ${h.name}`, description: `${b.id} · ${fmtDateL(b.arrivee, lang)} → ${fmtDateL(b.depart, lang)}` } } } },
+        payment_intent_data: { capture_method: "manual", description: `Caution ${b.id} — ${h.name}`, metadata: { reservation: b.id, caution: "1" } },
+        metadata: { reservation: b.id, caution: "1" },
+      });
+      b.caution = { montant: b.cautionMontant, etat: "lien", session: sess.id, url: sess.url, le: new Date().toISOString(), essais: (old.essais || 0) + 1, raison: e.message };
+      await save(env, b);
+      await sendGuestMail(env, b, "caution_lien", { encore: true });
+      notify(env, ctx, "Caution : le voyageur doit la valider", `${summary(b)}\nSa banque demande une confirmation : un lien lui a été envoyé${env.RESEND_API_KEY ? " par e-mail" : " (e-mails automatiques non activés : envoie-lui ce lien toi-même)"}.\n${sess.url}`, `${SITE}/admin.html`);
+      return "lien envoyé";
+    } catch (e2) {
+      b.caution = { montant: b.cautionMontant, etat: "echec", le: new Date().toISOString(), raison: `${e.message} / ${e2.message}` };
+      await save(env, b);
+      notify(env, ctx, "Caution impossible", `${summary(b)}\nL'empreinte de caution n'a pas pu être faite (${e2.message}).`, `${SITE}/admin.html`);
+      return "échec";
+    }
+  }
+}
+// Le voyageur a-t-il validé le lien de caution ?
+async function syncCautionLink(env, ctx, b) {
+  const c = b.caution;
+  if (!c || c.etat !== "lien" || !c.session || !env.STRIPE_SECRET_KEY) return b;
+  try {
+    const sess = await stripe(env, "GET", `checkout/sessions/${c.session}?expand[]=payment_intent`);
+    const pi = sess.payment_intent;
+    if (sess.status === "complete" && pi && pi.status === "requires_capture") {
+      b.caution = { montant: c.montant, etat: "bloquee", pi: pi.id, le: new Date().toISOString(), renouvelee: 0, parLien: true };
+      if (pi.payment_method) b.paymentMethod = typeof pi.payment_method === "string" ? pi.payment_method : pi.payment_method.id;
+      if (pi.customer) b.customer = typeof pi.customer === "string" ? pi.customer : pi.customer.id;
+      await save(env, b);
+    } else if (sess.status === "expired") {
+      c.etat = "expire";
+      await save(env, b);
+    }
+  } catch (e) { /* on réessaiera */ }
+  return b;
+}
+async function releaseCaution(env, b, label) {
+  const c = b.caution;
+  if (!c || c.etat !== "bloquee") return;
+  try {
+    const pi = await stripe(env, "GET", `payment_intents/${c.pi}`);
+    if (pi.status === "requires_capture") await stripe(env, "POST", `payment_intents/${c.pi}/cancel`, {});
+  } catch (e) { /* déjà expirée ou annulée */ }
+  b.caution = Object.assign({}, c, { etat: "liberee", libereeLe: new Date().toISOString(), note: label });
+  await save(env, b);
+}
+// Propriétaire : encaisser tout ou partie de la caution, ou la libérer tout de suite
+async function adminCaution(request, env, id) {
+  const b = await load(env, id);
+  if (!b) return json({ ok: false, error: "introuvable" }, 404);
+  let d;
+  try { d = await request.json(); } catch { d = {}; }
+  const c = b.caution;
+  if (!c || c.etat !== "bloquee") return json({ ok: false, message: "Aucune caution bloquée pour cette réservation." }, 409);
+  try {
+    if (d.action === "liberer") await releaseCaution(env, b, "libérée par le propriétaire");
+    else if (d.action === "encaisser") {
+      const cents = Math.round(Number(d.montant) * 100);
+      if (!(cents >= 100 && cents <= c.montant * 100)) return json({ ok: false, message: `Le montant doit être entre 1 et ${c.montant} €.` }, 400);
+      await stripe(env, "POST", `payment_intents/${c.pi}/capture`, { amount_to_capture: cents });
+      b.caution = Object.assign({}, c, { etat: "encaissee", encaisse: cents, encaisseeLe: new Date().toISOString() });
+      await save(env, b);
+    } else return json({ ok: false }, 400);
+  } catch (e) {
+    return json({ ok: false, message: `Stripe : ${e.message}` }, 502);
+  }
+  return json({ ok: true, reservation: b });
+}
+
+// Passage du matin (Cron Trigger) : paiements en attente, rappels J-7, caution, demandes d'avis
+async function morning(env, ctx) {
+  const today = todayISO();
+  const log = [];
+  for (let b of await allBookings(env)) {
+    try {
+      if (b.statut === "paiement") {
+        b = await syncStripe(env, b);
+        if (b._nouveau) { notify(env, ctx, "Réservation à valider (paiement autorisé)", summary(b), `${SITE}/admin.html`); delete b._nouveau; }
+      }
+      if (b.statut !== "confirmee") continue;
+      const toArrival = daysBetween(today, b.arrivee);
+      const sinceDeparture = daysBetween(b.depart, today);
+      if (toArrival >= 0 && toArrival <= 7 && !(b.mails || {}).rappel) log.push(`${b.id} rappel : ${await sendGuestMail(env, b, "rappel")}`);
+      // Caution
+      if (b.cautionMontant && env.STRIPE_SECRET_KEY) {
+        const c = b.caution || {};
+        if (c.etat === "lien") { await syncCautionLink(env, ctx, b); }
+        const c2 = b.caution || {};
+        if (c2.etat === "bloquee") {
+          if (sinceDeparture >= CAUTION_JOURS) { await releaseCaution(env, b, "libérée automatiquement"); log.push(`${b.id} caution libérée`); }
+          else if (daysBetween(c2.le.slice(0, 10), today) >= 6) log.push(`${b.id} caution renouvelée : ${await placeCaution(env, ctx, b, true)}`);
+        } else if ((!c2.etat || (c2.etat === "expire" && (c2.essais || 0) < 3)) && toArrival <= 1 && sinceDeparture < CAUTION_JOURS) {
+          log.push(`${b.id} caution : ${await placeCaution(env, ctx, b, false)}`);
+        }
+      }
+      if (sinceDeparture >= 1 && sinceDeparture <= 10 && !(b.mails || {}).avis) log.push(`${b.id} avis : ${await sendGuestMail(env, b, "avis")}`);
+    } catch (e) {
+      log.push(`${b.id} erreur : ${e.message}`);
+    }
+  }
+  return log;
 }
 
 /* ===================== Propriétaire ===================== */
@@ -598,12 +832,14 @@ async function adminAction(env, ctx, origin, id, action) {
         else if (pi.status === "succeeded") b.paiement = "débité — rembourser depuis Stripe si besoin";
       }
       b.statut = action === "refuser" ? "refusee" : "annulee";
+      if (b.caution && b.caution.etat === "bloquee") await releaseCaution(env, b, "libérée (réservation annulée)");
     } else return json({ ok: false, error: "action" }, 400);
   } catch (e) {
     return json({ ok: false, message: `Stripe : ${e.message}` }, 502);
   }
   await save(env, b);
-  return json({ ok: true, reservation: b });
+  const sent = await sendGuestMail(env, b, { accepter: "confirmee", refuser: "refusee", annuler: "annulee" }[action]);
+  return json({ ok: true, reservation: b, mail: sent });
 }
 async function icalFeed(env, house, key) {
   if (!env.ADMIN_KEY || key !== (await icalToken(env, house))) return new Response("Not found", { status: 404 });
@@ -636,6 +872,9 @@ async function legacyRequest(request, env, ctx) {
 
 /* ===================== Routage ===================== */
 export default {
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(morning(env, ctx).catch((e) => sendAlerts(env, "Erreur du passage du matin", String(e && e.message), `${SITE}/admin.html`)));
+  },
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     if (url.hostname.startsWith("www.")) {
@@ -660,6 +899,10 @@ export default {
       if (p === "/api/admin/stats" && request.method === "GET") return adminStats(env, ctx, url);
       if (p === "/api/admin/test-alertes" && request.method === "POST") return json({ ok: true, resultat: await sendAlerts(env, "Test des alertes Sable & Pierre", "Si tu lis ceci, les alertes de réservation fonctionnent.", `${origin}/admin.html`) });
       if (p === "/api/admin/tarifs") return adminTarifs(request, env);
+      if (p === "/api/admin/infos") return adminInfos(request, env);
+      if (p === "/api/admin/test-mail" && request.method === "POST") return testMail(env);
+      if (p === "/api/admin/matin" && request.method === "POST") return json({ ok: true, journal: await morning(env, ctx) });
+      if ((m = /^\/api\/admin\/reservations\/([A-Z0-9]{4,20})\/caution$/.exec(p)) && request.method === "POST") return adminCaution(request, env, m[1]);
       if ((m = /^\/api\/admin\/codes(?:\/([A-Za-z0-9-]{1,30}))?$/.exec(p))) return adminCodes(request, env, m[1]);
       if ((m = /^\/api\/admin\/reservations\/([A-Z0-9]{4,20})\/(accepter|refuser|annuler)$/.exec(p)) && request.method === "POST") return adminAction(env, ctx, origin, m[1], m[2]);
       return json({ ok: false }, 404);

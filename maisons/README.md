@@ -117,6 +117,26 @@ Les nuits prises selon ce lien s'ajoutent à celles du fichier automatique.
 - « Enregistrer et mettre en ligne » : les réglages sont gardés sur le serveur (stockage RESERVATIONS, clé `tarifs`) et visibles par les voyageurs en moins d'une minute, sans republier le site. Le serveur recalcule toujours le montant payé avec ces réglages.
 - Pour ajouter un événement, modifie `js/evenements.js` (dates de la première à la dernière nuit).
 
+## Caution
+
+- Montant par maison dans l'espace propriétaire → Prix (1 000 € par défaut, 0 = pas de caution).
+- Au paiement, Stripe garde la carte du voyageur. **La veille de l'arrivée**, une empreinte du montant de la caution est faite automatiquement (rien n'est débité). Elle est renouvelée si le séjour dépasse 6 jours, puis **libérée automatiquement 48 h après le départ**.
+- Si la banque du voyageur demande une validation, il reçoit un lien Stripe par e-mail (et tu reçois une alerte avec le lien).
+- Dans l'admin, sur la réservation : « Encaisser la caution… » (tout ou partie, le reste est libéré) ou « Libérer la caution ».
+
+## E-mails automatiques aux voyageurs (Resend)
+
+Envoyés dans la langue du voyageur : demande reçue, confirmation (quand tu acceptes), refus ou annulation, infos d'arrivée 7 jours avant, lien de caution si besoin, demande d'avis le lendemain du départ. Les réponses arrivent sur contact.sablepierre@gmail.com.
+
+Mise en route (une fois) :
+1. Crée un compte gratuit sur resend.com (3 000 e-mails par mois).
+2. Domains → Add domain → `sable-et-pierre.com` → « Sign in to Cloudflare » pour ajouter les enregistrements DNS automatiquement, puis attends que le domaine passe en « Verified ».
+3. API Keys → Create API key (permission « Sending access »), copie la clé.
+4. Cloudflare → Workers → lacanau → Settings → Variables and secrets → Add → Secret, nom `RESEND_API_KEY`, colle la clé.
+5. Admin → E-mails aux voyageurs : remplis l'adresse et les infos d'arrivée de chaque maison, puis « M'envoyer un e-mail de test ».
+
+Le passage automatique a lieu chaque matin à 7 h UTC (Cron Trigger dans `wrangler.jsonc`).
+
 ## Versions anglaise et espagnole
 
 - Le site existe en anglais (`/en/`) et en espagnol (`/es/`) : les dossiers `en/` et `es/` sont **générés** à partir des pages françaises, ne les modifie pas à la main.

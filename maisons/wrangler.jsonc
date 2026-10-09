@@ -28,6 +28,8 @@
     { "name": "MAILER", "destination_address": "contact.sablepierre@gmail.com" }
   ],
   // Nom de domaine (acheté sur Cloudflare le 8 octobre 2026) ; www renvoie vers l'adresse sans www
+  // Passage du matin (7 h UTC, 8-9 h à Paris) : rappels J-7, demandes d'avis, caution
+  "triggers": { "crons": ["0 7 * * *"] },
   "routes": [
     { "pattern": "sable-et-pierre.com", "custom_domain": true },
     { "pattern": "www.sable-et-pierre.com", "custom_domain": true }

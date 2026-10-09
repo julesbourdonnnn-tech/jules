@@ -51,8 +51,10 @@
     document.querySelectorAll("[data-email]").forEach(function (a) { a.href = "mailto:" + SITE.email; a.textContent = SITE.email; });
     if (TARIFS.remiseDirecte) document.getElementById("remise").textContent = "Les réservations faites sur ce site bénéficient d'une remise de " + TARIFS.remiseDirecte + " % sur la location et le ménage (la taxe de séjour, reversée à la commune, n'est pas remisée).";
     document.getElementById("annulation").innerHTML = TARIFS.annulation.map(function (t) { return "<li>" + t.replace(/</g, "&lt;") + "</li>"; }).join("");
-    var c = ["lacanau", "bordeaux"].filter(function (k) { return TARIFS[k].caution; }).map(function (k) { return HOUSES[k].name + " : " + TARIFS[k].caution.toLocaleString("fr-FR") + " €"; });
-    document.getElementById("caution").textContent = c.length ? "Caution (non prélevée, demandée à l'arrivée) — " + c.join(" · ") + "." : "";
+    var L = window.TARIFS_LIVE || {};
+    var cau = function (k) { var v = L[k] && L[k].caution != null ? L[k].caution : TARIFS[k].caution; return Math.round(Number(v) || 0); };
+    var c = ["lacanau", "bordeaux"].filter(function (k) { return cau(k) > 0; }).map(function (k) { return HOUSES[k].name + " : " + cau(k).toLocaleString("fr-FR") + " €"; });
+    document.getElementById("caution").textContent = c.length ? "Caution (" + c.join(" · ") + ") : la veille de l'arrivée, ce montant est bloqué sur la carte utilisée pour la réservation (empreinte bancaire : rien n'est débité). Il est libéré automatiquement 48 heures après le départ. En cas de dégradation ou de casse constatée, le coût des réparations peut être prélevé dans la limite de la caution, après vous en avoir informé, justificatifs à l'appui. Si votre banque demande une confirmation, un lien vous est envoyé par e-mail." : "";
   </script>
 </body>
 </html>

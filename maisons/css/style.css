@@ -1289,3 +1289,23 @@ button.ev:hover, button.ev:focus-visible { filter: brightness(.95); outline: 2px
   .px-ev { grid-template-columns: 1fr; }
   .px-ev > .btn, .px-ev__done { grid-column: 1; grid-row: auto; justify-self: start; }
 }
+/* Caution et e-mails aux voyageurs */
+.recap__caution { margin-top: 10px; }
+.resa__caution { margin: 0 0 26px; padding: 18px 22px; background: var(--ivory); border: 1px solid var(--line); }
+.resa__caution .h3 { margin: 0 0 6px; font-size: 1.35rem; }
+.resa__caution p { margin: 0 0 10px; }
+.admin-card__caution { margin: 10px 0 0; font-size: .92rem; }
+.admin-card__caution .link { font-size: inherit; }
+.is-error { color: #a33a2b; }
+.px-top__fields { display: flex; flex-wrap: wrap; gap: 14px; }
+.inf-status { padding: 12px 16px; margin: 0 0 12px; font-weight: 600; font-size: .92rem; }
+.inf-status.is-on { background: #cfe8d5; color: #1a4a2a; }
+.inf-status.is-off { background: #fbe6bb; color: #5c3f07; }
+.inf-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px; margin: 20px 0; }
+.inf-house { margin: 0; padding: 16px 18px; border: 1px solid var(--line); background: var(--paper); min-width: 0; }
+.inf-house legend { padding: 0 6px; font-size: 1.3rem; }
+.inf-house .field { margin: 0 0 12px; }
+.inf-house textarea { min-height: 140px; }
+.inf-more summary { cursor: pointer; font-size: .88rem; color: var(--ink-soft); margin-bottom: 10px; }
+.inf-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; }
+.inf-actions .btn:disabled { opacity: .45; cursor: default; }

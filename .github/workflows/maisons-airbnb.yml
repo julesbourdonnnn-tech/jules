@@ -49,3 +49,6 @@ jobs:
           git commit -m "Maisons : photos et informations Airbnb (mise à jour automatique)"
           git pull --rebase origin "${GITHUB_REF_NAME}"
           git push origin "HEAD:${GITHUB_REF_NAME}"
+          # Cloudflare met le site en ligne depuis la branche de travail : on l'aligne (sans forcer)
+          PROD="claude/gifted-ritchie-r1ffn4"
+          if [ "${GITHUB_REF_NAME}" != "$PROD" ]; then git push origin "HEAD:$PROD" || echo "::warning::$PROD n'a pas pu être mise à jour : le site en ligne n'a pas reçu ces données."; fi
