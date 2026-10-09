@@ -176,27 +176,76 @@
   };
 
   var RED = [[0, '#DA4B36'], [0.7, '#C8322B'], [1, '#A9271F']];
-  var WHITE = [[0, '#FBF3E2'], [0.75, '#F3E3C3'], [1, '#E2C690']];
+
+  // Raccourcis pour les garnitures de la carte
+  var g = {
+    olives: function (c, r, x, y, R, n) { paint.rings(c, r, x, y, R, n || 7, 0.045, '#2A2420', '#B9302A'); },
+    origan: function (c, r, x, y, R) { paint.specks(c, r, x, y, R, 45, '#5B6B2E', 0.006); },
+    jambon: function (c, r, x, y, R, n) { paint.bits(c, r, x, y, R, n || 7, 0.08, ['#EDAAA4', '#E59C97']); },
+    merguez: function (c, r, x, y, R) { paint.strips(c, r, x, y, R, 7, 0.07, 0.045, ['#8E3B24', '#7A3220']); },
+    chorizo: function (c, r, x, y, R) { paint.discs(c, r, x, y, R, 8, 0.07, ['#D2522F', '#A83A22'], '#8E2E1A', 'rgba(255,215,190,.55)'); },
+    viande: function (c, r, x, y, R) { paint.bits(c, r, x, y, R, 24, 0.035, ['#6B3F2A', '#5A3322', '#7B4A33']); },
+    oignons: function (c, r, x, y, R) { paint.strips(c, r, x, y, R, 6, 0.06, 0.012, ['#EBDCE6', '#B582A8']); },
+    poivrons: function (c, r, x, y, R) { paint.strips(c, r, x, y, R, 6, 0.08, 0.03, ['#D9452E', '#3F7A34', '#E8B23A']); },
+    emmental: function (c, r, x, y, R) { paint.bits(c, r, x, y, R, 6, 0.1, ['rgba(245,215,120,.75)']); },
+    bleu: function (c, r, x, y, R) { paint.discs(c, r, x, y, R, 4, 0.07, ['#F4F0E6', '#D7DCD6'], null, 'rgba(70,95,120,.7)'); },
+    chevre: function (c, r, x, y, R) { paint.rings(c, r, x, y, R, 5, 0.065, '#E2DCCD', '#FFFDF6'); },
+    cru: function (c, r, x, y, R) { paint.strips(c, r, x, y, R, 5, 0.11, 0.045, ['#C9605B', '#B9524E']); },
+    parmesan: function (c, r, x, y, R) { paint.bits(c, r, x, y, R, 8, 0.035, ['#F4E6BE', '#EEDCA8']); },
+    champignons: function (c, r, x, y, R) { paint.mushrooms(c, r, x, y, R, 7); },
+    artichauts: function (c, r, x, y, R) { paint.bits(c, r, x, y, R, 5, 0.065, ['#A7A86A', '#8E9257']); },
+    aubergines: function (c, r, x, y, R) { paint.rings(c, r, x, y, R, 4, 0.075, '#4A2742', '#E6D6B0'); },
+    anchois: function (c, r, x, y, R) { paint.strips(c, r, x, y, R, 6, 0.1, 0.03, ['#7D6352', '#6B5243']); },
+    capres: function (c, r, x, y, R) { paint.specks(c, r, x, y, R, 12, '#6E7F35', 0.012); },
+    roquette: function (c, r, x, y, R) { paint.strips(c, r, x, y, R, 10, 0.06, 0.022, ['#4E8A33', '#3A7027']); },
+    confites: function (c, r, x, y, R) { paint.discs(c, r, x, y, R, 5, 0.045, ['#D9532E', '#B23A1F'], null, null); },
+    balsamique: function (c, r, x, y, R) { paint.drizzle(c, r, x, y, R, 'rgba(59,31,20,.85)', 0.014); },
+    ravioles: function (c, r, x, y, R) {
+      for (var i = 0; i < 12; i++) {
+        var p = spot(r, x, y, R * 0.6), s = R * 0.075;
+        c.save(); c.translate(p[0], p[1]); c.rotate(r() * 6.28);
+        shadowed(c, R, function () { c.fillStyle = '#F1DFA6'; c.fillRect(-s / 2, -s / 2, s, s); });
+        c.strokeStyle = 'rgba(190,150,80,.8)'; c.lineWidth = s * 0.12; c.setLineDash([s * 0.12, s * 0.1]);
+        c.strokeRect(-s / 2 + s * 0.08, -s / 2 + s * 0.08, s * 0.84, s * 0.84);
+        c.setLineDash([]); c.restore();
+      }
+    },
+    oeuf: function (c, r, x, y, R) {
+      shadowed(c, R, function () { blob(c, x, y, R * 0.2, 0.2, r, 12); c.fillStyle = '#FFFDF6'; c.fill(); });
+      c.beginPath(); c.arc(x + R * 0.02, y - R * 0.01, R * 0.075, 0, 6.28);
+      c.fillStyle = radial(c, x, y, R * 0.075, [[0, '#FFC64A'], [1, '#E9940F']]); c.fill();
+    }
+  };
+
+  function recipe(list) {
+    return { base: RED, top: function (c, r, x, y, R) { paint.mozza(c, r, x, y, R, 5); list.forEach(function (k) { g[k](c, r, x, y, R); }); } };
+  }
 
   var recipes = {
-    margherita: { base: RED, top: function (c, r, x, y, R) { paint.mozza(c, r, x, y, R, 7); paint.basil(c, r, x, y, R, 4); } },
-    regina: { base: RED, top: function (c, r, x, y, R) { paint.mozza(c, r, x, y, R, 5); paint.bits(c, r, x, y, R, 7, 0.08, ['#EDAAA4', '#E59C97']); paint.mushrooms(c, r, x, y, R, 8); paint.specks(c, r, x, y, R, 40, '#5B6B2E', 0.006); } },
-    diavola: { base: RED, top: function (c, r, x, y, R) { paint.mozza(c, r, x, y, R, 5); paint.discs(c, r, x, y, R, 10, 0.085, ['#C2453A', '#8E2A22'], '#7A2019', 'rgba(255,220,200,.6)'); paint.rings(c, r, x, y, R, 5, 0.03, '#2A2420', '#C8322B'); } },
-    napoli: { base: RED, top: function (c, r, x, y, R) { paint.mozza(c, r, x, y, R, 4); paint.strips(c, r, x, y, R, 6, 0.1, 0.03, ['#7D6352', '#6B5243']); paint.rings(c, r, x, y, R, 6, 0.03, '#2A2420', '#C8322B'); paint.specks(c, r, x, y, R, 12, '#6E7F35', 0.012); paint.specks(c, r, x, y, R, 40, '#5B6B2E', 0.006); } },
-    ortolana: { base: RED, top: function (c, r, x, y, R) { paint.mozza(c, r, x, y, R, 4); paint.rings(c, r, x, y, R, 5, 0.075, '#4A2742', '#E6D6B0'); paint.rings(c, r, x, y, R, 6, 0.06, '#3F7A34', '#E7EDC4'); paint.strips(c, r, x, y, R, 6, 0.08, 0.035, ['#E8B23A', '#D9452E']); paint.specks(c, r, x, y, R, 18, '#3F7A2E', 0.012); } },
-    quattro: { base: WHITE, top: function (c, r, x, y, R) { paint.mozza(c, r, x, y, R, 4); paint.discs(c, r, x, y, R, 5, 0.09, ['#F4F0E6', '#D7DCD6'], null, 'rgba(70,95,120,.7)'); paint.bits(c, r, x, y, R, 8, 0.05, ['#F2DFA0', '#E9C97A']); paint.bits(c, r, x, y, R, 6, 0.035, ['#7A4E2C', '#8C5E34']); } },
-    chevre: { base: WHITE, top: function (c, r, x, y, R) { paint.mozza(c, r, x, y, R, 3); paint.rings(c, r, x, y, R, 7, 0.07, '#E2DCCD', '#FFFDF6'); paint.drizzle(c, r, x, y, R, 'rgba(214,150,40,.85)', 0.018); paint.strips(c, r, x, y, R, 9, 0.06, 0.022, ['#4E8A33', '#3A7027']); paint.specks(c, r, x, y, R, 30, '#55693A', 0.006); } },
-    mortadella: { base: WHITE, top: function (c, r, x, y, R) { paint.discs(c, r, x, y, R, 7, 0.13, ['#F6C3C1', '#E9A5A4'], 'rgba(214,140,140,.6)', '#FFF6EF'); paint.mozza(c, r, x, y, R * 0.3, 1, true); paint.specks(c, r, x, y, R, 34, '#7FA34A', 0.012); } },
-    tartufo: { base: WHITE, top: function (c, r, x, y, R) { paint.mozza(c, r, x, y, R, 4); paint.mushrooms(c, r, x, y, R, 7); paint.strips(c, r, x, y, R, 5, 0.11, 0.04, ['#C9605B', '#B9524E']); paint.discs(c, r, x, y, R, 8, 0.035, ['#4A3628', '#2E211A'], null, null); paint.bits(c, r, x, y, R, 6, 0.04, ['#F4E6BE']); } },
-    montagnarde: { base: WHITE, top: function (c, r, x, y, R) { paint.discs(c, r, x, y, R, 8, 0.08, ['#F6E3A6', '#E7C877'], 'rgba(170,120,50,.45)', null); paint.bits(c, r, x, y, R, 9, 0.035, ['#C77E6B', '#B06A57']); paint.bits(c, r, x, y, R, 5, 0.12, ['rgba(236,170,60,.55)']); paint.strips(c, r, x, y, R, 5, 0.05, 0.012, ['#B582A8']); } },
-    salmone: { base: WHITE, top: function (c, r, x, y, R) { paint.mozza(c, r, x, y, R, 3); paint.strips(c, r, x, y, R, 7, 0.1, 0.05, ['#F28C5E', '#EE7B4E']); paint.strips(c, r, x, y, R, 5, 0.05, 0.012, ['#B582A8']); paint.specks(c, r, x, y, R, 30, '#4F7F33', 0.008); paint.specks(c, r, x, y, R, 8, '#6E7F35', 0.012); } }
+    margarita: { base: RED, top: function (c, r, x, y, R) { paint.mozza(c, r, x, y, R, 9); g.olives(c, r, x, y, R, 9); g.origan(c, r, x, y, R); } },
+    jambon: recipe(['jambon', 'olives', 'origan']),
+    royale: recipe(['jambon', 'champignons', 'olives', 'origan']),
+    orientale: recipe(['merguez', 'oignons', 'olives', 'origan']),
+    chorizo: recipe(['chorizo', 'poivrons', 'olives']),
+    viande: recipe(['viande', 'oignons', 'olives', 'origan']),
+    napolitaine: recipe(['anchois', 'capres', 'olives']),
+    piemontaise: recipe(['jambon', 'chevre', 'olives', 'origan']),
+    parme: recipe(['cru', 'parmesan', 'olives', 'origan']),
+    saisons: recipe(['aubergines', 'poivrons', 'artichauts', 'champignons', 'olives']),
+    fromages: recipe(['bleu', 'chevre', 'emmental', 'olives']),
+    bolognaise: recipe(['viande', 'champignons', 'emmental', 'olives', 'origan']),
+    fromagere: { base: RED, top: function (c, r, x, y, R) { paint.mozza(c, r, x, y, R, 4); ['bleu', 'emmental', 'parmesan', 'olives'].forEach(function (k) { g[k](c, r, x, y, R); }); g.oeuf(c, r, x, y, R); } },
+    mexicaine: recipe(['chorizo', 'merguez', 'poivrons', 'oignons', 'olives']),
+    locale: recipe(['ravioles', 'cru', 'olives', 'origan']),
+    troisbecs: recipe(['ravioles', 'jambon', 'emmental', 'bleu', 'olives']),
+    roquette: recipe(['cru', 'confites', 'parmesan', 'roquette', 'olives', 'balsamique'])
   };
 
   function drawPizza(ctx, type, seed, cx, cy, R) {
     var rand = rng(seed * 9973 + 17);
-    var recipe = recipes[type] || recipes.margherita;
+    var recipe = recipes[type] || recipes.margarita;
 
-    if (type === 'calzone') return drawCalzone(ctx, rand, cx, cy, R);
+    if (type === 'calzone' || type === 'calzone3') return drawCalzone(ctx, rand, cx, cy, R);
 
     // Ombre portée
     ctx.save();
@@ -229,7 +278,7 @@
     ctx.save(); ctx.clip();
     for (var k = 0; k < 18; k++) {
       var p = spot(rand, cx, cy, R * 0.8);
-      ctx.fillStyle = recipe.base === RED ? 'rgba(140,25,15,.18)' : 'rgba(210,170,100,.22)';
+      ctx.fillStyle = recipe.base === RED ? 'rgba(140,25,15,.1)' : 'rgba(210,170,100,.22)';
       blob(ctx, p[0], p[1], R * (0.04 + rand() * 0.08), 0.4, rand, 8); ctx.fill();
     }
     ctx.restore();
@@ -271,7 +320,7 @@
     ctx.fillStyle = '#C8322B';
     blob(ctx, -R * 0.1, -R * 0.35, R * 0.12, 0.3, rand, 10); ctx.fill();
     ctx.restore();
-    paint.basil(ctx, rand, cx - R * 0.05, cy - R * 0.25, R * 0.25, 1);
+    paint.specks(ctx, rand, cx, cy - R * 0.3, R * 0.5, 30, '#5B6B2E', 0.01);
   }
 
   // Décor « photo » quand une image manque : nappe, bois ou ardoise

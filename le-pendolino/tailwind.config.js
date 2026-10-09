@@ -18,6 +18,7 @@ module.exports = {
         display: ['"Playfair Display"', 'Georgia', '"Times New Roman"', 'serif'],
         sans: ['"Plus Jakarta Sans"', 'system-ui', '-apple-system', '"Segoe UI"', 'sans-serif'],
         hand: ['Caveat', '"Segoe Print"', '"Bradley Hand"', 'cursive'],
+        script: ['"Kaushan Script"', 'Caveat', 'cursive'],
         board: ['Oswald', '"Arial Narrow"', 'Impact', 'sans-serif'],
       },
     },

@@ -32,19 +32,18 @@ le-pendolino/
 
 Sur mobile, une barre fixe en bas d'écran propose « Commander » et « Itinéraire ».
 
-## ⚠️ À compléter avant la mise en ligne
+## ⚠️ À vérifier avant la mise en ligne
 
-Chaque endroit est repéré par un commentaire `À COMPLÉTER` dans `index.html`.
+Infos réelles déjà intégrées : téléphone **04 75 82 83 08**, vente **à emporter uniquement**, **cuisson au feu de bois**, carte **Base Tomate** (19 pizzas, prix de la carte papier), note Google **4,4/5** et extraits d'avis.
 
-1. **Téléphone** : `04 75 00 00 00` / `tel:+33475000000` est un numéro factice. Remplacer partout (rechercher `33475000000` et `04 75 00 00 00`), y compris dans le bloc JSON-LD en haut de page. Pour un système de commande en ligne, remplacer le lien du bouton « Commander / Réserver ».
-2. **Horaires** : ceux du pied de page sont des exemples. Modifier le tableau (le texte **et** l'attribut `data-open="18:00-21:30"`, qui sert à l’état « ouvert / fermé » en direct ; jour fermé = pas d'attribut) et le bloc `openingHoursSpecification` du JSON-LD.
-3. **Carte et prix** : les pizzas et prix sont des exemples. Copier un `<article class="dish">` pour ajouter un produit (changer `data-pizza` pour sa mini-pizza) ; tampons disponibles : `stamp-house`, `stamp-star`, `stamp-veg`.
-4. **Textes** : les notes manuscrites (« basilic cueilli ce matin », « la reine de la maison »…) et la description du savoir-faire sont à relire avec l'équipe pour qu'elles collent à la réalité.
-5. **Avis clients** : les avis affichés sont des **exemples de mise en page**, pas de vrais avis. Les remplacer par de vrais avis Google / TripAdvisor (texte exact, prénom + initiale avec l'accord du client) — publier de faux avis est interdit (pratique commerciale trompeuse).
-6. **Photos** : ce sont des photos Unsplash d'illustration (libres de droits). Pour la grille Instagram et la section « La pizzeria », les remplacer par les vraies photos du compte @lependolino : déposer les fichiers dans `assets/` (format `.webp` ou `.jpg`, ~800 px de large) et changer les `src`. Si une photo ne se charge pas, une pizza dessinée sur une nappe, du bois ou de l'ardoise la remplace automatiquement (attribut `data-pizza`).
-   Les pizzas dessinées (accueil, carte) sont générées par `js/main.js` : recettes disponibles `margherita`, `regina`, `diavola`, `napoli`, `ortolana`, `calzone`, `quattro`, `chevre`, `mortadella`, `tartufo`, `montagnarde`, `salmone` ; changer `data-seed` donne une autre disposition.
-7. **Nom de domaine** : `https://lependolino.fr/` est supposé dans `index.html` (canonical, JSON-LD), `robots.txt` et `sitemap.xml`. Adapter au domaine réel.
-8. **Fiche Google Business Profile** : vérifier que nom, adresse et téléphone y sont rigoureusement identiques à ceux du site (essentiel pour le référencement local).
+1. **Horaires** : les annuaires en ligne se contredisent. Le site affiche « lundi fermé, mardi → dimanche 17h30 – 21h00 », **à confirmer** (surtout le dimanche). Modifier le tableau (texte **et** attribut `data-open="17:30-21:00"` ; jour fermé = pas d'attribut) et le bloc `openingHoursSpecification` du JSON-LD.
+2. **Autres pages de la carte** (base crème, desserts, boissons…) : copier un `<article class="dish">` dans la grille de la carte (changer `data-pizza` pour la mini-pizza dessinée ; tampons : `stamp-house`, `stamp-star`, `stamp-veg`). Pour plusieurs catégories, remettre des onglets (le script `js/main.js` gère déjà `role="tab"` / `role="tabpanel"`).
+3. **Avis** : ce sont des extraits courts de vrais avis (Google, TripAdvisor) trouvés via les annuaires. Pour en ajouter, copier le texte exact depuis la fiche Google, sans le modifier. La note 4,4/5 est à mettre à jour de temps en temps.
+4. **Logo** : le logo de l'en-tête est une reprise simplifiée (soleil rouge, pelle, écriture). Remplacer par le fichier du vrai logo si disponible.
+5. **Photos** : ce sont des photos Unsplash d'illustration. Les remplacer par les vraies photos du compte @lependolino : déposer les fichiers dans `assets/` (format `.webp` ou `.jpg`, ~800 px de large) et changer les `src`. Si une photo ne se charge pas, une pizza dessinée la remplace (attribut `data-pizza`).
+   Mini-pizzas disponibles : `margarita`, `jambon`, `royale`, `orientale`, `chorizo`, `viande`, `calzone`, `calzone3`, `napolitaine`, `piemontaise`, `parme`, `saisons`, `fromages`, `bolognaise`, `fromagere`, `mexicaine`, `locale`, `troisbecs`, `roquette` ; changer `data-seed` donne une autre disposition.
+6. **Nom de domaine** : `https://lependolino.fr/` est supposé dans `index.html` (canonical, JSON-LD), `robots.txt` et `sitemap.xml`. Adapter au domaine réel.
+7. **Fiche Google Business Profile** : nom, adresse, téléphone et horaires doivent être identiques à ceux du site (essentiel pour le référencement local).
 
 ## Modifier les styles
 
@@ -54,7 +53,7 @@ Après une modification des classes dans `index.html`, `404.html`, `js/main.js` 
 npx tailwindcss@3.4.17 -i src/input.css -o css/style.css --minify
 ```
 
-Couleurs : `cream`, `mozza`, `tomato`, `basil`, `charcoal`, `copper` (+ variantes). Polices : `font-display` (Playfair Display), `font-sans` (Plus Jakarta Sans), `font-hand` (Caveat, notes manuscrites), `font-board` (Oswald, tableau des départs).
+Couleurs : `cream`, `mozza`, `tomato`, `basil`, `charcoal`, `copper` (+ variantes). Polices : `font-script` (Kaushan Script, logo), `font-display` (Playfair Display), `font-sans` (Plus Jakarta Sans), `font-hand` (Caveat, notes manuscrites), `font-board` (Oswald, tableau des départs).
 Le cuivré `copper` (#D4A373) sert sur fonds sombres ; sur fond crème, utiliser `copper-dark` pour le texte (contraste suffisant).
 
 ## Mise en ligne
