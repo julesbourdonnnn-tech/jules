@@ -25,6 +25,7 @@
 
       <h2>Réservation et paiement</h2>
       <p>Vous choisissez vos dates et le nombre de voyageurs, puis vous payez par carte sur la page sécurisée de notre prestataire de paiement, Stripe. Votre carte n'est pas débitée immédiatement : le montant est réservé (empreinte bancaire), puis débité lorsque nous confirmons votre séjour, en général sous 24 heures. Si nous ne pouvons pas confirmer, le montant est libéré et rien n'est débité.</p>
+      <p id="pay2"></p>
       <p>Le prix affiché comprend la location, le ménage et la taxe de séjour lorsqu'elle s'applique. Il n'y a aucun frais de service. <span id="remise"></span></p>
 
       <h2>Annulation</h2>
@@ -50,6 +51,7 @@
   <script>
     document.querySelectorAll("[data-email]").forEach(function (a) { a.href = "mailto:" + SITE.email; a.textContent = SITE.email; });
     if (TARIFS.remiseDirecte) document.getElementById("remise").textContent = "Les réservations faites sur ce site bénéficient d'une remise de " + TARIFS.remiseDirecte + " % sur la location et le ménage (la taxe de séjour, reversée à la commune, n'est pas remisée).";
+    if (TARIFS.paiement2) document.getElementById("pay2").textContent = "Pour les séjours réservés au moins " + TARIFS.paiement2.delaiMin + " jours à l'avance, vous pouvez payer en 2 fois : un acompte de " + TARIFS.paiement2.acompte + " % à la réservation, puis le solde, prélevé automatiquement sur la même carte " + TARIFS.paiement2.soldeJours + " jours avant l'arrivée. Si votre banque demande une confirmation, un lien de paiement vous est envoyé par e-mail. Un contrat de location vous est envoyé avec la confirmation de votre séjour.";
     document.getElementById("annulation").innerHTML = TARIFS.annulation.map(function (t) { return "<li>" + t.replace(/</g, "&lt;") + "</li>"; }).join("");
     var L = window.TARIFS_LIVE || {};
     var cau = function (k) { var v = L[k] && L[k].caution != null ? L[k].caution : TARIFS[k].caution; return Math.round(Number(v) || 0); };

@@ -25,6 +25,7 @@
 <h1 class="h1" style="margin-top:18px">Condiciones de reserva</h1>
 <h2>Reserva y pago</h2>
 <p>Eliges tus fechas y el número de viajeros y pagas con tarjeta en la página segura de nuestro proveedor de pagos, Stripe. No se cobra a tu tarjeta de inmediato: el importe se retiene (preautorización) y se cobra cuando confirmamos tu estancia, normalmente en 24 horas. Si no podemos confirmarla, el importe se libera y no se cobra nada.</p>
+<p id="pay2"></p>
 <p>El precio indicado incluye el alquiler, la limpieza y la tasa turística cuando se aplica. No hay gastos de servicio. <span id="remise"></span></p>
 <h2>Cancelación</h2>
 <ul id="annulation"></ul>
@@ -46,6 +47,7 @@
 <script>
     document.querySelectorAll("[data-email]").forEach(function (a) { a.href = "mailto:" + SITE.email; a.textContent = SITE.email; });
     if (TARIFS.remiseDirecte) document.getElementById("remise").textContent = "Las reservas realizadas en esta web tienen un descuento del " + TARIFS.remiseDirecte + " % en el alquiler y la limpieza (la tasa turística, que se abona al ayuntamiento, no tiene descuento).";
+    if (TARIFS.paiement2) document.getElementById("pay2").textContent = "Para las estancias reservadas con al menos " + TARIFS.paiement2.delaiMin + " días de antelación, puedes pagar en 2 plazos: un anticipo del " + TARIFS.paiement2.acompte + " % al reservar y luego el resto, cobrado automáticamente en la misma tarjeta " + TARIFS.paiement2.soldeJours + " días antes de la llegada. Si tu banco pide una confirmación, te enviamos un enlace de pago por correo. Recibirás un contrato de alquiler con la confirmación de tu estancia.";
     document.getElementById("annulation").innerHTML = TARIFS.annulation.map(function (t) { return "<li>" + t.replace(/</g, "&lt;") + "</li>"; }).join("");
     var L = window.TARIFS_LIVE || {};
     var cau = function (k) { var v = L[k] && L[k].caution != null ? L[k].caution : TARIFS[k].caution; return Math.round(Number(v) || 0); };

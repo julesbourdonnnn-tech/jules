@@ -133,7 +133,7 @@
       ${h.photos.map(([n, cap, cat], i) => `<button type="button" class="tour__item" data-cat="${catOf(cap, cat)}" data-open-gallery="${i}" aria-label="Ampliar: ${esc(cap)}"><img src="${photo(key, n, "md")}" alt="${esc(cap)}" loading="lazy"><span>${esc(cap)}</span></button>`).join("")}
     </div> </div> <div class="dialog" id="dialog" aria-hidden="true"> <div class="dialog__bg" data-close></div> <div class="dialog__box" role="dialog" aria-modal="true" aria-labelledby="dlg-title"> <button type="button" class="dialog__close" data-close aria-label="Cerrar">${icon("close")}</button>
       <div id="dlg-form">
-        <span class="eyebrow eyebrow--plain">${esc(h.name)}</span> <h2 class="h3" id="dlg-title" style="margin-top:12px">Tu reserva</h2> <div class="form__recap" id="recap"></div> <form class="form" id="form" novalidate> <div class="field"><label for="d-name">Nombre y apellidos</label><input id="d-name" name="nom" autocomplete="name" required maxlength="80"></div> <div class="field"><label for="d-phone">Teléfono</label><input id="d-phone" name="telephone" type="tel" autocomplete="tel" maxlength="30"></div> <div class="field full"><label for="d-email">Correo electrónico</label><input id="d-email" name="email" type="email" autocomplete="email" required maxlength="254"></div> <div class="field full"><label for="d-msg">Unas palabras para nosotros (opcional)</label><textarea id="d-msg" name="message" maxlength="2000" placeholder="El motivo de tu estancia, la hora de llegada, tus preguntas…"></textarea></div> <div class="field full promo" id="promo-box"><label for="d-code">Código promocional (opcional)</label><div class="promo__row"><input id="d-code" name="code" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="30"><button type="button" class="btn btn--small" id="d-code-go">Aplicar</button></div><p class="small promo__msg" id="d-code-msg" aria-live="polite"></p></div> <label class="check full"><input type="checkbox" id="d-cgv" name="conditions" required> <span>Acepto las <a href="conditions.html" target="_blank" rel="noopener">condiciones de reserva</a> y las normas de la casa.</span></label> <input class="hp" type="text" name="bot-field" tabindex="-1" autocomplete="off" aria-hidden="true"> <div class="full"><button type="submit" class="btn btn--accent btn--block" id="d-submit">Continuar</button><p class="booking__msg" id="form-msg" aria-live="polite"></p><p class="small" id="d-note" style="margin-top:12px"></p></div> </form> </div> <div class="form__done" id="dlg-done" hidden>
+        <span class="eyebrow eyebrow--plain">${esc(h.name)}</span> <h2 class="h3" id="dlg-title" style="margin-top:12px">Tu reserva</h2> <div class="form__recap" id="recap"></div> <form class="form" id="form" novalidate> <div class="field"><label for="d-name">Nombre y apellidos</label><input id="d-name" name="nom" autocomplete="name" required maxlength="80"></div> <div class="field"><label for="d-phone">Teléfono</label><input id="d-phone" name="telephone" type="tel" autocomplete="tel" maxlength="30"></div> <div class="field full"><label for="d-email">Correo electrónico</label><input id="d-email" name="email" type="email" autocomplete="email" required maxlength="254"></div> <div class="field full"><label for="d-msg">Unas palabras para nosotros (opcional)</label><textarea id="d-msg" name="message" maxlength="2000" placeholder="El motivo de tu estancia, la hora de llegada, tus preguntas…"></textarea></div> <div class="field full promo" id="promo-box"><label for="d-code">Código promocional (opcional)</label><div class="promo__row"><input id="d-code" name="code" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="30"><button type="button" class="btn btn--small" id="d-code-go">Aplicar</button></div><p class="small promo__msg" id="d-code-msg" aria-live="polite"></p></div> <fieldset class="full pay2" id="pay2" hidden></fieldset> <label class="check full"><input type="checkbox" id="d-cgv" name="conditions" required> <span>Acepto las <a href="conditions.html" target="_blank" rel="noopener">condiciones de reserva</a> y las normas de la casa.</span></label> <input class="hp" type="text" name="bot-field" tabindex="-1" autocomplete="off" aria-hidden="true"> <div class="full"><button type="submit" class="btn btn--accent btn--block" id="d-submit">Continuar</button><p class="booking__msg" id="form-msg" aria-live="polite"></p><p class="small" id="d-note" style="margin-top:12px"></p></div> </form> </div> <div class="form__done" id="dlg-done" hidden>
         ${icon("check")}
         <h2 class="h3">¡Gracias!</h2> <p id="done-text" style="margin-top:12px">Tu solicitud se ha enviado. Te responderemos muy pronto.</p> <button type="button" class="btn" data-close style="margin-top:18px">Cerrar</button> </div> </div> </div>`;
 
@@ -635,10 +635,24 @@
     if (promo && promo.stay === stayKey() && promo.price) return Object.assign({}, p, promo.price, { ready: true });
     return p;
   };
+  // Paiement en 2 fois (acompte, puis solde prélevé automatiquement avant l'arrivée)
+  let pay2 = false;
+  const splitOf = (p) => (p && p.ready && window.SP_SPLIT ? SP_SPLIT(iso(state.in), p.cents) : null);
+  const dayLong = (s) => { const [y, m, d] = s.split("-").map(Number); return new Intl.DateTimeFormat(document.documentElement.lang || "fr", { day: "numeric", month: "long", year: "numeric" }).format(new Date(y, m - 1, d)); };
+  function renderPay2(p) {
+    const sp = splitOf(p);
+    const box = $("#pay2");
+    box.hidden = !sp;
+    if (!sp) { pay2 = false; box.innerHTML = ""; return; }
+    box.innerHTML = `<legend>Pago</legend> <label class="pay2__opt"><input type="radio" name="pay2" value="1"${pay2 ? "" : " checked"}> <span><strong>En un solo pago</strong> · ${EUR(p.cents)}</span></label>
+      <label class="pay2__opt"><input type="radio" name="pay2" value="2"${pay2 ? " checked" : ""}> <span><strong>En 2 plazos</strong> · ${EUR(sp.acompte)} ahora y luego ${EUR(sp.solde)} cobrados automáticamente el ${dayLong(sp.soldeLe)}</span></label>`;
+  }
   function renderRecap() {
     const p = shownPrice();
+    renderPay2(p);
+    const sp = pay2 ? splitOf(p) : null;
     $("#recap").innerHTML = `<p><strong>${esc(h.name)}</strong></p><p>${esc(stayText())}</p><p>${esc(guestsText())}</p>${p && p.ready ? `<div class="recap__price">${p.lines.map((l) => `<p${l.cents < 0 ? ' class="is-off"' : ""}><span>${esc(window.SP_LABEL ? SP_LABEL(l.label) : l.label)}</span><span>${EUR(l.cents)}</span></p>`).join("")}<p class="booking__total"><span>Total</span><strong>${EUR(p.cents)}</strong></p></div>` : ""}${window.SP_CAUTION && SP_CAUTION(key) ? `<p class="small recap__caution">Fianza: ${EUR(SP_CAUTION(key) * 100)}, bloqueados en tu tarjeta el día antes de la llegada (no se cobra nada) y liberados 48 h después de la salida.</p>` : ""}`;
-    $("#d-submit").textContent = p && p.ready ? `Continuar al pago · ${EUR(p.cents)}` : "Enviar mi solicitud";
+    $("#d-submit").textContent = p && p.ready ? `Continuar al pago · ${EUR(sp ? sp.acompte : p.cents)}` : "Enviar mi solicitud";
   }
   async function applyCode() {
     const input = $("#d-code");
@@ -667,6 +681,7 @@
     return false;
   }
   $("#d-code-go").addEventListener("click", applyCode);
+  $("#pay2").addEventListener("change", (e) => { if (e.target.name === "pay2") { pay2 = e.target.value === "2"; renderRecap(); } });
   $("#d-code").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); applyCode(); } });
 
   const closeDlg = () => {
@@ -728,7 +743,7 @@
     }
     const payload = Object.assign({}, fd, {
       maison: key, arrivee: iso(state.in), depart: iso(state.out), conditions: true, lang: document.documentElement.lang,
-      adultes: state.adults, enfants: state.children, bebes: state.infants,
+      adultes: state.adults, enfants: state.children, bebes: state.infants, paiement2: pay2 && !!splitOf(shownPrice()),
     });
     let res = null;
     let net = true;

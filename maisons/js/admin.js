@@ -85,9 +85,10 @@
         <div><dt>Montant</dt><dd>${b.cents ? SP_EUR(b.cents) : "à définir"}${b.code ? ` (code ${esc(b.code)})` : ""}${b.paiement ? ` · ${esc(b.paiement)}` : ""}</dd></div>
       </dl>
       ${b.message ? `<blockquote class="admin-card__msg">${esc(b.message)}</blockquote>` : ""}
+      ${b.solde && (b.statut === "confirmee" || b.statut === "a_valider") ? `<p class="admin-card__caution"><strong>Paiement en 2 fois</strong> · acompte ${SP_EUR(b.acompte)}, solde ${SP_EUR(b.solde.montant)} ${{ a_venir: `prélevé automatiquement le ${fmt(b.solde.le)}`, paye: `payé le ${b.solde.payeLe ? when(b.solde.payeLe) : ""}`, lien: `<span class="is-error">la banque demande une validation : lien envoyé au voyageur</span> <button type="button" class="link" data-copy="${esc(b.solde.url || "")}">copier le lien</button>`, expire: "lien expiré, nouvel essai demain matin", echec: `<span class="is-error">impossible à prélever (${esc(b.solde.raison || "")}) : contacte le voyageur</span>`, annule: "annulé" }[b.solde.etat] || b.solde.etat}</p>` : ""}
       ${b.cautionMontant && (b.statut === "confirmee" || b.statut === "a_valider") ? `<p class="admin-card__caution"><strong>Caution ${b.cautionMontant.toLocaleString("fr-FR")} €</strong> · ${cautionTxt(b)}</p>` : ""}
       ${b.mails || b.mailErreur ? `<p class="small">E-mails envoyés : ${Object.entries(b.mails || {}).map(([k, v]) => `${MAIL_NAMES[k] || k} (${when(v)})`).join(", ") || "aucun"}${b.mailErreur ? ` · <span class="is-error">échec ${esc(b.mailErreur)}</span>` : ""}</p>` : ""}
-      <div class="admin-card__actions">${actions}${b.caution && b.caution.etat === "bloquee" ? `<button type="button" class="btn btn--ghost" data-cau="encaisser" data-id="${b.id}">Encaisser la caution…</button><button type="button" class="link" data-cau="liberer" data-id="${b.id}">Libérer la caution</button>` : ""}</div>
+      <div class="admin-card__actions">${actions}${b.statut === "confirmee" ? `<button type="button" class="link" data-contrat="${b.id}">Contrat (PDF)</button>` : ""}${b.fidelite ? `<span class="small">code fidélité offert : ${esc(b.fidelite)}</span>` : ""}${b.caution && b.caution.etat === "bloquee" ? `<button type="button" class="btn btn--ghost" data-cau="encaisser" data-id="${b.id}">Encaisser la caution…</button><button type="button" class="link" data-cau="liberer" data-id="${b.id}">Libérer la caution</button>` : ""}</div>
       <p class="booking__msg" data-msg="${b.id}" aria-live="polite"></p>
     </article>`;
   };
@@ -578,6 +579,17 @@
   document.addEventListener("click", async (e) => {
     const c = e.target.closest("[data-copy]");
     if (c) { try { await navigator.clipboard.writeText(c.dataset.copy); c.textContent = "Copié"; } catch (err) { const i = c.previousElementSibling; if (i && i.select) i.select(); } return; }
+    const ct = e.target.closest("[data-contrat]");
+    if (ct) {
+      const w = window.open("", "_blank");
+      try {
+        const r = await fetch(`api/admin/reservations/${ct.dataset.contrat}/contrat.pdf`, { headers: { Authorization: `Bearer ${key}` } });
+        if (!r.ok) throw new Error();
+        const url = URL.createObjectURL(await r.blob());
+        if (w) w.location = url; else location.href = url;
+      } catch (err) { if (w) w.close(); window.alert("Contrat indisponible pour le moment."); }
+      return;
+    }
     const cb = e.target.closest("[data-cau]");
     if (cb) {
       const r = data.reservations.find((x) => x.id === cb.dataset.id);

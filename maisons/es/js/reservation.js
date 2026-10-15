@@ -32,6 +32,10 @@
         </dl>
         ${r.cents ? `<div class="booking__price">${r.lignes.map((l) => `<p><span>${esc(window.SP_LABEL ? SP_LABEL(l.label) : l.label)}</span><span>${SP_EUR(l.cents)}</span></p>`).join("")}<p class="booking__total"><span>Total</span><strong>${SP_EUR(r.cents)}</strong></p></div>` : ""}
       </div>
+      ${r.solde && (r.statut === "confirmee" || r.statut === "a_valider") ? `<div class="resa__caution"> <h2 class="h3">Pago en 2 plazos</h2> <p>Anticipo: ${SP_EUR(r.acompte)}${r.statut === "confirmee" ? " (pagado)" : " (retenido en tu tarjeta, cobrado al confirmar)"}.</p> <p>Resto: ${SP_EUR(r.solde.montant)}, ${r.solde.etat === "paye" ? "pagado. Tu estancia está totalmente pagada." : r.solde.etat === "lien" ? "tu banco necesita una confirmación: págalo antes de tu llegada." : `cobrado automáticamente el ${esc(fmt(r.solde.le))} en la misma tarjeta.`}</p>
+        ${r.solde.url ? `<p><a class="btn btn--accent" href="${esc(r.solde.url)}">Pagar el resto</a></p>` : ""}
+      </div>` : ""}
+      ${r.contrat ? `<p style="margin:0 0 26px"><a class="btn btn--ghost" href="${esc(r.contrat)}" target="_blank" rel="noopener">Descargar el contrato de alquiler (PDF)</a></p>` : ""}
       ${r.caution && (r.statut === "confirmee" || r.statut === "a_valider") ? `<div class="resa__caution"> <h2 class="h3">Fianza: ${SP_EUR(r.caution.montant * 100)}</h2>
         <p>${r.caution.etat === "bloquee" ? "La fianza está bloqueada en tu tarjeta (una preautorización, no se cobra nada). Se liberará automáticamente 48 horas después de tu salida." : r.caution.etat === "liberee" ? "La fianza se ha liberado." : r.caution.etat === "lien" ? "Tu banco necesita una confirmación para la fianza: confírmala antes de tu llegada (no se cobra nada)." : "La fianza se bloquea en tu tarjeta el día antes de tu llegada (una preautorización, no se cobra nada) y se libera automáticamente 48 horas después de tu salida."}</p>
         ${r.caution.url ? `<p><a class="btn btn--accent" href="${esc(r.caution.url)}">Confirmar la fianza</a></p>` : ""}

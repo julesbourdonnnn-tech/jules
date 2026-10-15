@@ -30,6 +30,12 @@ globalThis.TARIFS = {
     taxeSejour: 0,
     caution: 1000,
   },
+  // Paiement en 2 fois, proposé au voyageur : acompte (en %) à la réservation, solde prélevé
+  // automatiquement « soldeJours » jours avant l'arrivée. Proposé seulement si l'arrivée est dans
+  // « delaiMin » jours ou plus, et pour un séjour d'au moins « minimum » €.
+  paiement2: { acompte: 30, soldeJours: 30, delaiMin: 45, minimum: 300 },
+  // Code fidélité offert dans l'e-mail envoyé après le séjour : −x % sur le prochain séjour en direct
+  fidelite: 5,
   // Remise accordée aux réservations directes, en % (nuits et ménage ; la taxe de séjour n'est pas remisée)
   remiseDirecte: 10,
   // Conditions d'annulation (affichées avant le paiement, à adapter)

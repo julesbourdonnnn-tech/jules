@@ -338,6 +338,7 @@
           <div class="field full"><label for="d-email">E-mail</label><input id="d-email" name="email" type="email" autocomplete="email" required maxlength="254"></div>
           <div class="field full"><label for="d-msg">Un mot pour nous (facultatif)</label><textarea id="d-msg" name="message" maxlength="2000" placeholder="L'occasion de votre séjour, une heure d'arrivée, vos questions…"></textarea></div>
           <div class="field full promo" id="promo-box"><label for="d-code">Code promo (facultatif)</label><div class="promo__row"><input id="d-code" name="code" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="30"><button type="button" class="btn btn--small" id="d-code-go">Appliquer</button></div><p class="small promo__msg" id="d-code-msg" aria-live="polite"></p></div>
+          <fieldset class="full pay2" id="pay2" hidden></fieldset>
           <label class="check full"><input type="checkbox" id="d-cgv" name="conditions" required> <span>J'accepte les <a href="conditions.html" target="_blank" rel="noopener">conditions de réservation</a> et le règlement de la maison.</span></label>
           <input class="hp" type="text" name="bot-field" tabindex="-1" autocomplete="off" aria-hidden="true">
           <div class="full"><button type="submit" class="btn btn--accent btn--block" id="d-submit">Continuer</button><p class="booking__msg" id="form-msg" aria-live="polite"></p><p class="small" id="d-note" style="margin-top:12px"></p></div>
@@ -850,10 +851,25 @@
     if (promo && promo.stay === stayKey() && promo.price) return Object.assign({}, p, promo.price, { ready: true });
     return p;
   };
+  // Paiement en 2 fois (acompte, puis solde prélevé automatiquement avant l'arrivée)
+  let pay2 = false;
+  const splitOf = (p) => (p && p.ready && window.SP_SPLIT ? SP_SPLIT(iso(state.in), p.cents) : null);
+  const dayLong = (s) => { const [y, m, d] = s.split("-").map(Number); return new Intl.DateTimeFormat(document.documentElement.lang || "fr", { day: "numeric", month: "long", year: "numeric" }).format(new Date(y, m - 1, d)); };
+  function renderPay2(p) {
+    const sp = splitOf(p);
+    const box = $("#pay2");
+    box.hidden = !sp;
+    if (!sp) { pay2 = false; box.innerHTML = ""; return; }
+    box.innerHTML = `<legend>Paiement</legend>
+      <label class="pay2__opt"><input type="radio" name="pay2" value="1"${pay2 ? "" : " checked"}> <span><strong>En une fois</strong> · ${EUR(p.cents)}</span></label>
+      <label class="pay2__opt"><input type="radio" name="pay2" value="2"${pay2 ? " checked" : ""}> <span><strong>En 2 fois</strong> · ${EUR(sp.acompte)} maintenant, puis ${EUR(sp.solde)} prélevés automatiquement le ${dayLong(sp.soldeLe)}</span></label>`;
+  }
   function renderRecap() {
     const p = shownPrice();
+    renderPay2(p);
+    const sp = pay2 ? splitOf(p) : null;
     $("#recap").innerHTML = `<p><strong>${esc(h.name)}</strong></p><p>${esc(stayText())}</p><p>${esc(guestsText())}</p>${p && p.ready ? `<div class="recap__price">${p.lines.map((l) => `<p${l.cents < 0 ? ' class="is-off"' : ""}><span>${esc(window.SP_LABEL ? SP_LABEL(l.label) : l.label)}</span><span>${EUR(l.cents)}</span></p>`).join("")}<p class="booking__total"><span>Total</span><strong>${EUR(p.cents)}</strong></p></div>` : ""}${window.SP_CAUTION && SP_CAUTION(key) ? `<p class="small recap__caution">Caution : ${EUR(SP_CAUTION(key) * 100)}, bloqués sur votre carte la veille de l'arrivée (rien n'est débité) et libérés 48 h après le départ.</p>` : ""}`;
-    $("#d-submit").textContent = p && p.ready ? `Continuer vers le paiement · ${EUR(p.cents)}` : "Envoyer ma demande";
+    $("#d-submit").textContent = p && p.ready ? `Continuer vers le paiement · ${EUR(sp ? sp.acompte : p.cents)}` : "Envoyer ma demande";
   }
   async function applyCode() {
     const input = $("#d-code");
@@ -882,6 +898,7 @@
     return false;
   }
   $("#d-code-go").addEventListener("click", applyCode);
+  $("#pay2").addEventListener("change", (e) => { if (e.target.name === "pay2") { pay2 = e.target.value === "2"; renderRecap(); } });
   $("#d-code").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); applyCode(); } });
 
   const closeDlg = () => {
@@ -943,7 +960,7 @@
     }
     const payload = Object.assign({}, fd, {
       maison: key, arrivee: iso(state.in), depart: iso(state.out), conditions: true, lang: document.documentElement.lang,
-      adultes: state.adults, enfants: state.children, bebes: state.infants,
+      adultes: state.adults, enfants: state.children, bebes: state.infants, paiement2: pay2 && !!splitOf(shownPrice()),
     });
     let res = null;
     let net = true;

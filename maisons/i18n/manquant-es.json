@@ -8,27 +8,59 @@
   "ou": "data.js"
  },
  {
+  "fr": "Bonjour, j'ai une question sur",
+  "ou": "main.js"
+ },
+ {
+  "fr": "Bonjour, j'ai une question sur vos maisons.",
+  "ou": "main.js"
+ },
+ {
+  "fr": "Nous écrire sur WhatsApp",
+  "ou": "main.js"
+ },
+ {
   "fr": "</div> </div> </section> <section class=\"section\" id=\"equipements\"> <div class=\"wrap\"> <div class=\"section-head\"> <div><span class=\"eyebrow\">Ce que propose la maison</span><h2 class=\"h2\">Tout est <em>prévu</em></h2></div> <p>La liste complète des équipements, telle qu'elle figure sur l'annonce.</p> </div> <div class=\"amenities\">",
   "ou": "house.js"
  },
  {
-  "fr": ", bloqués sur votre carte la veille de l'arrivée (rien n'est débité) et libérés 48 h après le départ.</p>",
+  "fr": "> <span><strong>En une fois</strong> ·",
   "ou": "house.js"
  },
  {
-  "fr": "La caution est bloquée sur votre carte (empreinte bancaire, rien n'est débité). Elle sera libérée automatiquement 48 heures après votre départ.",
+  "fr": "prélevés automatiquement le",
+  "ou": "house.js"
+ },
+ {
+  "fr": "(payé)",
   "ou": "reservation.js"
  },
  {
-  "fr": "La caution a été libérée.",
+  "fr": "(réservé sur votre carte, débité à la confirmation)",
   "ou": "reservation.js"
  },
  {
-  "fr": "Votre banque demande une confirmation pour la caution : merci de la valider avant votre arrivée (rien n'est débité).",
+  "fr": "payé. Votre séjour est entièrement réglé.",
   "ou": "reservation.js"
  },
  {
-  "fr": "La caution est bloquée sur votre carte la veille de votre arrivée (empreinte bancaire, rien n'est débité), puis libérée automatiquement 48 heures après votre départ.",
+  "fr": "votre banque demande une confirmation : merci de le régler avant votre arrivée.",
+  "ou": "reservation.js"
+ },
+ {
+  "fr": "prélevé automatiquement le",
+  "ou": "reservation.js"
+ },
+ {
+  "fr": "sur la même carte.",
+  "ou": "reservation.js"
+ },
+ {
+  "fr": "\">Régler le solde</a></p>",
+  "ou": "reservation.js"
+ },
+ {
+  "fr": "\" target=\"_blank\" rel=\"noopener\">Télécharger le contrat de location (PDF)</a></p>",
   "ou": "reservation.js"
  },
  {
@@ -56,7 +88,19 @@
   "ou": "index.html"
  },
  {
-  "fr": ") : la veille de l'arrivée, ce montant est bloqué sur la carte utilisée pour la réservation (empreinte bancaire : rien n'est débité). Il est libéré automatiquement 48 heures après le départ. En cas de dégradation ou de casse constatée, le coût des réparations peut être prélevé dans la limite de la caution, après vous en avoir informé, justificatifs à l'appui. Si votre banque demande une confirmation, un lien vous est envoyé par e-mail.",
+  "fr": "Pour les séjours réservés au moins",
+  "ou": "conditions.html"
+ },
+ {
+  "fr": "jours à l'avance, vous pouvez payer en 2 fois : un acompte de",
+  "ou": "conditions.html"
+ },
+ {
+  "fr": "% à la réservation, puis le solde, prélevé automatiquement sur la même carte",
+  "ou": "conditions.html"
+ },
+ {
+  "fr": "jours avant l'arrivée. Si votre banque demande une confirmation, un lien de paiement vous est envoyé par e-mail. Un contrat de location vous est envoyé avec la confirmation de votre séjour.",
   "ou": "conditions.html"
  },
  {

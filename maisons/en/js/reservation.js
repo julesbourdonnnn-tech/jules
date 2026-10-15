@@ -32,6 +32,10 @@
         </dl>
         ${r.cents ? `<div class="booking__price">${r.lignes.map((l) => `<p><span>${esc(window.SP_LABEL ? SP_LABEL(l.label) : l.label)}</span><span>${SP_EUR(l.cents)}</span></p>`).join("")}<p class="booking__total"><span>Total</span><strong>${SP_EUR(r.cents)}</strong></p></div>` : ""}
       </div>
+      ${r.solde && (r.statut === "confirmee" || r.statut === "a_valider") ? `<div class="resa__caution"> <h2 class="h3">Payment in 2 instalments</h2> <p>Deposit: ${SP_EUR(r.acompte)}${r.statut === "confirmee" ? " (paid)" : " (held on your card, charged on confirmation)"}.</p> <p>Balance: ${SP_EUR(r.solde.montant)}, ${r.solde.etat === "paye" ? "paid. Your stay is fully paid." : r.solde.etat === "lien" ? "your bank needs a confirmation: please pay it before you arrive." : `charged automatically on ${esc(fmt(r.solde.le))} to the same card.`}</p>
+        ${r.solde.url ? `<p><a class="btn btn--accent" href="${esc(r.solde.url)}">Pay the balance</a></p>` : ""}
+      </div>` : ""}
+      ${r.contrat ? `<p style="margin:0 0 26px"><a class="btn btn--ghost" href="${esc(r.contrat)}" target="_blank" rel="noopener">Download the rental agreement (PDF)</a></p>` : ""}
       ${r.caution && (r.statut === "confirmee" || r.statut === "a_valider") ? `<div class="resa__caution"> <h2 class="h3">Security deposit: ${SP_EUR(r.caution.montant * 100)}</h2>
         <p>${r.caution.etat === "bloquee" ? "The security deposit is held on your card (a pre-authorisation, nothing is charged). It will be released automatically 48 hours after you leave." : r.caution.etat === "liberee" ? "The security deposit has been released." : r.caution.etat === "lien" ? "Your bank needs a confirmation for the security deposit: please confirm it before you arrive (nothing is charged)." : "The security deposit is held on your card the day before you arrive (a pre-authorisation, nothing is charged), then released automatically 48 hours after you leave."}</p>
         ${r.caution.url ? `<p><a class="btn btn--accent" href="${esc(r.caution.url)}">Confirm the deposit</a></p>` : ""}

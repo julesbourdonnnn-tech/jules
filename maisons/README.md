@@ -117,6 +117,13 @@ Les nuits prises selon ce lien s'ajoutent à celles du fichier automatique.
 - « Enregistrer et mettre en ligne » : les réglages sont gardés sur le serveur (stockage RESERVATIONS, clé `tarifs`) et visibles par les voyageurs en moins d'une minute, sans republier le site. Le serveur recalcule toujours le montant payé avec ces réglages.
 - Pour ajouter un événement, modifie `js/evenements.js` (dates de la première à la dernière nuit).
 
+## Paiement en 2 fois, contrat, fidélité, WhatsApp
+
+- **Paiement en 2 fois** (au choix du voyageur, dans le formulaire de réservation) : 30 % d'acompte, puis le solde prélevé automatiquement sur la même carte 30 jours avant l'arrivée. Proposé si l'arrivée est dans 45 jours ou plus et que le séjour dépasse 300 €. Réglages : `paiement2` dans `js/tarifs.js`. Si la banque demande une validation, le voyageur reçoit un lien et toi une alerte ; l'état du solde est affiché sur la réservation dans l'admin.
+- **Contrat de location (PDF)**, dans la langue du voyageur : joint à l'e-mail de confirmation, téléchargeable depuis sa page de suivi et depuis l'admin (« Contrat (PDF) »). Il reprend l'adresse saisie dans « E-mails aux voyageurs », le prix, l'échéancier, la caution, les conditions d'annulation et le règlement de la maison.
+- **Code fidélité** : dans l'e-mail envoyé après le séjour, un code unique de 5 % (réglage `fidelite` dans `js/tarifs.js`), valable 2 ans, une utilisation. Il apparaît dans la liste des codes promo.
+- **WhatsApp** : numéro dans `js/config.js` ; bouton vert sur toutes les pages, avec un message prérempli dans la langue de la page.
+
 ## Caution
 
 - Montant par maison dans l'espace propriétaire → Prix (1 000 € par défaut, 0 = pas de caution).

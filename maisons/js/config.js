@@ -13,7 +13,7 @@ window.SITE = {
   // Téléphone et WhatsApp au format international, sans espaces (ex. "33612345678").
   // Laisse vide pour ne pas les afficher.
   phone: "",
-  whatsapp: "",
+  whatsapp: "33688168869",
   instagram: "",
 
   // Mentions légales (obligatoires) : nom de l'éditeur du site

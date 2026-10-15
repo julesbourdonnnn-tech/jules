@@ -111,6 +111,16 @@ globalThis.SP_PRICE = function (house, arrivee, depart, adultes, live) {
   res.total = cents / 100;
   return res;
 };
+// Paiement en 2 fois : possible pour ce séjour ? Renvoie { acompte, solde, soldeLe } (centimes, date ISO) ou null
+globalThis.SP_SPLIT = function (arrivee, cents, today) {
+  const P = (globalThis.TARIFS || {}).paiement2;
+  if (!P || !(cents >= (P.minimum || 0) * 100)) return null;
+  const t = Date.parse(today || new Date().toISOString().slice(0, 10));
+  const a = Date.parse(arrivee);
+  if ((a - t) / 86400000 < P.delaiMin) return null;
+  const acompte = Math.round((cents * P.acompte) / 100);
+  return { acompte, solde: cents - acompte, soldeLe: new Date(a - P.soldeJours * 86400000).toISOString().slice(0, 10), pct: P.acompte };
+};
 // Caution d'une maison (en €) : réglage de l'espace propriétaire, sinon js/tarifs.js
 globalThis.SP_CAUTION = function (house, live) {
   const L = (live || globalThis.TARIFS_LIVE || {})[house] || {};

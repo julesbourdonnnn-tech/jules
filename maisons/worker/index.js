@@ -34,6 +34,9 @@ import "../js/tarifs.js";
 import "../js/tarifs-airbnb.js";
 import "../js/prix.js";
 import { mailText, mailHtml, hoursOf } from "./mails.js";
+import { contratPdf, pdfBase64 } from "./contrat.js";
+import SEG from "../i18n/segments/10-interface.json" with { type: "json" };
+import DON from "../i18n/traductions/01-donnees.json" with { type: "json" };
 
 const H = globalThis.HOUSES;
 const PRICE = globalThis.SP_PRICE;
@@ -194,6 +197,7 @@ async function loadPromo(env, code) {
   const v = await kv.get(`promo:${code}`);
   const c = v ? JSON.parse(v) : null;
   if (!c || !c.actif) return null;
+  if (c.expire && c.expire < todayISO()) return null;
   if (c.max && (await promoUses(env))[c.code] >= c.max) return null;
   return c;
 }
@@ -474,9 +478,9 @@ const LANGS = ["fr", "en", "es"];
 const langOf = (v) => (LANGS.includes(v) ? v : "fr");
 const prefixOf = (lang) => (lang === "fr" ? "" : `${lang}/`);
 const MSG = {
-  fr: { invalid: "Merci de vérifier vos dates, votre nom et votre e-mail.", conditions: "Merci d'accepter les conditions de réservation.", capacite: (n) => `Cette maison accueille jusqu'à ${n} voyageurs.`, bebes: "La Maison de Pierre ne convient pas aux bébés de moins de 2 ans.", code: "Ce code promo n'est pas valable.", codeShort: "Ce code n'est pas valable.", dates: "Choisissez d'abord vos dates.", stripe: "Le paiement en ligne est momentanément indisponible. Réessayez dans un instant.", ...ERR, nights: (n) => `${n} nuit${n > 1 ? "s" : ""}`, line: (a, b, g, id) => `Du ${a} au ${b} · ${g} voyageur(s) · réservation ${id}` },
-  en: { invalid: "Please check your dates, your name and your email address.", conditions: "Please accept the booking terms.", capacite: (n) => `This house sleeps up to ${n} guests.`, bebes: "La Maison de Pierre is not suitable for babies under 2.", code: "This promo code is not valid.", codeShort: "This code is not valid.", dates: "Please choose your dates first.", stripe: "Online payment is temporarily unavailable. Please try again in a moment.", passe: "The arrival date has already passed.", pris: "These dates are no longer available. Please choose other dates.", depart: "Departure is not possible on that day. Please choose another day.", court: "The stay is too short for these dates.", long: "The stay is too long for these dates.", nights: (n) => `${n} night${n > 1 ? "s" : ""}`, line: (a, b, g, id) => `From ${a} to ${b} · ${g} guest(s) · booking ${id}` },
-  es: { invalid: "Comprueba tus fechas, tu nombre y tu correo electrónico.", conditions: "Acepta las condiciones de reserva.", capacite: (n) => `Esta casa tiene capacidad para ${n} viajeros como máximo.`, bebes: "La Maison de Pierre no es adecuada para bebés menores de 2 años.", code: "Este código promocional no es válido.", codeShort: "Este código no es válido.", dates: "Elige primero tus fechas.", stripe: "El pago en línea no está disponible en este momento. Vuelve a intentarlo dentro de un instante.", passe: "La fecha de llegada ya ha pasado.", pris: "Estas fechas ya no están disponibles. Elige otras fechas.", depart: "No es posible salir ese día. Elige otro día.", court: "La estancia es demasiado corta para estas fechas.", long: "La estancia es demasiado larga para estas fechas.", nights: (n) => `${n} noche${n > 1 ? "s" : ""}`, line: (a, b, g, id) => `Del ${a} al ${b} · ${g} viajero(s) · reserva ${id}` },
+  fr: { acompte: (p) => `acompte ${p} %`, invalid: "Merci de vérifier vos dates, votre nom et votre e-mail.", conditions: "Merci d'accepter les conditions de réservation.", capacite: (n) => `Cette maison accueille jusqu'à ${n} voyageurs.`, bebes: "La Maison de Pierre ne convient pas aux bébés de moins de 2 ans.", code: "Ce code promo n'est pas valable.", codeShort: "Ce code n'est pas valable.", dates: "Choisissez d'abord vos dates.", stripe: "Le paiement en ligne est momentanément indisponible. Réessayez dans un instant.", ...ERR, nights: (n) => `${n} nuit${n > 1 ? "s" : ""}`, line: (a, b, g, id) => `Du ${a} au ${b} · ${g} voyageur(s) · réservation ${id}` },
+  en: { acompte: (p) => `${p}% deposit`, invalid: "Please check your dates, your name and your email address.", conditions: "Please accept the booking terms.", capacite: (n) => `This house sleeps up to ${n} guests.`, bebes: "La Maison de Pierre is not suitable for babies under 2.", code: "This promo code is not valid.", codeShort: "This code is not valid.", dates: "Please choose your dates first.", stripe: "Online payment is temporarily unavailable. Please try again in a moment.", passe: "The arrival date has already passed.", pris: "These dates are no longer available. Please choose other dates.", depart: "Departure is not possible on that day. Please choose another day.", court: "The stay is too short for these dates.", long: "The stay is too long for these dates.", nights: (n) => `${n} night${n > 1 ? "s" : ""}`, line: (a, b, g, id) => `From ${a} to ${b} · ${g} guest(s) · booking ${id}` },
+  es: { acompte: (p) => `anticipo del ${p} %`, invalid: "Comprueba tus fechas, tu nombre y tu correo electrónico.", conditions: "Acepta las condiciones de reserva.", capacite: (n) => `Esta casa tiene capacidad para ${n} viajeros como máximo.`, bebes: "La Maison de Pierre no es adecuada para bebés menores de 2 años.", code: "Este código promocional no es válido.", codeShort: "Este código no es válido.", dates: "Elige primero tus fechas.", stripe: "El pago en línea no está disponible en este momento. Vuelve a intentarlo dentro de un instante.", passe: "La fecha de llegada ya ha pasado.", pris: "Estas fechas ya no están disponibles. Elige otras fechas.", depart: "No es posible salir ese día. Elige otro día.", court: "La estancia es demasiado corta para estas fechas.", long: "La estancia es demasiado larga para estas fechas.", nights: (n) => `${n} noche${n > 1 ? "s" : ""}`, line: (a, b, g, id) => `Del ${a} al ${b} · ${g} viajero(s) · reserva ${id}` },
 };
 // Dates « 21 août 2027 » dans la langue du voyageur
 const fmtDateL = (s, lang) => new Intl.DateTimeFormat({ fr: "fr-FR", en: "en-GB", es: "es-ES" }[lang], { weekday: "short", day: "numeric", month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(toDay(s)));
@@ -521,6 +525,9 @@ async function createBooking(request, env, ctx, origin) {
   b.pays = (request.cf && request.cf.country) || "";
   if (p.ready) { b.cents = p.cents; b.total = p.total; b.lignes = p.lines; }
   b.cautionMontant = await cautionOf(env, house);
+  // Paiement en 2 fois, si le voyageur l'a choisi et que le séjour le permet
+  const split = d.paiement2 && p.ready ? globalThis.SP_SPLIT(b.arrivee, b.cents, todayISO()) : null;
+  if (split) { b.acompte = split.acompte; b.solde = { montant: split.solde, le: split.soldeLe, etat: "a_venir" }; }
 
   // Paiement en ligne possible : tarifs renseignés et clé Stripe en place
   if (p.ready && env.STRIPE_SECRET_KEY) {
@@ -535,12 +542,12 @@ async function createBooking(request, env, ctx, origin) {
         expires_at: Math.floor(Date.now() / 1000) + 31 * 60,
         success_url: back,
         cancel_url: `${origin}/${prefixOf(lang)}${h.page}?arrivee=${b.arrivee}&depart=${b.depart}&voyageurs=${b.adultes + b.enfants}&annule=1#reserver`,
-        line_items: { 0: { quantity: 1, price_data: { currency: "eur", unit_amount: b.cents, product_data: { name: `${h.name} — ${M.nights(b.nuits)}`, description: M.line(fmtDateL(b.arrivee, lang), fmtDateL(b.depart, lang), b.adultes + b.enfants, b.id) } } } },
+        line_items: { 0: { quantity: 1, price_data: { currency: "eur", unit_amount: split ? b.acompte : b.cents, product_data: { name: `${h.name} — ${M.nights(b.nuits)}${split ? ` — ${M.acompte(split.pct)}` : ""}`, description: M.line(fmtDateL(b.arrivee, lang), fmtDateL(b.depart, lang), b.adultes + b.enfants, b.id) } } } },
         // Empreinte bancaire : le montant n'est débité que lorsque tu acceptes la réservation
         payment_intent_data: { capture_method: "manual", description: `Réservation ${b.id} — ${h.name}`, receipt_email: b.email, metadata: { reservation: b.id },
           // Carte gardée par Stripe pour l'empreinte de caution (la veille de l'arrivée)
-          setup_future_usage: b.cautionMontant ? "off_session" : undefined },
-        customer_creation: b.cautionMontant ? "always" : undefined,
+          setup_future_usage: b.cautionMontant || split ? "off_session" : undefined },
+        customer_creation: b.cautionMontant || split ? "always" : undefined,
         metadata: { reservation: b.id, maison: house },
       });
       b.stripeSession = s.id;
@@ -566,6 +573,7 @@ async function bookingStatus(env, ctx, origin, id, token) {
   b = await syncStripe(env, b);
   if (b._nouveau) notify(env, ctx, "Réservation à valider (paiement autorisé)", summary(b), `${origin}/admin.html`);
   if (b.caution && b.caution.etat === "lien") await syncCautionLink(env, ctx, b);
+  if (b.solde && b.solde.etat === "lien") await syncSoldeLink(env, ctx, b);
   const h = H[b.maison];
   const c = b.caution || {};
   return json({ ok: true, reservation: {
@@ -573,6 +581,8 @@ async function bookingStatus(env, ctx, origin, id, token) {
     arrivee: b.arrivee, depart: b.depart, nuits: b.nuits, adultes: b.adultes, enfants: b.enfants, bebes: b.bebes,
     nom: b.nom, email: b.email, cents: b.cents || 0, lignes: b.lignes || [],
     caution: b.cautionMontant ? { montant: b.cautionMontant, etat: c.etat || "a_venir", url: c.etat === "lien" ? c.url : undefined } : null,
+    acompte: b.acompte || 0, solde: b.solde ? { montant: b.solde.montant, le: b.solde.le, etat: b.solde.etat, url: b.solde.etat === "lien" ? b.solde.url : undefined } : null,
+    contrat: b.statut === "confirmee" ? `api/reservation/${b.id}/contrat.pdf?t=${b.token}` : "",
   } });
 }
 
@@ -610,11 +620,11 @@ async function adminInfos(request, env) {
   return json({ ok: true, infos: out });
 }
 
-async function sendMail(env, to, subject, text) {
+async function sendMail(env, to, subject, text, attachments) {
   const r = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ from: env.MAIL_FROM || "Sable & Pierre <reservations@sable-et-pierre.com>", to: [to], reply_to: REPLY, subject, text, html: mailHtml(text) }),
+    body: JSON.stringify({ from: env.MAIL_FROM || "Sable & Pierre <reservations@sable-et-pierre.com>", to: [to], reply_to: REPLY, subject, text, html: mailHtml(text), attachments }),
   });
   if (!r.ok) throw new Error(`Resend ${r.status} : ${(await r.text()).slice(0, 200)}`);
 }
@@ -635,10 +645,15 @@ async function sendGuestMail(env, b, type, extra = {}) {
     arrivee: hrs.arrivee, depart: hrs.depart, adresse: I.adresse || "",
     infos: I[lang] || (lang === "es" && I.en) || I.fr || "", avisUrl: infos.avisUrl || (await loadInfos(env)).avisUrl || "",
     cautionUrl: (b.caution || {}).url || "",
+    acompte: b.acompte ? money(b.acompte, lang) : "", solde: b.solde ? money(b.solde.montant, lang) : "",
+    soldeLe: b.solde ? fmtDateL(b.solde.le, lang) : "", soldeUrl: (b.solde || {}).url || "",
+    fidelite: type === "avis" ? await fideliteCode(env, b) : "", fidelitePct: (globalThis.TARIFS || {}).fidelite || 0,
   };
   const m = mailText(type, b, x);
   try {
-    await sendMail(env, b.email, m.subject, m.text);
+    // Le contrat de location part avec la confirmation
+    const att = type === "confirmee" ? [{ filename: `contrat-${b.id}.pdf`, content: pdfBase64(await contratFor(env, b)) }] : undefined;
+    await sendMail(env, b.email, m.subject, m.text, att);
     b.mails[type] = new Date().toISOString();
     delete b.mailErreur;
     await save(env, b);
@@ -770,6 +785,11 @@ async function morning(env, ctx) {
       const toArrival = daysBetween(today, b.arrivee);
       const sinceDeparture = daysBetween(b.depart, today);
       if (toArrival >= 0 && toArrival <= 7 && !(b.mails || {}).rappel) log.push(`${b.id} rappel : ${await sendGuestMail(env, b, "rappel")}`);
+      // Solde du paiement en 2 fois
+      if (b.solde && env.STRIPE_SECRET_KEY) {
+        if (b.solde.etat === "lien") await syncSoldeLink(env, ctx, b);
+        if ((b.solde.etat === "a_venir" || (b.solde.etat === "expire" && (b.solde.essais || 0) < 3)) && today >= b.solde.le) log.push(`${b.id} solde : ${await chargeSolde(env, ctx, b)}`);
+      }
       // Caution
       if (b.cautionMontant && env.STRIPE_SECRET_KEY) {
         const c = b.caution || {};
@@ -788,6 +808,107 @@ async function morning(env, ctx) {
     }
   }
   return log;
+}
+
+/* ===================== Paiement en 2 fois, contrat, fidélité ===================== */
+// Traductions du site (règlement des maisons, conditions d'annulation) pour le contrat
+const tr = (s, lang) => (lang === "fr" ? s : ((SEG[s] || DON[s] || [])[lang === "en" ? 0 : 1] || s));
+
+// Solde prélevé automatiquement sur la carte enregistrée ; si la banque demande une validation, lien envoyé au voyageur
+async function chargeSolde(env, ctx, b) {
+  const h = H[b.maison];
+  const lang = langOf(b.lang);
+  const S = b.solde;
+  try {
+    if (!b.customer || !b.paymentMethod) throw new Error("pas de carte enregistrée");
+    const pi = await stripe(env, "POST", "payment_intents", {
+      amount: S.montant, currency: "eur", customer: b.customer, payment_method: b.paymentMethod,
+      off_session: "true", confirm: "true", description: `Solde ${b.id} — ${h.name}`, receipt_email: b.email, metadata: { reservation: b.id, solde: "1" },
+    });
+    if (pi.status !== "succeeded") throw new Error(`état ${pi.status}`);
+    Object.assign(S, { etat: "paye", pi: pi.id, payeLe: new Date().toISOString() });
+    b.paiement = "débité (acompte + solde)";
+    await save(env, b);
+    await sendGuestMail(env, b, "solde_ok");
+    return "payé";
+  } catch (e) {
+    try {
+      const sess = await stripe(env, "POST", "checkout/sessions", {
+        mode: "payment", locale: lang, customer: b.customer || undefined, customer_email: b.customer ? undefined : b.email,
+        expires_at: Math.floor(Date.now() / 1000) + 23 * 3600, success_url: statusLink(b), cancel_url: statusLink(b),
+        line_items: { 0: { quantity: 1, price_data: { currency: "eur", unit_amount: S.montant, product_data: { name: `${h.name} — solde`, description: `${b.id} · ${fmtDateL(b.arrivee, lang)} → ${fmtDateL(b.depart, lang)}` } } } },
+        payment_intent_data: { description: `Solde ${b.id} — ${h.name}`, receipt_email: b.email, metadata: { reservation: b.id, solde: "1" } },
+        metadata: { reservation: b.id, solde: "1" },
+      });
+      Object.assign(S, { etat: "lien", session: sess.id, url: sess.url, essais: (S.essais || 0) + 1, raison: e.message, lienLe: new Date().toISOString() });
+      await save(env, b);
+      await sendGuestMail(env, b, "solde_lien", { encore: true });
+      notify(env, ctx, "Solde : le voyageur doit valider le paiement", `${summary(b)}\nLe prélèvement automatique du solde (${EUR(S.montant)}) n'a pas pu se faire (${e.message}). Un lien de paiement lui a été envoyé${env.RESEND_API_KEY ? " par e-mail" : " (e-mails automatiques non activés : envoie-lui ce lien toi-même)"}.\n${sess.url}`, `${SITE}/admin.html`);
+      return "lien envoyé";
+    } catch (e2) {
+      Object.assign(S, { etat: "echec", raison: `${e.message} / ${e2.message}` });
+      await save(env, b);
+      notify(env, ctx, "Solde impossible à prélever", `${summary(b)}\n${e2.message}`, `${SITE}/admin.html`);
+      return "échec";
+    }
+  }
+}
+async function syncSoldeLink(env, ctx, b) {
+  const S = b.solde;
+  if (!S || S.etat !== "lien" || !S.session || !env.STRIPE_SECRET_KEY) return b;
+  try {
+    const sess = await stripe(env, "GET", `checkout/sessions/${S.session}?expand[]=payment_intent`);
+    if (sess.status === "complete" && sess.payment_intent && sess.payment_intent.status === "succeeded") {
+      Object.assign(S, { etat: "paye", pi: sess.payment_intent.id, payeLe: new Date().toISOString() });
+      b.paiement = "débité (acompte + solde)";
+      await save(env, b);
+      notify(env, ctx, "Solde payé", summary(b), `${SITE}/admin.html`);
+    } else if (sess.status === "expired") { S.etat = "expire"; await save(env, b); }
+  } catch (e) { /* on réessaiera */ }
+  return b;
+}
+
+// Code fidélité unique, offert après le séjour (une utilisation, valable 2 ans)
+async function fideliteCode(env, b) {
+  if (b.fidelite) return b.fidelite;
+  const pct = Number((globalThis.TARIFS || {}).fidelite) || 0;
+  if (!pct) return "";
+  const code = `MERCI-${rand(3).toUpperCase()}`;
+  const exp = new Date(Date.now() + 730 * DAY).toISOString().slice(0, 10);
+  await store(env).put(`promo:${code}`, JSON.stringify({ code, type: "pourcent", valeur: pct, maison: "", max: 1, actif: true, cree: new Date().toISOString(), expire: exp, fidelite: b.id, note: `Fidélité — ${b.nom}` }));
+  b.fidelite = code;
+  await save(env, b);
+  return code;
+}
+
+// Contrat de location (PDF)
+async function contratFor(env, b) {
+  const lang = langOf(b.lang);
+  const h = H[b.maison];
+  const I = (await loadInfos(env))[b.maison] || {};
+  const regles = Object.values(h.rules || {}).flat().map((x) => tr(x, lang));
+  return contratPdf(b, {
+    house: h, maison: h.name, url: `${SITE}/${prefixOf(lang)}${h.page}`, adresse: I.adresse || "",
+    owner: "Jules Bourdon", email: REPLY, registration: h.registration || "",
+    conditions: (globalThis.TARIFS.annulation || []).map((x) => tr(x, lang)), regles,
+    hours: hoursOf(b.maison, lang, h), fmt: (iso) => fmtDateL(iso, lang), money: (c) => money(c, lang),
+    lignes: (b.lignes || []).map((l) => ({ label: trLabel(l.label, lang), cents: l.cents })),
+    split: b.solde ? { acompte: b.acompte, solde: b.solde.montant, le: fmtDateL(b.solde.le, lang) } : null,
+  });
+}
+// Libellés des lignes de prix (toujours en français côté serveur)
+function trLabel(s, lang) {
+  if (lang === "fr") return s;
+  const W = lang === "en" ? { nuit: ["night", "nights"], men: "Cleaning and fees", rem: "Direct booking discount", taxe: "Tourist tax", code: "Code" } : { nuit: ["noche", "noches"], men: "Limpieza y gastos", rem: "Descuento por reserva directa", taxe: "Tasa turística", code: "Código" };
+  return String(s)
+    .replace(/ × (\d+) nuits?$/, (m, n) => ` × ${n} ${W.nuit[Number(n) > 1 ? 1 : 0]}`)
+    .replace(/^Ménage et frais$|^Ménage$/, W.men).replace(/^Remise réservation directe/, W.rem)
+    .replace(/^Taxe de séjour.*$/, W.taxe).replace(/^Code /, `${W.code} `);
+}
+async function contratResponse(env, id, token, admin) {
+  const b = await load(env, id);
+  if (!b || (!admin && b.token !== token) || b.statut !== "confirmee") return new Response("Not found", { status: 404 });
+  return new Response(await contratFor(env, b), { headers: { "Content-Type": "application/pdf", "Content-Disposition": `inline; filename="contrat-${b.id}.pdf"`, "Cache-Control": "no-store" } });
 }
 
 /* ===================== Propriétaire ===================== */
@@ -822,9 +943,10 @@ async function adminAction(env, ctx, origin, id, action) {
         const pi = await stripe(env, "GET", `payment_intents/${b.paymentIntent}`);
         if (pi.status === "requires_capture") await stripe(env, "POST", `payment_intents/${b.paymentIntent}/capture`, {});
         else if (pi.status !== "succeeded") return json({ ok: false, message: `Le paiement n'est plus valable (état Stripe : ${pi.status}). Contactez le voyageur.` }, 409);
-        b.paiement = "débité";
+        b.paiement = b.solde ? "acompte débité" : "débité";
       }
       b.statut = "confirmee";
+      b.confirmeeLe = new Date().toISOString();
     } else if (action === "refuser" || action === "annuler") {
       if (b.paymentIntent && env.STRIPE_SECRET_KEY) {
         const pi = await stripe(env, "GET", `payment_intents/${b.paymentIntent}`);
@@ -833,6 +955,7 @@ async function adminAction(env, ctx, origin, id, action) {
       }
       b.statut = action === "refuser" ? "refusee" : "annulee";
       if (b.caution && b.caution.etat === "bloquee") await releaseCaution(env, b, "libérée (réservation annulée)");
+      if (b.solde && b.solde.etat !== "paye") b.solde.etat = "annule";
     } else return json({ ok: false, error: "action" }, 400);
   } catch (e) {
     return json({ ok: false, message: `Stripe : ${e.message}` }, 502);
@@ -888,6 +1011,7 @@ export default {
       return json({ ok: true, booked: await bookedRanges(m[1], env), updated: new Date().toISOString() }, 200, { "Cache-Control": "public, max-age=60" });
     }
     if (p === "/api/reservation" && request.method === "POST") return createBooking(request, env, ctx, origin);
+    if ((m = /^\/api\/reservation\/([A-Z0-9]{4,20})\/contrat\.pdf$/.exec(p))) return contratResponse(env, m[1], url.searchParams.get("t") || "", false);
     if ((m = /^\/api\/reservation\/([A-Z0-9]{4,20})$/.exec(p))) return bookingStatus(env, ctx, origin, m[1], url.searchParams.get("t") || "");
     if (p === "/api/promo" && request.method === "POST") return checkPromo(request, env);
     if (p === "/api/evt" && request.method === "POST") return trackEvent(request, env).catch(() => new Response(null, { status: 204 }));
@@ -898,6 +1022,7 @@ export default {
       if (p === "/api/admin/reservations" && request.method === "GET") return adminList(env, ctx, origin);
       if (p === "/api/admin/stats" && request.method === "GET") return adminStats(env, ctx, url);
       if (p === "/api/admin/test-alertes" && request.method === "POST") return json({ ok: true, resultat: await sendAlerts(env, "Test des alertes Sable & Pierre", "Si tu lis ceci, les alertes de réservation fonctionnent.", `${origin}/admin.html`) });
+      if ((m = /^\/api\/admin\/reservations\/([A-Z0-9]{4,20})\/contrat\.pdf$/.exec(p))) return contratResponse(env, m[1], "", true);
       if (p === "/api/admin/tarifs") return adminTarifs(request, env);
       if (p === "/api/admin/infos") return adminInfos(request, env);
       if (p === "/api/admin/test-mail" && request.method === "POST") return testMail(env);
