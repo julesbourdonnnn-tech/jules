@@ -1,0 +1,10 @@
+# Fichiers générés
+*.rbxl
+*.rbxlx
+*.rbxm
+*.rbxmx
+build/*
+!build/.gitkeep
+sourcemap.json
+roblox.yml
+.DS_Store
