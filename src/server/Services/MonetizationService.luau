@@ -41,7 +41,8 @@ function MonetizationService.ownsPass(player: Player, passKey: string): boolean
 	return data ~= nil and type(data.passes) == "table" and data.passes[passKey] == true
 end
 
-local function grantPass(player: Player, passKey: string)
+-- Mémorise la possession ; `announce` déclenche PassGranted (effets en jeu)
+local function grantPass(player: Player, passKey: string, announce: boolean)
 	local data = DataService.get(player)
 	if not data then
 		return
@@ -54,7 +55,9 @@ local function grantPass(player: Player, passKey: string)
 	end
 	data.passes[passKey] = true
 	DataService.markDirty(player, "passes")
-	MonetizationService.PassGranted:Fire(player, passKey)
+	if announce then
+		MonetizationService.PassGranted:Fire(player, passKey)
+	end
 end
 
 local function checkPasses(player: Player)
@@ -67,13 +70,13 @@ local function checkPasses(player: Player)
 				return
 			end
 			if ok and owns then
-				grantPass(player, passKey)
+				grantPass(player, passKey, false)
 			elseif not ok then
 				warn(`[Monetization] vérification du pass {passKey} impossible pour {player.Name} :`, owns)
 			end
 		end
 	end
-	-- un pass déjà mémorisé (achat précédent) déclenche aussi ses effets à chaque session
+	-- chaque pass possédé déclenche ses effets une fois par session
 	local data = DataService.get(player)
 	if data and type(data.passes) == "table" then
 		for passKey, owned in data.passes do
@@ -147,7 +150,7 @@ function MonetizationService.Start()
 		function(player: Player, passId: number, wasPurchased: boolean)
 			local passKey = passKeyById[passId]
 			if wasPurchased and passKey then
-				grantPass(player, passKey)
+				grantPass(player, passKey, true)
 			end
 		end
 	)

@@ -25,6 +25,7 @@ local Net = require(Shared.Net)
 local Signal = require(Shared.Util.Signal)
 local Tables = require(Shared.Util.Tables)
 local Schema = require(script.Parent.Parent.Data.Schema)
+local RateLimit = require(script.Parent.Parent.Util.RateLimit)
 
 -- Réglages (modifiables par les tests avant le démarrage)
 local Settings = {
@@ -324,6 +325,9 @@ function DataService.Init()
 
 	-- le client redemande un instantané s'il a raté le premier (chargement lent)
 	Net.event("RequestSnapshot").OnServerEvent:Connect(function(player: Player)
+		if not RateLimit.allow(player, "RequestSnapshot", 2, 10) then
+			return
+		end
 		local data = profiles[player]
 		if data then
 			snapshotRemote:FireClient(player, publicView(data))

@@ -56,10 +56,15 @@ return function(T)
 		it("accorde un gamepass possédé à l'arrivée et acheté en jeu", function()
 			local h, DS, M = boot()
 			h.ownedPasses[33] = { [2001] = true }
+			local fired = 0
+			M.PassGranted:Connect(function()
+				fired += 1
+			end)
 			local p = h:addPlayer({ userId = 33 })
 			DS.waitFor(p, 2)
 			h:settle(3)
 			expect(M.ownsPass(p, "TestVIP")).toBe(true)
+			expect(fired).toBe(1)
 			local q = h:addPlayer({ userId = 34 })
 			DS.waitFor(q, 2)
 			h:settle(3)
