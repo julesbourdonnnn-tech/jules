@@ -12,6 +12,7 @@ local Services = script.Parent.Services
 -- Ordre explicite : un service ne dépend que de ceux listés avant lui.
 local ORDER = {
 	"DataService",
+	"MonetizationService",
 }
 
 local modules = {}

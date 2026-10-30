@@ -17,6 +17,7 @@ function Schema.defaults(): { [string]: any }
 	return {
 		version = Schema.VERSION,
 		coins = 0,
+		passes = {}, -- [passKey] = true (gamepasses possédés, répliqué pour l'UI)
 		receipts = {}, -- PurchaseId des produits déjà crédités (idempotence)
 	}
 end
