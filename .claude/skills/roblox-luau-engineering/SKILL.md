@@ -54,6 +54,24 @@ return MyService
 10. Nombres affichés : formater via `Shared/Util/Format.luau` (1.2K, 3.4M…), jamais de concaténation brute de grands nombres.
 11. Pas de `pcall` qui avale les erreurs en silence : logger avec `warn("[Système] message", err)`.
 12. Les instances créées en boucle (projectiles, popups, particules) sont **recyclées** ou détruites (`Debris:AddItem` ou `task.delay(d, inst.Destroy, inst)`).
+13. **Événements différés** (`SignalBehavior = Deferred`, défaut Roblox) : ne jamais déclencher un événement puis lire tout de suite l'effet de ses handlers ; utiliser `:Once()` pour les attentes uniques.
+14. Le code serveur (logique, config secrète, économie) vit dans `ServerScriptService` ; `ReplicatedStorage` ne contient que ce que le client a le droit de lire.
+15. Charges utiles des remotes et des sauvegardes : tables **soit tableau, soit dictionnaire à clés chaîne** (jamais mixtes ni à trous), pas de NaN/inf, pas d'Instance dans les sauvegardes.
+16. Contenu **data-driven** : objets, zones, quêtes et événements sont des entrées dans `src/shared/Config/*.luau`. Ajouter du contenu ne doit pas demander de nouveau code.
+
+## Socle existant (à réutiliser, ne pas réécrire)
+
+| Module | Usage |
+|--------|-------|
+| `Shared/Net` + `Shared/Remotes` | déclarer un remote dans `Remotes.luau`, puis `Net.event("Nom")` |
+| `Shared/Util/Signal`, `Trove`, `Tables`, `Format`, `Validate` | signaux, nettoyage, copies/reconcile, affichage, validation d'entrées |
+| `Shared/Localization` (+ `Strings.luau`) | textes EN/FR, `Localization.translator(lang)` |
+| `Server/Services/DataService` + `Server/Data/Schema` | données joueur, `DataService.get/set/increment/markDirty/saveNow`, `DataService.Loaded` |
+| `Server/Services/MonetizationService` | `registerProduct`, `ownsPass`, `PassGranted` |
+| `Server/Util/RateLimit` | `RateLimit.allow(player, "Action", n, perSeconds)` |
+| `Client/Controllers/StateController` | `State.get(key)`, `State.observe(key, fn)` |
+| `Client/Controllers/AudioController` | `AudioController.play("Coin")` |
+| `Client/UI/Root`, `Theme`, `Create`, `Juice`, `Toast` | écrans responsives, charte, construction d'UI, effets, notifications |
 
 ## Performance (mobile d'abord)
 
