@@ -466,6 +466,22 @@ function Harness:respawn(p)
 	task.wait()
 end
 
+-- (mode client) crée ReplicatedStorage.Remotes comme le ferait Net.setup() côté serveur
+function Harness:createRemotes()
+	if self.game.ReplicatedStorage:FindFirstChild("Remotes") then
+		return
+	end
+	local classes = { event = "RemoteEvent", unreliable = "UnreliableRemoteEvent", func = "RemoteFunction" }
+	local folder = MockInstance.new("Folder")
+	folder.Name = "Remotes"
+	for name, kind in self:require("ReplicatedStorage.Shared.Remotes") do
+		local remote = MockInstance.new(classes[kind])
+		remote.Name = name
+		remote.Parent = folder
+	end
+	folder.Parent = self.game.ReplicatedStorage
+end
+
 -- Laisse les threads en attente (DataStore simulé, task.defer…) se terminer
 function Harness:settle(frames: number?)
 	for _ = 1, frames or 5 do

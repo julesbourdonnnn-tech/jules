@@ -27,6 +27,7 @@ rojo build -o build/Game.rbxl
 | `h:removePlayer(p)` / `h:respawn(p)` | départ / réapparition |
 | `h:fireServer("ReplicatedStorage.Remotes.X", p, ...)` | simule un client (y compris un tricheur) |
 | `h:invokeServer(path, p, ...)` | RemoteFunction |
+| `h:createRemotes()` | (mode client) crée les remotes déclarés, comme le serveur |
 | `h:fireClient(path, ...)` | (mode client) le serveur parle au client |
 | `h:sentTo(p, "RemoteName")` | liste des `FireClient` reçus par p |
 | `h.log.allClientEvents` | `FireAllClients` |

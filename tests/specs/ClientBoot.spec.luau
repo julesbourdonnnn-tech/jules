@@ -7,16 +7,7 @@ return function(T)
 
 	local function bootClient()
 		local h = Harness.new({ mode = "client", touch = true })
-		-- les remotes sont créés par le serveur : on les crée comme Net.setup()
-		local remotes = h.globals.Instance.new("Folder")
-		remotes.Name = "Remotes"
-		for name, kind in h:require("ReplicatedStorage.Shared.Remotes") do
-			local class = ({ event = "RemoteEvent", unreliable = "UnreliableRemoteEvent", func = "RemoteFunction" })[kind]
-			local r = h.globals.Instance.new(class)
-			r.Name = name
-			r.Parent = remotes
-		end
-		remotes.Parent = h.game.ReplicatedStorage
+		h:createRemotes()
 		h:boot()
 		return h
 	end
