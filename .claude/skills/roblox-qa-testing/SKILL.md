@@ -25,6 +25,8 @@ rojo build -o build/Game.rbxl
 | `h:boot()` | exécute `Main.server.luau` (ou `Main.client.luau` en mode client) |
 | `h:addPlayer({ userId = 1, name = "A", locale = "fr-fr" })` | PlayerAdded + personnage |
 | `h:removePlayer(p)` / `h:respawn(p)` | départ / réapparition |
+| `h:moveTo(p, Vector3)` | déplace le personnage (HumanoidRootPart) |
+| `h:makeFriends(a, b)` | amis Roblox (`IsFriendsWith`, `GetFriendsAsync`) |
 | `h:fireServer("ReplicatedStorage.Remotes.X", p, ...)` | simule un client (y compris un tricheur) |
 | `h:invokeServer(path, p, ...)` | RemoteFunction |
 | `h:createRemotes()` | (mode client) crée les remotes déclarés, comme le serveur |

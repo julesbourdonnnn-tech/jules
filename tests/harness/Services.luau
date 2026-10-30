@@ -92,6 +92,13 @@ function Services.install(h)
 		GetServerTimeNow = function()
 			return os.clock() + 1.7e9
 		end,
+		BulkMoveTo = function(_, parts, cframes)
+			assert(type(parts) == "table" and type(cframes) == "table", "BulkMoveTo : deux listes attendues")
+			assert(#parts == #cframes, "BulkMoveTo : listes de tailles différentes")
+			for i, part in parts do
+				part.CFrame = cframes[i]
+			end
+		end,
 	}
 	cm.Terrain = {
 		FillBlock = function() end,
@@ -259,6 +266,19 @@ function Services.install(h)
 		end,
 		GetHumanoidDescriptionFromUserId = function()
 			return MockInstance.new("HumanoidDescription")
+		end,
+		GetFriendsAsync = function(_, userId)
+			local friends = {}
+			for _, id in (h.friends[userId] or {}) do
+				table.insert(friends, { Id = id, Username = "User" .. tostring(id), IsOnline = true })
+			end
+			return {
+				IsFinished = true,
+				GetCurrentPage = function()
+					return friends
+				end,
+				AdvanceToNextPageAsync = function() end,
+			}
 		end,
 	}
 

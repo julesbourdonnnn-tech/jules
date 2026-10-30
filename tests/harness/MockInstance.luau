@@ -906,7 +906,10 @@ function Methods.GetRoleInGroup(_self, _groupId)
 	return "Guest"
 end
 
-function Methods.IsFriendsWith(_self, _userId)
+function Methods.IsFriendsWith(self, userId)
+	if MockInstance.areFriends then
+		return MockInstance.areFriends(states[self].props.UserId, userId)
+	end
 	return false
 end
 

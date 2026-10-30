@@ -205,6 +205,10 @@ function Harness.new(options: { mode: string?, touch: boolean?, isStudio: boolea
 		serverEvents = {},
 	}
 	h.stats = { tweens = 0, dataStoreCalls = 0 }
+	h.friends = {} -- [userId] = { userId… } : amitiés simulées (h:makeFriends(a, b))
+	MockInstance.areFriends = function(a, b)
+		return table.find(h.friends[a] or {}, b) ~= nil
+	end
 	MockInstance.warnings = {}
 
 	-- remise à zéro des crochets globaux (un harnais à la fois)
@@ -459,6 +463,23 @@ function Harness:removePlayer(p)
 	end
 	p.Parent = nil
 	task.wait()
+end
+
+-- Rend deux joueurs amis Roblox (IsFriendsWith / GetFriendsAsync)
+function Harness:makeFriends(a, b)
+	local ida = if type(a) == "number" then a else a.UserId
+	local idb = if type(b) == "number" then b else b.UserId
+	self.friends[ida] = self.friends[ida] or {}
+	self.friends[idb] = self.friends[idb] or {}
+	table.insert(self.friends[ida], idb)
+	table.insert(self.friends[idb], ida)
+end
+
+-- Déplace le personnage d'un joueur (côté serveur) : met à jour HumanoidRootPart
+function Harness:moveTo(p, position)
+	local root = p.Character and p.Character:FindFirstChild("HumanoidRootPart")
+	assert(root, "moveTo : pas de personnage")
+	root.CFrame = self.globals.CFrame.new(position)
 end
 
 function Harness:respawn(p)
