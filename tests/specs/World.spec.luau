@@ -32,6 +32,23 @@ return function(T)
 		end)
 	end)
 
+	describe("Ambiance", function()
+		it("applique le crépuscule sans erreur et de façon idempotente", function()
+			local h = Harness.new()
+			local L = h:require("ServerScriptService.Server.World.Lighting")
+			L.applyTwilight()
+			L.applyTwilight()
+			expect(h.game.Lighting.ClockTime).toBe(18.4)
+			local atmospheres = 0
+			for _, c in h.game.Lighting:GetChildren() do
+				if c.ClassName == "Atmosphere" then
+					atmospheres += 1
+				end
+			end
+			expect(atmospheres).toBe(1)
+		end)
+	end)
+
 	describe("WorldFXController", function()
 		it("anime Spin/Float/Pulse et oublie les objets détruits", function()
 			local h = Harness.new({ mode = "client" })
