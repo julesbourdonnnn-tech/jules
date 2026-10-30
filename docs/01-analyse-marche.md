@@ -106,6 +106,8 @@ Source : lettres aux actionnaires [[91]][s91]. À la fin du T3 2026, 64 % des DA
 | **Ride A Pet** (« this game is gud », 14 avr. 2026) | Collection de familiers à chevaucher | ~208 K (relevé ponctuel) ; ~118 K de moyenne en sept. 2026 [[19]][s19] | Chevaucher ses familiers, trouver des œufs, les faire éclore au ranch (serveurs de 6 joueurs) | Croissance lente et régulière (~40 K CCU en 5 mois) jusqu'au top 10 |
 | **Forsaken** | Horreur asymétrique (tueur contre survivants) | ~138 K [[18]][s18] | Manches avec des listes de tueurs et de survivants | Pics à chaque grosse mise à jour ; ~4,69 Md de visites. Meilleure expérience de survie RIA 2025 |
 
+**Photo du classement fin septembre 2026.** Steal An Egg domine nettement, avec 1,6 M CCU le 30 sept., soit environ 5 fois le n°2. Suivent les jeux installés depuis longtemps (*evergreen*) : Brookhaven RP (~330 à 406 K), Murder Mystery 2, Blox Fruits et RIVALS, ainsi qu'un nouveau venu, Ride A Pet. Le jeu de rôle social et les RPG de longue date gardent une base stable, tandis que les jeux viraux « Steal/Grow » captent les pics [[23]][s23].
+
 ### 3.2 Ce qui crée les records
 
 - **Admin Abuse War (23 août 2025).** Un affrontement mis en scène entre Jandel (Grow a Garden) et SpyderSammy (Steal a Brainrot) a porté la plateforme à ~47,3 M de joueurs simultanés (Roblox annonce « plus de 45 M »), au-dessus du pic de Steam (41,2 M). Les deux jeux en représentaient à eux seuls ~37 M [[7]][s7][[59]][s59].
