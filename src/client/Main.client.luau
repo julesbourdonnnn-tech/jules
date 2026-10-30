@@ -8,6 +8,7 @@ local ORDER: { ModuleScript } = {
 	Client.UI.Root,
 	Client.Controllers.StateController,
 	Client.Controllers.AudioController,
+	Client.Controllers.WorldFXController,
 }
 
 local modules = {}

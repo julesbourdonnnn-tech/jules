@@ -321,26 +321,30 @@ function Services.install(h)
 
 	-- CollectionService
 	local tagSignals = {}
+	local removedSignals = {}
 	cm.CollectionService = {
 		AddTag = function(_, inst, tag)
-			inst:AddTag(tag)
+			MockInstance.Methods.AddTag(inst, tag)
 			if tagSignals[tag] then
 				tagSignals[tag]:Fire(inst)
 			end
 		end,
 		RemoveTag = function(_, inst, tag)
-			inst:RemoveTag(tag)
+			MockInstance.Methods.RemoveTag(inst, tag)
+			if removedSignals[tag] then
+				removedSignals[tag]:Fire(inst)
+			end
 		end,
 		HasTag = function(_, inst, tag)
-			return inst:HasTag(tag)
+			return MockInstance.Methods.HasTag(inst, tag)
 		end,
 		GetTags = function(_, inst)
-			return inst:GetTags()
+			return MockInstance.Methods.GetTags(inst)
 		end,
 		GetTagged = function(_, tag)
 			local out = {}
 			for _, d in game:GetDescendants() do
-				if d:HasTag(tag) then
+				if MockInstance.Methods.HasTag(d, tag) then
 					table.insert(out, d)
 				end
 			end
@@ -350,8 +354,9 @@ function Services.install(h)
 			tagSignals[tag] = tagSignals[tag] or Signal.new()
 			return tagSignals[tag]
 		end,
-		GetInstanceRemovedSignal = function()
-			return Signal.new()
+		GetInstanceRemovedSignal = function(_, tag)
+			removedSignals[tag] = removedSignals[tag] or Signal.new()
+			return removedSignals[tag]
 		end,
 	}
 
