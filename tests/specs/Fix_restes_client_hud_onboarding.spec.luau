@@ -727,7 +727,7 @@ return function(T)
 			expect(hint.Visible).toBe(false)
 			-- l'acclamation expire : l'instruction revient
 			c.Clock.freeze(T0 + 11)
-			obRun(c, 4)
+			obRun(c, 8) -- replacement toutes les 0,1 s
 			expect(c.HUD.cheerOverHint()).toBe(false)
 			expect(hint.Visible).toBe(true)
 			-- PC 1280 × 720 : ACCLAMER (y ≥ 480) ne touche pas l'instruction (y 342-398)
