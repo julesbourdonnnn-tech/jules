@@ -15,8 +15,9 @@
 --     l'achat
 --   * quêtes d'accueil d'achat (Q2/Q5 « upgrade » → goal.track, Q7 « perches ») lues dans le profil
 --     répliqué (onboarding.step ; progression onboarding.p = achats faits PENDANT la quête, comme
---     QuestService, jamais le niveau total) : la carte de la quête a le contour doré et elle seule pulse (quand
---     elle est payable) — jamais une autre carte moins chère qui ferait dépenser le Glow de la quête ;
+--     QuestService, jamais le niveau total) : la carte de la quête a le contour doré et elle seule
+--     pulse (quand elle est payable) — jamais une autre carte moins chère qui ferait dépenser le Glow
+--     de la quête ;
 --     elle passe en tête de liste le temps de la quête (visible dès l'ouverture sur téléphone)
 --   * bouton Supernova en bas avec anneau de progression (Glow prédit / Formulas.supernovaCost(R))
 --     → PanelController.open("Supernova")
