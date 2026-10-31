@@ -46,24 +46,27 @@ return function(T)
 	end
 
 	describe("Fix restes client HUD/accueil › démarrage du client isolé (Q11)", function()
-		it("un Start qui lève (LightingController) : les suivants démarrent, ClientReady au profil", function()
-			local h, ok, err = clientWith(function(h)
-				local Lighting = h:require(CLIENT .. "Controllers.LightingController")
-				Lighting.Start = function()
-					error("panne simulée de LightingController")
-				end
-			end)
-			expect({ ok = ok, err = if ok then nil else tostring(err) }).toEqual({ ok = true })
-			-- les modules suivants ont démarré (HUD, Minimap, accueil)
-			expect(h.localPlayer.PlayerGui:FindFirstChild("HUD") ~= nil).toBe(true)
-			expect(h.localPlayer.PlayerGui:FindFirstChild("Onboarding") ~= nil).toBe(true)
-			expect(anyLine(h:warnings(), "LightingController", "Start", "panne simulée")).toBe(true)
-			-- l'écran de chargement attend le profil
-			expect(h.localPlayer:GetAttribute("ClientReady")).toBeNil()
-			h:fireClient("ReplicatedStorage.Remotes.DataSnapshot", { glow = 5 })
-			h:settle(2)
-			expect(h.localPlayer:GetAttribute("ClientReady")).toBe(true)
-		end)
+		it(
+			"un Start qui lève (LightingController) : les suivants démarrent, ClientReady au profil",
+			function()
+				local h, ok, err = clientWith(function(h)
+					local Lighting = h:require(CLIENT .. "Controllers.LightingController")
+					Lighting.Start = function()
+						error("panne simulée de LightingController")
+					end
+				end)
+				expect({ ok = ok, err = if ok then nil else tostring(err) }).toEqual({ ok = true })
+				-- les modules suivants ont démarré (HUD, Minimap, accueil)
+				expect(h.localPlayer.PlayerGui:FindFirstChild("HUD") ~= nil).toBe(true)
+				expect(h.localPlayer.PlayerGui:FindFirstChild("Onboarding") ~= nil).toBe(true)
+				expect(anyLine(h:warnings(), "LightingController", "Start", "panne simulée")).toBe(true)
+				-- l'écran de chargement attend le profil
+				expect(h.localPlayer:GetAttribute("ClientReady")).toBeNil()
+				h:fireClient("ReplicatedStorage.Remotes.DataSnapshot", { glow = 5 })
+				h:settle(2)
+				expect(h.localPlayer:GetAttribute("ClientReady")).toBe(true)
+			end
+		)
 
 		it("HUD en panne (Init et Start lèvent) : ClientReady posé quand même à l'instantané", function()
 			local h, ok = clientWith(function(h)
@@ -99,19 +102,22 @@ return function(T)
 			expect(h.localPlayer:GetAttribute("ClientReady")).toBe(true)
 		end)
 
-		it("démarrage sain : aucun avertissement, ClientReady au profil (une seule fois, booléen)", function()
-			local h, ok = clientWith(function() end)
-			expect(ok).toBe(true)
-			local changes = 0
-			h.localPlayer:GetAttributeChangedSignal("ClientReady"):Connect(function()
-				changes += 1
-			end)
-			h:fireClient("ReplicatedStorage.Remotes.DataSnapshot", { glow = 5 })
-			h:settle(2)
-			expect(h.localPlayer:GetAttribute("ClientReady")).toBe(true)
-			expect(changes).toBe(1)
-			expect(#h:warnings()).toBe(0)
-		end)
+		it(
+			"démarrage sain : aucun avertissement, ClientReady au profil (une seule fois, booléen)",
+			function()
+				local h, ok = clientWith(function() end)
+				expect(ok).toBe(true)
+				local changes = 0
+				h.localPlayer:GetAttributeChangedSignal("ClientReady"):Connect(function()
+					changes += 1
+				end)
+				h:fireClient("ReplicatedStorage.Remotes.DataSnapshot", { glow = 5 })
+				h:settle(2)
+				expect(h.localPlayer:GetAttribute("ClientReady")).toBe(true)
+				expect(changes).toBe(1)
+				expect(#h:warnings()).toBe(0)
+			end
+		)
 	end)
 
 	-- =========================================================================================
@@ -186,32 +192,35 @@ return function(T)
 			expect(c.EventPill.compute(ev, now, c.t, c.nameOf).kind).toBe("boost")
 		end)
 
-		it("priorités inchangées : Comète, Balise, Frenzy, Starfall avant la météo et les boosts", function()
-			local c = pill()
-			local now = T0 + 150
-			local base = {
-				weather = { key = "aurora", startsAt = T0 + 120, endsAt = T0 + 270 },
-				serverBoost = { endsAt = now + 3000, source = "glowParty" },
-			}
-			local ev = events(now, base)
-			ev.frenzy = { endsAt = now + 30 }
-			expect(c.EventPill.compute(ev, now, c.t, c.nameOf).kind).toBe("frenzy")
-			ev.frenzy = nil
-			ev.starfall = { startsAt = now - 10, endsAt = now + 500 }
-			expect(c.EventPill.compute(ev, now, c.t, c.nameOf).kind).toBe("starfall")
-			ev.starfall = nil
-			ev.comet = {
-				id = 1,
-				phase = "ground",
-				x = 0,
-				z = 0,
-				code = 1,
-				warnAt = 0,
-				impactAt = now,
-				burstAt = now + 60,
-			}
-			expect(c.EventPill.compute(ev, now, c.t, c.nameOf).kind).toBe("comet")
-		end)
+		it(
+			"priorités inchangées : Comète, Balise, Frenzy, Starfall avant la météo et les boosts",
+			function()
+				local c = pill()
+				local now = T0 + 150
+				local base = {
+					weather = { key = "aurora", startsAt = T0 + 120, endsAt = T0 + 270 },
+					serverBoost = { endsAt = now + 3000, source = "glowParty" },
+				}
+				local ev = events(now, base)
+				ev.frenzy = { endsAt = now + 30 }
+				expect(c.EventPill.compute(ev, now, c.t, c.nameOf).kind).toBe("frenzy")
+				ev.frenzy = nil
+				ev.starfall = { startsAt = now - 10, endsAt = now + 500 }
+				expect(c.EventPill.compute(ev, now, c.t, c.nameOf).kind).toBe("starfall")
+				ev.starfall = nil
+				ev.comet = {
+					id = 1,
+					phase = "ground",
+					x = 0,
+					z = 0,
+					code = 1,
+					warnAt = 0,
+					impactAt = now,
+					burstAt = now + 60,
+				}
+				expect(c.EventPill.compute(ev, now, c.t, c.nameOf).kind).toBe("comet")
+			end
+		)
 
 		it("Nuit d'Or (temps fort de 5 min après la Balise) : garde sa place devant la météo", function()
 			local c = pill()
@@ -446,28 +455,31 @@ return function(T)
 			expect(b.Upgrades.NextSelectionRight).toBe(b.Collection)
 		end)
 
-		it("révélation progressive (Améliorer puis Objectifs) : voisins parmi les boutons affichés", function()
-			local c = hudSetup()
-			screen(c, 800, 360, 36)
-			c.HUD.reveal("rail.Upgrades", false)
-			c.HUD.reveal("rail.Goals", false)
-			local rail = hud(c).Rail
-			local up, goals = rail.Upgrades.Button, rail.Goals.Button
-			-- la grille tasse les boutons affichés : Objectifs à droite d'Améliorer
-			local rects = checkRail(c, "accueil Q3")
-			expect(rects.Goals.y0).toBe(rects.Upgrades.y0)
-			expect(up.NextSelectionRight).toBe(goals)
-			expect(goals.NextSelectionLeft).toBe(up)
-			expect(up.NextSelectionDown).toBeNil()
-			-- un bouton caché n'est jamais une cible de navigation
-			expect(rail.Collection.Button.NextSelectionLeft).toBeNil()
-			c.HUD.reveal("rail.Collection", false)
-			expect(up.NextSelectionRight).toBe(rail.Collection.Button)
-			expect(up.NextSelectionDown).toBe(goals)
-			-- sélection manette (Y) : premier bouton affiché
-			expect(c.HUD.selectRail()).toBe(true)
-			expect(#c.h:signalErrors()).toBe(0)
-		end)
+		it(
+			"révélation progressive (Améliorer puis Objectifs) : voisins parmi les boutons affichés",
+			function()
+				local c = hudSetup()
+				screen(c, 800, 360, 36)
+				c.HUD.reveal("rail.Upgrades", false)
+				c.HUD.reveal("rail.Goals", false)
+				local rail = hud(c).Rail
+				local up, goals = rail.Upgrades.Button, rail.Goals.Button
+				-- la grille tasse les boutons affichés : Objectifs à droite d'Améliorer
+				local rects = checkRail(c, "accueil Q3")
+				expect(rects.Goals.y0).toBe(rects.Upgrades.y0)
+				expect(up.NextSelectionRight).toBe(goals)
+				expect(goals.NextSelectionLeft).toBe(up)
+				expect(up.NextSelectionDown).toBeNil()
+				-- un bouton caché n'est jamais une cible de navigation
+				expect(rail.Collection.Button.NextSelectionLeft).toBeNil()
+				c.HUD.reveal("rail.Collection", false)
+				expect(up.NextSelectionRight).toBe(rail.Collection.Button)
+				expect(up.NextSelectionDown).toBe(goals)
+				-- sélection manette (Y) : premier bouton affiché
+				expect(c.HUD.selectRail()).toBe(true)
+				expect(#c.h:signalErrors()).toBe(0)
+			end
+		)
 	end)
 
 	-- =========================================================================================
@@ -603,140 +615,221 @@ return function(T)
 		return a.x0 < b.x1 and b.x0 < a.x1 and a.y0 < b.y1 and b.y0 < a.y1
 	end
 
-	describe("Fix restes client HUD/accueil › instruction d'accueil lisible (Q18, N93, N154, N159, N163)", function()
-		it("téléphones et PC : l'instruction ne touche ni la pile de 3 toasts ni le compteur de file", function()
-			local c = obSetup()
-			obLoad(c, { onboarding = { step = 1, p = 0 } })
-			obRun(c, 3)
-			expect(c.Onboarding.currentHint()).toBe("onboarding.catch")
-			for i = 1, 3 do
-				c.Toast.show("Toast " .. i, "info")
-			end
-			for _, size in
-				{
-					{ 800, 360, 36 },
-					{ 800, 360, 58 },
-					{ 844, 390, 36 },
-					{ 844, 390, 58 },
-					{ 667, 375, 36 },
-					{ 1280, 720, 36 },
-				}
-			do
-				screen(c, size[1], size[2], size[3])
+	describe(
+		"Fix restes client HUD/accueil › instruction d'accueil lisible (Q18, N93, N154, N159, N163)",
+		function()
+			it(
+				"téléphones et PC : l'instruction ne touche ni la pile de 3 toasts ni le compteur de file",
+				function()
+					local c = obSetup()
+					obLoad(c, { onboarding = { step = 1, p = 0 } })
+					obRun(c, 3)
+					expect(c.Onboarding.currentHint()).toBe("onboarding.catch")
+					for i = 1, 3 do
+						c.Toast.show("Toast " .. i, "info")
+					end
+					for _, size in
+						{
+							{ 800, 360, 36 },
+							{ 800, 360, 58 },
+							{ 844, 390, 36 },
+							{ 844, 390, 58 },
+							{ 667, 375, 36 },
+							{ 1280, 720, 36 },
+						}
+					do
+						screen(c, size[1], size[2], size[3])
+						obRun(c, 4)
+						local label = size[1] .. "x" .. size[2] .. "/" .. size[3]
+						local _, H = content(c)
+						local hint, toasts = hintRect(c), toastRect(c)
+						expect(toasts.n).toBe(3)
+						expect({ screen = label, overlap = overlaps(hint, toasts) }).toEqual({
+							screen = label,
+							overlap = false,
+						})
+						-- compteur de file (bas centre, y = −24, 56 de haut) : écart d'au moins 8 px
+						expect({ screen = label, clear = hint.y1 + 8 <= H - 24 - 56 + 1e-6 }).toEqual({
+							screen = label,
+							clear = true,
+						})
+						expect(hintOf(c).Visible).toBe(true)
+						expect(c.h.localPlayer.PlayerGui.Onboarding.DisplayOrder).toBe(20)
+						-- même règle que la colonne de droite du HUD (zone réservée)
+						expect(hint.y0).toBe(c.HUD.hintTop())
+					end
+					expect(#c.h:signalErrors()).toBe(0)
+				end
+			)
+
+			it(
+				"Améliorer ouvert : « Buy Conga +1 » au-dessus de la fenêtre, ancrée sur son bord haut",
+				function()
+					local c = obSetup()
+					screen(c, 800, 360, 36)
+					obLoad(c, { onboarding = { step = 1, p = 0 }, stats = { parades = 1, catches = 3 } })
+					obRun(c, 3)
+					expect(c.Onboarding.currentHint()).toBe("onboarding.tapUpgrade")
+					-- fenêtre des panneaux mesurée par le moteur : haut à 40 px réels sous la zone sûre
+					local window = c.g.Instance.new("CanvasGroup")
+					window.Name = "Window"
+					window.AbsolutePosition = Vector2.new(50, 40)
+					window.AbsoluteSize = Vector2.new(700, 280)
+					local page = c.g.Instance.new("Frame")
+					page.Name = "Page_Upgrades"
+					page.Parent = window
+					c.page = page
+					c.Panels.open("Upgrades")
+					obRun(c, 3)
+					expect(c.Onboarding.currentHint()).toBe("onboarding.buyConga")
+					local hint = hintOf(c)
+					expect(hint.Visible).toBe(true)
+					expect(hint.GroupTransparency).toBe(0)
+					expect(c.Onboarding._state().hintShown).toBe(true)
+					expect(c.Onboarding._state().hintDocked).toBe(true)
+					-- au-dessus de la fenêtre des panneaux (DisplayOrder 30)
+					local panelsOrder = 30
+					expect(c.h.localPlayer.PlayerGui.Onboarding.DisplayOrder > panelsOrder).toBe(true)
+					expect(c.h.localPlayer.PlayerGui.Onboarding.DisplayOrder < 40).toBe(true) -- sous les bannières
+					-- à cheval sur le bord haut de la fenêtre (40 / 0,6 − 8 ≈ 58,7 px de référence)
+					local top = 40 / c.Root.scale() - 8
+					local r = hintRect(c)
+					expect(r.y0 < top and r.y1 > top).toBe(true)
+					expect(r.y0 >= 8).toBe(true)
+					-- fenêtre pas encore mesurée : en haut de l'écran, toujours au-dessus du panneau
+					c.page = nil
+					obRun(c, 4)
+					expect(hint.Position.Y.Offset).toBe(8)
+					expect(hint.Visible).toBe(true)
+					-- fermeture : place normale sous les toasts, écran d'accueil redescendu
+					c.Panels.close()
+					obRun(c, 3)
+					expect(c.Onboarding.currentHint()).toBe("onboarding.tapUpgrade")
+					expect(hint.Visible).toBe(true)
+					expect(hint.Position.Y.Offset).toBe(c.HUD.hintTop())
+					expect(c.h.localPlayer.PlayerGui.Onboarding.DisplayOrder).toBe(20)
+					expect(#c.h:signalErrors()).toBe(0)
+				end
+			)
+
+			it(
+				"autre panneau ouvert : l'instruction (sans rapport) s'efface puis revient à la fermeture",
+				function()
+					local c = obSetup()
+					screen(c, 844, 390, 36)
+					obLoad(c, { onboarding = { step = 1, p = 0 } })
+					obRun(c, 3)
+					expect(c.Onboarding.currentHint()).toBe("onboarding.catch")
+					local hint = hintOf(c)
+					expect(hint.Visible).toBe(true)
+					c.Panels.open("Goals")
+					obRun(c, 3)
+					-- même instruction, volontairement effacée (elle serait sous la fenêtre)
+					expect(c.Onboarding.currentHint()).toBe("onboarding.catch")
+					expect(c.Onboarding._state().hintShown).toBe(false)
+					expect(hint.Visible).toBe(false)
+					expect(c.h.localPlayer.PlayerGui.Onboarding.DisplayOrder).toBe(20)
+					c.Panels.close()
+					obRun(c, 3)
+					expect(hint.Visible).toBe(true)
+					expect(hint.GroupTransparency).toBe(0)
+					expect(#c.h:signalErrors()).toBe(0)
+				end
+			)
+
+			it("ACCLAMER sur téléphone : l'instruction s'efface 10 s ; écran haut : elle reste", function()
+				local c = obSetup()
+				screen(c, 800, 360, 36)
+				obLoad(c, { onboarding = { step = 1, p = 0 } })
+				obRun(c, 3)
+				local hint = hintOf(c)
+				expect(hint.Visible).toBe(true)
+				c.HUD._onCheerPrompt({ heroId = 2, level = 1, expiresAt = T0 + 10 })
 				obRun(c, 4)
-				local label = size[1] .. "x" .. size[2] .. "/" .. size[3]
-				local _, H = content(c)
-				local hint, toasts = hintRect(c), toastRect(c)
-				expect(toasts.n).toBe(3)
-				expect({ screen = label, overlap = overlaps(hint, toasts) }).toEqual({
-					screen = label,
-					overlap = false,
-				})
-				-- compteur de file (bas centre, y = −24, 56 de haut) : écart d'au moins 8 px
-				expect({ screen = label, clear = hint.y1 + 8 <= H - 24 - 56 + 1e-6 }).toEqual({
-					screen = label,
-					clear = true,
-				})
-				expect(hintOf(c).Visible).toBe(true)
-				expect(c.h.localPlayer.PlayerGui.Onboarding.DisplayOrder).toBe(20)
-				-- même règle que la colonne de droite du HUD (zone réservée)
-				expect(hint.y0).toBe(c.HUD.hintTop())
+				expect(c.HUD.cheerOverHint()).toBe(true)
+				expect(hint.Visible).toBe(false)
+				-- l'acclamation expire : l'instruction revient
+				c.Clock.freeze(T0 + 11)
+				obRun(c, 8) -- replacement toutes les 0,1 s
+				expect(c.HUD.cheerOverHint()).toBe(false)
+				expect(hint.Visible).toBe(true)
+				-- PC 1280 × 720 : ACCLAMER (y ≥ 480) ne touche pas l'instruction (y 342-398)
+				screen(c, 1280, 720, 36)
+				c.HUD._onCheerPrompt({ heroId = 2, level = 1, expiresAt = T0 + 20 })
+				obRun(c, 4)
+				expect(c.HUD.cheerOverHint()).toBe(false)
+				expect(hint.Visible).toBe(true)
+				expect(#c.h:signalErrors()).toBe(0)
+			end)
+		end
+	)
+
+	-- =========================================================================================
+	-- ScreenFX : le tampon de Starforge ne gâche plus la révélation du panneau Collection
+	-- =========================================================================================
+
+	describe(
+		"Fix restes client HUD/accueil › Starforge : révélation laissée au panneau (N53)",
+		function()
+			local function smallStamp(c)
+				local stamp = c.h.localPlayer.PlayerGui.ScreenFX.Safe:FindFirstChild("SmallStamp")
+				return if stamp and stamp.Visible then stamp.Text else nil
 			end
-			expect(#c.h:signalErrors()).toBe(0)
-		end)
 
-		it("Améliorer ouvert : « Buy Conga +1 » au-dessus de la fenêtre, ancrée sur son bord haut", function()
-			local c = obSetup()
-			screen(c, 800, 360, 36)
-			obLoad(c, { onboarding = { step = 1, p = 0 }, stats = { parades = 1, catches = 3 } })
-			obRun(c, 3)
-			expect(c.Onboarding.currentHint()).toBe("onboarding.tapUpgrade")
-			-- fenêtre des panneaux mesurée par le moteur : haut à 40 px réels sous la zone sûre
-			local window = c.g.Instance.new("CanvasGroup")
-			window.Name = "Window"
-			window.AbsolutePosition = Vector2.new(50, 40)
-			window.AbsoluteSize = Vector2.new(700, 280)
-			local page = c.g.Instance.new("Frame")
-			page.Name = "Page_Upgrades"
-			page.Parent = window
-			c.page = page
-			c.Panels.open("Upgrades")
-			obRun(c, 3)
-			expect(c.Onboarding.currentHint()).toBe("onboarding.buyConga")
-			local hint = hintOf(c)
-			expect(hint.Visible).toBe(true)
-			expect(hint.GroupTransparency).toBe(0)
-			expect(c.Onboarding._state().hintShown).toBe(true)
-			expect(c.Onboarding._state().hintDocked).toBe(true)
-			-- au-dessus de la fenêtre des panneaux (DisplayOrder 30)
-			local panelsOrder = 30
-			expect(c.h.localPlayer.PlayerGui.Onboarding.DisplayOrder > panelsOrder).toBe(true)
-			expect(c.h.localPlayer.PlayerGui.Onboarding.DisplayOrder < 40).toBe(true) -- sous les bannières
-			-- à cheval sur le bord haut de la fenêtre (40 / 0,6 − 8 ≈ 58,7 px de référence)
-			local top = 40 / c.Root.scale() - 8
-			local r = hintRect(c)
-			expect(r.y0 < top and r.y1 > top).toBe(true)
-			expect(r.y0 >= 8).toBe(true)
-			-- fenêtre pas encore mesurée : en haut de l'écran, toujours au-dessus du panneau
-			c.page = nil
-			obRun(c, 4)
-			expect(hint.Position.Y.Offset).toBe(8)
-			expect(hint.Visible).toBe(true)
-			-- fermeture : place normale sous les toasts, écran d'accueil redescendu
-			c.Panels.close()
-			obRun(c, 3)
-			expect(c.Onboarding.currentHint()).toBe("onboarding.tapUpgrade")
-			expect(hint.Visible).toBe(true)
-			expect(hint.Position.Y.Offset).toBe(c.HUD.hintTop())
-			expect(c.h.localPlayer.PlayerGui.Onboarding.DisplayOrder).toBe(20)
-			expect(#c.h:signalErrors()).toBe(0)
-		end)
+			it(
+				"Collection ouverte : aucun tampon d'écran, le panneau reçoit toujours Celebrated",
+				function()
+					local c = hudSetup()
+					local open = "Collection"
+					c.Panels.current = function()
+						return open
+					end
+					local seen = {}
+					c.FX.Celebrated:Connect(function(payload)
+						table.insert(seen, payload.kind)
+					end)
+					local payload =
+						{ kind = "starforge", data = { uid = "n1", s = 1, f = 0, v = 0, stars = 3 } }
+					c.h:fireClient("ReplicatedStorage.Remotes.Celebrate", payload)
+					c.h:settle(1)
+					expect(smallStamp(c)).toBeNil()
+					expect(seen[1]).toBe("starforge")
+					-- panneau fermé (Starforge terminé ailleurs, ex. « Tout fusionner » puis fermeture) : tampon
+					open = nil
+					c.h:fireClient("ReplicatedStorage.Remotes.Celebrate", payload)
+					c.h:settle(1)
+					expect(smallStamp(c)).toBe("★3!")
+					-- autre panneau ouvert : le tampon reste (aucune autre révélation à l'écran)
+					c.h:step(1 / 10, 40)
+					expect(smallStamp(c)).toBeNil()
+					open = "Upgrades"
+					c.h:fireClient("ReplicatedStorage.Remotes.Celebrate", payload)
+					c.h:settle(1)
+					expect(smallStamp(c)).toBe("★3!")
+					expect(#seen).toBe(3)
+					expect(#c.h:signalErrors()).toBe(0)
+				end
+			)
 
-		it("autre panneau ouvert : l'instruction (sans rapport) s'efface puis revient à la fermeture", function()
-			local c = obSetup()
-			screen(c, 844, 390, 36)
-			obLoad(c, { onboarding = { step = 1, p = 0 } })
-			obRun(c, 3)
-			expect(c.Onboarding.currentHint()).toBe("onboarding.catch")
-			local hint = hintOf(c)
-			expect(hint.Visible).toBe(true)
-			c.Panels.open("Goals")
-			obRun(c, 3)
-			-- même instruction, volontairement effacée (elle serait sous la fenêtre)
-			expect(c.Onboarding.currentHint()).toBe("onboarding.catch")
-			expect(c.Onboarding._state().hintShown).toBe(false)
-			expect(hint.Visible).toBe(false)
-			expect(c.h.localPlayer.PlayerGui.Onboarding.DisplayOrder).toBe(20)
-			c.Panels.close()
-			obRun(c, 3)
-			expect(hint.Visible).toBe(true)
-			expect(hint.GroupTransparency).toBe(0)
-			expect(#c.h:signalErrors()).toBe(0)
-		end)
-
-		it("ACCLAMER sur téléphone : l'instruction s'efface 10 s ; écran haut : elle reste", function()
-			local c = obSetup()
-			screen(c, 800, 360, 36)
-			obLoad(c, { onboarding = { step = 1, p = 0 } })
-			obRun(c, 3)
-			local hint = hintOf(c)
-			expect(hint.Visible).toBe(true)
-			c.HUD._onCheerPrompt({ heroId = 2, level = 1, expiresAt = T0 + 10 })
-			obRun(c, 4)
-			expect(c.HUD.cheerOverHint()).toBe(true)
-			expect(hint.Visible).toBe(false)
-			-- l'acclamation expire : l'instruction revient
-			c.Clock.freeze(T0 + 11)
-			obRun(c, 8) -- replacement toutes les 0,1 s
-			expect(c.HUD.cheerOverHint()).toBe(false)
-			expect(hint.Visible).toBe(true)
-			-- PC 1280 × 720 : ACCLAMER (y ≥ 480) ne touche pas l'instruction (y 342-398)
-			screen(c, 1280, 720, 36)
-			c.HUD._onCheerPrompt({ heroId = 2, level = 1, expiresAt = T0 + 20 })
-			obRun(c, 4)
-			expect(c.HUD.cheerOverHint()).toBe(false)
-			expect(hint.Visible).toBe(true)
-			expect(#c.h:signalErrors()).toBe(0)
-		end)
-	end)
+			it("crochet absent ou en erreur : comportement d'origine, jamais d'erreur", function()
+				local c = hudSetup()
+				c.FX.setPanelResolver(function()
+					error("panne du crochet")
+				end)
+				local payload = { kind = "starforge", data = { stars = 2 } }
+				c.h:fireClient("ReplicatedStorage.Remotes.Celebrate", payload)
+				c.h:settle(1)
+				expect(smallStamp(c)).toBe("★2!")
+				c.FX.setPanelResolver(nil)
+				c.h:step(1 / 10, 40)
+				c.h:fireClient(
+					"ReplicatedStorage.Remotes.Celebrate",
+					{ kind = "starforge", data = { stars = 4 } }
+				)
+				c.h:settle(1)
+				expect(smallStamp(c)).toBe("★4!")
+				expect(#c.h:signalErrors()).toBe(0)
+			end)
+		end
+	)
 end

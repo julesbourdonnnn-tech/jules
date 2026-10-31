@@ -159,7 +159,7 @@ export type ParadeInfo = {
 	glow: number, -- Glow crédité
 	bonus: number, -- Conga Bonus appliqué
 	atBeacon: boolean,
-	idleSeconds: number, -- glow / revenu passif (0 si revenu nul)
+	idleSeconds: number, -- glow / revenu passif d'AVANT la parade (taux d'après s'il était nul ; 0 si les deux le sont)
 	newEntries: number, -- nouvelles entrées d'Atlas
 	forced: boolean, -- encaissement forcé avant Supernova
 }

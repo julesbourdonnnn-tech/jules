@@ -1248,8 +1248,8 @@ local function box(x: number, y: number, w: number, h: number): Rect
 end
 
 -- Haut de l'instruction d'accueil (px de référence) pour une zone intérieure de hauteur `height` :
--- sous la pile complète de toasts ; plus haut seulement si le compteur de file l'exige (écrans
--- très bas, < 320 dp) — le compteur de file reste toujours lisible
+-- sous la pile complète de toasts ; plus haut seulement si le compteur de file l'exige (zone
+-- intérieure < 486 px : écrans de moins de ~340 dp de haut) — le compteur de file reste lisible
 local function hintTop(height: number?): number
 	if height == nil or not isFinite(height) then
 		return HINT_Y
@@ -1993,6 +1993,10 @@ function HUD.Init()
 	cheerRemote = Net.event("Cheer")
 	-- crochet : ScreenFX (plus précoce) fait voler les récompenses vers nos compteurs
 	ScreenFX.setAnchorResolver(HUD.anchor)
+	-- crochet : ScreenFX laisse au panneau Collection ouvert sa propre révélation de Starforge
+	ScreenFX.setPanelResolver(function(): string?
+		return PanelController.current()
+	end)
 	-- garde des raccourcis : pas de panneau dont l'icône n'est pas encore affichée
 	InputController.setPanelGate(function(name: Types.PanelName): boolean
 		local element = PANEL_ELEMENT[name]

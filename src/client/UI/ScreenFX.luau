@@ -9,7 +9,9 @@
 --   * Celebrate → réactions d'écran : "supernova" (titre qui s'écrit en 0,6 s), "atlasNew" /
 --     "speciesComplete" (carte qui glisse de la droite, reflet), "atlasMilestone" (confettis),
 --     "questDone" / "questClaimed" / "dailyClaimed" (récompense qui vole vers son compteur),
---     "starforge", "purchase" (pluie de 30 pièces, « Merci ! »), "cometBanked", "release",
+--     "starforge" (tampon « ★N ! », sauf panneau Collection ouvert : il joue lui-même la révélation
+--     du GDD §9.4, orbite de 1,2 s puis résultat et son tampon), "purchase" (pluie de 30 pièces,
+--     « Merci ! »), "cometBanked", "release",
 --     "unlock", "upgrade" (+ VFXController.playUpgrade), "offline" (ReturnScreen ouvert par les
 --     abonnés de Celebrated)
 --   * tampons centraux (police LuckiestGuy, UIStroke 3 px) : « PARADE ×2,36 ! » (échelle 2 → 1,
@@ -196,6 +198,7 @@ local gui: ScreenGui? = nil
 local layer: Frame? = nil -- plein écran, en pixels (pièces, floaters, confettis, vignette)
 local center: Frame? = nil -- conteneur mis à l'échelle (tampons, titre, cartes)
 local anchorResolver: ((Types.HudElement) -> GuiObject?)? = nil
+local panelResolver: (() -> string?)? = nil
 
 local coinPool: { Frame } = {}
 local flights: { Flight } = {}
@@ -299,6 +302,17 @@ local function worldToScreen(pos: Vector3): Vector2?
 		return nil
 	end
 	return Vector2.new(point.X, point.Y)
+end
+
+-- Panneau ouvert (crochet posé par le HUD : PanelController, plus tardif dans l'ordre §13.1, requiert
+-- ce module) ; nil si aucun ou inconnu
+local function openPanel(): string?
+	local resolve = panelResolver
+	if resolve == nil then
+		return nil
+	end
+	local ok, result = pcall(resolve)
+	return if ok and type(result) == "string" then result else nil
 end
 
 local function anchor(element: Types.HudElement): GuiObject?
@@ -930,6 +944,11 @@ function ScreenFX.setAnchorResolver(fn: ((Types.HudElement) -> GuiObject?)?)
 	anchorResolver = fn
 end
 
+-- Crochet posé par le HUD : panneau ouvert (PanelController.current), lu sans dépendance montante
+function ScreenFX.setPanelResolver(fn: (() -> string?)?)
+	panelResolver = fn
+end
+
 -- Retour local (même chemin qu'un Feedback serveur : toast/tampon + FeedbackReceived)
 function ScreenFX.notify(key: string, vars: { [string]: any }?, tone: Types.FeedbackTone?)
 	ScreenFX._onFeedback({ key = key, vars = vars or {}, tone = tone or "info" })
@@ -1094,7 +1113,9 @@ local function onCelebrate(payload: any)
 		end
 	elseif kind == "starforge" then
 		local stars = num(data.stars)
-		if stars and stars >= 1 and stars <= MAX_STARS then
+		-- panneau Collection ouvert : sa révélation (orbite 1,2 s, flash, résultat, « ★N ! ») ne doit
+		-- pas être gâchée par un tampon d'écran qui donne le résultat avant elle (GDD §9.4)
+		if stars and stars >= 1 and stars <= MAX_STARS and openPanel() ~= "Collection" then
 			showStamp(Prefs.t("celebrate.starforge", { stars = math.floor(stars) }), GOLD, "small", 1.2)
 		end
 	elseif kind == "upgrade" then

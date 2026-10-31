@@ -221,7 +221,7 @@ return function(T)
 			end
 		)
 
-		it("Frostfall : neige qui suit la caméra (60 / s) ; Graphismes légers : × 0,3", function()
+		it("Frostfall : neige qui suit la caméra (15 / s) ; Graphismes légers : × 0,3", function()
 			local c = setup()
 			c.env.weather =
 				{ slot = 1, key = "frost", startsAt = T0 - 5, endsAt = T0 + 100, starfall = false }
@@ -233,14 +233,14 @@ return function(T)
 			expect(carrier.Position.Z).toBeNear(-40, 1e-6)
 			expect(carrier.Position.Y).toBeGreaterThan(10)
 			local emitter = carrier:FindFirstChildOfClass("ParticleEmitter")
-			expect(emitter.Rate).toBeNear(60, 1e-6)
+			expect(emitter.Rate).toBeNear(15, 1e-6)
 			expect(emitter.Lifetime.Min).toBeNear(6)
 			expect(c.L.Atmosphere.Haze).toBeNear(c.Events.Lighting.Presets.frost.Haze, 1e-6)
 			c.Prefs._onSettings({ lowGraphics = true })
 			c.h:settle(1)
 			c.LC._update(1 / 60)
 			local low = c.h.workspace.ClientSky.snow.SnowEmitter:FindFirstChildOfClass("ParticleEmitter")
-			expect(low.Rate).toBeNear(60 * 0.3, 1e-6)
+			expect(low.Rate).toBeNear(15 * 0.3, 1e-6)
 			c.LC._stop()
 		end)
 

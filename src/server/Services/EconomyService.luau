@@ -27,8 +27,8 @@
 --     Signals.UpgradeBought, Notify.celebrate "upgrade", Analytics Upgrade_<piste>_<niveau>
 --   * remote Supernova() : débit 1/2 s, port sûr de son Nid (position de CONFIANCE : la dernière
 --     validée par MoveCheck, jamais la seule position du client, voir NestService.inOwnHarbor), PUIS
---     encaissement de la file (crochet de CongaService), settle, Glow ≥ coût → Glow, glowCarry et
---     pistes ResetOnSupernova remis à 0,
+--     settle, Glow ≥ coût (refus sans effet de bord), PUIS encaissement de la file (crochet de
+--     CongaService), settle → Glow, glowCarry et pistes ResetOnSupernova remis à 0,
 --     supernovas + 1, Signals.Supernova, bannière, Celebrate, Analytics Supernova_<R>, SupernovaReached
 --   * Stardust : add / trySpend / addCapped (plafonds du jour UTC : snipDust, wispDust en Stardust ;
 --     cheers en nombre d'acclamations ; duo une fois par jour)
@@ -820,24 +820,32 @@ function EconomyService.trySupernova(player: Player): (boolean, string?)
 		Notify.feedback(player, "feedback.notInHarbor", {}, "warning")
 		return false, "feedback.notInHarbor"
 	end
-	-- la file en cours est encaissée d'abord (parade normale, forcée)
-	local banker = lineBanker
-	if banker then
-		local ok, err = pcall(banker, player)
-		if not ok then
-			warn("[EconomyService] encaissement de la file avant Supernova :", err)
-		end
-		-- le profil peut survivre au départ (sauvegarde en cours) : revérifier aussi la présence
-		if DataService.get(player) ~= data or player.Parent == nil then
-			return false, nil
-		end
-	end
+	-- conditions d'abord (GDD §4.12 : Glow ≥ coût), comme l'aperçu du client : un refus n'a aucun
+	-- effet de bord (la file n'est PAS encaissée)
 	settleCore(player, data, session, Clock.now())
 	local R = data.supernovas
 	local cost = Formulas.supernovaCost(R)
 	if data.glow < cost then
 		Notify.feedback(player, "feedback.notEnoughGlow", { missing = cost - data.glow }, "error")
 		return false, "feedback.notEnoughGlow"
+	end
+	-- puis la file en cours est encaissée juste avant (parade normale, forcée)
+	local banker = lineBanker
+	if banker then
+		local ok, err = pcall(banker, player)
+		if not ok then
+			warn("[EconomyService] encaissement de la file avant Supernova :", err)
+		end
+		-- le profil peut survivre au départ (sauvegarde en cours) : revérifier aussi la présence ;
+		-- défense : rien ne doit avoir dépensé ni fait de Supernova pendant l'encaissement
+		if DataService.get(player) ~= data or player.Parent == nil or data.supernovas ~= R then
+			return false, nil
+		end
+		settleCore(player, data, session, Clock.now())
+		if data.glow < cost then
+			Notify.feedback(player, "feedback.notEnoughGlow", { missing = cost - data.glow }, "error")
+			return false, "feedback.notEnoughGlow"
+		end
 	end
 	local newR = R + 1
 	local removed = data.glow

@@ -455,12 +455,12 @@ return function(T)
 			"neige active du ciel décomptée ; neige retirée → budget rendu ; débits absurdes ignorés",
 			function()
 				local c = setup({ vfx = true })
-				-- Graphismes légers du GDD : 60 × 0,3 = 18 / s pendant 6 s ≈ 108 particules
+				-- neige de test : 18 / s pendant 6 s ≈ 108 particules
 				local emitter, folder = snow(c, 18, 6)
 				frames(c, 10)
 				spam(c, 40)
 				expect(c.VFX.particlesAlive()).toBeNear(c.Render.MaxParticles - 108, 1)
-				-- neige à pleine intensité (60 / s × 6 s = 360) : plus aucune place pour les rafales
+				-- neige très dense (60 / s × 6 s = 360) : plus aucune place pour les rafales
 				c.Clock.advance(2)
 				emitter.Rate = 60
 				frames(c, 10)

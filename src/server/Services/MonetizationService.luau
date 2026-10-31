@@ -185,9 +185,10 @@ local function verifyPurchase(player: Player, passKey: string, passId: number)
 end
 
 -- Acquitte un reçu seulement après une sauvegarde réussie (GDD §8.1.4). Serveur en fermeture :
--- le profil peut déjà être libéré par BindToClose (DataService.saveNow répond alors true sans rien
--- écrire) ; Roblox redélivrera le reçu à la session suivante, où le reçu sauvegardé (ou non) dit
--- s'il faut créditer : jamais de double crédit, jamais d'achat perdu.
+-- le profil peut déjà être libéré par BindToClose (DataService.saveNow répond alors false : rien
+-- n'est écrit après la sauvegarde de libération ; la garde `closing` reste en défense en profondeur) ;
+-- Roblox redélivrera le reçu à la session suivante, où le reçu sauvegardé (ou non) dit s'il faut
+-- créditer : jamais de double crédit, jamais d'achat perdu.
 local function acknowledgeAfterSave(player: Player): Enum.ProductPurchaseDecision
 	if not DataService.saveNow(player) or closing then
 		return Enum.ProductPurchaseDecision.NotProcessedYet

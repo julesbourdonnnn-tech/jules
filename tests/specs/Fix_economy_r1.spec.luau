@@ -66,10 +66,6 @@ return function(T)
 		return fb[#fb] and fb[#fb][1]
 	end
 
-	local function has(list, value)
-		return table.find(list, value) ~= nil
-	end
-
 	-- Monde complet avec ticks (Bots) -------------------------------------------------------------
 
 	-- hors de toute fenêtre d'événement (Comète, Balise) : rien ne vient perturber la scène
@@ -148,13 +144,15 @@ return function(T)
 				expect(w.Conga.lineLength(p) >= n).toBe(true)
 				task.wait(2.05) -- débit réel du remote : 1 / 2 s
 				Bots.fire("Supernova", p)
-				-- au port sûr, la file est encaissée (parade forcée) puis la Supernova refusée (coût)
-				expect(w.Conga.lineLength(p)).toBe(0)
-				expect(data.glow > glow).toBe(true)
+				-- au port sûr mais sans le coût : refus SANS effet de bord (GDD §4.12 : conditions
+				-- d'abord), la file reste et n'est pas encaissée
+				expect(w.Conga.lineLength(p) >= n).toBe(true)
+				expect(data.glow).toBe(glow)
 				Bots.frames(1)
-				expect(#Bots.lineOps("bank", slot)).toBe(banks + 1)
+				expect(#Bots.lineOps("bank", slot)).toBe(banks)
 				expect(data.supernovas).toBe(0)
-				expect(has(Bots.feedbackKeys(p), "feedback.notEnoughGlow")).toBe(true)
+				local keys = Bots.feedbackKeys(p)
+				expect(keys[#keys]).toBe("feedback.notEnoughGlow")
 				expect(#Bots.problems()).toBe(0)
 			end
 		)

@@ -444,8 +444,9 @@ return function(T)
 			expect(C._state().sorted).toEqual({ "u6", "u5", "u4", "u3", "u2", "u1" })
 			C._setSort("rarity")
 			expect(C._state().sorted[1]).toBe("u5")
+			-- la réserve compte les Nebbies NON perchés (AtlasService.enforceStash) : 6 − 3 perchoirs
 			local count = c.PC.page("Collection").Body.Tab_stash.Toolbar.Count
-			expect(count.Text).toBe("6/300")
+			expect(count.Text).toBe("3/300")
 		end)
 
 		it("Réserve virtualisée : 600 Nebbies, une poignée de cases réutilisées", function()
@@ -462,7 +463,8 @@ return function(T)
 			local last = C._state().sorted[600]
 			expect(cellFor(C, last) ~= nil).toBe(true)
 			expect(#grid:cells() <= 20).toBe(true)
-			expect(c.PC.page("Collection").Body.Tab_stash.Toolbar.Count.Text).toBe("600/600")
+			-- 600 Nebbies dont 3 perchés : 597 en réserve (Stash Plus → 600 places)
+			expect(c.PC.page("Collection").Body.Tab_stash.Toolbar.Count.Text).toBe("597/600")
 		end)
 
 		it(

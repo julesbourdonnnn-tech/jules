@@ -160,7 +160,7 @@ Events.Lighting = {
 			Haze = 2.4,
 			AtmosphereColor = Color3.fromRGB(220, 235, 255),
 			Tint = Color3.fromRGB(225, 240, 255),
-			Effect = "snow", -- 60 / s, vitesse 4-6, durée 6 s
+			Effect = "snow", -- 15 / s, vitesse 4-6, durée 6 s (budget GDD §12.8)
 		},
 		solar = {
 			Tint = Color3.fromRGB(255, 225, 190),

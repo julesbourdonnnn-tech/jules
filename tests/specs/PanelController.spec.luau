@@ -563,6 +563,26 @@ return function(T)
 			c.h.localPlayer.Character = nil
 			expect(c.PC._tailThreatened()).toBe(false)
 		end)
+
+		it("arrière de sa plateforme (« chez soi » mais hors port sûr) : l'alerte reste juste", function()
+			local c = setup()
+			local _, other = arm(c)
+			local center = c.WorldLayout.nestCenter(1)
+			local gate = c.WorldLayout.gateCFrame(1).Position
+			-- point « chez soi » (Supernova, Zen) mais hors de la zone protégée des coupes
+			local rear = center + (center - gate).Unit * 12
+			local spot = Vector3.new(rear.X, 3, rear.Z)
+			expect(c.WorldLayout.inOwnHarbor(1, spot)).toBe(true)
+			expect(c.WorldLayout.inHarbor(spot)).toBe(false)
+			placeAt(c, c.h.localPlayer, spot)
+			placeAt(c, other, Vector3.new(spot.X + 4, 3, spot.Z))
+			expect(c.PC._tailThreatened()).toBe(true)
+			-- dans le port sûr d'une porte (même celle d'un autre) : pas d'alerte
+			local gate2 = c.WorldLayout.gateCFrame(2).Position
+			placeAt(c, c.h.localPlayer, Vector3.new(gate2.X, 3, gate2.Z))
+			placeAt(c, other, Vector3.new(gate2.X + 4, 3, gate2.Z))
+			expect(c.PC._tailThreatened()).toBe(false)
+		end)
 	end)
 
 	-- Revue du paquet : chaque test reproduit un défaut trouvé, corrigé ensuite

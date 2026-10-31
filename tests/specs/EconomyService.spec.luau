@@ -451,7 +451,7 @@ return function(T)
 			ctx.Signals.BannerRequested:Connect(function(kind, args)
 				table.insert(banners, { kind = kind, level = args.level, userId = args.userId })
 			end)
-			data.glow = 150000
+			data.glow = 400000 -- coût couvert AVANT l'encaissement (GDD §4.12 : conditions d'abord)
 			data.glowCarry = 0.7
 			data.stardust = 77
 			data.upgrades = { conga = 7, stride = 4, lure = 3, perches = 6, guard = 2 }
@@ -490,19 +490,37 @@ return function(T)
 			expect(ctx.E.trySupernova(p)).toBe(false)
 		end)
 
-		it("refuse sans assez de Glow ; un crochet défaillant ne bloque pas", function()
+		it("refuse sans assez de Glow, sans encaisser la file", function()
 			local ctx = boot()
 			local p, data = join(ctx, 1)
-			ctx.E.setLineBanker(function()
-				error("file cassée")
+			local banked = 0
+			ctx.E.setLineBanker(function(pl)
+				banked += 1
+				ctx.E.addGlow(pl, 300000, "Parade")
 			end)
 			data.glow = 399999
 			local ok, reason = ctx.E.trySupernova(p)
 			expect(ok).toBe(false)
 			expect(reason).toBe("feedback.notEnoughGlow")
+			expect(banked).toBe(0)
 			expect(data.glow).toBe(399999)
+			expect(data.supernovas).toBe(0)
 			local fb = ctx.h:sentTo(p, "Feedback")
 			expect(fb[#fb][1].vars.missing).toBe(1)
+		end)
+
+		it("un crochet d'encaissement défaillant ne bloque pas la Supernova (avertissement)", function()
+			local ctx = boot()
+			local p, data = join(ctx, 1)
+			ctx.E.setLineBanker(function()
+				error("file cassée")
+			end)
+			data.glow = 400000
+			local ok, reason = ctx.E.trySupernova(p)
+			expect(ok).toBe(true)
+			expect(reason).toBe(nil)
+			expect(data.supernovas).toBe(1)
+			expect(data.glow).toBe(0)
 			expect(#ctx.h:warnings() >= 1).toBe(true)
 		end)
 

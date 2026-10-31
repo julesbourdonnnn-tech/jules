@@ -1205,7 +1205,7 @@ Distance entre deux portes voisines : 67,8 studs ; les ports sûrs (r 25) ne se 
 | Préréglage | Changements | Effets supplémentaires (client) |
 |---|---|---|
 | Aurora Drift | Tint (215, 255, 235) ; Atmosphere Color (170, 255, 210), Decay (150, 90, 255) | 6 rideaux `Beam` vert-violet très haut dans le ciel |
-| Frostfall | Haze 2,4, Color (220, 235, 255) ; Tint (225, 240, 255) | Neige : `ParticleEmitter` sur une pièce qui suit la caméra (60 / s, vitesse 4-6, durée 6 s) |
+| Frostfall | Haze 2,4, Color (220, 235, 255) ; Tint (225, 240, 255) | Neige : `ParticleEmitter` sur une pièce qui suit la caméra (15 / s, vitesse 4-6, durée 6 s : ≈ 90 flocons, budget §12.8) |
 | Solar Flare | Tint (255, 225, 190) ; Atmosphere Color (255, 190, 150) ; Bloom 1,1 | — |
 | Meteor Shower | — | Traits Néon qui tombent dans le ciel (réserve de 10, un toutes les 0,4 s) |
 | Rainbow Comet | Tint qui cycle en HSV (saturation 0,12) sur 8 s | 5 arcs `Beam` arc-en-ciel |

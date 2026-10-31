@@ -871,7 +871,9 @@ local function tailThreatened(): boolean
 		return false
 	end
 	local pos = root.Position
-	if WorldLayout.inOwnHarbor(slot, pos) or WorldState.lineLength(slot) <= 0 then
+	-- zone protégée des coupes = port sûr de TOUTES les portes (SnipRules, WorldLayout.inHarbor) ;
+	-- pas « chez soi » (inOwnHarbor) : l'arrière de sa plateforme de Nid est hors de cette zone
+	if WorldLayout.inHarbor(pos) or WorldState.lineLength(slot) <= 0 then
 		return false
 	end
 	local okNodes, nodes = pcall(CongaRenderer.nodePositions, slot)

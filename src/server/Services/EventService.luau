@@ -457,8 +457,8 @@ local function onPlayerLeavingEarly(player: Player)
 end
 
 -- Crochet de sauvegarde (sans yield) : sauvegarde de départ → travail de départ AVANT l'instantané.
--- `release` : drapeau de départ passé par DataService (extension du contrat demandée) ; à défaut,
--- un Player déjà sorti de l'arbre (événements différés) est forcément en train de partir.
+-- `release` : drapeau de sauvegarde de libération passé par DataService (départ, BindToClose) ; en
+-- repli, un Player déjà sorti de l'arbre (événements différés) est forcément en train de partir.
 local function onBeforeSave(player: Player, _data: { [string]: any }, release: boolean?)
 	if release == true or player.Parent == nil then
 		onPlayerLeavingEarly(player)

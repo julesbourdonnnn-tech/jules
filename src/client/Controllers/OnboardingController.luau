@@ -569,7 +569,8 @@ end
 
 -- Place et montre l'instruction selon l'écran : sous la pile de toasts (HUD.hintTop), effacée sous
 -- ACCLAMER ou sous un panneau qui ne la concerne pas, ancrée sur le bord haut de la fenêtre d'un
--- panneau qui la concerne (moitié au-dessus : elle ne cache ni les cartes ni le bouton Fermer)
+-- panneau qui la concerne (à cheval sur ce bord, au centre : elle ne cache pas les cartes, ni le
+-- titre aligné à gauche et le bouton Fermer d'une fenêtre de largeur normale)
 local function layoutHint(pop: boolean)
 	lastHintLayout = frameTime
 	local frame = hintFrame
