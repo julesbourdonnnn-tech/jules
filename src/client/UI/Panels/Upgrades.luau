@@ -6,13 +6,16 @@
 --     suivant, prix (Formulas.upgradeCost), bouton Acheter 96 px → remote BuyUpgrade(track) ;
 --     la carte achetable la moins chère pulse (UIScale 1 → 1,08, sinus 0,8 s) ; MAX au plafond
 --     (Formulas.upgradeMaxLevel)
---   * prix et disponibilité calculés sur le Glow PRÉDIT ; refus : secousse ±6 px + contour rouge
---     + toast « Il manque … Glow » (le serveur reste seul juge : Feedback notEnoughGlow)
+--   * prix et disponibilité calculés sur le Glow PRÉDIT, moins les achats encore en route ; refus :
+--     secousse ±6 px + contour rouge + toast « Il manque … Glow » (le serveur reste seul juge :
+--     Feedback notEnoughGlow) ; un double appui n'envoie qu'un achat (achat en route jusqu'à la
+--     confirmation du niveau, au plus PENDING_TIMEOUT)
 --   * barre de stat remplie en 0,3 s et niveau qui défile à la confirmation (profil répliqué)
 --   * accueil : args.focus = "conga" → une seule carte en surbrillance, fermeture auto 0,6 s après
 --     l'achat
 --   * quêtes d'accueil d'achat (Q2/Q5 « upgrade » → goal.track, Q7 « perches ») lues dans le profil
---     répliqué (onboarding.step) : la carte de la quête a le contour doré et elle seule pulse (quand
+--     répliqué (onboarding.step ; progression onboarding.p = achats faits PENDANT la quête, comme
+--     QuestService, jamais le niveau total) : la carte de la quête a le contour doré et elle seule pulse (quand
 --     elle est payable) — jamais une autre carte moins chère qui ferait dépenser le Glow de la quête ;
 --     elle passe en tête de liste le temps de la quête (visible dès l'ouverture sur téléphone)
 --   * bouton Supernova en bas avec anneau de progression (Glow prédit / Formulas.supernovaCost(R))
@@ -70,8 +73,14 @@ local SUPERNOVA_HEIGHT = 100
 local PULSE_PERIOD, PULSE_AMOUNT = 0.8, 0.08
 local FOCUS_CLOSE_DELAY = 0.6
 local REFRESH_INTERVAL = 0.25
+-- s : un achat envoyé reste « en route » jusqu'à la confirmation de son niveau (patch du profil),
+-- au plus ce délai (refus ou limite de débit du serveur : le bouton redevient utilisable)
+local PENDING_TIMEOUT = 1
 -- Objectifs d'accueil liés à une piste sans `goal.track` (Q7 « Atteins 10 perchoirs »)
 local QUEST_KIND_TRACK: { [string]: string } = { perches = "perches" }
+
+-- Achat envoyé, pas encore confirmé : niveau de départ, prix payé, échéance (Clock)
+type Pending = { level: number, cost: number, until_: number }
 
 type CardRefs = {
 	holder: Frame,
@@ -105,6 +114,7 @@ local questMark: string? = nil -- carte de la quête d'accueil en cours (contour
 local pulseClock = 0
 local reducedMark: string? = nil -- carte au contour doré fixe (Mouvement réduit)
 local refreshAcc = 0
+local pending: { [string]: Pending } = {}
 
 local function levelText(level: number): string
 	return Prefs.t("common.level", { level = math.floor(level) })
@@ -123,7 +133,10 @@ local function effectText(track: string, from: number, to: number): string
 end
 
 -- Piste visée par la quête d'accueil en cours (Q2/Q5 : goal.track ; Q7 : perchoirs), nil hors
--- quête d'achat, objectif déjà atteint (réplication en deux temps) ou piste au plafond
+-- quête d'achat, objectif déjà atteint ou piste au plafond. Quêtes « upgrade » : QuestService compte
+-- les achats faits PENDANT la quête (« add » 1 par achat, onboarding.p remis à 0 à chaque quête) —
+-- Q2 « Conga ×2 » demande les niveaux 2 et 3 (le niveau 1 est acheté pendant Q1), Q5 « Achète
+-- Foulée » un nouvel achat même si Foulée 1 a été acheté en Q3/Q4. Q7 (« set ») : perchoirs réels.
 local function questTrack(): string?
 	local def = Quests.Onboarding[Model.onboardingStep(view)]
 	if def == nil then
@@ -134,9 +147,9 @@ local function questTrack(): string?
 	if track == nil or Balance.Upgrades[track] == nil then
 		return nil
 	end
-	local reached = if goal.kind == "perches"
-		then Model.perchCount(view) >= goal.n
-		else Model.upgradeLevel(view, track) >= goal.n
+	local ob = view.onboarding
+	local progress = if type(ob) == "table" then Model.num((ob :: any).p, 0) else 0
+	local reached = if goal.kind == "perches" then Model.perchCount(view) >= goal.n else progress >= goal.n
 	if reached or Model.upgradeInfo(view, track).maxed then
 		return nil
 	end
@@ -147,9 +160,43 @@ end
 -- Construction
 -- ---------------------------------------------------------------------------------------------
 
+-- Achat encore en route pour cette piste : niveau inchangé et échéance pas atteinte (sinon oublié)
+local function inFlight(track: string, now: number): Pending?
+	local entry = pending[track]
+	if entry == nil then
+		return nil
+	end
+	if now >= entry.until_ or Model.upgradeLevel(view, track) ~= entry.level then
+		pending[track] = nil
+		return nil
+	end
+	return entry
+end
+
+-- Glow prédit moins les achats encore en route : un double appui (ou deux cartes touchées d'affilée)
+-- ne dépense pas deux fois le même Glow, et l'affichage ne promet pas un achat que le serveur
+-- refuserait
+local function spendableGlow(now: number): number
+	local glow = Model.predictedGlow(view, now)
+	for track in pending do
+		local entry = inFlight(track, now)
+		if entry then
+			glow -= entry.cost
+		end
+	end
+	return math.max(0, glow)
+end
+
+local render: (animate: boolean?) -> ()
+
 -- Achat : intention envoyée seulement si le Glow prédit suffit ; sinon refus local et toast
 -- « Il manque … Glow ». `refused` : le bouton (désactivé) a déjà joué la secousse.
+-- Achat de cette piste déjà en route (double appui, ✕ répété) : ignoré sans refus ni toast.
 local function onBuy(track: string, refused: boolean?)
+	local now = Clock.now()
+	if inFlight(track, now) then
+		return
+	end
 	local info = Model.upgradeInfo(view, track)
 	local card = cards[track]
 	if info.maxed then
@@ -158,7 +205,7 @@ local function onBuy(track: string, refused: boolean?)
 		end
 		return
 	end
-	local glow = Model.predictedGlow(view, Clock.now())
+	local glow = spendableGlow(now)
 	if glow < info.cost then
 		if card and not refused then
 			Widgets.refuse(card.buy)
@@ -166,7 +213,9 @@ local function onBuy(track: string, refused: boolean?)
 		Toast.show(Prefs.t("feedback.notEnoughGlow", { missing = Prefs.number(info.cost - glow) }), "error")
 		return
 	end
+	pending[track] = { level = info.level, cost = info.cost, until_ = now + PENDING_TIMEOUT }
 	Net.event("BuyUpgrade"):FireServer(track)
+	render(false)
 end
 
 local function buildCard(track: string, order: number, parent: Instance): CardRefs
@@ -302,12 +351,14 @@ local function renderSupernova(glow: number)
 	end
 end
 
-local function render(animate: boolean?)
+function render(animate: boolean?)
 	if not built then
 		return
 	end
 	local now = Clock.now()
-	local glow = Model.predictedGlow(view, now)
+	local glow = spendableGlow(now)
+	local cheapest: string? = nil
+	local cheapestCost = math.huge
 	-- accueil : la carte de la quête d'achat en cours (la carte unique `focus` reste prioritaire)
 	local quest = if focus == nil then questTrack() else nil
 	local questChanged = quest ~= questMark
@@ -348,11 +399,19 @@ local function render(animate: boolean?)
 			else
 				card.buyLabel.Text = Prefs.number(info.cost)
 				card.coin.Visible = true
-				local affordable = glow >= info.cost
+				-- la carte dont l'achat est en route garde son état jusqu'à la confirmation (pas de
+				-- clignotement grisé → vert) ; les autres ne comptent que le Glow encore dépensable
+				local own = inFlight(track, now)
+				local available = if own then glow + own.cost else glow
+				local affordable = available >= info.cost
 				Widgets.setColor(card.buy, if affordable then Theme.Colors.Success else Widgets.DIM)
 				Widgets.setEnabled(card.buy, affordable)
 				if track == quest then
 					questAffordable = affordable
+				end
+				-- même règle que Model.cheapestAffordable, sur le Glow encore dépensable
+				if affordable and info.cost < cheapestCost then
+					cheapest, cheapestCost = track, info.cost
 				end
 			end
 			-- accueil : une seule carte (focus) ou la carte de la quête, en surbrillance
@@ -375,11 +434,17 @@ local function render(animate: boolean?)
 	elseif quest then
 		pulsing = if questAffordable then quest else nil
 	else
-		pulsing = Model.cheapestAffordable(view, now)
+		pulsing = cheapest
 	end
 end
 
 local function onUpgradesChanged()
+	-- niveau confirmé (ou retiré) : l'achat en route est terminé
+	for track, entry in pending do
+		if Model.upgradeLevel(view, track) ~= entry.level then
+			pending[track] = nil
+		end
+	end
 	if not built then
 		return
 	end
@@ -579,6 +644,9 @@ Panel._pulsing = function(): string?
 end
 Panel._quest = function(): string?
 	return questMark
+end
+Panel._pending = function(): { [string]: Pending }
+	return pending
 end
 
 return Panel

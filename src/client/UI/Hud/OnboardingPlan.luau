@@ -7,10 +7,13 @@
 --   * guidage au sol (empreintes vers les Puffkins, vers la porte, flèche vers les Nebbies, pilier
 --     bleu du Rare de Q4, Nebby météo ou Comète de Q6) ;
 --   * éléments qui pulsent pour attirer l'attention (icône Améliorer avec la main, pastille
---     d'événement quand Q6 attend la prochaine météo).
+--     d'événement quand Q6 attend la prochaine météo — jamais pendant une météo SANS forme, la
+--     Pluie de météores : la pastille compte alors à rebours sa fin, pas la prochaine météo utile).
 -- L'instruction affichée doit toujours être réalisable MAINTENANT (GDD §3) : rentrer dès que la
 -- file contient de quoi réussir la quête, chercher des Nebbies quand les Puffkins ont disparu ou
--- que le Glow manque, attendre la météo (compte à rebours) quand aucun Nebby météo n'existe.
+-- que le Glow manque, attendre la météo (compte à rebours) quand aucun Nebby météo n'existe ;
+-- pendant une Pluie de météores (aucune forme), « Météo dans {time} » jusqu'à la prochaine météo
+-- qui en donne une (Plan.formWeatherIn).
 -- Étapes : 0 pas commencé, 1-7 = quête Q1-Q7 en cours, 8 = accueil terminé.
 -- Manette (fait `gamepad`, docs/07-console-ps5.md §6.2) : aucune consigne tactile — « Ouvre
 -- Améliorer » (posée à côté de l'icône △ / ✕ par le contrôleur) au lieu de « Touche Améliorer ».
@@ -20,6 +23,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Quests = require(Shared.Config.Quests)
 local Types = require(Shared.Types)
+local EventClock = require(Shared.Logic.EventClock)
 
 local Plan = {}
 
@@ -42,6 +46,8 @@ export type Facts = {
 	goalInLine: boolean?, -- la file locale contient déjà de quoi réussir la quête (Rare pour Q4)
 	puffkinsLeft: number?, -- Puffkins de bienvenue (personnels) encore attrapables
 	weatherActive: boolean?, -- fenêtre météo en cours, avec une forme météo
+	weatherFormless: boolean?, -- fenêtre météo en cours SANS forme (Pluie de météores) : la pastille
+	-- d'événement affiche son compte à rebours à elle, pas celui de la prochaine météo utile
 	weatherTarget: boolean?, -- un Nebby météo attrapable est connu (Q6)
 	cometActive: boolean?, -- Comète au sol ou portée (Q6 accepte aussi la Comète)
 	gamepad: boolean?, -- entrée préférée : manette (consignes sans geste tactile)
@@ -128,7 +134,10 @@ end
 
 -- Q6 : faits météo / Comète connus (sinon instruction d'origine, sans guidage)
 local function eventFactsKnown(f: Facts): boolean
-	return f.weatherActive ~= nil or f.weatherTarget ~= nil or f.cometActive ~= nil
+	return f.weatherActive ~= nil
+		or f.weatherTarget ~= nil
+		or f.cometActive ~= nil
+		or f.weatherFormless ~= nil
 end
 
 -- Avant la toute première parade : les Puffkins de bienvenue ont disparu (réinitialisation, mort,
@@ -184,7 +193,13 @@ function Plan.hint(f: Facts): string?
 		if f.weatherTarget or f.weatherActive then
 			return def.hint
 		end
-		return if f.cometActive then "onboarding.joinComet" else "onboarding.waitWeather"
+		if f.cometActive then
+			return "onboarding.joinComet"
+		end
+		-- Pluie de météores en cours : « Météo bientôt ! » à côté d'une pastille qui compte à rebours
+		-- la fin de la pluie mentirait (rien ne se passe à 0) ; l'instruction porte son propre compte
+		-- à rebours jusqu'à la prochaine météo à forme (Plan.formWeatherIn, variable {time})
+		return if f.weatherFormless then "onboarding.waitWeatherIn" else "onboarding.waitWeather"
 	end
 	-- quêtes d'achat : n'inviter à acheter que si c'est possible, sinon guider vers les Nebbies
 	if def.goal.kind == "upgrade" then
@@ -268,7 +283,32 @@ function Plan.attention(f: Facts): { [Types.HudElement]: boolean }
 	elseif hint == "onboarding.waitWeather" then
 		out.eventPill = true -- le compte à rebours de la prochaine météo pulse
 	end
+	-- « onboarding.waitWeatherIn » : rien ne pulse, la pastille montre la Pluie de météores en cours
 	return out
+end
+
+-- Horizon de recherche de Plan.formWeatherIn (fenêtres météo successives examinées)
+local FORM_WEATHER_LOOKAHEAD = 32
+
+-- Secondes (entières, ≥ 0) jusqu'au début de la prochaine fenêtre météo qui donne une forme, après
+-- `now` (horloge des événements, EventClock) ; nil si aucune dans l'horizon ou `now` invalide.
+-- Variable {time} de « onboarding.waitWeatherIn », à rafraîchir chaque seconde.
+function Plan.formWeatherIn(now: number): number?
+	if type(now) ~= "number" or now ~= now or now == math.huge or now == -math.huge then
+		return nil
+	end
+	local t = now
+	for _ = 1, FORM_WEATHER_LOOKAHEAD do
+		local w = EventClock.nextWeather(t)
+		if w.startsAt <= t then
+			return nil -- garde-fou : l'horloge doit avancer
+		end
+		if w.form ~= nil then
+			return math.max(0, math.ceil(w.startsAt - now))
+		end
+		t = w.startsAt
+	end
+	return nil
 end
 
 return Plan

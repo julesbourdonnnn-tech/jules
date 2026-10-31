@@ -721,8 +721,11 @@ return function(T)
 			status = status,
 			pill = pill,
 			minimap = minimap,
+			-- r4 : Équipage et Réglages (la pastille les recouvrait sur 640 × 360 et 667 × 375)
+			crew = rect(c, hud(c).crew),
+			settings = rect(c, hud(c).settings),
 		}
-		local order = { "dash", "ping", "tracker", "status", "pill", "minimap" }
+		local order = { "dash", "ping", "tracker", "status", "pill", "minimap", "crew", "settings" }
 		for i, a in order do
 			for j = i + 1, #order do
 				local b = order[j]

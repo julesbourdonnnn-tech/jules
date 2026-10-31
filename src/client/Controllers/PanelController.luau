@@ -17,6 +17,10 @@
 --       - fenêtre en SelectionGroup fermé (SelectionBehavior* = Stop) : la sélection ne s'échappe
 --         jamais vers le HUD derrière ; après un changement d'onglet ou de contenu (achat, fusion,
 --         liste reconstruite), une sélection masquée ou détruite revient à la sélection par défaut
+--       - sélection effacée (pavé tactile / Créer, menu du système refermé) : rendue à l'image
+--         suivante ; vide seulement tant qu'une fenêtre Roblox tient la manette (achat ouvert par ✕,
+--         PanelController.holdSelection, menu du système) ; croix ↑ / ↓ / → sans sélection
+--         absorbées (PanelNavGuard) : ni roue de pings, ni minicarte, ni ACCLAMER derrière la fenêtre
 --       - ○ (Retour) recule d'un niveau (Supernova → Améliorer → bouton d'origine hors fenêtre,
 --         ex. le bouton du rail, rendu à la manette s'il est encore affiché) avec le son « Back »
 --       - L1 / R1 : onglets en boucle (son « Tab ») ; L2 / R2 : panneau précédent / suivant en boucle
@@ -35,8 +39,10 @@
 --   * pastilles « ! » : hasAction() de chaque panneau (sans le construire), réévalué à chaque
 --     changement du profil et chaque seconde (Glow prédit, minuit UTC) → BadgeChanged
 --   * contour rose de l'écran quand un panneau est ouvert hors du port sûr et qu'un non-équipier
---     capable de couper (pas en Mode Zen) approche à ≤ Balance.Render.TailWarnDistance de la file
---     (§13.2)
+--     capable de couper (pas en Mode Zen) approche à ≤ Balance.Render.TailWarnDistance de la queue
+--     coupable (nœuds au-delà des Guard Links) ; jamais pendant la trêve de la Balise (« active » et
+--     « success »), les coupes désactivées ni l'immunité de la victime (ImmuneUntil) : mêmes règles
+--     que le serveur et que CongaRenderer (§13.2, GDD §4.7, §6.4)
 --   * flou d'arrière-plan : suit « Graphismes légers » en direct, même panneau ouvert
 --   * propriétaire côté client du remote CrewInvitePrompt (→ Panels/Crew.showInvite, carte non
 --     bloquante) et de l'ouverture de ReturnScreen sur Celebrate "offline" (ScreenFX.Celebrated
@@ -49,6 +55,7 @@
 local ContextActionService = game:GetService("ContextActionService")
 local GuiService = game:GetService("GuiService")
 local Lighting = game:GetService("Lighting")
+local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -58,6 +65,8 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Balance = require(Shared.Config.Balance)
 local Console = require(Shared.Config.Console)
 local Cosmetics = require(Shared.Config.Cosmetics)
+local Formulas = require(Shared.Logic.Formulas)
+local Clock = require(Shared.Util.Clock)
 local Net = require(Shared.Net)
 local Signal = require(Shared.Util.Signal)
 local Types = require(Shared.Types)
@@ -137,6 +146,12 @@ local ACTION_PRIORITY = Enum.ContextActionPriority.High.Value + 50
 local ACTION_BACK, ACTION_PREV, ACTION_NEXT = "PanelBack", "PanelTabPrev", "PanelTabNext"
 local ACTION_CYCLE_PREV, ACTION_CYCLE_NEXT = "PanelPrev", "PanelNext" -- L2 / R2
 local ACTION_SCROLL = "PanelScroll" -- stick droit
+-- croix ↑ / ↓ / → sans sélection : jamais la roue de pings, la minicarte ni ACCLAMER derrière la
+-- fenêtre (← : le suivi de quête d'InputController s'efface déjà, panneau ouvert)
+local ACTION_NAV_GUARD = "PanelNavGuard"
+-- s : sélection effacée au plus tant après ✕ sur un objet de la fenêtre = fenêtre Roblox ouverte
+-- par ce bouton (achat : les infos du produit arrivent avant que la fenêtre prenne la manette)
+local PROMPT_HOLD_WINDOW = 3
 -- Panneaux parcourus par L2 / R2 (docs/07 §6.3) ; Supernova compte comme Améliorer
 local CYCLE: { Types.PanelName } = { "Upgrades", "Collection", "Goals", "Shop", "Crew", "Settings" }
 local CYCLE_ALIAS: { [string]: Types.PanelName } = { Supernova = "Upgrades" }
@@ -213,6 +228,14 @@ local scrollCache: { key: string, frame: ScrollingFrame? }? = nil
 local frameNo = 0
 local selectionChangedAt = -1
 local bump: BumpProbe? = nil
+-- Sélection laissée vide pendant qu'une fenêtre Roblox tient la manette (docs/07 §6.6, §7) :
+-- `heldByPanel` (PanelController.holdSelection, ex. Panels/Shop pendant la fenêtre d'achat),
+-- `heldByPrompt` (sélection effacée juste après ✕ sur `confirmTarget`, à `confirmAt`), menu du système
+local uiTime = 0 -- s : somme des dt (mesure de l'interface)
+local heldByPanel = false
+local heldByPrompt = false
+local confirmAt = -math.huge
+local confirmTarget: GuiObject? = nil
 
 -- ---------------------------------------------------------------------------------------------
 -- Aides
@@ -290,6 +313,27 @@ end
 local function inWindow(obj: Instance?): boolean
 	local w = window
 	return obj ~= nil and w ~= nil and obj:IsDescendantOf(w) and selectable(obj)
+end
+
+-- Menu du système Roblox ouvert (il tient la manette)
+local function systemMenuOpen(): boolean
+	local ok, open = pcall(function()
+		return GuiService.MenuIsOpen
+	end)
+	return ok and open == true
+end
+
+-- Une fenêtre Roblox tient-elle la manette ? (achat, menu du système) : une sélection effacée reste
+-- alors vide, la reposer volerait la manette à cette fenêtre
+local function selectionHeld(): boolean
+	return heldByPanel or heldByPrompt or systemMenuOpen()
+end
+
+-- La fenêtre Roblox est refermée (fin d'achat, sélection posée, panneau fermé)
+local function releaseHold()
+	heldByPanel = false
+	heldByPrompt = false
+	confirmTarget = nil
 end
 
 -- ---------------------------------------------------------------------------------------------
@@ -910,6 +954,20 @@ local function onAction(
 		stick = readStick(inputState, input)
 		return Enum.ContextActionResult.Sink
 	end
+	if actionName == ACTION_NAV_GUARD then
+		-- avec une sélection, la croix navigue dans la fenêtre (le moteur la traite avant)
+		if GuiService.SelectedObject ~= nil then
+			return Enum.ContextActionResult.Pass
+		end
+		-- sans sélection, la croix arrive au jeu : aucune fenêtre Roblox ne tient la manette ; la
+		-- sélection de la fenêtre est rendue et la croix absorbée (pas de roue de pings, de
+		-- minicarte ni d'ACCLAMER derrière le panneau)
+		if inputState == Enum.UserInputState.Begin then
+			releaseHold()
+			ensureSelection()
+		end
+		return Enum.ContextActionResult.Sink
+	end
 	if inputState == Enum.UserInputState.Begin then
 		if actionName == ACTION_BACK then
 			PanelController.back()
@@ -975,6 +1033,15 @@ local function bindActions()
 		ACTION_PRIORITY,
 		Enum.KeyCode.Thumbstick2
 	)
+	ContextActionService:BindActionAtPriority(
+		ACTION_NAV_GUARD,
+		onAction,
+		false,
+		ACTION_PRIORITY,
+		Enum.KeyCode.DPadUp,
+		Enum.KeyCode.DPadDown,
+		Enum.KeyCode.DPadRight
+	)
 end
 
 local function unbindActions()
@@ -988,6 +1055,7 @@ local function unbindActions()
 	ContextActionService:UnbindAction(ACTION_CYCLE_PREV)
 	ContextActionService:UnbindAction(ACTION_CYCLE_NEXT)
 	ContextActionService:UnbindAction(ACTION_SCROLL)
+	ContextActionService:UnbindAction(ACTION_NAV_GUARD)
 	stick = Vector2.zero
 end
 
@@ -1081,6 +1149,7 @@ local function closeInternal(restore: boolean)
 	currentName = nil
 	opening = false
 	unbindActions()
+	releaseHold()
 	local back = origin
 	origin = nil
 	opener = nil
@@ -1225,6 +1294,7 @@ end
 -- `target` s'il est affiché dans la fenêtre, sinon la sélection par défaut ; rien sans manette ou
 -- sans panneau. Retourne true si une sélection a été posée.
 function PanelController.select(target: GuiObject?): boolean
+	releaseHold()
 	local name = currentName
 	local page = if name then pages[name] else nil
 	if page == nil or not gamepadActive() then
@@ -1288,8 +1358,11 @@ end
 
 -- Sélection manette toujours valide pendant qu'un panneau est ouvert (docs/07 §7) : un objet masqué
 -- ou détruit (onglet changé, achat, fusion, liste reconstruite), ou une sélection partie derrière
--- la fenêtre, revient à la sélection par défaut. Une sélection effacée alors que l'objet est encore
--- affiché (fenêtre d'achat Roblox, choix du joueur) est laissée vide.
+-- la fenêtre, revient à la sélection par défaut. Une sélection effacée (pavé tactile / Créer de la
+-- DualSense, menu du système refermé…) est rendue : dernier objet de la fenêtre s'il est encore
+-- affiché, sinon la sélection par défaut. Elle ne reste vide que tant qu'une fenêtre Roblox tient
+-- la manette : effacée juste après ✕ sur ce même objet (fenêtre d'achat ouverte par ce bouton,
+-- jusqu'à la fin de l'achat), PanelController.holdSelection, menu du système ouvert.
 ensureSelection = function()
 	local name = currentName
 	local page = if name then pages[name] else nil
@@ -1299,6 +1372,7 @@ ensureSelection = function()
 	end
 	local selected = GuiService.SelectedObject
 	if selected ~= nil then
+		heldByPrompt = false
 		if selected:IsDescendantOf(w) then
 			if selectable(selected) then
 				lastInWindow = selected
@@ -1309,7 +1383,16 @@ ensureSelection = function()
 		end
 	else
 		local last = lastInWindow
-		if last == nil or inWindow(last) then
+		local shown = last ~= nil and inWindow(last)
+		if shown and confirmTarget == last and uiTime - confirmAt <= PROMPT_HOLD_WINDOW then
+			heldByPrompt = true
+		end
+		confirmTarget = nil
+		if selectionHeld() then
+			return
+		end
+		if shown then
+			GuiService.SelectedObject = last
 			return
 		end
 	end
@@ -1318,6 +1401,18 @@ ensureSelection = function()
 		GuiService.SelectedObject = target
 	end
 	lastInWindow = target
+end
+
+-- Une fenêtre Roblox ouverte depuis le panneau tient la manette (ex. fenêtre d'achat de la
+-- Boutique) : true laisse la sélection vide jusqu'à false, PanelController.select, la fin d'un achat
+-- (PromptGamePassPurchaseFinished / PromptProductPurchaseFinished), la fermeture du panneau, ou une
+-- croix qui arrive au jeu (preuve qu'aucune fenêtre Roblox ne tient plus la manette)
+function PanelController.holdSelection(on: boolean)
+	if on == true then
+		heldByPanel = true
+	else
+		releaseHold()
+	end
 end
 
 -- Onglet affiché d'un panneau (nil si le panneau n'a pas d'onglets ou n'a jamais été ouvert)
@@ -1355,7 +1450,40 @@ local function refreshBadges()
 	end
 end
 
--- Un non-équipier approche-t-il de la file locale hors du port sûr ? (§13.2)
+-- Guard Links de la file locale (premiers nœuds jamais coupables, GDD §4.7) : attribut posé par le
+-- serveur (EconomyService), repli sur le niveau Garde du profil (même formule)
+local function localGuardLinks(player: Player): number
+	local g = player:GetAttribute("GuardLinks")
+	if type(g) == "number" and g == g and g ~= math.huge and g ~= -math.huge then
+		return math.clamp(math.floor(g), 0, Balance.Guard.Max)
+	end
+	local upgrades = State.get("upgrades")
+	local level = if type(upgrades) == "table" and type(upgrades.guard) == "number" then upgrades.guard else 0
+	return Formulas.guardLinks(level)
+end
+
+-- Trêve de la Balise (phases « active » et « success » jusqu'à endsAt, comme EventService.isTruce
+-- et CongaRenderer) ou coupes désactivées : personne ne coupe
+local function snipsOff(now: number): boolean
+	local events = WorldState.events()
+	if events == nil then
+		return false
+	end
+	if events.snipsDisabled then
+		return true
+	end
+	local b = events.beacon
+	return b ~= nil
+		and (b.phase == "active" or b.phase == "success")
+		and type(b.startsAt) == "number"
+		and type(b.endsAt) == "number"
+		and now >= b.startsAt
+		and now < b.endsAt
+end
+
+-- Un non-équipier approche-t-il de la queue COUPABLE de la file locale (nœuds au-delà des Guard
+-- Links) hors du port sûr ? Mêmes règles que le serveur et que le contour de sa propre queue
+-- (CongaRenderer) : ni trêve de la Balise, ni immunité de la victime (§13.2, GDD §6.4)
 local function tailThreatened(): boolean
 	local player = Players.LocalPlayer
 	if not player then
@@ -1374,18 +1502,35 @@ local function tailThreatened(): boolean
 	if player:GetAttribute("Zen") == true or player:GetAttribute("Rookie") == true then
 		return false
 	end
-	local events = WorldState.events()
-	if events and (events.snipsDisabled or (events.beacon and events.beacon.phase == "active")) then
+	local now = Clock.now()
+	if snipsOff(now) then
+		return false
+	end
+	-- immunité après une coupe (ou plafond de coupes par minute) : le serveur refuse toute coupe
+	local immune = player:GetAttribute("ImmuneUntil")
+	if type(immune) == "number" and immune > now then
 		return false
 	end
 	local pos = root.Position
+	local guard = localGuardLinks(player)
 	-- zone protégée des coupes = port sûr de TOUTES les portes (SnipRules, WorldLayout.inHarbor) ;
-	-- pas « chez soi » (inOwnHarbor) : l'arrière de sa plateforme de Nid est hors de cette zone
-	if WorldLayout.inHarbor(pos) or WorldState.lineLength(slot) <= 0 then
+	-- pas « chez soi » (inOwnHarbor) : l'arrière de sa plateforme de Nid est hors de cette zone.
+	-- Une file entièrement en Guard Links (Lead Trio) n'a rien de coupable.
+	if WorldLayout.inHarbor(pos) or WorldState.lineLength(slot) <= guard then
 		return false
 	end
 	local okNodes, nodes = pcall(CongaRenderer.nodePositions, slot)
-	local points: { Vector3 } = if okNodes and type(nodes) == "table" and #nodes > 0 then nodes else { pos }
+	local points: { Vector3 } = {}
+	if okNodes and type(nodes) == "table" and #nodes > 0 then
+		for i = guard + 1, #nodes do
+			table.insert(points, nodes[i])
+		end
+	else
+		points = { pos } -- file pas encore rendue : position du joueur
+	end
+	if #points == 0 then
+		return false
+	end
 	local range = Balance.Render.TailWarnDistance
 	for _, other in Players:GetPlayers() do
 		-- un équipier ou un joueur en Mode Zen ne peut pas couper (§4.16, §6.1)
@@ -1532,7 +1677,26 @@ end
 -- Croix pressée dans la fenêtre : on note la sélection (et le défilement de sa liste : une grille
 -- virtualisée garde la même case en défilant)
 local function onNavInput(input: InputObject)
-	if currentName == nil or not NAV_KEYS[input.KeyCode] then
+	if currentName == nil then
+		return
+	end
+	local key = input.KeyCode
+	if key == Enum.KeyCode.ButtonA then
+		-- ✕ sur un objet de la fenêtre : s'il ouvre une fenêtre Roblox (achat), elle effacera la
+		-- sélection dans les PROMPT_HOLD_WINDOW s (ensureSelection la laisse alors vide)
+		local target = GuiService.SelectedObject
+		local w = window
+		if target ~= nil and w ~= nil and target:IsDescendantOf(w) then
+			confirmAt = uiTime
+			confirmTarget = target
+		end
+		return
+	elseif key == Enum.KeyCode.ButtonSelect then
+		-- pavé tactile / Créer : bascule de sélection de Roblox, jamais une fenêtre d'achat
+		confirmTarget = nil
+		return
+	end
+	if not NAV_KEYS[key] then
 		return
 	end
 	local selected = GuiService.SelectedObject
@@ -1542,7 +1706,6 @@ local function onNavInput(input: InputObject)
 		return
 	end
 	local scroll = nearestScroll(selected)
-	local key = input.KeyCode
 	bump = {
 		frame = frameNo,
 		object = selected,
@@ -1625,6 +1788,9 @@ end
 local badgeAcc, warnAcc = 0, 0
 local function onHeartbeat(dt: number)
 	frameNo += 1
+	if dt == dt and dt > 0 and dt < math.huge then
+		uiTime += dt
+	end
 	badgeAcc += dt
 	if badgesDirty or badgeAcc >= BADGE_INTERVAL then
 		badgeAcc = 0
@@ -1763,11 +1929,18 @@ function PanelController.Start()
 		end
 		local name = currentName
 		local page = if name then pages[name] else nil
-		if page and gamepadActive() and GuiService.SelectedObject == nil then
+		if page and gamepadActive() and GuiService.SelectedObject == nil and not selectionHeld() then
 			selectDefault(page)
 		end
 	end)
 	GuiService:GetPropertyChangedSignal("SelectedObject"):Connect(onSelectionChanged)
+	-- fenêtre d'achat Roblox refermée (achat ou annulation) : la sélection peut être rendue
+	MarketplaceService.PromptGamePassPurchaseFinished:Connect(function()
+		releaseHold()
+	end)
+	MarketplaceService.PromptProductPurchaseFinished:Connect(function()
+		releaseHold()
+	end)
 	UserInputService.InputBegan:Connect(function(input: InputObject, _processed: boolean)
 		onNavInput(input)
 	end)
@@ -1792,7 +1965,7 @@ function PanelController.Start()
 		UserInputService.LastInputTypeChanged:Connect(function()
 			local name = currentName
 			local page = name and pages[name]
-			if page and lastInputIsGamepad() and GuiService.SelectedObject == nil then
+			if page and lastInputIsGamepad() and GuiService.SelectedObject == nil and not selectionHeld() then
 				selectDefault(page)
 			end
 		end)

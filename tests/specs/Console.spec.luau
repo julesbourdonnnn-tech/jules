@@ -217,7 +217,7 @@ return function(T)
 			expect(#Gamepad.audit(h)).toBe(0)
 		end)
 
-		it("cadre de sélection commun : contour doré de 4 px, une seule instance", function()
+		it("cadre de sélection commun : trait blanc de 6 px bordé de sombre, une seule instance", function()
 			local h = client({ console = true })
 			local Root = h:require(CLIENT .. "UI.Root")
 			ApiAudit.start()
@@ -228,8 +228,12 @@ return function(T)
 			expect(table.concat(issues, "\n")).toBe("")
 			expect(Root.selectionImage()).toBe(image)
 			expect(image.Parent).toBeNil()
+			-- r4 : le curseur a sa propre couleur (blanc, jamais l'or des états « choisi / marqué » de
+			-- Widgets.highlight) et un liseré sombre extérieur (cartes claires) ; voir Fix_r4_ui_1_root
 			local stroke = image:FindFirstChildOfClass("UIStroke")
-			expect(stroke.Thickness).toBe(4)
+			expect(stroke.Thickness).toBe(6)
+			expect(stroke.Color).toBe(roblox.Color3.fromRGB(255, 255, 255))
+			expect(image.Edge:FindFirstChildOfClass("UIStroke").Thickness).toBe(2)
 			expect(image.Size).toBe(UDim2.new(1, 8, 1, 8))
 		end)
 

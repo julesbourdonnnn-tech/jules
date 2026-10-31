@@ -10,7 +10,9 @@
 --     (UserInputService:GetImageForKeyCode : icônes PlayStation sur PlayStation) et texte de repli
 --     neutre (jamais les lettres Xbox : ButtonX est le Carré d'une DualSense)
 --   * échelle et zone sûre : Platform.uiScale / Platform.safePadding (Config/Console)
---   * règle « pas de fenêtre de chat sur console » (Start) : ChatWindowConfiguration et
+--   * règle « pas de fenêtre de chat sur console » (Start) : fenêtre de chat du CoreGui coupée
+--     (StarterGui:SetCoreGuiEnabled(Chat, false) : ancien chat comme TextChatService, nouveaux
+--     essais bornés si le CoreGui n'est pas prêt), ChatWindowConfiguration et
 --     ChatInputBarConfiguration désactivées ; les bulles restent
 --   * Platform.Changed(raison) : "input" (entrée préférée), "display" (taille d'écran), "gamepad"
 --     (manette branchée / débranchée)
@@ -19,6 +21,7 @@
 
 local GuiService = game:GetService("GuiService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local StarterGui = game:GetService("StarterGui")
 local TextChatService = game:GetService("TextChatService")
 local UserInputService = game:GetService("UserInputService")
 
@@ -328,13 +331,39 @@ end
 -- Chat (docs/07 §7) ---------------------------------------------------------------------------
 
 local CHAT_CONFIGS = { "ChatWindowConfiguration", "ChatInputBarConfiguration" }
+local CHAT_CORE_RETRY = 0.5 -- s entre deux essais de SetCoreGuiEnabled (CoreGui pas encore prêt)
 
--- Sur console : fenêtre de chat et barre de saisie désactivées (attente bornée des configurations
--- créées par le moteur) ; ailleurs : rien n'est changé
+-- Fenêtre de chat du CoreGui coupée : vaut pour l'ancien chat comme pour TextChatService, que le
+-- moteur ait créé ou non les configurations ; nouveaux essais pendant Console.ChatWaitTimeout si le
+-- CoreGui n'est pas encore prêt (avertissement seulement si tous échouent)
+local function disableCoreChat()
+	task.spawn(function()
+		local waited = 0
+		while true do
+			local ok, err = pcall(function()
+				StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Chat, false)
+			end)
+			if ok then
+				return
+			end
+			if waited >= Console.ChatWaitTimeout then
+				warn("[Platform] chat (CoreGui) :", err)
+				return
+			end
+			task.wait(CHAT_CORE_RETRY)
+			waited += CHAT_CORE_RETRY
+		end
+	end)
+end
+
+-- Sur console : fenêtre de chat du CoreGui coupée, fenêtre et barre de saisie de TextChatService
+-- désactivées (attente bornée des configurations créées par le moteur) ; ailleurs : rien n'est
+-- changé
 function Platform.applyChatRule()
 	if Platform.chatWindowAllowed() then
 		return
 	end
+	disableCoreChat()
 	for _, className in CHAT_CONFIGS do
 		task.spawn(function()
 			local config = TextChatService:FindFirstChildOfClass(className)

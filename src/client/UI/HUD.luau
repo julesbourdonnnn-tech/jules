@@ -15,7 +15,9 @@
 --     Ping (72 × 72) à sa gauche ; sur les écrans bas (téléphones de 360-390 dp), la colonne de
 --     droite (état, suivi de quête) passe à gauche de la minicarte si le Dash la recouvrirait
 --   * pastille d'événement (haut centre, 320 × 48 ; Hud/EventPill) : prochain événement avec compte à
---     rebours, événement en cours en couleur, « ☄ COMÈTE 0:45 — Mira », barre de la Balise (420 × 28)
+--     rebours, événement en cours en couleur, « ☄ COMÈTE 0:45 — Mira », barre de la Balise (420 × 28) ;
+--     sur les écrans étroits (640 × 360, 667 × 375) elle glisse à droite d'Équipage / Réglages sans
+--     toucher la minicarte (pillGeometry)
 --     ; indicateurs d'état (Zen, boost ×2 avec minuteur, connexion instable) ; suivi de quête
 --     (260 × 72, repliable : icône + titre de 200 px jamais sous 18 px, barre + bouton de repli
 --     dessous ; coût de la Supernova abrégé s'il ne tient pas) ; icônes Équipage et Réglages
@@ -37,8 +39,9 @@
 --   * console / manette (docs/07-console-ps5.md §5-§7) : icônes de touches UI/Glyph « PadGlyph »
 --     (R2 Dash, croix ↑ Ping, croix ↓ minicarte, croix → ACCLAMER, croix ← suivi de quête, △ au-dessus
 --     du rail), touches clavier « KeyCap » masquées à la manette ; △ (HUD.selectRail) sélectionne la
---     cible de l'accueil, sinon PanelController.focusTarget(), sinon le bouton du rail à pastille
---     « ! », sinon le dernier panneau du rail ouvert, sinon le premier bouton affiché ; graphe
+--     carte d'invitation d'équipage (PanelController.focusTarget(), passagère), sinon la cible de
+--     l'accueil, sinon le bouton du rail à pastille « ! », sinon le dernier panneau du rail ouvert,
+--     sinon le premier bouton affiché ; graphe
 --     NextSelection* complet (rail, Équipage, Réglages, minicarte, suivi de quête, Ping, Dash,
 --     ACCLAMER) posé à la manette ; croix ← (InputController.QuestToggled) replie le suivi ; main
 --     d'accueil remplacée par l'icône de la touche (△, puis ✕ une fois le bouton sélectionné ; R2 sur
@@ -184,6 +187,9 @@ local RAIL_PAD_Y = RAIL_GLYPH_Y + GLYPH + GLYPH_GAP
 -- bord droit de Réglages (288 + 56 + 8 + 56 = 408) : la barre de la Balise, centrée sous la pastille
 -- d'événement, se rétrécit pour ne pas le toucher sur les écrans étroits (zone sûre TV : 1152 px)
 local TOP_ROW_RIGHT = MARGIN + GLOW_SIZE.X + 12 + ICON + 8 + ICON
+-- largeur minimale de la pastille d'événement quand même décalée elle ne tient pas entre Réglages et
+-- la minicarte (zone intérieure < 910 px de référence)
+local EVENT_MIN_WIDTH = 220
 
 type RailDef = {
 	element: Types.HudElement,
@@ -334,7 +340,6 @@ local eventParts: { label: TextLabel?, stroke: UIStroke?, bar: Frame?, fill: Fra
 	{}
 local lastPill: EventPill.PillState? = nil
 local lastBarRatio = -1
-local beaconWidth = BEACON_BAR.X -- largeur courante de la barre de la Balise (layoutActions)
 
 local statusParts: {
 	rookie: Frame?,
@@ -1424,6 +1429,32 @@ local function box(x: number, y: number, w: number, h: number): Rect
 	return { x0 = x, y0 = y, x1 = x + w, y1 = y + h }
 end
 
+-- Pastille d'événement pour une zone intérieure de largeur W (px de référence) : décalage du centre
+-- par rapport au milieu de l'écran, largeur de la pastille, largeur de la barre de la Balise.
+-- Centrée tant qu'elle laisse libres Équipage / Réglages (bord droit TOP_ROW_RIGHT) ; sur les
+-- écrans étroits (640 × 360, 667 × 375 : zone intérieure < 1136 px) elle glisse vers la droite
+-- sans toucher la minicarte, et ne rétrécit qu'en dernier recours. La barre de la Balise, centrée
+-- sous elle (y 70-98, à hauteur de Réglages et de la minicarte), tient dans le même couloir.
+local function pillGeometry(W: number): (number, number, number)
+	local minLeft = TOP_ROW_RIGHT + CLEARANCE
+	local maxRight = W - MARGIN - MINIMAP - CLEARANCE
+	local width = math.floor(math.clamp(maxRight - minLeft, EVENT_MIN_WIDTH, EVENT_SIZE.X))
+	local shift = math.max(0, math.ceil(minLeft - (W - width) / 2))
+	shift = math.min(shift, math.max(0, math.floor(maxRight - (W + width) / 2)))
+	local center = W / 2 + shift
+	local half = math.min(center - minLeft, maxRight - center)
+	local bar = math.clamp(math.floor(2 * half), width, BEACON_BAR.X)
+	return shift, width, bar
+end
+
+-- Rectangle de la pastille d'événement (avec la barre de la Balise si `withBar`)
+local function pillBox(W: number, withBar: boolean): Rect
+	local shift, width, bar = pillGeometry(W)
+	local w = if withBar then math.max(width, bar) else width
+	local h = if withBar then EVENT_SIZE.Y + BEACON_BAR_POS.Y.Offset + BEACON_BAR.Y else EVENT_SIZE.Y
+	return box(W / 2 + shift - w / 2, MARGIN, w, h)
+end
+
 -- Haut de l'instruction d'accueil (px de référence) pour une zone intérieure de hauteur `height` :
 -- sous la pile complète de toasts ; plus haut seulement si le compteur de file l'exige (zone
 -- intérieure < 486 px : écrans de moins de ~340 dp de haut) — le compteur de file reste lisible
@@ -1690,13 +1721,8 @@ local function layoutColumn(dashPos: UDim2, dashSize: number, pingSize: number)
 		local statusHome = box(W - MARGIN - STATUS_WIDTH, STATUS_Y, STATUS_WIDTH, STATUS_HEIGHT)
 		local trackerHome = box(W - MARGIN - TRACKER_SIZE.X, TRACKER_Y, TRACKER_SIZE.X, TRACKER_SIZE.Y)
 		if hitsAny(statusHome, fixed) or hitsAny(trackerHome, fixed) then
-			local pill = box((W - EVENT_SIZE.X) / 2, MARGIN, EVENT_SIZE.X, EVENT_SIZE.Y)
-			local withBar = box(
-				(W - beaconWidth) / 2,
-				MARGIN,
-				beaconWidth,
-				EVENT_SIZE.Y + BEACON_BAR_POS.Y.Offset + BEACON_BAR.Y
-			)
+			local pill = pillBox(W, false)
+			local withBar = pillBox(W, true)
 			local right = W - SIDE_RIGHT
 			local cluster = math.min(dash.y0, ping.y0) - CLEARANCE
 			local statusSize = Vector2.new(STATUS_WIDTH, STATUS_HEIGHT)
@@ -1782,18 +1808,15 @@ local function cardPlacement(size: Vector2, gap: number, wanted: number): Screen
 	local cx0 = math.min(dashBox.x0, pingBox.x0)
 	local cy0 = math.min(dashBox.y0, pingBox.y0)
 	local lineTop = H - LINE_Y - LINE_SIZE.Y
-	-- pastille d'événement, avec la barre de la Balise quand elle est affichée
-	local pillWidth, pillHeight = EVENT_SIZE.X, EVENT_SIZE.Y
+	-- pastille d'événement (décalée sur écran étroit), avec la barre de la Balise quand elle est
+	-- affichée
 	local bar = eventParts.bar
-	if bar and bar.Visible then
-		pillWidth = math.max(pillWidth, beaconWidth)
-		pillHeight += BEACON_BAR_POS.Y.Offset + BEACON_BAR.Y
-	end
+	local pill = pillBox(W, bar ~= nil and bar.Visible)
 	local obstacles: { Rect } = {
 		-- coin des actions jusqu'au bas de l'écran : Dash, Ping et bouton de saut tactile
 		box(cx0, cy0, W - cx0, H - cy0),
 		box(W - MARGIN - MINIMAP, MARGIN, MINIMAP, MINIMAP),
-		box((W - pillWidth) / 2, MARGIN, pillWidth, pillHeight),
+		pill,
 		box((W - TOAST_WIDTH) / 2, TOAST_TOP, TOAST_WIDTH, TOAST_BOTTOM - TOAST_TOP),
 		box((W - HINT_SIZE.X) / 2, hintTop(H), HINT_SIZE.X, HINT_SIZE.Y),
 		box((W - LINE_SIZE.X) / 2, lineTop, LINE_SIZE.X, LINE_SIZE.Y),
@@ -1861,14 +1884,24 @@ local function layoutActions()
 	end
 	-- Ping à gauche du Dash, bas alignés
 	ping.Position = dash.Position + UDim2.fromOffset(-dashSize - PING_GAP, 0)
-	-- barre de la Balise : jamais sous Équipage / Réglages (zone intérieure étroite : zone sûre TV)
+	-- pastille d'événement et barre de la Balise : jamais sur Équipage / Réglages ni la minicarte
+	-- (téléphones 16:9 étroits, zone sûre TV) — pillGeometry
 	local size = contentSize()
 	local bar = eventParts.bar
+	local pillHolder = if elements.eventPill then elements.eventPill.holder else nil
 	if size and bar then
-		local width = math.clamp(size.X - 2 * (TOP_ROW_RIGHT + CLEARANCE), EVENT_SIZE.X, BEACON_BAR.X)
-		beaconWidth = width
-		if bar.Size.X.Offset ~= width then
-			bar.Size = UDim2.fromOffset(width, BEACON_BAR.Y)
+		local shift, width, barWidth = pillGeometry(size.X)
+		if bar.Size.X.Offset ~= barWidth then
+			bar.Size = UDim2.fromOffset(barWidth, BEACON_BAR.Y)
+		end
+		if pillHolder then
+			local position = UDim2.new(0.5, shift, 0, MARGIN)
+			if pillHolder.Position ~= position then
+				pillHolder.Position = position
+			end
+			if pillHolder.Size.X.Offset ~= width then
+				pillHolder.Size = UDim2.fromOffset(width, EVENT_SIZE.Y)
+			end
 		end
 	end
 	layoutColumn(dash.Position, dashSize, pingSize)
@@ -2008,6 +2041,29 @@ local function stepGlow(now: number)
 	counter:step(uiTime)
 end
 
+-- Objet réellement affiché : lui et ses ancêtres visibles, dans un écran activé
+local function onScreen(obj: Instance): boolean
+	local cur: Instance? = obj
+	while cur ~= nil and cur:IsA("GuiObject") do
+		if not (cur :: GuiObject).Visible then
+			return false
+		end
+		cur = cur.Parent
+	end
+	return cur ~= nil and cur:IsA("LayerCollector") and (cur :: LayerCollector).Enabled
+end
+
+-- Bouton Accepter de la carte d'invitation d'équipage tant qu'elle est affichée
+-- (PanelController.focusTarget, docs/07 §6.7), nil sinon
+local function invitationTarget(): GuiObject?
+	local ok, focus = pcall(PanelController.focusTarget)
+	local target: any = if ok then focus else nil
+	if typeof(target) == "Instance" and target:IsA("GuiObject") and onScreen(target) then
+		return target :: GuiObject
+	end
+	return nil
+end
+
 local function stepAttention()
 	local reducedMotion = reduced()
 	local pulse = 1
@@ -2040,7 +2096,8 @@ local function stepAttention()
 	end
 	-- manette : icône de la touche à presser à la place de la main (docs/07 §6.2) : R2 pour le Dash,
 	-- △ pour un bouton du rail, puis ✕ une fois ce bouton sélectionné ; à droite de la cible (moitié
-	-- gauche de l'écran) ou au-dessus (moitié droite)
+	-- gauche de l'écran) ou au-dessus (moitié droite). Carte d'invitation d'équipage affichée : △ la
+	-- sélectionne d'abord (HUD.selectRail) et l'annonce sur Accepter — pas de second △ au rail
 	local g = handGlyph
 	if g then
 		local key: Enum.KeyCode? = nil
@@ -2049,7 +2106,7 @@ local function stepAttention()
 				key = Enum.KeyCode.ButtonR2
 			elseif GuiService.SelectedObject == target.visual then
 				key = Enum.KeyCode.ButtonA
-			else
+			elseif invitationTarget() == nil then
 				key = Enum.KeyCode.ButtonY
 			end
 			local visual = target.visual
@@ -2356,18 +2413,6 @@ function HUD.registerElement(element: Types.HudElement, holder: GuiObject, visua
 	register(element, holder, visual)
 end
 
--- Objet réellement affiché : lui et ses ancêtres visibles, dans un écran activé
-local function onScreen(obj: Instance): boolean
-	local cur: Instance? = obj
-	while cur ~= nil and cur:IsA("GuiObject") do
-		if not (cur :: GuiObject).Visible then
-			return false
-		end
-		cur = cur.Parent
-	end
-	return cur ~= nil and cur:IsA("LayerCollector") and (cur :: LayerCollector).Enabled
-end
-
 local function selectObject(target: GuiObject): boolean
 	local ok = pcall(function()
 		GuiService.SelectedObject = target
@@ -2389,10 +2434,10 @@ local function railButton(panel: Types.PanelName): GuiObject?
 	return nil
 end
 
--- △ (manette, docs/07-console-ps5.md §6.2) : sélection de départ du menu du HUD, par priorité : la
--- cible de l'accueil (main / pulsation), la cible hors fenêtre de PanelController.focusTarget()
--- (carte d'invitation d'équipage), le bouton du rail à pastille « ! », le dernier panneau du rail
--- ouvert, le premier bouton affiché du rail. false : rien à sélectionner.
+-- △ (manette, docs/07-console-ps5.md §6.2, §6.7) : sélection de départ du menu du HUD, par
+-- priorité : la cible hors fenêtre de PanelController.focusTarget() (carte d'invitation d'équipage,
+-- passagère), la cible de l'accueil (main / pulsation), le bouton du rail à pastille « ! », le
+-- dernier panneau du rail ouvert, le premier bouton affiché du rail. false : rien à sélectionner.
 -- Mode menu : la sélection manette est dans le HUD ou la minicarte (le stick la déplace au lieu de
 -- faire marcher) ; ○ rend la main au jeu (InputController efface la sélection)
 local function hudMenuMode(): boolean
@@ -2432,16 +2477,18 @@ function HUD.selectRail(): boolean
 	if playerGui ~= nil and playerGui:FindFirstChild("Loading") ~= nil then
 		return false
 	end
+	-- carte d'invitation d'équipage d'abord (docs/07 §6.7) : elle est passagère (20 s) et n'est
+	-- reliée à aucun bouton du HUD (autre ScreenGui), alors que la cible de l'accueil sera toujours
+	-- là après ; sa propre icône annonce △ sur Accepter
+	local target = invitationTarget()
+	if target then
+		return selectObject(target)
+	end
 	for _, name in HAND_ELEMENTS do
 		local e = elements[name]
 		if e and e.attention and e.revealed and e.visual:IsA("GuiButton") and onScreen(e.visual) then
 			return selectObject(e.visual)
 		end
-	end
-	local ok, focus = pcall(PanelController.focusTarget)
-	local target: any = if ok then focus else nil
-	if typeof(target) == "Instance" and target:IsA("GuiObject") and onScreen(target) then
-		return selectObject(target :: GuiObject)
 	end
 	for _, def in RAIL do
 		local badge = badges[def.panel]

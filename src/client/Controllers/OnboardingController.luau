@@ -21,10 +21,12 @@
 --   * jamais plus d'une instruction à l'écran (≤ 4 mots, "onboarding.*"), aucune fenêtre modale
 --     (l'accueil n'ouvre jamais de panneau lui-même)
 --   * place de l'instruction : sous la pile COMPLÈTE de toasts (HUD.hintTop, règle partagée avec la
---     colonne de droite du HUD) ; effacée pendant les 10 s du bouton ACCLAMER quand il occupe sa
---     place (téléphones) ; panneau ouvert : une instruction qui le concerne (achats dans Améliorer)
---     passe au-dessus de la fenêtre (écran relevé à 35), ancrée sur son bord haut, toute autre
---     instruction s'efface jusqu'à la fermeture
+--     colonne de droite du HUD), centrée, sauf si elle toucherait le coin des actions affichées
+--     (Dash, Ping et le bouton de saut dessous : téléphones de 640 × 360 à 667 × 375 dès Q3) :
+--     elle se décale alors à sa gauche (GDD §10.1) ; effacée pendant les 10 s du bouton ACCLAMER
+--     quand il occupe sa place (téléphones) ; panneau ouvert : une instruction qui le concerne
+--     (achats dans Améliorer) passe au-dessus de la fenêtre (écran relevé à 35), ancrée sur son
+--     bord haut, toute autre instruction s'efface jusqu'à la fermeture
 --   * message « Ton Nid travaille même quand tu dors » à 10 min de jeu (joueurs encore nouveaux)
 --   * manette (docs/07-console-ps5.md §6.2) : fait `gamepad` des règles (« Ouvre Améliorer » au lieu
 --     de « Touche Améliorer ») et icône de la touche (UI/Glyph « PadGlyph ») à la place de l'icône
@@ -83,6 +85,9 @@ local DOCKED_DISPLAY_ORDER = 35
 local HINT_SIZE = Vector2.new(400, 56)
 local HINT_GLYPH = 44 -- px de référence : icône de touche à la place de l'icône (44 × 44)
 local HINT_DOCK_MIN = 8 -- px de référence : haut minimal de l'instruction ancrée (fenêtre non mesurée)
+local HINT_CLEARANCE = 8 -- px de référence : écart avec le coin des actions (CLEARANCE du HUD)
+-- boutons du coin des actions (bas droite) que l'instruction ne recouvre jamais (GDD §10.1)
+local ACTION_ELEMENTS: { Types.HudElement } = { "dash", "ping" }
 local HINT_LAYOUT_EVERY = 0.1 -- s : replacement (écran tourné, fenêtre qui s'ouvre, ACCLAMER)
 local FOOTPRINTS = 6
 local FOOTPRINT_SIZE = Vector3.new(0.9, 0.12, 1.5)
@@ -616,6 +621,83 @@ local function windowTop(name: Types.PanelName): number?
 	return if isFinite(y) then y else nil
 end
 
+-- Conteneur d'un élément du HUD posé directement dans un conteneur Safe de Root, et ce Safe
+local function placedInSafe(obj: Instance?): (GuiObject?, GuiObject?)
+	local node = obj
+	while node ~= nil do
+		local parent = node.Parent
+		local gui = if parent then parent.Parent else nil
+		if gui ~= nil and gui:IsA("ScreenGui") then
+			if node:IsA("GuiObject") and parent ~= nil and parent:IsA("GuiObject") then
+				return node :: GuiObject, parent :: GuiObject
+			end
+			return nil, nil
+		end
+		node = parent
+	end
+	return nil, nil
+end
+
+-- Zone intérieure d'un conteneur Safe de Root (px de référence : écran ÷ échelle − marges) ; nil
+-- tant que le moteur ne l'a pas mesurée. Tous les écrans de Root ont la même : le HUD et l'accueil
+-- partagent donc leurs coordonnées.
+local function contentOf(safe: GuiObject): Vector2?
+	local gui = safe.Parent
+	if gui == nil or not gui:IsA("ScreenGui") then
+		return nil
+	end
+	local abs = (gui :: ScreenGui).AbsoluteSize
+	if not (isFinite(abs.X) and isFinite(abs.Y)) or abs.X <= 1 or abs.Y <= 1 then
+		return nil
+	end
+	local k = math.max(Root.scale(), 0.01)
+	local padding = safe:FindFirstChildOfClass("UIPadding")
+	local pad = if padding
+		then Vector2.new(
+			padding.PaddingLeft.Offset + padding.PaddingRight.Offset,
+			padding.PaddingTop.Offset + padding.PaddingBottom.Offset
+		)
+		else Vector2.zero
+	return abs / k - pad
+end
+
+-- Centre horizontal de l'instruction posée à `top` (px de référence de la zone intérieure) quand
+-- elle toucherait le coin des actions affichées — de leur bord haut gauche jusqu'au coin bas droit
+-- de l'écran (Dash, Ping et le bouton de saut tactile dessous, même coin que les cartes du HUD) :
+-- juste à gauche de ce coin. nil : centrée (rien à éviter, HUD pas encore construit ni mesuré).
+-- Positions de mise en page (pas AbsolutePosition) : le pouls d'attention du Dash ne la fait pas
+-- trembler.
+local function hintCenterX(top: number): number?
+	local x0, y0 = math.huge, math.huge
+	local content: Vector2? = nil
+	for _, name in ACTION_ELEMENTS do
+		if HUD.isRevealed(name) then
+			local holder, safe = placedInSafe(HUD.anchor(name))
+			local size = if safe then contentOf(safe) else nil
+			if holder ~= nil and size ~= nil then
+				content = size
+				local W, H = size.X, size.Y
+				local s, p, a = holder.Size, holder.Position, holder.AnchorPoint
+				local w = s.X.Scale * W + s.X.Offset
+				local h = s.Y.Scale * H + s.Y.Offset
+				x0 = math.min(x0, p.X.Scale * W + p.X.Offset - a.X * w)
+				y0 = math.min(y0, p.Y.Scale * H + p.Y.Offset - a.Y * h)
+			end
+		end
+	end
+	if content == nil or not (isFinite(x0) and isFinite(y0) and isFinite(top)) then
+		return nil
+	end
+	local W, H = content.X, content.Y
+	local half = HINT_SIZE.X / 2
+	local center = W / 2
+	-- [W/2 ± 200] × [top, top + 56] contre [x0, W] × [y0, H]
+	if not (center - half < W and x0 < center + half and top < H and y0 < top + HINT_SIZE.Y) then
+		return nil
+	end
+	return math.max(half, math.min(center, x0 - HINT_CLEARANCE - half))
+end
+
 -- Place et montre l'instruction selon l'écran : sous la pile de toasts (HUD.hintTop), effacée sous
 -- ACCLAMER ou sous un panneau qui ne la concerne pas, ancrée sur le bord haut de la fenêtre d'un
 -- panneau qui la concerne (à cheval sur ce bord, au centre : elle ne cache pas les cartes, ni le
@@ -639,11 +721,18 @@ local function layoutHint(pop: boolean)
 		visible = false
 	end
 	local y = HUD.hintTop()
+	local centerX: number? = nil
 	if docked and panel ~= nil then
 		local top = windowTop(panel)
 		y = if top ~= nil then math.max(HINT_DOCK_MIN, top - HINT_SIZE.Y / 2) else HINT_DOCK_MIN
+	else
+		-- jamais sur le Dash ni le Ping (petits téléphones) : décalée à gauche de leur coin
+		centerX = hintCenterX(y)
 	end
-	local position = UDim2.new(0.5, 0, 0, math.floor(y + 0.5))
+	local top = math.floor(y + 0.5)
+	local position = if centerX ~= nil
+		then UDim2.new(0, math.floor(centerX + 0.5), 0, top)
+		else UDim2.new(0.5, 0, 0, top)
 	if frame.Position ~= position then
 		frame.Position = position
 	end
