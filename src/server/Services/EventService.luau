@@ -844,6 +844,26 @@ local function stepGround(c: CometRun, now: number, actors: { Types.Actor })
 	end
 end
 
+-- Le déplacement VALIDÉ prev → pos du porteur traverse-t-il la porte de son Nid ? Comme pour les
+-- parades (CongaService) : à 10 Hz, avec la gigue du réseau, deux échantillons peuvent tomber de part
+-- et d'autre de la boîte de porte (profonde de 4 studs) ; on la teste donc le long du pas, tous les
+-- GATE_SWEEP_STEP studs. CongaService garantit que prev → pos est un déplacement validé.
+local GATE_SWEEP_STEP = 1
+local GATE_SWEEP_MAX = 128
+local function sweptThroughGate(slot: number, prev: Vector3, pos: Vector3): boolean
+	if WorldLayout.inGateBox(slot, pos) then
+		return true
+	end
+	local delta = pos - prev
+	local samples = math.min(math.ceil(delta.Magnitude / GATE_SWEEP_STEP), GATE_SWEEP_MAX)
+	for i = 1, samples - 1 do
+		if WorldLayout.inGateBox(slot, prev + delta * (i / samples)) then
+			return true
+		end
+	end
+	return false
+end
+
 local function stepCarried(c: CometRun, now: number, actors: { Types.Actor })
 	local carrier = c.carrier :: Player
 	local actor = findActor(actors, carrier)
@@ -862,7 +882,7 @@ local function stepCarried(c: CometRun, now: number, actors: { Types.Actor })
 	end
 	checkHoldReward(c, carrier, now)
 	-- encaissement : le porteur traverse la porte de SON Nid
-	if actor.valid and actor.slot > 0 and WorldLayout.inGateBox(actor.slot, actor.pos) then
+	if actor.valid and actor.slot > 0 and sweptThroughGate(actor.slot, actor.prev, actor.pos) then
 		bankComet(c, now, actor, actors)
 		return
 	end

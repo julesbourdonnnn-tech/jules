@@ -516,6 +516,44 @@ return function(T)
 			expect(saved.stats.cometsHeld).toBe(1)
 		end)
 
+		it("encaissement balayé : porte franchie entre deux ticks (pas de 6 studs) → encaissée", function()
+			local ctx = boot()
+			local a = join(ctx, 1)
+			at(ctx, T1)
+			local impact = ctx.EventClock.cometImpact(T1)
+			ctx.E.stepComet(T1, { actor(ctx, a, Vector3.new(impact.X, 3, impact.Z)) })
+			expect(ctx.E.carrier()).toBe(a)
+			-- deux échantillons de part et d'autre de la boîte de porte (profonde de 4 studs)
+			local gate = ctx.WorldLayout.gateCFrame(ctx.N.slotOf(a))
+			local before = gate.Position - gate.LookVector * 3
+			local after = gate.Position + gate.LookVector * 3
+			expect(ctx.WorldLayout.inGateBox(ctx.N.slotOf(a), before)).toBe(false)
+			expect(ctx.WorldLayout.inGateBox(ctx.N.slotOf(a), after)).toBe(false)
+			at(ctx, T1 + 20)
+			ctx.E.stepComet(T1 + 20, { actor(ctx, a, before) })
+			expect(ctx.E.snapshot().comet.phase).toBe("carried")
+			at(ctx, T1 + 20.1)
+			ctx.E.stepComet(T1 + 20.1, { actor(ctx, a, after, before) })
+			expect(ctx.E.snapshot().comet.phase).toBe("banked")
+			-- un pas refusé (valid = false) ne compte jamais
+			local ctx2 = boot()
+			local b = join(ctx2, 2)
+			at(ctx2, T1)
+			ctx2.E.stepComet(T1, { actor(ctx2, b, Vector3.new(impact.X, 3, impact.Z)) })
+			local g2 = ctx2.WorldLayout.gateCFrame(ctx2.N.slotOf(b))
+			at(ctx2, T1 + 20)
+			ctx2.E.stepComet(T1 + 20, {
+				actor(
+					ctx2,
+					b,
+					g2.Position + g2.LookVector * 3,
+					g2.Position - g2.LookVector * 3,
+					{ valid = false }
+				),
+			})
+			expect(ctx2.E.snapshot().comet.phase).toBe("carried")
+		end)
+
 		it("acteurs absurdes ou temps non fini : aucune erreur", function()
 			local ctx = boot()
 			at(ctx, T1)
