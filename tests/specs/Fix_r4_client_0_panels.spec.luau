@@ -163,6 +163,16 @@ return function(T)
 				c.h.game.GuiService.SelectedObject = nil
 				frames(c, 2)
 				expect(selected(c)).toBe(first)
+				-- ✕ puis pavé tactile aussitôt : l'effacement vient de la bascule de Roblox, pas d'une
+				-- fenêtre d'achat ouverte par ✕ → rendue quand même
+				frames(c, 2)
+				Gamepad.tap(c.h, K.ButtonA)
+				frames(c, 1)
+				expect(inside(c)).toBe(true)
+				Gamepad.tap(c.h, K.ButtonSelect)
+				c.h.game.GuiService.SelectedObject = nil
+				frames(c, 2)
+				expect(inside(c)).toBe(true)
 				-- effacée de nouveau, croix ↑ dans la même image : absorbée, sélection rendue, pas de roue
 				c.h.game.GuiService.SelectedObject = nil
 				expect(Gamepad.tap(c.h, K.DPadUp) ~= "CC_PingWheel").toBe(true)
@@ -280,15 +290,13 @@ return function(T)
 				)
 				frames(c, 2)
 				expect(selected(c)).toBe(buy)
-				-- un ✕ ancien (> 3 s) suivi d'un effacement n'est pas une fenêtre d'achat
+				-- un ✕ ancien (> 3 s, sélection restée sur Acheter entre-temps) suivi d'un effacement n'est
+				-- pas la fenêtre d'achat : sélection rendue
+				c.Clock.advance(2)
 				Gamepad.tap(c.h, K.ButtonA)
-				c.h.game.MarketplaceService.PromptGamePassPurchaseFinished:Fire(
-					c.h.localPlayer,
-					PASS_ID,
-					false
-				)
-				frames(c, 2)
+				expect(#c.h.log.prompts).toBe(2)
 				frames(c, 120)
+				expect(selected(c)).toBe(buy)
 				c.h.game.GuiService.SelectedObject = nil
 				frames(c, 2)
 				expect(selected(c)).toBe(buy)

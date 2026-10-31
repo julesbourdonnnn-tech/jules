@@ -9,14 +9,18 @@
 --   * Celebrate → réactions d'écran : "supernova" (titre qui s'écrit en 0,6 s), "atlasNew" /
 --     "speciesComplete" (carte qui glisse de la droite, reflet ; pile rangée dans la place libre de
 --     la colonne de droite du HUD, setCardPlacer : jamais sur le Dash, le Ping ni le bouton de saut,
---     zone sûre de l'appareil comprise ; les cartes en trop attendent), "atlasMilestone" (confettis),
+--     zone sûre de l'appareil comprise ; les cartes en trop attendent), "atlasUnlocked" (fin de Q4,
+--     GDD §3 « l'Atlas se débloque, page qui tourne, 5/150 » : carte « Star Atlas débloqué ! N/T »
+--     en tête de la file des cartes, son LevelUp quand elle entre ; l'accueil pointe l'icône
+--     Collection via Celebrated), "atlasMilestone" (confettis),
 --     "questDone" / "questClaimed" / "dailyClaimed" (récompense qui vole vers son compteur),
 --     "starforge" (tampon « ★N ! », sauf panneau Collection ouvert : il joue lui-même la révélation
 --     du GDD §9.4, orbite de 1,2 s puis résultat et son tampon), "purchase" (pluie de 30 pièces,
 --     « Merci ! »), "cometBanked", "release",
 --     "unlock", "upgrade" (+ VFXController.playUpgrade, différé à la fermeture du panneau ouvert :
---     l'onde de choc et le Nebby fantôme ne se jouent pas sous le voile), "offline" (ReturnScreen
---     ouvert par les abonnés de Celebrated)
+--     l'onde de choc et le Nebby fantôme ne se jouent pas sous le voile ; le son LevelUp de l'achat,
+--     GDD §9.4, part lui tout de suite, à chaque achat, et la reprise différée est muette),
+--     "offline" (ReturnScreen ouvert par les abonnés de Celebrated)
 --   * tampons centraux (police LuckiestGuy, UIStroke 3 px) : « PARADE ×2,36 ! » (échelle 2 → 1,
 --     rotation −8° → 0 en 0,25 s Back Out, tenu 0,8 s), « SNIP ! » (Elastic Out), « COMÈTE VOLÉE ! »,
 --     « Conga ×N ! » quand la file locale se remplit ; parade locale : 8-16 pièces volent de la porte
@@ -114,6 +118,7 @@ local DUPLICATE_WINDOW = 0.5 -- même toast ignoré pendant 0,5 s
 local TOAST_MEMORY = 32 -- textes récents mémorisés pour l'anti-doublon (au-delà : purge)
 local MAX_LEVEL = 1e6 -- niveau d'amélioration ou nombre d'étoiles absurde : ignoré
 local MAX_STARS = 5
+local MAX_ATLAS = 1e4 -- taille d'Atlas absurde (« N/T » du déblocage) : ignorée
 -- Amélioration achetée panneau ouvert : l'onde de choc et le Nebby fantôme (VFXController) se
 -- joueraient sous le voile et le flou de la fenêtre ; ils attendent sa fermeture (fondu de
 -- PanelController : 0,12 s), et sont oubliés si le panneau reste ouvert trop longtemps
@@ -147,6 +152,7 @@ local TONES: { [string]: boolean } =
 local CELEBRATE_KINDS: { [string]: boolean } = {
 	supernova = true,
 	atlasNew = true,
+	atlasUnlocked = true,
 	atlasMilestone = true,
 	speciesComplete = true,
 	questDone = true,
@@ -209,6 +215,9 @@ type StampSlot = {
 }
 
 type Card = { frame: CanvasGroup, t0: number, outAt: number, goneAt: number, index: number }
+-- Carte en attente de place : son joué à son entrée (défaut Pop) ; `first` : passe devant les
+-- autres (moment unique, jamais perdu quand la file est pleine)
+type QueuedCard = { text: string, sound: string?, first: boolean }
 
 local started = false
 local fxTime = 0
@@ -230,7 +239,7 @@ local vignette = { t0 = -math.huge, duration = 0, color = SNIP_PINK }
 local title: { label: TextLabel?, t0: number, graphemes: number, active: boolean } =
 	{ label = nil, t0 = 0, graphemes = 0, active = false }
 local cards: { Card } = {}
-local cardQueue: { string } = {}
+local cardQueue: { QueuedCard } = {}
 local lastCoinSound = -math.huge
 local lastToast: { [string]: number } = {}
 local rng = Random.new()
@@ -741,7 +750,7 @@ local function cardY(index: number, stack: CardStack?): UDim2
 	return UDim2.new(1, -8, 0.42, offset)
 end
 
-local function openCard(text: string, stack: CardStack?)
+local function openCard(text: string, stack: CardStack?, sound: string?)
 	local _, c = ensureGui()
 	local index = #cards + 1
 	local target = cardY(index, stack)
@@ -797,16 +806,34 @@ local function openCard(text: string, stack: CardStack?)
 			0.2
 		)
 	end
-	AudioController.play("Pop", 0.05)
+	-- son de la carte quand elle ENTRE (une carte mise en file attend avec son son)
+	AudioController.play(sound or "Pop", 0.05)
 end
 
--- Carte affichée tout de suite s'il reste de la place dans la pile, sinon mise en file
-local function queueCard(text: string)
+-- Carte affichée tout de suite s'il reste de la place dans la pile, sinon mise en file ; `first` :
+-- devant les cartes ordinaires (après les autres `first`), la dernière carte ordinaire cède sa
+-- place si la file est pleine
+local function queueCard(text: string, sound: string?, first: boolean?)
 	local stack = cardStack()
 	if #cards < cardCapacity(stack) then
-		openCard(text, stack)
+		openCard(text, stack, sound)
+		return
+	end
+	local entry: QueuedCard = { text = text, sound = sound, first = first == true }
+	if entry.first then
+		local at = 1
+		while cardQueue[at] ~= nil and cardQueue[at].first do
+			at += 1
+		end
+		if at > CARD_QUEUE_MAX then
+			return
+		end
+		table.insert(cardQueue, at, entry)
+		if #cardQueue > CARD_QUEUE_MAX then
+			table.remove(cardQueue)
+		end
 	elseif #cardQueue < CARD_QUEUE_MAX then
-		table.insert(cardQueue, text)
+		table.insert(cardQueue, entry)
 	end
 end
 
@@ -834,7 +861,8 @@ local function stepCards()
 		end
 	end
 	while #cards < cardCapacity(stack) and #cardQueue > 0 do
-		openCard(table.remove(cardQueue, 1) :: string, stack)
+		local entry = table.remove(cardQueue, 1) :: QueuedCard
+		openCard(entry.text, stack, entry.sound)
 	end
 end
 
@@ -899,15 +927,20 @@ end
 
 -- Amélioration (onde de choc au sol + Nebby fantôme qui rejoint la file, GDD §3) -----------------
 
-local function playUpgrade(track: string, level: number)
-	local ok, err = pcall(VFXController.playUpgrade, track, level)
+-- `silent` : le son LevelUp a déjà été joué à l'achat (panneau ouvert), seul l'effet du monde reste.
+-- Troisième paramètre demandé à VFXController.playUpgrade (qui saute alors son LevelUp) : type
+-- élargi tant que sa signature n'a que deux paramètres ; d'ici là il est ignoré et la reprise
+-- différée sonne encore une fois, avec l'onde de choc
+local function playUpgrade(track: string, level: number, silent: boolean?)
+	local play: (string, number, boolean?) -> () = VFXController.playUpgrade :: any
+	local ok, err = pcall(play, track, level, silent)
 	if not ok then
 		warn("[ScreenFX] playUpgrade :", err)
 	end
 end
 
 -- Effet en attente : joué UPGRADE_AFTER_CLOSE après la fermeture du panneau (le voile et le flou
--- sont partis), oublié après UPGRADE_WAIT_MAX panneau ouvert
+-- sont partis), sans son (entendu à l'achat), oublié après UPGRADE_WAIT_MAX panneau ouvert
 local function stepPendingUpgrade()
 	local p = pendingUpgrade
 	if p == nil then
@@ -925,7 +958,7 @@ local function stepPendingUpgrade()
 		p.readyAt = fxTime + UPGRADE_AFTER_CLOSE
 	elseif fxTime >= readyAt then
 		pendingUpgrade = nil
-		playUpgrade(p.track, p.level)
+		playUpgrade(p.track, p.level, true)
 	end
 end
 
@@ -1216,6 +1249,19 @@ local function onCelebrate(payload: any)
 				)
 			)
 		end
+	elseif (kind :: string) == "atlasUnlocked" then
+		-- fin de Q4 (GDD §3, « l'Atlas se débloque, page qui tourne, 5/150 ») : la carte qui glisse
+		-- de la droite est la page qui tourne ; elle passe devant les « NOUVEAU ! » du même Rare et
+		-- son LevelUp sonne quand elle entre (genre absent de Types.CelebrateKind : comparé en texte)
+		local n, total = num(data.count), num(data.total)
+		if n and total and n >= 0 and total >= 1 and total <= MAX_ATLAS then
+			local whole = math.floor(total)
+			local text = Prefs.t("celebrate.atlasUnlocked", {
+				count = Prefs.number(math.min(math.floor(n), whole)),
+				total = Prefs.number(whole),
+			})
+			queueCard(text, "LevelUp", true)
+		end
 	elseif kind == "atlasMilestone" then
 		ScreenFX.confetti(60)
 		AudioController.play("LevelUp")
@@ -1255,10 +1301,14 @@ local function onCelebrate(payload: any)
 			and level <= MAX_LEVEL
 		then
 			if openPanel() ~= nil then
-				-- achat depuis Améliorer : l'effet du monde attend la fermeture du panneau (la carte
-				-- d'accueil se ferme seule 0,6 s après l'achat) ; seul le dernier achat est rejoué
+				-- achat depuis Améliorer : le son de l'achat (GDD §9.4 : LevelUp) part tout de suite, à
+				-- chaque achat (le bouton Acheter est muet) ; seul l'effet du monde attend la fermeture
+				-- du panneau (la carte d'accueil se ferme seule 0,6 s après l'achat), rejoué muet pour
+				-- le dernier achat
+				AudioController.play("LevelUp", 0.05)
 				pendingUpgrade = { track = data.track, level = math.floor(level), at = fxTime, readyAt = nil }
 			else
+				-- aucun panneau : effet et son tout de suite (VFXController joue LevelUp lui-même)
 				playUpgrade(data.track, level)
 			end
 			ScreenFX.floater(
