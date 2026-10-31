@@ -27,6 +27,8 @@ local Settings = {
 	lowGraphics = { kind = "boolean", default = false, saved = true, order = 3 },
 	music = { kind = "boolean", default = true, saved = true, order = 4 },
 	sfx = { kind = "boolean", default = true, saved = true, order = 5 },
+	-- vibrations manette et téléphone (Client/Util/Haptics, docs/07-console-ps5.md §9.1)
+	vibration = { kind = "boolean", default = true, saved = true, order = 5.5 },
 	autoCrew = { kind = "boolean", default = true, saved = true, order = 6 },
 	refuseInvites = { kind = "boolean", default = false, saved = true, order = 7 },
 	lang = {

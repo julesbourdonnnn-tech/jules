@@ -14,6 +14,7 @@ local Client = script.Parent
 -- Ordre explicite (docs/04-architecture.md §13.1) : un module n'appelle directement que ceux
 -- listés avant lui ; vers le haut, il écoute leurs signaux.
 local ORDER: { ModuleScript } = {
+	Client.Util.Platform, -- console, écran, entrée préférée, règle du chat (docs/07-console-ps5.md)
 	Client.UI.Root,
 	Client.Controllers.StateController,
 	Client.Controllers.AudioController,

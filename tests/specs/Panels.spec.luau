@@ -1018,7 +1018,9 @@ return function(T)
 				for _ in rows do
 					n += 1
 				end
-				expect(n).toBe(9)
+				-- 10 entrées de Config/Settings (« vibration » ajoutée pour la console, docs/07 §9.1)
+				expect(n).toBe(10)
+				expect(rows.vibration.toggle:GetAttribute("On")).toBe(true)
 				expect(rows.privateNoSnip.frame.Visible).toBe(false)
 				expect(rows.music.name.Text).toBe("Music")
 				expect(rows.music.toggle:GetAttribute("On")).toBe(true)

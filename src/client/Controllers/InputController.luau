@@ -65,6 +65,9 @@ InputController.MinimapToggled = Signal.new() :: Signal.Signal<>
 -- Ajouts du paquet client-hud : Dash refusé localement (raison), Y (manette) : sélection du rail
 InputController.DashRefused = Signal.new() :: Signal.Signal<string>
 InputController.RailRequested = Signal.new() :: Signal.Signal<>
+-- Console (docs/07-console-ps5.md §1) : replier / déplier le suivi de quête (croix gauche), écouté par
+-- le HUD
+InputController.QuestToggled = Signal.new() :: Signal.Signal<>
 
 -- Constantes (GDD §6.3, §10.4) ------------------------------------------------------------------
 
@@ -476,6 +479,8 @@ end
 
 function InputController.setPanelGate(fn: ((Types.PanelName) -> boolean)?)
 	panelGate = fn
+	-- la même garde vaut pour le changement de panneau à la manette (L2 / R2, docs/07 §6)
+	panels("setGate", fn)
 end
 
 -- Acclamation : le HUD signale qu'une fenêtre est ouverte

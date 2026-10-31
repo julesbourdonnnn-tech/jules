@@ -29,6 +29,12 @@ local Sounds: { [string]: SoundDef } = {
 	Supernova = { id = "", volume = 0.8 },
 	Ping = { id = "", volume = 0.5 },
 	Cheer = { id = "", volume = 0.6 },
+	-- Navigation manette (docs/07-console-ps5.md §9) : sélection déplacée, retour (○), onglet ou
+	-- panneau changé (L1/R1, L2/R2), bout de liste atteint
+	Select = { id = "", volume = 0.3 },
+	Back = { id = "", volume = 0.35 },
+	Tab = { id = "", volume = 0.35 },
+	Bump = { id = "", volume = 0.3 },
 }
 
 return Sounds

@@ -28,6 +28,11 @@
         "EnableMouseLockOption": false
       }
     },
+    "StarterGui": {
+      "$properties": {
+        "VirtualCursorMode": "Disabled"
+      }
+    },
     "Players": {
       "$properties": {
         "MaxPlayers": 12

@@ -51,6 +51,10 @@ Aides d'intégration (même dossier) :
 | `Bots` | serveur complet (`Bots.boot(Harness, { t0, before })`), marche honnête (`stepToward`, `walkAll`), cerveaux qui chassent et paradent (`hunt`, `brains`), voyage dans le temps (`travelTo`), coupe mise en scène (`stageSnip`), scène réservée (`sendHome` / `resume`) |
 | `Wire` | enregistre ce que le serveur envoie à un joueur (règles de sérialisation des remotes Roblox : tables mixtes ou à trous, NaN, Instances, buffer > 900 octets…) puis le rejoue dans un client complet ; `saveContext` / `restoreContext` pour reparler au serveur après le client |
 | `ApiAudit` | pendant un test, confronte classes, propriétés écrites (tweens compris), types et droits d'écriture à la base de réflexion de Roblox livrée avec Lune |
+| `Layout` | géométrie simulée des interfaces de PlayerGui (`Layout.apply(h)` → `AbsolutePosition` / `AbsoluteSize` ; Size, Position, AnchorPoint, UIPadding, UIScale, contraintes, UIListLayout, UIGridLayout, ScrollingFrame) et navigation manette (`step`, `reachable`, `unreachable`, `escapes` : NextSelection* puis sélection directionnelle, SelectionGroup + SelectionBehavior) |
+| `Gamepad` | manette simulée (`press`, `release`, `tap`, `stick` : croix = navigation si une sélection existe, ✕ = `Activated`, sinon actions CAS par priorité) et `Gamepad.audit(h, { root })` : glyphes non PlayStation, lettres Xbox, textes < 18 px, débordement de la zone sûre TV (docs/07-console-ps5.md §10) |
+
+Console : `Harness.new({ mode = "client", console = true })` simule une PS5 sur téléviseur (`IsTenFootInterface()` vrai, `ViewportDisplaySize = Large`, écran 1920 × 1080, manette seule, `PreferredInput = Gamepad`, icônes PlayStation de `GetImageForKeyCode`). Vibrations journalisées dans `h.log.haptics`. Liaisons ContextActionService (touches, priorité) : `h.actionBindings`.
 
 Fidélité volontaire :
 - Chaque connexion de signal tourne dans son propre thread ; **une erreur dans une connexion fait échouer le test** (comme une ligne rouge dans la sortie Studio).
@@ -103,3 +107,4 @@ Fichiers : `tests/specs/<Système>.spec.luau`. Une spec par système, et des tes
 - [ ] Test DataStore : pannes simulées → retries → aucune perte ; données corrompues → migration/reconcile.
 - [ ] Achats : ProcessReceipt idempotent (même PurchaseId deux fois = un seul crédit).
 - [ ] Studio : jouer en mode « Local Server » avec 3 joueurs, émulateur téléphone (iPhone SE + tablette) et manette.
+- [ ] Console : specs `Console*.spec` vertes (manette seule, glyphes PlayStation, zone sûre, pas de fenêtre de chat) puis essai sur une vraie PS5 à 3 m (docs/07-console-ps5.md §12).

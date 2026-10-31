@@ -1061,7 +1061,8 @@ NebbyBuilder.budgetFx(rigs: { Rig }, maxParticles: number): number   -- du plus 
 
 | # | Module | Paquet | Rôle |
 |---|---|---|---|
-| 1 | `UI/Root` | socle | écrans et échelle |
+| 0 | `Util/Platform` | console (doc 07) | console, écran, entrée préférée, glyphes, règle du chat |
+| 1 | `UI/Root` | socle | écrans, échelle et zone sûre (règles de `Util/Platform`) |
 | 2 | `Controllers/StateController` | socle | miroir du profil |
 | 3 | `Controllers/AudioController` | socle (+ `setMusicEnabled`) | sons |
 | 4 | `Util/Prefs` | contrat | réglages, langue, traduction |
@@ -1089,8 +1090,9 @@ Chaque remote serveur → client a **un seul** abonné (§10.2) ; les autres mod
 | WorldStateController | `Ready`, `LineOp`, `Caught`, `Banked`, `Snipped`, `Cleared`, `OwnerChanged`, `WildAdded`, `WildRemoved`, `EventChanged`, `CrewsChanged`, `PingShown` |
 | ScreenFX | `FeedbackReceived`, `Celebrated` |
 | Banners | `Shown` |
-| InputController | `Dashed`, `InputTypeChanged`, `CheerRequested`, `MinimapToggled` |
+| InputController | `Dashed`, `InputTypeChanged`, `CheerRequested`, `MinimapToggled` (+ `DashRefused`, `RailRequested`, `QuestToggled` : croix ← à la manette, doc 07 §6) |
 | PanelController | `Opened`, `Closed`, `BadgeChanged` |
+| Util/Platform | `Changed(raison)` : `"input"`, `"display"`, `"gamepad"` (doc 07 §2) |
 | Prefs | `Changed`, `LanguageChanged` |
 | StateController (socle) | `Changed`, `ReadySignal` |
 
@@ -1339,7 +1341,7 @@ Interface d'un panneau (`PanelController.Panel`) : `name`, `tabs?`, `build(paren
 - Variables `{nom}` alphanumériques ; mêmes variables en EN et en FR (vérifié). Les noms d'espèces (`Config/Nebbies`, champ `name`) et les noms propres de l'IP restent en anglais.
 - Côté client : `Prefs.t(clé, vars)` ; nombres `Prefs.number` (EN « 1.24M », FR « 1,24 M ») ; durées `Prefs.duration`. Les textes construits gardent `AutoLocalize = true` pour la traduction automatique Roblox des autres langues.
 - Ajouter une clé : petite modification ciblée, EN **et** FR, sans toucher aux autres.
-- **Sons** : `src/shared/Config/Sounds.luau` (registre partagé) ; clés du GDD §9 : `Click, Pop, Coin, Reward, LevelUp, Error, Whoosh, Music, Catch, CatchRare, Snip, Scatter, Bank, Dash, CometWarn, CometImpact, CometSwipe, BeaconStart, BeaconWin, WispPop, Supernova, Ping, Cheer` ; IDs vides (jeu jouable en silence) ; `AudioController.play(clé, variation?, hauteur?)` (`hauteur` multiplie `PlaybackSpeed`, 1 par défaut).
+- **Sons** : `src/shared/Config/Sounds.luau` (registre partagé) ; clés du GDD §9 : `Click, Pop, Coin, Reward, LevelUp, Error, Whoosh, Music, Catch, CatchRare, Snip, Scatter, Bank, Dash, CometWarn, CometImpact, CometSwipe, BeaconStart, BeaconWin, WispPop, Supernova, Ping, Cheer`, et pour la navigation manette `Select, Back, Tab, Bump` (doc 07 §9.2) ; IDs vides (jeu jouable en silence) ; `AudioController.play(clé, variation?, hauteur?)` (`hauteur` multiplie `PlaybackSpeed`, 1 par défaut).
 
 ---
 
@@ -1452,3 +1454,12 @@ Ajouts minimaux et testés (aucune réécriture) :
 | `src/shared/Logic/Trail.luau` | stubs de l'extension (paquet logic) | GDD §4.7, §12.4 | `Contract.spec` |
 | `tests/harness/Harness.luau` | montage de `src/first` dans `ReplicatedFirst` | tester l'écran de chargement | `Contract.spec` |
 | `tests/specs/{DataService,MonetizationService,ClientBoot}.spec.luau` | portées du schéma d'exemple (`coins`) au schéma v1 (`glow`, `stardust`), mêmes vérifications + migration v0 et crochet de sauvegarde | schéma v1 | — |
+| `src/client/Util/Platform.luau`, `src/client/UI/Glyph.luau`, `src/client/Util/Haptics.luau`, `src/shared/Config/Console.luau` (nouveaux) | socle console : détection (`IsTenFootInterface` sous pcall, `ViewportDisplaySize`, `PreferredInput`), glyphes (`GetImageForKeyCode`, repli neutre), échelle « 10 pieds », zone sûre TV, règle du chat, vibrations modérées | console PS5 ([`07-console-ps5.md`](07-console-ps5.md)) | `Console.spec` |
+| `src/client/UI/Root.luau` | échelle et marge intérieure lues dans `Util/Platform` (1,5 et zone sûre de 5 % sur écran Large ou console ; inchangées ailleurs), `Root.padding()` | doc 07 §3-§4 | `Console.spec` |
+| `src/client/Main.client.luau` | `Util/Platform` chargé en premier | doc 07 §2 | `Contract.spec`, `Console.spec` |
+| `src/client/Controllers/InputController.luau` | signal `QuestToggled` ; `setPanelGate` transmet aussi la garde à PanelController | interfaces entre groupes console (doc 07 §11) | `Console.spec` |
+| `src/client/Controllers/PanelController.luau` | `setGate`, `allowed`, `focusTarget` (stub) | idem | `Console.spec` |
+| `src/shared/Config/Sounds.luau` | clés `Select`, `Back`, `Tab`, `Bump` (ID vides) | sons de navigation (doc 07 §9.2) | `Contract.spec` |
+| `src/shared/Config/Settings.luau` (+ `settings.vibration` EN/FR) | réglage `vibration` (booléen, activé, ordre 5,5) ; `Panels.spec` compte désormais 10 lignes de réglages | vibrations désactivables (doc 07 §9.1) | `Console.spec`, `Panels.spec` |
+| `default.project.json` | `StarterGui.VirtualCursorMode = "Disabled"` | navigation directionnelle sur mesure, sans curseur virtuel (doc 07 §0) | `Console.spec` |
+| `tests/harness/*` | option `console`, mocks `IsTenFootInterface`, `ViewportDisplaySize`, `PreferredInput`, `GetImageForKeyCode`, `TextChatService` (configurations), `HapticService` / `HapticEffect` ; `SelectionGained/Lost` ; `Selectable` par défaut des boutons ; liaisons CAS avec touches et priorités ; nouveaux `Layout.luau` (géométrie, navigation) et `Gamepad.luau` (entrées, audit console) | tester le jeu à la manette seule sur téléviseur (doc 07 §10) | `Console.spec` |

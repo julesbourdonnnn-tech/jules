@@ -1099,17 +1099,23 @@ Panneaux : `Size = UDim2.fromScale(0,72 ; 0,86)` avec `UISizeConstraint` (min 48
 
 ### 10.4 PC et manette
 
-| Action | Tactile | Clavier / souris | Manette |
-|---|---|---|---|
-| Se déplacer | Joystick | WASD / flèches | Stick gauche |
-| Sauter | Bouton Roblox | Espace | A |
-| **Dash** | Bouton Dash | Maj gauche ou E | X |
-| Roue de pings | Bouton Ping | Q puis 1-6 ou clic | Croix haut puis stick + A |
-| Menus | Rail | U, C, J, B, G ; Échap ferme | Y ouvre le rail (sélection `GuiService.SelectedObject`), B ferme, LB/RB changent d'onglet |
-| Minicarte | Appui | M | Croix bas |
-| Acclamer | Bouton | F | Croix droite |
+Manette : noms PlayStation (DualSense, cas du jeu sur PS5) avec la `KeyCode` générique de Roblox entre parenthèses ; sur Xbox, les mêmes `KeyCode` portent les noms Xbox, et le jeu affiche toujours l'icône de l'appareil (`UserInputService:GetImageForKeyCode`), jamais une lettre en dur. Détail complet, navigation écran par écran, vibrations et tests : [`07-console-ps5.md`](07-console-ps5.md).
 
-Les actions passent par `ContextActionService` (stable) avec les boutons tactiles créés par notre interface. L'option de verrouillage de la souris (Maj) est désactivée (`StarterPlayer.EnableMouseLockOption = false`) car Maj sert au Dash et le jeu n'a pas besoin de visée. Tous les boutons d'interface ont `Selectable = true` et un ordre de navigation manette explicite (`NextSelection*`).
+| Action | Tactile | Clavier / souris | Manette (DualSense — `KeyCode`) |
+|---|---|---|---|
+| Se déplacer | Joystick | WASD / flèches | Stick gauche (`Thumbstick1`) |
+| Caméra | Glisser | Clic droit + souris | Stick droit (`Thumbstick2`) |
+| Sauter | Bouton Roblox | Espace | ✕ Croix (`ButtonA`) |
+| **Dash** | Bouton Dash | Maj gauche ou E | **R2** (`ButtonR2`), ou □ Carré (`ButtonX`) |
+| Roue de pings | Bouton Ping | Q puis 1-6 ou clic | Croix directionnelle ↑ (`DPadUp`) puis stick gauche ou ← / → et ✕ ; ○ ferme |
+| Menus | Rail | U, C, J, B, G ; Échap ferme | △ Triangle (`ButtonY`) sélectionne le rail (`GuiService.SelectedObject`), ✕ ouvre ; dans un panneau : ○ (`ButtonB`) recule d'un niveau, △ ramène au jeu, L1 / R1 (`ButtonL1` / `ButtonR1`) changent d'onglet, L2 / R2 (`ButtonL2` / `ButtonR2`) changent de panneau, stick droit fait défiler |
+| Confirmer la Supernova | Maintenir le bouton 1 s | Maintenir Entrée 1 s | Maintenir ✕ 1 s sur le bouton sélectionné |
+| Minicarte | Appui | M | Croix directionnelle ↓ (`DPadDown`) |
+| Acclamer | Bouton | F | Croix directionnelle → (`DPadRight`) |
+| Suivi de quête (replier) | Appui | — | Croix directionnelle ← (`DPadLeft`) |
+| Menu Roblox | Bouton Roblox | Échap | Options (`ButtonStart`, réservé à Roblox) |
+
+Les actions passent par `ContextActionService` (stable) avec les boutons tactiles créés par notre interface. L'option de verrouillage de la souris (Maj) est désactivée (`StarterPlayer.EnableMouseLockOption = false`) car Maj sert au Dash et le jeu n'a pas besoin de visée. Tous les boutons d'interface ont `Selectable = true` et un ordre de navigation manette explicite (`NextSelection*`) là où la géométrie hésite ; chaque fenêtre est un `SelectionGroup` qui ne laisse pas s'échapper la sélection ; le curseur virtuel est désactivé (`StarterGui.VirtualCursorMode = Disabled`). Sur console (`GuiService:IsTenFootInterface()`) ou écran Large : interface agrandie proportionnellement (UIScale 1,5 en 1080p), zone sûre TV de 5 % de chaque côté, pas de fenêtre de chat (§13.2 ; `07-console-ps5.md` §3, §4, §8).
 
 ---
 
@@ -1554,6 +1560,7 @@ Appareil de référence : téléphone Android bas de gamme (≈ 3 Go de RAM). L'
 | Stress de la compétition | Mode Zen, serveurs privés sans coupe, bouclier débutant |
 | Menus ouverts hors du Nid | Le jeu continue (multijoueur) : quand un panneau est ouvert hors du port sûr, un contour rose de l'écran prévient si un non-équipier approche de la file |
 | Appareils modestes | Graphismes légers, niveaux de détail, budgets du §12.8 |
+| Téléviseur et manette (console) | Interface proportionnelle à l'écran (UIScale 1,5 en 1080p), textes ≥ 27 px réels, zone sûre TV de 5 %, icônes de boutons de l'appareil, tout à la manette sans curseur, vibrations modérées et désactivables, pas de fenêtre de chat ([`07-console-ps5.md`](07-console-ps5.md)) |
 
 ---
 

@@ -182,11 +182,28 @@ local function mount(h, parent, dirPath: string)
 	end
 end
 
-function Harness.new(options: { mode: string?, touch: boolean?, isStudio: boolean?, root: string? }?)
+function Harness.new(options: {
+	mode: string?,
+	touch: boolean?,
+	console: boolean?,
+	viewport: any?,
+	isStudio: boolean?,
+	root: string?,
+}?)
 	options = options or {}
 	local h = setmetatable({}, Harness)
 	h.mode = options.mode or "server"
-	h.touch = options.touch == true
+	-- console (docs/07-console-ps5.md §8) : GuiService:IsTenFootInterface() vrai, écran Large de
+	-- 1920 × 1080, manette seule (ni tactile, ni clavier, ni souris), glyphes PlayStation
+	h.console = options.console == true
+	h.touch = options.touch == true and not h.console
+	h.viewport = options.viewport
+		or (if h.console then roblox.Vector2.new(1920, 1080) else roblox.Vector2.new(1280, 720))
+	h.lastInputType = if h.console
+		then roblox.Enum.UserInputType.Gamepad1
+		elseif h.touch then roblox.Enum.UserInputType.Touch
+		else roblox.Enum.UserInputType.MouseButton1
+	MockInstance.screenSize = h.viewport
 	h.isStudio = options.isStudio == true
 	h.root = options.root or ROOT
 	h.sources = {}
@@ -194,6 +211,9 @@ function Harness.new(options: { mode: string?, touch: boolean?, isStudio: boolea
 	h.loading = {}
 	h.renderSteps = {}
 	h.actions = {}
+	-- liaisons ContextActionService : nom → { fn, keys, priority, seq } (tests/harness/Gamepad)
+	h.actionBindings = {}
+	h.actionSeq = 0
 	h.errors = {}
 	h.log = {
 		kicks = {},
@@ -202,6 +222,7 @@ function Harness.new(options: { mode: string?, touch: boolean?, isStudio: boolea
 		messages = {},
 		invites = {},
 		analytics = {},
+		haptics = {},
 		output = {},
 		clientEvents = {},
 		allClientEvents = {},

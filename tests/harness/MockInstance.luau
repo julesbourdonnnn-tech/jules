@@ -31,6 +31,9 @@ local MT = {}
 
 MockInstance.warnings = {} :: { string }
 MockInstance.waitTimeout = 2
+-- Taille de l'écran simulé (px) : ViewportSize des caméras et AbsoluteSize des LayerCollector créés
+-- ensuite. Posée par Harness.new (1280 × 720, ou 1920 × 1080 pour une console).
+MockInstance.screenSize = Vector2.new(1280, 720)
 
 local function warnOnce(msg: string)
 	table.insert(MockInstance.warnings, msg)
@@ -214,6 +217,8 @@ local EVENTS = {
 	SelectionGained = true,
 	SelectionLost = true,
 	SelectionChanged = true,
+	GamepadConnected = true,
+	GamepadDisconnected = true,
 	ReturnPressedFromOnScreenKeyboard = true,
 }
 
@@ -295,7 +300,9 @@ local function defaultsFor(className: string): { [string]: any }
 		d.AbsoluteSize = Vector2.new(100, 100)
 		d.AbsolutePosition = Vector2.zero
 		d.Active = false
-		d.Selectable = false
+		-- comme Roblox : boutons, champs de texte et cadres défilants sont sélectionnables par défaut
+		-- (navigation manette) ; les autres GuiObject ne le sont pas
+		d.Selectable = isA(className, "GuiButton") or className == "TextBox" or className == "ScrollingFrame"
 		d.Interactable = true
 	end
 	if className == "TextLabel" or className == "TextButton" or className == "TextBox" then
@@ -323,7 +330,7 @@ local function defaultsFor(className: string): { [string]: any }
 	if isA(className, "LayerCollector") then
 		d.Enabled = true
 		d.ResetOnSpawn = true
-		d.AbsoluteSize = Vector2.new(1280, 720)
+		d.AbsoluteSize = MockInstance.screenSize
 	end
 	if className == "BillboardGui" then
 		d.Size = UDim2.new(0, 100, 0, 50)
@@ -352,7 +359,7 @@ local function defaultsFor(className: string): { [string]: any }
 		d.CFrame = CFrame.new(0, 10, 20)
 		d.Focus = CFrame.new()
 		d.FieldOfView = 70
-		d.ViewportSize = Vector2.new(1280, 720)
+		d.ViewportSize = MockInstance.screenSize
 		d.CameraType = Enum.CameraType.Custom
 	end
 	if className == "Sound" then

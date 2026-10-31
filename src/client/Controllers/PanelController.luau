@@ -136,6 +136,7 @@ local warnEdges: { Frame } = {}
 local panels: { [string]: Panel } = {}
 local pages: { [string]: Page } = {}
 local currentName: string? = nil
+local panelGate: ((Types.PanelName) -> boolean)? = nil
 local currentTab: { [string]: string } = {}
 local badges: { [string]: boolean } = {}
 local badgesDirty = true
@@ -810,6 +811,30 @@ function PanelController.nextTab(direction: number)
 	if lastInputIsGamepad() then
 		GuiService.SelectedObject = shown[nextIndex].button
 	end
+end
+
+-- Console (docs/07-console-ps5.md §6) ------------------------------------------------------------
+
+-- Garde posée par le HUD (via InputController.setPanelGate) : un panneau dont l'icône n'est pas
+-- encore affichée ne s'ouvre pas au changement de panneau à la manette (L2 / R2)
+function PanelController.setGate(fn: ((Types.PanelName) -> boolean)?)
+	panelGate = fn
+end
+
+-- Le panneau peut-il être ouvert d'après la garde du HUD ? (vrai sans garde)
+function PanelController.allowed(name: Types.PanelName): boolean
+	local gate = panelGate
+	if gate == nil then
+		return true
+	end
+	local ok, result = pcall(gate, name)
+	return ok and result == true
+end
+
+-- Cible hors fenêtre que △ doit sélectionner avant le rail (ex. bouton Accepter de la carte
+-- d'invitation d'équipage) ; nil : aucune
+function PanelController.focusTarget(): GuiObject?
+	return nil
 end
 
 -- Onglet affiché d'un panneau (nil si le panneau n'a pas d'onglets ou n'a jamais été ouvert)

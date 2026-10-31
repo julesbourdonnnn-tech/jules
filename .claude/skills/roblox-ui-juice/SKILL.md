@@ -15,6 +15,7 @@ description: Interfaces Roblox construites en code, mobile d'abord (ScreenGui, U
 - Style : `UICorner` (8-16 px), `UIStroke` (2-3 px, couleur sombre, `ApplyStrokeMode = Border` pour les cadres et `Contextual` pour les textes), `UIGradient` léger, police `Enum.Font.FredokaOne`/`GothamBold` (via `Font.fromEnum`).
 - Textes : `TextScaled = true` + `UITextSizeConstraint` (max) pour éviter les textes géants.
 - Manette/PC : chaque bouton principal a un raccourci clavier (`ContextActionService`) et `Selectable = true` ; afficher les touches sur PC.
+- Console / téléviseur (docs/07-console-ps5.md) : repères de touches **uniquement** via `Client/UI/Glyph` (icône `GetImageForKeyCode`, PlayStation sur PS5 ; jamais « X », « Y », « LB » en dur) ; échelle et zone sûre TV fournies par `Root` (`Util/Platform`) ; fenêtres modales en `SelectionGroup` avec `SelectionBehavior* = Stop` ; ○ recule, △ revient au jeu, L1/R1 onglets, L2/R2 panneaux ; textes ≥ 18 px de référence.
 - Toutes les chaînes viennent de `Shared/Localization` (EN/FR).
 
 ## Catalogue de juice (côté client uniquement)

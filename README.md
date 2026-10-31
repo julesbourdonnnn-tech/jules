@@ -25,6 +25,7 @@ Le choix du concept vient d'une étude de marché Roblox 2025-2026 et d'un jury 
 | [`docs/02-game-design-document.md`](docs/02-game-design-document.md) | Game Design Document complet (règles, chiffres, monde, UI, architecture) |
 | [`docs/03-decision-du-jury.md`](docs/03-decision-du-jury.md) | Les 3 concepts étudiés, les notes et les raisons du choix |
 | [`docs/04-architecture.md`](docs/04-architecture.md) | Contrat technique : modules, API, réseau, données |
+| [`docs/07-console-ps5.md`](docs/07-console-ps5.md) | Console PS5 / téléviseur : correspondance DualSense, échelle 10 pieds, zone sûre, glyphes, navigation, vibrations, chat, tests |
 
 ## Démarrer en 5 minutes
 

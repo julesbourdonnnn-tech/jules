@@ -49,6 +49,39 @@ local function checkSerializable(value: any, path: string)
 	end
 end
 
+-- Icônes de touches de la manette (UserInputService:GetImageForKeyCode simulé)
+Services.PS_GLYPHS = "rbxasset://textures/ui/Controls/PlayStationController/"
+Services.XBOX_GLYPHS = "rbxasset://textures/ui/Controls/DesignSystem/"
+local PS_NAMES = {
+	ButtonA = "ButtonCross",
+	ButtonB = "ButtonCircle",
+	ButtonX = "ButtonSquare",
+	ButtonY = "ButtonTriangle",
+	ButtonL1 = "ButtonL1",
+	ButtonR1 = "ButtonR1",
+	ButtonL2 = "ButtonL2",
+	ButtonR2 = "ButtonR2",
+	ButtonL3 = "ButtonL3",
+	ButtonR3 = "ButtonR3",
+	ButtonSelect = "ButtonTouchpad",
+	ButtonStart = "ButtonOptions",
+	DPadUp = "DPadUp",
+	DPadDown = "DPadDown",
+	DPadLeft = "DPadLeft",
+	DPadRight = "DPadRight",
+	Thumbstick1 = "Thumbstick1",
+	Thumbstick2 = "Thumbstick2",
+}
+function Services.glyphImage(console: boolean, kc): string
+	local ps = PS_NAMES[kc.Name]
+	if ps == nil then
+		return ""
+	end
+	return if console
+		then Services.PS_GLYPHS .. ps .. "@2x.png"
+		else Services.XBOX_GLYPHS .. kc.Name .. "@2x.png"
+end
+
 function Services.install(h)
 	local game = h.game
 	local cm = MockInstance.classMethods
@@ -389,14 +422,39 @@ function Services.install(h)
 	}
 	game.GuiService.ReducedMotionEnabled = false
 	game.GuiService.PreferredTransparency = 1
+	game.GuiService.AutoSelectGuiEnabled = true
+	game.GuiService.GuiNavigationEnabled = true
+	-- écran : Large pour une console (téléviseur), Small pour un téléphone, Medium sinon
+	game.GuiService.ViewportDisplaySize = if h.console
+		then Enum.DisplaySize.Large
+		elseif h.touch then Enum.DisplaySize.Small
+		else Enum.DisplaySize.Medium
 	cm.GuiService = {
 		GetGuiInset = function()
 			return Vector2.new(0, 58), Vector2.zero
 		end,
+		-- seule détection garantie d'une console (docs/07-console-ps5.md §2) ; une spec peut la
+		-- remplacer (ex. pour vérifier la garde pcall)
 		IsTenFootInterface = function()
-			return false
+			return h.console == true
 		end,
 	}
+	-- comme Roblox : changer GuiService.SelectedObject émet SelectionLost sur l'ancien objet et
+	-- SelectionGained sur le nouveau
+	do
+		local previousSelection = nil
+		game.GuiService:GetPropertyChangedSignal("SelectedObject"):Connect(function()
+			local old = previousSelection
+			local new = game.GuiService.SelectedObject
+			previousSelection = new
+			if old ~= nil and old ~= new and MockInstance.is(old) then
+				old.SelectionLost:Fire()
+			end
+			if new ~= nil and new ~= old and MockInstance.is(new) then
+				new.SelectionGained:Fire()
+			end
+		end)
+	end
 	game.LocalizationService.RobloxLocaleId = "en-us"
 	game.LocalizationService.SystemLocaleId = "en-us"
 	cm.LocalizationService = {
@@ -482,6 +540,39 @@ function Services.install(h)
 			end
 		end,
 	})
+	-- TextChatService : configurations créées par le moteur (fenêtre, barre de saisie, bulles)
+	local textChat = game.TextChatService
+	textChat.ChatVersion = Enum.ChatVersion.TextChatService
+	for _, className in { "ChatWindowConfiguration", "ChatInputBarConfiguration", "BubbleChatConfiguration" } do
+		local config = MockInstance.new(className)
+		config.Name = className
+		config.Enabled = true
+		config.Parent = textChat
+	end
+	-- Vibrations : manette (console ou manette branchée) seulement ; journal h.log.haptics
+	cm.HapticService = {
+		IsVibrationSupported = function(_, inputType)
+			return game.UserInputService.GamepadEnabled == true and inputType == Enum.UserInputType.Gamepad1
+		end,
+		IsMotorSupported = function(_, inputType)
+			return game.UserInputService.GamepadEnabled == true and inputType == Enum.UserInputType.Gamepad1
+		end,
+		SetMotor = function(_, inputType, motor, value)
+			table.insert(
+				h.log.haptics,
+				{ kind = "motor", inputType = inputType, motor = motor, value = value }
+			)
+		end,
+		GetMotor = function()
+			return 0
+		end,
+	}
+	cm.HapticEffect = {
+		Play = function(self)
+			table.insert(h.log.haptics, { kind = "effect", type = self.Type })
+		end,
+		Stop = function() end,
+	}
 	cm.StarterGui = {
 		SetCore = function() end,
 		GetCore = function()
@@ -493,17 +584,34 @@ function Services.install(h)
 		end,
 	}
 
-	-- UserInputService (client)
+	-- UserInputService (client) ; console : manette seule
 	local uis = game.UserInputService
 	uis.TouchEnabled = h.touch
-	uis.KeyboardEnabled = not h.touch
-	uis.MouseEnabled = not h.touch
-	uis.GamepadEnabled = false
+	uis.KeyboardEnabled = not h.touch and not h.console
+	uis.MouseEnabled = not h.touch and not h.console
+	uis.GamepadEnabled = h.console == true
+	uis.PreferredInput = if h.console
+		then Enum.PreferredInput.Gamepad
+		elseif h.touch then Enum.PreferredInput.Touch
+		else Enum.PreferredInput.KeyboardAndMouse
 	uis.MouseBehavior = Enum.MouseBehavior.Default
 	uis.MouseIconEnabled = true
+	local NUMBER_KEYS = {
+		Zero = "0",
+		One = "1",
+		Two = "2",
+		Three = "3",
+		Four = "4",
+		Five = "5",
+		Six = "6",
+		Seven = "7",
+		Eight = "8",
+		Nine = "9",
+	}
 	cm.UserInputService = {
+		-- dernier type d'entrée : h.lastInputType (Gamepad1 sur console ; Gamepad.press le met à jour)
 		GetLastInputType = function()
-			return if h.touch then Enum.UserInputType.Touch else Enum.UserInputType.MouseButton1
+			return h.lastInputType
 		end,
 		IsKeyDown = function()
 			return false
@@ -512,24 +620,42 @@ function Services.install(h)
 			return Vector2.new(640, 360)
 		end,
 		GetConnectedGamepads = function()
-			return {}
+			return if uis.GamepadEnabled then { Enum.UserInputType.Gamepad1 } else {}
+		end,
+		GetNavigationGamepads = function()
+			return if uis.GamepadEnabled then { Enum.UserInputType.Gamepad1 } else {}
+		end,
+		GetGamepadConnected = function(_, gamepad)
+			return uis.GamepadEnabled == true and gamepad == Enum.UserInputType.Gamepad1
 		end,
 		GetStringForKeyCode = function(_, kc)
-			return kc.Name
+			return NUMBER_KEYS[kc.Name] or kc.Name
+		end,
+		-- icône Roblox de la touche : PlayStation sur console, Xbox (défaut PC) sinon ; vide pour le
+		-- clavier (docs/07-console-ps5.md §5)
+		GetImageForKeyCode = function(_, kc)
+			return Services.glyphImage(h.console == true, kc)
 		end,
 		GetFocusedTextBox = function()
 			return nil
 		end,
 	}
+	-- ContextActionService : les liaisons gardent touches et priorité (tests/harness/Gamepad.dispatch)
+	local function bind(name, fn, priority, ...)
+		h.actions[name] = fn
+		h.actionSeq += 1
+		h.actionBindings[name] = { fn = fn, keys = { ... }, priority = priority, seq = h.actionSeq }
+	end
 	cm.ContextActionService = {
-		BindAction = function(_, name, fn)
-			h.actions[name] = fn
+		BindAction = function(_, name, fn, _createTouchButton, ...)
+			bind(name, fn, Enum.ContextActionPriority.Medium.Value, ...)
 		end,
-		BindActionAtPriority = function(_, name, fn)
-			h.actions[name] = fn
+		BindActionAtPriority = function(_, name, fn, _createTouchButton, priority, ...)
+			bind(name, fn, priority, ...)
 		end,
 		UnbindAction = function(_, name)
 			h.actions[name] = nil
+			h.actionBindings[name] = nil
 		end,
 		SetTitle = function() end,
 		SetImage = function() end,
