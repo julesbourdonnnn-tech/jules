@@ -16,13 +16,18 @@
 --     un refus serveur (hors du port sûr, recharge…) ramène l'affichage après 2,5 s
 --   * recharge du Mode Zen comptée depuis le changement CONFIRMÉ (profil répliqué, comme
 --     NestService) : un refus serveur ne bloque jamais 60 s ; un seul changement de Zen en attente
+--   * quitter le Mode Zen avec une file non vide est refusé par le serveur (feedback.zenBankFirst) :
+--     l'interrupteur est désactivé et la ligne d'état demande de faire parader la file d'abord
+--   * pied d'information (GDD §7.1, « dans le menu ») : « Ton Nid travaille même quand tu dors » et
+--     le plafond hors ligne (8 h à 50 %, 12 h à 75 % avec Night Shift, lus dans Config/Balance)
 --   * textes via Prefs.t (ré-appliqués sur Prefs.LanguageChanged) ; intentions seulement
--- GDD : §4.16 (Zen), §5.3, §7.6, §9.1 (réglages), §10.3, §13.
+-- GDD : §4.16 (Zen), §4.9 (hors ligne), §5.3, §7.1, §7.6, §9.1 (réglages), §10.3, §13.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Balance = require(Shared.Config.Balance)
 local Events = require(Shared.Config.Events)
 local Nebbies = require(Shared.Config.Nebbies)
 local SettingsConfig = require(Shared.Config.Settings)
@@ -78,6 +83,8 @@ local styleRows: { StyleRow } = {}
 local sectionLabels: { [string]: TextLabel } = {}
 local liveOpsFrame: Frame? = nil
 local liveOpsButtons: { [string]: TextButton } = {}
+local infoNest: TextLabel? = nil
+local infoOffline: TextLabel? = nil
 local pendingValues: { [string]: { value: any, at: number } } = {}
 local pendingCosmetic: { [string]: { id: string, at: number } } = {}
 local zenChangedAt = -math.huge -- Clock.now() du dernier changement de Zen confirmé
@@ -156,14 +163,29 @@ local function cooldownLeft(key: string): number
 	return math.max(0, def.cooldown - (Clock.now() - zenChangedAt))
 end
 
--- Raison d'un refus local (nil = le changement peut partir)
-local function blockedReason(key: string): string?
+-- Longueur de la file du joueur local (miroir répliqué ; 0 tant que le slot est inconnu)
+local function localLineLength(): number
+	local slot = WorldState.localSlot()
+	if slot < 1 then
+		return 0
+	end
+	return WorldState.lineLength(slot)
+end
+
+-- Raison d'un refus local (nil = le changement peut partir). `target` : valeur visée (pour un
+-- interrupteur, l'inverse de la valeur affichée)
+local function blockedReason(key: string, target: any?): string?
 	local def = SettingsConfig[key]
 	if not def then
 		return "invalid"
 	end
 	if def.harborOnly and not inOwnHarbor() then
 		return "harbor"
+	end
+	if key == "zen" and target ~= true and actual(key) == true and localLineLength() > 0 then
+		-- même ordre que NestService.setSetting (port sûr, puis file à encaisser, puis recharge) :
+		-- une file attrapée en Zen se fait parader avant de quitter le Zen (feedback.zenBankFirst)
+		return "bankFirst"
 	end
 	if cooldownLeft(key) > 0 then
 		return "cooldown"
@@ -191,7 +213,7 @@ local function renderSettings()
 			row.frame.Visible = isPrivateOwner()
 		end
 		local value = displayed(key)
-		local reason = blockedReason(key)
+		local reason = blockedReason(key, if type(value) == "boolean" then not value else nil)
 		if row.toggle then
 			Widgets.setToggleEnabled(row.toggle, reason == nil)
 			Widgets.setToggle(row.toggle, value == true, true)
@@ -206,6 +228,8 @@ local function renderSettings()
 		if row.status then
 			if reason == "harbor" then
 				row.status.Text = Prefs.t("settings.zenHarbor")
+			elseif reason == "bankFirst" then
+				row.status.Text = Prefs.t("settings.zenBankFirst")
 			elseif reason == "cooldown" then
 				row.status.Text = Prefs.t("settings.cooldown", { seconds = math.ceil(cooldownLeft(key)) })
 			else
@@ -320,6 +344,23 @@ local function renderLiveOps()
 	end
 end
 
+-- Pied d'information : le Nid travaille hors ligne, avec son plafond (Night Shift possédé ou non)
+local function renderInfo()
+	if infoNest then
+		infoNest.Text = "🌙 " .. Prefs.t("onboarding.nestWorks")
+	end
+	if infoOffline then
+		local offline = Balance.Offline
+		local night = Model.ownsPass(view, "NightShift")
+		local rate = if night then offline.NightShiftRate else offline.Rate
+		local cap = if night then offline.NightShiftCap else offline.Cap
+		infoOffline.Text = Prefs.t("settings.offlineCap", {
+			pct = math.floor(rate * 100 + 0.5),
+			hours = Prefs.duration(cap),
+		})
+	end
+end
+
 local function render()
 	if not built then
 		return
@@ -330,6 +371,7 @@ local function render()
 	renderSettings()
 	renderStyles()
 	renderLiveOps()
+	renderInfo()
 end
 
 -- ---------------------------------------------------------------------------------------------
@@ -345,7 +387,7 @@ function Panel.setSetting(key: string, value: any)
 		return
 	end
 	local row = settingRows[key]
-	local reason = blockedReason(key)
+	local reason = blockedReason(key, value)
 	if reason ~= nil then
 		if row and row.toggle then
 			Widgets.refuse(row.toggle)
@@ -422,7 +464,7 @@ local function buildSettingRow(key: string, order: number, parent: Instance): Se
 		yAlign = Enum.TextYAlignment.Top,
 		color = Theme.Colors.TextDim,
 		font = Theme.Fonts.Body,
-		maxSize = 16,
+		maxSize = 18, -- GDD §10.1 : 18 px de référence au moins
 		parent = frame,
 	})
 	local row: SettingRow = { key = key, frame = frame, name = name, desc = desc }
@@ -434,7 +476,7 @@ local function buildSettingRow(key: string, order: number, parent: Instance): Se
 			xAlign = Enum.TextXAlignment.Left,
 			color = Theme.Colors.Warning,
 			font = Theme.Fonts.Body,
-			maxSize = 16,
+			maxSize = 18,
 			parent = frame,
 		})
 	end
@@ -594,6 +636,33 @@ function Panel.build(parent: Frame)
 			end,
 		})
 	end
+	-- pied d'information (dernier élément de la liste)
+	local info = Widgets.card({
+		name = "Info",
+		size = UDim2.new(1, -12, 0, 84),
+		order = nextOrder(),
+		color = Widgets.BOTTOM,
+		parent = scroll,
+	})
+	infoNest = Widgets.label({
+		name = "NestWorks",
+		size = UDim2.new(1, -28, 0, 32),
+		position = UDim2.fromOffset(14, 8),
+		xAlign = Enum.TextXAlignment.Left,
+		color = Theme.Colors.Gold,
+		maxSize = 22,
+		parent = info,
+	})
+	infoOffline = Widgets.label({
+		name = "Offline",
+		size = UDim2.new(1, -28, 0, 30),
+		position = UDim2.fromOffset(14, 46),
+		xAlign = Enum.TextXAlignment.Left,
+		color = Theme.Colors.TextDim,
+		font = Theme.Fonts.Body,
+		maxSize = 18,
+		parent = info,
+	})
 
 	State.Changed:Connect(function(key: string)
 		if
@@ -659,5 +728,8 @@ Panel._liveOpsFrame = function(): Frame?
 	return liveOpsFrame
 end
 Panel._displayed = displayed
+Panel._info = function(): (TextLabel?, TextLabel?)
+	return infoNest, infoOffline
+end
 
 return Panel

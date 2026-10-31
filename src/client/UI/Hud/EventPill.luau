@@ -2,8 +2,12 @@
 -- Hud/EventPill — contenu de la pastille d'événement du HUD (GDD §10.2, §2.4, §9.4), fonction PURE.
 -- Priorité de l'affichage : Comète (alerte, au sol, portée : « ☄ COMÈTE 0:45 — Mira ») > Nuit de la
 -- Balise (alerte puis trêve, avec la barre de serveur points / objectif) > Starfall Frenzy > Starfall
--- Saturday > boost de serveur (Nuit d'Or, Glow Party) > météo en cours > PROCHAIN événement
--- (EventClock.nextEvent : « ☄ 3:12 », en gris).
+-- Saturday > Nuit d'Or (boost de serveur de 5 min après une Balise réussie, ou LiveOps) > météo en
+-- cours > autre boost de serveur (Glow Party, jusqu'à 60 min en file), seulement si aucun événement
+-- ne commence dans les 60 s > PROCHAIN événement (EventClock.nextEvent : « ☄ 3:12 », en gris).
+-- Un boost long ne masque donc ni la fenêtre météo (GDD §4.15.1, accueil Q6) ni le rythme des
+-- Comètes (§2.4) : son minuteur reste sur l'indicateur ×2 du HUD. La Nuit d'Or, temps fort collectif
+-- court qui chevauche toujours la fenêtre météo de :32 / :02, garde sa place devant la météo.
 -- L'état vient du serveur (EventState via WorldStateController) ; le prochain événement de
 -- l'horloge commune, identique sur tous les serveurs.
 
@@ -51,6 +55,15 @@ local BOOST_KEYS: { [string]: string } = {
 	starfall = "hud.event.starfall",
 }
 
+-- Boosts qui sont l'événement du moment (Nuit d'Or) : affichés avant la météo
+local EVENT_BOOSTS: { [string]: boolean } = {
+	goldenNight = true,
+	liveOps = true,
+}
+
+-- s : un boost long laisse la place au compte à rebours d'un événement aussi proche
+local BOOST_YIELD = 60
+
 local NEXT_KEYS: { [string]: string } = {
 	comet = "hud.event.nextComet",
 	weather = "hud.event.nextWeather",
@@ -68,6 +81,17 @@ end
 
 local function weatherColor(key: string): Color3
 	return EventPill.Colors.weather[key] or EventPill.Colors.next
+end
+
+local function boostState(boost: Types.BoostState, now: number): PillState
+	return {
+		kind = "boost",
+		key = BOOST_KEYS[boost.source] or "hud.event.goldenNight",
+		vars = { time = clock(boost.endsAt - now) },
+		color = EventPill.Colors.boost,
+		active = true,
+		blink = false,
+	}
 end
 
 -- `t` traduit les noms (météo) ; `nameOf` donne le nom affiché d'un joueur (porteur de la Comète)
@@ -152,15 +176,8 @@ function EventPill.compute(
 			}
 		end
 		local boost = ev.serverBoost
-		if boost ~= nil and now < boost.endsAt then
-			return {
-				kind = "boost",
-				key = BOOST_KEYS[boost.source] or "hud.event.goldenNight",
-				vars = { time = clock(boost.endsAt - now) },
-				color = EventPill.Colors.boost,
-				active = true,
-				blink = false,
-			}
+		if boost ~= nil and now < boost.endsAt and EVENT_BOOSTS[boost.source] == true then
+			return boostState(boost, now)
 		end
 		local w = ev.weather
 		if w ~= nil and now >= w.startsAt and now < w.endsAt and Events.WeatherByKey[w.key] ~= nil then
@@ -175,6 +192,11 @@ function EventPill.compute(
 		end
 	end
 	local nextEvent = EventClock.nextEvent(now)
+	-- boost long (Glow Party…) : seulement quand rien ne commence dans les BOOST_YIELD s
+	local boost = if ev ~= nil then ev.serverBoost else nil
+	if boost ~= nil and now < boost.endsAt and nextEvent.at - now > BOOST_YIELD then
+		return boostState(boost, now)
+	end
 	return {
 		kind = "next",
 		key = NEXT_KEYS[nextEvent.kind] or "hud.event.nextComet",

@@ -38,11 +38,14 @@ local COUNT_TIME = 0.8 -- compteur 0,8 s Quint Out (§7.2)
 local COIN_COUNT = 24
 local COIN_LIFE = 1.3
 local GRAVITY = 2.4 -- en fractions de hauteur par s²
--- Pile du bas (px de référence) : bouton 96 px à 4 px du bord, ligne Night Shift de 26 px (texte
--- 18 px, GDD §10.1) 6 px au-dessus ; le montant occupe l'espace entre le titre et cette pile
+-- Mise en page verticale (px de référence) : titre de 36 px en haut ; en bas, bouton 96 px à 4 px
+-- du bord et ligne Night Shift de 26 px (texte 18 px, GDD §10.1) 4 px au-dessus ; le montant
+-- occupe tout l'espace entre les deux (≈ 26 px sur la fenêtre compacte minimale d'un iPhone SE)
+local TITLE_TOP, TITLE_HEIGHT = 4, 36
 local OK_HEIGHT, OK_MARGIN = 96, 4
-local NIGHT_HEIGHT, NIGHT_GAP = 26, 6
-local BOTTOM_STACK = OK_MARGIN + OK_HEIGHT + NIGHT_GAP + NIGHT_HEIGHT + 4
+local NIGHT_HEIGHT, NIGHT_GAP = 26, 4
+local AMOUNT_TOP = TITLE_TOP + TITLE_HEIGHT + 2
+local BOTTOM_STACK = OK_MARGIN + OK_HEIGHT + NIGHT_GAP + NIGHT_HEIGHT + 2
 
 type Coin = { frame: Frame, x: number, y: number, vx: number, vy: number, age: number, delay: number }
 
@@ -153,16 +156,16 @@ function Panel.build(parent: Frame)
 	}) :: Frame
 	title = Widgets.label({
 		name = "Title",
-		size = UDim2.new(1, -16, 0.2, 0),
-		position = UDim2.fromScale(0.5, 0.04),
+		size = UDim2.new(1, -16, 0, TITLE_HEIGHT),
+		position = UDim2.new(0.5, 0, 0, TITLE_TOP),
 		anchor = Vector2.new(0.5, 0),
 		maxSize = 30,
 		parent = parent,
 	})
 	amount = Widgets.label({
 		name = "Amount",
-		size = UDim2.new(1, -16, 0.74, -BOTTOM_STACK),
-		position = UDim2.fromScale(0.5, 0.26),
+		size = UDim2.new(1, -16, 1, -(AMOUNT_TOP + BOTTOM_STACK)),
+		position = UDim2.new(0.5, 0, 0, AMOUNT_TOP),
 		anchor = Vector2.new(0.5, 0),
 		color = Theme.Colors.Gold,
 		font = Widgets.STAMP_FONT,

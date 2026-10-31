@@ -20,7 +20,9 @@
 --     (260 × 72, repliable) ; icônes Équipage et Réglages
 --   * rail de menus (gauche, y 150-470, 4 boutons 80 × 80) : Améliorer, Collection, Objectifs,
 --     Boutique → InputController.togglePanel (PanelController) ; pastille « ! » (hasAction /
---     BadgeChanged)
+--     BadgeChanged) ; sur les écrans bas (téléphones de 360-390 dp) où la colonne descendrait dans
+--     le quart inférieur (joystick dynamique, GDD §10.1), grille 2 × 2 (168 × 168 dès y = 144),
+--     navigation manette recâblée sur les boutons affichés
 --   * bouton ACCLAMER (200 × 88, 10 s, anneau de temps) : propriétaire du remote CheerPrompt,
 --     envoie Cheer(heroId) (appui, F ou croix droite : InputController.CheerRequested)
 --   * icône « connexion instable » (attribut Player « Unstable »)
@@ -87,6 +89,9 @@ local TRACKER_SIZE = Vector2.new(260, 72)
 local RAIL_Y = 150
 local RAIL_BUTTON = 80
 local RAIL_GAP = 8
+local RAIL_GRID_Y = 144 -- grille 2 × 2 des écrans bas : sous la pastille Stardust (88 + 48 + 8)
+local RAIL_GRID_COLUMNS = 2
+local JOYSTICK_TOP = 0.75 -- GDD §10.1 : le quart inférieur gauche (joystick dynamique) reste libre
 local MIN_TEXT = 18 -- px de référence : plus petite taille de texte lisible (GDD §10.1)
 local RAIL_LABEL_HEIGHT = 22
 local RAIL_LABEL_BOTTOM = 5 -- marge sous le ruban, dans le bouton
@@ -110,8 +115,13 @@ local TRACKER_HOME = UDim2.new(1, -MARGIN, 0, TRACKER_Y)
 local SIDE_RIGHT = MARGIN + MINIMAP + 8 -- colonne de repli : bord droit à gauche de la minicarte
 local CLEARANCE = 8 -- écart minimal entre deux blocs du HUD (px de référence)
 local COLUMN_MOVE = 0.25
--- instruction d'accueil (écran Onboarding, OnboardingController : HINT_Y, HINT_SIZE)
-local HINT_Y = 232
+-- instruction d'accueil (écran Onboarding, placée par OnboardingController avec HUD.hintTop) : sous
+-- la pile COMPLÈTE de toasts (UI/Toast : y = 180, 3 × 48 + 2 × 6 → 336) ; sur les écrans très bas,
+-- remontée juste ce qu'il faut pour ne jamais recouvrir le compteur de file
+local TOAST_BOTTOM = 180 + 3 * 48 + 2 * 6
+local HINT_GAP = 6
+local HINT_Y = TOAST_BOTTOM + HINT_GAP
+local HINT_MIN_Y = 180 -- jamais dans la zone des bannières
 local HINT_SIZE = Vector2.new(400, 56)
 local TOUCH_FALLBACK = Vector2.new(-170, -130) -- coin bas droit sans bouton de saut trouvé
 local REVEAL_TIME = 0.35
@@ -207,6 +217,9 @@ local earlyReveals: { [string]: boolean } = {}
 local texts: { { label: TextLabel, key: string } } = {}
 local shines: { UIGradient } = {}
 local railButtons: { [string]: TextButton } = {}
+local railHolder: Frame? = nil
+local railLayout: UIGridLayout? = nil
+local railColumns = 1 -- 1 : colonne du GDD ; RAIL_GRID_COLUMNS : grille des écrans bas
 local badges: { [string]: Frame } = {}
 local keyCaps: { { cap: TextLabel, keyboard: string, gamepad: string? } } = {}
 local hand: Frame? = nil
@@ -670,14 +683,20 @@ local function buildRail(parent: Frame)
 		nil,
 		parent
 	)
-	Create("UIListLayout", {
-		FillDirection = Enum.FillDirection.Vertical,
+	-- grille d'une colonne (GDD) ou de RAIL_GRID_COLUMNS sur écran bas (layoutRail) ; comme une
+	-- liste, elle tasse les boutons affichés (révélés au fil de l'accueil, pas dans l'ordre du rail)
+	railLayout = Create("UIGridLayout", {
+		CellSize = UDim2.fromOffset(RAIL_BUTTON, RAIL_BUTTON),
+		CellPadding = UDim2.fromOffset(RAIL_GAP, RAIL_GAP),
+		FillDirection = Enum.FillDirection.Horizontal,
+		FillDirectionMaxCells = 1,
+		HorizontalAlignment = Enum.HorizontalAlignment.Left,
+		VerticalAlignment = Enum.VerticalAlignment.Top,
 		SortOrder = Enum.SortOrder.LayoutOrder,
-		Padding = UDim.new(0, RAIL_GAP),
 		Parent = rail,
-	})
+	}) :: UIGridLayout
+	railHolder = rail
 	register("rail", rail)
-	local previous: TextButton? = nil
 	for i, def in RAIL do
 		local holder =
 			Widgets.holder(def.panel, UDim2.fromOffset(RAIL_BUTTON, RAIL_BUTTON), UDim2.new(), nil, rail)
@@ -712,11 +731,6 @@ local function buildRail(parent: Frame)
 		button.Activated:Connect(function()
 			InputController.togglePanel(def.panel)
 		end)
-		if previous then
-			previous.NextSelectionDown = button
-			button.NextSelectionUp = previous
-		end
-		previous = button
 		railButtons[def.panel] = button
 		register(def.element, holder, button)
 	end
@@ -1233,6 +1247,79 @@ local function box(x: number, y: number, w: number, h: number): Rect
 	return { x0 = x, y0 = y, x1 = x + w, y1 = y + h }
 end
 
+-- Haut de l'instruction d'accueil (px de référence) pour une zone intérieure de hauteur `height` :
+-- sous la pile complète de toasts ; plus haut seulement si le compteur de file l'exige (écrans
+-- très bas, < 320 dp) — le compteur de file reste toujours lisible
+local function hintTop(height: number?): number
+	if height == nil or not isFinite(height) then
+		return HINT_Y
+	end
+	local lineTop = height - LINE_Y - LINE_SIZE.Y
+	return math.max(HINT_MIN_Y, math.min(HINT_Y, lineTop - CLEARANCE - HINT_SIZE.Y))
+end
+
+-- Navigation manette du rail : voisins dans la grille des boutons AFFICHÉS (la grille les tasse)
+local function linkRail()
+	local shown: { TextButton } = {}
+	for _, def in RAIL do
+		local button = railButtons[def.panel]
+		if button then
+			button.NextSelectionUp = nil
+			button.NextSelectionDown = nil
+			button.NextSelectionLeft = nil
+			button.NextSelectionRight = nil
+			local e = elements[def.element]
+			if e and e.revealed then
+				table.insert(shown, button)
+			end
+		end
+	end
+	local columns = railColumns
+	for i, button in shown do
+		local column = (i - 1) % columns
+		button.NextSelectionUp = shown[i - columns]
+		button.NextSelectionDown = shown[i + columns]
+		if column > 0 then
+			button.NextSelectionLeft = shown[i - 1]
+		end
+		if column < columns - 1 then
+			button.NextSelectionRight = shown[i + 1]
+		end
+	end
+end
+
+-- Rail : colonne du GDD (y = 150, 4 × 80 + 3 × 8 → y = 494), ou grille 2 × 2 dès y = 144 quand la
+-- colonne descendrait dans le quart inférieur de la zone intérieure (joystick dynamique, GDD §10.1)
+-- : téléphones de 360-390 dp de haut (zone intérieure ≈ 490-575 px de référence)
+local function layoutRail()
+	local rail, layout = railHolder, railLayout
+	if rail == nil or layout == nil then
+		return
+	end
+	local size = contentSize()
+	local columnBottom = RAIL_Y + #RAIL * RAIL_BUTTON + (#RAIL - 1) * RAIL_GAP
+	local columns = if size and columnBottom > JOYSTICK_TOP * size.Y then RAIL_GRID_COLUMNS else 1
+	local rows = math.ceil(#RAIL / columns)
+	local dims = UDim2.fromOffset(
+		columns * RAIL_BUTTON + (columns - 1) * RAIL_GAP,
+		rows * RAIL_BUTTON + (rows - 1) * RAIL_GAP
+	)
+	local position = UDim2.fromOffset(MARGIN, if columns > 1 then RAIL_GRID_Y else RAIL_Y)
+	if rail.Size ~= dims then
+		rail.Size = dims
+	end
+	if rail.Position ~= position then
+		rail.Position = position
+	end
+	if layout.FillDirectionMaxCells ~= columns then
+		layout.FillDirectionMaxCells = columns
+	end
+	if columns ~= railColumns then
+		railColumns = columns
+		linkRail()
+	end
+end
+
 -- Deux blocs plus proches que CLEARANCE
 local function hits(a: Rect, b: Rect): boolean
 	return a.x0 < b.x1 + CLEARANCE
@@ -1311,7 +1398,7 @@ local function layoutColumn(dashPos: UDim2, dashSize: number, pingSize: number)
 			dash,
 			ping,
 			box(W - MARGIN - MINIMAP, MARGIN, MINIMAP, MINIMAP),
-			box((W - HINT_SIZE.X) / 2, HINT_Y, HINT_SIZE.X, HINT_SIZE.Y),
+			box((W - HINT_SIZE.X) / 2, hintTop(H), HINT_SIZE.X, HINT_SIZE.Y),
 			box((W - LINE_SIZE.X) / 2, lineTop, LINE_SIZE.X, LINE_SIZE.Y),
 			box((W - CHEER_SIZE.X) / 2, lineTop - 16 - CHEER_SIZE.Y, CHEER_SIZE.X, CHEER_SIZE.Y),
 		}
@@ -1362,6 +1449,7 @@ local function layoutColumn(dashPos: UDim2, dashSize: number, pingSize: number)
 end
 
 local function layoutActions()
+	layoutRail()
 	local dash, ping, s = dashParts.holder, pingHolder, safe
 	if dash == nil or ping == nil or s == nil then
 		return
@@ -1740,6 +1828,8 @@ function HUD.reveal(element: Types.HudElement, animate: boolean?)
 		updateShield()
 	elseif element == "dash" or element == "ping" then
 		layoutActions()
+	elseif string.sub(element, 1, 5) == "rail." then
+		linkRail()
 	end
 end
 
@@ -1843,6 +1933,28 @@ function HUD.selectRail(): boolean
 	return false
 end
 
+-- Haut de l'instruction d'accueil (écran Onboarding) pour la hauteur courante de l'écran : une seule
+-- règle pour l'accueil qui la place et pour la colonne de droite qui l'évite (layoutColumn)
+function HUD.hintTop(): number
+	local size = contentSize()
+	return hintTop(if size then size.Y else nil)
+end
+
+-- Le bouton ACCLAMER (10 s, au-dessus du compteur de file) occupe la place de l'instruction d'accueil
+-- (téléphones de 360-390 dp : zone intérieure < 590 px de référence) : l'accueil efface son
+-- instruction le temps de l'acclamation. Écran pas encore mesuré : on suppose qu'il l'occupe.
+function HUD.cheerOverHint(): boolean
+	if cheer == nil then
+		return false
+	end
+	local size = contentSize()
+	if size == nil then
+		return true
+	end
+	local cheerTop = size.Y - LINE_Y - LINE_SIZE.Y - 16 - CHEER_SIZE.Y
+	return hintTop(size.Y) + HINT_SIZE.Y + CLEARANCE > cheerTop
+end
+
 -- Exposé pour les tests
 HUD._state = function()
 	return {
@@ -1860,6 +1972,7 @@ HUD._state = function()
 		hand = hand,
 		handTarget = handTarget,
 		safe = safe,
+		railColumns = railColumns,
 	}
 end
 HUD._onCheerPrompt = onCheerPrompt

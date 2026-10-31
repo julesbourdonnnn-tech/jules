@@ -614,7 +614,8 @@ local function buildCalendar(parent: Frame)
 			maxSize = 40,
 			parent = face,
 		})
-		local icon = Widgets.nebbyIcon("Icon", UDim2.fromScale(0.7, 0.36), face)
+		-- 0,42 de la carte : ≥ 60 px sur un iPhone SE, étoiles et verrou de l'icône ≥ 18 px (§10.1)
+		local icon = Widgets.nebbyIcon("Icon", UDim2.fromScale(0.7, 0.42), face)
 		icon.AnchorPoint = Vector2.new(0.5, 0.5)
 		icon.Position = UDim2.fromScale(0.5, 0.4)
 		local reward = Widgets.label({
