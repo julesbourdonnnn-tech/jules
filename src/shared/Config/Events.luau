@@ -79,9 +79,21 @@ Events.Starfall = {
 	CometEvery = 180, -- 16:00, 16:03 … 16:18 (7 comètes)
 	Weather = "rainbow",
 	FeaturedChance = 0.25, -- part des apparitions de l'espèce vedette
-	StarbornChance = 0.08, -- parmi elles, variante Starborn
-	PresenceSeconds = 300, -- présent ≥ 5 min → 1 vedette Starborn garantie
+	StarbornChance = 0.08, -- parmi elles, variante Starborn (semaines Starborn seulement, ci-dessous)
+	PresenceSeconds = 300, -- présent ≥ 5 min → 1 vedette garantie (Starborn les semaines Starborn)
 	BoostSeconds = 1200, -- boost ×2 de serveur
+	-- Starborn réellement limités (§4.15.5, principe §8.1.6) : l'espèce vedette d'une semaine ne
+	-- porte la variante Starborn (tirage StarbornChance ET cadeau garanti) qu'à sa PREMIÈRE apparition,
+	-- soit les #Rotations.FeaturedSpecies semaines à partir de LaunchWeek (une espèce distincte par
+	-- semaine), puis seulement lors d'un Encore annuel annoncé à l'avance (semaine listée dans
+	-- Encores). Les autres semaines, le show garde son espèce vedette, sans Starborn.
+	-- Semaine w = floor((t − Calendar.WeekEpoch) / Calendar.Week) (Logic/EventClock.week).
+	-- Toute modification de Rotations.FeaturedSpecies après la publication impose de revoir ce
+	-- calendrier (Events.starbornAllowed).
+	-- 1er show après la publication : samedi 14/11/2026 16:00 UTC pour une publication le samedi
+	-- 07/11/2026 à 17:00 UTC (GDD §15.3) ; À RECALER sur la date réelle de publication
+	LaunchWeek = 2966,
+	Encores = {} :: { [number]: boolean }, -- [semaine] = true, ex. [3018] = true (samedi 13/11/2027)
 }
 
 -- Rotations déterministes (§5.1) : indice = w mod #table
@@ -90,6 +102,21 @@ Events.Rotations = {
 	GrandParadeLegendary = { 29, 30, 31 },
 	FeaturedSpecies = { 1, 9, 16, 23, 4, 12, 19, 25, 6, 14, 21, 27 },
 }
+
+-- Semaine Starborn (Starfall.LaunchWeek, Starfall.Encores) : true si l'espèce vedette de la semaine
+-- `week` (EventClock.week du show) peut porter la variante Starborn (tirage et cadeau garanti) ;
+-- fonction pure, même résultat sur tous les serveurs ; entrée non finie ou non numérique → false
+function Events.starbornAllowed(week: number): boolean
+	if type(week) ~= "number" or week ~= week or week == math.huge or week == -math.huge then
+		return false
+	end
+	local w = math.floor(week)
+	if Events.Starfall.Encores[w] == true then
+		return true
+	end
+	local sinceLaunch = w - Events.Starfall.LaunchWeek
+	return sinceLaunch >= 0 and sinceLaunch < #Events.Rotations.FeaturedSpecies
+end
 
 -- LiveOps (§7.6) : commandes autorisées depuis Data/Admins (remote AdminCommand + MessagingService)
 Events.LiveOps = {

@@ -198,6 +198,66 @@ local function maxTextSize(label)
 	return if c and c.MaxTextSize then c.MaxTextSize else 100
 end
 
+local function minTextSize(label)
+	local c = label:FindFirstChildOfClass("UITextSizeConstraint")
+	return if c and c.MinTextSize then c.MinTextSize else 1
+end
+
+-- Largeur estimée d'un texte en em (FredokaOne, estimation par classe de caractère : étroits
+-- « i l t r . , » et espace, larges « m w M W », capitales, chiffres, autres minuscules ; hors ASCII
+-- (accents, ≈, —, ✦…) un peu plus large que la moyenne)
+local NARROW = "iljtfrI!.,:;'|()[]"
+local WIDE = "mwMW@%"
+local LINE_EM = 1.2
+
+local function textEm(text)
+	local em = 0
+	for _, code in utf8.codes(text) do
+		if code > 127 then
+			em += 0.6
+		else
+			local ch = string.char(code)
+			if ch == " " then
+				em += 0.28
+			elseif string.find(NARROW, ch, 1, true) then
+				em += 0.3
+			elseif string.find(WIDE, ch, 1, true) then
+				em += 0.78
+			elseif ch >= "A" and ch <= "Z" then
+				em += 0.64
+			elseif ch >= "0" and ch <= "9" then
+				em += 0.56
+			else
+				em += 0.52
+			end
+		end
+	end
+	return em
+end
+
+-- Plus grande taille (px de référence) à laquelle un texte de largeur `em` tient dans w × h : une
+-- ligne sans retour à la ligne, sinon ceil(em × s / w) lignes de 1,2 × s dans la hauteur
+local function fittingSize(em, w, h, wrapped, cap)
+	if em <= 0 or w <= 0 or h <= 0 then
+		return cap
+	end
+	local single = math.min(cap, h, w / em)
+	if not wrapped then
+		return single
+	end
+	local best = single
+	local s = math.floor(math.min(cap, h))
+	while s > best do
+		local lines = math.ceil(em * s / w)
+		if lines * LINE_EM * s <= h + 0.01 then
+			best = s
+			break
+		end
+		s -= 1
+	end
+	return best
+end
+
 -- Objet hors de l'écran ou masqué par un cadre défilant / ClipsDescendants : ignoré
 local function onScreen(r, h)
 	if r.clip ~= nil then
@@ -223,8 +283,10 @@ end
 -- Écarts aux règles console des interfaces visibles (docs/07-console-ps5.md §3, §5, §10) :
 --   * glyphes (attribut « GlyphKey » posé par UI/Glyph) : image PlayStation sur console ;
 --   * aucun texte visible égal à une lettre ou un nom de bouton Xbox (A, B, X, Y, LB, RB…) ;
---   * texte lisible : ≥ minText px de référence (défaut 18 ; TextScaled : min(MaxTextSize, hauteur
---     de la boîte en px de référence)) ;
+--   * texte lisible : ≥ minText px de référence (défaut 18 ; TextScaled : la plus grande taille où
+--     le texte tient en largeur ET en hauteur, retours à la ligne compris (TextWrapped), bornée par
+--     MaxTextSize, largeur estimée par classe de caractère) ; « texte coupé » quand il ne tient pas
+--     même à MinTextSize ≥ minText (le moteur le tronquerait) ;
 --   * zone sûre TV : chaque objet sélectionnable et chaque texte dans les `margin` (défaut 5 %) de
 --     chaque bord.
 -- Un objet (ou un ancêtre) avec l'attribut « Decorative » = true est ignoré (texte décoratif).
@@ -269,12 +331,25 @@ function Gamepad.audit(h, opts)
 					table.insert(issues, `texte de bouton Xbox sur console : {name} « {text} »`)
 				end
 				local size
+				local cut = false
 				if obj.TextScaled then
-					size = math.min(maxTextSize(obj), r.h / math.max(r.k, 1e-6))
+					-- taille que le moteur choisit : la plus grande où le texte tient en largeur ET en
+					-- hauteur (bornée par MaxTextSize) ; sous MinTextSize, le texte est coupé
+					local k = math.max(r.k, 1e-6)
+					local fit =
+						fittingSize(textEm(text), r.w / k, r.h / k, obj.TextWrapped == true, maxTextSize(obj))
+					local floor = minTextSize(obj)
+					size = math.max(fit, floor)
+					cut = fit < floor - 0.01 and floor >= minText - 0.01
 				else
 					size = obj.TextSize or 14
 				end
-				if size < minText - 0.01 then
+				if cut then
+					table.insert(
+						issues,
+						`texte coupé : {name} « {text} » (tient à {string.format("%.1f", size)} px seulement)`
+					)
+				elseif size < minText - 0.01 then
 					table.insert(
 						issues,
 						`texte trop petit : {name} « {text} » ({string.format("%.1f", size)} px)`

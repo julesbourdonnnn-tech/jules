@@ -50,6 +50,7 @@ local TIER_COLORS: { [string]: Color3 } = {
 	hard = Theme.Colors.Danger,
 }
 local QUEST_HEIGHT = 120
+local QUEST_BAR = 0.32 -- part de la largeur d'une carte de quête prise par la barre de progression
 local CLAIM_GUARD = 0.6 -- s : un appui par récompense (le serveur est idempotent de toute façon)
 local FLIP_TIME = 0.15
 local PULSE_EVERY = 1.2
@@ -336,9 +337,11 @@ local function buildQuestCard(slot: number, parent: Instance): QuestCard
 		maxSize = 18,
 		parent = frame,
 	})
+	-- rangée du bas : barre (QUEST_BAR de la largeur), progression, récompense (« ≈ 21.6K Glow +
+	-- 40 Stardust » tient à 18 px dans le reste de la rangée, fenêtre console comprise)
 	local bar = Widgets.bar({
 		name = "Bar",
-		size = UDim2.new(0.4, -10, 0, 14),
+		size = UDim2.new(QUEST_BAR, -10, 0, 14),
 		position = UDim2.fromOffset(10, 82),
 		color = Theme.Colors.Primary,
 		parent = frame,
@@ -346,15 +349,15 @@ local function buildQuestCard(slot: number, parent: Instance): QuestCard
 	local progress = Widgets.label({
 		name = "Progress",
 		size = UDim2.fromOffset(80, 24),
-		position = UDim2.new(0.4, 6, 0, 77),
+		position = UDim2.new(QUEST_BAR, 6, 0, 77),
 		xAlign = Enum.TextXAlignment.Left,
 		maxSize = 18,
 		parent = frame,
 	})
 	local reward = Widgets.label({
 		name = "Reward",
-		size = UDim2.new(0.6, -(96 + 170), 0, 26),
-		position = UDim2.new(0.4, 90, 0, 76),
+		size = UDim2.new(1 - QUEST_BAR, -(96 + 170), 0, 26),
+		position = UDim2.new(QUEST_BAR, 90, 0, 76),
 		xAlign = Enum.TextXAlignment.Left,
 		color = Theme.Colors.Gold,
 		maxSize = 18,

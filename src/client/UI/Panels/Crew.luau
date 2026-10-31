@@ -10,10 +10,15 @@
 --     t'invite ! » ✓ / ✕ pendant 20 s → CrewRespond(inviterId, accept) ; NON bloquante (elle vit
 --     hors de la fenêtre des panneaux, glisse depuis la droite), file de 3 au plus ; échéance lue
 --     sur Clock (une connexion Heartbeat tant qu'une carte est visible) ; une nouvelle invitation
---     du même joueur prolonge la carte ; un inviteur qui quitte le serveur retire sa carte
+--     du même joueur prolonge la carte ; un inviteur qui quitte le serveur retire sa carte ;
+--     panneau ouvert (PanelController.Opened / Closed) : la carte attend en file sa fermeture (elle
+--     recouvrirait la colonne de droite de la fenêtre, inatteignable à la manette), échéance
+--     inchangée, pastille « ! » d'Équipage tant qu'elle n'a pas expiré
 --   * manette (docs/07-console-ps5.md §6.7, A22) : la carte est un SelectionGroup fermé (Stop) ;
 --     △ la sélectionne via PanelController.focusTarget() → Panel.inviteTarget() (Accepter) ;
---     Accepter ↔ Refuser reliés (NextSelection) ; repère ✕ (ButtonA) sur Accepter et libellés
+--     Accepter ↔ Refuser reliés (NextSelection) ; repère sur Accepter : △ (ButtonY) tant que rien
+--     n'est sélectionné sur la carte (✕ ferait sauter le personnage), ← depuis Refuser, ✕ (ButtonA)
+--     une fois Accepter sélectionné ; libellés
 --     « Rejoindre » / « Non merci » à la place des « ✓ » / « ✕ » dessinés (sur une DualSense, ✕ veut
 --     dire valider) ; carte retirée : sa sélection est effacée (le stick refait marcher)
 --   * panneau ouvert : rafraîchi chaque seconde (« Inviter » revient après 20 s, Quitter après 5 s)
@@ -45,6 +50,7 @@ local Create = require(Client.UI.Create)
 local Juice = require(Client.UI.Juice)
 local Toast = require(Client.UI.Toast)
 local WorldState = require(Client.Controllers.WorldStateController)
+local PanelController = require(Client.Controllers.PanelController)
 local Widgets = require(script.Parent.Widgets)
 
 local Panel = {}
@@ -87,11 +93,15 @@ local card: Frame? = nil
 local cardText: TextLabel? = nil
 local cardFill: Frame? = nil
 local cardAccept: TextButton? = nil
+local cardDecline: TextButton? = nil
 local cardAcceptLabel: TextLabel? = nil
 local cardDeclineLabel: TextLabel? = nil
+local cardGlyph: Glyph.Handle? = nil -- repère manette d'Accepter : △, ← depuis Refuser, ✕ sélectionné
+local cardGlyphKey: Enum.KeyCode? = nil
 local shown: Invite? = nil
 local cardConn: RBXScriptConnection? = nil -- Heartbeat tant qu'une carte est visible
 local removingConn: RBXScriptConnection? = nil
+local panelsWatched = false -- PanelController.Opened / Closed branchés (carte suspendue)
 
 -- ---------------------------------------------------------------------------------------------
 -- Aides
@@ -487,9 +497,19 @@ function Panel.onClose()
 	isOpen = false
 end
 
--- Pastille sur l'icône Équipage tant qu'une invitation attend une réponse
+-- Pastille sur l'icône Équipage tant qu'une invitation attend une réponse (affichée, ou en file
+-- et pas encore expirée : la carte attend la fermeture du panneau ouvert)
 function Panel.hasAction(): boolean
-	return shown ~= nil or #pending > 0
+	if shown ~= nil then
+		return true
+	end
+	local now = Clock.now()
+	for _, invite in pending do
+		if invite.expiresAt > now then
+			return true
+		end
+	end
+	return false
 end
 
 function Panel.step(dt: number)
@@ -523,6 +543,41 @@ end
 
 local showNext: () -> ()
 
+-- Un panneau est-il ouvert ? La carte (même écran que la fenêtre, au-dessus d'elle) en
+-- recouvrirait la colonne de droite (Acheter, Inviter…) sans être atteignable à la manette
+-- (fenêtre = SelectionGroup fermé, △ ferme le panneau) : elle attend sa fermeture
+local function panelOpen(): boolean
+	local ok, name = pcall(PanelController.current)
+	return ok and name ~= nil
+end
+
+-- Repère manette du bouton Accepter : la prochaine touche qui y mène. △ (sélectionne la carte,
+-- docs/07 §6.7) tant que rien n'y est sélectionné ; ← depuis Refuser (△ y effacerait la
+-- sélection) ; ✕ une fois Accepter sélectionné. Un ✕ affiché sans sélection ferait sauter le
+-- personnage au lieu d'accepter (même règle que l'instruction d'accueil)
+local function refreshCardGlyph()
+	local g, accept = cardGlyph, cardAccept
+	if g == nil or accept == nil then
+		return
+	end
+	local selected: Instance? = nil
+	pcall(function()
+		selected = GuiService.SelectedObject
+	end)
+	local code = Enum.KeyCode.ButtonY
+	if shown ~= nil and selected ~= nil then
+		if selected == accept then
+			code = Enum.KeyCode.ButtonA
+		elseif selected == cardDecline then
+			code = Enum.KeyCode.DPadLeft
+		end
+	end
+	if code ~= cardGlyphKey then
+		cardGlyphKey = code
+		g:set({ gamepad = code })
+	end
+end
+
 local function hideCard()
 	shown = nil
 	local conn = cardConn
@@ -541,10 +596,39 @@ local function hideCard()
 			end
 		end)
 	end
+	refreshCardGlyph()
+end
+
+-- Un panneau s'ouvre : la carte affichée retourne en tête de file (son échéance court toujours)
+local function suspendCard()
+	local current = shown
+	if current == nil then
+		return
+	end
+	table.insert(pending, 1, current)
+	hideCard()
+end
+
+-- Tous les panneaux fermés : la carte en attente (non expirée) revient
+local function resumeCard()
+	if shown == nil and #pending > 0 and not panelOpen() then
+		showNext()
+	end
+end
+
+local function watchPanels()
+	if panelsWatched then
+		return
+	end
+	panelsWatched = true
+	PanelController.Opened:Connect(suspendCard)
+	-- pendant un changement de panneau (L2 / R2, Supernova → Améliorer), Closed arrive alors que
+	-- le suivant est déjà courant : panelOpen() reste vrai et la carte attend
+	PanelController.Closed:Connect(resumeCard)
 end
 
 -- Libellés des boutons de la carte : « ✓ » / « ✕ » dessinés au toucher et à la souris ; à la
--- manette « Rejoindre » (avec le repère ✕) / « Non merci »
+-- manette « Rejoindre » (avec le repère △ puis ✕) / « Non merci »
 local function paintCardButtons()
 	local accept, decline = cardAcceptLabel, cardDeclineLabel
 	if not accept or not decline then
@@ -603,6 +687,7 @@ local function ensureCard(): Frame
 	if removingConn == nil then
 		removingConn = Players.PlayerRemoving:Connect(onPlayerRemoving)
 	end
+	watchPanels()
 	local safe = Root.safe("Panels", 30)
 	local frame = Widgets.card({
 		name = "CrewInvite",
@@ -672,10 +757,11 @@ local function ensureCard(): Frame
 	})
 	accept.ZIndex = 41
 	decline.ZIndex = 41
-	-- manette : Accepter ↔ Refuser, repère ✕ sur Accepter
+	-- manette : Accepter ↔ Refuser, repère △ puis ✕ sur Accepter (refreshCardGlyph)
 	accept.NextSelectionRight = decline
 	decline.NextSelectionLeft = accept
-	Glyph.new(accept, { gamepad = Enum.KeyCode.ButtonA }, {
+	cardGlyphKey = Enum.KeyCode.ButtonY
+	cardGlyph = Glyph.new(accept, { gamepad = Enum.KeyCode.ButtonY }, {
 		name = "PadGlyph",
 		size = PAD_GLYPH,
 		position = UDim2.new(0, 8, 0.5, 0),
@@ -683,9 +769,11 @@ local function ensureCard(): Frame
 		zIndex = 43,
 	})
 	cardAccept = accept
+	cardDecline = decline
 	cardAcceptLabel = acceptLabel
 	cardDeclineLabel = declineLabel
 	paintCardButtons()
+	GuiService:GetPropertyChangedSignal("SelectedObject"):Connect(refreshCardGlyph)
 	Platform.Changed:Connect(function(reason: string)
 		if reason == "input" then
 			paintCardButtons()
@@ -707,7 +795,8 @@ function showNext()
 		end
 		table.remove(pending, 1)
 	end
-	local invite = table.remove(pending, 1)
+	-- panneau ouvert : la file attend sa fermeture (resumeCard)
+	local invite = if panelOpen() then nil else table.remove(pending, 1)
 	if not invite then
 		hideCard()
 		return
@@ -729,6 +818,7 @@ function showNext()
 	if cardConn == nil then
 		cardConn = RunService.Heartbeat:Connect(stepCard)
 	end
+	refreshCardGlyph()
 end
 
 -- Carte d'invitation (appelée par PanelController sur CrewInvitePrompt)

@@ -915,7 +915,7 @@ return function(T)
 	-- =============================================================================================
 	describe("Console G3 › carte d'invitation d'équipage", function()
 		it(
-			"focusTarget → Accepter (repère ✕), Accepter ↔ Refuser ; △ la sélectionne, → puis ✕ refuse",
+			"focusTarget → Accepter (repère △ puis ✕), Accepter ↔ Refuser ; △ la sélectionne, → puis ✕ refuse",
 			function()
 				local c = boot()
 				c.h:addPlayer({ userId = 2, name = "Mira" })
@@ -928,7 +928,8 @@ return function(T)
 				expect(c.PC.focusTarget()).toBe(accept)
 				expect(accept.NextSelectionRight).toBe(decline)
 				expect(decline.NextSelectionLeft).toBe(accept)
-				expect(glyph(accept.PadGlyph)).toEqual(psGlyph("ButtonA"))
+				-- rien n'est sélectionné en jeu : le repère montre △ (✕ ferait sauter le personnage)
+				expect(glyph(accept.PadGlyph)).toEqual(psGlyph("ButtonY"))
 				expect(accept.Label.Text).toBe("Join")
 				expect(decline.Label.Text).toBe("No thanks")
 				expect(card.SelectionBehaviorUp).toBe(Enum.SelectionBehavior.Stop)
@@ -936,6 +937,8 @@ return function(T)
 				c.h.game.GuiService.SelectedObject = nil
 				Gamepad.tap(c.h, K.ButtonY)
 				expect(selected(c)).toBe(accept)
+				-- Accepter sélectionné : ✕ valide
+				expect(glyph(accept.PadGlyph)).toEqual(psGlyph("ButtonA"))
 				Layout.apply(c.h)
 				expect(Layout.names(Layout.escapes(c.h, card, accept))).toBe("")
 				expect(Layout.names(Layout.unreachable(c.h, card, accept))).toBe("")
@@ -943,6 +946,8 @@ return function(T)
 				-- → puis ✕ : refusée, carte retirée, sélection effacée
 				Gamepad.tap(c.h, K.DPadRight)
 				expect(selected(c)).toBe(decline)
+				-- depuis Refuser : ← mène à Accepter
+				expect(accept.PadGlyph:GetAttribute("GlyphKey")).toBe("DPadLeft")
 				Gamepad.tap(c.h, K.ButtonA)
 				frames(c, 2)
 				local respond = sent(c, "CrewRespond")

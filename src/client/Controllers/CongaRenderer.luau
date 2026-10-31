@@ -233,6 +233,7 @@ local wildHandoff: { [number]: { rig: Rig, at: number } } = {}
 local localTrail: Trail.Trail = Trail.new(Conga.TrailLength, Conga.TrailMinStep)
 local localSlotCache = 0
 local nextPlan = -math.huge
+local perchedSeen = -1 -- NestDisplay.perchedVersion() à la dernière passe du planificateur
 local rebuilds = 0
 local others: { { userId: number, pos: Vector3 } } = {}
 local localPos: Vector3? = nil
@@ -1883,6 +1884,48 @@ local function budgetEffects(focus: Vector3)
 	table.clear(fxParaders)
 end
 
+-- Part des budgets §12.8 (Nebbies en détail complet, pièces) prise par les Nebbies de parade : ils
+-- restent dessinés à leur LOD de départ jusqu'à la fin de leur saut, le planificateur ne peut pas
+-- redonner cette part aux autres vues. Si elle dépasse déjà un plafond (Graphismes légers changés,
+-- parades simultanées), les plus lointains passent en boule (dans la limite de MAX_REBUILDS).
+local function chargeParaders(focus: Vector3): (number, number)
+	local full, used = 0, 0
+	for _, p in paraders do
+		local rig = p.rig
+		if not rig.destroyed and rig.lod ~= "hidden" then
+			p.dist = (rig.body.Position - focus).Magnitude
+			used += RigPool.partCount(rig.code, rig.lod)
+			if rig.lod == "full" then
+				full += 1
+			end
+		end
+	end
+	if full <= Render.MaxFullDetail and used <= Render.MaxNebbyParts then
+		return full, used
+	end
+	for _, p in paraders do
+		if p.rig.lod == "full" and not p.rig.destroyed then
+			table.insert(fxParaders, p)
+		end
+	end
+	table.sort(fxParaders, function(a, b)
+		return a.dist > b.dist
+	end)
+	for _, p in fxParaders do
+		if (full <= Render.MaxFullDetail and used <= Render.MaxNebbyParts) or rebuilds >= MAX_REBUILDS then
+			break
+		end
+		local rig = p.rig
+		local cost = RigPool.partCount(rig.code, "full")
+		rebuilds += 1
+		RigPool.setLod(rig, "ball")
+		full -= 1
+		used += 1 - cost
+	end
+	table.clear(fxParaders)
+	return full, used
+end
+
 local function plan(t: number, focus: Vector3)
 	localSlotCache = WorldStateController.localSlot()
 	RigPool.setLowGraphics(lowGraphics())
@@ -1912,7 +1955,9 @@ local function plan(t: number, focus: Vector3)
 	table.sort(planViews, function(a, b)
 		return a.dist < b.dist
 	end)
-	local full, used = 0, 0
+	-- Nebbies de parade : encore dessinés (≈ 2,35 s) à leur LOD de départ, leur part reste due
+	-- (§12.8) ; au-delà des plafonds, les plus lointains passent en boule
+	local full, used = chargeParaders(focus)
 	local mythics: { RigPool.View } = {}
 	local brights: { RigPool.View } = {}
 	for _, v in planViews do
@@ -2012,9 +2057,13 @@ local function syncLine(slot: number, focus: Vector3, t: number)
 	end
 end
 
+-- Passe du planificateur à 10 Hz, ou tout de suite quand les perchés d'un Nid ont changé (PerchData
+-- relu) : les vues perchées neuves partent masquées et sont décidées dès cette image
 local function planIfDue(t: number, focus: Vector3)
-	if t >= nextPlan or t < nextPlan - 1 then
+	local version = NestDisplay.perchedVersion()
+	if t >= nextPlan or t < nextPlan - 1 or version ~= perchedSeen then
 		nextPlan = t + PLAN_INTERVAL
+		perchedSeen = version
 		plan(t, focus)
 	end
 end
@@ -2271,9 +2320,14 @@ end
 
 -- Ajouts du paquet client-world (lus par VFXController, plus tardif) ---------------------------------------------
 
--- Nebbies rendus en détail complet (budget ≤ 100)
+-- Nebbies rendus en détail complet (budget ≤ 100), Nebbies de parade compris
 function CongaRenderer.fullDetailCount(): number
 	local n = 0
+	for _, p in paraders do
+		if p.rig.lod == "full" and not p.rig.destroyed then
+			n += 1
+		end
+	end
 	for _, view in lineViews do
 		for _, node in view.nodes do
 			if node.rig and node.rig.lod == "full" then

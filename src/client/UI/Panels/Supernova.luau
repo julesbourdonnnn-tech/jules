@@ -2,8 +2,9 @@
 -- Panels/Supernova — paquet « client-panels » (docs/04-architecture.md §13.16).
 -- Module de panneau (interface PanelController.Panel), construit à la première ouverture.
 -- Responsabilités :
---   * aperçu obligatoire : deux colonnes « Tu gardes » / « Remis à zéro », gains de la prochaine
---     Supernova (+40 % de revenu, +5 au plafond Conga, Dash −0,25 s, aura), coût et Glow prédit —
+--   * aperçu obligatoire : gains de la prochaine Supernova en tête (+40 % de revenu, +5 au plafond
+--     Conga, Dash −0,25 s, aura ; visibles sans défiler), puis deux colonnes « Tu gardes » /
+--     « Remis à zéro », coût et Glow prédit —
 --     calculés côté client avec Logic/Formulas et Config (Panels/Model.supernovaPreview : mêmes
 --     règles que EconomyService.supernovaPreview)
 --   * bouton à MAINTENIR Balance.Supernova.HoldSeconds (1 s) avec anneau → remote Supernova() ;
@@ -337,7 +338,8 @@ function Panel.build(parent: Frame)
 		color = Theme.Colors.Gold,
 		parent = parent,
 	})
-	-- milieu : colonnes et gains (défilant sur petit écran)
+	-- milieu : gains EN TÊTE (ce que l'on gagne reste visible sans défiler avant ce geste
+	-- irréversible), puis colonnes « Garder » / « Remis à zéro » (défilant sur petit écran)
 	local scroll = Create("ScrollingFrame", {
 		Name = "Preview",
 		BackgroundTransparency = 1,
@@ -394,7 +396,7 @@ function Panel.build(parent: Frame)
 		name = "Gains",
 		size = UDim2.new(1, -8, 0, 0),
 		color = Color3.fromRGB(76, 56, 120),
-		order = 2,
+		order = 0,
 		parent = scroll,
 	})
 	gains.AutomaticSize = Enum.AutomaticSize.Y

@@ -13,11 +13,19 @@
 --   * après 20 s : « Ton Nid se réveille… » / « Your Nest is waking up… » (textes embarqués FR/EN
 --     selon LocaleId, identiques aux clés loading.wake / loading.retry de Strings.luau, car
 --     Localization n'est pas encore répliqué) + bouton Réessayer (TeleportService:Teleport(PlaceId))
+--   * « Réessayer » attend tant que le chargement AVANCE encore (une téléportation le recommencerait
+--     de zéro : boucle sans fin sur un profil verrouillé) : attribut répliqué Player
+--     « ProfileLoading » (numéro d'essai, posé par DataService pendant ses essais : verrou d'un autre
+--     serveur jusqu'à 25 s, backoff) ou réplication initiale pas finie (game:IsLoaded() faux) ;
+--     message rassurant seul pendant ce temps, Réessayer RETRY_GRACE s après la fin de ces attentes,
+--     et au plus tard RETRY_MAX_WAIT s après l'ouverture de l'écran (attribut resté posé)
 --   * console / téléviseur (docs/07-console-ps5.md §3, §6.7) : échelle « 10 pieds » recopiée de
 --     Config/Console (écran Large ou console : max(0,6 ; min(L / 1280 ; H / 720)), sans plafond ;
 --     sinon la règle d'origine ×1,2 bornée 0,6-1,4 ; égalité vérifiée par une spec) ; à la manette
 --     (IsTenFootInterface sous pcall, ou GamepadEnabled), « Réessayer » est sélectionné d'office
---     (pas de curseur virtuel) avec l'icône ✕ de Roblox (GetImageForKeyCode(ButtonA)) à côté
+--     (pas de curseur virtuel) avec l'icône ✕ de Roblox (GetImageForKeyCode(ButtonA)) à côté ; tant
+--     que l'écran est là, une sélection perdue (○ / △ d'InputController, objet derrière l'écran) lui
+--     est rendue si la manette est en main (console, ou dernière entrée = manette)
 -- Une seule connexion RenderStepped, coupée à la fermeture. Le temps de l'écran est la somme des dt
 -- des images (mesure purement technique, sans Shared/Util/Clock qui n'est pas encore répliqué).
 -- GDD : §3 (chargement), §9.2, §10.3 (écrans Chargement / Échec), §12.2.
@@ -37,7 +45,13 @@ local TEXTS = {
 	fr = { wake = "Ton Nid se réveille…", retry = "Réessayer" },
 }
 
-local FAIL_AFTER = 20 -- s avant l'écran « Réessayer »
+local FAIL_AFTER = 20 -- s avant « Ton Nid se réveille… » (et « Réessayer » si plus rien n'avance)
+-- attribut Player répliqué posé par DataService pendant ses essais de chargement (numéro d'essai)
+local PROFILE_LOADING = "ProfileLoading"
+local RETRY_GRACE = 10 -- s après la fin du chargement serveur / de la réplication avant « Réessayer »
+-- au-delà du pire cas de DataService (verrou : 5 × 5 s ; erreurs : 2 + 4 + 8 + 16 + 16 s d'attente)
+local RETRY_MAX_WAIT = 60
+local MAX_RESELECTS_PER_FRAME = 4 -- garde-fou contre une sélection disputée image après image
 local FADE_TIME = 0.3
 local RETRY_COOLDOWN = 5 -- s entre deux tentatives de téléportation
 local PLAYER_WAIT = 10 -- s au plus pour LocalPlayer / PlayerGui
@@ -102,6 +116,17 @@ local function gamepadLikely(): boolean
 	end
 	local ok, value = pcall(function()
 		return UserInputService.GamepadEnabled
+	end)
+	return ok and value == true
+end
+
+-- Manette EN MAIN : console, ou dernière entrée venue d'une manette (une souris garde la main sur PC)
+local function padInUse(): boolean
+	if isTenFoot() then
+		return true
+	end
+	local ok, value = pcall(function()
+		return string.sub(UserInputService:GetLastInputType().Name, 1, 7) == "Gamepad"
 	end)
 	return ok and value == true
 end
@@ -399,6 +424,7 @@ local function main()
 	button.TextScaled = true
 	button.TextColor3 = OUTLINE
 	button.FontFace = Font.fromEnum(Enum.Font.FredokaOne)
+	button.Visible = false -- montré par showRetry (chargement qui n'avance plus)
 	button.Parent = fail
 	round(button, UDim.new(0, 16))
 	outline(button, 3)
@@ -429,7 +455,10 @@ local function main()
 	-- Boucle -------------------------------------------------------------------------------------
 	local elapsed = 0
 	local closing = false
-	local failShown = false
+	local failShown = false -- message « Ton Nid se réveille… »
+	local retryShown = false -- bouton « Réessayer »
+	local lastBusy = -math.huge -- dernier instant (elapsed) où le chargement avançait encore
+	local reselects = 0 -- sélections rendues à « Réessayer » pendant l'image en cours
 	local lastRetry = -math.huge
 	local connections: { RBXScriptConnection } = {}
 
@@ -478,6 +507,21 @@ local function main()
 		end
 	end
 
+	-- Le chargement avance encore : DataService réessaie (attribut répliqué ProfileLoading = numéro
+	-- d'essai > 0 ; toute autre valeur est ignorée) ou la réplication initiale n'est pas finie
+	-- (appelé à chaque image : aucune fermeture créée ici)
+	local function gameLoaded(): boolean
+		return game:IsLoaded()
+	end
+	local function stillLoading(): boolean
+		local attempt = player:GetAttribute(PROFILE_LOADING)
+		if type(attempt) == "number" and attempt > 0 and attempt < math.huge then
+			return true
+		end
+		local ok, loaded = pcall(gameLoaded)
+		return ok and loaded == false
+	end
+
 	-- Manette : icône ✕ (image Roblox de ButtonA) à gauche de « Réessayer » ; rien si indisponible
 	local function addConfirmGlyph()
 		if fail:FindFirstChild("PadGlyph") then
@@ -512,6 +556,33 @@ local function main()
 		end)
 	end
 
+	-- Sélection hors de l'écran de chargement (rien, ou un objet caché derrière lui)
+	local function selectionLost(): boolean
+		local ok, lost = pcall(function()
+			local selected = GuiService.SelectedObject
+			return selected == nil or not selected:IsDescendantOf(gui)
+		end)
+		return ok and lost == true
+	end
+
+	-- Manette en main et « Réessayer » affiché : une sélection perdue (○ / △ d'InputController qui
+	-- l'effacent, △ qui sélectionne le rail du HUD caché derrière, moteur) lui est rendue juste après,
+	-- sinon l'enfant reste bloqué devant un écran figé (docs/07-console-ps5.md §6.7)
+	local function keepRetrySelected()
+		if not retryShown or closing or not selectionLost() or not padInUse() then
+			return
+		end
+		if reselects >= MAX_RESELECTS_PER_FRAME then
+			return
+		end
+		reselects += 1
+		task.defer(function()
+			if retryShown and not closing and gui.Parent ~= nil and selectionLost() then
+				selectRetry()
+			end
+		end)
+	end
+
 	local function showFail()
 		failShown = true
 		fail.Visible = true
@@ -521,6 +592,19 @@ local function main()
 			TweenService:Create(fs, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
 				Scale = failBase,
 			}):Play()
+		end
+	end
+
+	local function showRetry()
+		retryShown = true
+		button.Visible = true
+		if not calm then
+			buttonScale.Scale = 0.6
+			TweenService
+				:Create(buttonScale, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+					Scale = 1,
+				})
+				:Play()
 		end
 		-- manette (docs/07-console-ps5.md §6.7) : sans curseur virtuel, seule la sélection atteint
 		-- « Réessayer » ; ✕ l'active
@@ -579,8 +663,19 @@ local function main()
 				dot.Size = UDim2.fromOffset(size, size)
 			end
 		end
+		reselects = 0
+		if stillLoading() then
+			lastBusy = elapsed
+		end
 		if not failShown and elapsed >= FAIL_AFTER then
 			showFail()
+		end
+		if
+			failShown
+			and not retryShown
+			and (elapsed - lastBusy >= RETRY_GRACE or elapsed >= RETRY_MAX_WAIT)
+		then
+			showRetry()
 		end
 		check()
 	end
@@ -599,16 +694,20 @@ local function main()
 	table.insert(
 		connections,
 		UserInputService.LastInputTypeChanged:Connect(function(inputType: Enum.UserInputType)
-			if failShown and not closing and string.sub(inputType.Name, 1, 7) == "Gamepad" then
-				local ok, selected = pcall(function()
-					return GuiService.SelectedObject
-				end)
-				if ok and selected == nil then
+			if retryShown and not closing and string.sub(inputType.Name, 1, 7) == "Gamepad" then
+				if selectionLost() then
 					selectRetry()
 				end
 			end
 		end)
 	)
+	-- sélection perdue pendant l'écran d'échec, manette en main : rendue à « Réessayer »
+	pcall(function()
+		table.insert(
+			connections,
+			GuiService:GetPropertyChangedSignal("SelectedObject"):Connect(keepRetrySelected)
+		)
+	end)
 	if not game:IsLoaded() then
 		table.insert(connections, game.Loaded:Connect(check))
 	end

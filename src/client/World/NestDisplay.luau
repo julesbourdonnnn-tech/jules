@@ -3,7 +3,9 @@
 -- autour des 12 Nids à partir de leurs ATTRIBUTS (docs §3.2) et de la stèle de la Balise.
 --   * perchés (PerchData « code.étoiles,… », dans l'ordre des perchoirs) : un rig par perché posé
 --     sur le dessus de son perchoir (attribut TopY du perchoir, sinon WorldLayout), rebond lent,
---     tourné vers le centre ; niveaux de détail décidés par le planificateur de CongaRenderer
+--     tourné vers le centre ; niveaux de détail décidés par le planificateur de CongaRenderer ;
+--     PerchData réordonné (parade d'un meilleur Nebby) : vues reprises par (code, étoiles), aucun
+--     perché ne disparaît, perchedVersion() fait refaire la passe du planificateur à l'image suivante
 --   * « +N » toutes les 2,5 s au-dessus des Balance.Render.PerchFloaters (8) perchés les plus
 --     rentables du Nid LOCAL seulement (N = revenu passif × M sur 2,5 s, GDD §9.3)
 --   * perchoir qui pousse du sol (Y 0 → hauteur en 0,35 s Back Out) quand un perchoir apparaît
@@ -65,6 +67,8 @@ local SLOT_COUNT = Zones.Nests.Count
 local MAX_PERCHES = 46
 local PERCH_BOUNCE = 0.12
 local PERCH_BOUNCE_SPEED = 1.6
+local PERCH_PHASE_STEP = 0.9 -- décalage du rebond d'un perchoir au suivant
+local PERCH_KEY_STARS = 8 -- clé (code, étoiles) des vues perchées (étoiles ≤ Nebbies.MAX_STARS < 8)
 local FLOATER_PERIOD = 2.5
 local FLOATER_RANGE = 80 -- studs : « +N » seulement si le point de vue est près du Nid local
 local FLOATER_COLOR = Color3.fromRGB(255, 220, 110)
@@ -171,6 +175,8 @@ local board: BasePart? = nil
 local boardGui: SurfaceGui? = nil
 local boardConn: RBXScriptConnection? = nil
 local started = false
+-- incrémenté à chaque changement des perchés d'un Nid (CongaRenderer refait alors sa passe)
+local perchedVersion = 0
 
 type Ring = {
 	folder: Folder,
@@ -250,39 +256,86 @@ end
 
 -- Perchés -------------------------------------------------------------------------------------------
 
+-- Clé d'un perché : même (code, étoiles) = même rig (RigPool les range ainsi)
+local function perchKey(code: number, stars: number): number
+	return code * PERCH_KEY_STARS + stars
+end
+
+-- Pose (ou repose) une vue sur le perchoir `index` du Nid
+local function placeView(state: NestState, view: PerchView, index: number)
+	view.index = index
+	view.top = perchTop(state, index)
+	view.look = WorldLayout.perchCFrame(state.slot, index).LookVector
+	view.phase = index * PERCH_PHASE_STEP
+end
+
+-- PerchData arrive trié du meilleur au moins bon (NestService.setPerchDisplay) : une parade qui
+-- apporte un Nebby meilleur que des perchés décale tous les suivants d'un perchoir. Les vues sont
+-- donc reprises par (code, étoiles), pas par index : rig, LOD voulu et distance gardés, seuls
+-- l'index, le perchoir et la phase changent ; seules les vues sans entrée sont rendues à la
+-- réserve. Une vue vraiment nouvelle part masquée : `perchedVersion` change et CongaRenderer refait
+-- la passe du planificateur dès l'image suivante (aucun perché invisible en attendant 10 Hz).
 local function refreshPerched(state: NestState)
 	local entries = parsePerchData(state.model:GetAttribute("PerchData"))
-	local perched = state.perched
-	for i, e in entries do
-		local view = perched[i]
-		if view and (view.code ~= e.code or view.stars ~= e.stars) then
-			releaseView(view)
-			view = nil
-		end
-		if view == nil then
-			local cf = WorldLayout.perchCFrame(state.slot, i)
-			local rarity = Nebbies.rarityOf((Nebbies.unpack(e.code)))
-			perched[i] = {
-				code = e.code,
-				stars = e.stars,
-				rig = nil,
-				want = "hidden",
-				dist = math.huge,
-				bubble = false,
-				pinned = nil,
-				mythic = rarity >= 6,
-				bright = rarity >= 5,
-				slot = state.slot,
-				index = i,
-				top = perchTop(state, i),
-				look = cf.LookVector,
-				phase = i * 0.9,
-			}
+	local old = state.perched
+	local perched: { PerchView } = {}
+	local spare: { [number]: { PerchView } } = {}
+	local changed = #old ~= #entries
+	-- même (code, étoiles) au même index : rien ne bouge
+	for i, view in old do
+		local e = entries[i]
+		if e and e.code == view.code and e.stars == view.stars then
+			perched[i] = view
+		else
+			local key = perchKey(view.code, view.stars)
+			local list = spare[key]
+			if list == nil then
+				list = {}
+				spare[key] = list
+			end
+			table.insert(list, view)
 		end
 	end
-	for i = #perched, #entries + 1, -1 do
-		releaseView(perched[i])
-		perched[i] = nil
+	for i, e in entries do
+		if perched[i] == nil then
+			local list = spare[perchKey(e.code, e.stars)]
+			-- dans l'ordre des anciens perchoirs : un décalage garde l'ordre des perchés
+			local view: PerchView? = if list then table.remove(list, 1) else nil
+			changed = true
+			if view then
+				placeView(state, view, i)
+				perched[i] = view
+			else
+				local rarity = Nebbies.rarityOf((Nebbies.unpack(e.code)))
+				local fresh: PerchView = {
+					code = e.code,
+					stars = e.stars,
+					rig = nil,
+					want = "hidden",
+					dist = math.huge,
+					bubble = false,
+					pinned = nil,
+					mythic = rarity >= 6,
+					bright = rarity >= 5,
+					slot = state.slot,
+					index = i,
+					top = Vector3.zero,
+					look = Vector3.zAxis,
+					phase = 0,
+				}
+				placeView(state, fresh, i)
+				perched[i] = fresh
+			end
+		end
+	end
+	for _, list in spare do
+		for _, view in list do
+			releaseView(view)
+		end
+	end
+	state.perched = perched
+	if changed then
+		perchedVersion += 1
 	end
 end
 
@@ -1310,6 +1363,12 @@ end
 function NestDisplay.perchCount(slot: number): number
 	local state = nests[slot]
 	return if state then state.perchCount else 0
+end
+
+-- Version des perchés : change dès qu'un PerchData est relu (vues ajoutées, déplacées, retirées) ;
+-- CongaRenderer refait la passe du planificateur à l'image suivante
+function NestDisplay.perchedVersion(): number
+	return perchedVersion
 end
 
 function NestDisplay.perchedCount(slot: number): number

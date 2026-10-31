@@ -8,7 +8,9 @@
 --     qu'un service défaillant ne fige jamais le jeu
 --   * miettes par joueur : trail (Trail.new(170, 0,5)) pour l'autorité, netTrail (Trail.new(170, 1,0,
 --     firstSeq)) pour le réseau, numérotation contiguë par slot entre propriétaires successifs ;
---     poussées seulement si MoveCheck valide le tick ; remise à zéro sur saut ≥ 40 studs ; chaque
+--     poussées seulement si MoveCheck valide le tick ; remise à zéro seulement sur une vraie
+--     téléportation (apparition, déplacement serveur) : un pas VALIDÉ de 40 studs ou plus (Dash,
+--     rafale après un gel réseau) est jalonné de miettes intermédiaires (pushCrumbs) ; chaque
 --     miette est posée à Tuning.RootHeight (3) au-dessus du sol ANALYTIQUE (WorldLayout.groundY) :
 --     les Nebbies marchent au sol, un saut, un vol (HipHeight relevé) ou une racine enfouie
 --     (passe-muraille) ne déplacent jamais la file hors de portée verticale des coupes
@@ -43,7 +45,7 @@
 --   * temps d'escorte (Signals.EscortTime), joueurs actifs (SpawnService/EventService.setActivePlayers)
 --   * diffusion : LineEvent groupé par tick, SnipEvent (une par coupe, même suite de `ver`),
 --     PathStream (PathCodec, non fiable, 10 Hz, 2 points répétés, découpé sous la limite moteur de
---     900 octets) ; remotes RequestWorld() 1/2 s → WorldSnapshot, RequestPath(slot 1-12) 4/s →
+--     900 octets) ; remotes RequestWorld() 1/2 s → WorldSnapshot, RequestPath(slot 1-12) 12/s →
 --     PathSnapshot (200 derniers points) ; WorldSnapshot à chaque arrivée, envoyé en fin de tick
 --     APRÈS la diffusion des ops (aucune op en attente ne peut contredire l'instantané)
 --   * remote SetInputType(kind 1-3) 1/5 s (aide tactile +0,3 aux coupes, champ analytique)
@@ -178,6 +180,7 @@ type PlayerState = {
 	snapshotSent: boolean,
 	floorParams: RaycastParams?, -- sonde du sol réel (créée au premier usage)
 	floorFor: Model?, -- personnage exclu par floorParams
+	rookieNoticed: boolean, -- Feedback rookieNoDust déjà montré (une fois par session)
 }
 
 type SlotState = {
@@ -501,6 +504,7 @@ local function newState(player: Player): PlayerState
 		snapshotSent = false,
 		floorParams = nil,
 		floorFor = nil,
+		rookieNoticed = false,
 	}
 end
 
@@ -769,6 +773,39 @@ local function moveCheckGround(state: PlayerState, character: Model, pos: Vector
 	return groundY
 end
 
+-- Pas des miettes intermédiaires d'un grand déplacement VALIDÉ (moitié de la distance de
+-- téléportation de Trail : aucun écart entre deux miettes poussées ne l'atteint)
+local CRUMB_FILL_STEP = Conga.TeleportDistance / 2
+
+-- Pousse la miette d'un tick validé (autorité ET réseau : le client dessine la file là où elle se
+-- coupe). Un déplacement validé de TeleportDistance ou plus (Dash + rafale après un gel réseau,
+-- jusqu'à vmax × 1,5 + 4 ≈ 58 studs) est d'abord jalonné de miettes intermédiaires le long de
+-- prev → pos : Trail.push ne remet jamais l'historique à zéro sur un pas légal (la file entière
+-- tomberait en tas sous le joueur, pour l'autorité comme pour tous les clients). Seules les vraies
+-- téléportations (resetPending : apparition, déplacement serveur) appellent trail:reset.
+local function pushCrumbs(state: PlayerState, prev: Vector3, pos: Vector3, crumb: Vector3)
+	local net = state.netTrail
+	local head = state.trail:head()
+	local netHead = if net then net:head() else nil
+	local far = (head ~= nil and (crumb - head).Magnitude >= Conga.TeleportDistance)
+		or (netHead ~= nil and (crumb - netHead).Magnitude >= Conga.TeleportDistance)
+	if far then
+		local n = math.ceil(distXZ(prev, pos) / CRUMB_FILL_STEP)
+		for i = 1, n - 1 do
+			local p = prev:Lerp(pos, i / n)
+			local mid = crumbOf(p, WorldLayout.groundY(p.X, p.Z))
+			state.trail:push(mid)
+			if net then
+				net:push(mid)
+			end
+		end
+	end
+	state.trail:push(crumb)
+	if net then
+		net:push(crumb)
+	end
+end
+
 local function buildActors(now: number): { Types.Actor }
 	local actors: { Types.Actor } = {}
 	for player, state in states do
@@ -817,12 +854,7 @@ local function buildActors(now: number): { Types.Actor }
 		end
 		if verdict == "ok" then
 			-- miettes au sol (autorité ET réseau : le client dessine la file là où elle se coupe)
-			local crumb = crumbOf(pos, groundY)
-			state.trail:push(crumb)
-			local net = state.netTrail
-			if net then
-				net:push(crumb)
-			end
+			pushCrumbs(state, prev, pos, crumbOf(pos, groundY))
 			noteActivity(state, distXZ(prev, pos), now)
 		else
 			-- tick refusé (signalé ou ramené) : l'acteur reste à sa dernière position validée, pour
@@ -1082,7 +1114,11 @@ local function applyCut(
 			sstate.rushUntil = now + Snip.RushDuration
 		end
 		if snipper.rookie then
-			Notify.feedback(snipper.player, "feedback.rookieNoDust", nil, "info")
+			-- l'explication, une seule fois par session : la première coupe reste une fête
+			if sstate and not sstate.rookieNoticed then
+				sstate.rookieNoticed = true
+				Notify.feedback(snipper.player, "feedback.rookieNoDust", nil, "info")
+			end
 		else
 			local wanted = Snip.RushDustPerNebby * count
 			dust = math.max(
@@ -1103,7 +1139,12 @@ local function applyCut(
 				Notify.feedback(snipper.player, "feedback.capReached", nil, "info")
 			end
 		end
-		Notify.feedback(snipper.player, "feedback.snipDealt", { count = count, dust = dust }, "reward")
+		-- sans Stardust (bouclier, plafond du jour) : « +N libres ! », jamais « +0 ✦ »
+		if dust > 0 then
+			Notify.feedback(snipper.player, "feedback.snipDealt", { count = count, dust = dust }, "reward")
+		else
+			Notify.feedback(snipper.player, "feedback.snipDealtNoDust", { count = count }, "reward")
+		end
 		Analytics.event(snipper.player, "SnipDealt", count)
 		Analytics.event(snipper.player, "SnipByInput", if sstate then sstate.inputType else INPUT_DEFAULT)
 		Analytics.event(victimPlayer, "SnipReceived", count)
@@ -1738,7 +1779,11 @@ local function onRequestWorld(player: Player)
 end
 
 local function onRequestPath(player: Player, slot: unknown)
-	if not RateLimit.allow(player, "RequestPath", 4, 1) then
+	-- SLOT_COUNT demandes par seconde, de quoi réparer chaque slot une fois par seconde (le client se
+	-- limite déjà à 1 / s par slot) : une rafale de paquets PathStream perdus ouvre un trou dans
+	-- TOUTES les files en mouvement à la fois, chacune doit pouvoir être réparée dans la même seconde
+	-- (au plus SLOT_COUNT instantanés de 200 points)
+	if not RateLimit.allow(player, "RequestPath", SLOT_COUNT, 1) then
 		return
 	end
 	if not Validate.integer(slot, 1, SLOT_COUNT) then

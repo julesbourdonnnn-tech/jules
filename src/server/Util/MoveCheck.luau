@@ -34,6 +34,13 @@
 --   * une infraction SIGNALE seulement (verdict "flag" : ce tick ne peut ni attraper, ni couper, ni
 --     encaisser, ni voler la Comète) ; 3 infractions en 5 s → "rewind" vers la dernière position
 --     valide, puis 3 s de restriction (isRestricted)
+--   * rafale (troisième valeur de step, lastWasBurst) : position ACCEPTÉE ("ok", tolérance des gels
+--     réseau inchangée) mais plus longue que la règle du GDD pour UN tick (vmax × dt × 1,5 + 4, dt =
+--     durée réelle du tick, depuis l'appel précédent, bornée à BURST_MAX_TICK) : le crédit d'arrêt
+--     (jusqu'à STILL_CREDIT s) et la fenêtre soutenue laisseraient sinon passer un bond de 28 à 58
+--     studs en 0,1 s après 1 s d'immobilité. Un tick en rafale ne doit AGIR sur rien (ni capture,
+--     ni coupe, ni vol ou ramassage de Comète, ni Gloomwisp) : CongaService pose ses miettes et
+--     balaie seulement sa propre porte (parade d'un rattrapage honnête). Jamais une infraction.
 --   * période de grâce (exemption de 3 s après reset, ou restriction après un retour) : les
 --     positions encore « en vol » ne déclenchent pas de nouveau retour par infractions et aucun
 --     retour n'y compte comme récidive (recentRewinds) — un joueur honnête qui décroche n'est jamais
@@ -75,6 +82,11 @@ local SUSTAIN_WINDOW = 1
 local MAX_ELAPSED = STILL_CREDIT
 -- Déplacement en dessous duquel le joueur est considéré à l'arrêt (studs)
 local STILL_EPSILON = 0.05
+-- Durée maximale d'un tick pour la règle de rafale (s) : le serveur rattrape au plus MaxCatchUp
+-- pas d'une image en retard (même instant) ; au-delà, le retard est abandonné. Un accroc du serveur
+-- n'est donc jamais une rafale ; un trou plus long (personnage absent sans réinitialisation) ne
+-- devient jamais un crédit de bond.
+local BURST_MAX_TICK = Balance.Tick.Step * Balance.Tick.MaxCatchUp
 -- Vitesse supposée tant qu'aucun WalkSpeed n'a été noté : le maximum atteignable en jeu
 local DEFAULT_VMAX = Balance.Speed.Base
 	+ Balance.Speed.PerStride * (Balance.Upgrades.stride.Max or 0)
@@ -97,6 +109,8 @@ type State = {
 	lastValid: Vector3, -- dernière position acceptée (référence du contrôle et point de retour)
 	validAt: number, -- instant depuis lequel le déplacement autorisé s'accumule (crédit d'arrêt)
 	acceptedAt: number, -- instant de la dernière position acceptée (montée verticale)
+	steppedAt: number, -- instant du dernier appel de step (ou de la dernière référence) : durée du tick
+	burst: boolean, -- dernier tick accepté plus long que la règle d'un tick (rafale : n'agit pas)
 	history: { Sample }, -- positions acceptées de la fenêtre soutenue
 	exemptUntil: number,
 	restrictedUntil: number,
@@ -132,6 +146,8 @@ local function anchor(st: State, pos: Vector3, now: number)
 	st.lastValid = pos
 	st.validAt = now
 	st.acceptedAt = now
+	st.steppedAt = now
+	st.burst = false
 	st.history = { { t = now, pos = pos } }
 end
 
@@ -140,6 +156,8 @@ local function newState(pos: Vector3, now: number): State
 		lastValid = pos,
 		validAt = now,
 		acceptedAt = now,
+		steppedAt = now,
+		burst = false,
 		history = {},
 		exemptUntil = -math.huge,
 		restrictedUntil = -math.huge,
@@ -214,7 +232,7 @@ local function accept(st: State, pos: Vector3, now: number)
 	end
 end
 
-local function rewind(st: State, now: number, grace: boolean): (Verdict, Vector3?)
+local function rewind(st: State, now: number, grace: boolean): (Verdict, Vector3?, boolean)
 	table.clear(st.flags)
 	st.highSince = nil
 	st.hoverSince = nil
@@ -224,7 +242,7 @@ local function rewind(st: State, now: number, grace: boolean): (Verdict, Vector3
 		prune(st.rewinds, now - Cfg.StrikeWindow)
 		table.insert(st.rewinds, now)
 	end
-	return "rewind", st.lastValid
+	return "rewind", st.lastValid, false
 end
 
 -- Le déplacement de `from` (à l'instant `since`) jusqu'à `pos` est-il plausible ? (Δt pris en
@@ -286,20 +304,25 @@ function MoveCheck.noteSpeed(player: Player, walkSpeed: number, now: number)
 	end
 end
 
--- Vérifie le déplacement du tick ; "rewind" fournit la position de retour
+-- Vérifie le déplacement du tick ; "rewind" fournit la position de retour. Troisième valeur :
+-- rafale (seulement avec "ok") — position acceptée, mais le tick ne doit agir sur rien (en-tête)
 function MoveCheck.step(
 	player: Player,
 	pos: Vector3,
 	dt: number,
 	now: number,
 	groundY: number
-): (Verdict, Vector3?)
+): (Verdict, Vector3?, boolean)
 	local st = states[player]
 	if not finiteVector(pos) or not isFinite(now) then
 		if st then
 			st.violations += 1
+			st.burst = false
+			if isFinite(now) then
+				st.steppedAt = now
+			end
 		end
-		return "flag", nil
+		return "flag", nil, false
 	end
 	if st == nil then
 		-- jamais vu (pas de reset) : la première position devient la référence, sans exemption
@@ -307,6 +330,10 @@ function MoveCheck.step(
 		states[player] = st
 	end
 	local grace = now < st.exemptUntil or now < st.restrictedUntil
+	-- début de ce tick (appel précédent ou dernière référence) : durée réelle pour la rafale
+	local tickStart = st.steppedAt
+	st.steppedAt = now
+	st.burst = false
 
 	-- Sol fourni (île relevée par l'appui réel : altitude, vol bas) et surface de l'île sous la
 	-- racine (racine enfouie) : la plus basse des deux, un appui ne fait jamais paraître « enfouie »
@@ -367,14 +394,20 @@ function MoveCheck.step(
 		end
 	end
 	if ok and not hovering and not underground then
+		-- rafale : la règle du GDD pour UN tick (vmax × dt × 1,5 + 4, dt = durée réelle du tick),
+		-- mesurée depuis la dernière position valide, comme le balayage prev → pos des services. Le
+		-- crédit d'arrêt reste une tolérance (position acceptée), jamais un bond qui agit.
+		local tick = math.clamp(now - tickStart, step, math.max(step, BURST_MAX_TICK))
+		local burst = not plausible(player, st.lastValid, now - tick, pos, now, tick, tick)
 		accept(st, pos, now)
-		return "ok", nil
+		st.burst = burst
+		return "ok", nil, burst
 	end
 
 	-- 3) exemption après une apparition ou un déplacement imposé par le serveur : position
 	-- incohérente signalée (aucune action ce tick), jamais comptée, référence inchangée
 	if now < st.exemptUntil then
-		return "flag", nil
+		return "flag", nil, false
 	end
 
 	-- 4) infraction : signalée ; 3 en 5 s (hors grâce) → retour
@@ -386,13 +419,20 @@ function MoveCheck.step(
 			return rewind(st, now, false)
 		end
 	end
-	return "flag", nil
+	return "flag", nil, false
 end
 
 -- Captures, coupes et parades interdites (3 s après un retour)
 function MoveCheck.isRestricted(player: Player, now: number): boolean
 	local st = states[player]
 	return st ~= nil and now < st.restrictedUntil
+end
+
+-- Le dernier tick était-il une rafale : position acceptée ("ok") mais trop longue pour UN tick ?
+-- Un tel tick ne capture, ne coupe, ne vole ni ne ramasse rien (seule sa propre porte est balayée)
+function MoveCheck.lastWasBurst(player: Player): boolean
+	local st = states[player]
+	return st ~= nil and st.burst
 end
 
 function MoveCheck.lastValid(player: Player): Vector3?

@@ -22,10 +22,16 @@
 --     SeededPath (seed, t0), balayages pour les coupes (CongaService), éclatement à ≤ 4,5 studs
 --     (+10 Stardust plafonnée, 20 s de revenu ; réapparition 10 s plus tard sur une nouvelle seed)
 --   * Starfall Saturday : Rainbow continu, comètes toutes les 3 min, boost 20 min, présence ≥ 5 min
---     (par UserId) → 1 Nebby vedette Starborn envoyé au Nid à la fin (ou au départ s'il est déjà
---     qualifié), une seule fois par compte et par show (registre stats.starfallGift de QuestService)
---   * boosts de serveur : une seule ligne de temps ×2 (Nuit d'Or, Starfall, Glow Party, LiveOps) ;
---     queueGlowParty prolonge depuis max(now, fin actuelle) et note la plage payée de l'acheteur ;
+--     (par UserId) → 1 Nebby vedette envoyé au Nid à la fin (ou au départ s'il est déjà
+--     qualifié), une seule fois par compte et par show (registre stats.starfallGift de QuestService) ;
+--     variante Starborn (cadeau et tirage StarbornChance) seulement les semaines Starborn
+--     (Events.starbornAllowed : première apparition de la vedette ou Encore annoncé), sinon cadeau
+--     ordinaire (« feedback.starfallGiftPlain ») et aucun Starborn tiré
+--   * boosts de serveur : une seule ligne de temps ×2 (Nuit d'Or, Starfall, Glow Party, LiveOps) :
+--     la fenêtre gratuite en cours d'abord, puis la file payée bout à bout ; queueGlowParty ajoute
+--     la plage payée de l'acheteur depuis max(now, fin actuelle) ; une fenêtre gratuite (Nuit d'Or,
+--     Starfall, LiveOps) commence tout de suite et repousse après elle les secondes payées pas
+--     encore écoulées (jamais avalées) ; la source repasse à glowParty / acheteur à sa fin ;
 --     à l'arrêt du serveur (BindToClose posé dans Init, AVANT celui de DataService.Start, sans
 --     yield ; et crochet onBeforeSave de libération pendant l'arrêt), les secondes payées pas encore
 --     écoulées sont rendues à chaque acheteur présent en boost ×2 personnel, une seule fois
@@ -48,7 +54,6 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Balance = require(Shared.Config.Balance)
 local Events = require(Shared.Config.Events)
 local Nebbies = require(Shared.Config.Nebbies)
-local Zones = require(Shared.Config.Zones)
 local EventClock = require(Shared.Logic.EventClock)
 local Formulas = require(Shared.Logic.Formulas)
 local Hash = require(Shared.Logic.Hash)
@@ -179,14 +184,21 @@ local frenzyEndsAt = 0
 local goldenNightAt: number? = nil -- début programmé de la Nuit d'Or (fin du Frenzy)
 local goldenNightEndsAt = 0
 
+-- Ligne de temps unique du boost ×2 de serveur : la fenêtre GRATUITE en cours (Nuit d'Or, Starfall,
+-- LiveOps) d'abord, puis la file PAYÉE (Glow Party), bout à bout, sans trou. boostUntil = fin de
+-- tout le ×2 ; boostSource / boostBuyerId = source et acheteur EN COURS (EventState).
 local boostUntil = 0
 local boostSource: string? = nil
 local boostBuyerId: number? = nil
+local freeUntil = 0
+local freeSource: string? = nil
 
 -- Plages de Glow Party PAYÉES dans la ligne de temps unique (docs §16.9 : jamais refusée, peut
--- dépasser 60 min). Un arrêt du serveur (redémarrage de la mise à jour du samedi…) ne doit pas
--- faire perdre à l'acheteur les secondes achetées et pas encore écoulées (Q9).
-type PaidRange = { buyerId: number, from: number, to: number }
+-- dépasser 60 min), dans l'ordre de la file. Une fenêtre gratuite qui commence ne les « avale »
+-- jamais : leurs secondes pas encore écoulées reprennent après elle. Un arrêt du serveur
+-- (redémarrage de la mise à jour du samedi…) ne doit pas faire perdre à l'acheteur les secondes
+-- achetées et pas encore écoulées (Q9). buyerId nil : achat sans acheteur identifié (jamais rendu).
+type PaidRange = { buyerId: number?, from: number, to: number }
 local paidRanges: { PaidRange } = {}
 local closing = false -- BindToClose reçu
 local refunded: { [number]: boolean } = {} -- UserId → secondes déjà rendues (une seule fois)
@@ -300,22 +312,68 @@ end
 -- Boost ×2 de serveur (une seule ligne de temps, docs §16.11)
 -- ---------------------------------------------------------------------------------------------
 
-local function extendBoost(endsAt: number, source: string, buyerId: number?): number
-	if endsAt > boostUntil then
-		boostUntil = endsAt
+-- Source et acheteur du boost ×2 à `now` : la fenêtre gratuite, sinon la plage payée en cours
+local function boostAt(now: number): (string?, number?)
+	if now >= boostUntil then
+		return nil, nil
+	end
+	if freeSource ~= nil and now < freeUntil then
+		return freeSource, nil
+	end
+	for _, r in paidRanges do
+		if now < r.to then
+			return "glowParty", r.buyerId
+		end
+	end
+	return freeSource, nil
+end
+
+-- Publie l'état du boost à `now` : source et acheteur courants (EventState), et la fin de tout le
+-- ×2 à EconomyService quand elle a changé
+local function publishBoost(now: number, untilChanged: boolean)
+	local source, buyerId = boostAt(now)
+	if source ~= boostSource or buyerId ~= boostBuyerId then
 		boostSource = source
 		boostBuyerId = buyerId
 		dirty = true
+	end
+	if untilChanged then
+		dirty = true
 		Safe.call(TAG .. ".setServerBoostUntil", EconomyService.setServerBoostUntil, boostUntil)
 	end
-	return boostUntil
+end
+
+-- Fenêtre ×2 GRATUITE (Nuit d'Or, Starfall, LiveOps) de maintenant à `endsAt` (prolonge celle en
+-- cours, jamais raccourcie). Les secondes payées pas encore écoulées ne la chevauchent jamais :
+-- toute la file payée reprend, dans l'ordre, bout à bout après la fin de la fenêtre gratuite
+-- (l'acheteur garde toutes ses secondes, docs §16.9 ; une Nuit d'Or ajoute toujours ses 5 min).
+local function startFreeBoost(now: number, endsAt: number, source: string)
+	if not (endsAt > now) or endsAt == math.huge then
+		return
+	end
+	if freeUntil <= now or endsAt > freeUntil then
+		freeUntil = endsAt
+		freeSource = source
+	end
+	local cursor = freeUntil
+	local queue: { PaidRange } = {}
+	for _, r in paidRanges do
+		if r.to > now then
+			local left = r.to - math.max(r.from, now)
+			table.insert(queue, { buyerId = r.buyerId, from = cursor, to = cursor + left })
+			cursor += left
+		end
+	end
+	paidRanges = queue
+	local newUntil = math.max(freeUntil, cursor)
+	local changed = newUntil ~= boostUntil
+	boostUntil = newUntil
+	publishBoost(now, changed)
 end
 
 local function stepBoost(now: number)
-	if boostSource ~= nil and now >= boostUntil then
-		boostSource = nil
-		boostBuyerId = nil
-		dirty = true
+	if freeSource ~= nil and now >= freeUntil then
+		freeSource = nil
 	end
 	-- plages payées entièrement écoulées : plus rien à rendre
 	for i = #paidRanges, 1, -1 do
@@ -323,6 +381,8 @@ local function stepBoost(now: number)
 			table.remove(paidRanges, i)
 		end
 	end
+	-- fin de la fenêtre gratuite → la Glow Party reprend (source et acheteur), fin du ×2 → rien
+	publishBoost(now, false)
 end
 
 -- Secondes de Glow Party payées par `buyerId` et pas encore écoulées à `now`
@@ -378,7 +438,7 @@ end
 local function startGoldenNight(now: number, source: string)
 	local endsAt = now + BeaconCfg.GoldenNightSeconds
 	goldenNightEndsAt = math.max(goldenNightEndsAt, endsAt)
-	extendBoost(endsAt, source, nil)
+	startFreeBoost(now, endsAt, source)
 	dirty = true
 	Notify.banner("goldenNight", { endsAt = goldenNightEndsAt })
 	Signals.EventPhase:Fire("goldenNight", "start")
@@ -406,9 +466,16 @@ end
 -- Starfall Saturday
 -- ---------------------------------------------------------------------------------------------
 
--- Nebby vedette Starborn garanti (présence ≥ PresenceSeconds pendant le show) : une fois par compte
--- et par show, même après une reconnexion ou un changement de serveur (marque du profil posée AVANT
--- la remise, comme les codes)
+-- Le show peut-il donner des Starborn ? Semaine de première apparition de son espèce vedette ou
+-- Encore annoncé (Events.starbornAllowed, GDD §4.15.5, §8.1.6) ; les autres semaines, la vedette
+-- garde son show, sans variante Starborn (tirage ni cadeau)
+local function starbornShow(show: Types.StarfallState): boolean
+	return Events.starbornAllowed(EventClock.week(show.startsAt))
+end
+
+-- Nebby vedette garanti (présence ≥ PresenceSeconds pendant le show), Starborn les semaines
+-- Starborn seulement : une fois par compte et par show, même après une reconnexion ou un
+-- changement de serveur (marque du profil posée AVANT la remise, comme les codes)
 local function giveStarfallGift(player: Player, show: Types.StarfallState)
 	local userId = player.UserId
 	if starfallGifted[userId] == show.startsAt or not DataService.isLoaded(player) then
@@ -419,10 +486,13 @@ local function giveStarfallGift(player: Player, show: Types.StarfallState)
 	if claim ~= nil and not Safe.value(TAG .. ".starfallClaim", false, claim, player, show.startsAt) then
 		return
 	end
-	local code = Nebbies.pack(show.featured, 0, STARBORN_BIT)
-	local ok = Safe.call(TAG .. ".starfallGift", AtlasService.addNebbies, player, { code }, "starfall")
-	if ok then
-		Notify.feedback(player, "feedback.starfallGift", { species = speciesName(show.featured) }, "reward")
+	local starborn = starbornShow(show)
+	local code = Nebbies.pack(show.featured, 0, if starborn then STARBORN_BIT else 0)
+	local ok, kept = Safe.call(TAG .. ".starfallGift", AtlasService.addNebbies, player, { code }, "starfall")
+	-- le toast suit les uids GARDÉS (jamais « reçu » pour un Nebby absent de la collection)
+	if ok and type(kept) == "table" and #kept > 0 then
+		local key = if starborn then "feedback.starfallGift" else "feedback.starfallGiftPlain"
+		Notify.feedback(player, key, { species = speciesName(show.featured) }, "reward")
 	end
 end
 
@@ -482,7 +552,7 @@ local function stepStarfall(now: number, dt: number)
 		table.clear(presence)
 		table.clear(starfallGifted)
 		dirty = true
-		extendBoost(sf.startsAt + SF.BoostSeconds, "starfall", nil)
+		startFreeBoost(now, sf.startsAt + SF.BoostSeconds, "starfall")
 		Notify.banner("starfall", {
 			s = sf.featured,
 			species = speciesName(sf.featured),
@@ -597,7 +667,7 @@ local function computeModifiers(now: number): Types.SpawnModifiers
 	if show ~= nil then
 		m.featured = show.featured
 		m.featuredChance = SF.FeaturedChance
-		m.starbornChance = SF.StarbornChance
+		m.starbornChance = if starbornShow(show) then SF.StarbornChance else 0
 	end
 	return m
 end
@@ -828,8 +898,10 @@ local function bankComet(c: CometRun, now: number, actor: Types.Actor, actors: {
 		CometCfg.BankIdleSeconds,
 		"Comet"
 	)
-	Safe.call(TAG .. ".bankNebby", AtlasService.addNebbies, player, { c.code }, "comet")
-	Notify.celebrate(player, "cometBanked", { glow = glow, code = c.code })
+	local ok, kept = Safe.call(TAG .. ".bankNebby", AtlasService.addNebbies, player, { c.code }, "comet")
+	-- la célébration ne montre le Nebby que s'il est vraiment dans la collection
+	local bankedCode = if ok and type(kept) == "table" and #kept > 0 then c.code else nil
+	Notify.celebrate(player, "cometBanked", { glow = glow, code = bankedCode })
 	-- bannière d'événement (une par Comète) : jamais retenue par la limite par joueur
 	Notify.banner("cometBanked", { userId = player.UserId, name = player.DisplayName, code = c.code })
 	nearRewards(c, actor.pos, positionsOfActors(actors), player)
@@ -856,11 +928,11 @@ local function burstComet(c: CometRun, now: number, positions: { Positioned })
 			table.insert(codes, Nebbies.pack(s, 0, 0))
 			table.insert(from, center)
 		end
-		local zone = Zones.byKey[WorldLayout.zoneAt(center) or ""]
+		-- durée de vie des Nebbies LIBRES (Balance.Snip.LooseLifetime, 20 s, GDD §4.5) : la ruée
+		-- vers les Épiques reste courte, jamais la durée de vie de la zone (60 s dans le Cratère)
 		Safe.call(TAG .. ".burstSpawn", SpawnService.spawnLoose, codes, from, now, {
 			group = "burst:" .. tostring(c.id),
 			groupCap = CometCfg.BurstPerPlayer,
-			life = if zone then zone.lifetime else nil,
 		})
 	end
 	Notify.banner("cometBurst", { x = center.X, z = center.Z })
@@ -1587,8 +1659,9 @@ function EventService.serverBoostActive(): boolean
 	return boostUntil > Clock.now()
 end
 
--- Glow Party : prolonge le boost ×2 de serveur depuis max(now, fin actuelle) ; jamais refusée
--- (docs §16.9) ; retourne la nouvelle fin
+-- Glow Party : ajoute la plage payée au bout de la file, depuis max(now, fin actuelle de tout le ×2) ;
+-- jamais refusée (docs §16.9) ; retourne la nouvelle fin. Une fenêtre gratuite qui commence plus
+-- tard la repousse sans en perdre une seconde (startFreeBoost).
 function EventService.queueGlowParty(buyer: Player, seconds: number): number
 	if not finite(seconds) or seconds <= 0 then
 		return boostUntil
@@ -1596,10 +1669,10 @@ function EventService.queueGlowParty(buyer: Player, seconds: number): number
 	local now = Clock.now()
 	local buyerId = if isPlayerArg(buyer) then buyer.UserId else nil
 	local from = math.max(now, boostUntil)
-	if buyerId ~= nil then
-		table.insert(paidRanges, { buyerId = buyerId, from = from, to = from + seconds })
-	end
-	return extendBoost(from + seconds, "glowParty", buyerId)
+	table.insert(paidRanges, { buyerId = buyerId, from = from, to = from + seconds })
+	boostUntil = from + seconds
+	publishBoost(now, true)
+	return boostUntil
 end
 
 -- Secondes de boost ×2 de serveur restantes (bouton masqué au-delà de Balance.GlowParty.HideAbove)

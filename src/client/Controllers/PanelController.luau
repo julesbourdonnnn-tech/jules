@@ -24,7 +24,9 @@
 --         Améliorer ; garde du HUD : PanelController.allowed), absorbés : R2 ne Dash pas
 --       - stick droit (Thumbstick2, absorbé, zone morte 0,2) : fait défiler la liste qui contient la
 --         sélection, sinon la liste principale du panneau (la caméra ne tourne pas derrière)
---       - croix sans changement de sélection (bout de liste, bord de la fenêtre) : son « Bump » et
+--       - croix ↑ / ↓ sans changement de sélection (rien de sélectionnable de ce côté : lignes en
+--         lecture seule de l'Atlas, du Guide, aperçu de la Supernova) : la liste défile de 70 % de sa
+--         hauteur visible ; au vrai bout de liste ou au bord de la fenêtre (← / →) : son « Bump » et
 --         vibration « listEnd »
 --       - repères (UI/Glyph, icônes PlayStation sur PS5) : ○ « PadGlyph » sur Retour, ou sur Fermer
 --         sans Retour (△, tout fermer, sur Fermer de la Supernova) à la place des « ‹ » / « ✕ »
@@ -144,6 +146,7 @@ local SCROLL_MIN_SPEED = 240 -- px / s au moins (petites listes)
 local CLOSE_GLYPH = 44 -- ○ / △ dans les boutons Fermer / Retour (px de référence)
 local EDGE_GLYPH = Console.GlyphSize -- L1 / R1 / L2 / R2
 local BUMP_FRAMES = 2 -- images sans changement de sélection après une croix : bout de liste
+local NUDGE_FRACTION = 0.7 -- ↑ / ↓ sans rien à sélectionner : défilement (part de la hauteur visible)
 local NAV_KEYS: { [Enum.KeyCode]: boolean } = {
 	[Enum.KeyCode.DPadUp] = true,
 	[Enum.KeyCode.DPadDown] = true,
@@ -175,8 +178,9 @@ type Page = {
 	chrome: string?, -- signature de la dernière mise en page de l'en-tête
 }
 
--- Croix pressée dans la fenêtre : sélection à cet instant (bout de liste si elle ne change pas)
-type BumpProbe = { frame: number, object: GuiObject, canvas: Vector2?, changed: boolean }
+-- Croix pressée dans la fenêtre : sélection à cet instant (bout de liste si elle ne change pas) ;
+-- `dir` : 1 pour ↓, -1 pour ↑, 0 pour ← / →
+type BumpProbe = { frame: number, object: GuiObject, canvas: Vector2?, changed: boolean, dir: number }
 
 local window: CanvasGroup? = nil
 local windowConstraint: UISizeConstraint? = nil
@@ -705,8 +709,21 @@ local function chooseTab(page: Page, args: any?): string?
 	return shown[1].id
 end
 
+-- Bouton de l'onglet affiché du panneau (nil sans onglets ou si l'onglet n'est plus visible)
+local function currentTabButton(page: Page, shown: { TabRef }): TextButton?
+	local id = currentTab[page.name]
+	for _, tab in shown do
+		if tab.id == id then
+			return tab.button
+		end
+	end
+	return nil
+end
+
 -- Sélection par défaut du panneau, seulement si elle est affichée dans la fenêtre (jamais un objet
--- masqué ou d'un autre onglet) ; sinon le premier onglet visible, sinon Fermer
+-- masqué ou d'un autre onglet) ; sinon le bouton de l'onglet AFFICHÉ (pas le premier onglet : un
+-- second ✕ basculerait d'onglet par surprise, ex. Calendrier réclamé → Aujourd'hui), puis le premier
+-- onglet visible, sinon Fermer
 local function defaultSelection(page: Page): GuiObject?
 	local fn = page.panel.defaultSelection
 	local candidate: GuiObject? = nil
@@ -719,7 +736,12 @@ local function defaultSelection(page: Page): GuiObject?
 	if candidate and inWindow(candidate) then
 		return candidate
 	end
-	for _, tab in visibleTabs(page) do
+	local shown = visibleTabs(page)
+	local own = currentTabButton(page, shown)
+	if own and inWindow(own) then
+		return own
+	end
+	for _, tab in shown do
 		if inWindow(tab.button) then
 			return tab.button
 		end
@@ -731,7 +753,10 @@ local function defaultSelection(page: Page): GuiObject?
 	if candidate then
 		return candidate
 	end
-	for _, tab in visibleTabs(page) do
+	if own then
+		return own
+	end
+	for _, tab in shown do
 		return tab.button
 	end
 	return page.close
@@ -1517,17 +1542,58 @@ local function onNavInput(input: InputObject)
 		return
 	end
 	local scroll = nearestScroll(selected)
+	local key = input.KeyCode
 	bump = {
 		frame = frameNo,
 		object = selected,
 		canvas = if scroll then scroll.CanvasPosition else nil,
 		-- sélection déplacée dans la même image, avant ce signal : la croix a servi
 		changed = selectionChangedAt == frameNo,
+		dir = if key == Enum.KeyCode.DPadDown then 1 elseif key == Enum.KeyCode.DPadUp then -1 else 0,
 	}
 end
 
--- Aucune sélection déplacée ni liste défilée après la croix : bout de liste (docs/07 §9)
-local function checkBump()
+-- Hauteur visible d'une liste (AbsoluteWindowSize : sans la barre de défilement), repli AbsoluteSize
+local function windowHeight(frame: ScrollingFrame): number
+	local ok, view = pcall(function(): any
+		return frame.AbsoluteWindowSize
+	end)
+	if ok and typeof(view) == "Vector2" and view.Y > 0 then
+		return view.Y
+	end
+	return frame.AbsoluteSize.Y
+end
+
+-- ↑ / ↓ qui ne trouve rien à sélectionner (lignes en lecture seule : Atlas, Guide, Perchoirs, aperçu
+-- de la Supernova) : la liste de la sélection, sinon la liste principale du panneau, défile de
+-- NUDGE_FRACTION de sa hauteur visible dans ce sens (règle R4 : tout le contenu reste lisible avec
+-- les 4 directions). Une sélection DANS cette liste reste entièrement affichée (le défilement
+-- s'arrête quand elle atteint le bord). false : rien à défiler de ce côté (vrai bout de liste)
+local function nudgeScroll(page: Page, dir: number): boolean
+	local frame = scrollTarget(page)
+	if frame == nil then
+		return false
+	end
+	local view = windowHeight(frame)
+	local position = frame.CanvasPosition
+	local y = math.clamp(position.Y + dir * view * NUDGE_FRACTION, 0, maxScroll(frame))
+	local selected = GuiService.SelectedObject
+	if selected ~= nil and selected:IsDescendantOf(frame) then
+		local top = selected.AbsolutePosition.Y - frame.AbsolutePosition.Y
+		local room = if dir > 0 then top else view - (top + selected.AbsoluteSize.Y)
+		y = position.Y + dir * math.clamp(math.abs(y - position.Y), 0, math.max(0, room))
+	end
+	if math.abs(y - position.Y) < 1 then
+		return false
+	end
+	frame.CanvasPosition = Vector2.new(position.X, y)
+	AudioController.playNav()
+	return true
+end
+
+-- Aucune sélection déplacée ni liste défilée après la croix : ↑ / ↓ font défiler la liste s'il
+-- reste du contenu de ce côté, sinon bout de liste (docs/07 §9)
+local function checkBump(page: Page)
 	local probe = bump
 	if probe == nil or frameNo - probe.frame < BUMP_FRAMES then
 		return
@@ -1539,6 +1605,9 @@ local function checkBump()
 	local scroll = nearestScroll(probe.object)
 	local canvas = if scroll then scroll.CanvasPosition else nil
 	if canvas ~= probe.canvas then
+		return
+	end
+	if probe.dir ~= 0 and nudgeScroll(page, probe.dir) then
 		return
 	end
 	AudioController.play("Bump")
@@ -1596,7 +1665,7 @@ local function onHeartbeat(dt: number)
 	if page and currentName == name then
 		ensureSelection()
 		stepScroll(page, dt)
-		checkBump()
+		checkBump(page)
 	end
 	warnAcc += dt
 	if warnAcc >= WARN_INTERVAL then

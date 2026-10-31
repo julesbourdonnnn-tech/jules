@@ -939,8 +939,16 @@ return function(T)
 			at(ctx, t)
 			ctx.E.queueGlowParty(a, 3600)
 			ctx.E.runLiveOps("goldenNight")
-			expect(ctx.E.snapshot().serverBoost.endsAt).toBe(t + 3600)
-			expect(ctx.E.snapshot().serverBoost.source).toBe("glowParty")
+			-- la fenêtre gratuite (5 min) passe d'abord ; l'heure payée reprend ensuite, entière :
+			-- la fin n'est jamais avant t + 3600, et la Nuit d'Or ajoute ses 5 min
+			local b = ctx.E.snapshot().serverBoost
+			expect(b.endsAt).toBe(t + 300 + 3600)
+			expect(b.source).toBe("liveOps")
+			at(ctx, t + 300)
+			b = ctx.E.snapshot().serverBoost
+			expect(b.endsAt).toBe(t + 300 + 3600)
+			expect(b.source).toBe("glowParty")
+			expect(b.buyerId).toBe(1)
 		end)
 	end)
 

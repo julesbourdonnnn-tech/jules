@@ -651,7 +651,7 @@ return function(T)
 		end)
 
 		it(
-			"Starfall Saturday : Rainbow, boost, comètes toutes les 3 min, cadeau Starborn de présence",
+			"Starfall Saturday : Rainbow, boost, comètes toutes les 3 min, cadeau de présence (Starborn les semaines Starborn)",
 			function()
 				local w = world()
 				travelTo(STARFALL - 15)
@@ -681,15 +681,26 @@ return function(T)
 					frame(brains)
 				end
 				expect(w.Event.snapshot().starfall).toBeNil()
-				local gifts = 0
+				-- variante Starborn seulement les semaines Starborn (Events.starbornAllowed : 1re apparition
+				-- de la vedette depuis Starfall.LaunchWeek, ou Encore) ; ce show (semaine 2964) précède la
+				-- semaine de lancement : cadeau ordinaire
+				local Events = w.h:require("ReplicatedStorage.Shared.Config.Events")
+				local EventClock = w.h:require("ReplicatedStorage.Shared.Logic.EventClock")
+				local starborn = Events.starbornAllowed(EventClock.week(STARFALL))
+				local expected = if starborn then "feedback.starfallGift" else "feedback.starfallGiftPlain"
+				local other = if starborn then "feedback.starfallGiftPlain" else "feedback.starfallGift"
+				local gifts, wrong = 0, 0
 				for _, p in w.players do
 					for _, args in sentTo(p, "Feedback") do
-						if args[1].key == "feedback.starfallGift" then
+						if args[1].key == expected then
 							gifts += 1
+						elseif args[1].key == other then
+							wrong += 1
 						end
 					end
 				end
 				expect(gifts).toBe(12)
+				expect(wrong).toBe(0)
 				noProblems()
 			end
 		)

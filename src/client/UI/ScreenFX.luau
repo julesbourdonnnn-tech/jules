@@ -7,13 +7,16 @@
 --     des tampons (« PLEINE », « Récupère-les ! », « Récupéré ! ») ou des « +N » flottants (coupe,
 --     Gloomwisp, acclamation) ; FeedbackReceived permet aux panneaux de secouer leur bouton
 --   * Celebrate → réactions d'écran : "supernova" (titre qui s'écrit en 0,6 s), "atlasNew" /
---     "speciesComplete" (carte qui glisse de la droite, reflet), "atlasMilestone" (confettis),
+--     "speciesComplete" (carte qui glisse de la droite, reflet ; pile rangée dans la place libre de
+--     la colonne de droite du HUD, setCardPlacer : jamais sur le Dash, le Ping ni le bouton de saut,
+--     zone sûre de l'appareil comprise ; les cartes en trop attendent), "atlasMilestone" (confettis),
 --     "questDone" / "questClaimed" / "dailyClaimed" (récompense qui vole vers son compteur),
 --     "starforge" (tampon « ★N ! », sauf panneau Collection ouvert : il joue lui-même la révélation
 --     du GDD §9.4, orbite de 1,2 s puis résultat et son tampon), "purchase" (pluie de 30 pièces,
 --     « Merci ! »), "cometBanked", "release",
---     "unlock", "upgrade" (+ VFXController.playUpgrade), "offline" (ReturnScreen ouvert par les
---     abonnés de Celebrated)
+--     "unlock", "upgrade" (+ VFXController.playUpgrade, différé à la fermeture du panneau ouvert :
+--     l'onde de choc et le Nebby fantôme ne se jouent pas sous le voile), "offline" (ReturnScreen
+--     ouvert par les abonnés de Celebrated)
 --   * tampons centraux (police LuckiestGuy, UIStroke 3 px) : « PARADE ×2,36 ! » (échelle 2 → 1,
 --     rotation −8° → 0 en 0,25 s Back Out, tenu 0,8 s), « SNIP ! » (Elastic Out), « COMÈTE VOLÉE ! »,
 --     « Conga ×N ! » quand la file locale se remplit ; parade locale : 8-16 pièces volent de la porte
@@ -67,6 +70,10 @@ ScreenFX.Celebrated = Signal.new() :: Signal.Signal<Types.CelebratePayload>
 
 export type StampStyle = "parade" | "snip" | "small" | "comet"
 
+-- Pile des cartes « NOUVEAU ! » donnée par le HUD, en px de la fenêtre (couche plein écran) : bord
+-- droit, haut de la première carte, nombre de cartes qui tiennent (≥ 1)
+export type CardPlacement = { right: number, top: number, count: number }
+
 -- Constantes (GDD §9.2, §9.4) ------------------------------------------------------------------
 
 local DISPLAY_ORDER = 45
@@ -96,7 +103,9 @@ local SNIP_SHAKE, SNIP_SHAKE_TIME = 0.35, 0.25
 local SNIP_VIGNETTE_TIME = 0.4
 local GOLD = Color3.fromRGB(255, 208, 72)
 local CARD_TIME_IN, CARD_HOLD, CARD_TIME_OUT = 0.3, 2.4, 0.25
-local CARD_MAX_VISIBLE = 3
+local CARD_SIZE = Vector2.new(340, 64)
+local CARD_GAP = 10
+local CARD_MAX_VISIBLE = 3 -- au plus ; moins si la place libre du HUD est plus courte (setCardPlacer)
 local CARD_QUEUE_MAX = 8
 local TITLE_TYPE_TIME, TITLE_HOLD, TITLE_FADE = 0.6, 1.6, 0.3
 local STAMP_FADE = 0.2
@@ -105,6 +114,11 @@ local DUPLICATE_WINDOW = 0.5 -- même toast ignoré pendant 0,5 s
 local TOAST_MEMORY = 32 -- textes récents mémorisés pour l'anti-doublon (au-delà : purge)
 local MAX_LEVEL = 1e6 -- niveau d'amélioration ou nombre d'étoiles absurde : ignoré
 local MAX_STARS = 5
+-- Amélioration achetée panneau ouvert : l'onde de choc et le Nebby fantôme (VFXController) se
+-- joueraient sous le voile et le flou de la fenêtre ; ils attendent sa fermeture (fondu de
+-- PanelController : 0,12 s), et sont oubliés si le panneau reste ouvert trop longtemps
+local UPGRADE_AFTER_CLOSE = 0.15
+local UPGRADE_WAIT_MAX = 10
 
 type StampDef = { slot: string, enter: number, hold: number }
 local STAMPS: { [string]: StampDef } = {
@@ -203,6 +217,7 @@ local layer: Frame? = nil -- plein écran, en pixels (pièces, floaters, confett
 local center: Frame? = nil -- conteneur mis à l'échelle (tampons, titre, cartes)
 local anchorResolver: ((Types.HudElement) -> GuiObject?)? = nil
 local panelResolver: (() -> string?)? = nil
+local cardPlacer: ((size: Vector2, gap: number, wanted: number) -> CardPlacement?)? = nil
 
 local coinPool: { Frame } = {}
 local flights: { Flight } = {}
@@ -221,6 +236,8 @@ local lastToast: { [string]: number } = {}
 local rng = Random.new()
 local lastLineCount = 0
 local lastCarrier: { id: number, userId: number? } = { id = 0, userId = nil }
+-- dernière amélioration en attente de la fermeture du panneau (readyAt : panneau fermé, effet dû)
+local pendingUpgrade: { track: string, level: number, at: number, readyAt: number? }? = nil
 
 -- Outils ----------------------------------------------------------------------------------------
 
@@ -679,18 +696,60 @@ end
 
 -- Cartes « NOUVEAU ! » (droite de l'écran) -----------------------------------------------------------
 
-local function cardY(index: number): UDim2
-	return UDim2.new(1, -8, 0.42, (index - 1) * 74)
+-- Pile en px de référence du conteneur Safe (bord droit, haut, nombre de cartes à l'écran)
+type CardStack = { right: number, top: number, count: number }
+
+-- Place de la pile : celle que le HUD trouve libre dans sa colonne de droite (zone sûre de
+-- l'appareil comprise : jamais sous l'encoche ; jamais sur le Dash, le Ping ni le bouton de saut,
+-- GDD §10.1) ; nil sans HUD (colonne historique, 3 cartes). La couche de ScreenFX ignore les
+-- insets (Safe commence au coin de la fenêtre) : px de la fenêtre ÷ échelle − marge intérieure.
+local function cardStack(): CardStack?
+	local place = cardPlacer
+	if place == nil then
+		return nil
+	end
+	local ok, result = pcall(place, CARD_SIZE, CARD_GAP, CARD_MAX_VISIBLE)
+	if not ok or type(result) ~= "table" then
+		return nil
+	end
+	local right, top, count = result.right, result.top, result.count
+	if not (isFinite(right) and isFinite(top) and isFinite(count)) then
+		return nil
+	end
+	local k = math.max(scale(), 0.01)
+	local _, c = ensureGui()
+	local padding = c:FindFirstChildOfClass("UIPadding")
+	local inset = if padding
+		then Vector2.new(padding.PaddingLeft.Offset, padding.PaddingTop.Offset)
+		else Vector2.zero
+	return {
+		right = right / k - inset.X,
+		top = top / k - inset.Y,
+		count = math.clamp(math.floor(count), 1, CARD_MAX_VISIBLE),
+	}
 end
 
-local function openCard(text: string)
+local function cardCapacity(stack: CardStack?): number
+	return if stack then stack.count else CARD_MAX_VISIBLE
+end
+
+local function cardY(index: number, stack: CardStack?): UDim2
+	local offset = (index - 1) * (CARD_SIZE.Y + CARD_GAP)
+	if stack then
+		return UDim2.fromOffset(stack.right, stack.top + offset)
+	end
+	return UDim2.new(1, -8, 0.42, offset)
+end
+
+local function openCard(text: string, stack: CardStack?)
 	local _, c = ensureGui()
 	local index = #cards + 1
+	local target = cardY(index, stack)
 	local frame = Create("CanvasGroup", {
 		Name = "AtlasCard",
 		AnchorPoint = Vector2.new(1, 0),
-		Position = cardY(index) + UDim2.fromOffset(if reduced() then 0 else 360, 0),
-		Size = UDim2.fromOffset(340, 64),
+		Position = target + UDim2.fromOffset(if reduced() then 0 else 360, 0),
+		Size = UDim2.fromOffset(CARD_SIZE.X, CARD_SIZE.Y),
 		BackgroundColor3 = Theme.Colors.Panel,
 		GroupTransparency = if reduced() then 1 else 0,
 		ZIndex = 26,
@@ -725,7 +784,7 @@ local function openCard(text: string)
 		Juice.tween(
 			frame,
 			CARD_TIME_IN,
-			{ Position = cardY(index) },
+			{ Position = target },
 			Enum.EasingStyle.Back,
 			Enum.EasingDirection.Out
 		)
@@ -741,9 +800,11 @@ local function openCard(text: string)
 	AudioController.play("Pop", 0.05)
 end
 
+-- Carte affichée tout de suite s'il reste de la place dans la pile, sinon mise en file
 local function queueCard(text: string)
-	if #cards < CARD_MAX_VISIBLE then
-		openCard(text)
+	local stack = cardStack()
+	if #cards < cardCapacity(stack) then
+		openCard(text, stack)
 	elseif #cardQueue < CARD_QUEUE_MAX then
 		table.insert(cardQueue, text)
 	end
@@ -761,16 +822,19 @@ local function stepCards()
 			Juice.tween(card.frame, CARD_TIME_OUT, { GroupTransparency = 1 })
 		end
 	end
-	if changed then
-		for i, card in cards do
-			if card.index ~= i then
-				card.index = i
-				Juice.tween(card.frame, 0.2, { Position = cardY(i) })
-			end
+	if not changed then
+		return
+	end
+	-- une carte est partie : les suivantes remontent, la file entre dans la place libérée
+	local stack = cardStack()
+	for i, card in cards do
+		if card.index ~= i then
+			card.index = i
+			Juice.tween(card.frame, 0.2, { Position = cardY(i, stack) })
 		end
 	end
-	while #cards < CARD_MAX_VISIBLE and #cardQueue > 0 do
-		openCard(table.remove(cardQueue, 1) :: string)
+	while #cards < cardCapacity(stack) and #cardQueue > 0 do
+		openCard(table.remove(cardQueue, 1) :: string, stack)
 	end
 end
 
@@ -833,6 +897,38 @@ local function stepVignette()
 	end
 end
 
+-- Amélioration (onde de choc au sol + Nebby fantôme qui rejoint la file, GDD §3) -----------------
+
+local function playUpgrade(track: string, level: number)
+	local ok, err = pcall(VFXController.playUpgrade, track, level)
+	if not ok then
+		warn("[ScreenFX] playUpgrade :", err)
+	end
+end
+
+-- Effet en attente : joué UPGRADE_AFTER_CLOSE après la fermeture du panneau (le voile et le flou
+-- sont partis), oublié après UPGRADE_WAIT_MAX panneau ouvert
+local function stepPendingUpgrade()
+	local p = pendingUpgrade
+	if p == nil then
+		return
+	end
+	if openPanel() ~= nil then
+		p.readyAt = nil
+		if fxTime - p.at > UPGRADE_WAIT_MAX then
+			pendingUpgrade = nil
+		end
+		return
+	end
+	local readyAt = p.readyAt
+	if readyAt == nil then
+		p.readyAt = fxTime + UPGRADE_AFTER_CLOSE
+	elseif fxTime >= readyAt then
+		pendingUpgrade = nil
+		playUpgrade(p.track, p.level)
+	end
+end
+
 -- Image -----------------------------------------------------------------------------------------
 
 local function onFrame(dt: number)
@@ -845,6 +941,7 @@ local function onFrame(dt: number)
 	stepTitle()
 	stepCards()
 	stepVignette()
+	stepPendingUpgrade()
 end
 
 -- API publique ----------------------------------------------------------------------------------
@@ -970,6 +1067,12 @@ end
 -- Crochet posé par le HUD : panneau ouvert (PanelController.current), lu sans dépendance montante
 function ScreenFX.setPanelResolver(fn: (() -> string?)?)
 	panelResolver = fn
+end
+
+-- Crochet posé par le HUD : place libre de la pile des cartes « NOUVEAU ! » (CardPlacement, px de
+-- la fenêtre) pour des cartes de `size` séparées de `gap`, `wanted` au plus ; nil = colonne historique
+function ScreenFX.setCardPlacer(fn: ((size: Vector2, gap: number, wanted: number) -> CardPlacement?)?)
+	cardPlacer = fn
 end
 
 -- Retour local (même chemin qu'un Feedback serveur : toast/tampon + FeedbackReceived)
@@ -1151,9 +1254,12 @@ local function onCelebrate(payload: any)
 			and level >= 0
 			and level <= MAX_LEVEL
 		then
-			local ok, err = pcall(VFXController.playUpgrade, data.track, level)
-			if not ok then
-				warn("[ScreenFX] playUpgrade :", err)
+			if openPanel() ~= nil then
+				-- achat depuis Améliorer : l'effet du monde attend la fermeture du panneau (la carte
+				-- d'accueil se ferme seule 0,6 s après l'achat) ; seul le dernier achat est rejoué
+				pendingUpgrade = { track = data.track, level = math.floor(level), at = fxTime, readyAt = nil }
+			else
+				playUpgrade(data.track, level)
 			end
 			ScreenFX.floater(
 				Prefs.t("celebrate.upgrade", { level = math.floor(level) }),

@@ -254,8 +254,10 @@ return function(T)
 
 		it("parade de 60 Nebbies sur une collection de 600 : seuls les 60 nouveaux partent", function()
 			local ctx = boot()
-			-- réserve agrandie : isole la réplication du débordement (testé plus bas)
+			-- réserve agrandie : isole la réplication du débordement (testé plus bas) ; instantané
+			-- complet : isole le flux d'arrivée par morceaux (Fix_r3_serveur_3_data)
 			ctx.Balance.Stash.Base = 1000
+			ctx.DS.Settings.SNAPSHOT_INLINE = 1000
 			seedCollection(ctx, 1, 600)
 			local p, data = join(ctx, 1)
 			local snaps = ctx.h:sentTo(p, "DataSnapshot")

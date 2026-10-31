@@ -5,9 +5,20 @@
 --  * schéma versionné (Data/Schema.luau) : defaults + migrations + reconcile
 --  * réplication vers le client : instantané au chargement, puis patchs groupés par frame
 --    (clés entières, ou entrées d'une grande table : DataPatch(patch, removed, entries?))
+--  * arrivée sous le budget réseau (GDD §12.8, 30 Ko/s en pointe) : une grande table (nebbies,
+--    ≈ 65 o par entrée, 40 Ko pour 640 Nebbies) ne part dans l'instantané qu'avec ses
+--    SNAPSHOT_INLINE premières entrées (ordre setStreamOrder : les perchés d'abord) ; le reste suit
+--    en entrées DataPatch de STREAM_CHUNK toutes les STREAM_INTERVAL s, après STREAM_DELAY s
+--    (horloge partagée Clock) : le client (StateController) les applique comme n'importe quel patch
+--  * une écriture n'a lieu que si CETTE session détient encore le verrou (même JobId ET même jeton) :
+--    verrou absent, étranger ou d'une autre session = session terminée, jamais d'écrasement
 --  * profil écrit par un schéma PLUS RÉCENT (serveur déjà mis à jour) : jamais réparé, jamais
 --    réécrit, aucun verrou pris ; le joueur est renvoyé vers un serveur à jour
 --  * verrou de session marqué d'un jeton par chargement (reconnexion sur le même serveur)
+--  * attribut répliqué Player « ProfileLoading » = numéro d'essai (> 0) tant que le chargement
+--    attend (sauvegarde de départ d'une reconnexion, verrou d'un autre serveur, backoff) ; nil dès
+--    que loadRecord a rendu sa réponse (avant l'instantané ou le renvoi) : l'écran de chargement
+--    (src/first/Loading.client) retient « Réessayer » tant qu'il est posé
 --  * repli en mémoire dans Studio quand l'accès API est désactivé
 --
 -- API :
@@ -25,6 +36,9 @@
 --                                                   écriture ; release = true pour la sauvegarde de
 --                                                   départ / BindToClose (EconomyService y règle le
 --                                                   revenu passif, EventService le travail de départ)
+--   DataService.setStreamOrder(key, fn)          -- fn(data) -> sous-clés de data[key] par priorité
+--                                                   d'envoi (instantané puis flux) ; sans crochet :
+--                                                   ordre quelconque
 
 local DataStoreService = game:GetService("DataStoreService")
 local HttpService = game:GetService("HttpService")
@@ -34,6 +48,7 @@ local RunService = game:GetService("RunService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Net = require(Shared.Net)
+local Clock = require(Shared.Util.Clock)
 local Signal = require(Shared.Util.Signal)
 local Tables = require(Shared.Util.Tables)
 local Types = require(Shared.Types)
@@ -51,13 +66,26 @@ local Settings = {
 	CLOSE_TIMEOUT = 25,
 	-- reconnexion sur le même serveur : attente max de la sauvegarde de départ de l'ancienne session
 	REJOIN_WAIT = 25,
+	-- grandes tables (STREAMED_KEYS) : entrées dans l'instantané, puis flux d'entrées DataPatch
+	-- (≈ 65 o par entrée : 50 entrées ≈ 3,3 Ko, 13 Ko/s pendant le flux)
+	SNAPSHOT_INLINE = 50,
+	STREAM_CHUNK = 50,
+	STREAM_INTERVAL = 0.25, -- s entre deux morceaux
+	STREAM_DELAY = 1, -- s avant le premier morceau (la seconde d'arrivée est celle du WorldSnapshot)
 }
+
+-- Tables envoyées par morceaux après l'instantané (au-delà de SNAPSHOT_INLINE entrées)
+local STREAMED_KEYS: { string } = { "nebbies" }
 
 local LOAD_FAILED_MESSAGE =
 	"Your data could not be loaded. Please rejoin in a moment. / Tes données n'ont pas pu être chargées, reviens dans un instant."
 -- profil sauvegardé par une version plus récente du jeu (serveur pas encore mis à jour)
 local OUTDATED_MESSAGE =
 	"This server is out of date. Please rejoin to play on an updated server. / Ce serveur n'est pas à jour, reviens pour jouer sur un serveur à jour."
+
+-- Attribut répliqué lu par l'écran de chargement (contrat : nombre > 0 pendant l'attente, toute
+-- autre valeur = pas en chargement)
+local LOADING_ATTRIBUTE = "ProfileLoading"
 
 type Record = {
 	data: { [string]: any }?,
@@ -97,6 +125,12 @@ local beforeSave: { (Player, { [string]: any }, boolean?) -> () } = {}
 local snapshotRemote: RemoteEvent
 local patchRemote: RemoteEvent
 
+-- Flux d'arrivée : sous-clés de data[key] restant à envoyer (dans l'ordre), par joueur
+type StreamPart = { key: string, order: { string }, index: number }
+type Stream = { data: { [string]: any }, parts: { StreamPart }, nextAt: number }
+local streams: { [Player]: Stream } = {}
+local streamOrder: { [string]: ({ [string]: any }) -> { string } } = {}
+
 -- Stockage mémoire (Studio sans accès API)
 local function memoryStore(): Store
 	local data: { [string]: any } = {}
@@ -126,6 +160,127 @@ local function publicView(data: { [string]: any }): { [string]: any }
 		end
 	end
 	return out
+end
+
+-- Sous-clés de data[key] dans l'ordre d'envoi : celui du crochet (protégé), puis toutes celles
+-- qu'il n'a pas citées (jamais une entrée oubliée)
+local function orderedSubKeys(key: string, data: { [string]: any }, container: { [any]: any }): { string }
+	local out: { string } = {}
+	local seen: { [string]: boolean } = {}
+	local hook = streamOrder[key]
+	if hook then
+		local ok, order = pcall(hook, data)
+		if ok and type(order) == "table" then
+			for _, sub in order :: { any } do
+				if type(sub) == "string" and not seen[sub] and container[sub] ~= nil then
+					seen[sub] = true
+					table.insert(out, sub)
+				end
+			end
+		elseif not ok then
+			warn(`[DataService] ordre d'envoi de « {key} » en échec :`, order)
+		end
+	end
+	for sub in container do
+		if type(sub) == "string" and not seen[sub] then
+			seen[sub] = true
+			table.insert(out, sub)
+		end
+	end
+	return out
+end
+
+-- Instantané (arrivée, RequestSnapshot) : les grandes tables n'y portent que leurs SNAPSHOT_INLINE
+-- premières entrées, le reste part ensuite en flux (DataPatch, entrées) ; un nouvel instantané
+-- remplace le flux en cours
+local function sendSnapshot(player: Player, data: { [string]: any })
+	local view = publicView(data)
+	local parts: { StreamPart } = {}
+	local inlineCount = math.max(0, math.floor(Settings.SNAPSHOT_INLINE))
+	for _, key in STREAMED_KEYS do
+		local container = view[key]
+		if type(container) == "table" and not Schema.PRIVATE_KEYS[key] then
+			local order = orderedSubKeys(key, data, container)
+			if #order > inlineCount then
+				local inline: { [string]: any } = {}
+				for i = 1, inlineCount do
+					local sub = order[i]
+					inline[sub] = container[sub]
+				end
+				view[key] = inline
+				table.insert(parts, { key = key, order = order, index = inlineCount + 1 })
+			end
+		end
+	end
+	snapshotRemote:FireClient(player, view)
+	if #parts > 0 then
+		streams[player] = { data = data, parts = parts, nextAt = Clock.now() + Settings.STREAM_DELAY }
+	else
+		streams[player] = nil
+	end
+end
+
+-- Envoie le morceau suivant d'un flux d'arrivée ; vrai quand le flux est terminé. Les valeurs sont
+-- lues à l'instant de l'envoi (état vivant) : une entrée supprimée entre-temps est sautée (sa
+-- suppression est déjà partie), une entrée modifiée part à jour.
+local function sendStreamChunk(player: Player, stream: Stream): boolean
+	local budget = math.max(1, math.floor(Settings.STREAM_CHUNK))
+	local entries: Types.DataPatchEntries = {}
+	local any = false
+	for _, part in stream.parts do
+		if budget <= 0 then
+			break
+		end
+		local container = stream.data[part.key]
+		local set: { [string]: any } = {}
+		local sent = false
+		if type(container) == "table" then
+			while budget > 0 and part.index <= #part.order do
+				local sub = part.order[part.index]
+				part.index += 1
+				local value = container[sub]
+				if value ~= nil then
+					set[sub] = value
+					sent = true
+					budget -= 1
+				end
+			end
+		else
+			part.index = #part.order + 1 -- table remplacée : sa nouvelle valeur part en clé entière
+		end
+		if sent then
+			entries[part.key] = { set = set, del = {} }
+			any = true
+		end
+	end
+	if any then
+		patchRemote:FireClient(player, {}, {}, entries)
+	end
+	for _, part in stream.parts do
+		if part.index <= #part.order then
+			return false
+		end
+	end
+	return true
+end
+
+-- Avance les flux d'arrivée (Heartbeat, horloge partagée)
+local function stepStreams()
+	if next(streams) == nil then
+		return
+	end
+	local now = Clock.now()
+	for player, stream in streams do
+		if profiles[player] ~= stream.data or player.Parent == nil then
+			streams[player] = nil
+		elseif now >= stream.nextAt then
+			if sendStreamChunk(player, stream) then
+				streams[player] = nil
+			else
+				stream.nextAt = now + Settings.STREAM_INTERVAL
+			end
+		end
+	end
 end
 
 local function flushPatches()
@@ -233,6 +388,13 @@ local function prepare(raw: { [string]: any }?): { [string]: any }
 	return data
 end
 
+-- Chargement en cours (numéro d'essai > 0) ou terminé (nil) ; rien pour un joueur déjà parti
+local function setLoading(player: Player, attempt: number?)
+	if player.Parent ~= nil then
+		player:SetAttribute(LOADING_ATTRIBUTE, attempt)
+	end
+end
+
 -- (chargé, données, schéma plus récent) ; `session` : jeton posé dans le verrou
 local function loadRecord(player: Player, session: string): (boolean, { [string]: any }?, boolean)
 	local key = keyFor(player)
@@ -240,6 +402,7 @@ local function loadRecord(player: Player, session: string): (boolean, { [string]
 		if player.Parent == nil then
 			return false, nil, false
 		end
+		setLoading(player, attempt)
 		local lockedByOther = false
 		local newer = false
 		local ok, result = pcall(function()
@@ -315,9 +478,18 @@ local function writeRecord(player: Player, data: { [string]: any }, release: boo
 			store:UpdateAsync(key, function(old: Record?)
 				local record: Record = old or {}
 				local lock = record.lock
-				if (lock and lock.jobId ~= game.JobId) or isNewer(record.data) then
-					-- un autre serveur a repris la session (ou un serveur à jour y a écrit un schéma
-					-- plus récent) : ne jamais écraser ses données
+				-- n'écrit que si CETTE session détient encore le verrou. Après un chargement réussi, le
+				-- verrou porte toujours notre JobId et notre jeton : absent (un autre serveur l'a repris
+				-- puis libéré : une sauvegarde de départ retardée écraserait toute sa session, achats
+				-- acquittés compris), d'un autre serveur, ou d'une autre session de ce serveur (même
+				-- JobId, autre jeton) = notre session est terminée, ses données sont périmées. Un
+				-- schéma plus récent n'est jamais écrasé non plus.
+				if
+					lock == nil
+					or lock.jobId ~= game.JobId
+					or lock.session ~= session
+					or isNewer(record.data)
+				then
 					lostLock = true
 					return nil
 				end
@@ -335,9 +507,16 @@ local function writeRecord(player: Player, data: { [string]: any }, release: boo
 		end)
 		if ok then
 			if lostLock then
-				warn(
-					`[DataService] session de {player.Name} reprise par un autre serveur : sauvegarde ignorée`
-				)
+				if release then
+					-- perte de données de cette session (jamais écrite) : à suivre dans les journaux
+					warn(
+						`[DataService] PERTE : sauvegarde de départ de {player.Name} refusée (verrou absent ou repris par une autre session)`
+					)
+				else
+					warn(
+						`[DataService] session de {player.Name} reprise par un autre serveur : sauvegarde ignorée`
+					)
+				end
 				return false
 			end
 			return true
@@ -397,6 +576,8 @@ local function onPlayerAdded(player: Player)
 	if profiles[player] then
 		return
 	end
+	-- l'écran de chargement attend (Réessayer retenu), y compris pendant REJOIN_WAIT ci-dessous
+	setLoading(player, 1)
 	-- Reconnexion sur le MÊME serveur : la sauvegarde de départ de l'ancienne session (même UserId,
 	-- autre instance Player) est peut-être encore en cours (attente d'une autosave, retries). Charger
 	-- maintenant lirait des données périmées (notre propre JobId ne compte pas comme verrou) que
@@ -415,12 +596,16 @@ local function onPlayerAdded(player: Player)
 			warn(
 				`[DataService] sauvegarde de départ de {player.Name} toujours en cours : chargement refusé`
 			)
+			setLoading(player, nil)
 			player:Kick(LOAD_FAILED_MESSAGE)
 			return
 		end
 	end
 	local session = HttpService:GenerateGUID(false)
 	local ok, raw, newer = loadRecord(player, session)
+	-- réponse connue (chargé, plus récent ou échec) : l'attente est finie, avant l'instantané ou le
+	-- renvoi
+	setLoading(player, nil)
 	if player.Parent == nil then
 		-- parti pendant le chargement : libérer le verrou sans toucher aux données
 		if ok then
@@ -446,7 +631,7 @@ local function onPlayerAdded(player: Player)
 	profiles[player] = data
 	releasedOk[player] = nil
 	releasing[player] = nil
-	snapshotRemote:FireClient(player, publicView(data))
+	sendSnapshot(player, data)
 	DataService.Loaded:Fire(player, data)
 end
 
@@ -468,6 +653,7 @@ local function onPlayerRemoving(player: Player)
 	releasedOk[player] = nil
 	releasing[player] = nil
 	sessions[player] = nil
+	streams[player] = nil
 end
 
 function DataService.Init()
@@ -506,7 +692,7 @@ function DataService.Init()
 		end
 		local data = profiles[player]
 		if data then
-			snapshotRemote:FireClient(player, publicView(data))
+			sendSnapshot(player, data)
 		end
 	end)
 end
@@ -514,6 +700,7 @@ end
 function DataService.Start()
 	Players.PlayerAdded:Connect(onPlayerAdded)
 	Players.PlayerRemoving:Connect(onPlayerRemoving)
+	RunService.Heartbeat:Connect(stepStreams)
 	for _, player in Players:GetPlayers() do
 		task.spawn(onPlayerAdded, player)
 	end
@@ -591,7 +778,8 @@ end
 
 -- Une entrée de la table data[key] a changé (ou a été supprimée) : seule data[key][subKey] part,
 -- dans le patch de la frame (DataPatch, 3e argument). L'instantané (chargement, RequestSnapshot)
--- envoie toujours la table entière.
+-- envoie la table entière, sauf une grande table (STREAMED_KEYS) : ses SNAPSHOT_INLINE premières
+-- entrées, le reste en flux d'entrées DataPatch juste après.
 function DataService.markDirtyEntry(player: Player, key: string, subKey: string)
 	if profiles[player] then
 		queueEntry(player, key, subKey)
@@ -608,6 +796,12 @@ end
 -- dans l'arbre (BindToClose) et aucune sauvegarde ne suivra.
 function DataService.onBeforeSave(fn: (Player, { [string]: any }, boolean?) -> ())
 	table.insert(beforeSave, fn)
+end
+
+-- Ordre d'envoi des entrées d'une grande table à l'arrivée (instantané puis flux) : fn(data)
+-- retourne les sous-clés de data[key] par priorité (ex. AtlasService : les perchés d'abord)
+function DataService.setStreamOrder(key: string, fn: ({ [string]: any }) -> { string })
+	streamOrder[key] = fn
 end
 
 return DataService

@@ -5,7 +5,11 @@
 --   * addNebbies : uids "u<n>", tri automatique des perchoirs (Economy/Collection.rank : revenu
 --     passif décroissant, puis rareté, puis uid), réserve 300/600 ; débordement : libération auto
 --     des non verrouillés les moins rentables (Commun → Rare seulement) contre Stardust + Feedback
---     récapitulatif, sinon libération des nouveaux arrivants excédentaires (leur Glow est payé)
+--     récapitulatif, sinon — APRÈS UNE PARADE seulement — libération des nouveaux arrivants
+--     excédentaires (leur Glow est payé, GDD §4.9). Jamais libérés automatiquement : un verrouillé,
+--     un Cosmique, un Starborn (édition limitée, §8.1.6), ni l'arrivant d'une récompense (Comète,
+--     quête, calendrier, produit, Starfall, code) : la réserve dépasse alors sa capacité jusqu'à la
+--     prochaine parade
 --   * entrées d'Atlas (bit (s − 1) × 6 + f) et badges Golden/Huge/Starborn validés à l'encaissement ;
 --     Celebrate "atlasNew" ; jalons (Config/Quests.Atlas) réclamés automatiquement (perchoirs, titre,
 --     style, thème via NestService.unlock, Celebrate "atlasMilestone", bannière personnelle) ;
@@ -27,6 +31,8 @@
 --     plus une fois par Settings.NebbiesPatchInterval (le premier tout de suite, les suivants
 --     regroupés en fin de fenêtre). La sauvegarde écrit le profil entier : rien n'est différé pour
 --     elle. Une réparation de la collection au premier accès renvoie la clé entière (une fois).
+--     À l'arrivée, DataService n'en met qu'une avance dans l'instantané (setStreamOrder : ordre
+--     Collection.rank, les perchés d'abord) et envoie le reste en flux d'entrées.
 -- GDD : §4.9, §4.13, §4.14, §5.4, §14.2 (Release_<rareté>, Starforge_<★>).
 -- Dépendances : DataService, MonetizationService (via Economy/PassEffects), NestService,
 -- EconomyService, Logic/Formulas, Config/{Nebbies,Quests,Balance}, Signals, Util/Notify,
@@ -68,6 +74,10 @@ local UID_MAX_LENGTH = 12
 local RELEASE_MAX = 50
 -- Garde-fou de « Tout fusionner » (chaque fusion retire 2 Nebbies : jamais atteint en pratique)
 local FUSE_ALL_MAX = 2000
+-- Variante Starborn : édition limitée (GDD §8.1.6), jamais libérée automatiquement
+local STARBORN_BIT = Nebbies.Variants.starborn.bit
+-- Seule source dont les arrivants excédentaires peuvent être libérés (§4.9)
+local PARADE_SOURCE = "parade"
 
 -- État de session par joueur (vidé au départ)
 local perchedCache: { [Player]: { string } } = {}
@@ -315,9 +325,17 @@ local function releaseUids(player: Player, data: Profile, uids: { string }): (nu
 	return count, total
 end
 
--- Débordement de la réserve (§4.9) : d'abord les C/U/R non verrouillés les moins rentables de la
--- réserve, puis les nouveaux arrivants excédentaires (jamais un Cosmique ni un verrouillé)
-local function enforceStash(player: Player, data: Profile, arrivals: { string })
+-- Jamais libéré automatiquement par le débordement : verrouillé ou Starborn (édition limitée)
+local function autoReleaseProtected(rec: Types.NebbyRecord): boolean
+	return rec.lk == true or bit32.btest(rec.v or 0, STARBORN_BIT)
+end
+
+-- Débordement de la réserve (§4.9) : d'abord les C/U/R non protégés les moins rentables de la
+-- réserve, puis — après une PARADE seulement (« la parade a déjà payé leur Glow ») — les nouveaux
+-- arrivants excédentaires (jamais un Cosmique, un verrouillé ni un Starborn). Les arrivants d'une
+-- récompense (source ≠ "parade" : Comète, quête, calendrier, produit, Starfall, code) restent hors
+-- des deux passes : la réserve peut dépasser sa capacité, la prochaine parade rééquilibre.
+local function enforceStash(player: Player, data: Profile, arrivals: { string }, source: string)
 	local perches = perchCountOf(player, data)
 	local total = 0
 	for _ in data.nebbies do
@@ -331,6 +349,11 @@ local function enforceStash(player: Player, data: Profile, arrivals: { string })
 	if excess <= 0 then
 		return
 	end
+	local isArrival: { [string]: boolean } = {}
+	for _, uid in arrivals do
+		isArrival[uid] = true
+	end
+	local afterParade = source == PARADE_SOURCE
 	local victims: { string } = {}
 	-- la réserve = tout ce qui n'est pas perché ; ranked est trié du meilleur au moins bon
 	for i = #ranked.uids, perches + 1, -1 do
@@ -339,18 +362,18 @@ local function enforceStash(player: Player, data: Profile, arrivals: { string })
 		end
 		local uid = ranked.uids[i]
 		local rec = data.nebbies[uid]
-		if not rec.lk and Nebbies.rarityOf(rec.s) <= Balance.Stash.AutoReleaseMaxRarity then
+		if
+			not autoReleaseProtected(rec)
+			and (afterParade or not isArrival[uid])
+			and Nebbies.rarityOf(rec.s) <= Balance.Stash.AutoReleaseMaxRarity
+		then
 			table.insert(victims, uid)
 		end
 	end
-	if #victims < excess then
+	if #victims < excess and afterParade then
 		local chosen: { [string]: boolean } = {}
 		for _, uid in victims do
 			chosen[uid] = true
-		end
-		local isArrival: { [string]: boolean } = {}
-		for _, uid in arrivals do
-			isArrival[uid] = true
 		end
 		for i = #ranked.uids, perches + 1, -1 do
 			if #victims >= excess then
@@ -358,7 +381,7 @@ local function enforceStash(player: Player, data: Profile, arrivals: { string })
 			end
 			local uid = ranked.uids[i]
 			local rec = data.nebbies[uid]
-			if isArrival[uid] and not chosen[uid] and not rec.lk then
+			if isArrival[uid] and not chosen[uid] and not autoReleaseProtected(rec) then
 				if Formulas.releaseDust(Nebbies.rarityOf(rec.s), rec.st) ~= nil then
 					table.insert(victims, uid)
 				end
@@ -417,7 +440,16 @@ end
 -- Cycle de vie
 -- ---------------------------------------------------------------------------------------------
 
-function AtlasService.Init() end
+function AtlasService.Init()
+	-- arrivée : les entrées de « nebbies » partent les mieux classées d'abord (perchés en tête) ;
+	-- l'instantané n'en porte qu'une avance, le reste suit en flux (DataService, budget réseau)
+	DataService.setStreamOrder("nebbies", function(data: Profile): { string }
+		if type(data.nebbies) ~= "table" then
+			return {}
+		end
+		return Collection.rank(data.nebbies).uids
+	end)
+end
 
 function AtlasService.Start()
 	DataService.Loaded:Connect(onLoaded)
@@ -506,7 +538,8 @@ end
 -- ---------------------------------------------------------------------------------------------
 
 -- Ajoute des Nebbies (★1 sauf `stars`) ; retourne les uids créés encore présents (vide si profil
--- absent ; un nouvel arrivant libéré par une réserve pleine n'y figure pas).
+-- absent ; un arrivant de PARADE libéré par une réserve pleine n'y figure pas — ceux des autres
+-- sources ne sont jamais libérés par le débordement).
 -- source : "parade" | "comet" | "quest" | "calendar" | "product" | "starfall" | "code"
 function AtlasService.addNebbies(
 	player: Player,
@@ -582,7 +615,7 @@ function AtlasService.addNebbies(
 		claimMilestones(player, data)
 	end
 
-	enforceStash(player, data, created)
+	enforceStash(player, data, created, source)
 	refresh(player, data)
 
 	local kept: { string } = {}

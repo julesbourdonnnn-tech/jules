@@ -122,7 +122,7 @@ Justification : un téléviseur de 55 pouces vu à 3 m occupe à peu près le m�
 
 | Élément | Minimum | Réel en 1080p | Vérification |
 |---|---|---|---|
-| Texte lisible (tout texte que le joueur doit lire) | **18** (`Config/Console.MinTextSize`) | 27 px = 2,5 % de la hauteur | `Gamepad.audit` : `MaxTextSize` du `UITextSizeConstraint` **et** hauteur de la boîte ≥ 18 |
+| Texte lisible (tout texte que le joueur doit lire) | **18** (`Config/Console.MinTextSize`) | 27 px = 2,5 % de la hauteur | `Gamepad.audit` : pour un texte `TextScaled`, la plus grande taille où il tient en largeur **et** en hauteur (retours à la ligne compris, `MaxTextSize` du `UITextSizeConstraint` en plafond, largeur estimée par classe de caractère) ≥ 18 ; « texte coupé » s'il ne tient pas même à un `MinTextSize` ≥ 18 |
 | Glyphe de bouton | **36** (`GlyphSize`) | 54 px | taille du cadre `Glyph` |
 | Bouton principal / secondaire | 96 / 80 (GDD §10.1) | 144 / 120 px | inchangé |
 | Repère de touche texte (`KeyCap` actuel) | interdit sous 18 : remplacé par `UI/Glyph` | — | `Gamepad.audit` |
@@ -191,6 +191,8 @@ L1, R1 et L2 restent libres en jeu : un enfant qui les presse par erreur ne déc
 | Revenir au jeu | ○ ou △ | Sélection effacée, son `Back` |
 | Dash | R2 / □ | Toujours actif |
 
+Repère du mode menu : tant que la sélection est dans le HUD ou la minicarte (après △, ou après ○ qui ferme un panneau ouvert depuis le rail et rend la sélection au bouton du rail), l'icône au-dessus du rail (`RailGlyph`) passe de △ à **○** avec le libellé « Play » / « Jouer » à côté (`RailHint`, clé `hud.backToGame`, ≥ 18 px, manette seulement). Sélection effacée ou partie ailleurs (fenêtre de panneau, carte d'invitation) : △ revient, libellé masqué ; rafraîchi sur `Prefs.LanguageChanged` et `Platform.Changed`.
+
 Sélection de départ : la cible de l'accueil (main / pulsation), sinon la carte d'invitation d'équipage visible (`PanelController.focusTarget()`), sinon le bouton du rail qui porte une pastille « ! », sinon le dernier bouton du rail utilisé, sinon Améliorer. Améliorer = **△ ✕** (2 gestes).
 
 ### 6.3 Panneaux
@@ -222,7 +224,7 @@ La roue ne pose **aucune** sélection `GuiService` : la croix, le stick et ✕ p
 
 ### 6.5 Supernova (maintien à la manette)
 
-1. Améliorer → bouton Supernova (✕) ; la sélection par défaut de l'aperçu est le bouton **Maintenir**, accompagné du glyphe ✕.
+1. Améliorer → bouton Supernova (✕) ; la sélection par défaut de l'aperçu est le bouton **Maintenir**, accompagné du glyphe ✕. L'aperçu montre d'abord les **gains** (visibles sans défiler avant ce geste irréversible), puis les colonnes « Tu gardes » / « Remis à zéro » ; ↓ depuis Maintenir fait défiler l'aperçu.
 2. Maintenir ✕ : l'anneau se remplit en `Balance.Supernova.HoldSeconds` (1 s) ; vibration `holdStart` au début.
 3. Relâcher avant la fin, ou déplacer la sélection : annulé, aucun envoi.
 4. À la fin : remote `Supernova`, son `Reward`, vibration `supernova` (héros) quand la célébration arrive.
@@ -245,9 +247,9 @@ Garde existante contre le double affichage de la fenêtre d'achat conservée.
 
 | Écran | Manette |
 |---|---|
-| Chargement « Ton Nid se réveille… » | « Réessayer » sélectionné d'office (manette ou console), glyphe ✕ à côté |
+| Chargement « Ton Nid se réveille… » | « Réessayer » sélectionné d'office (manette ou console), glyphe ✕ à côté ; « Réessayer » attend tant que l'attribut `ProfileLoading` (> 0, posé par DataService pendant ses essais) est posé, puis 10 s (au plus 60 s) ; tant que l'écran est là, △ / ○ / croix / L1-R2 / raccourcis d'InputController passent sans rien faire (`Pass`, ni sélection effacée, ni son, ni `RailRequested`) et `HUD.selectRail()` ne sélectionne rien |
 | Écran de retour hors ligne | OK sélectionné, ✕ ou ○ ferment |
-| Carte d'invitation d'équipage | △ la sélectionne (Accepter), ✕ accepte, → puis ✕ refuse ; ○ revient au jeu sans répondre |
+| Carte d'invitation d'équipage | △ la sélectionne (Accepter), ✕ accepte, → puis ✕ refuse ; ○ revient au jeu sans répondre. Glyphe d'Accepter : △ tant que rien n'est sélectionné sur la carte, ← depuis « Non merci », ✕ une fois Accepter sélectionné. Panneau ouvert : la carte attend sa fermeture (même échéance, pastille « ! » d'Équipage tant qu'elle n'a pas expiré) |
 | Bouton ACCLAMER | glyphe croix → sur le bouton ; aussi atteignable au menu du HUD |
 | Minicarte | glyphe croix ↓ au bord de la minicarte |
 
@@ -260,8 +262,8 @@ Règles communes :
 - Chaque fenêtre modale est un `SelectionGroup` avec `SelectionBehaviorUp/Down/Left/Right = Stop` : la sélection ne s'échappe jamais vers le HUD derrière.
 - Chaque objet sélectionnable visible d'un écran est atteignable depuis la sélection par défaut avec les 4 directions (graphe `NextSelection*` explicite là où la géométrie hésite, sinon la sélection directionnelle de Roblox).
 - ○ recule d'**un** niveau ; △ ramène au jeu ; L1/R1 onglets ; L2/R2 panneaux.
-- **Bouclage** : anneaux (roue de pings), onglets (L1/R1) et panneaux (L2/R2) bouclent ; listes et grilles **ne bouclent pas** (bout de liste : son `Bump` + vibration `listEnd`).
-- Un panneau qui change de contenu (onglet, achat, fusion) remet une sélection valide (jamais un objet masqué ou détruit).
+- **Bouclage** : anneaux (roue de pings), onglets (L1/R1) et panneaux (L2/R2) bouclent ; listes et grilles **ne bouclent pas**. ↑ / ↓ sans rien de sélectionnable de ce côté (lignes en lecture seule de l'Atlas, du Guide, aperçu de la Supernova) font défiler la liste de **70 %** de sa hauteur visible (une sélection dans la liste reste à l'écran) ; son `Bump` + vibration `listEnd` seulement au **vrai** bout de la liste, ou pour ← / → au bord de la fenêtre.
+- Un panneau qui change de contenu (onglet, achat, fusion) remet une sélection valide (jamais un objet masqué ou détruit) : sélection par défaut du panneau si elle est affichée, sinon le bouton de l'**onglet affiché**, sinon le premier onglet, sinon Fermer (`PanelController.defaultSelection`).
 - **Sélection visible à 3 m** : tout objet sélectionnable du jeu reçoit `SelectionImageObject = Root.selectionImage()` (contour doré de 4 px qui déborde de 4 px, implémenté) en plus de la pulsation `Juice.press` existante.
 
 | Écran | Sélection par défaut | ○ | L1 / R1 | L2 / R2 | Bouclage |
@@ -279,7 +281,7 @@ Règles communes :
 | Écran de retour | OK | ferme | — | — | — |
 | Chargement (échec) | Réessayer | — | — | — | — |
 
-Repères visibles à la manette : ○ sur le bouton Fermer (le « ✕ » dessiné disparaît) ; sur la **Supernova**, ○ est sur Retour (→ Améliorer) et Fermer porte **△** (tout fermer) ; L1 et R1 aux deux bouts de la barre d'onglets, L2 et R2 aux coins de l'en-tête, ✕ sur le bouton Maintenir, △ sur le rail du HUD.
+Repères visibles à la manette : ○ sur le bouton Fermer (le « ✕ » dessiné disparaît) ; sur la **Supernova**, ○ est sur Retour (→ Améliorer) et Fermer porte **△** (tout fermer) ; L1 et R1 aux deux bouts de la barre d'onglets, L2 et R2 aux coins de l'en-tête, ✕ sur le bouton Maintenir, △ sur le rail du HUD (○ « Jouer » en mode menu, §6.2).
 
 Retours : seul ○ (`PanelController.back()`) rend la sélection au bouton du rail d'origine ; △ (`PanelController.close()` puis sélection effacée) ne rend **jamais** de sélection, ni tout de suite ni après l'animation de fermeture ; le HUD ne re-sélectionne pas de lui-même après un ○ ou un △ (seul △ en jeu appelle `HUD.selectRail`).
 
@@ -408,12 +410,12 @@ Compatibilité avec les specs existantes : les repères clavier `KeyCap` (TextLa
 3. **A16, §6.3** — L2 / R2 (liés à `ACTION_PRIORITY` pendant qu'un panneau est ouvert, absorbés : pas de Dash) : panneau précédent / suivant en boucle (Améliorer, Collection, Objectifs, Boutique, Équipage, Réglages ; Supernova compte comme Améliorer), seulement si `PanelController.allowed(nom)` ; son `Tab`.
 4. **A17, §7** — à l'ouverture, retenir la sélection hors fenêtre (bouton du rail) ; ○ qui ferme la rend si elle est encore visible (manette) ; son `Back`.
 5. **A26** — stick droit (`Thumbstick2`, absorbé) : fait défiler la liste qui contient la sélection.
-6. **A25, §9** — L1/R1 : son `Tab` (au lieu de `Click`) ; bout de liste (croix sans changement de sélection à l'image suivante) : `Bump` + `Haptics.play("listEnd")` ; refus (`Widgets.refuse`) : `Haptics.play("refuse")`.
+6. **A25, §9** — L1/R1 : son `Tab` (au lieu de `Click`) ; croix ↑ / ↓ sans changement de sélection à l'image suivante : la liste défile de 70 % de sa hauteur visible ; `Bump` + `Haptics.play("listEnd")` seulement au vrai bout de la liste ou pour ← / → ; refus (`Widgets.refuse`) : `Haptics.play("refuse")`.
 7. **A21, §6.5** — Supernova : `PadGlyph` ✕ sur Maintenir, `Haptics.play("holdStart")` au début du maintien, refus avec vibration.
 8. **A18, §6.6** — Boutique : après `PromptProductPurchaseFinished` / `PromptGamePassPurchaseFinished`, re-sélection du bouton Acheter pressé ; Codes : validation du clavier virtuel (`FocusLost` avec Entrée) → envoi du code et sélection de « Valider ».
 9. **A19** — `VirtualGrid` / Collection : la sélection suit l'**index** quand les cases sont réaffectées au défilement ; la croix ↓ sur la dernière rangée visible fait défiler d'une rangée ; tous les Nebbies atteignables.
 10. **A20** — Collection : clés neutres `collection.selectHint.pad` (« Choose a Nebby to see it » / « Choisis un Nebby pour le voir ») et `collection.releaseHint.pad` (« Choose Nebbies to release » / « Choisis des Nebbies à libérer ») à la manette.
-11. **A22, §6.7** — carte d'invitation : `PanelController.focusTarget()` renvoie Accepter tant qu'elle est visible ; Accepter ↔ Refuser reliés ; glyphe ✕.
+11. **A22, §6.7** — carte d'invitation : `PanelController.focusTarget()` renvoie Accepter tant qu'elle est visible ; Accepter ↔ Refuser reliés ; glyphe d'Accepter △ tant que rien n'est sélectionné sur la carte, ← depuis Refuser, ✕ une fois Accepter sélectionné ; panneau ouvert : la carte attend sa fermeture (même échéance, pastille « ! » d'Équipage).
 12. **Spec** `Console_panels.spec` : client console complet ; pour chaque panneau et chaque onglet : sélection par défaut dans la fenêtre, `Layout.escapes` vide, `Layout.unreachable` vide, `Gamepad.audit` vide ; ○ (Supernova → Améliorer → bouton du rail), L1/R1 en boucle, L2/R2 en boucle avec la garde, R2 sans Dash panneau ouvert ; Supernova maintenue au `Gamepad.press/release` (relâchement anticipé = rien, `holdStart` journalisé) ; Boutique : re-sélection après la fenêtre d'achat ; Réserve de 60 Nebbies parcourue à la croix jusqu'au dernier.
 
 ### Intégration (validation de publication)

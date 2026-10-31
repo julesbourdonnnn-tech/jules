@@ -13,7 +13,8 @@
 --     l'achat
 --   * quêtes d'accueil d'achat (Q2/Q5 « upgrade » → goal.track, Q7 « perches ») lues dans le profil
 --     répliqué (onboarding.step) : la carte de la quête a le contour doré et elle seule pulse (quand
---     elle est payable) — jamais une autre carte moins chère qui ferait dépenser le Glow de la quête
+--     elle est payable) — jamais une autre carte moins chère qui ferait dépenser le Glow de la quête ;
+--     elle passe en tête de liste le temps de la quête (visible dès l'ouverture sur téléphone)
 --   * bouton Supernova en bas avec anneau de progression (Glow prédit / Formulas.supernovaCost(R))
 --     → PanelController.open("Supernova")
 --   * hasAction : une amélioration est achetable, ou la Supernova (son bouton vit dans ce panneau)
@@ -309,11 +310,18 @@ local function render(animate: boolean?)
 	local glow = Model.predictedGlow(view, now)
 	-- accueil : la carte de la quête d'achat en cours (la carte unique `focus` reste prioritaire)
 	local quest = if focus == nil then questTrack() else nil
+	local questChanged = quest ~= questMark
 	questMark = quest
 	local questAffordable = false
-	for _, track in Balance.UpgradeOrder do
+	for index, track in Balance.UpgradeOrder do
 		local card = cards[track]
 		if card then
+			-- la carte de la quête passe en tête de liste : Q7 (Perchoirs, 4e carte) serait sinon hors
+			-- de vue à l'ouverture sur téléphone (2 cartes visibles) ; l'ordre du GDD revient ensuite
+			local order = if track == quest then 0 else index
+			if card.holder.LayoutOrder ~= order then
+				card.holder.LayoutOrder = order
+			end
 			local info = Model.upgradeInfo(view, track)
 			local old = levels[track]
 			card.name.Text = Prefs.t(`upgrades.{track}.name`)
@@ -354,6 +362,12 @@ local function render(animate: boolean?)
 		end
 	end
 	renderSupernova(glow)
+	-- nouvelle carte de quête (ou fin de quête) panneau ouvert : la liste remonte en haut, là où
+	-- elle est désormais
+	local scroll = list
+	if questChanged and isOpen and scroll then
+		scroll.CanvasPosition = Vector2.zero
+	end
 	-- pendant une quête d'achat, seule sa carte pulse (et seulement si elle est payable) : la carte
 	-- la moins chère ferait dépenser le Glow prévu pour la quête (§3)
 	if focus then

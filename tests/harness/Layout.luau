@@ -6,6 +6,9 @@
 -- UISizeConstraint, UIAspectRatioConstraint, UIListLayout, UIGridLayout, ScrollingFrame
 -- (CanvasPosition, CanvasSize) et AutomaticSize des conteneurs à liste, puis écrit
 -- AbsolutePosition / AbsoluteSize (les connexions du jeu sont donc prévenues, comme dans Roblox).
+-- Convention de Roblox : AbsolutePosition est dans UN SEUL espace pour tous les écrans, dont
+-- l'origine est sous la barre Roblox (GUI_INSET) : un cadre en haut d'un écran IgnoreGuiInset lit
+-- Y = −GUI_INSET (ScreenFX.guiCenter et les écarts entre écrans s'appuient dessus).
 --
 -- Navigation : Layout.step reproduit la sélection directionnelle de Roblox — NextSelection* explicite
 -- d'abord, sinon l'objet sélectionnable le plus proche dans la direction (distance le long de l'axe
@@ -298,7 +301,8 @@ local function place(obj, x, y, w, h, T, gui, clip)
 	end
 	local rect = { x = T2.ox + T2.k * x, y = T2.oy + T2.k * y, w = T2.k * w, h = T2.k * h }
 	rects[obj] = { x = rect.x, y = rect.y, w = rect.w, h = rect.h, k = T2.k, clip = clip, gui = gui }
-	setAbsolute(obj, "AbsolutePosition", Vector2.new(rect.x, rect.y - gui.top))
+	-- espace commun sous la barre Roblox, quel que soit IgnoreGuiInset de l'écran (comme Roblox)
+	setAbsolute(obj, "AbsolutePosition", Vector2.new(rect.x, rect.y - Layout.GUI_INSET))
 	setAbsolute(obj, "AbsoluteSize", Vector2.new(rect.w, rect.h))
 	local childClip = clip
 	if obj.ClassName == "ScrollingFrame" or obj.ClipsDescendants == true then

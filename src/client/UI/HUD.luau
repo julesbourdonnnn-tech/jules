@@ -17,7 +17,11 @@
 --   * pastille d'événement (haut centre, 320 × 48 ; Hud/EventPill) : prochain événement avec compte à
 --     rebours, événement en cours en couleur, « ☄ COMÈTE 0:45 — Mira », barre de la Balise (420 × 28)
 --     ; indicateurs d'état (Zen, boost ×2 avec minuteur, connexion instable) ; suivi de quête
---     (260 × 72, repliable) ; icônes Équipage et Réglages
+--     (260 × 72, repliable : icône + titre de 200 px jamais sous 18 px, barre + bouton de repli
+--     dessous ; coût de la Supernova abrégé s'il ne tient pas) ; icônes Équipage et Réglages
+--   * crochets de ScreenFX : cibles des pièces (HUD.anchor), panneau ouvert, place libre des cartes
+--     « NOUVEAU ! » (cardPlacement : colonne de droite sous la minicarte, l'état et le suivi, jamais
+--     sur le Dash, le Ping ni le bouton de saut ; zone sûre de l'appareil comprise)
 --   * rail de menus (gauche, y 150-470, 4 boutons 80 × 80) : Améliorer, Collection, Objectifs,
 --     Boutique → InputController.togglePanel (PanelController) ; pastille « ! » (hasAction /
 --     BadgeChanged) ; sur les écrans bas (téléphones de 360-390 dp) où la colonne descendrait dans
@@ -38,7 +42,11 @@
 --     NextSelection* complet (rail, Équipage, Réglages, minicarte, suivi de quête, Ping, Dash,
 --     ACCLAMER) posé à la manette ; croix ← (InputController.QuestToggled) replie le suivi ; main
 --     d'accueil remplacée par l'icône de la touche (△, puis ✕ une fois le bouton sélectionné ; R2 sur
---     le Dash) ; rail en colonne sur console (pas de joystick tactile)
+--     le Dash) ; rail en colonne sur console (pas de joystick tactile) ; mode menu (sélection dans
+--     le HUD ou la minicarte, le stick ne fait plus marcher) : l'icône au-dessus du rail devient ○
+--     avec « Jouer » / « Play » à côté (RailHint, manette seulement) : ○ rend la main au jeu
+--     (InputController) ; sélection effacée ou partie ailleurs → △ revient, libellé masqué
+--   * écran de chargement encore là (ScreenGui « Loading ») : HUD.selectRail ne sélectionne rien
 -- Une seule connexion RenderStepped ; le temps d'animation est la somme des dt des images (mesure
 -- purement graphique), le temps de jeu vient de Shared/Util/Clock.
 -- GDD : §3 (HUD progressif), §6.6 (acclamer), §9.2, §10.1, §10.2.
@@ -98,6 +106,15 @@ local BEACON_BAR_POS = UDim2.new(0.5, 0, 1, 6) -- sous la pastille d'événement
 local MINIMAP = 150
 local STATUS = 48
 local TRACKER_SIZE = Vector2.new(260, 72)
+-- Intérieur du suivi de quête : rangée du haut icône + titre (le titre prend toute la largeur
+-- restante : 200 px, « Atteins 10 perchoirs » tient à 18 px), rangée du bas barre + bouton de repli
+local TRACKER_ICON = 32
+local TRACKER_TITLE_X = 54
+local TRACKER_TITLE_W = TRACKER_SIZE.X - TRACKER_TITLE_X - 6
+local TRACKER_TOGGLE = Vector2.new(52, 32)
+-- Caractères qui tiennent sur une ligne du titre à 18 px (0,55 em par caractère, estimation
+-- prudente pour FredokaOne) ; au-delà, le coût de la Supernova est abrégé (« 10M »)
+local TRACKER_TITLE_CHARS = math.floor(TRACKER_TITLE_W / (0.55 * 18))
 local RAIL_Y = 150
 local RAIL_BUTTON = 80
 local RAIL_GAP = 8
@@ -109,6 +126,7 @@ local RAIL_LABEL_HEIGHT = 22
 local RAIL_LABEL_BOTTOM = 5 -- marge sous le ruban, dans le bouton
 local RAIL_LABEL_OVERHANG = 6 -- débord du ruban de chaque côté du bouton (marge d'écran ≥ 10 px)
 local RAIL_LABEL_BACK = 0.25 -- transparence du fond sombre du ruban
+local RAIL_HINT_SIZE = Vector2.new(96, 32) -- « Jouer » / « Play » à droite de l'icône ○ (≥ 18 px)
 local STATUS_GAP = 8 -- écart entre les indicateurs d'état (UIListLayout)
 local STATUS_TIME = Vector2.new(64, 22) -- minuteur du boost sous son icône
 local CAPTION_SIZE = Vector2.new(210, 24) -- « Connexion instable », à gauche des indicateurs
@@ -130,7 +148,9 @@ local COLUMN_MOVE = 0.25
 -- instruction d'accueil (écran Onboarding, placée par OnboardingController avec HUD.hintTop) : sous
 -- la pile COMPLÈTE de toasts (UI/Toast : y = 180, 3 × 48 + 2 × 6 → 336) ; sur les écrans très bas,
 -- remontée juste ce qu'il faut pour ne jamais recouvrir le compteur de file
-local TOAST_BOTTOM = 180 + 3 * 48 + 2 * 6
+local TOAST_TOP = 180
+local TOAST_WIDTH = 420 -- pile de UI/Toast (toasts de 400 px)
+local TOAST_BOTTOM = TOAST_TOP + 3 * 48 + 2 * 6
 local HINT_GAP = 6
 local HINT_Y = TOAST_BOTTOM + HINT_GAP
 local HINT_MIN_Y = 180 -- jamais dans la zone des bannières
@@ -278,6 +298,8 @@ local navButtons: { crew: TextButton?, settings: TextButton?, ping: TextButton? 
 local lastRailPanel: Types.PanelName? = nil
 local railPadMode = false -- rail descendu sous le △ (manette)
 local railGlyphHolder: Frame? = nil
+local railHint: TextLabel? = nil -- « Jouer » à droite de l'icône du rail en mode menu (manette)
+local railMenuMode = false -- icône du rail sur ○ (sélection dans le HUD ou la minicarte)
 
 local glowCounter: Counter.Counter? = nil
 local dustCounter: Counter.Counter? = nil
@@ -708,12 +730,13 @@ local function buildTracker(parent: Frame)
 	pill.Position = UDim2.fromScale(1, 0)
 	pill.Size = UDim2.fromOffset(TRACKER_SIZE.X, TRACKER_SIZE.Y)
 	pill.ClipsDescendants = true
+	-- rangée du haut : icône (coin haut gauche, jamais sous le bouton de repli, même replié) et
+	-- titre sur toute la largeur restante, jamais sous 18 px de référence (GDD §10.1)
 	local icon = Widgets.label({
 		name = "Icon",
-		size = UDim2.fromOffset(48, 48),
-		position = UDim2.new(0, 12, 0.5, 0),
-		anchor = Vector2.new(0, 0.5),
-		maxSize = 36,
+		size = UDim2.fromOffset(TRACKER_ICON, TRACKER_ICON),
+		position = UDim2.fromOffset(12, 4),
+		maxSize = 32,
 		color = Theme.Colors.Gold,
 		strokeThickness = 2,
 		parent = pill,
@@ -721,16 +744,19 @@ local function buildTracker(parent: Frame)
 	icon.AutoLocalize = false
 	local title = Widgets.label({
 		name = "Title",
-		size = UDim2.new(1, -104, 0, 30),
-		position = UDim2.fromOffset(66, 8),
+		size = UDim2.new(1, -(TRACKER_TITLE_X + 6), 0, 30),
+		position = UDim2.fromOffset(TRACKER_TITLE_X, 6),
 		maxSize = 22,
+		minSize = MIN_TEXT,
 		xAlign = Enum.TextXAlignment.Left,
 		parent = pill,
 	})
+	-- rangée du bas : barre de progression puis bouton de repli
 	local barBack = Create("Frame", {
 		Name = "Bar",
-		Position = UDim2.fromOffset(66, 44),
-		Size = UDim2.new(1, -104, 0, 14),
+		AnchorPoint = Vector2.new(0, 0.5),
+		Position = UDim2.new(0, 12, 1, -(4 + TRACKER_TOGGLE.Y / 2)),
+		Size = UDim2.new(1, -(12 + 6 + TRACKER_TOGGLE.X + 6), 0, 14),
 		BackgroundColor3 = Theme.Colors.Background,
 		Parent = pill,
 	}, { Widgets.round() })
@@ -741,12 +767,14 @@ local function buildTracker(parent: Frame)
 		ZIndex = 2,
 		Parent = barBack,
 	}, { Widgets.round(), Widgets.gradient() })
+	-- bouton de repli dans la rangée de la barre (coin bas droit) : il ne mange plus la largeur du
+	-- titre ; replié (pastille carrée), il reste sous l'icône
 	local toggleHolder = Create("Frame", {
 		Name = "Toggle",
 		BackgroundTransparency = 1,
-		AnchorPoint = Vector2.new(1, 0.5),
-		Position = UDim2.new(1, -6, 0.5, 0),
-		Size = UDim2.fromOffset(28, 56),
+		AnchorPoint = Vector2.new(1, 1),
+		Position = UDim2.new(1, -6, 1, -4),
+		Size = UDim2.fromOffset(TRACKER_TOGGLE.X, TRACKER_TOGGLE.Y),
 		ZIndex = 5,
 		Parent = pill,
 	})
@@ -806,6 +834,23 @@ local function buildRail(parent: Frame)
 	})
 	railGlyphHolder = glyphHolder
 	padGlyph("rail", glyphHolder, Enum.KeyCode.ButtonY, UDim2.new(), Vector2.zero)
+	-- mode menu (manette) : « Jouer » à droite de l'icône ○ (refreshRailHint), texte ≥ 18 px
+	local hint = Widgets.label({
+		name = "RailHint",
+		size = UDim2.fromOffset(RAIL_HINT_SIZE.X, RAIL_HINT_SIZE.Y),
+		position = UDim2.new(1, GLYPH_GAP, 0.5, 0),
+		anchor = Vector2.new(0, 0.5),
+		maxSize = MIN_TEXT + 4,
+		minSize = MIN_TEXT,
+		zIndex = 8,
+		parent = glyphHolder,
+	})
+	hint.BackgroundColor3 = Widgets.STROKE
+	hint.BackgroundTransparency = RAIL_LABEL_BACK
+	hint.Visible = false
+	Widgets.corner(UDim.new(0, 8)).Parent = hint
+	bindText(hint, "hud.backToGame")
+	railHint = hint
 	register("rail", rail)
 	for i, def in RAIL do
 		local holder =
@@ -1044,6 +1089,12 @@ local function buildCheer(parent: Frame)
 		parent = button,
 	})
 	name.AutoLocalize = false
+	-- nom du héros (jusqu'à 20 caractères) : toujours 18 px, coupé par « … » plutôt que rétréci
+	-- sous la taille lisible (GDD §10.1)
+	name.TextScaled = false
+	name.TextWrapped = false
+	name.TextSize = MIN_TEXT
+	name.TextTruncate = Enum.TextTruncate.AtEnd
 	-- anneau de temps (10 s)
 	local ringHolder = Create("Frame", {
 		Name = "Ring",
@@ -1217,10 +1268,15 @@ local function updateTracker(now: number)
 		icon.Text = GOAL_GLYPHS[def.goal.kind] or "★"
 		progress = math.clamp(p / n, 0, 1)
 	else
-		-- objectif long permanent : « Supernova · 400 000 »
+		-- objectif long permanent : « Supernova · 400 000 » ; coût abrégé (« Supernova · 10 M ») dès
+		-- que le nombre complet ne tient plus sur une ligne à 18 px
 		local cost = Formulas.supernovaCost(math.max(0, math.floor(num(State.get("supernovas"), 0))))
 		key = "hud.quest.supernova"
-		title.Text = Prefs.t(key, { cost = Prefs.commas(cost) })
+		local text = Prefs.t(key, { cost = Prefs.commas(cost) })
+		if (utf8.len(text) or #text) > TRACKER_TITLE_CHARS then
+			text = Prefs.t(key, { cost = Prefs.number(cost) })
+		end
+		title.Text = text
 		icon.Text = "✺"
 		progress = if cost > 0 then math.clamp(Glow.predicted(now) / cost, 0, 1) else 1
 	end
@@ -1675,6 +1731,100 @@ local function layoutColumn(dashPos: UDim2, dashSize: number, pingSize: number)
 	end
 	placeColumn("status", statusAt)
 	placeColumn("questTracker", trackerAt)
+end
+
+-- Rectangle (px de référence de la zone intérieure W × H) d'un conteneur placé dans Safe
+local function placedBox(position: UDim2, size: Vector2, anchor: Vector2, W: number, H: number): Rect
+	local x = position.X.Scale * W + position.X.Offset - anchor.X * size.X
+	local y = position.Y.Scale * H + position.Y.Offset - anchor.Y * size.Y
+	return box(x, y, size.X, size.Y)
+end
+
+-- Point de la zone intérieure du HUD (px de référence) → px de la fenêtre, l'espace de la couche
+-- plein écran de ScreenFX : AbsolutePosition se mesure sous la barre Roblox, GetGuiInset la rend
+local function toViewport(x: number, y: number): Vector2
+	local s = safe
+	local k = math.max(Root.scale(), 0.01)
+	local origin = if s then s.AbsolutePosition else Vector2.zero
+	local padding = if s then s:FindFirstChildOfClass("UIPadding") else nil
+	local inset = if padding
+		then Vector2.new(padding.PaddingLeft.Offset, padding.PaddingTop.Offset)
+		else Vector2.zero
+	local bar = Vector2.zero
+	pcall(function()
+		local topLeft = GuiService:GetGuiInset()
+		bar = topLeft
+	end)
+	return origin + (Vector2.new(x, y) + inset) * k + bar
+end
+
+-- Place de la pile des cartes « NOUVEAU ! » de ScreenFX (GDD §9.4, cartes de size × n, écart gap) :
+-- le plus haut possible dans la colonne de droite (bord droit de la zone sûre − 16), sinon dans la
+-- colonne à gauche de la minicarte, sans toucher la minicarte, l'état, le suivi de quête, la
+-- pastille d'événement, les toasts, l'instruction d'accueil, le compteur de file, ACCLAMER ni le
+-- coin des actions (Dash, Ping et le bouton de saut dessous, GDD §10.1) ; autant de cartes que la
+-- place en permet (au moins 1). Repli (écran trop bas) : une carte juste au-dessus du Dash et du
+-- Ping, quitte à couvrir l'état ou la minicarte. nil tant que le HUD n'est pas mesuré.
+local function cardPlacement(size: Vector2, gap: number, wanted: number): ScreenFX.CardPlacement?
+	local content = contentSize()
+	local dash, ping = dashParts.holder, pingHolder
+	if content == nil or dash == nil or ping == nil then
+		return nil
+	end
+	if not (isFinite(size.X) and isFinite(size.Y) and isFinite(gap) and isFinite(wanted)) then
+		return nil
+	end
+	local W, H = content.X, content.Y
+	local dashBox =
+		placedBox(dash.Position, Vector2.new(dash.Size.X.Offset, dash.Size.Y.Offset), dash.AnchorPoint, W, H)
+	local pingBox =
+		placedBox(ping.Position, Vector2.new(ping.Size.X.Offset, ping.Size.Y.Offset), ping.AnchorPoint, W, H)
+	local cx0 = math.min(dashBox.x0, pingBox.x0)
+	local cy0 = math.min(dashBox.y0, pingBox.y0)
+	local lineTop = H - LINE_Y - LINE_SIZE.Y
+	-- pastille d'événement, avec la barre de la Balise quand elle est affichée
+	local pillWidth, pillHeight = EVENT_SIZE.X, EVENT_SIZE.Y
+	local bar = eventParts.bar
+	if bar and bar.Visible then
+		pillWidth = math.max(pillWidth, beaconWidth)
+		pillHeight += BEACON_BAR_POS.Y.Offset + BEACON_BAR.Y
+	end
+	local obstacles: { Rect } = {
+		-- coin des actions jusqu'au bas de l'écran : Dash, Ping et bouton de saut tactile
+		box(cx0, cy0, W - cx0, H - cy0),
+		box(W - MARGIN - MINIMAP, MARGIN, MINIMAP, MINIMAP),
+		box((W - pillWidth) / 2, MARGIN, pillWidth, pillHeight),
+		box((W - TOAST_WIDTH) / 2, TOAST_TOP, TOAST_WIDTH, TOAST_BOTTOM - TOAST_TOP),
+		box((W - HINT_SIZE.X) / 2, hintTop(H), HINT_SIZE.X, HINT_SIZE.Y),
+		box((W - LINE_SIZE.X) / 2, lineTop, LINE_SIZE.X, LINE_SIZE.Y),
+		box((W - CHEER_SIZE.X) / 2, lineTop - 16 - CHEER_SIZE.Y, CHEER_SIZE.X, CHEER_SIZE.Y),
+	}
+	-- état et suivi de quête affichés, à leur place cible (layoutColumn)
+	local column: { [string]: Vector2 } = {
+		status = Vector2.new(STATUS_WIDTH, STATUS_HEIGHT),
+		questTracker = TRACKER_SIZE,
+	}
+	for name, blockSize in column do
+		local e = elements[name :: Types.HudElement]
+		local home = columnHome[name]
+		if e and e.revealed and home then
+			table.insert(obstacles, placedBox(home, blockSize, Vector2.new(1, 0), W, H))
+		end
+	end
+	local function placement(right: number, y: number, count: number): ScreenFX.CardPlacement
+		local at = toViewport(right, y)
+		return { right = at.X, top = at.Y, count = count }
+	end
+	for n = math.max(1, math.floor(wanted)), 1, -1 do
+		local stack = Vector2.new(size.X, n * size.Y + (n - 1) * gap)
+		for _, right in { W - MARGIN, W - SIDE_RIGHT } do
+			local y = firstFree(right, stack, MARGIN, H, obstacles)
+			if y ~= nil then
+				return placement(right, y, n)
+			end
+		end
+	end
+	return placement(W - MARGIN, math.max(0, cy0 - CLEARANCE - size.Y), 1)
 end
 
 local function layoutActions()
@@ -2243,7 +2393,45 @@ end
 -- cible de l'accueil (main / pulsation), la cible hors fenêtre de PanelController.focusTarget()
 -- (carte d'invitation d'équipage), le bouton du rail à pastille « ! », le dernier panneau du rail
 -- ouvert, le premier bouton affiché du rail. false : rien à sélectionner.
+-- Mode menu : la sélection manette est dans le HUD ou la minicarte (le stick la déplace au lieu de
+-- faire marcher) ; ○ rend la main au jeu (InputController efface la sélection)
+local function hudMenuMode(): boolean
+	local ok, selected = pcall(function()
+		return GuiService.SelectedObject
+	end)
+	if not ok or typeof(selected) ~= "Instance" then
+		return false
+	end
+	local gui = (selected :: Instance):FindFirstAncestorWhichIsA("ScreenGui")
+	return gui ~= nil and (gui.Name == "HUD" or gui.Name == "Minimap")
+end
+
+-- Icône au-dessus du rail : △ (entrer dans le menu) en jeu, ○ + « Jouer » en mode menu ; le
+-- libellé n'est montré qu'à la manette (l'icône se masque seule ailleurs, UI/Glyph)
+local function refreshRailHint()
+	local menu = hudMenuMode()
+	local glyph = padGlyphs.rail
+	if glyph and menu ~= railMenuMode then
+		railMenuMode = menu
+		glyph:set({ gamepad = if menu then Enum.KeyCode.ButtonB else Enum.KeyCode.ButtonY })
+	end
+	local hint = railHint
+	if hint then
+		local show = menu and usingGamepad()
+		if hint.Visible ~= show then
+			hint.Visible = show
+		end
+	end
+end
+
 function HUD.selectRail(): boolean
+	-- écran de chargement encore là (src/first/Loading.client) : le rail est caché derrière lui,
+	-- jamais un bouton invisible sélectionné (✕ l'activerait à l'aveugle)
+	local player = localPlayer()
+	local playerGui = if player then player:FindFirstChildOfClass("PlayerGui") else nil
+	if playerGui ~= nil and playerGui:FindFirstChild("Loading") ~= nil then
+		return false
+	end
 	for _, name in HAND_ELEMENTS do
 		local e = elements[name]
 		if e and e.attention and e.revealed and e.visual:IsA("GuiButton") and onScreen(e.visual) then
@@ -2347,6 +2535,8 @@ function HUD.Init()
 	cheerRemote = Net.event("Cheer")
 	-- crochet : ScreenFX (plus précoce) fait voler les récompenses vers nos compteurs
 	ScreenFX.setAnchorResolver(HUD.anchor)
+	-- crochet : cartes « NOUVEAU ! » de l'Atlas rangées dans la place libre de la colonne de droite
+	ScreenFX.setCardPlacer(cardPlacement)
 	-- crochet : ScreenFX laisse au panneau Collection ouvert sa propre révélation de Starforge
 	ScreenFX.setPanelResolver(function(): string?
 		return PanelController.current()
@@ -2450,7 +2640,12 @@ function HUD.Start()
 		if reason == "input" then
 			onInputChanged()
 		end
+		refreshRailHint()
 	end)
+	-- mode menu (sélection dans le HUD ou la minicarte) : ○ + « Jouer » au-dessus du rail
+	GuiService:GetPropertyChangedSignal("SelectedObject"):Connect(refreshRailHint)
+	Prefs.LanguageChanged:Connect(refreshRailHint)
+	refreshRailHint()
 	InputController.DashRefused:Connect(function(reason: string)
 		local button = dashParts.button
 		if button and reason ~= "character" then

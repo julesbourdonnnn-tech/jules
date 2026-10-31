@@ -1,6 +1,11 @@
 --!strict
 -- Sons optionnels. Mettre un ID « rbxassetid://… » (Creator Store, sons publics) ;
 -- une chaîne vide = son désactivé, le jeu reste entièrement jouable en silence.
+-- Format exact « rbxassetid://<nombre> » (un nombre seul ou une adresse de page du Creator Store
+-- donnerait un son muet sans erreur ; vérifié par Fix_r3_partage_2.spec). Avant la publication :
+-- choisir à l'écoute des sons publiés par Roblox lui-même (bibliothèque audio du Creator Store,
+-- utilisables sans téléversement), au minimum Pop, Coin, Catch, Bank, LevelUp, Reward, Error,
+-- Whoosh, Supernova et Music, puis relâcher la règle « vides par défaut » de Contract.spec.
 
 export type SoundDef = { id: string, volume: number, pitch: number? }
 

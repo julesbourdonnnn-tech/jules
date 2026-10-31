@@ -21,6 +21,10 @@
 --     ouverte → fermée ; sinon, sans panneau, sélection active → effacée ; sinon laissé aux autres
 --     (panneau ouvert : ○ / Échap / L1 / R1 liés et absorbés par PanelController à plus haute
 --     priorité)
+--   * écran de chargement encore affiché (ScreenGui PlayerGui « Loading », src/first/Loading.client) :
+--     △, ○, L1 / R1 / L2 / R2, croix et raccourcis de panneaux passent (Pass) sans rien faire, ni
+--     sélection effacée, ni son, ni RailRequested : le HUD est caché derrière l'écran (△ y
+--     sélectionnerait un bouton du rail invisible que ✕ activerait) ; Loading garde « Réessayer »
 --   * type d'entrée (1 tactile, 2 clavier-souris, 3 manette) : entrée préférée de Client/Util/Platform
 --     (Platform.inputKind, Platform.Changed "input") → remote SetInputType au plus 1 / 5 s
 --     (seulement s'il change)
@@ -231,6 +235,14 @@ local function clearSelection()
 	pcall(function()
 		GuiService.SelectedObject = nil
 	end)
+end
+
+-- Écran de chargement (src/first/Loading.client, ScreenGui « Loading » du PlayerGui) encore là :
+-- le jeu est derrière lui, ses raccourcis ne font rien
+local function loadingShown(): boolean
+	local player = Players.LocalPlayer
+	local playerGui = if player then player:FindFirstChildOfClass("PlayerGui") else nil
+	return playerGui ~= nil and playerGui:FindFirstChild("Loading") ~= nil
 end
 
 local function character(): (Humanoid?, BasePart?)
@@ -644,7 +656,7 @@ local function onWheelAction(
 	state: Enum.UserInputState,
 	_input: InputObject
 ): Enum.ContextActionResult
-	if not began(state) then
+	if not began(state) or loadingShown() then
 		return Enum.ContextActionResult.Pass
 	end
 	if wheelOpen then
@@ -660,7 +672,7 @@ local function onCloseAction(
 	state: Enum.UserInputState,
 	_input: InputObject
 ): Enum.ContextActionResult
-	if not began(state) then
+	if not began(state) or loadingShown() then
 		return Enum.ContextActionResult.Pass
 	end
 	-- (panneau ouvert : PanelController lie ○ / Échap à plus haute priorité et les absorbe)
@@ -683,7 +695,7 @@ local function onPanelAction(
 	state: Enum.UserInputState,
 	input: InputObject
 ): Enum.ContextActionResult
-	if not began(state) then
+	if not began(state) or loadingShown() then
 		return Enum.ContextActionResult.Pass
 	end
 	local name = PANEL_KEYS[input.KeyCode]
@@ -699,7 +711,7 @@ local function onRailAction(
 	state: Enum.UserInputState,
 	_input: InputObject
 ): Enum.ContextActionResult
-	if not began(state) then
+	if not began(state) or loadingShown() then
 		return Enum.ContextActionResult.Pass
 	end
 	-- △ ramène au jeu depuis un panneau (sélection comprise : jamais un bouton du rail derrière la
@@ -728,7 +740,7 @@ local function onQuestAction(
 	_input: InputObject
 ): Enum.ContextActionResult
 	-- en jeu seulement (§6.1) : panneau ouvert, le suivi de quête derrière la fenêtre ne bouge pas
-	if not began(state) or currentPanel() ~= nil then
+	if not began(state) or currentPanel() ~= nil or loadingShown() then
 		return Enum.ContextActionResult.Pass
 	end
 	InputController.QuestToggled:Fire()
@@ -740,7 +752,7 @@ local function onMinimapAction(
 	state: Enum.UserInputState,
 	_input: InputObject
 ): Enum.ContextActionResult
-	if not began(state) then
+	if not began(state) or loadingShown() then
 		return Enum.ContextActionResult.Pass
 	end
 	InputController.MinimapToggled:Fire()
@@ -752,7 +764,7 @@ local function onCheerAction(
 	state: Enum.UserInputState,
 	_input: InputObject
 ): Enum.ContextActionResult
-	if not began(state) then
+	if not began(state) or loadingShown() then
 		return Enum.ContextActionResult.Pass
 	end
 	return if InputController.requestCheer()

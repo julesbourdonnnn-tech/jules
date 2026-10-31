@@ -282,13 +282,15 @@ return function(T)
 			for uid in data.nebbies do
 				ctx.A.setLock(p, uid, true)
 			end
-			local uids = ctx.A.addNebbies(p, codes(ctx, 23, 1), "comet") -- un Épique arrive
+			-- un Épique arrive d'une PARADE (seule source dont les arrivants excédentaires peuvent être
+			-- libérés, GDD §4.9 ; une récompense reste toujours : Fix_r3_serveur_3_atlas)
+			local uids = ctx.A.addNebbies(p, codes(ctx, 23, 1), "parade")
 			expect(uids).toEqual({})
 			expect(data.nebbies.u8).toBeNil()
 			expect(count(data.nebbies)).toBe(7)
 			expect(data.stardust).toBe(60)
 			-- un Cosmique n'est jamais libéré, même en excès
-			local cosmic = ctx.A.addNebbies(p, codes(ctx, 36, 1), "comet")
+			local cosmic = ctx.A.addNebbies(p, codes(ctx, 36, 1), "parade")
 			expect(#cosmic).toBe(1)
 			expect(count(data.nebbies)).toBe(8)
 		end)

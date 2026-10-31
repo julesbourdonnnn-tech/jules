@@ -135,7 +135,9 @@ local CHEER_WINDOW = Balance.Cheer.Window + 2
 local CHEER_SECONDS = 1
 local UPGRADE_RING = 12
 local UPGRADE_RING_SECONDS = 0.4
-local GHOST_SECONDS = 1
+-- silhouette fantôme d'Améliorer Conga : jouée en pleine vue après la fermeture du panneau, assez
+-- longue pour qu'on la voie se poser au bout de la file (GDD §3)
+local GHOST_SECONDS = 1.4
 local ZEN_FADE = 0.3
 local PING_SIZE = 4
 local PING_POOL = 6
@@ -687,7 +689,7 @@ function VFXController.playUpgrade(track: string, level: number)
 	VFXController.ring(feet, UPGRADE_RING, Color3.fromRGB(120, 230, 255), UPGRADE_RING_SECONDS)
 	local slot = WorldStateController.localSlot()
 	if track == "conga" then
-		-- silhouette fantôme (Ball ForceField) au bout de la file pendant 1 s
+		-- silhouette fantôme (Ball ForceField) au bout de la file pendant GHOST_SECONDS
 		local positions = CongaRenderer.nodePositions(slot)
 		local tail = positions[#positions]
 		local spot = if tail

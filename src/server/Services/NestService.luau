@@ -26,7 +26,11 @@
 --   * réglages : remote SetSetting — clés de Config/Settings, type attendu, valeurs ; zen : dans son
 --     port sûr, recharge 60 s, Feedback zenOn/zenOff, Analytics ZenToggled ; quitter le Zen exige
 --     une file VIDE (Feedback zenBankFirst) : une file attrapée sans risque garde le plafond Zen du
---     Conga Bonus jusqu'à son encaissement (longueur suivie par Signals.LineChanged) ; privateNoSnip :
+--     Conga Bonus jusqu'à son encaissement (longueur suivie par Signals.LineChanged) ; une file
+--     contenant des Nebbies attrapés en Zen et lâchée SANS parade (mort, réinitialisation du
+--     personnage, Supernova, changement de Nid : en Zen, ni coupe ni Gloomwisp) se reprend au sol
+--     pendant LooseLifetime + ScatterTime s → quitter le Zen y est refusé (Feedback zenLooseWait) :
+--     sinon « réinitialiser, couper le Zen, tout reprendre » contournerait le plafond ; privateNoSnip :
 --     propriétaire du serveur privé (réglage de serveur en mémoire) ; Signals.SettingChanged
 --   * cosmétiques : remote EquipCosmetic, unlock() (stocké + Celebrate "unlock"), grantTemporary()
 --     (session), hasUnlock() (gratuit, stocké, temporaire, pass, R atteint, statistique, Atlas)
@@ -115,6 +119,15 @@ type Placement = { character: Model, pos: Vector3, before: Vector3? }
 local placed: { [Player]: Placement } = {}
 -- Longueur de la file (Signals.LineChanged) ; absente = file vide
 local lineLength: { [Player]: number } = {}
+-- La file en cours contient des Nebbies attrapés en Zen (elle a grandi pendant le Zen)
+local zenLine: { [Player]: boolean } = {}
+-- Parade signalée depuis le dernier Signals.LineChanged : la file vidée a été ENCAISSÉE, pas lâchée
+local paraded: { [Player]: boolean } = {}
+-- Fin (Clock) de la fenêtre où une file Zen lâchée sans parade gît encore au sol, reprenable par son
+-- propriétaire (priorité) : quitter le Zen y est refusé
+local zenDropUntil: { [Player]: number } = {}
+-- Durée de vie d'un Nebby libre, arc de dispersion compris
+local LOOSE_WINDOW = Balance.Snip.LooseLifetime + Balance.Snip.ScatterTime
 -- joueurs partis (faible) : un thread d'attribution qui reprend après un yield s'arrête
 local gone: { [Player]: boolean } = setmetatable({}, { __mode = "k" }) :: any
 local privateNoSnip = false
@@ -414,6 +427,9 @@ local function onPlayerRemoving(player: Player)
 	readyFired[player] = nil
 	placed[player] = nil
 	lineLength[player] = nil
+	zenLine[player] = nil
+	paraded[player] = nil
+	zenDropUntil[player] = nil
 	for _, cache in friendCache do
 		cache[player.UserId] = nil
 	end
@@ -510,13 +526,41 @@ function NestService.Start()
 		-- pass remboursé ou plus possédé : badge VIP retiré, cosmétiques du pass rendus par défaut
 		applyIdentity(player)
 	end)
-	-- longueur de la file (règle du Zen) ; le signal du départ arrive parfois après le nettoyage
-	Signals.LineChanged:Connect(function(player: Player, n: number)
-		if gone[player] or player.Parent == nil or type(n) ~= "number" or not (n > 0) then
-			lineLength[player] = nil
+	-- file encaissée (Parade est émis pendant le tick, AVANT le Signals.LineChanged qui la vide)
+	Signals.Parade:Connect(function(player: Player)
+		if gone[player] or player.Parent == nil then
 			return
 		end
-		lineLength[player] = n
+		paraded[player] = true
+	end)
+	-- longueur de la file (règles du Zen) ; le signal du départ arrive parfois après le nettoyage
+	Signals.LineChanged:Connect(function(player: Player, n: number)
+		if gone[player] or player.Parent == nil then
+			lineLength[player] = nil
+			zenLine[player] = nil
+			paraded[player] = nil
+			zenDropUntil[player] = nil
+			return
+		end
+		local before = lineLength[player] or 0
+		local count = if type(n) == "number" and n > 0 then n else 0
+		local banked = paraded[player] == true
+		paraded[player] = nil
+		local zen = NestService.isZen(player)
+		if count > before and zen then
+			zenLine[player] = true
+		end
+		if count > 0 then
+			lineLength[player] = count
+			return
+		end
+		-- file vidée sans parade alors qu'elle contenait des Nebbies attrapés en Zen : ils gisent au
+		-- sol, reprenables en priorité ; le Zen reste jusqu'à leur disparition
+		if before > 0 and zen and zenLine[player] and not banked then
+			zenDropUntil[player] = Clock.now() + LOOSE_WINDOW
+		end
+		lineLength[player] = nil
+		zenLine[player] = nil
 	end)
 
 	Net.event("SetSetting").OnServerEvent:Connect(onSetSetting)
@@ -681,13 +725,28 @@ function NestService.applySetting(player: Player, key: string, value: any): (boo
 		Notify.feedback(player, "feedback.notInHarbor", {}, "warning")
 		return false, "feedback.notInHarbor"
 	end
+	local now = Clock.now()
 	if key == "zen" and value ~= true and (lineLength[player] or 0) > 0 then
 		-- une file attrapée en Zen (sans risque de coupe) s'encaisse avec le plafond Zen (GDD §4.16 :
 		-- « le plafond garde la poursuite plus rentable ») : on ne quitte pas le Zen à la porte
 		Notify.feedback(player, "feedback.zenBankFirst", {}, "warning")
 		return false, "feedback.zenBankFirst"
 	end
-	local now = Clock.now()
+	if key == "zen" and value ~= true then
+		-- file Zen lâchée sans parade (réinitialisation du personnage…) : ses Nebbies se reprennent
+		-- encore au sol ; sans Zen, ils seraient encaissés sans le plafond
+		local dropUntil = zenDropUntil[player]
+		if dropUntil ~= nil and now < dropUntil then
+			Notify.feedback(
+				player,
+				"feedback.zenLooseWait",
+				{ seconds = math.max(1, math.ceil(dropUntil - now)) },
+				"warning"
+			)
+			return false, "feedback.zenLooseWait"
+		end
+		zenDropUntil[player] = nil
+	end
 	if def.cooldown then
 		local last = zenChangedAt[player]
 		if last ~= nil and now - last < def.cooldown then
@@ -854,6 +913,9 @@ function NestService.debugTracked(player: Player): boolean
 		or charConns[player] ~= nil
 		or placed[player] ~= nil
 		or lineLength[player] ~= nil
+		or zenLine[player] ~= nil
+		or paraded[player] ~= nil
+		or zenDropUntil[player] ~= nil
 	then
 		return true
 	end

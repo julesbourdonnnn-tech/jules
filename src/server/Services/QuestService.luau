@@ -5,7 +5,9 @@
 -- services plus tardifs (table goal.kind → signal : en-tête de Config/Quests).
 -- Responsabilités :
 --   * chaîne d'accueil Q1-Q7 (Config/Quests.Onboarding) : récompense AUTOMATIQUE à la complétion,
---     Celebrate "questDone" puis "questClaimed", étape d'entonnoir ; au premier PlayerReady (step 0) :
+--     Celebrate "questDone" puis "questClaimed", étape d'entonnoir ; récompense « unlock » (Q4 :
+--     "atlas") → Celebrate "atlasUnlocked" { count, total } APRÈS "questClaimed" (le moment du
+--     déblocage de l'Atlas, GDD §3 ≈ 3 min) ; au premier PlayerReady (step 0) :
 --     SpawnService.spawnWelcome et setDirected pendant Q1-Q3 ; Q4 : spawnGuaranteedRare (une fois
 --     par compte, au début de Q4)
 --   * entonnoir d'accueil (§14.1) : TOUTES les étapes 1-10 sont envoyées ici (Analytics.funnel)
@@ -21,6 +23,10 @@
 --     attendue jusqu'à onSafeMoment (parade ou file vide, appelé par CongaService ; la longueur de
 --     file est suivie par Signals.LineChanged) ; bannière personnelle « rookieEnd », attribut
 --     Player « Rookie », Signals.RookieEnded, Analytics RookieShieldEnded (minutes jouées)
+--   * captures (Signals.Caught) : un Nebby REPRIS par son propriétaire (info.recovered : ses
+--     propres Nebbies libres, prioritaires après une coupe ou une mort) a déjà été compté à sa
+--     première capture → ni statistique, ni quête (sinon « attraper un Épique, se réinitialiser, le
+--     reprendre » validerait les quêtes difficiles avec un seul Nebby)
 --   * statistiques (clé « stats ») et temps de jeu (step, crochet onBeforeSave) ; titres de
 --     statistiques (Cosmetics.Titles, source « stat ») via NestService.unlock ; SessionLength
 --   * registre du cadeau Starfall Saturday (stats.starfallGift = startsAt du dernier show servi) :
@@ -255,7 +261,10 @@ end
 -- Récompenses
 -- ---------------------------------------------------------------------------------------------
 
-type Granted = { glow: number, stardust: number, boostSeconds: number?, code: number? }
+type Granted = { glow: number, stardust: number, boostSeconds: number?, code: number?, unlock: string? }
+
+-- Fonctionnalités d'interface que reward.unlock peut débloquer (Config/Quests.Reward)
+local UNLOCKS: { [string]: boolean } = { atlas = true }
 
 -- Applique une récompense (Config/Quests.Reward ou Data/Codes.CodeReward) ; chaque effet est
 -- protégé : un échec n'empêche pas les autres. `quietBoost` : l'appelant annonce lui-même le boost
@@ -325,7 +334,26 @@ local function grantReward(
 			out.code = code
 		end
 	end
+	-- déblocage d'interface : annoncé par l'appelant APRÈS ses propres célébrations (announceUnlock)
+	local unlock = reward.unlock
+	if type(unlock) == "string" and UNLOCKS[unlock] then
+		out.unlock = unlock
+	end
 	return out
+end
+
+-- Le moment d'un déblocage (GDD §3 : « l'Atlas se débloque, page qui tourne, 5/150 ») : Celebrate
+-- dédié, distinct du « Quête terminée ! » générique ; le client tourne la page et pointe l'icône
+local function announceUnlock(player: Player, unlock: string?)
+	if unlock == "atlas" then
+		local count = Safe.value(TAG .. ".atlasCount", 0, AtlasService.atlasCount, player)
+		-- type élargi tant que "atlasUnlocked" manque à Types.CelebrateKind (docs/04 §10.3)
+		local kind: any = "atlasUnlocked"
+		Notify.celebrate(player, kind, {
+			count = if type(count) == "number" and count >= 0 then math.floor(count) else 0,
+			total = Nebbies.atlasTotal(),
+		})
+	end
 end
 
 -- ---------------------------------------------------------------------------------------------
@@ -578,6 +606,7 @@ local function completeOnboarding(player: Player, data: { [string]: any }, s: Se
 		glow = granted.glow,
 		stardust = granted.stardust,
 	})
+	announceUnlock(player, granted.unlock)
 	if def.funnel then
 		funnel(player, def.funnel, def.funnelName)
 	end
@@ -724,6 +753,11 @@ end
 
 local function onCaught(player: Player, info: Types.CatchInfo)
 	if type(info) ~= "table" or not Nebbies.isValidCode(info.code) then
+		return
+	end
+	if info.recovered == true then
+		-- ses propres Nebbies repris (coupe, mort, réinitialisation) : déjà comptés à la première
+		-- capture. Les Nebbies libres d'un autre joueur et les Épiques d'une Comète restent comptés.
 		return
 	end
 	withSession(player, function(p, data, s)
