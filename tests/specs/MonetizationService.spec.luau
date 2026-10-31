@@ -5,14 +5,14 @@ return function(T)
 	local function boot()
 		local h = Harness.new()
 		local cfg = h:require("ReplicatedStorage.Shared.Config.Monetization")
-		cfg.Products.TestCoins = { id = 1001, price = 99, nameKey = "x", descKey = "x", order = 1 }
+		cfg.Products.TestDust = { id = 1001, price = 99, nameKey = "x", descKey = "x", order = 1 }
 		cfg.Passes.TestVIP = { id = 2001, price = 199, nameKey = "x", descKey = "x", order = 1 }
 		local DS = h:require("ServerScriptService.Server.Services.DataService")
 		DS.Settings.RETRY_BASE_DELAY = 0.001
 		local M = h:require("ServerScriptService.Server.Services.MonetizationService")
 		h:boot()
-		M.registerProduct("TestCoins", function(player, data)
-			DS.increment(player, "coins", 1000)
+		M.registerProduct("TestDust", function(player, data)
+			DS.increment(player, "stardust", 1000)
 			return true
 		end)
 		return h, DS, M
@@ -26,9 +26,9 @@ return function(T)
 			local Enum = h.globals.Enum
 			expect(h:purchaseProduct(p, 1001, "achat-1")).toBe(Enum.ProductPurchaseDecision.PurchaseGranted)
 			expect(h:purchaseProduct(p, 1001, "achat-1")).toBe(Enum.ProductPurchaseDecision.PurchaseGranted)
-			expect(DS.get(p).coins).toBe(1000)
+			expect(DS.get(p).stardust).toBe(1000)
 			expect(h:purchaseProduct(p, 1001, "achat-2")).toBe(Enum.ProductPurchaseDecision.PurchaseGranted)
-			expect(DS.get(p).coins).toBe(2000)
+			expect(DS.get(p).stardust).toBe(2000)
 		end)
 
 		it("ne crédite pas un joueur absent ou un produit inconnu", function()
@@ -50,7 +50,7 @@ return function(T)
 			expect(h:purchaseProduct(p, 1001, "z")).toBe(Enum.ProductPurchaseDecision.NotProcessedYet)
 			h.dataStoreFailures = 0
 			expect(h:purchaseProduct(p, 1001, "z")).toBe(Enum.ProductPurchaseDecision.PurchaseGranted)
-			expect(DS.get(p).coins).toBe(1000)
+			expect(DS.get(p).stardust).toBe(1000)
 		end)
 
 		it("accorde un gamepass possédé à l'arrivée et acheté en jeu", function()

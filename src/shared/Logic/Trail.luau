@@ -19,6 +19,11 @@ export type Trail = {
 	setMaxLength: (self: Trail, maxLength: number) -> (),
 	sample: (self: Trail, count: number, spacing: number, firstGap: number?) -> { Vector3 },
 	head: (self: Trail) -> Vector3?,
+	-- Extension du contrat (paquet « logic », docs/04-architecture.md §12.1) :
+	-- numérotation des points pour le réseau (PathStream). firstSeq = numéro de points[1] ;
+	-- push incrémente, la coupe des vieux points avance firstSeq, reset continue la numérotation.
+	lastSeq: (self: Trail) -> number,
+	since: (self: Trail, seq: number, maxCount: number?) -> (number, { Vector3 }),
 }
 
 local Trail = {}
@@ -155,6 +160,44 @@ function Trail.findCut(
 		end
 	end
 	return nil, nil
+end
+
+-- ---------------------------------------------------------------------------------------------
+-- Extension du contrat — paquet « logic » (STUBS, docs/04-architecture.md §12.1, GDD §4.7, §12.4)
+--  * Trail.new(maxLength, minStep?, firstSeq?) : firstSeq (défaut 1) = numéro du premier point
+--  * trail:lastSeq() = firstSeq + #points − 1 (firstSeq − 1 si vide)
+--  * trail:since(seq, maxCount?) → (numéro du 1er point rendu, points de numéro ≥ seq), borné
+--    aux points encore présents ; maxCount garde les PLUS RÉCENTS
+--  * Trail.segmentDistanceXZ(a0, a1, b0, b1) → (distance, s, t) : distance minimale dans le plan
+--    XZ entre les segments [a0, a1] et [b0, b1], s et t ∈ [0, 1] les paramètres des points proches
+--  * Trail.findCutSwept(nodes, from, to, radius, firstSegment, maxDy?, skip?) → (k, point) :
+--    premier segment k ≥ max(2, firstSegment) (segment k = [nodes[k−1], nodes[k]]) dont la
+--    distance XZ au balayage [from, to] ≤ radius et |Δy| ≤ maxDy (défaut 4) ;
+--    skip(k, point) = true ignore ce segment (escorte, port sûr). Test à 3,6 studs/tick sans trou.
+-- ---------------------------------------------------------------------------------------------
+
+function Trail.lastSeq(_self: Trail): number
+	error("TODO(logic): Trail.lastSeq")
+end
+
+function Trail.since(_self: Trail, _seq: number, _maxCount: number?): (number, { Vector3 })
+	error("TODO(logic): Trail.since")
+end
+
+function Trail.segmentDistanceXZ(_a0: Vector3, _a1: Vector3, _b0: Vector3, _b1: Vector3): (number, number, number)
+	error("TODO(logic): Trail.segmentDistanceXZ")
+end
+
+function Trail.findCutSwept(
+	_nodes: { Vector3 },
+	_from: Vector3,
+	_to: Vector3,
+	_radius: number,
+	_firstSegment: number,
+	_maxDy: number?,
+	_skip: ((k: number, point: Vector3) -> boolean)?
+): (number?, Vector3?)
+	error("TODO(logic): Trail.findCutSwept")
 end
 
 return Trail

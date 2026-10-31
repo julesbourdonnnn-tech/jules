@@ -9,10 +9,23 @@ Net.setup()
 
 local Services = script.Parent.Services
 
--- Ordre explicite : un service ne dépend que de ceux listés avant lui.
+-- Ordre explicite (GDD §12.3, docs/04-architecture.md §5) : un service n'appelle directement que
+-- ceux listés avant lui ; vers le haut, il passe par Server/Signals. CongaService est le dernier :
+-- il orchestre le tick de 10 Hz.
 local ORDER = {
 	"DataService",
 	"MonetizationService",
+	"WorldService",
+	"NestService",
+	"EconomyService",
+	"AtlasService",
+	"SpawnService",
+	"EventService",
+	"CrewService",
+	"QuestService",
+	"ProductService",
+	"LeaderboardService",
+	"CongaService",
 }
 
 local modules = {}

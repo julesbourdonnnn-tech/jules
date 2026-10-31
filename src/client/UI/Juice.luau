@@ -11,11 +11,16 @@ local TweenService = game:GetService("TweenService")
 local Juice = {}
 
 Juice.cameraShakeEnabled = true
+-- Réglage « Mouvement réduit » du joueur (posé par Client/Util/Prefs), en plus de GuiService
+Juice.forceReducedMotion = false
 
 -- Un seul tween actif par (instance, propriété)
 local active: { [Instance]: { [string]: Tween } } = setmetatable({}, { __mode = "k" }) :: any
 
 function Juice.reducedMotion(): boolean
+	if Juice.forceReducedMotion then
+		return true
+	end
 	local ok, value = pcall(function()
 		return GuiService.ReducedMotionEnabled
 	end)

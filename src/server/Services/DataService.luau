@@ -14,6 +14,8 @@
 --   DataService.increment(player, key, delta)    -- nombres
 --   DataService.markDirty(player, key)           -- après mutation d'une table imbriquée
 --   DataService.saveNow(player) -> boolean       -- sauvegarde immédiate (achats)
+--   DataService.onBeforeSave(fn)                 -- fn(player, data) juste avant chaque écriture
+--                                                   (EconomyService y règle le revenu passif)
 
 local DataStoreService = game:GetService("DataStoreService")
 local Players = game:GetService("Players")
@@ -61,6 +63,7 @@ local pendingPatch: { [Player]: { [string]: boolean } } = {}
 local flushScheduled = false
 local released: { [Player]: boolean } = {}
 local releasing: { [Player]: boolean } = {}
+local beforeSave: { (Player, { [string]: any }) -> () } = {}
 
 local snapshotRemote: RemoteEvent
 local patchRemote: RemoteEvent
@@ -246,6 +249,13 @@ local function save(player: Player, release: boolean): boolean
 	if not release and releasing[player] then
 		return false
 	end
+	-- crochets synchrones (ex. règlement du revenu passif) avant l'instantané écrit
+	for _, fn in beforeSave do
+		local ok, err = pcall(fn, player, data)
+		if not ok then
+			warn("[DataService] crochet onBeforeSave en échec :", err)
+		end
+	end
 	saving[player] = true
 	local ok = writeRecord(player, data, release)
 	saving[player] = nil
@@ -415,6 +425,12 @@ end
 
 function DataService.saveNow(player: Player): boolean
 	return save(player, false)
+end
+
+-- Enregistre un crochet appelé (sans yield) juste avant chaque sauvegarde du joueur :
+-- autosave, saveNow, départ et BindToClose.
+function DataService.onBeforeSave(fn: (Player, { [string]: any }) -> ())
+	table.insert(beforeSave, fn)
 end
 
 return DataService

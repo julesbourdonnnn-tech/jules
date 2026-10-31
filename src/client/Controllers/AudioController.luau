@@ -9,9 +9,10 @@ local SoundService = game:GetService("SoundService")
 local Sounds = require(ReplicatedStorage:WaitForChild("Shared").Config.Sounds)
 
 local AudioController = {}
-AudioController.enabled = true
+AudioController.enabled = true -- effets sonores (réglage « sfx », posé par Client/Util/Prefs)
 
 local instances: { [string]: Sound } = {}
+local musicEnabled = true
 
 function AudioController.Init()
 	local folder = Instance.new("Folder")
@@ -43,8 +44,28 @@ function AudioController.Start()
 	local music = instances.Music
 	if music then
 		music.Looped = true
-		music:Play()
+		if musicEnabled then
+			music:Play()
+		end
 	end
+end
+
+-- Réglage « Musique » (Client/Util/Prefs) : coupe ou relance la musique en boucle
+function AudioController.setMusicEnabled(enabled: boolean)
+	musicEnabled = enabled
+	local music = instances.Music
+	if not music then
+		return
+	end
+	if enabled and not music.Playing then
+		music:Play()
+	elseif not enabled and music.Playing then
+		music:Stop()
+	end
+end
+
+function AudioController.isMusicEnabled(): boolean
+	return musicEnabled
 end
 
 function AudioController.play(name: string, pitchVariation: number?)

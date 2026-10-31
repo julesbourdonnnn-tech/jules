@@ -259,6 +259,10 @@ function Harness.new(options: { mode: string?, touch: boolean?, isStudio: boolea
 	client.Name = "Client"
 	client.Parent = game.StarterPlayer.StarterPlayerScripts
 	mount(h, client, h.root .. "/src/client")
+	-- src/first → ReplicatedFirst (écran de chargement), monté directement sous le service
+	if fs.isDir(h.root .. "/src/first") then
+		mount(h, game.ReplicatedFirst, h.root .. "/src/first")
+	end
 
 	h.globals = h:_makeGlobals()
 

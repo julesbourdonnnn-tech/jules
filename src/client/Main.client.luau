@@ -3,12 +3,25 @@
 
 local Client = script.Parent
 
--- Ordre explicite : un contrôleur ne dépend que de ceux listés avant lui.
+-- Ordre explicite (docs/04-architecture.md §13.1) : un module n'appelle directement que ceux
+-- listés avant lui ; vers le haut, il écoute leurs signaux.
 local ORDER: { ModuleScript } = {
 	Client.UI.Root,
 	Client.Controllers.StateController,
 	Client.Controllers.AudioController,
+	Client.Util.Prefs,
 	Client.Controllers.WorldFXController,
+	Client.Controllers.WorldStateController,
+	Client.Controllers.LightingController,
+	Client.Controllers.CongaRenderer,
+	Client.Controllers.VFXController,
+	Client.UI.ScreenFX,
+	Client.UI.Banners,
+	Client.Controllers.PanelController,
+	Client.Controllers.InputController,
+	Client.UI.HUD,
+	Client.UI.Minimap,
+	Client.Controllers.OnboardingController,
 }
 
 local modules = {}
