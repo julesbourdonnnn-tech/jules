@@ -3,8 +3,9 @@
 -- Équipages (mémoire), escorte, pings, acclamations, file des bannières de serveur, cadeau Duo.
 -- Responsabilités :
 --   * équipages de 4 max : formation automatique des amis Roblox présents (réglage autoCrew des
---     DEUX joueurs, Player:IsFriendsWith en pcall, résultat en cache) ; remotes CrewInvite(userId)
---     1/3 s et 5/min, CrewRespond(inviterId, accept) 2/s (invitation de 20 s), CrewLeave() 1/5 s ;
+--     DEUX joueurs, cache de NestService.friendsCached puis Player:IsFriendsWith en pcall, résultat
+--     en cache) ; remotes CrewInvite(userId) 1/3 s et 5/min, CrewRespond(inviterId, accept) 2/s
+--     (invitation de 20 s), CrewLeave() 1/5 s ;
 --     refus si refuseInvites ; départ du serveur = départ de l'équipage ; un équipage d'un seul
 --     membre est dissous ; CrewState à tous à chaque changement (et à l'arrivée) ; attribut Player
 --     « CrewId » ; Signals.CrewChanged ; EconomyService.setCrewPresent pour chaque membre
@@ -286,12 +287,19 @@ end
 -- Amis Roblox : équipages automatiques et cadeau Duo
 -- ---------------------------------------------------------------------------------------------
 
--- Amitié (yield : IsFriendsWith en pcall ; le résultat est mis en cache, pas les échecs)
+-- Amitié (yield : IsFriendsWith en pcall ; le résultat est mis en cache, pas les échecs). La paire
+-- a presque toujours déjà été vérifiée par l'attribution du Nid : NestService.friendsCached (sans
+-- yield) est lu d'abord, l'appel web (limité par Roblox) n'est fait que s'il l'ignore (N78)
 local function areFriends(a: Player, b: Player): boolean
 	local key = pairKey(a.UserId, b.UserId)
 	local cached = friendCache[key]
 	if cached ~= nil then
 		return cached
+	end
+	local okNest, known = Safe.call(TAG .. ".friendsCached", NestService.friendsCached, a, b)
+	if okNest and type(known) == "boolean" then
+		friendCache[key] = known
+		return known
 	end
 	local ok, result = pcall(function()
 		return a:IsFriendsWith(b.UserId)

@@ -324,23 +324,8 @@ Balance.GlowParty = {
 	HideAbove = 1200, -- bouton masqué si plus de 20 min restantes
 }
 
--- Contrôle de déplacement (§12.7)
-Balance.MoveCheck = {
-	Margin = 1.5, -- déplacement XZ autorisé = vmax × dt × Margin + Slack
-	Slack = 4,
-	SpeedWindow = 0.5, -- vmax = WalkSpeed max des 0,5 dernières s
-	MaxClimbSpeed = 12,
-	FlagsToRewind = 3,
-	FlagWindow = 5,
-	RewindLockout = 3, -- s sans capture/coupe/parade après un retour
-	Exemption = 3, -- après apparition ou PivotTo serveur
-	MaxAltitude = 14, -- au-dessus du sol…
-	AltitudeTime = 1.5, -- … pendant plus de 1,5 s
-	MaxRadius = 182,
-	MinY = -5,
-	StrikesForBan = 10, -- retours forcés…
-	StrikeWindow = 600, -- … en 10 min → exclusion des classements
-}
+-- Contrôle de déplacement (§12.7) : seuils SERVEUR SEULEMENT, dans
+-- ServerScriptService.Server.Conga.Tuning.MoveCheck (jamais répliqués aux clients)
 
 -- Apparitions (§4.3)
 Balance.Spawn = {

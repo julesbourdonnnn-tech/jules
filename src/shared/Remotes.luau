@@ -7,7 +7,7 @@
 return {
 	-- Données joueur (DataService ↔ StateController)
 	DataSnapshot = "event", -- serveur → client : état complet
-	DataPatch = "event", -- serveur → client : (patch, removedKeys)
+	DataPatch = "event", -- serveur → client : (patch, removedKeys, entries?: Types.DataPatchEntries)
 	RequestSnapshot = "event", -- client → serveur : redemande l'état complet
 
 	-- Client → serveur : intentions (GDD §12.5)

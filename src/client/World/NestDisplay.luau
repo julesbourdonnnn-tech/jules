@@ -14,7 +14,9 @@
 --   * liens d'équipage la nuit (Beam entre les Nids des équipiers, tracé en 0,6 s, visible aussi de
 --     jour quelques secondes à la formation, GDD §9.4)
 --   * SpotLight sur le meilleur perchoir du Nid local ; stèle « Plus longues congas » (SurfaceGui,
---     attributs Live / Record / Weekly « userId:nom:n;… »)
+--     attributs Live / Record / Weekly / Atlas « userId:nom:n;… », GDD §6.7) : les quatre sections
+--     ne tiennent pas ensemble en lignes lisibles sur la face de 10 × 6 studs, elles tournent en
+--     pages de 6 s (congas en cours + record, semaine, Star Atlas ; pages mondiales vides sautées)
 --   * anneau de progression vers la Supernova autour du Nid LOCAL (GDD §3, « ~5 min ») : segments
 --     Néon plats au ras de la plateforme, remplis selon Glow prédit / Formulas.supernovaCost(R)
 --     (4 Hz), étiquette « ✺ Supernova 37 % », pulsation quand la Supernova est payable ; affiché à
@@ -53,6 +55,10 @@ local FloatText = require(script.Parent.FloatText)
 
 local NestDisplay = {}
 
+-- AnimState unique passé à NebbyBuilder.animate (qui le lit sans le garder) : aucune table jetable
+-- par perché et par image
+local animState: NebbyBuilder.AnimState = { t = 0, phase = 0, blink = false, speed = 0 }
+
 -- Constantes graphiques (GDD §6.6, §9.3, §11.3) ---------------------------------------------------
 
 local SLOT_COUNT = Zones.Nests.Count
@@ -84,6 +90,9 @@ local SPOT_ANGLE = 45
 local SPOT_COLOR = Color3.fromRGB(255, 225, 160)
 local BOARD_PIXELS_PER_STUD = 40
 local BOARD_LIVE, BOARD_WEEKLY = Balance.Leaderboard.TopLive, Balance.Leaderboard.TopWeekly
+local BOARD_PAGE_SECONDS = 6 -- s par page de la stèle
+local BOARD_HEADER_WEIGHT = 1.3 -- hauteur d'un titre de la stèle, en lignes
+local BOARD_PAD = 0.04 -- marges haute et basse de la stèle (part de la face)
 -- Anneau de la Supernova (Nid local) : entre les perchoirs (r ≤ 14,1) et le bord de la plateforme
 local RING_SEGMENTS = 40
 local RING_RADIUS = 15.5
@@ -682,6 +691,51 @@ local function parseBoard(raw: any, limit: number): { BoardEntry }
 	return out
 end
 
+-- Sections et pages de la stèle. Les quatre sections (31 lignes au plus) ne tiennent pas ensemble
+-- en lignes lisibles sur la face (10 × 6 studs) : elles se la partagent en pages qui tournent toutes
+-- les BOARD_PAGE_SECONDS ; la page des congas en cours est toujours montrée, une page mondiale
+-- vide (DataStore pas encore lu) est sautée.
+type BoardSection = { attr: string, title: string, line: string, limit: number }
+type BoardPage = { title: boolean, sections: { BoardSection } }
+
+local BOARD_PAGES: { BoardPage } = {
+	{
+		title = true,
+		sections = {
+			{ attr = "Live", title = "board.live", line = "board.entry", limit = BOARD_LIVE },
+			{ attr = "Record", title = "board.record", line = "board.entry", limit = 1 },
+		},
+	},
+	{
+		title = true,
+		sections = {
+			{ attr = "Weekly", title = "board.weekly", line = "board.entry", limit = BOARD_WEEKLY },
+		},
+	},
+	{
+		title = false,
+		sections = {
+			{ attr = "Atlas", title = "board.atlas", line = "board.atlasEntry", limit = BOARD_WEEKLY },
+		},
+	},
+}
+
+-- Hauteur d'une ligne (part de la face) : la page la plus haute remplit la face, marges comprises
+local BOARD_LINE_SCALE = (function(): number
+	local tallest = 1
+	for _, page in BOARD_PAGES do
+		local weight = if page.title then BOARD_HEADER_WEIGHT else 0
+		for _, section in page.sections do
+			weight += BOARD_HEADER_WEIGHT + math.max(1, section.limit)
+		end
+		tallest = math.max(tallest, weight)
+	end
+	return (1 - 2 * BOARD_PAD) / tallest
+end)()
+
+local boardPage = 1
+local boardPageAt = 0
+
 -- Lignes de la stèle réutilisées (LeaderboardService rafraîchit Live chaque seconde : aucune
 -- création d'instances à chaque mise à jour)
 local boardLabels: { TextLabel } = {}
@@ -703,13 +757,14 @@ local function boardLine(parent: Instance, order: number, text: string, header: 
 	end
 	local l = label :: TextLabel
 	l.Visible = true
-	l.Size = UDim2.new(1, 0, 0, if header then 44 else 34)
+	l.Size = UDim2.new(1, 0, BOARD_LINE_SCALE * (if header then BOARD_HEADER_WEIGHT else 1), 0)
 	l.TextXAlignment = if header then Enum.TextXAlignment.Center else Enum.TextXAlignment.Left
 	l.FontFace = if header then HEADER_FONT else ENTRY_FONT
 	l.TextColor3 = if header then HEADER_COLOR else Color3.new(1, 1, 1)
 	l.Text = text
 end
 
+-- Page courante de la stèle (titre, puis chaque section : titre et lignes ou « — »)
 local function refreshBoard()
 	local part = board
 	local gui = boardGui
@@ -725,21 +780,52 @@ local function refreshBoard()
 		order += 1
 		boardLine(list, order, text, header)
 	end
-	local function section(titleKey: string, entries: { BoardEntry })
-		add(Prefs.t(titleKey), true)
+	local page = BOARD_PAGES[boardPage] or BOARD_PAGES[1]
+	if page.title then
+		add(Prefs.t("board.title"), true)
+	end
+	for _, section in page.sections do
+		add(Prefs.t(section.title), true)
+		local entries = parseBoard(part:GetAttribute(section.attr), section.limit)
 		if #entries == 0 then
 			add(Prefs.t("world.empty"), false)
 		end
 		for rank, e in entries do
-			add(Prefs.t("board.entry", { rank = rank, name = e.name, n = e.n }), false)
+			add(Prefs.t(section.line, { rank = rank, name = e.name, n = e.n }), false)
 		end
 	end
-	add(Prefs.t("board.title"), true)
-	section("board.live", parseBoard(part:GetAttribute("Live"), BOARD_LIVE))
-	section("board.record", parseBoard(part:GetAttribute("Record"), 1))
-	section("board.weekly", parseBoard(part:GetAttribute("Weekly"), BOARD_WEEKLY))
 	for i = order + 1, #boardLabels do
 		boardLabels[i].Visible = false
+	end
+end
+
+-- Une page mondiale a-t-elle au moins une ligne ? (la première page est toujours montrée)
+local function pageHasEntries(part: BasePart, index: number): boolean
+	for _, section in BOARD_PAGES[index].sections do
+		if #parseBoard(part:GetAttribute(section.attr), 1) > 0 then
+			return true
+		end
+	end
+	return false
+end
+
+-- Rotation des pages (appelée à 10 Hz par NestDisplay.step)
+local function stepBoard(now: number)
+	local part = board
+	if part == nil or (now >= boardPageAt and now - boardPageAt < BOARD_PAGE_SECONDS) then
+		return
+	end
+	boardPageAt = now
+	local page = boardPage
+	for _ = 1, #BOARD_PAGES do
+		page = page % #BOARD_PAGES + 1
+		if page == 1 or pageHasEntries(part, page) then
+			break
+		end
+	end
+	if page ~= boardPage then
+		boardPage = page
+		refreshBoard()
 	end
 end
 
@@ -769,6 +855,8 @@ local function trackBoard(beacon: Instance)
 	end
 	table.clear(boardLabels)
 	board = part
+	boardPage = 1
+	boardPageAt = Clock.now()
 	local gui = Instance.new("SurfaceGui")
 	gui.Name = "CongaBoard"
 	gui.Face = Enum.NormalId.Front
@@ -784,7 +872,8 @@ local function trackBoard(beacon: Instance)
 	local padding = Instance.new("UIPadding")
 	padding.PaddingLeft = UDim.new(0, 16)
 	padding.PaddingRight = UDim.new(0, 16)
-	padding.PaddingTop = UDim.new(0, 12)
+	padding.PaddingTop = UDim.new(BOARD_PAD, 0)
+	padding.PaddingBottom = UDim.new(BOARD_PAD, 0)
 	padding.Parent = list
 	local layout = Instance.new("UIListLayout")
 	layout.SortOrder = Enum.SortOrder.LayoutOrder
@@ -1166,7 +1255,11 @@ function NestDisplay.collect(
 				local pos = view.top + Vector3.new(0, size / 2 + bounce, 0)
 				local cf = CFrame.lookAt(pos, pos + view.look)
 				if r.lod == "full" then
-					NebbyBuilder.animate(r, { t = t, phase = view.phase, blink = false, speed = 0 })
+					animState.t = t
+					animState.phase = view.phase
+					animState.blink = false
+					animState.speed = 0
+					NebbyBuilder.animate(r, animState)
 				end
 				NebbyBuilder.appendCFrames(r, cf, parts, cframes)
 			end
@@ -1179,6 +1272,7 @@ function NestDisplay.step(now: number, focus: Vector3?)
 	stepFloaters(now, focus)
 	refreshSpot(focus)
 	stepRing(now)
+	stepBoard(now)
 	local night = isNight()
 	for _, link in links do
 		local show = night or now - link.start < CREW_SHOW_SECONDS

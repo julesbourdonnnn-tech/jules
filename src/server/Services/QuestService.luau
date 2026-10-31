@@ -259,14 +259,17 @@ type Granted = { glow: number, stardust: number, boostSeconds: number?, code: nu
 
 -- Applique une récompense (Config/Quests.Reward ou Data/Codes.CodeReward) ; chaque effet est
 -- protégé : un échec n'empêche pas les autres. `quietBoost` : l'appelant annonce lui-même le boost
--- (Celebrate « dailyClaimed » porte boostSeconds, que le client affiche déjà en toast)
+-- (Celebrate « dailyClaimed » porte boostSeconds, que le client affiche déjà en toast).
+-- `rotationWeek` : semaine UTC de la rotation (reward.rotation) ; par défaut la semaine courante
+-- (le Grand Défilé encaissé au passage du lundi est payé avec la Légendaire de SA semaine)
 local function grantReward(
 	player: Player,
 	reward: { [string]: any },
 	sku: string,
 	txType: string?,
 	source: string,
-	quietBoost: boolean?
+	quietBoost: boolean?,
+	rotationWeek: number?
 ): Granted
 	local out: Granted = { glow = 0, stardust = 0 }
 	local glow = reward.glow
@@ -310,7 +313,8 @@ local function grantReward(
 	if type(reward.species) == "number" then
 		species = reward.species
 	elseif type(reward.rotation) == "string" then
-		local ok, s = Safe.call(TAG .. ".rotation", EventClock.rotation, reward.rotation, Clock.week())
+		local ok, s =
+			Safe.call(TAG .. ".rotation", EventClock.rotation, reward.rotation, rotationWeek or Clock.week())
 		if ok and type(s) == "number" then
 			species = s
 		end
@@ -336,12 +340,78 @@ local function isZen(player: Player): boolean
 	return Safe.value(TAG .. ".isZen", false, NestService.isZen, player)
 end
 
--- Nouvelles quêtes du jour au premier accès du jour UTC
-local function refreshDay(player: Player, data: { [string]: any }, day: number, mark: Mark?)
+-- Encaisse l'entrée `slot` de `list` (quêtes du jour) si elle est terminée et pas encore réclamée :
+-- mutation d'abord (jamais deux fois, même si une récompense échoue), récompense du niveau,
+-- Celebrate « questClaimed ». Vrai si elle a été payée.
+local function payDaily(player: Player, list: { any }, slot: number, markFn: Mark): boolean
+	local entry = list[slot]
+	local q = if type(entry) == "table" then QuestLogic.dailyById[entry.id] else nil
+	if q == nil or entry.done ~= true or entry.claimed == true then
+		return false
+	end
+	entry.claimed = true
+	markFn(player, "quests")
+	local reward = Quests.DailyTiers[q.tier] or {}
+	local granted = grantReward(player, reward :: any, "Quest_" .. tostring(q.id), nil, "quest")
+	Notify.celebrate(player, "questClaimed", {
+		kind = "daily",
+		slot = slot,
+		glow = granted.glow,
+		stardust = granted.stardust,
+	})
+	return true
+end
+
+-- Les 3 quêtes du jour de `list` sont réclamées (condition de l'« Étoile du jour »)
+local function allDailyClaimed(list: { any }): boolean
+	if #list < DAILY_SLOTS then
+		return false
+	end
+	for _, other in list do
+		if type(other) ~= "table" or other.claimed ~= true then
+			return false
+		end
+	end
+	return true
+end
+
+local function payDailyStar(player: Player)
+	grantReward(player, Quests.DailyStar :: any, "Quest_DailyStar", nil, "quest")
+end
+
+-- Grand Défilé terminé : récompense (Légendaire de la semaine `rotationWeek`, nil = courante) et
+-- Celebrate « questClaimed ». L'appelant a déjà marqué weekly.claimed (mutation d'abord).
+local function payWeekly(player: Player, rotationWeek: number?)
+	local granted = grantReward(
+		player,
+		Quests.Weekly.reward :: any,
+		"Quest_" .. Quests.Weekly.id,
+		nil,
+		"quest",
+		nil,
+		rotationWeek
+	)
+	Notify.celebrate(player, "questClaimed", {
+		kind = "weekly",
+		slot = 1,
+		glow = granted.glow,
+		stardust = granted.stardust,
+		code = granted.code,
+	})
+end
+
+-- Nouvelles quêtes du jour au premier accès du jour UTC. GDD §7.3 « rien n'est jamais perdu » :
+-- les quêtes de l'ancien jour terminées mais pas réclamées (réclamation juste après 00:00 UTC,
+-- retour des jours plus tard) sont encaissées, avec l'Étoile du jour si les 3 le sont alors. Le
+-- nouveau tirage est posé AVANT les récompenses (un second passage ne trouve plus rien à payer).
+-- Retourne le nombre de quêtes encaissées.
+local function refreshDay(player: Player, data: { [string]: any }, day: number, mark: Mark?): number
 	local quests = data.quests
 	if quests.day == day then
-		return
+		return 0
 	end
+	local old: { any } = if type(quests.list) == "table" then quests.list else {}
+	local oldStar = quests.starClaimed == true
 	local ids = QuestLogic.drawDaily(player.UserId, day, isZen(player), crewRecentFor(data, day))
 	local list = {}
 	for _, id in ids do
@@ -353,19 +423,36 @@ local function refreshDay(player: Player, data: { [string]: any }, day: number, 
 	quests.starClaimed = false
 	local markFn: Mark = mark or DataService.markDirty
 	markFn(player, "quests")
+	local paid = 0
+	for slot = 1, #old do
+		if payDaily(player, old, slot, markFn) then
+			paid += 1
+		end
+	end
+	if paid > 0 and not oldStar and allDailyClaimed(old) then
+		payDailyStar(player)
+	end
+	return paid
 end
 
--- Grand Défilé : remise à zéro le lundi 00:00 UTC
-local function refreshWeek(player: Player, data: { [string]: any }, week: number, mark: Mark?)
+-- Grand Défilé : remise à zéro le lundi 00:00 UTC. Un Grand Défilé terminé mais pas réclamé est
+-- encaissé d'abord, avec la Légendaire de la semaine où il a été gagné (GDD §7.3). Vrai si payé.
+local function refreshWeek(player: Player, data: { [string]: any }, week: number, mark: Mark?): boolean
 	local weekly = data.weekly
 	if weekly.week == week then
-		return
+		return false
 	end
+	local oldWeek = math.floor(num(weekly.week, 0))
+	local owed = weekly.claimed ~= true and num(weekly.banked, 0) >= Quests.Weekly.goal.n
 	weekly.week = week
 	weekly.banked = 0
 	weekly.claimed = false
 	local markFn: Mark = mark or DataService.markDirty
 	markFn(player, "weekly")
+	if owed then
+		payWeekly(player, if oldWeek > 0 then oldWeek else week)
+	end
+	return owed
 end
 
 -- ---------------------------------------------------------------------------------------------
@@ -928,26 +1015,12 @@ local function claimDailyQuest(player: Player, data: { [string]: any }, slot: nu
 		Notify.feedback(player, "feedback.questNotDone", nil, "info")
 		return
 	end
-	entry.claimed = true
-	DataService.markDirty(player, "quests")
-	local reward = Quests.DailyTiers[q.tier] or {}
-	local granted = grantReward(player, reward :: any, "Quest_" .. tostring(q.id), nil, "quest")
-	Notify.celebrate(player, "questClaimed", {
-		kind = "daily",
-		slot = slot,
-		glow = granted.glow,
-		stardust = granted.stardust,
-	})
+	payDaily(player, quests.list, slot, DataService.markDirty)
 	-- « Étoile du jour » : les 3 quêtes réclamées
-	if quests.starClaimed ~= true and #quests.list >= DAILY_SLOTS then
-		for _, other in quests.list do
-			if type(other) ~= "table" or other.claimed ~= true then
-				return
-			end
-		end
+	if quests.starClaimed ~= true and allDailyClaimed(quests.list) then
 		quests.starClaimed = true
 		DataService.markDirty(player, "quests")
-		grantReward(player, Quests.DailyStar :: any, "Quest_DailyStar", nil, "quest")
+		payDailyStar(player)
 	end
 end
 
@@ -963,15 +1036,7 @@ local function claimWeekly(player: Player, data: { [string]: any })
 	end
 	weekly.claimed = true
 	DataService.markDirty(player, "weekly")
-	local granted =
-		grantReward(player, Quests.Weekly.reward :: any, "Quest_" .. Quests.Weekly.id, nil, "quest")
-	Notify.celebrate(player, "questClaimed", {
-		kind = "weekly",
-		slot = 1,
-		glow = granted.glow,
-		stardust = granted.stardust,
-		code = granted.code,
-	})
+	payWeekly(player, nil)
 end
 
 local function onClaimQuest(player: Player, kind: unknown, slot: unknown)
@@ -990,12 +1055,18 @@ local function onClaimQuest(player: Player, kind: unknown, slot: unknown)
 		return
 	end
 	local now = Clock.now()
-	refreshDay(player, data, Clock.day(now))
-	refreshWeek(player, data, Clock.week(now))
+	-- un passage de jour / de semaine encaisse ce qui était dû : la réclamation visait l'ancienne
+	-- quête, déjà payée (pas de « quête pas terminée » sur la nouvelle juste après la récompense)
+	local paidDaily = refreshDay(player, data, Clock.day(now))
+	local paidWeekly = refreshWeek(player, data, Clock.week(now))
 	if kind == "daily" then
-		claimDailyQuest(player, data, slot :: number)
+		if paidDaily == 0 then
+			claimDailyQuest(player, data, slot :: number)
+		end
 	elseif kind == "weekly" then
-		claimWeekly(player, data)
+		if not paidWeekly then
+			claimWeekly(player, data)
+		end
 	else
 		-- récompenses d'accueil automatiques : rien n'est jamais dû (docs §16.4)
 		local step = data.onboarding.step

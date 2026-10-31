@@ -5,7 +5,8 @@
 -- les clients (minicarte, rendu). Toutes les valeurs viennent de Config/Zones et Config/Balance.
 --   * Nids : centre du Nid k = slot − 1 en (150 cos 30°k, 0, 150 sin 30°k), orienté vers le centre ;
 --     porte à 19 studs côté centre (r = 131) ; boîte de parade 12 × 10 × 4 centrée sur la porte
---   * port sûr : point à < 25 studs (XZ) du centre de N'IMPORTE QUELLE porte
+--   * port sûr : point à < 25 studs (XZ) du centre de N'IMPORTE QUELLE porte ; « chez soi »
+--     (inOwnHarbor) : port sûr de SA porte OU sur sa plateforme de Nid (≤ 17 + 1 studs du centre)
 --   * anneau de la Balise 8 ≤ r ≤ 16 ; zone d'un point (anneaux XZ) ; hauteur du sol
 --   * grille d'apparition par zone (pas de 6 studs) excluant : r < 16, port sûr élargi (30 studs
 --     autour de chaque porte), plateformes de Nid (20 studs), obstacles du décor (decor()), rebord
@@ -66,6 +67,9 @@ local PLACE_ATTEMPTS = 60
 local SLOT_COUNT = Nests.Count
 local ANGLE_STEP = math.rad(Nests.AngleStep)
 local GATE_RADIUS = Nests.Ring - Nests.GateDistance -- r = 131
+-- plateforme du Nid comptée « chez soi » (inOwnHarbor) : rayon de la plateforme + 1 stud de marge
+local HOME_PLATFORM_MARGIN = 1
+local HOME_PLATFORM_RADIUS = Nests.PlatformDiameter / 2 + HOME_PLATFORM_MARGIN
 
 -- ---------------------------------------------------------------------------------------------
 -- Aides
@@ -200,12 +204,20 @@ function WorldLayout.inHarbor(pos: Vector3): boolean
 	return WorldLayout.harborSlot(pos) ~= nil
 end
 
+-- « Chez soi » (Supernova, Zen, « Rentre au Nid ») : port sûr de SA porte OU sa plateforme de Nid
+-- (l'arrière de la plateforme est jusqu'à 36 studs de la porte, au-delà du port sûr de 25 studs).
+-- La zone protégée des coupes (inHarbor / harborSlot, toutes les portes) n'en dépend pas.
 function WorldLayout.inOwnHarbor(slot: number, pos: Vector3): boolean
 	if not validSlot(slot) then
 		return false
 	end
-	local g = frames[slot].gate
-	return distXZ(pos.X, pos.Z, g.X, g.Z) < Balance.Snip.HarborRadius
+	local f = frames[slot]
+	local g = f.gate
+	if distXZ(pos.X, pos.Z, g.X, g.Z) < Balance.Snip.HarborRadius then
+		return true
+	end
+	local c = f.center
+	return distXZ(pos.X, pos.Z, c.X, c.Z) <= HOME_PLATFORM_RADIUS -- rejette aussi NaN
 end
 
 function WorldLayout.inBeaconRing(pos: Vector3): boolean

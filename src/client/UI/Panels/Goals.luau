@@ -314,7 +314,7 @@ local function buildQuestCard(slot: number, parent: Instance): QuestCard
 		size = UDim2.new(1, -8, 1, -4),
 		position = UDim2.fromScale(0.5, 0.5),
 		anchor = Vector2.new(0.5, 0.5),
-		maxSize = 16,
+		maxSize = 18,
 		parent = tier,
 	})
 	local textW = -(116 + 170)
@@ -623,7 +623,7 @@ local function buildCalendar(parent: Frame)
 			position = UDim2.new(0.5, 0, 1, -4),
 			anchor = Vector2.new(0.5, 1),
 			font = Theme.Fonts.Body,
-			maxSize = 15,
+			maxSize = 18,
 			parent = face,
 		})
 		local check = Widgets.label({
@@ -903,7 +903,7 @@ local function buildWelcome(parent: Frame)
 			xAlign = Enum.TextXAlignment.Left,
 			color = Theme.Colors.Gold,
 			font = Theme.Fonts.Body,
-			maxSize = 17,
+			maxSize = 18,
 			parent = frame,
 		})
 		local bar = Widgets.bar({

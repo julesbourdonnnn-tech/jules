@@ -13,17 +13,24 @@
 --     glowPartyQueued ; StardustJar : +400 ; StarterKit : 3 Rares (AtlasService), style comet_tail
 --     (NestService.unlock), boost personnel 20 min, profile.starterKit = true (une seconde vente
 --     éventuelle est quand même honorée)
---   * passes (MonetizationService.PassGranted, y compris à l'arrivée) : VIP Star / Double Glow →
---     EconomyService.settle + refreshRate ; Extra Perches / Stash Plus → AtlasService.refreshPerches ;
---     Night Shift, Conga Styles : lus dynamiquement (rien à stocker) ; Celebrate "purchase" seulement
---     pour un achat fait en jeu (PromptGamePassPurchaseFinished)
+--   * attribution ATOMIQUE vis-à-vis du reçu : false seulement AVANT la première mutation (produit
+--     inconnu, profil absent, joueur parti, file de Glow Party indisponible) ; ensuite chaque effet
+--     est protégé (pcall + warn + Analytics ProductEffectFailed_<clé>) et grant retourne TOUJOURS
+--     true : MonetizationService enregistre le reçu, Roblox ne redélivre jamais des effets déjà
+--     appliqués (un effet en échec est perdu plutôt que les autres accordés deux fois)
+--   * passes (MonetizationService.PassGranted, y compris à l'arrivée, ET PassRevoked : remboursé ou
+--     plus possédé) : VIP Star / Double Glow → EconomyService.settle (taux enregistré) + refreshRate ;
+--     Extra Perches / Stash Plus → AtlasService.refreshPerches ; Night Shift, Conga Styles : lus
+--     dynamiquement (rien à stocker)
+--   * « Merci ! » (Celebrate "purchase") et Analytics Pass_<clé> seulement pour un achat en jeu
+--     CONFIRMÉ par Roblox (MonetizationService.PassPurchased) : PromptGamePassPurchaseFinished n'est
+--     qu'un indice qu'un exploit peut émettre
 --   * Celebrate "purchase" (pluie de pièces, « Merci ! ») ; Analytics Product_<clé>
 -- GDD : §8.1-§8.3, §4.17 (Glow Party), §14.2.
 -- Dépendances : DataService, MonetizationService, NestService, EconomyService, AtlasService,
 -- EventService, Config/{Monetization,Nebbies}, Signals, Util/Notify, Util/Analytics, Shared/Util/Clock,
 -- Economy/PassEffects.
 
-local MarketplaceService = game:GetService("MarketplaceService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
@@ -57,14 +64,30 @@ local function hasEffect(def: Monetization.ProductDef): boolean
 	return false
 end
 
-local function onPassGranted(player: Player, passKey: string)
+-- Pass accordé OU retiré (possession lue dynamiquement par PassEffects) : effets recalculés
+local function onPassChanged(player: Player, passKey: string)
 	if PassEffects.passHas(passKey, "glowBonus") or PassEffects.passHas(passKey, "glowMult") then
-		-- règle au taux enregistré (sans le pass) puis recalcule M avec le pass
+		-- règle au taux enregistré (avant le changement) puis recalcule M
 		EconomyService.settle(player)
 		EconomyService.refreshRate(player)
 	end
 	if PassEffects.passHas(passKey, "extraPerches") or PassEffects.passHas(passKey, "stashSize") then
 		AtlasService.refreshPerches(player)
+	end
+end
+
+-- Achat en jeu confirmé par UserOwnsGamePassAsync : « Merci ! » et analytique de revenus
+local function onPassPurchased(player: Player, passKey: string)
+	Notify.celebrate(player, "purchase", { pass = passKey })
+	Analytics.event(player, `Pass_{passKey}`, 1)
+end
+
+-- Exécute un effet d'un produit déjà payé : une erreur est signalée, jamais propagée
+local function applyEffect(player: Player, productKey: string, effect: string, fn: () -> ())
+	local ok, err = pcall(fn)
+	if not ok then
+		warn(`[ProductService] effet {effect} du produit {productKey} en échec pour {player.Name} :`, err)
+		Analytics.event(player, `ProductEffectFailed_{productKey}`, 1)
 	end
 end
 
@@ -82,24 +105,11 @@ function ProductService.Init()
 end
 
 function ProductService.Start()
-	MonetizationService.PassGranted:Connect(onPassGranted)
-
-	-- « Merci ! » seulement pour un pass acheté en jeu (PassGranted est aussi émis à l'arrivée)
-	local passKeyById: { [number]: string } = {}
-	for key, def in Monetization.Passes do
-		if def.id > 0 then
-			passKeyById[def.id] = key
-		end
-	end
-	MarketplaceService.PromptGamePassPurchaseFinished:Connect(
-		function(player: Player, passId: number, wasPurchased: boolean)
-			local passKey = passKeyById[passId]
-			if wasPurchased and passKey then
-				Notify.celebrate(player, "purchase", { pass = passKey })
-				Analytics.event(player, `Pass_{passKey}`, 1)
-			end
-		end
-	)
+	MonetizationService.PassGranted:Connect(onPassChanged)
+	MonetizationService.PassRevoked:Connect(onPassChanged)
+	-- « Merci ! » seulement pour un pass acheté en jeu et vérifié (PassGranted est aussi émis à
+	-- l'arrivée ; le signal brut du client n'est qu'un indice)
+	MonetizationService.PassPurchased:Connect(onPassPurchased)
 end
 
 -- Glow qu'accorderait maintenant un produit Glow (affichage « ≈ » côté client : même calcul)
@@ -111,7 +121,9 @@ function ProductService.glowAmount(player: Player, productKey: string): number
 	return Formulas.glowForSeconds(EconomyService.idleRate(player), def.idleSeconds, def.minGlow)
 end
 
--- Applique l'effet d'un produit (handler partagé, exposé pour les tests) ; true si appliqué
+-- Applique l'effet d'un produit (handler partagé, exposé pour les tests) ; true si le reçu doit être
+-- enregistré. false seulement tant que RIEN n'a été accordé (Roblox représentera le reçu) ; après
+-- la première mutation, toujours true : une redélivrance accorderait deux fois les effets réussis.
 function ProductService.grant(player: Player, productKey: string): boolean
 	local def = Monetization.Products[productKey]
 	if def == nil or not hasEffect(def) then
@@ -126,47 +138,79 @@ function ProductService.grant(player: Player, productKey: string): boolean
 	-- effet externe d'abord : s'il échoue, rien n'est accordé et Roblox représentera le reçu
 	local partySeconds = def.serverBoostSeconds
 	if partySeconds ~= nil and partySeconds > 0 then
-		local endsAt = EventService.queueGlowParty(player, partySeconds)
-		local remaining = if type(endsAt) == "number" and endsAt == endsAt
-			then math.max(endsAt - Clock.now(), partySeconds)
-			else partySeconds
-		Notify.banner("glowParty", {
-			userId = player.UserId,
-			name = player.DisplayName,
-			minutes = math.ceil(partySeconds / 60),
-		}, player)
-		Notify.feedback(player, "feedback.glowPartyQueued", { minutes = math.ceil(remaining / 60) }, "reward")
+		local queued, endsAt = pcall(EventService.queueGlowParty, player, partySeconds)
+		if not queued then
+			warn(
+				`[ProductService] Glow Party de {player.Name} non mise en file (reçu représenté) :`,
+				endsAt
+			)
+			return false
+		end
+		-- à partir d'ici, le reçu est TOUJOURS enregistré : chaque effet est protégé
+		applyEffect(player, productKey, "glowPartyNotice", function()
+			local remaining = if type(endsAt) == "number" and endsAt == endsAt
+				then math.max(endsAt - Clock.now(), partySeconds)
+				else partySeconds
+			Notify.banner("glowParty", {
+				userId = player.UserId,
+				name = player.DisplayName,
+				minutes = math.ceil(partySeconds / 60),
+			}, player)
+			Notify.feedback(
+				player,
+				"feedback.glowPartyQueued",
+				{ minutes = math.ceil(remaining / 60) },
+				"reward"
+			)
+		end)
 	end
 
-	if def.idleSeconds ~= nil then
-		EconomyService.addGlowSeconds(player, def.idleSeconds, sku, def.minGlow)
+	local idleSeconds = def.idleSeconds
+	if idleSeconds ~= nil then
+		applyEffect(player, productKey, "glow", function()
+			EconomyService.addGlowSeconds(player, idleSeconds, sku, def.minGlow)
+		end)
 	end
-	if def.stardust ~= nil then
-		EconomyService.addStardust(player, def.stardust, sku, "IAP")
+	local stardust = def.stardust
+	if stardust ~= nil then
+		applyEffect(player, productKey, "stardust", function()
+			EconomyService.addStardust(player, stardust, sku, "IAP")
+		end)
 	end
-	if def.species ~= nil then
-		local codes = {}
-		for _, s in def.species do
-			if Nebbies.Species[s] ~= nil then
-				table.insert(codes, Nebbies.pack(s, 0, 0))
+	local species = def.species
+	if species ~= nil then
+		applyEffect(player, productKey, "nebbies", function()
+			local codes = {}
+			for _, s in species do
+				if Nebbies.Species[s] ~= nil then
+					table.insert(codes, Nebbies.pack(s, 0, 0))
+				end
 			end
-		end
-		if #codes > 0 then
-			AtlasService.addNebbies(player, codes, "product")
-		end
+			if #codes > 0 then
+				AtlasService.addNebbies(player, codes, "product")
+			end
+		end)
 	end
-	if def.style ~= nil then
-		NestService.unlock(player, "styles", def.style)
+	local style = def.style
+	if style ~= nil then
+		applyEffect(player, productKey, "style", function()
+			NestService.unlock(player, "styles", style)
+		end)
 	end
-	if def.boostSeconds ~= nil then
-		EconomyService.grantPersonalBoost(player, def.boostSeconds)
+	local boostSeconds = def.boostSeconds
+	if boostSeconds ~= nil then
+		applyEffect(player, productKey, "boost", function()
+			EconomyService.grantPersonalBoost(player, boostSeconds)
+		end)
 	end
 	if def.oncePerAccount then
 		data.starterKit = true
 		DataService.markDirty(player, "starterKit")
 	end
 
-	Notify.celebrate(player, "purchase", { product = productKey })
+	applyEffect(player, productKey, "thanks", function()
+		Notify.celebrate(player, "purchase", { product = productKey })
+	end)
 	Analytics.event(player, sku, 1)
 	return true
 end

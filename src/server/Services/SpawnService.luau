@@ -887,7 +887,9 @@ function SpawnService.snapshotFor(player: Player): { Types.WildSpawn }
 	return out
 end
 
--- Retire les apparitions personnelles et les plafonds de groupe du joueur (départ)
+-- Retire les apparitions personnelles du joueur (départ). Les plafonds de groupe sont GARDÉS :
+-- indexés par UserId, ils disparaissent avec le dernier Nebby du groupe (removeWild) ; les oublier
+-- ici laisserait un joueur qui part et revient attraper un 2e Épique de la même explosion (Q27)
 function SpawnService.clearPlayer(player: Player)
 	local uid = player.UserId
 	for _, w in wilds do
@@ -899,9 +901,6 @@ function SpawnService.clearPlayer(player: Player)
 	personalSpawns[uid] = nil
 	personalDespawns[uid] = nil
 	directed[player] = nil
-	for _, counts in groupCounts do
-		counts[uid] = nil
-	end
 end
 
 -- Groupes de plafond encore suivis (diagnostic : un groupe disparaît avec son dernier Nebby)

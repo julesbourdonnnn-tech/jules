@@ -641,14 +641,16 @@ function Widgets.nebbyIcon(name: string, size: UDim2, parent: Instance?): Frame
 		zIndex = 5,
 		parent = icon,
 	})
+	-- étoiles : 18 px de référence au moins (GDD §10.1) ; bande de 0,3 × l'icône, soit ≥ 18 px dès
+	-- 60 px (plus petite icône : matériau de la Forge)
 	Widgets.label({
 		name = "Stars",
 		text = "",
-		size = UDim2.fromScale(1, 0.26),
+		size = UDim2.fromScale(1, 0.3),
 		position = UDim2.fromScale(0.5, 1),
 		anchor = Vector2.new(0.5, 1),
 		color = Theme.Colors.Gold,
-		maxSize = 16,
+		maxSize = 18,
 		zIndex = 6,
 		parent = icon,
 	})

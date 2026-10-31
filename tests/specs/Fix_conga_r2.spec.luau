@@ -497,7 +497,7 @@ return function(T)
 				expect(caught).toBe(0)
 				expect(env.Conga.lineLength(B)).toBe(3)
 				expect(B:GetAttribute("Unstable")).toBe(true)
-				expect(env.MoveCheck.violations(B) >= env.B.MoveCheck.FlagsToRewind).toBe(true)
+				expect(env.MoveCheck.violations(B) >= env.MoveCheck.Config.FlagsToRewind).toBe(true)
 				expect(env.profiles[2].flags.strikes >= 1).toBe(true)
 				expectLineAtStandingHeight(env, B)
 			end
@@ -565,7 +565,7 @@ return function(T)
 		local function newPlayer(MC, B, start)
 			local player = { Name = "Buried" }
 			MC.noteSpeed(player, 16, T0 - 10)
-			MC.reset(player, start, T0 - B.MoveCheck.Exemption)
+			MC.reset(player, start, T0 - MC.Config.Exemption)
 			local p = { player = player, pos = start, now = T0 }
 			assert(MC.step(player, start, DT, T0, 0) == "ok")
 			return p
@@ -645,7 +645,7 @@ return function(T)
 				local start = V3.new(30, 3, 30)
 				MC.reset(player, start, T0)
 				local now = T0
-				while now < T0 + B.MoveCheck.Exemption - DT do
+				while now < T0 + MC.Config.Exemption - DT do
 					now += DT
 					local verdict, back = MC.step(player, V3.new(30.5, -3, 30), DT, now, 0)
 					expect(verdict).toBe("flag")
@@ -802,7 +802,7 @@ return function(T)
 				walk(env, B, env.V3.new(80, GROUND + 8.5, 60))
 				tick(env, 5)
 				expect(B:GetAttribute("Unstable")).toBe(true)
-				expect(env.MoveCheck.violations(B) >= env.B.MoveCheck.FlagsToRewind).toBe(true)
+				expect(env.MoveCheck.violations(B) >= env.MoveCheck.Config.FlagsToRewind).toBe(true)
 				expect(env.profiles[2].flags.strikes >= 1).toBe(true)
 			end
 		)
@@ -818,7 +818,7 @@ return function(T)
 			tick(env)
 			walk(env, B, env.V3.new(80, GROUND + 2 + 3 + 6, 60))
 			tick(env, 5)
-			expect(env.MoveCheck.violations(B) >= env.B.MoveCheck.FlagsToRewind).toBe(true)
+			expect(env.MoveCheck.violations(B) >= env.MoveCheck.Config.FlagsToRewind).toBe(true)
 			expect(B:GetAttribute("Unstable")).toBe(true)
 		end)
 	end)

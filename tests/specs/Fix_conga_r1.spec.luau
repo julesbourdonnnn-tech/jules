@@ -360,7 +360,7 @@ return function(T)
 			walk(env, B, env.V3.new(75, 8, 60))
 			tick(env, 5)
 			expect(B:GetAttribute("Unstable")).toBe(true)
-			expect(env.MoveCheck.violations(B) >= env.B.MoveCheck.FlagsToRewind).toBe(true)
+			expect(env.MoveCheck.violations(B) >= env.MoveCheck.Config.FlagsToRewind).toBe(true)
 			expect(#violations >= 1).toBe(true)
 			expect(env.profiles[2].flags.strikes >= 1).toBe(true)
 			expectLineOnGround(env, B)
@@ -438,7 +438,7 @@ return function(T)
 		local function newPlayer(MC, B, start)
 			local player = { Name = "Hover" }
 			MC.noteSpeed(player, 16, T0 - 10)
-			MC.reset(player, start, T0 - B.MoveCheck.Exemption)
+			MC.reset(player, start, T0 - MC.Config.Exemption)
 			local p = { player = player, pos = start, now = T0 }
 			assert(MC.step(player, start, DT, T0, 0) == "ok")
 			return p
@@ -534,7 +534,7 @@ return function(T)
 			MC.reset(player, pos, T0)
 			local now = T0
 			local verdicts = {}
-			while now < T0 + B.MoveCheck.Exemption - DT do
+			while now < T0 + MC.Config.Exemption - DT do
 				now += DT
 				verdicts[MC.step(player, pos, DT, now, 0)] = true
 			end

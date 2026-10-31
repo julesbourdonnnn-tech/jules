@@ -2,7 +2,7 @@
 -- MoveCheck — paquet « conga » (docs/04-architecture.md §11.14).
 -- Contrôle de déplacement serveur (GDD §12.7), état par joueur en mémoire, SANS service Roblox :
 -- CongaService lui fournit positions, vitesses et hauteur du sol ; testable sous Lune.
--- Règles (Config/Balance.MoveCheck) :
+-- Règles (Conga/Tuning.MoveCheck, serveur seulement, exposé en MoveCheck.Config) :
 --   * déplacement XZ autorisé = vmax × Δt × 1,5 + 4, vmax = WalkSpeed serveur maximal des 0,5 s
 --     précédant la position de référence jusqu'à maintenant (noteSpeed) ; montée verticale
 --     ≤ 12 studs/s (même marge : un saut normal passe) ; chute libre ignorée
@@ -47,7 +47,8 @@
 --     retour le ramène là où le serveur l'a placé.
 --   * jamais d'accusation : l'interface affiche « connexion instable » (ton neutre)
 -- GDD : §12.7, §14.3 (MoveViolation), §14.4 (marges réglables).
--- Dépendances : Config/Balance, Logic/WorldLayout (surface de l'île, fonction pure), Conga/Tuning.
+-- Dépendances : Config/Balance (vitesses, coupes), Logic/WorldLayout (surface de l'île, fonction
+-- pure), Conga/Tuning (seuils de l'anti-triche : jamais dans ReplicatedStorage, GDD §12.7).
 
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Balance = require(Shared.Config.Balance)
@@ -58,7 +59,9 @@ local MoveCheck = {}
 
 export type Verdict = "ok" | "flag" | "rewind"
 
-local Cfg = Balance.MoveCheck
+-- Seuils de l'anti-triche : configuration serveur (GDD §12.7), exposée aux tests en lecture
+local Cfg = Tuning.MoveCheck
+MoveCheck.Config = Cfg
 
 -- Crédit de temps maximal accumulé à l'arrêt (s) : tolère un gel réseau sans permettre de
 -- « stocker » une téléportation
@@ -244,7 +247,7 @@ end
 -- API
 -- ---------------------------------------------------------------------------------------------
 
--- Nouvelle référence de position (apparition, PivotTo serveur) : exemption de Balance.MoveCheck.Exemption s
+-- Nouvelle référence de position (apparition, PivotTo serveur) : exemption de Tuning.MoveCheck.Exemption s
 function MoveCheck.reset(player: Player, pos: Vector3, now: number)
 	if not finiteVector(pos) or not isFinite(now) then
 		return

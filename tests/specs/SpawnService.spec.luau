@@ -361,9 +361,10 @@ return function(T)
 			expect(env.Spawn.consume(w1.id, p) ~= nil).toBe(true)
 			expect(env.Spawn.canCatch(p, 1, w2, now + 1)).toBe(false)
 			expect(env.Spawn.canCatch({ UserId = 10 }, 2, w2, now + 1)).toBe(true)
-			-- départ : le plafond du joueur est oublié
+			-- départ puis retour : le plafond est GARDÉ tant que le groupe vit (pas de 2e Épique)
 			env.Spawn.clearPlayer(p)
-			expect(env.Spawn.canCatch(p, 1, w2, now + 1)).toBe(true)
+			expect(env.Spawn.canCatch(p, 1, w2, now + 1)).toBe(false)
+			expect(env.Spawn.canCatch({ UserId = 10 }, 2, w2, now + 1)).toBe(true)
 		end)
 
 		it("plafonds de groupe oubliés quand le groupe n'a plus de Nebby vivant (pas de fuite)", function()

@@ -31,7 +31,8 @@
 --     EventService.beaconOpen(), testées sur le déplacement VALIDÉ du tick (prev → pos, échantillons
 --     de 1 stud : un pas de plus de 4 studs n'enjambe jamais la porte) ;
 --     Glow = EconomyService.paradeGlow ; AtlasService.addNebbies ;
---     LineEvent "bank" ; Signals.Parade ; Méga Parade (≥ 30) ; QuestService.onSafeMoment ;
+--     LineEvent "bank" ; Signals.Parade (idleSeconds = Glow / revenu passif d'AVANT la parade) ;
+--     Méga Parade (≥ 30) ; QuestService.onSafeMoment ;
 --     EventService.onBeaconParade ; forceParade (crochet de la Supernova) fait de même sans porte
 --   * WalkSpeed (seul propriétaire de Humanoid.WalkSpeed) : Formulas.walkSpeed (Foulée, ralenti
 --     au-delà des Guard Links, Comète ×0,85, Dash +10 pendant 1 s, Second Souffle +4) posé seulement
@@ -47,7 +48,8 @@
 --     APRÈS la diffusion des ops (aucune op en attente ne peut contredire l'instantané)
 --   * remote SetInputType(kind 1-3) 1/5 s (aide tactile +0,3 aux coupes, champ analytique)
 --   * MoveCheck : 3 infractions en 5 s → retour (PivotTo), 3 s sans capture/coupe/parade, attribut
---     « Unstable » ; flags.strikes ; 10 retours en 10 min → flags.lbBanned ; Signals.MoveViolation.
+--     « Unstable » ; flags.strikes ; 10 retours en 10 min → flags.lbBanned ; Signals.MoveViolation
+--     (seuils serveur seulement : Conga/Tuning.MoveCheck, jamais répliqués).
 --     Acteur d'un tick refusé : à sa dernière position VALIDÉE (prev = pos) ; le balayage d'un tick
 --     valide part toujours de la dernière position validée (jamais d'une position signalée) ; la
 --     référence d'une apparition / d'un déplacement serveur est lue à l'instant du déplacement
@@ -687,7 +689,7 @@ local function onRewind(state: PlayerState, root: BasePart, back: Vector3, now: 
 		local recent = MoveCheck.recentRewinds(player, now)
 		mutateFlags(player, function(flags)
 			flags.strikes += 1
-			if recent >= Balance.MoveCheck.StrikesForBan then
+			if recent >= Tuning.MoveCheck.StrikesForBan then
 				flags.lbBanned = true
 			end
 		end)
@@ -1362,6 +1364,14 @@ local function newAtlasEntries(data: { [string]: any }, codes: { number }): numb
 	return count
 end
 
+-- Revenu passif utilisable comme diviseur (fini, > 0 ; NaN exclu), sinon nil
+local function positiveRate(x: unknown): number?
+	if type(x) == "number" and x > 0 and x ~= math.huge then
+		return x
+	end
+	return nil
+end
+
 local function parade(state: PlayerState, atBeacon: boolean, forced: boolean): number
 	local player = state.player
 	local slot = state.slot
@@ -1381,6 +1391,9 @@ local function parade(state: PlayerState, atBeacon: boolean, forced: boolean): n
 	end
 	local glow = math.max(0, math.floor(rawGlow))
 	local newEntries = newAtlasEntries(data, codes)
+	-- revenu passif AU MOMENT de la parade (quête « Gros défilé », GDD §7.3 n° 25) : lu avant
+	-- addGlow / addNebbies, qui perchent les nouveaux Nebbies et relèvent déjà le taux (Q8)
+	local rateBefore = data.idleRate
 	local okAdd, err =
 		pcall(EconomyService.addGlow, player, glow, if atBeacon then "ParadeBeacon" else "Parade", "Gameplay")
 	if not okAdd then
@@ -1408,8 +1421,10 @@ local function parade(state: PlayerState, atBeacon: boolean, forced: boolean): n
 		newEntries = newEntries,
 	}
 	queueOp(op)
-	local rate = data.idleRate
-	local idleSeconds = if type(rate) == "number" and rate > 0 and rate == rate then glow / rate else 0
+	-- taux d'avant la parade ; s'il était nul (premier revenu apporté par cette parade), le taux
+	-- d'après, pour ne pas bloquer la quête à 0
+	local rate = positiveRate(rateBefore) or positiveRate(data.idleRate)
+	local idleSeconds = if rate ~= nil then glow / rate else 0
 	local info: Types.ParadeInfo = {
 		count = n,
 		codes = codes,

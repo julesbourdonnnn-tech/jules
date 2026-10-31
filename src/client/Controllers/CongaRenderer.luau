@@ -6,7 +6,9 @@
 --     (WorldStateController.trail), premier tronçon raccordé au personnage affiché s'il est chargé
 --     (les nœuds coupables, au-delà de 8,2 studs, restent exactement sur le chemin serveur) ;
 --     file du joueur LOCAL : Trail local alimenté chaque image
---   * un SEUL workspace:BulkMoveTo(parts, cframes, Enum.BulkMoveMode.FireCFrameChanged) par image ;
+--   * un SEUL workspace:BulkMoveTo(parts, cframes, Enum.BulkMoveMode.FireCFrameChanged) par image,
+--     toujours envoyé : chaque étape de l'image (une file, sauvages, planificateur, Nids, parade,
+--     Gloomwisps, orbe) tourne sous pcall, avertissement limité à un toutes les 10 s par étape ;
 --     files lointaines (> 120 studs) à 20 Hz ; LOD < 50 complet, 50-120 boule, > 120 : sauvages
 --     masqués, files réduites à la tête + étiquette « ×N » ; budgets §12.8 (≤ 100 complets,
 --     ≤ 1 500 pièces, Highlights, lumières) décidés à 10 Hz par un planificateur trié par
@@ -126,6 +128,8 @@ local MARK_DISTANCE = 120
 local MARK_COLOR = Color3.fromRGB(255, 205, 60)
 local MARK_STROKE = Color3.fromRGB(70, 45, 10)
 local TAU = 2 * math.pi
+-- s : une étape de l'image qui lève n'avertit qu'une fois par intervalle (aucun flot de 60 / s)
+local STEP_WARN_INTERVAL = 10
 
 -- Types -------------------------------------------------------------------------------------------
 
@@ -240,6 +244,11 @@ local planViews: { RigPool.View } = {}
 local aliveWisps: { [number]: boolean } = {}
 local fxRigs: { Rig } = {}
 local fxParaders: { Parader } = {}
+-- AnimState unique passé à NebbyBuilder.animate (qui le lit sans le garder) : aucune table jetable
+-- par Nebby et par image
+local animState: NebbyBuilder.AnimState = { t = 0, phase = 0, blink = false, speed = 0 }
+-- dernier avertissement de chaque étape de l'image qui a levé (Clock.now())
+local stepWarnAt: { [string]: number } = {}
 
 -- Particules des effets continus allumés à la dernière passe du planificateur (≤ rigShare())
 local rigParticles = 0
@@ -324,6 +333,15 @@ local function append(part: BasePart, cf: CFrame)
 	local n = #moveParts + 1
 	moveParts[n] = part
 	moveCFrames[n] = cf
+end
+
+-- NebbyBuilder.animate avec l'AnimState réutilisé (tous les champs reposés à chaque appel)
+local function animate(rig: Rig, t: number, phase: number, blink: boolean, speed: number)
+	animState.t = t
+	animState.phase = phase
+	animState.blink = blink
+	animState.speed = speed
+	NebbyBuilder.animate(rig, animState)
 end
 
 -- Pièces décoratives en réserve ---------------------------------------------------------------------
@@ -962,10 +980,7 @@ local function moveLine(view: LineView, t: number, dt: number)
 			* CFrame.Angles(0, 0, if reduced then 0 else node.roll)
 		if rig.lod == "full" then
 			local blink = node.dist <= BLINK_DISTANCE and ((t + i * 0.37) % (BLINK_MIN + 1.5)) < BLINK_SECONDS
-			NebbyBuilder.animate(
-				rig,
-				{ t = t, phase = i * 0.7, blink = blink, speed = if dancing then 0 else 12 }
-			)
+			animate(rig, t, i * 0.7, blink, if dancing then 0 else 12)
 			updateRing(node, view, i, cf, size, t)
 		else
 			dropRing(node)
@@ -1327,7 +1342,7 @@ local function moveWild(view: WildView, t: number)
 	end
 	if rig.lod == "full" then
 		local blink = view.dist <= BLINK_DISTANCE and ((t + view.phase) % view.blinkPeriod) < BLINK_SECONDS
-		NebbyBuilder.animate(rig, { t = t, phase = view.phase, blink = blink, speed = 0 })
+		animate(rig, t, view.phase, blink, 0)
 	end
 	if scale < 1 then
 		local s = Vector3.one * scale
@@ -1492,10 +1507,7 @@ local function moveWisps(t: number, focus: Vector3)
 				if (pos - focus).Magnitude <= WISP_RANGE then
 					local ahead = WorldStateController.wispPosition(w.id, t + 0.2) or ground
 					local yaw = yawToward(ground, ahead, 0)
-					NebbyBuilder.animate(
-						v.rig,
-						{ t = t, phase = w.id, blink = false, speed = Balance.Wisps.Speed }
-					)
+					animate(v.rig, t, w.id, false, Balance.Wisps.Speed)
 					NebbyBuilder.appendCFrames(
 						v.rig,
 						CFrame.new(pos) * CFrame.Angles(0, yaw, 0),
@@ -1567,7 +1579,7 @@ local function moveOrb(t: number)
 		end
 	end
 	view.pos = pos
-	NebbyBuilder.animate(view.rig, { t = t, phase = 0, blink = false, speed = 0 })
+	animate(view.rig, t, 0, false, 0)
 	NebbyBuilder.appendCFrames(view.rig, CFrame.new(pos), moveParts, moveCFrames)
 end
 
@@ -1980,6 +1992,67 @@ end
 
 -- Image ----------------------------------------------------------------------------------------------------
 
+-- files : création, suppression, réconciliation du slot avec le miroir
+local function syncLine(slot: number, focus: Vector3, t: number)
+	local line = WorldStateController.line(slot)
+	local view = lineViews[slot]
+	if line == nil then
+		if view then
+			dropLine(slot)
+		end
+	else
+		if view == nil or view.userId ~= line.userId then
+			if view then
+				dropLine(slot)
+			end
+			view = newLineView(slot, line.userId)
+			lineViews[slot] = view
+		end
+		reconcileLine(view :: LineView, line.codes, focus, t)
+	end
+end
+
+local function planIfDue(t: number, focus: Vector3)
+	if t >= nextPlan or t < nextPlan - 1 then
+		nextPlan = t + PLAN_INTERVAL
+		plan(t, focus)
+	end
+end
+
+local function moveWilds(t: number)
+	for _, view in wildViews do
+		moveWild(view, t)
+	end
+end
+
+-- Une étape de l'image a levé : listes du BulkMoveTo réalignées (une étape interrompue entre une
+-- pièce et son CFrame ne casse pas l'envoi) et avertissement limité à un par STEP_WARN_INTERVAL
+local function stepFailed(name: string, t: number, err: any)
+	local n = math.min(#moveParts, #moveCFrames)
+	for i = #moveParts, n + 1, -1 do
+		moveParts[i] = nil
+	end
+	for i = #moveCFrames, n + 1, -1 do
+		moveCFrames[i] = nil
+	end
+	local last = stepWarnAt[name]
+	if last == nil or t - last >= STEP_WARN_INTERVAL or t < last then
+		stepWarnAt[name] = t
+		warn(`[CongaRenderer] étape « {name} » : {err}`)
+	end
+end
+
+-- Exécute une étape de l'image sous pcall (aucune fermeture créée : arguments passés à pcall)
+local function guarded(name: string, t: number, fn: (...any) -> (), ...: any)
+	local ok, err = pcall(fn, ...)
+	if not ok then
+		stepFailed(name, t, err)
+	end
+end
+
+-- Chaque étape est protégée : une erreur qui se répète dans l'une d'elles (une file, les sauvages,
+-- les Nids, les Gloomwisps…) ne fige plus tout le rendu ; le BulkMoveTo final part toujours avec
+-- ce qui a été collecté
 local function onFrame(dt: number)
 	local t = Clock.now()
 	rebuilds = 0
@@ -1996,42 +2069,21 @@ local function onFrame(dt: number)
 	end
 	local focus = localPos or cameraPosition()
 	NestDisplay.focus = focus
-	-- files : création, suppression, réconciliation avec le miroir
 	for slot = 1, SLOT_COUNT do
-		local line = WorldStateController.line(slot)
-		local view = lineViews[slot]
-		if line == nil then
-			if view then
-				dropLine(slot)
-			end
-		else
-			if view == nil or view.userId ~= line.userId then
-				if view then
-					dropLine(slot)
-				end
-				view = newLineView(slot, line.userId)
-				lineViews[slot] = view
-			end
-			reconcileLine(view :: LineView, line.codes, focus, t)
-		end
+		guarded("syncLine", t, syncLine, slot, focus, t)
 	end
-	reconcileWilds(focus, t)
-	if t >= nextPlan or t < nextPlan - 1 then
-		nextPlan = t + PLAN_INTERVAL
-		plan(t, focus)
-	end
+	guarded("reconcileWilds", t, reconcileWilds, focus, t)
+	guarded("plan", t, planIfDue, t, focus)
 	for _, view in lineViews do
-		moveLine(view, t, dt)
+		guarded("moveLine", t, moveLine, view, t, dt)
 	end
-	updateMarkers(t)
-	for _, view in wildViews do
-		moveWild(view, t)
-	end
-	NestDisplay.collect(t, moveParts, moveCFrames, ensurePerched)
-	NestDisplay.animateLinks(t)
-	moveParaders(t)
-	moveWisps(t, focus)
-	moveOrb(t)
+	guarded("updateMarkers", t, updateMarkers, t)
+	guarded("moveWilds", t, moveWilds, t)
+	guarded("NestDisplay.collect", t, NestDisplay.collect, t, moveParts, moveCFrames, ensurePerched)
+	guarded("NestDisplay.animateLinks", t, NestDisplay.animateLinks, t)
+	guarded("moveParaders", t, moveParaders, t)
+	guarded("moveWisps", t, moveWisps, t, focus)
+	guarded("moveOrb", t, moveOrb, t)
 	if #moveParts > 0 then
 		workspace:BulkMoveTo(moveParts, moveCFrames, Enum.BulkMoveMode.FireCFrameChanged)
 	end

@@ -25,7 +25,10 @@
 --     (par UserId) → 1 Nebby vedette Starborn envoyé au Nid à la fin (ou au départ s'il est déjà
 --     qualifié), une seule fois par compte et par show (registre stats.starfallGift de QuestService)
 --   * boosts de serveur : une seule ligne de temps ×2 (Nuit d'Or, Starfall, Glow Party, LiveOps) ;
---     queueGlowParty prolonge depuis max(now, fin actuelle)
+--     queueGlowParty prolonge depuis max(now, fin actuelle) et note la plage payée de l'acheteur ;
+--     à l'arrêt du serveur (BindToClose posé dans Init, AVANT celui de DataService.Start, sans
+--     yield ; et crochet onBeforeSave de libération pendant l'arrêt), les secondes payées pas encore
+--     écoulées sont rendues à chaque acheteur présent en boost ×2 personnel, une seule fois
 --   * LiveOps : remote AdminCommand (UserIds de Data/Admins seulement) → MessagingService
 --     « LiveOps » → tous les serveurs ; attribut Player « Admin »
 --   * EventState : état complet envoyé à tous à chaque changement (flush, au plus 1 par tick) et
@@ -180,6 +183,14 @@ local boostUntil = 0
 local boostSource: string? = nil
 local boostBuyerId: number? = nil
 
+-- Plages de Glow Party PAYÉES dans la ligne de temps unique (docs §16.9 : jamais refusée, peut
+-- dépasser 60 min). Un arrêt du serveur (redémarrage de la mise à jour du samedi…) ne doit pas
+-- faire perdre à l'acheteur les secondes achetées et pas encore écoulées (Q9).
+type PaidRange = { buyerId: number, from: number, to: number }
+local paidRanges: { PaidRange } = {}
+local closing = false -- BindToClose reçu
+local refunded: { [number]: boolean } = {} -- UserId → secondes déjà rendues (une seule fois)
+
 local wisps: { WispRun } = {}
 local nextWispId = 1
 local wispSeedCounter = 0
@@ -306,6 +317,46 @@ local function stepBoost(now: number)
 		boostBuyerId = nil
 		dirty = true
 	end
+	-- plages payées entièrement écoulées : plus rien à rendre
+	for i = #paidRanges, 1, -1 do
+		if paidRanges[i].to <= now then
+			table.remove(paidRanges, i)
+		end
+	end
+end
+
+-- Secondes de Glow Party payées par `buyerId` et pas encore écoulées à `now`
+local function unusedPaidSeconds(buyerId: number, now: number): number
+	local total = 0
+	for _, r in paidRanges do
+		if r.buyerId == buyerId and r.to > now then
+			total += r.to - math.max(r.from, now)
+		end
+	end
+	return total
+end
+
+-- Arrêt du serveur : rend à l'acheteur (profil chargé) ses secondes payées pas encore écoulées, en
+-- boost ×2 personnel (persisté dans son profil par la sauvegarde de fermeture). Sans yield ;
+-- idempotent (BindToClose ET crochet de sauvegarde de libération)
+local function refundGlowParty(player: Player)
+	local uid = player.UserId
+	if refunded[uid] or DataService.get(player) == nil then
+		return
+	end
+	local seconds = math.ceil(unusedPaidSeconds(uid, Clock.now()))
+	if seconds <= 0 then
+		return
+	end
+	refunded[uid] = true
+	Safe.call(TAG .. ".refundGlowParty", EconomyService.grantPersonalBoost, player, seconds)
+end
+
+local function onClose()
+	closing = true
+	for _, player in Players:GetPlayers() do
+		refundGlowParty(player)
+	end
 end
 
 -- ---------------------------------------------------------------------------------------------
@@ -411,6 +462,10 @@ end
 local function onBeforeSave(player: Player, _data: { [string]: any }, release: boolean?)
 	if release == true or player.Parent == nil then
 		onPlayerLeavingEarly(player)
+	end
+	-- 2e voie de l'arrêt : la sauvegarde de fermeture d'un acheteur porte ses secondes rendues
+	if release == true and closing then
+		refundGlowParty(player)
 	end
 end
 
@@ -1322,6 +1377,9 @@ function EventService.Init()
 	-- départ : par le crochet de sauvegarde ET par une connexion PlayerRemoving (ordre non garanti)
 	DataService.onBeforeSave(onBeforeSave)
 	Players.PlayerRemoving:Connect(onPlayerLeavingEarly)
+	-- arrêt du serveur : posé ici (Init) pour passer AVANT le BindToClose de DataService.Start, dont
+	-- les sauvegardes de fermeture emportent alors les boosts rendus (sans yield)
+	game:BindToClose(onClose)
 end
 
 function EventService.Start()
@@ -1537,7 +1595,11 @@ function EventService.queueGlowParty(buyer: Player, seconds: number): number
 	end
 	local now = Clock.now()
 	local buyerId = if isPlayerArg(buyer) then buyer.UserId else nil
-	return extendBoost(math.max(now, boostUntil) + seconds, "glowParty", buyerId)
+	local from = math.max(now, boostUntil)
+	if buyerId ~= nil then
+		table.insert(paidRanges, { buyerId = buyerId, from = from, to = from + seconds })
+	end
+	return extendBoost(from + seconds, "glowParty", buyerId)
 end
 
 -- Secondes de boost ×2 de serveur restantes (bouton masqué au-delà de Balance.GlowParty.HideAbove)

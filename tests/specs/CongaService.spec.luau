@@ -769,6 +769,47 @@ return function(T)
 			expect(#analytics(env, "ParadeLength")).toBe(1)
 		end)
 
+		it("idleSeconds : revenu passif d'AVANT la parade, même si elle perche un Épique (Q8)", function()
+			local env = setup()
+			local parades = {}
+			env.Signals.Parade:Connect(function(_, info)
+				table.insert(parades, info)
+			end)
+			local p, data = join(env, 1, 1)
+			data.idleRate = 10
+			-- le vrai AtlasService perche les nouveaux Nebbies et relève le taux pendant la parade
+			local Atlas = env.h:require(S .. "AtlasService")
+			local addNebbies = Atlas.addNebbies
+			Atlas.addNebbies = function(pl, codes, source)
+				data.idleRate += env.Neb.Rarities[4].passive * #codes
+				return addNebbies(pl, codes, source)
+			end
+			local epic = env.Neb.pack(env.Neb.speciesOfRarity(4)[1], 0, 0)
+			place(env, p, env.V3.new(118, 3, 0))
+			tick(env)
+			feed(env, p, 1, epic)
+			walk(env, p, env.V3.new(131, 3, 0), 10)
+			expect(#parades).toBe(1)
+			local glow = parades[1].glow
+			expect(glow > 0).toBe(true)
+			expect(data.idleRate > 10).toBe(true) -- l'Épique est perché
+			expect(parades[1].idleSeconds).toBeNear(glow / 10)
+			-- premier revenu : taux nul avant la parade → taux d'après (jamais bloqué à 0)
+			local p2, data2 = join(env, 2, 2)
+			data2.idleRate = 0
+			Atlas.addNebbies = function(pl, codes, source)
+				data2.idleRate = 5
+				return addNebbies(pl, codes, source)
+			end
+			env.Conga.tick(env.Clock.now())
+			place(env, p2, env.V3.new(60, 3, -60))
+			tick(env)
+			feed(env, p2, 1, epic)
+			env.Conga.forceParade(p2)
+			expect(#parades).toBe(2)
+			expect(parades[2].idleSeconds).toBeNear(parades[2].glow / 5)
+		end)
+
 		it("la porte d'un autre Nid ne déclenche rien", function()
 			local env = setup()
 			local p = join(env, 1, 2)
@@ -1574,13 +1615,13 @@ return function(T)
 				place(env, p, env.V3.new(60, 3, 60))
 				tick(env, 35) -- exemption terminée
 				local anchor = rootOf(p).Position
-				for cycle = 1, env.B.MoveCheck.StrikesForBan do
+				for cycle = 1, env.MoveCheck.Config.StrikesForBan do
 					for _ = 1, 3 do
 						env.h:moveTo(p, anchor + env.V3.new(0, 0, 40))
 						tick(env)
 					end
 					expect(data.flags.strikes).toBe(cycle)
-					expect(data.flags.lbBanned).toBe(cycle >= env.B.MoveCheck.StrikesForBan)
+					expect(data.flags.lbBanned).toBe(cycle >= env.MoveCheck.Config.StrikesForBan)
 					tick(env, 32) -- restriction terminée, revenu à la position de retour
 				end
 				expect((rootOf(p).Position - anchor).Magnitude < 0.01).toBe(true)

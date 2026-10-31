@@ -60,7 +60,7 @@ local FORGE_ROWS = 40 -- lignes de fusion affichées au plus
 local PERCH_CELL = Vector2.new(92, 116)
 local STASH_CELL = Vector2.new(88, 108)
 local ATLAS_CELL = 52
-local ATLAS_ROW = 64
+local ATLAS_ROW = 84 -- nom (28 px) + détail sur deux lignes de 18 px (GDD §10.1)
 local SHRINK_TIME = 0.2
 -- Animation Starforge (§9.4) : orbite 1,2 s, flash 0,15 s, résultat 0,3 s, étoiles 0,1 s
 local ORBIT_TIME, FLASH_TIME, RESULT_TIME, STAR_EVERY, ANIM_HOLD = 1.2, 0.15, 0.3, 0.1, 1.4
@@ -232,11 +232,11 @@ local function perchCell(i: number, parent: Instance): Frame
 	icon.Position = UDim2.fromOffset(6, 4)
 	Widgets.label({
 		name = "Income",
-		size = UDim2.new(1, -6, 0, 20),
+		size = UDim2.new(1, -6, 0, 22),
 		position = UDim2.new(0.5, 0, 1, -4),
 		anchor = Vector2.new(0.5, 1),
 		color = Theme.Colors.Gold,
-		maxSize = 16,
+		maxSize = 18,
 		zIndex = 4,
 		parent = cell,
 	})
@@ -477,11 +477,11 @@ local function createStashCell(cell: Frame)
 	icon.Position = UDim2.fromOffset(5, 3)
 	Widgets.label({
 		name = "Income",
-		size = UDim2.new(1, -6, 0, 18),
+		size = UDim2.new(1, -6, 0, 22),
 		position = UDim2.new(0.5, 0, 1, -4),
 		anchor = Vector2.new(0.5, 1),
 		color = Theme.Colors.Gold,
-		maxSize = 15,
+		maxSize = 18,
 		zIndex = 4,
 		parent = hit,
 	})
@@ -514,7 +514,10 @@ local function renderStash()
 		end
 	end
 	if stashCount then
-		stashCount.Text = Prefs.t("collection.stashCount", { n = #sortedUids, max = Model.stashCap(view) })
+		-- la capacité de la réserve exclut les perchés (AtlasService.enforceStash : total − perchoirs
+		-- − capacité) : on compte donc les Nebbies NON perchés, sinon « 330/300 » avec 30 perchoirs
+		local used = #sortedUids - math.min(Model.perchCount(view), #sortedUids)
+		stashCount.Text = Prefs.t("collection.stashCount", { n = used, max = Model.stashCap(view) })
 	end
 	for mode, button in sortButtons do
 		Widgets.setText(button, Prefs.t("collection.sort." .. mode))
@@ -980,22 +983,24 @@ local function buildAtlasRows(list: ScrollingFrame)
 			order = i,
 			parent = list,
 		})
+		-- fiche : nom sur une ligne, détail (rareté · zones · étoiles) sur deux lignes de 18 px
 		local name = Widgets.label({
 			name = "Name",
-			size = UDim2.new(0.3, -8, 0.55, -4),
+			size = UDim2.new(0.3, -8, 0, 28),
 			position = UDim2.fromOffset(10, 4),
 			xAlign = Enum.TextXAlignment.Left,
-			maxSize = 20,
+			maxSize = 22,
 			parent = row,
 		})
 		local detail = Widgets.label({
 			name = "Detail",
-			size = UDim2.new(0.3, -8, 0.45, -4),
-			position = UDim2.new(0, 10, 0.55, 0),
+			size = UDim2.new(0.3, -8, 0, ATLAS_ROW - 38),
+			position = UDim2.fromOffset(10, 34),
 			xAlign = Enum.TextXAlignment.Left,
+			yAlign = Enum.TextYAlignment.Top,
 			color = Theme.Colors.TextDim,
 			font = Theme.Fonts.Body,
-			maxSize = 14,
+			maxSize = 18,
 			parent = row,
 		})
 		local cells: { [number]: Frame } = {}

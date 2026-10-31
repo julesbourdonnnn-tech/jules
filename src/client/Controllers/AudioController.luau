@@ -1,6 +1,7 @@
 --!strict
 -- Joue les sons déclarés dans Shared/Config/Sounds.luau ; un ID vide est ignoré.
 --   AudioController.play("Coin")
+--   AudioController.play("Catch", 0.05, 1.2) -- variation aléatoire ±5 %, hauteur × 1,2
 
 local ContentProvider = game:GetService("ContentProvider")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -68,7 +69,17 @@ function AudioController.isMusicEnabled(): boolean
 	return musicEnabled
 end
 
-function AudioController.play(name: string, pitchVariation: number?)
+-- Hauteur demandée par l'appelant : nombre fini et positif, sinon 1 (hauteur du son déclaré)
+local function validPitch(pitch: number?): number
+	if type(pitch) == "number" and pitch == pitch and pitch > 0 and pitch < math.huge then
+		return pitch
+	end
+	return 1
+end
+
+-- Joue une copie du son `name` : PlaybackSpeed = hauteur déclarée × `pitch` (défaut 1, ex. capture
+-- 1 + min(0,5 ; 0,01 × n), GDD §9.4) × (1 ± `pitchVariation` au hasard)
+function AudioController.play(name: string, pitchVariation: number?, pitch: number?)
 	if not AudioController.enabled then
 		return
 	end
@@ -79,7 +90,7 @@ function AudioController.play(name: string, pitchVariation: number?)
 	local sound = template:Clone()
 	local def = Sounds[name]
 	local variation = pitchVariation or 0
-	sound.PlaybackSpeed = (def.pitch or 1) * (1 + (math.random() * 2 - 1) * variation)
+	sound.PlaybackSpeed = (def.pitch or 1) * validPitch(pitch) * (1 + (math.random() * 2 - 1) * variation)
 	sound.Parent = SoundService
 	sound:Play()
 	task.delay(math.max(sound.TimeLength, 1) + 0.5, function()

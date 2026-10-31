@@ -9,7 +9,7 @@
 --   fx:destroy()
 --
 -- Effets : "auroraCurtains" (6 rideaux Beam vert-violet très haut), "snow" (ParticleEmitter sur une
--- pièce qui suit la caméra : 60 / s, vitesse 4-6, durée 6 s), "meteorStreaks" (réserve de 10 traits
+-- pièce qui suit la caméra : 15 / s, vitesse 4-6, durée 6 s), "meteorStreaks" (réserve de 10 traits
 -- Néon, un toutes les 0,4 s), "rainbowArcs" (5 arcs Beam). Graphismes légers : effets réduits.
 -- Toutes les pièces : ancrées, sans collision ni requête, sans ombre ; fondus en rétrécissant.
 
@@ -38,7 +38,11 @@ local AURORA_CURVE = 40
 local AURORA_GREEN = Color3.fromRGB(120, 255, 190)
 local AURORA_VIOLET = Color3.fromRGB(190, 120, 255)
 
-local SNOW_RATE = 60
+-- Neige sous budget (GDD §12.8, ≤ 300 particules à l'écran) : 15 / s × 6 s ≈ 90 flocons vivants ;
+-- avec la part des rigs de CongaRenderer (150), il reste ≥ 60 particules aux rafales de VFXController
+-- (capture, confettis, feux d'artifice), qui décomptent la neige active de workspace.ClientSky
+local SNOW_RATE = 15
+local SNOW_LIFETIME = 6
 local SNOW_LOW_MULT = 0.3
 local SNOW_HEIGHT = 30
 local SNOW_AREA = 120
@@ -183,7 +187,7 @@ local function snow(parent: Instance, options: Options): Effect
 	emitter.Name = "Snow"
 	emitter.Rate = 0
 	emitter.Speed = NumberRange.new(4, 6)
-	emitter.Lifetime = NumberRange.new(6)
+	emitter.Lifetime = NumberRange.new(SNOW_LIFETIME)
 	emitter.EmissionDirection = Enum.NormalId.Bottom
 	emitter.SpreadAngle = Vector2.new(20, 20)
 	emitter.Acceleration = Vector3.new(0.6, 0, 0.3)

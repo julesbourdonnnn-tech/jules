@@ -15,15 +15,18 @@
 --     NestService.setPerchCount / setPerchDisplay ; RÈGLE : EconomyService.settle AVANT de changer
 --     perchIncome, puis EconomyService.refreshRate
 --   * remotes Fuse(uid) 6/s, FuseAll() 1/2 s, Release(uids) 2/s, SetLock(uid, locked) 6/s ;
---     Starforge déterministe : 3 identiques (s, f, v, st), les verrouillés jamais consommés (sauf le
---     choisi, qui reçoit l'étoile) ; « Tout fusionner » : la fusion qui augmente le plus le revenu
---     perché d'abord, tant que la Stardust suffit ; Signals.Fused ; Celebrate "starforge"
+--     Starforge déterministe : Balance.Starforge.Copies identiques (s, f, v, st), les verrouillés
+--     jamais consommés (sauf le choisi, qui reçoit l'étoile) ; « Tout fusionner » : la fusion qui
+--     augmente le plus le revenu perché d'abord, tant que la Stardust suffit ; Signals.Fused ;
+--     Celebrate "starforge"
 --   * libération (tout ou rien) : Stardust = Formulas.releaseDust ; jamais un Cosmique ni un verrouillé
---   * réplication de « nebbies » (DataService envoie la clé ENTIÈRE, 11-22 Ko avec 300-600 Nebbies) :
---     les changements du jeu (parade, débordement) partent tout de suite ; ceux demandés par
---     l'interface (verrou, fusion, libération, jusqu'à 6 / s) au plus une fois par
---     Settings.NebbiesPatchInterval (le premier tout de suite, les suivants regroupés en fin de
---     fenêtre). La sauvegarde écrit le profil entier : rien n'est différé pour elle.
+--   * réplication de « nebbies » PAR ENTRÉES (DataService.markDirtyEntry : seuls les uids ajoutés,
+--     modifiés ou supprimés partent dans DataPatch ; la table entière, 11-22 Ko avec 300-600
+--     Nebbies, seulement dans l'instantané) : les changements du jeu (parade, débordement) partent
+--     tout de suite ; ceux demandés par l'interface (verrou, fusion, libération, jusqu'à 6 / s) au
+--     plus une fois par Settings.NebbiesPatchInterval (le premier tout de suite, les suivants
+--     regroupés en fin de fenêtre). La sauvegarde écrit le profil entier : rien n'est différé pour
+--     elle. Une réparation de la collection au premier accès renvoie la clé entière (une fois).
 -- GDD : §4.9, §4.13, §4.14, §5.4, §14.2 (Release_<rareté>, Starforge_<★>).
 -- Dépendances : DataService, MonetizationService (via Economy/PassEffects), NestService,
 -- EconomyService, Logic/Formulas, Config/{Nebbies,Quests,Balance}, Signals, Util/Notify,
@@ -70,9 +73,9 @@ local FUSE_ALL_MAX = 2000
 local perchedCache: { [Player]: { string } } = {}
 local atlasCache: { [Player]: number } = {}
 local lastPerchCount: { [Player]: number } = {}
--- Réplication de « nebbies » limitée : fenêtre ouverte, changement en attente de fin de fenêtre
+-- Réplication de « nebbies » limitée : fenêtre ouverte, uids changés en attente de fin de fenêtre
 local patchHold: { [Player]: boolean } = {}
-local patchPending: { [Player]: boolean } = {}
+local patchPending: { [Player]: { [string]: boolean } } = {}
 -- Joueurs partis (faible) : DataService garde le profil pendant la sauvegarde de départ, un appel
 -- tardif ne doit pas recréer d'état par joueur (il ne serait plus jamais vidé)
 local gone: { [Player]: boolean } = setmetatable({}, { __mode = "k" }) :: any
@@ -86,14 +89,33 @@ type Profile = { [string]: any }
 -- Aides
 -- ---------------------------------------------------------------------------------------------
 
--- Changement de la collection dû au jeu (parade, débordement) : répliqué tout de suite (le patch
--- part en fin d'image avec la table à jour, l'envoi en attente devient inutile)
-local function collectionChanged(player: Player)
-	patchPending[player] = nil
-	DataService.markDirty(player, "nebbies")
+-- Entrées de la collection à répliquer (ajoutées, modifiées ou supprimées : DataService envoie
+-- l'état de fin de frame de chaque uid)
+local function markEntries(player: Player, uids: { string })
+	for _, uid in uids do
+		DataService.markDirtyEntry(player, "nebbies", uid)
+	end
 end
 
--- Fin de fenêtre : envoie le changement en attente (et rouvre une fenêtre), sinon la ferme
+-- Envoie maintenant les uids en attente de fin de fenêtre
+local function flushPending(player: Player)
+	local waiting = patchPending[player]
+	if waiting then
+		patchPending[player] = nil
+		for uid in waiting do
+			DataService.markDirtyEntry(player, "nebbies", uid)
+		end
+	end
+end
+
+-- Changement de la collection dû au jeu (parade, débordement) : répliqué tout de suite, avec les
+-- changements de l'interface en attente (le patch part en fin d'image, état à jour)
+local function collectionChanged(player: Player, uids: { string })
+	flushPending(player)
+	markEntries(player, uids)
+end
+
+-- Fin de fenêtre : envoie les changements en attente (et rouvre une fenêtre), sinon la ferme
 local function releasePatchHold(player: Player)
 	if gone[player] or player.Parent == nil then
 		patchHold[player] = nil
@@ -101,8 +123,7 @@ local function releasePatchHold(player: Player)
 		return
 	end
 	if patchPending[player] then
-		patchPending[player] = nil
-		DataService.markDirty(player, "nebbies")
+		flushPending(player)
 		task.delay(AtlasService.Settings.NebbiesPatchInterval, releasePatchHold, player)
 	else
 		patchHold[player] = nil
@@ -110,16 +131,23 @@ local function releasePatchHold(player: Player)
 end
 
 -- Changement demandé par l'interface (verrou, fusion, libération) : au plus un envoi par fenêtre
-local function collectionChangedByRequest(player: Player)
+local function collectionChangedByRequest(player: Player, uids: { string })
 	if gone[player] then
 		return
 	end
 	if patchHold[player] then
-		patchPending[player] = true
+		local waiting = patchPending[player]
+		if not waiting then
+			waiting = {}
+			patchPending[player] = waiting
+		end
+		for _, uid in uids do
+			waiting[uid] = true
+		end
 		return
 	end
 	patchHold[player] = true
-	DataService.markDirty(player, "nebbies")
+	markEntries(player, uids)
 	task.delay(AtlasService.Settings.NebbiesPatchInterval, releasePatchHold, player)
 end
 
@@ -128,17 +156,22 @@ local function rarityKey(rarity: number): string
 	return if def then def.key else tostring(rarity)
 end
 
--- Répare les clés de collection d'un profil (anciennes sauvegardes, valeurs inattendues)
-local function sanitize(data: Profile)
+-- Répare les clés de collection d'un profil (anciennes sauvegardes, valeurs inattendues) ;
+-- retourne les clés réparées (l'instantané déjà envoyé au client contient l'ancienne valeur)
+local function sanitize(data: Profile): { string }
+	local repaired: { [string]: boolean } = {}
 	if type(data.nebbies) ~= "table" then
 		data.nebbies = {}
+		repaired.nebbies = true
 	end
 	for uid, rec in data.nebbies do
 		if type(uid) ~= "string" or not Collection.isValidRecord(rec) then
 			warn(`[AtlasService] enregistrement invalide ignoré : {tostring(uid)}`)
 			data.nebbies[uid] = nil
+			repaired.nebbies = true
 		end
 	end
+	local nextUid = data.nextUid
 	if type(data.nextUid) ~= "number" or data.nextUid ~= data.nextUid or data.nextUid < 1 then
 		data.nextUid = 1
 	end
@@ -150,28 +183,41 @@ local function sanitize(data: Profile)
 			data.nextUid = n + 1
 		end
 	end
+	if data.nextUid ~= nextUid then
+		repaired.nextUid = true
+	end
 	for _, key in { "atlas", "badges" } do
 		if type(data[key]) ~= "table" then
 			data[key] = {}
+			repaired[key] = true
 		end
 	end
 	local atlasWords = math.ceil(Nebbies.SPECIES_COUNT * Nebbies.FORM_COUNT / 32)
 	for i = 1, atlasWords do
 		if type(data.atlas[i]) ~= "number" then
 			data.atlas[i] = 0
+			repaired.atlas = true
 		end
 	end
 	for i = 1, math.ceil(3 * Nebbies.SPECIES_COUNT / 32) do
 		if type(data.badges[i]) ~= "number" then
 			data.badges[i] = 0
+			repaired.badges = true
 		end
 	end
 	if type(data.atlasRewards) ~= "number" or data.atlasRewards ~= data.atlasRewards then
 		data.atlasRewards = 0
+		repaired.atlasRewards = true
 	end
 	if type(data.perchIncome) ~= "number" or data.perchIncome ~= data.perchIncome then
 		data.perchIncome = 0
+		repaired.perchIncome = true
 	end
+	local keys: { string } = {}
+	for key in repaired do
+		table.insert(keys, key)
+	end
+	return keys
 end
 
 -- Profil chargé, réparé au premier accès ; nil si absent
@@ -182,7 +228,10 @@ local function profileOf(player: Player): Profile?
 	end
 	if not prepared[data] then
 		prepared[data] = true
-		sanitize(data)
+		-- réparé : la clé entière repart (la collection n'est ensuite répliquée que par entrées)
+		for _, key in sanitize(data) do
+			DataService.markDirty(player, key)
+		end
 	end
 	return data
 end
@@ -318,7 +367,7 @@ local function enforceStash(player: Player, data: Profile, arrivals: { string })
 	end
 	local count, dust = releaseUids(player, data, victims)
 	if count > 0 then
-		collectionChanged(player)
+		collectionChanged(player, victims)
 		Notify.feedback(player, "feedback.autoRelease", { count = count, dust = dust }, "info")
 	end
 end
@@ -504,7 +553,7 @@ function AtlasService.addNebbies(
 	if #created == 0 then
 		return {}
 	end
-	collectionChanged(player)
+	collectionChanged(player, created)
 	DataService.markDirty(player, "nextUid")
 	if badgesChanged then
 		DataService.markDirty(player, "badges")
@@ -612,7 +661,8 @@ end
 -- Starforge
 -- ---------------------------------------------------------------------------------------------
 
--- Deux copies consommables (identiques, non verrouillées, ≠ chosen), les plus récentes d'abord
+-- Copies consommables (identiques, non verrouillées, ≠ chosen), les plus récentes d'abord :
+-- au plus Balance.Starforge.Copies − 1 (moins s'il en manque)
 local function findCopies(data: Profile, chosen: string, rec: Types.NebbyRecord): { string }
 	local key = Collection.groupKey(rec)
 	local copies: { string } = {}
@@ -624,7 +674,8 @@ local function findCopies(data: Profile, chosen: string, rec: Types.NebbyRecord)
 	table.sort(copies, function(a: string, b: string): boolean
 		return Collection.uidNumber(a) > Collection.uidNumber(b)
 	end)
-	return { copies[1], copies[2] }
+	local need = math.max(Balance.Starforge.Copies - 1, 0)
+	return table.move(copies, 1, math.min(#copies, need), 1, {})
 end
 
 -- Fusion déjà validée (copies trouvées, Stardust suffisante) : ne trie pas les perchoirs
@@ -638,7 +689,9 @@ local function doFuse(player: Player, data: Profile, uid: string, copies: { stri
 		data.nebbies[copy] = nil
 	end
 	rec.st = stars
-	collectionChangedByRequest(player)
+	local touched = table.clone(copies)
+	table.insert(touched, uid)
+	collectionChangedByRequest(player, touched)
 	Signals.Fused:Fire(player, stars)
 	return stars
 end
@@ -866,12 +919,15 @@ function AtlasService.fuseAllDetailed(player: Player): (number, string?, { [stri
 		end
 	end
 	local fused = 0
+	local touched: { string } = {}
 	local best: { uid: string, stars: number, s: number, f: number, v: number }? = nil
 	for _, step in plan do
 		if step.stars < paidBelow then
 			for _, copy in step.copies do
 				data.nebbies[copy] = nil
+				table.insert(touched, copy)
 			end
+			table.insert(touched, step.chosen)
 			local rec = data.nebbies[step.chosen]
 			rec.st = step.stars
 			fused += 1
@@ -882,7 +938,7 @@ function AtlasService.fuseAllDetailed(player: Player): (number, string?, { [stri
 		end
 	end
 	if fused > 0 and best then
-		collectionChangedByRequest(player)
+		collectionChangedByRequest(player, touched)
 		Notify.celebrate(player, "starforge", {
 			uid = best.uid,
 			s = best.s,
@@ -931,7 +987,7 @@ function AtlasService.releaseDetailed(player: Player, uids: { Types.Uid }): (num
 	EconomyService.settle(player)
 	local count, dust = releaseUids(player, data, list)
 	if count > 0 then
-		collectionChangedByRequest(player)
+		collectionChangedByRequest(player, list)
 		Notify.feedback(player, "feedback.released", { count = count, dust = dust }, "reward")
 		Notify.celebrate(player, "release", { count = count, dust = dust })
 		refresh(player, data)
@@ -957,7 +1013,7 @@ function AtlasService.setLock(player: Player, uid: Types.Uid, locked: boolean): 
 	local value = if locked then true else nil
 	if rec.lk ~= value then
 		rec.lk = value
-		collectionChangedByRequest(player)
+		collectionChangedByRequest(player, { uid })
 	end
 	return true
 end

@@ -38,6 +38,11 @@ local COUNT_TIME = 0.8 -- compteur 0,8 s Quint Out (§7.2)
 local COIN_COUNT = 24
 local COIN_LIFE = 1.3
 local GRAVITY = 2.4 -- en fractions de hauteur par s²
+-- Pile du bas (px de référence) : bouton 96 px à 4 px du bord, ligne Night Shift de 26 px (texte
+-- 18 px, GDD §10.1) 6 px au-dessus ; le montant occupe l'espace entre le titre et cette pile
+local OK_HEIGHT, OK_MARGIN = 96, 4
+local NIGHT_HEIGHT, NIGHT_GAP = 26, 6
+local BOTTOM_STACK = OK_MARGIN + OK_HEIGHT + NIGHT_GAP + NIGHT_HEIGHT + 4
 
 type Coin = { frame: Frame, x: number, y: number, vx: number, vy: number, age: number, delay: number }
 
@@ -156,7 +161,7 @@ function Panel.build(parent: Frame)
 	})
 	amount = Widgets.label({
 		name = "Amount",
-		size = UDim2.new(1, -16, 0.3, 0),
+		size = UDim2.new(1, -16, 0.74, -BOTTOM_STACK),
 		position = UDim2.fromScale(0.5, 0.26),
 		anchor = Vector2.new(0.5, 0),
 		color = Theme.Colors.Gold,
@@ -164,20 +169,21 @@ function Panel.build(parent: Frame)
 		maxSize = 64,
 		parent = parent,
 	})
+	-- au-dessus du bouton (jamais dessous : l'ancienne place chevauchait ses 14 px du haut)
 	nightShift = Widgets.label({
 		name = "NightShift",
-		size = UDim2.new(1, -16, 0, 26),
-		position = UDim2.new(0.5, 0, 1, -112),
-		anchor = Vector2.new(0.5, 0),
+		size = UDim2.new(1, -16, 0, NIGHT_HEIGHT),
+		position = UDim2.new(0.5, 0, 1, -(OK_MARGIN + OK_HEIGHT + NIGHT_GAP)),
+		anchor = Vector2.new(0.5, 1),
 		color = Theme.Colors.TextDim,
 		font = Theme.Fonts.Body,
-		maxSize = 16,
+		maxSize = 18,
 		parent = parent,
 	})
 	okButton = Widgets.button({
 		name = "Ok",
-		size = UDim2.fromOffset(260, 96), -- bouton principal 96 px (§7.2)
-		position = UDim2.new(0.5, 0, 1, -4),
+		size = UDim2.fromOffset(260, OK_HEIGHT), -- bouton principal 96 px (§7.2)
+		position = UDim2.new(0.5, 0, 1, -OK_MARGIN),
 		anchor = Vector2.new(0.5, 1),
 		color = Theme.Colors.Success,
 		maxText = 34,

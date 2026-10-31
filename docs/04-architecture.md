@@ -84,7 +84,7 @@ workspace.Lumora (Folder)
     Base, Shaft, Top, Rings (Folder : 3 anneaux Néon tag "BeaconRing"), Star (Model),
     SkyBeam (Part porteuse : Attachment "Bottom" + "Top" à Y = 300, Beam "Beam"),
     Deposit (Cylinder Néon Ø 28, tag "BeaconDeposit", éteint hors Nuit de la Balise),
-    Board (Part, stèle du tableau, r = 12, face au sud ; attributs posés par LeaderboardService)
+    Board (Part, stèle du tableau, r = 12, face au sud ; attributs Live, Record, Weekly, Atlas posés par LeaderboardService, §11.12)
   Nests    (Folder)
     Nest_01 … Nest_12 (Model, Persistent, tag "Nest")
       Platform, Gate (Model : PostL, PostR, Arch (Folder : 7 Parts Néon tag "NestArch")),
@@ -124,6 +124,7 @@ Tags animés par `WorldFXController` (socle) : `Spin`, `Float`, `Pulse`. Tags lu
 | `VIP` | boolean | NestService | badge « ★ VIP » (pass VIPStar) |
 | `Title`, `LineStyle`, `NestTheme` | string | NestService | cosmétiques équipés |
 | `Supernovas` | number | NestService | R (miroir de la clé de profil, pour les autres clients) |
+| `GuardLinks` | number | EconomyService | maillons protégés de SA file, `Formulas.guardLinks(upgrades.guard)` (au chargement, à l'achat, conservé à la Supernova) ; lu par le rendu des files des autres clients (CongaRenderer) |
 | `Rookie` | boolean | QuestService | bouclier débutant actif |
 | `CrewId` | number | CrewService | 0 = aucun |
 | `DashReadyAt` | number | CongaService | `Clock.now()` de fin de recharge du Dash |
@@ -188,7 +189,7 @@ Règles :
 | 12 | LeaderboardService | events | 1, 3, 4 |
 | 13 | CongaService | conga | tous (orchestre le tick) |
 
-Tous peuvent utiliser : `Shared/*` (Config, Logic, Types, Util, Net, Localization), `Server/Signals`, `Server/Util/{Notify,RateLimit,Analytics}`, `Server/Data/Schema`. `MoveCheck` (`Server/Util`) n'est utilisé que par CongaService.
+Tous peuvent utiliser : `Shared/*` (Config, Logic, Types, Util, Net, Localization), `Server/Signals`, `Server/Util/{Notify,RateLimit,Analytics}`, `Server/Data/Schema`. `MoveCheck` (`Server/Util`) est **piloté** par CongaService seul (`reset`, `noteSpeed`, `step`, `clear`) ; NestService le **lit** sans jamais l'écrire (`lastValid`, `isRestricted` : position de confiance de `inOwnHarbor`, §11.4). Aucun autre service n'y touche.
 
 `Init()` : créer les états, récupérer les remotes (`Net.event`), enregistrer les crochets ; **aucun yield**. `Start()` : brancher les événements (`PlayerAdded` + joueurs déjà présents, signaux, remotes).
 
@@ -201,7 +202,9 @@ Un service ne doit jamais `require` un service plus tardif pour l'appeler. Il é
 | Appelant (tardif) | Appel | Quand |
 |---|---|---|
 | CongaService.Init | `EconomyService.setLineBanker(CongaService.forceParade)` | une fois ; la Supernova encaisse la file d'abord |
-| EconomyService.Init | `DataService.onBeforeSave(fn)` | une fois ; `fn` règle le revenu passif avant chaque sauvegarde |
+| EconomyService.Init | `DataService.onBeforeSave(fn)` | une fois ; `fn(player, data, release)` règle le revenu passif avant chaque sauvegarde |
+| EventService.Init | `DataService.onBeforeSave(fn)` | une fois ; `release == true` (départ, `BindToClose`) : travail de départ AVANT l'instantané écrit (Comète lâchée et dernier port compté, cadeau Starfall d'un joueur déjà qualifié) |
+| QuestService.Init | `DataService.onBeforeSave(fn)` ; `EventService.setStarfallClaim(claim)` | une fois ; temps de jeu compté avant chaque sauvegarde ; `claim(player, startsAt)` marque `stats.starfallGift` AVANT la remise du Starborn garanti et répond false si ce compte l'a déjà reçu pour ce show (sur n'importe quel serveur) |
 | EventService | `EconomyService.setServerBoostUntil(t)` | à chaque changement du boost ×2 de serveur |
 | EventService | `SpawnService.setModifiers(mods)` | à chaque changement de météo, Frenzy, Starfall |
 | CrewService | `EconomyService.setCrewPresent(player, n)` | à chaque changement d'équipage ou d'activité d'un équipier |
@@ -219,7 +222,7 @@ Un service ne doit jamais `require` un service plus tardif pour l'appeler. Il é
 | `CharacterAdded` (chaque apparition) | **NestService** place le personnage sur son Nid tourné vers le centre (`PivotTo`) puis `Signals.ServerMoved`. **CongaService** remet `MoveCheck` (exemption 3 s) et les miettes à zéro, applique le WalkSpeed. |
 | `DataService.Loaded` | **EconomyService** : gains hors ligne, `lastSettle = now`, `idleRate`, écran de retour. **AtlasService** : tri des perchoirs, `NestService.setPerchDisplay`. **NestService** : attributs (Zen, cosmétiques, Supernovas, VIP) puis `Signals.PlayerReady(player, slot)` dès que profil ET Nid sont prêts. **QuestService** : session +1, jours UTC, chaîne d'accueil (sur `PlayerReady` : Puffkins de bienvenue si `onboarding.step == 0`), bouclier. **LeaderboardService** : titre de la semaine. Tout handler revérifie `DataService.get(player)` et `player.Parent` après un yield. |
 | `Humanoid.Died` / réinitialisation | **CongaService** : file détachée (Nebbies libres prioritaires pour le propriétaire, sans Second Souffle), `LineEvent "clear" (death)`, `EventService.dropComet`. |
-| `PlayerRemoving` | **CongaService** : file détachée sans priorité (`clear` « leave »), `dropComet`, `LineEvent "owner"` (0). **SpawnService** : apparitions personnelles retirées. **CrewService** : retiré de son équipage. **NestService** : Nid libéré (gris). DataService sauvegarde (le crochet `onBeforeSave` règle le Glow). Chaque service vide ses tables par joueur. `RateLimit` se vide seul. |
+| `PlayerRemoving` | **CongaService** : file détachée sans priorité (`clear` « leave »), `dropComet`, `LineEvent "owner"` (0). **SpawnService** : apparitions personnelles retirées. **CrewService** : retiré de son équipage. **NestService** : Nid libéré (gris). DataService sauvegarde et libère le verrou (crochets `onBeforeSave(player, data, true)` : Glow réglé, travail de départ d'EventService, temps de jeu) ; une reconnexion sur le même serveur attend la fin de cette sauvegarde (§11.1). Chaque service vide ses tables par joueur. `RateLimit` se vide seul. |
 
 ---
 
@@ -232,7 +235,7 @@ Une seule connexion `RunService.Heartbeat` (dans `CongaService.Start`) accumule 
 | # | Étape | Appels |
 |---|---|---|
 | 1 | Horloge | `now` (paramètre) ; `tickId = (tickId + 1) % 65536` |
-| 2 | Acteurs et miettes | Pour chaque joueur avec profil chargé, slot > 0, personnage vivant avec `HumanoidRootPart` : `verdict, back = MoveCheck.step(player, pos, 0.1, now, WorldLayout.groundY(pos.X, pos.Z))` ; `"rewind"` → `PivotTo(back)`, `flags.strikes`, attribut `Unstable`, `Signals.MoveViolation` ; acteur `Types.Actor` avec `valid = verdict == "ok" and not MoveCheck.isRestricted(player, now)`, `zen = NestService.isZen`, `crewId = CrewService.crewOf`, `rookie = QuestService.isRookie`, `touch = inputType == 1` ; si `verdict == "ok"` : `trail:push(pos)` et `netTrail:push(pos)` |
+| 2 | Acteurs et miettes | Pour chaque joueur avec profil chargé, slot > 0, personnage vivant avec `HumanoidRootPart` : `groundY = WorldLayout.groundY(pos.X, pos.Z)` ; sol de MoveCheck = `max(groundY, appui réel)`, l'appui réel venant d'une sonde `workspace:Blockcast` vers le bas depuis la racine (§11.13) ; `verdict, back = MoveCheck.step(player, pos, 0.1, now, solMoveCheck)` ; `"rewind"` → `PivotTo(back)`, `flags.strikes`, attribut `Unstable`, `Signals.MoveViolation` ; acteur `Types.Actor` avec `valid = verdict == "ok" and not MoveCheck.isRestricted(player, now)`, `zen = NestService.isZen`, `crewId = CrewService.crewOf`, `rookie = QuestService.isRookie`, `touch = inputType == 1` ; si `verdict == "ok"` : miette `(pos.X, groundY + Tuning.RootHeight, pos.Z)` (sol ANALYTIQUE, jamais la sonde) poussée dans `trail` et `netTrail` |
 | 3 | Événements | `EventService.step(now)` — transitions de phase (météo, Comète, Balise, Frenzy, Nuit d'Or, Starfall), Gloomwisps |
 | 4 | Apparitions | `SpawnService.step(now)` — apparitions dues, expirations |
 | 5 | Captures | Acteurs `valid` dont la file a de la place : `SpawnService.query(pos, Formulas.lureRadius(lure, rush) + Balance.Catch.LatencyTolerance, now, player)`, `|Δy| ≤ Catch.MaxDy`, `SpawnService.canCatch` ; conflit : le plus proche gagne, égalité → ordre des acteurs mélangé à chaque tick ; `SpawnService.consume(id, player)` ; nœud ajouté ; `Signals.Caught` |
@@ -309,7 +312,7 @@ Ajouter un signal = modifier le contrat : le demander dans les notes d'intégrat
 | `onboarding` | `{ step, p }` (0 pas commencé, 1-7, 8 fini) | QuestService | `onboardingStep` |
 | `daily`, `quests`, `weekly` | calendrier, 3 quêtes du jour, Grand Défilé | QuestService | remotes |
 | `rookie` | `{ sessions, playSeconds, done }` | QuestService | `isRookie`, `onSafeMoment` |
-| `stats` | compteurs (§12.6 du GDD) | QuestService | signaux §7 |
+| `stats` | compteurs (§12.6 du GDD), dont `starfallGift` = `startsAt` du dernier Starfall Saturday dont le Starborn garanti a été remis (registre par compte : un seul cadeau par show, même après une reconnexion ou un changement de serveur) | QuestService | signaux §7 ; crochet `EventService.setStarfallClaim` |
 | `codes` (privé) | `[CODE] = true` | QuestService | `redeem` |
 | `settings` | réglages sauvegardés de `Config/Settings` | NestService | `setting`, `isZen`, `Signals.SettingChanged` |
 | `cosmetics`, `unlocks` | équipés ; `{ styles, titles, themes }` | NestService | `unlock`, `grantTemporary`, `hasUnlock` |
@@ -319,7 +322,7 @@ Ajouter un signal = modifier le contrat : le demander dans les notes d'intégrat
 | `flags` (privé) | `{ strikes, lbBanned }` | CongaService | lu par LeaderboardService |
 
 Règles :
-1. **Écriture** : seul le propriétaire mute sa clé, puis appelle `DataService.markDirty(player, clé)` (ou `DataService.set`) pour la réplication par patch. **Lecture** : tout service serveur peut lire `DataService.get(player)` (jamais muter).
+1. **Écriture** : seul le propriétaire mute sa clé, puis appelle `DataService.markDirty(player, clé)` (ou `DataService.set`) pour la réplication par patch ; pour une grande table dont seules quelques entrées changent (`nebbies`), `DataService.markDirtyEntry(player, clé, sousClé)` (§11.1). **Lecture** : tout service serveur peut lire `DataService.get(player)` (jamais muter).
 2. **Monnaies entières** (`math.floor`), jamais négatives, jamais NaN ; `glowCarry ∈ [0 ; 1[`.
 3. **Règle d'or du revenu passif** : `EconomyService.settle(player)` **avant** tout changement de taux (perchés, R, VIP, Double Glow, boosts, équipiers) ou de solde ; puis `EconomyService.refreshRate(player)`.
 4. Plafonds du jour (`caps`) remis à zéro quand `Clock.day() ≠ caps.day` (au premier accès du jour).
@@ -343,7 +346,7 @@ Règles :
 | `Monetization.luau` | 6 passes, 6 produits (IDs 0, prix §8, effets) | MonetizationService, ProductService, Economy/Atlas, Panels/Shop |
 | `Sounds.luau` | sons optionnels (IDs vides) (§9.1) | AudioController |
 
-`Shared/Types.luau` exporte le vocabulaire commun : `NebbyCode`, `NebbyRecord`, `UpgradeTrack`, `Profile`, `LineNode`, `WildNebby`, `Actor`, `SpawnModifiers`, `CatchInfo`, `ParadeInfo`, `SnipInfo`, `CometSignal`, toutes les charges utiles réseau (§10), `SupernovaPreview`, `PanelName`, `HudElement`, `LineMirror`, `WildMirror`. **Code de Nebby** : `code = s | (f << 6) | (v << 9)` (12 bits ; `Nebbies.pack/unpack`). Un Nebby de file est toujours ★1 ; les étoiles n'existent qu'en collection.
+`Shared/Types.luau` exporte le vocabulaire commun : `NebbyCode`, `NebbyRecord`, `UpgradeTrack`, `Profile`, `LineNode`, `WildNebby`, `Actor`, `SpawnModifiers`, `CatchInfo`, `ParadeInfo`, `SnipInfo`, `CometSignal`, toutes les charges utiles réseau (§10, dont `DataEntryOps` / `DataPatchEntries` du 3e argument de `DataPatch`), `SupernovaPreview`, `PanelName`, `HudElement`, `LineMirror`, `WildMirror`. **Code de Nebby** : `code = s | (f << 6) | (v << 9)` (12 bits ; `Nebbies.pack/unpack`). Un Nebby de file est toujours ★1 ; les étoiles n'existent qu'en collection.
 
 **Versions de contenu** : `Nebbies.ENABLED_VERSIONS["v1.1"] = false`. Tout tirage (espèces, formes, météos) ne considère que le contenu activé ; l'Atlas réserve déjà les bits de la v1.1 (aucune migration à prévoir).
 
@@ -362,7 +365,7 @@ Débit : `RateLimit.allow(player, "<Nom>", n, secondes)` ; deux limites = deux a
 | `Dash` | — | profil chargé ; personnage vivant ; pas porteur de la Comète (Feedback `cometNoDash`) ; recharge serveur écoulée (`DashReadyAt`) | 3 / 1 s | CongaService |
 | `BuyUpgrade` | `track: string` | `Validate.key(track, Balance.Upgrades, 16)` ; profil ; `settle` ; niveau < `Formulas.upgradeMaxLevel` (Feedback `maxLevel`) ; Glow ≥ coût (Feedback `notEnoughGlow {missing}`) | 10 / 1 s | EconomyService |
 | `Supernova` | — | profil ; `NestService.inOwnHarbor` (Feedback `notInHarbor`) ; encaissement de la file (crochet) ; `settle` ; Glow ≥ `Formulas.supernovaCost(R)` | 1 / 2 s | EconomyService |
-| `Fuse` | `uid: string` | `Validate.string(uid, 12)` ; possédé ; ★ < 5 ; 2 autres identiques non verrouillés (Feedback `fuseNeedCopies`) ; Stardust ≥ coût | 6 / 1 s | AtlasService |
+| `Fuse` | `uid: string` | `Validate.string(uid, 12)` ; possédé ; ★ < 5 ; `Balance.Starforge.Copies − 1` (2) autres identiques non verrouillés (Feedback `fuseNeedCopies`) ; Stardust ≥ coût | 6 / 1 s | AtlasService |
 | `FuseAll` | — | profil | 1 / 2 s | AtlasService |
 | `Release` | `uids: {string}` | table séquentielle (`#t` = nombre de clés), 1-50 chaînes ≤ 12, uniques ; toutes possédées, non verrouillées, non Cosmiques ; sinon RIEN n'est libéré | 2 / 1 s | AtlasService |
 | `SetLock` | `uid: string, locked: boolean` | chaîne ≤ 12 possédée ; booléen | 6 / 1 s | AtlasService |
@@ -387,7 +390,7 @@ Débit : `RateLimit.allow(player, "<Nom>", n, secondes)` ; deux limites = deux a
 
 | Remote | Charge utile (`Shared/Types`) | Destinataires | Émetteur | Abonné client (seul) |
 |---|---|---|---|---|
-| `DataSnapshot`, `DataPatch` | profil public / `(patch, removedKeys)` | le joueur | DataService | StateController |
+| `DataSnapshot`, `DataPatch` | profil public / `(patch, removedKeys, entries?)` | le joueur | DataService | StateController |
 | `PathStream` (non fiable) | `buffer` (§10.4) | tous, 10 Hz | CongaService | WorldStateController |
 | `PathSnapshot` | `(slot: number, buf: buffer)` — buf au format §10.4 (runs du seul `slot`, 200 derniers points) | le demandeur | CongaService | WorldStateController |
 | `WorldSnapshot` | `WorldSnapshotPayload` | arrivée, `RequestWorld` | CongaService | WorldStateController |
@@ -406,6 +409,15 @@ Débit : `RateLimit.allow(player, "<Nom>", n, secondes)` ; deux limites = deux a
 **Formes exactes** (types Luau dans `src/shared/Types.luau`, qui fait foi) :
 
 ```lua
+-- DataPatch : (patch, removedKeys, entries?) — une fois par frame et par joueur, clés publiques seules
+patch       = { [clé] = valeur }            -- clés de 1er niveau entières (markDirty, set, increment)
+removedKeys = { clé }                       -- clés devenues nil
+entries     = { [clé] = { set = { [sousClé] = valeur }, del = { sousClé } } }   -- DataPatchEntries
+--   entrées d'une grande table (markDirtyEntry ; aujourd'hui `nebbies` : uids ajoutés, modifiés ou
+--   supprimés), résolues sur l'état de fin de frame ; jamais pour une clé qui part entière dans le
+--   même message. Le client les applique sur une COPIE de sa table puis émet Changed(clé) une fois.
+--   La table entière ne part que dans DataSnapshot (chargement, RequestSnapshot).
+
 -- LineEvent : { LineOp }, appliquées par slot dans l'ordre STRICT de `ver`
 { op = "add",   slot, ver, codes = { NebbyCode }, ids = { number } }   -- capturés ce tick, ajoutés en queue
 { op = "bank",  slot, ver, count, glow, bonus, atBeacon, newEntries }  -- parade : la file est vidée
@@ -500,11 +512,39 @@ Chaque fiche donne : rôle, API (signatures exactes du stub), signaux, remotes, 
 
 ### 11.1 DataService (socle)
 
-API existante : `get`, `isLoaded`, `waitFor`, `set`, `increment`, `markDirty`, `saveNow`, `Loaded` (Signal `(player, data)`), `Settings`. **Ajout du contrat** : `DataService.onBeforeSave(fn: (Player, { [string]: any }) -> ())` — crochets synchrones appelés juste avant chaque écriture (autosave 90 s, `saveNow`, départ, `BindToClose`), protégés par `pcall`. Clé : `version`.
+```lua
+DataService.get(player: Player): { [string]: any }?
+DataService.isLoaded(player: Player): boolean
+DataService.waitFor(player: Player, timeout: number?): { [string]: any }?
+DataService.set(player: Player, key: string, value: any)
+DataService.increment(player: Player, key: string, delta: number): number?
+DataService.markDirty(player: Player, key: string)                         -- clé entière
+DataService.markDirtyEntry(player: Player, key: string, subKey: string)    -- une entrée de data[key]
+DataService.saveNow(player: Player): boolean
+DataService.onBeforeSave(fn: (Player, { [string]: any }, boolean?) -> ())
+DataService.Loaded: Signal<Player, { [string]: any }>
+DataService.Settings   -- LOCK_EXPIRY, LOAD_ATTEMPTS, LOCKED_RETRY_DELAY, RETRY_BASE_DELAY, SAVE_ATTEMPTS,
+                       -- AUTOSAVE_INTERVAL (90), CLOSE_TIMEOUT (25), REJOIN_WAIT (25)
+```
+
+- **Verrou de session** `record.lock = { jobId, time, session }` posé par le chargement (`UpdateAsync`) ; `session` = jeton (`HttpService:GenerateGUID`) propre à CE chargement. Un verrou d'un autre serveur plus jeune que `LOCK_EXPIRY` (30 min) fait réessayer (`LOCKED_RETRY_DELAY`), puis il est repris au dernier essai. Chaque écriture refuse d'écraser un enregistrement verrouillé par un autre `JobId`. Une session partie **pendant** son chargement libère le verrou sans toucher aux données, seulement s'il porte encore SON jeton : une reconnexion du même UserId sur ce serveur (même `JobId`), chargée entre-temps, garde le sien.
+- **Reconnexion sur le même serveur** : `pendingRelease[UserId]` compte les sauvegardes de départ en cours ; le nouveau chargement attend qu'elles finissent (au plus `REJOIN_WAIT` s), sinon le joueur est renvoyé (message bilingue « reviens dans un instant ») plutôt que de lire des données périmées.
+- **Schéma plus récent** (`data.version > Schema.VERSION` : profil écrit par un serveur déjà mis à jour, ami rejoint ou changement de serveur pendant un déploiement) : le chargement n'écrit RIEN (pas même le verrou, celui d'un serveur à jour reste intact), le profil n'est ni réparé ni gardé en mémoire, le joueur est renvoyé (« This server is out of date… / Ce serveur n'est pas à jour… »). Une écriture refuse aussi d'écraser un enregistrement de schéma plus récent. Cette garde doit être en ligne sur les serveurs v1 AVANT la sortie de la v2.
+- **Sauvegardes** : autosave (90 s), `saveNow`, départ (`PlayerRemoving`) et `BindToClose` (attente ≤ `CLOSE_TIMEOUT`) ; une écriture à la fois par joueur. La sauvegarde de **libération** (départ ou fermeture) efface le verrou et clôt la session : ensuite plus aucune écriture ; `saveNow` répond `false` (un achat n'est jamais acquitté sans écriture) et une 2e libération répond le résultat de la 1re.
+- **Crochets** `onBeforeSave(fn)` (ajout du contrat) : synchrones, protégés par `pcall`, appelés juste avant chaque écriture avec `release = true` pour la sauvegarde de libération (le Player est encore dans l'arbre pendant `BindToClose` : le drapeau, et non `player.Parent`, dit qu'aucune sauvegarde ne suivra). Utilisés par EconomyService (règlement du Glow), EventService (travail de départ) et QuestService (temps de jeu), §5.3.
+- **Réplication** : `DataSnapshot` (profil public entier) au chargement et sur `RequestSnapshot` ; puis `DataPatch(patch, removedKeys, entries?)` groupé par frame (§10.2). `markDirtyEntry` envoie seulement les sous-clés touchées (AtlasService : `nebbies` ; une parade de 60 Nebbies envoie 60 enregistrements au lieu de 600-646) ; si la clé entière est aussi marquée dans la frame, elle seule part. Clés privées (`Schema.PRIVATE_KEYS`) jamais envoyées.
+
+Clé : `version`.
 
 ### 11.2 MonetizationService (socle)
 
 API existante : `registerProduct(key, handler)`, `ownsPass(player, key)`, `PassGranted` `(player, passKey)` (à l'arrivée pour chaque pass possédé, et à l'achat), `ProductGranted` `(player, productKey)`. `ProcessReceipt` unique et idempotent. Clés : `passes`, `receipts`. Les effets sont dans ProductService (§11.11).
+
+Ajouts :
+- `PassPurchased` `(player, passKey)` : achat EN JEU confirmé par `UserOwnsGamePassAsync` (émis juste après `PassGranted`, même fil) ; `PromptGamePassPurchaseFinished` n'est qu'un indice (un exploit peut l'émettre avec `wasPurchased = true`). Abonnés : ProductService (« Merci ! », analytique `Pass_<clé>`), EconomyService (un pass acheté en jeu n'est pas rétroactif sur les gains hors ligne déjà calculés).
+- `PassRevoked` `(player, passKey)` : pass enregistré dans `passes` mais plus possédé à l'arrivée (remboursé, ou accordé jadis sans vérification) : retiré du profil, effets retirés dans la session (NestService : badge VIP et cosmétiques du pass ; ProductService : taux et perchoirs recalculés).
+- `Settings` : `VERIFY_ATTEMPTS` (3) vérifications de possession après un achat en jeu, espacées de `VERIFY_RETRY_DELAY × essai` (2 s × n) ; un acheteur non confirmé récupère son pass à l'arrivée suivante.
+- Son propre `BindToClose` lève `closing` : plus aucun reçu acquitté pendant l'arrêt (`NotProcessedYet`, Roblox redélivre à la session suivante) ; un reçu n'est acquitté qu'après un `DataService.saveNow` réussi (qui répond `false` après la sauvegarde de libération).
 
 ### 11.3 WorldService (paquet world) — GDD §11
 
@@ -548,6 +588,7 @@ NestService.hasUnlock(player: Player, kind: string, id: string): boolean
 
 - Attribution : dès `PlayerAdded` ; Nid libre le plus proche (distance entre centres) de celui d'un ami Roblox présent (`player:IsFriendsWith(id)` en `pcall`, mis en cache), sinon le plus petit slot libre. Plus de Nid libre (ne devrait pas arriver avec 12 places) : slot 0, le joueur peut se promener mais rien ne se déclenche ; `Feedback` d'information.
 - `teleportHome` et chaque `CharacterAdded` : `PivotTo(WorldLayout.nestCFrame(slot) + 3 studs)` tourné vers le centre, puis `Signals.ServerMoved`.
+- `inOwnHarbor(player, pos)` : avec `pos` (position fournie par un service, ex. acteur validé du tick), ce point est-il dans le port sûr de SON Nid. **Sans `pos`** (remotes Supernova, Zen) : jamais la seule position du client (il possède son personnage et peut se téléporter le temps d'un remote) ; il faut un personnage vivant avec `HumanoidRootPart`, aucune restriction MoveCheck en cours (`isRestricted`), et que la position de confiance — la dernière validée par MoveCheck (`lastValid`, avancée à chaque tick par CongaService), ou le placement serveur (`PivotTo`) tant qu'aucun tick ne l'a remplacée — ET la position actuelle de la racine soient toutes deux dans le port. Lecture seule de MoveCheck (§5.1).
 - Réglages : remote `SetSetting` (§10.1) ; Zen : dans son port sûr, recharge `Config.Settings.zen.cooldown` (60 s) ; activer Zen en portant la Comète la fait tomber (EventService écoute `SettingChanged`) ; `privateNoSnip` : réglage de serveur en mémoire (`snipsDisabled()`), réservé au propriétaire du serveur privé ; Analytics `ZenToggled`.
 - Cosmétiques : remote `EquipCosmetic` ; `hasUnlock` vrai si : source `free` ; stocké dans `unlocks` ; pass possédé (`MonetizationService.ownsPass`) ; `supernova` atteint ; `stat` du profil ≥ n ; déblocage temporaire de session. `unlock` stocke et envoie `Celebrate "unlock"`.
 - Constellation : sur `Signals.Supernova` et au chargement, attribut `Supernovas` (Nid et joueur).
@@ -615,8 +656,9 @@ AtlasService.setLock(player: Player, uid: Types.Uid, locked: boolean): boolean
 - `addNebbies` (après `EconomyService.settle`) : crée les enregistrements `{ s, f, v, st = 1 }` (uid `"u" .. nextUid`) ; nouvelles entrées d'Atlas (bit `Nebbies.atlasIndex`) et badges (`badgeIndex`) → `Celebrate "atlasNew"`, `Signals.AtlasEntry` ; jalons atteints (`Config/Quests.Atlas`) réclamés automatiquement (perchoirs, `NestService.unlock` pour titre/style/thème, `Celebrate "atlasMilestone"`, bannière personnelle) ; espèce complète (toutes les formes activées) → +100 Stardust, `Celebrate "speciesComplete"` ; tri des perchoirs ; débordement de la réserve (§4.9) ; `refreshRate`.
 - Tri des perchoirs : revenu passif décroissant (`Formulas.passiveIncome`), égalité → rareté, puis uid ; `perchIncome` = Σ des perchés ; `NestService.setPerchCount(player, perchCount)` et `setPerchDisplay(player, entries)` ; `Signals.PerchesChanged` si le nombre change.
 - Recalcul sur `Signals.UpgradeBought` (piste `perches`), `MonetizationService.PassGranted` (`ExtraPerches`, `StashPlus`) et jalons.
-- Starforge : `fuse(uid)` consomme 2 autres Nebbies identiques (même s, f, v, st) non verrouillés (le choisi peut l'être), Stardust `Formulas.fuseCost(st)` ; `fuseAll` boucle en prenant d'abord la fusion qui augmente le plus le revenu perché, tant que la Stardust suffit ; `Signals.Fused`, `Celebrate "starforge"`, analytics `Starforge_<★>`.
+- Starforge : `fuse(uid)` consomme exactement `Balance.Starforge.Copies − 1` (2) autres Nebbies identiques (même s, f, v, st) non verrouillés, les plus récents d'abord (le choisi peut l'être), Stardust `Formulas.fuseCost(st)` ; `fuseAll` boucle en prenant d'abord la fusion qui augmente le plus le revenu perché, tant que la Stardust suffit ; `Signals.Fused`, `Celebrate "starforge"`, analytics `Starforge_<★>`.
 - `release(uids)` : tout ou rien (§10.1) ; Stardust = Σ `Formulas.releaseDust` ; `Feedback released`, `Celebrate "release"`.
+- Réplication de `nebbies` **par entrées** (`DataService.markDirtyEntry`, §11.1) : seuls les uids ajoutés, modifiés ou supprimés partent (parade, débordement, fusion, libération, verrou) ; la table entière seulement dans l'instantané, ou une fois si la collection est réparée au premier accès. Changements du jeu (parade, débordement) : tout de suite ; changements demandés par l'interface (verrou, fusion, libération) : au plus un envoi par `AtlasService.Settings.NebbiesPatchInterval` (0,5 s), les uids en attente partent en fin de fenêtre ou avec le prochain changement du jeu.
 
 Signaux : émet `PerchesChanged`, `AtlasEntry`, `Fused` ; écoute `UpgradeBought`, `PassGranted`. Remotes : `Fuse`, `FuseAll`, `Release`, `SetLock`. Clés : `nebbies`, `nextUid`, `perchIncome`, `atlas`, `badges`, `atlasRewards`. Dépendances : DataService, MonetizationService, NestService, EconomyService, `Logic/Formulas`.
 
@@ -677,13 +719,14 @@ EventService.glowPartyRemaining(): number
 EventService.setActivePlayers(n: number)
 EventService.runLiveOps(command: string)
 EventService.snapshot(): Types.EventStatePayload
+EventService.setStarfallClaim(claim: ((Player, number) -> boolean)?)   -- crochet de QuestService (§5.3)
 ```
 
 - **Phases** dérivées de `EventClock` à chaque `step(now)` (et forçables par LiveOps) ; à chaque transition : `Notify.banner` (`weather`, `cometWarn`, `beaconStart`, `starfall`…), `Signals.EventPhase(event, phase)`, `SpawnService.setModifiers` (météo : `form`, `formChance = Balance.Spawn.WeatherFormChance` ; Meteor : `intervalDiv ×3`, `capMult ×1,5` ; Frenzy : `÷4`, `×2` ; Starfall : `featured`, chances), `EconomyService.setServerBoostUntil`.
 - **Comète** : phases `warn` (−8 s) → `ground` (impact `EventClock.cometImpact(id)`, contenu `EventClock.cometContent(id)`, forme = météo active à l'impact) → `carried` → `banked` | `burst` (`impactAt + 75`). Ramassage : premier acteur `valid`, non Zen, à ≤ `PickupRadius` (XZ) ; vol : acteur `valid` non équipier dont le balayage passe à ≤ `StealRadius` du porteur (`Trail.segmentDistanceXZ` entre les deux balayages), sauf immunité du nouveau porteur (2 s) et interdiction de reprise de l'ancien (4 s) ; encaissement : porteur dans `WorldLayout.inGateBox(son slot)` → `AtlasService.addNebbies({code}, "comet")`, `EconomyService.addGlowSeconds(120)`, bannière, `Celebrate "cometBanked"` ; explosion : 5 Épiques libres (`SpawnService.spawnLoose` au point, `group = "burst:<id>"`, `groupCap = 1`). Récompenses de participation et équipiers (§4.15.2), `Signals.CometParticipation` / `CometHeld` / `CometEvent`, analytics `CometHeld`, `CometBanked`, `CometBurst`. Le porteur est ralenti (×0,85) et privé de Dash par CongaService (`isCarrier`).
 - **Balise** : `warn` (−15 s), `active` (trêve : `isTruce()`, `beaconOpen()`), barre `points / goal` (`Formulas.beaconGoal(actifs, échecs consécutifs)` figé au début), contributeurs ; réussite immédiate quand `points ≥ goal` (`success`) → Frenzy 60 s → Nuit d'Or 5 min (boost) ; échec à la fin ; récompenses (+40 / +15 Stardust par contributeur), bannière du meilleur contributeur, `Signals.BeaconResult`, analytics `BeaconResult`.
 - **Gloomwisps** : `Formulas.wispCount(actifs, balise ou Starfall)` ; chacun `{ id, seed, t0 }` ; position `SeededPath.chordAt` ; `wispSweeps` donne le balayage depuis le tick précédent (vide pendant la trêve) ; `stepWisps` éclate ceux dont un acteur `valid` passe à ≤ `PopRadius` (+10 Stardust plafonnée `wispDust`, 20 s de revenu, `Signals.WispPopped`, analytics `WispPopped`) ; réapparition 10 s plus tard avec une nouvelle `seed`.
-- **Starfall Saturday** : comètes toutes les 3 min (EventClock), Rainbow, boost 20 min, présence par joueur ≥ 5 min → Nebby vedette Starborn (`AtlasService.addNebbies`, source `"starfall"`) à la fin.
+- **Starfall Saturday** : comètes toutes les 3 min (EventClock), Rainbow, boost 20 min, présence par UserId ≥ 5 min → Nebby vedette Starborn (`AtlasService.addNebbies`, source `"starfall"`) à la fin ; un seul par compte et par show : `claim(player, startsAt)` (`setStarfallClaim`, QuestService) marque `stats.starfallGift` avant la remise. Un joueur déjà qualifié qui part pendant le show — ou dont le serveur ferme (`BindToClose`) — reçoit son cadeau tout de suite, par le crochet `DataService.onBeforeSave` (`release = true`) ou sa connexion `PlayerRemoving` (ordre non garanti, travail idempotent) : il est dans la sauvegarde de libération.
 - **Boost de serveur** : une seule échéance `serverBoostUntil` ; Nuit d'Or et Starfall : `max(fin, now + durée)` ; Glow Party : `max(now, fin) + secondes` ; `EventState.serverBoost`.
 - **LiveOps** : remote `AdminCommand` (§10.1) → `MessagingService:PublishAsync(Events.LiveOps.Topic, { cmd, at })` en `task.spawn` + exécution locale ; `SubscribeAsync` au démarrage (pcall) → `runLiveOps` ; attribut `Admin`.
 - `flush` envoie `EventState` (état complet) si quelque chose a changé ; `snapshot()` pour WorldSnapshot.
@@ -761,10 +804,11 @@ LeaderboardService.step(now: number)
 LeaderboardService.liveTop(): { BoardEntry }
 LeaderboardService.serverRecord(): BoardEntry?
 LeaderboardService.weeklyTop(): { BoardEntry }
+LeaderboardService.atlasTop(): { BoardEntry }   -- top 10 mondial Star Atlas (dernière lecture réussie)
 ```
 
-- Direct : top `TopLive` (5) des files en cours (sur `LineChanged`), rafraîchi chaque seconde ; record de parade du serveur (sur `Parade`, bannière `serverRecord` si battu) ; attributs de la stèle `WorldService.board()` : `Live`, `Record`, `Weekly` au format `"userId:name:n;…"`.
-- Hebdo : `weeklyBest` (semaine `Clock.week()`) ; record battu → file d'écriture `OrderedDataStore("WeeklyConga_" .. week)` vidée toutes les 60 s ; `AtlasAllTime` sur `AtlasEntry` ; lecture du top 10 toutes les 120 s ; tout appel DataStore en `task.spawn` + `pcall` + nouvelles tentatives ; jamais pour `flags.lbBanned`.
+- Direct : top `TopLive` (5) des files en cours (sur `LineChanged`), rafraîchi chaque seconde ; record de parade du serveur (sur `Parade`, bannière `serverRecord` si battu) ; attributs de la stèle `WorldService.board()` : `Live`, `Record`, `Weekly`, `Atlas` au format `"userId:name:n;…"` (`Atlas` : top 10 mondial des entrées d'Atlas, tous temps).
+- Hebdo : `weeklyBest` (semaine `Clock.week()`) ; record battu → file d'écriture `OrderedDataStore("WeeklyConga_" .. week)` vidée toutes les 60 s ; `AtlasAllTime` sur `AtlasEntry` ; lecture des deux tops 10 (semaine, puis Atlas → `atlasTop()` et attribut `Atlas`) toutes les 120 s ; tout appel DataStore en `task.spawn` + `pcall` + nouvelles tentatives ; jamais pour `flags.lbBanned`.
 - Arrivée : top 10 de la semaine précédente → `NestService.grantTemporary(player, "titles", "conga_royal")`.
 
 Signaux : écoute `LineChanged`, `Parade`, `AtlasEntry`. Remotes : — . Clés : `weeklyBest`. Dépendances : DataService, WorldService, NestService.
@@ -789,6 +833,7 @@ CongaService.worldSnapshot(player: Player): Types.WorldSnapshotPayload
 État par joueur : slot, `trail` (`Trail.new(170, 0.5)`), `netTrail` (`Trail.new(170, 1.0, firstSeq)`), nœuds (`{ LineNode }`), version de file, recharges (Dash, coupe, paires), immunité et coupes récentes de victime, Second Souffle, Snip Rush, compteur de captures horaire, type d'entrée, temps d'escorte, activité (distance sur 60 s).
 
 - **Positions des nœuds** : `trail:sample(n, Spacing, HeadGap)` (abscisse curviligne, aucune spirale à l'arrêt).
+- **Miettes et sol** : chaque miette (autorité et réseau) est posée à `WorldLayout.groundY + Tuning.RootHeight` (3, hauteur d'une racine debout) sous la position validée : les Nebbies marchent au sol, un saut, un vol bas (HipHeight relevé) ou une racine enfouie ne sortent jamais la file de la portée verticale des coupes (`Snip.MaxDy`). Le sol passé à `MoveCheck.step` est `max(WorldLayout.groundY, appui réel)` : sonde `workspace:Blockcast` vers le bas depuis la racine (pavé `FloorProbeWidth` × `FloorProbeThickness`, portée `RootHeight + Snip.MaxDy + FloorProbeMargin`, personnage du joueur exclu, `RespectCanCollide`) ; elle ne peut que RELEVER le sol (debout sur la stèle ou la tête d'un ami, un joueur honnête n'est pas en vol bas).
 - **Captures** (étape 5) : rayon `Formulas.lureRadius(lure, rush) + LatencyTolerance`, `|Δy| ≤ MaxDy` ; capacité `Formulas.congaCapacity(conga)` ; file pleine → `Feedback lineFull` (≤ 1 / 5 s) ; reprise d'un Nebby libre prioritaire → `CatchInfo.recovered`, `Feedback recovered` ; 1 500 captures / h → suspension 5 min + `flags.lbBanned` ; bannière `mythicCatch` / `legendaryCatch` (rareté ≥ 5, avec `Rarities.banner`).
 - **Coupes** (étape 7) : `SnipRules.blockReason` avec l'état ; `SnipRules.findCut` (rayon `SnipRules.radius(touch, isWisp)`) ; `c = SnipRules.cutFrom(k, n)` ; nœuds c…n retirés ; `SpawnService.spawnLoose(codes, positions, now, { prioritySlot = victime, silent = true })` ; `SnipRules.applyCut` (immunité, coupes récentes, attribut `ImmuneUntil`) ; recharges coupeur (1,5 s) et paire (20 s) ; Second Souffle victime (+4, 3 s) ; Snip Rush coupeur (Attrait ×1,5, 3 s) ; Stardust `RushDustPerNebby × count` via `addStardustCapped(…, "snipDust", "Snip")` sauf coupeur sous bouclier (Feedback `rookieNoDust`) ; `SnipEvent` ; `Feedback snipped` (victime), `snipDealt` (coupeur) ; `Signals.Snipped` ; analytics `SnipDealt`, `SnipReceived`, `SnipByInput`, et `PostSnipQuit` si la victime part < 60 s après ; file vide → `QuestService.onSafeMoment`.
 - **Parades** (étape 9) : `glow = EconomyService.paradeGlow(player, codes, atBeacon)` → `EconomyService.addGlow(…, atBeacon and "ParadeBeacon" or "Parade")` → `AtlasService.addNebbies(codes, "parade")` → si `atBeacon` : `EventService.onBeaconParade(player, n)` → `LineEvent bank` → `Signals.Parade` (avec `idleSeconds = glow / idleRate`) → `n ≥ MegaParade` : bannière `megaParade` → `QuestService.onSafeMoment` → analytics `ParadeLength`. `forceParade` fait la même chose sans test de porte (`forced = true`).
@@ -813,7 +858,12 @@ MoveCheck.recentRewinds(player: Player, now: number): number
 MoveCheck.clear(player: Player)
 ```
 
-Module d'état pur (pas de service Roblox) : CongaService fournit positions, `dt`, `now`, hauteur du sol et WalkSpeed. Règles exactes dans l'en-tête du stub et `Balance.MoveCheck`. Jamais d'accusation : seul l'attribut `Unstable` (icône neutre) est montré.
+Module d'état pur (pas de service Roblox) : CongaService fournit positions, `dt`, `now`, hauteur du sol et WalkSpeed. Règles exactes dans l'en-tête du module et `Balance.MoveCheck`. Jamais d'accusation : seul l'attribut `Unstable` (icône neutre) est montré. Consommateurs : CongaService (pilote) et NestService (lecture seule de `lastValid` / `isRestricted`, §5.1).
+
+Règles de hauteur (constantes de `src/server/Conga/Tuning.luau` : `RootHeight = 3`, `HoverTime = 1`, `MaxBelowGround = 2`, `FloorProbeWidth = 2,5`, `FloorProbeThickness = 0,2`, `FloorProbeMargin = 1`) :
+- « sol » = hauteur fournie par CongaService (formule de l'île relevée par la sonde, §11.13) ; « surface » = `min(sol fourni, WorldLayout.groundY)` pour les règles de racine enfouie ; sol NaN : seules les bornes absolues s'appliquent.
+- **MaxBelowGround** : racine à plus de 2 studs SOUS la surface (passe-muraille) → retour immédiat, comme `Y < MinY` ; pendant l'exemption de 3 s, la position est seulement refusée (`"flag"`, personnage pas encore posé).
+- **HoverTime** : racine hors de portée verticale des coupes — plus de `Snip.MaxDy` (4) au-dessus (`> sol + RootHeight + MaxDy` = sol + 7, vol bas) ou au-dessous (`< surface + RootHeight − MaxDy` = surface − 1) de la hauteur debout — pendant plus de 1 s : chaque tick est une infraction (comptée : 3 en 5 s → retour) et la position n'est pas acceptée. Un vrai saut (JumpHeight 7,2) ne passe qu'≈ 0,36 s au-dessus.
 
 ---
 
@@ -988,7 +1038,13 @@ NebbyBuilder.buildWisp(): Rig
 NebbyBuilder.buildCometOrb(): Rig
 NebbyBuilder.buildCometSky(): Model
 NebbyBuilder.destroy(rig: Rig)
+-- Effets de particules continus (Fire des Blazing, Sparkles des Rares, orbite des Épiques), GDD §12.8
+NebbyBuilder.fxParticles(rig: Rig): number            -- particules estimées quand ils sont allumés
+NebbyBuilder.setFx(rig: Rig, on: boolean): number     -- interrupteur (Enabled, différentiel) ; coût allumé
+NebbyBuilder.budgetFx(rigs: { Rig }, maxParticles: number): number   -- du plus proche au plus lointain
 ```
+
+`BuildOptions.fxEnabled` (défaut `true`) : effets allumés à la construction ; ensuite `setFx` / `budgetFx`. `Rig.fx` (instances d'effet continu), `Rig.fxCost` (particules à l'écran estimées allumé, × `particleMult` en Graphismes légers, 0 hors détail complet), `Rig.fxOn` (état voulu, conservé par `setLod`). `budgetFx` reçoit TOUS les rigs rendus triés du plus proche au plus lointain, allume ceux qui tiennent dans le budget et éteint les autres ainsi que les rigs allumés au tour précédent et absents de la liste (un seul appelant : le planificateur de CongaRenderer).
 
 ---
 
@@ -1122,7 +1178,11 @@ CongaRenderer.nodePositions(slot: number): { Vector3 }
 CongaRenderer.nodeModel(slot: number, index: number): Model?
 CongaRenderer.wildModel(id: number): Model?
 CongaRenderer.renderedParts(): number
+CongaRenderer.fxParticles(): number        -- particules continues du rendu à l'écran (≤ rigParticleBudget)
+CongaRenderer.rigParticleBudget(): number  -- part des 300 laissée aux effets continus du rendu
 ```
+
+Particules à l'écran ≤ `Balance.Render.MaxParticles` (300, GDD §12.8) : les effets continus des Nebbies (parade comprise) sont allumés par `NebbyBuilder.budgetFx` du plus proche au plus lointain dans la part du rendu (moitié des 300, × 0,3 en Graphismes légers, paillettes des files ≥ 40 déduites) ; `fxParticles()` = estimation de la dernière passe ; VFXController ne donne à ses rafales que le reste (`VFXController.particlesAlive()`, §13.8, une fois déduits `fxParticles()` et la neige du ciel).
 
 Rendu des files des autres depuis `WorldStateController.trail(slot)`, de la file locale depuis un `Trail` local alimenté chaque image ; un seul `workspace:BulkMoveTo(parts, cframes, Enum.BulkMoveMode.FireCFrameChanged)` par image ; LOD, budgets et lisibilité (§3.2, `Cosmetics.Readability`) ; Nids depuis leurs attributs (perchés, panneau, constellation, liens d'équipage) ; stèle (attributs `Live`, `Record`, `Weekly`).
 
@@ -1141,6 +1201,7 @@ VFXController.fireworks(worldPos: Vector3, count: number, color: Color3?)
 VFXController.playDash()
 VFXController.playUpgrade(track: string, level: number)
 VFXController.playSupernova(slot: number, level: number)
+VFXController.particlesAlive(): number   -- particules des rafales comptées dans la fenêtre du budget
 ```
 
 ### 13.9 ScreenFX (paquet client-hud) — GDD §9.1, §9.2, §9.4
@@ -1254,7 +1315,7 @@ Interface d'un panneau (`PanelController.Panel`) : `name`, `tabs?`, `build(paren
 
 | Panneau | Contenu (détail dans l'en-tête du stub) | Remotes émis | Fonctions en plus |
 |---|---|---|---|
-| Upgrades | 5 cartes, bouton Supernova + anneau, carte unique à l'accueil | `BuyUpgrade` | — |
+| Upgrades | 5 cartes, bouton Supernova + anneau, carte unique à l'accueil ; **une seule carte pulse** : la carte d'accueil (`focus`), sinon pendant une quête d'accueil d'achat (Q2/Q5 piste, Q7 perchoirs, lue dans `onboarding`) la carte de la quête — seulement si elle est payable, jamais une autre moins chère qui dépenserait le Glow prévu —, sinon la carte achetable la moins chère | `BuyUpgrade` | — |
 | Supernova | aperçu Gardé / Remis à zéro, maintien 1 s, « Rentre au Nid » | `Supernova` | — |
 | Collection | onglets Perchoirs, Réserve (virtualisée), Forge, Atlas, Guide | `Fuse`, `FuseAll`, `Release`, `SetLock` | `selectTab` |
 | Goals | Aujourd'hui, Calendrier, Semaine, Accueil | `ClaimQuest`, `RerollQuest`, `ClaimDaily` | `selectTab` |
@@ -1326,7 +1387,7 @@ Points où le GDD laissait un choix, tranchés ici pour que tous implémentent l
 22. **Cordes des Gloomwisps continues** : chaque corde part du point d'arrivée de la précédente.
 23. **Mort** : Nebbies libres prioritaires pour le propriétaire (étourdis pour les autres), sans Second Souffle ; **départ** : sans priorité.
 24. **`MaxPlayers = 12`** posé aussi dans `default.project.json` (le Creator Hub reste la référence en production).
-25. **MoveCheck (GDD §12.7)** : appliquée à chaque tick de 0,1 s, la seule tolérance de +4 studs du GDD laisserait passer ≈ 4× la vitesse ; MoveCheck ajoute donc un contrôle du déplacement **soutenu sur 1 s** (tolérance comptée une fois). La référence de chaque tick est la dernière position validée (un téléport n'est jamais accepté au tick suivant), avec au plus 1,5 s de crédit à l'arrêt (gels réseau). Pendant l'exemption de 3 s après une apparition, les positions restent contrôlées : une position invraisemblable est refusée sans compter ni rembobiner. Après un rembobinage, une période de grâce absorbe les positions encore en vol (pas de nouveau rembobinage, pas de compte pour `lbBanned`). Un rembobinage n'émet pas `ServerMoved` (pas d'exemption enchaînable).
+25. **MoveCheck (GDD §12.7)** : appliquée à chaque tick de 0,1 s, la seule tolérance de +4 studs du GDD laisserait passer ≈ 4× la vitesse ; MoveCheck ajoute donc un contrôle du déplacement **soutenu sur 1 s** (tolérance comptée une fois). La référence de chaque tick est la dernière position validée (un téléport n'est jamais accepté au tick suivant), avec au plus 1,5 s de crédit à l'arrêt (gels réseau). Pendant l'exemption de 3 s après une apparition, les positions restent contrôlées : une position invraisemblable est refusée sans compter ni rembobiner. Après un rembobinage, une période de grâce absorbe les positions encore en vol (pas de nouveau rembobinage, pas de compte pour `lbBanned`). Un rembobinage n'émet pas `ServerMoved` (pas d'exemption enchaînable). Le GDD ne borne que l'altitude (> sol + 14 pendant 1,5 s) : MoveCheck ajoute deux règles de hauteur (§11.14) pour qu'une file ne quitte jamais la portée des coupes — racine à plus de `MaxBelowGround` (2) sous la surface → retour immédiat (passe-muraille) ; racine hors de ±`Snip.MaxDy` autour de la hauteur debout plus de `HoverTime` (1 s) → infraction à chaque tick (vol bas, HipHeight relevé, racine enfouie) ; le sol de ces règles est relevé par une sonde `Blockcast` (appuis réels) et les miettes restent posées à `sol + RootHeight`.
 26. **Acteur d'un tick refusé** (`valid = false`) : `pos = prev` = dernière position validée (jamais la position brute) ; `prev → pos` est toujours un déplacement validé, que tous les balayages utilisent (coupes, vol et encaissement de la Comète, Gloomwisps, portes).
 27. **Portes et anneau testés le long du pas validé** : à 10 Hz, avec un Dash (3,6 studs par tick) et la gigue du réseau, deux échantillons peuvent tomber de part et d'autre de la boîte de porte (4 studs de profondeur). Parades (CongaService) et encaissement de la Comète (EventService) testent donc `prev → pos` tous les 1 stud.
 28. **Analytique `SnipByInput`** : valeur = type d'entrée du coupeur (1 tactile, 2 clavier-souris, 3 manette), `Util/Analytics` n'ayant pas de champs personnalisés. `WispSnip` est envoyée par CongaService seul (pas par `EventService.onWispSnip`).
@@ -1375,7 +1436,9 @@ Ajouts minimaux et testés (aucune réécriture) :
 
 | Fichier | Ajout | Pourquoi | Test |
 |---|---|---|---|
-| `src/server/Services/DataService.luau` | `DataService.onBeforeSave(fn)` (crochets synchrones avant chaque écriture) | GDD §12.6 : `settle` avant chaque sauvegarde, y compris au départ et à la fermeture | `DataService.spec` |
+| `src/server/Services/DataService.luau` | `DataService.onBeforeSave(fn)` (crochets synchrones avant chaque écriture, `fn(player, data, release)`) | GDD §12.6 : `settle` avant chaque sauvegarde, y compris au départ et à la fermeture ; travail de départ pendant `BindToClose` | `DataService.spec`, `Fix_restes_server_data_replication.spec` |
+| `src/server/Services/DataService.luau` | `REJOIN_WAIT` + `pendingRelease` (reconnexion sur le même serveur) ; jeton `session` dans le verrou ; refus d'un profil de schéma plus récent (aucune écriture, joueur renvoyé) ; `saveNow` → `false` après la sauvegarde de libération ; `markDirtyEntry` et 3e argument `entries` de `DataPatch` (§10.2) | GDD §12.6 (aucune perte de données pendant un déploiement), §12.8 (budget réseau : `nebbies` n'est plus renvoyé entier à chaque parade) | `Fix_divers_r1_server.spec`, `Fix_restes_server_data_replication.spec` |
+| `src/client/Controllers/StateController.luau` | applique `entries` de `DataPatch` sur une copie de la table, `Changed(clé, nouvelle, ancienne)` une fois | même raison | `Fix_restes_server_data_replication.spec`, `ClientGame.spec` |
 | `src/shared/Util/Format.luau` | correction : `abbreviate(100000)` donnait « 1K » (les zéros entiers étaient retirés) ; paramètre `lang` (FR : « 1,24 M », espaces insécables) pour `abbreviate`, `commas`, `duration` | GDD §13.1 ; affichage juste des compteurs | `Contract.spec` |
 | `src/client/UI/Juice.luau` | `Juice.forceReducedMotion` | réglage « Mouvement réduit » du joueur (GDD §9.1) | `Contract.spec` |
 | `src/client/Controllers/AudioController.luau` | `setMusicEnabled`, `isMusicEnabled` | réglage « Musique » (GDD §10.3) | `Contract.spec` |

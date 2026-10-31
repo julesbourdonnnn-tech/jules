@@ -13,7 +13,16 @@
 --     EventService) ; idleRate répliqué (clé de profil) pour la prédiction client ; Signals.RateChanged
 --   * hors ligne au premier traitement du profil : Formulas.offlineGlow (50 %/8 h, Night Shift
 --     75 %/12 h, sans boosts ni équipage) ; écran de retour (Notify.celebrate "offline") si ≥ 1 % du
---     coût de la prochaine Supernova ou ≥ 1 000 Glow ; premier chargement (lastOnline == 0) : rien
+--     coût de la prochaine Supernova ou ≥ 1 000 Glow ; premier chargement (lastOnline == 0) : rien.
+--     La vérification des passes à l'arrivée (MonetizationService, UserOwnsGamePassAsync) peut finir
+--     APRÈS ce calcul : au premier PassGranted d'un pass à effet hors ligne (offlineRate, glowBonus,
+--     glowMult) dans les OFFLINE_PASS_WINDOW s, le gain est recalculé avec les passes possédés (achat
+--     sur le site pendant l'absence) et la différence créditée une fois (Analytics « Offline »,
+--     écran de retour mis à jour) ; un pass acheté EN JEU (PassPurchased) n'est jamais rétroactif
+--   * attribut Player GuardLinks = Formulas.guardLinks(upgrades.guard) (rendu des files des autres
+--     joueurs, docs §3.3) : au chargement, après chaque achat et après une Supernova
+--   * invariants de développement (Economy/Invariants, Studio seulement) : avant chaque sauvegarde,
+--     après BuyUpgrade et après une Supernova
 --   * remote BuyUpgrade(track) : débit 10/s, piste valide, settle, niveau < max, coût →
 --     Signals.UpgradeBought, Notify.celebrate "upgrade", Analytics Upgrade_<piste>_<niveau>
 --   * remote Supernova() : débit 1/2 s, port sûr de son Nid (position de CONFIANCE : la dernière
@@ -26,13 +35,14 @@
 --   * boosts personnels prolongés (personalUntil = max(now, personalUntil) + durée, jamais ×4)
 -- GDD : §4.1, §4.8-§4.12, §4.16 (Zen), §7.2, §12.3, §12.6, §14.2.
 -- Dépendances : DataService, MonetizationService, NestService, Logic/Formulas, Config/*, Signals,
--- Util/Notify, Util/RateLimit, Util/Analytics, Shared/Util/Clock, Economy/PassEffects.
+-- Util/Notify, Util/RateLimit, Util/Analytics, Shared/Util/Clock, Economy/{PassEffects,Invariants}.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Balance = require(Shared.Config.Balance)
+local Monetization = require(Shared.Config.Monetization)
 local Formulas = require(Shared.Logic.Formulas)
 local Net = require(Shared.Net)
 local Types = require(Shared.Types)
@@ -45,7 +55,9 @@ local Notify = require(Server.Util.Notify)
 local RateLimit = require(Server.Util.RateLimit)
 local Analytics = require(Server.Util.Analytics)
 local PassEffects = require(Server.Economy.PassEffects)
+local Invariants = require(Server.Economy.Invariants)
 local DataService = require(script.Parent.DataService)
+local MonetizationService = require(script.Parent.MonetizationService)
 local NestService = require(script.Parent.NestService)
 
 local EconomyService = {}
@@ -56,6 +68,24 @@ local MAX_MONEY = 2 ^ 53
 -- Plafonds du jour comptés en NOMBRE d'événements (et non en Stardust)
 local COUNT_CAPS: { [string]: boolean } = { cheers = true }
 
+-- Fenêtre (s, depuis le traitement du profil) pendant laquelle la vérification des passes à
+-- l'arrivée peut encore compléter le gain hors ligne (UserOwnsGamePassAsync répond en quelques s)
+local OFFLINE_PASS_WINDOW = 30
+
+-- Champs d'effet de pass qui entrent dans le gain hors ligne (Config/Monetization.PassDef)
+local OFFLINE_PASS_FIELDS = { "offlineRate", "glowBonus", "glowMult" }
+
+-- Gain hors ligne crédité au chargement, gardé pour un complément éventuel (passes vérifiés après)
+type OfflineContext = {
+	startedAt: number, -- Clock.now() du traitement du profil
+	away: number, -- secondes d'absence (Clock.unix() − lastOnline)
+	perchIncome: number, -- revenu perché enregistré au chargement (base du calcul)
+	R: number,
+	credited: number, -- Glow hors ligne déjà crédité
+	done: boolean, -- complément déjà évalué (une seule fois)
+	purchased: { [string]: boolean }, -- passes achetés EN JEU pendant la fenêtre : jamais rétroactifs
+}
+
 -- État de session d'un profil, indexé par la TABLE du profil (faible) : il survit au nettoyage
 -- par joueur tant que DataService garde le profil (crochet de sauvegarde au départ).
 type Session = {
@@ -63,6 +93,7 @@ type Session = {
 	nextSettleAt: number?, -- prochain règlement périodique (step)
 	idleGlow: number, -- Glow passif cumulé pour l'événement analytique « Idle »
 	idleSince: number,
+	offline: OfflineContext?, -- gain hors ligne de cette session (nil : premier chargement, aucun revenu)
 }
 
 local sessions: { [any]: Session } = setmetatable({}, { __mode = "k" }) :: any
@@ -241,35 +272,106 @@ local function settleCore(player: Player, data: { [string]: any }, session: Sess
 	return credited
 end
 
+-- Attribut Player GuardLinks (maillons protégés de SA file, lu par le rendu des autres clients)
+local function applyGuardLinks(player: Player, data: { [string]: any })
+	if player.Parent == nil or type(data.upgrades) ~= "table" then
+		return
+	end
+	player:SetAttribute("GuardLinks", Formulas.guardLinks(money(data.upgrades.guard)))
+end
+
+-- Le pass `passKey` agit-il sur le gain hors ligne ?
+local function hasOfflineEffect(passKey: string): boolean
+	for _, field in OFFLINE_PASS_FIELDS do
+		if PassEffects.passHas(passKey, field) then
+			return true
+		end
+	end
+	return false
+end
+
+-- Le joueur possède-t-il un pass à l'effet `field`, sans compter les passes `except` ?
+local function ownsEffectExcept(player: Player, field: string, except: { [string]: boolean }): boolean
+	for passKey in Monetization.Passes do
+		if not except[passKey] and PassEffects.passHas(passKey, field) then
+			if MonetizationService.ownsPass(player, passKey) then
+				return true
+			end
+		end
+	end
+	return false
+end
+
+-- Gain hors ligne de `away` s avec les passes possédés (sauf `except`) : (gain, secondes, Night Shift)
+local function offlineGainFor(
+	player: Player,
+	income: number,
+	R: number,
+	away: number,
+	except: { [string]: boolean }
+): (number, number, boolean)
+	local nightShift = ownsEffectExcept(player, "offlineRate", except)
+	local M = Formulas.offlineMultiplier(
+		R,
+		ownsEffectExcept(player, "glowBonus", except),
+		ownsEffectExcept(player, "glowMult", except)
+	)
+	local gain, seconds = Formulas.offlineGlow(income * M, away, nightShift)
+	return gain, seconds, nightShift
+end
+
+-- Écran de retour si le gain le mérite (≥ 1 % du coût de la prochaine Supernova ou ≥ 1 000 Glow)
+local function celebrateOffline(
+	player: Player,
+	R: number,
+	glow: number,
+	seconds: number,
+	nightShift: boolean,
+	away: number
+)
+	local o = Balance.Offline
+	if glow >= o.ReturnMinRatio * Formulas.supernovaCost(R) or glow >= o.ReturnMinGlow then
+		Notify.celebrate(player, "offline", {
+			glow = glow,
+			seconds = seconds,
+			nightShift = nightShift,
+			away = away,
+		})
+	end
+end
+
 -- Premier traitement d'un profil chargé : gains hors ligne, horloges, taux, écran de retour
 local function processLoad(player: Player, data: { [string]: any }): Session
 	local now = Clock.now()
 	sanitize(data)
 	local session: Session = { boostEndsAt = nil, nextSettleAt = nil, idleGlow = 0, idleSince = now }
 	sessions[data] = session
+	applyGuardLinks(player, data)
 
 	local nowUnix = Clock.unix()
 	local lastOnline = data.lastOnline
 	if lastOnline > 0 then
 		local R = data.supernovas
-		local nightShift = PassEffects.nightShift(player)
-		local rate = perchIncome(data)
-			* Formulas.offlineMultiplier(R, PassEffects.vip(player), PassEffects.doubleGlow(player))
-		local gain, seconds = Formulas.offlineGlow(rate, nowUnix - lastOnline, nightShift)
+		local income = perchIncome(data)
+		local away = math.max(0, nowUnix - lastOnline)
+		local gain, seconds, nightShift = offlineGainFor(player, income, R, away, {})
 		gain = math.min(gain, MAX_MONEY - data.glow)
 		if gain > 0 then
 			data.glow += gain
 			DataService.markDirty(player, "glow")
 			Analytics.earn(player, "Glow", gain, data.glow, "TimedReward", "Offline")
-			local o = Balance.Offline
-			if gain >= o.ReturnMinRatio * Formulas.supernovaCost(R) or gain >= o.ReturnMinGlow then
-				Notify.celebrate(player, "offline", {
-					glow = gain,
-					seconds = seconds,
-					nightShift = nightShift,
-					away = math.max(0, nowUnix - lastOnline),
-				})
-			end
+			celebrateOffline(player, R, gain, seconds, nightShift, away)
+		end
+		if income > 0 and away > 0 then
+			session.offline = {
+				startedAt = now,
+				away = away,
+				perchIncome = income,
+				R = R,
+				credited = math.max(gain, 0),
+				done = false,
+				purchased = {},
+			}
 		end
 	end
 
@@ -357,6 +459,36 @@ local function addStardustRaw(
 	return credited
 end
 
+-- Complément hors ligne (passes confirmés par la vérification d'arrivée APRÈS le calcul du
+-- chargement : achat sur le site pendant l'absence). Une seule évaluation par session, dans la
+-- fenêtre OFFLINE_PASS_WINDOW ; jamais de retrait (gain recalculé plus faible : rien ne change).
+local function topUpOffline(player: Player, passKey: string)
+	local data = DataService.get(player)
+	local session = if data then sessions[data] else nil
+	local ctx = if session then session.offline else nil
+	if data == nil or ctx == nil or ctx.done or player.Parent == nil then
+		return
+	end
+	if ctx.purchased[passKey] then
+		return -- acheté en jeu à l'instant : pas rétroactif (la vérification d'arrivée peut suivre)
+	end
+	ctx.done = true
+	if Clock.now() - ctx.startedAt > OFFLINE_PASS_WINDOW then
+		return
+	end
+	local gain, seconds, nightShift = offlineGainFor(player, ctx.perchIncome, ctx.R, ctx.away, ctx.purchased)
+	local extra = gain - ctx.credited
+	if extra <= 0 then
+		return
+	end
+	local credited = addGlowRaw(player, data, extra, "Offline", "TimedReward")
+	if credited <= 0 then
+		return
+	end
+	ctx.credited += credited
+	celebrateOffline(player, ctx.R, ctx.credited, seconds, nightShift, ctx.away)
+end
+
 -- ---------------------------------------------------------------------------------------------
 -- Cycle de vie
 -- ---------------------------------------------------------------------------------------------
@@ -374,6 +506,27 @@ end
 function EconomyService.Start()
 	DataService.Loaded:Connect(function(player: Player)
 		ensure(player)
+	end)
+	-- invariants de développement (Studio) juste avant chaque écriture, après le règlement (Init)
+	DataService.onBeforeSave(function(player: Player, data: { [string]: any })
+		if sessions[data] then
+			Invariants.check(player, data, "sauvegarde")
+		end
+	end)
+	-- passes vérifiés à l'arrivée après le calcul hors ligne : complément éventuel. Différé : un
+	-- achat EN JEU émet PassPurchased juste après PassGranted (même fil) et n'est pas rétroactif.
+	MonetizationService.PassGranted:Connect(function(player: Player, passKey: string)
+		if hasOfflineEffect(passKey) then
+			task.defer(topUpOffline, player, passKey)
+		end
+	end)
+	MonetizationService.PassPurchased:Connect(function(player: Player, passKey: string)
+		local data = DataService.get(player)
+		local session = if data then sessions[data] else nil
+		local ctx = if session then session.offline else nil
+		if ctx then
+			ctx.purchased[passKey] = true
+		end
 	end)
 	Players.PlayerRemoving:Connect(function(player: Player)
 		crewPresent[player] = nil
@@ -634,8 +787,10 @@ function EconomyService.buyUpgrade(player: Player, track: Types.UpgradeTrack): (
 	DataService.markDirty(player, "glow")
 	DataService.markDirty(player, "upgrades")
 	Analytics.spend(player, "Glow", cost, data.glow, "Shop", `Upgrade_{track}_{newLevel}`)
+	applyGuardLinks(player, data)
 	Signals.UpgradeBought:Fire(player, track, newLevel)
 	Notify.celebrate(player, "upgrade", { track = track, level = newLevel })
+	Invariants.check(player, data, `BuyUpgrade {track}`)
 	return true, nil
 end
 
@@ -700,9 +855,11 @@ function EconomyService.trySupernova(player: Player): (boolean, string?)
 	Analytics.spend(player, "Glow", removed, 0, "Gameplay", `Supernova_{newR}`)
 	Analytics.event(player, "SupernovaReached", newR)
 	applyRate(player, data, session, Clock.now())
+	applyGuardLinks(player, data) -- Guard Links conservés (Config : ResetOnSupernova)
 	Signals.Supernova:Fire(player, newR)
 	Notify.banner("supernova", { userId = player.UserId, name = player.DisplayName, level = newR }, player)
 	Notify.celebrate(player, "supernova", { level = newR })
+	Invariants.check(player, data, "Supernova")
 	return true, nil
 end
 

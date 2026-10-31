@@ -184,7 +184,7 @@ local function buildRow(key: string, kind: "pass" | "product", order: number, pa
 		yAlign = Enum.TextYAlignment.Top,
 		color = Theme.Colors.TextDim,
 		font = Theme.Fonts.Body,
-		maxSize = 17,
+		maxSize = 18, -- deux lignes de 18 px dans 44 px (GDD §10.1)
 		parent = frame,
 	})
 	local detail = Widgets.label({

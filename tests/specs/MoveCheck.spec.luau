@@ -11,8 +11,8 @@ return function(T)
 	local function setup()
 		local h = Harness.new()
 		local MoveCheck = h:require("ServerScriptService.Server.Util.MoveCheck")
-		local Balance = h:require("ReplicatedStorage.Shared.Config.Balance")
-		return MoveCheck, Balance, h.globals.Vector3
+		-- seuils serveur seulement (Conga/Tuning, exposés en MoveCheck.Config : GDD §12.7)
+		return MoveCheck, MoveCheck.Config, h.globals.Vector3
 	end
 
 	-- Joueur simulé (MoveCheck n'utilise le joueur que comme clé) : apparu, exemption terminée à T0,
@@ -20,9 +20,8 @@ return function(T)
 	local function newPlayer(MoveCheck, V3, pos, speed)
 		local player = { Name = "Tester" }
 		local start = pos or V3.new(100, 3, 0)
-		local B = Harness.new():require("ReplicatedStorage.Shared.Config.Balance")
 		MoveCheck.noteSpeed(player, speed or 16, T0 - 10)
-		MoveCheck.reset(player, start, T0 - B.MoveCheck.Exemption)
+		MoveCheck.reset(player, start, T0 - MoveCheck.Config.Exemption)
 		local p = { player = player, pos = start + V3.new(0, 0, 0.5), now = T0 }
 		assert(MoveCheck.step(player, p.pos, DT, T0, 0) == "ok")
 		return p
@@ -105,7 +104,7 @@ return function(T)
 		end)
 
 		it("exemption de 3 s après reset (apparition, PivotTo serveur)", function()
-			local MC, B, V3 = setup()
+			local MC, Cfg, V3 = setup()
 			local player = {}
 			MC.noteSpeed(player, 16, T0)
 			MC.reset(player, V3.new(150, 3, 0), T0)
@@ -124,7 +123,7 @@ return function(T)
 			now += DT
 			expect(MC.step(player, V3.new(150.5, 3, 0), DT, now, 0)).toBe("ok")
 			-- immobile jusqu'à la fin de l'exemption, puis un bond de 60 studs : signalé
-			while now < T0 + B.MoveCheck.Exemption do
+			while now < T0 + Cfg.Exemption do
 				now += DT
 				expect(MC.step(player, V3.new(150.5, 3, 0), DT, now, 0)).toBe("ok")
 			end
@@ -135,13 +134,13 @@ return function(T)
 		it(
 			"sans position acceptée depuis la référence, le crédit de temps reste borné (pas de bond de 100 studs)",
 			function()
-				local MC, B, V3 = setup()
+				local MC, Cfg, V3 = setup()
 				-- après une apparition : positions incohérentes pendant ~3 s, puis bond depuis la référence
 				local player = {}
 				MC.noteSpeed(player, 26, T0)
 				MC.reset(player, V3.new(150, 3, 0), T0)
 				local now = T0
-				while now < T0 + B.MoveCheck.Exemption - 0.15 do
+				while now < T0 + Cfg.Exemption - 0.15 do
 					now += DT
 					expect(MC.step(player, V3.new(-150, 3, 0), DT, now, 0)).toBe("flag")
 				end
@@ -156,19 +155,19 @@ return function(T)
 					MC.step(p.player, start + V3.new(-60, 0, 0), DT, p.now, 0)
 				end
 				expect(MC.isRestricted(p.player, p.now)).toBe(true)
-				p.now += B.MoveCheck.RewindLockout
+				p.now += Cfg.RewindLockout
 				expect(MC.step(p.player, start + V3.new(-100, 0, 0), DT, p.now, 0)).toBe("flag")
 			end
 		)
 
 		it("après l'exemption, un client resté loin de la référence est ramené (retour)", function()
-			local MC, B, V3 = setup()
+			local MC, Cfg, V3 = setup()
 			local player = {}
 			MC.noteSpeed(player, 16, T0)
 			MC.reset(player, V3.new(150, 3, 0), T0)
 			local now = T0
 			local verdict, back
-			while now < T0 + B.MoveCheck.Exemption + 1 do
+			while now < T0 + Cfg.Exemption + 1 do
 				now += DT
 				verdict, back = MC.step(player, V3.new(20, 3, 20), DT, now, 0)
 				if verdict == "rewind" then
@@ -177,7 +176,7 @@ return function(T)
 			end
 			expect(verdict).toBe("rewind")
 			expect(back).toEqual(V3.new(150, 3, 0))
-			expect(now > T0 + B.MoveCheck.Exemption).toBe(true)
+			expect(now > T0 + Cfg.Exemption).toBe(true)
 		end)
 	end)
 
@@ -185,7 +184,7 @@ return function(T)
 		it(
 			"vitesse ×3 soutenue (4,8 studs par tick, sous la marge d'un seul tick) : détectée sur la fenêtre",
 			function()
-				local MC, B, V3 = setup()
+				local MC, Cfg, V3 = setup()
 				local p = newPlayer(MC, V3)
 				local step = V3.new(16 * 3 * DT, 0, 0)
 				expect(move(MC, p, step)).toBe("ok")
@@ -196,7 +195,7 @@ return function(T)
 				expect(verdict).toBe("rewind")
 				expect(back).toEqual(valid)
 				expect(MC.isRestricted(p.player, p.now)).toBe(true)
-				expect(MC.isRestricted(p.player, p.now + B.MoveCheck.RewindLockout + 0.01)).toBe(false)
+				expect(MC.isRestricted(p.player, p.now + Cfg.RewindLockout + 0.01)).toBe(false)
 				expect(MC.recentRewinds(p.player, p.now)).toBe(1)
 				expect(MC.violations(p.player)).toBe(3)
 			end
@@ -236,14 +235,14 @@ return function(T)
 		)
 
 		it("une infraction isolée ne déclenche rien et la fenêtre de 5 s s'oublie", function()
-			local MC, B, V3 = setup()
+			local MC, Cfg, V3 = setup()
 			local p = newPlayer(MC, V3)
 			for _ = 1, 2 do
 				p.now += DT
 				expect(MC.step(p.player, p.pos + V3.new(30, 0, 0), DT, p.now, 0)).toBe("flag")
 			end
 			-- retour à la normale, puis 2 nouvelles infractions plus de 5 s après
-			p.now += B.MoveCheck.FlagWindow + 0.5
+			p.now += Cfg.FlagWindow + 0.5
 			expect(MC.step(p.player, p.pos, DT, p.now, 0)).toBe("ok")
 			for _ = 1, 2 do
 				p.now += DT
@@ -289,7 +288,7 @@ return function(T)
 		end)
 
 		it("grâce après un retour : les positions « en vol » ne déclenchent pas un 2e retour", function()
-			local MC, B, V3 = setup()
+			local MC, Cfg, V3 = setup()
 			local p = newPlayer(MC, V3)
 			local far = p.pos + V3.new(60, 0, 0)
 			local verdict
@@ -307,7 +306,7 @@ return function(T)
 			expect(MC.step(p.player, MC.lastValid(p.player), DT, p.now, 0)).toBe("ok")
 			expect(MC.recentRewinds(p.player, p.now)).toBe(1)
 			-- mais un tricheur qui reste loin est ramené dès la fin de la grâce
-			p.now += B.MoveCheck.RewindLockout
+			p.now += Cfg.RewindLockout
 			local last
 			for _ = 1, 3 do
 				p.now += DT
@@ -318,18 +317,18 @@ return function(T)
 		end)
 
 		it("récidives comptées sur 10 min (exclusion des classements à 10)", function()
-			local MC, B, V3 = setup()
+			local MC, Cfg, V3 = setup()
 			local p = newPlayer(MC, V3)
-			for _ = 1, B.MoveCheck.StrikesForBan do
+			for _ = 1, Cfg.StrikesForBan do
 				for _ = 1, 3 do
 					p.now += DT
 					MC.step(p.player, p.pos + V3.new(70, 0, 0), DT, p.now, 0)
 				end
-				p.now += B.MoveCheck.RewindLockout + 0.1 -- grâce terminée
+				p.now += Cfg.RewindLockout + 0.1 -- grâce terminée
 				MC.step(p.player, MC.lastValid(p.player), DT, p.now, 0)
 			end
-			expect(MC.recentRewinds(p.player, p.now)).toBe(B.MoveCheck.StrikesForBan)
-			expect(MC.recentRewinds(p.player, p.now + B.MoveCheck.StrikeWindow + 1)).toBe(0)
+			expect(MC.recentRewinds(p.player, p.now)).toBe(Cfg.StrikesForBan)
+			expect(MC.recentRewinds(p.player, p.now + Cfg.StrikeWindow + 1)).toBe(0)
 		end)
 	end)
 

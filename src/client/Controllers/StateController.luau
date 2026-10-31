@@ -3,6 +3,9 @@
 --   State.get("coins")
 --   State.observe("coins", function(value, old) ... end)  -- appelé tout de suite si prêt, puis à chaque changement
 --   State.Changed:Connect(function(key, value, old) end)
+-- DataPatch(patch, removed, entries?) : `entries` porte les entrées changées d'une grande table
+-- (ex. nebbies) ; elles sont appliquées sur une COPIE de la table, puis Changed(key, nouvelle,
+-- ancienne) part une fois : l'ancienne table n'est jamais modifiée (comparaisons des abonnés).
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -21,6 +24,37 @@ local function apply(key: string, value: any)
 	local old = data[key]
 	data[key] = value
 	StateController.Changed:Fire(key, value, old)
+end
+
+-- Entrées { [clé] = { set = { [sous-clé] = valeur }, del = { sous-clé } } } (Types.DataPatchEntries)
+local function applyEntries(entries: unknown)
+	if type(entries) ~= "table" then
+		return
+	end
+	for key, ops in entries :: { [any]: any } do
+		if type(key) == "string" and type(ops) == "table" then
+			local set, del = ops.set, ops.del
+			if type(set) == "table" or type(del) == "table" then
+				local old = data[key]
+				local new: { [any]: any } = if type(old) == "table" then table.clone(old) else {}
+				if type(set) == "table" then
+					for subKey, value in set do
+						if type(subKey) == "string" then
+							new[subKey] = value
+						end
+					end
+				end
+				if type(del) == "table" then
+					for _, subKey in del do
+						if type(subKey) == "string" then
+							new[subKey] = nil
+						end
+					end
+				end
+				apply(key, new)
+			end
+		end
+	end
 end
 
 function StateController.Init()
@@ -43,19 +77,21 @@ function StateController.Init()
 		end
 	end)
 
-	Net.event("DataPatch").OnClientEvent:Connect(function(patch: { [string]: any }, removed: { string }?)
-		if not StateController.ready or type(patch) ~= "table" then
-			return
-		end
-		for key, value in patch do
-			apply(key, value)
-		end
-		if type(removed) == "table" then
-			for _, key in removed do
-				apply(key, nil)
+	Net.event("DataPatch").OnClientEvent
+		:Connect(function(patch: { [string]: any }, removed: { string }?, entries: unknown)
+			if not StateController.ready or type(patch) ~= "table" then
+				return
 			end
-		end
-	end)
+			for key, value in patch do
+				apply(key, value)
+			end
+			if type(removed) == "table" then
+				for _, key in removed do
+					apply(key, nil)
+				end
+			end
+			applyEntries(entries)
+		end)
 end
 
 function StateController.Start()

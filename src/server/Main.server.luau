@@ -1,6 +1,7 @@
 --!strict
 -- Point d'entrée serveur : crée les remotes, puis Init() de tous les services
--- dans l'ordre, puis Start() de tous les services.
+-- dans l'ordre, puis Start() de tous les services. Chaque appel est isolé (xpcall) : une erreur
+-- est signalée par warn et le service suivant démarre quand même.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -28,17 +29,32 @@ local ORDER = {
 	"CongaService",
 }
 
-local modules = {}
+-- Isolation des erreurs (Q12) : un Init ou un Start qui lève est signalé puis on passe au service
+-- suivant. Sans cela, une erreur dans un service amont (ex. LeaderboardService.Start) empêchait
+-- CongaService.Start de brancher le tick de 10 Hz : serveur ouvert, mais ni captures, ni coupes,
+-- ni parades, ni instantanés. Le tick protège déjà chacun de ses appels aux autres services.
+local function run(name: string, phase: string, fn: () -> ())
+	local ok, err = xpcall(fn, debug.traceback)
+	if not ok then
+		warn(`[Server] {name} {phase}:`, err)
+	end
+end
+
+local modules: { [string]: any } = {}
 for _, name in ORDER do
-	modules[name] = require(Services:FindFirstChild(name) :: ModuleScript) :: any
+	run(name, "require", function()
+		modules[name] = require(Services:FindFirstChild(name) :: ModuleScript) :: any
+	end)
 end
 for _, name in ORDER do
-	if modules[name].Init then
-		modules[name].Init()
+	local m = modules[name]
+	if m and m.Init then
+		run(name, "Init", m.Init)
 	end
 end
 for _, name in ORDER do
-	if modules[name].Start then
-		modules[name].Start()
+	local m = modules[name]
+	if m and m.Start then
+		run(name, "Start", m.Start)
 	end
 end

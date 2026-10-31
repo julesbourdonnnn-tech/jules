@@ -16,7 +16,8 @@
 --   * attributs de Nest_XX (OwnerUserId, OwnerName, Color, Supernovas, PerchCount, PerchData, Title,
 --     NestTheme, LineStyle) et du Player (Slot, Zen, VIP, Title, LineStyle, NestTheme, Supernovas) —
 --     docs §3.2 et §3.3 ; couleur du propriétaire (Cosmetics.NestColors[slot]) ou thème, via
---     WorldService.setNestAppearance ; Nid libéré (gris) au départ
+--     WorldService.setNestAppearance ; Nid libéré (gris) au départ ; réappliqués sur PassGranted ET
+--     PassRevoked (pass remboursé : VIP et cosmétiques du pass retirés dans la session)
 --   * perchoirs : setPerchCount (WorldService) et PerchData "code.étoiles,…" (meilleurs d'abord,
 --     poussés par AtlasService) ; mémorisés si le Nid n'est pas encore attribué
 --   * constellation : attribut Supernovas mis à jour sur Signals.Supernova (rendu client) ;
@@ -503,6 +504,10 @@ function NestService.Start()
 	end)
 	MonetizationService.PassGranted:Connect(function(player: Player)
 		-- VIP, thème « Or Royal », styles de pass : possession lue dynamiquement
+		applyIdentity(player)
+	end)
+	MonetizationService.PassRevoked:Connect(function(player: Player)
+		-- pass remboursé ou plus possédé : badge VIP retiré, cosmétiques du pass rendus par défaut
 		applyIdentity(player)
 	end)
 	-- longueur de la file (règle du Zen) ; le signal du départ arrive parfois après le nettoyage

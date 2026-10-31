@@ -184,6 +184,13 @@ export type CometSignal = {
 -- Réseau : charges utiles des remotes serveur → client (GDD §12.5)
 -- =============================================================================================
 
+-- DataPatch(patch, removed, entries?) : 3e argument, entrées d'une grande table du profil
+-- (DataService.markDirtyEntry), ex. { nebbies = { set = { u12 = rec }, del = { "u3" } } }.
+-- set : nouvelles valeurs des sous-clés ; del : sous-clés supprimées. Jamais avec la clé entière
+-- dans le même message (la clé entière l'emporte). Le client applique sur une copie de sa table.
+export type DataEntryOps = { set: { [string]: any }, del: { string } }
+export type DataPatchEntries = { [string]: DataEntryOps }
+
 -- WildEvent / WorldSnapshot / LineEvent(clear) / SnipEvent : une apparition
 export type WildSpawn = {
 	id: number,

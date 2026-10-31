@@ -398,10 +398,14 @@ return function(T)
 	end)
 
 	describe("Fix economy r1 › réplication de la collection", function()
+		-- envois de « nebbies » : clé entière (args[1]) ou entrées (args[3], DataService.markDirtyEntry)
 		local function nebbiesPatches(h, p)
 			local n = 0
 			for _, args in h:sentTo(p, "DataPatch") do
-				if type(args[1]) == "table" and args[1].nebbies ~= nil then
+				if
+					(type(args[1]) == "table" and args[1].nebbies ~= nil)
+					or (type(args[3]) == "table" and args[3].nebbies ~= nil)
+				then
 					n += 1
 				end
 			end

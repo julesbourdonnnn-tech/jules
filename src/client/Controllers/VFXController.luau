@@ -7,7 +7,8 @@
 -- la Comète, Highlight seulement sur le porteur, lumières coupées au-delà de 60 studs.
 -- Responsabilités (réactions aux signaux de WorldStateController, répartition imposée du §13.2) :
 --   * capture : 10 particules couleur de rareté, « +1 Puffkin » (taille selon la rareté), « ? » doré
---     si nouvelle entrée ; Rare+ : colonne Néon 0,6 s ; Épique+ : focale 70 → 74 → 70, vibration ;
+--     si nouvelle entrée, son Catch plus aigu à mesure que la file locale grandit ; Rare+ : colonne
+--     Néon 0,6 s et son CatchRare ; Épique+ : focale 70 → 74 → 70, vibration ;
 --     Légendaire+ : colonne de 4 s (tout le serveur) ; Mythique+ : confettis, flash, secousse
 --   * coupe : 12 étincelles, « SNIP ! » 3D (Elastic Out) au point touché ; victime : traînées de
 --     vitesse 3 s ; coupeur : anneau Snip Rush de 6 studs pendant 3 s ; Gloomwisp : « miam ! »
@@ -81,6 +82,8 @@ local LEGEND_PILLAR_HEIGHT = 160
 local LEGEND_PILLAR_SECONDS = 4
 local RARE_PILLAR_SECONDS = 0.6
 local CATCH_PARTICLES = 10
+-- Hauteur du son de capture : 1 + min(0,5 ; 0,01 × n), n = file locale après la capture (GDD §9.4)
+local CATCH_PITCH_STEP, CATCH_PITCH_MAX = 0.01, 0.5
 local CONFETTI = 60
 local CONFETTI_COLORS = {
 	Color3.fromRGB(255, 110, 150),
@@ -864,7 +867,12 @@ local function onCaught(slot: number, code: number, _id: number, pos: Vector3?)
 			1.2
 		)
 	end
-	AudioController.play(if rarity.id >= 3 then "CatchRare" else "Catch", 0.05)
+	if rarity.id >= 3 then
+		AudioController.play("CatchRare", 0.05)
+	else
+		local n = WorldStateController.lineLength(slot)
+		AudioController.play("Catch", 0.05, 1 + math.min(CATCH_PITCH_MAX, CATCH_PITCH_STEP * n))
+	end
 	if rarity.id >= 4 then
 		VFXController.fovPunch(EPIC_FOV, EPIC_FOV_OUT, EPIC_FOV_BACK)
 		VFXController.haptic(0.4, 0.08)
