@@ -13,6 +13,11 @@
 --     distance (Highlights et lumières attribués de façon différentielle : rien n'est ré-adorné ni
 --     re-parenté tant que le choix ne change pas) ; Graphismes légers : distances × 0,6, ni
 --     Highlight (pas même le flash de coupe) ni Trail, lumières ≤ 60 studs
+--   * particules à l'écran ≤ 300 (§12.8) : effets continus des Nebbies (Fire des Blazing, Sparkles
+--     des Rares, orbite des Épiques ; Nebbies de parade compris) allumés par NebbyBuilder.budgetFx
+--     du plus proche au plus lointain dans la part des rendus (moitié des 300, × 0,3 en Graphismes
+--     légers ; paillettes des files ≥ 40 déduites) ; rigs neufs éteints jusqu'à la passe suivante ;
+--     VFXController lit fxParticles() et ne donne aux rafales que le reste
 --   * animations : vague dans la file, face au précédent, inclinaison dans les virages, danse à
 --     l'arrêt (> 1 s), rebond et clignement des sauvages, regard vers le joueur proche (≤ 15),
 --     flânerie SeededPath, apparition ; saut de capture (parabole 0,3 s, écrasement), arcs de
@@ -95,6 +100,10 @@ local RING_THICKNESS, RING_SCALE, RING_LIFT = 0.12, 1.25, 0.06
 local CROWN_THICKNESS, CROWN_SCALE = 0.3, 0.7
 local CROWN_COLOR = Color3.fromRGB(255, 215, 80)
 local SPARKLE_RATE = 10
+local SPARKLE_LIFE_MIN, SPARKLE_LIFE_MAX = 0.8, 1.2
+-- Part des particules à l'écran (Render.MaxParticles) laissée aux effets continus du rendu ; le
+-- reste va aux rafales de VFXController (et à la neige du ciel)
+local RIG_PARTICLE_SHARE = 0.5
 local LABEL_SIZE = UDim2.fromScale(4.5, 2)
 local LABEL_DISTANCE = 600
 local WISP_HOVER, WISP_BOB = 3, 0.3
@@ -187,6 +196,7 @@ type Parader = {
 	t0: number,
 	start: number,
 	look: Vector3,
+	dist: number, -- distance au point de vue (budget des effets continus, planificateur)
 }
 type Handoff = { code: number, rig: Rig?, from: Vector3?, at: number }
 
@@ -228,6 +238,12 @@ local moveParts: { BasePart } = {}
 local moveCFrames: { CFrame } = {}
 local planViews: { RigPool.View } = {}
 local aliveWisps: { [number]: boolean } = {}
+local fxRigs: { Rig } = {}
+local fxParaders: { Parader } = {}
+
+-- Particules des effets continus allumés à la dernière passe du planificateur (≤ rigShare())
+local rigParticles = 0
+local glitterParticles = 0
 
 -- Réserves de pièces décoratives
 local ringPool: { BasePart } = {}
@@ -768,7 +784,7 @@ local function updateExtras(view: LineView, headCF: CFrame?, headSize: number, l
 			local emitter = Instance.new("ParticleEmitter")
 			emitter.Name = "Glitter"
 			emitter.Rate = SPARKLE_RATE
-			emitter.Lifetime = NumberRange.new(0.8, 1.2)
+			emitter.Lifetime = NumberRange.new(SPARKLE_LIFE_MIN, SPARKLE_LIFE_MAX)
 			emitter.Speed = NumberRange.new(1, 3)
 			emitter.SpreadAngle = Vector2.new(25, 25)
 			emitter.LightEmission = 1
@@ -1143,6 +1159,7 @@ local function startParade(slot: number, atBeacon: boolean)
 					t0 = now,
 					start = now + (k - 1) * step,
 					look = look,
+					dist = node.dist,
 				})
 			end
 		end
@@ -1801,6 +1818,59 @@ local function applyLights(wanted: { DecorWant })
 	end
 end
 
+-- Part des particules à l'écran réservée aux effets continus du rendu (× 0,3 en Graphismes légers :
+-- les coûts des rigs y sont déjà réduits, autant de Nebbies restent allumés)
+local function rigShare(): number
+	local share = Render.MaxParticles * RIG_PARTICLE_SHARE
+	return if lowGraphics() then share * Render.LowGraphicsParticleMult else share
+end
+
+-- Budget des effets continus (GDD §12.8 ≤ 300 particules à l'écran) : paillettes des files ≥ 40
+-- déduites, puis NebbyBuilder.budgetFx allume Fire / Sparkles / orbite des Nebbies voulus en détail
+-- complet (vues triées par distance fusionnées avec les Nebbies de parade) du plus proche au plus
+-- lointain et éteint tous les autres, y compris les rigs rendus à la réserve depuis la passe
+-- précédente. Un rig reconstruit entre deux passes reste éteint jusqu'à la suivante (≤ 0,1 s).
+local function budgetEffects(focus: Vector3)
+	local glitterRate = SPARKLE_RATE * (if lowGraphics() then Render.LowGraphicsParticleMult else 1)
+	local glitter = 0
+	for _, view in lineViews do
+		local sparkle = view.sparkle
+		if sparkle and sparkle.Parent ~= nil then
+			glitter += glitterRate * (SPARKLE_LIFE_MIN + SPARKLE_LIFE_MAX) / 2
+		end
+	end
+	glitterParticles = glitter
+	for _, p in paraders do
+		local rig = p.rig
+		if rig.lod == "full" and not rig.destroyed then
+			p.dist = (rig.body.Position - focus).Magnitude
+			table.insert(fxParaders, p)
+		end
+	end
+	if #fxParaders > 1 then
+		table.sort(fxParaders, function(a, b)
+			return a.dist < b.dist
+		end)
+	end
+	local k = 1
+	for _, v in planViews do
+		local rig = v.rig
+		if rig and v.want == "full" then
+			while fxParaders[k] ~= nil and fxParaders[k].dist < v.dist do
+				table.insert(fxRigs, fxParaders[k].rig)
+				k += 1
+			end
+			table.insert(fxRigs, rig)
+		end
+	end
+	for i = k, #fxParaders do
+		table.insert(fxRigs, fxParaders[i].rig)
+	end
+	rigParticles = NebbyBuilder.budgetFx(fxRigs, math.max(0, rigShare() - glitter))
+	table.clear(fxRigs)
+	table.clear(fxParaders)
+end
+
 local function plan(t: number, focus: Vector3)
 	localSlotCache = WorldStateController.localSlot()
 	RigPool.setLowGraphics(lowGraphics())
@@ -1862,6 +1932,8 @@ local function plan(t: number, focus: Vector3)
 			table.insert(brights, v)
 		end
 	end
+	-- Effets de particules continus : les plus proches d'abord, dans la part des rendus (§12.8)
+	budgetEffects(focus)
 	-- Highlights : 4 files ≥ 20 les plus proches, 6 Mythiques+ (aucun en Graphismes légers)
 	local wantHl: { DecorWant } = {}
 	if not lowGraphics() then
@@ -2183,6 +2255,18 @@ function CongaRenderer.decorCounts(): (number, number)
 		l += 1
 	end
 	return h, l
+end
+
+-- Particules continues du rendu à l'écran (effets des Nebbies allumés par le budget + paillettes
+-- des files ≥ 40), estimées à la dernière passe du planificateur ; toujours ≤ rigParticleBudget().
+-- VFXController en déduit la part de ses rafales.
+function CongaRenderer.fxParticles(): number
+	return rigParticles + glitterParticles
+end
+
+-- Part des 300 particules à l'écran réservée aux effets continus du rendu (Graphismes légers compris)
+function CongaRenderer.rigParticleBudget(): number
+	return rigShare()
 end
 
 -- Mode des anneaux de lisibilité d'une file ("style" | "cut" | "warn"), nil si aucune file

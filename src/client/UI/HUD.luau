@@ -12,7 +12,8 @@
 --   * bouton Dash (112 × 112, au-dessus à gauche du bouton de saut tactile lu dans
 --     TouchGui.TouchControlFrame.JumpButton — recherche bornée et non bloquante, décalage −16 px ;
 --     PC/manette : bas droite) avec balayage radial de recharge et pop + éclair au retour ; bouton
---     Ping (72 × 72) à sa gauche
+--     Ping (72 × 72) à sa gauche ; sur les écrans bas (téléphones de 360-390 dp), la colonne de
+--     droite (état, suivi de quête) passe à gauche de la minicarte si le Dash la recouvrirait
 --   * pastille d'événement (haut centre, 320 × 48 ; Hud/EventPill) : prochain événement avec compte à
 --     rebours, événement en cours en couleur, « ☄ COMÈTE 0:45 — Mira », barre de la Balise (420 × 28)
 --     ; indicateurs d'état (Zen, boost ×2 avec minuteur, connexion instable) ; suivi de quête
@@ -99,6 +100,19 @@ local LINE_Y = 24
 local DASH = 112
 local PING = 72
 local CHEER_SIZE = Vector2.new(200, 88)
+local PING_GAP = 12 -- écart Ping ↔ Dash
+local STATUS_Y = MARGIN + MINIMAP + 8 -- indicateurs d'état sous la minicarte
+local STATUS_WIDTH = STATUS * 4 + STATUS_GAP * 3
+local STATUS_HEIGHT = STATUS + 2 + STATUS_TIME.Y
+local TRACKER_Y = STATUS_Y + STATUS + 30 -- suivi de quête sous les indicateurs
+local STATUS_HOME = UDim2.new(1, -MARGIN, 0, STATUS_Y)
+local TRACKER_HOME = UDim2.new(1, -MARGIN, 0, TRACKER_Y)
+local SIDE_RIGHT = MARGIN + MINIMAP + 8 -- colonne de repli : bord droit à gauche de la minicarte
+local CLEARANCE = 8 -- écart minimal entre deux blocs du HUD (px de référence)
+local COLUMN_MOVE = 0.25
+-- instruction d'accueil (écran Onboarding, OnboardingController : HINT_Y, HINT_SIZE)
+local HINT_Y = 232
+local HINT_SIZE = Vector2.new(400, 56)
 local TOUCH_FALLBACK = Vector2.new(-170, -130) -- coin bas droit sans bouton de saut trouvé
 local REVEAL_TIME = 0.35
 local REVEAL_PULSE = 1.4
@@ -177,6 +191,9 @@ type Element = {
 
 type Cheer = { heroId: number, level: number, expiresAt: number, total: number }
 
+-- Rectangle en px de référence du HUD (zone intérieure de Safe)
+type Rect = { x0: number, y0: number, x1: number, y1: number }
+
 local started = false
 local built = false
 local uiTime = 0
@@ -221,6 +238,8 @@ local pingHolder: Frame? = nil
 local dashWasReady = true
 local lastPressDash = -math.huge
 local jumpButton: GuiObject? = nil
+-- place courante de la colonne de droite (positions du GDD, ou colonne de repli sur écran bas)
+local columnHome: { [string]: UDim2 } = { status = STATUS_HOME, questTracker = TRACKER_HOME }
 
 local eventParts: { label: TextLabel?, stroke: UIStroke?, bar: Frame?, fill: Frame?, barLabel: TextLabel? } =
 	{}
@@ -494,8 +513,8 @@ end
 local function buildStatus(parent: Frame)
 	local holder = Widgets.holder(
 		"Status",
-		UDim2.fromOffset(STATUS * 4 + STATUS_GAP * 3, STATUS + 2 + STATUS_TIME.Y),
-		UDim2.new(1, -MARGIN, 0, MARGIN + MINIMAP + 8),
+		UDim2.fromOffset(STATUS_WIDTH, STATUS_HEIGHT),
+		STATUS_HOME,
 		Vector2.new(1, 0),
 		parent
 	)
@@ -578,7 +597,7 @@ local function buildTracker(parent: Frame)
 	local holder = Widgets.holder(
 		"QuestTracker",
 		UDim2.fromOffset(TRACKER_SIZE.X, TRACKER_SIZE.Y),
-		UDim2.new(1, -MARGIN, 0, MARGIN + MINIMAP + 8 + STATUS + 30),
+		TRACKER_HOME,
 		Vector2.new(1, 0),
 		parent
 	)
@@ -840,7 +859,7 @@ local function buildDash(parent: Frame)
 	local ping = Widgets.holder(
 		"Ping",
 		UDim2.fromOffset(PING, PING),
-		UDim2.new(1, -MARGIN - DASH - 12, 1, -MARGIN),
+		UDim2.new(1, -MARGIN - DASH - PING_GAP, 1, -MARGIN),
 		Vector2.new(1, 1),
 		parent
 	)
@@ -1187,6 +1206,161 @@ local function findJump(): GuiObject?
 	return if jump and jump:IsA("GuiObject") then jump else nil
 end
 
+-- Taille de la zone intérieure du HUD en px de référence (zone sûre ÷ échelle − marges de
+-- Root.safe) ; nil tant que le moteur ne l'a pas mesurée
+local function contentSize(): Vector2?
+	local s = safe
+	local gui = if s then s.Parent else nil
+	if s == nil or gui == nil or not gui:IsA("ScreenGui") then
+		return nil
+	end
+	local abs = (gui :: ScreenGui).AbsoluteSize
+	if not (isFinite(abs.X) and isFinite(abs.Y)) or abs.X <= 1 or abs.Y <= 1 then
+		return nil
+	end
+	local k = math.max(Root.scale(), 0.01)
+	local padding = s:FindFirstChildOfClass("UIPadding")
+	local pad = if padding
+		then Vector2.new(
+			padding.PaddingLeft.Offset + padding.PaddingRight.Offset,
+			padding.PaddingTop.Offset + padding.PaddingBottom.Offset
+		)
+		else Vector2.zero
+	return abs / k - pad
+end
+
+local function box(x: number, y: number, w: number, h: number): Rect
+	return { x0 = x, y0 = y, x1 = x + w, y1 = y + h }
+end
+
+-- Deux blocs plus proches que CLEARANCE
+local function hits(a: Rect, b: Rect): boolean
+	return a.x0 < b.x1 + CLEARANCE
+		and b.x0 < a.x1 + CLEARANCE
+		and a.y0 < b.y1 + CLEARANCE
+		and b.y0 < a.y1 + CLEARANCE
+end
+
+local function hitsAny(r: Rect, list: { Rect }): boolean
+	for _, other in list do
+		if hits(r, other) then
+			return true
+		end
+	end
+	return false
+end
+
+-- Plus haute place libre d'un bloc de bord droit `right`, entre `from` et `bottom` ; nil si aucune.
+-- Les seules hauteurs à essayer : `from` et juste sous chaque obstacle.
+local function firstFree(
+	right: number,
+	size: Vector2,
+	from: number,
+	bottom: number,
+	obstacles: { Rect }
+): number?
+	local candidates = { from }
+	for _, r in obstacles do
+		local y = r.y1 + CLEARANCE
+		if y > from then
+			table.insert(candidates, y)
+		end
+	end
+	table.sort(candidates)
+	for _, y in candidates do
+		if y + size.Y > bottom then
+			return nil
+		end
+		if not hitsAny(box(right - size.X, y, size.X, size.Y), obstacles) then
+			return y
+		end
+	end
+	return nil
+end
+
+-- Déplace un élément de la colonne de droite (glissement s'il est déjà affiché)
+local function placeColumn(name: Types.HudElement, position: UDim2)
+	local e = elements[name]
+	if e == nil or columnHome[name] == position then
+		return
+	end
+	columnHome[name] = position
+	if e.revealed and e.holder.Visible and not reduced() then
+		Juice.tween(e.holder, COLUMN_MOVE, { Position = position })
+	else
+		e.holder.Position = position
+	end
+end
+
+-- Colonne de droite (indicateurs d'état, suivi de quête) : positions du GDD sous la minicarte, sauf
+-- si le Dash ou le Ping les recouvrent (téléphones de 360-390 dp de haut : le bouton de saut remonte
+-- le Dash jusqu'à y ≈ 217-304). Elles passent alors dans une colonne à gauche de la minicarte, au
+-- plus haut sans toucher la pastille d'événement (et sa barre de Balise si la largeur le permet),
+-- l'instruction d'accueil, le compteur de file ni ACCLAMER (GDD §10.1, §10.2).
+local function layoutColumn(dashPos: UDim2, dashSize: number, pingSize: number)
+	local size = contentSize()
+	local statusAt, trackerAt = STATUS_HOME, TRACKER_HOME
+	if size then
+		local W, H = size.X, size.Y
+		local cx = dashPos.X.Scale * W + dashPos.X.Offset
+		local cy = dashPos.Y.Scale * H + dashPos.Y.Offset
+		local dash = box(cx - dashSize, cy - dashSize, dashSize, dashSize)
+		local ping = box(cx - dashSize - PING_GAP - pingSize, cy - pingSize, pingSize, pingSize)
+		local lineTop = H - LINE_Y - LINE_SIZE.Y
+		local fixed: { Rect } = {
+			dash,
+			ping,
+			box(W - MARGIN - MINIMAP, MARGIN, MINIMAP, MINIMAP),
+			box((W - HINT_SIZE.X) / 2, HINT_Y, HINT_SIZE.X, HINT_SIZE.Y),
+			box((W - LINE_SIZE.X) / 2, lineTop, LINE_SIZE.X, LINE_SIZE.Y),
+			box((W - CHEER_SIZE.X) / 2, lineTop - 16 - CHEER_SIZE.Y, CHEER_SIZE.X, CHEER_SIZE.Y),
+		}
+		local statusHome = box(W - MARGIN - STATUS_WIDTH, STATUS_Y, STATUS_WIDTH, STATUS_HEIGHT)
+		local trackerHome = box(W - MARGIN - TRACKER_SIZE.X, TRACKER_Y, TRACKER_SIZE.X, TRACKER_SIZE.Y)
+		if hitsAny(statusHome, fixed) or hitsAny(trackerHome, fixed) then
+			local pill = box((W - EVENT_SIZE.X) / 2, MARGIN, EVENT_SIZE.X, EVENT_SIZE.Y)
+			local withBar = box(
+				(W - BEACON_BAR.X) / 2,
+				MARGIN,
+				BEACON_BAR.X,
+				EVENT_SIZE.Y + BEACON_BAR_POS.Y.Offset + BEACON_BAR.Y
+			)
+			local right = W - SIDE_RIGHT
+			local cluster = math.min(dash.y0, ping.y0) - CLEARANCE
+			local statusSize = Vector2.new(STATUS_WIDTH, STATUS_HEIGHT)
+			-- d'abord au-dessus du Dash (colonne compacte), barre de Balise comprise puis non ;
+			-- en dernier recours n'importe où dans l'écran
+			local passes: { { top: Rect, bottom: number } } = {
+				{ top = withBar, bottom = cluster },
+				{ top = pill, bottom = cluster },
+				{ top = withBar, bottom = H },
+				{ top = pill, bottom = H },
+			}
+			for _, pass in passes do
+				local obstacles = table.clone(fixed)
+				table.insert(obstacles, pass.top)
+				local bottom = pass.bottom
+				local ty = firstFree(right, TRACKER_SIZE, MARGIN, bottom, obstacles)
+				if ty ~= nil then
+					table.insert(obstacles, box(right - TRACKER_SIZE.X, ty, TRACKER_SIZE.X, TRACKER_SIZE.Y))
+					-- état : à sa place du GDD si elle reste libre, sinon sous le suivi
+					local sy: number? = nil
+					if hitsAny(statusHome, obstacles) then
+						sy = firstFree(right, statusSize, ty + TRACKER_SIZE.Y + CLEARANCE, bottom, obstacles)
+					end
+					if sy ~= nil or not hitsAny(statusHome, obstacles) then
+						trackerAt = UDim2.new(1, -SIDE_RIGHT, 0, ty)
+						statusAt = if sy ~= nil then UDim2.new(1, -SIDE_RIGHT, 0, sy) else STATUS_HOME
+						break
+					end
+				end
+			end
+		end
+	end
+	placeColumn("status", statusAt)
+	placeColumn("questTracker", trackerAt)
+end
+
 local function layoutActions()
 	local dash, ping, s = dashParts.holder, pingHolder, safe
 	if dash == nil or ping == nil or s == nil then
@@ -1219,7 +1393,8 @@ local function layoutActions()
 		dash.Position = UDim2.new(1, -MARGIN, 1, -MARGIN)
 	end
 	-- Ping à gauche du Dash, bas alignés
-	ping.Position = dash.Position + UDim2.fromOffset(-dashSize - 12, 0)
+	ping.Position = dash.Position + UDim2.fromOffset(-dashSize - PING_GAP, 0)
+	layoutColumn(dash.Position, dashSize, pingSize)
 end
 
 -- Acclamation -----------------------------------------------------------------------------------
@@ -1484,7 +1659,8 @@ local function onFrame(dt: number)
 		updateTracker(now)
 		updateRate()
 	end
-	if InputController.inputType() == 1 and uiTime - lastTouchCheck >= TOUCH_CHECK then
+	-- bouton de saut tactile (apparu, déplacé) et taille d'écran (rotation, fenêtre PC)
+	if uiTime - lastTouchCheck >= TOUCH_CHECK then
 		lastTouchCheck = uiTime
 		layoutActions()
 	end
@@ -1536,8 +1712,9 @@ function HUD.reveal(element: Types.HudElement, animate: boolean?)
 	e.holder.Visible = true
 	local s = e.scale
 	if animate and s and not reduced() and element == "questTracker" then
-		-- « le suivi de quête glisse à droite » (GDD §3, ~25 s) : entrée par le bord droit
-		local target = e.holder.Position
+		-- « le suivi de quête glisse à droite » (GDD §3, ~25 s) : entrée par le bord droit, jusqu'à
+		-- sa place courante (colonne du GDD ou de repli)
+		local target = columnHome.questTracker or e.holder.Position
 		s.Scale = 1
 		e.holder.Position = target + UDim2.fromOffset(TRACKER_SIZE.X + 2 * MARGIN, 0)
 		e.revealEnd = uiTime + TRACKER_SLIDE

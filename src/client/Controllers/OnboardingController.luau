@@ -8,11 +8,16 @@
 --   * affichage progressif du HUD (HUD.reveal) : Glow, file, Dash à 1,5 s ; rail Améliorer après la
 --     1re parade ; suivi de quête après le 1er achat ; Collection + Stardust à Q4 ; tout pour un
 --     joueur qui revient (pas sa première session) ou ayant fini l'accueil (step 8)
---   * guidage : 6 empreintes Néon de la porte vers les Puffkins puis inversées vers la porte, arche
---     qui pulse en doré, Beam joueur → porte ; flèche au sol vers le Nebby le plus proche (ou vers la
---     porte quand la file est pleine) ; pilier bleu sur le Rare de Q4 ; main animée sur l'icône
---     Améliorer (HUD.attention) ; carte unique en surbrillance dans Améliorer (arguments
---     { focus = "conga" } posés via InputController.setPanelArgs) ; le Dash pulse au début de Q5
+--   * guidage : 6 empreintes Néon de la porte vers les Puffkins (réels) puis inversées vers la porte,
+--     arche qui pulse en doré, Beam joueur → porte ; flèche au sol vers le Nebby le plus proche (ou
+--     vers la porte quand la file est pleine ou contient déjà l'objectif) ; pilier bleu sur le Rare de
+--     Q4 ; Q6 : pilier coloré + flèche sur le Nebby météo, flèche vers la Comète ; main animée sur
+--     l'icône Améliorer (HUD.attention) ; pastille d'événement qui pulse quand Q6 attend la météo ;
+--     carte unique en surbrillance dans Améliorer (arguments { focus = "conga" } posés via
+--     InputController.setPanelArgs) ; le Dash pulse au début de Q5
+--   * faits de terrain fournis aux règles (gather) : Rare déjà dans la file (Q4), Puffkins de
+--     bienvenue restants (Q1), fenêtre météo avec forme, Nebby météo visible, Comète au sol ou
+--     portée (Q6) — l'instruction affichée est toujours réalisable maintenant (GDD §3)
 --   * jamais plus d'une instruction à l'écran (≤ 4 mots, "onboarding.*"), aucune fenêtre modale
 --     (l'accueil n'ouvre jamais de panneau lui-même)
 --   * message « Ton Nid travaille même quand tu dors » à 10 min de jeu (joueurs encore nouveaux)
@@ -20,7 +25,8 @@
 -- connexion Heartbeat ; temps d'animation = somme des dt (mesure graphique), temps de jeu = Clock.
 -- GDD : §3, §7.1, §7.4, §10.1 (affichage progressif).
 -- Dépendances : StateController, Util/Prefs, UI/Juice, WorldStateController, CongaRenderer,
--- PanelController, HUD, Logic/WorldLayout, Config/Quests, Shared/Util/Clock.
+-- PanelController, HUD, Hud/EventPill, Logic/WorldLayout, Config/Quests, Config/Events,
+-- Shared/Util/Clock.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -33,6 +39,7 @@ local Nebbies = require(Shared.Config.Nebbies)
 local Quests = require(Shared.Config.Quests)
 local Balance = require(Shared.Config.Balance)
 local Zones = require(Shared.Config.Zones)
+local Events = require(Shared.Config.Events)
 local Formulas = require(Shared.Logic.Formulas)
 local WorldLayout = require(Shared.Logic.WorldLayout)
 
@@ -51,6 +58,7 @@ local HUD = require(Client.UI.HUD)
 local Plan = require(Client.UI.Hud.OnboardingPlan)
 local Widgets = require(Client.UI.Hud.Widgets)
 local Glow = require(Client.UI.Hud.Glow)
+local EventPill = require(Client.UI.Hud.EventPill)
 
 local OnboardingController = {}
 
@@ -82,6 +90,11 @@ local NEST_WORKS_HOLD = 6
 local NEST_WORKS_MAX_PLAY = 7200 -- joueurs encore nouveaux (< 2 h de jeu cumulé)
 local FOCUS_ARGS = table.freeze({ focus = "conga" })
 local ROOT_TO_FEET = 3
+-- s : les Puffkins de bienvenue arrivent un peu après l'étape 1 (flux d'apparitions distinct des
+-- patchs du profil) ; sans les avoir vus, on ne les déclare « disparus » qu'après ce délai
+local PUFFKIN_GRACE = 4
+local FOOT_RETARGET = 5 -- studs : les empreintes ne sont reposées que si leur cible bouge vraiment
+local WELCOME = Nebbies.Named.Welcome
 
 local HINT_ICONS: { [string]: string } = {
 	["onboarding.catch"] = "◉",
@@ -94,9 +107,28 @@ local HINT_ICONS: { [string]: string } = {
 	["onboarding.weather"] = "☁",
 	["onboarding.perches"] = "▣",
 	["onboarding.nestWorks"] = "☾",
+	["onboarding.waitWeather"] = "◷",
+	["onboarding.joinComet"] = "☄",
 }
 
-local ATTENTION_ELEMENTS: { Types.HudElement } = { "rail.Upgrades", "dash" }
+local ATTENTION_ELEMENTS: { Types.HudElement } = { "rail.Upgrades", "dash", "eventPill" }
+
+-- Modes de guidage qui posent la flèche au sol (stepGuide)
+local ARROW_MODES: { [string]: boolean } = {
+	toNebbies = true,
+	toRare = true,
+	toWeather = true,
+	toComet = true,
+}
+
+-- Couleur du pilier d'un Nebby météo : celle de sa météo (pastille d'événement)
+local FORM_COLORS: { [number]: Color3 } = {}
+for _, def in Events.Weather.Kinds do
+	local form = def.form
+	if form ~= nil then
+		FORM_COLORS[form] = EventPill.Colors.weather[def.key] or RARE_BLUE
+	end
+end
 
 -- Q4 : rareté minimale du Rare à encaisser (config)
 local RARE_MIN = (function(): number
@@ -146,6 +178,7 @@ local hintScale: UIScale? = nil
 local folder: Folder? = nil
 local footprints: { BasePart } = {}
 local footMode: string? = nil
+local footTarget: Vector3? = nil
 local archBalls: { BasePart } = {}
 local archSlot = 0
 local beam: Beam? = nil
@@ -156,6 +189,11 @@ local arrowParts: { BasePart } = {}
 local pillar: BasePart? = nil
 local targetWildId: number? = nil
 local rareWildId: number? = nil
+local weatherWildId: number? = nil
+local weatherColor = RARE_BLUE
+-- Puffkins de bienvenue déjà vus cette session (dans le monde ou dans la file) ; début d'observation
+local puffkinsSeen = false
+local puffkinWatchSince: number? = nil
 
 -- Outils ----------------------------------------------------------------------------------------
 
@@ -195,17 +233,21 @@ local function canBuy(track: Types.UpgradeTrack, level: number, glow: number): b
 	return glow >= Formulas.upgradeCost(track, level)
 end
 
--- Nebby sauvage attrapable le plus proche (rareté minimale facultative), nil si aucun
-local function nearestWild(from: Vector3, minRarity: number?): (number?, Vector3?)
+-- Nebby sauvage attrapable le plus proche (filtre facultatif sur espèce et forme), nil si aucun
+local function nearestWild(from: Vector3, accept: ((number, number) -> boolean)?): (number?, Vector3?)
 	local slot = WorldStateController.localSlot()
 	local now = Clock.now()
 	local bestId: number? = nil
 	local bestPos: Vector3? = nil
 	local bestDistance = math.huge
 	for id, wild in WorldStateController.wilds() do
-		local catchable = wild.dizzyUntil <= now or wild.prioritySlot == slot
-		local s = Nebbies.unpack(wild.code)
-		if catchable and (minRarity == nil or Nebbies.rarityOf(s) >= minRarity) then
+		local catchable = Nebbies.isValidCode(wild.code)
+			and (wild.dizzyUntil <= now or wild.prioritySlot == slot)
+		local s, f = 0, 0
+		if catchable then
+			s, f = Nebbies.unpack(wild.code)
+		end
+		if catchable and (accept == nil or accept(s, f)) then
 			local pos = WorldStateController.wildPosition(wild, now)
 			-- les Nebbies personnels (accueil, Rare de Q4) passent avant les autres
 			local d = (Vector3.new(pos.X, 0, pos.Z) - Vector3.new(from.X, 0, from.Z)).Magnitude
@@ -233,6 +275,93 @@ local function wildPos(id: number?): Vector3?
 	return WorldStateController.wildPosition(wild, Clock.now())
 end
 
+-- Codes de la file locale (miroir WorldStateController), {} si inconnue
+local function lineCodes(slot: number): { any }
+	if slot == 0 then
+		return {}
+	end
+	local line = WorldStateController.line(slot)
+	local codes: any = if line then line.codes else nil
+	return if type(codes) == "table" then codes else {}
+end
+
+local function isWeatherForm(_s: number, f: number): boolean
+	return f ~= 0
+end
+
+-- Q1 : Puffkins de bienvenue (personnels) encore attrapables ; nil tant que c'est inconnu (pas encore
+-- vus et délai d'arrivée pas écoulé) — la règle d'origine « Attrape les Puffkins » s'applique alors
+local function welcomeLeft(step: number, slot: number): number?
+	if step ~= 1 then
+		puffkinWatchSince = nil
+		return nil
+	end
+	local now = Clock.now()
+	local count = 0
+	for _, wild in WorldStateController.wilds() do
+		if
+			wild.personal == true
+			and Nebbies.isValidCode(wild.code)
+			and num(wild.expiresAt, math.huge) > now
+		then
+			if Nebbies.unpack(wild.code) == WELCOME then
+				count += 1
+			end
+		end
+	end
+	if count > 0 then
+		puffkinsSeen = true
+	else
+		for _, code in lineCodes(slot) do
+			if Nebbies.isValidCode(code) and Nebbies.unpack(code) == WELCOME then
+				puffkinsSeen = true -- déjà attrapés : ils sont bien arrivés
+				break
+			end
+		end
+	end
+	local since = puffkinWatchSince
+	if since == nil then
+		since = now
+		puffkinWatchSince = now
+	end
+	if puffkinsSeen or now - (since :: number) >= PUFFKIN_GRACE then
+		return count
+	end
+	return nil
+end
+
+-- La file contient au moins un Nebby de rareté ≥ minRarity (Q4 : le Rare est attrapé, reste à rentrer)
+local function lineHasRarity(slot: number, minRarity: number): boolean
+	for _, code in lineCodes(slot) do
+		if Nebbies.isValidCode(code) and Nebbies.rarityOf((Nebbies.unpack(code))) >= minRarity then
+			return true
+		end
+	end
+	return false
+end
+
+-- Fenêtre météo en cours qui donne une forme (la Pluie de météores n'en donne aucune)
+local function weatherOpen(ev: any, now: number): boolean
+	local w = if type(ev) == "table" then ev.weather else nil
+	if type(w) ~= "table" or not isFinite(w.startsAt) or not isFinite(w.endsAt) then
+		return false
+	end
+	if now < w.startsAt or now >= w.endsAt then
+		return false
+	end
+	local def = if type(w.key) == "string" then Events.WeatherByKey[w.key] else nil
+	if def then
+		return def.form ~= nil
+	end
+	return isFinite(w.form) and w.form > 0 -- météo inconnue de cette version : forme annoncée
+end
+
+-- Comète que l'on peut rejoindre maintenant (au sol ou portée ; l'alerte dans le ciel ne compte pas)
+local function cometJoinable(ev: any): boolean
+	local comet = if type(ev) == "table" then ev.comet else nil
+	return type(comet) == "table" and (comet.phase == "ground" or comet.phase == "carried")
+end
+
 -- Faits observés (entrée des règles pures)
 local function gather(): Plan.Facts
 	local step = currentStep()
@@ -246,13 +375,42 @@ local function gather(): Plan.Facts
 	local n = if slot ~= 0 then WorldStateController.lineLength(slot) else 0
 	local glow = Glow.predicted()
 	local root = rootPart()
+	local def = if step >= 1 and step < Plan.DONE then Quests.Onboarding[step] else nil
+	local kind = if def then def.goal.kind else nil
 	local rareTarget = false
-	if step >= 1 and step < Plan.DONE and Quests.Onboarding[step].goal.kind == "bankRarity" and root then
-		local id = nearestWild(root.Position, RARE_MIN)
+	local goalInLine: boolean? = nil
+	if kind == "bankRarity" then
+		local minRarity = num((def :: Quests.OnboardingQuest).goal.minRarity, RARE_MIN)
+		goalInLine = lineHasRarity(slot, minRarity)
+		local id = if root
+			then nearestWild(root.Position, function(s: number, _f: number): boolean
+				return Nebbies.rarityOf(s) >= minRarity
+			end)
+			else nil
 		rareWildId = id
 		rareTarget = id ~= nil
 	else
 		rareWildId = nil
+	end
+	local weatherActive: boolean? = nil
+	local weatherTarget: boolean? = nil
+	local cometActive: boolean? = nil
+	if kind == "weatherOrComet" then
+		local ev: any = WorldStateController.events()
+		weatherActive = weatherOpen(ev, Clock.now())
+		cometActive = cometJoinable(ev)
+		local id = if root then nearestWild(root.Position, isWeatherForm) else nil
+		weatherWildId = id
+		weatherTarget = id ~= nil
+		local wild = if id then WorldStateController.wilds()[id] else nil
+		local form = 0
+		if wild and Nebbies.isValidCode(wild.code) then
+			local _, f = Nebbies.unpack(wild.code)
+			form = f
+		end
+		weatherColor = FORM_COLORS[form] or RARE_BLUE
+	else
+		weatherWildId = nil
 	end
 	local sessions = math.max(num(rookie.sessions, 0), num(stats.sessions, 0))
 	local seen = snapshotSessions
@@ -271,6 +429,11 @@ local function gather(): Plan.Facts
 		canBuyStride = canBuy("stride", stride, glow),
 		canBuyPerches = canBuy("perches", perches, glow),
 		rareTarget = rareTarget,
+		goalInLine = goalInLine,
+		puffkinsLeft = welcomeLeft(step, slot),
+		weatherActive = weatherActive,
+		weatherTarget = weatherTarget,
+		cometActive = cometActive,
 	}
 end
 
@@ -400,30 +563,63 @@ local function hideParts(parts: { BasePart })
 	end
 end
 
--- Empreintes : de la porte vers les Puffkins (ou l'inverse), allumées une à une
-local function setFootprints(mode: string?)
-	if mode == footMode then
-		return
-	end
-	local slot = WorldStateController.localSlot()
-	if mode ~= nil and slot == 0 then
-		return -- Nid pas encore connu : réessayé à la prochaine évaluation
-	end
-	footMode = mode
-	if mode == nil then
-		hideParts(footprints)
-		return
-	end
-	while #footprints < FOOTPRINTS do
-		table.insert(footprints, neonPart("Footprint", GOLD))
-	end
-	local gate = WorldLayout.gateCFrame(slot).Position
-	local points = WorldLayout.welcomePoints(slot, Balance.Spawn.WelcomeCount)
+-- Place théorique des Puffkins de bienvenue (devant la porte)
+local function welcomeSpot(slot: number, gate: Vector3): Vector3
 	local sum = Vector3.zero
+	local points = WorldLayout.welcomePoints(slot, Balance.Spawn.WelcomeCount)
 	for _, p in points do
 		sum += p
 	end
-	local target = if #points > 0 then sum / #points else gate
+	return if #points > 0 then sum / #points else gate
+end
+
+-- Centre des Puffkins de bienvenue encore là (ancres réelles), sinon leur place théorique
+local function welcomeCenter(slot: number, gate: Vector3): Vector3
+	local sum = Vector3.zero
+	local n = 0
+	for _, wild in WorldStateController.wilds() do
+		if
+			wild.personal == true
+			and Nebbies.isValidCode(wild.code)
+			and Nebbies.unpack(wild.code) == WELCOME
+		then
+			local a = wild.anchor
+			if typeof(a) == "Vector3" and isFinite(a.X) and isFinite(a.Z) then
+				sum += a
+				n += 1
+			end
+		end
+	end
+	if n > 0 then
+		return sum / n
+	end
+	return welcomeSpot(slot, gate)
+end
+
+-- Empreintes : de la porte vers les Puffkins réels (ou de leur place vers la porte), allumées une à
+-- une ; reposées si les Puffkins sont ailleurs que la cible déjà dessinée
+local function setFootprints(mode: string?)
+	local slot = WorldStateController.localSlot()
+	if mode == nil then
+		footMode = nil
+		footTarget = nil
+		hideParts(footprints)
+		return
+	end
+	if slot == 0 then
+		return -- Nid pas encore connu : réessayé à la prochaine évaluation
+	end
+	local gate = WorldLayout.gateCFrame(slot).Position
+	local target = if mode == "toPuffkins" then welcomeCenter(slot, gate) else welcomeSpot(slot, gate)
+	local drawn = footTarget
+	if mode == footMode and drawn ~= nil and (drawn - target).Magnitude < FOOT_RETARGET then
+		return
+	end
+	footMode = mode
+	footTarget = target
+	while #footprints < FOOTPRINTS do
+		table.insert(footprints, neonPart("Footprint", GOLD))
+	end
 	local from = if mode == "toPuffkins" then gate else target
 	local to = if mode == "toPuffkins" then target else gate
 	local flat = Vector3.new(to.X - from.X, 0, to.Z - from.Z)
@@ -581,8 +777,8 @@ local function placeArrow(target: Vector3?)
 	end
 end
 
--- Pilier bleu sur le Rare de Q4
-local function placePillar(pos: Vector3?)
+-- Pilier bleu sur le Rare de Q4 (couleur de la météo sur le Nebby météo de Q6)
+local function placePillar(pos: Vector3?, color: Color3?)
 	local p = pillar
 	if pos == nil then
 		if p then
@@ -597,6 +793,10 @@ local function placePillar(pos: Vector3?)
 		p = made
 	end
 	local part = p :: BasePart
+	local tint = color or RARE_BLUE
+	if part.Color ~= tint then
+		part.Color = tint
+	end
 	local ground = feet(pos)
 	part.CFrame = CFrame.new(ground + Vector3.new(0, PILLAR_HEIGHT / 2, 0))
 		* CFrame.Angles(0, 0, math.rad(90))
@@ -615,10 +815,10 @@ local function setGuide(mode: Plan.Guide?)
 	setFootprints(if intro and (mode == "toPuffkins" or mode == "toGate") then mode else nil)
 	setArch(mode == "toGate")
 	setBeam(intro and mode == "toGate")
-	if mode ~= "toNebbies" and mode ~= "toRare" and not (mode == "toGate" and not intro) then
+	if not (mode ~= nil and ARROW_MODES[mode]) and not (mode == "toGate" and not intro) then
 		hideParts(arrowParts)
 	end
-	if mode ~= "toRare" then
+	if mode ~= "toRare" and mode ~= "toWeather" then
 		placePillar(nil)
 	end
 end
@@ -654,6 +854,16 @@ local function stepGuide()
 		if pos == nil then
 			dirty = true -- Rare attrapé ou disparu : nouveau guidage
 		end
+	elseif mode == "toWeather" then
+		local pos = wildPos(weatherWildId)
+		placePillar(pos, weatherColor)
+		placeArrow(pos)
+		if pos == nil then
+			dirty = true -- Nebby météo attrapé ou disparu : nouveau guidage
+		end
+	elseif mode == "toComet" then
+		-- Comète encaissée ou éclatée : flèche masquée jusqu'à la réévaluation périodique
+		placeArrow(WorldStateController.cometPosition(Clock.now()))
 	elseif mode == "toGate" and footMode == nil then
 		local slot = WorldStateController.localSlot()
 		placeArrow(if slot ~= 0 then WorldLayout.gateCFrame(slot).Position else nil)

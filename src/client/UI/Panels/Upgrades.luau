@@ -11,6 +11,9 @@
 --   * barre de stat remplie en 0,3 s et niveau qui défile à la confirmation (profil répliqué)
 --   * accueil : args.focus = "conga" → une seule carte en surbrillance, fermeture auto 0,6 s après
 --     l'achat
+--   * quêtes d'accueil d'achat (Q2/Q5 « upgrade » → goal.track, Q7 « perches ») lues dans le profil
+--     répliqué (onboarding.step) : la carte de la quête a le contour doré et elle seule pulse (quand
+--     elle est payable) — jamais une autre carte moins chère qui ferait dépenser le Glow de la quête
 --   * bouton Supernova en bas avec anneau de progression (Glow prédit / Formulas.supernovaCost(R))
 --     → PanelController.open("Supernova")
 --   * hasAction : une amélioration est achetable, ou la Supernova (son bouton vit dans ce panneau)
@@ -25,6 +28,7 @@ local Balance = require(Shared.Config.Balance)
 local Formulas = require(Shared.Logic.Formulas)
 local Net = require(Shared.Net)
 local Clock = require(Shared.Util.Clock)
+local Quests = require(Shared.Config.Quests)
 local Types = require(Shared.Types)
 
 local Client = script.Parent.Parent.Parent
@@ -65,6 +69,8 @@ local SUPERNOVA_HEIGHT = 100
 local PULSE_PERIOD, PULSE_AMOUNT = 0.8, 0.08
 local FOCUS_CLOSE_DELAY = 0.6
 local REFRESH_INTERVAL = 0.25
+-- Objectifs d'accueil liés à une piste sans `goal.track` (Q7 « Atteins 10 perchoirs »)
+local QUEST_KIND_TRACK: { [string]: string } = { perches = "perches" }
 
 type CardRefs = {
 	holder: Frame,
@@ -94,6 +100,7 @@ local focus: string? = nil
 local focusLevel = 0
 local focusToken = 0
 local pulsing: string? = nil
+local questMark: string? = nil -- carte de la quête d'accueil en cours (contour doré)
 local pulseClock = 0
 local reducedMark: string? = nil -- carte au contour doré fixe (Mouvement réduit)
 local refreshAcc = 0
@@ -112,6 +119,27 @@ local function effectText(track: string, from: number, to: number): string
 		return s
 	end
 	return Prefs.t(`upgrades.{track}.effect`, { from = fmt(from), to = fmt(to) })
+end
+
+-- Piste visée par la quête d'accueil en cours (Q2/Q5 : goal.track ; Q7 : perchoirs), nil hors
+-- quête d'achat, objectif déjà atteint (réplication en deux temps) ou piste au plafond
+local function questTrack(): string?
+	local def = Quests.Onboarding[Model.onboardingStep(view)]
+	if def == nil then
+		return nil
+	end
+	local goal = def.goal
+	local track = if goal.kind == "upgrade" then goal.track else QUEST_KIND_TRACK[goal.kind]
+	if track == nil or Balance.Upgrades[track] == nil then
+		return nil
+	end
+	local reached = if goal.kind == "perches"
+		then Model.perchCount(view) >= goal.n
+		else Model.upgradeLevel(view, track) >= goal.n
+	if reached or Model.upgradeInfo(view, track).maxed then
+		return nil
+	end
+	return track
 end
 
 -- ---------------------------------------------------------------------------------------------
@@ -279,6 +307,10 @@ local function render(animate: boolean?)
 	end
 	local now = Clock.now()
 	local glow = Model.predictedGlow(view, now)
+	-- accueil : la carte de la quête d'achat en cours (la carte unique `focus` reste prioritaire)
+	local quest = if focus == nil then questTrack() else nil
+	questMark = quest
+	local questAffordable = false
 	for _, track in Balance.UpgradeOrder do
 		local card = cards[track]
 		if card then
@@ -311,15 +343,26 @@ local function render(animate: boolean?)
 				local affordable = glow >= info.cost
 				Widgets.setColor(card.buy, if affordable then Theme.Colors.Success else Widgets.DIM)
 				Widgets.setEnabled(card.buy, affordable)
+				if track == quest then
+					questAffordable = affordable
+				end
 			end
-			-- accueil : une seule carte, en surbrillance
+			-- accueil : une seule carte (focus) ou la carte de la quête, en surbrillance
 			card.holder.Visible = focus == nil or focus == track
-			local marked = focus == track or (focus == nil and reducedMark == track)
+			local marked = focus == track or (focus == nil and (quest == track or reducedMark == track))
 			Widgets.highlight(card.visual, marked, Theme.Colors.Gold)
 		end
 	end
 	renderSupernova(glow)
-	pulsing = if focus then focus else Model.cheapestAffordable(view, now)
+	-- pendant une quête d'achat, seule sa carte pulse (et seulement si elle est payable) : la carte
+	-- la moins chère ferait dépenser le Glow prévu pour la quête (§3)
+	if focus then
+		pulsing = focus
+	elseif quest then
+		pulsing = if questAffordable then quest else nil
+	else
+		pulsing = Model.cheapestAffordable(view, now)
+	end
 end
 
 local function onUpgradesChanged()
@@ -421,6 +464,7 @@ function Panel.build(parent: Frame)
 				or key == "atlas"
 				or key == "passes"
 				or key == "idleRate"
+				or key == "onboarding"
 			)
 		then
 			render(false)
@@ -493,7 +537,8 @@ function Panel.step(dt: number)
 	local mark = if focus == nil and reduced then pulsing else nil
 	if mark ~= reducedMark then
 		local previous = if reducedMark then cards[reducedMark] else nil
-		if previous and focus == nil then
+		-- la carte de quête garde son contour doré (posé par render)
+		if previous and focus == nil and reducedMark ~= questMark then
 			Widgets.highlight(previous.visual, false, Theme.Colors.Gold)
 		end
 		local card = if mark then cards[mark] else nil
@@ -505,7 +550,7 @@ function Panel.step(dt: number)
 end
 
 function Panel.defaultSelection(): GuiObject?
-	local track = pulsing or Balance.UpgradeOrder[1]
+	local track = pulsing or questMark or Balance.UpgradeOrder[1]
 	local card = cards[track]
 	return if card then card.buy else nil
 end
@@ -517,6 +562,9 @@ Panel._focus = function(): string?
 end
 Panel._pulsing = function(): string?
 	return pulsing
+end
+Panel._quest = function(): string?
+	return questMark
 end
 
 return Panel

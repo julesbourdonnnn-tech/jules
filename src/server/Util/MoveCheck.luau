@@ -15,12 +15,22 @@
 --       - soutenue, sur SUSTAIN_WINDOW (1 s) de positions valides : la marge fixe de 4 studs n'est
 --         comptée qu'une fois sur la fenêtre (appliquée à chaque tick de 0,1 s, elle laisserait
 --         passer une vitesse ×4)
---   * altitude > sol + 14 pendant plus de 1,5 s, r > 182 ou Y < −5 → retour immédiat
---   * vol bas prolongé : racine à plus de RootHeight + Snip.MaxDy (3 + 4) au-dessus du sol pendant
---     plus de HoverTime (1 s, Conga/Tuning) → chaque tick est une INFRACTION (signalée, comptée,
---     3 en 5 s → retour) et la position n'est pas acceptée. Hors de portée verticale des coupes, un
---     joueur ne doit jamais pouvoir rester (HipHeight relevé, CFrame décalé) ; un vrai saut
---     (JumpHeight 7,2) n'y passe qu'≈ 0,36 s. CongaService ramène de toute façon les miettes au sol.
+--   * altitude > sol + 14 pendant plus de 1,5 s, r > 182, Y < −5 ou racine à plus de
+--     MaxBelowGround (2, Conga/Tuning) sous la surface de l'île (passe-muraille) → retour
+--     immédiat ; une racine sous la surface pendant l'exemption est seulement refusée ("flag",
+--     sans retour ni restriction : personnage pas encore posé par le serveur)
+--   * hors de portée verticale des coupes, prolongé : racine à plus de Snip.MaxDy (4) au-dessus
+--     (vol bas : > sol + RootHeight + MaxDy = sol + 7) ou au-dessous (racine enfouie :
+--     < surface + RootHeight − MaxDy = surface − 1) de la hauteur debout pendant plus de HoverTime (1 s,
+--     Conga/Tuning) → chaque tick est une INFRACTION (signalée, comptée, 3 en 5 s → retour) et la
+--     position n'est pas acceptée. Un joueur ne doit jamais pouvoir y rester (HipHeight relevé,
+--     CFrame décalé vers le haut ou sous le sol) ; un vrai saut (JumpHeight 7,2) ne passe qu'≈ 0,36 s
+--     au-dessus. CongaService pose de toute façon les miettes à hauteur debout.
+--   * « sol » = hauteur fournie par CongaService : la formule de l'île, relevée par ce qui porte
+--     vraiment le personnage (stèle, tête d'un autre joueur : sonde Blockcast) ; un joueur honnête
+--     debout sur un appui n'est jamais en vol bas. Les règles de racine enfouie se mesurent à la
+--     SURFACE de l'île : min(sol fourni, WorldLayout.groundY) ; sol inconnu (NaN) : seules les
+--     bornes absolues s'appliquent
 --   * une infraction SIGNALE seulement (verdict "flag" : ce tick ne peut ni attraper, ni couper, ni
 --     encaisser, ni voler la Comète) ; 3 infractions en 5 s → "rewind" vers la dernière position
 --     valide, puis 3 s de restriction (isRestricted)
@@ -37,9 +47,11 @@
 --     retour le ramène là où le serveur l'a placé.
 --   * jamais d'accusation : l'interface affiche « connexion instable » (ton neutre)
 -- GDD : §12.7, §14.3 (MoveViolation), §14.4 (marges réglables).
--- Dépendances : Config/Balance, Conga/Tuning.
+-- Dépendances : Config/Balance, Logic/WorldLayout (surface de l'île, fonction pure), Conga/Tuning.
 
-local Balance = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared").Config.Balance)
+local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
+local Balance = require(Shared.Config.Balance)
+local WorldLayout = require(Shared.Logic.WorldLayout)
 local Tuning = require(script.Parent.Parent.Conga.Tuning)
 
 local MoveCheck = {}
@@ -65,10 +77,13 @@ local DEFAULT_VMAX = Balance.Speed.Base
 	+ Balance.Speed.PerStride * (Balance.Upgrades.stride.Max or 0)
 	+ Balance.Dash.Boost
 	+ Balance.Speed.SecondWindBoost
--- Hauteur de la racine au-dessus du sol au-delà de laquelle le joueur est hors de portée
--- verticale des coupes (un coupeur au sol ne l'atteindrait plus), et durée tolérée (saut)
+-- Hauteurs de la racine par rapport au sol au-delà desquelles le joueur est hors de portée
+-- verticale des coupes (un coupeur debout ne l'atteindrait plus), et durée tolérée (saut)
 local HOVER_ABOVE = Tuning.RootHeight + Balance.Snip.MaxDy
+local BURIED_BELOW = Tuning.RootHeight - Balance.Snip.MaxDy
 local HOVER_TIME = Tuning.HoverTime
+-- Profondeur de la racine sous la surface du sol au-delà de laquelle elle est hors du monde
+local MAX_BELOW_GROUND = Tuning.MaxBelowGround
 -- Historique de vitesses conservé au-delà de la fenêtre utile (s)
 local SPEED_HISTORY = Cfg.SpeedWindow + MAX_ELAPSED + SUSTAIN_WINDOW
 
@@ -83,7 +98,7 @@ type State = {
 	exemptUntil: number,
 	restrictedUntil: number,
 	highSince: number?, -- début d'un vol prolongé au-dessus du sol
-	hoverSince: number?, -- début d'un vol bas, hors de portée verticale des coupes
+	hoverSince: number?, -- début d'un écart hors de portée verticale des coupes (vol bas ou racine enfouie)
 	flags: { number }, -- instants des infractions (fenêtre FlagWindow)
 	rewinds: { number }, -- instants des retours comptés (fenêtre StrikeWindow)
 	violations: number, -- infractions de la session
@@ -290,9 +305,19 @@ function MoveCheck.step(
 	end
 	local grace = now < st.exemptUntil or now < st.restrictedUntil
 
-	-- 1) bornes absolues : hors de l'île, sous le monde, vol prolongé
-	local outOfBounds = math.sqrt(pos.X * pos.X + pos.Z * pos.Z) > Cfg.MaxRadius or pos.Y < Cfg.MinY
+	-- Sol fourni (île relevée par l'appui réel : altitude, vol bas) et surface de l'île sous la
+	-- racine (racine enfouie) : la plus basse des deux, un appui ne fait jamais paraître « enfouie »
+	-- une racine debout sur l'île ; sol inconnu (NaN) : aucune règle de hauteur relative
 	local ground = if isFinite(groundY) then groundY else pos.Y
+	local surface = math.min(ground, WorldLayout.groundY(pos.X, pos.Z))
+	-- racine sous la surface (passe-muraille) : hors du monde ; pendant l'exemption (personnage
+	-- pas encore posé par le serveur), seulement refusée (étape 3), sans retour ni restriction
+	local underground = pos.Y < surface - MAX_BELOW_GROUND
+
+	-- 1) bornes absolues : hors de l'île, sous le monde, vol prolongé
+	local outOfBounds = math.sqrt(pos.X * pos.X + pos.Z * pos.Z) > Cfg.MaxRadius
+		or pos.Y < Cfg.MinY
+		or (underground and now >= st.exemptUntil)
 	if pos.Y > ground + Cfg.MaxAltitude then
 		local since = st.highSince
 		if since == nil then
@@ -307,9 +332,10 @@ function MoveCheck.step(
 		st.violations += 1
 		return rewind(st, now, grace)
 	end
-	-- vol bas prolongé, hors de portée verticale des coupes (infraction à l'étape 4)
+	-- vol bas ou racine enfouie prolongés, hors de portée verticale des coupes (infraction à
+	-- l'étape 4)
 	local hovering = false
-	if pos.Y > ground + HOVER_ABOVE then
+	if pos.Y > ground + HOVER_ABOVE or pos.Y < surface + BURIED_BELOW then
 		local since = st.hoverSince
 		if since == nil then
 			st.hoverSince = now
@@ -337,7 +363,7 @@ function MoveCheck.step(
 			ok = plausible(player, oldest.pos, oldest.t, pos, now, step, SUSTAIN_WINDOW)
 		end
 	end
-	if ok and not hovering then
+	if ok and not hovering and not underground then
 		accept(st, pos, now)
 		return "ok", nil
 	end

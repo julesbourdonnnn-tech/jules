@@ -26,6 +26,9 @@
 --     bannière dans le ciel « Glow Party offerte par Mira ! » au-dessus de la Balise (≈ 5 s, pop
 --     Back Out, reflet), 3 vagues de confettis dorés autour de soi, 3 feux dorés depuis la Balise ;
 --     pendant la fête, le ping « Merci » (6, cœur) envoie des cœurs qui volent vers l'acheteur
+-- Particules à l'écran ≤ 300 (§12.8) : les rafales n'utilisent que le reste, une fois déduits les
+-- effets continus du rendu (CongaRenderer.fxParticles : Fire / Sparkles / orbites des Nebbies et
+-- paillettes des files) et la neige active du ciel (émetteurs de workspace.ClientSky).
 -- Une seule connexion RenderStepped (animations suivies image par image).
 -- GDD : §9.1 (fonctions), §9.4, §11.6, §13.2.
 -- Dépendances : StateController, AudioController, Util/Prefs, UI/Juice, WorldStateController,
@@ -70,6 +73,7 @@ local SOUND_RANGE = 120
 local EMITTERS = 6
 local MAX_EMIT = 60 -- particules par appel
 local PARTICLE_WINDOW = 1 -- s : durée de vie typique d'une particule (budget ≤ 300 à l'écran)
+local SKY_SCAN_INTERVAL = 0.25 -- s : émetteurs du ciel (neige) recomptés au plus 4 fois par seconde
 local RING_START_THICKNESS, RING_END_THICKNESS = 0.4, 0.05
 local PILLAR_DIAMETER = 1.5
 local PILLAR_HEIGHT = 30
@@ -199,6 +203,8 @@ local anims: { Anim } = {}
 local emitters: { { part: BasePart, emitter: ParticleEmitter } } = {}
 local emitterCursor = 0
 local emittedLog: { { at: number, n: number } } = {}
+local skyParticles = 0 -- particules continues du ciel au dernier comptage
+local skyCountedAt = -math.huge
 local ringPool: { BasePart } = {}
 local ballPool: { BasePart } = {}
 local fovBase: number? = nil
@@ -376,8 +382,8 @@ local function buildEmitters()
 	end
 end
 
--- Particules encore à l'écran (fenêtre glissante) : budget ≤ Render.MaxParticles
-local function particleBudget(now: number): number
+-- Particules des rafales encore à l'écran (fenêtre glissante)
+local function burstsAlive(now: number): number
 	local alive = 0
 	for i = #emittedLog, 1, -1 do
 		local e = emittedLog[i]
@@ -387,7 +393,43 @@ local function particleBudget(now: number): number
 			alive += e.n
 		end
 	end
-	return math.max(0, Render.MaxParticles - alive)
+	return alive
+end
+
+-- Particules continues du ciel (neige de LightingController, Render/SkyFX) : pour chaque émetteur
+-- allumé de workspace.ClientSky, débit × durée de vie moyenne (régime établi). Débits ou durées
+-- absurdes (négatifs, NaN, infinis) comptés 0.
+local function ambientParticles(now: number): number
+	if now >= skyCountedAt and now - skyCountedAt < SKY_SCAN_INTERVAL then
+		return skyParticles
+	end
+	skyCountedAt = now
+	local total = 0
+	local sky = workspace:FindFirstChild("ClientSky")
+	if sky then
+		for _, d in sky:GetDescendants() do
+			if d:IsA("ParticleEmitter") and d.Enabled then
+				local life = d.Lifetime
+				local n = d.Rate * (life.Min + life.Max) / 2
+				if n == n and n > 0 and n < math.huge then
+					total += n
+				end
+			end
+		end
+	end
+	skyParticles = total
+	return total
+end
+
+-- Place des rafales (budget ≤ Render.MaxParticles à l'écran) : ce que laissent les effets continus
+-- du rendu, la neige du ciel et les rafales encore vivantes
+local function particleBudget(now: number): number
+	local continuous = CongaRenderer.fxParticles() + ambientParticles(now)
+	local free = Render.MaxParticles - continuous - burstsAlive(now)
+	if free ~= free then
+		return 0
+	end
+	return math.max(0, math.floor(free))
 end
 
 -- Tweens de pièces 3D (Juice : une seule animation par propriété)
@@ -2063,9 +2105,10 @@ end
 
 -- Ajouts du paquet client-world (tests et budgets) --------------------------------------------------------------
 
--- Particules émises encore comptées dans la fenêtre du budget (≤ Render.MaxParticles)
+-- Particules des rafales encore comptées dans la fenêtre du budget (≤ Render.MaxParticles moins
+-- les effets continus du rendu et la neige du ciel)
 function VFXController.particlesAlive(): number
-	return Render.MaxParticles - particleBudget(Clock.now())
+	return burstsAlive(Clock.now())
 end
 
 function VFXController.activeAnims(): number

@@ -3,7 +3,10 @@
 --   * acquire(code, stars, lod, bubble, parent) : rig réutilisé (même code) ou construit ; options
 --     communes (aura, Trail sauf Graphismes légers, particules × 0,3 en Graphismes légers, bulle du
 --     bouclier débutant) ; jamais de Highlight ni de PointLight intégrés : CongaRenderer les attribue
---     lui-même aux plus proches (budgets §12.8)
+--     lui-même aux plus proches (budgets §12.8) ; effets de particules continus ÉTEINTS à chaque
+--     construction, reconstruction (LOD, options), sortie ou retour en réserve : seule la passe
+--     suivante du planificateur (NebbyBuilder.budgetFx, 10 Hz) les allume, au coût du rig tel qu'il
+--     est alors (sinon un rig rallumé au coût d'avant dépasserait le budget jusqu'à la passe suivante)
 --   * release(rig) : tailles de repos rendues, modèle déparenté et gardé (au plus MAX_POOLED rigs),
 --     sinon détruit
 --   * setLod / conform : changement de niveau de détail ou d'options sur place (même modèle)
@@ -61,6 +64,8 @@ local function optsFor(bubble: boolean): NebbyBuilder.BuildOptions
 		trail = not lowGraphics,
 		rookieBubble = bubble,
 		particleMult = if lowGraphics then Balance.Render.LowGraphicsParticleMult else 1,
+		-- éteints jusqu'au prochain budgetFx de CongaRenderer (≤ 300 particules à l'écran, §12.8)
+		fxEnabled = false,
 	}
 end
 
@@ -86,6 +91,7 @@ local function rebuild(rig: Rig, bubble: boolean, lod: Lod)
 		NebbyBuilder.setLod(rig, "hidden")
 	end
 	NebbyBuilder.setLod(rig, lod)
+	NebbyBuilder.setFx(rig, false)
 end
 
 function RigPool.acquire(code: number, stars: number, lod: Lod, bubble: boolean, parent: Instance): Rig
@@ -103,6 +109,7 @@ function RigPool.acquire(code: number, stars: number, lod: Lod, bubble: boolean,
 		rig = NebbyBuilder.build(code, stars, lod, optsFor(bubble))
 	end
 	local r = rig :: Rig
+	NebbyBuilder.setFx(r, false) -- rig de la réserve : peut-être encore allumé par le dernier budget
 	r.model.Parent = parent
 	return r
 end
@@ -113,6 +120,7 @@ function RigPool.release(rig: Rig)
 	end
 	notify(rig)
 	Fx.scaleRig(rig, Vector3.one)
+	NebbyBuilder.setFx(rig, false)
 	rig.model.Parent = nil
 	if pooled >= MAX_POOLED then
 		NebbyBuilder.destroy(rig)
@@ -133,6 +141,7 @@ function RigPool.setLod(rig: Rig, lod: Lod)
 		notify(rig)
 		Fx.scaleRig(rig, Vector3.one)
 		NebbyBuilder.setLod(rig, lod)
+		NebbyBuilder.setFx(rig, false)
 	end
 end
 

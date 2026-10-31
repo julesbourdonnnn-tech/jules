@@ -396,9 +396,25 @@ return function(T)
 				expect(pillar.Position.Z).toBeNear(spot.Z, 1e-3)
 				expect(c.HUD.isRevealed("stardust")).toBe(true)
 				expect(c.HUD.isRevealed("rail.Collection")).toBe(false)
+				-- attrapé : le Rare est dans la file (2/5) → retour au Nid, pas vers un autre Rare
+				local codes = { c.Nebbies.pack(1, 0, 0), c.Nebbies.pack(rare, 0, 0) }
+				c.length = #codes
+				c.WSC.line = function(slot)
+					return if slot == 1 then { slot = 1, userId = 1, ver = 2, codes = codes } else nil
+				end
 				c.wilds[12] = nil
 				c.WSC.WildRemoved:Fire(12, "caught", 1)
+				c.WSC.LineOp:Fire(1, { op = "add", slot = 1, ver = 2, codes = { codes[2] }, ids = { 0 } })
 				run(c, 2)
+				expect(c.Onboarding.currentHint()).toBe("onboarding.goHome")
+				expect(c.Onboarding.guide()).toBe("toGate")
+				expect(c.Onboarding._state().pillar.Transparency).toBe(1)
+				-- file coupée avant la parade (Rare perdu) : plus de Rare visible → Nebbies
+				codes = {}
+				c.length = 0
+				c.WSC.LineOp:Fire(1, { op = "clear", slot = 1, ver = 3 })
+				run(c, 2)
+				expect(c.Onboarding.currentHint()).toBe("onboarding.catchRare")
 				expect(c.Onboarding.guide()).toBe("toNebbies")
 				expect(c.Onboarding._state().pillar.Transparency).toBe(1)
 				patch(c, { onboarding = { step = 5, p = 0 } })

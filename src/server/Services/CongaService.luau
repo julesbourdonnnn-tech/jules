@@ -9,9 +9,14 @@
 --   * miettes par joueur : trail (Trail.new(170, 0,5)) pour l'autorité, netTrail (Trail.new(170, 1,0,
 --     firstSeq)) pour le réseau, numérotation contiguë par slot entre propriétaires successifs ;
 --     poussées seulement si MoveCheck valide le tick ; remise à zéro sur saut ≥ 40 studs ; chaque
---     miette est ramenée au plus à Tuning.RootHeight (3) au-dessus du sol : les Nebbies marchent au
---     sol, un saut ou un vol (HipHeight relevé) ne soulève jamais la file hors de portée verticale
---     des coupes (Snip.MaxDy), ni pour les joueurs ni pour les Gloomwisps
+--     miette est posée à Tuning.RootHeight (3) au-dessus du sol ANALYTIQUE (WorldLayout.groundY) :
+--     les Nebbies marchent au sol, un saut, un vol (HipHeight relevé) ou une racine enfouie
+--     (passe-muraille) ne déplacent jamais la file hors de portée verticale des coupes
+--     (Snip.MaxDy), ni pour les joueurs ni pour les Gloomwisps, ni hors de vue des autres clients
+--   * sol de MoveCheck : max(sol analytique, appui réel sous la racine) ; l'appui réel vient d'une
+--     sonde workspace:Blockcast vers le bas (pavé Tuning.FloorProbeWidth, portée RootHeight +
+--     Snip.MaxDy + FloorProbeMargin, personnage du joueur exclu, RespectCanCollide) : debout sur la
+--     stèle du tableau ou sur la tête d'un ami, un joueur honnête n'est jamais en « vol bas »
 --   * captures : joueurs avec place libre × SpawnService.query (rayon Attrait + 0,75, |Δy| ≤ 6,
 --     Snip Rush ×1,5) ; le plus proche gagne, égalité → ordre tiré au hasard à chaque tick ;
 --     file pleine → Feedback "feedback.lineFull" au plus toutes les 5 s ; plafond 1 500 captures/h
@@ -169,6 +174,8 @@ type PlayerState = {
 	unstable: boolean,
 	needsSnapshot: boolean,
 	snapshotSent: boolean,
+	floorParams: RaycastParams?, -- sonde du sol réel (créée au premier usage)
+	floorFor: Model?, -- personnage exclu par floorParams
 }
 
 type SlotState = {
@@ -490,6 +497,8 @@ local function newState(player: Player): PlayerState
 		unstable = false,
 		needsSnapshot = true,
 		snapshotSent = false,
+		floorParams = nil,
+		floorFor = nil,
 	}
 end
 
@@ -691,14 +700,71 @@ local function onRewind(state: PlayerState, root: BasePart, back: Vector3, now: 
 	Signals.MoveViolation:Fire(player, MoveCheck.violations(player))
 end
 
--- Miette d'une position de la racine : au plus à RootHeight au-dessus du sol (jamais relevée : une
--- racine plus basse, sur une pente, reste telle quelle)
+-- Miette d'une position de la racine : toujours à RootHeight au-dessus du sol analytique (hauteur
+-- d'une racine debout). Ni abaissée (racine enfouie : la file serait sous terre, invisible et hors
+-- de portée de tous les coupeurs), ni relevée (saut, vol bas).
 local function crumbOf(pos: Vector3, groundY: number): Vector3
-	local top = groundY + Tuning.RootHeight
-	if pos.Y <= top then
-		return pos
+	return Vector3.new(pos.X, groundY + Tuning.RootHeight, pos.Z)
+end
+
+-- Sonde du sol réel : pavé fin lancé vers le bas depuis la racine
+local FLOOR_PROBE_SIZE =
+	Vector3.new(Tuning.FloorProbeWidth, Tuning.FloorProbeThickness, Tuning.FloorProbeWidth)
+local FLOOR_PROBE_DOWN = Vector3.new(0, -(Tuning.RootHeight + Snip.MaxDy + Tuning.FloorProbeMargin), 0)
+
+local function finiteVector(v: Vector3): boolean
+	local x, y, z = v.X, v.Y, v.Z
+	return x == x
+		and y == y
+		and z == z
+		and math.abs(x) ~= math.huge
+		and math.abs(y) ~= math.huge
+		and math.abs(z) ~= math.huge
+end
+
+-- Paramètres de la sonde du joueur : son propre personnage est exclu (sinon ses jambes porteraient
+-- un HipHeight relevé), les pièces sans collision (décor) sont ignorées
+local function floorParamsOf(state: PlayerState, character: Model): RaycastParams
+	local params = state.floorParams
+	if params == nil then
+		local created = RaycastParams.new()
+		created.FilterType = Enum.RaycastFilterType.Exclude
+		created.RespectCanCollide = true
+		created.IgnoreWater = true
+		state.floorParams = created
+		params = created
 	end
-	return Vector3.new(pos.X, top, pos.Z)
+	if state.floorFor ~= character then
+		state.floorFor = character
+		params.FilterDescendantsInstances = { character }
+	end
+	return params
+end
+
+-- Sol vu par MoveCheck : le sol analytique, relevé par l'appui réel le plus haut sous la racine
+-- (stèle du tableau, tête d'un autre joueur, poteau…) à portée de la sonde. Une sonde ne peut que
+-- RELEVER le sol (jamais de racine « enfouie » à cause d'elle) ; un vol bas sans appui à portée
+-- reste un vol bas. Les miettes restent, elles, sur le sol analytique.
+local function moveCheckGround(state: PlayerState, character: Model, pos: Vector3, groundY: number): number
+	if not finiteVector(pos) then
+		return groundY
+	end
+	local params = floorParamsOf(state, character)
+	local ok, hit = pcall(function()
+		return workspace:Blockcast(CFrame.new(pos), FLOOR_PROBE_SIZE, FLOOR_PROBE_DOWN, params)
+	end)
+	if not ok then
+		report("floorProbe", hit)
+		return groundY
+	end
+	if hit == nil then
+		return groundY
+	end
+	local y = hit.Position.Y
+	if y == y and y > groundY and y <= pos.Y then
+		return y
+	end
+	return groundY
 end
 
 local function buildActors(now: number): { Types.Actor }
@@ -741,7 +807,9 @@ local function buildActors(now: number): { Types.Actor }
 		local prev = state.prev or pos
 		local rewindsBefore = MoveCheck.recentRewinds(player, now)
 		local groundY = WorldLayout.groundY(pos.X, pos.Z)
-		local verdict, back = MoveCheck.step(player, pos, STEP, now, groundY)
+		local character = player.Character
+		local checkGround = if character then moveCheckGround(state, character, pos, groundY) else groundY
+		local verdict, back = MoveCheck.step(player, pos, STEP, now, checkGround)
 		if verdict == "rewind" and back ~= nil then
 			onRewind(state, root, back, now, MoveCheck.recentRewinds(player, now) > rewindsBefore)
 		end

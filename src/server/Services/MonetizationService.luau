@@ -1,6 +1,7 @@
 --!strict
 -- MonetizationService : achats Robux fiables.
---  * ProcessReceipt unique et idempotent (PurchaseId mémorisés dans data.receipts)
+--  * ProcessReceipt unique et idempotent (PurchaseId mémorisés dans data.receipts) ;
+--    PurchaseGranted seulement après une sauvegarde réussie, y compris pour un reçu rejoué
 --  * gamepasses : vérifiés à l'arrivée + achat en jeu, exposés au client via data.passes.
 --    UserOwnsGamePassAsync fait foi : PromptGamePassPurchaseFinished n'est qu'un indice (un exploit
 --    peut l'émettre avec wasPurchased = true) ; un pass enregistré mais plus possédé (remboursé,
@@ -48,6 +49,8 @@ local passKeyById: { [number]: string } = {}
 -- vérifications d'achat en cours, et passes confirmés par Roblox pendant cette session
 local verifying: { [Player]: { [string]: boolean } } = {}
 local confirmed: { [Player]: { [string]: boolean } } = {}
+-- arrêt du serveur commencé (BindToClose) : plus aucun reçu acquitté ici
+local closing = false
 
 function MonetizationService.registerProduct(productKey: string, handler: ProductHandler)
 	assert(Monetization.Products[productKey], `Produit inconnu : {productKey}`)
@@ -181,7 +184,21 @@ local function verifyPurchase(player: Player, passKey: string, passId: number)
 	end
 end
 
+-- Acquitte un reçu seulement après une sauvegarde réussie (GDD §8.1.4). Serveur en fermeture :
+-- le profil peut déjà être libéré par BindToClose (DataService.saveNow répond alors true sans rien
+-- écrire) ; Roblox redélivrera le reçu à la session suivante, où le reçu sauvegardé (ou non) dit
+-- s'il faut créditer : jamais de double crédit, jamais d'achat perdu.
+local function acknowledgeAfterSave(player: Player): Enum.ProductPurchaseDecision
+	if not DataService.saveNow(player) or closing then
+		return Enum.ProductPurchaseDecision.NotProcessedYet
+	end
+	return Enum.ProductPurchaseDecision.PurchaseGranted
+end
+
 local function processReceipt(receipt: { [string]: any }): Enum.ProductPurchaseDecision
+	if closing then
+		return Enum.ProductPurchaseDecision.NotProcessedYet -- crédité à la session suivante
+	end
 	local player = Players:GetPlayerByUserId(receipt.PlayerId)
 	if not player then
 		return Enum.ProductPurchaseDecision.NotProcessedYet
@@ -194,7 +211,10 @@ local function processReceipt(receipt: { [string]: any }): Enum.ProductPurchaseD
 		data.receipts = {}
 	end
 	if table.find(data.receipts, receipt.PurchaseId) then
-		return Enum.ProductPurchaseDecision.PurchaseGranted
+		-- Déjà crédité (jamais deux fois), mais le reçu n'est peut-être qu'en mémoire : sauvegarde
+		-- précédente en échec. On n'acquitte qu'après une sauvegarde réussie (GDD §8.1.4), sinon
+		-- Roblox réessaiera ; reçu venu d'un profil chargé : la sauvegarde en plus est sans risque.
+		return acknowledgeAfterSave(player)
 	end
 	local productKey = productKeyById[receipt.ProductId]
 	local handler = productKey and handlers[productKey]
@@ -215,11 +235,9 @@ local function processReceipt(receipt: { [string]: any }): Enum.ProductPurchaseD
 		table.remove(data.receipts, 1)
 	end
 	MonetizationService.ProductGranted:Fire(player, productKey)
-	-- Si la sauvegarde échoue, Roblox redemandera : le reçu en mémoire évite le double crédit.
-	if not DataService.saveNow(player) then
-		return Enum.ProductPurchaseDecision.NotProcessedYet
-	end
-	return Enum.ProductPurchaseDecision.PurchaseGranted
+	-- Si la sauvegarde échoue, Roblox redemandera : le reçu en mémoire évite le double crédit, et
+	-- le rejeu ne sera acquitté qu'une fois la sauvegarde réussie (branche ci-dessus).
+	return acknowledgeAfterSave(player)
 end
 
 function MonetizationService.Init()
@@ -239,6 +257,9 @@ end
 
 function MonetizationService.Start()
 	MarketplaceService.ProcessReceipt = processReceipt
+	game:BindToClose(function()
+		closing = true
+	end)
 
 	MarketplaceService.PromptGamePassPurchaseFinished:Connect(
 		function(player: Player, passId: number, wasPurchased: boolean)
