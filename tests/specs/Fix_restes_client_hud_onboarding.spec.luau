@@ -469,4 +469,274 @@ return function(T)
 			expect(#c.h:signalErrors()).toBe(0)
 		end)
 	end)
+
+	-- =========================================================================================
+	-- OnboardingController : instruction hors des toasts, d'ACCLAMER et des panneaux
+	-- =========================================================================================
+
+	local Schema = Harness.new():require("ServerScriptService.Server.Data.Schema")
+	local Vector3 = roblox.Vector3
+	local CFrame = roblox.CFrame
+
+	local function obSetup()
+		local h = Harness.new({ mode = "client", touch = true })
+		h.localPlayer.LocaleId = "en-us"
+		h:createRemotes()
+		h.game.GuiService.ReducedMotionEnabled = true
+		local Clock = h:require("ReplicatedStorage.Shared.Util.Clock")
+		Clock.freeze(T0)
+		local c = {
+			h = h,
+			g = h.globals,
+			Clock = Clock,
+			WorldLayout = h:require("ReplicatedStorage.Shared.Logic.WorldLayout"),
+			Root = h:require(CLIENT .. "UI.Root"),
+			State = h:require(CLIENT .. "Controllers.StateController"),
+			Prefs = h:require(CLIENT .. "Util.Prefs"),
+			WSC = h:require(CLIENT .. "Controllers.WorldStateController"),
+			VFX = h:require(CLIENT .. "Controllers.VFXController"),
+			Panels = h:require(CLIENT .. "Controllers.PanelController"),
+			FX = h:require(CLIENT .. "UI.ScreenFX"),
+			Toast = h:require(CLIENT .. "UI.Toast"),
+			Input = h:require(CLIENT .. "Controllers.InputController"),
+			HUD = h:require(CLIENT .. "UI.HUD"),
+			Minimap = h:require(CLIENT .. "UI.Minimap"),
+			Onboarding = h:require(CLIENT .. "Controllers.OnboardingController"),
+			open = nil,
+			page = nil,
+		}
+		-- isolation : paquets client-world et client-panels remplacés
+		c.VFX.playDash = function() end
+		c.WSC.localSlot = function()
+			return 1
+		end
+		c.WSC.lineLength = function()
+			return 0
+		end
+		c.WSC.wilds = function()
+			return {}
+		end
+		c.Panels.open = function(name)
+			if c.open == name then
+				return
+			end
+			if c.open then
+				c.Panels.Closed:Fire(c.open)
+			end
+			c.open = name
+			c.Panels.Opened:Fire(name)
+		end
+		c.Panels.close = function()
+			local name = c.open
+			c.open = nil
+			if name then
+				c.Panels.Closed:Fire(name)
+			end
+		end
+		c.Panels.current = function()
+			return c.open
+		end
+		c.Panels.page = function()
+			return c.page
+		end
+		c.h.localPlayer.Character.HumanoidRootPart.CFrame =
+			CFrame.new(c.WorldLayout.gateCFrame(1).Position + Vector3.new(0, 3, 0))
+		local order = { "Root", "State", "Prefs", "FX", "Input", "HUD", "Minimap", "Onboarding" }
+		for _, name in order do
+			if c[name].Init then
+				c[name].Init()
+			end
+		end
+		for _, name in order do
+			if c[name].Start and name ~= "Root" and name ~= "State" then
+				c[name].Start()
+			end
+		end
+		return c
+	end
+
+	local function obLoad(c, over)
+		local p = Schema.defaults()
+		for k, v in over or {} do
+			p[k] = v
+		end
+		c.h:fireClient("ReplicatedStorage.Remotes.DataSnapshot", p)
+		c.h:settle(1)
+	end
+
+	local function obRun(c, n)
+		for _ = 1, n or 3 do
+			c.h:step(1 / 30, 1)
+			c.h:settle(1)
+		end
+	end
+
+	local function hintOf(c)
+		return c.h.localPlayer.PlayerGui.Onboarding.Safe.Hint
+	end
+
+	local function hintRect(c)
+		local hint = hintOf(c)
+		local W = content(c)
+		local y = hint.Position.Y.Offset
+		local w, hh = hint.Size.X.Offset, hint.Size.Y.Offset
+		return { x0 = W / 2 - w / 2, y0 = y, x1 = W / 2 + w / 2, y1 = y + hh }
+	end
+
+	-- pile de toasts (UI/Toast) : rectangle des toasts affichés, d'après leur conteneur et sa liste
+	local function toastRect(c)
+		local stack = c.h.localPlayer.PlayerGui.Toasts.Safe.Stack
+		local W = content(c)
+		local padding = stack:FindFirstChildOfClass("UIListLayout").Padding.Offset
+		local y, n, width = stack.Position.Y.Offset, 0, 0
+		for _, toast in stack:GetChildren() do
+			if toast.Name == "Toast" then
+				y += toast.Size.Y.Offset + (if n > 0 then padding else 0)
+				n += 1
+				width = math.max(width, toast.Size.X.Offset)
+			end
+		end
+		return { x0 = W / 2 - width / 2, y0 = stack.Position.Y.Offset, x1 = W / 2 + width / 2, y1 = y, n = n }
+	end
+
+	local function overlaps(a, b)
+		return a.x0 < b.x1 and b.x0 < a.x1 and a.y0 < b.y1 and b.y0 < a.y1
+	end
+
+	describe("Fix restes client HUD/accueil › instruction d'accueil lisible (Q18, N93, N154, N159, N163)", function()
+		it("téléphones et PC : l'instruction ne touche ni la pile de 3 toasts ni le compteur de file", function()
+			local c = obSetup()
+			obLoad(c, { onboarding = { step = 1, p = 0 } })
+			obRun(c, 3)
+			expect(c.Onboarding.currentHint()).toBe("onboarding.catch")
+			for i = 1, 3 do
+				c.Toast.show("Toast " .. i, "info")
+			end
+			for _, size in
+				{
+					{ 800, 360, 36 },
+					{ 800, 360, 58 },
+					{ 844, 390, 36 },
+					{ 844, 390, 58 },
+					{ 667, 375, 36 },
+					{ 1280, 720, 36 },
+				}
+			do
+				screen(c, size[1], size[2], size[3])
+				obRun(c, 4)
+				local label = size[1] .. "x" .. size[2] .. "/" .. size[3]
+				local _, H = content(c)
+				local hint, toasts = hintRect(c), toastRect(c)
+				expect(toasts.n).toBe(3)
+				expect({ screen = label, overlap = overlaps(hint, toasts) }).toEqual({
+					screen = label,
+					overlap = false,
+				})
+				-- compteur de file (bas centre, y = −24, 56 de haut) : écart d'au moins 8 px
+				expect({ screen = label, clear = hint.y1 + 8 <= H - 24 - 56 + 1e-6 }).toEqual({
+					screen = label,
+					clear = true,
+				})
+				expect(hintOf(c).Visible).toBe(true)
+				expect(c.h.localPlayer.PlayerGui.Onboarding.DisplayOrder).toBe(20)
+				-- même règle que la colonne de droite du HUD (zone réservée)
+				expect(hint.y0).toBe(c.HUD.hintTop())
+			end
+			expect(#c.h:signalErrors()).toBe(0)
+		end)
+
+		it("Améliorer ouvert : « Buy Conga +1 » au-dessus de la fenêtre, ancrée sur son bord haut", function()
+			local c = obSetup()
+			screen(c, 800, 360, 36)
+			obLoad(c, { onboarding = { step = 1, p = 0 }, stats = { parades = 1, catches = 3 } })
+			obRun(c, 3)
+			expect(c.Onboarding.currentHint()).toBe("onboarding.tapUpgrade")
+			-- fenêtre des panneaux mesurée par le moteur : haut à 40 px réels sous la zone sûre
+			local window = c.g.Instance.new("CanvasGroup")
+			window.Name = "Window"
+			window.AbsolutePosition = Vector2.new(50, 40)
+			window.AbsoluteSize = Vector2.new(700, 280)
+			local page = c.g.Instance.new("Frame")
+			page.Name = "Page_Upgrades"
+			page.Parent = window
+			c.page = page
+			c.Panels.open("Upgrades")
+			obRun(c, 3)
+			expect(c.Onboarding.currentHint()).toBe("onboarding.buyConga")
+			local hint = hintOf(c)
+			expect(hint.Visible).toBe(true)
+			expect(hint.GroupTransparency).toBe(0)
+			expect(c.Onboarding._state().hintShown).toBe(true)
+			expect(c.Onboarding._state().hintDocked).toBe(true)
+			-- au-dessus de la fenêtre des panneaux (DisplayOrder 30)
+			local panelsOrder = 30
+			expect(c.h.localPlayer.PlayerGui.Onboarding.DisplayOrder > panelsOrder).toBe(true)
+			expect(c.h.localPlayer.PlayerGui.Onboarding.DisplayOrder < 40).toBe(true) -- sous les bannières
+			-- à cheval sur le bord haut de la fenêtre (40 / 0,6 − 8 ≈ 58,7 px de référence)
+			local top = 40 / c.Root.scale() - 8
+			local r = hintRect(c)
+			expect(r.y0 < top and r.y1 > top).toBe(true)
+			expect(r.y0 >= 8).toBe(true)
+			-- fenêtre pas encore mesurée : en haut de l'écran, toujours au-dessus du panneau
+			c.page = nil
+			obRun(c, 4)
+			expect(hint.Position.Y.Offset).toBe(8)
+			expect(hint.Visible).toBe(true)
+			-- fermeture : place normale sous les toasts, écran d'accueil redescendu
+			c.Panels.close()
+			obRun(c, 3)
+			expect(c.Onboarding.currentHint()).toBe("onboarding.tapUpgrade")
+			expect(hint.Visible).toBe(true)
+			expect(hint.Position.Y.Offset).toBe(c.HUD.hintTop())
+			expect(c.h.localPlayer.PlayerGui.Onboarding.DisplayOrder).toBe(20)
+			expect(#c.h:signalErrors()).toBe(0)
+		end)
+
+		it("autre panneau ouvert : l'instruction (sans rapport) s'efface puis revient à la fermeture", function()
+			local c = obSetup()
+			screen(c, 844, 390, 36)
+			obLoad(c, { onboarding = { step = 1, p = 0 } })
+			obRun(c, 3)
+			expect(c.Onboarding.currentHint()).toBe("onboarding.catch")
+			local hint = hintOf(c)
+			expect(hint.Visible).toBe(true)
+			c.Panels.open("Goals")
+			obRun(c, 3)
+			-- même instruction, volontairement effacée (elle serait sous la fenêtre)
+			expect(c.Onboarding.currentHint()).toBe("onboarding.catch")
+			expect(c.Onboarding._state().hintShown).toBe(false)
+			expect(hint.Visible).toBe(false)
+			expect(c.h.localPlayer.PlayerGui.Onboarding.DisplayOrder).toBe(20)
+			c.Panels.close()
+			obRun(c, 3)
+			expect(hint.Visible).toBe(true)
+			expect(hint.GroupTransparency).toBe(0)
+			expect(#c.h:signalErrors()).toBe(0)
+		end)
+
+		it("ACCLAMER sur téléphone : l'instruction s'efface 10 s ; écran haut : elle reste", function()
+			local c = obSetup()
+			screen(c, 800, 360, 36)
+			obLoad(c, { onboarding = { step = 1, p = 0 } })
+			obRun(c, 3)
+			local hint = hintOf(c)
+			expect(hint.Visible).toBe(true)
+			c.HUD._onCheerPrompt({ heroId = 2, level = 1, expiresAt = T0 + 10 })
+			obRun(c, 4)
+			expect(c.HUD.cheerOverHint()).toBe(true)
+			expect(hint.Visible).toBe(false)
+			-- l'acclamation expire : l'instruction revient
+			c.Clock.freeze(T0 + 11)
+			obRun(c, 4)
+			expect(c.HUD.cheerOverHint()).toBe(false)
+			expect(hint.Visible).toBe(true)
+			-- PC 1280 × 720 : ACCLAMER (y ≥ 480) ne touche pas l'instruction (y 342-398)
+			screen(c, 1280, 720, 36)
+			c.HUD._onCheerPrompt({ heroId = 2, level = 1, expiresAt = T0 + 20 })
+			obRun(c, 4)
+			expect(c.HUD.cheerOverHint()).toBe(false)
+			expect(hint.Visible).toBe(true)
+			expect(#c.h:signalErrors()).toBe(0)
+		end)
+	end)
 end
