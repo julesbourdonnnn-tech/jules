@@ -19,6 +19,10 @@
 -- débutant en option : AU PLUS 8 pièces en détail complet. Formes (Config/Nebbies.Forms),
 -- variantes (Golden Foil, Huge ×2, halo Starborn en 5 Beams), étoiles ★2+ (BillboardGui proche).
 -- Niveaux de détail : "full", "ball" (une Ball couleur du corps, Néon si Mythique+), "hidden".
+-- Effets de particules continus (Fire Blazing, Sparkles Rare, orbite Épique) : coût estimé par rig
+-- (fxParticles), interrupteur (setFx) et budget des plus proches (budgetFx) pour tenir « ≤ 300
+-- particules à l'écran » ; Graphismes légers (particleMult < 1) : émetteurs à débit × particleMult
+-- à la place des instances héritées (débit non réglable) ; particleMult = 0 : aucun effet continu.
 -- GDD : §4.2, §4.4, §5.2, §9.3, §11.6, §12.8, §13.2 (rareté lisible sans couleur : chaque aura a
 -- une forme distincte).
 -- Dépendances : Config/Nebbies, Render/Recipes.
@@ -38,7 +42,8 @@ export type BuildOptions = {
 	trail: boolean?, -- Trail (Légendaire, Comet) ; false en Graphismes légers
 	light: boolean?, -- PointLight (Légendaire+), budget de l'appelant
 	rookieBubble: boolean?, -- bulle dorée du bouclier débutant
-	particleMult: number?, -- 0,3 en Graphismes légers
+	particleMult: number?, -- 0,3 en Graphismes légers ; 0 : aucun effet de particules continu
+	fxEnabled: boolean?, -- effets continus allumés à la construction (défaut true) ; ensuite setFx / budgetFx
 }
 
 export type AnimState = {
@@ -85,6 +90,9 @@ export type Rig = {
 	hsv: { HsvEntry },
 	orbit: Attachment?,
 	destroyed: boolean,
+	fx: { Instance }, -- effets de particules continus (Fire, Sparkles, ParticleEmitter)
+	fxCost: number, -- particules à l'écran estimées quand ils sont allumés (0 hors détail complet)
+	fxOn: boolean, -- état voulu (survit aux setLod)
 }
 
 -- Constantes graphiques internes (GDD §4.2, §4.4, §9.3, §11.6) -------------------------------
@@ -109,6 +117,16 @@ local TRAIL_LIFETIME = 0.35
 local FIRE_HEAT = 4
 local FIRE_COLOR = Color3.fromRGB(255, 140, 50)
 local FIRE_SECONDARY = Color3.fromRGB(255, 220, 110)
+-- Effets continus : budget de particules (GDD §12.8 ≤ 300 à l'écran, §9 Graphismes légers × 0,3)
+local LEGACY_FIRE_PARTICLES = 20 -- estimation pour une instance Fire héritée (débit non réglable)
+local LEGACY_SPARKLES_PARTICLES = 15 -- estimation pour une instance Sparkles héritée
+local FLAME_LIFETIME = 0.8 -- s : flamme émulée (Graphismes légers)
+local FLAME_HEIGHT = 0.42 -- × T : point d'émission au sommet du corps
+local FLAME_SPREAD = Vector2.new(12, 12)
+local FLAME_TEXTURE = "rbxasset://textures/particles/fire_main.dds"
+local SPARKLE_LIFETIME = 1.2 -- s : paillettes émulées (Graphismes légers)
+local SPARKLE_TEXTURE = "rbxasset://textures/particles/sparkles_main.dds"
+local BUDGET_EPSILON = 1e-6
 local HIGHLIGHT_FILL_TRANSPARENCY = 0.8
 local STAR_HALO_RADIUS = 0.75 -- × T, 5 branches dans le plan du dos
 local STAR_HALO_DEPTH = 0.3 -- × T derrière le centre
@@ -148,6 +166,7 @@ local DEFAULT_OPTS: BuildOptions = table.freeze({
 	light = false,
 	rookieBubble = false,
 	particleMult = 1,
+	fxEnabled = true,
 }) :: any
 
 -- Décodage d'un code (repli sûr : un code invalide devient un Puffkin normal) ------------------
@@ -381,6 +400,130 @@ local function addStars(body: BasePart, t: number, stars: number)
 	gui.Parent = body
 end
 
+-- Effets de particules continus -----------------------------------------------------------------
+
+-- Multiplicateur de particules borné : absent ou non numérique → 1 ; NaN → 0 (côté prudent)
+local function particleMultOf(opts: BuildOptions): number
+	local m: any = opts.particleMult
+	if type(m) ~= "number" then
+		return 1
+	elseif m ~= m then
+		return 0
+	end
+	return math.clamp(m, 0, 1)
+end
+
+-- rig.fx ne contient que des Fire, Sparkles et ParticleEmitter (tous dotés de Enabled)
+local function setEnabled(inst: Instance, on: boolean)
+	(inst :: any).Enabled = on
+end
+
+-- Inscrit un effet continu dans le rig (allumé selon rig.fxOn) et ajoute son coût
+local function registerFx(rig: Rig, inst: Instance, cost: number)
+	setEnabled(inst, rig.fxOn)
+	table.insert(rig.fx, inst)
+	rig.fxCost += cost
+end
+
+-- Petite flamme Blazing : instance Fire du GDD, ou émetteur au débit × mult en Graphismes légers
+local function addFlame(rig: Rig, body: BasePart, size: number, t: number, mult: number)
+	if mult >= 1 then
+		local fire = Instance.new("Fire")
+		fire.Size = size
+		fire.Heat = FIRE_HEAT
+		fire.Color = FIRE_COLOR
+		fire.SecondaryColor = FIRE_SECONDARY
+		registerFx(rig, fire, LEGACY_FIRE_PARTICLES)
+		fire.Parent = body
+		return
+	end
+	local cost = LEGACY_FIRE_PARTICLES * mult
+	local anchor = Instance.new("Attachment")
+	anchor.Name = "FlameFx"
+	anchor.Position = Vector3.new(0, FLAME_HEIGHT * t, 0)
+	anchor.Parent = body
+	local emitter = Instance.new("ParticleEmitter")
+	emitter.Name = "Flame"
+	emitter.Texture = FLAME_TEXTURE
+	emitter.Rate = cost / FLAME_LIFETIME
+	emitter.Lifetime = NumberRange.new(FLAME_LIFETIME)
+	emitter.Speed = NumberRange.new(0.8 * size / FLAME_LIFETIME, size / FLAME_LIFETIME)
+	emitter.EmissionDirection = Enum.NormalId.Top
+	emitter.SpreadAngle = FLAME_SPREAD
+	emitter.Rotation = NumberRange.new(0, 360)
+	emitter.RotSpeed = NumberRange.new(-60, 60)
+	emitter.LightEmission = 1
+	emitter.LightInfluence = 0
+	emitter.LockedToPart = false
+	-- cœur jaune (SecondaryColor de Fire) → bords orange (Color)
+	emitter.Color = ColorSequence.new(FIRE_SECONDARY, FIRE_COLOR)
+	emitter.Size = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0.45 * size),
+		NumberSequenceKeypoint.new(0.6, 0.35 * size),
+		NumberSequenceKeypoint.new(1, 0),
+	})
+	emitter.Transparency = NumberSequence.new(0.15, 1)
+	registerFx(rig, emitter, cost)
+	emitter.Parent = anchor
+end
+
+-- Paillettes Rare : instance Sparkles du GDD, ou émetteur au débit × mult en Graphismes légers
+local function addSparkles(rig: Rig, body: BasePart, color: Color3, t: number, mult: number)
+	if mult >= 1 then
+		local sparkles = Instance.new("Sparkles")
+		sparkles.SparkleColor = color
+		registerFx(rig, sparkles, LEGACY_SPARKLES_PARTICLES)
+		sparkles.Parent = body
+		return
+	end
+	local cost = LEGACY_SPARKLES_PARTICLES * mult
+	local emitter = Instance.new("ParticleEmitter")
+	emitter.Name = "SparkleFx"
+	emitter.Texture = SPARKLE_TEXTURE
+	emitter.Rate = cost / SPARKLE_LIFETIME
+	emitter.Lifetime = NumberRange.new(SPARKLE_LIFETIME)
+	emitter.Speed = NumberRange.new(0.3 * t, 0.7 * t)
+	emitter.SpreadAngle = Vector2.new(180, 180)
+	emitter.Rotation = NumberRange.new(0, 360)
+	emitter.RotSpeed = NumberRange.new(-90, 90)
+	emitter.LightEmission = 1
+	emitter.LightInfluence = 0
+	emitter.LockedToPart = false
+	emitter.Color = ColorSequence.new(color)
+	emitter.Size = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0.1 * t),
+		NumberSequenceKeypoint.new(0.4, 0.2 * t),
+		NumberSequenceKeypoint.new(1, 0),
+	})
+	emitter.Transparency = NumberSequence.new(0.1, 0.8)
+	registerFx(rig, emitter, cost)
+	emitter.Parent = body
+end
+
+-- Particules en orbite (Épique, GDD §4.2 : ≈ 3 visibles), débit × mult
+local function addOrbit(rig: Rig, body: BasePart, color: Color3, t: number, mult: number)
+	local orbit = Instance.new("Attachment")
+	orbit.Name = "Orbit"
+	orbit.Position = Vector3.new(ORBIT_RADIUS * t, 0.1 * t, 0)
+	orbit.Parent = body
+	local emitter = Instance.new("ParticleEmitter")
+	emitter.Name = "OrbitSparks"
+	emitter.Rate = ORBIT_RATE * mult
+	emitter.Lifetime = NumberRange.new(ORBIT_LIFETIME)
+	emitter.Speed = NumberRange.new(0)
+	emitter.LightEmission = 1
+	emitter.LockedToPart = false
+	emitter.Color = ColorSequence.new(color)
+	emitter.Size = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0.22 * t),
+		NumberSequenceKeypoint.new(1, 0),
+	})
+	emitter.Transparency = NumberSequence.new(0, 1)
+	registerFx(rig, emitter, ORBIT_RATE * mult * ORBIT_LIFETIME)
+	emitter.Parent = orbit
+	rig.orbit = orbit
+end
+
 -- Plan des pièces en détail complet (≤ Recipes.MaxParts) ----------------------------------------
 
 local function plan(look: Look, opts: BuildOptions): { Recipes.PartSpec }
@@ -498,6 +641,9 @@ local function emptyRig(
 		hsv = {},
 		orbit = nil,
 		destroyed = false,
+		fx = {},
+		fxCost = 0,
+		fxOn = opts.fxEnabled ~= false,
 	}
 end
 
@@ -595,14 +741,12 @@ local function fill(rig: Rig, lod: Lod)
 	end)
 	local body = rig.body
 
+	-- Effets de particules continus (budgétés : fxParticles / setFx / budgetFx)
+	local mult = particleMultOf(opts)
+
 	-- Forme : petite flamme (Blazing)
-	if look.form.fire then
-		local fire = Instance.new("Fire")
-		fire.Size = look.form.fire * math.max(1, t / 2)
-		fire.Heat = FIRE_HEAT
-		fire.Color = FIRE_COLOR
-		fire.SecondaryColor = FIRE_SECONDARY
-		fire.Parent = body
+	if look.form.fire and mult > 0 then
+		addFlame(rig, body, look.form.fire * math.max(1, t / 2), t, mult)
 	end
 
 	-- Auras de rareté sans pièce
@@ -610,29 +754,13 @@ local function fill(rig: Rig, lod: Lod)
 	local rarityId = look.rarity.id
 	if opts.aura ~= false then
 		if aura == "sparkles" then
-			local sparkles = Instance.new("Sparkles")
-			sparkles.SparkleColor = look.rarity.color
-			sparkles.Parent = body
+			if mult > 0 then
+				addSparkles(rig, body, look.rarity.color, t, mult)
+			end
 		elseif aura == "orbit" then
-			local orbit = Instance.new("Attachment")
-			orbit.Name = "Orbit"
-			orbit.Position = Vector3.new(ORBIT_RADIUS * t, 0.1 * t, 0)
-			orbit.Parent = body
-			local emitter = Instance.new("ParticleEmitter")
-			emitter.Name = "OrbitSparks"
-			emitter.Rate = ORBIT_RATE * math.clamp(opts.particleMult or 1, 0, 1)
-			emitter.Lifetime = NumberRange.new(ORBIT_LIFETIME)
-			emitter.Speed = NumberRange.new(0)
-			emitter.LightEmission = 1
-			emitter.LockedToPart = false
-			emitter.Color = ColorSequence.new(look.rarity.color)
-			emitter.Size = NumberSequence.new({
-				NumberSequenceKeypoint.new(0, 0.22 * t),
-				NumberSequenceKeypoint.new(1, 0),
-			})
-			emitter.Transparency = NumberSequence.new(0, 1)
-			emitter.Parent = orbit
-			rig.orbit = orbit
+			if mult > 0 then
+				addOrbit(rig, body, look.rarity.color, t, mult)
+			end
 		elseif aura == "lightTrail" and opts.trail ~= false then
 			addTrail(body, 0.3 * t, look.rarity.color, Color3.new(1, 1, 1), TRAIL_LIFETIME)
 		end
@@ -685,6 +813,8 @@ local function clear(rig: Rig)
 	table.clear(rig.anims)
 	table.clear(rig.eyes)
 	table.clear(rig.hsv)
+	table.clear(rig.fx)
+	rig.fxCost = 0 -- rig.fxOn est conservé : le prochain fill rallume ou non selon le budget
 	rig.orbit = nil
 	rig.blinking = false
 end
@@ -772,6 +902,85 @@ function NebbyBuilder.animate(rig: Rig, state: AnimState)
 		orbit.CFrame = CFrame.Angles(0, TAU * t / ORBIT_PERIOD + ph, 0)
 			* CFrame.new(ORBIT_RADIUS * rig.size, 0.1 * rig.size, 0)
 	end
+end
+
+-- Budget des effets continus (GDD §12.8) -------------------------------------------------------
+
+-- Rigs allumés par le dernier budgetFx (clés faibles : un rig oublié par l'appelant ne fuit pas)
+local litByBudget: { [Rig]: boolean } = setmetatable({}, { __mode = "k" }) :: any
+local budgetSeen: { [Rig]: boolean } = {}
+
+local function isBudgetable(value: any): boolean
+	return type(value) == "table"
+		and value.kind == "nebby"
+		and value.destroyed == false
+		and type(value.fx) == "table"
+		and type(value.fxCost) == "number"
+end
+
+-- Particules à l'écran estimées pour les effets continus du rig quand ils sont allumés
+-- (Fire, Sparkles, orbite ; × particleMult en Graphismes légers ; 0 hors détail complet)
+function NebbyBuilder.fxParticles(rig: Rig): number
+	if not isBudgetable(rig) then
+		return 0
+	end
+	return rig.fxCost
+end
+
+-- Allume ou éteint les effets continus du rig (Enabled, différentiel) ; l'état survit aux
+-- setLod. Renvoie le coût allumé (0 si éteint, détruit ou sans effet)
+function NebbyBuilder.setFx(rig: Rig, on: boolean): number
+	if not isBudgetable(rig) then
+		return 0
+	end
+	local want = on == true
+	if rig.fxOn ~= want then
+		rig.fxOn = want
+		for _, inst in rig.fx do
+			setEnabled(inst, want)
+		end
+	end
+	return if want then rig.fxCost else 0
+end
+
+-- Budget des plus proches : `rigs` triés du plus proche au plus lointain (tous les rigs rendus,
+-- y compris ceux à éteindre). Allume les effets de chaque rig tant que le total tient dans
+-- maxParticles, éteint les autres ainsi que les rigs allumés au tour précédent et absents de la
+-- liste (rendus à la réserve). Un seul appelant (le planificateur du rendu). Renvoie le total
+-- allumé. En Graphismes légers, passer budget × particleMult (les coûts sont déjà réduits).
+function NebbyBuilder.budgetFx(rigs: { Rig }, maxParticles: number): number
+	local budget = 0
+	if type(maxParticles) == "number" and maxParticles == maxParticles then
+		budget = math.max(maxParticles, 0)
+	end
+	local used = 0
+	table.clear(budgetSeen)
+	if type(rigs) == "table" then
+		for _, value in rigs do
+			if isBudgetable(value) and not budgetSeen[value] then
+				local rig = value :: Rig
+				budgetSeen[rig] = true
+				local cost = rig.fxCost
+				if cost > 0 and used + cost <= budget + BUDGET_EPSILON then
+					used += cost
+					NebbyBuilder.setFx(rig, true)
+					litByBudget[rig] = true
+				else
+					-- hors budget, ou pas (encore) en détail complet : revient éteint
+					NebbyBuilder.setFx(rig, false)
+					litByBudget[rig] = nil
+				end
+			end
+		end
+	end
+	for rig in litByBudget do
+		if not budgetSeen[rig] then
+			litByBudget[rig] = nil
+			NebbyBuilder.setFx(rig, false)
+		end
+	end
+	table.clear(budgetSeen)
+	return used
 end
 
 -- Ajoute les pièces du rig et leurs CFrame monde (root × pose) aux listes de BulkMoveTo
@@ -965,6 +1174,7 @@ function NebbyBuilder.destroy(rig: Rig)
 		return
 	end
 	rig.destroyed = true
+	litByBudget[rig] = nil
 	clear(rig)
 	rig.model:Destroy()
 	rig.lod = "hidden"

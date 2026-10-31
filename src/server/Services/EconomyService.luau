@@ -16,8 +16,10 @@
 --     coût de la prochaine Supernova ou ≥ 1 000 Glow ; premier chargement (lastOnline == 0) : rien
 --   * remote BuyUpgrade(track) : débit 10/s, piste valide, settle, niveau < max, coût →
 --     Signals.UpgradeBought, Notify.celebrate "upgrade", Analytics Upgrade_<piste>_<niveau>
---   * remote Supernova() : débit 1/2 s, port sûr de son Nid, encaissement de la file (crochet de
---     CongaService), settle, Glow ≥ coût → Glow, glowCarry et pistes ResetOnSupernova remis à 0,
+--   * remote Supernova() : débit 1/2 s, port sûr de son Nid (position de CONFIANCE : la dernière
+--     validée par MoveCheck, jamais la seule position du client, voir NestService.inOwnHarbor), PUIS
+--     encaissement de la file (crochet de CongaService), settle, Glow ≥ coût → Glow, glowCarry et
+--     pistes ResetOnSupernova remis à 0,
 --     supernovas + 1, Signals.Supernova, bannière, Celebrate, Analytics Supernova_<R>, SupernovaReached
 --   * Stardust : add / trySpend / addCapped (plafonds du jour UTC : snipDust, wispDust en Stardust ;
 --     cheers en nombre d'acclamations ; duo une fois par jour)
@@ -657,6 +659,8 @@ function EconomyService.trySupernova(player: Player): (boolean, string?)
 	if not data or not session then
 		return false, nil
 	end
+	-- port sûr vérifié sur la position validée (une téléportation au Nid le temps du remote
+	-- n'encaisse rien : le crochet ci-dessous force une parade sans passer la porte)
 	if not NestService.inOwnHarbor(player) then
 		Notify.feedback(player, "feedback.notInHarbor", {}, "warning")
 		return false, "feedback.notInHarbor"

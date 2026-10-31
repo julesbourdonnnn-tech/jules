@@ -5,8 +5,12 @@
 --   * éléments du HUD affichés (affichage progressif, jamais retirés) ;
 --   * UNE instruction à l'écran au plus (clé "onboarding.*", ≤ 4 mots) ;
 --   * guidage au sol (empreintes vers les Puffkins, vers la porte, flèche vers les Nebbies, pilier
---     bleu du Rare de Q4) ;
---   * éléments qui pulsent pour attirer l'attention (icône Améliorer avec la main).
+--     bleu du Rare de Q4, Nebby météo ou Comète de Q6) ;
+--   * éléments qui pulsent pour attirer l'attention (icône Améliorer avec la main, pastille
+--     d'événement quand Q6 attend la prochaine météo).
+-- L'instruction affichée doit toujours être réalisable MAINTENANT (GDD §3) : rentrer dès que la
+-- file contient de quoi réussir la quête, chercher des Nebbies quand les Puffkins ont disparu ou
+-- que le Glow manque, attendre la météo (compte à rebours) quand aucun Nebby météo n'existe.
 -- Étapes : 0 pas commencé, 1-7 = quête Q1-Q7 en cours, 8 = accueil terminé.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -32,9 +36,15 @@ export type Facts = {
 	canBuyStride: boolean,
 	canBuyPerches: boolean,
 	rareTarget: boolean, -- un Rare attrapable est visible (Q4)
+	-- Faits facultatifs : nil = inconnu (règle d'origine appliquée)
+	goalInLine: boolean?, -- la file locale contient déjà de quoi réussir la quête (Rare pour Q4)
+	puffkinsLeft: number?, -- Puffkins de bienvenue (personnels) encore attrapables
+	weatherActive: boolean?, -- fenêtre météo en cours, avec une forme météo
+	weatherTarget: boolean?, -- un Nebby météo attrapable est connu (Q6)
+	cometActive: boolean?, -- Comète au sol ou portée (Q6 accepte aussi la Comète)
 }
 
-export type Guide = "toPuffkins" | "toGate" | "toNebbies" | "toRare"
+export type Guide = "toPuffkins" | "toGate" | "toNebbies" | "toRare" | "toWeather" | "toComet"
 
 local ALL: { Types.HudElement } = {
 	"glow",
@@ -101,6 +111,36 @@ function Plan.reveals(f: Facts): { Types.HudElement }
 	return out
 end
 
+-- La file contient déjà ce que demande la quête : il faut rentrer encaisser, pas attraper encore
+local function goalInLine(f: Facts, def: Quests.OnboardingQuest): boolean
+	local goal = def.goal
+	if goal.kind == "paradeSize" then
+		local n = goal.n
+		return f.goalInLine == true or (type(n) == "number" and n > 0 and f.lineCount >= n)
+	elseif goal.kind == "bankRarity" then
+		return f.goalInLine == true
+	end
+	return false
+end
+
+-- Q6 : faits météo / Comète connus (sinon instruction d'origine, sans guidage)
+local function eventFactsKnown(f: Facts): boolean
+	return f.weatherActive ~= nil or f.weatherTarget ~= nil or f.cometActive ~= nil
+end
+
+-- Avant la toute première parade : les Puffkins de bienvenue ont disparu (réinitialisation, mort,
+-- durée de vie écoulée) ou n'existent pas (joueur qui revient) → Nebbies sauvages
+local function puffkinsGone(f: Facts): boolean
+	return f.returning or f.puffkinsLeft == 0
+end
+
+-- Après la première parade, Conga +1 pas encore payable (parade de 1-2 Puffkins seulement) : on
+-- remplit la file au lieu d'ouvrir une carte grisée. Règle active quand le contrôleur observe le
+-- terrain (puffkinsLeft fourni) ; sans ce fait, l'invitation d'origine à toucher Améliorer.
+local function congaShort(f: Facts): boolean
+	return f.puffkinsLeft ~= nil and not f.canBuyConga
+end
+
 -- Instruction à afficher (une seule), nil si aucune
 function Plan.hint(f: Facts): string?
 	local step = f.step
@@ -115,9 +155,12 @@ function Plan.hint(f: Facts): string?
 			if f.lineFull or f.lineCount >= 3 then
 				return "onboarding.goHome"
 			end
-			return if f.returning then "onboarding.findNebbies" else "onboarding.catch"
+			return if puffkinsGone(f) then "onboarding.findNebbies" else "onboarding.catch"
 		end
 		if f.conga < 1 then
+			if congaShort(f) then
+				return if f.lineFull then "onboarding.goHome" else "onboarding.findNebbies"
+			end
 			return if f.upgradesOpen then "onboarding.buyConga" else "onboarding.tapUpgrade"
 		end
 	end
@@ -127,6 +170,15 @@ function Plan.hint(f: Facts): string?
 	local def = Quests.Onboarding[step]
 	if def == nil then
 		return nil
+	end
+	if goalInLine(f, def) then
+		return "onboarding.goHome"
+	end
+	if def.goal.kind == "weatherOrComet" and eventFactsKnown(f) then
+		if f.weatherTarget or f.weatherActive then
+			return def.hint
+		end
+		return if f.cometActive then "onboarding.joinComet" else "onboarding.waitWeather"
 	end
 	-- quêtes d'achat : n'inviter à acheter que si c'est possible, sinon guider vers les Nebbies
 	if def.goal.kind == "upgrade" then
@@ -152,16 +204,30 @@ function Plan.guide(f: Facts): Guide?
 		if f.lineFull or f.lineCount >= 3 then
 			return "toGate"
 		end
-		return if f.returning then "toNebbies" else "toPuffkins"
+		return if puffkinsGone(f) then "toNebbies" else "toPuffkins"
 	end
 	if f.lineFull then
 		return "toGate"
 	end
 	if step == 1 and f.conga < 1 then
-		return nil -- le joueur est invité à toucher Améliorer
+		-- invité à toucher Améliorer ; Glow insuffisant : vers les Nebbies (Puffkins restants d'abord)
+		return if congaShort(f) then "toNebbies" else nil
 	end
 	local def = Quests.Onboarding[step]
 	if def == nil then
+		return nil
+	end
+	if goalInLine(f, def) then
+		return "toGate"
+	end
+	if def.goal.kind == "weatherOrComet" then
+		if f.weatherTarget then
+			return "toWeather"
+		elseif f.cometActive then
+			return "toComet"
+		elseif f.weatherActive then
+			return "toNebbies" -- fenêtre ouverte : les formes météo apparaissent parmi les Nebbies
+		end
 		return nil
 	end
 	if def.goal.kind == "bankRarity" and f.rareTarget then
@@ -192,6 +258,8 @@ function Plan.attention(f: Facts): { [Types.HudElement]: boolean }
 		or hint == "onboarding.perches"
 	then
 		out["rail.Upgrades"] = true
+	elseif hint == "onboarding.waitWeather" then
+		out.eventPill = true -- le compte à rebours de la prochaine météo pulse
 	end
 	return out
 end

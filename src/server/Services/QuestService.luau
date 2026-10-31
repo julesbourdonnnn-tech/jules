@@ -23,6 +23,10 @@
 --     Player « Rookie », Signals.RookieEnded, Analytics RookieShieldEnded (minutes jouées)
 --   * statistiques (clé « stats ») et temps de jeu (step, crochet onBeforeSave) ; titres de
 --     statistiques (Cosmetics.Titles, source « stat ») via NestService.unlock ; SessionLength
+--   * registre du cadeau Starfall Saturday (stats.starfallGift = startsAt du dernier show servi) :
+--     crochet EventService.setStarfallClaim, un Starborn garanti par compte et par show
+--   * PlayerReady : rattrapage au Start() (signal émis pendant le Start() d'un service précédent),
+--     accueil une seule fois par session
 -- GDD : §3, §4.16, §7.3-§7.5, §14.1, §4.17 (codes).
 -- Dépendances : DataService, MonetizationService, NestService, EconomyService, AtlasService,
 -- SpawnService, EventService, CrewService, Logic/Hash, Logic/Formulas, Logic/EventClock,
@@ -59,6 +63,7 @@ local NestService = require(script.Parent.NestService)
 local EconomyService = require(script.Parent.EconomyService)
 local AtlasService = require(script.Parent.AtlasService)
 local SpawnService = require(script.Parent.SpawnService)
+local EventService = require(script.Parent.EventService)
 local CrewService = require(script.Parent.CrewService)
 
 local QuestService = {}
@@ -108,9 +113,12 @@ type Session = {
 	rookieDue: boolean, -- fin du bouclier décidée, appliquée au prochain moment sûr
 	day: number,
 	week: number,
+	ready: boolean, -- PlayerReady déjà traité (signal ou rattrapage du Start)
 }
 
 local sessions: { [Player]: Session } = {}
+-- Joueurs partis (clés faibles) : aucune nouvelle session ne leur est ouverte par un signal tardif
+local departed: { [Player]: boolean } = setmetatable({}, { __mode = "k" }) :: any
 local lastSlowAt = 0
 
 -- Clés initialisées à l'arrivée (sessions, quêtes du jour, semaine, accueil) : leur réplication
@@ -424,12 +432,17 @@ end
 -- Session courante (créée au premier besoin après le chargement du profil : sessions + 1)
 local function ensureSession(player: Player): (Session?, { [string]: any }?)
 	local data = DataService.get(player)
-	if data == nil or player.Parent == nil then
+	if data == nil then
 		return nil, nil
 	end
 	local s = sessions[player]
 	if s ~= nil and s.data == data then
+		-- session ouverte : valable jusqu'à son nettoyage, même pendant le départ (la progression
+		-- accordée par la sauvegarde de départ, ex. dernier port de Comète, est bien écrite)
 		return s, data
+	end
+	if player.Parent == nil or departed[player] then
+		return nil, nil
 	end
 	normalize(data)
 	local now = Clock.now()
@@ -448,6 +461,7 @@ local function ensureSession(player: Player): (Session?, { [string]: any }?)
 		rookieDue = false,
 		day = Clock.day(now),
 		week = Clock.week(now),
+		ready = false,
 	}
 	sessions[player] = session
 	refreshDay(player, data, session.day, markLater)
@@ -592,6 +606,11 @@ end
 
 local function onPlayerReady(player: Player)
 	withSession(player, function(p, data, s)
+		-- une fois par session : le rattrapage du Start et le signal peuvent tous deux arriver
+		if s.ready then
+			return
+		end
+		s.ready = true
 		if s.firstSession then
 			funnel(p, 1)
 		end
@@ -1094,19 +1113,51 @@ local function onLoaded(player: Player)
 	ensureSession(player)
 end
 
-local function onPlayerRemoving(player: Player)
+local function closeSession(player: Player)
 	local s = sessions[player]
+	pendingDirty[player] = nil
 	if s == nil then
 		return
 	end
 	sessions[player] = nil
-	pendingDirty[player] = nil
 	s.playAcc += math.clamp(Clock.now() - s.lastTick, 0, Tuning.MaxStepGap)
 	flushPlay(player, s.data, s)
 	Analytics.event(player, "SessionLength", math.floor((Clock.now() - s.joinedAt) / 60))
 end
 
+local function onPlayerRemoving(player: Player)
+	departed[player] = true
+	-- Nettoyage différé : Roblox ne garantit pas l'ordre des connexions PlayerRemoving ; les autres
+	-- (sauvegarde de départ de DataService et ses crochets, CongaService, EventService) trouvent
+	-- encore la session et leur progression de départ est écrite, sans session fantôme
+	if sessions[player] ~= nil then
+		task.defer(closeSession, player)
+	else
+		pendingDirty[player] = nil
+	end
+end
+
+-- Registre du cadeau Starfall Saturday (clé stats, dont ce service est propriétaire) : marque le
+-- profil AVANT la remise ; false si ce compte a déjà reçu le Starborn garanti de ce show
+local function claimStarfallGift(player: Player, showId: number): boolean
+	local data = DataService.get(player)
+	if data == nil or not Validate.finiteNumber(showId) then
+		return false
+	end
+	local stats = data.stats
+	if type(stats) ~= "table" then
+		return false
+	end
+	if num(stats.starfallGift, 0) >= showId then
+		return false
+	end
+	stats.starfallGift = showId
+	DataService.markDirty(player, "stats")
+	return true
+end
+
 function QuestService.Init()
+	EventService.setStarfallClaim(claimStarfallGift)
 	-- La sauvegarde de départ (DataService, branché avant nous) copie le profil AVANT notre propre
 	-- PlayerRemoving : le temps écoulé depuis le dernier passage de step est donc compté ici
 	DataService.onBeforeSave(function(player: Player, data: { [string]: any })
@@ -1129,6 +1180,13 @@ function QuestService.Start()
 		end
 	end
 	connectSignals()
+	-- PlayerReady a pu partir pendant le Start() d'un service précédent (NestService : profil chargé
+	-- sans yield, ex. magasin en mémoire de Studio) : rattrapage des joueurs déjà prêts
+	for _, player in Players:GetPlayers() do
+		if DataService.isLoaded(player) and NestService.slotOf(player) ~= 0 then
+			task.spawn(onPlayerReady, player)
+		end
+	end
 	Net.event("ClaimDaily").OnServerEvent:Connect(onClaimDaily)
 	Net.event("ClaimQuest").OnServerEvent:Connect(onClaimQuest)
 	Net.event("RerollQuest").OnServerEvent:Connect(onRerollQuest)

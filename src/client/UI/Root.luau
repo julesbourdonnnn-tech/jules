@@ -1,12 +1,20 @@
 --!strict
 -- Fournit les ScreenGui du jeu, avec une mise à l'échelle responsive commune
--- (référence 1280×720, bornée 0.6–1.4) et ResetOnSpawn désactivé.
+-- (référence 1280×720, bornée 0,6–1,25) et ResetOnSpawn désactivé.
 --   local gui = Root.screen("HUD", 10)
+--
+-- Le conteneur « Safe » porte l'UIScale. Un UIScale agrandit ou réduit son parent autour de son
+-- point d'ancrage (ici le coin haut gauche) : Safe mesure donc 1/s de l'écran pour couvrir
+-- exactement tout l'écran une fois mis à l'échelle (sinon, à 0,6, tout le HUD tiendrait dans les
+-- 60 % haut gauche de l'écran, et à 1,4 il déborderait à droite et en bas).
 
 local Players = game:GetService("Players")
 
 local REFERENCE = Vector2.new(1280, 720)
-local MIN_SCALE, MAX_SCALE = 0.6, 1.4
+-- GDD §10.1 : UIScale = clamp(hauteur / 720 ; 0,6 ; 1,25). Écart assumé : on prend le plus petit
+-- des rapports hauteur ET largeur pour que le cadre de référence 1280 × 720 tienne aussi sur les
+-- écrans étroits (4:3, 16:10, fenêtres) ; identique au GDD sur les écrans larges (téléphones, 16:9).
+local MIN_SCALE, MAX_SCALE = 0.6, 1.25
 
 local Root = {}
 
@@ -26,10 +34,24 @@ local function computeScale(): number
 	return math.clamp(s, MIN_SCALE, MAX_SCALE)
 end
 
+-- Applique l'échelle et garde Safe plein écran après mise à l'échelle
+local function apply(scale: UIScale, s: number)
+	scale.Scale = s
+	local safe = scale.Parent
+	if safe and safe:IsA("GuiObject") then
+		safe.Size = UDim2.fromScale(1 / s, 1 / s)
+	end
+end
+
 local function refresh()
 	local s = computeScale()
-	for _, scale in scales do
-		scale.Scale = s
+	for i = #scales, 1, -1 do
+		local scale = scales[i]
+		if scale.Parent == nil then
+			table.remove(scales, i) -- écran détruit
+		else
+			apply(scale, s)
+		end
 	end
 end
 
@@ -55,6 +77,8 @@ function Root.screen(name: string, displayOrder: number?): ScreenGui
 	local safe = Instance.new("Frame")
 	safe.Name = "Safe"
 	safe.BackgroundTransparency = 1
+	safe.AnchorPoint = Vector2.zero
+	safe.Position = UDim2.fromScale(0, 0)
 	safe.Size = UDim2.fromScale(1, 1)
 	safe.Parent = gui
 
@@ -67,8 +91,8 @@ function Root.screen(name: string, displayOrder: number?): ScreenGui
 
 	local scale = Instance.new("UIScale")
 	scale.Name = "RootScale"
-	scale.Scale = computeScale()
 	scale.Parent = safe
+	apply(scale, computeScale())
 	table.insert(scales, scale)
 
 	gui.Parent = playerGui

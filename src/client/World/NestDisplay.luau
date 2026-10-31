@@ -15,9 +15,14 @@
 --     jour quelques secondes à la formation, GDD §9.4)
 --   * SpotLight sur le meilleur perchoir du Nid local ; stèle « Plus longues congas » (SurfaceGui,
 --     attributs Live / Record / Weekly « userId:nom:n;… »)
--- GDD : §6.4, §6.6, §9.3, §11.3, §12.8.
--- Dépendances : WorldStateController, StateController, Util/Prefs, UI/Juice, Render/NebbyBuilder,
--- Logic/WorldLayout, Logic/Formulas, Config/*, Shared/Util/Clock, World/{Fx,RigPool,FloatText}.
+--   * anneau de progression vers la Supernova autour du Nid LOCAL (GDD §3, « ~5 min ») : segments
+--     Néon plats au ras de la plateforme, remplis selon Glow prédit / Formulas.supernovaCost(R)
+--     (4 Hz), étiquette « ✺ Supernova 37 % », pulsation quand la Supernova est payable ; affiché à
+--     partir de l'étape d'accueil qui suit le déblocage de l'Atlas (Q4), donc toujours ensuite
+-- GDD : §3, §6.4, §6.6, §9.3, §11.3, §12.8.
+-- Dépendances : WorldStateController, StateController, Util/Prefs, UI/Juice, UI/Hud/Glow,
+-- Render/NebbyBuilder, Logic/WorldLayout, Logic/Formulas, Config/*, Shared/Util/Clock,
+-- World/{Fx,RigPool,FloatText}.
 
 local CollectionService = game:GetService("CollectionService")
 local Lighting = game:GetService("Lighting")
@@ -28,6 +33,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Balance = require(Shared.Config.Balance)
 local Cosmetics = require(Shared.Config.Cosmetics)
 local Nebbies = require(Shared.Config.Nebbies)
+local Quests = require(Shared.Config.Quests)
 local Zones = require(Shared.Config.Zones)
 local Formulas = require(Shared.Logic.Formulas)
 local WorldLayout = require(Shared.Logic.WorldLayout)
@@ -38,6 +44,7 @@ local Client = script.Parent.Parent
 local State = require(Client.Controllers.StateController)
 local Prefs = require(Client.Util.Prefs)
 local Juice = require(Client.UI.Juice)
+local Glow = require(Client.UI.Hud.Glow)
 local WorldStateController = require(Client.Controllers.WorldStateController)
 
 local Fx = require(script.Parent.Fx)
@@ -77,6 +84,36 @@ local SPOT_ANGLE = 45
 local SPOT_COLOR = Color3.fromRGB(255, 225, 160)
 local BOARD_PIXELS_PER_STUD = 40
 local BOARD_LIVE, BOARD_WEEKLY = Balance.Leaderboard.TopLive, Balance.Leaderboard.TopWeekly
+-- Anneau de la Supernova (Nid local) : entre les perchoirs (r ≤ 14,1) et le bord de la plateforme
+local RING_SEGMENTS = 40
+local RING_RADIUS = 15.5
+local RING_WIDTH, RING_THICKNESS = 0.7, 0.12
+local RING_FILL = 0.82 -- part de l'arc couverte par un segment (le reste : interstice)
+local RING_LIFT = 0.06 -- au-dessus du sol de la plateforme (dessus à ≈ 0,3)
+local RING_LIT = Color3.fromRGB(255, 210, 90)
+local RING_READY = Color3.fromRGB(255, 248, 220)
+local RING_DIM = Color3.fromRGB(70, 60, 115)
+local RING_DIM_TRANSPARENCY = 0.55
+local RING_REFRESH = 0.25 -- s : progression lue à 4 Hz
+local RING_LIGHT_TIME = 0.3
+local RING_SNAP = 0.05 -- s : changement « immédiat » (passe quand même par Juice.tween)
+local RING_GROW_TIME, RING_GROW_STAGGER = 0.3, 0.02
+local RING_PULSE_PERIOD = 1.2 -- s : pulsation « Supernova payable » (≤ 1 Hz)
+local RING_PULSE_LEVELS = 6 -- pulsation quantifiée : peu d'écritures de propriétés
+local RING_PULSE_MAX = 0.4 -- transparence au creux de la pulsation
+local RING_LABEL_Y = 2.6
+local RING_LABEL_WIDTH, RING_LABEL_HEIGHT = 7, 1.4
+local RING_LABEL_DISTANCE = 70
+-- Étape d'accueil à partir de laquelle l'anneau s'affiche : celle qui suit le déblocage de l'Atlas
+-- (Q4, GDD §3 « ~5 min ») ; à défaut, fin de l'accueil
+local RING_FROM_STEP = (function(): number
+	for i, quest in Quests.Onboarding do
+		if quest.reward.unlock == "atlas" then
+			return i + 1
+		end
+	end
+	return #Quests.Onboarding + 1
+end)()
 
 type PerchView = RigPool.View & {
 	slot: number,
@@ -125,6 +162,25 @@ local board: BasePart? = nil
 local boardGui: SurfaceGui? = nil
 local boardConn: RBXScriptConnection? = nil
 local started = false
+
+type Ring = {
+	folder: Folder,
+	segments: { BasePart },
+	lit: { boolean },
+	attachment: Attachment,
+	label: BillboardGui,
+	text: TextLabel,
+	slot: number,
+	shown: boolean,
+	litCount: number,
+	ready: boolean,
+	pulseFrom: number,
+	pulseLevel: number,
+	nextRefresh: number,
+}
+local ring: Ring? = nil
+-- étape d'accueil vue sous le seuil de l'anneau pendant cette session (apparition animée)
+local ringBelowSeen = false
 
 -- Outils -------------------------------------------------------------------------------------------
 
@@ -827,6 +883,216 @@ local function stepFloaters(now: number, focus: Vector3?)
 	end
 end
 
+-- Anneau de progression vers la Supernova (Nid local) -------------------------------------------------
+
+local function segmentSize(): Vector3
+	return Vector3.new(RING_WIDTH, RING_THICKNESS, 2 * math.pi * RING_RADIUS / RING_SEGMENTS * RING_FILL)
+end
+
+local function buildRing(): Ring
+	local folder = Fx.folder(root :: Folder, "SupernovaRing")
+	local segments: { BasePart } = {}
+	local lit: { boolean } = {}
+	for i = 1, RING_SEGMENTS do
+		local part = Fx.part("RingSegment", "Block", segmentSize(), RING_DIM)
+		part.Transparency = 1
+		part.Parent = folder
+		segments[i] = part
+		lit[i] = false
+	end
+	local attachment = Instance.new("Attachment")
+	attachment.Name = "SupernovaRingLabel"
+	attachment.Parent = anchorPart
+	local gui = Instance.new("BillboardGui")
+	gui.Name = "SupernovaRing"
+	gui.Size = UDim2.fromScale(RING_LABEL_WIDTH, RING_LABEL_HEIGHT)
+	gui.MaxDistance = RING_LABEL_DISTANCE
+	gui.LightInfluence = 0
+	gui.AlwaysOnTop = false
+	gui.ResetOnSpawn = false
+	gui.Adornee = attachment
+	gui.Enabled = false
+	local text = panelLabel("Progress", 1, 1, gui)
+	text.TextColor3 = RING_LIT
+	gui.Parent = attachment
+	return {
+		folder = folder,
+		segments = segments,
+		lit = lit,
+		attachment = attachment,
+		label = gui,
+		text = text,
+		slot = 0,
+		shown = false,
+		litCount = 0,
+		ready = false,
+		pulseFrom = 0,
+		pulseLevel = -1,
+		nextRefresh = -math.huge,
+	}
+end
+
+-- Segments disposés autour du Nid `slot`, en partant de la porte (sens horaire vu du ciel)
+local function placeRing(r: Ring, slot: number)
+	r.slot = slot
+	local center = WorldLayout.nestCenter(slot)
+	local gate = WorldLayout.gateCFrame(slot).Position
+	local toGate = Vector3.new(gate.X - center.X, 0, gate.Z - center.Z)
+	local start = if toGate.Magnitude > 1e-3 then math.atan2(toGate.Z, toGate.X) else 0
+	local y = WorldLayout.groundY(center.X, center.Z) + RING_LIFT
+	for i, part in r.segments do
+		local a = start + (i - 0.5) * 2 * math.pi / RING_SEGMENTS
+		local radial = Vector3.new(math.cos(a), 0, math.sin(a))
+		local pos = Vector3.new(center.X, y, center.Z) + radial * RING_RADIUS
+		-- grand côté (Z) tangent au cercle
+		local tangent = Vector3.new(-radial.Z, 0, radial.X)
+		part.CFrame = CFrame.lookAt(pos, pos + tangent)
+	end
+	local startDir = Vector3.new(math.cos(start), 0, math.sin(start))
+	r.attachment.Position = Vector3.new(center.X, y + RING_LABEL_Y, center.Z) + startDir * RING_RADIUS
+end
+
+-- Couleur et transparence d'un segment selon l'état de l'anneau. Toujours par Juice.tween (un seul
+-- tween par propriété : le dernier état demandé gagne), bref quand il ne faut pas animer.
+local function paint(r: Ring, i: number, duration: number)
+	local on = r.lit[i]
+	local color = if on then (if r.ready then RING_READY else RING_LIT) else RING_DIM
+	local transparency = if not r.shown then 1 elseif on then 0 else RING_DIM_TRANSPARENCY
+	Juice.tween(r.segments[i], duration, { Color = color, Transparency = transparency })
+end
+
+local function hideRing(r: Ring)
+	if not r.shown then
+		return
+	end
+	r.shown = false
+	r.ready = false
+	r.litCount = 0
+	r.pulseLevel = -1
+	for i in r.segments do
+		r.lit[i] = false
+		paint(r, i, RING_SNAP)
+	end
+	r.label.Enabled = false
+end
+
+local function onboardingStep(): number
+	local ob = State.get("onboarding")
+	local step = if type(ob) == "table" then ob.step else nil
+	if type(step) ~= "number" or step ~= step then
+		return -1
+	end
+	return step
+end
+
+local function supernovaProgress(now: number): number
+	local raw = State.get("supernovas")
+	local r = if type(raw) == "number" and raw == raw then math.max(0, math.floor(raw)) else 0
+	local cost = Formulas.supernovaCost(r)
+	if not (cost > 0) or cost == math.huge then
+		return 0
+	end
+	return math.clamp(Glow.predicted(now) / cost, 0, 1)
+end
+
+local function stepRing(now: number)
+	if root == nil then
+		return
+	end
+	local step = onboardingStep()
+	if step >= 0 and step < RING_FROM_STEP then
+		ringBelowSeen = true -- l'anneau apparaîtra pendant la partie : apparition animée
+	end
+	local slot = WorldStateController.localSlot()
+	local visible = slot ~= 0 and nests[slot] ~= nil and step >= RING_FROM_STEP
+	local r = ring
+	if not visible then
+		if r then
+			hideRing(r)
+		end
+		return
+	end
+	if r == nil then
+		r = buildRing()
+		ring = r
+	end
+	local rr = r :: Ring
+	local reduced = Prefs.reducedMotion()
+	if rr.slot ~= slot then
+		hideRing(rr)
+		placeRing(rr, slot)
+	end
+	local appeared = false
+	if not rr.shown then
+		-- apparition : les segments poussent un à un depuis la porte (pas pour un joueur qui
+		-- arrive avec l'anneau déjà gagné, ni en Mouvement réduit)
+		appeared = true
+		rr.shown = true
+		rr.nextRefresh = -math.huge
+		local grow = ringBelowSeen and not reduced
+		local full = segmentSize()
+		for i, part in rr.segments do
+			if grow then
+				part.Size = Vector3.new(0.05, RING_THICKNESS, 0.05)
+				Juice.tween(
+					part,
+					RING_GROW_TIME,
+					{ Size = full },
+					Enum.EasingStyle.Back,
+					Enum.EasingDirection.Out,
+					(i - 1) * RING_GROW_STAGGER
+				)
+			else
+				Juice.tween(part, RING_SNAP, { Size = full })
+			end
+		end
+		rr.label.Enabled = true
+	end
+	if now >= rr.nextRefresh then
+		rr.nextRefresh = now + RING_REFRESH
+		local progress = supernovaProgress(now)
+		local ready = progress >= 1
+		local count = math.clamp(math.floor(progress * RING_SEGMENTS + 1e-6), 0, RING_SEGMENTS)
+		local readyChanged = ready ~= rr.ready
+		if readyChanged then
+			rr.ready = ready
+			rr.pulseLevel = -1
+			rr.pulseFrom = now + RING_LIGHT_TIME
+			rr.text.TextColor3 = if ready then RING_READY else RING_LIT
+		end
+		-- quelques segments de plus : fondu ; grand saut (arrivée, achat, Supernova) : bref
+		local duration = if not reduced and (math.abs(count - rr.litCount) <= 3 or readyChanged)
+			then RING_LIGHT_TIME
+			else RING_SNAP
+		for i = 1, RING_SEGMENTS do
+			local on = i <= count
+			if on ~= rr.lit[i] or appeared or readyChanged then
+				rr.lit[i] = on
+				paint(rr, i, duration)
+			end
+		end
+		rr.litCount = count
+		local text = if ready
+			then Prefs.t("world.supernovaReady")
+			else Prefs.t("world.supernovaRing", { pct = math.floor(progress * 100) })
+		if rr.text.Text ~= text then
+			rr.text.Text = text
+		end
+	end
+	-- Supernova payable : tout l'anneau pulse doucement (quantifié, ≤ 1 Hz)
+	if rr.ready and not reduced and now >= rr.pulseFrom then
+		local k = 0.5 + 0.5 * math.sin(2 * math.pi * (now - rr.pulseFrom) / RING_PULSE_PERIOD)
+		local level = math.floor(k * RING_PULSE_LEVELS + 0.5)
+		if level ~= rr.pulseLevel then
+			rr.pulseLevel = level
+			local transparency = RING_PULSE_MAX * level / RING_PULSE_LEVELS
+			for _, part in rr.segments do
+				part.Transparency = transparency
+			end
+		end
+	end
+end
+
 -- API ----------------------------------------------------------------------------------------------------
 
 -- Point de vue courant (posé par CongaRenderer à chaque image)
@@ -912,6 +1178,7 @@ end
 function NestDisplay.step(now: number, focus: Vector3?)
 	stepFloaters(now, focus)
 	refreshSpot(focus)
+	stepRing(now)
 	local night = isNight()
 	for _, link in links do
 		local show = night or now - link.start < CREW_SHOW_SECONDS
@@ -1001,6 +1268,39 @@ end
 
 function NestDisplay.boardGui(): SurfaceGui?
 	return boardGui
+end
+
+-- État de l'anneau de la Supernova (tests, diagnostic)
+function NestDisplay.supernovaRing(): {
+	shown: boolean,
+	slot: number,
+	lit: number,
+	segments: number,
+	ready: boolean,
+	label: string,
+	parts: { BasePart },
+}
+	local r = ring
+	if r == nil then
+		return {
+			shown = false,
+			slot = 0,
+			lit = 0,
+			segments = RING_SEGMENTS,
+			ready = false,
+			label = "",
+			parts = {},
+		}
+	end
+	return {
+		shown = r.shown,
+		slot = r.slot,
+		lit = r.litCount,
+		segments = RING_SEGMENTS,
+		ready = r.ready,
+		label = r.text.Text,
+		parts = r.segments,
+	}
 end
 
 function NestDisplay.crewLinkCount(): number

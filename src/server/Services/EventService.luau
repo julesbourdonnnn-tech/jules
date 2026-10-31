@@ -22,7 +22,8 @@
 --     SeededPath (seed, t0), balayages pour les coupes (CongaService), éclatement à ≤ 4,5 studs
 --     (+10 Stardust plafonnée, 20 s de revenu ; réapparition 10 s plus tard sur une nouvelle seed)
 --   * Starfall Saturday : Rainbow continu, comètes toutes les 3 min, boost 20 min, présence ≥ 5 min
---     → 1 Nebby vedette Starborn envoyé au Nid à la fin
+--     (par UserId) → 1 Nebby vedette Starborn envoyé au Nid à la fin (ou au départ s'il est déjà
+--     qualifié), une seule fois par compte et par show (registre stats.starfallGift de QuestService)
 --   * boosts de serveur : une seule ligne de temps ×2 (Nuit d'Or, Starfall, Glow Party, LiveOps) ;
 --     queueGlowParty prolonge depuis max(now, fin actuelle)
 --   * LiveOps : remote AdminCommand (UserIds de Data/Admins seulement) → MessagingService
@@ -104,10 +105,11 @@ type CometRun = {
 	carrierSince: number,
 	prevCarrierId: number?,
 	immuneUntil: number, -- nouveau porteur intouchable jusqu'à
-	retake: { [Player]: number }, -- reprise interdite jusqu'à (ancien porteur, lâcheur)
-	held: { [Player]: number }, -- secondes de port cumulées sur cette Comète
-	holdRewarded: { [Player]: boolean },
-	nearRewarded: { [Player]: boolean },
+	-- tables par UserId (pas par Player) : une reconnexion ne rouvre ni récompense ni reprise
+	retake: { [number]: number }, -- reprise interdite jusqu'à (ancien porteur, lâcheur)
+	held: { [number]: number }, -- secondes de port cumulées sur cette Comète
+	holdRewarded: { [number]: boolean },
+	nearRewarded: { [number]: boolean },
 	endedAt: number?,
 }
 
@@ -121,9 +123,10 @@ type BeaconRun = {
 	phase: BeaconPhase,
 	points: number,
 	goal: number,
-	contributions: { [Player]: number },
-	order: { Player }, -- contributeurs dans l'ordre de leur première contribution
-	rewarded: { [Player]: boolean },
+	-- par UserId : un contributeur qui revient sur le serveur garde son total et n'est payé qu'une fois
+	contributions: { [number]: number },
+	order: { number }, -- UserIds des contributeurs dans l'ordre de leur première contribution
+	rewarded: { [number]: boolean },
 	top: Player?,
 	topUserId: number?,
 	topPoints: number,
@@ -154,7 +157,13 @@ local weatherShow = false -- la fenêtre courante est le Rainbow de Starfall
 local forcedWeather: Types.WeatherState? = nil
 
 local starfall: Types.StarfallState? = nil
-local presence: { [Player]: number } = {}
+-- présence pendant le show, par UserId : un retour sur ce serveur garde le temps déjà passé
+local presence: { [number]: number } = {}
+-- comptes déjà servis (UserId → startsAt du show) : jamais deux Starborn garantis sur ce serveur
+local starfallGifted: { [number]: number } = {}
+-- registre persistant (crochet de QuestService, propriétaire de la clé stats) : marque le profil et
+-- retourne false si ce compte a déjà reçu le cadeau de ce show (sur n'importe quel serveur)
+local starfallClaim: ((Player, number) -> boolean)? = nil
 
 local comet: CometRun? = nil
 local doneComets: { [number]: boolean } = {} -- créneaux terminés ou remplacés (jamais relancés)
@@ -346,9 +355,17 @@ end
 -- Starfall Saturday
 -- ---------------------------------------------------------------------------------------------
 
--- Nebby vedette Starborn garanti (présence ≥ PresenceSeconds pendant le show)
+-- Nebby vedette Starborn garanti (présence ≥ PresenceSeconds pendant le show) : une fois par compte
+-- et par show, même après une reconnexion ou un changement de serveur (marque du profil posée AVANT
+-- la remise, comme les codes)
 local function giveStarfallGift(player: Player, show: Types.StarfallState)
-	if not DataService.isLoaded(player) then
+	local userId = player.UserId
+	if starfallGifted[userId] == show.startsAt or not DataService.isLoaded(player) then
+		return
+	end
+	starfallGifted[userId] = show.startsAt
+	local claim = starfallClaim
+	if claim ~= nil and not Safe.value(TAG .. ".starfallClaim", false, claim, player, show.startsAt) then
 		return
 	end
 	local code = Nebbies.pack(show.featured, 0, STARBORN_BIT)
@@ -361,27 +378,39 @@ end
 local function endStarfall(show: Types.StarfallState)
 	dirty = true
 	Signals.EventPhase:Fire("starfall", "end")
-	for player, seconds in presence do
-		if seconds >= SF.PresenceSeconds and player.Parent ~= nil then
+	for userId, seconds in presence do
+		local player = Players:GetPlayerByUserId(userId)
+		if seconds >= SF.PresenceSeconds and player ~= nil then
 			giveStarfallGift(player, show)
 		end
 	end
 	table.clear(presence)
+	table.clear(starfallGifted)
 end
 
--- Départ, branché dès Init pour passer AVANT la sauvegarde de départ de DataService (qui copie le
--- profil) : ce qui est accordé ici est bien écrit.
+-- Départ : ce qui est accordé ici doit être dans la sauvegarde de départ de DataService (qui copie
+-- le profil). Roblox ne garantit pas l'ordre des connexions PlayerRemoving : ce travail est donc
+-- lancé à la fois par la connexion PlayerRemoving (Init) ET par le crochet DataService.onBeforeSave
+-- (départ détecté) ; il est idempotent, le premier passage fait tout.
 --   * Starfall : un joueur déjà qualifié qui part pendant le show reçoit tout de suite son cadeau
---     « garanti » (sinon il le perdait en partant avant 16:20)
+--     « garanti » (sinon il le perdait en partant avant 16:20) ; une seule fois par compte
 --   * Comète : le porteur la lâche ; son dernier temps de port (Signals.CometHeld → quête
 --     « Porteur de Comète ») est compté avant la sauvegarde
 local function onPlayerLeavingEarly(player: Player)
 	EventService.dropComet(player)
 	local show = starfall
-	local seconds = presence[player]
-	presence[player] = nil
+	local seconds = presence[player.UserId]
 	if show ~= nil and seconds ~= nil and seconds >= SF.PresenceSeconds then
 		giveStarfallGift(player, show)
+	end
+end
+
+-- Crochet de sauvegarde (sans yield) : sauvegarde de départ → travail de départ AVANT l'instantané.
+-- `release` : drapeau de départ passé par DataService (extension du contrat demandée) ; à défaut,
+-- un Player déjà sorti de l'arbre (événements différés) est forcément en train de partir.
+local function onBeforeSave(player: Player, _data: { [string]: any }, release: boolean?)
+	if release == true or player.Parent == nil then
+		onPlayerLeavingEarly(player)
 	end
 end
 
@@ -396,6 +425,7 @@ local function stepStarfall(now: number, dt: number)
 	if sf ~= nil and current == nil then
 		starfall = { startsAt = sf.startsAt, endsAt = sf.endsAt, featured = sf.featured }
 		table.clear(presence)
+		table.clear(starfallGifted)
 		dirty = true
 		extendBoost(sf.startsAt + SF.BoostSeconds, "starfall", nil)
 		Notify.banner("starfall", {
@@ -409,7 +439,8 @@ local function stepStarfall(now: number, dt: number)
 	if starfall ~= nil and dt > 0 then
 		for _, player in Players:GetPlayers() do
 			if DataService.isLoaded(player) then
-				presence[player] = (presence[player] or 0) + dt
+				local userId = player.UserId
+				presence[userId] = (presence[userId] or 0) + dt
 			end
 		end
 	end
@@ -595,17 +626,18 @@ end
 
 -- Participation « tenue ≥ 3 s » (cumulée sur cette Comète), récompensée une fois
 local function checkHoldReward(c: CometRun, player: Player, now: number)
-	if c.holdRewarded[player] then
+	local userId = player.UserId
+	if c.holdRewarded[userId] then
 		return
 	end
-	local total = c.held[player] or 0
+	local total = c.held[userId] or 0
 	if c.carrier == player then
 		total += math.max(0, now - c.carrierSince)
 	end
 	if total < CometCfg.HoldMinSeconds then
 		return
 	end
-	c.holdRewarded[player] = true
+	c.holdRewarded[userId] = true
 	local dust =
 		Safe.value(TAG .. ".holdDust", 0, EconomyService.addStardust, player, CometCfg.HoldDust, "Comet")
 	Notify.feedback(player, "feedback.cometHold", { dust = dust }, "reward")
@@ -616,7 +648,7 @@ end
 local function releaseHold(c: CometRun, player: Player, now: number)
 	checkHoldReward(c, player, now)
 	local stint = math.max(0, now - c.carrierSince)
-	c.held[player] = (c.held[player] or 0) + stint
+	c.held[player.UserId] = (c.held[player.UserId] or 0) + stint
 	if c.carrier == player then
 		c.carrier = nil
 	end
@@ -630,13 +662,13 @@ local function canCarry(a: Types.Actor, c: CometRun, now: number): boolean
 		and a.slot > 0
 		and not a.zen
 		and a.player.Parent ~= nil
-		and (c.retake[a.player] or -math.huge) <= now
+		and (c.retake[a.player.UserId] or -math.huge) <= now
 end
 
 local function takeComet(c: CometRun, now: number, actor: Types.Actor, from: Player?)
 	if from ~= nil then
 		releaseHold(c, from, now)
-		c.retake[from] = now + CometCfg.RetakeCooldown
+		c.retake[from.UserId] = now + CometCfg.RetakeCooldown
 	end
 	local player = actor.player
 	c.carrier = player
@@ -668,10 +700,10 @@ local function nearRewards(c: CometRun, center: Vector3, positions: { Positioned
 			player ~= exclude
 			and e.slot > 0
 			and player.Parent ~= nil
-			and not c.nearRewarded[player]
+			and not c.nearRewarded[player.UserId]
 			and distXZ(e.pos, center) <= CometCfg.NearRadius
 		then
-			c.nearRewarded[player] = true
+			c.nearRewarded[player.UserId] = true
 			local dust = Safe.value(
 				TAG .. ".nearDust",
 				0,
@@ -913,23 +945,24 @@ end
 -- Nuit de la Balise (§4.15.3)
 -- ---------------------------------------------------------------------------------------------
 
-local function rewardContributors(b: BeaconRun, success: boolean, list: { Player })
+-- Paie une fois par compte les contributeurs PRÉSENTS (Player actuel du UserId : un contributeur
+-- revenu sur le serveur est payé sur sa nouvelle session) ; les absents ne sont pas marqués
+local function rewardContributors(b: BeaconRun, success: boolean, userIds: { number })
 	local dust = if success then BeaconCfg.WinDust else BeaconCfg.FailDust
 	local fresh: { Player } = {}
-	for _, player in list do
-		if not b.rewarded[player] then
-			b.rewarded[player] = true
+	for _, userId in userIds do
+		local player = Players:GetPlayerByUserId(userId)
+		if not b.rewarded[userId] and player ~= nil and DataService.isLoaded(player) then
+			b.rewarded[userId] = true
 			table.insert(fresh, player)
-			if player.Parent ~= nil then
-				local got =
-					Safe.value(TAG .. ".beaconDust", 0, EconomyService.addStardust, player, dust, "Beacon")
-				Notify.feedback(
-					player,
-					if success then "feedback.beaconWin" else "feedback.beaconFail",
-					{ dust = got },
-					if success then "reward" else "info"
-				)
-			end
+			local got =
+				Safe.value(TAG .. ".beaconDust", 0, EconomyService.addStardust, player, dust, "Beacon")
+			Notify.feedback(
+				player,
+				if success then "feedback.beaconWin" else "feedback.beaconFail",
+				{ dust = got },
+				if success then "reward" else "info"
+			)
 		end
 	end
 	Signals.BeaconResult:Fire(success, fresh)
@@ -1277,21 +1310,17 @@ local function onPlayerAdded(player: Player)
 	getStateRemote():FireClient(player, buildState(Clock.now()))
 end
 
+-- Nettoyage du départ. Les tables par UserId (présence Starfall, Comète, Balise) sont gardées
+-- exprès : une reconnexion ne rouvre pas les récompenses ; elles sont vidées avec leur événement.
 local function onPlayerRemoving(player: Player)
 	EventService.dropComet(player)
-	presence[player] = nil
-	local c = comet
-	if c ~= nil then
-		c.retake[player] = nil
-		c.held[player] = nil
-		c.holdRewarded[player] = nil
-		c.nearRewarded[player] = nil
-	end
 end
 
 function EventService.Init()
 	stateRemote = Net.event("EventState")
-	-- seule connexion faite dans Init (aucun yield) : elle doit passer avant celle de DataService
+	-- travail de départ (Comète lâchée, cadeau Starfall) AVANT l'instantané de la sauvegarde de
+	-- départ : par le crochet de sauvegarde ET par une connexion PlayerRemoving (ordre non garanti)
+	DataService.onBeforeSave(onBeforeSave)
 	Players.PlayerRemoving:Connect(onPlayerLeavingEarly)
 end
 
@@ -1439,11 +1468,12 @@ function EventService.onBeaconParade(player: Player, count: number)
 		return
 	end
 	local now = Clock.now()
-	if b.contributions[player] == nil then
-		table.insert(b.order, player)
+	local userId = player.UserId
+	if b.contributions[userId] == nil then
+		table.insert(b.order, userId)
 	end
-	local total = (b.contributions[player] or 0) + count
-	b.contributions[player] = total
+	local total = (b.contributions[userId] or 0) + count
+	b.contributions[userId] = total
 	b.points += count
 	if total > b.topPoints then
 		b.top = player
@@ -1453,9 +1483,9 @@ function EventService.onBeaconParade(player: Player, count: number)
 	dirty = true
 	if b.phase == "active" and b.points >= b.goal then
 		succeedBeacon(b, now)
-	elseif b.phase == "success" and not b.rewarded[player] then
+	elseif b.phase == "success" and not b.rewarded[userId] then
 		-- contributeur tardif : la nuit est déjà gagnée, il touche la récompense de réussite
-		rewardContributors(b, true, { player })
+		rewardContributors(b, true, { userId })
 	end
 end
 
@@ -1482,7 +1512,7 @@ function EventService.dropComet(player: Player)
 	local now = Clock.now()
 	releaseHold(c, player, now)
 	c.phase = "ground"
-	c.retake[player] = now + CometCfg.RetakeCooldown
+	c.retake[player.UserId] = now + CometCfg.RetakeCooldown
 	local p = WorldLayout.clampToIsland(c.pos)
 	c.pos = Vector3.new(p.X, WorldLayout.groundY(p.X, p.Z), p.Z)
 	dirty = true
@@ -1578,6 +1608,14 @@ end
 
 function EventService.snapshot(): Types.EventStatePayload
 	return buildState(Clock.now())
+end
+
+-- Crochet enregistré par QuestService (Init), propriétaire de la clé de profil stats : `claim(player,
+-- startsAt)` marque le profil (stats.starfallGift = startsAt) et retourne false si ce compte a déjà
+-- reçu le Starborn garanti de ce show, sur n'importe quel serveur. Sans crochet, seul le registre
+-- en mémoire de ce serveur protège.
+function EventService.setStarfallClaim(claim: ((Player, number) -> boolean)?)
+	starfallClaim = claim
 end
 
 -- Diagnostic (tests, console) : Nebbies grignotés par les Gloomwisps et échecs consécutifs

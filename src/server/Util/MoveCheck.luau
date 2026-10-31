@@ -16,6 +16,11 @@
 --         comptée qu'une fois sur la fenêtre (appliquée à chaque tick de 0,1 s, elle laisserait
 --         passer une vitesse ×4)
 --   * altitude > sol + 14 pendant plus de 1,5 s, r > 182 ou Y < −5 → retour immédiat
+--   * vol bas prolongé : racine à plus de RootHeight + Snip.MaxDy (3 + 4) au-dessus du sol pendant
+--     plus de HoverTime (1 s, Conga/Tuning) → chaque tick est une INFRACTION (signalée, comptée,
+--     3 en 5 s → retour) et la position n'est pas acceptée. Hors de portée verticale des coupes, un
+--     joueur ne doit jamais pouvoir rester (HipHeight relevé, CFrame décalé) ; un vrai saut
+--     (JumpHeight 7,2) n'y passe qu'≈ 0,36 s. CongaService ramène de toute façon les miettes au sol.
 --   * une infraction SIGNALE seulement (verdict "flag" : ce tick ne peut ni attraper, ni couper, ni
 --     encaisser, ni voler la Comète) ; 3 infractions en 5 s → "rewind" vers la dernière position
 --     valide, puis 3 s de restriction (isRestricted)
@@ -32,9 +37,10 @@
 --     retour le ramène là où le serveur l'a placé.
 --   * jamais d'accusation : l'interface affiche « connexion instable » (ton neutre)
 -- GDD : §12.7, §14.3 (MoveViolation), §14.4 (marges réglables).
--- Dépendances : Config/Balance.
+-- Dépendances : Config/Balance, Conga/Tuning.
 
 local Balance = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared").Config.Balance)
+local Tuning = require(script.Parent.Parent.Conga.Tuning)
 
 local MoveCheck = {}
 
@@ -59,6 +65,10 @@ local DEFAULT_VMAX = Balance.Speed.Base
 	+ Balance.Speed.PerStride * (Balance.Upgrades.stride.Max or 0)
 	+ Balance.Dash.Boost
 	+ Balance.Speed.SecondWindBoost
+-- Hauteur de la racine au-dessus du sol au-delà de laquelle le joueur est hors de portée
+-- verticale des coupes (un coupeur au sol ne l'atteindrait plus), et durée tolérée (saut)
+local HOVER_ABOVE = Tuning.RootHeight + Balance.Snip.MaxDy
+local HOVER_TIME = Tuning.HoverTime
 -- Historique de vitesses conservé au-delà de la fenêtre utile (s)
 local SPEED_HISTORY = Cfg.SpeedWindow + MAX_ELAPSED + SUSTAIN_WINDOW
 
@@ -73,6 +83,7 @@ type State = {
 	exemptUntil: number,
 	restrictedUntil: number,
 	highSince: number?, -- début d'un vol prolongé au-dessus du sol
+	hoverSince: number?, -- début d'un vol bas, hors de portée verticale des coupes
 	flags: { number }, -- instants des infractions (fenêtre FlagWindow)
 	rewinds: { number }, -- instants des retours comptés (fenêtre StrikeWindow)
 	violations: number, -- infractions de la session
@@ -115,6 +126,7 @@ local function newState(pos: Vector3, now: number): State
 		exemptUntil = -math.huge,
 		restrictedUntil = -math.huge,
 		highSince = nil,
+		hoverSince = nil,
 		flags = {},
 		rewinds = {},
 		violations = 0,
@@ -187,6 +199,7 @@ end
 local function rewind(st: State, now: number, grace: boolean): (Verdict, Vector3?)
 	table.clear(st.flags)
 	st.highSince = nil
+	st.hoverSince = nil
 	st.restrictedUntil = math.max(st.restrictedUntil, now + Cfg.RewindLockout)
 	anchor(st, st.lastValid, now)
 	if not grace then
@@ -229,6 +242,7 @@ function MoveCheck.reset(player: Player, pos: Vector3, now: number)
 	anchor(st, pos, now)
 	st.exemptUntil = now + Cfg.Exemption
 	st.highSince = nil
+	st.hoverSince = nil
 	table.clear(st.flags)
 end
 
@@ -293,6 +307,18 @@ function MoveCheck.step(
 		st.violations += 1
 		return rewind(st, now, grace)
 	end
+	-- vol bas prolongé, hors de portée verticale des coupes (infraction à l'étape 4)
+	local hovering = false
+	if pos.Y > ground + HOVER_ABOVE then
+		local since = st.hoverSince
+		if since == nil then
+			st.hoverSince = now
+		elseif now - since > HOVER_TIME then
+			hovering = true
+		end
+	else
+		st.hoverSince = nil
+	end
 
 	-- 2) déplacement par tick (depuis la dernière position valide), montée, puis vitesse soutenue ;
 	-- appliqué AUSSI pendant l'exemption (seule la sanction en est levée, étape 3)
@@ -311,7 +337,7 @@ function MoveCheck.step(
 			ok = plausible(player, oldest.pos, oldest.t, pos, now, step, SUSTAIN_WINDOW)
 		end
 	end
-	if ok then
+	if ok and not hovering then
 		accept(st, pos, now)
 		return "ok", nil
 	end

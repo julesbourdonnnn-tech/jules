@@ -1,12 +1,17 @@
 --!strict
 -- MonetizationService : achats Robux fiables.
 --  * ProcessReceipt unique et idempotent (PurchaseId mémorisés dans data.receipts)
---  * gamepasses : vérifiés à l'arrivée + achat en jeu, exposés au client via data.passes
+--  * gamepasses : vérifiés à l'arrivée + achat en jeu, exposés au client via data.passes.
+--    UserOwnsGamePassAsync fait foi : PromptGamePassPurchaseFinished n'est qu'un indice (un exploit
+--    peut l'émettre avec wasPurchased = true) ; un pass enregistré mais plus possédé (remboursé,
+--    ou accordé autrefois sur un signal non vérifié) est retiré à l'arrivée.
 --
 -- API :
 --   MonetizationService.registerProduct("Coins1000", function(player, data) ... return true end)
 --   MonetizationService.ownsPass(player, "VIP") -> boolean
---   MonetizationService.PassGranted:Connect(function(player, passKey) end)
+--   MonetizationService.PassGranted:Connect(function(player, passKey) end)   -- arrivée + achat
+--   MonetizationService.PassPurchased:Connect(function(player, passKey) end) -- achat en jeu VÉRIFIÉ
+--   MonetizationService.PassRevoked:Connect(function(player, passKey) end)   -- retiré à l'arrivée
 
 local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
@@ -20,15 +25,29 @@ local DataService = require(script.Parent.DataService)
 local MAX_STORED_RECEIPTS = 100
 local RECEIPT_DATA_TIMEOUT = 15
 
+-- Réglages (modifiables par les tests avant le démarrage)
+local Settings = {
+	VERIFY_ATTEMPTS = 3, -- vérifications de possession après un achat en jeu
+	VERIFY_RETRY_DELAY = 2, -- s, multiplié par le numéro de l'essai
+}
+
 type ProductHandler = (player: Player, data: { [string]: any }) -> boolean
 
 local MonetizationService = {}
+MonetizationService.Settings = Settings
 MonetizationService.PassGranted = Signal.new() :: Signal.Signal<Player, string>
 MonetizationService.ProductGranted = Signal.new() :: Signal.Signal<Player, string>
+-- Achat en jeu confirmé par UserOwnsGamePassAsync (remerciements, analytique de revenus)
+MonetizationService.PassPurchased = Signal.new() :: Signal.Signal<Player, string>
+-- Pass enregistré mais plus possédé (remboursé, ou accordé jadis sans vérification) : effets à retirer
+MonetizationService.PassRevoked = Signal.new() :: Signal.Signal<Player, string>
 
 local handlers: { [string]: ProductHandler } = {}
 local productKeyById: { [number]: string } = {}
 local passKeyById: { [number]: string } = {}
+-- vérifications d'achat en cours, et passes confirmés par Roblox pendant cette session
+local verifying: { [Player]: { [string]: boolean } } = {}
+local confirmed: { [Player]: { [string]: boolean } } = {}
 
 function MonetizationService.registerProduct(productKey: string, handler: ProductHandler)
 	assert(Monetization.Products[productKey], `Produit inconnu : {productKey}`)
@@ -41,23 +60,50 @@ function MonetizationService.ownsPass(player: Player, passKey: string): boolean
 	return data ~= nil and type(data.passes) == "table" and data.passes[passKey] == true
 end
 
--- Mémorise la possession ; `announce` déclenche PassGranted (effets en jeu)
-local function grantPass(player: Player, passKey: string, announce: boolean)
+local function markConfirmed(player: Player, passKey: string)
+	local set = confirmed[player]
+	if set == nil then
+		set = {}
+		confirmed[player] = set
+	end
+	set[passKey] = true
+end
+
+-- Mémorise la possession ; `announce` déclenche PassGranted (effets en jeu).
+-- Renvoie true si le pass vient d'être accordé (il ne l'était pas encore).
+local function grantPass(player: Player, passKey: string, announce: boolean): boolean
 	local data = DataService.get(player)
 	if not data then
-		return
+		return false
 	end
 	if type(data.passes) ~= "table" then
 		data.passes = {}
 	end
 	if data.passes[passKey] then
-		return
+		return false
 	end
 	data.passes[passKey] = true
 	DataService.markDirty(player, "passes")
 	if announce then
 		MonetizationService.PassGranted:Fire(player, passKey)
 	end
+	return true
+end
+
+-- Roblox affirme que le joueur ne possède pas (ou plus) ce pass : retiré du profil
+local function revokePass(player: Player, passKey: string)
+	local data = DataService.get(player)
+	if not data or type(data.passes) ~= "table" or data.passes[passKey] == nil then
+		return
+	end
+	local set = confirmed[player]
+	if set and set[passKey] then
+		return -- acheté et vérifié pendant cette session (réponse arrivée entre-temps)
+	end
+	data.passes[passKey] = nil
+	DataService.markDirty(player, "passes")
+	warn(`[Monetization] pass {passKey} non possédé par {player.Name} : retiré du profil`)
+	MonetizationService.PassRevoked:Fire(player, passKey)
 end
 
 local function checkPasses(player: Player)
@@ -69,9 +115,13 @@ local function checkPasses(player: Player)
 			if player.Parent == nil then
 				return
 			end
-			if ok and owns then
+			if ok and owns == true then
+				markConfirmed(player, passKey)
 				grantPass(player, passKey, false)
-			elseif not ok then
+			elseif ok then
+				revokePass(player, passKey)
+			else
+				-- panne : on garde la valeur enregistrée (jamais de retrait sans réponse de Roblox)
 				warn(`[Monetization] vérification du pass {passKey} impossible pour {player.Name} :`, owns)
 			end
 		end
@@ -84,6 +134,50 @@ local function checkPasses(player: Player)
 				MonetizationService.PassGranted:Fire(player, passKey)
 			end
 		end
+	end
+end
+
+-- Achat en jeu : PromptGamePassPurchaseFinished n'est qu'un indice, la possession est confirmée
+-- par UserOwnsGamePassAsync avant tout octroi (quelques essais : panne ou propagation lente).
+-- Un acheteur légitime non confirmé ici récupère son pass à l'arrivée suivante (checkPasses).
+local function verifyPurchase(player: Player, passKey: string, passId: number)
+	if player.Parent == nil then
+		return -- déjà parti : rien à mémoriser
+	end
+	local mine = verifying[player]
+	if mine == nil then
+		mine = {}
+		verifying[player] = mine
+	end
+	if mine[passKey] or MonetizationService.ownsPass(player, passKey) then
+		return -- déjà vérifié ou en cours (signal répété)
+	end
+	mine[passKey] = true
+	for attempt = 1, Settings.VERIFY_ATTEMPTS do
+		local ok, owns = pcall(function()
+			return MarketplaceService:UserOwnsGamePassAsync(player.UserId, passId)
+		end)
+		if player.Parent == nil then
+			break
+		end
+		if ok and owns == true then
+			markConfirmed(player, passKey)
+			if grantPass(player, passKey, true) then
+				MonetizationService.PassPurchased:Fire(player, passKey)
+			end
+			break
+		end
+		if attempt >= Settings.VERIFY_ATTEMPTS then
+			warn(
+				`[Monetization] achat du pass {passKey} non confirmé par Roblox pour {player.Name} :`,
+				if ok then "non possédé" else owns
+			)
+		else
+			task.wait(Settings.VERIFY_RETRY_DELAY * attempt)
+		end
+	end
+	if verifying[player] == mine then
+		mine[passKey] = nil
 	end
 end
 
@@ -148,12 +242,16 @@ function MonetizationService.Start()
 
 	MarketplaceService.PromptGamePassPurchaseFinished:Connect(
 		function(player: Player, passId: number, wasPurchased: boolean)
-			local passKey = passKeyById[passId]
-			if wasPurchased and passKey then
-				grantPass(player, passKey, true)
+			local passKey = if type(passId) == "number" then passKeyById[passId] else nil
+			if wasPurchased == true and passKey then
+				task.spawn(verifyPurchase, player, passKey, passId)
 			end
 		end
 	)
+	Players.PlayerRemoving:Connect(function(player: Player)
+		verifying[player] = nil
+		confirmed[player] = nil
+	end)
 
 	DataService.Loaded:Connect(function(player: Player)
 		checkPasses(player)

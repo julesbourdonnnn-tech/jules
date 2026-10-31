@@ -1660,8 +1660,9 @@ return function(T)
 						h:step(DT)
 					end
 				end
-				-- marche de 1,5 stud par tick (15 studs/s)
-				local function walkTo(p, to)
+				-- marche de 1,5 stud par tick (15 studs/s) ; `stop` (facultatif) est testé après chaque
+				-- tick : vrai → arrêt immédiat (retourne vrai)
+				local function walkTo(p, to, stop)
 					local target = V3.new(to.X, 3, to.Z)
 					for _ = 1, 400 do
 						local pos = p.Character.HumanoidRootPart.Position
@@ -1669,11 +1670,15 @@ return function(T)
 						if d.Magnitude < 1.5 then
 							h:moveTo(p, target)
 							frames(1)
-							return
+							return stop ~= nil and stop()
 						end
 						h:moveTo(p, pos + d.Unit * 1.5)
 						frames(1)
+						if stop and stop() then
+							return true
+						end
 					end
+					return false
 				end
 				local function count(remote)
 					local n = 0
@@ -1683,6 +1688,15 @@ return function(T)
 						end
 					end
 					return n
+				end
+				local function lastEvent(remote)
+					local found = nil
+					for _, e in h.log.allClientEvents do
+						if e.remote == remote then
+							found = e.args[1]
+						end
+					end
+					return found
 				end
 				frames(5)
 				-- capture puis parade à SA porte
@@ -1718,8 +1732,21 @@ return function(T)
 				expect(Conga.lineLength(B)).toBe(10)
 				local snips = count("SnipEvent")
 				local dust = DS.get(A).stardust
-				walkTo(A, V3.new(70, 3, 70))
+				-- A traverse la file ; vérifications AU TICK DE LA COUPE : avant, B (10/10, file pleine)
+				-- ne peut rien attraper (captures à l'étape 5, coupes à l'étape 7) ; dès le tick suivant,
+				-- il peut reprendre un Nebby libre (prioritaire) ou un sauvage de la Clairière qui flâne
+				-- dans son Attrait, selon l'ordre des acteurs : la file mesurée plus tard ne serait plus 4
+				local cut = walkTo(A, V3.new(70, 3, 70), function()
+					return count("SnipEvent") > snips
+				end)
+				expect(cut).toBe(true)
 				expect(count("SnipEvent") - snips).toBe(1)
+				local ev = lastEvent("SnipEvent")
+				expect(ev.victimSlot).toBe(Nest.slotOf(B))
+				expect(ev.snipperSlot).toBe(Nest.slotOf(A))
+				expect(ev.cutIndex).toBe(5)
+				expect(ev.count).toBe(6)
+				expect(#ev.loose).toBe(6)
 				expect(Conga.lineLength(B)).toBe(4)
 				expect(DS.get(A).stardust - dust).toBe(30)
 				-- mort, réapparition, départ

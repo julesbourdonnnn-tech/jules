@@ -5,11 +5,12 @@
 --   * tableau du serveur (mémoire) : top 5 des congas en cours (Signals.LineChanged), mis à jour
 --     chaque seconde ; record de parade du serveur (Signals.Parade) → bannière serverRecord quand
 --     un record existant est battu ; écrit sur la stèle (WorldService.board()) les attributs
---     Live / Record / Weekly (format "userId:name:n;userId:name:n…", noms Roblox Name)
---   * classements mondiaux : OrderedDataStore "WeeklyConga_<w>" (plus longue parade de la semaine) et
---     "AtlasAllTime" (entrées d'Atlas) ; écritures quand un joueur bat son record (file par serveur
---     vidée toutes les 60 s, en task.spawn + pcall + nouvelles tentatives), lecture du top 10 toutes
---     les 120 s ; joueurs flags.lbBanned jamais écrits
+--     Live / Record / Weekly / Atlas (format "userId:name:n;userId:name:n…", noms Roblox Name)
+--   * classements mondiaux (GDD §6.7) : OrderedDataStore "WeeklyConga_<w>" (plus longue parade de la
+--     semaine) et "AtlasAllTime" (entrées d'Atlas) ; écritures quand un joueur bat son record (file
+--     par serveur vidée toutes les 60 s, en task.spawn + pcall + nouvelles tentatives), lecture des
+--     deux tops 10 toutes les 120 s (l'une après l'autre) ; joueurs flags.lbBanned jamais écrits,
+--     et retirés de l'affichage s'ils sont présents
 --   * titre « Roi / Reine de la Conga » : à l'arrivée, top 10 de la semaine précédente →
 --     NestService.grantTemporary(player, "titles", "conga_royal")
 --   * aucune boucle propre : step(now) est appelé par le tick de CongaService ; les appels
@@ -58,6 +59,7 @@ local liveText = ""
 local record: BoardEntry? = nil
 local weekly: { BoardEntry } = {}
 local weeklyOf = -1 -- semaine du top mondial affiché
+local atlas: { BoardEntry } = {} -- top mondial Star Atlas (entrées, tous temps) affiché
 
 local pendingWeekly: { [number]: { week: number, n: number } } = {} -- UserId → meilleure parade
 local pendingAtlas: { [number]: number } = {} -- UserId → entrées d'Atlas
@@ -271,8 +273,22 @@ local function flushOnClose()
 	flushing = false
 end
 
--- Lit le top 10 mondial de la semaine (une fois par ReadInterval, thread séparé)
-local function readWeekly(week: number)
+-- Lignes d'un top mondial lu (yield possible : noms) ; un joueur présent signalé par l'anti-triche
+-- n'est jamais affiché (son ancien score peut rester dans le magasin)
+local function boardEntries(top: { { userId: number, n: number } }): { BoardEntry }
+	local entries: { BoardEntry } = {}
+	for _, e in top do
+		if not bannedNow(e.userId) then
+			table.insert(entries, { userId = e.userId, name = resolveName(e.userId), n = e.n })
+		end
+	end
+	return entries
+end
+
+-- Lit les tops 10 mondiaux (semaine, puis Star Atlas) une fois par ReadInterval, dans un seul
+-- thread séparé : les lectures se suivent (budget DataStore étalé) ; une lecture en échec garde
+-- l'affichage précédent
+local function readBoards(week: number)
 	if reading then
 		return
 	end
@@ -280,15 +296,17 @@ local function readWeekly(week: number)
 	task.spawn(function()
 		local top = topOf(WEEKLY_PREFIX .. tostring(week), Cfg.TopWeekly)
 		if top ~= nil and currentWeek == week then
-			local entries: { BoardEntry } = {}
-			for _, e in top do
-				table.insert(entries, { userId = e.userId, name = resolveName(e.userId), n = e.n })
-			end
+			local entries = boardEntries(top)
 			if currentWeek == week then
 				weekly = entries
 				weeklyOf = week
 				setBoard("Weekly", encode(entries))
 			end
+		end
+		local atlasTop = topOf(ATLAS_STORE, Cfg.TopWeekly)
+		if atlasTop ~= nil then
+			atlas = boardEntries(atlasTop)
+			setBoard("Atlas", encode(atlas))
 		end
 		reading = false
 	end)
@@ -445,6 +463,7 @@ function LeaderboardService.Start()
 	setBoard("Live", "")
 	setBoard("Record", "")
 	setBoard("Weekly", "")
+	setBoard("Atlas", "")
 	game:BindToClose(flushOnClose)
 end
 
@@ -487,7 +506,7 @@ function LeaderboardService.step(now: number)
 	end
 	if lastRead == 0 or now - lastRead >= Cfg.ReadInterval then
 		lastRead = now
-		readWeekly(week)
+		readBoards(week)
 		-- couronne pas encore connue (lecture en échec au démarrage ou au changement de semaine) :
 		-- nouvel essai au rythme des lectures, sinon personne n'aurait son titre de la semaine
 		if crownWeek ~= week - 1 then
@@ -510,6 +529,11 @@ function LeaderboardService.weeklyTop(): { BoardEntry }
 		return {}
 	end
 	return table.clone(weekly)
+end
+
+-- Top 10 mondial Star Atlas (entrées d'Atlas, tous temps), dernière lecture réussie
+function LeaderboardService.atlasTop(): { BoardEntry }
+	return table.clone(atlas)
 end
 
 return LeaderboardService

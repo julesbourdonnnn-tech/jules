@@ -248,10 +248,34 @@ return function(T)
 			expect(w.Conga.lineLength(victim)).toBe(n - ev.count + staged.caughtDuring)
 			expect(hasKey(Bots.feedbackKeys(victim), "feedback.snipped")).toBe(true)
 			expect(hasKey(Bots.feedbackKeys(snipper), "feedback.snipDealt")).toBe(true)
-			-- la victime récupère ses Nebbies libres (priorité : pas étourdis pour elle)
+			-- la victime récupère ses Nebbies libres (priorité : pas étourdis pour elle) : elle vise
+			-- d'abord SES Nebbies (ids de la coupe), avec de la place dans sa file
 			local before = w.Conga.lineLength(victim)
+			expect(before < w.Conga.lineCapacity(victim)).toBe(true)
+			local mine = {}
+			for _, id in ev.looseIds do
+				mine[id] = true
+			end
+			local function nearestLoose()
+				local root = rootOf(victim)
+				if not root then
+					return nil
+				end
+				local t = now()
+				local best, bestD = nil, math.huge
+				for _, wild in w.Spawn.query(root.Position, 60, t, victim) do
+					if mine[wild.id] and w.Spawn.canCatch(victim, w.Nest.slotOf(victim), wild, t) then
+						local pos = w.Spawn.positionOf(wild, t)
+						local d = (pos - root.Position).Magnitude
+						if d < bestD then
+							best, bestD = pos, d
+						end
+					end
+				end
+				return best
+			end
 			for _ = 1, 60 do
-				local target = nearestWild(victim, 40)
+				local target = nearestLoose() or nearestWild(victim, 40)
 				if target then
 					stepToward(victim, target)
 				end

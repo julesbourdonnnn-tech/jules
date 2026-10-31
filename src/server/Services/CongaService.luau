@@ -8,7 +8,10 @@
 --     qu'un service défaillant ne fige jamais le jeu
 --   * miettes par joueur : trail (Trail.new(170, 0,5)) pour l'autorité, netTrail (Trail.new(170, 1,0,
 --     firstSeq)) pour le réseau, numérotation contiguë par slot entre propriétaires successifs ;
---     poussées seulement si MoveCheck valide le tick ; remise à zéro sur saut ≥ 40 studs
+--     poussées seulement si MoveCheck valide le tick ; remise à zéro sur saut ≥ 40 studs ; chaque
+--     miette est ramenée au plus à Tuning.RootHeight (3) au-dessus du sol : les Nebbies marchent au
+--     sol, un saut ou un vol (HipHeight relevé) ne soulève jamais la file hors de portée verticale
+--     des coupes (Snip.MaxDy), ni pour les joueurs ni pour les Gloomwisps
 --   * captures : joueurs avec place libre × SpawnService.query (rayon Attrait + 0,75, |Δy| ≤ 6,
 --     Snip Rush ×1,5) ; le plus proche gagne, égalité → ordre tiré au hasard à chaque tick ;
 --     file pleine → Feedback "feedback.lineFull" au plus toutes les 5 s ; plafond 1 500 captures/h
@@ -71,6 +74,7 @@ local Signals = require(Server.Signals)
 local Analytics = require(Server.Util.Analytics)
 local MoveCheck = require(Server.Util.MoveCheck)
 local Notify = require(Server.Util.Notify)
+local Tuning = require(Server.Conga.Tuning)
 local RateLimit = require(Server.Util.RateLimit)
 
 local Services = script.Parent
@@ -687,6 +691,16 @@ local function onRewind(state: PlayerState, root: BasePart, back: Vector3, now: 
 	Signals.MoveViolation:Fire(player, MoveCheck.violations(player))
 end
 
+-- Miette d'une position de la racine : au plus à RootHeight au-dessus du sol (jamais relevée : une
+-- racine plus basse, sur une pente, reste telle quelle)
+local function crumbOf(pos: Vector3, groundY: number): Vector3
+	local top = groundY + Tuning.RootHeight
+	if pos.Y <= top then
+		return pos
+	end
+	return Vector3.new(pos.X, top, pos.Z)
+end
+
 local function buildActors(now: number): { Types.Actor }
 	local actors: { Types.Actor } = {}
 	for player, state in states do
@@ -713,10 +727,11 @@ local function buildActors(now: number): { Types.Actor }
 				anchor = pos
 			end
 			MoveCheck.reset(player, anchor, now)
-			state.trail:reset(anchor)
+			local crumb = crumbOf(anchor, WorldLayout.groundY(anchor.X, anchor.Z))
+			state.trail:reset(crumb)
 			local net = state.netTrail
 			if net then
-				net:reset(anchor)
+				net:reset(crumb)
 			end
 			state.prev = anchor
 			state.walkSpeed = -1
@@ -725,15 +740,18 @@ local function buildActors(now: number): { Types.Actor }
 		-- téléportation aller-retour balaierait tout ce qui sépare les deux points)
 		local prev = state.prev or pos
 		local rewindsBefore = MoveCheck.recentRewinds(player, now)
-		local verdict, back = MoveCheck.step(player, pos, STEP, now, WorldLayout.groundY(pos.X, pos.Z))
+		local groundY = WorldLayout.groundY(pos.X, pos.Z)
+		local verdict, back = MoveCheck.step(player, pos, STEP, now, groundY)
 		if verdict == "rewind" and back ~= nil then
 			onRewind(state, root, back, now, MoveCheck.recentRewinds(player, now) > rewindsBefore)
 		end
 		if verdict == "ok" then
-			state.trail:push(pos)
+			-- miettes au sol (autorité ET réseau : le client dessine la file là où elle se coupe)
+			local crumb = crumbOf(pos, groundY)
+			state.trail:push(crumb)
 			local net = state.netTrail
 			if net then
-				net:push(pos)
+				net:push(crumb)
 			end
 			noteActivity(state, distXZ(prev, pos), now)
 		else
@@ -1082,6 +1100,15 @@ local function stepSnips(actors: { Types.Actor }, now: number, truce: boolean, d
 	if #victims == 0 then
 		return
 	end
+	-- Tête de la file (début du segment 1) : dernière miette, sinon la racine ramenée au sol
+	local function headOf(victim: Victim): Vector3
+		local head = victim.state.trail:head()
+		if head then
+			return head
+		end
+		local p = victim.actor.pos
+		return crumbOf(p, WorldLayout.groundY(p.X, p.Z))
+	end
 	-- Élagage large : boîte XZ des segments coupables (calculée une fois par victime et par tick ;
 	-- une coupe ne fait que retirer des nœuds, la boîte reste une enveloppe valide)
 	local function boundsOf(victim: Victim): { number }
@@ -1108,7 +1135,7 @@ local function stepSnips(actors: { Types.Actor }, now: number, truce: boolean, d
 		end
 		-- segment k = [nœud k − 1, nœud k] pour k > G : la boîte part du nœud G (la tête si G = 0)
 		if victim.guard == 0 then
-			grow(victim.state.trail:head() or victim.actor.pos)
+			grow(headOf(victim))
 		end
 		for i = math.max(1, victim.guard), #nodes do
 			grow(nodes[i])
@@ -1145,7 +1172,7 @@ local function stepSnips(actors: { Types.Actor }, now: number, truce: boolean, d
 		end
 		return SnipRules.findCut({
 			nodes = nodes,
-			head = victim.state.trail:head() or victim.actor.pos,
+			head = headOf(victim),
 			from = from,
 			to = to,
 			radius = radius,

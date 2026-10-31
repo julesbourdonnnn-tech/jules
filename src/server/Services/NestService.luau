@@ -5,9 +5,14 @@
 -- Responsabilités :
 --   * attribution du Nid 1-12 dès PlayerAdded (joueurs déjà présents compris) : le Nid libre le
 --     plus proche (distance entre centres) de celui d'un ami Roblox présent (Player:IsFriendsWith en
---     pcall, mis en cache), sinon le plus petit libre ; plus de Nid : slot 0 + Feedback d'information
---     (un Nid libéré plus tard lui est attribué) ; player.RespawnLocation = Spawn du Nid ; personnage
---     placé sur son Nid tourné vers le centre (PivotTo → Signals.ServerMoved) à chaque apparition
+--     pcall, EN PARALLÈLE, attente bornée par Settings.FriendLookupDeadline, réponses mises en cache
+--     et partagées : friendsCached), sinon le plus petit libre ; plus de Nid : slot 0 + Feedback
+--     d'information (un Nid libéré plus tard lui est attribué) ; player.RespawnLocation = Spawn du
+--     Nid ; personnage placé sur son Nid tourné vers le centre (PivotTo → Signals.ServerMoved) à
+--     chaque apparition
+--   * port sûr (inOwnHarbor) : jamais la seule position du client (il possède son personnage) ;
+--     la position de confiance est la dernière validée par MoveCheck (tick de CongaService), ou le
+--     placement serveur tant qu'aucun tick ne l'a remplacé ; refus pendant une restriction MoveCheck
 --   * attributs de Nest_XX (OwnerUserId, OwnerName, Color, Supernovas, PerchCount, PerchData, Title,
 --     NestTheme, LineStyle) et du Player (Slot, Zen, VIP, Title, LineStyle, NestTheme, Supernovas) —
 --     docs §3.2 et §3.3 ; couleur du propriétaire (Cosmetics.NestColors[slot]) ou thème, via
@@ -18,14 +23,17 @@
 --     l'anneau de progression vers la Supernova est calculé par le client (glow, supernovas répliqués)
 --   * Signals.PlayerReady(player, slot) une fois, quand le profil est chargé ET le Nid attribué
 --   * réglages : remote SetSetting — clés de Config/Settings, type attendu, valeurs ; zen : dans son
---     port sûr, recharge 60 s, Feedback zenOn/zenOff, Analytics ZenToggled ; privateNoSnip :
+--     port sûr, recharge 60 s, Feedback zenOn/zenOff, Analytics ZenToggled ; quitter le Zen exige
+--     une file VIDE (Feedback zenBankFirst) : une file attrapée sans risque garde le plafond Zen du
+--     Conga Bonus jusqu'à son encaissement (longueur suivie par Signals.LineChanged) ; privateNoSnip :
 --     propriétaire du serveur privé (réglage de serveur en mémoire) ; Signals.SettingChanged
 --   * cosmétiques : remote EquipCosmetic, unlock() (stocké + Celebrate "unlock"), grantTemporary()
 --     (session), hasUnlock() (gratuit, stocké, temporaire, pass, R atteint, statistique, Atlas)
 -- GDD : §3 (0,0 s), §4.16 (Zen, serveurs privés), §5.3, §6.1, §6.6, §10.3, §11.3.
 -- Dépendances : DataService, MonetizationService (via Economy/PassEffects), WorldService,
 -- Logic/WorldLayout, Config/{Settings,Cosmetics,Zones,Balance}, Signals, Util/Notify,
--- Util/RateLimit, Util/Analytics, Shared/Util/Clock, Economy/Collection.
+-- Util/RateLimit, Util/Analytics, Util/MoveCheck (lecture seule), Shared/Util/Clock,
+-- Economy/Collection.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -45,6 +53,7 @@ local Signals = require(Server.Signals)
 local Notify = require(Server.Util.Notify)
 local RateLimit = require(Server.Util.RateLimit)
 local Analytics = require(Server.Util.Analytics)
+local MoveCheck = require(Server.Util.MoveCheck)
 local Collection = require(Server.Economy.Collection)
 local PassEffects = require(Server.Economy.PassEffects)
 local DataService = require(script.Parent.DataService)
@@ -52,6 +61,12 @@ local MonetizationService = require(script.Parent.MonetizationService)
 local WorldService = require(script.Parent.WorldService)
 
 local NestService = {}
+
+-- Réglages techniques (modifiables par les tests avant l'arrivée des joueurs)
+NestService.Settings = {
+	-- attente maximale (s) des réponses d'amitié avant de choisir un Nid : au-delà, plus petit libre
+	FriendLookupDeadline = 1,
+}
 
 -- Hauteur du personnage au-dessus du repère du Nid au sol (placement, studs)
 local SPAWN_LIFT = 3
@@ -92,6 +107,13 @@ local perchCountOf: { [Player]: number } = {}
 local perchDataOf: { [Player]: string } = {}
 local readyFired: { [Player]: boolean } = {}
 local charConns: { [Player]: RBXScriptConnection } = {}
+-- Dernier placement serveur : position du personnage `character` juste après PivotTo, et dernière
+-- position validée de MoveCheck à ce moment (`before`) ; le placement fait foi tant que MoveCheck
+-- n'a pas changé de référence (aucun tick depuis)
+type Placement = { character: Model, pos: Vector3, before: Vector3? }
+local placed: { [Player]: Placement } = {}
+-- Longueur de la file (Signals.LineChanged) ; absente = file vide
+local lineLength: { [Player]: number } = {}
 -- joueurs partis (faible) : un thread d'attribution qui reprend après un yield s'arrête
 local gone: { [Player]: boolean } = setmetatable({}, { __mode = "k" }) :: any
 local privateNoSnip = false
@@ -108,18 +130,31 @@ local function ownerColor(slot: number): Color3
 	return Cosmetics.NestColors[slot] or Cosmetics.FreeNestColor
 end
 
+-- Amitié déjà connue (dans un sens ou dans l'autre) ; nil si jamais vérifiée
+local function cachedFriendship(a: Player, b: Player): boolean?
+	local cache = friendCache[a]
+	local known = if cache then cache[b.UserId] else nil
+	if known == nil then
+		local other = friendCache[b]
+		known = if other then other[a.UserId] else nil
+	end
+	return known
+end
+
+-- Amitié Roblox (yield : appel web) ; un échec compte comme « pas amis » sans être mémorisé
 local function isFriend(player: Player, other: Player): boolean
-	local known = friendCache[player] and friendCache[player][other.UserId]
+	local known = cachedFriendship(player, other)
 	if known ~= nil then
 		return known
 	end
 	local ok, result = pcall(function()
 		return player:IsFriendsWith(other.UserId)
 	end)
-	local friends = ok and result == true
 	if not ok then
 		warn(`[NestService] IsFriendsWith impossible pour {player.Name} :`, result)
+		return false
 	end
+	local friends = result == true
 	-- l'appel yield : rien n'est mémorisé si l'un des deux est parti entre-temps (fuite)
 	if gone[player] or gone[other] then
 		return friends
@@ -214,8 +249,33 @@ local function placeCharacter(player: Player, character: Model?)
 	if slot == 0 or character == nil or character.Parent == nil then
 		return
 	end
-	character:PivotTo(WorldLayout.nestCFrame(slot) + Vector3.new(0, SPAWN_LIFT, 0))
+	local cf = WorldLayout.nestCFrame(slot) + Vector3.new(0, SPAWN_LIFT, 0)
+	character:PivotTo(cf)
+	local root = character:FindFirstChild("HumanoidRootPart")
+	placed[player] = {
+		character = character,
+		pos = if root and root:IsA("BasePart") then root.Position else cf.Position,
+		before = MoveCheck.lastValid(player),
+	}
 	Signals.ServerMoved:Fire(player)
+end
+
+-- Position de confiance du joueur : la dernière validée par MoveCheck (CongaService la fait avancer
+-- à chaque tick), ou le placement serveur tant que MoveCheck n'a pas encore pris le relais ; nil
+-- pendant une restriction (retour forcé récent) ou sans aucune référence.
+local function trustedPosition(player: Player): Vector3?
+	if MoveCheck.isRestricted(player, Clock.now()) then
+		return nil
+	end
+	local valid = MoveCheck.lastValid(player)
+	local mark = placed[player]
+	if mark then
+		if mark.character == player.Character and valid == mark.before then
+			return mark.pos
+		end
+		placed[player] = nil -- MoveCheck a une référence plus récente (ou nouveau personnage)
+	end
+	return valid
 end
 
 -- Slot libre le plus proche d'un ami présent, sinon le plus petit libre ; 0 si tout est pris
@@ -238,36 +298,61 @@ local function chooseSlot(friendSlots: { number }): number
 	return best
 end
 
+-- Nids des amis présents. Chaque vérification (IsFriendsWith, appel web qui yield) part dans son
+-- propre thread : les appels se font en parallèle et l'attente est bornée par
+-- Settings.FriendLookupDeadline (une API d'amis lente ou en panne ne retarde jamais l'arrivée sur
+-- son Nid). Une réponse tardive est quand même mise en cache, mais ignorée pour ce choix.
+type FriendSlot = { slot: number, owner: Player }
+
+local function lookupFriendSlots(player: Player): { FriendSlot }
+	local found: { FriendSlot } = {}
+	local pending = 0
+	local closed = false
+	for slot, owner in slotOwner do
+		if owner ~= player then
+			local known = cachedFriendship(player, owner)
+			if known == true then
+				table.insert(found, { slot = slot, owner = owner })
+			elseif known == nil then
+				pending += 1
+				task.spawn(function()
+					local friends = isFriend(player, owner)
+					pending -= 1
+					if friends and not closed then
+						table.insert(found, { slot = slot, owner = owner })
+					end
+				end)
+			end
+		end
+	end
+	local elapsed = 0
+	local deadline = NestService.Settings.FriendLookupDeadline
+	while pending > 0 and elapsed < deadline and not gone[player] do
+		elapsed += task.wait()
+	end
+	closed = true
+	return found
+end
+
 local function assign(player: Player)
 	if playerSlot[player] ~= nil or assigning[player] or gone[player] then
 		return
 	end
 	assigning[player] = true
 	-- amitiés d'abord (peut yield) : le choix du slot se fait ensuite d'un seul tenant
-	local others: { { slot: number, owner: Player } } = {}
-	for slot, owner in slotOwner do
-		table.insert(others, { slot = slot, owner = owner })
-	end
-	local friendSlots: { number } = {}
-	for _, entry in others do
-		if gone[player] then
-			break -- parti pendant une vérification d'amitié
-		end
-		if isFriend(player, entry.owner) and slotOwner[entry.slot] == entry.owner then
-			table.insert(friendSlots, entry.slot)
-		end
-	end
+	local friends = lookupFriendSlots(player)
 	assigning[player] = nil
 	if gone[player] or player.Parent == nil or playerSlot[player] ~= nil then
 		return
 	end
-	-- un ami parti pendant l'attente ne compte plus
+	-- un ami parti (ou remplacé) pendant l'attente ne compte plus
 	local present: { number } = {}
-	for _, slot in friendSlots do
-		if slotOwner[slot] ~= nil then
-			table.insert(present, slot)
+	for _, entry in friends do
+		if slotOwner[entry.slot] == entry.owner then
+			table.insert(present, entry.slot)
 		end
 	end
+	table.sort(present)
 	local slot = chooseSlot(present)
 	playerSlot[player] = slot
 	if slot == 0 then
@@ -326,6 +411,8 @@ local function onPlayerRemoving(player: Player)
 	perchCountOf[player] = nil
 	perchDataOf[player] = nil
 	readyFired[player] = nil
+	placed[player] = nil
+	lineLength[player] = nil
 	for _, cache in friendCache do
 		cache[player.UserId] = nil
 	end
@@ -418,6 +505,14 @@ function NestService.Start()
 		-- VIP, thème « Or Royal », styles de pass : possession lue dynamiquement
 		applyIdentity(player)
 	end)
+	-- longueur de la file (règle du Zen) ; le signal du départ arrive parfois après le nettoyage
+	Signals.LineChanged:Connect(function(player: Player, n: number)
+		if gone[player] or player.Parent == nil or type(n) ~= "number" or not (n > 0) then
+			lineLength[player] = nil
+			return
+		end
+		lineLength[player] = n
+	end)
 
 	Net.event("SetSetting").OnServerEvent:Connect(onSetSetting)
 	Net.event("EquipCosmetic").OnServerEvent:Connect(onEquipCosmetic)
@@ -436,25 +531,41 @@ function NestService.playerAt(slot: number): Player?
 	return slotOwner[slot]
 end
 
--- Le joueur (position serveur actuelle ou `pos`) est-il dans le port sûr de SON Nid ?
+-- Le joueur est-il dans le port sûr de SON Nid ? Avec `pos` (position fournie par un service) :
+-- ce point. Sans `pos` (remotes Supernova, Zen) : le personnage vivant ET sa position de confiance
+-- (dernière validée par MoveCheck, ou placement serveur) y sont tous deux ; la position du client
+-- seule ne suffit jamais (il la contrôle : téléportation au Nid le temps d'un remote).
 function NestService.inOwnHarbor(player: Player, pos: Vector3?): boolean
 	local slot = playerSlot[player] or 0
 	if slot == 0 then
 		return false
 	end
-	local at = pos
-	if at == nil then
-		local character = player.Character
-		local root = if character then character:FindFirstChild("HumanoidRootPart") else nil
-		if root == nil or not root:IsA("BasePart") then
-			return false
-		end
-		at = root.Position
+	if pos ~= nil then
+		return typeof(pos) == "Vector3" and WorldLayout.inOwnHarbor(slot, pos)
 	end
-	if typeof(at) ~= "Vector3" then
+	local character = player.Character
+	if character == nil then
 		return false
 	end
-	return WorldLayout.inOwnHarbor(slot, at :: Vector3)
+	local root = character:FindFirstChild("HumanoidRootPart")
+	if root == nil or not root:IsA("BasePart") then
+		return false
+	end
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+	if humanoid and humanoid.Health <= 0 then
+		return false
+	end
+	local trusted = trustedPosition(player)
+	if trusted == nil or not WorldLayout.inOwnHarbor(slot, trusted) then
+		return false
+	end
+	return WorldLayout.inOwnHarbor(slot, root.Position)
+end
+
+-- Amitié Roblox déjà vérifiée par une attribution de Nid : true / false, nil si inconnue (sans
+-- yield ; CrewService peut la relire au lieu de refaire l'appel web)
+function NestService.friendsCached(a: Player, b: Player): boolean?
+	return cachedFriendship(a, b)
 end
 
 -- Ramène le personnage sur son Nid (PivotTo + Signals.ServerMoved)
@@ -564,6 +675,12 @@ function NestService.applySetting(player: Player, key: string, value: any): (boo
 	if def.harborOnly and not NestService.inOwnHarbor(player) then
 		Notify.feedback(player, "feedback.notInHarbor", {}, "warning")
 		return false, "feedback.notInHarbor"
+	end
+	if key == "zen" and value ~= true and (lineLength[player] or 0) > 0 then
+		-- une file attrapée en Zen (sans risque de coupe) s'encaisse avec le plafond Zen (GDD §4.16 :
+		-- « le plafond garde la poursuite plus rentable ») : on ne quitte pas le Zen à la porte
+		Notify.feedback(player, "feedback.zenBankFirst", {}, "warning")
+		return false, "feedback.zenBankFirst"
 	end
 	local now = Clock.now()
 	if def.cooldown then
@@ -730,6 +847,8 @@ function NestService.debugTracked(player: Player): boolean
 		or perchDataOf[player] ~= nil
 		or readyFired[player] ~= nil
 		or charConns[player] ~= nil
+		or placed[player] ~= nil
+		or lineLength[player] ~= nil
 	then
 		return true
 	end

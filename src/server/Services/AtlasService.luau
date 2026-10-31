@@ -19,6 +19,11 @@
 --     choisi, qui reçoit l'étoile) ; « Tout fusionner » : la fusion qui augmente le plus le revenu
 --     perché d'abord, tant que la Stardust suffit ; Signals.Fused ; Celebrate "starforge"
 --   * libération (tout ou rien) : Stardust = Formulas.releaseDust ; jamais un Cosmique ni un verrouillé
+--   * réplication de « nebbies » (DataService envoie la clé ENTIÈRE, 11-22 Ko avec 300-600 Nebbies) :
+--     les changements du jeu (parade, débordement) partent tout de suite ; ceux demandés par
+--     l'interface (verrou, fusion, libération, jusqu'à 6 / s) au plus une fois par
+--     Settings.NebbiesPatchInterval (le premier tout de suite, les suivants regroupés en fin de
+--     fenêtre). La sauvegarde écrit le profil entier : rien n'est différé pour elle.
 -- GDD : §4.9, §4.13, §4.14, §5.4, §14.2 (Release_<rareté>, Starforge_<★>).
 -- Dépendances : DataService, MonetizationService (via Economy/PassEffects), NestService,
 -- EconomyService, Logic/Formulas, Config/{Nebbies,Quests,Balance}, Signals, Util/Notify,
@@ -49,6 +54,12 @@ local EconomyService = require(script.Parent.EconomyService)
 
 local AtlasService = {}
 
+-- Réglages techniques (modifiables par les tests)
+AtlasService.Settings = {
+	-- intervalle minimal (s) entre deux envois de « nebbies » dus à l'interface (≈ 2 Hz)
+	NebbiesPatchInterval = 0.5,
+}
+
 -- Longueur maximale d'un uid ("u" + 11 chiffres) et taille maximale d'une libération en lot
 local UID_MAX_LENGTH = 12
 local RELEASE_MAX = 50
@@ -59,6 +70,9 @@ local FUSE_ALL_MAX = 2000
 local perchedCache: { [Player]: { string } } = {}
 local atlasCache: { [Player]: number } = {}
 local lastPerchCount: { [Player]: number } = {}
+-- Réplication de « nebbies » limitée : fenêtre ouverte, changement en attente de fin de fenêtre
+local patchHold: { [Player]: boolean } = {}
+local patchPending: { [Player]: boolean } = {}
 -- Joueurs partis (faible) : DataService garde le profil pendant la sauvegarde de départ, un appel
 -- tardif ne doit pas recréer d'état par joueur (il ne serait plus jamais vidé)
 local gone: { [Player]: boolean } = setmetatable({}, { __mode = "k" }) :: any
@@ -71,6 +85,43 @@ type Profile = { [string]: any }
 -- ---------------------------------------------------------------------------------------------
 -- Aides
 -- ---------------------------------------------------------------------------------------------
+
+-- Changement de la collection dû au jeu (parade, débordement) : répliqué tout de suite (le patch
+-- part en fin d'image avec la table à jour, l'envoi en attente devient inutile)
+local function collectionChanged(player: Player)
+	patchPending[player] = nil
+	DataService.markDirty(player, "nebbies")
+end
+
+-- Fin de fenêtre : envoie le changement en attente (et rouvre une fenêtre), sinon la ferme
+local function releasePatchHold(player: Player)
+	if gone[player] or player.Parent == nil then
+		patchHold[player] = nil
+		patchPending[player] = nil
+		return
+	end
+	if patchPending[player] then
+		patchPending[player] = nil
+		DataService.markDirty(player, "nebbies")
+		task.delay(AtlasService.Settings.NebbiesPatchInterval, releasePatchHold, player)
+	else
+		patchHold[player] = nil
+	end
+end
+
+-- Changement demandé par l'interface (verrou, fusion, libération) : au plus un envoi par fenêtre
+local function collectionChangedByRequest(player: Player)
+	if gone[player] then
+		return
+	end
+	if patchHold[player] then
+		patchPending[player] = true
+		return
+	end
+	patchHold[player] = true
+	DataService.markDirty(player, "nebbies")
+	task.delay(AtlasService.Settings.NebbiesPatchInterval, releasePatchHold, player)
+end
 
 local function rarityKey(rarity: number): string
 	local def = Nebbies.Rarities[rarity]
@@ -209,9 +260,6 @@ local function releaseUids(player: Player, data: Profile, uids: { string }): (nu
 			end
 		end
 	end
-	if count > 0 then
-		DataService.markDirty(player, "nebbies")
-	end
 	for rarity, dust in byRarity do
 		EconomyService.addStardust(player, dust, `Release_{rarityKey(rarity)}`, "Gameplay")
 	end
@@ -270,6 +318,7 @@ local function enforceStash(player: Player, data: Profile, arrivals: { string })
 	end
 	local count, dust = releaseUids(player, data, victims)
 	if count > 0 then
+		collectionChanged(player)
 		Notify.feedback(player, "feedback.autoRelease", { count = count, dust = dust }, "info")
 	end
 end
@@ -328,6 +377,8 @@ function AtlasService.Start()
 		perchedCache[player] = nil
 		atlasCache[player] = nil
 		lastPerchCount[player] = nil
+		patchHold[player] = nil
+		patchPending[player] = nil
 	end)
 	for _, player in Players:GetPlayers() do
 		if DataService.isLoaded(player) then
@@ -453,7 +504,7 @@ function AtlasService.addNebbies(
 	if #created == 0 then
 		return {}
 	end
-	DataService.markDirty(player, "nebbies")
+	collectionChanged(player)
 	DataService.markDirty(player, "nextUid")
 	if badgesChanged then
 		DataService.markDirty(player, "badges")
@@ -587,7 +638,7 @@ local function doFuse(player: Player, data: Profile, uid: string, copies: { stri
 		data.nebbies[copy] = nil
 	end
 	rec.st = stars
-	DataService.markDirty(player, "nebbies")
+	collectionChangedByRequest(player)
 	Signals.Fused:Fire(player, stars)
 	return stars
 end
@@ -831,7 +882,7 @@ function AtlasService.fuseAllDetailed(player: Player): (number, string?, { [stri
 		end
 	end
 	if fused > 0 and best then
-		DataService.markDirty(player, "nebbies")
+		collectionChangedByRequest(player)
 		Notify.celebrate(player, "starforge", {
 			uid = best.uid,
 			s = best.s,
@@ -880,6 +931,7 @@ function AtlasService.releaseDetailed(player: Player, uids: { Types.Uid }): (num
 	EconomyService.settle(player)
 	local count, dust = releaseUids(player, data, list)
 	if count > 0 then
+		collectionChangedByRequest(player)
 		Notify.feedback(player, "feedback.released", { count = count, dust = dust }, "reward")
 		Notify.celebrate(player, "release", { count = count, dust = dust })
 		refresh(player, data)
@@ -905,14 +957,18 @@ function AtlasService.setLock(player: Player, uid: Types.Uid, locked: boolean): 
 	local value = if locked then true else nil
 	if rec.lk ~= value then
 		rec.lk = value
-		DataService.markDirty(player, "nebbies")
+		collectionChangedByRequest(player)
 	end
 	return true
 end
 
 -- Diagnostic (tests de fuite) : un état par joueur est-il encore gardé pour `player` ?
 function AtlasService.debugTracked(player: Player): boolean
-	return perchedCache[player] ~= nil or atlasCache[player] ~= nil or lastPerchCount[player] ~= nil
+	return perchedCache[player] ~= nil
+		or atlasCache[player] ~= nil
+		or lastPerchCount[player] ~= nil
+		or patchHold[player] ~= nil
+		or patchPending[player] ~= nil
 end
 
 return AtlasService

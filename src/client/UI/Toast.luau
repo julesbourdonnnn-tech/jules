@@ -1,6 +1,9 @@
 --!strict
 -- Notifications « toast » empilées en haut de l'écran (3 max, 3 s chacune).
 --   Toast.show("Quest complete!", "success")
+-- La pile commence SOUS les bannières (Banners : y = 72, 72 de haut, décalées de 34 pendant la
+-- barre de serveur de la Balise, donc jusqu'à y = 178) : un toast ne cache jamais une bannière,
+-- la pastille d'événement ni la barre de la Balise (GDD §10.2 : haut centre, sans chevauchement).
 
 local Root = require(script.Parent.Root)
 local Theme = require(script.Parent.Theme)
@@ -9,6 +12,7 @@ local Juice = require(script.Parent.Juice)
 
 local MAX_VISIBLE = 3
 local LIFETIME = 3
+local TOP_Y = 180 -- sous la zone des bannières (72 + 72 + 34 de barre de Balise, + 2 de marge)
 
 local Toast = {}
 
@@ -32,7 +36,7 @@ local function getContainer(): Frame
 	container = Create("Frame", {
 		Name = "Stack",
 		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, 56),
+		Position = UDim2.new(0.5, 0, 0, TOP_Y),
 		Size = UDim2.fromOffset(420, 200),
 		BackgroundTransparency = 1,
 		Parent = safe,

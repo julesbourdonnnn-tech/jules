@@ -38,7 +38,12 @@ local Settings = {
 	SAVE_ATTEMPTS = 4,
 	AUTOSAVE_INTERVAL = 90,
 	CLOSE_TIMEOUT = 25,
+	-- reconnexion sur le même serveur : attente max de la sauvegarde de départ de l'ancienne session
+	REJOIN_WAIT = 25,
 }
+
+local LOAD_FAILED_MESSAGE =
+	"Your data could not be loaded. Please rejoin in a moment. / Tes données n'ont pas pu être chargées, reviens dans un instant."
 
 type Record = {
 	data: { [string]: any }?,
@@ -63,6 +68,8 @@ local pendingPatch: { [Player]: { [string]: boolean } } = {}
 local flushScheduled = false
 local released: { [Player]: boolean } = {}
 local releasing: { [Player]: boolean } = {}
+-- sauvegardes de départ en cours, par UserId (l'instance Player change à la reconnexion)
+local pendingRelease: { [number]: number } = {}
 local beforeSave: { (Player, { [string]: any }) -> () } = {}
 
 local snapshotRemote: RemoteEvent
@@ -250,6 +257,11 @@ local function save(player: Player, release: boolean): boolean
 	if released[player] then
 		return true
 	end
+	-- session terminée pendant l'attente (départ sauvegardé, état nettoyé) : une sauvegarde mise en
+	-- file derrière celle du départ ne doit ni écrire ni reprendre le verrou de session
+	if profiles[player] ~= data then
+		return false
+	end
 	if not release and releasing[player] then
 		return false
 	end
@@ -273,6 +285,28 @@ local function onPlayerAdded(player: Player)
 	if profiles[player] then
 		return
 	end
+	-- Reconnexion sur le MÊME serveur : la sauvegarde de départ de l'ancienne session (même UserId,
+	-- autre instance Player) est peut-être encore en cours (attente d'une autosave, retries). Charger
+	-- maintenant lirait des données périmées (notre propre JobId ne compte pas comme verrou) que
+	-- cette session réécrirait ensuite : on attend qu'elle se termine.
+	local userId = player.UserId
+	if pendingRelease[userId] then
+		local start = os.clock()
+		while pendingRelease[userId] and player.Parent ~= nil and os.clock() - start < Settings.REJOIN_WAIT do
+			task.wait(0.1)
+		end
+		if player.Parent == nil then
+			return
+		end
+		if pendingRelease[userId] then
+			-- toujours en cours : jamais de données périmées, le joueur reviendra dans un instant
+			warn(
+				`[DataService] sauvegarde de départ de {player.Name} toujours en cours : chargement refusé`
+			)
+			player:Kick(LOAD_FAILED_MESSAGE)
+			return
+		end
+	end
 	local ok, raw = loadRecord(player)
 	if player.Parent == nil then
 		-- parti pendant le chargement : libérer le verrou sans toucher aux données
@@ -290,9 +324,7 @@ local function onPlayerAdded(player: Player)
 		return
 	end
 	if not ok then
-		player:Kick(
-			"Your data could not be loaded. Please rejoin in a moment. / Tes données n'ont pas pu être chargées, reviens dans un instant."
-		)
+		player:Kick(LOAD_FAILED_MESSAGE)
 		return
 	end
 	local data = prepare(raw)
@@ -305,7 +337,15 @@ end
 
 local function onPlayerRemoving(player: Player)
 	if profiles[player] then
-		save(player, true)
+		local userId = player.UserId
+		pendingRelease[userId] = (pendingRelease[userId] or 0) + 1
+		-- protégé : une erreur ne doit jamais laisser ce UserId « en cours de départ » pour toujours
+		local ok, err = pcall(save, player, true)
+		if not ok then
+			warn(`[DataService] sauvegarde de départ de {player.Name} en erreur :`, err)
+		end
+		local left = (pendingRelease[userId] or 1) - 1
+		pendingRelease[userId] = if left > 0 then left else nil
 	end
 	profiles[player] = nil
 	pendingPatch[player] = nil
