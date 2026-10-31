@@ -14,7 +14,13 @@
 --         plus STILL_CREDIT s : pas de « banque » de téléportation)
 --       - soutenue, sur SUSTAIN_WINDOW (1 s) de positions valides : la marge fixe de 4 studs n'est
 --         comptée qu'une fois sur la fenêtre (appliquée à chaque tick de 0,1 s, elle laisserait
---         passer une vitesse ×4)
+--         passer une vitesse ×4). Arrêt (gel réseau) : pendant un gel, le serveur reçoit encore la
+--         position figée avec des instants frais ; une fois le joueur reparti, la fenêtre se mesure
+--         depuis le DÉBUT de cet arrêt (Sample.since) et s'allonge du temps écoulé depuis le départ
+--         (SUSTAIN_WINDOW + (now − départ)). Au tick du départ elle vaut exactement SUSTAIN_WINDOW :
+--         le crédit d'arrêt reste borné par la fenêtre soutenue (un bond de 40 studs après 2 s
+--         d'arrêt reste signalé), mais un joueur honnête qui court après un gel de 0,7 à 1,5 s n'est
+--         plus ramené, restreint, signalé « instable » ni compté pour l'exclusion des classements
 --   * altitude > sol + 14 pendant plus de 1,5 s, r > 182, Y < −5 ou racine à plus de
 --     MaxBelowGround (2, Conga/Tuning) sous la surface de l'île (passe-muraille) → retour
 --     immédiat ; une racine sous la surface pendant l'exemption est seulement refusée ("flag",
@@ -34,13 +40,24 @@
 --   * une infraction SIGNALE seulement (verdict "flag" : ce tick ne peut ni attraper, ni couper, ni
 --     encaisser, ni voler la Comète) ; 3 infractions en 5 s → "rewind" vers la dernière position
 --     valide, puis 3 s de restriction (isRestricted)
---   * rafale (troisième valeur de step, lastWasBurst) : position ACCEPTÉE ("ok", tolérance des gels
---     réseau inchangée) mais plus longue que la règle du GDD pour UN tick (vmax × dt × 1,5 + 4, dt =
---     durée réelle du tick, depuis l'appel précédent, bornée à BURST_MAX_TICK) : le crédit d'arrêt
---     (jusqu'à STILL_CREDIT s) et la fenêtre soutenue laisseraient sinon passer un bond de 28 à 58
---     studs en 0,1 s après 1 s d'immobilité. Un tick en rafale ne doit AGIR sur rien (ni capture,
---     ni coupe, ni vol ou ramassage de Comète, ni Gloomwisp) : CongaService pose ses miettes et
---     balaie seulement sa propre porte (parade d'un rattrapage honnête). Jamais une infraction.
+--   * rafale (troisième valeur de step, lastWasBurst, canAct) : position ACCEPTÉE ("ok", tolérance
+--     des gels réseau inchangée) mais le joueur est « en dette » de BUDGET D'ACTION. Le budget (seau
+--     à jetons, en studs, par joueur) a pour plafond la règle du GDD pour UN tick (vmax × dt × 1,5
+--     + 4, dt = durée réelle du tick, depuis l'appel précédent, bornée à BURST_MAX_TICK), se
+--     remplit à vmax × 1,5 studs/s et chaque position acceptée en retire sa distance XZ depuis la
+--     position valide précédente ; budget < 0 → rafale. Le budget a de la MÉMOIRE d'un tick à
+--     l'autre : un bond (1 s d'arrêt puis 19 à 58 studs) laisse une dette que seuls la marche
+--     lente ou l'arrêt remboursent ; le tick SUIVANT le bond est donc toujours une rafale, de même
+--     qu'une chaîne de petits pas trop longs (4 × 6,25 studs en 0,4 s) : le joueur ne ré-agit
+--     qu'une fois la dette remboursée, à une distance compatible avec 1,5 × vmax depuis sa
+--     dernière position « agissante » (+ un tick de tolérance). Le crédit d'arrêt (jusqu'à
+--     STILL_CREDIT s) et la fenêtre soutenue ne sont plus que des tolérances de position. Un tick
+--     en rafale ne doit AGIR sur rien (ni capture, ni coupe, ni vol ou ramassage de Comète, ni
+--     encaissement de la Comète, ni Gloomwisp, ni anneau de la Balise, ni port sûr de NestService) :
+--     CongaService pose ses miettes et balaie seulement sa propre porte (parade d'un rattrapage
+--     honnête). Jamais une infraction, jamais de retour. Coût honnête : après un gel réseau de f s
+--     à la vitesse v, ≈ (v × (f + 0,1) − plafond) / (0,05 × v) ticks sans action en continuant de
+--     courir (gel de 0,7 s : 0,8 s ; 1 s : 1,4 s), trois fois moins à l'arrêt
 --   * période de grâce (exemption de 3 s après reset, ou restriction après un retour) : les
 --     positions encore « en vol » ne déclenchent pas de nouveau retour par infractions et aucun
 --     retour n'y compte comme récidive (recentRewinds) — un joueur honnête qui décroche n'est jamais
@@ -103,14 +120,18 @@ local MAX_BELOW_GROUND = Tuning.MaxBelowGround
 local SPEED_HISTORY = Cfg.SpeedWindow + MAX_ELAPSED + SUSTAIN_WINDOW
 
 type SpeedNote = { t: number, v: number }
-type Sample = { t: number, pos: Vector3 }
+-- since : début de l'arrêt dont fait partie cet échantillon (= t pour une position qui a bougé)
+type Sample = { t: number, pos: Vector3, since: number }
 
 type State = {
 	lastValid: Vector3, -- dernière position acceptée (référence du contrôle et point de retour)
 	validAt: number, -- instant depuis lequel le déplacement autorisé s'accumule (crédit d'arrêt)
 	acceptedAt: number, -- instant de la dernière position acceptée (montée verticale)
 	steppedAt: number, -- instant du dernier appel de step (ou de la dernière référence) : durée du tick
-	burst: boolean, -- dernier tick accepté plus long que la règle d'un tick (rafale : n'agit pas)
+	burst: boolean, -- dernier tick accepté en dette de budget d'action (rafale : n'agit pas)
+	budget: number, -- budget d'action (studs) après le dernier tick accepté ; < 0 : en dette
+	budgetAt: number, -- instant de la dernière mise à jour du budget (remplissage)
+	leftStillAt: number, -- instant du dernier départ d'un arrêt (fenêtre soutenue après un gel)
 	history: { Sample }, -- positions acceptées de la fenêtre soutenue
 	exemptUntil: number,
 	restrictedUntil: number,
@@ -148,7 +169,12 @@ local function anchor(st: State, pos: Vector3, now: number)
 	st.acceptedAt = now
 	st.steppedAt = now
 	st.burst = false
-	st.history = { { t = now, pos = pos } }
+	-- budget plein (borné au plafond du premier tick) : un déplacement imposé par le serveur ne
+	-- laisse jamais de dette
+	st.budget = math.huge
+	st.budgetAt = now
+	st.leftStillAt = -math.huge
+	st.history = { { t = now, pos = pos, since = now } }
 end
 
 local function newState(pos: Vector3, now: number): State
@@ -158,6 +184,9 @@ local function newState(pos: Vector3, now: number): State
 		acceptedAt = now,
 		steppedAt = now,
 		burst = false,
+		budget = math.huge,
+		budgetAt = now,
+		leftStillAt = -math.huge,
 		history = {},
 		exemptUntil = -math.huge,
 		restrictedUntil = -math.huge,
@@ -221,7 +250,13 @@ local function accept(st: State, pos: Vector3, now: number)
 		st.validAt = math.max(st.validAt, now - STILL_CREDIT)
 	end
 	local history = st.history
-	table.insert(history, { t = now, pos = pos })
+	-- arrêt : l'échantillon garde le début de l'arrêt en cours ; départ d'un arrêt noté
+	local last = history[#history]
+	local since = if last and (pos - last.pos).Magnitude <= STILL_EPSILON then last.since else now
+	if last and since == now and last.since < last.t then
+		st.leftStillAt = now
+	end
+	table.insert(history, { t = now, pos = pos, since = since })
 	local cutoff = now - SUSTAIN_WINDOW
 	local first = 1
 	while first < #history and history[first].t < cutoff do
@@ -390,15 +425,34 @@ function MoveCheck.step(
 		-- quand cette position est plus ancienne : référence sans position acceptée depuis)
 		local oldest = st.history[1]
 		if oldest then
-			ok = plausible(player, oldest.pos, oldest.t, pos, now, step, SUSTAIN_WINDOW)
+			-- gel réseau : si cette position fait partie d'un arrêt QUITTÉ depuis, la fenêtre part du
+			-- début de l'arrêt et s'allonge du temps écoulé depuis le départ ; au tick du départ elle
+			-- vaut exactement SUSTAIN_WINDOW (crédit d'arrêt toujours borné par la fenêtre)
+			local last = st.history[#st.history]
+			local departing = (pos - st.lastValid).Magnitude > STILL_EPSILON and last.since < last.t
+			local left = if departing then now else st.leftStillAt
+			local from, window = oldest.t, SUSTAIN_WINDOW
+			if oldest.since < oldest.t and oldest.since < left then
+				from = oldest.since
+				window = SUSTAIN_WINDOW + math.max(0, now - left)
+			end
+			ok = plausible(player, oldest.pos, from, pos, now, step, window)
 		end
 	end
 	if ok and not hovering and not underground then
-		-- rafale : la règle du GDD pour UN tick (vmax × dt × 1,5 + 4, dt = durée réelle du tick),
-		-- mesurée depuis la dernière position valide, comme le balayage prev → pos des services. Le
-		-- crédit d'arrêt reste une tolérance (position acceptée), jamais un bond qui agit.
+		-- rafale : budget d'action (seau à jetons, en-tête). Plafond = la règle du GDD pour UN tick
+		-- (vmax × dt × 1,5 + 4, dt = durée réelle du tick) ; remplissage à vmax × 1,5 studs/s ;
+		-- chaque position acceptée en retire sa distance depuis la dernière position valide (le
+		-- balayage prev → pos des services). La dette survit au tick : bond puis action, ou chaîne
+		-- de petits pas trop longs, restent des rafales jusqu'au remboursement. Le crédit d'arrêt
+		-- reste une tolérance (position acceptée), jamais un bond qui agit.
 		local tick = math.clamp(now - tickStart, step, math.max(step, BURST_MAX_TICK))
-		local burst = not plausible(player, st.lastValid, now - tick, pos, now, tick, tick)
+		local vmax = maxSpeed(player, now - tick - Cfg.SpeedWindow, now)
+		local cap = vmax * tick * Cfg.Margin + Cfg.Slack
+		local refill = vmax * Cfg.Margin * math.max(0, now - st.budgetAt)
+		st.budget = math.min(cap, st.budget + refill) - distXZ(pos, st.lastValid)
+		st.budgetAt = now
+		local burst = st.budget < 0
 		accept(st, pos, now)
 		st.burst = burst
 		return "ok", nil, burst
@@ -428,11 +482,23 @@ function MoveCheck.isRestricted(player: Player, now: number): boolean
 	return st ~= nil and now < st.restrictedUntil
 end
 
--- Le dernier tick était-il une rafale : position acceptée ("ok") mais trop longue pour UN tick ?
+-- Le dernier tick était-il une rafale : position acceptée ("ok") mais budget d'action en dette ?
 -- Un tel tick ne capture, ne coupe, ne vole ni ne ramasse rien (seule sa propre porte est balayée)
 function MoveCheck.lastWasBurst(player: Player): boolean
 	local st = states[player]
 	return st ~= nil and st.burst
+end
+
+-- Le joueur peut-il agir depuis sa dernière position valide (lastValid) : ni restreint (retour
+-- récent), ni en dette de budget d'action (rafale) ? Même règle que les captures et les coupes de
+-- CongaService, pour les lectures hors tick (port sûr de NestService). Joueur inconnu : rien à lui
+-- reprocher (true) ; il n'a de toute façon pas de lastValid.
+function MoveCheck.canAct(player: Player, now: number): boolean
+	local st = states[player]
+	if st == nil then
+		return true
+	end
+	return not (now < st.restrictedUntil) and st.budget >= 0
 end
 
 function MoveCheck.lastValid(player: Player): Vector3?
