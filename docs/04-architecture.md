@@ -1329,7 +1329,33 @@ Section tenue par le paquet **logic** (simulation `tests/specs/EconomyPacing.spe
 
 | Date | Clé | Avant → après | Effet mesuré | Raison |
 |---|---|---|---|---|
-| — | — | — | — | Aucun réglage à ce jour : valeurs du GDD. |
+| 31/10/2026 | `Balance.Supernova.Costs[4..12]` (R3 → R4 et au-delà) | 120 M, 300 M, 700 M, 1,8 G, 4 G, 8 G, 14 G, 22 G, 34 G → **240 M, 600 M, 1,4 G, 3,6 G, 8 G, 16 G, 28 G, 44 G, 68 G** (× 2) | Supernova 10 : jour 16 → **21** ; Supernova 6 + ★3 : jour 6 (limite basse) → **7** ; S1, S3 et Atlas inchangés (mesuré seul, formes à 0,4) | Avec les valeurs du GDD, les perchoirs remplis de Légendaires/Mythiques (et leurs étoiles) font exploser le revenu passif après R3 : S10 arrivait 2 jours avant la fenêtre. Premier levier du GDD §4.18 ; `Costs[1] = 400 000` (objectif affiché dès l'accueil, figé par `Contract.spec`), `Costs[2]` et `Costs[3]` (rythme de S3) gardés. |
+| 31/10/2026 | `Balance.Supernova.BeyondBase` | 34 G → **68 G** | — | Raccord sans saut avec `Costs[12]` (R ≥ 12 : `BeyondBase × 1,5^(R − 11)`). |
+| 31/10/2026 | `Balance.Spawn.WeatherFormChance` | 0,4 → **0,2** | 50 % de l'Atlas : jour 6 → **12** ; entrées au jour 28 : 114 → 99 (66 %) ; Supernova 1 : 21,8 → **25,0 min** (moins de Nebbies à ×2-×6 au début) ; S3, S6, S10 inchangées | Les formes météo (4 × 30 entrées) remplissaient l'Atlas deux fois trop vite. Seul levier de `Balance` sur le rythme de l'Atlas ; une fenêtre météo reste visible (1 apparition sur 5 pendant une fenêtre à forme, soit ≈ 1 capture sur 14 au total), la chasse aux formes reste un objectif de J2-J28. Alternative si le design tient aux 40 % : allonger `Zones.*.interval` (contrat). |
+
+**Résultat retenu** (200 joueurs × 28 jours, médianes ; tolérances du GDD §4.18) :
+
+| Jalon | Cible GDD | Tolérance | Valeurs du GDD | Après réglage |
+|---|---|---|---|---|
+| Première parade | 12 s | ≤ 20 s | 10,5 s | 10,5 s |
+| Première amélioration | 20 s | ≤ 30 s | 18,5 s | 18,5 s |
+| Supernova 1 | 25 min | 20-35 min | 21,8 min | **25,0 min** |
+| Supernova 3 | jour 3 | jour 2-4 | jour 3 | jour 3 |
+| Supernova 6 + premier ★3 | jour 7 | jour 6-8 | jour 6 | **jour 7** (★3 dès le jour 2) |
+| 50 % de l'Atlas | jour 14 | jour 10-16 | jour 6 ✗ | **jour 12** |
+| Supernova 10 | jour 21 | jour 18-24 | jour 16 ✗ | **jour 21** |
+| 80 % de l'Atlas | jour 28 | — | non atteint (114/150) | non atteint (99/150), longue traîne |
+
+**Modèle** (`tests/sim/Pacing.luau`, constantes `Pacing.Model`) : joueur de référence du §4.18 (30 min par jour, 35 le premier, hors ligne gratuit 50 % / 8 h, aucun achat), sessions à une heure UTC tirée au hasard (météo et Comètes réelles d'`EventClock`, Starfall compris). Toutes les valeurs de jeu viennent de `Config/*` et de `Logic/Formulas` ; seules les hypothèses de comportement sont propres au modèle :
+- serveur de référence de 8 joueurs actifs (`capScale` 0,75) répartis entre les zones selon une distribution idéale libre (joueurs ∝ valeur de parade apparue par seconde : ≈ 1,2 Prairie, 2,3 Clairière, 4,5 Cratère) ; chaque capture coûte `max(part du flux d'apparition de la zone, marche jusqu'au Nebby le plus proche − Attrait) + 0,3 s + temps de recherche` ;
+- temps de recherche de 10 s par capture, **calibré avant tout réglage** sur le bilan à 5 minutes du GDD §3 (4 à 6 parades et 4 à 6 améliorations : le modèle donne 5 et 5) ;
+- zone choisie selon la capacité de file (< 6 Prairie, < 12 Clairière, sinon Cratère) ; trajet = distance moyenne de la porte aux 20 % de points d'apparition les plus proches ;
+- pertes par coupe : 12 % des Nebbies hors Prairie (aucune sous bouclier débutant) ; Comètes gagnées 1 fois sur 6 (Nebby + 120 s de revenu + 50 Stardust) ;
+- Supernova dès que possible ; sinon améliorations au moins cher d'abord, sauf celles qui coûtent plus de 10 % de la Supernova visée (épargne) ; pendant la chaîne d'accueil du 1er jour, une amélioration par retour au Nid (panneau à une carte, §3), rien avant la 1re parade ;
+- chaîne d'accueil Q1-Q7, calendrier, 3 quêtes du jour (facile et moyenne toujours, difficile 2 jours sur 3, à 25 / 50 / 75 % de la session), Étoile du jour, Grand Défilé ;
+- fin de session : Tout fusionner (meilleur revenu obtenu d'abord), tri des perchoirs, libération automatique des C/U/R en trop contre leur Stardust.
+
+La spec vérifie aussi que la porte est déterministe et qu'elle échoue réellement si l'équilibrage dérive (Supernovas 10 fois moins chères → S1, S6 et S10 hors tolérance).
 
 ---
 

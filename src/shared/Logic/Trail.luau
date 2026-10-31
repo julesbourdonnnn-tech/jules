@@ -15,13 +15,14 @@ export type Trail = {
 	minStep: number, -- distance minimale entre deux points enregistrés
 	length: number, -- longueur totale actuelle de l'historique
 	push: (self: Trail, position: Vector3) -> (),
-	reset: (self: Trail, position: Vector3) -> (),
+	reset: (self: Trail, position: Vector3, seq: number?) -> (),
 	setMaxLength: (self: Trail, maxLength: number) -> (),
 	sample: (self: Trail, count: number, spacing: number, firstGap: number?) -> { Vector3 },
 	head: (self: Trail) -> Vector3?,
 	-- Extension du contrat (paquet « logic », docs/04-architecture.md §12.1) :
 	-- numérotation des points pour le réseau (PathStream). firstSeq = numéro de points[1] ;
 	-- push incrémente, la coupe des vieux points avance firstSeq, reset continue la numérotation.
+	firstSeq: number,
 	lastSeq: (self: Trail) -> number,
 	since: (self: Trail, seq: number, maxCount: number?) -> (number, { Vector3 }),
 }
@@ -32,20 +33,33 @@ Trail.__index = Trail
 local DEFAULT_MIN_STEP = 0.5
 local TELEPORT_DISTANCE = 40 -- un saut plus grand = téléportation : l'historique repart de zéro
 
-function Trail.new(maxLength: number, minStep: number?): Trail
+-- firstSeq (extension logic, défaut 1) : numéro attribué au premier point poussé
+function Trail.new(maxLength: number, minStep: number?, firstSeq: number?): Trail
 	assert(maxLength > 0, "Trail.new : maxLength > 0 attendu")
+	local seq = firstSeq or 1
+	if seq ~= seq or seq == math.huge or seq == -math.huge then
+		seq = 1
+	end
 	local self = setmetatable({
 		points = {},
 		maxLength = maxLength,
 		minStep = minStep or DEFAULT_MIN_STEP,
 		length = 0,
+		firstSeq = math.floor(seq),
 	}, Trail)
 	return self :: any
 end
 
-function Trail.reset(self: Trail, position: Vector3)
+-- `seq` (extension logic, optionnel) : numéro du point de départ ; par défaut la numérotation
+-- continue (lastSeq + 1), un client qui reconstruit un PathSnapshot passe le numéro reçu
+function Trail.reset(self: Trail, position: Vector3, seq: number?)
+	local nextSeq = self.firstSeq + #self.points
+	if seq ~= nil and seq == seq and seq ~= math.huge and seq ~= -math.huge then
+		nextSeq = math.floor(seq)
+	end
 	self.points = { position }
 	self.length = 0
+	self.firstSeq = nextSeq
 end
 
 function Trail.setMaxLength(self: Trail, maxLength: number)
@@ -65,6 +79,7 @@ local function trim(self: Trail)
 		local segment = (second - first).Magnitude
 		if self.length - segment >= self.maxLength then
 			table.remove(points, 1)
+			self.firstSeq += 1
 			self.length -= segment
 		else
 			break
@@ -163,7 +178,7 @@ function Trail.findCut(
 end
 
 -- ---------------------------------------------------------------------------------------------
--- Extension du contrat — paquet « logic » (STUBS, docs/04-architecture.md §12.1, GDD §4.7, §12.4)
+-- Extension du contrat — paquet « logic » (docs/04-architecture.md §12.1, GDD §4.7, §12.4)
 --  * Trail.new(maxLength, minStep?, firstSeq?) : firstSeq (défaut 1) = numéro du premier point
 --  * trail:lastSeq() = firstSeq + #points − 1 (firstSeq − 1 si vide)
 --  * trail:since(seq, maxCount?) → (numéro du 1er point rendu, points de numéro ≥ seq), borné
@@ -173,31 +188,126 @@ end
 --  * Trail.findCutSwept(nodes, from, to, radius, firstSegment, maxDy?, skip?) → (k, point) :
 --    premier segment k ≥ max(2, firstSegment) (segment k = [nodes[k−1], nodes[k]]) dont la
 --    distance XZ au balayage [from, to] ≤ radius et |Δy| ≤ maxDy (défaut 4) ;
---    skip(k, point) = true ignore ce segment (escorte, port sûr). Test à 3,6 studs/tick sans trou.
+--    skip(k, point) = true ignore ce segment (escorte, port sûr). Test continu (segment contre
+--    segment) : aucun trou, quelle que soit la vitesse (3,6 studs/tick au Dash).
 -- ---------------------------------------------------------------------------------------------
 
-function Trail.lastSeq(_self: Trail): number
-	error("TODO(logic): Trail.lastSeq")
+local SEGMENT_EPSILON = 1e-12
+local DEFAULT_MAX_DY = 4
+
+-- Numéro du point le plus récent (firstSeq − 1 si l'historique est vide)
+function Trail.lastSeq(self: Trail): number
+	return self.firstSeq + #self.points - 1
 end
 
-function Trail.since(_self: Trail, _seq: number, _maxCount: number?): (number, { Vector3 })
-	error("TODO(logic): Trail.since")
+-- Points de numéro ≥ seq encore présents (copie), au plus `maxCount` (les plus récents) ;
+-- retourne aussi le numéro du premier point rendu (lastSeq + 1 si aucun)
+function Trail.since(self: Trail, seq: number, maxCount: number?): (number, { Vector3 })
+	local points = self.points
+	local last = self.firstSeq + #points - 1
+	local from = if seq == seq then math.max(self.firstSeq, math.ceil(seq)) else self.firstSeq
+	if maxCount ~= nil then
+		local limit = if maxCount == maxCount then math.floor(maxCount) else 0
+		if limit <= 0 then
+			return last + 1, {}
+		end
+		from = math.max(from, last - limit + 1)
+	end
+	if from > last then
+		return last + 1, {}
+	end
+	local out = table.create(last - from + 1)
+	for s = from, last do
+		out[s - from + 1] = points[s - self.firstSeq + 1]
+	end
+	return from, out
 end
 
-function Trail.segmentDistanceXZ(_a0: Vector3, _a1: Vector3, _b0: Vector3, _b1: Vector3): (number, number, number)
-	error("TODO(logic): Trail.segmentDistanceXZ")
+-- Distance minimale dans le plan XZ entre les segments [a0, a1] et [b0, b1] (algorithme des
+-- points les plus proches d'Ericson, segments dégénérés et parallèles compris).
+-- Retourne (distance, s, t) : points proches a0 + s (a1 − a0) et b0 + t (b1 − b0).
+function Trail.segmentDistanceXZ(a0: Vector3, a1: Vector3, b0: Vector3, b1: Vector3): (number, number, number)
+	local d1x, d1z = a1.X - a0.X, a1.Z - a0.Z
+	local d2x, d2z = b1.X - b0.X, b1.Z - b0.Z
+	local rx, rz = a0.X - b0.X, a0.Z - b0.Z
+	local a = d1x * d1x + d1z * d1z
+	local e = d2x * d2x + d2z * d2z
+	local f = d2x * rx + d2z * rz
+	local s, t
+	if a <= SEGMENT_EPSILON and e <= SEGMENT_EPSILON then
+		s, t = 0, 0
+	elseif a <= SEGMENT_EPSILON then
+		s = 0
+		t = math.clamp(f / e, 0, 1)
+	else
+		local c = d1x * rx + d1z * rz
+		if e <= SEGMENT_EPSILON then
+			t = 0
+			s = math.clamp(-c / a, 0, 1)
+		else
+			local b = d1x * d2x + d1z * d2z
+			local denom = a * e - b * b
+			s = if denom > SEGMENT_EPSILON * a * e then math.clamp((b * f - c * e) / denom, 0, 1) else 0
+			t = (b * s + f) / e
+			if t < 0 then
+				t = 0
+				s = math.clamp(-c / a, 0, 1)
+			elseif t > 1 then
+				t = 1
+				s = math.clamp((b - c) / a, 0, 1)
+			end
+		end
+	end
+	local px, pz = a0.X + d1x * s, a0.Z + d1z * s
+	local qx, qz = b0.X + d2x * t, b0.Z + d2z * t
+	local dx, dz = px - qx, pz - qz
+	return math.sqrt(dx * dx + dz * dz), s, t
 end
 
+-- Premier segment de file coupé par le balayage [from, to] (le plus près de la tête), ou nil.
+-- Retourne (k, point touché sur le segment de la file).
 function Trail.findCutSwept(
-	_nodes: { Vector3 },
-	_from: Vector3,
-	_to: Vector3,
-	_radius: number,
-	_firstSegment: number,
-	_maxDy: number?,
-	_skip: ((k: number, point: Vector3) -> boolean)?
+	nodes: { Vector3 },
+	from: Vector3,
+	to: Vector3,
+	radius: number,
+	firstSegment: number,
+	maxDy: number?,
+	skip: ((k: number, point: Vector3) -> boolean)?
 ): (number?, Vector3?)
-	error("TODO(logic): Trail.findCutSwept")
+	if not (radius >= 0) then -- rejette NaN et négatif
+		return nil, nil
+	end
+	local dyMax = maxDy or DEFAULT_MAX_DY
+	-- boîte XZ du balayage élargie du rayon (élagage segment par segment)
+	local minX = math.min(from.X, to.X) - radius
+	local maxX = math.max(from.X, to.X) + radius
+	local minZ = math.min(from.Z, to.Z) - radius
+	local maxZ = math.max(from.Z, to.Z) + radius
+	if not (minX <= maxX and minZ <= maxZ) then -- NaN dans le balayage
+		return nil, nil
+	end
+	local first = if firstSegment == firstSegment then math.max(2, math.ceil(firstSegment)) else 2
+	for k = first, #nodes do
+		local a = nodes[k - 1]
+		local b = nodes[k]
+		if
+			math.max(a.X, b.X) >= minX
+			and math.min(a.X, b.X) <= maxX
+			and math.max(a.Z, b.Z) >= minZ
+			and math.min(a.Z, b.Z) <= maxZ
+		then
+			local d, s, t = Trail.segmentDistanceXZ(a, b, from, to)
+			if d <= radius then
+				local hit = a + (b - a) * s
+				local sweepY = from.Y + (to.Y - from.Y) * t
+				if math.abs(hit.Y - sweepY) <= dyMax and not (skip and skip(k, hit)) then
+					return k, hit
+				end
+			end
+		end
+	end
+	return nil, nil
 end
 
 return Trail

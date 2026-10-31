@@ -193,21 +193,22 @@ Balance.Stash = {
 
 -- Supernova (§4.12) : Costs[R + 1] = coût de R → R + 1 ; au-delà : BeyondBase × BeyondGrowth^(R − 11)
 Balance.Supernova = {
+	-- Réglage §17 (simulation §4.18) : coûts de R3 → R4 et au-delà × 2 par rapport au GDD
 	Costs = {
 		400000,
 		10000000,
 		40000000,
-		120000000,
-		300000000,
-		700000000,
-		1800000000,
-		4000000000,
+		240000000,
+		600000000,
+		1400000000,
+		3600000000,
 		8000000000,
-		14000000000,
-		22000000000,
-		34000000000,
+		16000000000,
+		28000000000,
+		44000000000,
+		68000000000,
 	},
-	BeyondBase = 34000000000,
+	BeyondBase = 68000000000,
 	BeyondGrowth = 1.5,
 	BeyondFrom = 11,
 	HoldSeconds = 1, -- confirmation maintenue (client)
@@ -356,7 +357,7 @@ Balance.Spawn = {
 	CapScaleDiv = 16,
 	CapScaleMin = 0.5,
 	CapScaleMax = 1.0,
-	WeatherFormChance = 0.4,
+	WeatherFormChance = 0.2, -- réglage §17 (GDD : 0,4) : rythme de l'Atlas
 	WelcomeCount = 3,
 	WelcomeDistance = 12, -- devant la porte
 	DirectedCommons = 6, -- accueil : ≥ 6 Communs…
