@@ -86,6 +86,14 @@ local TRACKER_SIZE = Vector2.new(260, 72)
 local RAIL_Y = 150
 local RAIL_BUTTON = 80
 local RAIL_GAP = 8
+local MIN_TEXT = 18 -- px de référence : plus petite taille de texte lisible (GDD §10.1)
+local RAIL_LABEL_HEIGHT = 22
+local RAIL_LABEL_BOTTOM = 5 -- marge sous le ruban, dans le bouton
+local RAIL_LABEL_OVERHANG = 6 -- débord du ruban de chaque côté du bouton (marge d'écran ≥ 10 px)
+local RAIL_LABEL_BACK = 0.25 -- transparence du fond sombre du ruban
+local STATUS_GAP = 8 -- écart entre les indicateurs d'état (UIListLayout)
+local STATUS_TIME = Vector2.new(64, 22) -- minuteur du boost sous son icône
+local CAPTION_SIZE = Vector2.new(210, 24) -- « Connexion instable », à gauche des indicateurs
 local LINE_SIZE = Vector2.new(360, 56)
 local LINE_Y = 24
 local DASH = 112
@@ -486,7 +494,7 @@ end
 local function buildStatus(parent: Frame)
 	local holder = Widgets.holder(
 		"Status",
-		UDim2.fromOffset(STATUS * 4 + 24, STATUS + 22),
+		UDim2.fromOffset(STATUS * 4 + STATUS_GAP * 3, STATUS + 2 + STATUS_TIME.Y),
 		UDim2.new(1, -MARGIN, 0, MARGIN + MINIMAP + 8),
 		Vector2.new(1, 0),
 		parent
@@ -501,28 +509,32 @@ local function buildStatus(parent: Frame)
 			FillDirection = Enum.FillDirection.Horizontal,
 			HorizontalAlignment = Enum.HorizontalAlignment.Right,
 			SortOrder = Enum.SortOrder.LayoutOrder,
-			Padding = UDim.new(0, 8),
+			Padding = UDim.new(0, STATUS_GAP),
 		}),
 	})
 	statusParts.rookie = statusIcon("Rookie", "◈", Cosmetics.Readability.Rookie, row, 0)
 	statusParts.zen = statusIcon("Zen", "☯", Cosmetics.Readability.Zen, row, 1)
 	local boost = statusIcon("Boost", "×2", Theme.Colors.Gold, row, 2)
 	statusParts.boost = boost
+	-- minuteur ≥ 18 px de référence (GDD §10.1), assez large pour « 20:00 »
 	statusParts.boostTime = Widgets.label({
 		name = "Time",
-		size = UDim2.new(1, 8, 0, 18),
+		size = UDim2.fromOffset(STATUS_TIME.X, STATUS_TIME.Y),
 		position = UDim2.new(0.5, 0, 1, 2),
 		anchor = Vector2.new(0.5, 0),
-		maxSize = 15,
+		maxSize = MIN_TEXT,
 		zIndex = 4,
 		parent = boost,
 	})
 	statusParts.unstable = statusIcon("Unstable", "⚠", Theme.Colors.Warning, row, 3)
+	-- légende à GAUCHE des indicateurs visibles, centrée sur la rangée (placée par updateStatus) :
+	-- jamais sur le minuteur du boost ni sur le suivi de quête
 	local caption = Widgets.label({
 		name = "Caption",
-		size = UDim2.new(1, 0, 0, 18),
-		position = UDim2.new(0, 0, 0, STATUS + 4),
-		maxSize = 15,
+		size = UDim2.fromOffset(CAPTION_SIZE.X, CAPTION_SIZE.Y),
+		position = UDim2.new(0, -STATUS_GAP, 0, STATUS / 2),
+		anchor = Vector2.new(1, 0.5),
+		maxSize = MIN_TEXT,
 		xAlign = Enum.TextXAlignment.Right,
 		color = Theme.Colors.Warning,
 		parent = holder,
@@ -653,21 +665,30 @@ local function buildRail(parent: Frame)
 		holder.LayoutOrder = i
 		local button = Widgets.button("Button", holder, Theme.Colors.Panel, false)
 		local glyph = Widgets.glyph("Icon", def.glyph, button, Theme.Colors.Gold, 40)
-		glyph.Size = UDim2.fromScale(0.7, 0.55)
-		glyph.Position = UDim2.fromScale(0.5, 0.38)
+		glyph.Size = UDim2.fromScale(0.7, 0.5)
+		glyph.Position = UDim2.fromScale(0.5, 0.36)
 		glyph.AutoLocalize = false
+		-- ruban de libellé : texte ≥ 18 px de référence (GDD §10.1) ; il déborde un peu du bouton
+		-- (RAIL_LABEL_OVERHANG de chaque côté) pour que « Collection » / « Améliorer » tiennent à 18 px
 		local label = Widgets.label({
 			name = "Label",
-			size = UDim2.new(1, -6, 0, 18),
-			position = UDim2.new(0.5, 0, 1, -6),
+			size = UDim2.new(1, RAIL_LABEL_OVERHANG * 2, 0, RAIL_LABEL_HEIGHT),
+			position = UDim2.new(0.5, 0, 1, -RAIL_LABEL_BOTTOM),
 			anchor = Vector2.new(0.5, 1),
-			maxSize = 15,
+			maxSize = MIN_TEXT,
 			zIndex = 4,
 			parent = button,
 		})
+		label.BackgroundColor3 = Widgets.STROKE
+		label.BackgroundTransparency = RAIL_LABEL_BACK
+		Widgets.corner(UDim.new(0, 8)).Parent = label
 		bindText(label, def.label)
 		badges[def.panel] = Widgets.badge(button)
-		table.insert(keyCaps, { cap = Widgets.keyCap(button, def.key), keyboard = def.key })
+		-- touche de raccourci dans le coin haut gauche : elle ne masque plus le début du libellé
+		local cap = Widgets.keyCap(button, def.key)
+		cap.AnchorPoint = Vector2.zero
+		cap.Position = UDim2.fromOffset(-4, -4)
+		table.insert(keyCaps, { cap = cap, keyboard = def.key })
 		table.insert(shines, Widgets.shine(button))
 		button.Activated:Connect(function()
 			InputController.togglePanel(def.panel)
@@ -958,6 +979,10 @@ local function updateShield()
 	end
 end
 
+local function shownCount(icon: GuiObject?): number
+	return if icon and icon.Visible then 1 else 0
+end
+
 local function updateStatus(now: number)
 	local player = localPlayer()
 	local zenIcon, boostIcon, boostTime, unstable, caption =
@@ -992,6 +1017,18 @@ local function updateStatus(now: number)
 	end
 	if caption then
 		caption.Visible = isUnstable
+		if isUnstable then
+			-- largeur des indicateurs visibles (alignés à droite) → la légende se cale à leur gauche
+			local shown = shownCount(statusParts.rookie)
+				+ shownCount(zenIcon)
+				+ shownCount(boostIcon)
+				+ shownCount(unstable)
+			local width = shown * STATUS + math.max(0, shown - 1) * STATUS_GAP
+			local position = UDim2.new(1, -(width + STATUS_GAP), 0, STATUS / 2)
+			if caption.Position ~= position then
+				caption.Position = position
+			end
+		end
 	end
 	updateShield()
 end

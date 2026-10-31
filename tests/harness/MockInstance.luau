@@ -17,7 +17,16 @@ local Enum = roblox.Enum
 
 local MockInstance = {}
 
-local states = setmetatable({}, { __mode = "k" })
+-- État de chaque instance rangé DANS l'instance, sous une clé privée. Une table à clés faibles
+-- (instance → état) ne libérait jamais rien : Luau n'a pas d'éphémérons et l'état référence
+-- Parent et enfants, donc chaque arbre d'instances restait vivant jusqu'à la fin de la suite
+-- (plusieurs Go). Rangé dans l'instance, l'état disparaît avec elle.
+local STATE = table.freeze({})
+
+-- état d'une valeur quelconque (nil si ce n'est pas une instance simulée)
+local function stateOf(value: any)
+	return if type(value) == "table" then rawget(value, STATE) else nil
+end
 local MT = {}
 
 MockInstance.warnings = {} :: { string }
@@ -429,7 +438,7 @@ end
 
 function MockInstance.new(className: string, parent: any?)
 	local self = setmetatable({}, MT)
-	states[self] = {
+	rawset(self, STATE, {
 		ClassName = className,
 		Name = className,
 		Parent = nil,
@@ -442,7 +451,7 @@ function MockInstance.new(className: string, parent: any?)
 		attrSignals = {},
 		destroyed = false,
 		fired = {},
-	}
+	})
 	if parent ~= nil then
 		self.Parent = parent
 	end
@@ -450,28 +459,28 @@ function MockInstance.new(className: string, parent: any?)
 end
 
 function MockInstance.is(value: any): boolean
-	return type(value) == "table" and states[value] ~= nil
+	return stateOf(value) ~= nil
 end
 
 function MockInstance.state(inst: any)
-	return states[inst]
+	return stateOf(inst)
 end
 
 -- Fonctions « méthodes » communes
 local Methods = {}
 
 function Methods.IsA(self, className: string): boolean
-	return isA(states[self].ClassName, className)
+	return isA(self[STATE].ClassName, className)
 end
 
 function Methods.FindFirstChild(self, name: string, recursive: boolean?)
-	for _, c in states[self].children do
-		if states[c].Name == name then
+	for _, c in self[STATE].children do
+		if c[STATE].Name == name then
 			return c
 		end
 	end
 	if recursive then
-		for _, c in states[self].children do
+		for _, c in self[STATE].children do
 			local found = Methods.FindFirstChild(c, name, true)
 			if found then
 				return found
@@ -482,8 +491,8 @@ function Methods.FindFirstChild(self, name: string, recursive: boolean?)
 end
 
 function Methods.FindFirstChildOfClass(self, className: string)
-	for _, c in states[self].children do
-		if states[c].ClassName == className then
+	for _, c in self[STATE].children do
+		if c[STATE].ClassName == className then
 			return c
 		end
 	end
@@ -491,13 +500,13 @@ function Methods.FindFirstChildOfClass(self, className: string)
 end
 
 function Methods.FindFirstChildWhichIsA(self, className: string, recursive: boolean?)
-	for _, c in states[self].children do
-		if isA(states[c].ClassName, className) then
+	for _, c in self[STATE].children do
+		if isA(c[STATE].ClassName, className) then
 			return c
 		end
 	end
 	if recursive then
-		for _, c in states[self].children do
+		for _, c in self[STATE].children do
 			local found = Methods.FindFirstChildWhichIsA(c, className, true)
 			if found then
 				return found
@@ -508,34 +517,34 @@ function Methods.FindFirstChildWhichIsA(self, className: string, recursive: bool
 end
 
 function Methods.FindFirstAncestor(self, name: string)
-	local p = states[self].Parent
+	local p = self[STATE].Parent
 	while p do
-		if states[p].Name == name then
+		if p[STATE].Name == name then
 			return p
 		end
-		p = states[p].Parent
+		p = p[STATE].Parent
 	end
 	return nil
 end
 
 function Methods.FindFirstAncestorOfClass(self, className: string)
-	local p = states[self].Parent
+	local p = self[STATE].Parent
 	while p do
-		if states[p].ClassName == className then
+		if p[STATE].ClassName == className then
 			return p
 		end
-		p = states[p].Parent
+		p = p[STATE].Parent
 	end
 	return nil
 end
 
 function Methods.FindFirstAncestorWhichIsA(self, className: string)
-	local p = states[self].Parent
+	local p = self[STATE].Parent
 	while p do
-		if isA(states[p].ClassName, className) then
+		if isA(p[STATE].ClassName, className) then
 			return p
 		end
-		p = states[p].Parent
+		p = p[STATE].Parent
 	end
 	return nil
 end
@@ -561,13 +570,13 @@ function Methods.WaitForChild(self, name: string, timeout: number?)
 end
 
 function Methods.GetChildren(self)
-	return table.clone(states[self].children)
+	return table.clone(self[STATE].children)
 end
 
 function Methods.GetDescendants(self)
 	local out = {}
 	local function walk(inst)
-		for _, c in states[inst].children do
+		for _, c in inst[STATE].children do
 			table.insert(out, c)
 			walk(c)
 		end
@@ -577,12 +586,12 @@ function Methods.GetDescendants(self)
 end
 
 function Methods.IsDescendantOf(self, ancestor)
-	local p = states[self].Parent
+	local p = self[STATE].Parent
 	while p do
 		if p == ancestor then
 			return true
 		end
-		p = states[p].Parent
+		p = p[STATE].Parent
 	end
 	return false
 end
@@ -594,15 +603,15 @@ end
 function Methods.GetFullName(self)
 	local parts = {}
 	local cur = self
-	while cur and states[cur].ClassName ~= "DataModel" do
-		table.insert(parts, 1, states[cur].Name)
-		cur = states[cur].Parent
+	while cur and cur[STATE].ClassName ~= "DataModel" do
+		table.insert(parts, 1, cur[STATE].Name)
+		cur = cur[STATE].Parent
 	end
 	return table.concat(parts, ".")
 end
 
 function Methods.Destroy(self)
-	local st = states[self]
+	local st = self[STATE]
 	if st.destroyed then
 		return
 	end
@@ -621,15 +630,15 @@ function Methods.Destroy(self)
 end
 
 function Methods.ClearAllChildren(self)
-	for _, c in table.clone(states[self].children) do
+	for _, c in table.clone(self[STATE].children) do
 		Methods.Destroy(c)
 	end
 end
 
 function Methods.Clone(self)
-	local st = states[self]
+	local st = self[STATE]
 	local copy = MockInstance.new(st.ClassName)
-	local cst = states[copy]
+	local cst = copy[STATE]
 	cst.Name = st.Name
 	for k, v in st.props do
 		cst.props[k] = v
@@ -672,7 +681,7 @@ function Methods.SetAttribute(self, name: string, value: any)
 	if not ATTRIBUTE_TYPES[t] then
 		error(`SetAttribute: type {t} non supporté par les attributs Roblox ({name})`, 2)
 	end
-	local st = states[self]
+	local st = self[STATE]
 	if st.attrs[name] ~= value then
 		st.attrs[name] = value
 		signalOf(st, "AttributeChanged"):Fire(name)
@@ -684,15 +693,15 @@ function Methods.SetAttribute(self, name: string, value: any)
 end
 
 function Methods.GetAttribute(self, name: string)
-	return states[self].attrs[name]
+	return self[STATE].attrs[name]
 end
 
 function Methods.GetAttributes(self)
-	return table.clone(states[self].attrs)
+	return table.clone(self[STATE].attrs)
 end
 
 function Methods.GetAttributeChangedSignal(self, name: string)
-	local st = states[self]
+	local st = self[STATE]
 	local s = st.attrSignals[name]
 	if not s then
 		s = Signal.new()
@@ -702,43 +711,43 @@ function Methods.GetAttributeChangedSignal(self, name: string)
 end
 
 function Methods.GetPropertyChangedSignal(self, prop: string)
-	return propSignal(states[self], prop)
+	return propSignal(self[STATE], prop)
 end
 
 function Methods.AddTag(self, tag: string)
-	states[self].tags[tag] = true
+	self[STATE].tags[tag] = true
 end
 
 function Methods.RemoveTag(self, tag: string)
-	states[self].tags[tag] = nil
+	self[STATE].tags[tag] = nil
 end
 
 function Methods.HasTag(self, tag: string)
-	return states[self].tags[tag] == true
+	return self[STATE].tags[tag] == true
 end
 
 function Methods.GetTags(self)
 	local out = {}
-	for t in states[self].tags do
+	for t in self[STATE].tags do
 		table.insert(out, t)
 	end
 	return out
 end
 
 function Methods.GetPivot(self)
-	local st = states[self]
+	local st = self[STATE]
 	if isA(st.ClassName, "BasePart") then
 		return st.props.CFrame
 	end
 	local pp = st.props.PrimaryPart
 	if pp then
-		return states[pp].props.CFrame
+		return pp[STATE].props.CFrame
 	end
 	return st.props.WorldPivot or CFrame.new()
 end
 
 function Methods.PivotTo(self, cf)
-	local st = states[self]
+	local st = self[STATE]
 	if isA(st.ClassName, "BasePart") then
 		self.CFrame = cf
 		return
@@ -746,8 +755,8 @@ function Methods.PivotTo(self, cf)
 	local current = Methods.GetPivot(self)
 	local delta = cf * current:Inverse()
 	for _, d in Methods.GetDescendants(self) do
-		if isA(states[d].ClassName, "BasePart") then
-			d.CFrame = delta * states[d].props.CFrame
+		if isA(d[STATE].ClassName, "BasePart") then
+			d.CFrame = delta * d[STATE].props.CFrame
 		end
 	end
 	st.props.WorldPivot = cf
@@ -780,31 +789,31 @@ end
 -- Remotes et Bindables
 function Methods.FireClient(self, player, ...)
 	assert(
-		MockInstance.is(player) and states[player].ClassName == "Player",
+		MockInstance.is(player) and player[STATE].ClassName == "Player",
 		"FireClient : le 1er argument doit être un Player"
 	)
-	table.insert(states[self].fired, { kind = "client", player = player, args = table.pack(...) })
+	table.insert(self[STATE].fired, { kind = "client", player = player, args = table.pack(...) })
 	if MockInstance.onFireClient then
 		MockInstance.onFireClient(self, player, ...)
 	end
 end
 
 function Methods.FireAllClients(self, ...)
-	table.insert(states[self].fired, { kind = "all", args = table.pack(...) })
+	table.insert(self[STATE].fired, { kind = "all", args = table.pack(...) })
 	if MockInstance.onFireAllClients then
 		MockInstance.onFireAllClients(self, ...)
 	end
 end
 
 function Methods.FireServer(self, ...)
-	table.insert(states[self].fired, { kind = "server", args = table.pack(...) })
+	table.insert(self[STATE].fired, { kind = "server", args = table.pack(...) })
 	if MockInstance.onFireServer then
 		MockInstance.onFireServer(self, ...)
 	end
 end
 
 function Methods.InvokeServer(self, ...)
-	local cb = states[self].props.OnServerInvoke
+	local cb = self[STATE].props.OnServerInvoke
 	if MockInstance.localPlayer and cb then
 		return cb(MockInstance.localPlayer, ...)
 	end
@@ -819,18 +828,18 @@ function Methods.InvokeClient(_self)
 end
 
 function Methods.Fire(self, ...)
-	signalOf(states[self], "Event"):Fire(...)
+	signalOf(self[STATE], "Event"):Fire(...)
 end
 
 function Methods.Invoke(self, ...)
-	local cb = states[self].props.OnInvoke
+	local cb = self[STATE].props.OnInvoke
 	assert(cb, "BindableFunction sans OnInvoke")
 	return cb(...)
 end
 
 -- Sons, animations
 function Methods.Play(self)
-	local st = states[self]
+	local st = self[STATE]
 	if st.ClassName == "Sound" then
 		st.props.Playing = true
 		signalOf(st, "Played"):Fire(st.props.SoundId)
@@ -838,14 +847,14 @@ function Methods.Play(self)
 end
 
 function Methods.Stop(self)
-	local st = states[self]
+	local st = self[STATE]
 	st.props.Playing = false
 	signalOf(st, "Stopped"):Fire()
 end
 
 -- Humanoid
 function Methods.TakeDamage(self, amount: number)
-	local st = states[self]
+	local st = self[STATE]
 	if st.ClassName ~= "Humanoid" then
 		return
 	end
@@ -853,7 +862,7 @@ function Methods.TakeDamage(self, amount: number)
 end
 
 function Methods.MoveTo(self, _pos, _part)
-	local st = states[self]
+	local st = self[STATE]
 	task.defer(function()
 		signalOf(st, "MoveToFinished"):Fire(true)
 	end)
@@ -884,7 +893,7 @@ function Methods.AdjustSpeed(_self, _speed) end
 
 -- Player
 function Methods.Kick(self, message: string?)
-	local st = states[self]
+	local st = self[STATE]
 	st.props.KickedWith = message or ""
 	if MockInstance.onKick then
 		MockInstance.onKick(self, message)
@@ -911,7 +920,7 @@ end
 
 function Methods.IsFriendsWith(self, userId)
 	if MockInstance.areFriends then
-		return MockInstance.areFriends(states[self].props.UserId, userId)
+		return MockInstance.areFriends(self[STATE].props.UserId, userId)
 	end
 	return false
 end
@@ -960,7 +969,7 @@ MockInstance.Methods = Methods
 MockInstance.classMethods = {} :: { [string]: { [string]: any } }
 
 MT.__index = function(self, key)
-	local st = states[self]
+	local st = self[STATE]
 	if key == "ClassName" then
 		return st.ClassName
 	elseif key == "Name" then
@@ -984,7 +993,7 @@ MT.__index = function(self, key)
 		return signalOf(st, key)
 	end
 	for _, c in st.children do
-		if states[c].Name == key then
+		if c[STATE].Name == key then
 			return c
 		end
 	end
@@ -1006,11 +1015,13 @@ local function fireChanged(st, key: string)
 end
 
 MT.__newindex = function(self, key, value)
-	local st = states[self]
+	local st = self[STATE]
 	if key == "Parent" then
 		if st.destroyed then
 			error(
-				`The Parent property of {st.Name} is locked, current parent: NULL, new parent {value and states[value] and states[value].Name or "nil"}`,
+				`The Parent property of {st.Name} is locked, current parent: NULL, new parent {stateOf(value) and stateOf(
+					value
+				).Name or "nil"}`,
 				2
 			)
 		end
@@ -1025,7 +1036,7 @@ MT.__newindex = function(self, key, value)
 			return
 		end
 		if old then
-			local ost = states[old]
+			local ost = old[STATE]
 			local i = table.find(ost.children, self)
 			if i then
 				table.remove(ost.children, i)
@@ -1034,11 +1045,11 @@ MT.__newindex = function(self, key, value)
 		end
 		st.Parent = value
 		if value then
-			table.insert(states[value].children, self)
-			signalOf(states[value], "ChildAdded"):Fire(self)
+			table.insert(value[STATE].children, self)
+			signalOf(value[STATE], "ChildAdded"):Fire(self)
 			local anc = value
 			while anc do
-				local ast = states[anc]
+				local ast = anc[STATE]
 				if ast.signals.DescendantAdded then
 					ast.signals.DescendantAdded:Fire(self)
 				end
@@ -1085,8 +1096,13 @@ MT.__newindex = function(self, key, value)
 	end
 end
 
+-- itérer une instance ne montre rien (la clé privée de l'état reste cachée), comme avant
+MT.__iter = function()
+	return next, {}
+end
+
 MT.__tostring = function(self)
-	return states[self].Name
+	return self[STATE].Name
 end
 
 return MockInstance

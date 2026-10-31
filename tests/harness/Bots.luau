@@ -376,38 +376,48 @@ function Bots.stageSnip(victim, snipper, minLine)
 	if b2 then
 		b2.paused = true
 	end
-	local spot = Bots.zonePoint(victim, 85, 0)
-	Bots.walkAll({ [victim] = spot }, 400, Bots.brains)
-	for _ = 1, 600 do
+	local cross, side
+	-- pendant la mise en place, les autres joueurs (cerveaux actifs), un Gloomwisp ou le coupeur
+	-- lui-même (immobile, quand le trajet de la victime passe sur lui : le test balayé coupe aussi
+	-- une file qui glisse sous un corps à l'arrêt) peuvent couper la victime : la scène reprend
+	-- alors depuis le début (au plus 4 fois) pour que la traversée parte d'une file intacte
+	for _ = 1, 4 do
+		local spot = Bots.zonePoint(victim, 85, 0)
+		Bots.walkAll({ [victim] = spot }, 400, Bots.brains)
+		for _ = 1, 600 do
+			if w.Conga.lineLength(victim) >= minLine then
+				break
+			end
+			Bots.stepToward(victim, Bots.nearestWild(victim, 40) or spot)
+			Bots.frame(Bots.brains)
+		end
+		assert(w.Conga.lineLength(victim) >= minLine, "stageSnip : la victime n'a pas constitué sa file")
+		-- point de départ loin de tout port sûr (portes à r ≈ 131, ports de 25 studs) : r = 75,
+		-- entre deux Nids ; la file suit
+		Bots.walkAll({ [victim] = Bots.zonePoint(victim, 75, math.pi / 12) }, 400, Bots.brains)
+		-- ligne droite de 30 studs, perpendiculaire au rayon
+		local root = Bots.rootOf(victim).Position
+		local dir = w.V3.new(-root.Z, 0, root.X).Unit
+		local a = w.V3.new(root.X, 0, root.Z)
+		local b = a + dir * 30
+		Bots.walkAll({ [victim] = b }, 100, Bots.brains)
+		Bots.frames(3, Bots.brains)
+		-- le coupeur approche par le côté où il se trouve déjà (sans traverser la file en venant)
+		cross = b - dir * 16
+		side = w.V3.new(dir.Z, 0, -dir.X)
+		if (Bots.rootOf(snipper).Position - cross):Dot(side) < 0 then
+			side = -side
+		end
+		Bots.walkAll({ [snipper] = cross + side * 10 }, 600)
+		while
+			Bots.now() < Bots.lastSnipOf(victim) + 61
+			or Bots.now() < (victim:GetAttribute("ImmuneUntil") or 0)
+		do
+			Bots.frame()
+		end
 		if w.Conga.lineLength(victim) >= minLine then
 			break
 		end
-		Bots.stepToward(victim, Bots.nearestWild(victim, 40) or spot)
-		Bots.frame(Bots.brains)
-	end
-	assert(w.Conga.lineLength(victim) >= minLine, "stageSnip : la victime n'a pas constitué sa file")
-	-- point de départ loin de tout port sûr (portes à r ≈ 131, ports de 25 studs) : r = 75, entre
-	-- deux Nids ; la file suit
-	Bots.walkAll({ [victim] = Bots.zonePoint(victim, 75, math.pi / 12) }, 400, Bots.brains)
-	-- ligne droite de 30 studs, perpendiculaire au rayon
-	local root = Bots.rootOf(victim).Position
-	local dir = w.V3.new(-root.Z, 0, root.X).Unit
-	local a = w.V3.new(root.X, 0, root.Z)
-	local b = a + dir * 30
-	Bots.walkAll({ [victim] = b }, 100, Bots.brains)
-	Bots.frames(3, Bots.brains)
-	-- le coupeur approche par le côté où il se trouve déjà (sans traverser la file en venant)
-	local cross = b - dir * 16
-	local side = w.V3.new(dir.Z, 0, -dir.X)
-	if (Bots.rootOf(snipper).Position - cross):Dot(side) < 0 then
-		side = -side
-	end
-	Bots.walkAll({ [snipper] = cross + side * 10 }, 600)
-	while
-		Bots.now() < Bots.lastSnipOf(victim) + 61
-		or Bots.now() < (victim:GetAttribute("ImmuneUntil") or 0)
-	do
-		Bots.frame()
 	end
 	local out = {
 		n = w.Conga.lineLength(victim),

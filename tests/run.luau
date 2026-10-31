@@ -49,6 +49,9 @@ for _, path in specs do
 			table.insert(loadErrors, path .. " : " .. tostring(err))
 			print("  \27[31m✗ échec de chargement : " .. tostring(err) .. "\27[0m")
 		end
+		-- threads restants des harnais de cette spec : annulés (aucune fuite vers la spec suivante,
+		-- mémoire libérée)
+		Harness.disposeAll()
 	end
 end
 

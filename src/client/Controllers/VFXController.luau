@@ -21,6 +21,11 @@
 --     perchoir), Dash (Trail + focale), bouclier débutant (bulles qui éclatent), Zen (anneau
 --     turquoise), étoile bleue des équipiers, étincelles roses d'immunité, pings (BillboardGui 4 × 4,
 --     2,5 s, visible à 200 studs), acclamations (arc de confettis vers le Nid du héros)
+--   * Glow Party (§8.3, §9.4) : à chaque NOUVEL achat (EventState.serverBoost de source glowParty dont
+--     la fin recule ; jamais rejouée à l'arrivée ni sur un état renvoyé), chez tous les joueurs :
+--     bannière dans le ciel « Glow Party offerte par Mira ! » au-dessus de la Balise (≈ 5 s, pop
+--     Back Out, reflet), 3 vagues de confettis dorés autour de soi, 3 feux dorés depuis la Balise ;
+--     pendant la fête, le ping « Merci » (6, cœur) envoie des cœurs qui volent vers l'acheteur
 -- Une seule connexion RenderStepped (animations suivies image par image).
 -- GDD : §9.1 (fonctions), §9.4, §11.6, §13.2.
 -- Dépendances : StateController, AudioController, Util/Prefs, UI/Juice, WorldStateController,
@@ -128,6 +133,29 @@ local SUPERNOVA_ARM_SECONDS = 30
 local ANIM_WARN_INTERVAL = 10
 local HAPTIC_INPUTS = { Enum.UserInputType.Touch, Enum.UserInputType.Gamepad1 }
 local BEACON_TOP = Vector3.new(0, Zones.Beacon.StarY, 0) -- étoile au sommet de la Balise
+-- Glow Party (GDD §8.3, §9.4) : bannière dans le ciel, confettis dorés, cœurs « Merci »
+local GLOW_SKY_LIFT = 34 -- studs au-dessus de l'étoile de la Balise
+local GLOW_SKY_SIZE = UDim2.fromScale(44, 8)
+local GLOW_SKY_RANGE = 1000 -- visible de toute l'île
+local GLOW_SKY_SECONDS = 5
+local GLOW_SKY_POP, GLOW_SKY_CLOSE, GLOW_SKY_SHINE = 0.45, 0.3, 0.8
+local GLOW_SKY_BOB, GLOW_SKY_BOB_SPEED = 0.8, 1.5
+local GLOW_SKY_COLOR = Color3.fromRGB(60, 30, 100)
+local GLOW_SKY_OUTLINE = Color3.fromRGB(70, 35, 0)
+local GLOW_CONFETTI_WAVES, GLOW_CONFETTI_STEP = 3, 0.3
+local GLOW_CONFETTI = 12 -- particules par jet (un jet par teinte dorée, autour du joueur)
+local GLOW_CONFETTI_LIFT, GLOW_CONFETTI_RADIUS = 7, 4
+local GLOW_FIREWORKS = 3
+local GLOW_GOLDS = {
+	Color3.fromRGB(255, 205, 60),
+	Color3.fromRGB(255, 232, 140),
+	Color3.fromRGB(255, 170, 40),
+}
+local GLOW_EPSILON = 1 -- s : une fin qui recule de plus d'1 s est un nouvel achat
+local THANKS_PING = 6 -- « Merci » (icône cœur, GDD §6.3)
+local HEART_COLOR = Color3.fromRGB(255, 110, 150)
+local HEART_BALLS, HEART_SIZE, HEART_SPARKS = 3, 0.7, 10
+local HEART_SECONDS, HEART_STAGGER, HEART_APEX = 0.6, 0.08, 6
 local TAU = 2 * math.pi
 
 -- État ------------------------------------------------------------------------------------------------------
@@ -146,6 +174,15 @@ type PingEntry = {
 }
 
 type ArchFlash = { original: Color3, token: number }
+
+type SkyBanner = {
+	attachment: Attachment,
+	gui: BillboardGui,
+	label: TextLabel,
+	scale: UIScale,
+	shine: UIGradient,
+	token: number,
+}
 
 type CarrierFx = {
 	balls: { BasePart },
@@ -190,6 +227,10 @@ local playerConns: { [Player]: { RBXScriptConnection } } = {}
 local rookieWas = false
 local lastAnimWarn = -math.huge
 local lastStatus = -math.huge
+local glowSky: SkyBanner? = nil
+local glowPrimed = false -- premier état d'événements reçu : une fête déjà en cours n'est pas rejouée
+local glowPartyEnd = -math.huge -- fin de la dernière Glow Party vue
+local glowPartyBuyer: number? = nil -- acheteur de la Glow Party en cours (cible des cœurs « Merci »)
 
 -- Outils ----------------------------------------------------------------------------------------------------
 
@@ -1291,7 +1332,262 @@ local function wispPopped(id: number)
 	end)
 end
 
+-- Réactions : Glow Party (GDD §8.3, §9.4) ---------------------------------------------------------------
+
+local function skyBanner(): SkyBanner
+	local existing = glowSky
+	if existing and existing.attachment.Parent then
+		return existing
+	end
+	local attachment = Instance.new("Attachment")
+	attachment.Name = "GlowPartySky"
+	attachment.Position = BEACON_TOP + Vector3.new(0, GLOW_SKY_LIFT, 0)
+	attachment.Parent = anchorPart()
+	local gui = Instance.new("BillboardGui")
+	gui.Name = "GlowPartySky"
+	gui.Size = GLOW_SKY_SIZE
+	gui.AlwaysOnTop = true
+	gui.LightInfluence = 0
+	gui.MaxDistance = GLOW_SKY_RANGE
+	gui.ResetOnSpawn = false
+	gui.Enabled = false
+	gui.Adornee = attachment
+	local ribbon = Instance.new("Frame")
+	ribbon.Name = "Ribbon"
+	ribbon.Size = UDim2.fromScale(1, 1)
+	ribbon.BackgroundColor3 = GLOW_SKY_COLOR
+	ribbon.BackgroundTransparency = 0.1
+	ribbon.Parent = gui
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0.35, 0)
+	corner.Parent = ribbon
+	local border = Instance.new("UIStroke")
+	border.Thickness = 4
+	border.Color = GLOW_GOLDS[1]
+	border.Parent = ribbon
+	local label = Instance.new("TextLabel")
+	label.Name = "Text"
+	label.Size = UDim2.fromScale(0.92, 0.8)
+	label.Position = UDim2.fromScale(0.04, 0.1)
+	label.BackgroundTransparency = 1
+	label.TextScaled = true
+	label.FontFace = Font.fromEnum(Enum.Font.LuckiestGuy)
+	label.TextColor3 = Color3.new(1, 1, 1)
+	label.Parent = ribbon
+	local outline = Instance.new("UIStroke")
+	outline.Thickness = 3
+	outline.Color = GLOW_SKY_OUTLINE
+	outline.Parent = label
+	-- texte doré avec un reflet blanc qui balaie la bannière à l'apparition
+	local shine = Instance.new("UIGradient")
+	shine.Name = "Shine"
+	shine.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, GLOW_GOLDS[1]),
+		ColorSequenceKeypoint.new(0.5, Color3.new(1, 1, 1)),
+		ColorSequenceKeypoint.new(1, GLOW_GOLDS[1]),
+	})
+	shine.Parent = label
+	local scale = Instance.new("UIScale")
+	scale.Parent = ribbon
+	gui.Parent = attachment
+	local created: SkyBanner = {
+		attachment = attachment,
+		gui = gui,
+		label = label,
+		scale = scale,
+		shine = shine,
+		token = 0,
+	}
+	glowSky = created
+	return created
+end
+
+-- Bannière dans le ciel : pop (Back Out), léger flottement, tenue GLOW_SKY_SECONDS puis repli (Back In) ;
+-- cycle de vie suivi sur Clock (une fête plus récente reprend la même bannière)
+local function showSkyBanner(text: string)
+	local b = skyBanner()
+	b.token += 1
+	local token = b.token
+	local base = BEACON_TOP + Vector3.new(0, GLOW_SKY_LIFT, 0)
+	b.label.Text = text
+	b.attachment.Position = base
+	b.gui.Enabled = true
+	local still = reduced()
+	if still then
+		b.scale.Scale = 1
+	else
+		b.scale.Scale = 0
+		tween(b.scale, GLOW_SKY_POP, { Scale = 1 }, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+		if not low() then
+			b.shine.Offset = Vector2.new(-1, 0)
+			tween(
+				b.shine,
+				GLOW_SKY_SHINE,
+				{ Offset = Vector2.new(1, 0) },
+				Enum.EasingStyle.Sine,
+				Enum.EasingDirection.InOut
+			)
+		end
+	end
+	local t0 = Clock.now()
+	local closing = false
+	addAnim(function(t: number): boolean
+		if b.token ~= token then
+			return true -- reprise par une fête plus récente
+		end
+		local age = t - t0
+		if not closing and (age >= GLOW_SKY_SECONDS or age < -GLOW_SKY_SECONDS) then
+			closing = true
+			if reduced() then
+				b.gui.Enabled = false
+				return true
+			end
+			tween(b.scale, GLOW_SKY_CLOSE, { Scale = 0 }, Enum.EasingStyle.Back, Enum.EasingDirection.In)
+			t0 = t - GLOW_SKY_SECONDS
+			age = GLOW_SKY_SECONDS
+		end
+		if closing then
+			if age >= GLOW_SKY_SECONDS + GLOW_SKY_CLOSE then
+				b.gui.Enabled = false
+				return true
+			end
+			return false
+		end
+		if not still then
+			b.attachment.Position = base
+				+ Vector3.new(0, GLOW_SKY_BOB * math.sin(GLOW_SKY_BOB_SPEED * age), 0)
+		end
+		return false
+	end)
+end
+
+-- Une vague de confettis dorés autour (et au-dessus) du point de vue local
+local function goldConfettiWave(k: number)
+	local center = focus() + Vector3.new(0, GLOW_CONFETTI_LIFT, 0)
+	for j, color in GLOW_GOLDS do
+		local a = (j / #GLOW_GOLDS + k * 0.17) * TAU
+		VFXController.burst(
+			center + Vector3.new(math.cos(a), 0, math.sin(a)) * GLOW_CONFETTI_RADIUS,
+			color,
+			GLOW_CONFETTI
+		)
+	end
+end
+
+local function celebrateGlowParty(buyerId: number?)
+	local buyer = if buyerId then Players:GetPlayerByUserId(buyerId) else nil
+	local text = if buyer
+		then Prefs.t("world.glowPartySky", { name = buyer.DisplayName })
+		else Prefs.t("world.glowPartySkyAnon")
+	showSkyBanner(text)
+	goldConfettiWave(0)
+	local t0 = Clock.now()
+	local wave = 1
+	addAnim(function(t: number): boolean
+		while wave < GLOW_CONFETTI_WAVES and t - t0 >= wave * GLOW_CONFETTI_STEP do
+			goldConfettiWave(wave)
+			wave += 1
+		end
+		return wave >= GLOW_CONFETTI_WAVES or t < t0
+	end)
+	VFXController.fireworks(BEACON_TOP, GLOW_FIREWORKS, GLOW_GOLDS[1])
+	-- l'acheteur entend déjà « Reward » avec sa pluie de pièces (ScreenFX, Celebrate "purchase")
+	local me = Players.LocalPlayer
+	if me == nil or me.UserId ~= buyerId then
+		AudioController.play("Reward")
+	end
+end
+
+local function validUserId(v: any): number?
+	if type(v) == "number" and v == v and v > 0 and v < 2 ^ 53 and v % 1 == 0 then
+		return v
+	end
+	return nil
+end
+
+-- Nouvel achat = boost de source glowParty dont la fin recule (chaque achat ajoute du temps depuis
+-- max(now, fin) côté serveur) ; le premier état reçu (arrivée en pleine fête) n'est jamais rejoué
+local function glowPartyChanged(new: Types.EventStatePayload)
+	local primed = glowPrimed
+	glowPrimed = true
+	local boost: any = new.serverBoost
+	if
+		type(boost) ~= "table"
+		or boost.source ~= "glowParty"
+		or type(boost.endsAt) ~= "number"
+		or boost.endsAt ~= boost.endsAt
+		or boost.endsAt == math.huge
+	then
+		glowPartyBuyer = nil
+		return
+	end
+	local endsAt: number = boost.endsAt
+	local buyerId = validUserId(boost.buyerId)
+	local fresh = primed and endsAt > glowPartyEnd + GLOW_EPSILON and endsAt > Clock.now()
+	glowPartyBuyer = buyerId
+	glowPartyEnd = math.max(glowPartyEnd, endsAt)
+	if fresh then
+		celebrateGlowParty(buyerId)
+	end
+end
+
+-- Cœurs « Merci » : du joueur qui pinge vers l'acheteur de la Glow Party en cours
+local function thanksHearts(fromUserId: number, from: Vector3)
+	local buyer = glowPartyBuyer
+	if buyer == nil or buyer == fromUserId or Clock.now() >= glowPartyEnd then
+		return
+	end
+	local heart = Prefs.t("world.heart")
+	local start = from + Vector3.new(0, 5, 0)
+	FloatText.show(start + Vector3.new(0, 1, 0), heart, HEART_COLOR, 1)
+	local to = userPosition(buyer)
+	if to == nil then
+		return -- acheteur parti ou pas encore répliqué : le cœur reste au-dessus de l'expéditeur
+	end
+	local target = (to :: Vector3) + Vector3.new(0, 4, 0)
+	if reduced() then
+		VFXController.burst(target, HEART_COLOR, HEART_SPARKS)
+		FloatText.show(target + Vector3.new(0, 1.5, 0), heart, HEART_COLOR, 1.3)
+		return
+	end
+	local balls: { BasePart } = {}
+	local landed: { boolean } = {}
+	for k = 1, if low() then 1 else HEART_BALLS do
+		local ball = takeBall(HEART_COLOR, HEART_SIZE)
+		ball.Name = "ThanksHeart"
+		ball.CFrame = CFrame.new(start)
+		balls[k] = ball
+		landed[k] = false
+	end
+	local t0 = Clock.now()
+	addAnim(function(t: number): boolean
+		local done = true
+		for k, ball in balls do
+			if not landed[k] then
+				local a = (t - t0 - (k - 1) * HEART_STAGGER) / HEART_SECONDS
+				if a >= 1 or t < t0 then
+					landed[k] = true
+					ball.Name = "FxBall"
+					giveBall(ball)
+					if k == 1 then
+						VFXController.burst(target, HEART_COLOR, HEART_SPARKS)
+						FloatText.show(target + Vector3.new(0, 1.5, 0), heart, HEART_COLOR, 1.3)
+					end
+				else
+					done = false
+					local u = math.max(a, 0)
+					ball.CFrame = CFrame.new(
+						start:Lerp(target, Fx.quadOut(u)) + Vector3.new(0, Fx.arc(u, HEART_APEX), 0)
+					)
+				end
+			end
+		end
+		return done
+	end)
+end
+
 local function onEventChanged(new: Types.EventStatePayload, old: Types.EventStatePayload?)
+	glowPartyChanged(new)
 	cometChanged(new, old)
 	local before: { [number]: boolean } = {}
 	if old then
@@ -1573,6 +1869,9 @@ local function onPing(userId: number, kind: number)
 		)
 	end
 	AudioController.play("Ping")
+	if kind == THANKS_PING then
+		thanksHearts(userId, pos)
+	end
 	task.delay(Balance.Ping.Duration, function()
 		if e.token ~= token then
 			return
@@ -1736,6 +2035,11 @@ function VFXController.Start()
 	WorldStateController.Snipped:Connect(onSnipped)
 	WorldStateController.Banked:Connect(onBanked)
 	WorldStateController.EventChanged:Connect(onEventChanged)
+	-- état d'événements déjà reçu avant le démarrage : il sert de référence (aucune fête rejouée)
+	local current = WorldStateController.events()
+	if current then
+		glowPartyChanged(current)
+	end
 	WorldStateController.PingShown:Connect(onPing)
 	WorldStateController.CrewsChanged:Connect(refreshCrewStars)
 	for _, model in CollectionService:GetTagged("Nest") do

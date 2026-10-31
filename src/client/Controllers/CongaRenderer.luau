@@ -22,6 +22,10 @@
 --     propre queue si un non-équipier est à ≤ 15 studs ; anneau de style sinon (Cosmetics.Styles,
 --     auras), Trail de style sur le dernier Nebby ; bulle dorée (bouclier) ; couronne + Highlight
 --     des files ≥ 20 (4 plus proches), paillettes ≥ 40 ; anneau doré sous ses Nebbies libres
+--   * Atlas (§4.14) : petit « ? » doré persistant au-dessus de chaque Nebby de la file LOCALE dont
+--     l'entrée (espèce × forme) n'est pas encore dans State.get("atlas") ; réserve de BillboardGuis
+--     (12, 6 en Graphismes légers ; aucune pièce ajoutée au budget), attribuée par rig de façon
+--     différentielle, retirée à l'enregistrement de l'entrée et à l'encaissement
 --   * Nids (World/NestDisplay) : perchés, « +N », perchoir qui pousse, panneau, constellation,
 --     liens d'équipage, SpotLight, stèle
 --   * Gloomwisps (tremblement, Beam d'aperçu pointillé de 15 studs) et orbe de la Comète (au sol,
@@ -103,6 +107,15 @@ local HANDOFF_SECONDS = 1.5
 local MAX_LINE_HIGHLIGHTS = Render.HighlightLines
 local MAX_MYTHIC_HIGHLIGHTS = Render.HighlightMythics
 local MAX_LIGHTS = Render.LegendaryLights
+-- « ? » doré des entrées d'Atlas inconnues (file locale)
+local MARK_MAX, MARK_MAX_LOW = 12, 6
+local MARK_SIZE = UDim2.fromScale(1.4, 1.4)
+local MARK_LIFT = 1.4 -- studs au-dessus du sommet du Nebby
+local MARK_BOB, MARK_BOB_SPEED, MARK_BOB_STEP = 0.25, 3, 0.6
+local MARK_POP = 0.25
+local MARK_DISTANCE = 120
+local MARK_COLOR = Color3.fromRGB(255, 205, 60)
+local MARK_STROKE = Color3.fromRGB(70, 45, 10)
 local TAU = 2 * math.pi
 
 -- Types -------------------------------------------------------------------------------------------
@@ -120,6 +133,8 @@ type NodeView = RigPool.View & {
 	ring: BasePart?,
 	ringColor: Color3?,
 	ringWarn: boolean,
+	newEntry: boolean, -- entrée d'Atlas encore inconnue (file locale seulement)
+	atlasVer: number, -- version de l'Atlas pour laquelle newEntry a été calculé
 }
 
 type LineView = {
@@ -179,6 +194,16 @@ type WispView = { id: number, rig: Rig, preview: Beam, target: Attachment, pos: 
 
 type OrbView = { rig: Rig, pos: Vector3?, carrier: number, arcFrom: Vector3?, arcStart: number }
 
+-- « ? » doré prêté au rig d'un nœud de la file locale
+type Marker = {
+	gui: BillboardGui,
+	label: TextLabel,
+	scale: UIScale,
+	body: BasePart?,
+	lift: number,
+	index: number,
+}
+
 -- État -------------------------------------------------------------------------------------------------
 
 local started = false
@@ -212,6 +237,12 @@ local lights: { PointLight } = {}
 local highlightOf: { [Rig]: Highlight } = {}
 local lightOf: { [Rig]: PointLight } = {}
 local flashHighlight: Highlight? = nil
+
+-- « ? » dorés : attribués par rig (rien n'est ré-adorné tant que le Nebby reste inconnu)
+local markerOf: { [Rig]: Marker } = {}
+local markerFree: { Marker } = {}
+local markerWant: { [Rig]: number } = {} -- réutilisée : rig → index du nœud
+local atlasVersion = 0 -- incrémentée à chaque changement de State "atlas"
 
 -- Outils ----------------------------------------------------------------------------------------------
 
@@ -434,6 +465,8 @@ local function newNode(code: number, pos: Vector3, focus: Vector3?, bubble: bool
 		ring = nil,
 		ringColor = nil,
 		ringWarn = false,
+		newEntry = false,
+		atlasVer = -1,
 	}
 end
 
@@ -936,6 +969,125 @@ local function moveLine(view: LineView, t: number, dt: number)
 	end
 	updateLabel(view, headRig)
 	updateExtras(view, headCF, headSize, if n >= 1 and nodes[n].rig ~= nil then lastRig else nil)
+end
+
+-- Atlas : « ? » doré au-dessus des Nebbies inconnus de la file locale (GDD §4.14) ---------------------------
+
+local function unknownEntry(atlas: any, code: number): boolean
+	if type(atlas) ~= "table" then
+		return false -- Atlas pas encore chargé : rien à signaler
+	end
+	local s, f = Nebbies.unpack(code)
+	if s < 1 then
+		return false
+	end
+	return not Nebbies.testBit(atlas, Nebbies.atlasIndex(s, f))
+end
+
+local function newMarker(): Marker
+	local gui = Instance.new("BillboardGui")
+	gui.Name = "NewEntry"
+	gui.Size = MARK_SIZE
+	gui.AlwaysOnTop = true
+	gui.LightInfluence = 0
+	gui.MaxDistance = MARK_DISTANCE
+	gui.ResetOnSpawn = false
+	gui.Enabled = false
+	local label = Instance.new("TextLabel")
+	label.Name = "Mark"
+	label.Size = UDim2.fromScale(1, 1)
+	label.BackgroundTransparency = 1
+	label.TextScaled = true
+	label.FontFace = Font.fromEnum(Enum.Font.FredokaOne)
+	label.TextColor3 = MARK_COLOR
+	label.Text = Prefs.t("world.newEntry")
+	local stroke = Instance.new("UIStroke")
+	stroke.Thickness = 2
+	stroke.Color = MARK_STROKE
+	stroke.Parent = label
+	local scale = Instance.new("UIScale")
+	scale.Parent = label
+	label.Parent = gui
+	gui.Parent = folders.Lines
+	return { gui = gui, label = label, scale = scale, body = nil, lift = 0, index = 0 }
+end
+
+local function freeMarker(m: Marker)
+	m.gui.Enabled = false
+	m.gui.Adornee = nil
+	m.body = nil
+	m.index = 0
+	table.insert(markerFree, m)
+end
+
+-- Une passe par image : nœuds visibles de la file locale dont l'entrée est inconnue (tête d'abord,
+-- au plus MARK_MAX), puis attribution différentielle des « ? » (pop à l'apparition, léger flottement)
+local function updateMarkers(t: number)
+	table.clear(markerWant)
+	local view = if localSlotCache ~= 0 then lineViews[localSlotCache] else nil
+	if view then
+		local atlas = State.get("atlas")
+		local cap = if lowGraphics() then MARK_MAX_LOW else MARK_MAX
+		local used = 0
+		for i, node in view.nodes do
+			if node.atlasVer ~= atlasVersion then
+				node.atlasVer = atlasVersion
+				node.newEntry = unknownEntry(atlas, node.code)
+			end
+			local rig = node.rig
+			if node.newEntry and rig and rig.lod ~= "hidden" then
+				markerWant[rig] = i
+				used += 1
+				if used >= cap then
+					break
+				end
+			end
+		end
+	end
+	for rig, m in markerOf do
+		if markerWant[rig] == nil then
+			markerOf[rig] = nil
+			freeMarker(m)
+		end
+	end
+	local reduced = Juice.reducedMotion()
+	local bob = not reduced and not lowGraphics()
+	for rig, i in markerWant do
+		local m = markerOf[rig]
+		if m == nil then
+			local created = table.remove(markerFree) or newMarker()
+			markerOf[rig] = created
+			created.label.Text = Prefs.t("world.newEntry")
+			created.gui.Enabled = true
+			if reduced then
+				created.scale.Scale = 1
+			else
+				created.scale.Scale = 0
+				Juice.tween(
+					created.scale,
+					MARK_POP,
+					{ Scale = 1 },
+					Enum.EasingStyle.Back,
+					Enum.EasingDirection.Out
+				)
+			end
+			m = created
+		end
+		local mk = m :: Marker
+		mk.index = i
+		if mk.body ~= rig.body then
+			mk.body = rig.body
+			mk.gui.Adornee = rig.body
+		end
+		local lift = rig.size / 2 + MARK_LIFT
+		if bob then
+			lift += MARK_BOB * math.sin(MARK_BOB_SPEED * t + MARK_BOB_STEP * i)
+		end
+		if mk.lift ~= lift then
+			mk.lift = lift
+			mk.gui.StudsOffset = Vector3.new(0, lift, 0)
+		end
+	end
 end
 
 -- Parade : les Nebbies sautent vers les perchoirs du Nid ---------------------------------------------------
@@ -1799,6 +1951,7 @@ local function onFrame(dt: number)
 	for _, view in lineViews do
 		moveLine(view, t, dt)
 	end
+	updateMarkers(t)
 	for _, view in wildViews do
 		moveWild(view, t)
 	end
@@ -1913,6 +2066,12 @@ function CongaRenderer.Start()
 	WorldStateController.LineOp:Connect(onLineOp)
 	WorldStateController.Banked:Connect(function(slot: number, op: Types.LineBankOp)
 		startParade(slot, op.atBeacon == true)
+	end)
+	-- Atlas modifié (encaissement, récompense, instantané) : les « ? » sont recalculés
+	State.Changed:Connect(function(key: string)
+		if key == "atlas" then
+			atlasVersion += 1
+		end
 	end)
 	local me = Players.LocalPlayer
 	if me then
@@ -2039,6 +2198,18 @@ function CongaRenderer.lineLabel(slot: number): string?
 		return view.labelText.Text
 	end
 	return nil
+end
+
+-- Index (croissants) des nœuds de la file locale qui portent un « ? » doré (entrée d'Atlas inconnue)
+function CongaRenderer.newEntryMarkers(): { number }
+	local out: { number } = {}
+	for _, m in markerOf do
+		if m.gui.Enabled and m.index > 0 then
+			table.insert(out, m.index)
+		end
+	end
+	table.sort(out)
+	return out
 end
 
 -- Nebbies en cours de saut vers les perchoirs

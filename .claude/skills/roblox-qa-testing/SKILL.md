@@ -40,6 +40,7 @@ rojo build -o build/Game.rbxl
 | `h.dataStoreFailures = 3` | les 3 prochains appels DataStore échouent (tester les retries) |
 | `h.dataStores["Nom/global"]` | inspecter les sauvegardes |
 | `h:close()` | exécute les callbacks `BindToClose` |
+| `h:dispose()` / `Harness.disposeAll()` | annule les threads encore en attente du code monté (boucles d'autosave, `task.delay`…) ; le lanceur appelle `disposeAll()` après chaque spec : aucune spec ne garde un harnais pour la suivante, la mémoire reste stable (~0,8 Go pour toute la suite) |
 | `h:warnings()` | `warn()` + « Infinite yield possible » |
 | `h.log.kicks`, `h.log.prompts`, `h.log.analytics` | journaux |
 

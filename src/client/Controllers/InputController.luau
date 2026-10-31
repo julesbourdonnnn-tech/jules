@@ -74,6 +74,7 @@ local PING_COOLDOWN = Balance.Ping.Cooldown
 local PING_COUNT = Balance.Ping.Count
 local WHEEL_RADIUS = 132 -- px de référence
 local SECTOR = 96
+local WHEEL_TEXT = 18 -- px de référence : texte minimal lisible (GDD §10.1)
 local STICK_DEADZONE = 0.45
 local REFUSE_TOAST_INTERVAL = 2
 local EMOTES: { [number]: string } = { [2] = "point", [4] = "cheer", [6] = "wave" }
@@ -324,20 +325,24 @@ local function buildWheel(): Frame
 		local icon = PING_ICONS[i]
 		local button = Widgets.button("Button", holder, Theme.Colors.PanelLight, true)
 		local glyph = Widgets.glyph("Icon", icon.glyph, button, icon.color, 46)
-		glyph.Size = UDim2.fromScale(0.62, 0.62)
-		glyph.Position = UDim2.fromScale(0.5, 0.42)
+		glyph.Size = UDim2.fromScale(0.58, 0.58)
+		glyph.Position = UDim2.fromScale(0.5, 0.4)
 		glyph.AutoLocalize = false
+		-- libellé ≥ 18 px de référence (GDD §10.1), sous le glyphe
 		Widgets.label({
 			name = "Label",
 			text = Prefs.t("ping." .. i),
 			size = UDim2.new(1.3, 0, 0.3, 0),
 			position = UDim2.fromScale(0.5, 0.86),
 			anchor = Vector2.new(0.5, 0.5),
-			maxSize = 16,
+			maxSize = WHEEL_TEXT,
 			zIndex = 4,
 			parent = button,
 		})
-		Widgets.keyCap(button, tostring(i))
+		-- touche dans le coin haut gauche : elle ne masque pas le début du libellé
+		local cap = Widgets.keyCap(button, tostring(i))
+		cap.AnchorPoint = Vector2.zero
+		cap.Position = UDim2.fromOffset(-4, -4)
 		button.Activated:Connect(function()
 			InputController.ping(i)
 		end)

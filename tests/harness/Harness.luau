@@ -22,6 +22,9 @@ Harness.__index = Harness
 
 local ROOT = "."
 
+-- Harnais créés depuis le dernier Harness.disposeAll() (le lanceur l'appelle après chaque spec)
+local live = {}
+
 -- Types de données Roblox fournis par Lune (+ compléments simulés)
 local function datatypes()
 	local t = {}
@@ -206,6 +209,11 @@ function Harness.new(options: { mode: string?, touch: boolean?, isStudio: boolea
 	}
 	h.stats = { tweens = 0, dataStoreCalls = 0 }
 	h.friends = {} -- [userId] = { userId… } : amitiés simulées (h:makeFriends(a, b))
+	-- threads du code monté (task.spawn/defer/delay, et tout thread qui attend via task.wait) :
+	-- annulés par h:dispose() pour que les boucles sans fin des services (autosave…) ne gardent
+	-- pas le harnais entier en mémoire jusqu'à la fin de la suite
+	h.threads = setmetatable({}, { __mode = "k" })
+	table.insert(live, h)
 	MockInstance.areFriends = function(a, b)
 		return table.find(h.friends[a] or {}, b) ~= nil
 	end
@@ -289,7 +297,29 @@ function Harness:_makeGlobals()
 	g.game = self.game
 	g.workspace = self.game.Workspace
 	g.Workspace = self.game.Workspace
-	g.task = task
+	local threads = h.threads
+	local function track(thread)
+		if type(thread) == "thread" then
+			threads[thread] = true
+		end
+		return thread
+	end
+	g.task = table.freeze({
+		spawn = function(f, ...)
+			return track(task.spawn(f, ...))
+		end,
+		defer = function(f, ...)
+			return track(task.defer(f, ...))
+		end,
+		delay = function(t, f, ...)
+			return track(task.delay(t, f, ...))
+		end,
+		wait = function(t)
+			track(coroutine.running())
+			return task.wait(t)
+		end,
+		cancel = task.cancel,
+	})
 	g.Instance = {
 		new = function(className: string, parent: any?)
 			assert(type(className) == "string", "Instance.new : nom de classe attendu")
@@ -583,6 +613,28 @@ end
 function Harness:close()
 	for _, fn in self.closeCallbacks or {} do
 		fn()
+	end
+end
+
+-- Arrête tout le code monté encore en attente (boucles d'autosave, task.delay en cours…) : le
+-- harnais n'est plus utilisable ensuite et peut être libéré par le ramasse-miettes
+function Harness:dispose()
+	local current = coroutine.running()
+	for thread in self.threads do
+		if thread ~= current and coroutine.status(thread) == "suspended" then
+			pcall(task.cancel, thread)
+		end
+	end
+	table.clear(self.threads)
+end
+
+-- Libère tous les harnais créés depuis le dernier appel (le lanceur l'appelle après chaque spec ;
+-- une spec ne garde jamais un harnais pour la suivante)
+function Harness.disposeAll()
+	local list = live
+	live = {}
+	for _, h in list do
+		h:dispose()
 	end
 end
 

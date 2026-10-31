@@ -93,6 +93,60 @@ return function(T)
 			expect(done).toBe(true)
 		end)
 
+		it("dispose annule les threads en attente du code monté (boucles sans fin, task.delay)", function()
+			local h = Harness.new({ root = ROOT })
+			local g = h.globals
+			local fired = false
+			local delayed = g.task.delay(100, function()
+				fired = true
+			end)
+			local loop = g.task.spawn(function()
+				while true do
+					g.task.wait(10)
+				end
+			end)
+			-- thread lancé hors du task du harnais mais qui attend via task.wait du code monté
+			local waiter = task.spawn(function()
+				g.task.wait(10)
+			end)
+			expect(coroutine.status(delayed)).toBe("suspended")
+			expect(coroutine.status(loop)).toBe("suspended")
+			expect(coroutine.status(waiter)).toBe("suspended")
+			h:dispose()
+			expect(coroutine.status(delayed)).toBe("dead")
+			expect(coroutine.status(loop)).toBe("dead")
+			expect(coroutine.status(waiter)).toBe("dead")
+			expect(fired).toBe(false)
+			-- idempotent ; disposeAll ne touche pas au thread courant
+			h:dispose()
+			local h2 = Harness.new({ root = ROOT })
+			h2.globals.task.wait()
+			Harness.disposeAll()
+			expect(coroutine.status(coroutine.running())).toBe("running")
+		end)
+
+		it("état des instances privé : itération vide, is/state fiables", function()
+			local MockInstance = require("../../harness/MockInstance")
+			local h = Harness.new({ root = ROOT })
+			local part = h.globals.Instance.new("Part", h.game.Workspace)
+			part.Name = "Bloc"
+			local n = 0
+			for _ in part do
+				n += 1
+			end
+			expect(n).toBe(0)
+			expect(MockInstance.is(part)).toBe(true)
+			expect(MockInstance.state(part).Name).toBe("Bloc")
+			expect(part.Parent).toBe(h.game.Workspace)
+			for _, v in { {}, "Bloc", 5, true, h.globals.Vector3.new(1, 2, 3) } do
+				expect(MockInstance.is(v)).toBe(false)
+				expect(MockInstance.state(v)).toBeNil()
+			end
+			expect(function()
+				part.Parent = "pas une instance"
+			end).toThrow("Parent doit être une Instance")
+		end)
+
 		it("simule les pannes DataStore", function()
 			local h = Harness.new({ root = ROOT })
 			local store = h.game.DataStoreService:GetDataStore("Y")
