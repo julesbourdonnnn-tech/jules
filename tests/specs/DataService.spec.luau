@@ -129,27 +129,30 @@ return function(T)
 			expect(data.settings.lang).toBe("auto")
 		end)
 
-		it("appelle les crochets onBeforeSave avant chaque écriture (règlement du revenu passif)", function()
-			local h, DS = boot()
-			local calls = 0
-			DS.onBeforeSave(function(player, data)
-				calls += 1
-				data.glow += 10 -- simule un règlement : doit figurer dans la sauvegarde
-			end)
-			DS.onBeforeSave(function()
-				error("crochet défaillant") -- ne doit jamais bloquer la sauvegarde
-			end)
-			local p = h:addPlayer({ userId = 20 })
-			DS.waitFor(p, 2)
-			expect(DS.saveNow(p)).toBe(true)
-			expect(calls).toBe(1)
-			local store = h.game.DataStoreService:GetDataStore("PlayerData_v1")
-			expect(store:GetAsync("player_20").data.glow).toBe(10)
-			h:removePlayer(p)
-			h:settle(5)
-			expect(calls).toBe(2)
-			expect(store:GetAsync("player_20").data.glow).toBe(20)
-			expect(store:GetAsync("player_20").lock).toBeNil()
-		end)
+		it(
+			"appelle les crochets onBeforeSave avant chaque écriture (règlement du revenu passif)",
+			function()
+				local h, DS = boot()
+				local calls = 0
+				DS.onBeforeSave(function(player, data)
+					calls += 1
+					data.glow += 10 -- simule un règlement : doit figurer dans la sauvegarde
+				end)
+				DS.onBeforeSave(function()
+					error("crochet défaillant") -- ne doit jamais bloquer la sauvegarde
+				end)
+				local p = h:addPlayer({ userId = 20 })
+				DS.waitFor(p, 2)
+				expect(DS.saveNow(p)).toBe(true)
+				expect(calls).toBe(1)
+				local store = h.game.DataStoreService:GetDataStore("PlayerData_v1")
+				expect(store:GetAsync("player_20").data.glow).toBe(10)
+				h:removePlayer(p)
+				h:settle(5)
+				expect(calls).toBe(2)
+				expect(store:GetAsync("player_20").data.glow).toBe(20)
+				expect(store:GetAsync("player_20").lock).toBeNil()
+			end
+		)
 	end)
 end

@@ -324,10 +324,146 @@ function Bots.brainStep(p)
 	end
 end
 
+-- Scène réservée : met en pause les cerveaux de tous les joueurs sauf `keep` ({ [Player] = true })
+-- et renvoie la table des cibles qui les ramène à leur port sûr (à passer à walkAll, complétée
+-- des cibles des acteurs de la scène). Bots.resume() rend la main à tous les cerveaux.
+function Bots.sendHome(keep)
+	local w = world()
+	local targets = {}
+	for _, p in w.players do
+		if not keep[p] then
+			if w.brains[p] then
+				w.brains[p].paused = true
+			end
+			if p.Parent and Bots.rootOf(p) then
+				targets[p] = Bots.harborPoint(p)
+			end
+		end
+	end
+	return targets
+end
+
+function Bots.resume()
+	for _, b in world().brains do
+		b.paused = false
+	end
+end
+
 function Bots.brains()
 	for _, p in world().players do
 		Bots.brainStep(p)
 	end
+end
+
+-- -------------------------------------------------------------------------------------------
+-- Coupe mise en scène : la victime se constitue une file d'au moins `minLine` Nebbies, marche
+-- 30 studs en ligne droite (hors port sûr) puis s'arrête ; le coupeur se place sur le côté,
+-- attend que les règles de coupe l'autorisent (immunité de la victime, 2 coupes subies par
+-- minute) puis traverse la file. Les cerveaux des deux joueurs sont mis en pause pendant la
+-- scène (puis rendus). Retourne { n = file avant la coupe, snips = SnipEvent avant, dust =
+-- Stardust du coupeur avant, event = SnipEvent de CETTE coupe ou nil, count = nombre de SnipEvent
+-- de ce coupeur sur cette victime pendant la traversée, caughtDuring = Nebbies capturés par la
+-- victime pendant la traversée, why = diagnostic si rien n'a été coupé }.
+-- -------------------------------------------------------------------------------------------
+
+function Bots.stageSnip(victim, snipper, minLine)
+	local w = world()
+	minLine = minLine or 7
+	local b1, b2 = w.brains[victim], w.brains[snipper]
+	if b1 then
+		b1.paused = true
+	end
+	if b2 then
+		b2.paused = true
+	end
+	local spot = Bots.zonePoint(victim, 85, 0)
+	Bots.walkAll({ [victim] = spot }, 400, Bots.brains)
+	for _ = 1, 600 do
+		if w.Conga.lineLength(victim) >= minLine then
+			break
+		end
+		Bots.stepToward(victim, Bots.nearestWild(victim, 40) or spot)
+		Bots.frame(Bots.brains)
+	end
+	assert(w.Conga.lineLength(victim) >= minLine, "stageSnip : la victime n'a pas constitué sa file")
+	-- point de départ loin de tout port sûr (portes à r ≈ 131, ports de 25 studs) : r = 75, entre
+	-- deux Nids ; la file suit
+	Bots.walkAll({ [victim] = Bots.zonePoint(victim, 75, math.pi / 12) }, 400, Bots.brains)
+	-- ligne droite de 30 studs, perpendiculaire au rayon
+	local root = Bots.rootOf(victim).Position
+	local dir = w.V3.new(-root.Z, 0, root.X).Unit
+	local a = w.V3.new(root.X, 0, root.Z)
+	local b = a + dir * 30
+	Bots.walkAll({ [victim] = b }, 100, Bots.brains)
+	Bots.frames(3, Bots.brains)
+	-- le coupeur approche par le côté où il se trouve déjà (sans traverser la file en venant)
+	local cross = b - dir * 16
+	local side = w.V3.new(dir.Z, 0, -dir.X)
+	if (Bots.rootOf(snipper).Position - cross):Dot(side) < 0 then
+		side = -side
+	end
+	Bots.walkAll({ [snipper] = cross + side * 10 }, 600)
+	while
+		Bots.now() < Bots.lastSnipOf(victim) + 61
+		or Bots.now() < (victim:GetAttribute("ImmuneUntil") or 0)
+	do
+		Bots.frame()
+	end
+	local out = {
+		n = w.Conga.lineLength(victim),
+		snips = Bots.countAll("SnipEvent"),
+		dust = w.DS.get(snipper).stardust,
+	}
+	local lineEvents = Bots.countAll("LineEvent")
+	Bots.walkAll({ [snipper] = cross - side * 10 }, 40)
+	Bots.frames(2)
+	-- captures de la victime pendant la traversée (un sauvage qui flâne jusqu'à elle)
+	out.caughtDuring = 0
+	local slot = w.Nest.slotOf(victim)
+	local lists = Bots.allEvents("LineEvent")
+	for i = lineEvents + 1, #lists do
+		for _, op in lists[i] do
+			if op.op == "add" and op.slot == slot then
+				out.caughtDuring += #op.codes
+			end
+		end
+	end
+	local events = Bots.allEvents("SnipEvent")
+	out.count = 0
+	for i = out.snips + 1, #events do
+		local e = events[i]
+		if e.victimSlot == w.Nest.slotOf(victim) and e.snipperSlot == w.Nest.slotOf(snipper) then
+			out.event = e
+			out.count += 1
+		end
+	end
+	if out.count == 0 then
+		-- diagnostic : pourquoi la traversée n'a rien coupé ?
+		local inHarbor = 0
+		for _, node in w.Conga.nodePositions(victim) do
+			if w.WL.inHarbor(node) then
+				inHarbor += 1
+			end
+		end
+		out.why = string.format(
+			"file %d (%d au port sûr), immunité %.1f s, dernière coupe subie il y a %.1f s, coupeur à %s, zen %s, rookie %s/%s",
+			w.Conga.lineLength(victim),
+			inHarbor,
+			(victim:GetAttribute("ImmuneUntil") or 0) - Bots.now(),
+			Bots.now() - Bots.lastSnipOf(victim),
+			tostring(Bots.rootOf(snipper) and Bots.rootOf(snipper).Position),
+			tostring(w.Nest.isZen(victim)),
+			tostring(w.Quest.isRookie(victim)),
+			tostring(w.Quest.isRookie(snipper))
+		)
+	end
+	if b1 then
+		b1.paused = false
+	end
+	if b2 then
+		b2.paused = false
+	end
+	return out
 end
 
 -- Erreurs de scripts et avertissements (dont « Infinite yield possible ») depuis le démarrage

@@ -779,7 +779,10 @@ end
 
 -- Remotes et Bindables
 function Methods.FireClient(self, player, ...)
-	assert(MockInstance.is(player) and states[player].ClassName == "Player", "FireClient : le 1er argument doit être un Player")
+	assert(
+		MockInstance.is(player) and states[player].ClassName == "Player",
+		"FireClient : le 1er argument doit être un Player"
+	)
 	table.insert(states[self].fired, { kind = "client", player = player, args = table.pack(...) })
 	if MockInstance.onFireClient then
 		MockInstance.onFireClient(self, player, ...)
@@ -1006,7 +1009,10 @@ MT.__newindex = function(self, key, value)
 	local st = states[self]
 	if key == "Parent" then
 		if st.destroyed then
-			error(`The Parent property of {st.Name} is locked, current parent: NULL, new parent {value and states[value] and states[value].Name or "nil"}`, 2)
+			error(
+				`The Parent property of {st.Name} is locked, current parent: NULL, new parent {value and states[value] and states[value].Name or "nil"}`,
+				2
+			)
 		end
 		if value ~= nil and not MockInstance.is(value) then
 			error("Parent doit être une Instance", 2)

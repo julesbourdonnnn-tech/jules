@@ -35,7 +35,10 @@ local function checkSerializable(value: any, path: string)
 				error(`[DataStore simulé] clé non sérialisable à {path}`, 4)
 			end
 			if isArray and type(k) == "string" then
-				error(`[DataStore simulé] table mixte (tableau + dictionnaire) à {path} : perte de données dans Roblox`, 4)
+				error(
+					`[DataStore simulé] table mixte (tableau + dictionnaire) à {path} : perte de données dans Roblox`,
+					4
+				)
 			end
 			checkSerializable(v, path .. "." .. tostring(k))
 		end
@@ -735,7 +738,11 @@ function Services.install(h)
 
 	-- Services créés à la demande (ex. noms rares)
 	MockInstance.serviceFactory = function(name)
-		if name == "VoiceChatService" or name == "ExperienceNotificationService" or name == "OpenCloudService" then
+		if
+			name == "VoiceChatService"
+			or name == "ExperienceNotificationService"
+			or name == "OpenCloudService"
+		then
 			return service(name)
 		end
 		return nil

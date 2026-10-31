@@ -24,10 +24,12 @@ local function interpolate(text: string, vars: { [string]: any }?): string
 	if not vars then
 		return text
 	end
-	return (string.gsub(text, "{(%w+)}", function(name: string)
-		local v = vars[name]
-		return if v ~= nil then tostring(v) else "{" .. name .. "}"
-	end))
+	return (
+		string.gsub(text, "{(%w+)}", function(name: string)
+			local v = vars[name]
+			return if v ~= nil then tostring(v) else "{" .. name .. "}"
+		end)
+	)
 end
 
 function Localization.get(lang: Language, key: string, vars: { [string]: any }?): string

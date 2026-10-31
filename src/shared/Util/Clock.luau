@@ -29,7 +29,10 @@ local function source(): number
 end
 
 local function assertFinite(x: number, what: string)
-	assert(type(x) == "number" and x == x and x ~= math.huge and x ~= -math.huge, `Clock.{what} : nombre fini attendu`)
+	assert(
+		type(x) == "number" and x == x and x ~= math.huge and x ~= -math.huge,
+		`Clock.{what} : nombre fini attendu`
+	)
 end
 
 function Clock.now(): number

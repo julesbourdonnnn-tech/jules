@@ -63,7 +63,14 @@ local function economy(
 	end)
 end
 
-function Analytics.earn(player: Player, currency: string, amount: number, balance: number, transactionType: string, sku: string?)
+function Analytics.earn(
+	player: Player,
+	currency: string,
+	amount: number,
+	balance: number,
+	transactionType: string,
+	sku: string?
+)
 	economy(player, Enum.AnalyticsEconomyFlowType.Source, currency, amount, balance, transactionType, sku)
 end
 

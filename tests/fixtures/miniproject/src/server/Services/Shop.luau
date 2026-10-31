@@ -15,9 +15,13 @@ function Shop.Init()
 	result.Name = "Result"
 	result.Parent = remotes
 	buy.OnServerEvent:Connect(function(player, itemId)
-		if typeof(itemId) ~= "string" then return end
+		if typeof(itemId) ~= "string" then
+			return
+		end
 		local item = Config.Items[itemId]
-		if not item then return end
+		if not item then
+			return
+		end
 		if Shop.coins[player] >= item.cost then
 			Shop.coins[player] -= item.cost
 			result:FireClient(player, true, Shop.coins[player])
@@ -32,7 +36,9 @@ function Shop.Start()
 		Shop.coins[p] = (store:GetAsync("p" .. p.UserId) or Config.StartCoins)
 	end
 	Players.PlayerAdded:Connect(onAdded)
-	for _, p in Players:GetPlayers() do task.spawn(onAdded, p) end
+	for _, p in Players:GetPlayers() do
+		task.spawn(onAdded, p)
+	end
 	Players.PlayerRemoving:Connect(function(p)
 		store:SetAsync("p" .. p.UserId, Shop.coins[p])
 		Shop.coins[p] = nil

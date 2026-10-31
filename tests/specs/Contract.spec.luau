@@ -8,46 +8,464 @@ local serde = require("@lune/serde")
 
 -- Surface d'API publique du contrat : module → fonctions et signaux exigés
 local API = {
-	["ReplicatedStorage.Shared.Logic.Hash"] = { fns = { "u32", "unit", "int", "range", "pickWeighted", "string", "stream" }, signals = {  } },
-	["ReplicatedStorage.Shared.Logic.EventClock"] = { fns = { "day", "week", "weekday", "weatherKeyForSlot", "weather", "nextWeather", "comet", "nextComet", "cometImpact", "cometContent", "beacon", "nextBeacon", "starfall", "nextStarfall", "nextEvent", "featuredSpecies", "weeklyWanderer", "grandParadeLegendary", "rotation" }, signals = {  } },
-	["ReplicatedStorage.Shared.Logic.SeededPath"] = { fns = { "wander", "chordAt", "newChordCursor", "cometSky", "scatterPoint" }, signals = {  } },
-	["ReplicatedStorage.Shared.Logic.WorldLayout"] = { fns = { "radiusXZ", "nestCenter", "nestCFrame", "gateCFrame", "inGateBox", "harborSlot", "inHarbor", "inOwnHarbor", "inBeaconRing", "zoneAt", "groundY", "clampToIsland", "spawnPoints", "perchCFrame", "welcomePoints", "observatoryCFrame", "constellationPoint", "boardCFrame", "pathStones", "lanterns", "decor" }, signals = {  } },
-	["ReplicatedStorage.Shared.Logic.SnipRules"] = { fns = { "blockReason", "isImmune", "radius", "lossCap", "cutFrom", "boundsOverlap", "findCut", "applyCut" }, signals = {  } },
-	["ReplicatedStorage.Shared.Logic.Formulas"] = { fns = { "upgradeCost", "upgradeMaxLevel", "congaCapacity", "congaBonus", "guardLinks", "lureRadius", "baseWalkSpeed", "walkSpeed", "dashCooldown", "nebbyMultiplier", "paradeValue", "passiveIncome", "multiplier", "offlineMultiplier", "paradeGlow", "offlineGlow", "settle", "glowForSeconds", "supernovaCost", "auraFor", "atlasPerchMilestones", "perchCount", "stashCap", "fuseCost", "releaseDust", "capScale", "effectiveCap", "beaconGoal", "wispCount", "rookieEligible" }, signals = {  } },
-	["ReplicatedStorage.Shared.Logic.Trail"] = { fns = { "new", "reset", "setMaxLength", "head", "push", "sample", "findCut", "lastSeq", "since", "segmentDistanceXZ", "findCutSwept" }, signals = {  } },
-	["ReplicatedStorage.Shared.Logic.PathCodec"] = { fns = { "encode", "decode", "split", "size" }, signals = {  } },
-	["ReplicatedStorage.Shared.Render.NebbyBuilder"] = { fns = { "build", "setLod", "animate", "appendCFrames", "bodySize", "bodyColor", "partCount", "buildWisp", "buildCometOrb", "buildCometSky", "destroy" }, signals = {  } },
-	["ServerScriptService.Server.Services.WorldService"] = { fns = { "Init", "Start", "root", "nest", "spawnLocation", "setNestAppearance", "setPerchCount", "beacon", "board", "partCount" }, signals = {  } },
-	["ServerScriptService.Server.Services.NestService"] = { fns = { "Init", "Start", "slotOf", "playerAt", "inOwnHarbor", "teleportHome", "setPerchDisplay", "setPerchCount", "setting", "isZen", "snipsDisabled", "unlock", "grantTemporary", "hasUnlock" }, signals = {  } },
-	["ServerScriptService.Server.Services.EconomyService"] = { fns = { "Init", "Start", "step", "settle", "refreshRate", "idleRate", "multiplier", "addGlow", "addGlowSeconds", "trySpendGlow", "addStardust", "addStardustCapped", "trySpendStardust", "paradeGlow", "upgradeLevel", "supernovas", "supernovaPreview", "grantPersonalBoost", "hasBoost", "setServerBoostUntil", "setCrewPresent", "setLineBanker" }, signals = {  } },
-	["ServerScriptService.Server.Services.AtlasService"] = { fns = { "Init", "Start", "addNebbies", "record", "perched", "perchCount", "stashCap", "atlasCount", "hasEntry", "refreshPerches", "fuse", "fuseAll", "release", "setLock" }, signals = {  } },
-	["ServerScriptService.Server.Services.SpawnService"] = { fns = { "Init", "Start", "step", "setModifiers", "setActivePlayers", "query", "positionOf", "canCatch", "consume", "spawnLoose", "spawnPersonal", "spawnWelcome", "spawnGuaranteedRare", "setDirected", "flush", "snapshotFor", "clearPlayer", "aliveCount", "toSpawn" }, signals = {  } },
-	["ServerScriptService.Server.Services.EventService"] = { fns = { "Init", "Start", "step", "stepComet", "wispSweeps", "onWispSnip", "stepWisps", "flush", "isTruce", "beaconOpen", "onBeaconParade", "isCarrier", "carrier", "dropComet", "weatherForm", "serverBoostActive", "queueGlowParty", "glowPartyRemaining", "setActivePlayers", "runLiveOps", "snapshot" }, signals = {  } },
-	["ServerScriptService.Server.Services.CrewService"] = { fns = { "Init", "Start", "step", "crewOf", "areCrewmates", "crewmates", "escortersOf", "banner", "snapshot" }, signals = {  } },
-	["ServerScriptService.Server.Services.QuestService"] = { fns = { "Init", "Start", "step", "isRookie", "onSafeMoment", "onboardingStep", "drawDaily", "redeem" }, signals = {  } },
-	["ServerScriptService.Server.Services.ProductService"] = { fns = { "Init", "Start", "glowAmount", "grant" }, signals = {  } },
-	["ServerScriptService.Server.Services.LeaderboardService"] = { fns = { "Init", "Start", "step", "liveTop", "serverRecord", "weeklyTop" }, signals = {  } },
-	["ServerScriptService.Server.Services.CongaService"] = { fns = { "Init", "Start", "tick", "lineLength", "lineCodes", "lineCapacity", "nodePositions", "forceParade", "isActive", "activeCount", "inputType", "worldSnapshot" }, signals = {  } },
-	["ServerScriptService.Server.Util.MoveCheck"] = { fns = { "reset", "noteSpeed", "step", "isRestricted", "lastValid", "violations", "recentRewinds", "clear" }, signals = {  } },
-	["StarterPlayer.StarterPlayerScripts.Client.Controllers.LightingController"] = { fns = { "Init", "Start", "cycleClockTime", "currentPreset", "setPreset" }, signals = {  } },
-	["StarterPlayer.StarterPlayerScripts.Client.Controllers.WorldStateController"] = { fns = { "Init", "Start", "isReady", "localSlot", "slotOf", "userAt", "line", "lineLength", "trail", "wilds", "wildPosition", "events", "wispPosition", "cometPosition", "crews", "crewOf", "isCrewmate", "requestWorld" }, signals = { "Ready", "LineOp", "Caught", "Banked", "Snipped", "Cleared", "OwnerChanged", "WildAdded", "WildRemoved", "EventChanged", "CrewsChanged", "PingShown" } },
-	["StarterPlayer.StarterPlayerScripts.Client.Controllers.CongaRenderer"] = { fns = { "Init", "Start", "nodePositions", "nodeModel", "wildModel", "renderedParts" }, signals = {  } },
-	["StarterPlayer.StarterPlayerScripts.Client.Controllers.VFXController"] = { fns = { "Init", "Start", "floatText", "ring", "burst", "pillar", "fovPunch", "haptic", "fireworks", "playDash", "playUpgrade", "playSupernova" }, signals = {  } },
-	["StarterPlayer.StarterPlayerScripts.Client.Controllers.InputController"] = { fns = { "Init", "Start", "dash", "dashReadyAt", "inputType", "openPingWheel", "closePingWheel", "ping" }, signals = { "Dashed", "InputTypeChanged", "CheerRequested", "MinimapToggled" } },
-	["StarterPlayer.StarterPlayerScripts.Client.Controllers.OnboardingController"] = { fns = { "Init", "Start", "step", "currentHint" }, signals = {  } },
-	["StarterPlayer.StarterPlayerScripts.Client.Controllers.PanelController"] = { fns = { "Init", "Start", "open", "close", "back", "toggle", "current", "hasAction", "nextTab" }, signals = { "Opened", "Closed", "BadgeChanged" } },
-	["StarterPlayer.StarterPlayerScripts.Client.UI.ScreenFX"] = { fns = { "Init", "Start", "stamp", "flyCoins", "floater", "vignette", "confetti" }, signals = { "FeedbackReceived", "Celebrated" } },
-	["StarterPlayer.StarterPlayerScripts.Client.UI.Banners"] = { fns = { "Init", "Start", "show", "queued" }, signals = { "Shown" } },
-	["StarterPlayer.StarterPlayerScripts.Client.UI.HUD"] = { fns = { "Init", "Start", "reveal", "isRevealed", "revealAll", "anchor", "attention" }, signals = {  } },
-	["StarterPlayer.StarterPlayerScripts.Client.UI.Minimap"] = { fns = { "Init", "Start", "setExpanded", "toggle", "project" }, signals = {  } },
-	["StarterPlayer.StarterPlayerScripts.Client.UI.Panels.Upgrades"] = { fns = { "build", "onOpen", "onClose", "hasAction" }, signals = {  } },
-	["StarterPlayer.StarterPlayerScripts.Client.UI.Panels.Supernova"] = { fns = { "build", "onOpen", "onClose", "hasAction" }, signals = {  } },
-	["StarterPlayer.StarterPlayerScripts.Client.UI.Panels.Collection"] = { fns = { "build", "onOpen", "onClose", "hasAction", "selectTab" }, signals = {  } },
-	["StarterPlayer.StarterPlayerScripts.Client.UI.Panels.Goals"] = { fns = { "build", "onOpen", "onClose", "hasAction", "selectTab" }, signals = {  } },
-	["StarterPlayer.StarterPlayerScripts.Client.UI.Panels.Shop"] = { fns = { "build", "onOpen", "onClose", "hasAction", "selectTab" }, signals = {  } },
-	["StarterPlayer.StarterPlayerScripts.Client.UI.Panels.Crew"] = { fns = { "build", "onOpen", "onClose", "hasAction", "showInvite" }, signals = {  } },
-	["StarterPlayer.StarterPlayerScripts.Client.UI.Panels.Settings"] = { fns = { "build", "onOpen", "onClose", "hasAction" }, signals = {  } },
-	["StarterPlayer.StarterPlayerScripts.Client.UI.Panels.ReturnScreen"] = { fns = { "build", "onOpen", "onClose", "hasAction", "present" }, signals = {  } },
+	["ReplicatedStorage.Shared.Logic.Hash"] = {
+		fns = { "u32", "unit", "int", "range", "pickWeighted", "string", "stream" },
+		signals = {},
+	},
+	["ReplicatedStorage.Shared.Logic.EventClock"] = {
+		fns = {
+			"day",
+			"week",
+			"weekday",
+			"weatherKeyForSlot",
+			"weather",
+			"nextWeather",
+			"comet",
+			"nextComet",
+			"cometImpact",
+			"cometContent",
+			"beacon",
+			"nextBeacon",
+			"starfall",
+			"nextStarfall",
+			"nextEvent",
+			"featuredSpecies",
+			"weeklyWanderer",
+			"grandParadeLegendary",
+			"rotation",
+		},
+		signals = {},
+	},
+	["ReplicatedStorage.Shared.Logic.SeededPath"] = {
+		fns = { "wander", "chordAt", "newChordCursor", "cometSky", "scatterPoint" },
+		signals = {},
+	},
+	["ReplicatedStorage.Shared.Logic.WorldLayout"] = {
+		fns = {
+			"radiusXZ",
+			"nestCenter",
+			"nestCFrame",
+			"gateCFrame",
+			"inGateBox",
+			"harborSlot",
+			"inHarbor",
+			"inOwnHarbor",
+			"inBeaconRing",
+			"zoneAt",
+			"groundY",
+			"clampToIsland",
+			"spawnPoints",
+			"perchCFrame",
+			"welcomePoints",
+			"observatoryCFrame",
+			"constellationPoint",
+			"boardCFrame",
+			"pathStones",
+			"lanterns",
+			"decor",
+		},
+		signals = {},
+	},
+	["ReplicatedStorage.Shared.Logic.SnipRules"] = {
+		fns = {
+			"blockReason",
+			"isImmune",
+			"radius",
+			"lossCap",
+			"cutFrom",
+			"boundsOverlap",
+			"findCut",
+			"applyCut",
+		},
+		signals = {},
+	},
+	["ReplicatedStorage.Shared.Logic.Formulas"] = {
+		fns = {
+			"upgradeCost",
+			"upgradeMaxLevel",
+			"congaCapacity",
+			"congaBonus",
+			"guardLinks",
+			"lureRadius",
+			"baseWalkSpeed",
+			"walkSpeed",
+			"dashCooldown",
+			"nebbyMultiplier",
+			"paradeValue",
+			"passiveIncome",
+			"multiplier",
+			"offlineMultiplier",
+			"paradeGlow",
+			"offlineGlow",
+			"settle",
+			"glowForSeconds",
+			"supernovaCost",
+			"auraFor",
+			"atlasPerchMilestones",
+			"perchCount",
+			"stashCap",
+			"fuseCost",
+			"releaseDust",
+			"capScale",
+			"effectiveCap",
+			"beaconGoal",
+			"wispCount",
+			"rookieEligible",
+		},
+		signals = {},
+	},
+	["ReplicatedStorage.Shared.Logic.Trail"] = {
+		fns = {
+			"new",
+			"reset",
+			"setMaxLength",
+			"head",
+			"push",
+			"sample",
+			"findCut",
+			"lastSeq",
+			"since",
+			"segmentDistanceXZ",
+			"findCutSwept",
+		},
+		signals = {},
+	},
+	["ReplicatedStorage.Shared.Logic.PathCodec"] = {
+		fns = { "encode", "decode", "split", "size" },
+		signals = {},
+	},
+	["ReplicatedStorage.Shared.Render.NebbyBuilder"] = {
+		fns = {
+			"build",
+			"setLod",
+			"animate",
+			"appendCFrames",
+			"bodySize",
+			"bodyColor",
+			"partCount",
+			"buildWisp",
+			"buildCometOrb",
+			"buildCometSky",
+			"destroy",
+		},
+		signals = {},
+	},
+	["ServerScriptService.Server.Services.WorldService"] = {
+		fns = {
+			"Init",
+			"Start",
+			"root",
+			"nest",
+			"spawnLocation",
+			"setNestAppearance",
+			"setPerchCount",
+			"beacon",
+			"board",
+			"partCount",
+		},
+		signals = {},
+	},
+	["ServerScriptService.Server.Services.NestService"] = {
+		fns = {
+			"Init",
+			"Start",
+			"slotOf",
+			"playerAt",
+			"inOwnHarbor",
+			"teleportHome",
+			"setPerchDisplay",
+			"setPerchCount",
+			"setting",
+			"isZen",
+			"snipsDisabled",
+			"unlock",
+			"grantTemporary",
+			"hasUnlock",
+		},
+		signals = {},
+	},
+	["ServerScriptService.Server.Services.EconomyService"] = {
+		fns = {
+			"Init",
+			"Start",
+			"step",
+			"settle",
+			"refreshRate",
+			"idleRate",
+			"multiplier",
+			"addGlow",
+			"addGlowSeconds",
+			"trySpendGlow",
+			"addStardust",
+			"addStardustCapped",
+			"trySpendStardust",
+			"paradeGlow",
+			"upgradeLevel",
+			"supernovas",
+			"supernovaPreview",
+			"grantPersonalBoost",
+			"hasBoost",
+			"setServerBoostUntil",
+			"setCrewPresent",
+			"setLineBanker",
+		},
+		signals = {},
+	},
+	["ServerScriptService.Server.Services.AtlasService"] = {
+		fns = {
+			"Init",
+			"Start",
+			"addNebbies",
+			"record",
+			"perched",
+			"perchCount",
+			"stashCap",
+			"atlasCount",
+			"hasEntry",
+			"refreshPerches",
+			"fuse",
+			"fuseAll",
+			"release",
+			"setLock",
+		},
+		signals = {},
+	},
+	["ServerScriptService.Server.Services.SpawnService"] = {
+		fns = {
+			"Init",
+			"Start",
+			"step",
+			"setModifiers",
+			"setActivePlayers",
+			"query",
+			"positionOf",
+			"canCatch",
+			"consume",
+			"spawnLoose",
+			"spawnPersonal",
+			"spawnWelcome",
+			"spawnGuaranteedRare",
+			"setDirected",
+			"flush",
+			"snapshotFor",
+			"clearPlayer",
+			"aliveCount",
+			"toSpawn",
+		},
+		signals = {},
+	},
+	["ServerScriptService.Server.Services.EventService"] = {
+		fns = {
+			"Init",
+			"Start",
+			"step",
+			"stepComet",
+			"wispSweeps",
+			"onWispSnip",
+			"stepWisps",
+			"flush",
+			"isTruce",
+			"beaconOpen",
+			"onBeaconParade",
+			"isCarrier",
+			"carrier",
+			"dropComet",
+			"weatherForm",
+			"serverBoostActive",
+			"queueGlowParty",
+			"glowPartyRemaining",
+			"setActivePlayers",
+			"runLiveOps",
+			"snapshot",
+		},
+		signals = {},
+	},
+	["ServerScriptService.Server.Services.CrewService"] = {
+		fns = {
+			"Init",
+			"Start",
+			"step",
+			"crewOf",
+			"areCrewmates",
+			"crewmates",
+			"escortersOf",
+			"banner",
+			"snapshot",
+		},
+		signals = {},
+	},
+	["ServerScriptService.Server.Services.QuestService"] = {
+		fns = { "Init", "Start", "step", "isRookie", "onSafeMoment", "onboardingStep", "drawDaily", "redeem" },
+		signals = {},
+	},
+	["ServerScriptService.Server.Services.ProductService"] = {
+		fns = { "Init", "Start", "glowAmount", "grant" },
+		signals = {},
+	},
+	["ServerScriptService.Server.Services.LeaderboardService"] = {
+		fns = { "Init", "Start", "step", "liveTop", "serverRecord", "weeklyTop" },
+		signals = {},
+	},
+	["ServerScriptService.Server.Services.CongaService"] = {
+		fns = {
+			"Init",
+			"Start",
+			"tick",
+			"lineLength",
+			"lineCodes",
+			"lineCapacity",
+			"nodePositions",
+			"forceParade",
+			"isActive",
+			"activeCount",
+			"inputType",
+			"worldSnapshot",
+		},
+		signals = {},
+	},
+	["ServerScriptService.Server.Util.MoveCheck"] = {
+		fns = {
+			"reset",
+			"noteSpeed",
+			"step",
+			"isRestricted",
+			"lastValid",
+			"violations",
+			"recentRewinds",
+			"clear",
+		},
+		signals = {},
+	},
+	["StarterPlayer.StarterPlayerScripts.Client.Controllers.LightingController"] = {
+		fns = { "Init", "Start", "cycleClockTime", "currentPreset", "setPreset" },
+		signals = {},
+	},
+	["StarterPlayer.StarterPlayerScripts.Client.Controllers.WorldStateController"] = {
+		fns = {
+			"Init",
+			"Start",
+			"isReady",
+			"localSlot",
+			"slotOf",
+			"userAt",
+			"line",
+			"lineLength",
+			"trail",
+			"wilds",
+			"wildPosition",
+			"events",
+			"wispPosition",
+			"cometPosition",
+			"crews",
+			"crewOf",
+			"isCrewmate",
+			"requestWorld",
+		},
+		signals = {
+			"Ready",
+			"LineOp",
+			"Caught",
+			"Banked",
+			"Snipped",
+			"Cleared",
+			"OwnerChanged",
+			"WildAdded",
+			"WildRemoved",
+			"EventChanged",
+			"CrewsChanged",
+			"PingShown",
+		},
+	},
+	["StarterPlayer.StarterPlayerScripts.Client.Controllers.CongaRenderer"] = {
+		fns = { "Init", "Start", "nodePositions", "nodeModel", "wildModel", "renderedParts" },
+		signals = {},
+	},
+	["StarterPlayer.StarterPlayerScripts.Client.Controllers.VFXController"] = {
+		fns = {
+			"Init",
+			"Start",
+			"floatText",
+			"ring",
+			"burst",
+			"pillar",
+			"fovPunch",
+			"haptic",
+			"fireworks",
+			"playDash",
+			"playUpgrade",
+			"playSupernova",
+		},
+		signals = {},
+	},
+	["StarterPlayer.StarterPlayerScripts.Client.Controllers.InputController"] = {
+		fns = {
+			"Init",
+			"Start",
+			"dash",
+			"dashReadyAt",
+			"inputType",
+			"openPingWheel",
+			"closePingWheel",
+			"ping",
+		},
+		signals = { "Dashed", "InputTypeChanged", "CheerRequested", "MinimapToggled" },
+	},
+	["StarterPlayer.StarterPlayerScripts.Client.Controllers.OnboardingController"] = {
+		fns = { "Init", "Start", "step", "currentHint" },
+		signals = {},
+	},
+	["StarterPlayer.StarterPlayerScripts.Client.Controllers.PanelController"] = {
+		fns = { "Init", "Start", "open", "close", "back", "toggle", "current", "hasAction", "nextTab" },
+		signals = { "Opened", "Closed", "BadgeChanged" },
+	},
+	["StarterPlayer.StarterPlayerScripts.Client.UI.ScreenFX"] = {
+		fns = { "Init", "Start", "stamp", "flyCoins", "floater", "vignette", "confetti" },
+		signals = { "FeedbackReceived", "Celebrated" },
+	},
+	["StarterPlayer.StarterPlayerScripts.Client.UI.Banners"] = {
+		fns = { "Init", "Start", "show", "queued" },
+		signals = { "Shown" },
+	},
+	["StarterPlayer.StarterPlayerScripts.Client.UI.HUD"] = {
+		fns = { "Init", "Start", "reveal", "isRevealed", "revealAll", "anchor", "attention" },
+		signals = {},
+	},
+	["StarterPlayer.StarterPlayerScripts.Client.UI.Minimap"] = {
+		fns = { "Init", "Start", "setExpanded", "toggle", "project" },
+		signals = {},
+	},
+	["StarterPlayer.StarterPlayerScripts.Client.UI.Panels.Upgrades"] = {
+		fns = { "build", "onOpen", "onClose", "hasAction" },
+		signals = {},
+	},
+	["StarterPlayer.StarterPlayerScripts.Client.UI.Panels.Supernova"] = {
+		fns = { "build", "onOpen", "onClose", "hasAction" },
+		signals = {},
+	},
+	["StarterPlayer.StarterPlayerScripts.Client.UI.Panels.Collection"] = {
+		fns = { "build", "onOpen", "onClose", "hasAction", "selectTab" },
+		signals = {},
+	},
+	["StarterPlayer.StarterPlayerScripts.Client.UI.Panels.Goals"] = {
+		fns = { "build", "onOpen", "onClose", "hasAction", "selectTab" },
+		signals = {},
+	},
+	["StarterPlayer.StarterPlayerScripts.Client.UI.Panels.Shop"] = {
+		fns = { "build", "onOpen", "onClose", "hasAction", "selectTab" },
+		signals = {},
+	},
+	["StarterPlayer.StarterPlayerScripts.Client.UI.Panels.Crew"] = {
+		fns = { "build", "onOpen", "onClose", "hasAction", "showInvite" },
+		signals = {},
+	},
+	["StarterPlayer.StarterPlayerScripts.Client.UI.Panels.Settings"] = {
+		fns = { "build", "onOpen", "onClose", "hasAction" },
+		signals = {},
+	},
+	["StarterPlayer.StarterPlayerScripts.Client.UI.Panels.ReturnScreen"] = {
+		fns = { "build", "onOpen", "onClose", "hasAction", "present" },
+		signals = {},
+	},
 }
 
 local SERVER_ORDER = {
@@ -325,9 +743,12 @@ return function(T)
 			expect(B.Supernova.Costs[1]).toBe(400000)
 			expect(B.Starforge.Costs).toEqual({ 25, 120, 600, 3000 })
 			expect(B.Conga.BaseCapacity + B.Upgrades.conga.MaxAbsolute).toBe(B.Conga.AbsoluteMax)
-			expect(B.Perches.Base + B.Upgrades.perches.Max + B.Perches.AtlasMilestoneMax + B.Perches.ExtraPerchesPass).toBe(
-				B.Perches.Max
-			)
+			expect(
+				B.Perches.Base
+					+ B.Upgrades.perches.Max
+					+ B.Perches.AtlasMilestoneMax
+					+ B.Perches.ExtraPerchesPass
+			).toBe(B.Perches.Max)
 			expect(B.Guard.Base + B.Upgrades.guard.Max * B.Guard.PerLevel).toBe(B.Guard.Max)
 			expect(#B.UpgradeOrder).toBe(5)
 			for _, track in B.UpgradeOrder do
@@ -374,8 +795,22 @@ return function(T)
 		local Strings = shared(h, "Localization.Strings")
 
 		it("6 passes et 6 produits aux prix du §8, IDs à 0, textes EN/FR", function()
-			local passPrices = { VIPStar = 199, DoubleGlow = 299, NightShift = 99, ExtraPerches = 149, StashPlus = 99, CongaStyles = 79 }
-			local productPrices = { GlowPouch = 25, GlowSack = 89, GlowCrate = 199, GlowParty = 99, StardustJar = 49, StarterKit = 49 }
+			local passPrices = {
+				VIPStar = 199,
+				DoubleGlow = 299,
+				NightShift = 99,
+				ExtraPerches = 149,
+				StashPlus = 99,
+				CongaStyles = 79,
+			}
+			local productPrices = {
+				GlowPouch = 25,
+				GlowSack = 89,
+				GlowCrate = 199,
+				GlowParty = 99,
+				StardustJar = 49,
+				StarterKit = 49,
+			}
 			local n = 0
 			for key, def in M.Passes do
 				n += 1
@@ -437,11 +872,23 @@ return function(T)
 
 		it("sons : toutes les clés du §9 existent et sont vides par défaut", function()
 			for _, key in
-				{ "Catch", "CatchRare", "Snip", "Scatter", "Bank", "Dash", "CometWarn", "CometImpact", "CometSwipe" }
+				{
+					"Catch",
+					"CatchRare",
+					"Snip",
+					"Scatter",
+					"Bank",
+					"Dash",
+					"CometWarn",
+					"CometImpact",
+					"CometSwipe",
+				}
 			do
 				expect(Sounds[key] ~= nil and Sounds[key].id == "").toBe(true)
 			end
-			for _, key in { "BeaconStart", "BeaconWin", "WispPop", "Supernova", "Ping", "Cheer", "Click", "Coin" } do
+			for _, key in
+				{ "BeaconStart", "BeaconWin", "WispPop", "Supernova", "Ping", "Cheer", "Click", "Coin" }
+			do
 				expect(Sounds[key] ~= nil and Sounds[key].id == "").toBe(true)
 			end
 		end)
@@ -576,11 +1023,19 @@ return function(T)
 				end)
 				expect({ path = path, loaded = ok }).toEqual({ path = path, loaded = true })
 				for _, fn in spec.fns do
-					expect({ path = path, fn = fn, kind = type(mod[fn]) }).toEqual({ path = path, fn = fn, kind = "function" })
+					expect({ path = path, fn = fn, kind = type(mod[fn]) }).toEqual({
+						path = path,
+						fn = fn,
+						kind = "function",
+					})
 				end
 				for _, sig in spec.signals do
 					local s = mod[sig]
-					expect({ path = path, signal = sig, ok = type(s) == "table" and type(s.Connect) == "function" }).toEqual({
+					expect({
+						path = path,
+						signal = sig,
+						ok = type(s) == "table" and type(s.Connect) == "function",
+					}).toEqual({
 						path = path,
 						signal = sig,
 						ok = true,
@@ -649,23 +1104,26 @@ return function(T)
 	end)
 
 	describe("Contrat › Démarrage complet", function()
-		it("le serveur démarre, accueille, fait avancer le temps et libère des joueurs sans erreur", function()
-			local h = Harness.new()
-			local DS = h:require("ServerScriptService.Server.Services.DataService")
-			DS.Settings.RETRY_BASE_DELAY = 0.001
-			h:boot()
-			local a = h:addPlayer({ userId = 101, name = "Mira" })
-			local b = h:addPlayer({ userId = 102, name = "Noah", locale = "fr-fr" })
-			DS.waitFor(a, 2)
-			DS.waitFor(b, 2)
-			h:step(1 / 60, 30)
-			h:respawn(a)
-			h:step(1 / 60, 10)
-			h:removePlayer(b)
-			h:settle(3)
-			expect(#h.errors).toBe(0)
-			expect(#h:warnings()).toBe(0)
-		end)
+		it(
+			"le serveur démarre, accueille, fait avancer le temps et libère des joueurs sans erreur",
+			function()
+				local h = Harness.new()
+				local DS = h:require("ServerScriptService.Server.Services.DataService")
+				DS.Settings.RETRY_BASE_DELAY = 0.001
+				h:boot()
+				local a = h:addPlayer({ userId = 101, name = "Mira" })
+				local b = h:addPlayer({ userId = 102, name = "Noah", locale = "fr-fr" })
+				DS.waitFor(a, 2)
+				DS.waitFor(b, 2)
+				h:step(1 / 60, 30)
+				h:respawn(a)
+				h:step(1 / 60, 10)
+				h:removePlayer(b)
+				h:settle(3)
+				expect(#h.errors).toBe(0)
+				expect(#h:warnings()).toBe(0)
+			end
+		)
 
 		it("src/first est monté dans ReplicatedFirst et l'écran de chargement s'exécute", function()
 			local h = Harness.new({ mode = "client" })
@@ -716,7 +1174,11 @@ return function(T)
 			Notify.personalBanner(p, "rookieEnd")
 			local fb = h:sentTo(p, "Feedback")
 			expect(#fb).toBe(1)
-			expect(fb[1][1]).toEqual({ key = "feedback.notEnoughGlow", vars = { missing = 1200 }, tone = "error" })
+			expect(fb[1][1]).toEqual({
+				key = "feedback.notEnoughGlow",
+				vars = { missing = 1200 },
+				tone = "error",
+			})
 			local cel = h:sentTo(p, "Celebrate")
 			expect(cel[1][1].kind).toBe("upgrade")
 			expect(cel[1][1].data.level).toBe(4)
@@ -741,7 +1203,10 @@ return function(T)
 			local Strings = shared(h, "Localization.Strings")
 			for kind, prio in Notify.BANNER_PRIORITY do
 				expect(prio >= 1 and prio <= 7).toBe(true)
-				expect({ kind = kind, text = hasString(Strings, "banner." .. kind) }).toEqual({ kind = kind, text = true })
+				expect({ kind = kind, text = hasString(Strings, "banner." .. kind) }).toEqual({
+					kind = kind,
+					text = true,
+				})
 			end
 		end)
 	end)

@@ -52,7 +52,11 @@ local function step()
 			else CFrame.Angles(0, angle, 0)
 		local float = entries.Float[part]
 		local lift = if float
-			then math.sin(t * (2 * math.pi) / attr(part, "period", 3) + attr(part, "phase", 0)) * attr(part, "amplitude", 0.5)
+			then math.sin(t * (2 * math.pi) / attr(part, "period", 3) + attr(part, "phase", 0)) * attr(
+				part,
+				"amplitude",
+				0.5
+			)
 			else 0
 		part.CFrame = (e.origin + Vector3.new(0, lift, 0)) * rot
 	end

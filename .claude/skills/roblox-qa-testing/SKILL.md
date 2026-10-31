@@ -43,6 +43,14 @@ rojo build -o build/Game.rbxl
 | `h:warnings()` | `warn()` + « Infinite yield possible » |
 | `h.log.kicks`, `h.log.prompts`, `h.log.analytics` | journaux |
 
+Aides d'intégration (même dossier) :
+
+| Module | Rôle |
+|--------|------|
+| `Bots` | serveur complet (`Bots.boot(Harness, { t0, before })`), marche honnête (`stepToward`, `walkAll`), cerveaux qui chassent et paradent (`hunt`, `brains`), voyage dans le temps (`travelTo`), coupe mise en scène (`stageSnip`), scène réservée (`sendHome` / `resume`) |
+| `Wire` | enregistre ce que le serveur envoie à un joueur (règles de sérialisation des remotes Roblox : tables mixtes ou à trous, NaN, Instances, buffer > 900 octets…) puis le rejoue dans un client complet ; `saveContext` / `restoreContext` pour reparler au serveur après le client |
+| `ApiAudit` | pendant un test, confronte classes, propriétés écrites (tweens compris), types et droits d'écriture à la base de réflexion de Roblox livrée avec Lune |
+
 Fidélité volontaire :
 - Chaque connexion de signal tourne dans son propre thread ; **une erreur dans une connexion fait échouer le test** (comme une ligne rouge dans la sortie Studio).
 - Accéder à un enfant inexistant d'un dossier de scripts lève « X is not a valid member » (fautes de chemin).

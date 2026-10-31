@@ -110,7 +110,11 @@ end
 function Build.vary(color: Color3, rng: Random, amount: number?): Color3
 	local h, s, v = color:ToHSV()
 	local a = amount or 0.04
-	return Color3.fromHSV((h + rng:NextNumber(-a, a) * 0.5) % 1, math.clamp(s + rng:NextNumber(-a, a), 0, 1), math.clamp(v + rng:NextNumber(-a, a), 0, 1))
+	return Color3.fromHSV(
+		(h + rng:NextNumber(-a, a) * 0.5) % 1,
+		math.clamp(s + rng:NextNumber(-a, a), 0, 1),
+		math.clamp(v + rng:NextNumber(-a, a), 0, 1)
+	)
 end
 
 -- Arbre stylisé : tronc cylindrique + 2-3 boules de feuillage
@@ -129,7 +133,11 @@ function Build.tree(parent: Instance, base: Vector3, scale: number, rng: Random,
 	local clusters = rng:NextInteger(2, 3)
 	for i = 1, clusters do
 		local size = (4.5 - i * 0.6) * scale * rng:NextNumber(0.9, 1.15)
-		local offset = Vector3.new(rng:NextNumber(-1, 1) * scale, trunkHeight + (i - 1) * 1.8 * scale, rng:NextNumber(-1, 1) * scale)
+		local offset = Vector3.new(
+			rng:NextNumber(-1, 1) * scale,
+			trunkHeight + (i - 1) * 1.8 * scale,
+			rng:NextNumber(-1, 1) * scale
+		)
 		Build.ball({
 			Name = "Leaves",
 			Size = Vector3.new(size, size, size),
@@ -151,8 +159,13 @@ function Build.rock(parent: Instance, base: Vector3, scale: number, rng: Random,
 		Build.part({
 			Name = "Stone",
 			Size = Vector3.new(s, s * 0.7, s * 0.9),
-			CFrame = CFrame.new(base + Vector3.new(rng:NextNumber(-1, 1) * scale, s * 0.25, rng:NextNumber(-1, 1) * scale))
-				* CFrame.Angles(rng:NextNumber(-0.4, 0.4), rng:NextNumber(0, math.pi * 2), rng:NextNumber(-0.4, 0.4)),
+			CFrame = CFrame.new(
+				base + Vector3.new(rng:NextNumber(-1, 1) * scale, s * 0.25, rng:NextNumber(-1, 1) * scale)
+			) * CFrame.Angles(
+				rng:NextNumber(-0.4, 0.4),
+				rng:NextNumber(0, math.pi * 2),
+				rng:NextNumber(-0.4, 0.4)
+			),
 			Color = Build.vary(tint, rng),
 			Material = Enum.Material.Slate,
 			Parent = m,
@@ -169,13 +182,24 @@ function Build.cloud(parent: Instance, center: Vector3, scale: number, rng: Rand
 		local p = Build.ball({
 			Name = "Puff",
 			Size = Vector3.new(s, s * 0.8, s),
-			CFrame = CFrame.new(center + Vector3.new((i - 3) * scale * 2.2, rng:NextNumber(-1, 1) * scale, rng:NextNumber(-1.5, 1.5) * scale)),
+			CFrame = CFrame.new(
+				center
+					+ Vector3.new(
+						(i - 3) * scale * 2.2,
+						rng:NextNumber(-1, 1) * scale,
+						rng:NextNumber(-1.5, 1.5) * scale
+					)
+			),
 			Color = Color3.fromRGB(255, 255, 255),
 			Material = Enum.Material.SmoothPlastic,
 			Transparency = 0,
 			Parent = m,
 		})
-		Build.tag(p, "Float", { amplitude = 0.6 * scale, period = rng:NextNumber(5, 8), phase = rng:NextNumber(0, 6.28) })
+		Build.tag(
+			p,
+			"Float",
+			{ amplitude = 0.6 * scale, period = rng:NextNumber(5, 8), phase = rng:NextNumber(0, 6.28) }
+		)
 	end
 	return m
 end

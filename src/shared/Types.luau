@@ -115,8 +115,11 @@ export type Actor = {
 	player: Player,
 	userId: number,
 	slot: number, -- 1-12 (0 = pas de Nid)
-	pos: Vector3, -- position serveur de la HumanoidRootPart
-	prev: Vector3, -- position au tick précédent
+	-- position serveur de la HumanoidRootPart ; sur un tick refusé (valid = false), pos = prev =
+	-- dernière position VALIDÉE (jamais la position brute, qui peut être un téléport)
+	pos: Vector3,
+	-- dernière position validée avant ce tick : prev → pos est un déplacement validé (balayages)
+	prev: Vector3,
 	valid: boolean, -- MoveCheck a validé ce tick (sinon : ni capture, ni coupe, ni parade, ni vol)
 	zen: boolean,
 	crewId: number, -- 0 = aucun
@@ -126,7 +129,7 @@ export type Actor = {
 
 -- Modificateurs d'apparition poussés par EventService vers SpawnService
 export type SpawnModifiers = {
-	form: number?, -- forme météo (40 %)
+	form: number?, -- forme météo (probabilité formChance = Balance.Spawn.WeatherFormChance)
 	formChance: number,
 	intervalDiv: number, -- intervalles ÷ (météo Meteor ×3, Frenzy ×4 ; produit)
 	capMult: number, -- plafonds × (Meteor ×1,5, Frenzy ×2 ; produit)
@@ -437,7 +440,15 @@ export type SupernovaPreview = {
 -- Client
 -- =============================================================================================
 
-export type PanelName = "Upgrades" | "Supernova" | "Collection" | "Goals" | "Shop" | "Crew" | "Settings" | "ReturnScreen"
+export type PanelName =
+	"Upgrades"
+	| "Supernova"
+	| "Collection"
+	| "Goals"
+	| "Shop"
+	| "Crew"
+	| "Settings"
+	| "ReturnScreen"
 
 export type HudElement =
 	"glow"

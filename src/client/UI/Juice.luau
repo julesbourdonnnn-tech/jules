@@ -171,7 +171,13 @@ end
 
 -- Compteur qui défile de `from` à `to` ; une nouvelle valeur annule la précédente
 local counting: { [TextLabel]: number } = setmetatable({}, { __mode = "k" }) :: any
-function Juice.countTo(label: TextLabel, from: number, to: number, duration: number?, format: ((number) -> string)?)
+function Juice.countTo(
+	label: TextLabel,
+	from: number,
+	to: number,
+	duration: number?,
+	format: ((number) -> string)?
+)
 	local fmt = format or function(n: number): string
 		return tostring(math.floor(n))
 	end

@@ -239,7 +239,7 @@ Une seule connexion `RunService.Heartbeat` (dans `CongaService.Start`) accumule 
 | 6 | Comète | `EventService.stepComet(now, actors)` — ramassage, vol, encaissement, explosion |
 | 7 | Coupes | Joueurs (`valid`) × files des autres : `SnipRules.blockReason` puis `SnipRules.findCut` (balayage `prev → pos`, escorte via `CrewService.escortersOf(victim)` à ≤ 7 studs, port sûr via `WorldLayout.inHarbor`) ; puis `EventService.wispSweeps(now)` × files (rayon 2,5, `isWisp = true`) → `EventService.onWispSnip` |
 | 8 | Gloomwisps éclatés | `EventService.stepWisps(now, actors)` |
-| 9 | Parades | Acteurs `valid` dans `WorldLayout.inGateBox(slot, pos)` de LEUR Nid, ou dans `WorldLayout.inBeaconRing(pos)` si `EventService.beaconOpen()` ; file non vide → parade (§11.13) |
+| 9 | Parades | Acteurs `valid` dont le déplacement validé `prev → pos` traverse `WorldLayout.inGateBox(slot, ·)` de LEUR Nid, ou `WorldLayout.inBeaconRing(·)` si `EventService.beaconOpen()` (échantillons tous les 1 stud, §16.27) ; file non vide → parade (§11.13) |
 | 10 | Entretien par joueur | WalkSpeed (`Formulas.walkSpeed`) posé seulement s'il change + `MoveCheck.noteSpeed` ; temps d'escorte (cumul, `Signals.EscortTime` par seconde pleine) ; joueurs actifs (1 / s → `SpawnService.setActivePlayers`, `EventService.setActivePlayers`) ; `Signals.LineChanged` pour chaque file modifiée ce tick |
 | 11 | Services lents | `EconomyService.step(now)`, `QuestService.step(now)`, `CrewService.step(now)`, `LeaderboardService.step(now)` (chacun limite lui-même sa fréquence) |
 | 12 | Diffusion | `LineEvent:FireAllClients(ops)` (UNE liste par tick, si non vide) ; `SnipEvent:FireAllClients(payload)` (une par coupe) ; `PathStream:FireAllClients(buf)` ; `SpawnService.flush(now, urgent)` ; `EventService.flush()` |
@@ -259,7 +259,7 @@ Bus de `Shared/Util/Signal` (chaque handler dans son propre thread). Un signal a
 | Signal | Arguments | Émis par | Abonnés prévus |
 |---|---|---|---|
 | `PlayerReady` | `(player, slot)` | NestService | QuestService (entonnoir 1 « Loaded », accueil), CongaService (WorldSnapshot si non envoyé) |
-| `ServerMoved` | `(player)` | NestService, CongaService | CongaService (`MoveCheck.reset`, miettes) |
+| `ServerMoved` | `(player)` | NestService (CongaService ne l'émet pas : un rembobinage anti-triche n'ouvre aucune exemption, voir §16.25) | CongaService (`MoveCheck.reset`, miettes) |
 | `Caught` | `(player, CatchInfo)` | CongaService | QuestService (quêtes, stats, entonnoir 2) |
 | `LineChanged` | `(player, n)` | CongaService | LeaderboardService (tableau en direct) |
 | `Parade` | `(player, ParadeInfo)` | CongaService | QuestService (Q1/Q3/Q4, quotidiennes, hebdo, entonnoir 3), LeaderboardService (record, hebdo), EventService (Balise : via `onBeaconParade` direct, pas ce signal) |
@@ -793,12 +793,12 @@ CongaService.worldSnapshot(player: Player): Types.WorldSnapshotPayload
 - **Coupes** (étape 7) : `SnipRules.blockReason` avec l'état ; `SnipRules.findCut` (rayon `SnipRules.radius(touch, isWisp)`) ; `c = SnipRules.cutFrom(k, n)` ; nœuds c…n retirés ; `SpawnService.spawnLoose(codes, positions, now, { prioritySlot = victime, silent = true })` ; `SnipRules.applyCut` (immunité, coupes récentes, attribut `ImmuneUntil`) ; recharges coupeur (1,5 s) et paire (20 s) ; Second Souffle victime (+4, 3 s) ; Snip Rush coupeur (Attrait ×1,5, 3 s) ; Stardust `RushDustPerNebby × count` via `addStardustCapped(…, "snipDust", "Snip")` sauf coupeur sous bouclier (Feedback `rookieNoDust`) ; `SnipEvent` ; `Feedback snipped` (victime), `snipDealt` (coupeur) ; `Signals.Snipped` ; analytics `SnipDealt`, `SnipReceived`, `SnipByInput`, et `PostSnipQuit` si la victime part < 60 s après ; file vide → `QuestService.onSafeMoment`.
 - **Parades** (étape 9) : `glow = EconomyService.paradeGlow(player, codes, atBeacon)` → `EconomyService.addGlow(…, atBeacon and "ParadeBeacon" or "Parade")` → `AtlasService.addNebbies(codes, "parade")` → si `atBeacon` : `EventService.onBeaconParade(player, n)` → `LineEvent bank` → `Signals.Parade` (avec `idleSeconds = glow / idleRate`) → `n ≥ MegaParade` : bannière `megaParade` → `QuestService.onSafeMoment` → analytics `ParadeLength`. `forceParade` fait la même chose sans test de porte (`forced = true`).
 - **WalkSpeed** : `Formulas.walkSpeed { stride, n, guard = Formulas.guardLinks(guard), carrier = EventService.isCarrier, dashing, secondWind }`. Dash : remote `Dash` → `DashReadyAt = now + Formulas.dashCooldown(R)`, `Signals.Dashed`.
-- **Mort / départ / Supernova** : `LineEvent clear` (`death` : libres prioritaires pour le propriétaire ; `leave` : sans priorité ; `supernova` : jamais de libres, la file a été encaissée).
+- **Mort / départ / Supernova** : `LineEvent clear` (`death` : libres prioritaires pour le propriétaire ; `leave` : sans priorité). La Supernova encaisse la file par `forceParade` (op `bank` normale, `ParadeInfo.forced = true`) : la raison `supernova` reste dans le contrat mais n'est jamais envoyée ; `reset` seulement si le slot d'un joueur change alors qu'il a une file (cas anormal).
 - **Diffusion** : §10.4-§10.6. `RequestWorld` → `worldSnapshot(player)`. `RequestPath(slot)` → `PathSnapshot`.
 - **MoveCheck** : §11.14 ; analytics `MoveViolation` (au départ, nombre de la session).
 - `Init` pose `EconomyService.setLineBanker(CongaService.forceParade)`.
 
-Signaux : émet `Caught`, `LineChanged`, `Parade`, `Snipped`, `Dashed`, `EscortTime`, `MoveViolation`, `ServerMoved` ; écoute `ServerMoved`, `PlayerReady`. Remotes : `Dash`, `SetInputType`, `RequestWorld`, `RequestPath` ; émet `PathStream`, `PathSnapshot`, `WorldSnapshot`, `LineEvent`, `SnipEvent`. Clés : `flags`. Dépendances : tous les services précédents, `Util/MoveCheck`, `Logic/*`.
+Signaux : émet `Caught`, `LineChanged`, `Parade`, `Snipped`, `Dashed`, `EscortTime`, `MoveViolation` ; écoute `ServerMoved`, `PlayerReady`. Remotes : `Dash`, `SetInputType`, `RequestWorld`, `RequestPath` ; émet `PathStream`, `PathSnapshot`, `WorldSnapshot`, `LineEvent`, `SnipEvent`. Clés : `flags`. Dépendances : tous les services précédents, `Util/MoveCheck`, `Logic/*`.
 
 ### 11.14 MoveCheck (paquet conga) — GDD §12.7
 
@@ -1288,6 +1288,12 @@ Interface d'un panneau (`PanelController.Panel`) : `name`, `tabs?`, `build(paren
 
 **Spécifiques** (GDD §12.9) : `Formulas.spec` (tables du §4.11), `Trail.spec` (extension), `SnipRules.spec` (chaque règle et combinaisons), `SeededPath.spec`, `EventClock.spec` (minuit, :25, :55, samedi 16:00 et 16:20, 100 000 créneaux à ±1 %), `Hash.spec` (valeurs de référence), `PathCodec.spec` (aller-retour, runs multiples, buffers tronqués), `EconomyPacing.spec` (porte bloquante §4.18 : 200 joueurs × 28 jours ; médianes dans les tolérances), `EconomyService/AtlasService/ProductService.spec` (achats, Supernova, Starforge, libération, réserve pleine, rejeu de reçu).
 
+**Intégration** (tout le jeu, aucun remplacement de fonction) :
+- `Boot.spec` : serveur complet, 12 joueurs (`tests/harness/Bots` : marche honnête, cerveaux qui chassent et paradent) ; coupes, améliorations et Supernova par les remotes ; météo, Grande Comète (ramassage, vol, encaissement), Nuit de la Balise et Starfall Saturday par voyage dans le temps (`Clock`) ; réapparitions, départs et retours (profil persisté) ; fermeture. Tous les envois du serveur passent par les règles de sérialisation des remotes Roblox (`tests/harness/Wire`) et chaque Feedback / bannière / célébration est vérifié contre `Strings` (EN et FR, variables comprises).
+- `ClientGame.spec` : un vrai serveur joue une partie ; tout ce qu'il envoie à un joueur (remotes, attributs répliqués, perchoirs, position du personnage) est enregistré puis rejoué dans le vrai client (`Main.client`) au même instant ; à des points de contrôle, le miroir du client (files, miettes, sauvages, événements, équipages, profil) doit être identique à l'état du serveur, sans `RequestWorld` ni `RequestPath`. Puis chaque panneau, onglet et bouton est pressé (EN puis FR) et les intentions produites sont livrées au vrai serveur. Variante : arrivée en cours de partie (tactile, français).
+- Les deux specs auditent aussi l'API Roblox (`tests/harness/ApiAudit`) : chaque classe créée, chaque propriété écrite (objectifs des tweens compris) et chaque membre lu inconnu du harnais sont confrontés à la base de réflexion de Roblox livrée avec Lune (existence, type, droit d'écriture, type interpolable) — une faute de frappe de propriété, qui passe sous Lune, casserait dans Roblox.
+- `Boot.spec` couvre aussi les courses de cycle de vie : joueurs présents avant le démarrage des services, départ pendant le chargement du profil puis retour, personnage absent, mort avant la porte, réapparitions en rafale.
+
 **Définition de fini** : plus aucun `error("TODO(<paquet>)…")` dans ses fichiers ; comportement conforme au GDD et à ce document ; specs ci-dessus ; `selene src` sans erreur ; fichiers formatés ; suite complète lancée et résultat rapporté honnêtement ; notes d'intégration pour tout besoin hors de ses fichiers.
 
 ---
@@ -1320,6 +1326,10 @@ Points où le GDD laissait un choix, tranchés ici pour que tous implémentent l
 22. **Cordes des Gloomwisps continues** : chaque corde part du point d'arrivée de la précédente.
 23. **Mort** : Nebbies libres prioritaires pour le propriétaire (étourdis pour les autres), sans Second Souffle ; **départ** : sans priorité.
 24. **`MaxPlayers = 12`** posé aussi dans `default.project.json` (le Creator Hub reste la référence en production).
+25. **MoveCheck (GDD §12.7)** : appliquée à chaque tick de 0,1 s, la seule tolérance de +4 studs du GDD laisserait passer ≈ 4× la vitesse ; MoveCheck ajoute donc un contrôle du déplacement **soutenu sur 1 s** (tolérance comptée une fois). La référence de chaque tick est la dernière position validée (un téléport n'est jamais accepté au tick suivant), avec au plus 1,5 s de crédit à l'arrêt (gels réseau). Pendant l'exemption de 3 s après une apparition, les positions restent contrôlées : une position invraisemblable est refusée sans compter ni rembobiner. Après un rembobinage, une période de grâce absorbe les positions encore en vol (pas de nouveau rembobinage, pas de compte pour `lbBanned`). Un rembobinage n'émet pas `ServerMoved` (pas d'exemption enchaînable).
+26. **Acteur d'un tick refusé** (`valid = false`) : `pos = prev` = dernière position validée (jamais la position brute) ; `prev → pos` est toujours un déplacement validé, que tous les balayages utilisent (coupes, vol et encaissement de la Comète, Gloomwisps, portes).
+27. **Portes et anneau testés le long du pas validé** : à 10 Hz, avec un Dash (3,6 studs par tick) et la gigue du réseau, deux échantillons peuvent tomber de part et d'autre de la boîte de porte (4 studs de profondeur). Parades (CongaService) et encaissement de la Comète (EventService) testent donc `prev → pos` tous les 1 stud.
+28. **Analytique `SnipByInput`** : valeur = type d'entrée du coupeur (1 tactile, 2 clavier-souris, 3 manette), `Util/Analytics` n'ayant pas de champs personnalisés. `WispSnip` est envoyée par CongaService seul (pas par `EventService.onWispSnip`).
 
 ---
 

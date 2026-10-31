@@ -181,7 +181,9 @@ local function loadRecord(player: Player): (boolean, { [string]: any }?)
 			local record = result :: Record?
 			return true, if record then record.data else nil
 		elseif ok then
-			warn(`[DataService] données de {player.Name} verrouillées par un autre serveur, essai {attempt}/{Settings.LOAD_ATTEMPTS}`)
+			warn(
+				`[DataService] données de {player.Name} verrouillées par un autre serveur, essai {attempt}/{Settings.LOAD_ATTEMPTS}`
+			)
 			task.wait(Settings.LOCKED_RETRY_DELAY)
 		else
 			warn(`[DataService] échec de chargement pour {player.Name} (essai {attempt}) :`, result)
@@ -217,7 +219,9 @@ local function writeRecord(player: Player, data: { [string]: any }, release: boo
 		end)
 		if ok then
 			if lostLock then
-				warn(`[DataService] session de {player.Name} reprise par un autre serveur : sauvegarde ignorée`)
+				warn(
+					`[DataService] session de {player.Name} reprise par un autre serveur : sauvegarde ignorée`
+				)
 				return false
 			end
 			return true
@@ -286,7 +290,9 @@ local function onPlayerAdded(player: Player)
 		return
 	end
 	if not ok then
-		player:Kick("Your data could not be loaded. Please rejoin in a moment. / Tes données n'ont pas pu être chargées, reviens dans un instant.")
+		player:Kick(
+			"Your data could not be loaded. Please rejoin in a moment. / Tes données n'ont pas pu être chargées, reviens dans un instant."
+		)
 		return
 	end
 	local data = prepare(raw)
@@ -322,7 +328,11 @@ function DataService.Init()
 				store:GetAsync("__studio_probe")
 			end)
 			if not probeOk then
-				warn("[DataService] DataStore indisponible dans Studio (", probeErr, ") : sauvegarde EN MÉMOIRE uniquement.")
+				warn(
+					"[DataService] DataStore indisponible dans Studio (",
+					probeErr,
+					") : sauvegarde EN MÉMOIRE uniquement."
+				)
 				store = memoryStore()
 				DataService.usingMemoryStore = true
 			end
