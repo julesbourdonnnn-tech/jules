@@ -20,6 +20,11 @@
 --     portée (Q6) — l'instruction affichée est toujours réalisable maintenant (GDD §3)
 --   * jamais plus d'une instruction à l'écran (≤ 4 mots, "onboarding.*"), aucune fenêtre modale
 --     (l'accueil n'ouvre jamais de panneau lui-même)
+--   * place de l'instruction : sous la pile COMPLÈTE de toasts (HUD.hintTop, règle partagée avec la
+--     colonne de droite du HUD) ; effacée pendant les 10 s du bouton ACCLAMER quand il occupe sa
+--     place (téléphones) ; panneau ouvert : une instruction qui le concerne (achats dans Améliorer)
+--     passe au-dessus de la fenêtre (écran relevé à 35), ancrée sur son bord haut, toute autre
+--     instruction s'efface jusqu'à la fermeture
 --   * message « Ton Nid travaille même quand tu dors » à 10 min de jeu (joueurs encore nouveaux)
 -- Pièces 3D : dossier workspace.ClientOnboarding (ancrées, sans collision, réutilisées). Une seule
 -- connexion Heartbeat ; temps d'animation = somme des dt (mesure graphique), temps de jeu = Clock.
@@ -65,8 +70,12 @@ local OnboardingController = {}
 -- Constantes (GDD §3) ---------------------------------------------------------------------------
 
 local DISPLAY_ORDER = 20
+-- instruction ancrée sur un panneau ouvert : au-dessus de la fenêtre des panneaux (30), sous les
+-- bannières (40), ScreenFX (45) et les toasts (50)
+local DOCKED_DISPLAY_ORDER = 35
 local HINT_SIZE = Vector2.new(400, 56)
-local HINT_Y = 232 -- sous la pile de toasts
+local HINT_DOCK_MIN = 8 -- px de référence : haut minimal de l'instruction ancrée (fenêtre non mesurée)
+local HINT_LAYOUT_EVERY = 0.1 -- s : replacement (écran tourné, fenêtre qui s'ouvre, ACCLAMER)
 local FOOTPRINTS = 6
 local FOOTPRINT_SIZE = Vector3.new(0.9, 0.12, 1.5)
 local FOOTPRINT_STAGGER = 0.15
@@ -112,6 +121,16 @@ local HINT_ICONS: { [string]: string } = {
 }
 
 local ATTENTION_ELEMENTS: { Types.HudElement } = { "rail.Upgrades", "dash", "eventPill" }
+
+-- Instructions qui concernent un panneau : affichées PAR-DESSUS lui quand il est ouvert ; toute
+-- autre instruction s'efface tant qu'un panneau est ouvert (elle ne se lirait pas dessous)
+local PANEL_HINTS: { [string]: { [string]: boolean } } = {
+	Upgrades = {
+		["onboarding.buyConga"] = true,
+		["onboarding.buyStride"] = true,
+		["onboarding.perches"] = true,
+	},
+}
 
 -- Modes de guidage qui posent la flèche au sol (stepGuide)
 local ARROW_MODES: { [string]: boolean } = {
@@ -174,6 +193,10 @@ local hintFrame: CanvasGroup? = nil
 local hintLabel: TextLabel? = nil
 local hintIcon: TextLabel? = nil
 local hintScale: UIScale? = nil
+local hintGui: ScreenGui? = nil
+local hintShown = false -- instruction réellement à l'écran (clé présente et pas effacée)
+local hintDocked = false -- ancrée sur la fenêtre du panneau ouvert
+local lastHintLayout = -math.huge
 
 local folder: Folder? = nil
 local footprints: { BasePart } = {}
@@ -443,6 +466,7 @@ local function buildHint()
 	if hintFrame and hintFrame.Parent then
 		return
 	end
+	hintGui = Root.screen("Onboarding", DISPLAY_ORDER)
 	local safe = Root.safe("Onboarding", DISPLAY_ORDER)
 	local s = Create("UIScale", { Name = "HintScale", Scale = 1 })
 	local icon = Widgets.label({
@@ -468,7 +492,7 @@ local function buildHint()
 	local frame = Create("CanvasGroup", {
 		Name = "Hint",
 		AnchorPoint = Vector2.new(0.5, 0),
-		Position = UDim2.new(0.5, 0, 0, HINT_Y),
+		Position = UDim2.new(0.5, 0, 0, HUD.hintTop()),
 		Size = UDim2.fromOffset(HINT_SIZE.X, HINT_SIZE.Y),
 		BackgroundColor3 = Theme.Colors.Background,
 		BackgroundTransparency = 0.15,
@@ -488,27 +512,28 @@ local function buildHint()
 	hintScale = s
 end
 
-local function showHint(key: string?)
-	if key == currentHintKey then
+-- Affiche (fondu + pop, ou nouvelle instruction : `pop`) ou efface (fondu) l'instruction
+local function setHintShown(visible: boolean, pop: boolean)
+	local frame, s = hintFrame, hintScale
+	if frame == nil or s == nil then
 		return
 	end
-	currentHintKey = key
-	buildHint()
-	local frame, label, icon, s = hintFrame, hintLabel, hintIcon, hintScale
-	if frame == nil or label == nil or icon == nil or s == nil then
+	if not visible then
+		if hintShown then
+			hintShown = false
+			local tween = Juice.tween(frame, 0.2, { GroupTransparency = 1 })
+			tween.Completed:Once(function()
+				if not hintShown then
+					frame.Visible = false
+				end
+			end)
+		end
 		return
 	end
-	if key == nil then
-		local tween = Juice.tween(frame, 0.2, { GroupTransparency = 1 })
-		tween.Completed:Once(function()
-			if currentHintKey == nil then
-				frame.Visible = false
-			end
-		end)
+	if hintShown and not pop then
 		return
 	end
-	label.Text = Prefs.t(key)
-	icon.Text = HINT_ICONS[key] or "★"
+	hintShown = true
 	frame.Visible = true
 	frame.GroupTransparency = 1
 	Juice.tween(frame, 0.15, { GroupTransparency = 0 })
@@ -519,6 +544,81 @@ local function showHint(key: string?)
 		Juice.tween(s, 0.25, { Scale = 1 }, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
 	end
 	AudioController.play("Pop", 0.05)
+end
+
+-- Haut de la fenêtre du panneau `name` dans l'écran d'accueil (px de référence) ; nil tant que le
+-- moteur ne l'a pas mesurée
+local function windowTop(name: Types.PanelName): number?
+	local page = PanelController.page(name)
+	local window = if page then page.Parent else nil
+	local frame = hintFrame
+	local safe = if frame then frame.Parent else nil
+	if window == nil or safe == nil or not window:IsA("GuiObject") or not safe:IsA("GuiObject") then
+		return nil
+	end
+	local size = (window :: GuiObject).AbsoluteSize
+	if not (isFinite(size.Y) and size.Y > 1) then
+		return nil
+	end
+	local k = math.max(Root.scale(), 0.01)
+	local padding = safe:FindFirstChildOfClass("UIPadding")
+	local inset = if padding then padding.PaddingTop.Offset else 0
+	local y = ((window :: GuiObject).AbsolutePosition.Y - (safe :: GuiObject).AbsolutePosition.Y) / k - inset
+	return if isFinite(y) then y else nil
+end
+
+-- Place et montre l'instruction selon l'écran : sous la pile de toasts (HUD.hintTop), effacée sous
+-- ACCLAMER ou sous un panneau qui ne la concerne pas, ancrée sur le bord haut de la fenêtre d'un
+-- panneau qui la concerne (moitié au-dessus : elle ne cache ni les cartes ni le bouton Fermer)
+local function layoutHint(pop: boolean)
+	lastHintLayout = frameTime
+	local frame = hintFrame
+	if frame == nil then
+		return
+	end
+	local key = currentHintKey
+	local panel = PanelController.current()
+	local docked = false
+	local visible = key ~= nil
+	if key ~= nil and panel ~= nil then
+		local own = PANEL_HINTS[panel]
+		docked = own ~= nil and own[key] == true
+		visible = docked
+	end
+	if visible and not docked and HUD.cheerOverHint() then
+		visible = false
+	end
+	local y = HUD.hintTop()
+	if docked and panel ~= nil then
+		local top = windowTop(panel)
+		y = if top ~= nil then math.max(HINT_DOCK_MIN, top - HINT_SIZE.Y / 2) else HINT_DOCK_MIN
+	end
+	local position = UDim2.new(0.5, 0, 0, math.floor(y + 0.5))
+	if frame.Position ~= position then
+		frame.Position = position
+	end
+	local gui = hintGui
+	local order = if docked then DOCKED_DISPLAY_ORDER else DISPLAY_ORDER
+	if gui and gui.DisplayOrder ~= order then
+		gui.DisplayOrder = order
+	end
+	hintDocked = docked
+	setHintShown(visible, pop)
+end
+
+local function showHint(key: string?)
+	if key == currentHintKey then
+		return
+	end
+	currentHintKey = key
+	buildHint()
+	local label, icon = hintLabel, hintIcon
+	if key ~= nil and label ~= nil and icon ~= nil then
+		label.Text = Prefs.t(key)
+		icon.Text = HINT_ICONS[key] or "★"
+	end
+	-- nouvelle instruction : fondu + pop (si elle peut s'afficher ici et maintenant)
+	layoutHint(key ~= nil)
 end
 
 -- Pièces 3D -------------------------------------------------------------------------------------
@@ -1063,6 +1163,9 @@ local function onFrame(dt: number)
 	if introDone then
 		stepGuide()
 	end
+	if frameTime - lastHintLayout >= HINT_LAYOUT_EVERY or frameTime < lastHintLayout then
+		layoutHint(false)
+	end
 end
 
 -- API -------------------------------------------------------------------------------------------
@@ -1117,12 +1220,14 @@ function OnboardingController.Start()
 			upgradesOpen = true
 			dirty = true
 		end
+		layoutHint(false)
 	end)
 	PanelController.Closed:Connect(function(name: Types.PanelName)
 		if name == "Upgrades" then
 			upgradesOpen = false
 			dirty = true
 		end
+		layoutHint(false)
 	end)
 	Prefs.LanguageChanged:Connect(function()
 		local key = currentHintKey
@@ -1155,6 +1260,8 @@ OnboardingController._state = function()
 		attention = attentionState,
 		folder = folder,
 		hintFrame = hintFrame,
+		hintShown = hintShown,
+		hintDocked = hintDocked,
 		nestWorksUntil = nestWorksUntil,
 	}
 end
