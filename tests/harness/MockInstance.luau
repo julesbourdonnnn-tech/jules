@@ -207,6 +207,7 @@ local EVENTS = {
 	PromptGamePassPurchaseFinished = true,
 	PromptProductPurchaseFinished = true,
 	PromptPurchaseFinished = true,
+	GameInvitePromptClosed = true,
 	TouchTap = true,
 	JumpRequest = true,
 	LastInputTypeChanged = true,

@@ -193,7 +193,7 @@ L1, R1 et L2 restent libres en jeu : un enfant qui les presse par erreur ne déc
 
 Repère du mode menu : tant que la sélection est dans le HUD ou la minicarte (après △, ou après ○ qui ferme un panneau ouvert depuis le rail et rend la sélection au bouton du rail), l'icône au-dessus du rail (`RailGlyph`) passe de △ à **○** avec le libellé « Play » / « Jouer » à côté (`RailHint`, clé `hud.backToGame`, ≥ 18 px, manette seulement). Sélection effacée ou partie ailleurs (fenêtre de panneau, carte d'invitation) : △ revient, libellé masqué ; rafraîchi sur `Prefs.LanguageChanged` et `Platform.Changed`.
 
-Sélection de départ : la cible de l'accueil (main / pulsation), sinon la carte d'invitation d'équipage visible (`PanelController.focusTarget()`), sinon le bouton du rail qui porte une pastille « ! », sinon le dernier bouton du rail utilisé, sinon Améliorer. Améliorer = **△ ✕** (2 gestes).
+Sélection de départ : la carte d'invitation d'équipage visible (`PanelController.focusTarget()` : passagère, 20 s, et reliée à aucun bouton du HUD), sinon la cible de l'accueil (main / pulsation), sinon le bouton du rail qui porte une pastille « ! », sinon le dernier bouton du rail utilisé, sinon le premier bouton affiché (Améliorer). Améliorer = **△ ✕** (2 gestes). Tant que la carte d'invitation montre △ sur Accepter, le △ de l'instruction d'accueil est masqué (un seul △ à l'écran).
 
 ### 6.3 Panneaux
 
@@ -238,7 +238,8 @@ La roue ne pose **aucune** sélection `GuiService` : la croix, le stick et ✕ p
 | Ouvrir | △ ✕ puis R2 jusqu'à Boutique (ou △, ↓ × 3, ✕) |
 | Onglets Passes / Boosts & Glow / Codes | L1 / R1 |
 | Acheter | ✕ sur Acheter → fenêtre d'achat **Roblox** (navigable à la manette par Roblox : ✕ confirmer, ○ annuler) |
-| Après la fenêtre (`PromptProductPurchaseFinished`, `PromptGamePassPurchaseFinished`) | la sélection revient sur le même bouton Acheter si le panneau est encore ouvert |
+| Pendant la fenêtre | sélection du jeu vide : `Panels/Shop` appelle `PanelController.holdSelection(true)` après un appel réussi à `PromptGamePassPurchase` / `PromptProductPurchase` (repli : sélection effacée moins de `Config/Console.PromptHoldWindow` = 3 s après ✕ sur ce même bouton) |
+| Après la fenêtre (`PromptProductPurchaseFinished`, `PromptGamePassPurchaseFinished`) | `holdSelection(false)`, puis la sélection revient sur le même bouton Acheter si le panneau est encore ouvert |
 | Codes | ✕ sur le champ → clavier virtuel de la console ; validation du clavier → envoi automatique du code, sélection sur « Valider » |
 
 Garde existante contre le double affichage de la fenêtre d'achat conservée.
@@ -249,6 +250,7 @@ Garde existante contre le double affichage de la fenêtre d'achat conservée.
 |---|---|
 | Chargement « Ton Nid se réveille… » | « Réessayer » sélectionné d'office (manette ou console), glyphe ✕ à côté ; « Réessayer » attend tant que l'attribut `ProfileLoading` (> 0, posé par DataService pendant ses essais) est posé, puis 10 s (au plus 60 s) ; tant que l'écran est là, △ / ○ / croix / L1-R2 / raccourcis d'InputController passent sans rien faire (`Pass`, ni sélection effacée, ni son, ni `RailRequested`) et `HUD.selectRail()` ne sélectionne rien |
 | Écran de retour hors ligne | OK sélectionné, ✕ ou ○ ferment |
+| Équipage, « Inviter un ami » | fenêtre d'invitation Roblox (`SocialService:PromptGameInvite`) : `holdSelection(true)` pendant la fenêtre, rendue à « Inviter un ami » sur `SocialService.GameInvitePromptClosed` si le panneau est encore ouvert |
 | Carte d'invitation d'équipage | △ la sélectionne (Accepter), ✕ accepte, → puis ✕ refuse ; ○ revient au jeu sans répondre. Glyphe d'Accepter : △ tant que rien n'est sélectionné sur la carte, ← depuis « Non merci », ✕ une fois Accepter sélectionné. Panneau ouvert : la carte attend sa fermeture (même échéance, pastille « ! » d'Équipage tant qu'elle n'a pas expiré) |
 | Bouton ACCLAMER | glyphe croix → sur le bouton ; aussi atteignable au menu du HUD |
 | Minicarte | glyphe croix ↓ au bord de la minicarte |
@@ -264,7 +266,9 @@ Règles communes :
 - ○ recule d'**un** niveau ; △ ramène au jeu ; L1/R1 onglets ; L2/R2 panneaux.
 - **Bouclage** : anneaux (roue de pings), onglets (L1/R1) et panneaux (L2/R2) bouclent ; listes et grilles **ne bouclent pas**. ↑ / ↓ sans rien de sélectionnable de ce côté (lignes en lecture seule de l'Atlas, du Guide, aperçu de la Supernova) font défiler la liste de **70 %** de sa hauteur visible (une sélection dans la liste reste à l'écran) ; son `Bump` + vibration `listEnd` seulement au **vrai** bout de la liste, ou pour ← / → au bord de la fenêtre.
 - Un panneau qui change de contenu (onglet, achat, fusion) remet une sélection valide (jamais un objet masqué ou détruit) : sélection par défaut du panneau si elle est affichée, sinon le bouton de l'**onglet affiché**, sinon le premier onglet, sinon Fermer (`PanelController.defaultSelection`).
-- **Sélection visible à 3 m** : tout objet sélectionnable du jeu reçoit `SelectionImageObject = Root.selectionImage()` (contour doré de 4 px qui déborde de 4 px, implémenté) en plus de la pulsation `Juice.press` existante.
+- **Sélection visible à 3 m** : tout objet sélectionnable du jeu reçoit `SelectionImageObject = Root.selectionImage()` (trait blanc de 6 px bordé d'un liseré sombre de 2 px, débord 4 px, respiration 0↔0,35 en 1,2 s hors Mouvement réduit ; implémenté) en plus de la pulsation `Juice.press` existante. « Réessayer » de l'écran de chargement (`src/first/Loading.client`, autonome) en recopie le dessin, sans respiration.
+- **Sélection jamais perdue dans un panneau** : une sélection effacée pendant qu'un panneau est ouvert (pavé tactile / Créer de la DualSense, menu du système refermé…) est rendue tout de suite (dernier objet de la fenêtre s'il est encore affiché, sinon la sélection par défaut). Elle ne reste vide que tant qu'une fenêtre Roblox tient la manette : fenêtre d'achat (✕ puis sélection effacée dans les 3 s, ou `PanelController.holdSelection(true)`), fenêtre d'invitation, menu du système ouvert. Croix ↑ / ↓ / → sans sélection, panneau ouvert : absorbées (`PanelNavGuard` de PanelController) — ni roue de pings, ni minicarte, ni ACCLAMER derrière la fenêtre ; au clavier, Q, M et F passent de même (InputController). Croix ← non liée (le suivi de quête passe déjà).
+- **Double appui** : une fermeture demandée moins de `Config/Console.ToggleCloseGuard` (0,35 s) après l'ouverture du même panneau (`InputController.togglePanel` : rail, Équipage, Réglages, raccourcis clavier) est ignorée — un double appui n'ouvre pas puis referme aussitôt.
 
 | Écran | Sélection par défaut | ○ | L1 / R1 | L2 / R2 | Bouclage |
 |---|---|---|---|---|---|
@@ -289,7 +293,8 @@ Retours : seul ○ (`PanelController.back()`) rend la sélection au bouton du ra
 
 ## 8. Chat
 
-- **Console** (`Platform.isTenFoot()`) : `TextChatService.ChatWindowConfiguration.Enabled = false` **et** `ChatInputBarConfiguration.Enabled = false` (la barre seule ne sert à rien sans fenêtre et taper à la manette n'est pas une interaction console). Les configurations sont attendues au plus `Config/Console.ChatWaitTimeout` (10 s), sans avertissement si elles n'existent pas (ancien chat).
+- **Console** (`Platform.isTenFoot()`) : `StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Chat, false)` (nouveaux essais toutes les `Config/Console.ChatCoreRetry` = 0,5 s pendant `ChatWaitTimeout` si le CoreGui n'est pas prêt ; avertissement seulement si tous échouent), **et** `TextChatService.ChatWindowConfiguration.Enabled = false` **et** `ChatInputBarConfiguration.Enabled = false` (la barre seule ne sert à rien sans fenêtre et taper à la manette n'est pas une interaction console). Les configurations sont attendues au plus `Config/Console.ChatWaitTimeout` (10 s), sans avertissement si elles n'existent pas (ancien chat).
+- La place déclare `TextChatService.ChatVersion = TextChatService` (`default.project.json`, vérifié par `scripts/verify-place.luau` : la base de réflexion de Rojo / Lune donnerait sinon `LegacyChatService`).
 - Les **bulles** restent (`BubbleChatConfiguration` inchangée) : un joueur console voit ce que disent les autres au-dessus de leur tête.
 - Communication console : la **roue de pings** (6 messages illustrés, emotes) remplace le chat.
 - PC et mobile : rien n'est changé.
@@ -358,7 +363,7 @@ Modèle d'entrée documenté dans l'en-tête de `Gamepad.luau` (approximation du
 | Pas de fenêtre de chat | `Console.spec` | console / PC / téléphone / configuration tardive ou absente |
 | Vibrations modérées | `Console.spec` | type, délai, priorité, repli SetMotor, réglage, clavier, mobile |
 | Curseur virtuel désactivé | `Console.spec` | `default.project.json` |
-| Cadre de sélection visible à 3 m | `Console.spec` | `Root.selectionImage()` (contour 4 px, API auditée) |
+| Cadre de sélection visible à 3 m | `Console.spec` | `Root.selectionImage()` (trait blanc 6 px + liseré sombre 2 px, API auditée ; copie de « Réessayer » : `Fix_r4_release.spec`) |
 | Interfaces entre groupes | `Console.spec` | garde transmise à PanelController, `QuestToggled`, `focusTarget` |
 | Réglage « Vibrations » | `Console.spec`, `Panels.spec` | profil `settings.vibration` suivi en direct ; ligne affichée dans Réglages |
 | Démarrage console complet, API valide | `Console.spec` | `Main.client` + `ApiAudit` : 0 erreur, 0 avertissement, 0 écart |
@@ -396,7 +401,7 @@ Compatibilité avec les specs existantes : les repères clavier `KeyCap` (TextLa
 
 1. **A6, A7, §5** — `PadGlyph` (UI/Glyph) : Dash `ButtonR2`, Ping `DPadUp`, minicarte `DPadDown`, ACCLAMER `DPadRight`, suivi de quête `DPadLeft`, un △ (`ButtonY`) au-dessus du rail ; `KeyCap` masqués à la manette (texte clavier via `Platform.glyph(...).text`, disposition du joueur) ; plus aucun « X ».
 2. **§7** — `SelectionImageObject = Root.selectionImage()` sur tous les boutons du HUD et de la minicarte (`Hud/Widgets.button`, minicarte).
-3. **A9, §6.2** — `HUD.selectRail()` : cible de l'accueil > `PanelController.focusTarget()` > bouton du rail à pastille « ! » > dernier panneau du rail ouvert (`PanelController.Opened`) > premier bouton affiché ; graphe `NextSelection*` complété pour que tout le HUD et la minicarte soient atteignables depuis cette cible (accueil partiel, HUD complet, bouton ACCLAMER affiché).
+3. **A9, §6.2** — `HUD.selectRail()` : carte d'invitation (`PanelController.focusTarget()`) > cible de l'accueil > bouton du rail à pastille « ! » > dernier panneau du rail ouvert (`PanelController.Opened`) > premier bouton affiché ; graphe `NextSelection*` complété pour que tout le HUD et la minicarte soient atteignables depuis cette cible (accueil partiel, HUD complet, bouton ACCLAMER affiché).
 4. **A11** — `InputController.QuestToggled` replie / déplie le suivi de quête.
 5. **A20, §6.2** — accueil à la manette : clé `onboarding.openUpgrade` (EN « Open Upgrade », FR « Ouvre Améliorer ») avec glyphe △ à la place de « Touche Améliorer », puis ✕ quand le rail est sélectionné ; main animée remplacée par le glyphe à la manette ; glyphe R2 pendant la pulsation du Dash (Q5). `OnboardingPlan` reste pur (fait `gamepad` en entrée).
 6. **A23, §6.7** — `Loading.client` (autonome) : règle d'échelle TV recopiée de `Config/Console` (vérifiée par la spec) ; « Réessayer » sélectionné d'office si `IsTenFootInterface()` (sous pcall) ou `GamepadEnabled` ; icône ✕ (`GetImageForKeyCode(ButtonA)`) à côté.
@@ -423,7 +428,7 @@ Compatibilité avec les specs existantes : les repères clavier `KeyCap` (TextLa
 Groupes G1-G3 livrés ; notes croisées résolues (spec `Console_release.spec`) :
 
 - **G1** — `InputController.inputType()` / `InputTypeChanged` suivent l'entrée préférée (`Platform.inputKind`) ; actions `CC_Quest` (croix ←) et `CC_PingNav` (anneau de la roue) ; △ et ○ reculent d'un pas avec `Back`. **□ panneau ouvert : absorbé sans Dash** (comme R2, §6.3). Vibration `supernova` du héros jouée par InputController seul (le panneau Supernova ne joue que `holdStart` et `refuse`). `AudioController.playNav()` et l'écoute de `SelectedObject` (son `Select`, au plus 1 / `NavSoundInterval` : un double déplacement dans la même image — défilement de la Réserve — ne joue qu'un son).
-- **G2** — `HUD.selectRail()` : cible de l'accueil > `PanelController.focusTarget()` (ignorée si hors écran) > rail à pastille « ! » > dernier panneau du rail ouvert (`Opened`, Supernova = Améliorer) > premier bouton affiché. Instances `PadGlyph` (repères de touches), `RailGlyph` (△ au-dessus du rail), `HandGlyph` (main de l'accueil remplacée par la touche). À la manette, △ à y = 144-180 et le rail descend à y = 188 ; pas de grille 2 × 2 sur console. Barre de la Balise bornée à 320-420 px selon la largeur intérieure (jamais sous Équipage / Réglages). `Hud/OnboardingPlan` : fait `gamepad` ; clé `onboarding.openUpgrade` (EN / FR). `Loading.client` : `REFERENCE` (1280 × 720) et `TV_SCALE_MIN` (0,6) recopiés de `Config/Console` (vérifiés par la spec). Toasts, bannières, tampons, titre Supernova, cartes d'Atlas : ≥ 18 px et dans `Root.safe`, sans modification.
+- **G2** — `HUD.selectRail()` : carte d'invitation (`PanelController.focusTarget()`, ignorée si hors écran) > cible de l'accueil > rail à pastille « ! » > dernier panneau du rail ouvert (`Opened`, Supernova = Améliorer) > premier bouton affiché. Instances `PadGlyph` (repères de touches), `RailGlyph` (△ au-dessus du rail), `HandGlyph` (main de l'accueil remplacée par la touche). À la manette, △ à y = 144-180 et le rail descend à y = 188 ; pas de grille 2 × 2 sur console. Barre de la Balise bornée à 320-420 px selon la largeur intérieure (jamais sous Équipage / Réglages). `Hud/OnboardingPlan` : fait `gamepad` ; clé `onboarding.openUpgrade` (EN / FR). `Loading.client` : `REFERENCE` (1280 × 720) et `TV_SCALE_MIN` (0,6) recopiés de `Config/Console` (vérifiés par la spec). Toasts, bannières, tampons, titre Supernova, cartes d'Atlas : ≥ 18 px et dans `Root.safe`, sans modification.
 - **G3** — nouvelles API (docs/04 §13.15) : `PanelController.cyclePanel`, `PanelController.select`, `Crew.inviteTarget()` (Accepter) / `Crew.inviteCard()`, `VirtualGrid` option `selectable` et `reveal(index)` ; actions CAS `PanelBack`, `PanelTabPrev` / `PanelTabNext`, `PanelPrev` / `PanelNext` (L2 / R2), `PanelScroll` (stick droit) à `High + 50`, liées seulement panneau ouvert.
 - **Limites connues** (sans effet en jeu) : `VFXController.haptic` (contrat) attend le délai après `Haptics.Played`, mais `Haptics.play` ne voit pas une vibration lancée par `VFXController.haptic` (horodatage privé) ; aucun appel dans le jeu. Une API `Haptics.note()` rendrait le délai commun dans les deux sens si l'appel revient. Navigation du harnais après `UIScale` : voir §10.1.
 

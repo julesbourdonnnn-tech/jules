@@ -141,7 +141,8 @@ function Widgets.pill(name: string, parent: Instance?, accent: Color3?): Frame
 end
 
 -- Bouton principal : appui, survol, luminosité, son Click, Selectable (navigation manette) avec le
--- cadre de sélection doré visible à 3 m (docs/07-console-ps5.md §7)
+-- curseur de sélection commun (Root.selectionImage : trait blanc bordé de sombre) visible à 3 m
+-- (docs/07-console-ps5.md §7)
 function Widgets.button(name: string, parent: Instance?, color: Color3, round: boolean?): TextButton
 	local button = Create("TextButton", {
 		Name = name,

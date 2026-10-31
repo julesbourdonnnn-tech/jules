@@ -60,7 +60,13 @@ local REFERENCE = Vector2.new(1280, 720) -- = Config/Console.Reference
 -- 1920 × 1080) ; recopie de Config/Console.TvScale (non répliqué ici)
 local TV_SCALE_MIN = 0.6 -- = Config/Console.TvScale.Min
 local GLYPH_SIZE = 48 -- px (avant mise à l'échelle) : icône ✕ à côté de « Réessayer »
-local SELECTION_COLOR = Color3.fromRGB(255, 208, 72) -- cadre de sélection doré (UI/Root)
+-- curseur de sélection (recopie de UI/Root.selectionImage) : trait blanc de 6 px, liseré sombre de 2 px
+local SELECTION_COLOR = Color3.fromRGB(255, 255, 255)
+local SELECTION_EDGE_COLOR = Color3.fromRGB(16, 12, 30)
+local SELECTION_THICKNESS = 6
+local SELECTION_EDGE = 2
+local SELECTION_OUTSET = 4 -- px de débord autour du bouton (de chaque côté)
+local SELECTION_RADIUS = 16
 local TAU = 2 * math.pi
 
 -- Constantes graphiques (charte du jeu : crépuscule violet → orangé, Puffkin crème)
@@ -434,19 +440,36 @@ local function main()
 	buttonPadding.Parent = button
 	local buttonScale = Instance.new("UIScale")
 	buttonScale.Parent = button
-	-- cadre de sélection doré bien visible à 3 m (même dessin que UI/Root.selectionImage)
+	-- curseur de sélection bien visible à 3 m, sur fond clair comme sombre (même dessin que
+	-- UI/Root.selectionImage, sans respiration : écran de quelques secondes)
 	local selection = Instance.new("Frame")
 	selection.Name = "SelectionHighlight"
 	selection.BackgroundTransparency = 1
 	selection.AnchorPoint = Vector2.new(0.5, 0.5)
 	selection.Position = UDim2.fromScale(0.5, 0.5)
-	selection.Size = UDim2.new(1, 8, 1, 8)
-	round(selection, UDim.new(0, 16))
+	selection.Size = UDim2.new(1, 2 * SELECTION_OUTSET, 1, 2 * SELECTION_OUTSET)
+	round(selection, UDim.new(0, SELECTION_RADIUS))
 	local selectionStroke = Instance.new("UIStroke")
+	selectionStroke.Name = "Cursor"
 	selectionStroke.Color = SELECTION_COLOR
-	selectionStroke.Thickness = 4
+	selectionStroke.Thickness = SELECTION_THICKNESS
 	selectionStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 	selectionStroke.Parent = selection
+	-- liseré sombre à l'extérieur du trait blanc (cadre imbriqué : un seul UIStroke par objet)
+	local selectionEdge = Instance.new("Frame")
+	selectionEdge.Name = "Edge"
+	selectionEdge.BackgroundTransparency = 1
+	selectionEdge.AnchorPoint = Vector2.new(0.5, 0.5)
+	selectionEdge.Position = UDim2.fromScale(0.5, 0.5)
+	selectionEdge.Size = UDim2.new(1, 2 * SELECTION_THICKNESS, 1, 2 * SELECTION_THICKNESS)
+	round(selectionEdge, UDim.new(0, SELECTION_RADIUS + SELECTION_THICKNESS))
+	local edgeStroke = Instance.new("UIStroke")
+	edgeStroke.Name = "Edge"
+	edgeStroke.Color = SELECTION_EDGE_COLOR
+	edgeStroke.Thickness = SELECTION_EDGE
+	edgeStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	edgeStroke.Parent = selectionEdge
+	selectionEdge.Parent = selection
 	button.SelectionImageObject = selection
 
 	gui.Parent = playerGui

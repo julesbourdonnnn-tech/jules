@@ -14,7 +14,8 @@
 --   * Codes : champ + Valider → RedeemCode (RemoteFunction, appelée hors du fil d'interface) ;
 --     statut → "code.<status>"
 --   * aucun faux minuteur, prix en Robux toujours visible, aucune pastille « ! » (§8.1)
---   * manette (docs/07-console-ps5.md §6.6) : après la fenêtre d'achat Roblox
+--   * manette (docs/07-console-ps5.md §6.6) : pendant la fenêtre d'achat Roblox, la sélection reste
+--     vide (PanelController.holdSelection(true) après un appel réussi) ; après elle
 --     (PromptGamePassPurchaseFinished / PromptProductPurchaseFinished), la sélection revient sur le
 --     bouton Acheter pressé si le panneau est encore ouvert ; Codes : validation du clavier virtuel
 --     (FocusLost avec Entrée) → envoi du code et sélection sur « Valider »
@@ -124,7 +125,10 @@ local function prompt(row: Row)
 		local ok, err = pcall(function()
 			MarketplaceService:PromptGamePassPurchase(player, def.id)
 		end)
-		if not ok then
+		if ok then
+			-- la fenêtre d'achat tient la manette : sélection laissée vide jusqu'à la fin de l'achat
+			PanelController.holdSelection(true)
+		else
 			warn("[Shop] PromptGamePassPurchase :", err)
 		end
 	else
@@ -138,7 +142,9 @@ local function prompt(row: Row)
 		local ok, err = pcall(function()
 			MarketplaceService:PromptProductPurchase(player, def.id)
 		end)
-		if not ok then
+		if ok then
+			PanelController.holdSelection(true)
+		else
 			warn("[Shop] PromptProductPurchase :", err)
 		end
 	end
@@ -156,6 +162,8 @@ local function onPromptFinished(kind: "pass" | "product", id: any)
 		return
 	end
 	prompted = nil
+	-- fenêtre refermée : la manette est rendue (select relâche aussi la retenue, ceci la rend explicite)
+	PanelController.holdSelection(false)
 	if isOpen and PanelController.current() == "Shop" then
 		PanelController.select(row.buy)
 	end

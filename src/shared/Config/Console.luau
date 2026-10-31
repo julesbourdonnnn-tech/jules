@@ -32,6 +32,14 @@ local Console = {
 	GlyphSize = 36,
 	-- s : attente bornée des configurations de TextChatService (règle « pas de fenêtre de chat »)
 	ChatWaitTimeout = 10,
+	-- s entre deux essais de StarterGui:SetCoreGuiEnabled(Chat, false) (CoreGui pas encore prêt)
+	ChatCoreRetry = 0.5,
+	-- s : sélection effacée au plus tant après ✕ sur un objet de la fenêtre = fenêtre Roblox ouverte
+	-- par ce bouton (achat : les infos du produit arrivent avant que la fenêtre prenne la manette)
+	PromptHoldWindow = 3,
+	-- s : une fermeture demandée si peu de temps après l'ouverture du même panneau est ignorée
+	-- (double appui sur un bouton du rail, Équipage ou Réglages : InputController.togglePanel)
+	ToggleCloseGuard = 0.35,
 	-- s : intervalle minimal entre deux sons de navigation (« Select »)
 	NavSoundInterval = 0.06,
 	Haptics = {

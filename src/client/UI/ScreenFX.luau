@@ -927,13 +927,10 @@ end
 
 -- Amélioration (onde de choc au sol + Nebby fantôme qui rejoint la file, GDD §3) -----------------
 
--- `silent` : le son LevelUp a déjà été joué à l'achat (panneau ouvert), seul l'effet du monde reste.
--- Troisième paramètre demandé à VFXController.playUpgrade (qui saute alors son LevelUp) : type
--- élargi tant que sa signature n'a que deux paramètres ; d'ici là il est ignoré et la reprise
--- différée sonne encore une fois, avec l'onde de choc
+-- `silent` : le son LevelUp a déjà été joué à l'achat (panneau ouvert), seul l'effet du monde reste
+-- (VFXController.playUpgrade saute alors son LevelUp)
 local function playUpgrade(track: string, level: number, silent: boolean?)
-	local play: (string, number, boolean?) -> () = VFXController.playUpgrade :: any
-	local ok, err = pcall(play, track, level, silent)
+	local ok, err = pcall(VFXController.playUpgrade, track, level, silent)
 	if not ok then
 		warn("[ScreenFX] playUpgrade :", err)
 	end
@@ -1252,7 +1249,7 @@ local function onCelebrate(payload: any)
 	elseif (kind :: string) == "atlasUnlocked" then
 		-- fin de Q4 (GDD §3, « l'Atlas se débloque, page qui tourne, 5/150 ») : la carte qui glisse
 		-- de la droite est la page qui tourne ; elle passe devant les « NOUVEAU ! » du même Rare et
-		-- son LevelUp sonne quand elle entre (genre absent de Types.CelebrateKind : comparé en texte)
+		-- son LevelUp sonne quand elle entre
 		local n, total = num(data.count), num(data.total)
 		if n and total and n >= 0 and total >= 1 and total <= MAX_ATLAS then
 			local whole = math.floor(total)

@@ -156,7 +156,8 @@ end
 -- Cartes et boutons
 -- ---------------------------------------------------------------------------------------------
 
--- Objet sélectionnable à la manette : cadre de sélection commun (contour doré visible à 3 m)
+-- Objet sélectionnable à la manette : curseur de sélection commun (Root.selectionImage : trait
+-- blanc bordé de sombre, visible à 3 m)
 function Widgets.selectable(gui: GuiObject)
 	gui.Selectable = true
 	gui.SelectionImageObject = Root.selectionImage()

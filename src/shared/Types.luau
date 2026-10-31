@@ -383,6 +383,7 @@ export type FeedbackPayload = {
 export type CelebrateKind =
 	"supernova"
 	| "atlasNew"
+	| "atlasUnlocked"
 	| "atlasMilestone"
 	| "speciesComplete"
 	| "questDone"

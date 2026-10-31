@@ -150,8 +150,8 @@ local ACTION_SCROLL = "PanelScroll" -- stick droit
 -- fenêtre (← : le suivi de quête d'InputController s'efface déjà, panneau ouvert)
 local ACTION_NAV_GUARD = "PanelNavGuard"
 -- s : sélection effacée au plus tant après ✕ sur un objet de la fenêtre = fenêtre Roblox ouverte
--- par ce bouton (achat : les infos du produit arrivent avant que la fenêtre prenne la manette)
-local PROMPT_HOLD_WINDOW = 3
+-- par ce bouton (Config/Console.PromptHoldWindow)
+local PROMPT_HOLD_WINDOW = Console.PromptHoldWindow
 -- Panneaux parcourus par L2 / R2 (docs/07 §6.3) ; Supernova compte comme Améliorer
 local CYCLE: { Types.PanelName } = { "Upgrades", "Collection", "Goals", "Shop", "Crew", "Settings" }
 local CYCLE_ALIAS: { [string]: Types.PanelName } = { Supernova = "Upgrades" }
@@ -233,6 +233,8 @@ local bump: BumpProbe? = nil
 -- `heldByPrompt` (sélection effacée juste après ✕ sur `confirmTarget`, à `confirmAt`), menu du système
 local uiTime = 0 -- s : somme des dt (mesure de l'interface)
 local heldByPanel = false
+local heldAt = -math.huge -- uiTime de holdSelection(true)
+local heldTaken = false -- la sélection a été vide pendant la retenue (la fenêtre a pris la manette)
 local heldByPrompt = false
 local confirmAt = -math.huge
 local confirmTarget: GuiObject? = nil
@@ -332,6 +334,7 @@ end
 -- La fenêtre Roblox est refermée (fin d'achat, sélection posée, panneau fermé)
 local function releaseHold()
 	heldByPanel = false
+	heldTaken = false
 	heldByPrompt = false
 	confirmTarget = nil
 end
@@ -1373,6 +1376,11 @@ ensureSelection = function()
 	local selected = GuiService.SelectedObject
 	if selected ~= nil then
 		heldByPrompt = false
+		-- retenue dont la fenêtre Roblox n'a jamais pris la manette (sélection restée posée plus de
+		-- PROMPT_HOLD_WINDOW s : fenêtre jamais montrée) : elle tombe, un effacement plus tard est rendu
+		if heldByPanel and not heldTaken and uiTime - heldAt > PROMPT_HOLD_WINDOW then
+			heldByPanel = false
+		end
 		if selected:IsDescendantOf(w) then
 			if selectable(selected) then
 				lastInWindow = selected
@@ -1382,6 +1390,9 @@ ensureSelection = function()
 			return
 		end
 	else
+		if heldByPanel then
+			heldTaken = true
+		end
 		local last = lastInWindow
 		local shown = last ~= nil and inWindow(last)
 		if shown and confirmTarget == last and uiTime - confirmAt <= PROMPT_HOLD_WINDOW then
@@ -1405,11 +1416,14 @@ end
 
 -- Une fenêtre Roblox ouverte depuis le panneau tient la manette (ex. fenêtre d'achat de la
 -- Boutique) : true laisse la sélection vide jusqu'à false, PanelController.select, la fin d'un achat
--- (PromptGamePassPurchaseFinished / PromptProductPurchaseFinished), la fermeture du panneau, ou une
--- croix qui arrive au jeu (preuve qu'aucune fenêtre Roblox ne tient plus la manette)
+-- (PromptGamePassPurchaseFinished / PromptProductPurchaseFinished), la fermeture du panneau, une
+-- croix qui arrive au jeu (preuve qu'aucune fenêtre Roblox ne tient plus la manette), ou une
+-- sélection restée posée plus de Config/Console.PromptHoldWindow s (la fenêtre ne s'est pas montrée)
 function PanelController.holdSelection(on: boolean)
 	if on == true then
 		heldByPanel = true
+		heldAt = uiTime
+		heldTaken = false
 	else
 		releaseHold()
 	end

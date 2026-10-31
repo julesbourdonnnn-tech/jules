@@ -22,7 +22,9 @@
 --   * captures : joueurs avec place libre × SpawnService.query (rayon Attrait + 0,75, |Δy| ≤ 6,
 --     Snip Rush ×1,5) ; le plus proche gagne, égalité → ordre tiré au hasard à chaque tick ;
 --     file pleine → Feedback "feedback.lineFull" au plus toutes les 5 s ; plafond 1 500 captures/h
---     (au-delà : 5 min de suspension + flags.lbBanned) ; Signals.Caught ; bannières Légendaire+
+--     (au-delà : 5 min de suspension + flags.lbBanned) ; Signals.Caught ; bannières Légendaire+ ;
+--     SpawnService.canCatch revérifié à chaque capture (plafond de groupe : 1 Épique de l'explosion
+--     de la Comète par joueur, même quand plusieurs sont à sa portée dans le même tick)
 --   * coupes : joueurs × files puis Gloomwisps × files (EventService.wispSweeps), SnipRules
 --     (blockReason puis findCut, escorte via CrewService.escortersOf, port sûr via WorldLayout) ;
 --     détache cutFrom(k, n) … n, Nebbies libres (SpawnService.spawnLoose silent, priorité victime),
@@ -31,7 +33,8 @@
 --     Analytics SnipDealt / SnipReceived / SnipByInput / PostSnipQuit / WispSnip
 --   * parades : boîte de la porte de SON Nid (WorldLayout.inGateBox), et anneau de la Balise quand
 --     EventService.beaconOpen(), testées sur le déplacement VALIDÉ du tick (prev → pos, échantillons
---     de 1 stud : un pas de plus de 4 studs n'enjambe jamais la porte) ;
+--     de 1 stud : un pas de plus de 4 studs n'enjambe jamais la porte) ; un tick en rafale (voir
+--     MoveCheck) balaie seulement SA porte, jamais l'anneau de la Balise ;
 --     Glow = EconomyService.paradeGlow ; AtlasService.addNebbies ;
 --     LineEvent "bank" ; Signals.Parade (idleSeconds = Glow / revenu passif d'AVANT la parade) ;
 --     Méga Parade (≥ 30) ; QuestService.onSafeMoment ;
@@ -54,7 +57,11 @@
 --     (seuils serveur seulement : Conga/Tuning.MoveCheck, jamais répliqués).
 --     Acteur d'un tick refusé : à sa dernière position VALIDÉE (prev = pos) ; le balayage d'un tick
 --     valide part toujours de la dernière position validée (jamais d'une position signalée) ; la
---     référence d'une apparition / d'un déplacement serveur est lue à l'instant du déplacement
+--     référence d'une apparition / d'un déplacement serveur est lue à l'instant du déplacement.
+--     Tick en RAFALE (troisième valeur de MoveCheck.step : position acceptée, mais bond plus long
+--     que la règle d'UN tick du GDD §12.7, ex. 1 s d'arrêt puis 27 à 58 studs) : miettes posées,
+--     prev → pos = le bond accepté, mais acteur NON `valid` (ni capture, ni coupe, ni ramassage ou
+--     vol de Comète, ni Gloomwisp, ni anneau de la Balise) ; seule SA porte est balayée
 --   * pose le crochet EconomyService.setLineBanker(forceParade) dans Init
 -- GDD : §4.5-§4.8, §4.15.2, §4.15.4, §4.16, §4.17, §12.1, §12.3, §12.4, §12.7, §14.3.
 -- Dépendances : TOUS les services précédents, Util/MoveCheck, Logic/*, Config/*, Signals,
@@ -150,6 +157,10 @@ type PlayerState = {
 	nodes: { Types.LineNode },
 	nodeCache: { Vector3 }?,
 	prev: Vector3?, -- dernière position VALIDÉE (départ du balayage des coupes, vols, portes)
+	-- tick en rafale (MoveCheck.step, troisième valeur) : position acceptée mais plus longue que la
+	-- règle d'UN tick ; l'acteur n'est pas `valid` (ni capture, ni coupe, ni Comète, ni Gloomwisp,
+	-- ni anneau de la Balise), seule SA porte est balayée (stepParades)
+	burst: boolean,
 	resetPending: boolean, -- apparition ou déplacement serveur à prendre en compte
 	resetPos: Vector3?, -- position posée par le serveur, lue à l'instant du déplacement
 	character: Model?,
@@ -474,6 +485,7 @@ local function newState(player: Player): PlayerState
 		nodes = {},
 		nodeCache = nil,
 		prev = nil,
+		burst = false,
 		resetPending = true,
 		resetPos = nil,
 		character = nil,
@@ -815,6 +827,7 @@ local function buildActors(now: number): { Types.Actor }
 			bindSlot(state, slot)
 		end
 		state.nodeCache = nil
+		state.burst = false
 		local root, humanoid = characterParts(state)
 		if humanoid and humanoid.Health <= 0 then
 			onDeath(state) -- Died manqué : rattrapage
@@ -848,10 +861,16 @@ local function buildActors(now: number): { Types.Actor }
 		local groundY = WorldLayout.groundY(pos.X, pos.Z)
 		local character = player.Character
 		local checkGround = if character then moveCheckGround(state, character, pos, groundY) else groundY
-		local verdict, back = MoveCheck.step(player, pos, STEP, now, checkGround)
+		local verdict, back, burst = MoveCheck.step(player, pos, STEP, now, checkGround)
 		if verdict == "rewind" and back ~= nil then
 			onRewind(state, root, back, now, MoveCheck.recentRewinds(player, now) > rewindsBefore)
 		end
+		-- tick accepté (hors restriction après un retour) ; en rafale (bond plus long que la règle
+		-- d'UN tick du GDD §12.7, toléré pour les gels réseau), il n'agit sur rien : l'acteur n'est
+		-- pas `valid` (captures, coupes, Comète, Gloomwisps, anneau de la Balise), mais sa position
+		-- est acceptée (miettes, prev → pos) et SA porte reste balayée (stepParades)
+		local accepted = verdict == "ok" and not MoveCheck.isRestricted(player, now)
+		state.burst = accepted and burst == true
 		if verdict == "ok" then
 			-- miettes au sol (autorité ET réseau : le client dessine la file là où elle se coupe)
 			pushCrumbs(state, prev, pos, crumbOf(pos, groundY))
@@ -870,7 +889,7 @@ local function buildActors(now: number): { Types.Actor }
 				slot = state.slot,
 				pos = pos,
 				prev = prev,
-				valid = verdict == "ok" and not MoveCheck.isRestricted(player, now),
+				valid = accepted and not state.burst,
 				zen = safe("isZen", false, NestService.isZen, player),
 				crewId = safe("crewOf", 0, CrewService.crewOf, player),
 				rookie = safe("isRookie", false, QuestService.isRookie, player),
@@ -1010,7 +1029,15 @@ local function stepCaptures(actors: { Types.Actor }, now: number)
 		if not taken[wild.id] then
 			local actor = actors[claim.actor]
 			local state = states[actor.player]
-			if state and #state.nodes < capacityOf(state) and now >= state.catchSuspendedUntil then
+			-- canCatch revérifié AU MOMENT de la capture : le plafond de groupe (explosion de la
+			-- Comète : 1 Épique par joueur) compte les captures déjà faites dans CE tick (consume) ;
+			-- un Nebby refusé reste libre pour le candidat suivant du même tick
+			if
+				state
+				and #state.nodes < capacityOf(state)
+				and now >= state.catchSuspendedUntil
+				and safe("canCatch", false, SpawnService.canCatch, actor.player, actor.slot, wild, now)
+			then
 				taken[wild.id] = true
 				local got =
 					safe("consume", nil :: Types.WildNebby?, SpawnService.consume, wild.id, actor.player)
@@ -1512,12 +1539,18 @@ local function sweepEnters(prev: Vector3, pos: Vector3, slot: number): boolean
 	return false
 end
 
+-- Un tick en rafale (state.burst : bond accepté mais plus long que la règle d'UN tick) balaie
+-- seulement SA porte : un rattrapage honnête après un gel réseau qui la traverse encaisse ; jamais
+-- l'anneau de la Balise, commun à tous (un bond ne doit agir sur rien d'autre)
 local function stepParades(actors: { Types.Actor }, beaconOpen: boolean)
 	for _, actor in actors do
 		local state = states[actor.player]
-		if actor.valid and state and #state.nodes > 0 then
+		if state and (actor.valid or state.burst) and #state.nodes > 0 then
 			local atGate = sweepEnters(actor.prev, actor.pos, actor.slot)
-			local atBeacon = not atGate and beaconOpen and sweepEnters(actor.prev, actor.pos, 0)
+			local atBeacon = actor.valid
+				and not atGate
+				and beaconOpen
+				and sweepEnters(actor.prev, actor.pos, 0)
 			if atGate or atBeacon then
 				parade(state, atBeacon, false)
 			end

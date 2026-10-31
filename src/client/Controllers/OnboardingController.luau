@@ -14,10 +14,14 @@
 --     Q4 ; Q6 : pilier coloré + flèche sur le Nebby météo, flèche vers la Comète ; main animée sur
 --     l'icône Améliorer (HUD.attention) ; pastille d'événement qui pulse quand Q6 attend la météo ;
 --     carte unique en surbrillance dans Améliorer (arguments { focus = "conga" } posés via
---     InputController.setPanelArgs) ; le Dash pulse au début de Q5
+--     InputController.setPanelArgs) ; le Dash pulse au début de Q5 ; fin de Q4 (Celebrate
+--     "atlasUnlocked" via ScreenFX.Celebrated) : l'icône Collection rejoint le rail avec la main
+--     pendant COLLECTION_PULSE s, et la prochaine ouverture de Collection montre l'onglet Atlas
 --   * faits de terrain fournis aux règles (gather) : Rare déjà dans la file (Q4), Puffkins de
---     bienvenue restants (Q1), fenêtre météo avec forme, Nebby météo visible, Comète au sol ou
---     portée (Q6) — l'instruction affichée est toujours réalisable maintenant (GDD §3)
+--     bienvenue restants (Q1), fenêtre météo avec forme, ou SANS forme (Pluie de météores : « Météo
+--     dans {time} », compte à rebours Plan.formWeatherIn rafraîchi chaque seconde), Nebby météo
+--     visible, Comète au sol ou portée (Q6) — l'instruction affichée est toujours réalisable
+--     maintenant (GDD §3)
 --   * jamais plus d'une instruction à l'écran (≤ 4 mots, "onboarding.*"), aucune fenêtre modale
 --     (l'accueil n'ouvre jamais de panneau lui-même)
 --   * place de l'instruction : sous la pile COMPLÈTE de toasts (HUD.hintTop, règle partagée avec la
@@ -37,7 +41,7 @@
 -- GDD : §3, §7.1, §7.4, §10.1 (affichage progressif).
 -- Dépendances : StateController, Util/Prefs, Util/Platform, UI/Juice, UI/Glyph,
 -- WorldStateController, CongaRenderer, PanelController, HUD, Hud/EventPill, Logic/WorldLayout,
--- Config/Quests, Config/Events, Shared/Util/Clock.
+-- ScreenFX (Celebrated), Config/Quests, Config/Events, Shared/Util/{Clock,Format}.
 
 local GuiService = game:GetService("GuiService")
 local Players = game:GetService("Players")
@@ -47,6 +51,7 @@ local RunService = game:GetService("RunService")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Types = require(Shared.Types)
 local Clock = require(Shared.Util.Clock)
+local Format = require(Shared.Util.Format)
 local Nebbies = require(Shared.Config.Nebbies)
 local Quests = require(Shared.Config.Quests)
 local Balance = require(Shared.Config.Balance)
@@ -73,6 +78,7 @@ local Plan = require(Client.UI.Hud.OnboardingPlan)
 local Widgets = require(Client.UI.Hud.Widgets)
 local Glow = require(Client.UI.Hud.Glow)
 local EventPill = require(Client.UI.Hud.EventPill)
+local ScreenFX = require(Client.UI.ScreenFX)
 
 local OnboardingController = {}
 
@@ -107,6 +113,9 @@ local TRAVEL_SAFETY = 3 -- s : la caméra est rendue quoi qu'il arrive
 local INTRO_WAIT = 2.5
 local GUIDE_REFRESH = 0.2
 local DASH_PULSE = 1.6
+local COLLECTION_PULSE = 3 -- s : main et pulsation sur l'icône Collection qui rejoint le rail (Q4)
+local ATLAS_ARGS = table.freeze({ tab = "atlas" })
+local WAIT_WEATHER_IN = "onboarding.waitWeatherIn" -- instruction à compte à rebours ({time})
 local NEST_WORKS_AT = 600 -- 10 min de jeu
 local NEST_WORKS_HOLD = 6
 local NEST_WORKS_MAX_PLAY = 7200 -- joueurs encore nouveaux (< 2 h de jeu cumulé)
@@ -131,10 +140,13 @@ local HINT_ICONS: { [string]: string } = {
 	["onboarding.perches"] = "▣",
 	["onboarding.nestWorks"] = "☾",
 	["onboarding.waitWeather"] = "◷",
+	["onboarding.waitWeatherIn"] = "◷",
 	["onboarding.joinComet"] = "☄",
 }
 
-local ATTENTION_ELEMENTS: { Types.HudElement } = { "rail.Upgrades", "dash", "eventPill" }
+-- (ordre : le dernier allumé dans la même évaluation reçoit la main — Collection passe devant le
+-- Dash qui pulse au même moment, au début de Q5)
+local ATTENTION_ELEMENTS: { Types.HudElement } = { "rail.Upgrades", "dash", "eventPill", "rail.Collection" }
 
 -- Instructions qui concernent un panneau : affichées PAR-DESSUS lui quand il est ouvert ; toute
 -- autre instruction s'efface tant qu'un panneau est ouvert (elle ne se lirait pas dessous)
@@ -196,6 +208,9 @@ local nestWorksShown = false
 local nestWorksUntil = -math.huge
 local dashPulsed = false
 local dashPulseUntil = -math.huge
+local collectionPending = false -- "atlasUnlocked" reçu : pulsation dès que l'icône est affichée
+local collectionPulseUntil = -math.huge
+local hintSecond: number? = nil -- seconde (Clock) du dernier texte de WAIT_WEATHER_IN
 local upgradesOpen = false
 local currentHintKey: string? = nil
 local attentionState: { [string]: boolean } = {}
@@ -395,6 +410,20 @@ local function weatherOpen(ev: any, now: number): boolean
 	return isFinite(w.form) and w.form > 0 -- météo inconnue de cette version : forme annoncée
 end
 
+-- Fenêtre météo en cours d'une météo CONNUE qui ne donne aucune forme (Pluie de météores) : la
+-- pastille compte à rebours sa fin, l'instruction celle de la prochaine météo à forme
+local function weatherFormlessNow(ev: any, now: number): boolean
+	local w = if type(ev) == "table" then ev.weather else nil
+	if type(w) ~= "table" or not isFinite(w.startsAt) or not isFinite(w.endsAt) then
+		return false
+	end
+	if now < w.startsAt or now >= w.endsAt then
+		return false
+	end
+	local def = if type(w.key) == "string" then Events.WeatherByKey[w.key] else nil
+	return def ~= nil and def.form == nil
+end
+
 -- Comète que l'on peut rejoindre maintenant (au sol ou portée ; l'alerte dans le ciel ne compte pas)
 local function cometJoinable(ev: any): boolean
 	local comet = if type(ev) == "table" then ev.comet else nil
@@ -432,11 +461,13 @@ local function gather(): Plan.Facts
 		rareWildId = nil
 	end
 	local weatherActive: boolean? = nil
+	local weatherFormless: boolean? = nil
 	local weatherTarget: boolean? = nil
 	local cometActive: boolean? = nil
 	if kind == "weatherOrComet" then
 		local ev: any = WorldStateController.events()
 		weatherActive = weatherOpen(ev, Clock.now())
+		weatherFormless = weatherFormlessNow(ev, Clock.now())
 		cometActive = cometJoinable(ev)
 		local id = if root then nearestWild(root.Position, isWeatherForm) else nil
 		weatherWildId = id
@@ -471,6 +502,7 @@ local function gather(): Plan.Facts
 		goalInLine = goalInLine,
 		puffkinsLeft = welcomeLeft(step, slot),
 		weatherActive = weatherActive,
+		weatherFormless = weatherFormless,
 		weatherTarget = weatherTarget,
 		cometActive = cometActive,
 		gamepad = Platform.usingGamepad(),
@@ -542,9 +574,16 @@ end
 local function hintKeyCode(key: string?): Enum.KeyCode?
 	if key == "onboarding.openUpgrade" then
 		local target = HUD.anchor("rail.Upgrades")
-		return if target ~= nil and GuiService.SelectedObject == target
-			then Enum.KeyCode.ButtonA
-			else Enum.KeyCode.ButtonY
+		if target ~= nil and GuiService.SelectedObject == target then
+			return Enum.KeyCode.ButtonA
+		end
+		-- carte d'invitation d'équipage affichée : △ la sélectionne d'abord (HUD.selectRail) et
+		-- l'annonce sur Accepter — pas de second △ à côté de l'instruction (icône dessinée)
+		local ok, invite = pcall(PanelController.focusTarget)
+		if ok and invite ~= nil then
+			return nil
+		end
+		return Enum.KeyCode.ButtonY
 	end
 	return nil
 end
@@ -746,6 +785,15 @@ local function layoutHint(pop: boolean)
 	setHintShown(visible, pop)
 end
 
+-- Texte d'une instruction ; « Météo dans {time} » : secondes jusqu'à la prochaine météo à forme
+local function hintText(key: string): string
+	if key == WAIT_WEATHER_IN then
+		hintSecond = math.floor(Clock.now())
+		return Prefs.t(key, { time = Format.clock(Plan.formWeatherIn(Clock.now()) or 0) })
+	end
+	return Prefs.t(key)
+end
+
 local function showHint(key: string?)
 	if key == currentHintKey then
 		return
@@ -754,7 +802,7 @@ local function showHint(key: string?)
 	buildHint()
 	local label, icon = hintLabel, hintIcon
 	if key ~= nil and label ~= nil and icon ~= nil then
-		label.Text = Prefs.t(key)
+		label.Text = hintText(key)
 		icon.Text = HINT_ICONS[key] or "★"
 	end
 	-- nouvelle instruction : fondu + pop (si elle peut s'afficher ici et maintenant)
@@ -1248,9 +1296,16 @@ local function evaluate()
 		dashPulsed = true
 		dashPulseUntil = frameTime + DASH_PULSE
 	end
+	-- l'icône Collection rejoint le rail (fin de Q4) : main et pulsation dès qu'elle est affichée
+	if collectionPending and HUD.isRevealed("rail.Collection") then
+		collectionPending = false
+		collectionPulseUntil = frameTime + COLLECTION_PULSE
+	end
 	local attention = Plan.attention(f)
 	for _, element in ATTENTION_ELEMENTS do
-		local on = attention[element] == true or (element == "dash" and frameTime < dashPulseUntil)
+		local on = attention[element] == true
+			or (element == "dash" and frameTime < dashPulseUntil)
+			or (element == "rail.Collection" and frameTime < collectionPulseUntil)
 		setAttention(element, on)
 	end
 	-- panneau Améliorer à une seule carte pendant le premier achat
@@ -1295,6 +1350,14 @@ local function onFrame(dt: number)
 	end
 	if attentionState.dash and frameTime >= dashPulseUntil then
 		dirty = true
+	end
+	if attentionState["rail.Collection"] and frameTime >= collectionPulseUntil then
+		dirty = true
+	end
+	-- « Météo dans {time} » : compte à rebours rafraîchi chaque seconde
+	local label = hintLabel
+	if currentHintKey == WAIT_WEATHER_IN and label ~= nil and math.floor(now) ~= hintSecond then
+		label.Text = hintText(WAIT_WEATHER_IN)
 	end
 	-- l'état d'achat dépend du Glow prédit (qui monte sans patch) : réévaluation périodique
 	if dirty or (introDone and frameTime - lastEval >= GUIDE_REFRESH * 2) then
@@ -1367,8 +1430,20 @@ function OnboardingController.Start()
 		if name == "Upgrades" then
 			upgradesOpen = true
 			dirty = true
+		elseif name == "Collection" then
+			-- onglet Atlas montré une seule fois, à la première ouverture après le déblocage
+			InputController.setPanelArgs("Collection", nil)
 		end
 		layoutHint(false)
+	end)
+	-- fin de Q4 : « Atlas débloqué 5/150 » → l'icône Collection pulse avec la main, et Collection
+	-- s'ouvrira sur l'Atlas
+	ScreenFX.Celebrated:Connect(function(payload: Types.CelebratePayload)
+		if type(payload) == "table" and payload.kind == "atlasUnlocked" then
+			collectionPending = true
+			InputController.setPanelArgs("Collection", ATLAS_ARGS)
+			dirty = true
+		end
 	end)
 	PanelController.Closed:Connect(function(name: Types.PanelName)
 		if name == "Upgrades" then
@@ -1381,7 +1456,7 @@ function OnboardingController.Start()
 		local key = currentHintKey
 		local label = hintLabel
 		if key and label then
-			label.Text = Prefs.t(key)
+			label.Text = hintText(key)
 		end
 	end)
 	local player = Players.LocalPlayer
@@ -1408,10 +1483,14 @@ OnboardingController._state = function()
 		attention = attentionState,
 		folder = folder,
 		hintFrame = hintFrame,
+		hintLabel = hintLabel,
+		hintIcon = hintIcon,
 		hintShown = hintShown,
 		hintDocked = hintDocked,
 		hintGlyph = hintGlyph,
 		nestWorksUntil = nestWorksUntil,
+		collectionPulseUntil = collectionPulseUntil,
+		frameTime = frameTime,
 	}
 end
 

@@ -331,7 +331,7 @@ end
 -- Chat (docs/07 §7) ---------------------------------------------------------------------------
 
 local CHAT_CONFIGS = { "ChatWindowConfiguration", "ChatInputBarConfiguration" }
-local CHAT_CORE_RETRY = 0.5 -- s entre deux essais de SetCoreGuiEnabled (CoreGui pas encore prêt)
+local CHAT_CORE_RETRY = Console.ChatCoreRetry -- s entre deux essais de SetCoreGuiEnabled
 
 -- Fenêtre de chat du CoreGui coupée : vaut pour l'ancien chat comme pour TextChatService, que le
 -- moteur ait créé ou non les configurations ; nouveaux essais pendant Console.ChatWaitTimeout si le

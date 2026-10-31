@@ -9,7 +9,7 @@
 -- Mise à jour à 10 Hz (pas chaque image) ; réserve de Frames (aucune création en rafale).
 -- Affichage progressif : le conteneur est confié au HUD (HUD.registerElement("minimap")).
 -- Manette (docs/07-console-ps5.md §6.7, §7) : icône croix ↓ (UI/Glyph « PadGlyph ») dans le coin bas
--- gauche, cadre de sélection doré Root.selectionImage ; le disque est atteignable depuis le menu du
+-- gauche, curseur de sélection commun Root.selectionImage (trait blanc bordé de sombre) ; le disque est atteignable depuis le menu du
 -- HUD (graphe NextSelection* posé par le HUD) ; agrandie (300 × 300), elle reste dans Root.safe,
 -- donc dans la zone sûre TV.
 -- GDD : §6.4, §10.2, §9.4 (porteur).

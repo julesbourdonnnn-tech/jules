@@ -347,9 +347,7 @@ end
 local function announceUnlock(player: Player, unlock: string?)
 	if unlock == "atlas" then
 		local count = Safe.value(TAG .. ".atlasCount", 0, AtlasService.atlasCount, player)
-		-- type élargi tant que "atlasUnlocked" manque à Types.CelebrateKind (docs/04 §10.3)
-		local kind: any = "atlasUnlocked"
-		Notify.celebrate(player, kind, {
+		Notify.celebrate(player, "atlasUnlocked", {
 			count = if type(count) == "number" and count >= 0 then math.floor(count) else 0,
 			total = Nebbies.atlasTotal(),
 		})

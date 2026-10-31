@@ -5,7 +5,9 @@
 --   * équipage actuel (WorldStateController.crews), bonus (+10 % par équipier) et escorte ;
 --     liste des joueurs du serveur avec Inviter (56 px) → CrewInvite(userId) (limite locale
 --     1 / 3 s et 5 / min, comme le serveur) ; Quitter → CrewLeave (recharge 5 s) ; Inviter un
---     ami → SocialService:PromptGameInvite (aucune récompense, §6.2)
+--     ami → SocialService:PromptGameInvite (aucune récompense, §6.2) ; manette : sélection retenue
+--     (PanelController.holdSelection) jusqu'à SocialService.GameInvitePromptClosed, puis rendue au
+--     bouton « Inviter un ami » si le panneau est encore ouvert
 --   * carte d'invitation reçue (remote CrewInvitePrompt routé par PanelController) : « Mira
 --     t'invite ! » ✓ / ✕ pendant 20 s → CrewRespond(inviterId, accept) ; NON bloquante (elle vit
 --     hors de la fenêtre des panneaux, glisse depuis la droite), file de 3 au plus ; échéance lue
@@ -102,6 +104,8 @@ local shown: Invite? = nil
 local cardConn: RBXScriptConnection? = nil -- Heartbeat tant qu'une carte est visible
 local removingConn: RBXScriptConnection? = nil
 local panelsWatched = false -- PanelController.Opened / Closed branchés (carte suspendue)
+local inviteWatched = false -- SocialService.GameInvitePromptClosed branché
+local inviteHeld = false -- fenêtre d'invitation Roblox ouverte : sélection manette retenue
 
 -- ---------------------------------------------------------------------------------------------
 -- Aides
@@ -383,10 +387,38 @@ local function inviteFriend()
 		local ok, err = pcall(function()
 			SocialService:PromptGameInvite(player)
 		end)
-		if not ok then
+		if ok then
+			-- la fenêtre d'invitation Roblox tient la manette : sélection laissée vide jusqu'à sa
+			-- fermeture (SocialService.GameInvitePromptClosed, watchInvitePrompt)
+			inviteHeld = true
+			PanelController.holdSelection(true)
+		else
 			warn("[Crew] PromptGameInvite :", err)
 		end
 	end)
+end
+
+-- Fenêtre d'invitation refermée (envoi ou annulation) : la manette retrouve « Inviter un ami »
+local function watchInvitePrompt()
+	if inviteWatched then
+		return
+	end
+	inviteWatched = true
+	local ok, err = pcall(function()
+		SocialService.GameInvitePromptClosed:Connect(function(sender: Instance)
+			if sender ~= Players.LocalPlayer or not inviteHeld then
+				return
+			end
+			inviteHeld = false
+			PanelController.holdSelection(false)
+			if isOpen and friendButton and PanelController.current() == "Crew" then
+				PanelController.select(friendButton)
+			end
+		end)
+	end)
+	if not ok then
+		warn("[Crew] GameInvitePromptClosed :", err)
+	end
 end
 
 function Panel.build(parent: Frame)
@@ -394,6 +426,7 @@ function Panel.build(parent: Frame)
 		return
 	end
 	built = true
+	watchInvitePrompt()
 	membersTitle = Widgets.label({
 		name = "MembersTitle",
 		size = UDim2.new(0.6, 0, 0, 34),

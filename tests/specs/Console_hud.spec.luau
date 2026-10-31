@@ -7,8 +7,8 @@
 --   * Gamepad.audit vide avec une bannière, 3 toasts, un tampon, un floater et la minicarte agrandie
 --   * aucun chevauchement à 1080p : rangée du haut, colonne de droite, rail, compteur de file,
 --     Dash / Ping, ACCLAMER, instruction d'accueil (icônes comprises)
---   * △ : cible de l'accueil > PanelController.focusTarget() > pastille « ! » > dernier panneau du rail
---     ouvert > premier bouton ; Layout.unreachable vide sur le HUD et la minicarte (HUD complet,
+--   * △ : carte d'invitation (PanelController.focusTarget()) > cible de l'accueil > pastille « ! » >
+--     dernier panneau du rail ouvert > premier bouton ; Layout.unreachable vide sur le HUD et la minicarte (HUD complet,
 --     ACCLAMER affiché, accueil Q1-Q3) ; ↑ depuis le 1er bouton du rail → Équipage
 --   * croix ← replie le suivi de quête (InputController.QuestToggled)
 --   * accueil à la manette : « Open Upgrade » + △, puis ✕ une fois Améliorer sélectionné ; la main

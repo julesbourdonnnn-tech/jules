@@ -17,7 +17,11 @@ for _, inst in game:GetDescendants() do
 		if source == nil or #source < 10 then
 			table.insert(problems, "script vide : " .. inst:GetFullName())
 		end
-		if inst.ClassName == "Script" and inst.RunContext ~= nil and inst.RunContext == roblox.Enum.RunContext.Client then
+		if
+			inst.ClassName == "Script"
+			and inst.RunContext ~= nil
+			and inst.RunContext == roblox.Enum.RunContext.Client
+		then
 			table.insert(problems, "Script en RunContext Client : " .. inst:GetFullName())
 		end
 	end
@@ -37,7 +41,24 @@ expect("StarterPlayer.StarterPlayerScripts.Client.Main", "LocalScript")
 expect("ReplicatedStorage.Shared.Net", "ModuleScript")
 expect("ReplicatedStorage.Shared.Remotes", "ModuleScript")
 
-print(string.format("Place %s : %d Script, %d LocalScript, %d ModuleScript", path, counts.Script, counts.LocalScript, counts.ModuleScript))
+-- Chat : TextChatService explicite (docs/07 §8 ; la base de réflexion par défaut donnerait
+-- LegacyChatService, l'ancien chat que Platform ne sait pas couper sur console)
+local tcs = game:FindFirstChildOfClass("TextChatService")
+if tcs == nil then
+	table.insert(problems, "manquant : TextChatService")
+elseif tcs.ChatVersion ~= roblox.Enum.ChatVersion.TextChatService then
+	table.insert(problems, `TextChatService.ChatVersion = {tcs.ChatVersion} (attendu TextChatService)`)
+end
+
+print(
+	string.format(
+		"Place %s : %d Script, %d LocalScript, %d ModuleScript",
+		path,
+		counts.Script,
+		counts.LocalScript,
+		counts.ModuleScript
+	)
+)
 if #problems > 0 then
 	for _, p in problems do
 		print("  ✗ " .. p)

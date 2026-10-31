@@ -33,8 +33,11 @@
 --   * StarterPlayer.EnableMouseLockOption = false (projet) : Maj sert au Dash
 -- Ouverture des panneaux centralisée (openPanel / togglePanel) : arguments posés par l'accueil
 -- (setPanelArgs, ex. { focus = "conga" }) et garde posée par le HUD (setPanelGate : pas de
--- panneau dont l'icône n'est pas encore affichée).
--- Une seule connexion Heartbeat (envoi différé du type d'entrée, stick de la roue).
+-- panneau dont l'icône n'est pas encore affichée). Double appui : une fermeture demandée moins de
+-- Console.ToggleCloseGuard s après PanelController.Opened du même panneau est ignorée (horloge de
+-- l'interface : somme des dt du Heartbeat). Panneau ouvert : Q, M et F passent (ni roue de pings,
+-- ni minicarte, ni ACCLAMER derrière la fenêtre).
+-- Une seule connexion Heartbeat (envoi différé du type d'entrée, horloge de l'interface).
 -- GDD : §6.3, §10.2 (Dash, Ping), §10.4.
 -- Dépendances : StateController, AudioController, Util/{Prefs,Platform,Haptics}, VFXController,
 -- WorldStateController, PanelController, ScreenFX, UI/Glyph, Logic/Formulas, Config/{Balance,Console},
@@ -173,6 +176,8 @@ local lastPing = -math.huge
 local lastRefuseToast = -math.huge
 local cheerAvailable = false
 local panelArgs: { [string]: any } = {}
+local uiTime = 0 -- s : somme des dt du Heartbeat (garde du double appui, avance aussi en test)
+local openedAt: { [string]: number } = {} -- panneau → uiTime de son dernier PanelController.Opened
 local panelGate: ((Types.PanelName) -> boolean)? = nil
 local wheelGui: Frame? = nil
 local wheelSectors: { TextButton } = {}
@@ -594,9 +599,14 @@ function InputController.openPanel(name: Types.PanelName): boolean
 	return ok
 end
 
--- Bascule : ferme le panneau s'il est déjà ouvert, sinon l'ouvre
+-- Bascule : ferme le panneau s'il est déjà ouvert, sinon l'ouvre ; une fermeture qui suit de
+-- moins de Console.ToggleCloseGuard s son ouverture est ignorée (double appui sur le même bouton)
 function InputController.togglePanel(name: Types.PanelName): boolean
 	if currentPanel() == name then
+		local at = openedAt[name]
+		if at ~= nil and uiTime - at < Console.ToggleCloseGuard then
+			return false
+		end
 		local ok = panels("close")
 		return ok
 	end
@@ -656,7 +666,9 @@ local function onWheelAction(
 	state: Enum.UserInputState,
 	_input: InputObject
 ): Enum.ContextActionResult
-	if not began(state) or loadingShown() then
+	-- panneau ouvert : jamais de roue de pings derrière la fenêtre (Q au clavier ; à la manette,
+	-- PanelNavGuard de PanelController absorbe déjà la croix) ; une roue déjà ouverte se referme
+	if not began(state) or loadingShown() or (currentPanel() ~= nil and not wheelOpen) then
 		return Enum.ContextActionResult.Pass
 	end
 	if wheelOpen then
@@ -752,7 +764,8 @@ local function onMinimapAction(
 	state: Enum.UserInputState,
 	_input: InputObject
 ): Enum.ContextActionResult
-	if not began(state) or loadingShown() then
+	-- panneau ouvert : la minicarte derrière la fenêtre ne bouge pas (M au clavier, comme ← / △)
+	if not began(state) or currentPanel() ~= nil or loadingShown() then
 		return Enum.ContextActionResult.Pass
 	end
 	InputController.MinimapToggled:Fire()
@@ -764,7 +777,8 @@ local function onCheerAction(
 	state: Enum.UserInputState,
 	_input: InputObject
 ): Enum.ContextActionResult
-	if not began(state) or loadingShown() then
+	-- panneau ouvert : pas d'ACCLAMER derrière la fenêtre (F au clavier ; le bouton du HUD reste)
+	if not began(state) or currentPanel() ~= nil or loadingShown() then
 		return Enum.ContextActionResult.Pass
 	end
 	return if InputController.requestCheer()
@@ -1079,7 +1093,13 @@ function InputController.Start()
 		end
 	end)
 	Prefs.LanguageChanged:Connect(refreshWheelTexts)
-	RunService.Heartbeat:Connect(function()
+	PanelController.Opened:Connect(function(name: Types.PanelName)
+		openedAt[name] = uiTime
+	end)
+	RunService.Heartbeat:Connect(function(dt: number)
+		if isFinite(dt) and dt > 0 then
+			uiTime += dt
+		end
 		flushInputType(Clock.now())
 	end)
 	-- type d'entrée initial (le serveur suppose clavier-souris)

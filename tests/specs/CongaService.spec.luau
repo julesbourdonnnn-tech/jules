@@ -1663,7 +1663,12 @@ return function(T)
 			tick(env, 15) -- à l'arrêt : le paquet suivant peut porter 7 studs d'un coup
 			env.h:moveTo(p, after)
 			tick(env)
-			expect(actorOf(env, p).valid).toBe(true)
+			-- 7 studs en un tick dépassent la règle d'UN tick du GDD §12.7 (16 × 0,1 × 1,5 + 4 = 6,4) :
+			-- rafale tolérée (position acceptée, aucune infraction), acteur non `valid` (r4 serveur 3,
+			-- Fix_r4_serveur_3.spec), mais SA porte est balayée : la parade encaisse
+			expect(env.MoveCheck.lastWasBurst(p)).toBe(true)
+			expect(env.MoveCheck.violations(p)).toBe(0)
+			expect(actorOf(env, p).valid).toBe(false)
 			expect(env.Conga.lineLength(p)).toBe(0)
 			expect(#lineOps(env, 1, "bank")).toBe(1)
 			-- longer la porte à l'extérieur de la boîte ne déclenche rien

@@ -678,10 +678,14 @@ function VFXController.playDash()
 	end)
 end
 
--- Amélioration (anneau, fantôme Conga, perchoir) — appelé par ScreenFX sur Celebrate "upgrade"
-function VFXController.playUpgrade(track: string, level: number)
+-- Amélioration (anneau, fantôme Conga, perchoir) — appelé par ScreenFX sur Celebrate "upgrade" ;
+-- `silent` : LevelUp déjà joué à l'achat (panneau ouvert), seule la reprise différée de l'effet
+-- du monde reste (sans second LevelUp)
+function VFXController.playUpgrade(track: string, level: number, silent: boolean?)
 	local root = localRoot()
-	AudioController.play("LevelUp")
+	if silent ~= true then
+		AudioController.play("LevelUp")
+	end
 	if root == nil then
 		return
 	end

@@ -350,14 +350,18 @@ return function(T)
 		)
 
 		it(
-			"Pluie de météores (sans forme) : « Météo bientôt » ; un Nebby météo qui traîne reste une cible",
+			"Pluie de météores (sans forme) : « Météo dans {time} » ; un Nebby météo qui traîne reste une cible",
 			function()
 				local c = setup()
 				load(c, Q6)
 				c.events = eventState({ weather = { key = "meteor", startsAt = T0 - 5, endsAt = T0 + 145 } })
 				run(c, 15)
 				expect(c.Onboarding._state().facts.weatherActive).toBe(false)
-				expect(c.Onboarding.currentHint()).toBe("onboarding.waitWeather")
+				-- QA r4 (Fix_r4_ui_1_plan, Fix_r4_release) : pendant la pluie, « Météo bientôt ! » à côté
+				-- d'une pastille qui compte à rebours la fin de la pluie trompait ; l'instruction porte son
+				-- propre compte à rebours jusqu'à la prochaine météo à forme
+				expect(c.Onboarding._state().facts.weatherFormless).toBe(true)
+				expect(c.Onboarding.currentHint()).toBe("onboarding.waitWeatherIn")
 				-- Nebby de forme Frost resté de la fenêtre précédente : il compte encore pour Q6
 				local spot = c.WorldLayout.gateCFrame(1).Position + Vector3.new(25, 0, -20)
 				wild(c, 40, c.Nebbies.pack(commonSpecies(c), 2, 0), spot, false)
