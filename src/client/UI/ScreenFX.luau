@@ -23,9 +23,12 @@
 --     volantes, ni confettis, ni rotation, ni secousse)
 -- Une seule connexion RenderStepped (pièces, confettis, floaters, tampons, vignette, cartes), temps
 -- d'animation = somme des dt des images (mesure purement graphique).
+-- Téléviseur / console (docs/07-console-ps5.md §3-§4) : tampons, titre et cartes sont dans Root.safe
+-- (zone sûre TV, textes ≥ 18 px de référence) ; les floaters (couche plein écran, en pixels) sont
+-- gardés dans la zone sûre sur écran Large ; la vignette, décorative, déborde (attribut Decorative).
 -- GDD : §9.1 (stamp, flyCoins), §9.2, §9.4, §7.2.
 -- Dépendances : StateController, AudioController, Util/Prefs, UI/Root, UI/Theme, UI/Create, UI/Juice,
--- UI/Toast, WorldStateController, VFXController, Shared/Net, Shared/Util/Signal.
+-- UI/Toast, Util/Platform, WorldStateController, VFXController, Shared/Net, Shared/Util/Signal.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -44,6 +47,7 @@ local Client = script.Parent.Parent
 local State = require(Client.Controllers.StateController)
 local AudioController = require(Client.Controllers.AudioController)
 local Prefs = require(Client.Util.Prefs)
+local Platform = require(Client.Util.Platform)
 local Root = require(Client.UI.Root)
 local Theme = require(Client.UI.Theme)
 local Create = require(Client.UI.Create)
@@ -806,6 +810,8 @@ local function ensureVignette()
 				}),
 			}),
 		})
+		-- bord d'écran décoratif : hors zone sûre TV par nature (docs/07 §4)
+		frame:SetAttribute("Decorative", true)
 		table.insert(vignetteFrames, frame)
 	end
 end
@@ -861,19 +867,36 @@ function ScreenFX.flyCoins(fromScreen: Vector2, target: GuiObject, count: number
 	launch(fromScreen, target, count, "coin", COIN_TIME, COIN_STAGGER)
 end
 
+-- Origine d'un floater (centre, px de la couche) gardée dans la zone sûre TV sur écran Large ou
+-- console (docs/07-console-ps5.md §4) : le libellé (w × h) et sa montée restent à 5 % des bords ;
+-- ailleurs, inchangée
+local function safeOrigin(pos: Vector2, w: number, h: number, rise: number): Vector2
+	if not Platform.isLargeDisplay() then
+		return pos
+	end
+	local size = viewportSize()
+	local pad = Root.padding() * scale()
+	local x0, x1 = pad.X + w / 2, size.X - pad.X - w / 2
+	local y0, y1 = pad.Y + h / 2 + rise, size.Y - pad.Y - h / 2
+	return Vector2.new(math.clamp(pos.X, x0, math.max(x0, x1)), math.clamp(pos.Y, y0, math.max(y0, y1)))
+end
+
 function ScreenFX.floater(text: string, screenPos: Vector2, color: Color3)
 	if type(text) ~= "string" or typeof(screenPos) ~= "Vector2" or typeof(color) ~= "Color3" then
 		return
 	end
+	local s = scale()
+	local w, h = 260 * s, 44 * s
+	local origin = safeOrigin(screenPos, w, h, FLOATER_RISE * s)
 	local f = takeFloater()
 	f.busy = true
 	f.t0 = fxTime
-	f.origin = screenPos
+	f.origin = origin
 	f.label.Text = text
 	f.label.TextColor3 = color
 	f.label.TextTransparency = 0
-	f.label.Size = UDim2.fromOffset(260 * scale(), 44 * scale())
-	f.label.Position = UDim2.fromOffset(screenPos.X, screenPos.Y)
+	f.label.Size = UDim2.fromOffset(w, h)
+	f.label.Position = UDim2.fromOffset(origin.X, origin.Y)
 	f.label.Visible = true
 end
 

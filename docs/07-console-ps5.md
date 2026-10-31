@@ -205,19 +205,20 @@ Sélection de départ : la cible de l'accueil (main / pulsation), sinon la carte
 | **Panneau précédent / suivant**, en boucle, panneaux autorisés seulement (garde du HUD) : Améliorer → Collection → Objectifs → Boutique → Équipage → Réglages | L2 / R2 | `ButtonL2` / `ButtonR2` | PanelController |
 | Faire défiler la liste du panneau | Stick droit | `Thumbstick2` (absorbé) | PanelController |
 | Confirmer la Supernova | **Maintenir ✕ 1 s** sur « Maintiens pour confirmer » | `ButtonA` | Panels/Supernova |
+| Dash | **aucun** : □ absorbé comme R2 (la sélection tient le stick ; un appui égaré ne doit pas sortir le personnage du port sûr derrière la fenêtre) ; le clavier garde Maj / E | `ButtonX` | InputController |
 
 Gestes : Boutique = △ ✕ R2 R2 R2 (ou △ ↓ ↓ ↓ ✕) ; chaque panneau est à au plus 3 gestes de son voisin.
 
 ### 6.4 Roue de pings
 
-| Action | DualSense |
-|---|---|
-| Ouvrir | Croix ↑ |
-| Viser un secteur | Stick gauche (direction) ou croix ← / → (anneau, en boucle) |
-| Envoyer | ✕ |
-| Fermer sans envoyer | ○ |
+| Action | DualSense | Action CAS |
+|---|---|---|
+| Ouvrir / refermer | Croix ↑ | `CC_PingWheel` |
+| Viser un secteur | Stick gauche (direction) ; ou croix ← / → : anneau en boucle, le **1er appui vise le secteur 1** (← depuis 1 → 6) | `CC_PingStick`, `CC_PingNav` |
+| Envoyer | ✕ ; ✕ **sans secteur visé ferme** sans envoyer | `CC_PingConfirm` |
+| Fermer sans envoyer | ○ (son `Back`) | `CC_Close` |
 
-Repères : ✕ « Envoyer » et ○ « Fermer » au centre de la roue (le « ✕ » dessiné du centre disparaît à la manette).
+La roue ne pose **aucune** sélection `GuiService` : la croix, le stick et ✕ passent tous par ContextActionService (InputController) ; roue ouverte, la croix ← ne replie pas le suivi de quête. Envoi : remote `Ping(kind)` au plus 1 / 1,5 s et emote locale `Humanoid:PlayEmote` (2 → `point`, 4 → `cheer`, 6 → `wave`). Repères : ✕ « Envoyer » et ○ « Fermer » au centre de la roue (le « ✕ » dessiné du centre disparaît à la manette).
 
 ### 6.5 Supernova (maintien à la manette)
 
@@ -278,7 +279,9 @@ Règles communes :
 | Écran de retour | OK | ferme | — | — | — |
 | Chargement (échec) | Réessayer | — | — | — | — |
 
-Repères visibles à la manette : ○ sur le bouton Fermer / Retour (le « ✕ » dessiné disparaît), L1 et R1 aux deux bouts de la barre d'onglets, L2 et R2 aux coins de l'en-tête, ✕ sur le bouton Maintenir, △ sur le rail du HUD.
+Repères visibles à la manette : ○ sur le bouton Fermer (le « ✕ » dessiné disparaît) ; sur la **Supernova**, ○ est sur Retour (→ Améliorer) et Fermer porte **△** (tout fermer) ; L1 et R1 aux deux bouts de la barre d'onglets, L2 et R2 aux coins de l'en-tête, ✕ sur le bouton Maintenir, △ sur le rail du HUD.
+
+Retours : seul ○ (`PanelController.back()`) rend la sélection au bouton du rail d'origine ; △ (`PanelController.close()` puis sélection effacée) ne rend **jamais** de sélection, ni tout de suite ni après l'animation de fermeture ; le HUD ne re-sélectionne pas de lui-même après un ○ ou un △ (seul △ en jeu appelle `HUD.selectRail`).
 
 ---
 
@@ -340,7 +343,9 @@ Le jeu reste entièrement jouable en silence (GDD §9.1).
 | `tests/harness/Layout` | géométrie des interfaces (Size, Position, AnchorPoint, UIPadding, UIScale cumulés, UISizeConstraint, UIAspectRatioConstraint, UIListLayout, UIGridLayout, ScrollingFrame, AutomaticSize des conteneurs) → `AbsolutePosition` / `AbsoluteSize` ; navigation : `step` (explicite puis géométrique, `SelectionGroup` + `SelectionBehavior`), `reachable`, `unreachable`, `escapes` |
 | `tests/harness/Gamepad` | `press` / `release` / `tap` / `stick` : croix = navigation quand une sélection existe, ✕ = `Activated` au relâchement, autres boutons = actions CAS par priorité (Pass propage) ; `audit(h, { root })` : glyphes non PlayStation, textes de boutons Xbox, textes < 18 px, débordement de la zone sûre |
 
-Modèle d'entrée documenté dans l'en-tête de `Gamepad.luau` (approximation du moteur ; la fonction de score de la sélection directionnelle n'est pas celle, non documentée, de Roblox : les specs vérifient l'atteignabilité, pas un chemin exact).
+Modèle d'entrée documenté dans l'en-tête de `Gamepad.luau` (approximation du moteur ; la fonction de score de la sélection directionnelle n'est pas celle, non documentée, de Roblox : les specs vérifient l'atteignabilité, pas un chemin exact). Limite connue : `Layout.step` part du rectangle **après** `UIScale` ; un bouton sélectionné grossi de 5-6 % autour de son coin haut gauche (`Widgets` / `Juice`) peut, au bord gauche d'une grille, faire passer la croix ← sur la case du dessous là où le moteur s'arrêterait sans doute. Les specs de grilles visent donc des index exacts (`Console_panels.spec`, Réserve) plutôt que d'enchaîner des ← au bord.
+
+`ApiAudit` connaît `Humanoid:PlayEmote` (vraie méthode Roblox absente de la base de réflexion, appelée sous pcall par les pings à emote et l'acclamation).
 
 ### 10.2 Règle → test
 
@@ -358,6 +363,7 @@ Modèle d'entrée documenté dans l'en-tête de `Gamepad.luau` (approximation du
 | Entrées : R2/□ Dash, △ entre et sort du menu, ○ sort, croix ←, roue ✕/○, haptique de jeu, sons de navigation | `Console_input.spec` (G1) | `Gamepad.tap` sur le vrai client console |
 | HUD, accueil, minicarte, bannières, toasts, chargement : glyphes PlayStation, textes ≥ 18, zone sûre, tout atteignable depuis △ | `Console_hud.spec` (G2) | `Gamepad.audit`, `Layout.unreachable` |
 | Chaque panneau : ○ recule, L1/R1, L2/R2, aucune fuite de sélection, tout atteignable, glyphes PlayStation | `Console_panels.spec` (G3) | `Layout.escapes`, `Layout.unreachable`, `Gamepad.audit` |
+| Interfaces croisées G1-G3 : □ absorbé panneau ouvert, △ sans sélection rendue, une seule vibration `supernova`, pings à emote audités | `Console_release.spec` | `Gamepad.tap` / `press` / `release`, `Haptics.Played`, `ApiAudit` |
 
 ---
 
@@ -409,6 +415,15 @@ Compatibilité avec les specs existantes : les repères clavier `KeyCap` (TextLa
 10. **A20** — Collection : clés neutres `collection.selectHint.pad` (« Choose a Nebby to see it » / « Choisis un Nebby pour le voir ») et `collection.releaseHint.pad` (« Choose Nebbies to release » / « Choisis des Nebbies à libérer ») à la manette.
 11. **A22, §6.7** — carte d'invitation : `PanelController.focusTarget()` renvoie Accepter tant qu'elle est visible ; Accepter ↔ Refuser reliés ; glyphe ✕.
 12. **Spec** `Console_panels.spec` : client console complet ; pour chaque panneau et chaque onglet : sélection par défaut dans la fenêtre, `Layout.escapes` vide, `Layout.unreachable` vide, `Gamepad.audit` vide ; ○ (Supernova → Améliorer → bouton du rail), L1/R1 en boucle, L2/R2 en boucle avec la garde, R2 sans Dash panneau ouvert ; Supernova maintenue au `Gamepad.press/release` (relâchement anticipé = rien, `holdStart` journalisé) ; Boutique : re-sélection après la fenêtre d'achat ; Réserve de 60 Nebbies parcourue à la croix jusqu'au dernier.
+
+### Intégration (validation de publication)
+
+Groupes G1-G3 livrés ; notes croisées résolues (spec `Console_release.spec`) :
+
+- **G1** — `InputController.inputType()` / `InputTypeChanged` suivent l'entrée préférée (`Platform.inputKind`) ; actions `CC_Quest` (croix ←) et `CC_PingNav` (anneau de la roue) ; △ et ○ reculent d'un pas avec `Back`. **□ panneau ouvert : absorbé sans Dash** (comme R2, §6.3). Vibration `supernova` du héros jouée par InputController seul (le panneau Supernova ne joue que `holdStart` et `refuse`). `AudioController.playNav()` et l'écoute de `SelectedObject` (son `Select`, au plus 1 / `NavSoundInterval` : un double déplacement dans la même image — défilement de la Réserve — ne joue qu'un son).
+- **G2** — `HUD.selectRail()` : cible de l'accueil > `PanelController.focusTarget()` (ignorée si hors écran) > rail à pastille « ! » > dernier panneau du rail ouvert (`Opened`, Supernova = Améliorer) > premier bouton affiché. Instances `PadGlyph` (repères de touches), `RailGlyph` (△ au-dessus du rail), `HandGlyph` (main de l'accueil remplacée par la touche). À la manette, △ à y = 144-180 et le rail descend à y = 188 ; pas de grille 2 × 2 sur console. Barre de la Balise bornée à 320-420 px selon la largeur intérieure (jamais sous Équipage / Réglages). `Hud/OnboardingPlan` : fait `gamepad` ; clé `onboarding.openUpgrade` (EN / FR). `Loading.client` : `REFERENCE` (1280 × 720) et `TV_SCALE_MIN` (0,6) recopiés de `Config/Console` (vérifiés par la spec). Toasts, bannières, tampons, titre Supernova, cartes d'Atlas : ≥ 18 px et dans `Root.safe`, sans modification.
+- **G3** — nouvelles API (docs/04 §13.15) : `PanelController.cyclePanel`, `PanelController.select`, `Crew.inviteTarget()` (Accepter) / `Crew.inviteCard()`, `VirtualGrid` option `selectable` et `reveal(index)` ; actions CAS `PanelBack`, `PanelTabPrev` / `PanelTabNext`, `PanelPrev` / `PanelNext` (L2 / R2), `PanelScroll` (stick droit) à `High + 50`, liées seulement panneau ouvert.
+- **Limites connues** (sans effet en jeu) : `VFXController.haptic` (contrat) attend le délai après `Haptics.Played`, mais `Haptics.play` ne voit pas une vibration lancée par `VFXController.haptic` (horodatage privé) ; aucun appel dans le jeu. Une API `Haptics.note()` rendrait le délai commun dans les deux sens si l'appel revient. Navigation du harnais après `UIScale` : voir §10.1.
 
 ---
 

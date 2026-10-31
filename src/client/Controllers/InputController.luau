@@ -1,27 +1,40 @@
 --!strict
 -- InputController — paquet « client-hud » (docs/04-architecture.md §13.11).
 -- Toutes les actions passent par ContextActionService (boutons tactiles créés par notre UI).
--- Responsabilités :
---   * Dash : Maj gauche ou E, bouton X (manette), bouton tactile du HUD → dash() : recharge locale
---     prédite (Formulas.dashCooldown(R)), refus local si porteur de la Comète, remote Dash,
---     VFXController.playDash, son Dash ; synchronisation sur l'attribut Player « DashReadyAt »
---   * roue de pings : Q (puis 1-6 ou clic), croix haut (puis stick + A), bouton tactile 72 px ;
---     6 secteurs de 96 px dessinés en Frames ; remote Ping(kind) au plus 1 / 1,5 s ; emote locale
---     (Humanoid:PlayEmote) : Suis-moi → point, Bravo → cheer, Merci → wave
---   * raccourcis : U, C, J, B, G → panneaux (PanelController) ; Échap / B ferme la roue (panneau
---     ouvert : B / Échap / LB / RB sont liés et absorbés par PanelController à plus haute priorité) ;
---     Y ouvre le rail (signal RailRequested, le HUD sélectionne le premier bouton) ;
---     M / croix bas : minicarte ; F / croix droite : acclamer
---   * type d'entrée (1 tactile, 2 clavier-souris, 3 manette) depuis UserInputService
---     (LastInputTypeChanged) → remote SetInputType au plus 1 / 5 s (seulement s'il change)
+-- Responsabilités (manette DualSense : docs/07-console-ps5.md §6) :
+--   * Dash : Maj gauche ou E, R2 ou □ Carré (ButtonR2, ButtonX) à la manette, bouton tactile du
+--     HUD → dash() : recharge locale prédite (Formulas.dashCooldown(R)), refus local si porteur de
+--     la Comète, remote Dash, VFXController.playDash, son Dash ; synchronisation sur l'attribut
+--     Player « DashReadyAt » ; panneau ouvert, □ est absorbé sans Dash (R2 l'est par PanelController)
+--   * roue de pings : Q (puis 1-6 ou clic), croix ↑ (puis stick ou croix ← / → en anneau, ✕
+--     envoie, ○ ferme), bouton tactile 72 px ; 6 secteurs de 96 px dessinés en Frames ; aucune
+--     sélection GuiService dans la roue (tout passe par ContextActionService) ; à la manette, repères
+--     UI/Glyph ✕ « Envoyer » et ○ (« PadGlyph », au centre, à la place du « ✕ » dessiné, gardé au
+--     toucher et au clavier) ; touches 1-6 affichées au clavier seulement ; remote Ping(kind) au
+--     plus 1 / 1,5 s ; emote locale (Humanoid:PlayEmote) : Suis-moi → point, Bravo → cheer,
+--     Merci → wave
+--   * raccourcis : U, C, J, B, G → panneaux (PanelController) ; M / croix ↓ : minicarte ; F /
+--     croix → : acclamer ; croix ← : suivi de quête (QuestToggled)
+--   * retours (son « Back » à chaque pas en arrière, docs/07 §6.2-§6.3) : △ (ButtonY) : panneau
+--     ouvert → tout fermer et effacer la sélection ; sinon sélection active (menu du HUD, carte
+--     d'invitation) → effacée ; sinon RailRequested (le HUD sélectionne le rail) ; ○ / Échap : roue
+--     ouverte → fermée ; sinon, sans panneau, sélection active → effacée ; sinon laissé aux autres
+--     (panneau ouvert : ○ / Échap / L1 / R1 liés et absorbés par PanelController à plus haute
+--     priorité)
+--   * type d'entrée (1 tactile, 2 clavier-souris, 3 manette) : entrée préférée de Client/Util/Platform
+--     (Platform.inputKind, Platform.Changed "input") → remote SetInputType au plus 1 / 5 s
+--     (seulement s'il change)
+--   * vibration de la Supernova du héros local (Celebrate "supernova" via ScreenFX.Celebrated,
+--     Util/Haptics, docs/07 §9.1) ; les vibrations du monde sont dans VFXController
 --   * StarterPlayer.EnableMouseLockOption = false (projet) : Maj sert au Dash
 -- Ouverture des panneaux centralisée (openPanel / togglePanel) : arguments posés par l'accueil
 -- (setPanelArgs, ex. { focus = "conga" }) et garde posée par le HUD (setPanelGate : pas de
 -- panneau dont l'icône n'est pas encore affichée).
 -- Une seule connexion Heartbeat (envoi différé du type d'entrée, stick de la roue).
 -- GDD : §6.3, §10.2 (Dash, Ping), §10.4.
--- Dépendances : StateController, AudioController, Util/Prefs, VFXController, WorldStateController,
--- PanelController, ScreenFX, Logic/Formulas, Config/Balance, Shared/Net, Shared/Util/Clock.
+-- Dépendances : StateController, AudioController, Util/{Prefs,Platform,Haptics}, VFXController,
+-- WorldStateController, PanelController, ScreenFX, UI/Glyph, Logic/Formulas, Config/{Balance,Console},
+-- Shared/Net, Shared/Util/Clock.
 
 local ContextActionService = game:GetService("ContextActionService")
 local GuiService = game:GetService("GuiService")
@@ -36,12 +49,16 @@ local Types = require(Shared.Types)
 local Net = require(Shared.Net)
 local Clock = require(Shared.Util.Clock)
 local Balance = require(Shared.Config.Balance)
+local Console = require(Shared.Config.Console)
 local Formulas = require(Shared.Logic.Formulas)
 
 local Client = script.Parent.Parent
 local State = require(Client.Controllers.StateController)
 local AudioController = require(Client.Controllers.AudioController)
 local Prefs = require(Client.Util.Prefs)
+local Platform = require(Client.Util.Platform)
+local Haptics = require(Client.Util.Haptics)
+local Glyph = require(Client.UI.Glyph)
 local Root = require(Client.UI.Root)
 local Theme = require(Client.UI.Theme)
 local Create = require(Client.UI.Create)
@@ -71,13 +88,20 @@ InputController.QuestToggled = Signal.new() :: Signal.Signal<>
 
 -- Constantes (GDD §6.3, §10.4) ------------------------------------------------------------------
 
-local TOUCH, KEYBOARD, GAMEPAD = 1, 2, 3
+local KEYBOARD, GAMEPAD = Platform.KEYBOARD, Platform.GAMEPAD
 local INPUT_SEND_INTERVAL = 5 -- remote SetInputType : 1 / 5 s
 local PING_COOLDOWN = Balance.Ping.Cooldown
 local PING_COUNT = Balance.Ping.Count
 local WHEEL_RADIUS = 132 -- px de référence
 local SECTOR = 96
-local WHEEL_TEXT = 18 -- px de référence : texte minimal lisible (GDD §10.1)
+local WHEEL_TEXT = Console.MinTextSize -- px de référence : texte minimal lisible (GDD §10.1)
+-- Centre de la roue (px de référence) : la zone libre entre les secteurs fait 132 × 168 px
+local CENTER = 64 -- bouton central (fermer)
+local HINT_WIDTH = 120 -- repères de la manette : ✕ « Envoyer » au-dessus, « Fermer » en dessous
+local HINT_GAP = 4
+local SEND_HINT_Y = -(CENTER / 2 + HINT_GAP + Console.GlyphSize / 2)
+local CLOSE_HINT_HEIGHT = 24
+local CLOSE_HINT_Y = CENTER / 2 + HINT_GAP + CLOSE_HINT_HEIGHT / 2
 local STICK_DEADZONE = 0.45
 local REFUSE_TOAST_INTERVAL = 2
 local EMOTES: { [number]: string } = { [2] = "point", [4] = "cheer", [6] = "wave" }
@@ -121,11 +145,13 @@ local ACTION = {
 	pingKey = "CC_PingKey",
 	pingStick = "CC_PingStick",
 	pingConfirm = "CC_PingConfirm",
+	pingNav = "CC_PingNav",
 	close = "CC_Close",
 	panels = "CC_Panels",
 	rail = "CC_Rail",
 	minimap = "CC_Minimap",
 	cheer = "CC_Cheer",
+	quest = "CC_Quest",
 }
 
 -- État ------------------------------------------------------------------------------------------
@@ -148,6 +174,12 @@ local wheelGui: Frame? = nil
 local wheelSectors: { TextButton } = {}
 local wheelOpen = false
 local wheelSelected = 0
+-- Centre de la roue : « ✕ » dessiné (toucher, clavier) ou glyphes de la manette (docs/07 §6.4)
+local wheelCloseIcon: TextLabel? = nil
+local wheelPadGlyph: Glyph.Handle? = nil
+local wheelSendHint: Frame? = nil
+local wheelSendLabel: TextLabel? = nil
+local wheelCloseHint: TextLabel? = nil
 
 -- Outils ----------------------------------------------------------------------------------------
 
@@ -187,24 +219,18 @@ local function currentPanel(): Types.PanelName?
 	return if ok and type(result) == "string" then result :: Types.PanelName else nil
 end
 
-local function kindFor(inputType: Enum.UserInputType): number?
-	if inputType == Enum.UserInputType.Touch then
-		return TOUCH
-	end
-	if
-		inputType == Enum.UserInputType.Keyboard
-		or inputType == Enum.UserInputType.MouseButton1
-		or inputType == Enum.UserInputType.MouseButton2
-		or inputType == Enum.UserInputType.MouseButton3
-		or inputType == Enum.UserInputType.MouseMovement
-		or inputType == Enum.UserInputType.MouseWheel
-	then
-		return KEYBOARD
-	end
-	if string.sub(inputType.Name, 1, 7) == "Gamepad" then
-		return GAMEPAD
-	end
-	return nil
+-- Sélection GuiService courante (menu du HUD, carte d'invitation, panneau), nil sans sélection
+local function selection(): GuiObject?
+	local ok, selected = pcall(function()
+		return GuiService.SelectedObject
+	end)
+	return if ok then selected else nil
+end
+
+local function clearSelection()
+	pcall(function()
+		GuiService.SelectedObject = nil
+	end)
 end
 
 local function character(): (Humanoid?, BasePart?)
@@ -290,6 +316,15 @@ local function highlight(index: number)
 	end
 end
 
+-- Secteur visé à la manette (stick ou croix) : surligné, son de navigation « Select »
+local function aim(index: number)
+	if index == wheelSelected then
+		return
+	end
+	highlight(index)
+	AudioController.playNav()
+end
+
 local function buildWheel(): Frame
 	if wheelGui and wheelGui.Parent then
 		return wheelGui :: Frame
@@ -354,20 +389,63 @@ local function buildWheel(): Frame
 		end)
 		wheelSectors[i] = button
 	end
-	-- centre : fermer
+	-- centre : fermer. « ✕ » dessiné au toucher et au clavier ; à la manette, glyphe ○ (ButtonB)
+	-- « PadGlyph » à sa place : sur PlayStation, ✕ veut dire valider (docs/07 §6.4)
 	local closeHolder = Widgets.holder(
 		"Close",
-		UDim2.fromOffset(64, 64),
+		UDim2.fromOffset(CENTER, CENTER),
 		UDim2.fromScale(0.5, 0.5),
 		Vector2.new(0.5, 0.5),
 		wheel
 	)
 	closeHolder.Visible = true
 	local close = Widgets.button("Button", closeHolder, Theme.Colors.Panel, true)
-	Widgets.glyph("Icon", "✕", close, Theme.Colors.TextDim, 30).AutoLocalize = false
+	local closeIcon = Widgets.glyph("Icon", "✕", close, Theme.Colors.TextDim, 30)
+	closeIcon.AutoLocalize = false
+	wheelCloseIcon = closeIcon
+	wheelPadGlyph = Glyph.new(close, { gamepad = Enum.KeyCode.ButtonB }, {
+		name = "PadGlyph",
+		position = UDim2.fromScale(0.5, 0.5),
+		anchor = Vector2.new(0.5, 0.5),
+	})
 	close.Activated:Connect(function()
 		InputController.closePingWheel()
 	end)
+	-- repères de la manette : ✕ « Envoyer » au-dessus du centre, « Fermer » en dessous (texte
+	-- ≥ 18 px de référence, dans la zone libre entre les secteurs)
+	local sendHint = Create("Frame", {
+		Name = "SendHint",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.new(0.5, 0, 0.5, SEND_HINT_Y),
+		Size = UDim2.fromOffset(HINT_WIDTH, Console.GlyphSize),
+		BackgroundTransparency = 1,
+		Visible = false,
+		Parent = wheel,
+	}) :: Frame
+	Glyph.new(sendHint, { gamepad = Enum.KeyCode.ButtonA }, { name = "SendGlyph" })
+	wheelSendLabel = Widgets.label({
+		name = "Label",
+		text = Prefs.t("ping.send"),
+		size = UDim2.new(1, -(Console.GlyphSize + HINT_GAP), 1, 0),
+		position = UDim2.fromOffset(Console.GlyphSize + HINT_GAP, 0),
+		xAlign = Enum.TextXAlignment.Left,
+		maxSize = WHEEL_TEXT,
+		zIndex = 4,
+		parent = sendHint,
+	})
+	wheelSendHint = sendHint
+	local closeHint = Widgets.label({
+		name = "CloseHint",
+		text = Prefs.t("common.close"),
+		size = UDim2.fromOffset(HINT_WIDTH, CLOSE_HINT_HEIGHT),
+		position = UDim2.new(0.5, 0, 0.5, CLOSE_HINT_Y),
+		anchor = Vector2.new(0.5, 0.5),
+		maxSize = WHEEL_TEXT,
+		zIndex = 4,
+		parent = wheel,
+	})
+	closeHint.Visible = false
+	wheelCloseHint = closeHint
 	-- navigation manette explicite autour de la roue
 	for i, button in wheelSectors do
 		button.NextSelectionRight = wheelSectors[i % PING_COUNT + 1]
@@ -383,10 +461,34 @@ local function refreshWheelTexts()
 		if label and label:IsA("TextLabel") then
 			label.Text = Prefs.t("ping." .. i)
 		end
+		-- touches 1-6 : clavier seulement (masquées à la manette et au toucher)
 		local cap = button:FindFirstChild("KeyCap")
 		if cap and cap:IsA("TextLabel") then
 			cap.Visible = inputKind == KEYBOARD
 		end
+	end
+	local pad = inputKind == GAMEPAD
+	-- glyphe ○ rafraîchi ici (l'ordre des abonnés de Platform.Changed n'est pas garanti)
+	local padGlyph = wheelPadGlyph
+	if padGlyph then
+		padGlyph:refresh()
+	end
+	local icon = wheelCloseIcon
+	if icon then
+		icon.Visible = not (padGlyph ~= nil and padGlyph:shown())
+	end
+	local sendHint = wheelSendHint
+	if sendHint then
+		sendHint.Visible = pad
+	end
+	local sendLabel = wheelSendLabel
+	if sendLabel then
+		sendLabel.Text = Prefs.t("ping.send")
+	end
+	local closeHint = wheelCloseHint
+	if closeHint then
+		closeHint.Text = Prefs.t("common.close")
+		closeHint.Visible = pad
 	end
 end
 
@@ -422,9 +524,23 @@ local function onPingStick(
 	end
 	local angle = math.deg(math.atan2(v.Y, v.X)) + 90 -- 0 = haut, sens horaire
 	local index = math.floor(((angle % 360) + 360 / PING_COUNT / 2) / (360 / PING_COUNT)) % PING_COUNT + 1
-	if index ~= wheelSelected then
-		highlight(index)
+	aim(index)
+	return Enum.ContextActionResult.Sink
+end
+
+-- Croix ← / → roue ouverte : secteur précédent / suivant en anneau (le 1er appui vise le secteur 1)
+local function onPingNav(_: string, state: Enum.UserInputState, input: InputObject): Enum.ContextActionResult
+	if state ~= Enum.UserInputState.Begin or not wheelOpen then
+		return Enum.ContextActionResult.Pass
 	end
+	local step = if input.KeyCode == Enum.KeyCode.DPadRight
+		then 1
+		elseif input.KeyCode == Enum.KeyCode.DPadLeft then -1
+		else 0
+	if step == 0 then
+		return Enum.ContextActionResult.Pass
+	end
+	aim(if wheelSelected < 1 then 1 else (wheelSelected - 1 + step) % PING_COUNT + 1)
 	return Enum.ContextActionResult.Sink
 end
 
@@ -439,7 +555,9 @@ local function onPingConfirm(
 	if wheelSelected >= 1 then
 		InputController.ping(wheelSelected)
 	else
+		-- rien de visé : ✕ ferme la roue sans envoyer
 		InputController.closePingWheel()
+		AudioController.play("Back")
 	end
 	return Enum.ContextActionResult.Sink
 end
@@ -506,10 +624,16 @@ end
 local function onDashAction(
 	_: string,
 	state: Enum.UserInputState,
-	_input: InputObject
+	input: InputObject
 ): Enum.ContextActionResult
 	if not began(state) then
 		return Enum.ContextActionResult.Pass
+	end
+	-- □ panneau ouvert : absorbé sans Dash, comme R2 (PanelController, docs/07 §6.3) ; la sélection
+	-- tient le stick, un appui égaré ne doit pas projeter le personnage hors du port sûr derrière la
+	-- fenêtre (Supernova). Le clavier (Maj, E) garde le Dash : WASD fait toujours marcher.
+	if input ~= nil and input.KeyCode == Enum.KeyCode.ButtonX and currentPanel() ~= nil then
+		return Enum.ContextActionResult.Sink
 	end
 	InputController.dash()
 	return Enum.ContextActionResult.Sink
@@ -539,9 +663,16 @@ local function onCloseAction(
 	if not began(state) then
 		return Enum.ContextActionResult.Pass
 	end
-	-- (panneau ouvert : PanelController lie B / Échap à plus haute priorité et les absorbe)
+	-- (panneau ouvert : PanelController lie ○ / Échap à plus haute priorité et les absorbe)
 	if wheelOpen then
 		InputController.closePingWheel()
+		AudioController.play("Back")
+		return Enum.ContextActionResult.Sink
+	end
+	-- menu du HUD ou carte d'invitation sélectionnés : on rend la main au jeu (le stick fait marcher)
+	if currentPanel() == nil and selection() ~= nil then
+		clearSelection()
+		AudioController.play("Back")
 		return Enum.ContextActionResult.Sink
 	end
 	return Enum.ContextActionResult.Pass
@@ -571,7 +702,36 @@ local function onRailAction(
 	if not began(state) then
 		return Enum.ContextActionResult.Pass
 	end
+	-- △ ramène au jeu depuis un panneau (sélection comprise : jamais un bouton du rail derrière la
+	-- fenêtre) ou depuis le menu du HUD ; sinon il entre dans le menu (docs/07 §6.2-§6.3)
+	if currentPanel() ~= nil then
+		panels("close")
+		clearSelection()
+		AudioController.play("Back")
+		return Enum.ContextActionResult.Sink
+	end
+	if selection() ~= nil then
+		clearSelection()
+		AudioController.play("Back")
+		return Enum.ContextActionResult.Sink
+	end
+	if wheelOpen then
+		InputController.closePingWheel()
+	end
 	InputController.RailRequested:Fire()
+	return Enum.ContextActionResult.Sink
+end
+
+local function onQuestAction(
+	_: string,
+	state: Enum.UserInputState,
+	_input: InputObject
+): Enum.ContextActionResult
+	-- en jeu seulement (§6.1) : panneau ouvert, le suivi de quête derrière la fenêtre ne bouge pas
+	if not began(state) or currentPanel() ~= nil then
+		return Enum.ContextActionResult.Pass
+	end
+	InputController.QuestToggled:Fire()
 	return Enum.ContextActionResult.Sink
 end
 
@@ -607,6 +767,7 @@ local function bindAll()
 		false,
 		Enum.KeyCode.LeftShift,
 		Enum.KeyCode.E,
+		Enum.KeyCode.ButtonR2,
 		Enum.KeyCode.ButtonX
 	)
 	ContextActionService:BindAction(ACTION.wheel, onWheelAction, false, Enum.KeyCode.Q, Enum.KeyCode.DPadUp)
@@ -642,6 +803,7 @@ local function bindAll()
 		Enum.KeyCode.F,
 		Enum.KeyCode.DPadRight
 	)
+	ContextActionService:BindAction(ACTION.quest, onQuestAction, false, Enum.KeyCode.DPadLeft)
 end
 
 -- Dash ------------------------------------------------------------------------------------------
@@ -769,10 +931,19 @@ function InputController.openPingWheel()
 		Enum.ContextActionPriority.High.Value,
 		Enum.KeyCode.ButtonA
 	)
+	ContextActionService:BindActionAtPriority(
+		ACTION.pingNav,
+		onPingNav,
+		false,
+		Enum.ContextActionPriority.High.Value,
+		Enum.KeyCode.DPadLeft,
+		Enum.KeyCode.DPadRight
+	)
+	-- manette : aucune sélection GuiService dans la roue (sinon le moteur prendrait la croix, le
+	-- stick et ✕ pour naviguer) ; une sélection du menu du HUD (roue ouverte depuis le bouton Ping)
+	-- est effacée
 	if inputKind == GAMEPAD then
-		pcall(function()
-			GuiService.SelectedObject = wheelSectors[1]
-		end)
+		clearSelection()
 	end
 	AudioController.play("Whoosh", 0.05)
 end
@@ -786,6 +957,7 @@ function InputController.closePingWheel()
 	ContextActionService:UnbindAction(ACTION.pingKey)
 	ContextActionService:UnbindAction(ACTION.pingStick)
 	ContextActionService:UnbindAction(ACTION.pingConfirm)
+	ContextActionService:UnbindAction(ACTION.pingNav)
 	local wheel = wheelGui
 	if wheel then
 		wheel.Visible = false
@@ -855,28 +1027,11 @@ local function syncDashAttribute()
 	end
 end
 
-local function initialKind(): number
-	local ok, last = pcall(function()
-		return UserInputService:GetLastInputType()
-	end)
-	if ok and typeof(last) == "EnumItem" then
-		local kind = kindFor(last :: Enum.UserInputType)
-		if kind then
-			return kind
-		end
-	end
-	if UserInputService.GamepadEnabled and not UserInputService.KeyboardEnabled then
-		return GAMEPAD
-	end
-	if UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled then
-		return TOUCH
-	end
-	return KEYBOARD
-end
-
 function InputController.Init()
 	getRemotes()
-	inputKind = initialKind()
+	-- entrée préférée de Platform (idempotent : Main.client l'a déjà initialisé)
+	Platform.Init()
+	inputKind = Platform.inputKind()
 end
 
 function InputController.Start()
@@ -890,17 +1045,25 @@ function InputController.Start()
 		player:GetAttributeChangedSignal("DashReadyAt"):Connect(syncDashAttribute)
 		syncDashAttribute()
 	end
-	UserInputService.LastInputTypeChanged:Connect(function(inputType: Enum.UserInputType)
-		local kind = kindFor(inputType)
-		if kind then
-			setInputKind(kind)
+	-- type d'entrée : suit l'entrée préférée (PreferredInput puis dernier type d'entrée, docs/07 §2)
+	Platform.Changed:Connect(function(reason: string)
+		if reason == "input" then
+			setInputKind(Platform.inputKind())
 			refreshWheelTexts()
 		end
 	end)
+	-- un changement survenu entre Init et Start
+	setInputKind(Platform.inputKind())
 	-- le serveur a refusé le Dash : la recharge affichée revient à la valeur serveur
 	ScreenFX.FeedbackReceived:Connect(function(payload: Types.FeedbackPayload)
 		if payload.key == "feedback.cometNoDash" or payload.key == "feedback.dashCooldown" then
 			syncDashAttribute()
+		end
+	end)
+	-- vibration de la Supernova du héros local, à l'arrivée de la célébration (docs/07 §6.5, §9.1)
+	ScreenFX.Celebrated:Connect(function(payload: Types.CelebratePayload)
+		if payload.kind == "supernova" then
+			Haptics.play("supernova")
 		end
 	end)
 	Prefs.LanguageChanged:Connect(refreshWheelTexts)

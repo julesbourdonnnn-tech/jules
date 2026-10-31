@@ -4,7 +4,8 @@
 --   * boutons (§9.2) : appui UIScale 1 → 0,92 en 0,06 s Quad Out, relâchement 0,92 → 1,05 → 1 en
 --     0,18 s Back Out, +10 % de luminosité pendant l'appui, survol 1,05 en 0,12 s, son Click,
 --     Selectable (manette) ; bouton désactivé : refus (secousse ±6 px × 3 en 0,25 s, contour rouge
---     0,25 s, son Error)
+--     0,25 s, son Error, vibration « refuse » à la manette) ; cadre de sélection commun bien visible à
+--     3 m (Root.selectionImage, docs/07-console-ps5.md §7)
 --   * libellés TextScaled + UITextSizeConstraint (le français est ≈ 25 % plus long)
 --   * cartes, barres de progression (remplissage 0,3 s Quad Out), anneaux de points, interrupteurs
 --     80 × 48, pièce et étoile dessinées, icônes de Nebbies en Frames (corps à la couleur de rareté
@@ -20,7 +21,9 @@ local Client = script.Parent.Parent.Parent
 local Theme = require(Client.UI.Theme)
 local Create = require(Client.UI.Create)
 local Juice = require(Client.UI.Juice)
+local Root = require(Client.UI.Root)
 local AudioController = require(Client.Controllers.AudioController)
+local Haptics = require(Client.Util.Haptics)
 
 local Widgets = {}
 
@@ -153,6 +156,12 @@ end
 -- Cartes et boutons
 -- ---------------------------------------------------------------------------------------------
 
+-- Objet sélectionnable à la manette : cadre de sélection commun (contour doré visible à 3 m)
+function Widgets.selectable(gui: GuiObject)
+	gui.Selectable = true
+	gui.SelectionImageObject = Root.selectionImage()
+end
+
 export type CardProps = {
 	name: string,
 	size: UDim2,
@@ -234,6 +243,7 @@ function Widgets.button(p: ButtonProps): (TextButton, TextLabel)
 		BackgroundColor3 = p.color or Theme.Colors.Primary,
 		LayoutOrder = p.order or 0,
 		Selectable = true,
+		SelectionImageObject = Root.selectionImage(),
 		Parent = p.parent,
 	}, {
 		Widgets.corner(Theme.CornerSmall),
@@ -358,10 +368,12 @@ function Widgets.setText(button: GuiButton, text: string)
 	end
 end
 
--- Refus (§9.2) : secousse horizontale ±6 px × 3 en 0,25 s + contour rouge 0,25 s + son Error
+-- Refus (§9.2) : secousse horizontale ±6 px × 3 en 0,25 s + contour rouge 0,25 s + son Error ;
+-- vibration « refuse » à la manette (docs/07-console-ps5.md §9.1, filtrée par Util/Haptics)
 local refuseTokens: { [GuiObject]: number } = setmetatable({}, { __mode = "k" }) :: any
 function Widgets.refuse(gui: GuiObject)
 	AudioController.play("Error")
+	Haptics.play("refuse")
 	Juice.shake(gui)
 	local stroke = gui:FindFirstChild("Stroke")
 	if stroke and stroke:IsA("UIStroke") then
@@ -503,6 +515,7 @@ function Widgets.toggle(name: string, parent: Instance?, onChanged: (boolean) ->
 		Size = UDim2.fromOffset(80, 48),
 		BackgroundColor3 = Widgets.DIM,
 		Selectable = true,
+		SelectionImageObject = Root.selectionImage(),
 		Parent = parent,
 	}, {
 		Widgets.round(),

@@ -13,6 +13,23 @@
 --     manette), fenêtre en SelectionGroup ; tant qu'un panneau est ouvert, B / Échap = retour,
 --     LB / RB = onglets, liés via ContextActionService à haute priorité et « absorbés » (Sink) pour
 --     ne jamais être traités deux fois
+--   * console PS5 (docs/07-console-ps5.md §6.3, §7, §9) :
+--       - fenêtre en SelectionGroup fermé (SelectionBehavior* = Stop) : la sélection ne s'échappe
+--         jamais vers le HUD derrière ; après un changement d'onglet ou de contenu (achat, fusion,
+--         liste reconstruite), une sélection masquée ou détruite revient à la sélection par défaut
+--       - ○ (Retour) recule d'un niveau (Supernova → Améliorer → bouton d'origine hors fenêtre,
+--         ex. le bouton du rail, rendu à la manette s'il est encore affiché) avec le son « Back »
+--       - L1 / R1 : onglets en boucle (son « Tab ») ; L2 / R2 : panneau précédent / suivant en boucle
+--         (Améliorer, Collection, Objectifs, Boutique, Équipage, Réglages ; Supernova compte comme
+--         Améliorer ; garde du HUD : PanelController.allowed), absorbés : R2 ne Dash pas
+--       - stick droit (Thumbstick2, absorbé, zone morte 0,2) : fait défiler la liste qui contient la
+--         sélection, sinon la liste principale du panneau (la caméra ne tourne pas derrière)
+--       - croix sans changement de sélection (bout de liste, bord de la fenêtre) : son « Bump » et
+--         vibration « listEnd »
+--       - repères (UI/Glyph, icônes PlayStation sur PS5) : ○ « PadGlyph » sur Retour, ou sur Fermer
+--         sans Retour (△, tout fermer, sur Fermer de la Supernova) à la place des « ‹ » / « ✕ »
+--         dessinés ; L1 / R1 aux bouts de la barre d'onglets (≥ 2 onglets) ; L2 / R2 aux coins de
+--         l'en-tête ; focusTarget() : bouton Accepter de la carte d'invitation d'équipage
 --   * pastilles « ! » : hasAction() de chaque panneau (sans le construire), réévalué à chaque
 --     changement du profil et chaque seconde (Glow prédit, minuit UTC) → BadgeChanged
 --   * contour rose de l'écran quand un panneau est ouvert hors du port sûr et qu'un non-équipier
@@ -37,6 +54,7 @@ local UserInputService = game:GetService("UserInputService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Balance = require(Shared.Config.Balance)
+local Console = require(Shared.Config.Console)
 local Cosmetics = require(Shared.Config.Cosmetics)
 local Net = require(Shared.Net)
 local Signal = require(Shared.Util.Signal)
@@ -46,8 +64,11 @@ local WorldLayout = require(Shared.Logic.WorldLayout)
 local Client = script.Parent.Parent
 local State = require(Client.Controllers.StateController)
 local AudioController = require(Client.Controllers.AudioController)
+local Haptics = require(Client.Util.Haptics)
+local Platform = require(Client.Util.Platform)
 local Prefs = require(Client.Util.Prefs)
 local Root = require(Client.UI.Root)
+local Glyph = require(Client.UI.Glyph)
 local Theme = require(Client.UI.Theme)
 local Create = require(Client.UI.Create)
 local Juice = require(Client.UI.Juice)
@@ -112,6 +133,23 @@ local WARN_INTERVAL = 0.2
 local WARN_ALPHA = 0.45 -- transparence la plus forte du contour rose
 local ACTION_PRIORITY = Enum.ContextActionPriority.High.Value + 50
 local ACTION_BACK, ACTION_PREV, ACTION_NEXT = "PanelBack", "PanelTabPrev", "PanelTabNext"
+local ACTION_CYCLE_PREV, ACTION_CYCLE_NEXT = "PanelPrev", "PanelNext" -- L2 / R2
+local ACTION_SCROLL = "PanelScroll" -- stick droit
+-- Panneaux parcourus par L2 / R2 (docs/07 §6.3) ; Supernova compte comme Améliorer
+local CYCLE: { Types.PanelName } = { "Upgrades", "Collection", "Goals", "Shop", "Crew", "Settings" }
+local CYCLE_ALIAS: { [string]: Types.PanelName } = { Supernova = "Upgrades" }
+local STICK_DEADZONE = 0.2
+local SCROLL_SPEED = 1.6 -- hauteurs de liste par seconde, stick au fond
+local SCROLL_MIN_SPEED = 240 -- px / s au moins (petites listes)
+local CLOSE_GLYPH = 44 -- ○ / △ dans les boutons Fermer / Retour (px de référence)
+local EDGE_GLYPH = Console.GlyphSize -- L1 / R1 / L2 / R2
+local BUMP_FRAMES = 2 -- images sans changement de sélection après une croix : bout de liste
+local NAV_KEYS: { [Enum.KeyCode]: boolean } = {
+	[Enum.KeyCode.DPadUp] = true,
+	[Enum.KeyCode.DPadDown] = true,
+	[Enum.KeyCode.DPadLeft] = true,
+	[Enum.KeyCode.DPadRight] = true,
+}
 local STEP_WARN_EVERY = 10 -- s entre deux avertissements d'erreur d'un même panneau
 
 type TabRef = { id: string, key: string, button: TextButton, label: TextLabel }
@@ -125,7 +163,20 @@ type Page = {
 	close: TextButton,
 	tabs: { TabRef },
 	body: Frame,
+	-- manette (docs/07 §7)
+	backLabel: TextLabel,
+	closeLabel: TextLabel,
+	tabBar: Frame?,
+	tabTop: number,
+	l1: Glyph.Handle?,
+	r1: Glyph.Handle?,
+	l2: Glyph.Handle,
+	r2: Glyph.Handle,
+	chrome: string?, -- signature de la dernière mise en page de l'en-tête
 }
+
+-- Croix pressée dans la fenêtre : sélection à cet instant (bout de liste si elle ne change pas)
+type BumpProbe = { frame: number, object: GuiObject, canvas: Vector2?, changed: boolean }
 
 local window: CanvasGroup? = nil
 local windowConstraint: UISizeConstraint? = nil
@@ -149,6 +200,15 @@ local stepWarnedAt: { [string]: number } = {}
 local started = false
 local modulesLoaded = false -- Start a chargé les modules des panneaux (un seul fil)
 local pendingReturn: { [string]: any }? = nil -- Celebrate "offline" reçu avant ce chargement
+-- manette
+local origin: GuiObject? = nil -- sélection hors fenêtre à l'ouverture (bouton du rail), rendue par ○
+local opener: GuiObject? = nil -- bouton du panneau parent qui a ouvert le panneau courant
+local lastInWindow: GuiObject? = nil -- dernière sélection valide dans la fenêtre
+local stick = Vector2.zero -- stick droit (zone morte appliquée)
+local scrollCache: { key: string, frame: ScrollingFrame? }? = nil
+local frameNo = 0
+local selectionChangedAt = -1
+local bump: BumpProbe? = nil
 
 -- ---------------------------------------------------------------------------------------------
 -- Aides
@@ -194,6 +254,38 @@ local function lastInputIsGamepad(): boolean
 		return UserInputService:GetLastInputType()
 	end)
 	return ok and typeof(kind) == "EnumItem" and string.sub(kind.Name, 1, 7) == "Gamepad"
+end
+
+-- La manette est-elle l'entrée du joueur ? (entrée préférée, docs/07 §2, ou dernière entrée)
+local function gamepadActive(): boolean
+	return Platform.usingGamepad() or lastInputIsGamepad()
+end
+
+-- Affiché à l'écran : lui et ses ancêtres visibles, dans un ScreenGui activé et parenté
+local function shownOnScreen(obj: Instance?): boolean
+	local cur = obj
+	while cur ~= nil do
+		if cur:IsA("GuiObject") then
+			if not (cur :: GuiObject).Visible then
+				return false
+			end
+		elseif cur:IsA("LayerCollector") then
+			return (cur :: LayerCollector).Enabled and cur.Parent ~= nil
+		end
+		cur = cur.Parent
+	end
+	return false
+end
+
+-- Objet que la manette peut sélectionner (sélectionnable et affiché)
+local function selectable(obj: Instance?): boolean
+	return obj ~= nil and obj:IsA("GuiObject") and (obj :: GuiObject).Selectable and shownOnScreen(obj)
+end
+
+-- Sélectionnable et dans la fenêtre des panneaux
+local function inWindow(obj: Instance?): boolean
+	local w = window
+	return obj ~= nil and w ~= nil and obj:IsDescendantOf(w) and selectable(obj)
 end
 
 -- ---------------------------------------------------------------------------------------------
@@ -266,7 +358,12 @@ local function ensureWindow(): CanvasGroup
 		BackgroundColor3 = Theme.Colors.Panel,
 		GroupTransparency = 0,
 		Visible = false,
+		-- fenêtre modale : la sélection manette n'en sort jamais (docs/07 §7)
 		SelectionGroup = true,
+		SelectionBehaviorUp = Enum.SelectionBehavior.Stop,
+		SelectionBehaviorDown = Enum.SelectionBehavior.Stop,
+		SelectionBehaviorLeft = Enum.SelectionBehavior.Stop,
+		SelectionBehaviorRight = Enum.SelectionBehavior.Stop,
 		ZIndex = 5,
 		Parent = safe,
 	}, {
@@ -310,6 +407,65 @@ local function visibleTabs(page: Page): { TabRef }
 	return out
 end
 
+-- Nom du panneau dans le cycle L2 / R2 (Supernova → Améliorer), nil hors cycle
+local function cycleName(name: string?): Types.PanelName?
+	if name == nil then
+		return nil
+	end
+	local alias: string = CYCLE_ALIAS[name] or name
+	return if table.find(CYCLE, alias :: Types.PanelName) then alias :: Types.PanelName else nil
+end
+
+-- L2 / R2 mènent-ils quelque part depuis ce panneau ? (un autre panneau du cycle autorisé)
+local function canCycle(name: string): boolean
+	local own = cycleName(name)
+	if own == nil then
+		return false
+	end
+	for _, other in CYCLE do
+		if other ~= own and PanelController.allowed(other) then
+			return true
+		end
+	end
+	return false
+end
+
+-- En-tête à la manette (docs/07 §7) : ○ (ou △) à la place des « ‹ » / « ✕ » dessinés, L2 / R2 aux
+-- coins de l'en-tête, L1 / R1 aux bouts de la barre d'onglets ; refait seulement s'il a changé
+local function layoutChrome(page: Page, force: boolean?)
+	local pad = Platform.usingGamepad()
+	local cycle = pad and canCycle(page.name)
+	local edges = pad and page.tabBar ~= nil and #visibleTabs(page) >= 2
+	local signature = `{pad}|{cycle}|{edges}|{page.back.Visible}`
+	if signature == page.chrome and not force then
+		return
+	end
+	page.chrome = signature
+	page.backLabel.Visible = not pad
+	page.closeLabel.Visible = not pad
+	page.l2:set(if cycle then { gamepad = Enum.KeyCode.ButtonL2 } else {})
+	page.r2:set(if cycle then { gamepad = Enum.KeyCode.ButtonR2 } else {})
+	local left = if page.back.Visible then CLOSE_SIZE + GAP else 0
+	page.l2.frame.Position = UDim2.new(0, left, 0.5, 0)
+	if cycle then
+		left += EDGE_GLYPH + GAP
+	end
+	local right = CLOSE_SIZE + GAP + (if cycle then EDGE_GLYPH + GAP else 0)
+	page.title.Position = UDim2.new(0, left, 0, 4)
+	page.title.Size = UDim2.new(1, -(left + right), 1, -8)
+	local bar = page.tabBar
+	if bar then
+		local l1, r1 = page.l1, page.r1
+		if l1 and r1 then
+			l1:set(if edges then { gamepad = Enum.KeyCode.ButtonL1 } else {})
+			r1:set(if edges then { gamepad = Enum.KeyCode.ButtonR1 } else {})
+		end
+		local inset = if edges then EDGE_GLYPH + GAP else 0
+		bar.Position = UDim2.fromOffset(inset, page.tabTop)
+		bar.Size = UDim2.new(1, -2 * inset, 0, TAB_HEIGHT)
+	end
+end
+
 local function layoutTabs(page: Page)
 	local shown = visibleTabs(page)
 	local n = math.max(1, #shown)
@@ -321,6 +477,7 @@ local function layoutTabs(page: Page)
 		tab.button.LayoutOrder = i
 		tab.button.Size = UDim2.new(1 / n, -GAP, 1, 0)
 	end
+	layoutChrome(page)
 end
 
 local function paintTabs(page: Page)
@@ -332,7 +489,11 @@ local function paintTabs(page: Page)
 	end
 end
 
-local function selectTabInternal(name: string, id: string, userInitiated: boolean)
+-- (défini plus bas) remet une sélection manette valide dans la fenêtre
+local ensureSelection: () -> ()
+
+-- `sound` : son de l'action (« Click » au toucher, « Tab » à L1 / R1), nil à l'ouverture
+local function selectTabInternal(name: string, id: string, sound: string?)
 	local page = pages[name]
 	if not page then
 		return
@@ -348,10 +509,15 @@ local function selectTabInternal(name: string, id: string, userInitiated: boolea
 	end
 	currentTab[name] = id
 	paintTabs(page)
-	if userInitiated then
-		AudioController.play("Click")
+	if sound then
+		AudioController.play(sound)
 	end
 	safeCall(name, "selectTab", page.panel.selectTab, id)
+	-- contenu changé : la liste à faire défiler et la sélection manette sont réévaluées
+	scrollCache = nil
+	if currentName == name then
+		ensureSelection()
+	end
 end
 
 local function ensurePage(name: string, panel: Panel): Page
@@ -373,13 +539,14 @@ local function ensurePage(name: string, panel: Panel): Page
 		Size = UDim2.new(1, 0, 0, HEADER_HEIGHT),
 		Parent = frame,
 	})
-	local back = Widgets.button({
+	local back, backLabel = Widgets.button({
 		name = "Back",
 		text = "‹",
 		size = UDim2.fromOffset(CLOSE_SIZE, CLOSE_SIZE),
 		color = Widgets.CARD,
 		maxText = 40,
 		parent = header,
+		sound = "", -- back() joue « Back »
 		onClick = function()
 			PanelController.back()
 		end,
@@ -395,7 +562,7 @@ local function ensurePage(name: string, panel: Panel): Page
 		xAlign = Enum.TextXAlignment.Left,
 		parent = header,
 	})
-	local close = Widgets.button({
+	local close, closeLabel = Widgets.button({
 		name = "Close",
 		text = "✕",
 		size = UDim2.fromOffset(CLOSE_SIZE, CLOSE_SIZE),
@@ -408,8 +575,41 @@ local function ensurePage(name: string, panel: Panel): Page
 			PanelController.close()
 		end,
 	})
+	-- manette : ○ (retour d'un niveau) sur Retour, ou sur Fermer quand il n'y a pas de Retour ;
+	-- Fermer d'un sous-panneau (Supernova) : △, qui ferme tout (docs/07 §6.3)
+	Glyph.new(back, { gamepad = Enum.KeyCode.ButtonB }, {
+		name = "PadGlyph",
+		size = CLOSE_GLYPH,
+		position = UDim2.fromScale(0.5, 0.5),
+		anchor = Vector2.new(0.5, 0.5),
+	})
+	Glyph.new(close, {
+		gamepad = if panel.parent ~= nil then Enum.KeyCode.ButtonY else Enum.KeyCode.ButtonB,
+	}, {
+		name = "PadGlyph",
+		size = CLOSE_GLYPH,
+		position = UDim2.fromScale(0.5, 0.5),
+		anchor = Vector2.new(0.5, 0.5),
+	})
+	-- L2 / R2 aux coins de l'en-tête (affichés par layoutChrome)
+	local l2 = Glyph.new(header, {}, {
+		name = "PadL2",
+		size = EDGE_GLYPH,
+		position = UDim2.new(0, 0, 0.5, 0),
+		anchor = Vector2.new(0, 0.5),
+	})
+	local r2 = Glyph.new(header, {}, {
+		name = "PadR2",
+		size = EDGE_GLYPH,
+		position = UDim2.new(1, -(CLOSE_SIZE + GAP), 0.5, 0),
+		anchor = Vector2.new(1, 0.5),
+	})
 	local tabs: { TabRef } = {}
 	local bodyTop = HEADER_HEIGHT + GAP
+	local tabBar: Frame? = nil
+	local tabTop = bodyTop
+	local l1: Glyph.Handle? = nil
+	local r1: Glyph.Handle? = nil
 	if panel.tabs and #panel.tabs > 0 then
 		local bar = Create("Frame", {
 			Name = "Tabs",
@@ -431,11 +631,25 @@ local function ensurePage(name: string, panel: Panel): Page
 				parent = bar,
 				sound = "",
 				onClick = function()
-					selectTabInternal(name, id, true)
+					selectTabInternal(name, id, "Click")
 				end,
 			})
 			table.insert(tabs, { id = id, key = key, button = button, label = label })
 		end
+		tabBar = bar
+		-- L1 / R1 aux deux bouts de la barre d'onglets (affichés par layoutChrome)
+		l1 = Glyph.new(frame, {}, {
+			name = "PadL1",
+			size = EDGE_GLYPH,
+			position = UDim2.fromOffset(0, bodyTop + TAB_HEIGHT / 2),
+			anchor = Vector2.new(0, 0.5),
+		})
+		r1 = Glyph.new(frame, {}, {
+			name = "PadR1",
+			size = EDGE_GLYPH,
+			position = UDim2.new(1, 0, 0, bodyTop + TAB_HEIGHT / 2),
+			anchor = Vector2.new(1, 0.5),
+		})
 		bodyTop += TAB_HEIGHT + GAP
 	end
 	local body = Create("Frame", {
@@ -454,6 +668,15 @@ local function ensurePage(name: string, panel: Panel): Page
 		close = close,
 		tabs = tabs,
 		body = body,
+		backLabel = backLabel,
+		closeLabel = closeLabel,
+		tabBar = tabBar,
+		tabTop = tabTop,
+		l1 = l1,
+		r1 = r1,
+		l2 = l2,
+		r2 = r2,
+		chrome = nil,
 	}
 	pages[name] = page
 	applyChrome(page)
@@ -482,13 +705,31 @@ local function chooseTab(page: Page, args: any?): string?
 	return shown[1].id
 end
 
+-- Sélection par défaut du panneau, seulement si elle est affichée dans la fenêtre (jamais un objet
+-- masqué ou d'un autre onglet) ; sinon le premier onglet visible, sinon Fermer
 local function defaultSelection(page: Page): GuiObject?
 	local fn = page.panel.defaultSelection
+	local candidate: GuiObject? = nil
 	if fn then
 		local ok, result = safeCall(page.name, "defaultSelection", fn)
 		if ok and typeof(result) == "Instance" and (result :: Instance):IsA("GuiObject") then
-			return result :: GuiObject
+			candidate = result :: GuiObject
 		end
+	end
+	if candidate and inWindow(candidate) then
+		return candidate
+	end
+	for _, tab in visibleTabs(page) do
+		if inWindow(tab.button) then
+			return tab.button
+		end
+	end
+	if inWindow(page.close) then
+		return page.close
+	end
+	-- fenêtre pas encore affichée
+	if candidate then
+		return candidate
 	end
 	for _, tab in visibleTabs(page) do
 		return tab.button
@@ -497,8 +738,10 @@ local function defaultSelection(page: Page): GuiObject?
 end
 
 local function selectDefault(page: Page)
-	if lastInputIsGamepad() then
-		GuiService.SelectedObject = defaultSelection(page)
+	if gamepadActive() then
+		local target = defaultSelection(page)
+		GuiService.SelectedObject = target
+		lastInWindow = target
 	end
 end
 
@@ -526,7 +769,8 @@ local function setWindowSize(compact: boolean)
 	constraint.MaxSize = if compact then COMPACT_MAX else WINDOW_MAX
 end
 
-local function animateOpen(fresh: boolean)
+-- `quiet` : pas de « Whoosh » (changement de panneau à L2 / R2 : son « Tab »)
+local function animateOpen(fresh: boolean, quiet: boolean?)
 	local w = window
 	if not w then
 		return
@@ -560,7 +804,9 @@ local function animateOpen(fresh: boolean)
 		local target = if Prefs.lowGraphics() then 0 else BLUR_SIZE
 		Juice.tween(b, BLUR_TIME, { Size = target })
 	end
-	AudioController.play("Whoosh")
+	if not quiet then
+		AudioController.play("Whoosh")
+	end
 end
 
 local function animateClose(name: string)
@@ -609,13 +855,35 @@ end
 -- Manette / clavier (actions liées seulement quand un panneau est ouvert)
 -- ---------------------------------------------------------------------------------------------
 
+-- Stick droit : position après zone morte (0 sous STICK_DEADZONE, puis remise à l'échelle 0-1)
+local function readStick(inputState: Enum.UserInputState, input: any): Vector2
+	if inputState ~= Enum.UserInputState.Begin and inputState ~= Enum.UserInputState.Change then
+		return Vector2.zero
+	end
+	local position = if input ~= nil then input.Position else nil
+	if typeof(position) ~= "Vector3" then
+		return Vector2.zero
+	end
+	local v = Vector2.new(position.X, position.Y)
+	local magnitude = v.Magnitude
+	if magnitude ~= magnitude or magnitude <= STICK_DEADZONE then
+		return Vector2.zero
+	end
+	local strength = math.min(1, (magnitude - STICK_DEADZONE) / (1 - STICK_DEADZONE))
+	return v.Unit * strength
+end
+
 local function onAction(
 	actionName: string,
 	inputState: Enum.UserInputState,
-	_input: any
+	input: any
 ): Enum.ContextActionResult
 	if currentName == nil then
 		return Enum.ContextActionResult.Pass
+	end
+	if actionName == ACTION_SCROLL then
+		stick = readStick(inputState, input)
+		return Enum.ContextActionResult.Sink
 	end
 	if inputState == Enum.UserInputState.Begin then
 		if actionName == ACTION_BACK then
@@ -624,8 +892,13 @@ local function onAction(
 			PanelController.nextTab(-1)
 		elseif actionName == ACTION_NEXT then
 			PanelController.nextTab(1)
+		elseif actionName == ACTION_CYCLE_PREV then
+			PanelController.cyclePanel(-1)
+		elseif actionName == ACTION_CYCLE_NEXT then
+			PanelController.cyclePanel(1)
 		end
 	end
+	-- absorbé (appui, relâchement, gâchette analogique) : R2 ne Dash pas, la caméra ne tourne pas
 	return Enum.ContextActionResult.Sink
 end
 
@@ -656,6 +929,27 @@ local function bindActions()
 		ACTION_PRIORITY,
 		Enum.KeyCode.ButtonR1
 	)
+	ContextActionService:BindActionAtPriority(
+		ACTION_CYCLE_PREV,
+		onAction,
+		false,
+		ACTION_PRIORITY,
+		Enum.KeyCode.ButtonL2
+	)
+	ContextActionService:BindActionAtPriority(
+		ACTION_CYCLE_NEXT,
+		onAction,
+		false,
+		ACTION_PRIORITY,
+		Enum.KeyCode.ButtonR2
+	)
+	ContextActionService:BindActionAtPriority(
+		ACTION_SCROLL,
+		onAction,
+		false,
+		ACTION_PRIORITY,
+		Enum.KeyCode.Thumbstick2
+	)
 end
 
 local function unbindActions()
@@ -666,6 +960,10 @@ local function unbindActions()
 	ContextActionService:UnbindAction(ACTION_BACK)
 	ContextActionService:UnbindAction(ACTION_PREV)
 	ContextActionService:UnbindAction(ACTION_NEXT)
+	ContextActionService:UnbindAction(ACTION_CYCLE_PREV)
+	ContextActionService:UnbindAction(ACTION_CYCLE_NEXT)
+	ContextActionService:UnbindAction(ACTION_SCROLL)
+	stick = Vector2.zero
 end
 
 -- ---------------------------------------------------------------------------------------------
@@ -681,7 +979,10 @@ local function hidePage(name: string)
 	PanelController.Closed:Fire(name :: Types.PanelName)
 end
 
-function PanelController.open(name: Types.PanelName, args: any?)
+local opening = false -- ouverture en cours : la sélection est posée à la fin (selectDefault)
+
+-- `quiet` : sans « Whoosh » (L2 / R2 jouent « Tab »)
+local function openInternal(name: Types.PanelName, args: any?, quiet: boolean)
 	if type(name) ~= "string" or not VALID[name] then
 		warn("[PanelController] panneau inconnu :", name)
 		return
@@ -697,14 +998,30 @@ function PanelController.open(name: Types.PanelName, args: any?)
 		safeCall(name, "onOpen", panel.onOpen, args)
 		local tab = chooseTab(page, args)
 		if tab then
-			selectTabInternal(name, tab, false)
+			selectTabInternal(name, tab)
 		end
+		ensureSelection()
 		return
 	end
+	-- manette : sélection hors fenêtre à l'ouverture (bouton du rail) rendue par ○ à la fermeture ;
+	-- bouton du panneau parent qui ouvre ce panneau (Supernova) rendu par ○ au retour
+	local selected = GuiService.SelectedObject
+	local w = window
+	local inside = selected ~= nil and w ~= nil and selected:IsDescendantOf(w)
+	if previous == nil then
+		origin = if selected ~= nil and not inside then selected else nil
+		opener = nil
+	else
+		opener = if inside then selected else nil
+	end
+	lastInWindow = nil
+	scrollCache = nil
+	bump = nil
 	if previous then
 		hidePage(previous)
 	end
 	closeToken += 1 -- annule une fermeture en cours
+	opening = true
 	currentName = name
 	for other, otherPage in pages do
 		if other ~= name then
@@ -717,22 +1034,46 @@ function PanelController.open(name: Types.PanelName, args: any?)
 	safeCall(name, "onOpen", panel.onOpen, args)
 	local tab = chooseTab(page, args)
 	if tab then
-		selectTabInternal(name, tab, false)
+		selectTabInternal(name, tab)
 	end
-	animateOpen(previous == nil)
+	animateOpen(previous == nil, quiet)
+	opening = false
 	bindActions()
 	selectDefault(page)
 	PanelController.Opened:Fire(name)
 end
 
-function PanelController.close()
+function PanelController.open(name: Types.PanelName, args: any?)
+	openInternal(name, args, false)
+end
+
+-- `restore` : ○ ferme le panneau et rend à la manette la sélection d'origine (bouton du rail)
+local function closeInternal(restore: boolean)
 	local name = currentName
 	if name == nil then
 		return
 	end
 	currentName = nil
+	opening = false
 	unbindActions()
-	clearSelection()
+	local back = origin
+	origin = nil
+	opener = nil
+	lastInWindow = nil
+	bump = nil
+	scrollCache = nil
+	local w = window
+	if
+		restore
+		and back ~= nil
+		and gamepadActive()
+		and not (w ~= nil and back:IsDescendantOf(w))
+		and selectable(back)
+	then
+		GuiService.SelectedObject = back
+	else
+		clearSelection()
+	end
 	local page = pages[name]
 	if page then
 		safeCall(name, "onClose", page.panel.onClose)
@@ -747,17 +1088,37 @@ function PanelController.close()
 	PanelController.Closed:Fire(name :: Types.PanelName)
 end
 
+function PanelController.close()
+	closeInternal(false)
+end
+
+-- ○ / Échap / bouton Retour : recule d'un niveau (son « Back ») : Supernova → Améliorer (bouton
+-- Supernova resélectionné à la manette) → fermeture (bouton d'origine hors fenêtre resélectionné)
 function PanelController.back()
 	local name = currentName
 	if name == nil then
 		return
 	end
+	AudioController.play("Back")
 	local panel = panels[name]
 	local parent = panel and panel.parent
 	if parent and VALID[parent] then
-		PanelController.open(parent)
+		local target = opener
+		openInternal(parent, nil, true)
+		opener = nil
+		local page = pages[parent]
+		if
+			target ~= nil
+			and page ~= nil
+			and gamepadActive()
+			and target:IsDescendantOf(page.frame)
+			and inWindow(target)
+		then
+			GuiService.SelectedObject = target
+			lastInWindow = target
+		end
 	else
-		PanelController.close()
+		closeInternal(true)
 	end
 end
 
@@ -807,10 +1168,50 @@ function PanelController.nextTab(direction: number)
 	end
 	local step = if direction > 0 then 1 else -1
 	local nextIndex = (index - 1 + step) % #shown + 1
-	selectTabInternal(name, shown[nextIndex].id, true)
-	if lastInputIsGamepad() then
+	selectTabInternal(name, shown[nextIndex].id, "Tab")
+	if gamepadActive() then
 		GuiService.SelectedObject = shown[nextIndex].button
+		lastInWindow = shown[nextIndex].button
 	end
+end
+
+-- Panneau précédent / suivant (L2 / R2, docs/07 §6.3), en boucle sur Améliorer, Collection,
+-- Objectifs, Boutique, Équipage, Réglages (Supernova compte comme Améliorer), en sautant ceux que la
+-- garde du HUD refuse (PanelController.allowed) ; son « Tab ». false : rien d'ouvert
+function PanelController.cyclePanel(direction: number): boolean
+	local own = cycleName(currentName)
+	if own == nil or type(direction) ~= "number" or direction ~= direction or direction == 0 then
+		return false
+	end
+	local index = table.find(CYCLE, own) :: number
+	local step = if direction > 0 then 1 else -1
+	for k = 1, #CYCLE - 1 do
+		local candidate = CYCLE[(index - 1 + step * k) % #CYCLE + 1]
+		if PanelController.allowed(candidate) then
+			AudioController.play("Tab")
+			openInternal(candidate, nil, true)
+			return true
+		end
+	end
+	return false
+end
+
+-- Sélection manette dans le panneau ouvert (ex. bouton Acheter après la fenêtre d'achat Roblox) :
+-- `target` s'il est affiché dans la fenêtre, sinon la sélection par défaut ; rien sans manette ou
+-- sans panneau. Retourne true si une sélection a été posée.
+function PanelController.select(target: GuiObject?): boolean
+	local name = currentName
+	local page = if name then pages[name] else nil
+	if page == nil or not gamepadActive() then
+		return false
+	end
+	local chosen = if target ~= nil and inWindow(target) then target else defaultSelection(page)
+	if chosen == nil then
+		return false
+	end
+	GuiService.SelectedObject = chosen
+	lastInWindow = chosen
+	return true
 end
 
 -- Console (docs/07-console-ps5.md §6) ------------------------------------------------------------
@@ -831,10 +1232,67 @@ function PanelController.allowed(name: Types.PanelName): boolean
 	return ok and result == true
 end
 
--- Cible hors fenêtre que △ doit sélectionner avant le rail (ex. bouton Accepter de la carte
--- d'invitation d'équipage) ; nil : aucune
+-- Panneau Équipage (carte d'invitation, hors de la fenêtre), s'il est chargé
+local function crewPanel(): any
+	return panels["Crew"]
+end
+
+-- Cible hors fenêtre que △ doit sélectionner avant le rail : bouton Accepter de la carte
+-- d'invitation d'équipage tant qu'elle est affichée (docs/07 §6.7) ; nil : aucune
 function PanelController.focusTarget(): GuiObject?
+	local crew = crewPanel()
+	if crew == nil or type(crew.inviteTarget) ~= "function" then
+		return nil
+	end
+	local ok, target = pcall(crew.inviteTarget)
+	if ok and typeof(target) == "Instance" and target:IsA("GuiObject") and selectable(target) then
+		return target :: GuiObject
+	end
 	return nil
+end
+
+-- La sélection hors fenêtre est-elle légitime pendant qu'un panneau est ouvert ? (carte d'invitation)
+local function outsideAllowed(obj: Instance): boolean
+	local crew = crewPanel()
+	if crew == nil or type(crew.inviteCard) ~= "function" then
+		return false
+	end
+	local ok, card = pcall(crew.inviteCard)
+	return ok and typeof(card) == "Instance" and obj:IsDescendantOf(card)
+end
+
+-- Sélection manette toujours valide pendant qu'un panneau est ouvert (docs/07 §7) : un objet masqué
+-- ou détruit (onglet changé, achat, fusion, liste reconstruite), ou une sélection partie derrière
+-- la fenêtre, revient à la sélection par défaut. Une sélection effacée alors que l'objet est encore
+-- affiché (fenêtre d'achat Roblox, choix du joueur) est laissée vide.
+ensureSelection = function()
+	local name = currentName
+	local page = if name then pages[name] else nil
+	local w = window
+	if page == nil or w == nil or opening or not gamepadActive() then
+		return
+	end
+	local selected = GuiService.SelectedObject
+	if selected ~= nil then
+		if selected:IsDescendantOf(w) then
+			if selectable(selected) then
+				lastInWindow = selected
+				return
+			end
+		elseif selected ~= lastInWindow and outsideAllowed(selected) then
+			return
+		end
+	else
+		local last = lastInWindow
+		if last == nil or inWindow(last) then
+			return
+		end
+	end
+	local target = defaultSelection(page)
+	if target ~= nil and target ~= selected then
+		GuiService.SelectedObject = target
+	end
+	lastInWindow = target
 end
 
 -- Onglet affiché d'un panneau (nil si le panneau n'a pas d'onglets ou n'a jamais été ouvert)
@@ -952,8 +1410,152 @@ local function pulseWarning(dt: number)
 	end
 end
 
+-- ---------------------------------------------------------------------------------------------
+-- Manette : défilement au stick droit, bout de liste
+-- ---------------------------------------------------------------------------------------------
+
+local function verticalScroll(obj: Instance): boolean
+	return obj:IsA("ScrollingFrame")
+		and (obj :: ScrollingFrame).ScrollingDirection ~= Enum.ScrollingDirection.X
+end
+
+-- Cadre défilant vertical qui contient la sélection, sinon la liste principale du panneau (le plus
+-- grand cadre défilant vertical affiché de la page, mémorisé par onglet)
+local function scrollTarget(page: Page): ScrollingFrame?
+	local selected = GuiService.SelectedObject
+	if selected ~= nil and selected:IsDescendantOf(page.body) then
+		local cur = selected.Parent
+		while cur ~= nil and cur ~= page.body do
+			if verticalScroll(cur) and shownOnScreen(cur) then
+				return cur :: ScrollingFrame
+			end
+			cur = cur.Parent
+		end
+	end
+	local key = `{page.name}/{currentTab[page.name] or ""}`
+	local cache = scrollCache
+	if cache and cache.key == key and (cache.frame == nil or shownOnScreen(cache.frame)) then
+		return cache.frame
+	end
+	local best: ScrollingFrame? = nil
+	local area = 0
+	for _, d in page.body:GetDescendants() do
+		if verticalScroll(d) and shownOnScreen(d) then
+			local size = (d :: ScrollingFrame).AbsoluteSize
+			if best == nil or size.X * size.Y > area then
+				best = d :: ScrollingFrame
+				area = size.X * size.Y
+			end
+		end
+	end
+	scrollCache = { key = key, frame = best }
+	return best
+end
+
+-- Défilement maximal (px) : AbsoluteCanvasSize − AbsoluteWindowSize ; repli (propriétés absentes) :
+-- CanvasSize à l'échelle de l'écran, ou contenu mesuré (enfants affichés) pour un canevas
+-- automatique
+local function maxScroll(frame: ScrollingFrame): number
+	local ok, canvas, view = pcall(function(): (any, any)
+		return frame.AbsoluteCanvasSize, frame.AbsoluteWindowSize
+	end)
+	if ok and typeof(canvas) == "Vector2" and typeof(view) == "Vector2" and canvas.Y > 0 then
+		return math.max(0, canvas.Y - view.Y)
+	end
+	local size = frame.AbsoluteSize
+	local extent = frame.CanvasSize.Y.Offset * Root.scale() + frame.CanvasSize.Y.Scale * size.Y
+	if frame.AutomaticCanvasSize ~= Enum.AutomaticSize.None then
+		local top = frame.AbsolutePosition.Y - frame.CanvasPosition.Y
+		for _, child in frame:GetChildren() do
+			if child:IsA("GuiObject") and child.Visible then
+				extent = math.max(extent, child.AbsolutePosition.Y + child.AbsoluteSize.Y - top)
+			end
+		end
+	end
+	return math.max(0, extent - size.Y)
+end
+
+-- Stick droit : défile la liste (vers le haut : on remonte), vitesse proportionnelle à sa hauteur
+local function stepScroll(page: Page, dt: number)
+	local v = stick
+	if v.Y == 0 then
+		return
+	end
+	local frame = scrollTarget(page)
+	if frame == nil then
+		return
+	end
+	local speed = math.max(SCROLL_MIN_SPEED, frame.AbsoluteSize.Y * SCROLL_SPEED)
+	local position = frame.CanvasPosition
+	local y = math.clamp(position.Y - v.Y * speed * dt, 0, maxScroll(frame))
+	if y ~= position.Y then
+		frame.CanvasPosition = Vector2.new(position.X, y)
+	end
+end
+
+local function nearestScroll(obj: Instance): ScrollingFrame?
+	local cur = obj.Parent
+	while cur ~= nil and not cur:IsA("LayerCollector") do
+		if cur:IsA("ScrollingFrame") then
+			return cur :: ScrollingFrame
+		end
+		cur = cur.Parent
+	end
+	return nil
+end
+
+-- Croix pressée dans la fenêtre : on note la sélection (et le défilement de sa liste : une grille
+-- virtualisée garde la même case en défilant)
+local function onNavInput(input: InputObject)
+	if currentName == nil or not NAV_KEYS[input.KeyCode] then
+		return
+	end
+	local selected = GuiService.SelectedObject
+	local w = window
+	if selected == nil or w == nil or not selected:IsDescendantOf(w) then
+		bump = nil
+		return
+	end
+	local scroll = nearestScroll(selected)
+	bump = {
+		frame = frameNo,
+		object = selected,
+		canvas = if scroll then scroll.CanvasPosition else nil,
+		-- sélection déplacée dans la même image, avant ce signal : la croix a servi
+		changed = selectionChangedAt == frameNo,
+	}
+end
+
+-- Aucune sélection déplacée ni liste défilée après la croix : bout de liste (docs/07 §9)
+local function checkBump()
+	local probe = bump
+	if probe == nil or frameNo - probe.frame < BUMP_FRAMES then
+		return
+	end
+	bump = nil
+	if probe.changed or GuiService.SelectedObject ~= probe.object then
+		return
+	end
+	local scroll = nearestScroll(probe.object)
+	local canvas = if scroll then scroll.CanvasPosition else nil
+	if canvas ~= probe.canvas then
+		return
+	end
+	AudioController.play("Bump")
+	Haptics.play("listEnd")
+end
+
+local function onSelectionChanged()
+	selectionChangedAt = frameNo
+	local probe = bump
+	if probe then
+		probe.changed = true
+	end
+end
+
 local badgeAcc, warnAcc = 0, 0
 local function onHeartbeat(dt: number)
+	frameNo += 1
 	badgeAcc += dt
 	if badgesDirty or badgeAcc >= BADGE_INTERVAL then
 		badgeAcc = 0
@@ -961,6 +1563,7 @@ local function onHeartbeat(dt: number)
 	end
 	local name = currentName
 	if name == nil then
+		bump = nil
 		return
 	end
 	local page = pages[name]
@@ -975,7 +1578,7 @@ local function onHeartbeat(dt: number)
 			end
 		end
 		if not still and shown[1] then
-			selectTabInternal(name, shown[1].id, false)
+			selectTabInternal(name, shown[1].id)
 		end
 	end
 	local panel = panels[name]
@@ -988,6 +1591,12 @@ local function onHeartbeat(dt: number)
 				warn(`[PanelController] {name}.step :`, err)
 			end
 		end
+	end
+	-- manette : sélection toujours valide, défilement au stick droit, bout de liste
+	if page and currentName == name then
+		ensureSelection()
+		stepScroll(page, dt)
+		checkBump()
 	end
 	warnAcc += dt
 	if warnAcc >= WARN_INTERVAL then
@@ -1074,6 +1683,25 @@ function PanelController.Start()
 	end
 	modulesLoaded = true
 	ensureWindow()
+	Platform.Init()
+	-- périphérique changé : en-têtes refaits (repères ○ / L1 / R1 / L2 / R2), sélection posée
+	Platform.Changed:Connect(function(reason: string)
+		if reason ~= "input" then
+			return
+		end
+		for _, page in pages do
+			layoutChrome(page, true)
+		end
+		local name = currentName
+		local page = if name then pages[name] else nil
+		if page and gamepadActive() and GuiService.SelectedObject == nil then
+			selectDefault(page)
+		end
+	end)
+	GuiService:GetPropertyChangedSignal("SelectedObject"):Connect(onSelectionChanged)
+	UserInputService.InputBegan:Connect(function(input: InputObject, _processed: boolean)
+		onNavInput(input)
+	end)
 	State.Changed:Connect(function()
 		badgesDirty = true
 		tabsDirty = true
@@ -1096,7 +1724,7 @@ function PanelController.Start()
 			local name = currentName
 			local page = name and pages[name]
 			if page and lastInputIsGamepad() and GuiService.SelectedObject == nil then
-				GuiService.SelectedObject = defaultSelection(page)
+				selectDefault(page)
 			end
 		end)
 	end)

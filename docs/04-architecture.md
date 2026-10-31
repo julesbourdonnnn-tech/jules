@@ -1213,6 +1213,8 @@ VFXController.playSupernova(slot: number, level: number)
 VFXController.particlesAlive(): number   -- particules des rafales comptées dans la fenêtre du budget
 ```
 
+`haptic(force, durée)` (console, doc 07 §9.1) : rien si le réglage « Vibrations » est coupé ; manette d'abord quand elle est l'entrée préférée (`Platform.usingGamepad()`), sinon tactile d'abord ; délai minimal `Config/Console.Haptics.Cooldown` après sa propre vibration **et** après chaque `Haptics.Played`. Les vibrations du jeu passent par `Util/Haptics.play` (carte `Config/Console.Haptics`) ; plus aucun appel du jeu à `haptic`. Limite connue : `Haptics.play` ne voit pas une vibration lancée par `haptic` (horodatage privé de `Util/Haptics`) ; une API `Haptics.note()` rendrait le délai commun dans les deux sens si un appel revient.
+
 ### 13.9 ScreenFX (paquet client-hud) — GDD §9.1, §9.2, §9.4
 
 ```lua
@@ -1252,6 +1254,16 @@ InputController.inputType(): number
 InputController.openPingWheel()
 InputController.closePingWheel()
 InputController.ping(kind: number): boolean
+-- ajouts (paquet client-hud, console)
+InputController.dashProgress(now: number?): number      -- 0 = vient d'être lancé, 1 = prêt
+InputController.isPingWheelOpen(): boolean
+InputController.playEmote(name: string)                 -- Humanoid:PlayEmote sous pcall
+InputController.openPanel(name: Types.PanelName): boolean
+InputController.togglePanel(name: Types.PanelName): boolean
+InputController.setPanelArgs(name: Types.PanelName, args: any?)
+InputController.setPanelGate(fn: ((Types.PanelName) -> boolean)?)  -- transmise à PanelController.setGate
+InputController.setCheerAvailable(available: boolean)
+InputController.requestCheer(): boolean
 ```
 
 Signaux :
@@ -1261,7 +1273,12 @@ InputController.Dashed: Signal.Signal<>
 InputController.InputTypeChanged: Signal.Signal<number>
 InputController.CheerRequested: Signal.Signal<>
 InputController.MinimapToggled: Signal.Signal<>
+InputController.DashRefused: Signal.Signal<string>   -- "cooldown" | "character" | "comet"
+InputController.RailRequested: Signal.Signal<>       -- △ en jeu sans sélection → HUD.selectRail
+InputController.QuestToggled: Signal.Signal<>        -- croix ← → suivi de quête
 ```
+
+Manette (doc 07 §6) : `inputType()` / `InputTypeChanged` suivent l'entrée **préférée** (`Platform.inputKind`, `Platform.Changed("input")`), remote `SetInputType` au plus 1 / 5 s. Actions CAS : `CC_Dash` (Maj, E, R2, □ ; **□ panneau ouvert absorbé sans Dash**, R2 l'est par PanelController), `CC_PingWheel` (Q, croix ↑), `CC_PingNav` (croix ← / → en anneau, roue ouverte), `CC_PingKey` (1-6), `CC_PingStick`, `CC_PingConfirm`, `CC_Close` (○, Échap), `CC_Rail` (△), `CC_Quest` (croix ←), `CC_Minimap` (M, croix ↓), `CC_Cheer` (F, croix →), `CC_Panels` (U, C, J, B, G). Retours (son `Back`) : △ panneau ouvert → `PanelController.close()` puis sélection effacée ; △ ou ○ avec une sélection du HUD ou de la carte d'invitation → effacée ; △ sans sélection → `RailRequested`. Vibration `supernova` du héros jouée ici à `ScreenFX.Celebrated` (le panneau Supernova ne la rejoue pas).
 
 ### 13.12 HUD (paquet client-hud) — GDD §10.2
 
@@ -1276,6 +1293,8 @@ HUD.attention(element: Types.HudElement, on: boolean)
 ```
 
 `HudElement` : `"glow" | "stardust" | "line" | "dash" | "ping" | "rail" | "rail.Upgrades" | "rail.Collection" | "rail.Goals" | "rail.Shop" | "eventPill" | "minimap" | "status" | "questTracker" | "crew" | "settings"`. Le HUD prédit le Glow (`glow + idleRate × (Clock.now() − lastSettle) + glowCarry`, borné à ≥ valeur serveur), anime les compteurs, possède `CheerPrompt` et pose `ClientReady`.
+
+Ajouts (paquet client-hud) : `HUD.registerElement(element, holder, visual?)`, `HUD.hintTop(): number`, `HUD.cheerOverHint(): boolean`, `HUD.selectRail(): boolean`. Manette (doc 07 §6.2, §11 G2) : `selectRail` (branché sur `InputController.RailRequested`) choisit, par priorité, la cible de l'accueil, puis `PanelController.focusTarget()` (sous pcall, ignorée si hors écran), puis le bouton du rail à pastille « ! » (`BadgeChanged`), puis le dernier panneau du rail ouvert (`PanelController.Opened`, Supernova = Améliorer), puis le premier bouton affiché ; il ne re-sélectionne jamais de lui-même après ○ / △. Repères : instances `PadGlyph` (touches), `RailGlyph` (△ au-dessus du rail, y = 144-180 : le rail descend à y = 188, sans grille 2 × 2 sur console), `HandGlyph` (main de l'accueil remplacée par la touche) ; `KeyCap` clavier masqués à la manette ; repères suivis sur `Platform.Changed("input")` et `InputController.InputTypeChanged`. Barre de la Balise bornée à 320-420 px selon la largeur intérieure. `Hud/Widgets.button` pose `SelectionImageObject = Root.selectionImage()`.
 
 ### 13.13 Minimap (paquet client-hud) — GDD §6.4
 
@@ -1294,7 +1313,10 @@ OnboardingController.Init()
 OnboardingController.Start()
 OnboardingController.step(): number
 OnboardingController.currentHint(): string?
+OnboardingController.guide(): string?   -- ajout : mode de guidage au sol courant (specs)
 ```
+
+Manette (doc 07 §6.2) : `Hud/OnboardingPlan` reçoit le fait `gamepad` (entrée préférée) ; consigne `onboarding.openUpgrade` (EN « Open Upgrade », FR « Ouvre Améliorer ») avec le glyphe △, puis ✕ quand le rail est sélectionné ; R2 pendant la pulsation du Dash.
 
 ### 13.15 PanelController (paquet client-panels) — GDD §10.3, §10.4
 
@@ -1308,6 +1330,15 @@ PanelController.toggle(name: Types.PanelName)
 PanelController.current(): Types.PanelName?
 PanelController.hasAction(name: Types.PanelName): boolean
 PanelController.nextTab(direction: number)
+-- ajouts (paquet client-panels, console)
+PanelController.currentTab(name: Types.PanelName): string?
+PanelController.page(name: Types.PanelName): Frame?
+PanelController.invalidate()                                 -- onglets et pastilles à réévaluer
+PanelController.setGate(fn: ((Types.PanelName) -> boolean)?)  -- garde du HUD (via InputController)
+PanelController.allowed(name: Types.PanelName): boolean
+PanelController.focusTarget(): GuiObject?                    -- Accepter de la carte d'invitation, sinon nil
+PanelController.cyclePanel(direction: number): boolean       -- L2 / R2 ; false : rien d'ouvert ou rien d'autre d'autorisé
+PanelController.select(target: GuiObject?): boolean          -- sélection manette dans la fenêtre (sinon défaut)
 ```
 
 Signaux :
@@ -1317,6 +1348,8 @@ PanelController.Opened: Signal.Signal<Types.PanelName>
 PanelController.Closed: Signal.Signal<Types.PanelName>
 PanelController.BadgeChanged: Signal.Signal<Types.PanelName, boolean>
 ```
+
+Manette (doc 07 §6.3, §7) : actions CAS liées **seulement panneau ouvert**, à `High + 50` et absorbées (appui, relâchement, gâchette analogique) : `PanelBack` (○, Échap → `back()`), `PanelTabPrev` / `PanelTabNext` (L1 / R1), `PanelPrev` / `PanelNext` (L2 / R2 : R2 ne Dash pas), `PanelScroll` (stick droit). `back()` recule d'un niveau et seul lui rend la sélection d'origine (bouton du rail) ; `close()` efface la sélection et n'en rend jamais (ni tout de suite ni en différé). Panneaux : `Crew.inviteTarget()` (bouton Accepter tant que la carte d'invitation est affichée) et `Crew.inviteCard()` ; `Panels/VirtualGrid` : option `selectable(cell)` et méthode `reveal(index)` (la sélection suit l'index). Le panneau Supernova ne joue que les vibrations `holdStart` et `refuse`.
 
 Interface d'un panneau (`PanelController.Panel`) : `name`, `tabs?`, `build(parent: Frame)`, `onOpen(args: any?)`, `onClose()`, `hasAction(): boolean`, `selectTab?(tab: string)`. `PanelName` : `"Upgrades" | "Supernova" | "Collection" | "Goals" | "Shop" | "Crew" | "Settings" | "ReturnScreen"`. Arguments d'ouverture utilisés : `{ focus = "conga" }` (Upgrades, accueil), `{ tab = "atlas" }` (Collection), `{ data = … }` (ReturnScreen).
 
@@ -1400,6 +1433,7 @@ Points où le GDD laissait un choix, tranchés ici pour que tous implémentent l
 26. **Acteur d'un tick refusé** (`valid = false`) : `pos = prev` = dernière position validée (jamais la position brute) ; `prev → pos` est toujours un déplacement validé, que tous les balayages utilisent (coupes, vol et encaissement de la Comète, Gloomwisps, portes).
 27. **Portes et anneau testés le long du pas validé** : à 10 Hz, avec un Dash (3,6 studs par tick) et la gigue du réseau, deux échantillons peuvent tomber de part et d'autre de la boîte de porte (4 studs de profondeur). Parades (CongaService) et encaissement de la Comète (EventService) testent donc `prev → pos` tous les 1 stud.
 28. **Analytique `SnipByInput`** : valeur = type d'entrée du coupeur (1 tactile, 2 clavier-souris, 3 manette), `Util/Analytics` n'ayant pas de champs personnalisés. `WispSnip` est envoyée par CongaService seul (pas par `EventService.onWispSnip`).
+29. **□ (Carré) panneau ouvert** (doc 07 §6.3, silencieuse sur ce point) : absorbé sans Dash, comme R2. À la manette la sélection du panneau tient le stick, le personnage ne bouge pas ; un □ égaré ne doit pas le projeter hors du port sûr derrière la fenêtre (la Supernova l'exige). Au clavier, Maj / E gardent le Dash panneau ouvert (WASD fait toujours marcher) ; au menu du HUD (△, sans panneau) □ et R2 dashent toujours (§6.2).
 
 ---
 
@@ -1459,6 +1493,8 @@ Ajouts minimaux et testés (aucune réécriture) :
 | `src/client/Main.client.luau` | `Util/Platform` chargé en premier | doc 07 §2 | `Contract.spec`, `Console.spec` |
 | `src/client/Controllers/InputController.luau` | signal `QuestToggled` ; `setPanelGate` transmet aussi la garde à PanelController | interfaces entre groupes console (doc 07 §11) | `Console.spec` |
 | `src/client/Controllers/PanelController.luau` | `setGate`, `allowed`, `focusTarget` (stub) | idem | `Console.spec` |
+| `src/client/Controllers/AudioController.luau` (groupe console G1) | `playNav()` et écoute de `GuiService.SelectedObject` : son `Select` quand la sélection passe d'un objet à un autre (manette seulement, au plus 1 / `Config/Console.NavSoundInterval`), rien à la pose ni à l'effacement | sons de navigation (doc 07 §9.2) | `Console_input.spec` |
+| `tests/harness/ApiAudit.luau` | `Humanoid.PlayEmote` dans les méthodes connues (vraie méthode Roblox absente de la base de réflexion) | pings à emote 2, 4, 6 et acclamation audités | `Console_release.spec` |
 | `src/shared/Config/Sounds.luau` | clés `Select`, `Back`, `Tab`, `Bump` (ID vides) | sons de navigation (doc 07 §9.2) | `Contract.spec` |
 | `src/shared/Config/Settings.luau` (+ `settings.vibration` EN/FR) | réglage `vibration` (booléen, activé, ordre 5,5) ; `Panels.spec` compte désormais 10 lignes de réglages | vibrations désactivables (doc 07 §9.1) | `Console.spec`, `Panels.spec` |
 | `default.project.json` | `StarterGui.VirtualCursorMode = "Disabled"` | navigation directionnelle sur mesure, sans curseur virtuel (doc 07 §0) | `Console.spec` |

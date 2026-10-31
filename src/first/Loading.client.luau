@@ -13,6 +13,11 @@
 --   * après 20 s : « Ton Nid se réveille… » / « Your Nest is waking up… » (textes embarqués FR/EN
 --     selon LocaleId, identiques aux clés loading.wake / loading.retry de Strings.luau, car
 --     Localization n'est pas encore répliqué) + bouton Réessayer (TeleportService:Teleport(PlaceId))
+--   * console / téléviseur (docs/07-console-ps5.md §3, §6.7) : échelle « 10 pieds » recopiée de
+--     Config/Console (écran Large ou console : max(0,6 ; min(L / 1280 ; H / 720)), sans plafond ;
+--     sinon la règle d'origine ×1,2 bornée 0,6-1,4 ; égalité vérifiée par une spec) ; à la manette
+--     (IsTenFootInterface sous pcall, ou GamepadEnabled), « Réessayer » est sélectionné d'office
+--     (pas de curseur virtuel) avec l'icône ✕ de Roblox (GetImageForKeyCode(ButtonA)) à côté
 -- Une seule connexion RenderStepped, coupée à la fermeture. Le temps de l'écran est la somme des dt
 -- des images (mesure purement technique, sans Shared/Util/Clock qui n'est pas encore répliqué).
 -- GDD : §3 (chargement), §9.2, §10.3 (écrans Chargement / Échec), §12.2.
@@ -24,6 +29,7 @@ local ReplicatedFirst = game:GetService("ReplicatedFirst")
 local RunService = game:GetService("RunService")
 local TeleportService = game:GetService("TeleportService")
 local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
 
 -- Textes embarqués (mêmes valeurs que Strings.luau : loading.wake, loading.retry)
 local TEXTS = {
@@ -35,7 +41,12 @@ local FAIL_AFTER = 20 -- s avant l'écran « Réessayer »
 local FADE_TIME = 0.3
 local RETRY_COOLDOWN = 5 -- s entre deux tentatives de téléportation
 local PLAYER_WAIT = 10 -- s au plus pour LocalPlayer / PlayerGui
-local REFERENCE = Vector2.new(1280, 720)
+local REFERENCE = Vector2.new(1280, 720) -- = Config/Console.Reference
+-- Écran Large ou console : UIScale = max(TV_SCALE_MIN ; min(L / 1280 ; H / 720)), sans plafond (1,5 en
+-- 1920 × 1080) ; recopie de Config/Console.TvScale (non répliqué ici)
+local TV_SCALE_MIN = 0.6 -- = Config/Console.TvScale.Min
+local GLYPH_SIZE = 48 -- px (avant mise à l'échelle) : icône ✕ à côté de « Réessayer »
+local SELECTION_COLOR = Color3.fromRGB(255, 208, 72) -- cadre de sélection doré (UI/Root)
 local TAU = 2 * math.pi
 
 -- Constantes graphiques (charte du jeu : crépuscule violet → orangé, Puffkin crème)
@@ -64,6 +75,55 @@ local function reducedMotion(): boolean
 		return GuiService.ReducedMotionEnabled
 	end)
 	return ok and value == true
+end
+
+-- Console (seule détection garantie, sous pcall) ou écran Large (téléviseur)
+local function isTenFoot(): boolean
+	local ok, value = pcall(function()
+		return GuiService:IsTenFootInterface()
+	end)
+	return ok and value == true
+end
+
+local function isLargeDisplay(): boolean
+	if isTenFoot() then
+		return true
+	end
+	local ok, value = pcall(function()
+		return GuiService.ViewportDisplaySize
+	end)
+	return ok and value == Enum.DisplaySize.Large
+end
+
+-- Manette : console, ou manette branchée (sans curseur virtuel, seule la sélection l'atteint)
+local function gamepadLikely(): boolean
+	if isTenFoot() then
+		return true
+	end
+	local ok, value = pcall(function()
+		return UserInputService.GamepadEnabled
+	end)
+	return ok and value == true
+end
+
+-- Échelle de l'écran (docs/07-console-ps5.md §3)
+local function screenScale(viewport: Vector2, large: boolean): number
+	local s = math.min(viewport.X / REFERENCE.X, viewport.Y / REFERENCE.Y)
+	if large then
+		return math.max(s, TV_SCALE_MIN)
+	end
+	return math.clamp(s * 1.2, 0.6, 1.4)
+end
+
+-- Icône Roblox de la touche (PlayStation sur PlayStation) ; nil si indisponible
+local function keyImage(keyCode: Enum.KeyCode): string?
+	local ok, image = pcall(function()
+		return UserInputService:GetImageForKeyCode(keyCode)
+	end)
+	if ok and type(image) == "string" and image ~= "" then
+		return image
+	end
+	return nil
 end
 
 -- L'écran par défaut de Roblox est retiré dès que le nôtre existe (API absente : rien à retirer)
@@ -169,6 +229,7 @@ local function main()
 	stars.Name = "Stars"
 	stars.Size = UDim2.fromScale(1, 0.6)
 	stars.BackgroundTransparency = 1
+	stars:SetAttribute("Decorative", true) -- fond plein écran, hors zone sûre TV (docs/07 §4)
 	stars.Parent = root
 	local rng = Random.new(20261031)
 	for i = 1, STAR_COUNT do
@@ -208,10 +269,19 @@ local function main()
 	stage.Parent = root
 	local scale = Instance.new("UIScale")
 	scale.Parent = stage
+	-- écran d'échec : même échelle sur téléviseur (1 ailleurs, inchangé) ; failScale anime l'entrée
+	local failBase = 1
+	local failScale: UIScale? = nil
 	local function rescale()
 		local camera = workspace.CurrentCamera
 		local viewport = if camera then camera.ViewportSize else REFERENCE
-		scale.Scale = math.clamp(math.min(viewport.X / REFERENCE.X, viewport.Y / REFERENCE.Y) * 1.2, 0.6, 1.4)
+		local large = isLargeDisplay()
+		scale.Scale = screenScale(viewport, large)
+		failBase = if large then scale.Scale else 1
+		local fs = failScale
+		if fs then
+			fs.Scale = failBase
+		end
 	end
 	rescale()
 
@@ -300,8 +370,11 @@ local function main()
 	fail.BackgroundTransparency = 1
 	fail.Visible = false
 	fail.Parent = root
-	local failScale = Instance.new("UIScale")
-	failScale.Parent = fail
+	local failUIScale = Instance.new("UIScale")
+	failUIScale.Name = "FailScale"
+	failUIScale.Scale = failBase
+	failUIScale.Parent = fail
+	failScale = failUIScale
 	local message = Instance.new("TextLabel")
 	message.Name = "Message"
 	message.Size = UDim2.new(1, 0, 0, 44)
@@ -335,6 +408,20 @@ local function main()
 	buttonPadding.Parent = button
 	local buttonScale = Instance.new("UIScale")
 	buttonScale.Parent = button
+	-- cadre de sélection doré bien visible à 3 m (même dessin que UI/Root.selectionImage)
+	local selection = Instance.new("Frame")
+	selection.Name = "SelectionHighlight"
+	selection.BackgroundTransparency = 1
+	selection.AnchorPoint = Vector2.new(0.5, 0.5)
+	selection.Position = UDim2.fromScale(0.5, 0.5)
+	selection.Size = UDim2.new(1, 8, 1, 8)
+	round(selection, UDim.new(0, 16))
+	local selectionStroke = Instance.new("UIStroke")
+	selectionStroke.Color = SELECTION_COLOR
+	selectionStroke.Thickness = 4
+	selectionStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	selectionStroke.Parent = selection
+	button.SelectionImageObject = selection
 
 	gui.Parent = playerGui
 	removeDefaultScreen()
@@ -358,6 +445,12 @@ local function main()
 			return
 		end
 		closing = true
+		-- manette : la sélection quitte « Réessayer » (le stick fait de nouveau marcher)
+		pcall(function()
+			if GuiService.SelectedObject ~= nil and GuiService.SelectedObject:IsDescendantOf(gui) then
+				GuiService.SelectedObject = nil
+			end
+		end)
 		local tween = TweenService:Create(
 			root,
 			TweenInfo.new(FADE_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
@@ -385,16 +478,54 @@ local function main()
 		end
 	end
 
+	-- Manette : icône ✕ (image Roblox de ButtonA) à gauche de « Réessayer » ; rien si indisponible
+	local function addConfirmGlyph()
+		if fail:FindFirstChild("PadGlyph") then
+			return
+		end
+		local image = keyImage(Enum.KeyCode.ButtonA)
+		if image == nil then
+			return
+		end
+		local holder = Instance.new("Frame")
+		holder.Name = "PadGlyph"
+		holder.AnchorPoint = Vector2.new(1, 0.5)
+		holder.Position = UDim2.new(0.5, -button.Size.X.Offset / 2 - 8, 0, 62 + button.Size.Y.Offset / 2)
+		holder.Size = UDim2.fromOffset(GLYPH_SIZE, GLYPH_SIZE)
+		holder.BackgroundTransparency = 1
+		holder:SetAttribute("GlyphKey", Enum.KeyCode.ButtonA.Name)
+		holder:SetAttribute("GlyphMode", "image")
+		holder.Parent = fail
+		local icon = Instance.new("ImageLabel")
+		icon.Name = "Image"
+		icon.Size = UDim2.fromScale(1, 1)
+		icon.BackgroundTransparency = 1
+		icon.ScaleType = Enum.ScaleType.Fit
+		icon.Image = image
+		icon.Parent = holder
+	end
+
+	local function selectRetry()
+		addConfirmGlyph()
+		pcall(function()
+			GuiService.SelectedObject = button
+		end)
+	end
+
 	local function showFail()
 		failShown = true
 		fail.Visible = true
+		local fs = failUIScale
 		if not calm then
-			failScale.Scale = 0.6
-			TweenService
-				:Create(failScale, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-					Scale = 1,
-				})
-				:Play()
+			fs.Scale = 0.6 * failBase
+			TweenService:Create(fs, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+				Scale = failBase,
+			}):Play()
+		end
+		-- manette (docs/07-console-ps5.md §6.7) : sans curseur virtuel, seule la sélection atteint
+		-- « Réessayer » ; ✕ l'active
+		if gamepadLikely() then
+			selectRetry()
 		end
 	end
 
@@ -461,6 +592,23 @@ local function main()
 	if camera then
 		table.insert(connections, camera:GetPropertyChangedSignal("ViewportSize"):Connect(rescale))
 	end
+	pcall(function()
+		table.insert(connections, GuiService:GetPropertyChangedSignal("ViewportDisplaySize"):Connect(rescale))
+	end)
+	-- manette prise en main pendant l'écran d'échec (PC) : « Réessayer » sélectionné à ce moment-là
+	table.insert(
+		connections,
+		UserInputService.LastInputTypeChanged:Connect(function(inputType: Enum.UserInputType)
+			if failShown and not closing and string.sub(inputType.Name, 1, 7) == "Gamepad" then
+				local ok, selected = pcall(function()
+					return GuiService.SelectedObject
+				end)
+				if ok and selected == nil then
+					selectRetry()
+				end
+			end
+		end)
+	)
 	if not game:IsLoaded() then
 		table.insert(connections, game.Loaded:Connect(check))
 	end

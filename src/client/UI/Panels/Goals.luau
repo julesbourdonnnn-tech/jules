@@ -1089,13 +1089,26 @@ function Panel.step(dt: number)
 	end
 end
 
+-- Sélection manette de l'onglet affiché (docs/07-console-ps5.md §7) : « Réclamer » disponible,
+-- sinon le premier bouton d'une carte (Relancer) ; nil : premier onglet (PanelController). Jamais un
+-- bouton d'un autre onglet (masqué)
 function Panel.defaultSelection(): GuiObject?
-	if currentTab == "calendar" and calendarClaim and calendarClaim.Visible then
-		return calendarClaim
+	if currentTab == "calendar" then
+		return if calendarClaim and calendarClaim.Visible then calendarClaim else nil
+	elseif currentTab == "week" then
+		local claim = week.claim
+		return if claim and claim.Visible then claim else nil
+	elseif currentTab ~= "today" then
+		return nil
 	end
 	for _, card in questCards do
 		if card.frame.Visible and card.claim.Visible then
 			return card.claim
+		end
+	end
+	for _, card in questCards do
+		if card.frame.Visible and card.reroll.Visible then
+			return card.reroll
 		end
 	end
 	return nil

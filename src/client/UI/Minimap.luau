@@ -8,9 +8,13 @@
 -- propriétaire, gris si libre), anneaux des zones.
 -- Mise à jour à 10 Hz (pas chaque image) ; réserve de Frames (aucune création en rafale).
 -- Affichage progressif : le conteneur est confié au HUD (HUD.registerElement("minimap")).
+-- Manette (docs/07-console-ps5.md §6.7, §7) : icône croix ↓ (UI/Glyph « PadGlyph ») dans le coin bas
+-- gauche, cadre de sélection doré Root.selectionImage ; le disque est atteignable depuis le menu du
+-- HUD (graphe NextSelection* posé par le HUD) ; agrandie (300 × 300), elle reste dans Root.safe,
+-- donc dans la zone sûre TV.
 -- GDD : §6.4, §10.2, §9.4 (porteur).
--- Dépendances : Util/Prefs, UI/Root, UI/Theme, UI/Create, WorldStateController, InputController,
--- Logic/WorldLayout, Config/Cosmetics, Config/Zones, Shared/Util/Clock.
+-- Dépendances : Util/Prefs, UI/Root, UI/Theme, UI/Create, UI/Glyph, WorldStateController,
+-- InputController, Logic/WorldLayout, Config/Cosmetics, Config/Zones, Shared/Util/Clock.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -29,6 +33,7 @@ local Root = require(Client.UI.Root)
 local Theme = require(Client.UI.Theme)
 local Create = require(Client.UI.Create)
 local Juice = require(Client.UI.Juice)
+local Glyph = require(Client.UI.Glyph)
 local WorldStateController = require(Client.Controllers.WorldStateController)
 local InputController = require(Client.Controllers.InputController)
 local HUD = require(Client.UI.HUD)
@@ -141,9 +146,17 @@ local function build()
 		AutoButtonColor = false,
 		Text = "",
 		Selectable = true,
+		SelectionImageObject = Root.selectionImage(),
 		ClipsDescendants = true,
 		Parent = frame,
 	}, { Widgets.round(), Widgets.stroke(Widgets.STROKE, 3) })
+	-- croix ↓ (manette) : coin bas gauche, hors du disque (le disque coupe ses enfants)
+	Glyph.new(frame, { gamepad = Enum.KeyCode.DPadDown }, {
+		name = "PadGlyph",
+		position = UDim2.fromScale(0, 1),
+		anchor = Vector2.new(0, 1),
+		zIndex = 8,
+	})
 	button.Activated:Connect(function()
 		Minimap.toggle()
 	end)

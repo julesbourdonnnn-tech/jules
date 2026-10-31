@@ -2,18 +2,31 @@
 -- Joue les sons déclarés dans Shared/Config/Sounds.luau ; un ID vide est ignoré.
 --   AudioController.play("Coin")
 --   AudioController.play("Catch", 0.05, 1.2) -- variation aléatoire ±5 %, hauteur × 1,2
+--   AudioController.playNav()                 -- son de navigation « Select » (manette)
+-- Son de navigation (docs/07-console-ps5.md §9.2) : « Select » quand GuiService.SelectedObject passe
+-- d'un objet à un autre, entrée préférée = manette (Client/Util/Platform), au plus 1 par
+-- Config/Console.NavSoundInterval ; rien quand le code pose la première sélection ou l'efface.
 
 local ContentProvider = game:GetService("ContentProvider")
+local GuiService = game:GetService("GuiService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SoundService = game:GetService("SoundService")
 
-local Sounds = require(ReplicatedStorage:WaitForChild("Shared").Config.Sounds)
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Sounds = require(Shared.Config.Sounds)
+local Console = require(Shared.Config.Console)
+local Clock = require(Shared.Util.Clock)
+
+local Platform = require(script.Parent.Parent.Util.Platform)
 
 local AudioController = {}
 AudioController.enabled = true -- effets sonores (réglage « sfx », posé par Client/Util/Prefs)
 
 local instances: { [string]: Sound } = {}
 local musicEnabled = true
+local started = false
+local lastSelected: Instance? = nil -- dernière sélection GuiService vue
+local lastNavAt = -math.huge -- Clock.now() du dernier son « Select »
 
 function AudioController.Init()
 	local folder = Instance.new("Folder")
@@ -41,7 +54,38 @@ function AudioController.Init()
 	end
 end
 
+-- Son de navigation « Select » : manette seulement (entrée préférée), au plus 1 par
+-- Config/Console.NavSoundInterval ; true s'il a été demandé
+function AudioController.playNav(): boolean
+	if Platform.inputKind() ~= Platform.GAMEPAD then
+		return false
+	end
+	local now = Clock.now()
+	if now - lastNavAt < Console.NavSoundInterval and now >= lastNavAt then
+		return false
+	end
+	lastNavAt = now
+	AudioController.play("Select")
+	return true
+end
+
+-- Sélection déplacée d'un objet à un autre (croix, stick, code) : « Select » ; première sélection
+-- posée par le code ou sélection effacée : rien
+local function onSelectionChanged()
+	local selected: Instance? = GuiService.SelectedObject
+	local previous = lastSelected
+	lastSelected = selected
+	if previous ~= nil and selected ~= nil and previous ~= selected then
+		AudioController.playNav()
+	end
+end
+
 function AudioController.Start()
+	if not started then
+		started = true
+		lastSelected = GuiService.SelectedObject
+		GuiService:GetPropertyChangedSignal("SelectedObject"):Connect(onSelectionChanged)
+	end
 	local music = instances.Music
 	if music then
 		music.Looped = true

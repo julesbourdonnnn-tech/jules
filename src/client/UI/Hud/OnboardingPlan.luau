@@ -12,6 +12,8 @@
 -- file contient de quoi réussir la quête, chercher des Nebbies quand les Puffkins ont disparu ou
 -- que le Glow manque, attendre la météo (compte à rebours) quand aucun Nebby météo n'existe.
 -- Étapes : 0 pas commencé, 1-7 = quête Q1-Q7 en cours, 8 = accueil terminé.
+-- Manette (fait `gamepad`, docs/07-console-ps5.md §6.2) : aucune consigne tactile — « Ouvre
+-- Améliorer » (posée à côté de l'icône △ / ✕ par le contrôleur) au lieu de « Touche Améliorer ».
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -42,6 +44,7 @@ export type Facts = {
 	weatherActive: boolean?, -- fenêtre météo en cours, avec une forme météo
 	weatherTarget: boolean?, -- un Nebby météo attrapable est connu (Q6)
 	cometActive: boolean?, -- Comète au sol ou portée (Q6 accepte aussi la Comète)
+	gamepad: boolean?, -- entrée préférée : manette (consignes sans geste tactile)
 }
 
 export type Guide = "toPuffkins" | "toGate" | "toNebbies" | "toRare" | "toWeather" | "toComet"
@@ -161,7 +164,10 @@ function Plan.hint(f: Facts): string?
 			if congaShort(f) then
 				return if f.lineFull then "onboarding.goHome" else "onboarding.findNebbies"
 			end
-			return if f.upgradesOpen then "onboarding.buyConga" else "onboarding.tapUpgrade"
+			if f.upgradesOpen then
+				return "onboarding.buyConga"
+			end
+			return if f.gamepad then "onboarding.openUpgrade" else "onboarding.tapUpgrade"
 		end
 	end
 	if f.lineFull then
@@ -253,6 +259,7 @@ function Plan.attention(f: Facts): { [Types.HudElement]: boolean }
 	local hint = Plan.hint(f)
 	if
 		hint == "onboarding.tapUpgrade"
+		or hint == "onboarding.openUpgrade"
 		or hint == "onboarding.buyConga"
 		or hint == "onboarding.buyStride"
 		or hint == "onboarding.perches"

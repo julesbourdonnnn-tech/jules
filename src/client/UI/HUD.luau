@@ -28,14 +28,23 @@
 --   * icône « connexion instable » (attribut Player « Unstable »)
 --   * pose l'attribut LOCAL Players.LocalPlayer « ClientReady » = true quand l'instantané est reçu et
 --     le HUD construit (fin de l'écran de chargement)
---   * tous les boutons : Juice.press, Selectable, navigation manette explicite ; textes via Prefs.t,
---     ré-appliqués sur Prefs.LanguageChanged
+--   * tous les boutons : Juice.press, Selectable, cadre de sélection Root.selectionImage, navigation
+--     manette explicite ; textes via Prefs.t, ré-appliqués sur Prefs.LanguageChanged
+--   * console / manette (docs/07-console-ps5.md §5-§7) : icônes de touches UI/Glyph « PadGlyph »
+--     (R2 Dash, croix ↑ Ping, croix ↓ minicarte, croix → ACCLAMER, croix ← suivi de quête, △ au-dessus
+--     du rail), touches clavier « KeyCap » masquées à la manette ; △ (HUD.selectRail) sélectionne la
+--     cible de l'accueil, sinon PanelController.focusTarget(), sinon le bouton du rail à pastille
+--     « ! », sinon le dernier panneau du rail ouvert, sinon le premier bouton affiché ; graphe
+--     NextSelection* complet (rail, Équipage, Réglages, minicarte, suivi de quête, Ping, Dash,
+--     ACCLAMER) posé à la manette ; croix ← (InputController.QuestToggled) replie le suivi ; main
+--     d'accueil remplacée par l'icône de la touche (△, puis ✕ une fois le bouton sélectionné ; R2 sur
+--     le Dash) ; rail en colonne sur console (pas de joystick tactile)
 -- Une seule connexion RenderStepped ; le temps d'animation est la somme des dt des images (mesure
 -- purement graphique), le temps de jeu vient de Shared/Util/Clock.
 -- GDD : §3 (HUD progressif), §6.6 (acclamer), §9.2, §10.1, §10.2.
--- Dépendances : StateController, AudioController, Util/Prefs, UI/Root, UI/Theme, UI/Create, UI/Juice,
--- WorldStateController, ScreenFX, Banners, PanelController, InputController, Logic/Formulas,
--- Logic/EventClock, Config/*, Shared/Net, Shared/Util/Clock.
+-- Dépendances : StateController, AudioController, Util/Prefs, Util/Platform, UI/Root, UI/Theme,
+-- UI/Create, UI/Juice, UI/Glyph, WorldStateController, ScreenFX, Banners, PanelController,
+-- InputController, Logic/Formulas, Logic/EventClock, Config/*, Shared/Net, Shared/Util/Clock.
 
 local GuiService = game:GetService("GuiService")
 local Players = game:GetService("Players")
@@ -50,6 +59,7 @@ local Format = require(Shared.Util.Format)
 local Balance = require(Shared.Config.Balance)
 local Quests = require(Shared.Config.Quests)
 local Cosmetics = require(Shared.Config.Cosmetics)
+local Console = require(Shared.Config.Console)
 local Formulas = require(Shared.Logic.Formulas)
 local WorldLayout = require(Shared.Logic.WorldLayout)
 
@@ -57,10 +67,12 @@ local Client = script.Parent.Parent
 local State = require(Client.Controllers.StateController)
 local AudioController = require(Client.Controllers.AudioController)
 local Prefs = require(Client.Util.Prefs)
+local Platform = require(Client.Util.Platform)
 local Root = require(Client.UI.Root)
 local Theme = require(Client.UI.Theme)
 local Create = require(Client.UI.Create)
 local Juice = require(Client.UI.Juice)
+local Glyph = require(Client.UI.Glyph)
 local WorldStateController = require(Client.Controllers.WorldStateController)
 local ScreenFX = require(Client.UI.ScreenFX)
 local PanelController = require(Client.Controllers.PanelController)
@@ -142,26 +154,58 @@ local TRACKER_SLIDE = 0.3
 local PRESS_ACTIVATED_WINDOW = 1.5 -- s : Activated qui suit un appui déjà traité (même geste)
 local LINE_BAR = Theme.Colors.Primary
 local LINE_BAR_FULL = Theme.Colors.Gold
+-- Manette (docs/07-console-ps5.md §3, §5) : icônes de touches de 36 px de référence
+local GLYPH = Console.GlyphSize
+local GLYPH_GAP = 8
+-- △ au-dessus du rail, sous la pastille Stardust (16 + 64 + 8 + 48 + 8 = 144) ; à la manette le rail
+-- descend d'autant (y = 144 + 36 + 8 = 188 : bas de la colonne à 532)
+local RAIL_GLYPH_Y = MARGIN + GLOW_SIZE.Y + 8 + DUST_SIZE.Y + 8
+local RAIL_PAD_Y = RAIL_GLYPH_Y + GLYPH + GLYPH_GAP
+-- bord droit de Réglages (288 + 56 + 8 + 56 = 408) : la barre de la Balise, centrée sous la pastille
+-- d'événement, se rétrécit pour ne pas le toucher sur les écrans étroits (zone sûre TV : 1152 px)
+local TOP_ROW_RIGHT = MARGIN + GLOW_SIZE.X + 12 + ICON + 8 + ICON
 
-local RAIL: { { element: Types.HudElement, panel: Types.PanelName, glyph: string, label: string, key: string } } =
+type RailDef = {
+	element: Types.HudElement,
+	panel: Types.PanelName,
+	glyph: string,
+	label: string,
+	key: Enum.KeyCode,
+}
+
+local RAIL: { RailDef } = {
 	{
-		{
-			element = "rail.Upgrades",
-			panel = "Upgrades",
-			glyph = "▲",
-			label = "hud.rail.upgrades",
-			key = "U",
-		},
-		{
-			element = "rail.Collection",
-			panel = "Collection",
-			glyph = "❖",
-			label = "hud.rail.collection",
-			key = "C",
-		},
-		{ element = "rail.Goals", panel = "Goals", glyph = "◎", label = "hud.rail.goals", key = "J" },
-		{ element = "rail.Shop", panel = "Shop", glyph = "✚", label = "hud.rail.shop", key = "B" },
-	}
+		element = "rail.Upgrades",
+		panel = "Upgrades",
+		glyph = "▲",
+		label = "hud.rail.upgrades",
+		key = Enum.KeyCode.U,
+	},
+	{
+		element = "rail.Collection",
+		panel = "Collection",
+		glyph = "❖",
+		label = "hud.rail.collection",
+		key = Enum.KeyCode.C,
+	},
+	{
+		element = "rail.Goals",
+		panel = "Goals",
+		glyph = "◎",
+		label = "hud.rail.goals",
+		key = Enum.KeyCode.J,
+	},
+	{ element = "rail.Shop", panel = "Shop", glyph = "✚", label = "hud.rail.shop", key = Enum.KeyCode.B },
+}
+
+-- Panneau ouvert → bouton du rail qui y mène (dernier panneau du rail ouvert : sélection de △)
+local RAIL_PANEL: { [string]: Types.PanelName } = {
+	Upgrades = "Upgrades",
+	Supernova = "Upgrades",
+	Collection = "Collection",
+	Goals = "Goals",
+	Shop = "Shop",
+}
 
 -- Éléments donnant accès à un panneau (garde des raccourcis clavier pendant l'accueil)
 local PANEL_ELEMENT: { [string]: Types.HudElement } = {
@@ -221,9 +265,19 @@ local railHolder: Frame? = nil
 local railLayout: UIGridLayout? = nil
 local railColumns = 1 -- 1 : colonne du GDD ; RAIL_GRID_COLUMNS : grille des écrans bas
 local badges: { [string]: Frame } = {}
-local keyCaps: { { cap: TextLabel, keyboard: string, gamepad: string? } } = {}
+-- touches du clavier (KeyCap) : affichées au clavier seulement, texte selon la disposition du joueur
+local keyCaps: { { cap: TextLabel, key: Enum.KeyCode } } = {}
+-- icônes de touches de la manette (UI/Glyph « PadGlyph »), par élément
+local padGlyphs: { [string]: Glyph.Handle } = {}
 local hand: Frame? = nil
 local handTarget: Element? = nil
+-- manette : la main d'accueil devient l'icône de la touche à presser (△, ✕ ou R2)
+local handGlyph: Glyph.Handle? = nil
+local handKey: Enum.KeyCode? = nil
+local navButtons: { crew: TextButton?, settings: TextButton?, ping: TextButton? } = {}
+local lastRailPanel: Types.PanelName? = nil
+local railPadMode = false -- rail descendu sous le △ (manette)
+local railGlyphHolder: Frame? = nil
 
 local glowCounter: Counter.Counter? = nil
 local dustCounter: Counter.Counter? = nil
@@ -258,6 +312,7 @@ local eventParts: { label: TextLabel?, stroke: UIStroke?, bar: Frame?, fill: Fra
 	{}
 local lastPill: EventPill.PillState? = nil
 local lastBarRatio = -1
+local beaconWidth = BEACON_BAR.X -- largeur courante de la barre de la Balise (layoutActions)
 
 local statusParts: {
 	rookie: Frame?,
@@ -299,6 +354,28 @@ end
 
 local function reduced(): boolean
 	return Prefs.reducedMotion()
+end
+
+-- Entrée préférée (Util/Platform, docs/07-console-ps5.md §2) : manette / clavier-souris
+local function usingGamepad(): boolean
+	return Platform.usingGamepad()
+end
+
+-- Icône de touche de manette « PadGlyph » posée dans `parent` (masquée hors manette)
+local function padGlyph(
+	element: string,
+	parent: Instance,
+	key: Enum.KeyCode,
+	position: UDim2,
+	anchor: Vector2
+)
+	padGlyphs[element] = Glyph.new(parent, { gamepad = key }, {
+		name = "PadGlyph",
+		size = GLYPH,
+		position = position,
+		anchor = anchor,
+		zIndex = 8,
+	})
 end
 
 local function localPlayer(): Player?
@@ -432,14 +509,14 @@ local function iconButton(
 	position: UDim2,
 	parent: Frame,
 	onClick: () -> (),
-	key: string?
+	key: Enum.KeyCode?
 ): TextButton
 	local holder = Widgets.holder(name, UDim2.fromOffset(ICON, ICON), position, nil, parent)
 	local button = Widgets.button("Button", holder, Theme.Colors.Panel, false)
 	Widgets.glyph("Icon", glyph, button, Theme.Colors.Text, 32).AutoLocalize = false
 	button.Activated:Connect(onClick)
 	if key then
-		table.insert(keyCaps, { cap = Widgets.keyCap(button, key), keyboard = key })
+		table.insert(keyCaps, { cap = Widgets.keyCap(button, Platform.glyph(key).text), key = key })
 	end
 	register(name, holder, button)
 	return button
@@ -449,7 +526,7 @@ local function buildSecondary(parent: Frame)
 	local x = MARGIN + GLOW_SIZE.X + 12
 	local crew = iconButton("crew", "☺", UDim2.fromOffset(x, MARGIN + 4), parent, function()
 		InputController.togglePanel("Crew")
-	end, "G")
+	end, Enum.KeyCode.G)
 	local settings = iconButton(
 		"settings",
 		"⚙",
@@ -461,6 +538,8 @@ local function buildSecondary(parent: Frame)
 	)
 	crew.NextSelectionRight = settings
 	settings.NextSelectionLeft = crew
+	navButtons.crew = crew
+	navButtons.settings = settings
 end
 
 local function buildEventPill(parent: Frame)
@@ -604,6 +683,16 @@ local function setTrackerCollapsed(collapsed: boolean)
 			glyph.Text = if collapsed then "◂" else "▸"
 		end
 	end
+	-- icône croix ← (manette) : toujours à gauche de la pastille, repliée ou non
+	local pad = padGlyphs.questTracker
+	if pad then
+		local position = UDim2.new(1, -width - GLYPH_GAP, 0.5, 0)
+		if reduced() then
+			pad.frame.Position = position
+		else
+			Juice.tween(pad.frame, 0.2, { Position = position })
+		end
+	end
 end
 
 local function buildTracker(parent: Frame)
@@ -671,6 +760,14 @@ local function buildTracker(parent: Frame)
 	trackerParts.title = title
 	trackerParts.fill = fill
 	trackerParts.toggle = toggle
+	-- croix ← replie / déplie (docs/07 §6.1) : icône à gauche de la pastille (qui coupe ses enfants)
+	padGlyph(
+		"questTracker",
+		holder,
+		Enum.KeyCode.DPadLeft,
+		UDim2.new(1, -TRACKER_SIZE.X - GLYPH_GAP, 0.5, 0),
+		Vector2.new(1, 0.5)
+	)
 	register("questTracker", holder, pill)
 end
 
@@ -696,6 +793,19 @@ local function buildRail(parent: Frame)
 		Parent = rail,
 	}) :: UIGridLayout
 	railHolder = rail
+	-- △ (manette) au-dessus du rail : la touche des menus (docs/07 §6.2) ; le rail descend sous elle.
+	-- Conteneur frère du rail (la grille placerait l'icône comme une case), placé par layoutRail
+	local glyphHolder = Create("Frame", {
+		Name = "RailGlyph",
+		BackgroundTransparency = 1,
+		AnchorPoint = Vector2.new(0.5, 1),
+		Position = UDim2.fromOffset(MARGIN + RAIL_BUTTON / 2, RAIL_Y - GLYPH_GAP),
+		Size = UDim2.fromOffset(GLYPH, GLYPH),
+		Visible = false,
+		Parent = parent,
+	})
+	railGlyphHolder = glyphHolder
+	padGlyph("rail", glyphHolder, Enum.KeyCode.ButtonY, UDim2.new(), Vector2.zero)
 	register("rail", rail)
 	for i, def in RAIL do
 		local holder =
@@ -723,10 +833,10 @@ local function buildRail(parent: Frame)
 		bindText(label, def.label)
 		badges[def.panel] = Widgets.badge(button)
 		-- touche de raccourci dans le coin haut gauche : elle ne masque plus le début du libellé
-		local cap = Widgets.keyCap(button, def.key)
+		local cap = Widgets.keyCap(button, Platform.glyph(def.key).text)
 		cap.AnchorPoint = Vector2.zero
 		cap.Position = UDim2.fromOffset(-4, -4)
-		table.insert(keyCaps, { cap = cap, keyboard = def.key })
+		table.insert(keyCaps, { cap = cap, key = def.key })
 		table.insert(shines, Widgets.shine(button))
 		button.Activated:Connect(function()
 			InputController.togglePanel(def.panel)
@@ -851,7 +961,12 @@ local function buildDash(parent: Frame)
 		Parent = button,
 	}, { Widgets.round() })
 	table.insert(shines, Widgets.shine(button))
-	table.insert(keyCaps, { cap = Widgets.keyCap(button, "E"), keyboard = "E", gamepad = "X" })
+	table.insert(
+		keyCaps,
+		{ cap = Widgets.keyCap(button, Platform.glyph(Enum.KeyCode.E).text), key = Enum.KeyCode.E }
+	)
+	-- R2 (manette, docs/07 §6.1) dans le coin haut gauche, hors du disque
+	padGlyph("dash", button, Enum.KeyCode.ButtonR2, UDim2.fromOffset(-4, -4), Vector2.zero)
 	-- Dash dès l'appui (tactile, souris) : Activated n'arrive qu'au relâchement du doigt ;
 	-- Activated reste la voie de la manette (bouton sélectionné + A) et ignore l'appui déjà traité
 	button.InputBegan:Connect(function(input: InputObject)
@@ -879,7 +994,11 @@ local function buildDash(parent: Frame)
 	)
 	local pingButton = Widgets.button("Button", ping, Theme.Colors.PanelLight, true)
 	Widgets.glyph("Icon", "⚑", pingButton, Color3.fromRGB(255, 205, 60), 40).AutoLocalize = false
-	table.insert(keyCaps, { cap = Widgets.keyCap(pingButton, "Q"), keyboard = "Q", gamepad = "↑" })
+	table.insert(
+		keyCaps,
+		{ cap = Widgets.keyCap(pingButton, Platform.glyph(Enum.KeyCode.Q).text), key = Enum.KeyCode.Q }
+	)
+	padGlyph("ping", pingButton, Enum.KeyCode.DPadUp, UDim2.fromOffset(-4, -4), Vector2.zero)
 	pingButton.Activated:Connect(function()
 		if InputController.isPingWheelOpen() then
 			InputController.closePingWheel()
@@ -889,6 +1008,7 @@ local function buildDash(parent: Frame)
 	end)
 	pingButton.NextSelectionRight = button
 	button.NextSelectionLeft = pingButton
+	navButtons.ping = pingButton
 	pingHolder = ping
 	register("ping", ping, pingButton)
 end
@@ -939,6 +1059,8 @@ local function buildCheer(parent: Frame)
 	button.Activated:Connect(function()
 		InputController.requestCheer()
 	end)
+	-- croix → (manette) à droite du bouton
+	padGlyph("cheer", holder, Enum.KeyCode.DPadRight, UDim2.new(1, GLYPH_GAP, 0.5, 0), Vector2.new(0, 0.5))
 	cheerParts.holder = holder
 	cheerParts.button = button
 	cheerParts.ring = ring
@@ -947,6 +1069,8 @@ end
 
 local function buildHand(parent: Frame)
 	hand = Widgets.hand(parent)
+	-- manette : la main (geste tactile) est remplacée par l'icône de la touche à presser
+	handGlyph = Glyph.new(parent, {}, { name = "HandGlyph", size = GLYPH, zIndex = 10 })
 end
 
 local function build()
@@ -1180,18 +1304,15 @@ local function updateRate()
 	end
 end
 
+-- Touches du clavier : au clavier-souris seulement (la manette a ses icônes PadGlyph, le tactile
+-- rien) ; texte selon la disposition du joueur (AZERTY : la touche Q s'écrit « A »)
 local function updateKeyCaps()
-	local kind = InputController.inputType()
+	local keyboard = Platform.inputKind() == Platform.KEYBOARD
 	for _, entry in keyCaps do
-		if kind == 2 then
-			entry.cap.Text = entry.keyboard
-			entry.cap.Visible = true
-		elseif kind == 3 and entry.gamepad then
-			entry.cap.Text = entry.gamepad :: string
-			entry.cap.Visible = true
-		else
-			entry.cap.Visible = false
+		if keyboard then
+			entry.cap.Text = Platform.glyph(entry.key).text
 		end
+		entry.cap.Visible = keyboard
 	end
 end
 
@@ -1258,16 +1379,35 @@ local function hintTop(height: number?): number
 	return math.max(HINT_MIN_Y, math.min(HINT_Y, lineTop - CLEARANCE - HINT_SIZE.Y))
 end
 
--- Navigation manette du rail : voisins dans la grille des boutons AFFICHÉS (la grille les tasse)
-local function linkRail()
-	local shown: { TextButton } = {}
+-- Bouton d'un élément affiché (révélé), nil sinon
+local function shownButton(name: Types.HudElement, button: GuiObject?): GuiObject?
+	local e = elements[name]
+	return if e and e.revealed and button then button else nil
+end
+
+local function clearNav(button: GuiObject?)
+	if button then
+		button.NextSelectionUp = nil
+		button.NextSelectionDown = nil
+		button.NextSelectionLeft = nil
+		button.NextSelectionRight = nil
+	end
+end
+
+-- Navigation manette. Rail : voisins dans la grille des boutons AFFICHÉS (la grille les tasse) ;
+-- Équipage ↔ Réglages, Ping ↔ Dash. À la manette (docs/07-console-ps5.md §6.2, §7), graphe complet
+-- entre les boutons affichés, pour que tout le HUD et la minicarte soient atteignables depuis la
+-- sélection de △ : rangée du haut (Équipage, Réglages, minicarte) ; ↑ depuis la 1re rangée du rail
+-- → Équipage ; → depuis le rail → ACCLAMER, sinon suivi de quête, sinon Ping / Dash ; colonne de
+-- droite minicarte → suivi de quête → Dash ; le rail s'arrête en bas (sauf ACCLAMER affiché : ↓ y
+-- mène). Un lien ne vise jamais un bouton caché (recalculé à chaque révélation, à l'apparition et à
+-- la disparition d'ACCLAMER, au changement d'entrée) ; hors manette, seuls les liens d'origine.
+local function linkNav()
+	local shown: { GuiObject } = {}
 	for _, def in RAIL do
 		local button = railButtons[def.panel]
 		if button then
-			button.NextSelectionUp = nil
-			button.NextSelectionDown = nil
-			button.NextSelectionLeft = nil
-			button.NextSelectionRight = nil
+			clearNav(button)
 			local e = elements[def.element]
 			if e and e.revealed then
 				table.insert(shown, button)
@@ -1286,6 +1426,76 @@ local function linkRail()
 			button.NextSelectionRight = shown[i + 1]
 		end
 	end
+	local minimap = elements.minimap
+	local disc: GuiObject? = if minimap and minimap.visual:IsA("GuiButton") then minimap.visual else nil
+	local crew, settings, ping, dash = navButtons.crew, navButtons.settings, navButtons.ping, dashParts.button
+	local toggle, cheerButton = trackerParts.toggle, cheerParts.button
+	for _, button in { crew, settings, ping, dash, toggle, cheerButton, disc } :: { GuiObject? } do
+		clearNav(button)
+	end
+	-- liens d'origine (valables partout)
+	if crew and settings then
+		crew.NextSelectionRight = settings
+		settings.NextSelectionLeft = crew
+	end
+	if ping and dash then
+		ping.NextSelectionRight = dash
+		dash.NextSelectionLeft = ping
+	end
+	if not usingGamepad() then
+		return
+	end
+	local C = if cheer ~= nil then cheerButton else nil
+	local T = shownButton("questTracker", toggle)
+	local M = shownButton("minimap", disc)
+	local P = shownButton("ping", ping)
+	local D = shownButton("dash", dash)
+	local first, last = shown[1], shown[#shown]
+	local top: { GuiObject } = {}
+	for _, b in { shownButton("crew", crew), shownButton("settings", settings), M } :: { GuiObject? } do
+		if b then
+			table.insert(top, b)
+		end
+	end
+	local topLast = top[#top]
+	-- rangée du haut : gauche ↔ droite, ↓ vers le rail (la minicarte : vers le suivi de quête)
+	for i, b in top do
+		b.NextSelectionLeft = top[i - 1]
+		b.NextSelectionRight = top[i + 1]
+		b.NextSelectionDown = if b == M then T or D or P else first or T or P or D or C
+	end
+	-- rail : ↑ depuis la 1re rangée → Équipage ; → depuis la dernière colonne
+	local railRight = C or T or P or D or M
+	for i, b in shown do
+		local column = (i - 1) % columns
+		if i <= columns then
+			b.NextSelectionUp = top[1]
+		end
+		if column == columns - 1 or i == #shown then
+			b.NextSelectionRight = railRight
+		end
+	end
+	if T then
+		T.NextSelectionUp = M or topLast
+		T.NextSelectionDown = D or P or C
+		T.NextSelectionLeft = first or C or P
+	end
+	if D then
+		D.NextSelectionLeft = P or C or last
+		D.NextSelectionUp = T or M or topLast
+	end
+	if P then
+		P.NextSelectionRight = D
+		P.NextSelectionLeft = C or last
+		P.NextSelectionUp = T or M or topLast
+	end
+	if C then
+		C.NextSelectionRight = P or D
+		C.NextSelectionLeft = last
+		if last then
+			last.NextSelectionDown = C
+		end
+	end
 end
 
 -- Rail : colonne du GDD (y = 150, 4 × 80 + 3 × 8 → y = 494), ou grille 2 × 2 dès y = 144 quand la
@@ -1298,25 +1508,44 @@ local function layoutRail()
 	end
 	local size = contentSize()
 	local columnBottom = RAIL_Y + #RAIL * RAIL_BUTTON + (#RAIL - 1) * RAIL_GAP
-	local columns = if size and columnBottom > JOYSTICK_TOP * size.Y then RAIL_GRID_COLUMNS else 1
+	-- console : pas de joystick tactile, colonne du GDD (navigation ↑ / ↓, docs/07 §7)
+	local columns = if size
+			and columnBottom > JOYSTICK_TOP * size.Y
+			and not Platform.isTenFoot()
+		then RAIL_GRID_COLUMNS
+		else 1
 	local rows = math.ceil(#RAIL / columns)
 	local dims = UDim2.fromOffset(
 		columns * RAIL_BUTTON + (columns - 1) * RAIL_GAP,
 		rows * RAIL_BUTTON + (rows - 1) * RAIL_GAP
 	)
-	local position = UDim2.fromOffset(MARGIN, if columns > 1 then RAIL_GRID_Y else RAIL_Y)
+	-- manette : le rail descend sous son icône △ (elle-même sous la pastille Stardust)
+	local pad = usingGamepad()
+	local top = if columns > 1 then RAIL_GRID_Y else RAIL_Y
+	if pad then
+		top = math.max(top, RAIL_PAD_Y)
+	end
+	local position = UDim2.fromOffset(MARGIN, top)
 	if rail.Size ~= dims then
 		rail.Size = dims
 	end
 	if rail.Position ~= position then
 		rail.Position = position
 	end
+	local glyphHolder = railGlyphHolder
+	if glyphHolder then
+		local at = UDim2.fromOffset(MARGIN + dims.X.Offset / 2, top - GLYPH_GAP)
+		if glyphHolder.Position ~= at then
+			glyphHolder.Position = at
+		end
+	end
 	if layout.FillDirectionMaxCells ~= columns then
 		layout.FillDirectionMaxCells = columns
 	end
-	if columns ~= railColumns then
+	if columns ~= railColumns or pad ~= railPadMode then
 		railColumns = columns
-		linkRail()
+		railPadMode = pad
+		linkNav()
 	end
 end
 
@@ -1407,9 +1636,9 @@ local function layoutColumn(dashPos: UDim2, dashSize: number, pingSize: number)
 		if hitsAny(statusHome, fixed) or hitsAny(trackerHome, fixed) then
 			local pill = box((W - EVENT_SIZE.X) / 2, MARGIN, EVENT_SIZE.X, EVENT_SIZE.Y)
 			local withBar = box(
-				(W - BEACON_BAR.X) / 2,
+				(W - beaconWidth) / 2,
 				MARGIN,
-				BEACON_BAR.X,
+				beaconWidth,
 				EVENT_SIZE.Y + BEACON_BAR_POS.Y.Offset + BEACON_BAR.Y
 			)
 			local right = W - SIDE_RIGHT
@@ -1482,6 +1711,16 @@ local function layoutActions()
 	end
 	-- Ping à gauche du Dash, bas alignés
 	ping.Position = dash.Position + UDim2.fromOffset(-dashSize - PING_GAP, 0)
+	-- barre de la Balise : jamais sous Équipage / Réglages (zone intérieure étroite : zone sûre TV)
+	local size = contentSize()
+	local bar = eventParts.bar
+	if size and bar then
+		local width = math.clamp(size.X - 2 * (TOP_ROW_RIGHT + CLEARANCE), EVENT_SIZE.X, BEACON_BAR.X)
+		beaconWidth = width
+		if bar.Size.X.Offset ~= width then
+			bar.Size = UDim2.fromOffset(width, BEACON_BAR.Y)
+		end
+	end
 	layoutColumn(dash.Position, dashSize, pingSize)
 end
 
@@ -1494,6 +1733,16 @@ local function hideCheer()
 	local holder = cheerParts.holder
 	if holder == nil or current == nil then
 		return
+	end
+	linkNav()
+	-- manette : la sélection ne reste jamais sur un bouton qui disparaît
+	local button = cheerParts.button
+	if button and GuiService.SelectedObject == button then
+		if not HUD.selectRail() then
+			pcall(function()
+				GuiService.SelectedObject = nil
+			end)
+		end
 	end
 	if reduced() then
 		holder.Visible = false
@@ -1540,6 +1789,7 @@ local function onCheerPrompt(payload: any)
 	local heroName = nameOf(heroId)
 	name.Text = if heroName then heroName .. " · " .. title else title
 	holder.Visible = true
+	linkNav()
 	local target = UDim2.new(0.5, 0, 1, -LINE_Y - LINE_SIZE.Y - 16)
 	if reduced() then
 		holder.Position = target
@@ -1626,14 +1876,50 @@ local function stepAttention()
 	end
 	local h = hand
 	local target = handTarget
+	local active = target ~= nil and target.attention and target.revealed and target.holder.Visible
+	local pad = usingGamepad()
+	local bob = if reducedMotion then 0 else math.sin(2 * math.pi * uiTime / 1.2) * 6
 	if h then
-		if target and target.attention and target.revealed and target.holder.Visible then
+		if active and not pad and target then
 			h.Visible = true
-			local bob = if reducedMotion then 0 else math.sin(2 * math.pi * uiTime / 1.2) * 6
 			local corner = toLocal(target.visual.AbsolutePosition + target.visual.AbsoluteSize * 0.6)
 			h.Position = UDim2.fromOffset(corner.X, corner.Y + bob)
 		else
 			h.Visible = false
+		end
+	end
+	-- manette : icône de la touche à presser à la place de la main (docs/07 §6.2) : R2 pour le Dash,
+	-- △ pour un bouton du rail, puis ✕ une fois ce bouton sélectionné ; à droite de la cible (moitié
+	-- gauche de l'écran) ou au-dessus (moitié droite)
+	local g = handGlyph
+	if g then
+		local key: Enum.KeyCode? = nil
+		if active and pad and target then
+			if target == elements.dash then
+				key = Enum.KeyCode.ButtonR2
+			elseif GuiService.SelectedObject == target.visual then
+				key = Enum.KeyCode.ButtonA
+			else
+				key = Enum.KeyCode.ButtonY
+			end
+			local visual = target.visual
+			local topLeft = toLocal(visual.AbsolutePosition)
+			local size = visual.AbsoluteSize / math.max(Root.scale(), 0.01)
+			local area = contentSize()
+			local half = if area then area.X / 2 else math.huge
+			local nudge = math.abs(bob)
+			if topLeft.X + size.X / 2 < half then
+				g.frame.AnchorPoint = Vector2.new(0, 0.5)
+				g.frame.Position =
+					UDim2.fromOffset(topLeft.X + size.X + GLYPH_GAP + nudge, topLeft.Y + size.Y / 2)
+			else
+				g.frame.AnchorPoint = Vector2.new(0.5, 1)
+				g.frame.Position = UDim2.fromOffset(topLeft.X + size.X / 2, topLeft.Y - GLYPH_GAP - nudge)
+			end
+		end
+		if handKey ~= key then
+			handKey = key
+			g:set({ gamepad = key })
 		end
 	end
 end
@@ -1826,11 +2112,13 @@ function HUD.reveal(element: Types.HudElement, animate: boolean?)
 	end
 	if element == "status" then
 		updateShield()
+	elseif element == "rail" and railGlyphHolder then
+		(railGlyphHolder :: Frame).Visible = true
 	elseif element == "dash" or element == "ping" then
 		layoutActions()
-	elseif string.sub(element, 1, 5) == "rail." then
-		linkRail()
 	end
+	-- graphe de navigation : le nouveau bouton devient atteignable
+	linkNav()
 end
 
 function HUD.isRevealed(element: Types.HudElement): boolean
@@ -1918,16 +2206,70 @@ function HUD.registerElement(element: Types.HudElement, holder: GuiObject, visua
 	register(element, holder, visual)
 end
 
--- Sélection manette du premier bouton visible du rail (Y)
-function HUD.selectRail(): boolean
+-- Objet réellement affiché : lui et ses ancêtres visibles, dans un écran activé
+local function onScreen(obj: Instance): boolean
+	local cur: Instance? = obj
+	while cur ~= nil and cur:IsA("GuiObject") do
+		if not (cur :: GuiObject).Visible then
+			return false
+		end
+		cur = cur.Parent
+	end
+	return cur ~= nil and cur:IsA("LayerCollector") and (cur :: LayerCollector).Enabled
+end
+
+local function selectObject(target: GuiObject): boolean
+	local ok = pcall(function()
+		GuiService.SelectedObject = target
+	end)
+	return ok
+end
+
+-- Bouton affiché du rail pour ce panneau, nil sinon
+local function railButton(panel: Types.PanelName): GuiObject?
 	for _, def in RAIL do
-		local button = railButtons[def.panel]
-		local e = elements[def.element]
-		if button and e and e.revealed then
-			pcall(function()
-				GuiService.SelectedObject = button
-			end)
-			return true
+		if def.panel == panel then
+			local e = elements[def.element]
+			local button = railButtons[panel]
+			if e and e.revealed and button and onScreen(button) then
+				return button
+			end
+		end
+	end
+	return nil
+end
+
+-- △ (manette, docs/07-console-ps5.md §6.2) : sélection de départ du menu du HUD, par priorité : la
+-- cible de l'accueil (main / pulsation), la cible hors fenêtre de PanelController.focusTarget()
+-- (carte d'invitation d'équipage), le bouton du rail à pastille « ! », le dernier panneau du rail
+-- ouvert, le premier bouton affiché du rail. false : rien à sélectionner.
+function HUD.selectRail(): boolean
+	for _, name in HAND_ELEMENTS do
+		local e = elements[name]
+		if e and e.attention and e.revealed and e.visual:IsA("GuiButton") and onScreen(e.visual) then
+			return selectObject(e.visual)
+		end
+	end
+	local ok, focus = pcall(PanelController.focusTarget)
+	local target: any = if ok then focus else nil
+	if typeof(target) == "Instance" and target:IsA("GuiObject") and onScreen(target) then
+		return selectObject(target :: GuiObject)
+	end
+	for _, def in RAIL do
+		local badge = badges[def.panel]
+		local button = railButton(def.panel)
+		if button and badge and badge.Visible then
+			return selectObject(button)
+		end
+	end
+	local last = if lastRailPanel then railButton(lastRailPanel) else nil
+	if last then
+		return selectObject(last)
+	end
+	for _, def in RAIL do
+		local button = railButton(def.panel)
+		if button then
+			return selectObject(button)
 		end
 	end
 	return false
@@ -1971,6 +2313,9 @@ HUD._state = function()
 		dustCounter = dustCounter,
 		hand = hand,
 		handTarget = handTarget,
+		handGlyph = handGlyph,
+		padGlyphs = padGlyphs,
+		lastRailPanel = lastRailPanel,
 		safe = safe,
 		railColumns = railColumns,
 	}
@@ -1988,7 +2333,16 @@ local function markReady()
 	end
 end
 
+-- Entrée préférée changée (manette ↔ clavier ↔ tactile) : touches, place du rail, navigation
+local function onInputChanged()
+	updateKeyCaps()
+	layoutActions()
+	linkNav()
+end
+
 function HUD.Init()
+	-- entrée préférée suivie avant toute construction (idempotent ; déjà fait par Main.client)
+	Platform.Init()
 	build()
 	cheerRemote = Net.event("Cheer")
 	-- crochet : ScreenFX (plus précoce) fait voler les récompenses vers nos compteurs
@@ -2009,6 +2363,7 @@ function HUD.Start()
 		return
 	end
 	started = true
+	Platform.Init()
 	build()
 	-- monnaies : gains discrets détectés à l'image suivante (patchs appliqués clé par clé)
 	for _, key in { "glow", "glowCarry", "lastSettle", "idleRate" } do
@@ -2077,9 +2432,24 @@ function HUD.Start()
 	PanelController.BadgeChanged:Connect(setBadge)
 	InputController.CheerRequested:Connect(onCheerRequested)
 	InputController.RailRequested:Connect(HUD.selectRail)
-	InputController.InputTypeChanged:Connect(function()
-		updateKeyCaps()
-		layoutActions()
+	-- croix ← (manette) : replier / déplier le suivi de quête (docs/07 §6.1)
+	InputController.QuestToggled:Connect(function()
+		if HUD.isRevealed("questTracker") then
+			setTrackerCollapsed(not trackerParts.collapsed)
+		end
+	end)
+	-- dernier panneau du rail ouvert : sélection de départ de △ (docs/07 §6.2)
+	PanelController.Opened:Connect(function(name: Types.PanelName)
+		local panel = RAIL_PANEL[name]
+		if panel then
+			lastRailPanel = panel
+		end
+	end)
+	InputController.InputTypeChanged:Connect(onInputChanged)
+	Platform.Changed:Connect(function(reason: string)
+		if reason == "input" then
+			onInputChanged()
+		end
 	end)
 	InputController.DashRefused:Connect(function(reason: string)
 		local button = dashParts.button

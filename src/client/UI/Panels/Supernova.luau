@@ -9,7 +9,9 @@
 --   * bouton à MAINTENIR Balance.Supernova.HoldSeconds (1 s) avec anneau → remote Supernova() ;
 --     relâcher avant la fin annule ; un seul envoi (le serveur limite aussi à 1 / 2 s). La fin du
 --     maintien est lue sur UserInputService.InputEnded (le doigt relevé HORS du bouton ne déclenche
---     ni MouseButton1Up ni, sur mobile, MouseLeave) ; manette : A sur le bouton sélectionné
+--     ni MouseButton1Up ni, sur mobile, MouseLeave) ; manette : ✕ (ButtonA) maintenue sur le bouton
+--     sélectionné, repère « PadGlyph » ✕ sur le bouton, vibration « holdStart » au début du maintien
+--     et « refuse » au refus (docs/07-console-ps5.md §6.5)
 --   * hors du port sûr de son Nid : message « Rentre au Nid » (refus si on maintient)
 --   * back() → Upgrades (Panel.parent)
 --   * hasAction : Glow prédit ≥ coût
@@ -32,10 +34,13 @@ local Types = require(Shared.Types)
 local Client = script.Parent.Parent.Parent
 local State = require(Client.Controllers.StateController)
 local AudioController = require(Client.Controllers.AudioController)
+local Haptics = require(Client.Util.Haptics)
+local Platform = require(Client.Util.Platform)
 local Prefs = require(Client.Util.Prefs)
 local Theme = require(Client.UI.Theme)
 local Create = require(Client.UI.Create)
 local Juice = require(Client.UI.Juice)
+local Glyph = require(Client.UI.Glyph)
 local PanelController = require(Client.Controllers.PanelController)
 local Model = require(script.Parent.Model)
 local Widgets = require(script.Parent.Widgets)
@@ -51,6 +56,7 @@ local RESEND_GUARD = 2 -- s : pas de second envoi (débit serveur 1 / 2 s)
 local CLOSE_AFTER = 0.25
 local REFRESH_INTERVAL = 0.25
 local ITEM_HEIGHT = 30
+local PAD_GLYPH = 44 -- repère ✕ du bouton Maintenir (px de référence, ≥ Config/Console.GlyphSize)
 
 local view = Model.view(State.get)
 local built = false
@@ -77,6 +83,7 @@ local refs: {
 	status: TextLabel?,
 	hold: TextButton?,
 	holdLabel: TextLabel?,
+	holdGlyph: Glyph.Handle?,
 	ring: Widgets.Ring?,
 } =
 	{ gains = {} }
@@ -245,6 +252,7 @@ local function beginHold(source: InputObject?)
 	holding = true
 	holdTime = 0
 	holdInput = source
+	Haptics.play("holdStart")
 end
 
 local function endHold()
@@ -283,6 +291,21 @@ local function confirm()
 			PanelController.close()
 		end
 	end)
+end
+
+-- Libellé du bouton Maintenir : entre l'anneau (à gauche) et, à la manette, le repère ✕ (à droite)
+local function layoutHold()
+	local label = refs.holdLabel
+	if not label then
+		return
+	end
+	if Platform.usingGamepad() then
+		label.Size = UDim2.new(1, -(100 + PAD_GLYPH + 20), 1, -10)
+		label.Position = UDim2.new(0.5, 44 - (PAD_GLYPH + 20) / 2, 0.5, 0)
+	else
+		label.Size = UDim2.new(1, -110, 1, -10)
+		label.Position = UDim2.new(0.5, 44, 0.5, 0)
+	end
 end
 
 function Panel.build(parent: Frame)
@@ -415,11 +438,22 @@ function Panel.build(parent: Frame)
 		parent = parent,
 		sound = "",
 	})
-	holdLabel.Size = UDim2.new(1, -110, 1, -10)
-	holdLabel.Position = UDim2.new(0.5, 44, 0.5, 0)
 	holdLabel.FontFace = Widgets.STAMP_FONT
 	refs.hold = hold
 	refs.holdLabel = holdLabel
+	-- manette : repère ✕ (icône PlayStation sur PS5) à droite du bouton
+	refs.holdGlyph = Glyph.new(hold, { gamepad = Enum.KeyCode.ButtonA }, {
+		name = "PadGlyph",
+		size = PAD_GLYPH,
+		position = UDim2.new(1, -12, 0.5, 0),
+		anchor = Vector2.new(1, 0.5),
+	})
+	layoutHold()
+	Platform.Changed:Connect(function(reason: string)
+		if reason == "input" then
+			layoutHold()
+		end
+	end)
 	local ring = Widgets.ring("HoldRing", 76, 20, Theme.Colors.Gold, nil, hold)
 	ring.frame.AnchorPoint = Vector2.new(0, 0.5)
 	ring.frame.Position = UDim2.new(0, 12, 0.5, 0)

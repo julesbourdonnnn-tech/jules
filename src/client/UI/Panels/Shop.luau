@@ -14,6 +14,10 @@
 --   * Codes : champ + Valider → RedeemCode (RemoteFunction, appelée hors du fil d'interface) ;
 --     statut → "code.<status>"
 --   * aucun faux minuteur, prix en Robux toujours visible, aucune pastille « ! » (§8.1)
+--   * manette (docs/07-console-ps5.md §6.6) : après la fenêtre d'achat Roblox
+--     (PromptGamePassPurchaseFinished / PromptProductPurchaseFinished), la sélection revient sur le
+--     bouton Acheter pressé si le panneau est encore ouvert ; Codes : validation du clavier virtuel
+--     (FocusLost avec Entrée) → envoi du code et sélection sur « Valider »
 --   * textes via Prefs.t (ré-appliqués sur Prefs.LanguageChanged), nombres via Prefs.number ;
 --     intentions seulement (le serveur valide tout)
 -- GDD : §8, §4.17 (Glow Party), §10.3.
@@ -36,6 +40,7 @@ local Prices = require(Client.Util.Prices)
 local Theme = require(Client.UI.Theme)
 local Create = require(Client.UI.Create)
 local WorldState = require(Client.Controllers.WorldStateController)
+local PanelController = require(Client.Controllers.PanelController)
 local Model = require(script.Parent.Model)
 local Widgets = require(script.Parent.Widgets)
 
@@ -92,6 +97,7 @@ local redeemButton: TextButton? = nil
 local codeStatus: TextLabel? = nil
 local redeeming = false
 local lastPrompt = -math.huge
+local prompted: Row? = nil -- ligne dont la fenêtre d'achat Roblox est affichée
 local refreshAcc = 0
 
 local VALID_STATUS: { [string]: boolean } =
@@ -114,6 +120,7 @@ local function prompt(row: Row)
 			return
 		end
 		lastPrompt = now
+		prompted = row
 		local ok, err = pcall(function()
 			MarketplaceService:PromptGamePassPurchase(player, def.id)
 		end)
@@ -127,12 +134,30 @@ local function prompt(row: Row)
 			return
 		end
 		lastPrompt = now
+		prompted = row
 		local ok, err = pcall(function()
 			MarketplaceService:PromptProductPurchase(player, def.id)
 		end)
 		if not ok then
 			warn("[Shop] PromptProductPurchase :", err)
 		end
+	end
+end
+
+-- Fenêtre d'achat Roblox refermée (achat ou annulation) : la manette retrouve le bouton Acheter
+local function onPromptFinished(kind: "pass" | "product", id: any)
+	local row = prompted
+	if row == nil or row.kind ~= kind then
+		return
+	end
+	local defs: { [string]: any } = if kind == "pass" then Monetization.Passes else Monetization.Products
+	local def = defs[row.key]
+	if def == nil or def.id ~= id then
+		return
+	end
+	prompted = nil
+	if isOpen and PanelController.current() == "Shop" then
+		PanelController.select(row.buy)
 	end
 end
 
@@ -468,12 +493,30 @@ function Panel.build(parent: Frame)
 		parent = codes,
 	})
 	if codeBox then
+		Widgets.selectable(codeBox)
+		-- validation du clavier (virtuel sur console) : envoi, puis sélection sur « Valider »
 		codeBox.FocusLost:Connect(function(enterPressed: boolean)
 			if enterPressed then
 				redeem()
+				PanelController.select(redeemButton)
 			end
 		end)
 	end
+	MarketplaceService.PromptGamePassPurchaseFinished:Connect(
+		function(player: Player, passId: number, _purchased: boolean)
+			if player == Players.LocalPlayer then
+				onPromptFinished("pass", passId)
+			end
+		end
+	)
+	MarketplaceService.PromptProductPurchaseFinished:Connect(
+		function(userId: number, productId: number, _purchased: boolean)
+			local player = Players.LocalPlayer
+			if player and userId == player.UserId then
+				onPromptFinished("product", productId)
+			end
+		end
+	)
 
 	State.Changed:Connect(function(key: string)
 		if isOpen and (key == "passes" or key == "starterKit" or key == "idleRate") then

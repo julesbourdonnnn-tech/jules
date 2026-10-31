@@ -35,6 +35,8 @@ local METHODS = {
 	["HapticService.IsVibrationSupported"] = true,
 	["HapticService.IsMotorSupported"] = true,
 	["HapticService.SetMotor"] = true,
+	-- emotes des pings et de l'acclamation (InputController.playEmote, sous pcall)
+	["Humanoid.PlayEmote"] = true,
 }
 local IGNORED_READS = {}
 

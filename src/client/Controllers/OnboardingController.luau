@@ -26,13 +26,18 @@
 --     passe au-dessus de la fenêtre (écran relevé à 35), ancrée sur son bord haut, toute autre
 --     instruction s'efface jusqu'à la fermeture
 --   * message « Ton Nid travaille même quand tu dors » à 10 min de jeu (joueurs encore nouveaux)
+--   * manette (docs/07-console-ps5.md §6.2) : fait `gamepad` des règles (« Ouvre Améliorer » au lieu
+--     de « Touche Améliorer ») et icône de la touche (UI/Glyph « PadGlyph ») à la place de l'icône
+--     de l'instruction : △ tant que le bouton Améliorer n'est pas sélectionné, puis ✕ ; la main
+--     animée devient l'icône de la touche (HUD)
 -- Pièces 3D : dossier workspace.ClientOnboarding (ancrées, sans collision, réutilisées). Une seule
 -- connexion Heartbeat ; temps d'animation = somme des dt (mesure graphique), temps de jeu = Clock.
 -- GDD : §3, §7.1, §7.4, §10.1 (affichage progressif).
--- Dépendances : StateController, Util/Prefs, UI/Juice, WorldStateController, CongaRenderer,
--- PanelController, HUD, Hud/EventPill, Logic/WorldLayout, Config/Quests, Config/Events,
--- Shared/Util/Clock.
+-- Dépendances : StateController, Util/Prefs, Util/Platform, UI/Juice, UI/Glyph,
+-- WorldStateController, CongaRenderer, PanelController, HUD, Hud/EventPill, Logic/WorldLayout,
+-- Config/Quests, Config/Events, Shared/Util/Clock.
 
+local GuiService = game:GetService("GuiService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -52,10 +57,12 @@ local Client = script.Parent.Parent
 local State = require(Client.Controllers.StateController)
 local AudioController = require(Client.Controllers.AudioController)
 local Prefs = require(Client.Util.Prefs)
+local Platform = require(Client.Util.Platform)
 local Root = require(Client.UI.Root)
 local Theme = require(Client.UI.Theme)
 local Create = require(Client.UI.Create)
 local Juice = require(Client.UI.Juice)
+local Glyph = require(Client.UI.Glyph)
 local WorldStateController = require(Client.Controllers.WorldStateController)
 local PanelController = require(Client.Controllers.PanelController)
 local InputController = require(Client.Controllers.InputController)
@@ -74,6 +81,7 @@ local DISPLAY_ORDER = 20
 -- bannières (40), ScreenFX (45) et les toasts (50)
 local DOCKED_DISPLAY_ORDER = 35
 local HINT_SIZE = Vector2.new(400, 56)
+local HINT_GLYPH = 44 -- px de référence : icône de touche à la place de l'icône (44 × 44)
 local HINT_DOCK_MIN = 8 -- px de référence : haut minimal de l'instruction ancrée (fenêtre non mesurée)
 local HINT_LAYOUT_EVERY = 0.1 -- s : replacement (écran tourné, fenêtre qui s'ouvre, ACCLAMER)
 local FOOTPRINTS = 6
@@ -109,6 +117,7 @@ local HINT_ICONS: { [string]: string } = {
 	["onboarding.catch"] = "◉",
 	["onboarding.goHome"] = "⌂",
 	["onboarding.tapUpgrade"] = "▲",
+	["onboarding.openUpgrade"] = "▲",
 	["onboarding.buyConga"] = "✚",
 	["onboarding.findNebbies"] = "◉",
 	["onboarding.catchRare"] = "◆",
@@ -193,6 +202,8 @@ local hintFrame: CanvasGroup? = nil
 local hintLabel: TextLabel? = nil
 local hintIcon: TextLabel? = nil
 local hintScale: UIScale? = nil
+local hintGlyph: Glyph.Handle? = nil -- manette : touche à presser, à la place de l'icône
+local hintGlyphKey: Enum.KeyCode? = nil
 local hintGui: ScreenGui? = nil
 local hintShown = false -- instruction réellement à l'écran (clé présente et pas effacée)
 local hintDocked = false -- ancrée sur la fenêtre du panneau ouvert
@@ -457,6 +468,7 @@ local function gather(): Plan.Facts
 		weatherActive = weatherActive,
 		weatherTarget = weatherTarget,
 		cometActive = cometActive,
+		gamepad = Platform.usingGamepad(),
 	}
 end
 
@@ -510,6 +522,43 @@ local function buildHint()
 	hintLabel = label
 	hintIcon = icon
 	hintScale = s
+	hintGlyph = Glyph.new(frame, {}, {
+		name = "PadGlyph",
+		size = HINT_GLYPH,
+		position = UDim2.new(0, 10, 0.5, 0),
+		anchor = Vector2.new(0, 0.5),
+		zIndex = 4,
+	})
+	hintGlyphKey = nil
+end
+
+-- Touche de manette posée à côté de l'instruction (nil : l'icône dessinée reste) : « Ouvre
+-- Améliorer » = △ (menu du HUD), puis ✕ une fois le bouton Améliorer sélectionné
+local function hintKeyCode(key: string?): Enum.KeyCode?
+	if key == "onboarding.openUpgrade" then
+		local target = HUD.anchor("rail.Upgrades")
+		return if target ~= nil and GuiService.SelectedObject == target
+			then Enum.KeyCode.ButtonA
+			else Enum.KeyCode.ButtonY
+	end
+	return nil
+end
+
+-- Icône de touche (manette) ou icône dessinée de l'instruction, jamais les deux
+local function refreshHintGlyph()
+	local g, icon = hintGlyph, hintIcon
+	if g == nil or icon == nil then
+		return
+	end
+	local code = hintKeyCode(currentHintKey)
+	if code ~= hintGlyphKey then
+		hintGlyphKey = code
+		g:set({ gamepad = code })
+	end
+	local showIcon = not g:shown()
+	if icon.Visible ~= showIcon then
+		icon.Visible = showIcon
+	end
 end
 
 -- Affiche (fondu + pop, ou nouvelle instruction : `pop`) ou efface (fondu) l'instruction
@@ -604,6 +653,7 @@ local function layoutHint(pop: boolean)
 		gui.DisplayOrder = order
 	end
 	hintDocked = docked
+	refreshHintGlyph()
 	setHintShown(visible, pop)
 end
 
@@ -1216,6 +1266,14 @@ function OnboardingController.Start()
 		footMode = nil
 		dirty = true
 	end)
+	-- manette : consignes sans geste tactile ; ✕ dès que le bouton désigné est sélectionné
+	Platform.Changed:Connect(function(reason: string)
+		if reason == "input" then
+			dirty = true
+			refreshHintGlyph()
+		end
+	end)
+	GuiService:GetPropertyChangedSignal("SelectedObject"):Connect(refreshHintGlyph)
 	PanelController.Opened:Connect(function(name: Types.PanelName)
 		if name == "Upgrades" then
 			upgradesOpen = true
@@ -1263,6 +1321,7 @@ OnboardingController._state = function()
 		hintFrame = hintFrame,
 		hintShown = hintShown,
 		hintDocked = hintDocked,
+		hintGlyph = hintGlyph,
 		nestWorksUntil = nestWorksUntil,
 	}
 end

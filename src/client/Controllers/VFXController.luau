@@ -8,7 +8,7 @@
 -- Responsabilités (réactions aux signaux de WorldStateController, répartition imposée du §13.2) :
 --   * capture : 10 particules couleur de rareté, « +1 Puffkin » (taille selon la rareté), « ? » doré
 --     si nouvelle entrée, son Catch plus aigu à mesure que la file locale grandit ; Rare+ : colonne
---     Néon 0,6 s et son CatchRare ; Épique+ : focale 70 → 74 → 70, vibration ;
+--     Néon 0,6 s et son CatchRare ; Épique+ : focale 70 → 74 → 70 ;
 --     Légendaire+ : colonne de 4 s (tout le serveur) ; Mythique+ : confettis, flash, secousse
 --   * coupe : 12 étincelles, « SNIP ! » 3D (Elastic Out) au point touché ; victime : traînées de
 --     vitesse 3 s ; coupeur : anneau Snip Rush de 6 studs pendant 3 s ; Gloomwisp : « miam ! »
@@ -22,6 +22,12 @@
 --     perchoir), Dash (Trail + focale), bouclier débutant (bulles qui éclatent), Zen (anneau
 --     turquoise), étoile bleue des équipiers, étincelles roses d'immunité, pings (BillboardGui 4 × 4,
 --     2,5 s, visible à 200 studs), acclamations (arc de confettis vers le Nid du héros)
+--   * vibrations du jeu (Util/Haptics, carte Config/Console.Haptics, docs/07-console-ps5.md §9.1) :
+--     captures locales catchEpic / catchLegendary, coupe snipper / snipped, parade locale ≥ 15
+--     (parade), Comète : alerte (cometWarn), impact à < 120 studs atténué 1 − d/120 (cometImpact),
+--     joueur local devenu porteur (cometGrab) ; la Supernova du héros vibre dans InputController
+--     (Celebrate) ; haptic(force, durée) (contrat) : manette d'abord si c'est l'entrée préférée,
+--     même délai minimal que Util/Haptics, réglage « Vibrations » respecté
 --   * Glow Party (§8.3, §9.4) : à chaque NOUVEL achat (EventState.serverBoost de source glowParty dont
 --     la fin recule ; jamais rejouée à l'arrivée ni sur un état renvoyé), chez tous les joueurs :
 --     bannière dans le ciel « Glow Party offerte par Mira ! » au-dessus de la Balise (≈ 5 s, pop
@@ -32,9 +38,9 @@
 -- paillettes des files) et la neige active du ciel (émetteurs de workspace.ClientSky).
 -- Une seule connexion RenderStepped (animations suivies image par image).
 -- GDD : §9.1 (fonctions), §9.4, §11.6, §13.2.
--- Dépendances : StateController, AudioController, Util/Prefs, UI/Juice, WorldStateController,
--- CongaRenderer, Render/NebbyBuilder, Logic/WorldLayout, Logic/Formulas, Config/*,
--- Shared/Util/Clock, World/{Fx,FloatText}.
+-- Dépendances : StateController, AudioController, Util/{Prefs,Platform,Haptics}, UI/Juice,
+-- WorldStateController, CongaRenderer, Render/NebbyBuilder, Logic/WorldLayout, Logic/Formulas,
+-- Config/*, Shared/Util/Clock, World/{Fx,FloatText}.
 
 local CollectionService = game:GetService("CollectionService")
 local HapticService = game:GetService("HapticService")
@@ -45,6 +51,7 @@ local RunService = game:GetService("RunService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Balance = require(Shared.Config.Balance)
+local Console = require(Shared.Config.Console)
 local Cosmetics = require(Shared.Config.Cosmetics)
 local Nebbies = require(Shared.Config.Nebbies)
 local Zones = require(Shared.Config.Zones)
@@ -58,6 +65,8 @@ local Client = script.Parent.Parent
 local State = require(Client.Controllers.StateController)
 local AudioController = require(Client.Controllers.AudioController)
 local Prefs = require(Client.Util.Prefs)
+local Platform = require(Client.Util.Platform)
+local Haptics = require(Client.Util.Haptics)
 local Juice = require(Client.UI.Juice)
 local WorldStateController = require(Client.Controllers.WorldStateController)
 local CongaRenderer = require(Client.Controllers.CongaRenderer)
@@ -138,7 +147,10 @@ local ROOT_TO_FEET = 3
 -- Supernovas est le chargement de son profil (pas une Supernova)
 local SUPERNOVA_ARM_SECONDS = 30
 local ANIM_WARN_INTERVAL = 10
-local HAPTIC_INPUTS = { Enum.UserInputType.Touch, Enum.UserInputType.Gamepad1 }
+-- haptic() : mobile d'abord (GDD §9.1), manette d'abord quand elle est l'entrée préférée
+local HAPTIC_TOUCH_FIRST = { Enum.UserInputType.Touch, Enum.UserInputType.Gamepad1 }
+local HAPTIC_GAMEPAD_FIRST = { Enum.UserInputType.Gamepad1, Enum.UserInputType.Touch }
+local EPIC_RARITY = 4 -- Épique (Config/Nebbies.Rarities) ; Légendaire+ : rareté « banner »
 local BEACON_TOP = Vector3.new(0, Zones.Beacon.StarY, 0) -- étoile au sommet de la Balise
 -- Glow Party (GDD §8.3, §9.4) : bannière dans le ciel, confettis dorés, cœurs « Merci »
 local GLOW_SKY_LIFT = 34 -- studs au-dessus de l'étoile de la Balise
@@ -240,6 +252,8 @@ local glowSky: SkyBanner? = nil
 local glowPrimed = false -- premier état d'événements reçu : une fête déjà en cours n'est pas rejouée
 local glowPartyEnd = -math.huge -- fin de la dernière Glow Party vue
 local glowPartyBuyer: number? = nil -- acheteur de la Glow Party en cours (cible des cœurs « Merci »)
+local lastHapticAt = -math.huge -- dernière vibration (Util/Haptics ou haptic()) : délai minimal commun
+local hapticToken = 0
 
 -- Outils ----------------------------------------------------------------------------------------------------
 
@@ -543,16 +557,30 @@ function VFXController.fovPunch(delta: number, outTime: number, backTime: number
 	end)
 end
 
--- Vibration mobile / manette via HapticService si supportée
+-- Vibration mobile / manette via HapticService si supportée (contrat §13.8). Manette d'abord quand
+-- c'est l'entrée préférée (console), sinon mobile d'abord (GDD §9.1) ; réglage « Vibrations » et
+-- délai minimal entre deux vibrations (Config/Console.Haptics.Cooldown, partagé avec Util/Haptics).
+-- Les événements du jeu passent par Haptics.play (carte Config/Console.Haptics).
 function VFXController.haptic(strength: number, duration: number)
-	if strength ~= strength or duration ~= duration then
+	if
+		type(strength) ~= "number"
+		or type(duration) ~= "number"
+		or strength ~= strength
+		or duration ~= duration
+	then
+		return
+	end
+	if not Haptics.enabled() then
+		return
+	end
+	local now = Clock.now()
+	if now - lastHapticAt < Console.Haptics.Cooldown and now >= lastHapticAt then
 		return
 	end
 	local power = math.clamp(strength, 0, 1)
 	local motor = Enum.VibrationMotor.Small
-	-- mobile d'abord (GDD §9.1 « vibration mobile »), puis manette
 	local inputType: Enum.UserInputType? = nil
-	for _, candidate in HAPTIC_INPUTS do
+	for _, candidate in if Platform.usingGamepad() then HAPTIC_GAMEPAD_FIRST else HAPTIC_TOUCH_FIRST do
 		local ok, supported = pcall(function()
 			return HapticService:IsVibrationSupported(candidate)
 				and HapticService:IsMotorSupported(candidate, motor)
@@ -565,13 +593,19 @@ function VFXController.haptic(strength: number, duration: number)
 	if inputType == nil then
 		return
 	end
+	lastHapticAt = now
+	hapticToken += 1
+	local token = hapticToken
 	pcall(function()
 		HapticService:SetMotor(inputType, motor, power)
 	end)
 	task.delay(math.clamp(duration, 0, 1), function()
-		pcall(function()
-			HapticService:SetMotor(inputType, motor, 0)
-		end)
+		-- une vibration plus récente garde son moteur
+		if token == hapticToken then
+			pcall(function()
+				HapticService:SetMotor(inputType, motor, 0)
+			end)
+		end
 	end)
 end
 
@@ -820,13 +854,21 @@ local function isNewEntry(code: number): boolean
 end
 
 local function onCaught(slot: number, code: number, _id: number, pos: Vector3?)
+	local rarity = rarityDef(code)
+	local mine = slot ~= 0 and slot == WorldStateController.localSlot()
+	-- vibration des captures du joueur local (GDD §9.4) : Épique, Légendaire+
+	if mine then
+		if rarity.banner then
+			Haptics.play("catchLegendary")
+		elseif rarity.id >= EPIC_RARITY then
+			Haptics.play("catchEpic")
+		end
+	end
 	local at = pos or CongaRenderer.headPosition(slot)
 	if at == nil then
 		return
 	end
 	local p = at :: Vector3
-	local rarity = rarityDef(code)
-	local mine = slot ~= 0 and slot == WorldStateController.localSlot()
 	-- Légendaire+ : colonne de 4 s visible par tout le serveur
 	if rarity.banner then
 		VFXController.pillar(p, rarity.color, LEGEND_PILLAR_SECONDS, LEGEND_PILLAR_HEIGHT)
@@ -873,9 +915,8 @@ local function onCaught(slot: number, code: number, _id: number, pos: Vector3?)
 		local n = WorldStateController.lineLength(slot)
 		AudioController.play("Catch", 0.05, 1 + math.min(CATCH_PITCH_MAX, CATCH_PITCH_STEP * n))
 	end
-	if rarity.id >= 4 then
+	if rarity.id >= EPIC_RARITY then
 		VFXController.fovPunch(EPIC_FOV, EPIC_FOV_OUT, EPIC_FOV_BACK)
-		VFXController.haptic(0.4, 0.08)
 	end
 	if rarity.id >= 6 and not reduced() then
 		Juice.flash(Color3.new(1, 1, 1), MYTHIC_FLASH_ALPHA, MYTHIC_FLASH_SECONDS)
@@ -950,6 +991,11 @@ local function onSnipped(payload: Types.SnipEventPayload)
 	local localSlot = WorldStateController.localSlot()
 	local victim = localSlot ~= 0 and payload.victimSlot == localSlot
 	local snipper = localSlot ~= 0 and payload.snipperSlot == localSlot
+	if victim then
+		Haptics.play("snipped")
+	elseif snipper then
+		Haptics.play("snipper")
+	end
 	if not (victim or snipper or near(point, EFFECT_RANGE)) then
 		return
 	end
@@ -1059,6 +1105,9 @@ local function onBanked(slot: number, op: Types.LineBankOp)
 	end
 	if mine then
 		AudioController.play("Bank")
+		if op.count >= Balance.Parade.FireworksMin then
+			Haptics.play("parade")
+		end
 	end
 	if not op.atBeacon then
 		flashArch(slot)
@@ -1188,6 +1237,8 @@ local function impact(c: Types.CometState)
 	local d = (point - focus()).Magnitude
 	if d < COMET_SHAKE_RANGE then
 		Juice.cameraShake(COMET_SHAKE * (1 - d / COMET_SHAKE_RANGE), SHAKE_SECONDS)
+		-- vibration atténuée 1 − d/120 (sous Haptics.MinScale : rien)
+		Haptics.play("cometImpact", 1 - d / COMET_SHAKE_RANGE)
 	end
 end
 
@@ -1206,6 +1257,7 @@ local function cometChanged(new: Types.EventStatePayload, old: Types.EventStateP
 		if warnedComet ~= c.id then
 			warnedComet = c.id
 			AudioController.play("CometWarn")
+			Haptics.play("cometWarn")
 		end
 	else
 		dropSky()
@@ -1228,6 +1280,17 @@ local function cometChanged(new: Types.EventStatePayload, old: Types.EventStateP
 	if c.phase == "carried" then
 		if samePrev and prev.phase == "carried" and prev.carrierId ~= c.carrierId then
 			playSound("CometSwipe", nil)
+		end
+		-- le joueur local ramasse ou vole la Comète (jamais rejoué sur le premier état reçu)
+		local me = Players.LocalPlayer
+		if
+			me ~= nil
+			and c.carrierId == me.UserId
+			and prev ~= nil
+			and prev.id == c.id
+			and (prev.phase ~= "carried" or prev.carrierId ~= c.carrierId)
+		then
+			Haptics.play("cometGrab")
 		end
 	else
 		dropCarrier()
@@ -2081,6 +2144,10 @@ function VFXController.Start()
 		return
 	end
 	started = true
+	-- délai minimal commun : haptic() attend aussi après une vibration de Util/Haptics
+	Haptics.Played:Connect(function()
+		lastHapticAt = Clock.now()
+	end)
 	WorldStateController.Caught:Connect(onCaught)
 	WorldStateController.Snipped:Connect(onSnipped)
 	WorldStateController.Banked:Connect(onBanked)

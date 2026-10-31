@@ -1,14 +1,17 @@
 --!strict
 -- Hud/Widgets — briques d'interface du paquet client-hud, construites en code (GDD §10.1) :
 -- pastilles, boutons (appui 0,92 → rebond, survol 1,05, +10 % de luminosité, son Click,
--- Selectable), libellés TextScaled bornés, pièce et étoile dessinées en Frames, pastille « ! »,
--- reflet UIGradient, balayage radial (recharge du Dash, anneau d'acclamation), main d'accueil.
--- Aucune image importée : formes en Frames et grands glyphes.
+-- Selectable, cadre de sélection manette commun Root.selectionImage), libellés TextScaled bornés,
+-- pièce et étoile dessinées en Frames, pastille « ! », reflet UIGradient, balayage radial (recharge
+-- du Dash, anneau d'acclamation), main d'accueil.
+-- Aucune image importée : formes en Frames et grands glyphes (les icônes de touches de manette
+-- viennent de Roblox, UI/Glyph).
 
 local Client = script.Parent.Parent.Parent
 local Theme = require(Client.UI.Theme)
 local Create = require(Client.UI.Create)
 local Juice = require(Client.UI.Juice)
+local Root = require(Client.UI.Root)
 local AudioController = require(Client.Controllers.AudioController)
 
 local Widgets = {}
@@ -137,7 +140,8 @@ function Widgets.pill(name: string, parent: Instance?, accent: Color3?): Frame
 	})
 end
 
--- Bouton principal : appui, survol, luminosité, son Click, Selectable (navigation manette)
+-- Bouton principal : appui, survol, luminosité, son Click, Selectable (navigation manette) avec le
+-- cadre de sélection doré visible à 3 m (docs/07-console-ps5.md §7)
 function Widgets.button(name: string, parent: Instance?, color: Color3, round: boolean?): TextButton
 	local button = Create("TextButton", {
 		Name = name,
@@ -146,6 +150,7 @@ function Widgets.button(name: string, parent: Instance?, color: Color3, round: b
 		AutoButtonColor = false,
 		Text = "",
 		Selectable = true,
+		SelectionImageObject = Root.selectionImage(),
 		Active = true,
 		ZIndex = 2,
 		Parent = parent,
@@ -377,7 +382,8 @@ function Widgets.hand(parent: Instance?): Frame
 	})
 end
 
--- Petite touche de raccourci (PC / manette), cachée sur tactile
+-- Petite touche de raccourci du CLAVIER (texte selon la disposition du joueur : Platform.glyph),
+-- cachée au tactile et à la manette (la manette a ses icônes : UI/Glyph « PadGlyph »)
 function Widgets.keyCap(parent: Instance?, text: string): TextLabel
 	local cap = Widgets.label({
 		name = "KeyCap",

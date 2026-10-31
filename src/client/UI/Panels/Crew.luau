@@ -11,11 +11,17 @@
 --     hors de la fenêtre des panneaux, glisse depuis la droite), file de 3 au plus ; échéance lue
 --     sur Clock (une connexion Heartbeat tant qu'une carte est visible) ; une nouvelle invitation
 --     du même joueur prolonge la carte ; un inviteur qui quitte le serveur retire sa carte
+--   * manette (docs/07-console-ps5.md §6.7, A22) : la carte est un SelectionGroup fermé (Stop) ;
+--     △ la sélectionne via PanelController.focusTarget() → Panel.inviteTarget() (Accepter) ;
+--     Accepter ↔ Refuser reliés (NextSelection) ; repère ✕ (ButtonA) sur Accepter et libellés
+--     « Rejoindre » / « Non merci » à la place des « ✓ » / « ✕ » dessinés (sur une DualSense, ✕ veut
+--     dire valider) ; carte retirée : sa sélection est effacée (le stick refait marcher)
 --   * panneau ouvert : rafraîchi chaque seconde (« Inviter » revient après 20 s, Quitter après 5 s)
 --   * textes via Prefs.t (ré-appliqués sur Prefs.LanguageChanged) ; intentions seulement
 --     (le serveur valide tout)
 -- GDD : §6.1, §6.2, §9.4 (Équipage), §10.3.
 
+local GuiService = game:GetService("GuiService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -30,8 +36,10 @@ local Types = require(Shared.Types)
 
 local Client = script.Parent.Parent.Parent
 local AudioController = require(Client.Controllers.AudioController)
+local Platform = require(Client.Util.Platform)
 local Prefs = require(Client.Util.Prefs)
 local Root = require(Client.UI.Root)
+local Glyph = require(Client.UI.Glyph)
 local Theme = require(Client.UI.Theme)
 local Create = require(Client.UI.Create)
 local Juice = require(Client.UI.Juice)
@@ -50,6 +58,7 @@ local INVITE_SIZE = Vector2.new(360, 156)
 local SLIDE_TIME = 0.3
 local MINUTE = 60
 local REFRESH_INTERVAL = 1 -- s : minuteurs « Envoyée ! » et recharge de Quitter
+local PAD_GLYPH = 40 -- repère ✕ du bouton Accepter (px de référence, ≥ Config/Console.GlyphSize)
 
 type PlayerRow = { frame: Frame, dot: Frame, name: TextLabel, invite: TextButton, tag: TextLabel }
 type Invite = { inviterId: number, expiresAt: number }
@@ -77,6 +86,9 @@ local pending: { Invite } = {}
 local card: Frame? = nil
 local cardText: TextLabel? = nil
 local cardFill: Frame? = nil
+local cardAccept: TextButton? = nil
+local cardAcceptLabel: TextLabel? = nil
+local cardDeclineLabel: TextLabel? = nil
 local shown: Invite? = nil
 local cardConn: RBXScriptConnection? = nil -- Heartbeat tant qu'une carte est visible
 local removingConn: RBXScriptConnection? = nil
@@ -521,6 +533,33 @@ local function hideCard()
 	local frame = card
 	if frame then
 		frame.Visible = false
+		-- sélection manette sur la carte retirée : effacée (le stick refait marcher le personnage)
+		pcall(function()
+			local selected = GuiService.SelectedObject
+			if selected and selected:IsDescendantOf(frame) then
+				GuiService.SelectedObject = nil
+			end
+		end)
+	end
+end
+
+-- Libellés des boutons de la carte : « ✓ » / « ✕ » dessinés au toucher et à la souris ; à la
+-- manette « Rejoindre » (avec le repère ✕) / « Non merci »
+local function paintCardButtons()
+	local accept, decline = cardAcceptLabel, cardDeclineLabel
+	if not accept or not decline then
+		return
+	end
+	if Platform.usingGamepad() then
+		accept.Text = Prefs.t("crew.accept")
+		accept.Size = UDim2.new(1, -(PAD_GLYPH + 24), 1, -8)
+		accept.Position = UDim2.new(0.5, (PAD_GLYPH + 8) / 2, 0.5, 0)
+		decline.Text = Prefs.t("crew.decline")
+	else
+		accept.Text = "✓"
+		accept.Size = UDim2.new(1, -12, 1, -8)
+		accept.Position = UDim2.fromScale(0.5, 0.5)
+		decline.Text = "✕"
 	end
 end
 
@@ -575,6 +614,12 @@ local function ensureCard(): Frame
 	})
 	frame.Visible = false
 	frame.ZIndex = 40
+	-- carte modale pour la manette : la sélection n'en sort pas vers le HUD (docs/07 §7)
+	frame.SelectionGroup = true
+	frame.SelectionBehaviorUp = Enum.SelectionBehavior.Stop
+	frame.SelectionBehaviorDown = Enum.SelectionBehavior.Stop
+	frame.SelectionBehaviorLeft = Enum.SelectionBehavior.Stop
+	frame.SelectionBehaviorRight = Enum.SelectionBehavior.Stop
 	cardText = Widgets.label({
 		name = "Text",
 		size = UDim2.new(1, -20, 0, 44),
@@ -599,7 +644,7 @@ local function ensureCard(): Frame
 		Net.event("CrewRespond"):FireServer(invite.inviterId, accept)
 		showNext()
 	end
-	local accept = Widgets.button({
+	local accept, acceptLabel = Widgets.button({
 		name = "Accept",
 		text = "✓",
 		size = UDim2.new(0.5, -15, 0, 64),
@@ -612,7 +657,7 @@ local function ensureCard(): Frame
 			respond(true)
 		end,
 	})
-	local decline = Widgets.button({
+	local decline, declineLabel = Widgets.button({
 		name = "Decline",
 		text = "✕",
 		size = UDim2.new(0.5, -15, 0, 64),
@@ -627,6 +672,26 @@ local function ensureCard(): Frame
 	})
 	accept.ZIndex = 41
 	decline.ZIndex = 41
+	-- manette : Accepter ↔ Refuser, repère ✕ sur Accepter
+	accept.NextSelectionRight = decline
+	decline.NextSelectionLeft = accept
+	Glyph.new(accept, { gamepad = Enum.KeyCode.ButtonA }, {
+		name = "PadGlyph",
+		size = PAD_GLYPH,
+		position = UDim2.new(0, 8, 0.5, 0),
+		anchor = Vector2.new(0, 0.5),
+		zIndex = 43,
+	})
+	cardAccept = accept
+	cardAcceptLabel = acceptLabel
+	cardDeclineLabel = declineLabel
+	paintCardButtons()
+	Platform.Changed:Connect(function(reason: string)
+		if reason == "input" then
+			paintCardButtons()
+		end
+	end)
+	Prefs.LanguageChanged:Connect(paintCardButtons)
 	card = frame
 	return frame
 end
@@ -698,6 +763,25 @@ function Panel.showInvite(payload: Types.CrewInvitePayload)
 	if shown == nil then
 		showNext()
 	end
+end
+
+-- Bouton Accepter de la carte d'invitation tant qu'elle est affichée (cible de △ avant le rail,
+-- PanelController.focusTarget) ; nil sinon
+function Panel.inviteTarget(): GuiObject?
+	local frame = card
+	if shown == nil or frame == nil or not frame.Visible or frame.Parent == nil then
+		return nil
+	end
+	return cardAccept
+end
+
+-- Carte d'invitation affichée (hors de la fenêtre des panneaux), nil sinon
+function Panel.inviteCard(): Frame?
+	local frame = card
+	if shown == nil or frame == nil or not frame.Visible or frame.Parent == nil then
+		return nil
+	end
+	return frame
 end
 
 -- Exposé pour les tests

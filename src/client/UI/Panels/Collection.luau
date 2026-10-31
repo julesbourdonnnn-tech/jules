@@ -14,6 +14,9 @@
 --     annule ce rétrécissement
 --   * icônes de Nebbies : pastilles en Frames (Widgets.nebbyIcon), légères sur mobile
 --   * Atlas débloqué après Q4 (profil onboarding) ; hasAction : une fusion est possible
+--   * manette (docs/07-console-ps5.md §7, A19-A20) : la sélection de la Réserve suit l'index du
+--     Nebby quand la grille réaffecte ses cases, la croix fait défiler la grille (VirtualGrid) ;
+--     consignes neutres « Choisis… » (clés *.pad) à la manette, mises à jour sur Platform.Changed
 --   * textes via Prefs.t (ré-appliqués sur Prefs.LanguageChanged), nombres via Prefs.number ;
 --     intentions seulement (le serveur valide tout)
 -- GDD : §4.9, §4.13, §4.14, §4.3 (probabilités affichées), §9.4 (Starforge, Atlas, Libération), §10.3.
@@ -32,6 +35,7 @@ local Types = require(Shared.Types)
 local Client = script.Parent.Parent.Parent
 local State = require(Client.Controllers.StateController)
 local AudioController = require(Client.Controllers.AudioController)
+local Platform = require(Client.Util.Platform)
 local Prefs = require(Client.Util.Prefs)
 local Theme = require(Client.UI.Theme)
 local Create = require(Client.UI.Create)
@@ -206,6 +210,11 @@ local function describe(rec: any): string
 	return table.concat(parts, " · ") .. " " .. string.rep("★", stars)
 end
 
+-- Consigne de la Réserve : tactile / souris (« Touche… ») ou manette (« Choisis… », clé .pad)
+local function hint(key: string): string
+	return Prefs.t(if Platform.usingGamepad() then key .. ".pad" else key)
+end
+
 -- Nombre de pourcentage lisible (« 0.5 », « 23 » ; « 0,5 » en français)
 local function pctNumber(x: number): string
 	local rounded = math.floor(x * 10 + 0.5) / 10
@@ -338,7 +347,7 @@ local function renderAction()
 	if selectMode then
 		label.Text = if selectedCount > 0
 			then Prefs.t("collection.selected", { count = selectedCount })
-			else Prefs.t("collection.releaseHint")
+			else hint("collection.releaseHint")
 		lock.Visible = false
 		cancel.Visible = false
 		release.Visible = true
@@ -358,7 +367,7 @@ local function renderAction()
 	local rec = if focusUid then all[focusUid] else nil
 	if not Model.validRecord(rec) then
 		focusUid = nil
-		label.Text = Prefs.t("collection.selectHint")
+		label.Text = hint("collection.selectHint")
 		lock.Visible = false
 		release.Visible = false
 		cancel.Visible = false
@@ -470,9 +479,9 @@ local function createStashCell(cell: Frame)
 		AutoButtonColor = false,
 		Size = UDim2.fromScale(1, 1),
 		BackgroundColor3 = Widgets.CARD,
-		Selectable = true,
 		Parent = cell,
 	}, { Widgets.corner(Theme.CornerSmall), Widgets.stroke() }) :: TextButton
+	Widgets.selectable(hit)
 	local icon = Widgets.nebbyIcon("Icon", UDim2.new(1, -10, 0, STASH_CELL.X - 12), hit)
 	icon.Position = UDim2.fromOffset(5, 3)
 	Widgets.label({
@@ -1316,6 +1325,9 @@ local function buildStash(parent: Frame)
 		size = UDim2.new(1, 0, 1, -(56 + 76)),
 		create = createStashCell,
 		bind = bindStashCell,
+		selectable = function(cell: Frame): GuiObject?
+			return cell:FindFirstChild("Hit") :: GuiObject?
+		end,
 	})
 	stashGrid = grid
 	stashEmpty = Widgets.label({
@@ -1533,6 +1545,12 @@ function Panel.build(parent: Frame)
 			renderTab(currentTab)
 		else
 			dirty = true
+		end
+	end)
+	-- consignes tactiles / manette : suivent le périphérique du joueur
+	Platform.Changed:Connect(function(reason: string)
+		if reason == "input" then
+			renderAction()
 		end
 	end)
 	ScreenFX.Celebrated:Connect(function(payload: Types.CelebratePayload)
