@@ -17,6 +17,18 @@ Sur **Lumora**, une île flottante au crépuscule, des bébés comètes (les **N
 
 Le choix du concept vient d'une étude de marché Roblox 2025-2026 et d'un jury de 3 concepts concurrents : voir les documents ci-dessous.
 
+## État du projet (31 octobre 2026)
+
+| | |
+|---|---|
+| **Jouable sur** | Téléphone et tablette (tactile), ordinateur (clavier-souris), **PlayStation 5** et Xbox (manette, interface adaptée au téléviseur) |
+| **Langues** | Français et anglais, choisis automatiquement (ou dans Réglages) |
+| **Vérification** | `./scripts/check.sh` vert : **1 396 tests automatiques** (89 fichiers), 0 échec ; 0 erreur et 0 avertissement d'analyse |
+| **Fait** | Version 1.0 du GDD complète, 4 tours de QA (sécurité, données, robustesse, expérience joueur, conformité, bonnes pratiques Roblox) |
+| **Reste à faire à la main avant de publier** | Créer les 6 passes et 6 produits dans le Creator Hub et coller leurs numéros ; administrateurs et date du premier Starfall Saturday ; choisir les sons de jeu et la musique ; questionnaire de maturité, icône, miniatures ; tests dans Roblox Studio (rendu, physique, vraies sauvegardes et vrais achats, 12 vrais joueurs, téléphone modeste) et essai sur une vraie PS5 ; répondre à 7 questions de design |
+
+Détails : [guide de publication](docs/05-guide-publication.md) · [rapport qualité](docs/06-rapport-qualite.md) · [console PS5](docs/07-console-ps5.md).
+
 ## Documents
 
 | Document | Contenu |
@@ -25,17 +37,20 @@ Le choix du concept vient d'une étude de marché Roblox 2025-2026 et d'un jury 
 | [`docs/02-game-design-document.md`](docs/02-game-design-document.md) | Game Design Document complet (règles, chiffres, monde, UI, architecture) |
 | [`docs/03-decision-du-jury.md`](docs/03-decision-du-jury.md) | Les 3 concepts étudiés, les notes et les raisons du choix |
 | [`docs/04-architecture.md`](docs/04-architecture.md) | Contrat technique : modules, API, réseau, données |
+| [`docs/05-guide-publication.md`](docs/05-guide-publication.md) | **Guide pas à pas** du dépôt au jeu publié : outils, Studio, passes et produits, réglages, maturité, page du jeu, PS5, check-lists avant et après le lancement |
+| [`docs/06-rapport-qualite.md`](docs/06-rapport-qualite.md) | Rapport qualité : résultat des tests, méthode, ce qui reste à vérifier dans Studio (plan de test), résultats de QA, questions de design ouvertes |
 | [`docs/07-console-ps5.md`](docs/07-console-ps5.md) | Console PS5 / téléviseur : correspondance DualSense, échelle 10 pieds, zone sûre, glyphes, navigation, vibrations, chat, tests |
 
 ## Démarrer en 5 minutes
 
-1. Installer [Rokit](https://github.com/rojo-rbx/rokit), puis dans ce dossier : `rokit install` (installe Rojo, Selene, StyLua, Lune aux versions du projet).
-2. Construire la place : `rojo build -o build/Game.rbxl`
-3. Double-cliquer sur `build/Game.rbxl` pour l'ouvrir dans **Roblox Studio**, puis **Play**.
+1. Installer **Roblox Studio** (site de Roblox, page *Create*) et [Rokit](https://github.com/rojo-rbx/rokit), puis dans ce dossier : `rokit install` (installe Rojo, Selene, StyLua, Lune aux versions de `rokit.toml`).
+2. Vérifier : `./scripts/check.sh` doit finir par « ✅ Tout est vert. ».
+3. Construire le jeu : `rojo build -o build/Game.rbxl`
+4. Double-cliquer sur `build/Game.rbxl` pour l'ouvrir dans **Roblox Studio**, puis **Play**. Pour jouer à plusieurs : onglet *Test*, *Local Server*, 2 à 4 joueurs.
 
-Pour développer en direct : `rojo serve`, puis, dans Studio, ouvrir le plugin Rojo et cliquer sur *Connect*.
+Pour développer en direct : `rojo serve`, puis, dans Studio, ouvrir le plugin Rojo (`rojo plugin install`) et cliquer sur *Connect*.
 
-Publication, gamepasses et lancement : voir la skill [`roblox-publish`](.claude/skills/roblox-publish/SKILL.md).
+Publier le jeu : suivre le [guide de publication](docs/05-guide-publication.md) (résumé pour Claude : skill [`roblox-publish`](.claude/skills/roblox-publish/SKILL.md)).
 
 ## Vérifier la qualité
 
@@ -56,13 +71,15 @@ Les tests tournent **hors de Roblox**. Le harnais `tests/harness/` simule le mot
 
 ```
 src/
+  first/    → ReplicatedFirst                (écran de chargement)
   shared/   → ReplicatedStorage.Shared       (config, textes EN/FR, réseau, utilitaires)
   server/   → ServerScriptService.Server     (services serveur : autorité sur tout)
   client/   → StarterPlayerScripts.Client    (interface, effets, contrôles)
 tests/
   harness/  → simulateur Roblox pour Lune
   specs/    → tests (*.spec.luau)
-docs/       → marché, GDD, jury, architecture
+  sim/      → simulation du rythme de l'économie
+docs/       → marché, GDD, jury, architecture, publication, qualité, console
 .claude/skills/ → savoir-faire Roblox réutilisable par Claude
 ```
 
