@@ -135,6 +135,33 @@ return function(T)
 			end
 		)
 
+		it(
+			"capture à l'atterrissage en monture (règle 17) : écart vertical mesuré depuis les PIEDS",
+			function()
+				local Z = h:require("ReplicatedStorage.Shared.Logic.ZoneRules")
+				-- selle géante : racine 3 + 6 = 9 au-dessus du sol ; la créature court au sol (Y = 0)
+				local rider = Vector3.new(0, 9, 0)
+				expect(L.catchesOnLanding(rider, Vector3.new(4, 0, 0), false, 1.5, 6)).toBe(true)
+				expect(L.catchesOnLanding(rider, Vector3.new(6.4, 0, 0), false, 1.5, 6)).toBe(true)
+				expect(L.catchesOnLanding(rider, Vector3.new(6.6, 0, 0), false, 1.5, 6)).toBe(false)
+				-- petite et grande selles (+4,275 et +5,25)
+				expect(L.catchesOnLanding(Vector3.new(0, 7.275, 0), Vector3.new(3, 0, 0), false, 1.5, 4.275)).toBe(
+					true
+				)
+				expect(L.catchesOnLanding(Vector3.new(0, 8.25, 0), Vector3.new(3, 0, 0), false, 1.5, 5.25)).toBe(
+					true
+				)
+				-- même règle que ZoneRules.feetY : pieds à 0, une créature à 8 studs au-dessus passe, 8,1 non
+				expect(Z.feetY(9, 6)).toBe(0)
+				expect(L.catchesOnLanding(rider, Vector3.new(0, 8, 0), false, 0, 6)).toBe(true)
+				expect(L.catchesOnLanding(rider, Vector3.new(0, 8.1, 0), false, 0, 6)).toBe(false)
+				-- décalage illisible : 0 (à pied)
+				expect(L.catchesOnLanding(Vector3.new(0, 3, 0), Vector3.new(1, 0, 0), false, 0, 0 / 0)).toBe(
+					true
+				)
+			end
+		)
+
 		it("zéro trace", function()
 			expect(#h.errors).toBe(0)
 			expect(#h:warnings()).toBe(0)

@@ -1,44 +1,46 @@
 --!nocheck
--- EconomyModel (paquet logic, docs/04 §16, §17.1 couche f ; GDD §3, §4.24) : un joueur de référence
--- de Raise a Squishy, joué avec les VRAIES règles (Shared/Logic/Formulas, Odds, FusionRules,
+-- EconomyModel (paquet logic, docs/04 §16, §17.1 couche f ; GDD §3, §4.23, §4.24) : un joueur de
+-- référence de Raise a Squishy, joué avec les VRAIES règles (Shared/Logic/Formulas, Odds, FusionRules,
 -- QuestRules, RushRules, EventClock et les tables de Shared/Config). Seules les hypothèses de
--- COMPORTEMENT du joueur appartiennent au modèle (GDD §4.24) :
+-- COMPORTEMENT du joueur appartiennent au modèle (GDD §4.24, politique exacte) :
 --   * 35 min de jeu le premier jour, puis 30 min par jour, une séance par jour à la même heure (le
 --     hors-ligne entre deux dépasse toujours la limite : 8 h, 12 h avec le Lit douillet, + 1 h Spiky) ;
 --   * une pression toutes les 2 s sur le squishy prêt le plus rentable, PERFECT 40 % du temps ;
 --   * Pot encaissé toutes les 40 s (le premier à 1:30, accueil) ;
---   * achats du moins cher utile d'abord (Tapis, Enclos si plein, décorations, Lit douillet), un
---     achat toutes les 2 s au plus (il faut marcher jusqu'à la dalle) ;
+--   * achats du moins cher utile d'abord (Tapis, Enclos si plein, décorations, Lit douillet dès son
+--     MinR), un achat par pression au plus (il faut marcher jusqu'à la dalle) ;
 --   * fusion dès qu'une paire de jumeaux existe (« Tout fusionner », FusionRules.planMergeAll) ;
 --   * le plus gros reste en enclos, les plus faibles vont dans la Boîte à dodo pour laisser naître la
 --     Cuve (après l'accueil) ; Dodo plein : « Ranger » (GDD §4.13), sinon vente du plus faible ;
---   * 85 % des créatures en fuite attrapées ;
---   * boosts ×2 calculés d'après les règles, jamais supposés : boost de serveur (Wobble Party) 20 % du
---     temps par fenêtres de 5 min (après l'accueil, docs/04 §16) ; Nourrir Plop au début de chaque
---     séance (le premier jour, à la carte des objectifs de 5:00), durée Balance.Boosts.FeedDay /
---     FeedMilestone ; les objectifs du jour rapportent leurs minutes de revenu mais AUCUN boost
---     (GDD §4.24 et §7.4, révision 1.3 : les sources de boost du joueur de référence sont le bol et
---     la Wobble Party ; voir la note d'intégration sur Config/Quests.ObjectiveRules.Rewards) ;
---     un boost personnel est en pause pendant un boost de serveur (GDD §4.25) ;
---   * événements moyens : 60 % des Rush avec un bébé, 50 % des Wild Wobblers partagés, 85 % des
---     personnels, 2 bébés par MEGA, 30 % des Golden, un cadeau de Grand Splorch toutes les 20 min ;
---   * aucun achat Robux ; aucun ami sur le serveur ; 3 emotes par séance.
--- Le calendrier des événements est celui d'EventClock (heure de départ tirée pour chaque joueur) ;
--- les naissances utilisent Odds.roll avec la graine du jeu (Odds.seed) ; le Pot est l'intégrale
--- exacte (Formulas.potGain) ; le hors-ligne passe par Formulas.offline* (rebase de onPrepare).
--- Pas de 2 s pendant les 10 premières minutes (jalons de l'accueil), puis de 8 s avec 4 pressions
--- (une toutes les 2 s) : même comportement, quatre fois moins de pas.
+--   * 85 % des créatures en fuite personnelles attrapées ;
+--   * aucun achat Robux (sauf la variante « gros acheteur » : ×2 Pièces, Grand Ranch, Squish Party la
+--     moitié du temps) ; aucun ami sur le serveur ; 3 emotes par séance.
+-- Contrat v1.2 (docs/04 §16, GDD v1.3 §4.24) :
+--   * boosts ×2 CALCULÉS d'après les règles, jamais supposés : Nourrir Plop au début de chaque séance
+--     (le premier jour, à la carte des objectifs de 5:00), Balance.Boosts.FeedDay / FeedMilestone ;
+--     Wobble Party tirée des règles de la jauge (Events.Gauge : seules les pressions PERFECT comptent
+--     parmi les pressions, objectif 600 × max(2, N), fête de 5 min, sieste de 20 min ; les N − 1 autres
+--     joueurs du serveur donnent chacun le débit de points mesuré du joueur de référence) ; un boost
+--     personnel est en pause pendant un boost de serveur (GDD §4.25) ; les objectifs ne donnent aucun
+--     boost ;
+--   * vraies parts d'un serveur de N = 4, 8 ou 16 joueurs (GDD §4.24) : Wild Wobbler partagé 75 / 38 /
+--     19 % par Rush, Golden 25 / 12 / 6 % ; cadeaux de Grand Splorch des N − 1 autres (un toutes les
+--     20 min à 16) ; 60 % des Rush avec un bébé, Wild Wobbler personnel 85 %, 2 bébés par MEGA ;
+--   * moteur PAR ÉVÉNEMENTS : le temps saute d'un événement au suivant (pression, Pot, Cuve, fuite,
+--     Rush, MEGA, Golden, cadeau, boosts, jauge, Grand Splorch) avec les formules exactes du calcul
+--     paresseux (Formulas.G, potGain) ;
+--   * hors ligne : Formulas.offlineGrowth(g, durée, R, plus gros) (arrêt à 90 % de l'objectif) et
+--     offlinePot ; bonus de famille lus par QuestRules.familyEarned (dex.fam posé à la complétion) ;
+--     bébé du Rush : RushRules.babySize et RushRules.babyMutation.
 --
 --   local EconomyModel = require("../sim/EconomyModel")
 --   local model = EconomyModel.new(L)  -- L : modules requis par le harnais (voir EconomyPacing.spec)
---   Sim.run({ players = 200, days = 28, simulate = model.simulate, gates = EconomyModel.GATES, … })
+--   Sim.run({ players = 50, days = 28, simulate = model.simulateFor({ players = 8 }), … })
 
 local EconomyModel = {}
 
 local DAY = 86400
 local PRESS_EVERY = 2 -- s : une pression toutes les 2 s
-local FINE_UNTIL = 600 -- s de jeu en pas de 2 s (jalons de l'accueil)
-local COARSE_STEP = 8 -- s ensuite (4 pressions par pas)
 local FIRST_PRESS = 10 -- s : Big Plop pose Plop, le joueur presse (GDD §3)
 local FIRST_POT = 90 -- s : premier Pot (étape 6 de l'accueil)
 local POT_EVERY = 40
@@ -46,25 +48,31 @@ local TWIN_AT = 40
 local FIRST_RUNAWAY_AT = 120
 local FIRST_PULL_AT = 166 -- 2:45 + éclosion
 local DEMO_AT = 180
+local RUNAWAY_PAUSE_FROM = 165 -- l'accueil met la créature en fuite en pause de 2:45 à 5:00
 local ONBOARDING_END = 300
 local SPLORCH_DELAY = 23 -- s : file du serveur (≈ 20 s) + éclatement (3,2 s)
-local BOOST_WINDOW = 300 -- s : fenêtres de 5 min, ×2 de serveur avec une chance de 20 %
-local BOOST_SHARE = 0.2
 local PERFECT_SHARE = 0.4
 local CATCH_SHARE = 0.85
 local CATCH_TIME = 10 -- s pour attraper une créature en fuite
 local RUSH_BABY_SHARE = 0.6
-local SHARED_WILD_SHARE = 0.5
 local PERSONAL_WILD_SHARE = 0.85
 local MEGA_BABIES = 2
-local GOLDEN_SHARE = 0.3
-local GIFT_EVERY = 1200
+local GIFT_EVERY_16 = 1200 -- s : un cadeau de Grand Splorch toutes les 20 min sur un serveur de 16
 local EMOTES_AT = 120 -- s de séance : 3 emotes faites (objectif 6)
-local PLAYERS_ON_SERVER = 16
+local VAT_RETRY = 2 -- s : la Cuve attend une place (enclos et Dodo pleins)
+local REF_POINTS_PER_SECOND = 20 / 60 -- GDD §4.23 : graine du débit des autres avant toute mesure
+local HEALTH_LAST_DAY = 14 -- jalons de santé : boucles des jours 1 à 14 (GDD §4.24)
 local START_UNIX = 1797638400 -- lundi 14/12/2026 00:00 UTC (après le lancement)
 
--- Portes de la simulation (docs/04 §16, GDD §4.24). Les parts (≥ 90 %, ≥ 95 %) sont vérifiées à part
--- par la spec (EconomyModel.SHARES) : une médiane ne mesure pas une proportion.
+-- Parts d'un serveur de N joueurs (GDD §4.24) : Wild Wobbler partagé attrapé par Rush, Golden gagné
+local SHARED_WILD_SHARE = { [4] = 0.75, [8] = 0.38, [16] = 0.19 }
+local GOLDEN_SHARE = { [4] = 0.25, [8] = 0.12, [16] = 0.06 }
+
+EconomyModel.SIZES = { 4, 8, 16 }
+
+-- Portes de la simulation (docs/04 §16 v1.2, GDD §4.24) : médianes, à chaque taille de serveur. Les
+-- parts (≥ 80 %, ≥ 90 %, ≥ 95 %) sont vérifiées à part par la spec (EconomyModel.SHARES) : une médiane
+-- ne mesure pas une proportion.
 EconomyModel.GATES = {
 	{ key = "firstPress", label = "Première pression (s)", max = 15 },
 	{ key = "firstBuy", label = "Premier achat (s)", max = 30 },
@@ -72,28 +80,41 @@ EconomyModel.GATES = {
 	{ key = "fusions5", label = "Fusions à 5:00", min = 1 },
 	{ key = "captures5", label = "Captures à 5:00", min = 1 },
 	{ key = "firstRide", label = "Première balade (s)", max = 300 },
-	{ key = "firstSplorch", label = "Premier Grand Splorch (min)", min = 12, max = 16 },
+	{ key = "firstSplorch", label = "Premier Grand Splorch (min)", min = 11, max = 16 },
 	{ key = "r30", label = "R à 30 min", min = 1, max = 3 },
 	{ key = "stamps30", label = "Tampons à 30 min", min = 14, max = 24 },
 	{ key = "rDay1", label = "R en fin de jour 1", min = 2, max = 3 },
 	{ key = "rDay7", label = "R en fin de jour 7", min = 8, max = 11 },
-	{ key = "biggestDay7", label = "Plus gros, fin du jour 7", min = 5e7, max = 3e8 },
+	{ key = "biggestDay7", label = "Plus gros, fin du jour 7", min = 4e7, max = 4e8 },
 	{ key = "stampsDay7", label = "Tampons en fin de jour 7", min = 80, max = 110 },
+	{ key = "rDay14", label = "R en fin de jour 14", min = 14, max = 16 },
 	{ key = "rDay28", label = "R en fin de jour 28", min = 17, max = 22 },
+	-- jalons de santé (jours 1 à 14 : médiane des boucles de chaque joueur)
+	{ key = "snack12Share", label = "Santé : Tapis 12 (part de la boucle)", min = 0.5 },
+	{ key = "coinsLostRatio", label = "Santé : pièces perdues / Tapis 12", max = 10 },
+	{ key = "pressShareDay7", label = "Santé : part des pressions, jour 7", min = 0.5 },
+	{ key = "readyAtLogin", label = "Santé : Splorch prêts à la connexion", max = 0.5 },
+	{ key = "boostShare", label = "Santé : temps en ×2 (%)", min = 20, max = 40 },
 }
 
+-- Parts de joueurs : (clé, seuil) ; la clé vaut 1 ou 0 pour chaque joueur
 EconomyModel.SHARES = {
 	{ key = "penPayable5", label = "Dalle Enclos payable à 5:00", min = 0.9 },
 	{ key = "objectivesDay1", label = "3 objectifs sur 3 au jour 1", min = 0.9 },
 	{ key = "epicDay7", label = "Un Épique+ au jour 7", min = 0.95 },
+	{ key = "splorchIn10to18", label = "Premier Grand Splorch en 10-18 min", min = 0.8 },
 }
 
+-- Gros acheteur (×2 Pièces, Grand Ranch, Squish Party la moitié du temps) : avance au jour 28 ≤ 2 R
+EconomyModel.SPENDER_MAX_LEAD = 2
+
 EconomyModel.REPORTED = {
-	{ key = "coins5", label = "Pièces à 5:00 (repère)" },
-	{ key = "rDay14", label = "R en fin de jour 14" },
+	{ key = "coins5", label = "Pièces à 5:00 (repère 5K-17K)" },
 	{ key = "stampsDay28", label = "Tampons en fin de jour 28" },
 	{ key = "first1e12Day", label = "Premier squishy de 1e12 (jour)" },
-	{ key = "boostShare", label = "Part du temps de jeu en ×2 (%)" },
+	{ key = "gaugeFillMin", label = "Remplissage de la jauge (min)" },
+	{ key = "gaugeCycleMin", label = "Cycle de la Wobble Party (min)" },
+	{ key = "pointsPerMin", label = "Points de jauge du joueur (/min)" },
 }
 
 function EconomyModel.new(L)
@@ -117,11 +138,25 @@ function EconomyModel.new(L)
 	for _, def in Mutations.List do
 		MUT_LOCK[def.id] = def.autoLock
 	end
+	local FAMILY_INDEX = {}
+	for i, key in Species.FamilyOrder do
+		FAMILY_INDEX[key] = i
+	end
 	local OBJECTIVE_REWARD = Quests.ObjectiveRules.Rewards
 	local COOLDOWN = Balance.Press.Cooldown
 	local MAX_COINS = Balance.Numbers.Max
+	local GAUGE = Events.Gauge
+	local POINTS = GAUGE.Points
+	local SNACK_LEVELS = Balance.Tiles.snack.Levels
 
-	local function simulate(rng, index, days)
+	local function simulateWith(opts, rng, index, days)
+		local N = opts.players or 16
+		local spender = opts.spender == true
+		local sharedWildShare = SHARED_WILD_SHARE[N] or (3 / N)
+		local goldenShare = GOLDEN_SHARE[N] or (1 / N)
+		local giftEvery = GIFT_EVERY_16 * 15 / math.max(1, N - 1)
+		local gaugeTarget = GAUGE.TargetPerPlayer * math.max(GAUGE.MinPlayers, N)
+
 		-- =================================================================================
 		-- État (même forme que le profil quand une règle du jeu le lit)
 		-- =================================================================================
@@ -131,7 +166,8 @@ function EconomyModel.new(L)
 		local userId = 100000 + index
 		local P = {
 			coins = 0,
-			pot = 0,
+			potOn = 0, -- Pot gagné en jeu
+			potOff = 0, -- Pot versé hors ligne (rebase)
 			R = 0,
 			fame = 0,
 			growth = { G = 0, g = 1, t = now },
@@ -139,20 +175,18 @@ function EconomyModel.new(L)
 			pen = {}, -- squishies en enclos (et Bassin) : rapportent et grandissent
 			dodo = {}, -- Boîte à dodo : taille figée
 			nextUid = 1,
-			dex = { mut = table.create(SPECIES_COUNT, 0), stars = table.create(SPECIES_COUNT, 0) },
+			dex = {
+				mut = table.create(SPECIES_COUNT, 0),
+				stars = table.create(SPECIES_COUNT, 0),
+				fam = table.create(#Species.FamilyOrder, 0),
+			},
 			trophies = table.create(SPECIES_COUNT, 0),
 			biggestEver = 0,
-			vat = {
-				nextAt = math.huge,
-				hatchAt = math.huge,
-				pityRare = 0,
-				pityEpic = 0,
-				newPulls = Balance.Vat.NewPulls,
-				pulls = 0,
-			},
-			personalBoost = 0,
+			vat = { nextAt = math.huge, hatchAt = math.huge, pityRare = 0, pityEpic = 0, pulls = 0 },
+			newPulls = Balance.Vat.NewPulls,
+			personalLeft = 0, -- s de boost personnel (en pause pendant un boost de serveur)
 			plopDays = 0,
-			caps = { day = -1, rushBabies = 0, splorchGifts = 0, fameRush = 0 },
+			caps = { day = -1, rushBabies = 0, splorchGifts = 0, splorchCoins = 0, fameRush = 0 },
 			streak = 0,
 			goldenWinAt = -math.huge,
 		}
@@ -166,20 +200,20 @@ function EconomyModel.new(L)
 			objectivesDay1 = 0,
 			epicDay7 = 0,
 			penPayable5 = 0,
+			splorchIn10to18 = 0,
 		}
 		local fusions, captures = 0, 0
-		local boostTime = 0 -- s de jeu en ×2 (boosts calculés)
+		local boostTime, sessionTime = 0, 0 -- s de jeu en ×2 / s de jeu (part du temps en ×2)
 		local ctx = {
 			decor = 0,
 			friends = 0,
 			fame = 0,
 			trophyBonus = 0,
 			goldenPages = 0,
-			doubleCoins = false,
+			doubleCoins = spender,
 			boost = false,
 		}
 		local families = {}
-		local serverBoost = false
 		local fuseDirty, buyDirty = true, true
 		local dirtySpecies = {} -- espèces qui ont reçu une ligne : seules elles peuvent avoir une paire
 		local cheapest = math.huge
@@ -188,6 +222,27 @@ function EconomyModel.new(L)
 		local objectivesDay = -1
 		local epicEver = false
 		local moonPhase = { active = false, startsAt = -math.huge, endsAt = -math.huge }
+		local dayIndex = 0
+
+		-- jauge du serveur (Wobble Meter) et boosts de serveur
+		local gauge = { points = 0, at = now, state = "fill", untilAt = math.huge }
+		local othersRate = (N - 1) * REF_POINTS_PER_SECOND -- points/s des N − 1 autres joueurs
+		local measuredRate = REF_POINTS_PER_SECOND
+		local ownPoints, ownPointsTime = 0, 0
+		local gaugeFills, gaugeFillTime = 0, 0
+		local fillStartAt = nil -- fin de la dernière fête vue en jeu (la jauge repart de 0)
+		local squishOn = false -- Squish Party (gros acheteur) en cours
+
+		-- santé de l'économie (boucles des jours 1 à 14)
+		local loopStartPlay = 0
+		local snack12Play = nil
+		local loopShares, lostRatios = {}, {}
+		local loginReadyPending = false
+		local splorchDays2to14, readyAtLoginCount = 0, 0
+		local pressCoins, onlineCoins = 0, 0 -- jour en cours (part des pressions au jour 7)
+		local dayPeak = 0 -- plus grande taille atteinte ce jour-là (avant un éventuel Grand Splorch)
+		local sourceCoins = {} -- jour en cours : pièces gagnées en jeu par source (rapport)
+		local currentSource = "other"
 
 		-- =================================================================================
 		-- Aides (formules du jeu ; G(t) en ligne pour la boucle chaude)
@@ -203,31 +258,51 @@ function EconomyModel.new(L)
 			local s = rec.z + Gt - rec.zg
 			return if s < 1 then 1 else s
 		end
+		local function serverBoost()
+			return gauge.state == "party" or squishOn
+		end
 		local function boostOn()
-			return serverBoost or P.personalBoost > 0
+			return serverBoost() or P.personalLeft > 0
 		end
 		local function refreshFamilies()
 			for key in Species.Families do
-				families[key] = QuestRules.familyComplete(P.dex, key)
+				-- QuestService pose dex.fam[f] = 1 au tampon qui complète la famille (pour toujours)
+				if QuestRules.familyComplete(P.dex, key) and FAMILY_INDEX[key] then
+					P.dex.fam[FAMILY_INDEX[key]] = 1
+				end
+				families[key] = QuestRules.familyEarned(P.dex, key)
 			end
 		end
 		local capCache, capLevel = 0, -1
 		local function penCap()
 			if capLevel ~= P.tiles.pens then
 				capLevel = P.tiles.pens
-				capCache = Formulas.penCapacity(P.tiles.pens, false)
+				capCache = Formulas.penCapacity(P.tiles.pens, spender)
 			end
 			return capCache
 		end
-		local function allRecords()
-			local map = {}
+		local incomeDirty = true
+		local bigDirty = true
+		local bigOffset, bigRec = -math.huge, nil -- plus gros d'enclos : argmax(z − zg)
+		local function refreshBig()
+			bigOffset, bigRec = -math.huge, nil
 			for _, r in P.pen do
-				map[r.uid] = r
+				local off = r.z - r.zg
+				if off > bigOffset then
+					bigOffset, bigRec = off, r
+				end
 			end
-			for _, r in P.dodo do
-				map[r.uid] = r
+			bigDirty = false
+		end
+		local function biggest()
+			if bigDirty then
+				refreshBig()
 			end
-			return map
+			if bigRec == nil then
+				return 0, nil
+			end
+			local s = bigOffset + Gnow()
+			return (if s < 1 then 1 else s), bigRec
 		end
 		local function refreshK()
 			ctx.decor = P.tiles.decor
@@ -243,15 +318,12 @@ function EconomyModel.new(L)
 			end
 			incomeDirty = true
 		end
-		-- règlement : Pot intégré exactement sur [growth.t ; now] (EconomyService.settle), trophées
-		-- (K, S1) de Formulas.ranchIncome ne changent qu'avec les lignes de l'enclos ou le contexte :
-		-- recalculés seulement quand l'un d'eux a changé (incomeDirty)
-		local cachedK, cachedS1, incomeDirty = 0, 0, true
+		-- règlement : Pot intégré exactement sur [growth.t ; now] (EconomyService.settle) ; (K, S1) de
+		-- Formulas.ranchIncome ne changent qu'avec les lignes de l'enclos ou le contexte
+		local cachedK, cachedS1 = 0, 0
 		local function settle()
 			local Gt = Formulas.G(P.growth, now)
 			if incomeDirty then
-				-- même somme que Formulas.ranchIncome (K = Σ k, S1 = Σ k × (z − zg)), avec les k
-				-- déjà calculés par Formulas.incomeFactor pour le contexte en cours
 				local K, S1 = 0, 0
 				local G0 = P.growth.G
 				for _, r in P.pen do
@@ -265,7 +337,7 @@ function EconomyModel.new(L)
 				cachedK, cachedS1 = K, S1
 				incomeDirty = false
 			end
-			P.pot += Formulas.potGain(cachedK, cachedS1, P.growth, P.growth.t, now)
+			P.potOn += Formulas.potGain(cachedK, cachedS1, P.growth, P.growth.t, now)
 			P.growth.G = Gt
 			P.growth.t = now
 			for _, r in P.pen do
@@ -299,19 +371,15 @@ function EconomyModel.new(L)
 			end
 			return total
 		end
-		local function biggest()
-			local Gt = Gnow()
-			local best, bestRec = 0, nil
-			for _, r in P.pen do
-				local s = sizeOf(r, Gt)
-				if s > best then
-					best, bestRec = s, r
-				end
-			end
-			return best, bestRec
-		end
-		local function addCoins(x)
+		local function addCoins(x, fromPress)
+			local before = P.coins
 			P.coins = Formulas.clampCoins(P.coins + x)
+			local gained = P.coins - before
+			onlineCoins += gained
+			sourceCoins[currentSource] = (sourceCoins[currentSource] or 0) + gained
+			if fromPress then
+				pressCoins += gained
+			end
 		end
 		local function incomeSeconds(seconds)
 			addCoins(Formulas.secondsOfIncome(income(), seconds))
@@ -319,7 +387,7 @@ function EconomyModel.new(L)
 		local function resetCaps()
 			local day = math.floor(now / DAY)
 			if P.caps.day ~= day then
-				P.caps = { day = day, rushBabies = 0, splorchGifts = 0, fameRush = 0 }
+				P.caps = { day = day, rushBabies = 0, splorchGifts = 0, splorchCoins = 0, fameRush = 0 }
 			end
 		end
 		local function addFameRush(n)
@@ -330,6 +398,97 @@ function EconomyModel.new(L)
 				P.fame += granted
 			end
 		end
+
+		-- ---------------------------------------------------------------------------------
+		-- Jauge du serveur : points du joueur + (N − 1) autres joueurs au débit mesuré
+		-- ---------------------------------------------------------------------------------
+		local function gaugeAdvance()
+			-- points des autres joueurs depuis la dernière mise à jour (pendant la fête : perdus, la jauge
+			-- repart de 0 à la fin de la fête ; pendant la sieste : comptés)
+			if now > gauge.at then
+				if gauge.state ~= "party" then
+					gauge.points += othersRate * (now - gauge.at)
+				end
+				gauge.at = now
+			end
+		end
+		local function addPoints(n)
+			ownPoints += n
+			gaugeAdvance()
+			if gauge.state ~= "party" then
+				gauge.points += n
+			end
+		end
+		-- Pleine : objectif atteint, ou si proche que l'instant de remplissage arrondi est déjà là
+		local function gaugeFull()
+			if gauge.points >= gaugeTarget then
+				return true
+			end
+			return othersRate > 0 and now + (gaugeTarget - gauge.points) / othersRate <= now
+		end
+		-- Instant où la jauge sera pleine au débit actuel des autres (la prochaine transition)
+		local function gaugeNextAt()
+			if gauge.state ~= "fill" then
+				return gauge.untilAt
+			end
+			gaugeAdvance()
+			if gaugeFull() then
+				return now
+			end
+			if othersRate <= 0 then
+				return math.huge
+			end
+			return now + (gaugeTarget - gauge.points) / othersRate
+		end
+		local function gaugeStep()
+			gaugeAdvance()
+			local was = boostOn()
+			if gauge.state == "party" and now >= gauge.untilAt then
+				gauge.state = "rest"
+				gauge.untilAt = now + GAUGE.RestSeconds
+				gauge.points = 0 -- la jauge repart de 0 à la fin de la fête
+				fillStartAt = now
+			elseif gauge.state == "rest" and now >= gauge.untilAt then
+				gauge.state = "fill"
+				gauge.untilAt = math.huge
+			end
+			if gauge.state == "fill" and gaugeFull() then
+				gauge.state = "party"
+				gauge.untilAt = now + GAUGE.PartyDuration
+				if fillStartAt ~= nil then
+					-- remplissage complet vu en jeu : de 0 (fin de fête) à pleine, sieste comprise
+					gaugeFills += 1
+					gaugeFillTime += now - fillStartAt
+				end
+				fillStartAt = nil
+			end
+			if was ~= boostOn() then
+				boostChanged()
+			end
+		end
+		-- État du serveur à l'arrivée du joueur : phase uniforme dans le cycle stationnaire (fête, sieste,
+		-- remplissage) au débit de N joueurs de référence
+		local function gaugeJoin()
+			local rate = N * measuredRate
+			local fill = if rate > 0 then gaugeTarget / rate else math.huge
+			local party, rest = GAUGE.PartyDuration, GAUGE.RestSeconds
+			local afterRest = math.max(0, fill - rest)
+			local cycle = party + rest + afterRest
+			local phi = rng.range(0, cycle)
+			gauge.at = now
+			if phi < party then
+				gauge.state, gauge.untilAt, gauge.points = "party", now + party - phi, 0
+			elseif phi < party + rest then
+				local elapsed = phi - party
+				gauge.state, gauge.untilAt = "rest", now + rest - elapsed
+				gauge.points = math.min(gaugeTarget, elapsed * rate)
+			else
+				gauge.state, gauge.untilAt = "fill", math.huge
+				gauge.points = math.min(gaugeTarget, rest * rate + (phi - party - rest) * rate)
+			end
+			fillStartAt = nil
+		end
+
 		-- objectifs du jour : progression (QuestRules.apply), réclamation aussitôt terminés
 		local function objective(stat, amount, perfect)
 			for _, e in objectives do
@@ -339,10 +498,12 @@ function EconomyModel.new(L)
 					if out.done and not e.done then
 						e.done = true
 						e.claimed = true
-						-- minutes de revenu seulement : pas de boost (politique du joueur de référence,
-						-- GDD §4.24 et §7.4 révision 1.3 ; en-tête du fichier)
+						-- minutes de revenu seulement : aucun boost (GDD §7.4 révision 1.3)
 						local reward = OBJECTIVE_REWARD[Quests.Objectives[e.id].tier]
+						local was = currentSource
+						currentSource = "objective"
 						incomeSeconds(reward.incomeSeconds)
+						currentSource = was
 					end
 				end
 			end
@@ -376,7 +537,11 @@ function EconomyModel.new(L)
 				objective("stamps", gained)
 			end
 			if not bit32.btest(beforeMut, 1) then
-				refreshFamilies() -- nouvelle espèce : un bonus de famille peut s'ouvrir
+				local before = families.jelly
+				refreshFamilies() -- nouvelle espèce : un bonus de famille peut s'ouvrir (dex.fam)
+				if families.jelly ~= before then
+					setGrowth()
+				end
 			end
 		end
 
@@ -458,12 +623,14 @@ function EconomyModel.new(L)
 				o = "",
 				at = at,
 				b = math.floor(now),
+				gd = 0,
 				readyAt = 0,
 			}
 			rec.k = incomeFactor(s, m, 0, ctx)
 			if at == "pen" then
 				settle() -- le Pot est réglé avec l'ancien enclos avant d'ajouter la ligne
 				incomeDirty = true
+				bigDirty = true
 			end
 			table.insert(if at == "pen" then P.pen else P.dodo, rec)
 			fuseDirty, buyDirty = true, true
@@ -477,6 +644,7 @@ function EconomyModel.new(L)
 			end
 			if source == "vat" then
 				objective("vatHatch", 1)
+				addPoints(POINTS.hatch)
 			end
 			return rec
 		end
@@ -501,10 +669,9 @@ function EconomyModel.new(L)
 				return
 			end
 			fuseDirty = false
-			-- pré-test rapide : au moins deux lignes non verrouillées de même espèce et mêmes étoiles
-			-- le joueur de référence fusionne aussi à la main ses jumeaux verrouillés (GDD §4.13) ;
-			-- avant l'ajout il ne restait aucune paire : seules les espèces qui ont reçu une ligne
-			-- peuvent en avoir une (le plan de FusionRules traite chaque espèce à part)
+			-- le joueur de référence fusionne aussi à la main ses jumeaux verrouillés (GDD §4.13) ; avant
+			-- l'ajout il ne restait aucune paire : seules les espèces qui ont reçu une ligne peuvent en
+			-- avoir une (le plan de FusionRules traite chaque espèce à part)
 			local wanted = dirtySpecies
 			dirtySpecies = {}
 			local seen, speciesWithPair = {}, {}
@@ -552,7 +719,12 @@ function EconomyModel.new(L)
 					local kept = FusionRules.keepUid(pair[1], pair[2], a, b)
 					prevKept = kept
 					local merged = FusionRules.fuse(a, b, Gt, math.floor(now))
-					merged.at = if a.at == "pen" or b.at == "pen" then "pen" else "dodo"
+					-- GDD §4.10 : le résultat va dans l'enclos s'il y a de la place (une fusion libère
+					-- toujours une place quand l'un des deux y était)
+					merged.at = if merged.at == "pool" then "pen" else merged.at
+					if merged.at == "dodo" and #P.pen < penCap() then
+						merged.at = "pen"
+					end
 					merged.uid = kept
 					merged.readyAt = 0
 					merged.k = incomeFactor(merged.s, merged.m, merged.st, ctx)
@@ -560,11 +732,15 @@ function EconomyModel.new(L)
 					removeUid(pair[2])
 					table.insert(if merged.at == "pen" then P.pen else P.dodo, merged)
 					incomeDirty = true
+					bigDirty = true
 					map[pair[1]], map[pair[2]] = nil, nil
 					map[kept] = merged
 					fusions += 1
 					local resultSize = if merged.at == "pen" then sizeOf(merged, Gt) else merged.z
+					currentSource = "combo"
 					addCoins(Formulas.comboReward(step, merged.k * resultSize))
+					currentSource = "other"
+					addPoints(POINTS.fuseStep)
 					objective("fusion", 1)
 					if step >= 2 then
 						objective("combo2", 1)
@@ -584,10 +760,10 @@ function EconomyModel.new(L)
 				return false
 			end
 			local Gt = Gnow()
-			local _, bigRec = biggest()
+			local _, big = biggest()
 			local weakest, weakestIncome = nil, math.huge
 			for i, r in P.pen do
-				if r.bf == 0 and r ~= bigRec then
+				if r.bf == 0 and r ~= big then
 					local inc = r.k * sizeOf(r, Gt)
 					if inc < weakestIncome then
 						weakest, weakestIncome = i, inc
@@ -603,6 +779,7 @@ function EconomyModel.new(L)
 			r.at = "dodo"
 			table.insert(P.dodo, r)
 			incomeDirty = true
+			bigDirty = true
 			fuseDirty, buyDirty = true, true
 			return true
 		end
@@ -650,6 +827,9 @@ function EconomyModel.new(L)
 			objective("tileBuy", 1)
 			if best == "snack" then
 				setGrowth()
+				if P.tiles.snack >= SNACK_LEVELS and snack12Play == nil then
+					snack12Play = playTime
+				end
 			elseif best == "decor" then
 				refreshK()
 			end
@@ -657,9 +837,18 @@ function EconomyModel.new(L)
 
 		local function collectPot()
 			settle()
-			addCoins(P.pot)
-			P.pot = 0
+			-- le Pot en jeu compte dans les pièces gagnées en jeu ; le Pot hors ligne non
+			local before = P.coins
+			P.coins = Formulas.clampCoins(P.coins + P.potOn + P.potOff)
+			local gained = P.coins - before
+			local total = P.potOn + P.potOff
+			if total > 0 then
+				onlineCoins += gained * P.potOn / total
+				sourceCoins.pot = (sourceCoins.pot or 0) + gained * P.potOn / total
+			end
+			P.potOn, P.potOff = 0, 0
 			objective("potCollect", 1)
+			buyDirty = true
 		end
 
 		-- tirage de la Cuve (graine Odds.seed, nouveauté garantie, protections, Lune)
@@ -678,14 +867,13 @@ function EconomyModel.new(L)
 				unix = math.floor(now),
 				families = Odds.unlockedFamilies(P.R),
 				owned = owned,
-				newPull = P.vat.newPulls > 0,
+				newPull = P.newPulls > 0,
 				pityRare = P.vat.pityRare,
 				pityEpic = P.vat.pityEpic,
 			})
 			P.vat.pulls += 1
-			metrics.vatPulls = (metrics.vatPulls or 0) + 1
 			if result.usedNewPull then
-				P.vat.newPulls -= 1
+				P.newPulls -= 1
 			end
 			P.vat.pityRare, P.vat.pityEpic = result.pityRare, result.pityEpic
 			give(result.species, result.mutation, 1, "vat")
@@ -695,7 +883,7 @@ function EconomyModel.new(L)
 		end
 
 		-- bébé d'un événement (toutes familles ou familles débloquées), taille donnée
-		local function rollBaby(quality, nozzles, mult, force, z, unlockedOnly)
+		local function rollBaby(quality, nozzles, mult, force, z, unlockedOnly, points)
 			local result = Odds.roll(Hash.stream(Odds.seed(userId, 1e6 + P.nextUid)), {
 				quality = quality,
 				nozzles = nozzles,
@@ -706,13 +894,56 @@ function EconomyModel.new(L)
 				forceMutation = force,
 			})
 			captures += 1
+			if points then
+				addPoints(points)
+			end
 			return give(result.species, result.mutation, z, "event")
 		end
 
 		-- Grand Splorch d'un bloc (EconomyService.applySplorch + SquishyService.resetSizes)
 		local function applySplorch()
 			settle()
-			P.coins, P.pot = 0, 0
+			local peak = biggest()
+			if peak > dayPeak then
+				dayPeak = peak -- le plus gros juste avant de repartir à 1
+			end
+			local lost = P.coins + P.potOn + P.potOff
+			if dayIndex <= HEALTH_LAST_DAY then
+				local loopLen = playTime - loopStartPlay
+				local share = 1
+				if snack12Play ~= nil and loopLen > 0 then
+					share = math.clamp((snack12Play - loopStartPlay) / loopLen, 0, 1)
+				end
+				table.insert(loopShares, share)
+				table.insert(lostRatios, lost / Formulas.tileCost("snack", SNACK_LEVELS - 1, P.R))
+				if dayIndex >= 2 then
+					splorchDays2to14 += 1
+					if loginReadyPending then
+						readyAtLoginCount += 1
+					end
+				end
+			end
+			loginReadyPending = false
+			if opts.trace then
+				print(
+					string.format(
+						"  splorch R=%d jour %d : jeu %.0f s, boucle %.0f s, Tapis12 à %s, Tapis %d, décos %d, pièces %.3g, Pot jeu %.3g, Pot hors ligne %.3g, Tapis 12 = %.3g (×%.1f)",
+						P.R,
+						dayIndex,
+						playTime,
+						playTime - loopStartPlay,
+						tostring(snack12Play and (snack12Play - loopStartPlay)),
+						P.tiles.snack,
+						P.tiles.decor,
+						P.coins,
+						P.potOn,
+						P.potOff,
+						Formulas.tileCost("snack", SNACK_LEVELS - 1, P.R),
+						lost / Formulas.tileCost("snack", SNACK_LEVELS - 1, P.R)
+					)
+				)
+			end
+			P.coins, P.potOn, P.potOff = 0, 0, 0
 			P.tiles.snack, P.tiles.decor = 0, 0
 			P.R += 1
 			P.fame += Balance.Fame.Splorch
@@ -723,31 +954,40 @@ function EconomyModel.new(L)
 				r.z, r.zg = 1, 0
 			end
 			incomeDirty = true
+			bigDirty = true
 			P.growth = { G = 0, g = P.growth.g, t = now }
 			boostChanged()
 			buyDirty = true
+			addPoints(POINTS.splorch)
 			objective("splorch", 1)
 			if metrics.firstSplorch == math.huge then
 				metrics.firstSplorch = playTime / 60
+				metrics.splorchIn10to18 = if metrics.firstSplorch >= 10
+						and metrics.firstSplorch <= 18
+					then 1
+					else 0
 			end
+			loopStartPlay = playTime
+			snack12Play = nil
 		end
 
-		-- Nourrir Plop (jours au total) : boost personnel, palier du jour 2 en pièces
+		-- Nourrir Plop (jours au total) : boost personnel de 5 min, palier du jour 2 en pièces
 		local function feed()
 			P.plopDays += 1
 			local milestone = QuestRules.plopReward(P.plopDays)
 			local was = boostOn()
-			P.personalBoost += if milestone then Balance.Boosts.FeedMilestone else Balance.Boosts.FeedDay
+			P.personalLeft += if milestone then Balance.Boosts.FeedMilestone else Balance.Boosts.FeedDay
 			if milestone and milestone.kind == "coins" then
 				incomeSeconds(Balance.Rewards.PlopDay2)
 			end
+			addPoints(POINTS.feed)
 			if not was then
 				boostChanged()
 			end
 		end
 
-		-- objectifs du jour (jour 1 : fixes) et Nourrir Plop (jours au total, boost personnel)
-		local function chores(dayIndex, withFeed)
+		-- objectifs du jour (jour 1 : fixes) et Nourrir Plop
+		local function chores(withFeed)
 			resetCaps()
 			local day = math.floor(now / DAY)
 			if objectivesDay ~= day then
@@ -780,39 +1020,224 @@ function EconomyModel.new(L)
 		end
 
 		-- =================================================================================
-		-- Une séance
+		-- Une séance : moteur par événements
 		-- =================================================================================
 		local runawayAt = math.huge
 		local splorchAt = math.huge
-		local function playSession(duration, dayIndex)
-			local sessionEnd = playTime + duration
-			local sessionT0 = now
+		local function playSession(duration)
+			local sessionStart = now
+			local sessionEnd = now + duration
+			local playStart = playTime
+			local function playAt(t)
+				return playStart + (t - sessionStart)
+			end
+			local function atPlay(p)
+				return sessionStart + (p - playStart)
+			end
+			local first = dayIndex == 1
 			local nextRush = EventClock.rush(now)
 			local nextMega = EventClock.mega(now)
 			local nextGolden = EventClock.golden(now)
-			local nextGift = now + GIFT_EVERY
-			local boostWindowEnd = now
-			local nextPot = if playTime == 0 then FIRST_POT else playTime + POT_EVERY
+			local nextGift = now + rng.range(0, giftEvery)
+			local nextPotAt = atPlay(if first then FIRST_POT else playStart + POT_EVERY)
+			local nextPressAt = atPlay(if first then FIRST_PRESS else playStart)
+			local emoteAt = now + EMOTES_AT
 			local rushEnd, megaEnd = -math.huge, -math.huge
 			local wildPersonalAt = math.huge
-			local emoted = false
-			if dayIndex > 1 then
+			local squishEnd = if spender then now + duration / 2 else -math.huge
+			if spender and not first then
+				squishOn = true
+				boostChanged()
+			end
+			-- jalons et script de l'accueil (temps de jeu → instants)
+			local script = {}
+			if first then
+				script = {
+					{ at = atPlay(TWIN_AT), kind = "twin" },
+					{ at = atPlay(FIRST_RUNAWAY_AT), kind = "firstRunaway" },
+					{ at = atPlay(FIRST_PULL_AT), kind = "firstPull" },
+					{ at = atPlay(DEMO_AT), kind = "demo" },
+					{ at = atPlay(ONBOARDING_END), kind = "card" },
+					{ at = atPlay(1800), kind = "m30" },
+				}
+			else
 				runawayAt = now + Balance.Runaway.Interval
 			end
-			while playTime < sessionEnd do
-				local fine = playTime < FINE_UNTIL
-				local step = if fine then PRESS_EVERY else COARSE_STEP
-				local onboarding = dayIndex == 1 and playTime < ONBOARDING_END
+			local scriptIndex = 1
+			local ownPointsAtStart = ownPoints
 
-				-- --- script de l'accueil (premier jour) ---
-				if dayIndex == 1 then
-					if playTime == TWIN_AT then
+			local function onboarding()
+				return first and playAt(now) < ONBOARDING_END
+			end
+			local function personalEndAt()
+				if P.personalLeft > 0 and not serverBoost() then
+					return now + P.personalLeft
+				end
+				return math.huge
+			end
+			-- avance l'horloge à t (boost personnel décompté hors boost de serveur, temps en ×2)
+			local function advanceTo(t)
+				local dt = t - now
+				if dt <= 0 then
+					return
+				end
+				if boostOn() then
+					boostTime += dt
+				end
+				sessionTime += dt
+				if P.personalLeft > 0 and not serverBoost() then
+					P.personalLeft -= dt
+					-- reste d'arrondi (instants de l'ordre de 1,8e9 s) : fini
+					if P.personalLeft < 1e-3 then
+						P.personalLeft = 0
+					end
+				end
+				now = t
+				playTime = playAt(t)
+			end
+			local function splorchReadyCheck()
+				local bg = biggest()
+				if bg > dayPeak then
+					dayPeak = bg
+				end
+				if bg >= 1200 and metrics.firstRide == math.huge then
+					metrics.firstRide = playTime
+				end
+				if bg >= 1e12 and metrics.first1e12Day == math.huge then
+					metrics.first1e12Day = dayIndex
+				end
+				if splorchAt == math.huge and bg >= Formulas.splorchTarget(P.R) then
+					splorchAt = now + SPLORCH_DELAY
+				end
+			end
+
+			-- une pression sur le squishy prêt le plus rentable, puis un achat éventuel
+			local function press()
+				local Gt = Gnow()
+				local best, bestIncome = nil, -1
+				for _, r in P.pen do
+					if r.readyAt <= now then
+						local inc = r.k * sizeOf(r, Gt)
+						if inc > bestIncome then
+							best, bestIncome = r, inc
+						end
+					end
+				end
+				if best then
+					local perfect = rng.chance(PERFECT_SHARE)
+					P.streak = if perfect then math.min(P.streak + 1, Balance.Press.StreakMax) else 0
+					local reward = pressReward(bestIncome, perfect, P.streak, families.kitty == true)
+					local c = P.coins + reward
+					P.coins = if c > MAX_COINS then MAX_COINS else c
+					onlineCoins += reward
+					pressCoins += reward
+					sourceCoins.press = (sourceCoins.press or 0) + reward
+					best.readyAt = now + COOLDOWN
+					if metrics.firstPress == math.huge then
+						metrics.firstPress = playTime
+					end
+					objective("press", 1, perfect)
+					if perfect then
+						objective("perfect", 1)
+						addPoints(POINTS.perfect + POINTS.press)
+					elseif POINTS.press > 0 then
+						addPoints(POINTS.press)
+					end
+				end
+				tryBuy()
+			end
+
+			local stuckAt, stuckCount = -1, 0
+			while true do
+				-- garde-fou de l'outil : un événement jamais consommé bloquerait la boucle au même instant
+				if now == stuckAt then
+					stuckCount += 1
+					if stuckCount > 200 then
+						error(
+							string.format(
+								"EconomyModel : boucle bloquée à t = %.3f (jeu %.1f s)",
+								now,
+								playTime
+							)
+						)
+					end
+				else
+					stuckAt, stuckCount = now, 0
+				end
+				-- prochain événement (hors pressions)
+				local tNext, nextName = sessionEnd, "fin"
+				local function at(t, name)
+					if t < tNext then
+						tNext, nextName = t, name
+					end
+				end
+				if script[scriptIndex] then
+					at(script[scriptIndex].at, script[scriptIndex].kind)
+				end
+				at(nextPotAt, "pot")
+				at(nextRush.startsAt, "rush")
+				at(wildPersonalAt, "wild")
+				at(nextMega.landsAt, "mega")
+				at(nextGolden.spawnAt, "golden")
+				at(nextGift, "gift")
+				at(emoteAt, "emote")
+				at(runawayAt, "runaway")
+				at(P.vat.hatchAt, "hatch")
+				at(P.vat.nextAt, "vat")
+				at(splorchAt, "splorch")
+				at(personalEndAt(), "personal")
+				at(gaugeNextAt(), "gauge")
+				at(moonPhase.endsAt, "moonEnd")
+				if not moonPhase.active then
+					at(moonPhase.startsAt, "moonStart")
+				end
+				if squishOn then
+					at(squishEnd, "squish")
+				end
+				if stuckCount > 100 then
+					error(
+						string.format(
+							"EconomyModel : événement « %s » jamais consommé (jeu %.1f s)",
+							nextName,
+							playTime
+						)
+					)
+				end
+				if tNext < now then
+					tNext = now
+				end
+
+				-- pressions jusqu'au prochain événement (avec un éventuel Grand Splorch prêt)
+				while nextPressAt < tNext do
+					advanceTo(nextPressAt)
+					press()
+					splorchReadyCheck()
+					nextPressAt += PRESS_EVERY
+					if splorchAt < tNext then
+						tNext = math.max(now, splorchAt)
+					end
+					-- une pression PERFECT peut remplir la jauge : la fête part tout de suite
+					local gNext = gaugeNextAt()
+					if gNext < tNext then
+						tNext = math.max(now, gNext)
+					end
+				end
+				advanceTo(tNext)
+				if now >= sessionEnd then
+					break
+				end
+
+				-- --- script de l'accueil et jalons (premier jour) ---
+				local ev = script[scriptIndex]
+				if ev and now >= ev.at then
+					scriptIndex += 1
+					if ev.kind == "twin" then
 						give(Species.PLOP, 0, 1, "vat") -- jumeau de Plop (naissance scriptée)
-					elseif playTime == FIRST_RUNAWAY_AT then
+					elseif ev.kind == "firstRunaway" then
 						runawayAt = now -- Mochi Mew, attrapée (leçon du bond)
-					elseif playTime == FIRST_PULL_AT then
+					elseif ev.kind == "firstPull" then
 						vatRoll() -- premier vrai tirage
-					elseif playTime == DEMO_AT then
+					elseif ev.kind == "demo" then
 						local plop = 1
 						for _, r in P.pen do
 							if r.bf == 1 then
@@ -820,76 +1245,93 @@ function EconomyModel.new(L)
 							end
 						end
 						captures += 1
+						addPoints(POINTS.catch)
 						give(
 							Species.PLOP,
 							0,
 							Formulas.babySize(Balance.Babies.DemoShare, Balance.Babies.DemoMin, plop),
 							"demo"
 						)
-					end
-					if playTime == ONBOARDING_END then
-						-- carte de 5:00 : objectifs du jour 1 et « Nourris Plop : Jour 1 »
-						chores(dayIndex, true)
+					elseif ev.kind == "card" then
+						-- jalons de 5:00 (avant la carte), puis objectifs du jour 1 et « Nourris Plop »
+						metrics.squishies5 = #P.pen + #P.dodo
+						metrics.fusions5 = fusions
+						metrics.captures5 = captures
+						metrics.coins5 = P.coins
+						local payable = P.tiles.pens > 0
+							or P.coins >= Formulas.tileCost("pens", P.tiles.pens, P.R)
+						metrics.penPayable5 = if payable then 1 else 0
+						chores(true)
 						buyDirty = true
 						scheduleVat()
 						runawayAt = math.min(runawayAt, now + Balance.Runaway.Interval)
+						if spender then
+							squishOn = true
+							squishEnd = now + (sessionEnd - now) / 2
+							boostChanged()
+						end
+					elseif ev.kind == "m30" then
+						metrics.r30 = P.R
+						metrics.stamps30 = QuestRules.stampCount(P.dex)
 					end
 				end
 
-				-- --- boosts ---
-				if not onboarding and now >= boostWindowEnd then
-					local was = boostOn()
-					serverBoost = rng.chance(BOOST_SHARE)
-					boostWindowEnd = now + BOOST_WINDOW
-					if was ~= boostOn() then
-						boostChanged()
-					end
+				-- --- boosts et jauge ---
+				if squishOn and now >= squishEnd then
+					squishOn = false
+					boostChanged()
 				end
-				if P.personalBoost > 0 and not serverBoost then
-					P.personalBoost -= step
-					if P.personalBoost <= 0 then
-						P.personalBoost = 0
-						boostChanged()
-					end
+				if now >= gaugeNextAt() then
+					gaugeStep()
+				end
+				-- le boost personnel vient de finir : g et k sans ×2
+				if ctx.boost ~= boostOn() then
+					boostChanged()
 				end
 
-				-- --- événements du serveur (EventClock) ---
+				-- --- Jelly Moon ---
 				if now >= moonPhase.endsAt or (not moonPhase.active and now >= moonPhase.startsAt) then
 					moonPhase = EventClock.moon(now)
 				end
+
+				-- --- BOOP RUSH et Wild Wobblers ---
 				if now >= nextRush.startsAt then
 					rushEnd = nextRush.endsAt
-					if not onboarding then
+					if not onboarding() then
 						wildPersonalAt = nextRush.startsAt + Events.Wild.PersonalDelay
 						local bg = biggest()
-						local caught = 0
-						for _ = 1, RushRules.wildShared(PLAYERS_ON_SERVER) do
-							if
-								caught < Events.Wild.SharedPerPlayerPerRush and rng.chance(SHARED_WILD_SHARE)
-							then
-								caught += 1
-								rollBaby(
-									Events.Wild.Quality,
-									Events.Wild.Nozzles,
-									nil,
-									nil,
-									Formulas.babySize(Balance.Babies.WildShare, Balance.Babies.WildMin, bg)
-								)
-								addFameRush(Balance.Fame.Wild)
-								objective("wildCatch", 1)
-								objective("rushCatchOrBoop", 1)
-							end
+						-- Wild Wobbler partagé : part du serveur de N joueurs
+						if rng.chance(sharedWildShare) then
+							rollBaby(
+								Events.Wild.Quality,
+								Events.Wild.Nozzles,
+								nil,
+								nil,
+								Formulas.babySize(Balance.Babies.WildShare, Balance.Babies.WildMin, bg),
+								false,
+								POINTS.catch
+							)
+							addFameRush(Balance.Fame.Wild)
+							objective("wildCatch", 1)
+							objective("rushCatchOrBoop", 1)
 						end
 						resetCaps()
 						if rng.chance(RUSH_BABY_SHARE) and P.caps.rushBabies < Balance.Caps.rushBabies then
 							P.caps.rushBabies += 1
 							local lvl = Formulas.vatLevel(P.R)
+							-- original : un squishy d'un autre joueur, de taille voisine ; sa mutation tirée
+							-- comme une naissance de la Cuve, puis RushRules.babyMutation (≤ ×5 copiée)
+							local original = bg * rng.range(0.5, 2)
+							local origMut = Odds.rollMutation(rng(), lvl.nozzles, moonPhase.active)
+							local mut = RushRules.babyMutation(origMut, rng(), lvl.nozzles, moonPhase.active)
 							rollBaby(
 								lvl.quality,
 								lvl.nozzles,
 								nil,
-								nil,
-								RushRules.babySize(bg * rng.range(0.5, 2), bg)
+								mut,
+								RushRules.babySize(original, bg),
+								false,
+								POINTS.rushCatch
 							)
 							objective("rushCatchOrBoop", 1)
 						end
@@ -904,16 +1346,20 @@ function EconomyModel.new(L)
 							Events.Wild.Nozzles,
 							nil,
 							nil,
-							Formulas.babySize(Balance.Babies.WildShare, Balance.Babies.WildMin, (biggest()))
+							Formulas.babySize(Balance.Babies.WildShare, Balance.Babies.WildMin, (biggest())),
+							false,
+							POINTS.catch
 						)
 						addFameRush(Balance.Fame.Wild)
 						objective("wildCatch", 1)
 						objective("rushCatchOrBoop", 1)
 					end
 				end
+
+				-- --- MEGA SQUISH ---
 				if now >= nextMega.landsAt then
 					megaEnd = nextMega.burstEndsAt
-					if not onboarding then
+					if not onboarding() then
 						local lvl = Formulas.vatLevel(P.R)
 						local bg = biggest()
 						for _ = 1, MEGA_BABIES do
@@ -930,15 +1376,18 @@ function EconomyModel.new(L)
 						end
 						incomeSeconds(Balance.Rewards.MegaSuccess)
 						P.fame += Balance.Fame.Mega
+						addPoints(POINTS.mega)
 						objective("megaJoin", 1)
 					end
 					nextMega = EventClock.mega(nextMega.burstEndsAt)
 				end
+
+				-- --- Golden Wobbler ---
 				if now >= nextGolden.spawnAt then
 					if
-						not onboarding
+						not onboarding()
 						and now - P.goldenWinAt >= Balance.Golden.WinCooldown
-						and rng.chance(GOLDEN_SHARE)
+						and rng.chance(goldenShare)
 					then
 						P.goldenWinAt = now
 						rollBaby(
@@ -946,17 +1395,26 @@ function EconomyModel.new(L)
 							0,
 							nil,
 							Mutations.GOLDEN,
-							Formulas.babySize(Balance.Golden.SizeShare, Balance.Golden.MinSize, (biggest()))
+							Formulas.babySize(Balance.Golden.SizeShare, Balance.Golden.MinSize, (biggest())),
+							false,
+							POINTS.catch
 						)
 						objective("goldenRace", 1)
 					end
 					nextGolden = EventClock.golden(nextGolden.endsAt)
 				end
+
+				-- --- cadeaux des Grands Splorch des N − 1 autres joueurs ---
 				if now >= nextGift then
-					nextGift = now + GIFT_EVERY
-					if not onboarding then
-						incomeSeconds(Balance.Splorch.GiftSeconds)
+					nextGift = now + giftEvery
+					if not onboarding() then
 						resetCaps()
+						if P.caps.splorchCoins < Balance.Caps.splorchCoins then
+							P.caps.splorchCoins += 1
+							incomeSeconds(Balance.Splorch.GiftSeconds)
+						else
+							incomeSeconds(Balance.Rewards.GiftSecondsAfterCap)
+						end
 						if P.caps.splorchGifts < Balance.Caps.splorchGifts then
 							P.caps.splorchGifts += 1
 							local lvl = Formulas.vatLevel(P.R)
@@ -975,41 +1433,54 @@ function EconomyModel.new(L)
 						end
 					end
 				end
-				if not emoted and now - sessionT0 >= EMOTES_AT then
-					emoted = true
+				if now >= emoteAt then
+					emoteAt = math.huge
 					objective("emote", 3)
 				end
 
 				-- --- créature en fuite personnelle ---
-				local paused = now < rushEnd
-					or now < megaEnd
-					or (dayIndex == 1 and playTime >= 165 and playTime < ONBOARDING_END)
-				if now >= runawayAt and not paused then
-					local first = dayIndex == 1 and playTime < 165
-					local endAt
-					if first or rng.chance(CATCH_SHARE) then
-						local bg = biggest()
-						local z = Formulas.babySize(Balance.Runaway.SizeShare, Balance.Runaway.MinSize, bg)
-						if first then
-							captures += 1
-							give(Quests.Onboarding.FirstRunawaySpecies, 0, z, "runaway")
-						else
-							local lvl = Formulas.vatLevel(P.R)
-							rollBaby(lvl.quality, lvl.nozzles, nil, nil, z, true)
+				if now >= runawayAt then
+					local paused = now < rushEnd
+						or now < megaEnd
+						or (first and playTime >= RUNAWAY_PAUSE_FROM and playTime < ONBOARDING_END)
+					if paused then
+						runawayAt = math.max(
+							rushEnd,
+							megaEnd,
+							if first and playTime < ONBOARDING_END then atPlay(ONBOARDING_END) else now
+						)
+						if runawayAt <= now then
+							runawayAt = now + 1
 						end
-						objective("runawayCatch", 1)
-						endAt = now + CATCH_TIME
 					else
-						endAt = now + Balance.Runaway.Duration
+						local firstCatch = first and playTime < RUNAWAY_PAUSE_FROM
+						local endAt
+						if firstCatch or rng.chance(CATCH_SHARE) then
+							local bg = biggest()
+							local z =
+								Formulas.babySize(Balance.Runaway.SizeShare, Balance.Runaway.MinSize, bg)
+							if firstCatch then
+								captures += 1
+								addPoints(POINTS.catch)
+								give(Quests.Onboarding.FirstRunawaySpecies, 0, z, "runaway")
+							else
+								local lvl = Formulas.vatLevel(P.R)
+								rollBaby(lvl.quality, lvl.nozzles, nil, nil, z, true, POINTS.catch)
+							end
+							objective("runawayCatch", 1)
+							endAt = now + CATCH_TIME
+						else
+							endAt = now + Balance.Runaway.Duration
+						end
+						local interval = if families.froggy
+							then Species.Families.froggy.bonus.value
+							else Balance.Runaway.Interval
+						runawayAt = endAt + interval
 					end
-					local interval = if families.froggy
-						then Species.Families.froggy.bonus.value
-						else Balance.Runaway.Interval
-					runawayAt = endAt + interval
 				end
 
 				-- --- Cuve (après l'accueil) ---
-				if not onboarding then
+				if not onboarding() then
 					if P.vat.hatchAt <= now then
 						P.vat.hatchAt = math.huge
 						vatRoll()
@@ -1025,96 +1496,48 @@ function EconomyModel.new(L)
 						if #P.pen < penCap() then
 							P.vat.hatchAt = now + Balance.Vat.HatchTime
 							P.vat.nextAt = math.huge
+						else
+							P.vat.nextAt = now + VAT_RETRY
 						end
 					end
 				end
 
-				-- --- fusions et Pot ---
+				-- --- fusions, Pot ---
 				fuseAll()
-				if playTime >= nextPot then
+				if now >= nextPotAt then
 					collectPot()
 					if onboardingTiles then
 						onboardingTiles = false
 						buyDirty = true
 					end
-					nextPot = playTime + POT_EVERY
+					nextPotAt = now + POT_EVERY
 				end
-
-				-- --- pressions (une toutes les 2 s) et achats ---
-				for k = 0, step - PRESS_EVERY, PRESS_EVERY do
-					local t = now + k
-					if playTime + k >= FIRST_PRESS then
-						local Gt = Gnow() + P.growth.g * k
-						local best, bestIncome = nil, -1
-						for _, r in P.pen do
-							if r.readyAt <= t then
-								local inc = r.k * sizeOf(r, Gt)
-								if inc > bestIncome then
-									best, bestIncome = r, inc
-								end
-							end
-						end
-						if best then
-							local perfect = rng.chance(PERFECT_SHARE)
-							P.streak = if perfect then math.min(P.streak + 1, Balance.Press.StreakMax) else 0
-							-- récompense déjà entière et bornée (Formulas.pressReward) : addition simple
-							local c = P.coins
-								+ pressReward(bestIncome, perfect, P.streak, families.kitty == true)
-							P.coins = if c > MAX_COINS then MAX_COINS else c
-							best.readyAt = t + COOLDOWN
-							if metrics.firstPress == math.huge then
-								metrics.firstPress = playTime + k
-							end
-							objective("press", 1, perfect)
-							if perfect then
-								objective("perfect", 1)
-							end
-						end
-					end
-					tryBuy()
-				end
+				tryBuy()
 
 				-- --- Grand Splorch dès que l'objectif est atteint ---
-				local bg = biggest()
-				if bg >= 1200 and metrics.firstRide == math.huge then
-					metrics.firstRide = playTime
-				end
-				if bg >= 1e12 and metrics.first1e12Day == math.huge then
-					metrics.first1e12Day = dayIndex
-				end
-
-				if splorchAt == math.huge and bg >= Formulas.splorchTarget(P.R) then
-					splorchAt = now + SPLORCH_DELAY
-				end
+				splorchReadyCheck()
 				if now >= splorchAt then
 					splorchAt = math.huge
 					applySplorch()
 				end
-
-				-- --- jalons ---
-				if dayIndex == 1 then
-					if playTime == ONBOARDING_END then
-						metrics.squishies5 = #P.pen + #P.dodo
-						metrics.fusions5 = fusions
-						metrics.captures5 = captures
-						metrics.coins5 = P.coins
-						local payable = P.tiles.pens > 0
-							or P.coins >= Formulas.tileCost("pens", P.tiles.pens, P.R)
-						metrics.penPayable5 = if payable then 1 else 0
-					end
-					if playTime == 1800 then
-						metrics.r30 = P.R
-						metrics.stamps30 = QuestRules.stampCount(P.dex)
-					end
-				end
-
-				if serverBoost or P.personalBoost > 0 then
-					boostTime += step
-				end
-				now += step
-				playTime += step
 			end
 			settle()
+			if squishOn then
+				squishOn = false
+				boostChanged()
+			end
+			-- débit de points mesuré (les autres joueurs du serveur jouent comme lui)
+			local own = ownPoints - ownPointsAtStart
+			local span = playTime - playStart
+			if first then
+				span -= ONBOARDING_END
+			end
+			if span > 0 then
+				local rate = own / span
+				measuredRate = if dayIndex <= 2 then rate else 0.5 * measuredRate + 0.5 * rate
+				ownPointsTime += span
+				othersRate = (N - 1) * measuredRate
+			end
 		end
 
 		-- =================================================================================
@@ -1125,13 +1548,43 @@ function EconomyModel.new(L)
 		setGrowth()
 		refreshK()
 
-		for dayIndex = 1, days do
-			if dayIndex > 1 then
-				chores(dayIndex, true)
+		for d = 1, days do
+			dayIndex = d
+			pressCoins, onlineCoins = 0, 0
+			sourceCoins = {}
+			dayPeak = 0
+			gaugeJoin()
+			if gauge.state == "party" then
+				boostChanged()
 			end
-			playSession(if dayIndex == 1 then 35 * 60 else 30 * 60, dayIndex)
+			if d > 1 then
+				chores(true)
+				-- Grand Splorch déjà prêt à la connexion (santé : jamais plus d'une fois sur deux)
+				if biggest() >= Formulas.splorchTarget(P.R) then
+					loginReadyPending = true
+				end
+			end
+			playSession(if d == 1 then 35 * 60 else 30 * 60)
 
-			if dayIndex == 1 then
+			if opts.trace then
+				local parts = {}
+				for key, v in sourceCoins do
+					table.insert(parts, string.format("%s %.3g", key, v))
+				end
+				table.sort(parts)
+				local bg = biggest()
+				print(
+					string.format(
+						"  jour %d : R=%d plus gros %.3g revenu %.3g/s ; %s",
+						d,
+						P.R,
+						bg,
+						income(),
+						table.concat(parts, ", ")
+					)
+				)
+			end
+			if d == 1 then
 				local done = 0
 				for _, e in objectives do
 					if e.done then
@@ -1141,24 +1594,32 @@ function EconomyModel.new(L)
 				metrics.objectivesDay1 = if done == #objectives and done == 3 then 1 else 0
 				metrics.rDay1 = P.R
 			end
-			if dayIndex == 7 then
-				-- plus gros squishy en fin de jour 7, dans la boucle en cours (avant son Grand Splorch)
-				metrics.biggestDay7 = (biggest())
+			if d == 7 then
+				-- GDD §4.24 « plus gros squishy (avant Grand Splorch) » au jour 7 : la plus grande taille
+				-- atteinte ce jour-là, juste avant le Grand Splorch s'il y en a eu un (cible ≈ 1e8, au-dessus de
+				-- l'objectif 81 M de R = 9 → 10), sinon le plus gros en fin de séance
+				metrics.biggestDay7 = math.max(dayPeak, (biggest()))
 				metrics.rDay7 = P.R
 				metrics.stampsDay7 = QuestRules.stampCount(P.dex)
 				metrics.epicDay7 = if epicEver then 1 else 0
+				metrics.pressShareDay7 = if onlineCoins > 0 then pressCoins / onlineCoins else 0
+				for key, v in sourceCoins do
+					metrics["day7_" .. key] = if onlineCoins > 0 then v / onlineCoins else 0
+				end
 			end
-			if dayIndex == 14 then
+			if d == 14 then
 				metrics.rDay14 = P.R
 			end
-			if dayIndex == days then
-				metrics.boostShare = 100 * boostTime / math.max(1, playTime)
+			if d == days then
+				metrics.boostShare = 100 * boostTime / math.max(1, sessionTime)
 				metrics.rDay28 = P.R
 				metrics.stampsDay28 = QuestRules.stampCount(P.dex)
 			end
 
 			-- départ (lastOnline), retour le lendemain à la même heure : rebase hors ligne pur
-			if dayIndex < days then
+			if d < days then
+				gauge.state, gauge.untilAt = "fill", math.huge
+				-- le boost personnel restant est gardé (en pause hors ligne, boosts.personalLeft)
 				ctx.boost = false
 				local map = {}
 				for _, r in P.pen do
@@ -1173,15 +1634,15 @@ function EconomyModel.new(L)
 					jellyFamily = families.jelly == true,
 					boost = false,
 				})
+				local bg = biggest()
 				local lastOnline = math.floor(now)
-				local nextStart = firstStart + DAY * dayIndex
+				local nextStart = firstStart + DAY * d
 				local seconds =
 					Formulas.offlineSeconds(nextStart, lastOnline, P.tiles.cozyBed, families.spiky == true)
+				P.growth.G = Gt + Formulas.offlineGrowth(gNoBoost, seconds, P.R, bg)
+				P.potOff += Formulas.offlinePot(incomeNoBoost, seconds)
 				now = nextStart
-				P.growth.G = Gt + Formulas.offlineGrowth(gNoBoost, seconds)
-				P.pot += Formulas.offlinePot(incomeNoBoost, seconds)
 				P.growth.t = now
-				serverBoost = false
 				boostChanged()
 				-- la Cuve ne tourne que joueur présent : elle repart à l'arrivée (goutte en cours perdue)
 				P.vat.hatchAt = math.huge
@@ -1189,10 +1650,41 @@ function EconomyModel.new(L)
 				splorchAt = math.huge
 			end
 		end
+
+		-- santé : médiane des boucles du joueur (jours 1 à 14)
+		local function median(list)
+			if #list == 0 then
+				return nil
+			end
+			local sorted = table.clone(list)
+			table.sort(sorted)
+			local n = #sorted
+			if n % 2 == 1 then
+				return sorted[(n + 1) / 2]
+			end
+			return (sorted[n / 2] + sorted[n / 2 + 1]) / 2
+		end
+		metrics.snack12Share = median(loopShares) or 1
+		metrics.coinsLostRatio = median(lostRatios) or 0
+		metrics.readyAtLogin = if splorchDays2to14 > 0 then readyAtLoginCount / splorchDays2to14 else 0
+		-- remplissage de 0 à pleine au débit mesuré des N joueurs (sans la sieste) ; cycle observé en jeu :
+		-- fin de fête → fête suivante, sieste comprise (au moins 20 min)
+		local rate = N * measuredRate
+		metrics.gaugeFillMin = if rate > 0 then gaugeTarget / rate / 60 else math.huge
+		metrics.gaugeCycleMin = if gaugeFills > 0
+			then gaugeFillTime / gaugeFills / 60 + GAUGE.PartyDuration / 60
+			else math.huge
+		metrics.pointsPerMin = if ownPointsTime > 0 then 60 * measuredRate else 0
 		return metrics
 	end
 
-	return { simulate = simulate }
+	local function simulateFor(opts)
+		return function(rng, index, days)
+			return simulateWith(opts or {}, rng, index, days)
+		end
+	end
+
+	return { simulate = simulateFor({ players = 16 }), simulateFor = simulateFor }
 end
 
 return EconomyModel

@@ -31,6 +31,9 @@
 --     d'office (pas de curseur virtuel) avec l'icône ✕ de Roblox (GetImageForKeyCode(ButtonA)) à
 --     côté ; tant que l'écran est là, une sélection perdue (bouton retour du jeu, objet derrière
 --     l'écran) lui est rendue si la manette est en main (console, ou dernière entrée = manette)
+--   * robuste par construction : l'échelle suit la caméra COURANTE à chaque image (caméra absente au
+--     lancement, créée ou remplacée ensuite, taille 1 × 1 pas encore connue) ; la destruction ne
+--     dépend pas de la fin du fondu (filet de CLOSE_GRACE s d'images après FADE_TIME)
 -- Une seule connexion RenderStepped, coupée à la fermeture. Le temps de l'écran est la somme des dt
 -- des images (mesure purement technique, sans Shared/Util/Clock qui n'est pas encore répliqué).
 -- Dépendances : aucune (services Roblox uniquement).
@@ -62,6 +65,9 @@ local RETRY_GRACE = 10 -- s après la fin du chargement serveur / de la réplica
 local RETRY_MAX_WAIT = 60
 local MAX_RESELECTS_PER_FRAME = 4 -- garde-fou contre une sélection disputée image après image
 local FADE_TIME = 0.3
+-- s d'images après le début du fondu : l'écran est détruit même si le moteur ne signale jamais la fin
+-- du fondu (aucune règle ne dépend d'une fin d'animation, docs/04 §17.3)
+local CLOSE_GRACE = 0.5
 local RETRY_COOLDOWN = 5 -- s entre deux tentatives de téléportation
 local PLAYER_WAIT = 10 -- s au plus pour LocalPlayer / PlayerGui
 local REFERENCE = Vector2.new(1920, 1080) -- = Config/Console.Reference (px TV, note INT-TV)
@@ -422,9 +428,11 @@ local function main()
 	-- failUIScale anime à l'entrée autour de son ancre) et les étoiles ; scène centrée, bloc à 68 %
 	-- de la hauteur (dans la zone sûre de 5 % aux résolutions télé : 720p, 1080p, 4K, 16:10, 21:9)
 	local failBase = 1
+	local lastViewport: Vector2? = nil
 	local function rescale()
 		local camera = workspace.CurrentCamera
 		local viewport = if camera then camera.ViewportSize else REFERENCE
+		lastViewport = viewport
 		local s = screenScale(viewport)
 		scale.Scale = s
 		failBase = s
@@ -523,6 +531,18 @@ local function main()
 		table.clear(connections)
 	end
 
+	local finished = false
+	local closeElapsed = 0
+	-- fin de l'écran (idempotente) : fin du fondu, ou filet si le fondu ne finit jamais
+	local function finish()
+		if finished then
+			return
+		end
+		finished = true
+		disconnectAll()
+		gui:Destroy()
+	end
+
 	local function close()
 		if closing then
 			return
@@ -541,10 +561,7 @@ local function main()
 				GroupTransparency = 1,
 			}
 		)
-		tween.Completed:Once(function()
-			disconnectAll()
-			gui:Destroy()
-		end)
+		tween.Completed:Once(finish)
 		tween:Play()
 	end
 
@@ -688,13 +705,26 @@ local function main()
 		end
 	end
 
+	-- caméra courante (absente au lancement, créée ou remplacée ensuite) : l'échelle la suit
+	local function followViewport()
+		local camera = workspace.CurrentCamera
+		local viewport = if camera then camera.ViewportSize else REFERENCE
+		if viewport ~= lastViewport then
+			rescale()
+		end
+	end
+
 	local function step(dt: number)
+		local d = if type(dt) == "number" and dt == dt and dt > 0 and dt < 1e6 then dt else 0
 		if closing then
+			closeElapsed += d
+			if closeElapsed >= FADE_TIME + CLOSE_GRACE then
+				finish()
+			end
 			return
 		end
-		if type(dt) == "number" and dt == dt and dt > 0 and dt < 1e6 then
-			elapsed += dt
-		end
+		elapsed += d
+		followViewport()
 		if not calm then
 			-- rebond : sinus de la hauteur, écrasement près du sol, ombre qui rétrécit en l'air
 			local p = (elapsed % BOUNCE_PERIOD) / BOUNCE_PERIOD

@@ -51,6 +51,36 @@ return function(T)
 			end
 		)
 
+		it("contrat v1.2 : la fusion garde le gd (bonus du Rush du jour) de l'uid gardé", function()
+			local a = rec(2, 1, 50, "pen", { b = 5, gd = 20400 })
+			local b = rec(2, 1, 60, "pen", { b = 9, gd = 20401 })
+			expect(FR.fuse(a, b, 0, 1000).gd).toBe(20400) -- a est le plus ancien : gardé
+			expect(FR.fuse(b, a, 0, 1000).gd).toBe(20400)
+			local friend = rec(2, 1, 50, "pen", { b = 50, bf = 2, gd = 7 })
+			expect(FR.fuse(a, friend, 0, 1000).gd).toBe(7) -- Meilleur Ami gardé
+			-- gd illisible ou absent : 0 (jamais NaN dans la sauvegarde)
+			expect(FR.fuse(rec(2, 1, 5, "pen", { b = 1, gd = 0 / 0 }), b, 0, 1000).gd).toBe(0)
+			expect(FR.fuse(rec(2, 1, 5, "pen", { b = 1 }), b, 0, 1000).gd).toBe(0)
+			expect(FR.fuse(rec(2, 1, 5, "pen", { b = 1, gd = -3 }), b, 0, 1000).gd).toBe(0)
+			expect(FR.fuse(rec(2, 1, 5, "pen", { b = 1, gd = 2.5 }), b, 0, 1000).gd).toBe(2)
+		end)
+
+		it(
+			"lieu du résultat : Bassin si l'un y est, sinon l'enclos si l'un y est (place libérée)",
+			function()
+				-- GDD §4.10 « Tout fusionner » : le résultat va dans l'enclos s'il y a de la place. La fusion
+				-- d'un squishy d'enclos libère sa place : le résultat ne part jamais au Dodo à sa place.
+				local penYoung = rec(4, 0, 30, "pen", { b = 90 })
+				local dodoOld = rec(4, 0, 10, "dodo", { b = 10 })
+				local r = FR.fuse(penYoung, dodoOld, 0, 1000)
+				expect(r.at).toBe("pen")
+				expect(FR.fuse(dodoOld, penYoung, 0, 1000).at).toBe("pen")
+				expect(FR.fuse(dodoOld, rec(4, 0, 1, "dodo", { b = 20 }), 0, 1000).at).toBe("dodo")
+				expect(FR.fuse(dodoOld, rec(4, 0, 1, "pool", { b = 20 }), 0, 1000).at).toBe("pool")
+				expect(FR.fuse(penYoung, rec(4, 0, 1, "pool", { b = 20 }), 0, 1000).at).toBe("pool")
+			end
+		)
+
 		it("keepUid : Meilleur Ami d'abord, puis le plus ancien, puis le plus petit uid", function()
 			expect(
 				FR.keepUid("a", "b", rec(1, 0, 1, "pen", { b = 50 }), rec(1, 0, 1, "pen", { bf = 2, b = 99 }))

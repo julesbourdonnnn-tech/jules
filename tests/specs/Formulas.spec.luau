@@ -134,18 +134,22 @@ return function(T)
 
 	describe("Formulas › presser, dalles, places, Cuve", function()
 		it("première pression = 10 (minimum) ; PERFECT, série, Kitty", function()
+			-- Balance.Press.Seconds = 22 (réglage logic de la porte EconomyPacing v1.2, docs/04 §21)
+			expect(Balance.Press.Seconds).toBe(22)
 			expect(F.pressReward(0.2, false, 0, false)).toBe(10)
-			expect(F.pressReward(10, false, 0, false)).toBe(120)
-			expect(F.pressReward(10, true, 0, false)).toBe(240)
-			expect(F.pressReward(10, true, 5, false)).toBe(360)
-			expect(F.pressReward(10, true, 9, false)).toBe(360) -- série plafonnée à 5
-			expect(F.pressReward(10, false, 0, true)).toBe(132)
+			expect(F.pressReward(10, false, 0, false)).toBe(220)
+			expect(F.pressReward(10, true, 0, false)).toBe(440)
+			expect(F.pressReward(10, true, 5, false)).toBe(660)
+			expect(F.pressReward(10, true, 9, false)).toBe(660) -- série plafonnée à 5
+			expect(F.pressReward(10, false, 0, true)).toBe(242)
 			expect(F.pressReward(0 / 0, true, 0 / 0, true)).toBe(22) -- minimum × 2 × 1,1
 		end)
 
-		it("coûts des dalles du GDD §4.6 (R = 0, puis × 2^R pour la boucle)", function()
+		it("coûts des dalles du GDD §4.6 (R = 0, puis × 3,5^R pour la boucle)", function()
+			-- Tapis : croissance 4,5 (GDD : 4,0), réglage logic de la porte EconomyPacing v1.2 (docs/04 §21)
+			expect(Balance.Tiles.snack.Growth).toBe(4.5)
 			local snack =
-				{ 20, 80, 320, 1280, 5120, 20480, 81920, 327680, 1310720, 5242880, 20971520, 83886080 }
+				{ 20, 90, 405, 1822, 8201, 36905, 166075, 747338, 3363025, 15133612, 68101257, 306455660 }
 			for level, cost in snack do
 				expect(F.tileCost("snack", level - 1, 0)).toBe(cost)
 			end
@@ -157,9 +161,18 @@ return function(T)
 			for level, cost in pens do
 				expect(F.tileCost("pens", level - 1, 0)).toBe(cost)
 			end
-			expect(F.tileCost("snack", 0, 2)).toBe(80)
+			-- contrat v1.2 (GDD v1.3 §4.6) : × Tiles.RScale^R (3,5) pour les dalles de la boucle
+			expect(F.tileCost("snack", 0, 1)).toBe(70)
+			expect(F.tileCost("snack", 0, 2)).toBe(245)
+			expect(F.tileCost("snack", 1, 1)).toBe(315) -- 20 × 4,5 × 3,5
+			expect(F.tileCost("decor", 2, 3)).toBe(math.floor(80 * 2.2 ^ 2 * 3.5 ^ 3))
 			expect(F.tileCost("pens", 0, 5)).toBe(1200) -- les places ne suivent pas R
-			expect(F.tileCost("cozyBed", 0, 3)).toBe(250000)
+			expect(F.tileCost("cozyBed", 0, 3)).toBe(25e6) -- jamais multiplié
+			expect(F.tileCost("cozyBed", 0, 10)).toBe(25e6)
+			-- Tiles porte aussi des nombres (DwellSeconds, RScale, rayons) : ce ne sont pas des dalles
+			expect(F.tileCost("RScale", 0, 0)).toBe(math.huge)
+			expect(F.tileCost("DwellSeconds", 0, 0)).toBe(math.huge)
+			expect(F.tileCost("EnterRadius", 0, 0)).toBe(math.huge)
 			expect(F.tileCost("snack", 12, 0)).toBe(math.huge)
 			expect(F.tileCost("cozyBed", 1, 0)).toBe(math.huge)
 			expect(F.tileCost("rocket", 0, 0)).toBe(math.huge)
@@ -209,11 +222,12 @@ return function(T)
 			expect(F.secondsOfIncome(0.001, 60, 10)).toBe(10)
 		end)
 
-		it("objectifs du Grand Splorch : table, puis × 2,7 arrondi à 2 chiffres", function()
+		it("objectifs du Grand Splorch : table v1.3, puis × 2,6 arrondi à 2 chiffres", function()
 			expect(F.splorchTarget(0)).toBe(15000)
-			expect(F.splorchTarget(19)).toBe(2.4e12)
-			expect(F.splorchTarget(20)).toBe(6.5e12)
-			expect(F.splorchTarget(21)).toBe(1.8e13)
+			expect(F.splorchTarget(1)).toBe(39000)
+			expect(F.splorchTarget(19)).toBe(1.1e12)
+			expect(F.splorchTarget(20)).toBe(2.9e12) -- 1,1e12 × 2,6 = 2,86e12 → 2,9e12
+			expect(F.splorchTarget(21)).toBe(7.5e12) -- 2,9e12 × 2,6 = 7,54e12 → 7,5e12
 			expect(F.splorchTarget(5000)).toBe(1e300)
 			expect(F.splorchTarget(0 / 0)).toBe(15000)
 			for R = 1, 100 do
@@ -222,7 +236,7 @@ return function(T)
 		end)
 
 		it(
-			"hors ligne : 0 au premier chargement, plafond 8 h / 12 h (+ 1 h Spiky), parts 50 % et 25 %",
+			"hors ligne : 0 au premier chargement, plafond 8 h / 12 h (+ 1 h Spiky), parts 30 % et 25 %",
 			function()
 				expect(F.offlineSeconds(1000, 0, false, false)).toBe(0)
 				expect(F.offlineSeconds(1000, 400, false, false)).toBe(600)
@@ -230,17 +244,42 @@ return function(T)
 				expect(F.offlineSeconds(1e6, 1, true, false)).toBe(12 * 3600)
 				expect(F.offlineSeconds(1e6, 1, true, true)).toBe(13 * 3600)
 				expect(F.offlineSeconds(1000, 2000, false, false)).toBe(0) -- horloge en arrière
-				expect(F.offlineGrowth(4, 100)).toBe(200)
+				expect(F.offlineGrowth(4, 100)).toBe(120) -- sans R ni plus gros : pas d'arrêt
 				expect(F.offlinePot(2, 100)).toBe(50)
 			end
 		)
 
-		it("bébés : part, minimum, et jamais plus de 2 × le plus gros du receveur", function()
+		it(
+			"hors ligne (contrat v1.2) : la croissance s'arrête à StopAt (90 %) de l'objectif de R",
+			function()
+				-- R = 0 : objectif 15 000, arrêt à 13 500
+				expect(F.offlineGrowth(4, 100, 0, 1000)).toBe(120) -- loin de l'arrêt
+				expect(F.offlineGrowth(100, 1000, 0, 13000)).toBe(500) -- 30 000 bornés à 13 500 − 13 000
+				expect(F.offlineGrowth(100, 1000, 0, 13500)).toBe(0) -- déjà à 90 %
+				expect(F.offlineGrowth(100, 1000, 0, 20000)).toBe(0) -- déjà prêt en jeu : rien ne grandit
+				expect(F.offlineGrowth(1e9, 1e6, 19, 0)).toBeNear(0.9 * 1.1e12, 1) -- R = 19
+				expect(F.offlineGrowth(100, 1000, 0)).toBe(30000) -- plus gros inconnu : pas d'arrêt
+				expect(F.offlineGrowth(100, 1000, nil, 13000)).toBe(30000)
+				-- entrées bizarres : jamais NaN ni négatif
+				expect(F.offlineGrowth(100, 1000, 0 / 0, 13000)).toBe(500) -- R illisible → 0
+				expect(F.offlineGrowth(100, 1000, 0, 0 / 0)).toBe(13500) -- plus gros illisible → 0
+				expect(F.offlineGrowth(100, 1000, 0, math.huge)).toBe(0)
+				expect(F.offlineGrowth(0 / 0, 1000, 0, 0)).toBe(0)
+			end
+		)
+
+		it("bébés : part, minimum, et jamais plus de 0,5 × le plus gros du receveur (GDD v1.3)", function()
 			-- démonstration : 10 % du Plop, minimum 10
 			expect(F.babySize(0.1, 10, 50)).toBe(10)
 			expect(F.babySize(0.1, 10, 1000)).toBe(100)
-			-- bébé du Rush : 10 % de l'original 1e9, receveur de 100 → 200
-			expect(F.babySize(0.1, 1, 100, 1e9)).toBe(200)
+			-- bébé du Rush : 10 % de l'original 1e9, receveur de 100 → 0,5 × 100 = 50
+			expect(F.babySize(0.1, 1, 100, 1e9)).toBe(50)
+			-- MEGA : 20 % du plus gros, déjà sous 0,5 ×
+			expect(F.babySize(0.2, 10, 1e6)).toBe(2e5)
+			-- part plus grande que 0,5 : bornée
+			expect(F.babySize(0.9, 1, 1000)).toBe(500)
+			-- le minimum passe en dernier (un nouveau reçoit quand même son minimum)
+			expect(F.babySize(0.2, 10, 1)).toBe(10)
 			expect(F.babySize(0.1, 1, 0 / 0, 0 / 0)).toBe(1)
 		end)
 
@@ -269,17 +308,20 @@ return function(T)
 			expect(F.trophyBonus(nil)).toBe(0)
 		end)
 
-		it("paquets de pièces : minutes du revenu, minimum du paquet", function()
-			expect(F.coinPack(0, "CoinsSmall")).toBe(5000)
-			expect(F.coinPack(10, "CoinsSmall")).toBe(18000)
-			expect(F.coinPack(10, "CoinsBig")).toBe(72000)
+		it("paquets de pièces retirés du lancement (contrat v1.2) : coinPack ne rend plus rien", function()
+			-- Balance.CoinPacks est retiré ; la fonction reste seulement tant que Contract_game la liste
+			expect(Balance.CoinPacks).toBeNil()
+			expect(F.coinPack(0, "CoinsSmall")).toBe(0)
+			expect(F.coinPack(10, "CoinsSmall")).toBe(0)
+			expect(F.coinPack(10, "CoinsBig")).toBe(0)
 			expect(F.coinPack(10, "Nope")).toBe(0)
+			expect(F.coinPack(0 / 0, nil)).toBe(0)
 		end)
 	end)
 
 	describe("Formulas › aperçu du Grand Splorch", function()
 		it(
-			"prêt, objectif, envol par défaut (pas un Meilleur Ami), pièces perdues, 2e confirmation",
+			"prêt, objectif, envol par défaut (pas un Meilleur Ami), pièces perdues, plus de 2e confirmation",
 			function()
 				local data = {
 					R = 0,
@@ -299,15 +341,18 @@ return function(T)
 				expect(p.target).toBe(15000)
 				expect(p.biggest).toBe(20001) -- le Dodo ne compte pas
 				expect(p.level).toBe(1)
-				expect(p.unlocks).toEqual({ "family.axolo", "pad.cozyBed" })
+				expect(p.unlocks).toEqual({ "family.axolo" }) -- Lit douillet à R = 3 (GDD v1.3)
 				expect(p.coinsLost).toBe(1500)
-				expect(p.recentBuy).toBe(true)
-				expect(p.nextTarget).toBe(40000)
+				-- contrat v1.2 : paquets retirés, plus de 2e confirmation ; un vieux coinBuy est ignoré
+				expect(p.recentBuy).toBeNil()
+				expect(p.nextTarget).toBe(39000)
 				expect(p.defaultFlyer).toBe("2") -- le Meilleur Ami n° 1 reste
-				-- paquet trop ancien ou dépensé : pas de 2e confirmation
-				expect(F.splorchPreview(data, { now = 100, unix = 1000 + 1800 }).recentBuy).toBe(false)
-				data.coins = 900
-				expect(F.splorchPreview(data, { now = 100, unix = 1500 }).recentBuy).toBe(false)
+				data.R = 2
+				expect(F.splorchPreview(data, { now = 100, unix = 1500 }).unlocks).toEqual({
+					"family.bunny",
+					"bestFriend.2",
+					"pad.cozyBed",
+				})
 			end
 		)
 

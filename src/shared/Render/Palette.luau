@@ -10,6 +10,7 @@
 -- Aucun nombre de jeu ici : seulement des couleurs et des réglages purement graphiques, nommés.
 
 local Cosmetics = require(script.Parent.Parent.Config.Cosmetics)
+local Quests = require(script.Parent.Parent.Config.Quests)
 
 export type Preset = {
 	clockTime: number,
@@ -130,8 +131,9 @@ Palette.Transitions = table.freeze({
 	reduced = 0.5,
 })
 
--- Part du calque du Rush pour un nouveau avant l'étape 9 (GDD §9.4 : teinte à 30 %)
-Palette.QuietRush = 0.3
+-- Part du calque du Rush pour un nouveau avant l'étape 9 (GDD §3, §9.4 : teinte à 30 %), lue dans
+-- Config/Quests (source unique)
+Palette.QuietRush = Quests.Onboarding.QuietSkyTint
 
 -- =============================================================================================
 -- Couleurs du monde (GDD §11.1, §11.2, §5.4) : lues par WorldService et le décor d'hiver
@@ -148,12 +150,14 @@ Palette.World = table.freeze({
 	sidewalk = rgb(245, 225, 240),
 	megaPad = rgb(255, 200, 225),
 	megaRing = rgb(255, 120, 190),
+	megaRingOff = rgb(245, 190, 215), -- anneau éteint au calme (allumé de l'alerte à la fin, client)
 	marble = rgb(240, 236, 245),
 	shopCounter = rgb(255, 214, 165),
 	shopStripes = { rgb(255, 130, 170), rgb(255, 255, 255) } :: { Color3 },
 	altarCrescent = rgb(200, 190, 255),
 	jarBase = rgb(170, 120, 210),
 	jelly = rgb(255, 120, 200),
+	jellyRest = rgb(176, 172, 186), -- jarre grise pendant la sieste de Big Plop (GDD §4.23, client)
 	glass = rgb(220, 240, 255),
 	stage = rgb(150, 220, 255),
 	gold = rgb(255, 205, 60),

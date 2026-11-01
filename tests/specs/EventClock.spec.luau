@@ -180,6 +180,45 @@ return function(T)
 			expect(count).toBe(24)
 		end)
 
+		it(
+			"espèce du géant (contrat v1.2) : liste publiée à l'atterrissage, avec 27, 30 et 64 espèces",
+			function()
+				for _, size in { 24, 27, 30, 64 } do
+					local hh = Harness.new()
+					local S = hh:require("ReplicatedStorage.Shared.Config.Species")
+					for i = 1, size - 24 do
+						local def = table.clone(S.List[1])
+						def.id = #S.List + 1
+						def.key = "test_" .. def.id
+						def.rarity = 1 + (i % 6)
+						def.release = 0
+						table.insert(S.List, def)
+						S.ById[def.id] = def
+					end
+					local ECx = hh:require("ReplicatedStorage.Shared.Logic.EventClock")
+					local MRx = hh:require("ReplicatedStorage.Shared.Logic.MegaRules")
+					local seen, count = {}, 0
+					local t = SAT
+					for _ = 1, size do
+						local m = ECx.mega(t)
+						local sp = ECx.megaSpecies(m.landsAt)
+						-- même espèce pendant l'alerte et tout le MEGA
+						expect(ECx.megaSpecies(m.warnAt)).toBe(sp)
+						expect(ECx.megaSpecies(m.burstEndsAt - 0.5)).toBe(sp)
+						expect(S.ById[sp].rarity ~= 7).toBe(true)
+						if not seen[sp] then
+							seen[sp] = true
+							count += 1
+						end
+						t = m.burstEndsAt
+					end
+					expect(count).toBe(size) -- jamais mod 24 : chaque espèce passe une fois par tour
+					expect(MRx.species(0, 0, SAT)).toBe(1)
+					expect(#hh.errors).toBe(0)
+				end
+			end
+		)
+
 		it("graines et costumes", function()
 			expect(EC.seed("rush", 5)).toBe(EC.seed("rush", 5))
 			expect(EC.seed("rush", 5) ~= EC.seed("rush", 6)).toBe(true)

@@ -41,6 +41,18 @@ return function(T)
 			expect(Z.near(3, "pot", pot, -1)).toBe(false)
 		end)
 
+		it("objet du ranch inconnu (faute de frappe d'un service) : jamais vrai, même au portail", function()
+			local gate = W.anchor(3, "gate")
+			expect(Z.near(3, "gate", gate, 5)).toBe(true)
+			-- WorldLayout.anchor rend le portail pour un nom inconnu : near ne doit pas s'en servir
+			expect(Z.near(3, "pott", gate, 5)).toBe(false)
+			expect(Z.near(3, nil, gate, 5)).toBe(false)
+			expect(Z.near(3, 12, gate, 5)).toBe(false)
+			expect(W.hasAnchor("pot")).toBe(true)
+			expect(W.hasAnchor("pott")).toBe(false)
+			expect(W.hasAnchor(nil)).toBe(false)
+		end)
+
 		it("MEGA : à 20 studs du centre du pad", function()
 			expect(Z.inMegaZone(Vector3.new(19.9, 3, 0))).toBe(true)
 			expect(Z.inMegaZone(Vector3.new(14, 0, 14.5))).toBe(false)
@@ -88,6 +100,61 @@ return function(T)
 			expect(Z.atAltar(altar + Vector3.new(0, 3, 11))).toBe(true)
 			expect(Z.atAltar(altar + Vector3.new(0, 3, 13))).toBe(false)
 		end)
+
+		it("distXZ (contrat v1.2) : distance à plat, la hauteur ne compte jamais", function()
+			expect(Z.distXZ(Vector3.new(0, 0, 0), Vector3.new(3, 100, 4))).toBe(5)
+			expect(Z.distXZ(Vector3.new(1, -50, 1), Vector3.new(1, 50, 1))).toBe(0)
+			-- entrées bizarres : infiniment loin (aucune portée ne passe), jamais NaN ni erreur
+			expect(Z.distXZ(Vector3.new(0 / 0, 0, 0), Vector3.zero)).toBe(math.huge)
+			expect(Z.distXZ(Vector3.zero, Vector3.new(math.huge, 0, 0))).toBe(math.huge)
+			expect(Z.distXZ(nil, Vector3.zero)).toBe(math.huge)
+			expect(Z.distXZ(Vector3.zero, "x")).toBe(math.huge)
+		end)
+
+		it("feetY (contrat v1.2) : racine − hauteur debout − hausse de la monture", function()
+			local root = W.Const.RootHeight
+			expect(root).toBe(3)
+			-- à pied, debout sur le sol (Y = 0) : racine à 3, pieds à 0
+			expect(Z.feetY(3, 0)).toBe(0)
+			-- en monture (selle géante : racine + 6) : pieds toujours au sol
+			expect(Z.feetY(9, 6)).toBe(0)
+			expect(Z.feetY(7.275, 4.275)).toBeNear(0, 1e-9)
+			-- décalage illisible ou négatif : 0 ; racine illisible : infiniment loin
+			expect(Z.feetY(3, 0 / 0)).toBe(0)
+			expect(Z.feetY(3, -5)).toBe(0)
+			expect(Z.feetY(3, nil)).toBe(0)
+			expect(Z.feetY(0 / 0, 0)).toBe(math.huge)
+			expect(Z.feetY(math.huge, 0)).toBe(math.huge)
+		end)
+
+		it("feetY : hauteur debout identique à Server/Movement/Tuning.RootHeight (MoveCheck)", function()
+			local hs = Harness.new({ mode = "server" })
+			local Tuning = hs:require("ServerScriptService.Server.Movement.Tuning")
+			expect(W.Const.RootHeight).toBe(Tuning.RootHeight)
+			expect(#hs.errors).toBe(0)
+		end)
+
+		it(
+			"withinReach : portée à plat + écart vertical depuis les pieds ≤ Catch.MaxDY (règle 17)",
+			function()
+				local B = h:require("ReplicatedStorage.Shared.Config.Balance")
+				local pot = W.anchor(5, "pot")
+				-- à pied, à 4,9 studs à plat
+				expect(Z.withinReach(pot + Vector3.new(4.9, 3, 0), 0, pot, 5)).toBe(true)
+				expect(Z.withinReach(pot + Vector3.new(5.1, 3, 0), 0, pot, 5)).toBe(false)
+				-- en monture géante (racine + 6) : la portée ne diminue jamais
+				expect(Z.withinReach(pot + Vector3.new(4.9, 9, 0), 6, pot, 5)).toBe(true)
+				-- sans le décalage, la même racine compterait 6 studs de plus (toujours ≤ 8 ici)
+				expect(Z.withinReach(pot + Vector3.new(0, 3 + B.Catch.MaxDY, 0), 0, pot, 5)).toBe(true)
+				expect(Z.withinReach(pot + Vector3.new(0, 3 + B.Catch.MaxDY + 0.1, 0), 0, pot, 5)).toBe(false)
+				expect(Z.withinReach(pot + Vector3.new(0, 3 - B.Catch.MaxDY - 0.1, 0), 0, pot, 5)).toBe(false)
+				-- entrées bizarres : jamais vrai
+				expect(Z.withinReach(Vector3.new(0 / 0, 3, 0), 0, pot, 5)).toBe(false)
+				expect(Z.withinReach(pot, 0, nil, 5)).toBe(false)
+				expect(Z.withinReach(pot, 0, pot, 0 / 0)).toBe(false)
+				expect(Z.withinReach(pot, 0, pot, -1)).toBe(false)
+			end
+		)
 
 		it("zéro trace", function()
 			expect(#h.errors).toBe(0)

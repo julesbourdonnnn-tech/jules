@@ -47,6 +47,10 @@ local CONST = {
 	EdgeThickness = 2,
 	PlateThickness = 4,
 	SpawnHeight = 3, -- hauteur de la racine (HumanoidRootPart) au point d'apparition
+	-- hauteur de la racine d'un personnage DEBOUT au-dessus de ses pieds (HipHeight 2 + demi-racine 1) :
+	-- doit rester égale à Server/Movement/Tuning.RootHeight (MoveCheck), vérifié par ZoneRules.spec ;
+	-- ZoneRules.feetY la retire de la racine (contrat v1.2, portées mesurées depuis les pieds)
+	RootHeight = 3,
 	GateOutsideDistance = 6, -- point de poussée d'un intrus devant le portail
 	AltarRadius = 12, -- présence à l'Autel de la Lune
 	PoolSlotRadius = 3.5, -- places flottantes du Bassin autour de son centre
@@ -99,13 +103,16 @@ local ANCHORS: { [string]: Vector3 } = {
 	gate = Vector3.new(0, 0, 0),
 }
 
--- Prises de dalles (Config/Pads.Defs[].socket) : rangée Z = 62 ; la 5e (réservée, Gelée lente) à
--- côté de la Cuve
+-- Prises de dalles (Config/Pads.Defs[].socket) : rangée Z = 67 (contrat v1.2, GDD v1.3 §11.2 : à Z = 62
+-- la rangée était à 2 studs du bord du Bassin et la dalle de droite à 4,5 studs du bol, on achetait sans
+-- le vouloir) ; la 5e (réservée, Gelée lente de janvier) à côté de la Cuve. Règle de plan
+-- (WorldLayout.spec) : centre d'une dalle à ≥ 8 studs du bol, de la Cuve, du Pot, du coussin, de la prise
+-- réservée et du bord du Bassin ; dalles à 12 studs ; décorations à ≥ 6 studs du bord d'une dalle.
 local PAD_SOCKETS: { Vector3 } = {
-	Vector3.new(-18, 0, 62),
-	Vector3.new(-6, 0, 62),
-	Vector3.new(6, 0, 62),
-	Vector3.new(18, 0, 62),
+	Vector3.new(-18, 0, 67),
+	Vector3.new(-6, 0, 67),
+	Vector3.new(6, 0, 67),
+	Vector3.new(18, 0, 67),
 	Vector3.new(-28, 0, 52),
 }
 
@@ -123,7 +130,9 @@ local FENCE_POINTS: { Vector3 } = {
 }
 
 -- 18 emplacements de décoration (ordre d'apparition de Config/Pads.Decor) : bandes le long des
--- murs, entre la Cuve et le Bassin, près de l'étagère
+-- murs, entre la Cuve et le Bassin, aux coins du fond. Contrat v1.2 : les n° 9, 10, 13 et 14 (à moins
+-- de 6 studs des dalles de la rangée Z = 67) sont déplacés aux coins du fond et entre la Cuve, le
+-- Bassin et les dalles.
 local DECOR_SLOTS: { Vector3 } = {
 	Vector3.new(29, 0, 16),
 	Vector3.new(-29, 0, 16),
@@ -133,12 +142,12 @@ local DECOR_SLOTS: { Vector3 } = {
 	Vector3.new(17, 0, 50),
 	Vector3.new(29, 0, 32),
 	Vector3.new(-29, 0, 32),
-	Vector3.new(-25, 0, 67),
-	Vector3.new(25, 0, 67),
+	Vector3.new(-28, 0, 67),
+	Vector3.new(28, 0, 67),
 	Vector3.new(29, 0, 40),
 	Vector3.new(-29, 0, 40),
-	Vector3.new(-12, 0, 66),
-	Vector3.new(12, 0, 66),
+	Vector3.new(-12, 0, 59),
+	Vector3.new(13, 0, 60),
 	Vector3.new(29, 0, 48),
 	Vector3.new(-29, 0, 48),
 	Vector3.new(29, 0, 56),
@@ -341,6 +350,12 @@ function WorldLayout.anchor(slot: number, name: Anchor): Vector3
 		return p
 	end
 	return localToWorld(FRAMES[slot], p.X, p.Y, p.Z)
+end
+
+-- Le nom désigne un objet du ranch (fonction ajoutée : anchor rend le portail pour un nom inconnu,
+-- ZoneRules.near refuse un nom inconnu au lieu de mesurer le portail)
+function WorldLayout.hasAnchor(name: string): boolean
+	return type(name) == "string" and ANCHORS[name] ~= nil
 end
 
 -- Centre monde d'une prise de dalle (1 … 4, Config/Pads ; 5 = réservée)

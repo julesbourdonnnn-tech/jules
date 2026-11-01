@@ -190,4 +190,61 @@ return function(T)
 			expect(table.concat(issues, "\n")).toBe("")
 		end)
 	end)
+
+	-- Revue adversariale (paquet world) : robustesse par construction de l'écran de chargement
+	describe("Loading_game › robustesse (revue)", function()
+		it(
+			"caméra absente au lancement, puis créée et remplacée : l'échelle télé suit l'écran réel",
+			function()
+				local h = Harness.new({ mode = "client", console = true, viewport = Vector2.new(1920, 1080) })
+				local workspace = h.game.Workspace
+				workspace.CurrentCamera = nil
+				MockInstance.classMethods.ReplicatedFirst = { RemoveDefaultLoadingScreen = function() end }
+				h:run("ReplicatedFirst.Loading")
+				MockInstance.classMethods.ReplicatedFirst = nil
+				local loading = h.localPlayer.PlayerGui:FindFirstChild("Loading")
+				expect(stageScale(loading)).toBe(1) -- repli : écran de référence
+				-- la caméra arrive (télé 4K) : échelle 2 dès l'image suivante
+				local camera = MockInstance.new("Camera")
+				camera.ViewportSize = Vector2.new(3840, 2160)
+				camera.Parent = workspace
+				workspace.CurrentCamera = camera
+				h:step(1 / 60, 2)
+				expect(stageScale(loading)).toBe(2)
+				-- caméra remplacée (720p) : suivie aussi
+				local other = MockInstance.new("Camera")
+				other.ViewportSize = Vector2.new(1280, 720)
+				other.Parent = workspace
+				workspace.CurrentCamera = other
+				h:step(1 / 60, 2)
+				expect(math.abs(stageScale(loading) - 2 / 3) < 1e-9).toBe(true)
+				-- taille d'écran pas encore connue (1 × 1) : jamais d'échelle absurde
+				other.ViewportSize = Vector2.new(1, 1)
+				h:step(1 / 60, 2)
+				expect(stageScale(loading)).toBe(1)
+				zeroLog(h)
+			end
+		)
+
+		it(
+			"fondu de fermeture jamais terminé (Completed jamais reçu) : l'écran est détruit quand même",
+			function()
+				local h, loading = run({ console = true })
+				h:step(1 / 10, 5)
+				local methods = MockInstance.classMethods.Tween
+				local original = methods.Play
+				methods.Play = function() end -- le moteur ne joue jamais le fondu
+				local ok, err = pcall(function()
+					h.localPlayer:SetAttribute("ClientReady", true)
+					h:settle(2)
+					expect(loading.Parent ~= nil).toBe(true) -- le fondu « tourne » encore
+					h:step(1 / 30, 30) -- 1 s d'images : la fermeture ne dépend pas d'une fin d'animation
+				end)
+				methods.Play = original
+				expect(ok and true or err).toBe(true)
+				expect(h.localPlayer.PlayerGui:FindFirstChild("Loading")).toBeNil()
+				zeroLog(h)
+			end
+		)
+	end)
 end

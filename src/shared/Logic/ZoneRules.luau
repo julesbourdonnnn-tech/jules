@@ -3,7 +3,10 @@
 -- (GDD §4.6, §4.8, §6.3, §4.22) : dalles (entrée ≤ 2,5 studs, sortie > 3,5, un achat par entrée),
 -- Pot (5), bol (8), Bassin (12), MEGA (20), clôture côté rue (boop 8, pet-sitting 10, propriétaire
 -- proche 25), intrus, Autel de la Lune. Jamais d'événement physique Touched. Les distances sont
--- mesurées à plat (XZ) : aucun toit n'existe (solides de 30 studs).
+-- mesurées à plat (XZ, distXZ) : aucun toit n'existe (solides de 30 studs).
+-- Contrat v1.2 (docs/04 §1 règle 17, GDD §12.5, §12.8) : toute portée d'action du serveur = distance
+-- XZ (distXZ) + écart vertical mesuré depuis les PIEDS (feetY(pos.Y, rootOffset)) ≤ Balance.Catch.MaxDY ;
+-- withinReach fait les deux. Une monture (racine plus haute de 4,3 à 6 studs) ne réduit jamais une portée.
 -- Toute position bizarre (NaN, nil) est lue comme hors zone : jamais d'erreur, jamais d'effet.
 
 -- Bibliothèques gardées en local : appels rapides, aussi dans l'environnement injecté du harnais
@@ -17,6 +20,7 @@ local ZoneRules = {}
 
 local FENCE_POINTS = WorldLayout.fencePointsLocal()
 local HALF_WIDTH = WorldLayout.Const.RanchWidth / 2
+local ROOT_HEIGHT = WorldLayout.Const.RootHeight
 
 -- Position utilisable (Vector3 aux composantes finies)
 local function usable(pos: any): boolean
@@ -30,6 +34,47 @@ end
 local function flatDistance(a: Vector3, b: Vector3): number
 	local dx, dz = a.X - b.X, a.Z - b.Z
 	return math.sqrt(dx * dx + dz * dz)
+end
+
+local function finite(x: any): boolean
+	return type(x) == "number" and x == x and x ~= math.huge and x ~= -math.huge
+end
+
+-- Distance à plat (XZ) de toutes les portées du serveur ; math.huge pour une position illisible
+-- (aucune portée ne passe), jamais NaN
+function ZoneRules.distXZ(a: Vector3, b: Vector3): number
+	if not usable(a) or not usable(b) then
+		return math.huge
+	end
+	local d = flatDistance(a, b)
+	return if d == d then d else math.huge
+end
+
+-- Altitude des pieds = rootY − hauteur debout (WorldLayout.Const.RootHeight = Tuning.RootHeight de
+-- MoveCheck) − hausse de la monture (MoveCheck.rootOffset, TickActor.rootOffset ; 0 à pied). Un
+-- décalage illisible ou négatif vaut 0 ; une racine illisible donne math.huge (hors de toute portée).
+function ZoneRules.feetY(rootY: number, rootOffset: number): number
+	if not finite(rootY) then
+		return math.huge
+	end
+	local offset = if finite(rootOffset) and rootOffset > 0 then rootOffset else 0
+	return rootY - ROOT_HEIGHT - offset
+end
+
+-- Portée d'action du serveur (règle 17) : distance à plat ≤ radius ET |pieds − hauteur du centre visé|
+-- ≤ Balance.Catch.MaxDY. Fonction ajoutée (même règle pour Press, PetPress, Catch, BoopHold, Pot,
+-- FeedPlop, MegaPress, Throw, dalles, comptoir). Toute entrée bizarre → faux.
+function ZoneRules.withinReach(pos: Vector3, rootOffset: number, target: Vector3, radius: number): boolean
+	if not usable(pos) or not usable(target) or not finite(radius) or radius < 0 then
+		return false
+	end
+	if not finite(pos.Y) or not finite(target.Y) then
+		return false
+	end
+	if ZoneRules.distXZ(pos, target) > radius then
+		return false
+	end
+	return math.abs(ZoneRules.feetY(pos.Y, rootOffset) - target.Y) <= Balance.Catch.MaxDY
 end
 
 -- (dedans, vient d'entrer) avec l'hystérésis 2,5 / 3,5
@@ -50,6 +95,9 @@ function ZoneRules.near(slot: number, anchor: string, pos: Vector3, radius: numb
 	end
 	if type(slot) ~= "number" or slot < 1 or slot > WorldLayout.Const.Ranches or slot % 1 ~= 0 then
 		return false
+	end
+	if not WorldLayout.hasAnchor(anchor) then
+		return false -- nom inconnu : jamais le portail par défaut
 	end
 	local target = WorldLayout.anchor(slot, anchor :: any)
 	return flatDistance(pos, target) <= radius

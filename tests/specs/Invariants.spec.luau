@@ -9,7 +9,8 @@ return function(T)
 	local Schema = h:require("ServerScriptService.Server.Data.Schema")
 
 	local function rec(extra)
-		local r = { s = 1, m = 0, st = 0, z = 1, zg = 0, bf = 0, lk = false, o = "", at = "pen", b = 100 }
+		local r =
+			{ s = 1, m = 0, st = 0, z = 1, zg = 0, bf = 0, lk = false, o = "", at = "pen", b = 100, gd = 0 }
 		for k, v in extra or {} do
 			r[k] = v
 		end
@@ -92,6 +93,36 @@ return function(T)
 			expect(has(I.profile(f), "capacity.mail")).toBe(true)
 		end)
 
+		it(
+			"capacités du joueur (§17.2 n° 3) : enclos + Bassin ≤ penCapacity, Bassin ≤ poolSlots",
+			function()
+				-- dalle Enclos au niveau 0, sans Grand Ranch : 4 places (le profil sain en a 2)
+				local d = healthy()
+				for i = 3, 5 do
+					d.squishies[tostring(i)] = rec()
+				end
+				d.nextUid = 100
+				expect(has(I.profile(d), "capacity.pen")).toBe(true) -- 5 pour 4 places
+				d.tiles.pens = 1
+				expect(has(I.profile(d), "capacity.pen")).toBe(false) -- 5 places
+				d.tiles.pens = 0
+				d.passes.BigRanch = true
+				expect(has(I.profile(d), "capacity.pen")).toBe(false) -- 4 + 6 places
+				-- Bassin : 5 places, 6 avec le bonus Axolo gagné pour toujours (dex.fam)
+				local e = healthy()
+				e.squishies = {}
+				for i = 1, 6 do
+					e.squishies[tostring(i)] = rec({ at = "pool" })
+				end
+				e.tiles.pens = 5
+				e.nextUid = 100
+				expect(has(I.profile(e), "capacity.pool")).toBe(true)
+				local Species = h:require("ReplicatedStorage.Shared.Config.Species")
+				e.dex.fam[table.find(Species.FamilyOrder, "axolo")] = 1
+				expect(has(I.profile(e), "capacity.pool")).toBe(false)
+			end
+		)
+
 		it("Meilleurs Amis : un seul squishy par emplacement", function()
 			local d = healthy()
 			d.squishies["2"].bf = 1
@@ -99,23 +130,96 @@ return function(T)
 		end)
 
 		it(
-			"tenues : portées par des uid existants, jamais plus que possédées, listes cohérentes",
+			"tenues (contrat v1.2) : porteurs dérivés de squishies[uid].o, jamais plus que possédées ; worn vide",
 			function()
 				local d = healthy()
 				d.outfits.owned.sweater = 1
-				d.outfits.worn.sweater = { "1" }
 				d.squishies["1"].o = "sweater"
+				expect(I.profile(d)).toEqual({}) -- worn = {} (Schema) : accepté
+				d.outfits.worn = nil
+				expect(I.profile(d)).toEqual({}) -- worn absent : accepté
+				d.squishies["2"].o = "sweater" -- 2 porteurs pour 1 exemplaire
+				expect(has(I.profile(d), "outfits.owned.sweater.count")).toBe(true)
+				d.outfits.owned.sweater = 2
 				expect(I.profile(d)).toEqual({})
-				d.outfits.worn.sweater = { "1", "2" }
-				d.squishies["2"].o = "sweater"
-				expect(has(I.profile(d), "outfits.worn.sweater.count")).toBe(true)
-				local e = healthy()
-				e.outfits.owned.sweater = 2
-				e.outfits.worn.sweater = { "77" }
-				expect(has(I.profile(e), "outfits.worn.sweater.77")).toBe(true)
+				-- tenue jamais possédée
 				local f = healthy()
 				f.squishies["2"].o = "jellyCrown"
-				expect(has(I.profile(f), "squishies.2.o.worn")).toBe(true)
+				expect(has(I.profile(f), "outfits.owned.jellyCrown.count")).toBe(true)
+				-- worn obsolète : toujours vide (§17.2 invariant 4)
+				local g = healthy()
+				g.outfits.owned.sweater = 1
+				g.outfits.worn.sweater = { "1" }
+				g.squishies["1"].o = "sweater"
+				expect(has(I.profile(g), "outfits.worn")).toBe(true)
+				-- owned abîmé : nombres entiers ≥ 0
+				local k = healthy()
+				k.outfits.owned.sweater = -1
+				expect(has(I.profile(k), "outfits.owned.sweater")).toBe(true)
+				k.outfits.owned.sweater = 0 / 0
+				expect(has(I.profile(k), "outfits.owned.sweater")).toBe(true)
+				local m = healthy()
+				m.outfits.owned = nil
+				expect(has(I.profile(m), "outfits")).toBe(true)
+			end
+		)
+
+		it(
+			"contrat v1.2 : dex.fam dense en 0/1, caps.petSitBy ≤ CapsPerFriend.petSit, gd entier ≥ 0",
+			function()
+				local B = h:require("ReplicatedStorage.Shared.Config.Balance")
+				local Species = h:require("ReplicatedStorage.Shared.Config.Species")
+				-- dex.fam
+				local d = healthy()
+				expect(#d.dex.fam).toBe(#Species.FamilyOrder)
+				d.dex.fam[2] = 1
+				expect(I.profile(d)).toEqual({})
+				d.dex.fam[2] = 2
+				expect(has(I.profile(d), "dex.fam")).toBe(true)
+				d.dex.fam[2] = true
+				expect(has(I.profile(d), "dex.fam")).toBe(true)
+				d.dex.fam = { 0, 1 } -- trop court
+				expect(has(I.profile(d), "dex.fam")).toBe(true)
+				d.dex.fam = { [1] = 0, [3] = 1 } -- à trous
+				expect(has(I.profile(d), "dex.fam")).toBe(true)
+				d.dex.fam = nil
+				expect(has(I.profile(d), "dex.fam")).toBe(true)
+				-- caps.petSitBy
+				local e = healthy()
+				e.caps.petSitBy["123456"] = B.CapsPerFriend.petSit
+				e.caps.petSitBy["-1"] = 0 -- joueur de test de Studio
+				expect(I.profile(e)).toEqual({})
+				e.caps.petSitBy["123456"] = B.CapsPerFriend.petSit + 1
+				expect(has(I.profile(e), "caps.petSitBy.123456")).toBe(true)
+				e.caps.petSitBy["123456"] = 2.5
+				expect(has(I.profile(e), "caps.petSitBy.123456")).toBe(true)
+				e.caps.petSitBy["123456"] = 0 / 0
+				expect(has(I.profile(e), "caps.petSitBy.123456")).toBe(true)
+				local f = healthy()
+				f.caps.petSitBy[123456] = 3 -- clé nombre : table mixte refusée par le DataStore
+				expect(has(I.profile(f), "caps.petSitBy.123456")).toBe(true)
+				f.caps.petSitBy = "x"
+				expect(has(I.profile(f), "caps.petSitBy")).toBe(true)
+				-- plafonds scalaires du contrat v1.2 vérifiés comme les autres
+				local c = healthy()
+				c.caps.petSitIn = B.Caps.petSitIn + 1
+				c.caps.splorchCoins = -1
+				local v = I.profile(c)
+				expect(has(v, "caps.petSitIn")).toBe(true)
+				expect(has(v, "caps.splorchCoins")).toBe(true)
+				-- gd : entier ≥ 0
+				local g = healthy()
+				g.squishies["1"].gd = 20400
+				expect(I.profile(g)).toEqual({})
+				for _, bad in { -1, 1.5, 0 / 0, math.huge, "3" } do
+					g.squishies["1"].gd = bad
+					expect({ bad = tostring(bad), hit = has(I.profile(g), "squishies.1.gd") }).toEqual({
+						bad = tostring(bad),
+						hit = true,
+					})
+				end
+				g.squishies["1"].gd = nil
+				expect(has(I.profile(g), "squishies.1.gd")).toBe(true)
 			end
 		)
 
@@ -131,7 +235,7 @@ return function(T)
 		it("niveaux bornés : dalles, plafonds du jour, Cuve, monture", function()
 			local d = healthy()
 			d.tiles.snack = 13
-			d.caps.petSit = 301
+			d.caps.petSit = 101
 			d.vat.newPulls = 4
 			d.mount = "zz"
 			local v = I.profile(d)

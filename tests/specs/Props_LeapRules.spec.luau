@@ -62,26 +62,31 @@ return function(T)
 			)
 		end)
 
-		it("catchesOnLanding : vrai ⇒ dans le rayon (+ tolérance) et à 8 studs de haut", function()
-			Props.check(
-				5000,
-				Props.tuple(
-					Props.vector3(-20, 20),
-					Props.vector3(-20, 20),
-					Props.bool(),
-					Props.maybe(Props.number(0, 3))
-				),
-				function(v)
-					local ok = L.catchesOnLanding(v[1], v[2], v[3], v[4])
-					if not ok then
-						return true
+		it(
+			"catchesOnLanding : vrai ⇒ dans le rayon (+ tolérance) et pieds à 8 studs de haut (règle 17)",
+			function()
+				local Z = h:require("ReplicatedStorage.Shared.Logic.ZoneRules")
+				Props.check(
+					5000,
+					Props.tuple(
+						Props.vector3(-20, 20),
+						Props.vector3(-20, 20),
+						Props.bool(),
+						Props.maybe(Props.number(0, 3)),
+						Props.maybe(Props.number(0, 6))
+					),
+					function(v)
+						local ok = L.catchesOnLanding(v[1], v[2], v[3], v[4], v[5])
+						if not ok then
+							return true
+						end
+						local r = (if v[3] then 8 else 5) + (v[4] or 0)
+						local d = math.sqrt((v[1].X - v[2].X) ^ 2 + (v[1].Z - v[2].Z) ^ 2)
+						return d <= r + 1e-4 and math.abs(Z.feetY(v[1].Y, v[5] or 0) - v[2].Y) <= 8 + 1e-4
 					end
-					local r = (if v[3] then 8 else 5) + (v[4] or 0)
-					local d = math.sqrt((v[1].X - v[2].X) ^ 2 + (v[1].Z - v[2].Z) ^ 2)
-					return d <= r + 1e-4 and math.abs(v[1].Y - v[2].Y) <= 8 + 1e-4
-				end
-			)
-		end)
+				)
+			end
+		)
 
 		it("entrées bizarres : jamais d'erreur", function()
 			Props.check(3000, Props.tuple(Props.any(), Props.any(), Props.any(), Props.any()), function(v)

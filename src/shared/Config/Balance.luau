@@ -14,12 +14,11 @@ local Balance = {}
 -- des clés existantes qui changent en v1.3 sont réglées par le paquet logic (notes du contrat v1.2,
 -- avec leurs specs et la porte EconomyPacing), qui passe alors cette marque à "1.3". Contract_game
 -- vérifie les valeurs témoins de la version annoncée ici ; la publication exige "1.3" (docs/04 §23).
--- Valeurs en attente (logic) : Tiles.cozyBed.Base 25e6 et MinR 3 ; Splorch.Targets (table v1.3),
--- Splorch.BeyondMult 2.6 et Unlocks (« pad.cozyBed » à R = 3) ; Offline.GrowthShare 0.3 ;
--- Babies.MaxOfBiggest 0.5 ; Caps.petSit 100 ; Rewards.PetSitVisitor 2 ; Boosts.ObjectiveMedium et
--- ObjectiveHard 0 ; retrait de Splorch.RecentBuyWindow / RecentBuyShare et de CoinPacks (paquets de
--- pièces retirés du lancement) ; Formulas.tileCost passe de 2^R à Tiles.RScale^R.
-Balance.GddValues = "1.2"
+-- Notes logic du contrat v1.2 appliquées (revue logic du 01/11/2026, docs/04 §21) : Tiles.cozyBed
+-- 25e6 dès R = 3 ; Splorch.Targets v1.3, BeyondMult 2.6, Unlocks (« pad.cozyBed » à R = 3) ;
+-- Offline.GrowthShare 0.3 ; Babies.MaxOfBiggest 0.5 ; Caps.petSit 100 ; Rewards.PetSitVisitor 2 ;
+-- Boosts.Objective* 0 ; Splorch.RecentBuy* et CoinPacks retirés ; Formulas.tileCost × Tiles.RScale^R.
+Balance.GddValues = "1.3"
 
 -- Nombres géants (GDD §4.2) : toute valeur de pièces, de Pot ou de taille est bornée à [0 ; Max] et
 -- jamais NaN ni infinie avant chaque écriture ; sous ExactBelow, les pièces restent des entiers.
@@ -66,7 +65,9 @@ Balance.Trophies = {
 --   × (1 + StreakStep × min(StreakMax, série)) × (familleKitty ? 1 + KittyBonus : 1))
 Balance.Press = {
 	Cooldown = 8,
-	Seconds = 12,
+	-- 22 s (GDD : 12) : réglage logic du 01/11/2026 pour la porte EconomyPacing v1.2 (docs/04 §21) :
+	-- avec 12, les pressions ne faisaient que 40 % des pièces gagnées en jeu au jour 7 (porte ≥ 50 %)
+	Seconds = 22,
 	Min = 10,
 	PerfectMult = 2,
 	StreakStep = 0.10,
@@ -108,10 +109,15 @@ Balance.Tiles = {
 	ExitRadius = 3.5, -- studs : « sortie » (écart contre les achats en rafale)
 	DwellSeconds = 0.6, -- s sur la dalle avant l'achat automatique (GDD v1.3)
 	RScale = 3.5, -- prix des dalles de la boucle × RScale^R (GDD v1.3 ; remplace 2^R)
-	snack = { Base = 20, Growth = 4.0, Levels = 12, ScaleWithR = true, ResetOnSplorch = true, MinR = 0 },
+	-- Growth 4,5 (GDD §4.6 : 4,0) : réglage logic du 01/11/2026 pour la porte EconomyPacing v1.2 (docs/04
+	-- §21) : avec 4,0, les pièces perdues au Grand Splorch valaient 13 à 17 fois le prix du Tapis 12 (santé
+	-- ≤ 10) ; le GDD ne retrouve « 3 fois, Tapis 12 à 93 % de la boucle » qu'avec A = 1 (sans décorations,
+	-- Fame ni trophées). Niveaux 0 à 3 presque inchangés (20, 90, 405, 1 822). Témoin de Contract_game à
+	-- mettre à jour par l'architecte (note INT-LR1 de la revue logic).
+	snack = { Base = 20, Growth = 4.5, Levels = 12, ScaleWithR = true, ResetOnSplorch = true, MinR = 0 },
 	decor = { Base = 80, Growth = 2.2, Levels = 18, ScaleWithR = true, ResetOnSplorch = true, MinR = 0 },
 	pens = { Base = 1200, Growth = 2.2, Levels = 14, ScaleWithR = false, ResetOnSplorch = false, MinR = 0 },
-	cozyBed = { Base = 250000, Growth = 1, Levels = 1, ScaleWithR = false, ResetOnSplorch = false, MinR = 1 },
+	cozyBed = { Base = 25e6, Growth = 1, Levels = 1, ScaleWithR = false, ResetOnSplorch = false, MinR = 3 },
 }
 
 -- Enclos, Boîte à dodo, Boîte aux lettres (GDD §4.14)
@@ -267,13 +273,13 @@ Balance.SizeScale = {
 Balance.Splorch = {
 	-- stylua: ignore start
 	Targets = {
-		15000, 40000, 110000, 300000, 800000,
-		2.2e6, 5.8e6, 16e6, 42e6, 110e6,
-		310e6, 830e6, 2.3e9, 6.1e9, 16e9,
-		44e9, 120e9, 320e9, 870e9, 2.4e12,
-	} :: { number }, -- Targets[R + 1] = objectif pour passer de R à R + 1
+		15000, 39000, 100000, 260000, 690000,
+		1.8e6, 4.6e6, 12e6, 31e6, 81e6,
+		210e6, 550e6, 1.4e9, 3.7e9, 9.7e9,
+		25e9, 65e9, 170e9, 440e9, 1.1e12,
+	} :: { number }, -- Targets[R + 1] = objectif pour passer de R à R + 1 (≈ 15 000 × 2,6^R, GDD v1.3)
 	-- stylua: ignore end
-	BeyondMult = 2.7, -- R ≥ 20 : objectif précédent × BeyondMult, arrondi à 2 chiffres significatifs (v1.3 : 2,6, logic)
+	BeyondMult = 2.6, -- R ≥ 20 : objectif précédent × BeyondMult, arrondi à 2 chiffres significatifs
 	Fame = 5,
 	HoldConfirm = 1.5, -- s (geste client)
 	BurstAt = 3.2, -- s après le début du spectacle : application au profil d'un seul bloc
@@ -288,16 +294,12 @@ Balance.Splorch = {
 	-- fois toutes les FullShowGap s par spectateur (mémoire de session de SplorchService) ; sinon
 	-- version courte (Celebrate "splorch" avec short = true : cadeau compté directement)
 	FullShowGap = 180,
-	-- OBSOLÈTE (contrat v1.2 : paquets de pièces retirés du lancement, plus de 2e confirmation) : lu
-	-- seulement par Formulas.splorchPreview (recentBuy) ; logic l'en retire puis supprime ces deux clés
-	RecentBuyWindow = 1800,
-	RecentBuyShare = 0.5,
 	-- Emplacements de Meilleur Ami débloqués : 1 dès le départ, 2 à R = 3, 3 à R = 10
 	BestFriendSlotsAt = { 0, 3, 10 },
 	-- Déblocages par R (aperçu : tuiles « Tu gagnes »)
 	Unlocks = {
-		[1] = { "family.axolo", "pad.cozyBed" },
-		[3] = { "family.bunny", "bestFriend.2" },
+		[1] = { "family.axolo" },
+		[3] = { "family.bunny", "bestFriend.2", "pad.cozyBed" },
 		[5] = { "family.spiky", "title.splorch_star" },
 		[10] = { "bestFriend.3", "title.splorch_legend" },
 		[15] = { "title.splorch_hero" },
@@ -309,7 +311,7 @@ Balance.Splorch = {
 Balance.Offline = {
 	CapHours = 8,
 	CozyBedHours = 12,
-	GrowthShare = 0.5, -- croissance sans boost × GrowthShare × durée (v1.3 : 0,3, logic)
+	GrowthShare = 0.3, -- croissance sans boost × GrowthShare × durée
 	-- La croissance hors ligne du ranch s'arrête quand le plus gros squishy d'enclos ou du Bassin atteint
 	-- StopAt × objectif(R) : ΔG = clamp(g sans boost × GrowthShare × durée, 0, max(0, StopAt × objectif(R)
 	-- − plus gros)) (GDD v1.3, §4.19 ; Formulas.offlineGrowth, rebase de DataService.onPrepare)
@@ -334,7 +336,7 @@ Balance.Caps = {
 	splorchGifts = 10,
 	fameRush = 30, -- Fame du Rush (boopé, Wild Wobblers, Héros), Rush ou Cozy
 	fameRelease = 20,
-	petSit = 300, -- pressions de pet-sitting RÉCOMPENSÉES comme visiteur (v1.3 : 100, logic)
+	petSit = 100, -- pressions de pet-sitting RÉCOMPENSÉES comme visiteur
 	petSitIn = 100, -- pressions de pet-sitting reçues comme propriétaire (GDD v1.3, §6.4)
 	splorchCoins = 10, -- cadeaux en pièces des Grands Splorch des autres (60 s), ensuite Rewards.GiftSecondsAfterCap
 	claps = 10,
@@ -350,7 +352,7 @@ Balance.CapsPerFriend = {
 -- Bébés et cadeaux : taille = part du plus gros squishy du RECEVEUR (min), et jamais plus de
 -- MaxOfBiggest × ce plus gros (GDD §4.25)
 Balance.Babies = {
-	MaxOfBiggest = 2, -- (v1.3 : 0,5 pour chaque bébé et chaque cadeau, logic)
+	MaxOfBiggest = 0.5, -- chaque bébé et chaque cadeau (GDD v1.3, §4.25)
 	RushShare = 0.10, -- de l'ORIGINAL (bébé du Rush), borné par MaxOfBiggest
 	RushMin = 1,
 	-- Bébé du Rush : mutation de l'original copiée si son multiplicateur ≤ RushMutationMaxMult (Doré),
@@ -376,7 +378,7 @@ Balance.Rewards = {
 	Hero = 120, -- capture Héros de son propre squishy en fuite
 	OwnerReturn = 60, -- squishy boopé rendu au propriétaire
 	RushNear = 20, -- joueur Rush à NearRadius d'une capture du Rush
-	PetSitVisitor = 10, -- ×2 si PERFECT (v1.3 : 2, logic)
+	PetSitVisitor = 2, -- ×2 si PERFECT
 	Clap = 10,
 	GiftSecondsAfterCap = 10, -- cadeau en pièces d'un Grand Splorch au-delà de Caps.splorchCoins (GDD v1.3)
 	PlopDay2 = 600, -- palier « Jour 2 » de Nourrir Plop
@@ -397,19 +399,12 @@ Balance.Boosts = {
 	SquishParty = 600,
 	AdminParty = 600,
 	SquishPartyLeaver = 600, -- l'acheteur part avant la fin : boost personnel gardé
-	ObjectiveMedium = 300, -- (v1.3 : 0, plus de boost dans les objectifs, logic)
-	ObjectiveHard = 600, -- (v1.3 : 0, logic)
+	ObjectiveMedium = 0, -- plus de boost dans les objectifs (GDD v1.3, §7.4)
+	ObjectiveHard = 0,
 	FeedDay = 300, -- jour de Nourrir Plop sans palier
 	-- jour de palier : 5 min comme les autres jours (GDD §7.3 et §4.25, révision 1.3 ; réglage logic
 	-- pour tenir la porte EconomyPacing : avec 900, premier Grand Splorch trop tôt)
 	FeedMilestone = 300,
-}
-
--- OBSOLÈTE (contrat v1.2 : paquets de pièces retirés du lancement, GDD §8.3) : lu seulement par
--- Formulas.coinPack ; logic retire coinPack puis supprime cette table (autorisé par le contrat)
-Balance.CoinPacks = {
-	CoinsSmall = { minutes = 30, min = 5000 },
-	CoinsBig = { minutes = 120, min = 20000 },
 }
 
 return Balance

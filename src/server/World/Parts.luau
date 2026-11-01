@@ -159,7 +159,9 @@ function Parts.model(parent: Instance, name: string, pivot: CFrame?): Model
 	return m
 end
 
--- Montre ou cache une pièce (Transparency 0 / 1, transparence propre gardée) ; n'écrit que si besoin
+-- Montre ou cache une pièce (Transparency 0 / 1, transparence propre gardée) ; n'écrit que si besoin.
+-- Un SurfaceGui reste dessiné sur une pièce transparente : les siens (icône d'une dalle) suivent
+-- donc la pièce (Enabled), sinon une dalle cachée laisserait son icône flotter au sol.
 function Parts.setVisible(part: BasePart, visible: boolean)
 	local target = 1
 	if visible then
@@ -168,6 +170,11 @@ function Parts.setVisible(part: BasePart, visible: boolean)
 	end
 	if part.Transparency ~= target then
 		part.Transparency = target
+	end
+	for _, child in part:GetChildren() do
+		if child:IsA("SurfaceGui") and child.Enabled ~= visible then
+			child.Enabled = visible
+		end
 	end
 end
 

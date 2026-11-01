@@ -326,10 +326,16 @@ end
 -- Dalles, places, Cuve
 -- =============================================================================================
 
--- Prix du prochain niveau (math.huge si niveau maximal ou dalle inconnue)
+-- Prix du prochain niveau : floor(Base × Growth^L × (ScaleWithR ? Tiles.RScale^R : 1)) (contrat v1.2,
+-- GDD v1.3 §4.6 : × 3,5^R pour les dalles de la boucle) ; math.huge si niveau maximal ou dalle inconnue.
+-- Balance.Tiles porte aussi des nombres (EnterRadius, DwellSeconds, RScale…) : seule une TABLE est une
+-- dalle.
 function Formulas.tileCost(tile: string, lvl: number, R: number): number
+	if type(tile) ~= "string" then
+		return math.huge
+	end
 	local def = (Balance.Tiles :: any)[tile]
-	if type(tile) ~= "string" or type(def) ~= "table" or type(def.Base) ~= "number" then
+	if type(def) ~= "table" or type(def.Base) ~= "number" or type(def.Levels) ~= "number" then
 		return math.huge
 	end
 	local L = level(lvl, math.huge)
@@ -338,7 +344,7 @@ function Formulas.tileCost(tile: string, lvl: number, R: number): number
 	end
 	local price = def.Base * def.Growth ^ L
 	if def.ScaleWithR then
-		price *= Balance.Growth.RebirthMult ^ level(R, MAX_R)
+		price *= Balance.Tiles.RScale ^ level(R, MAX_R)
 	end
 	return Formulas.clampCoins(price)
 end
@@ -490,13 +496,20 @@ function Formulas.offlineSeconds(
 	return math.min(now - last, hours * HOUR)
 end
 
--- Croissance cumulée gagnée hors ligne (× GrowthShare)
-function Formulas.offlineGrowth(gNoBoost: number, seconds: number): number
-	return clampNum(
-		clampNum(gNoBoost, 0, MAX) * Balance.Offline.GrowthShare * clampNum(seconds, 0, MAX),
-		0,
-		MAX
-	)
+-- Croissance cumulée gagnée hors ligne (contrat v1.2, GDD v1.3 §4.19) :
+--   clamp(g sans boost × GrowthShare × durée, 0, max(0, StopAt × splorchTarget(R) − plus gros))
+-- Le plus gros squishy d'enclos ou du Bassin s'arrête à StopAt (90 %) de l'objectif en cours : le
+-- Grand Splorch se fait en jeu. Sans R ou sans plus gros (nil), pas d'arrêt. Un R illisible vaut 0 ;
+-- un plus gros illisible (NaN) vaut 0, +inf arrête tout.
+function Formulas.offlineGrowth(gNoBoost: number, seconds: number, R: number?, biggest: number?): number
+	local cfg = Balance.Offline
+	local grown = clampNum(clampNum(gNoBoost, 0, MAX) * cfg.GrowthShare * clampNum(seconds, 0, MAX), 0, MAX)
+	if R == nil or biggest == nil then
+		return grown
+	end
+	local stopAt = cfg.StopAt * Formulas.splorchTarget(R :: number)
+	local room = math.max(0, stopAt - clampNum(biggest, 0, MAX))
+	return math.min(grown, room)
 end
 
 -- Pièces hors ligne versées au Pot (× PotShare) ; montant réel, borné
@@ -509,8 +522,8 @@ end
 -- =============================================================================================
 
 -- Taille d'un bébé ou d'un cadeau : part (de l'original, sinon du plus gros du receveur), ≥ minimum,
--- ≤ 2 × plus gros du receveur. Le minimum passe en dernier (un bébé n'est jamais plus petit que son
--- minimum, même chez un nouveau).
+-- ≤ MaxOfBiggest (0,5, GDD v1.3 §4.25) × plus gros du receveur. Le minimum passe en dernier (un bébé
+-- n'est jamais plus petit que son minimum, même chez un nouveau).
 function Formulas.babySize(share: number, minimum: number, receiverBiggest: number, original: number?): number
 	local biggest = Formulas.clampSize(receiverBiggest)
 	local base = if original ~= nil then Formulas.clampSize(original) else biggest
@@ -579,13 +592,11 @@ function Formulas.trophyBonus(trophies: { number }): number
 	return total
 end
 
--- Pièces d'un paquet (minutes du revenu actuel, minimum du paquet)
-function Formulas.coinPack(income: number, productKey: string): number
-	local def = (Balance.CoinPacks :: any)[productKey]
-	if type(productKey) ~= "string" or type(def) ~= "table" then
-		return 0
-	end
-	return math.max(def.min, Formulas.clampCoins(clampNum(income, 0, MAX) * def.minutes * 60))
+-- OBSOLÈTE (contrat v1.2, GDD v1.3 §8.3 : paquets de pièces retirés du lancement, Balance.CoinPacks
+-- supprimé) : rend toujours 0. Gardée seulement parce que Contract_game.spec liste encore la fonction ;
+-- à supprimer quand l'architecte la retire de sa liste (note d'intégration de la revue logic).
+function Formulas.coinPack(_income: number, _productKey: string): number
+	return 0
 end
 
 -- =============================================================================================
@@ -637,19 +648,7 @@ function Formulas.splorchPreview(data: { [string]: any }, ctx: PreviewCtx): Type
 	local coins = Formulas.clampCoins(d.coins)
 	local pot = amount(num(d.pot, 0))
 	local coinsLost = Formulas.clampCoins(coins + pot)
-
-	-- 2e confirmation : paquet acheté il y a moins de RecentBuyWindow et au moins la moitié restante
-	local recentBuy = false
-	if type(d.coinBuy) == "table" then
-		local at = num(d.coinBuy.at, 0)
-		local bought = clampNum(d.coinBuy.amount, 0, MAX)
-		local unix = num(c.unix, 0)
-		recentBuy = at > 0
-			and bought > 0
-			and unix >= at
-			and unix - at < cfg.RecentBuyWindow
-			and coins >= cfg.RecentBuyShare * bought
-	end
+	-- contrat v1.2 : plus de 2e confirmation (paquets de pièces retirés) ; recentBuy n'est plus rendu
 
 	local unlocks = {}
 	for _, key in cfg.Unlocks[R + 1] or {} do
@@ -663,7 +662,6 @@ function Formulas.splorchPreview(data: { [string]: any }, ctx: PreviewCtx): Type
 		level = R + 1,
 		unlocks = unlocks,
 		coinsLost = coinsLost,
-		recentBuy = recentBuy,
 		nextTarget = Formulas.splorchTarget(R + 1),
 		defaultFlyer = if bestFree ~= "" then bestFree else bestAny,
 	}

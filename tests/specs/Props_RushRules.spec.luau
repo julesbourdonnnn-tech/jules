@@ -262,7 +262,7 @@ return function(T)
 			)
 		end)
 
-		it("wildShared ∈ [3 ; 13] et décroissant ; babySize ∈ [1 ; max(1, 2 × plus gros)]", function()
+		it("wildShared ∈ [3 ; 13] et décroissant ; babySize ∈ [1 ; max(1, 0,5 × plus gros)]", function()
 			Props.check(4000, Props.tuple(any, any, any), function(v)
 				local w = RR.wildShared(v[1])
 				if not (w >= 3 and w <= 13 and w % 1 == 0) then
@@ -272,9 +272,28 @@ return function(T)
 				local biggest = if type(v[3]) == "number" and v[3] == v[3]
 					then math.clamp(v[3], 1, 1e300)
 					else 1
-				return size >= 1 and size <= math.max(1, 2 * biggest) * (1 + 1e-12)
+				return size >= 1 and size <= math.max(1, 0.5 * biggest) * (1 + 1e-12)
 			end)
 		end)
+
+		it(
+			"babyMutation : toujours une mutation connue (ou 0), jamais une mutation > ×5 recopiée",
+			function()
+				local Mutations = h:require("ReplicatedStorage.Shared.Config.Mutations")
+				local ids = Props.oneOf({ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 42, -1, 0 / 0, 1.5 })
+				Props.check(4000, Props.tuple(ids, any, any, Props.oneOf({ true, false, nil })), function(v)
+					local m = RR.babyMutation(v[1], v[2], v[3], v[4])
+					if m ~= 0 and Mutations.ById[m] == nil then
+						return false
+					end
+					local orig = Mutations.ById[v[1]]
+					if orig and orig.mult <= 5 then
+						return m == v[1]
+					end
+					return true
+				end)
+			end
+		)
 
 		it("zéro trace", function()
 			expect(#h.errors).toBe(0)

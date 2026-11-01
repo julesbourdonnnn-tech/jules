@@ -251,12 +251,55 @@ return function(T)
 			expect(RR.wildShared(0 / 0)).toBe(13)
 		end)
 
-		it("bébé du Rush : min(10 % de l'original, 2 × plus gros du receveur), minimum 1", function()
-			expect(RR.babySize(1000, 1e6)).toBe(100)
-			expect(RR.babySize(1e12, 50)).toBe(100)
-			expect(RR.babySize(3, 1)).toBe(1)
-			expect(RR.babySize(0 / 0, 0 / 0)).toBe(1)
-		end)
+		it(
+			"bébé du Rush : max(1, min(10 % de l'original, 0,5 × plus gros du receveur)) (GDD v1.3)",
+			function()
+				expect(RR.babySize(1000, 1e6)).toBe(100)
+				expect(RR.babySize(1e12, 50)).toBe(25) -- 0,5 × 50
+				expect(RR.babySize(1e12, 1e9)).toBe(5e8)
+				expect(RR.babySize(3, 1)).toBe(1)
+				expect(RR.babySize(1e6, 1)).toBe(1) -- minimum 1 en dernier
+				expect(RR.babySize(0 / 0, 0 / 0)).toBe(1)
+			end
+		)
+
+		it(
+			"mutation du bébé du Rush (contrat v1.2) : copiée si ≤ ×5 (Doré), sinon tirée × 2",
+			function()
+				local Mutations = h:require("ReplicatedStorage.Shared.Config.Mutations")
+				local Odds = h:require("ReplicatedStorage.Shared.Logic.Odds")
+				local B = h:require("ReplicatedStorage.Shared.Config.Balance")
+				expect(B.Babies.RushMutationMaxMult).toBe(5)
+				-- ≤ ×5 : copiée telle quelle, quel que soit r
+				for _, def in Mutations.List do
+					if def.mult <= B.Babies.RushMutationMaxMult then
+						for _, r in { 0, 0.001, 0.5, 0.999 } do
+							expect(RR.babyMutation(def.id, r, 5, true)).toBe(def.id)
+						end
+					end
+				end
+				expect(RR.babyMutation(0, 0, 5, true)).toBe(0) -- sans mutation : sans mutation
+				-- > ×5 : jamais copiée, tirée par Odds.rollMutation avec les chances × LuckyMutationMult
+				local above = 0
+				for _, def in Mutations.List do
+					if def.mult > B.Babies.RushMutationMaxMult then
+						above += 1
+						for _, r in { 0, 0.0001, 0.02, 0.3, 0.9999 } do
+							expect(RR.babyMutation(def.id, r, 3, false)).toBe(
+								Odds.rollMutation(r, 3, false, B.Babies.LuckyMutationMult)
+							)
+						end
+					end
+				end
+				expect(above > 0).toBe(true)
+				-- Galaxie (×8) n'est jamais recopiée par un r « vide » : r élevé → sans mutation
+				expect(RR.babyMutation(5, 0.9999, 0, false)).toBe(0)
+				-- entrées bizarres : une mutation inconnue vaut « aucune », r illisible vaut 0
+				expect(RR.babyMutation(42, 0.5, 0, false)).toBe(0)
+				expect(RR.babyMutation(0 / 0, 0 / 0, 0 / 0, nil)).toBe(0)
+				expect(RR.babyMutation(nil, nil, nil, nil)).toBe(0)
+			end
+		)
 
 		it("zéro trace", function()
 			expect(#h.errors).toBe(0)

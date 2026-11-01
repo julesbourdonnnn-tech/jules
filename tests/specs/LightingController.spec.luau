@@ -95,6 +95,13 @@ return function(T)
 			end
 		end
 		Prefs.Init()
+		-- profil du joueur (miroir StateController, DataSnapshot) : étape de l'accueil
+		local State = h:require(base .. "Controllers.StateController")
+		State.Init()
+		if opts.profile then
+			h:fireClient("ReplicatedStorage.Remotes.DataSnapshot", opts.profile)
+			h:settle(1)
+		end
 		local LC = h:require(base .. "Controllers.LightingController")
 		local played = {}
 		Haptics.Played:Connect(function(name)
@@ -120,9 +127,20 @@ return function(T)
 				WSC.EventChanged:Fire(p)
 				h:settle(1)
 			end,
+			-- nouvelle étape de l'accueil (DataPatch du profil)
+			setStep = function(step, done)
+				h:fireClient("ReplicatedStorage.Remotes.DataPatch", {
+					onboarding = { step = step, done = done == true, demoDone = false },
+				})
+				h:settle(1)
+			end,
 		}
 		return c
 	end
+
+	-- profils : un ancien (accueil fini) et un nouveau avant l'étape 9 de l'accueil
+	local VETERAN = { coins = 0, onboarding = { step = 11, done = true, demoDone = true } }
+	local NEWCOMER = { coins = 0, onboarding = { step = 3, done = false, demoDone = false } }
 
 	local function zeroLog(h)
 		expect(table.concat(h.errors, "\n")).toBe("")
@@ -291,7 +309,7 @@ return function(T)
 		it(
 			"sirène : une vibration « rushSiren » par Rush (jamais deux), seulement pendant la sirène",
 			function()
-				local c = client({ t = T_SIREN, event = payload() })
+				local c = client({ t = T_SIREN, event = payload(), profile = VETERAN })
 				c.LC.refresh()
 				c.LC.refresh()
 				c.h:step(0.1, 10)
@@ -307,6 +325,71 @@ return function(T)
 				c.LC.refresh()
 				expect(#c.played).toBe(1)
 				zeroLog(c.h)
+			end
+		)
+
+		it(
+			"nouveau d'après son profil (étape < 9), sans setQuiet : teinte à 30 %, aucune vibration de sirène",
+			function()
+				-- OnboardingController n'a pas (encore) appelé setQuiet : le profil suffit (GDD §3)
+				local c = client({ t = T_SIREN, event = payload(), profile = NEWCOMER })
+				c.LC.refresh()
+				c.h:step(0.5, 4)
+				expect(c.LC.current()).toBe("rush")
+				expect(rgb(lighting(c.h).SquishyColor.TintColor)).toEqual({
+					255,
+					math.floor(255 - 55 * 0.3 + 0.5),
+					math.floor(255 - 30 * 0.3 + 0.5),
+				})
+				expect(#c.played).toBe(0)
+				-- étape 9 atteinte pendant cette sirène : ciel rose plein, mais aucune vibration tardive
+				c.setStep(9, false)
+				c.LC.refresh()
+				c.h:step(0.5, 4)
+				expect(rgb(lighting(c.h).SquishyColor.TintColor)).toEqual({ 255, 200, 225 })
+				expect(#c.played).toBe(0)
+				-- sirène suivante (1 h plus tard) : la vibration revient
+				c.Clock.freeze(T_SIREN + 3600)
+				c.LC.refresh()
+				expect(c.played).toEqual({ "rushSiren" })
+				zeroLog(c.h)
+			end
+		)
+
+		it(
+			"profil pas encore arrivé : aucune vibration ; un ancien dont le profil arrive pendant la sirène : une seule",
+			function()
+				local c = client({ t = T_SIREN, event = payload() })
+				c.LC.refresh()
+				c.h:step(0.5, 4)
+				expect(#c.played).toBe(0)
+				c.h:fireClient("ReplicatedStorage.Remotes.DataSnapshot", VETERAN)
+				c.h:settle(1)
+				c.LC.refresh()
+				c.h:step(0.5, 4)
+				c.LC.refresh()
+				expect(c.played).toEqual({ "rushSiren" })
+				zeroLog(c.h)
+			end
+		)
+
+		it(
+			"profil abîmé (onboarding absent, étape NaN, mauvais types) : prudence, jamais d'erreur",
+			function()
+				for _, profile in
+					{
+						{ coins = 0 },
+						{ onboarding = "x" },
+						{ onboarding = { step = 0 / 0, done = "yes" } },
+						{ onboarding = { step = math.huge } },
+					}
+				do
+					local c = client({ t = T_SIREN, event = payload(), profile = profile })
+					c.LC.refresh()
+					c.h:step(0.5, 2)
+					expect(c.LC.current()).toBe("rush")
+					zeroLog(c.h)
+				end
 			end
 		)
 
@@ -509,6 +592,185 @@ return function(T)
 				zeroLog(c.h)
 			end
 		)
+	end)
+
+	-- Revue adversariale (paquet world) : habillage de la place selon les événements (GDD §11.1,
+	-- §4.22, §4.23) et étiquettes reconstruites sans doublon. Chaque défaut est reproduit ici.
+	describe("LightingController › place et étiquettes (revue)", function()
+		-- Place répliquée (fixture) : anneau du MEGA pad, jarre de la jauge, poutre de l'Autel
+		local function plazaFixture(h)
+			local world = MockInstance.new("Folder")
+			world.Name = "Wobbleton"
+			local plaza = MockInstance.new("Folder")
+			plaza.Name = "Plaza"
+			plaza.Parent = world
+			local function part(parent, name, material, color)
+				local p = MockInstance.new("Part")
+				p.Name = name
+				p.Material = material
+				p.Color = color
+				p.Parent = parent
+				return p
+			end
+			local mega = MockInstance.new("Model")
+			mega.Name = "MegaPad"
+			mega.Parent = plaza
+			part(mega, "Ring", roblox.Enum.Material.Neon, roblox.Color3.fromRGB(255, 120, 190))
+			local jar = MockInstance.new("Model")
+			jar.Name = "GaugeJar"
+			jar.Parent = plaza
+			part(jar, "Jelly", roblox.Enum.Material.Neon, roblox.Color3.fromRGB(255, 120, 200))
+			local altar = MockInstance.new("Model")
+			altar.Name = "Altar"
+			altar.Parent = plaza
+			local beam = part(altar, "Beam", roblox.Enum.Material.Marble, roblox.Color3.new(1, 1, 1))
+			beam:SetAttribute("LabelKey", "event.altarCountdown")
+			beam:SetAttribute("LabelHeight", 4)
+			beam:SetAttribute("LabelTimer", "moon")
+			world.Parent = h.game.Workspace
+			return world
+		end
+
+		local function altarLabel(c)
+			return c.h.game.Workspace.ClientWorld.Labels:FindFirstChild("Label_event.altarCountdown")
+		end
+
+		it("monde remplacé : étiquettes reconstruites sans doublon, les anciennes détruites", function()
+			local c = client({ before = fixture })
+			c.LC.refresh()
+			expect(c.LC.stats().labels).toBe(1)
+			c.h.game.Workspace.Wobbleton:Destroy()
+			fixture(c.h)
+			c.h:settle(1)
+			c.LC.refresh()
+			expect(c.LC.stats().labels).toBe(1)
+			local holders = 0
+			for _, child in c.h.game.Workspace.ClientWorld:GetChildren() do
+				if child.Name == "Labels" then
+					holders += 1
+					expect(#child:GetChildren()).toBe(1)
+				end
+			end
+			expect(holders).toBe(1)
+			zeroLog(c.h)
+		end)
+
+		it(
+			"Autel de la Lune : compte à rebours du samedi (px TV, EN/FR), « reste 5 min » pendant la Lune, caché si l'interrupteur est coupé",
+			function()
+				local c = client({ before = plazaFixture, event = payload() })
+				local EventClock = c.h:require("ReplicatedStorage.Shared.Logic.EventClock")
+				local Format = c.h:require("ReplicatedStorage.Shared.Util.Format")
+				c.LC.refresh()
+				local gui = altarLabel(c)
+				expect(gui.ClassName).toBe("BillboardGui")
+				expect(gui.Enabled).toBe(true)
+				expect(gui.LightInfluence).toBe(0)
+				local left = EventClock.moon(T_DAY).startsAt - T_DAY
+				expect(gui.Text.Text).toBe("Next Jelly Moon " .. Format.duration(left, "en"))
+				expect(gui.Text.TextSize >= 28).toBe(true)
+				-- le temps passe : le texte suit (et la plaque s'ajuste au texte)
+				c.Clock.freeze(T_DAY + 3600)
+				c.LC.refresh()
+				expect(gui.Text.Text).toBe("Next Jelly Moon " .. Format.duration(left - 3600, "en"))
+				c.Prefs._onSettings({ lang = "fr" })
+				c.h:settle(1)
+				c.LC.refresh()
+				expect(gui.Text.Text).toBe("Prochaine Jelly Moon " .. Format.duration(left - 3600, "fr"))
+				-- pendant une séance : la consigne de l'Autel
+				c.Clock.freeze(T_MOON)
+				c.LC.refresh()
+				expect(gui.Text.Text).toBe("Reste 5 min pour une Goutte de Lune")
+				-- interrupteur coupé en direct : aucun compte à rebours fantôme
+				c.setEvent(payload({ features = features({ jellyMoon = false }) }))
+				c.LC.refresh()
+				expect(gui.Enabled).toBe(false)
+				zeroLog(c.h)
+			end
+		)
+
+		it(
+			"Autel : sans EventState reçu, le compte à rebours reste caché (interrupteur inconnu)",
+			function()
+				local c = client({ before = plazaFixture })
+				c.LC.refresh()
+				expect(altarLabel(c).Enabled).toBe(false)
+				zeroLog(c.h)
+			end
+		)
+
+		it("jarre grise pendant la sieste de Big Plop (restUntil), gelée Neon rendue à la fin", function()
+			local c = client({
+				before = plazaFixture,
+				event = payload({
+					gauge = { points = 10, target = 1200, partyUntil = 0, restUntil = T_DAY + 600 },
+				}),
+			})
+			local Palette = c.h:require("ReplicatedStorage.Shared.Render.Palette")
+			c.LC.refresh()
+			local jelly = c.h.game.Workspace.Wobbleton.Plaza.GaugeJar.Jelly
+			expect(jelly.Material).toBe(roblox.Enum.Material.SmoothPlastic)
+			expect(jelly.Color).toBe(Palette.World.jellyRest)
+			c.Clock.freeze(T_DAY + 601) -- fin de la sieste sans message : la jarre se rallume seule
+			c.LC.refresh()
+			expect(jelly.Material).toBe(roblox.Enum.Material.Neon)
+			expect(jelly.Color).toBe(roblox.Color3.fromRGB(255, 120, 200))
+			zeroLog(c.h)
+		end)
+
+		it(
+			"anneau du MEGA pad : éteint au calme, Neon de l'alerte à la fin des pressions ; interrupteur coupé → éteint",
+			function()
+				local c = client({ before = plazaFixture, event = payload() })
+				local EventClock = c.h:require("ReplicatedStorage.Shared.Logic.EventClock")
+				local Palette = c.h:require("ReplicatedStorage.Shared.Render.Palette")
+				c.LC.refresh()
+				local ring = c.h.game.Workspace.Wobbleton.Plaza.MegaPad.Ring
+				expect(ring.Material).toBe(roblox.Enum.Material.SmoothPlastic)
+				expect(ring.Color).toBe(Palette.World.megaRingOff)
+				local m = EventClock.mega(T_DAY)
+				c.Clock.freeze(m.warnAt + 1)
+				c.LC.refresh()
+				expect(ring.Material).toBe(roblox.Enum.Material.Neon)
+				expect(ring.Color).toBe(roblox.Color3.fromRGB(255, 120, 190))
+				c.Clock.freeze(m.endsAt - 1)
+				c.LC.refresh()
+				expect(ring.Material).toBe(roblox.Enum.Material.Neon)
+				c.Clock.freeze(m.endsAt + 1)
+				c.LC.refresh()
+				expect(ring.Material).toBe(roblox.Enum.Material.SmoothPlastic)
+				-- MEGA coupé par l'interrupteur : jamais d'anneau allumé
+				c.setEvent(payload({ features = features({ megaSquish = false }) }))
+				c.Clock.freeze(m.warnAt + 1)
+				c.LC.refresh()
+				expect(ring.Material).toBe(roblox.Enum.Material.SmoothPlastic)
+				zeroLog(c.h)
+			end
+		)
+
+		it("API Roblox valide (ApiAudit) : anneau, jarre, compte à rebours de l'Autel", function()
+			ApiAudit.start()
+			local ok, err = pcall(function()
+				local c = client({
+					before = plazaFixture,
+					event = payload({
+						gauge = { points = 0, target = 1200, partyUntil = 0, restUntil = T_DAY + 60 },
+					}),
+				})
+				local EventClock = c.h:require("ReplicatedStorage.Shared.Logic.EventClock")
+				c.LC.refresh()
+				c.Clock.freeze(EventClock.mega(T_DAY).warnAt + 1)
+				c.LC.refresh()
+				c.Clock.freeze(T_MOON)
+				c.LC.refresh()
+				c.Prefs._onSettings({ lang = "fr" })
+				c.h:settle(1)
+				zeroLog(c.h)
+			end)
+			local issues = ApiAudit.stop()
+			expect(ok and true or err).toBe(true)
+			expect(table.concat(issues, "\n")).toBe("")
+		end)
 	end)
 
 	describe("LightingController › robustesse", function()

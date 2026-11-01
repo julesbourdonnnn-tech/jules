@@ -13,6 +13,7 @@ local type, typeof, math = type, typeof, math
 
 local Balance = require(script.Parent.Parent.Config.Balance)
 local WorldLayout = require(script.Parent.WorldLayout)
+local ZoneRules = require(script.Parent.ZoneRules)
 
 export type AimCandidate = { id: number, posAt: (t: number) -> Vector3 }
 
@@ -177,12 +178,16 @@ function LeapRules.aim(
 end
 
 -- Capture automatique (5 studs, 8 pour le propriétaire de sa fuite du Rush ; + tolérance côté
--- serveur : 4e paramètre facultatif, Balance.Catch.Tolerance) ; écart vertical ≤ MaxDY
+-- serveur : 4e paramètre facultatif, Balance.Catch.Tolerance) ; distance à plat ; écart vertical ≤
+-- MaxDY mesuré depuis les PIEDS (contrat v1.2, docs/04 §1 règle 17) : `landing` porte la hauteur de la
+-- racine (LeapRules.landing garde from.Y) et `rootOffset` (5e paramètre facultatif, MoveCheck.rootOffset,
+-- 0 à pied) la hausse de la monture ; une monture ne réduit jamais la portée.
 function LeapRules.catchesOnLanding(
 	landing: Vector3,
 	creaturePos: Vector3,
 	isOwner: boolean,
-	tolerance: number?
+	tolerance: number?,
+	rootOffset: number?
 ): boolean
 	if not usable(landing) or not usable(creaturePos) then
 		return false
@@ -193,7 +198,8 @@ function LeapRules.catchesOnLanding(
 	if dx * dx + dz * dz > radius * radius then
 		return false
 	end
-	return math.abs(landing.Y - creaturePos.Y) <= CATCH.MaxDY
+	local feet = ZoneRules.feetY(landing.Y, if finite(rootOffset) then rootOffset :: number else 0)
+	return math.abs(feet - creaturePos.Y) <= CATCH.MaxDY
 end
 
 return LeapRules

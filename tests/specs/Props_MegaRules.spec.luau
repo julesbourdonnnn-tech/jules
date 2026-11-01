@@ -55,24 +55,27 @@ return function(T)
 			end)
 		end)
 
-		it("phase ∈ [0 ; 1[, nextApex ≥ t, species ∈ [1 ; 24]", function()
-			Props.check(4000, Props.tuple(any, any), function(v)
-				local p = MR.phase(v[1], v[2])
-				local s = MR.species(v[1], v[2])
-				local a = MR.nextApex(v[1], v[2])
-				local ok = p >= 0 and p < 1 and s >= 1 and s <= 24 and s % 1 == 0 and a == a
-				local finite = type(v[1]) == "number"
-					and type(v[2]) == "number"
-					and v[1] == v[1]
-					and v[2] == v[2]
-					and math.abs(v[1]) < 1e15
-					and math.abs(v[2]) < 1e15
-				if finite then
-					ok = ok and a >= v[2] - 1e-6
-				end
-				return ok
-			end)
-		end)
+		it(
+			"phase ∈ [0 ; 1[, nextApex ≥ t, species ∈ [1 ; 24] (24 espèces non secrètes au lancement)",
+			function()
+				Props.check(4000, Props.tuple(any, any), function(v)
+					local p = MR.phase(v[1], v[2])
+					local s = MR.species(v[1], v[2])
+					local a = MR.nextApex(v[1], v[2])
+					local ok = p >= 0 and p < 1 and s >= 1 and s <= 24 and s % 1 == 0 and a == a
+					local finite = type(v[1]) == "number"
+						and type(v[2]) == "number"
+						and v[1] == v[1]
+						and v[2] == v[2]
+						and math.abs(v[1]) < 1e15
+						and math.abs(v[2]) < 1e15
+					if finite then
+						ok = ok and a >= v[2] - 1e-6
+					end
+					return ok
+				end)
+			end
+		)
 
 		it("zéro trace", function()
 			expect(#h.errors).toBe(0)

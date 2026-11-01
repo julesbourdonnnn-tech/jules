@@ -16,10 +16,12 @@ local type, math = type, math
 
 local Types = require(script.Parent.Parent.Types)
 local Formulas = require(script.Parent.Formulas)
+local Odds = require(script.Parent.Odds)
 local Balance = require(script.Parent.Parent.Config.Balance)
 local Events = require(script.Parent.Parent.Config.Events)
 local Species = require(script.Parent.Parent.Config.Species)
 local Rarities = require(script.Parent.Parent.Config.Rarities)
+local Mutations = require(script.Parent.Parent.Config.Mutations)
 
 export type BoopCtx = {
 	feature: string, -- Features.BoopRush
@@ -52,7 +54,9 @@ export type CatchCtx = {
 	isBooper: boolean,
 	age: number, -- s depuis le début de la fuite
 	isOwner: boolean,
-	distance: number,
+	distance: number, -- studs À PLAT (ZoneRules.distXZ) entre la position validée à tClient et la créature
+	-- écart vertical entre les PIEDS du joueur (ZoneRules.feetY(pos.Y, rootOffset)) et le sol de la
+	-- créature (contrat v1.2, docs/04 §1 règle 17) : une monture ne réduit jamais la portée
 	dy: number,
 	canAct: boolean,
 }
@@ -259,10 +263,26 @@ function RushRules.wildShared(players: number): number
 	return wild.SharedBase + wild.SharedPerMissing * math.max(0, wild.SharedFullServer - n)
 end
 
--- min(10 % de l'original, 2 × plus gros du receveur), minimum 1
+-- max(RushMin, min(RushShare × original, MaxOfBiggest × plus gros du receveur)) : min(10 % de
+-- l'original, 0,5 × plus gros du receveur), minimum 1 (GDD v1.3 §4.21.3, §4.25)
 function RushRules.babySize(original: number, receiverBiggest: number): number
 	local babies = Balance.Babies
 	return Formulas.babySize(babies.RushShare, babies.RushMin, receiverBiggest, Formulas.clampSize(original))
+end
+
+-- Mutation du bébé du Rush (contrat v1.2, GDD v1.3 §4.21.3) : celle de l'original si son multiplicateur
+-- est ≤ Babies.RushMutationMaxMult (Doré ×5 ou plus faible, « aucune » comprise) ; sinon tirée avec
+-- Odds.rollMutation(r, buses, Lune, LuckyMutationMult) : une ferme à deux comptes ne recopie jamais
+-- une Galaxie ou mieux. Mutation inconnue ou illisible = aucune (copiée : 0).
+function RushRules.babyMutation(original: number, r: number, nozzles: number, moon: boolean): number
+	local def = if type(original) == "number" then Mutations.ById[original] else nil
+	if def == nil then
+		return Mutations.NONE
+	end
+	if def.mult <= Balance.Babies.RushMutationMaxMult then
+		return def.id
+	end
+	return Odds.rollMutation(r, nozzles, moon == true, Balance.Babies.LuckyMutationMult)
 end
 
 return RushRules

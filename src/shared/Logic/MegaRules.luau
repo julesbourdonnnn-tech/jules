@@ -1,14 +1,15 @@
 --!strict
 -- MegaRules (paquet logic, docs/04 §12.1). MEGA SQUISH (GDD §4.22) : objectif adapté au nombre de
 -- joueurs et indulgence après échec, paliers de bébés, fenêtre PERFECT du géant (décalée vers le
--- tard), espèce de la semaine en rotation.
+-- tard), espèce de la semaine en rotation (contrat v1.2 : sur la liste des espèces PUBLIÉES et non
+-- secrètes, triées par id, jamais mod 24 ; Species.MegaRotation est obsolète).
 -- Rebond du géant (même règle pour le serveur et le dessin du client) : période BouncePeriod (2 s)
 -- à partir de l'atterrissage landsAt ; le géant touche le sol à landsAt + k × période et passe au
 -- sommet à landsAt + (k + ½) × période. PERFECT = de PerfectBefore avant à PerfectAfter après un
 -- sommet (Events.Mega).
 
 -- Bibliothèques gardées en local : appels rapides, aussi dans l'environnement injecté du harnais
-local type, math = type, math
+local type, math, table = type, math, table
 
 local Events = require(script.Parent.Parent.Config.Events)
 local Species = require(script.Parent.Parent.Config.Species)
@@ -95,13 +96,33 @@ function MegaRules.isPerfect(landsAt: number, t: number): boolean
 	return offset <= MEGA.PerfectAfter + EPSILON or offset >= period - MEGA.PerfectBefore - EPSILON
 end
 
--- ((semaine + n) mod 24) + 1, Secrets exclus
-function MegaRules.species(week: number, indexInWeek: number): number
+-- Espèces de la rotation à l'instant `unix` : publiées (Species.isReleased) et non secrètes (rareté ≠
+-- Secret), triées par id. Relue à chaque appel (au plus quelques dizaines de lignes) : une espèce de la
+-- semaine entre dans la rotation à sa date, sans nouveau code (GDD §7.6).
+local SECRET_RARITY = 7
+local function rotationAt(unix: number): { number }
+	local list = {}
+	for _, def in Species.List do
+		if def.rarity ~= SECRET_RARITY and def.family ~= "secret" and Species.isReleased(def, unix) then
+			table.insert(list, def.id)
+		end
+	end
+	table.sort(list)
+	return list
+end
+
+-- Contrat v1.2 : liste des espèces publiées à `unix` et non secrètes, triées par id, indexée par
+-- (semaine + n) mod #liste (jamais mod 24). Sans `unix` (ou illisible) : les espèces du lancement
+-- (release ≤ 0). Liste vide (impossible au lancement) : Plop.
+function MegaRules.species(week: number, indexInWeek: number, unix: number?): number
 	-- bornes de sûreté : un modulo sur des doubles énormes n'est plus exact
 	local w = math.clamp(math.floor(finite(week, 0)), -1e9, 1e9)
 	local n = math.clamp(math.floor(finite(indexInWeek, 0)), -1e9, 1e9)
-	local rotation = Species.MegaRotation
-	return ((w + n) % rotation) + 1
+	local list = rotationAt(finite(unix, 0))
+	if #list == 0 then
+		return Species.PLOP
+	end
+	return list[((w + n) % #list) + 1]
 end
 
 return MegaRules

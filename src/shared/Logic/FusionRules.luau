@@ -4,7 +4,10 @@
 --   * Jumeaux = même espèce ET même nombre d'étoiles (la mutation peut différer).
 --   * Fusion : taille (a + b) × 1,25, étoiles + 1 (5 au plus), meilleure mutation ; Meilleur Ami,
 --     tenue et verrou gardés si l'un des deux les avait ; la ligne gardée est celle de keepUid
---     (Meilleur Ami d'abord, puis le plus ancien) : le résultat garde sa naissance `b`.
+--     (Meilleur Ami d'abord, puis le plus ancien) : le résultat garde sa naissance `b` et son `gd` (jour
+--     du dernier bonus de croissance du Rush, contrat v1.2). Lieu du résultat : Bassin si l'un des deux
+--     y est (combo), sinon l'enclos si l'un des deux y est (sa place est libérée), sinon celui de la
+--     ligne gardée (Dodo) ; le service le met ensuite dans l'enclos s'il y a de la place (GDD §4.10).
 --   * Combo : après chaque fusion, un jumeau du résultat qui attend dans le Bassin fusionne à son
 --     tour (nextInChain).
 --   * Tout fusionner : plan déterministe (planMergeAll) qui fait les plus longues chaînes possibles
@@ -134,7 +137,12 @@ function FusionRules.fuse(
 	if birth <= 0 then
 		birth = math.max(0, math.floor(finite(unix, 0)))
 	end
-	local at = if ra.at == "pool" or rb.at == "pool" then "pool" else (kept.at or "pen")
+	local at = if ra.at == "pool" or rb.at == "pool"
+		then "pool"
+		elseif ra.at == "pen" or rb.at == "pen" then "pen"
+		else (kept.at or "pen")
+	-- jour du dernier bonus du Rush de la ligne gardée : entier ≥ 0 (illisible : 0)
+	local gd = math.max(0, math.floor(finite(kept.gd, 0)))
 
 	return {
 		s = if type(kept.s) == "number" then kept.s else (other.s or 1),
@@ -147,6 +155,7 @@ function FusionRules.fuse(
 		o = outfit :: string,
 		at = at,
 		b = birth,
+		gd = gd,
 	}
 end
 

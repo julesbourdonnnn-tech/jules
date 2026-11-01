@@ -8,6 +8,13 @@
 -- Bibliothèques gardées en local : appels rapides, aussi dans l'environnement injecté du harnais
 local type, math, table = type, math, table
 
+local Balance = require(script.Parent.Parent.Config.Balance)
+local Events = require(script.Parent.Parent.Config.Events)
+local Quests = require(script.Parent.Parent.Config.Quests)
+
+-- grâce d'une attente sur une dalle (même marge que les maintiens du boop et du bol)
+local TILE_GRACE = 0.5
+
 local TABLE: { [string]: number } = {
 	profileLoad = 60,
 	characterPlace = 10,
@@ -17,7 +24,9 @@ local TABLE: { [string]: number } = {
 	unstable = 3, -- attribut Unstable après un retour forcé
 	carry = math.huge,
 	boopHold = 5.5, -- 5 s + 0,5 s de grâce (2,5 s + 0,5 s sans propriétaire proche) ; extendHold une seule fois
-	feedHold = 5.5,
+	feedHold = Quests.Feed.Hold + Quests.Feed.HoldGrace, -- bol : 2 s + 0,5 s (contrat v1.2)
+	-- attente de 0,6 s sur une dalle avant l'achat (contrat v1.2, HoldState « tile » de RanchService)
+	tileDwell = Balance.Tiles.DwellSeconds + TILE_GRACE,
 	leap = 0.35,
 	runaway = 20,
 	escape = 25,
@@ -26,10 +35,12 @@ local TABLE: { [string]: number } = {
 	demo = 20,
 	rush = 115, -- 90 s + 25 s pour les fuites en cours
 	mega = 65,
-	splorchQueue = 110,
+	-- file des Grands Splorch : place × 20 s + reste du spectacle, recalculé ; coupure dure à 8 min
+	splorchQueue = Events.SplorchQueueHardCut,
 	spectacle = 10,
 	squishParty = 600,
 	wobbleParty = 300,
+	gaugeRest = Events.Gauge.RestSeconds, -- sieste de Big Plop après une Wobble Party (contrat v1.2)
 	modeCard = 20,
 	card = 8,
 	robloxPrompt = 60,

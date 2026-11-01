@@ -7,6 +7,7 @@ return function(T)
 
 	local h = Harness.new()
 	local F = h:require("ReplicatedStorage.Shared.Logic.Formulas")
+	local Balance = h:require("ReplicatedStorage.Shared.Config.Balance")
 	local MAX = 1e300
 
 	local function ok(x)
@@ -276,12 +277,37 @@ return function(T)
 					and ok(F.sellValue(v[1]))
 					and ok(F.secondsOfIncome(v[1], v[2], v[3]))
 					and ok(F.offlineGrowth(v[1], v[2]))
+					and ok(F.offlineGrowth(v[1], v[2], v[3], v[1]))
 					and ok(F.offlinePot(v[1], v[2]))
 					and okSize(F.babySize(v[1], v[2], v[3]))
 					and okSize(F.babySize(v[1], v[2], v[3], v[1]))
-					and ok(F.coinPack(v[1], "CoinsSmall"))
+					and F.coinPack(v[1], "CoinsSmall") == 0
 			end)
 		end)
+
+		it(
+			"offlineGrowth (contrat v1.2) : jamais au-delà de StopAt × objectif − plus gros, croissant en durée",
+			function()
+				Props.check(
+					5000,
+					Props.tuple(
+						Props.number(0, 1e12),
+						Props.number(0, 13 * 3600),
+						Props.int(0, 40),
+						Props.number(0, 1e14)
+					),
+					function(v)
+						local grown = F.offlineGrowth(v[1], v[2], v[3], v[4])
+						local stopAt = Balance.Offline.StopAt * F.splorchTarget(v[3])
+						local longer = F.offlineGrowth(v[1], v[2] + 60, v[3], v[4])
+						return ok(grown)
+							and grown <= math.max(0, stopAt - v[4]) * (1 + 1e-12)
+							and grown <= F.offlineGrowth(v[1], v[2]) * (1 + 1e-12)
+							and longer >= grown
+					end
+				)
+			end
+		)
 
 		it("fusionSize : la fusion grossit toujours (≥ chacun des deux, Max mis à part)", function()
 			Props.check(5000, Props.tuple(Props.number(1, 1e299), Props.number(1, 1e299)), function(v)
@@ -291,7 +317,7 @@ return function(T)
 		end)
 
 		it(
-			"bébés : ≥ minimum (borné à [1 ; Max]) et ≤ max(minimum, 2 × plus gros du receveur)",
+			"bébés : ≥ minimum (borné à [1 ; Max]) et ≤ max(minimum, 0,5 × plus gros du receveur)",
 			function()
 				Props.check(
 					5000,
@@ -303,7 +329,8 @@ return function(T)
 					),
 					function(v)
 						local size = F.babySize(v[1], v[2], v[3], v[4])
-						return size >= v[2] and size <= math.max(v[2], 2 * v[3]) + 1e-6
+						return size >= v[2]
+							and size <= math.max(v[2], Balance.Babies.MaxOfBiggest * v[3]) + 1e-6
 					end
 				)
 			end
@@ -372,6 +399,7 @@ return function(T)
 			Props.check(3000, Props.tuple(profile, any, any), function(v)
 				local p = F.splorchPreview(v[1], { now = v[2], unix = v[3] })
 				return type(p.ready) == "boolean"
+					and p.recentBuy == nil
 					and ok(p.target)
 					and ok(p.biggest)
 					and ok(p.coinsLost)

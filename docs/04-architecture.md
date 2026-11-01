@@ -2212,25 +2212,25 @@ Contrat v1.2 : le GDD v1.3 a changé des valeurs de `Config/Balance`, `Config/Ev
 | Date | Clé | Avant → après | Raison | Résultat |
 |---|---|---|---|---|
 | 01/11/2026 | `Balance.Boosts.FeedMilestone` | 900 → 300 | GDD v1.3 §7.3, §4.25 (bol : 5 min chaque jour) | logic (déjà fait) : premier Grand Splorch dans sa tolérance |
-| 01/11/2026 | `Balance.Tiles.RScale` (nouvelle) | — → 3,5 | GDD v1.3 §4.6 (C3-4 : inflation des pièces) | contrat v1.2 ; `Formulas.tileCost` : note logic |
+| 01/11/2026 | `Balance.Tiles.RScale` (nouvelle) | — → 3,5 | GDD v1.3 §4.6 (C3-4 : inflation des pièces) | contrat v1.2 ; revue logic : `Formulas.tileCost` × `RScale`^R (`tileCost("snack", 0, 1) = 70`) |
 | 01/11/2026 | `Balance.Tiles.DwellSeconds` (nouvelle) | — → 0,6 | GDD v1.3 §4.6 (C2-10 : achats sans le vouloir) | contrat v1.2 |
-| 01/11/2026 | `Balance.Tiles.cozyBed.Base` / `MinR` | 250 000 / 1 → 25e6 / 3 | GDD v1.3 §4.6 (C3-5) | note logic |
-| 01/11/2026 | `Balance.Splorch.Unlocks` | « pad.cozyBed » à R = 1 → R = 3 | GDD v1.3 §4.15 | note logic |
-| 01/11/2026 | `Balance.Splorch.Targets` | table × 2,7 → table v1.3 (15 000 … 1,1e12) | GDD v1.3 §4.15, §4.24 (C3-3) | note logic |
-| 01/11/2026 | `Balance.Splorch.BeyondMult` | 2,7 → 2,6 | GDD v1.3 §4.15 | note logic |
-| 01/11/2026 | `Balance.Splorch.RecentBuyWindow` / `RecentBuyShare`, `Balance.CoinPacks` | → retirés | GDD v1.3 §8.3 (C3-6 : paquets retirés) | note logic (après `splorchPreview` et `coinPack`) |
+| 01/11/2026 | `Balance.Tiles.cozyBed.Base` / `MinR` | 250 000 / 1 → 25e6 / 3 | GDD v1.3 §4.6 (C3-5) | revue logic : appliqué, specs à jour ; porte EconomyPacing v1.2 verte (50 joueurs × 4/8/16) ; `tileCost("cozyBed", 0, 3) = 25e6` |
+| 01/11/2026 | `Balance.Splorch.Unlocks` | « pad.cozyBed » à R = 1 → R = 3 | GDD v1.3 §4.15 | revue logic : appliqué, specs à jour ; porte EconomyPacing v1.2 verte (50 joueurs × 4/8/16) (aperçu : tuile à R = 3) |
+| 01/11/2026 | `Balance.Splorch.Targets` | table × 2,7 → table v1.3 (15 000 … 1,1e12) | GDD v1.3 §4.15, §4.24 (C3-3) | revue logic : appliqué, specs à jour ; porte EconomyPacing v1.2 verte (50 joueurs × 4/8/16) : R = 10 / 15 / 20 aux jours 7 / 14 / 28 aux 3 tailles |
+| 01/11/2026 | `Balance.Splorch.BeyondMult` | 2,7 → 2,6 | GDD v1.3 §4.15 | revue logic : appliqué, specs à jour ; porte EconomyPacing v1.2 verte (50 joueurs × 4/8/16) : `splorchTarget(20) = 2,9e12` |
+| 01/11/2026 | `Balance.Splorch.RecentBuyWindow` / `RecentBuyShare`, `Balance.CoinPacks` | → retirés | GDD v1.3 §8.3 (C3-6 : paquets retirés) | revue logic : retirés ; `splorchPreview` ne rend plus `recentBuy` ; `coinPack` rend 0 (gardée tant que `Contract_game` la liste, note INT-LR1) |
 | 01/11/2026 | `Balance.Splorch.FullShowGap` (nouvelle) | — → 180 | GDD v1.3 §4.15 (C2-11) | contrat v1.2 |
-| 01/11/2026 | `Balance.Offline.GrowthShare` | 0,5 → 0,3 | GDD v1.3 §4.19 (C3-5) | note logic |
-| 01/11/2026 | `Balance.Offline.StopAt` (nouvelle) | — → 0,9 | GDD v1.3 §4.19 (C3-5) | contrat v1.2 ; `Formulas.offlineGrowth` : note logic |
-| 01/11/2026 | `Balance.Babies.MaxOfBiggest` | 2 → 0,5 | GDD v1.3 §4.21.3, §4.25 (C3-11) | note logic |
-| 01/11/2026 | `Balance.Babies.RushMutationMaxMult` (nouvelle) | — → 5 | GDD v1.3 §4.21.3 (C3-11) | contrat v1.2 ; `RushRules.babyMutation` : note logic |
+| 01/11/2026 | `Balance.Offline.GrowthShare` | 0,5 → 0,3 | GDD v1.3 §4.19 (C3-5) | revue logic : appliqué, specs à jour ; porte EconomyPacing v1.2 verte (50 joueurs × 4/8/16) : Grands Splorch prêts à la connexion 0 % (J2-J14) |
+| 01/11/2026 | `Balance.Offline.StopAt` (nouvelle) | — → 0,9 | GDD v1.3 §4.19 (C3-5) | contrat v1.2 ; revue logic : `Formulas.offlineGrowth(g, s, R, plus gros)` borné à 0,9 × objectif − plus gros, joué par `EconomyModel` |
+| 01/11/2026 | `Balance.Babies.MaxOfBiggest` | 2 → 0,5 | GDD v1.3 §4.21.3, §4.25 (C3-11) | revue logic : appliqué, specs à jour ; porte EconomyPacing v1.2 verte (50 joueurs × 4/8/16) (`babySize`, `RushRules.babySize`) |
+| 01/11/2026 | `Balance.Babies.RushMutationMaxMult` (nouvelle) | — → 5 | GDD v1.3 §4.21.3 (C3-11) | contrat v1.2 ; revue logic : `RushRules.babyMutation` livrée et jouée par `EconomyModel` |
 | 01/11/2026 | `Balance.RushSize.HeroBonus` / `ReturnBonus` | 10 % / 5 % → `HeroGrowthSeconds` 3 600 / `ReturnGrowthSeconds` 1 800 | GDD v1.3 §4.21.3 (C3-11) | contrat v1.2 (aucune valeur lue par logic) |
-| 01/11/2026 | `Balance.Caps.petSit` | 300 → 100 | GDD v1.3 §6.4 (C3-11) | note logic |
+| 01/11/2026 | `Balance.Caps.petSit` | 300 → 100 | GDD v1.3 §6.4 (C3-11) | revue logic : appliqué (vérifié par `Invariants`) ; hors porte (aucun ami dans le modèle) |
 | 01/11/2026 | `Balance.Caps.petSitIn`, `splorchCoins` (nouvelles) | — → 100, 10 | GDD v1.3 §6.4, §4.15 | contrat v1.2 |
 | 01/11/2026 | `Balance.CapsPerFriend.petSit` (nouvelle) | — → 20 | GDD v1.3 §6.4, §6.9 | contrat v1.2 |
-| 01/11/2026 | `Balance.Rewards.PetSitVisitor` | 10 → 2 | GDD v1.3 §6.4 (C3-11) | note logic |
+| 01/11/2026 | `Balance.Rewards.PetSitVisitor` | 10 → 2 | GDD v1.3 §6.4 (C3-11) | revue logic : appliqué ; hors porte (aucun ami dans le modèle) |
 | 01/11/2026 | `Balance.Rewards.GiftSecondsAfterCap` (nouvelle) | — → 10 | GDD v1.3 §4.15 | contrat v1.2 |
-| 01/11/2026 | `Balance.Boosts.ObjectiveMedium` / `ObjectiveHard` | 300 / 600 → 0 / 0 | GDD v1.3 §7.4 (C3-12) | note logic |
+| 01/11/2026 | `Balance.Boosts.ObjectiveMedium` / `ObjectiveHard` | 300 / 600 → 0 / 0 | GDD v1.3 §7.4 (C3-12) | revue logic : appliqué ; la porte ne donne aucun boost aux objectifs ; `Balance.GddValues = "1.3"` |
 | 01/11/2026 | `Balance.Press.RangeTolerance`, `Balance.Catch.ClientPast` (nouvelles) | — → 2, 0,35 | GDD v1.3 §12.7, §12.5 | contrat v1.2 |
 | 01/11/2026 | `Balance.Leap.GrantSpeed` | 36 → retirée | GDD v1.3 §12.8 (C3-8 : `MoveCheck.grant`) | contrat v1.2 |
 | 01/11/2026 | `Events.Gauge.Points.press` | 1 → 0 | GDD v1.3 §4.23 (C3-12) | contrat v1.2 |
@@ -2240,6 +2240,8 @@ Contrat v1.2 : le GDD v1.3 a changé des valeurs de `Config/Balance`, `Config/Ev
 | 01/11/2026 | `Events.SplorchQueueHardCut` (nouvelle) | — → 480 | GDD v1.3 §12.10 | contrat v1.2 |
 | 01/11/2026 | `Quests.Feed.Hold` | 5 → 2 | GDD v1.3 §4.20 (C2-17) | contrat v1.2 |
 | 01/11/2026 | `Quests.ObjectiveRules.Rewards.medium.boost` / `hard.boost` | 300 / 600 → 0 / 0 | GDD v1.3 §7.4 (C3-12) | contrat v1.2 (`EconomyModel` ne les lisait déjà plus) |
+| 01/11/2026 | `Balance.Press.Seconds` | 12 → 22 | Revue logic, porte v1.2 (santé « pressions ≥ 50 % des pièces gagnées en jeu au J7 ») : avec 12, les pressions faisaient 40-42 % (objectifs 30-40 %, Pot en jeu 20 %) ; levier nommé par le GDD §4.24 | 50 joueurs × 3 tailles : pressions 0,56-0,60 au J7 (avant 0,40-0,42) ; pièces à 5:00 10,3-10,8K (repère 5K-17K, GDD ≈ 10K) ; premier Grand Splorch 12,6-12,9 min |
+| 01/11/2026 | `Balance.Tiles.snack.Growth` | 4,0 → 4,5 | Revue logic, porte v1.2 (santé « pièces perdues au Grand Splorch ≤ 10 × le prix du Tapis 12 ») : avec 4,0, 13,8-14,4 × (le revenu d'une boucle croît plus vite que 3,5^R : 18 squishies d'enclos qui grandissent tous de G, étoiles, Fame, trophées) ; `RScale` (3,5) est figé par `Contract_game` ; levier nommé par le GDD §4.24 ; le GDD ne retrouve « 3 ×, Tapis 12 à 93 % » qu'avec A = 1 (sans décorations, Fame ni trophées). Tapis 12 = 306 M (GDD : 83,9 M), niveaux 0-3 presque inchangés (20, 90, 405, 1 822). **Le témoin « prix des dalles » de `Contract_game` (Tapis niveaux 3 et 11) reste à mettre à jour par l'architecte : note INT-LR1 de la revue logic** ; essais sans ce réglage (dans les seules valeurs libres : `Offline.PotShare`, `Income.FamePerPoint`, `Trophies`, `Income.DecorBonus`, `Vat.QualityMax`) : aucun ne passe sous 10 sans retirer une règle du GDD | 50 joueurs × 3 tailles : pertes 3,5-4,1 × (GDD ≈ 3), Tapis 12 à 0,86-0,9 de la boucle (GDD ≈ 90 %), balade 290 s, R = 10 / 15 / 20, plus gros J7 8,3e7-9,5e7 (GDD ≈ 1e8), tampons J7 95-96, temps en ×2 36 % (jauge pleine en ≈ 18 min au débit mesuré de 33 points/min, cycle de 25 min sieste comprise), gros acheteur + 2 R au J28 (limite 2) |
 
 ---
 

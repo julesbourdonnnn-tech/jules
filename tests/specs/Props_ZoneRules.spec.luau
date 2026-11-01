@@ -4,6 +4,7 @@
 return function(T)
 	local describe, it, expect, Harness = T.describe, T.it, T.expect, T.Harness
 	local Props = require("../harness/Props")
+	local Vector3 = require("@lune/roblox").Vector3
 
 	local h = Harness.new()
 	local Z = h:require("ReplicatedStorage.Shared.Logic.ZoneRules")
@@ -71,6 +72,23 @@ return function(T)
 					and not Z.ownerNearFence(v[1], pos)
 					and Z.intruder(v[1], pos) == 0
 					and not Z.atAltar(pos)
+					and not Z.withinReach(pos, v[3], Vector3.zero, v[1])
+					and Z.distXZ(pos, Vector3.zero) == math.huge
+			end)
+		end)
+
+		it("distXZ et feetY : jamais NaN ni négatif ; distXZ symétrique et sans la hauteur", function()
+			local n = Props.number(-1000, 1000)
+			Props.check(4000, Props.tuple(n, n, n, n, n, n, Props.anyNumber()), function(v)
+				local a, b = Vector3.new(v[1], v[2], v[3]), Vector3.new(v[4], v[5], v[6])
+				local d = Z.distXZ(a, b)
+				local f = Z.feetY(v[2], v[7])
+				return d >= 0
+					and d == d
+					and math.abs(d - Z.distXZ(b, a)) < 1e-9
+					and math.abs(d - Z.distXZ(a, Vector3.new(v[4], v[2] + 50, v[6]))) < 1e-9
+					and f == f
+					and f <= v[2]
 			end)
 		end)
 

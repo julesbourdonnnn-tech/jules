@@ -205,6 +205,45 @@ return function(T)
 			expect(QR.isNewStamp({ mut = {}, stars = {} }, 26, 0, 0)).toBe(true)
 		end)
 
+		it(
+			"familyEarned (contrat v1.2) : bonus gagné pour toujours, lu dans dex.fam[index de FamilyOrder]",
+			function()
+				local Species = h:require("ReplicatedStorage.Shared.Config.Species")
+				local order = Species.FamilyOrder
+				local function famDex(fam)
+					return {
+						mut = table.create(#Species.List, 0),
+						stars = table.create(#Species.List, 0),
+						fam = fam,
+					}
+				end
+				local fam = table.create(#order, 0)
+				local d = famDex(fam)
+				for _, key in order do
+					expect(QR.familyEarned(d, key)).toBe(false)
+				end
+				-- Kitty (index 2) gagnée : seule Kitty compte, même si aucune espèce n'est tamponnée (pour
+				-- toujours : une espèce ajoutée plus tard ne retire jamais le bonus)
+				fam[table.find(order, "kitty")] = 1
+				expect(QR.familyEarned(d, "kitty")).toBe(true)
+				expect(QR.familyEarned(d, "jelly")).toBe(false)
+				expect(QR.familyComplete(d, "kitty")).toBe(false)
+				-- Secrets : jamais de bonus, même avec une case abîmée à 1
+				fam[table.find(order, "secret")] = 1
+				expect(QR.familyEarned(d, "secret")).toBe(false)
+				-- valeurs autres que 1, famille inconnue, dex abîmé : faux, jamais d'erreur
+				fam[1] = 2
+				expect(QR.familyEarned(d, "jelly")).toBe(false)
+				fam[1] = true
+				expect(QR.familyEarned(d, "jelly")).toBe(false)
+				expect(QR.familyEarned(d, "dragon")).toBe(false)
+				expect(QR.familyEarned({}, "kitty")).toBe(false)
+				expect(QR.familyEarned(nil, "kitty")).toBe(false)
+				expect(QR.familyEarned({ fam = "x" }, "kitty")).toBe(false)
+				expect(QR.familyEarned(d, nil)).toBe(false)
+			end
+		)
+
 		it("zéro trace", function()
 			expect(#h.errors).toBe(0)
 			expect(#h:warnings()).toBe(0)

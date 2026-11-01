@@ -17,9 +17,20 @@
 --     allumées (tag « RanchLight », éteintes sur le serveur), lampadaires (tag « LampLight ») coupés
 --     au-delà de QualityController.budgets().lightRange ; jamais plus que les quotas lightQuota
 --     (world 16, ranch 4 : les plus proches de la caméra d'abord) ;
---   * vibration « rushSiren » (une impulsion de 0,3 s, GDD v1.3) à la sirène, jamais pour un nouveau ;
+--   * vibration « rushSiren » (une impulsion de 0,3 s, GDD v1.3) au début de la sirène, UN appel par
+--     Rush, seulement pour un joueur dont le profil est arrivé et a passé l'étape 9 de l'accueil
+--     (Quests.Onboarding.EventsQuietUntilStep, lu dans StateController) : jamais pour un nouveau,
+--     même si OnboardingController n'a pas encore appelé setQuiet ; un nouveau voit aussi le Rush
+--     discret (30 %) d'après son seul profil ;
 --   * étiquettes fixes du monde (attribut « LabelKey » posé par WorldService : boutique, Prairie,
---     jauge, Big Plop) : BillboardGui en px TV × UIScale (Config/Layout.WorldText), traduites (Prefs.t).
+--     jauge, Big Plop) : BillboardGui en px TV × UIScale (Config/Layout.WorldText), traduites (Prefs.t) ;
+--     compte à rebours de l'Autel de la Lune (attribut « LabelTimer » = "moon", GDD §11.1) : « Prochaine
+--     Jelly Moon 3 h 05 », « Reste 5 min pour une Goutte de Lune » pendant une séance, caché si
+--     l'interrupteur jellyMoon est coupé ou inconnu ;
+--   * habillage de la place selon les événements : anneau du MEGA pad en Neon de l'alerte à la fin
+--     des pressions (interrupteur megaSquish), éteint au calme (GDD §11.1) ; jarre de la jauge grise
+--     pendant la sieste de Big Plop (EventState.gauge.restUntil, GDD §4.23) ; tout finit à son heure,
+--     sans message ;
 -- Une seule connexion par image (RenderStepped) : flocons à chaque image, le reste toutes les 0,5 s. Toute lecture d'un module plus précoce encore en cours d'écriture passe
 -- par pcall avec un repli (jamais d'erreur ni d'avertissement). Positions : Render/WorldDecor.
 
@@ -35,10 +46,12 @@ local Types = require(Shared.Types)
 local Clock = require(Shared.Util.Clock)
 local EventClock = require(Shared.Logic.EventClock)
 local Layout = require(Shared.Config.Layout)
+local Quests = require(Shared.Config.Quests)
 local Palette = require(Shared.Render.Palette)
 local WorldDecor = require(Shared.Render.WorldDecor)
 
 local Client = script.Parent.Parent
+local StateController = require(script.Parent.StateController)
 local WorldStateController = require(script.Parent.WorldStateController)
 local QualityController = require(script.Parent.QualityController)
 local Prefs = require(Client.Util.Prefs)
@@ -79,6 +92,9 @@ export type Stats = {
 	winterParts: number,
 }
 
+type LabelEntry = { gui: BillboardGui, label: TextLabel, key: string, timer: string? }
+type Dressed = { part: BasePart, color: Color3, material: Enum.Material }
+
 type Budgets = {
 	lightRange: number,
 	particles: number,
@@ -100,8 +116,11 @@ local state = {
 	worldSearch = 0,
 	ranchLights = {} :: { { light: PointLight, model: Model } },
 	lampLights = {} :: { PointLight },
-	labels = {} :: { { gui: BillboardGui, label: TextLabel, key: string } },
+	labels = {} :: { LabelEntry },
+	labelHolder = nil :: Folder?,
 	labelScale = 0,
+	ring = nil :: Dressed?, -- anneau du MEGA pad (couleur et matériau du serveur)
+	jarJelly = nil :: Dressed?, -- gelée de la jarre de la jauge
 	winter = nil :: Folder?,
 	snowPart = nil :: BasePart?,
 	snowEmitter = nil :: ParticleEmitter?,
@@ -183,6 +202,27 @@ end
 
 local function camera(): Camera?
 	return workspace.CurrentCamera
+end
+
+-- Accueil du joueur local d'après son profil (miroir StateController, socle, rang 4) : « unknown »
+-- tant que le profil n'est pas arrivé ; « newcomer » avant l'étape EventsQuietUntilStep (profil abîmé
+-- compris : prudence) ; « veteran » ensuite. La vibration de la sirène exige « veteran ».
+local function onboardingStatus(): string
+	local okReady, ready = pcall(function()
+		return StateController.ready
+	end)
+	if not okReady or ready ~= true then
+		return "unknown"
+	end
+	local ok, value = pcall(StateController.get, "onboarding")
+	if not ok or not isTable(value) then
+		return "newcomer"
+	end
+	if value.done == true then
+		return "veteran"
+	end
+	local step = finite(value.step, 0)
+	return if step >= Quests.Onboarding.EventsQuietUntilStep then "veteran" else "newcomer"
 end
 
 -- =============================================================================================
@@ -476,7 +516,7 @@ local function labelText(key: string): string
 	return ""
 end
 
-local function sizeLabel(entry: { gui: BillboardGui, label: TextLabel, key: string }, scale: number)
+local function sizeLabel(entry: LabelEntry, scale: number)
 	local px = Layout.WorldText.Text * scale
 	local text = entry.label.Text
 	local chars = utf8.len(text) or #text
@@ -486,9 +526,16 @@ local function sizeLabel(entry: { gui: BillboardGui, label: TextLabel, key: stri
 end
 
 local function buildLabels(world: Folder)
+	-- monde remplacé : les anciennes étiquettes (accrochées à des pièces disparues) partent toutes
+	local previous = state.labelHolder
+	if previous then
+		previous:Destroy()
+	end
+	table.clear(state.labels)
 	local holder = Instance.new("Folder")
 	holder.Name = "Labels"
 	holder.Parent = clientWorld()
+	state.labelHolder = holder
 	local scale = uiScale()
 	for _, inst in world:GetDescendants() do
 		local key = inst:GetAttribute("LabelKey")
@@ -514,7 +561,18 @@ local function buildLabels(world: Folder)
 			corner.Parent = label
 			label.Parent = gui
 			gui.Parent = holder
-			local entry = { gui = gui, label = label, key = key }
+			local timer = inst:GetAttribute("LabelTimer")
+			local entry: LabelEntry = {
+				gui = gui,
+				label = label,
+				key = key,
+				timer = if type(timer) == "string" then timer else nil,
+			}
+			if entry.timer then
+				-- texte et visibilité posés par refreshTimers (interrupteur du serveur d'abord)
+				gui.Enabled = false
+				label.Text = ""
+			end
 			sizeLabel(entry, scale)
 			table.insert(state.labels, entry)
 		end
@@ -529,9 +587,96 @@ local function refreshLabels(force: boolean)
 	end
 	state.labelScale = scale
 	for _, entry in state.labels do
-		entry.label.Text = labelText(entry.key)
+		if entry.timer == nil then
+			entry.label.Text = labelText(entry.key)
+		end
 		sizeLabel(entry, scale)
 	end
+end
+
+-- Comptes à rebours du monde (Autel de la Lune) : texte, taille et visibilité à l'instant `now`
+local function refreshTimers(payload: Types.EventStatePayload?, now: number)
+	local features: any = field(payload, "features")
+	local moonOn = isTable(features) and features.jellyMoon == true
+	for _, entry in state.labels do
+		if entry.timer == "moon" then
+			local text = ""
+			if moonOn then
+				local moonPayload: any = field(payload, "moon")
+				local phase = EventClock.moon(now)
+				local fromState = field(moonPayload, "active") == true
+					and now < finite(field(moonPayload, "endsAt"), 0)
+				if fromState or phase.active then
+					text = labelText("event.altar")
+				else
+					local ok, value = pcall(function()
+						return Prefs.t(
+							"event.altarCountdown",
+							{ time = Prefs.duration(phase.startsAt - now) }
+						)
+					end)
+					text = if ok and type(value) == "string" then value else ""
+				end
+			end
+			local enabled = text ~= ""
+			if entry.gui.Enabled ~= enabled then
+				entry.gui.Enabled = enabled
+			end
+			if entry.label.Text ~= text then
+				entry.label.Text = text
+				sizeLabel(entry, state.labelScale)
+			end
+		end
+	end
+end
+
+-- Pièce de la place à habiller (couleur et matériau du serveur gardés pour les rendre)
+local function dressed(world: Folder, model: string, name: string): Dressed?
+	local plaza = world:FindFirstChild("Plaza")
+	local holder = if plaza then plaza:FindFirstChild(model) else nil
+	local part = if holder then holder:FindFirstChild(name) else nil
+	if part and part:IsA("BasePart") then
+		return { part = part, color = part.Color, material = part.Material }
+	end
+	return nil
+end
+
+local function dress(d: Dressed?, on: boolean, offColor: Color3, offMaterial: Enum.Material)
+	if d == nil or d.part.Parent == nil then
+		return
+	end
+	local color = if on then d.color else offColor
+	local material = if on then d.material else offMaterial
+	if d.part.Color ~= color then
+		d.part.Color = color
+	end
+	if d.part.Material ~= material then
+		d.part.Material = material
+	end
+end
+
+-- Habillage de la place selon les événements (interrupteurs du serveur, heures de fin : rien ne
+-- reste allumé ni gris si un message manque)
+local function refreshPlaza(payload: Types.EventStatePayload?, now: number)
+	local features: any = field(payload, "features")
+	local hasFeatures = isTable(features)
+	-- anneau du MEGA pad : de l'alerte à la fin des pressions (horaire EventClock, ou MEGA annoncé)
+	local ringOn = false
+	if hasFeatures and features.megaSquish == true then
+		local m = EventClock.mega(now)
+		local megaPayload: any = field(payload, "mega")
+		local megaPhase = field(megaPayload, "phase")
+		local announced = (megaPhase == "warn" or megaPhase == "press")
+			and now < finite(field(megaPayload, "endsAt"), 0)
+		ringOn = announced or (now >= m.warnAt and now < m.endsAt)
+	end
+	dress(state.ring, ringOn, Palette.World.megaRingOff, Enum.Material.SmoothPlastic)
+	-- jarre grise pendant la sieste de Big Plop
+	local resting = hasFeatures
+		and features.gauge == true
+		and now < finite(field(field(payload, "gauge"), "restUntil"), 0)
+	dress(state.jarJelly, not resting, Palette.World.jellyRest, Enum.Material.SmoothPlastic)
+	refreshTimers(payload, now)
 end
 
 -- Recherche bornée du monde (StreamingEnabled coupé : présent dès la fin du chargement)
@@ -565,6 +710,8 @@ local function findWorld(): Folder?
 			table.insert(state.lampLights, light)
 		end
 	end
+	state.ring = dressed(world, "MegaPad", "Ring")
+	state.jarJelly = dressed(world, "GaugeJar", "Jelly")
 	buildLabels(world)
 	return world
 end
@@ -650,7 +797,9 @@ end
 local function evaluate(force: boolean, siren: boolean)
 	local now = Clock.now()
 	local payload = readEvent()
-	local resolved = LightingController.resolve(payload, now, state.quiet, Clock.unix())
+	local status = onboardingStatus()
+	local quiet = state.quiet or status == "newcomer"
+	local resolved = LightingController.resolve(payload, now, quiet, Clock.unix())
 	local previous = state.resolved
 	local changed = previous == nil
 		or previous.name ~= resolved.name
@@ -670,10 +819,20 @@ local function evaluate(force: boolean, siren: boolean)
 		destroyWinter()
 	end
 	refreshSnow()
-	-- sirène du BOOP RUSH : une impulsion de 0,3 s (Config/Console), jamais pour un nouveau
+	refreshPlaza(payload, now)
+	-- sirène du BOOP RUSH : une impulsion de 0,3 s (Config/Console), un seul appel par Rush ; jamais
+	-- pour un nouveau : une sirène commencée en version discrète reste muette jusqu'au bout (aucune
+	-- vibration tardive à l'étape 9) ; profil pas encore arrivé : rien, la sirène reste à jouer
 	local phase = EventClock.rush(now)
-	if siren and resolved.rush and not state.quiet and now >= phase.sirenAt and now < phase.startsAt then
-		if state.sirenIndex ~= phase.index then
+	if
+		resolved.rush
+		and now >= phase.sirenAt
+		and now < phase.startsAt
+		and state.sirenIndex ~= phase.index
+	then
+		if quiet then
+			state.sirenIndex = phase.index
+		elseif siren and status == "veteran" then
 			state.sirenIndex = phase.index
 			pcall(Haptics.play, "rushSiren")
 		end
@@ -729,6 +888,15 @@ function LightingController.Start()
 			end
 		end)
 	)
+	-- étape de l'accueil qui change (étape 9 : fin de la version discrète) : tout de suite
+	table.insert(
+		state.connections,
+		StateController.Changed:Connect(function(key: string)
+			if key == "onboarding" then
+				evaluate(false, true)
+			end
+		end)
+	)
 	table.insert(
 		state.connections,
 		QualityController.Changed:Connect(function()
@@ -748,6 +916,7 @@ function LightingController.Start()
 		state.connections,
 		Prefs.LanguageChanged:Connect(function()
 			refreshLabels(true)
+			refreshTimers(readEvent(), Clock.now())
 		end)
 	)
 	table.insert(state.connections, RunService.RenderStepped:Connect(step))

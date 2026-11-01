@@ -307,6 +307,26 @@ function QuestRules.familyComplete(dex: { [string]: any }, family: string): bool
 	return #def.species > 0
 end
 
+-- Bonus de la famille gagné pour toujours (contrat v1.2, GDD §4.17) : dex.fam[f] == 1, f = index de la
+-- famille dans Species.FamilyOrder (liste en ajout seul). QuestService pose la case quand
+-- familyComplete devient vrai ; une espèce ajoutée plus tard ne retire jamais le bonus. Lu par les
+-- bonus de famille de l'économie (EconomyService, SquishyService, EconomyModel). Une famille sans
+-- bonus (Secrets) ou inconnue : jamais.
+function QuestRules.familyEarned(dex: { [string]: any }, family: string): boolean
+	if type(family) ~= "string" then
+		return false
+	end
+	local def = (Species.Families :: any)[family]
+	if type(def) ~= "table" or def.bonus == nil or family == "secret" then
+		return false
+	end
+	local index = table.find(Species.FamilyOrder, family :: any)
+	if index == nil then
+		return false
+	end
+	return dexArray(dex, "fam")[index] == 1
+end
+
 -- Espèces dont les 8 mutations hors Lunaire sont trouvées
 function QuestRules.goldenPages(dex: { [string]: any }): number
 	local mut = dexArray(dex, "mut")

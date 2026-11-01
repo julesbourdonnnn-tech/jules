@@ -17,7 +17,7 @@ return function(T)
 		unstable = 3,
 		carry = math.huge,
 		boopHold = 5.5,
-		feedHold = 5.5,
+		feedHold = 2.5, -- contrat v1.2 : bol en 2 s + 0,5 s (GDD v1.3 §12.10)
 		leap = 0.35,
 		runaway = 20,
 		escape = 25,
@@ -26,7 +26,7 @@ return function(T)
 		demo = 20,
 		rush = 115,
 		mega = 65,
-		splorchQueue = 110,
+		splorchQueue = 480, -- contrat v1.2 : coupure dure de l'attente dynamique (Events.SplorchQueueHardCut)
 		spectacle = 10,
 		squishParty = 600,
 		wobbleParty = 300,
@@ -41,9 +41,37 @@ return function(T)
 		hatch = 2,
 		splorchBurst = 3.2,
 		clip = 8,
+		tileDwell = 1.1, -- contrat v1.2 : 0,6 s sur la dalle + 0,5 s de grâce
+		gaugeRest = 1200, -- contrat v1.2 : sieste de Big Plop (Events.Gauge.RestSeconds)
 	}
 
 	describe("StateTimeouts", function()
+		it(
+			"états du contrat v1.2 : chacun a son test de délai et suit sa valeur de configuration",
+			function()
+				local B = h:require("ReplicatedStorage.Shared.Config.Balance")
+				local E = h:require("ReplicatedStorage.Shared.Config.Events")
+				local Q = h:require("ReplicatedStorage.Shared.Config.Quests")
+				expect(ST.seconds("tileDwell")).toBeNear(B.Tiles.DwellSeconds + 0.5, 1e-12)
+				expect(ST.seconds("feedHold")).toBeNear(Q.Feed.Hold + 0.5, 1e-12)
+				expect(ST.seconds("splorchQueue")).toBe(E.SplorchQueueHardCut)
+				expect(ST.seconds("gaugeRest")).toBe(E.Gauge.RestSeconds)
+				-- tileDwell : ouvert à 10 s ; à 11,1 s toujours ouvert, à 11,11 s échu
+				expect(ST.expired("tileDwell", 10, 11.1)).toBe(false)
+				expect(ST.expired("tileDwell", 10, 11.11)).toBe(true)
+				-- feedHold : 2,5 s
+				expect(ST.expired("feedHold", 0, 2.5)).toBe(false)
+				expect(ST.expired("feedHold", 0, 2.51)).toBe(true)
+				-- file des Grands Splorch : coupure dure à 8 min
+				expect(ST.expired("splorchQueue", 100, 580)).toBe(false)
+				expect(ST.expired("splorchQueue", 100, 580.01)).toBe(true)
+				-- sieste de la jauge : 20 min
+				expect(ST.expired("gaugeRest", 0, 1200)).toBe(false)
+				expect(ST.expired("gaugeRest", 0, 1200.01)).toBe(true)
+				expect(ST.deadline("gaugeRest", 50)).toBe(1250)
+			end
+		)
+
 		it("chaque état connu a le délai du GDD, et la liste est triée et complète", function()
 			local names = ST.names()
 			local sorted = table.clone(names)
@@ -101,10 +129,13 @@ return function(T)
 			end
 		)
 
-		it("boopHold tient le pire maintien prolongé (5 s) + grâce (0,5 s)", function()
-			expect(ST.seconds("boopHold")).toBe(5 + 0.5)
-			expect(ST.seconds("feedHold")).toBe(5 + 0.5)
-		end)
+		it(
+			"boopHold tient le pire maintien prolongé (5 s) + grâce (0,5 s) ; bol 2 s + 0,5 s (v1.2)",
+			function()
+				expect(ST.seconds("boopHold")).toBe(5 + 0.5)
+				expect(ST.seconds("feedHold")).toBe(2 + 0.5)
+			end
+		)
 
 		it("zéro trace", function()
 			expect(#h.errors).toBe(0)

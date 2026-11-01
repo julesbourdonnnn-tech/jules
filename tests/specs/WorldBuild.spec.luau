@@ -735,7 +735,17 @@ return function(T)
 					expect(d.ClassName ~= "TextLabel" and d.ClassName ~= "TextButton").toBe(true)
 				end
 				table.sort(keys)
-				expect(keys).toEqual({ "world.bigPlop", "world.gauge", "world.meadow", "world.shop" })
+				expect(keys).toEqual({
+					"event.altarCountdown",
+					"world.bigPlop",
+					"world.gauge",
+					"world.meadow",
+					"world.shop",
+				})
+				-- le compte à rebours de l'Autel est calculé par le client (LabelTimer), sur la poutre
+				local beam = root.Plaza.Altar.Beam
+				expect(beam:GetAttribute("LabelKey")).toBe("event.altarCountdown")
+				expect(beam:GetAttribute("LabelTimer")).toBe("moon")
 				zeroLog(h)
 			end
 		)
@@ -826,5 +836,352 @@ return function(T)
 			expect(ok and true or err).toBe(true)
 			expect(table.concat(issues, "\n")).toBe("")
 		end)
+	end)
+
+	-- Revue adversariale (paquet world, contrat v1.2) : défauts trouvés en revue, chacun reproduit ici
+	-- avant sa correction (le test reste).
+	describe("WorldBuild › revue (contrat v1.2)", function()
+		-- Emprise au sol (XZ) d'une pièce : disque (cylindre vertical, boule) ou rectangle orienté
+		local function footprint(p)
+			local pos = p.CFrame.Position
+			if p.Shape == roblox.Enum.PartType.Cylinder then
+				-- cylindres du monde : axe X tourné vers le haut (Parts.UPRIGHT), diamètre = Size.Y
+				return { kind = "circle", c = Vector2.new(pos.X, pos.Z), r = p.Size.Y / 2 }
+			elseif p.Shape == roblox.Enum.PartType.Ball then
+				return { kind = "circle", c = Vector2.new(pos.X, pos.Z), r = p.Size.X / 2 }
+			end
+			local mesh = p:FindFirstChildOfClass("SpecialMesh")
+			if mesh and mesh.MeshType == roblox.Enum.MeshType.Sphere then
+				-- ellipsoïde (bloc + SpecialMesh Sphere) : disque englobant de son emprise
+				return { kind = "circle", c = Vector2.new(pos.X, pos.Z), r = math.max(p.Size.X, p.Size.Z) / 2 }
+			end
+			return { kind = "rect", poly = corners({ cframe = p.CFrame, size = p.Size }) }
+		end
+
+		local function circleRect(circle, poly)
+			-- centre dans le rectangle (quel que soit le sens du contour) : chevauchement
+			local positive, negative = false, false
+			for i = 1, 4 do
+				local a, b = poly[i], poly[i % 4 + 1]
+				local e = b - a
+				local cross = e.X * (circle.c.Y - a.Y) - e.Y * (circle.c.X - a.X)
+				if cross > 0 then
+					positive = true
+				elseif cross < 0 then
+					negative = true
+				end
+			end
+			if not (positive and negative) then
+				return true
+			end
+			local best = math.huge
+			for i = 1, 4 do
+				best = math.min(best, pointSegment(circle.c, poly[i], poly[i % 4 + 1]))
+			end
+			return best < circle.r - 1e-6
+		end
+
+		local function overlaps(fa, fb)
+			if fa.kind == "circle" and fb.kind == "circle" then
+				return (fa.c - fb.c).Magnitude < fa.r + fb.r - 1e-6
+			elseif fa.kind == "circle" then
+				return circleRect(fa, fb.poly)
+			elseif fb.kind == "circle" then
+				return overlaps(fb, fa)
+			end
+			return overlap(fa.poly, fb.poly)
+		end
+
+		it(
+			"une dalle cachée (ranch libre, non découverte, au maximum) cache aussi son icône (SurfaceGui)",
+			function()
+				local h, W, _, root = world()
+				local Pads = h:require("ReplicatedStorage.Shared.Config.Pads")
+				local function icon(ranch, key)
+					return ranch.Pads[tostring(Pads.Defs[key].socket)].Icon
+				end
+				-- après la construction : 16 × 4 dalles cachées, aucune icône visible au sol
+				local shown = {}
+				for slot = 1, 16 do
+					local ranch = root.Ranches[tostring(slot)]
+					for _, key in Pads.Order do
+						local pad = ranch.Pads[tostring(Pads.Defs[key].socket)]
+						expect(pad.Transparency).toBe(1)
+						if icon(ranch, key).Enabled then
+							table.insert(shown, `{slot}.{key}`)
+						end
+					end
+				end
+				expect(table.concat(shown, ", ")).toBe("")
+				-- découverte : dalle et icône visibles ensemble
+				W.setRanchOwner(4, 44)
+				local ranch = root.Ranches["4"]
+				W.setRanchBuild(4, { snack = 0, decor = 0, pens = 0, cozyBed = false, seen = 1 }, true, true)
+				expect(icon(ranch, "snack").Enabled).toBe(true)
+				expect(icon(ranch, "decor").Enabled).toBe(false)
+				-- au maximum : dalle et icône cachées
+				W.setRanchBuild(4, { snack = 12, decor = 0, pens = 0, cozyBed = false, seen = 1 }, true, true)
+				expect(ranch.Pads["1"].Transparency).toBe(1)
+				expect(icon(ranch, "snack").Enabled).toBe(false)
+				-- ranch libéré : plus aucune icône
+				W.setRanchBuild(4, { snack = 0, decor = 0, pens = 0, cozyBed = false, seen = 15 }, true, true)
+				expect(icon(ranch, "pens").Enabled).toBe(true)
+				W.setRanchOwner(4, 0)
+				for _, key in Pads.Order do
+					expect(icon(ranch, key).Enabled).toBe(false)
+				end
+				zeroLog(h)
+			end
+		)
+
+		it(
+			"icône d'une dalle dessinée sur la face du dessus du disque (tournée vers le ciel), en Frames",
+			function()
+				local h, W, _, root = world()
+				W.setRanchOwner(6, 66)
+				W.setRanchBuild(6, { snack = 0, decor = 0, pens = 0, cozyBed = false, seen = 15 }, true, true)
+				local normals = {
+					[roblox.Enum.NormalId.Top] = function(cf)
+						return cf.UpVector
+					end,
+					[roblox.Enum.NormalId.Bottom] = function(cf)
+						return -cf.UpVector
+					end,
+					[roblox.Enum.NormalId.Right] = function(cf)
+						return cf.RightVector
+					end,
+					[roblox.Enum.NormalId.Left] = function(cf)
+						return -cf.RightVector
+					end,
+					[roblox.Enum.NormalId.Front] = function(cf)
+						return cf.LookVector
+					end,
+					[roblox.Enum.NormalId.Back] = function(cf)
+						return -cf.LookVector
+					end,
+				}
+				for slot = 1, 16 do
+					for _, pad in root.Ranches[tostring(slot)].Pads:GetChildren() do
+						local icon = pad.Icon
+						local up = normals[icon.Face](pad.CFrame)
+						expect({ pad = pad:GetFullName(), up = up.Y > 0.99 }).toEqual({
+							pad = pad:GetFullName(),
+							up = true,
+						})
+						expect(#icon:GetChildren() > 0).toBe(true)
+					end
+				end
+				-- tableaux des classements : face avant (SurfaceGui « Board ») tournée vers le centre de la place
+				for _, board in root.Plaza.Boards:GetChildren() do
+					local panel = board.Panel
+					local gui = panel.Board
+					local normal = normals[gui.Face](panel.CFrame)
+					local p = panel.CFrame.Position
+					local toCenter = Vector3.new(-p.X, 0, -p.Z).Unit
+					expect(normal:Dot(toCenter) > 0.9).toBe(true)
+				end
+				-- points d'accroche lus par le client (LightingController) : anneau Neon, gelée de la jarre
+				local plaza = root.Plaza
+				expect(plaza.MegaPad.Ring.Material).toBe(roblox.Enum.Material.Neon)
+				expect(plaza.GaugeJar.Jelly.Material).toBe(roblox.Enum.Material.Neon)
+				zeroLog(h)
+			end
+		)
+
+		it(
+			"prises de dalles et décorations lues dans WorldLayout seulement (rangée déplacée à Z = 67, contrat v1.2)",
+			function()
+				local h = Harness.new()
+				local L = h:require("ReplicatedStorage.Shared.Logic.WorldLayout")
+				-- logic déplace les prises à Z = 67 et les décorations : le monde suit sans une ligne changée
+				local xs = { -18, -6, 6, 18 }
+				local originalDecor = L.decorSlot
+				L.padSocket = function(slot, socket)
+					return L.toWorld(slot, Vector3.new(xs[socket] or xs[1], 0, 67))
+				end
+				L.decorSlot = function(slot, index)
+					return originalDecor(slot, index) * roblox.CFrame.new(0.75, 0, -1.25)
+				end
+				local W = h:require("ServerScriptService.Server.Services.WorldService")
+				W.Init()
+				local root = h.game.Workspace.Wobbleton
+				for slot = 1, 16 do
+					local ranch = root.Ranches[tostring(slot)]
+					for socket = 1, 4 do
+						local p = ranch.Pads[tostring(socket)].CFrame.Position
+						local want = L.padSocket(slot, socket)
+						expect(Vector2.new(p.X - want.X, p.Z - want.Z).Magnitude).toBeLessThan(EPS)
+						local localZ = L.toLocal(slot, p).Z
+						expect(math.abs(localZ - 67)).toBeLessThan(EPS)
+					end
+					for i = 1, 18 do
+						local holder = ranch.Decor[tostring(i)]
+						expect(sameCFrame(holder.WorldPivot, L.decorSlot(slot, i))).toBe(true)
+					end
+				end
+				expect(#W.failures()).toBe(0)
+				zeroLog(h)
+			end
+		)
+
+		it(
+			"aucun texte à lire posé dans le monde construit : ni TextLabel ni BillboardGui ; SurfaceGui = icônes en Frames et tableaux vides",
+			function()
+				local h, _, _, root = world()
+				local bad = {}
+				for _, d in root:GetDescendants() do
+					local cls = d.ClassName
+					if
+						cls == "TextLabel"
+						or cls == "TextButton"
+						or cls == "TextBox"
+						or cls == "BillboardGui"
+					then
+						table.insert(bad, d:GetFullName())
+					elseif cls == "SurfaceGui" then
+						local isBoard = d.Name == "Board"
+						local isIcon = d.Name == "Icon" and d.Parent.Parent.Name == "Pads"
+						if not (isBoard or isIcon) then
+							table.insert(bad, d:GetFullName())
+						end
+						for _, g in d:GetDescendants() do
+							if g.ClassName ~= "Frame" and g.ClassName ~= "UICorner" then
+								table.insert(bad, g:GetFullName())
+							end
+						end
+						if isBoard then
+							expect(#d:GetChildren()).toBe(0) -- rempli par le client (LeaderboardState)
+						end
+					end
+				end
+				expect(table.concat(bad, "\n")).toBe("")
+				zeroLog(h)
+			end
+		)
+
+		it(
+			"objets de la place sans chevauchement au sol (jardinières hors de la scène de Big Plop)",
+			function()
+				local h, _, _, root = world()
+				local plaza = root.Plaza
+				local groups = {}
+				for _, child in plaza:GetChildren() do
+					if child.Name ~= "Floor" and child.Name ~= "Border" then
+						if child.Name == "Boards" then
+							for _, board in child:GetChildren() do
+								groups["Board" .. board.Name] = parts(board)
+							end
+						elseif child:IsA("BasePart") then
+							local index = string.match(child.Name, "%d+$") or child.Name
+							local key = "Planter" .. index
+							groups[key] = groups[key] or {}
+							table.insert(groups[key], child)
+						else
+							groups[child.Name] = parts(child)
+						end
+					end
+				end
+				local names = {}
+				for name in groups do
+					table.insert(names, name)
+				end
+				table.sort(names)
+				expect(#names).toBe(7 + 5 + 4)
+				local clashes = {}
+				for i = 1, #names do
+					for j = i + 1, #names do
+						local hit = false
+						for _, a in groups[names[i]] do
+							for _, b in groups[names[j]] do
+								if not hit and overlaps(footprint(a), footprint(b)) then
+									hit = true
+								end
+							end
+						end
+						if hit then
+							table.insert(clashes, names[i] .. " / " .. names[j])
+						end
+					end
+				end
+				expect(table.concat(clashes, "\n")).toBe("")
+				-- tout reste sur la place (r < 50)
+				for _, name in names do
+					for _, p in groups[name] do
+						local pos = p.CFrame.Position
+						expect(Vector2.new(pos.X, pos.Z).Magnitude).toBeLessThan(50)
+					end
+				end
+				zeroLog(h)
+			end
+		)
+
+		it(
+			"objets d'un ranch sans chevauchement au sol (18 décorations, dalles, Pot, Cuve, Bassin, bol, coussin, étagère, clôture)",
+			function()
+				local h, W, _, root = world()
+				W.setRanchOwner(1, 11)
+				W.setRanchBuild(
+					1,
+					{ snack = 12, decor = 18, pens = 0, cozyBed = false, seen = 15 },
+					true,
+					true
+				)
+				local clashes = {}
+				for slot = 1, 16 do
+					local ranch = root.Ranches[tostring(slot)]
+					local groups = {}
+					for i = 1, 18 do
+						groups["Decor" .. i] = parts(ranch.Decor[tostring(i)])
+					end
+					for _, pad in ranch.Pads:GetChildren() do
+						groups["Pad" .. pad.Name] = { pad }
+					end
+					for _, name in { "Pot", "Vat", "Pool", "Bowl", "Shelf", "Fence" } do
+						groups[name] = parts(ranch[name])
+					end
+					groups.Cushion = { ranch.Cushion }
+					local names = {}
+					for name in groups do
+						table.insert(names, name)
+					end
+					table.sort(names)
+					for i = 1, #names do
+						for j = i + 1, #names do
+							local hit = false
+							for _, a in groups[names[i]] do
+								for _, b in groups[names[j]] do
+									if not hit and overlaps(footprint(a), footprint(b)) then
+										hit = true
+									end
+								end
+							end
+							if hit then
+								table.insert(clashes, `{slot}: {names[i]} / {names[j]}`)
+							end
+						end
+					end
+				end
+				expect(table.concat(clashes, " | ")).toBe("")
+				zeroLog(h)
+			end
+		)
+
+		it(
+			"murs du bord : faces intérieures sur le cercle r = 322 (WorldLayout), 30 studs de haut",
+			function()
+				local h, _, L, root = world()
+				expect(L.Const.WallRadius).toBe(322)
+				local walls = root.Walls:GetChildren()
+				expect(#walls).toBe(L.Const.EdgeSegments)
+				for _, wall in walls do
+					local p = wall.CFrame.Position
+					local inner = Vector2.new(p.X, p.Z).Magnitude - wall.Size.Z / 2
+					expect(math.abs(inner - 322)).toBeLessThan(1e-3)
+					expect(wall.Size.Y).toBeGreaterThanOrEqual(30)
+					expect(wall.CanCollide).toBe(true)
+				end
+				zeroLog(h)
+			end
+		)
 	end)
 end

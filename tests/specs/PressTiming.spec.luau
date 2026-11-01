@@ -45,6 +45,29 @@ return function(T)
 			expect(hits / 12000).toBeNear(0.28 / 1.2, 0.002)
 		end)
 
+		it(
+			"contrat v1.2 : offset = hachage (UserId du propriétaire, uid) ; cas du GDD v1.3 §4.7",
+			function()
+				local Hash = h:require("ReplicatedStorage.Shared.Logic.Hash")
+				-- même valeur côté client et serveur : seulement l'UserId du propriétaire et l'uid
+				local off = PT.offset(123456789, "a7")
+				expect(off).toBe(PT.offset(123456789, "a7"))
+				expect(off).toBe(Hash.unit(123456789, Hash.string("a7"), 0x9E55) * 1.2)
+				-- le même uid chez deux propriétaires ne rebondit pas pareil (uid unique par profil seulement)
+				expect(PT.offset(123456789, "a7") ~= PT.offset(987654321, "a7")).toBe(true)
+				for _, owner in { 1, 42, 123456789, 9007199254740991 } do
+					for _, uid in { "1", "a7", "zzzzzzzz" } do
+						local o = PT.offset(owner, uid)
+						local apex = PT.nextApex(5000, o)
+						expect(PT.isPerfect(apex + 0.18, o)).toBe(true) -- +0,18 s : PERFECT
+						expect(PT.isPerfect(apex + 0.22, o)).toBe(false) -- +0,22 s : non
+						expect(PT.isPerfect(apex - 0.08, o)).toBe(true) -- −0,08 s : PERFECT
+						expect(PT.isPerfect(apex - 0.10, o)).toBe(false) -- −0,10 s : non
+					end
+				end
+			end
+		)
+
 		it("prochain sommet : le premier ≥ t", function()
 			expect(PT.nextApex(0.3, 0.3)).toBeNear(0.3, 1e-12)
 			expect(PT.nextApex(0.31, 0.3)).toBeNear(1.5, 1e-9)

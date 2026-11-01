@@ -133,7 +133,7 @@ return function(T)
 		end)
 
 		it(
-			"dalles : 4 prises sur la rangée Z = 62 (+ la 5e réservée), dans le ranch, espacées",
+			"dalles : 4 prises sur la rangée Z = 67 (+ la 5e réservée), dans le ranch, espacées",
 			function()
 				for slot = 1, 16 do
 					local seen = {}
@@ -146,7 +146,7 @@ return function(T)
 						table.insert(seen, p)
 					end
 					for _, def in Pads.Defs do
-						expect(W.toLocal(slot, W.padSocket(slot, def.socket)).Z).toBeNear(62, 1e-3)
+						expect(W.toLocal(slot, W.padSocket(slot, def.socket)).Z).toBeNear(67, 1e-3)
 					end
 					-- une dalle n'est jamais à portée d'achat du bol, du Pot ni du point d'apparition
 					for socket = 1, 4 do
@@ -157,6 +157,58 @@ return function(T)
 				end
 			end
 		)
+
+		it("règle de plan du GDD v1.3 §11.2 (contrat v1.2) : 8 studs autour de chaque dalle", function()
+			local PAD_RADIUS = 2 -- disques Ø 4
+			local POOL_RADIUS = 6
+			for slot = 1, 16 do
+				-- prises exactes : X = −18, −6, +6, +18 à Z = 67 ; la 5e réservée à (−28, 52)
+				local xs = { -18, -6, 6, 18 }
+				for socket = 1, 4 do
+					local l = W.toLocal(slot, W.padSocket(slot, socket))
+					expect(l.X).toBeNear(xs[socket], 1e-3)
+					expect(l.Z).toBeNear(67, 1e-3)
+				end
+				local reserved = W.toLocal(slot, W.padSocket(slot, 5))
+				expect(reserved.X).toBeNear(-28, 1e-3)
+				expect(reserved.Z).toBeNear(52, 1e-3)
+				for socket = 1, 4 do
+					local p = W.padSocket(slot, socket)
+					for _, name in { "bowl", "vat", "pot", "cushion" } do
+						expect({
+							socket = socket,
+							near = name,
+							ok = flat(p, W.anchor(slot, name)) >= 8 - 1e-3,
+						}).toEqual({ socket = socket, near = name, ok = true })
+					end
+					expect(flat(p, W.padSocket(slot, 5)) >= 8 - 1e-3).toBe(true)
+					-- bord du Bassin (rayon 6)
+					expect(flat(p, W.anchor(slot, "pool")) - POOL_RADIUS >= 8 - 1e-3).toBe(true)
+					-- deux dalles voisines à 12 studs
+					if socket < 4 then
+						expect(flat(p, W.padSocket(slot, socket + 1))).toBeNear(12, 1e-3)
+					end
+					-- aucune décoration à moins de 6 studs d'une dalle (bord du disque)
+					for i = 1, 18 do
+						local d = flat(W.decorSlot(slot, i).Position, p) - PAD_RADIUS
+						expect({ socket = socket, decor = i, ok = d >= 6 - 1e-3 }).toEqual({
+							socket = socket,
+							decor = i,
+							ok = true,
+						})
+					end
+				end
+			end
+			-- GDD §11.2 : la dalle la plus proche du Bassin est à 9 studs de son bord, celle du bol à 9,8
+			local nearestPool, nearestBowl = math.huge, math.huge
+			for socket = 1, 4 do
+				local p = W.padSocket(1, socket)
+				nearestPool = math.min(nearestPool, flat(p, W.anchor(1, "pool")) - POOL_RADIUS)
+				nearestBowl = math.min(nearestBowl, flat(p, W.anchor(1, "bowl")))
+			end
+			expect(nearestPool).toBeNear(9, 1e-3)
+			expect(nearestBowl).toBeNear(math.sqrt(16 + 81), 1e-3)
+		end)
 
 		it(
 			"enclos : 24 places dans la zone Z 8 … 44, à ≥ 8 studs l'une de l'autre, loin du Pot et du coussin",

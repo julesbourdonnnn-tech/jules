@@ -125,14 +125,16 @@ return function(T)
 			end)
 		end)
 
-		it("isNewStamp, familyComplete, plopReward, dexMilestones : jamais d'erreur", function()
+		it("isNewStamp, familyComplete, familyEarned, plopReward, dexMilestones : jamais d'erreur", function()
 			Props.check(4000, Props.tuple(dexGen, any, any, any, Props.any()), function(v)
 				local a = QR.isNewStamp(v[1], v[2], v[3], v[4])
 				local b = QR.familyComplete(v[1], v[5])
+				local e = QR.familyEarned(v[1], v[5])
 				local r = QR.plopReward(v[2])
 				local m = QR.dexMilestones(v[3], v[4])
 				return type(a) == "boolean"
 					and type(b) == "boolean"
+					and type(e) == "boolean"
 					and (r == nil or type(r) == "table")
 					and type(m) == "table"
 			end)

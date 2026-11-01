@@ -30,7 +30,8 @@ return function(T)
 					Props.int(0, 5),
 					Props.number(1, 1e30),
 					Props.number(0, 1e6),
-					Props.oneOf({ "pen", "pool", "dodo", "mail" })
+					Props.oneOf({ "pen", "pool", "dodo", "mail" }),
+					Props.int(0, 30000)
 				),
 				function(v)
 					return {
@@ -44,6 +45,7 @@ return function(T)
 						o = "",
 						at = v[6],
 						b = 1,
+						gd = v[7], -- contrat v1.2 : Clock.day() du dernier bonus du Rush (0 = jamais)
 					}
 				end
 			)
@@ -54,6 +56,11 @@ return function(T)
 					local d = Schema.defaults()
 					d.coins = math.floor(v[2])
 					d.R = v[3]
+					-- capacités du joueur (§17.2 n° 3) : dalle Enclos au maximum et Grand Ranch (24 places,
+					-- Bassin compris), bonus Axolo gagné (6 places au Bassin) : les tirages ci-dessous sont valides
+					d.tiles.pens = 14
+					d.passes.BigRanch = true
+					d.dex.fam[4] = 1 -- Species.FamilyOrder[4] = "axolo"
 					local counts = { pen = 0, pool = 0, dodo = 0, mail = 0 }
 					local caps = { pen = 18, pool = 6, dodo = 60, mail = 20 }
 					local n = 0
@@ -81,6 +88,8 @@ return function(T)
 					d.outfits = { owned = v[3], worn = v[4] }
 					d.dex.mut = v[5]
 					d.tiles = v[6]
+					d.dex.fam = v[5]
+					d.caps.petSitBy = v[4]
 					return d
 				end
 			)

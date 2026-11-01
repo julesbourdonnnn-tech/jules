@@ -556,6 +556,45 @@ return function(T)
 			end
 		)
 
+		it(
+			"réserve : un modèle repris repart propre (lumière d'aura éteinte, particules et aura rétablies)",
+			function()
+				local h, SB, Species, Mutations, Rarities = load()
+				-- une espèce Légendaire (PointLight d'aura) et une mutation à particules
+				local legend, sparkly
+				for _, def in Species.List do
+					local rarity = Rarities.List[def.rarity]
+					if legend == nil and rarity and rarity.light then
+						legend = def.id
+					end
+				end
+				for id, m in Mutations.List do
+					if sparkly == nil and m.look.particles then
+						sparkly = id
+					end
+				end
+				expect(legend ~= nil and sparkly ~= nil).toBe(true)
+				local s = spec(legend, { mutation = sparkly, rarityAura = true })
+				local a = SB.build(s)
+				local light = a.body:FindFirstChild("AuraLight")
+				expect(light.Enabled).toBe(false)
+				-- le renderer allume la lumière (4 Légendaires les plus proches), coupe aura et particules
+				light.Enabled = true
+				SB.setAura(a, false)
+				SB.setParticles(a, 0)
+				SB.release(a)
+				local b = SB.build(s)
+				expect(b.model).toBe(a.model)
+				-- repris : rien n'est hérité du Handle rendu (sinon le quota de lumières est dépassé)
+				expect(b.body:FindFirstChild("AuraLight").Enabled).toBe(false)
+				expect(b.body:FindFirstChild("Aura").Enabled).toBe(true)
+				local emitter = b.body:FindFirstChildWhichIsA("ParticleEmitter")
+				expect(emitter.Enabled).toBe(true)
+				expect(emitter.Rate > 0).toBe(true)
+				zeroLog(h)
+			end
+		)
+
 		it("réserve bornée : au-delà de POOL_PER_LOOK, les modèles rendus sont détruits", function()
 			local h, SB = load()
 			local handles = {}

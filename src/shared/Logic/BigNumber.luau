@@ -4,13 +4,16 @@
 --   * moins de 10 000 : entier avec séparateur des milliers (EN « , », FR espace fine insécable
 --     U+202F) ;
 --   * ensuite 3 chiffres significatifs TRONQUÉS, jamais arrondis vers le haut (999 999 → « 999K »),
---     zéro final gardé (« 7.80T ») et suffixe (EN K M B T Qa Qi Sx Sp Oc No Dc ; FR k M Md Bn Bd Tn
---     Td Qn Qd Qt Qtd, virgule décimale, espace fine insécable avant le suffixe) ;
+--     zéro final gardé (« 7.80T ») et suffixe : MÊMES suffixes internationaux dans les deux langues
+--     (K M B T Qa Qi Sx Sp Oc No Dc, GDD v1.3 §4.2) ; en français, virgule décimale et espace fine
+--     insécable avant le suffixe (« 12,3 K », « 4,56 B », « 7,80 T ») ;
 --   * à partir de 1e36 : « 1.23e36 » / « 1,23e36 ».
 -- NaN → « 0 », ±inf → « ∞ », −0 → « 0 » : jamais d'erreur (propriétés : Props_BigNumber.spec).
 -- Les chiffres viennent de string.format("%.14e") (15 chiffres significatifs : exact pour tout
 -- entier < 1e15, et une petite erreur d'arrondi flottant — 4,5599999999999995e9 — s'affiche 4.56B).
--- Les mots entiers (« 7,80 billions ») viennent des clés num.name.<p> de Localization/Strings.
+-- Les mots entiers viennent des clés num.name.<p> de Localization/Strings (table du GDD §4.2) : EN
+-- « 7.80 trillion » ; FR « 7 800 milliards » (un mot « mille X » s'écrit en milliers de X), « 7,80
+-- millions de milliards » (pluriel du premier mot d'un mot composé « X de Y »), « 2,50 trilliards ».
 
 -- Bibliothèques gardées en local : appels rapides, aussi dans l'environnement injecté du harnais
 local type, math, string, table = type, math, string, table
@@ -25,7 +28,7 @@ local EXACT_BELOW = 1e15 -- full() : entier exact en dessous
 local SHORT_FROM = 10000 -- abbreviate() : abrégé à partir de 10 000
 
 local SUFFIXES_EN = { "K", "M", "B", "T", "Qa", "Qi", "Sx", "Sp", "Oc", "No", "Dc" }
-local SUFFIXES_FR = { "k", "M", "Md", "Bn", "Bd", "Tn", "Td", "Qn", "Qd", "Qt", "Qtd" }
+local SUFFIXES_FR = SUFFIXES_EN -- GDD v1.3 §4.2 : mêmes suffixes internationaux (virgule et U+202F en FR)
 
 -- Jalons des bannières (Events.Banners.RecordThresholds) : puissance → clé de texte
 local MILESTONES = { 6, 9, 12, 15 }
@@ -83,12 +86,13 @@ local function threeDigits(digits: string, intDigits: number, fr: boolean): stri
 end
 
 -- Forme abrégée d'une valeur absolue finie ≥ 10 000 : (texte du nombre, palier de mille 1 … 11, ou
--- 0 en notation scientifique)
-local function shortParts(x: number, fr: boolean): (string, number)
+-- 0 en notation scientifique, puis les 3 chiffres tronqués en entier (« 780 ») et le nombre de chiffres
+-- avant la virgule, 1 … 3)
+local function shortParts(x: number, fr: boolean): (string, number, number, number)
 	local digits, e = digitsOf(x)
 	if e >= SCIENTIFIC_EXP then
 		local mark = if fr then "," else "."
-		return string.sub(digits, 1, 1) .. mark .. string.sub(digits, 2, 3) .. "e" .. tostring(e), 0
+		return string.sub(digits, 1, 1) .. mark .. string.sub(digits, 2, 3) .. "e" .. tostring(e), 0, 0, 0
 	end
 	if e < 4 then
 		e = 4 -- 9999,99… arrondi par le format : reste au palier des milliers
@@ -96,7 +100,21 @@ local function shortParts(x: number, fr: boolean): (string, number)
 	end
 	local tier = e // 3
 	local intDigits = e - tier * 3 + 1
-	return threeDigits(digits, intDigits, fr), tier
+	local three = tonumber(string.sub(digits, 1, 3)) or 100
+	return threeDigits(digits, intDigits, fr), tier, three, intDigits
+end
+
+-- Pluriel français d'un mot de grand nombre : « millions », « millions de milliards » (le premier mot
+-- d'un mot composé « X de Y »), jamais « mille »
+local function frPlural(word: string): string
+	if word == "mille" or word == "" then
+		return word
+	end
+	local head, tail = string.match(word, "^(%S+)( de .+)$")
+	if head and tail then
+		return head .. "s" .. tail
+	end
+	return word .. "s"
 end
 
 -- Forme courte du HUD, des étiquettes et des « +N »
@@ -156,18 +174,25 @@ function BigNumber.words(n: number, lang: string?): (string, string)
 	if a < SHORT_FROM then
 		return short, BigNumber.full(x, lang)
 	end
-	local num, tier = shortParts(a, fr)
+	local num, tier, three, intDigits = shortParts(a, fr)
 	if tier == 0 then
 		return short, short
 	end
 	local key = "num.name." .. tostring(tier * 3)
 	local texts = Strings[if fr then "fr" else "en"] or Strings.en
 	local word = texts[key] or Strings.en[key] or ""
-	-- français : pluriel dès 2 (« 7,80 billions »), « mille » est invariable
-	if fr and tier >= 2 and a >= 2 * 10 ^ (tier * 3) then
-		word ..= "s"
+	local text
+	local thousandsOf = if fr then string.match(word, "^mille (.+)$") else nil
+	if thousandsOf then
+		-- GDD §4.2 : « 7,80 T = 7 800 milliards » (« mille milliards » : le second mot est déjà au pluriel)
+		text = groupDigits(three * 10 ^ intDigits, true) .. " " .. thousandsOf
+	else
+		-- français : pluriel dès 2 (« 4,56 milliards »), « mille » est invariable
+		if fr and tier >= 2 and a >= 2 * 10 ^ (tier * 3) then
+			word = frPlural(word)
+		end
+		text = num .. " " .. word
 	end
-	local text = num .. " " .. word
 	if x < 0 then
 		text = "-" .. text
 	end

@@ -245,7 +245,9 @@ function EventClock.rushMoonBoopable(t: number): boolean
 	return EventClock.moon(rush.startsAt).active
 end
 
--- Espèce du géant (rotation du GDD §5.1) : ((semaine + numéro du MEGA dans la semaine) mod 24) + 1
+-- Espèce du géant (rotation du GDD §5.1, contrat v1.2) : MegaRules.species(semaine, numéro du MEGA
+-- dans la semaine, atterrissage) sur les espèces publiées et non secrètes À L'ATTERRISSAGE (la même
+-- pendant l'alerte et tout le MEGA, même si une espèce sort entre-temps), jamais mod 24
 function EventClock.megaSpecies(t: number): number
 	local mega = EventClock.mega(sane(t))
 	local week = math.floor((mega.landsAt - WEEK_EPOCH) / WEEK)
@@ -254,7 +256,7 @@ function EventClock.megaSpecies(t: number): number
 	if indexInWeek < 0 then
 		indexInWeek = 0
 	end
-	return MegaRules.species(week, indexInWeek)
+	return MegaRules.species(week, indexInWeek, mega.landsAt)
 end
 
 -- Graine des trajets d'un événement (Hash)

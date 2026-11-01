@@ -12,6 +12,8 @@ local Balance = require(script.Parent.Parent.Config.Balance)
 local Species = require(script.Parent.Parent.Config.Species)
 local Mutations = require(script.Parent.Parent.Config.Mutations)
 local Quests = require(script.Parent.Parent.Config.Quests)
+local Formulas = require(script.Parent.Formulas)
+local QuestRules = require(script.Parent.QuestRules)
 
 local Invariants = {}
 
@@ -55,7 +57,9 @@ function Invariants.uid(x: any): boolean
 end
 
 -- Pièces, Pot, Fame, tailles finies et bornées ; places ≤ capacités (24 / 60 / 20) ; un squishy par
--- emplacement de Meilleur Ami ; tenues portées par des uid existants ; tableaux denses ; niveaux bornés
+-- emplacement de Meilleur Ami ; tenues portées (dérivées de squishies[uid].o) ≤ possédées ; tableaux
+-- denses ; niveaux bornés. Contrat v1.2 (docs/04 §17.2) : outfits.worn absent ou vide (obsolète),
+-- dex.fam dense en 0 / 1, caps.petSitBy[UserId] entier dans [0 ; CapsPerFriend.petSit], gd entier ≥ 0.
 function Invariants.profile(data: { [string]: any }): { string }
 	local out: { string } = {}
 	local function bad(path: string)
@@ -116,9 +120,22 @@ function Invariants.profile(data: { [string]: any }): { string }
 	if type(d.caps) ~= "table" then
 		bad("caps")
 	else
+		-- chaque compteur scalaire de Balance.Caps (petSitIn et splorchCoins compris, contrat v1.2)
 		for key, cap in Balance.Caps do
 			if not Invariants.number(d.caps[key], 0, cap) then
 				bad("caps." .. key)
+			end
+		end
+		-- plafond par ami : petSitBy[tostring(UserId du propriétaire)] = entier dans [0 ; CapsPerFriend]
+		local by = d.caps.petSitBy
+		if type(by) ~= "table" then
+			bad("caps.petSitBy")
+		else
+			for key, count in by do
+				local okKey = type(key) == "string" and string.match(key, "^%-?%d+$") ~= nil
+				if not okKey or not int(count, 0, Balance.CapsPerFriend.petSit) then
+					bad("caps.petSitBy." .. tostring(key))
+				end
 			end
 		end
 	end
@@ -190,11 +207,21 @@ function Invariants.profile(data: { [string]: any }): { string }
 		if not Invariants.number(rec.b, 0, MAX) then
 			bad(path .. ".b")
 		end
+		-- jour UTC du dernier bonus de croissance du Rush (0 = jamais, contrat v1.2)
+		if not int(rec.gd, 0, 1e9) then
+			bad(path .. ".gd")
+		end
 	end
-	if counts.pen + counts.pool > Balance.Pens.Max then
+	-- capacités DU JOUEUR (§17.2 n° 3) : enclos + Bassin ≤ penCapacity(dalle Enclos, Grand Ranch), Bassin
+	-- ≤ poolSlots(bonus Axolo gagné) ; jamais au-delà des plafonds absolus (24, 6)
+	local pensLevel = if type(d.tiles) == "table" then d.tiles.pens else 0
+	local bigRanch = type(d.passes) == "table" and d.passes.BigRanch == true
+	local penCap = math.min(Balance.Pens.Max, Formulas.penCapacity(pensLevel, bigRanch))
+	local poolCap = math.min(MAX_POOL, Formulas.poolSlots(QuestRules.familyEarned(d.dex, "axolo")))
+	if counts.pen + counts.pool > penCap then
 		bad("capacity.pen")
 	end
-	if counts.pool > MAX_POOL then
+	if counts.pool > poolCap then
 		bad("capacity.pool")
 	end
 	if counts.dodo > Balance.Pens.Dodo then
@@ -207,35 +234,31 @@ function Invariants.profile(data: { [string]: any }): { string }
 		bad("mount")
 	end
 
-	-- tenues : chaque uid porté existe et porte cette tenue ; jamais plus de portées que possédées ;
-	-- chaque squishy habillé est dans la liste de sa tenue
+	-- tenues (contrat v1.2, GDD §12.6) : la tenue portée n'est gardée QUE dans squishies[uid].o ;
+	-- porteurs d'une tenue (squishies dont o == id) ≤ owned[id] ; outfits.worn est obsolète : absent ou
+	-- vide (Schema le garde à {}, ProfileRepair le vide)
 	local outfits = d.outfits
-	if type(outfits) ~= "table" or type(outfits.owned) ~= "table" or type(outfits.worn) ~= "table" then
+	if type(outfits) ~= "table" or type(outfits.owned) ~= "table" then
 		bad("outfits")
 	else
-		local wornBy: { [string]: string } = {}
-		for id, list in outfits.worn do
-			local path = "outfits.worn." .. tostring(id)
-			if not Invariants.dense(list) then
-				bad(path)
-				continue
-			end
-			if #list > (if Invariants.number(outfits.owned[id], 0, 1e9) then outfits.owned[id] else 0) then
-				bad(path .. ".count")
-			end
-			for _, uid in list do
-				local rec = squishies[uid]
-				if type(rec) ~= "table" or rec.o ~= id then
-					bad(path .. "." .. tostring(uid))
-				end
-				if type(uid) == "string" then
-					wornBy[uid] = tostring(id)
-				end
+		for id, count in outfits.owned do
+			if type(id) ~= "string" or not int(count, 0, 1e9) then
+				bad("outfits.owned." .. tostring(id))
 			end
 		end
-		for uid, rec in squishies do
-			if type(rec) == "table" and type(rec.o) == "string" and rec.o ~= "" and wornBy[uid] ~= rec.o then
-				bad("squishies." .. tostring(uid) .. ".o.worn")
+		if outfits.worn ~= nil and (type(outfits.worn) ~= "table" or next(outfits.worn) ~= nil) then
+			bad("outfits.worn")
+		end
+		local wearers: { [string]: number } = {}
+		for _, rec in squishies do
+			if type(rec) == "table" and type(rec.o) == "string" and rec.o ~= "" then
+				wearers[rec.o] = (wearers[rec.o] or 0) + 1
+			end
+		end
+		for id, n in wearers do
+			local owned = outfits.owned[id]
+			if n > (if int(owned, 0, 1e9) then owned else 0) then
+				bad("outfits.owned." .. id .. ".count")
 			end
 		end
 	end
@@ -252,6 +275,20 @@ function Invariants.profile(data: { [string]: any }): { string }
 	else
 		denseSpecies(d.dex.mut, "dex.mut")
 		denseSpecies(d.dex.stars, "dex.stars")
+		-- bonus de famille gagnés pour toujours (contrat v1.2) : une case 0 / 1 par famille de FamilyOrder
+		local fam = d.dex.fam
+		local okFam = Invariants.dense(fam) and #fam >= #Species.FamilyOrder
+		if okFam then
+			for _, v in fam do
+				if v ~= 0 and v ~= 1 then
+					okFam = false
+					break
+				end
+			end
+		end
+		if not okFam then
+			bad("dex.fam")
+		end
 	end
 	if
 		type(d.released) ~= "table"

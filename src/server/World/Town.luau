@@ -29,6 +29,7 @@ Town.LAMP_TAG = "LampLight"
 Town.FLOAT_TAG = "Float"
 Town.LABEL_KEY = "LabelKey"
 Town.LABEL_HEIGHT = "LabelHeight"
+Town.LABEL_TIMER = "LabelTimer" -- étiquette dont le texte est un compte à rebours calculé par le client
 Town.JAR_MIN_JELLY = 0.05 -- hauteur de la gelée de la jarre à 0 % (jamais nulle)
 Town.JAR_MAX_JELLY = 11.6 -- hauteur de la gelée de la jarre à 100 %
 Town.JAR_JELLY_BOTTOM = 1.1 -- bas de la gelée au-dessus du dessus de la place
@@ -43,6 +44,8 @@ local TOPS = table.freeze({
 	meadow = 0.03,
 	plaza = 0.06,
 })
+
+local PLANTER_RADIUS = CONST.PlazaRadius - 3 -- jardinières (Ø 3) au bord de la place
 
 local function polar(r: number, deg: number, y: number?): Vector3
 	local a = math.rad(deg)
@@ -223,12 +226,16 @@ function Town.plaza(root: Instance)
 			shadow = true,
 		})
 	end
-	Parts.block(
+	local beam = Parts.block(
 		altar,
 		altarCf * CFrame.new(0, 10.4, 0),
 		Vector3.new(10, 1.6, 1.6),
 		{ name = "Beam", color = COLORS.marble, material = Enum.Material.Marble }
 	)
+	-- compte à rebours du samedi (GDD §11.1) : étiquette du monde en px TV dessinée par le client
+	-- (LightingController : EventClock.moon, interrupteur jellyMoon), jamais un texte posé ici
+	label(beam, "event.altarCountdown", 5)
+	beam:SetAttribute(Town.LABEL_TIMER, "moon")
 	for i = 1, 5 do
 		local a = math.rad(-60 + (i - 1) * 30)
 		Parts.block(
@@ -328,9 +335,11 @@ function Town.plaza(root: Instance)
 		end
 	end
 
-	-- Jardinières aux quatre coins de la place
+	-- Jardinières aux quatre coins de la place, au bord (r = 47) : à r = 44, celle du sud-est
+	-- empiétait sur la scène de Big Plop (27, 27) ; WorldBuild.spec vérifie qu'aucun objet de la place
+	-- n'en chevauche un autre
 	for i = 0, 3 do
-		local pos = polar(CONST.PlazaRadius - 6, 45 + 90 * i, TOPS.plaza)
+		local pos = polar(PLANTER_RADIUS, 45 + 90 * i, TOPS.plaza)
 		Parts.cylinder(plaza, CFrame.new(pos), 3, 1.4, { name = "Planter" .. (i + 1), color = COLORS.sign })
 		Parts.ball(plaza, pos + Vector3.new(0, 2, 0), 2.4, {
 			name = "Blossom" .. (i + 1),

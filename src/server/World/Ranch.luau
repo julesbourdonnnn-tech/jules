@@ -96,11 +96,13 @@ local function padMax(key: string): number?
 	return nil
 end
 
--- Icône d'une dalle dessinée en Frames sur sa face du dessus (aucune image téléversée)
+-- Icône d'une dalle dessinée en Frames sur sa face du dessus (aucune image téléversée). Le disque est
+-- un cylindre couché (axe X tourné vers le haut, Parts.UPRIGHT) : sa face ronde du dessus est la face
+-- Right de la pièce ; la face Top est une tranche verticale de 0,3 stud (icône invisible)
 local function padIcon(pad: BasePart, icon: string)
 	local gui = Instance.new("SurfaceGui")
 	gui.Name = "Icon"
-	gui.Face = Enum.NormalId.Top
+	gui.Face = Enum.NormalId.Right
 	gui.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
 	gui.PixelsPerStud = 50
 	gui.LightInfluence = 0
@@ -548,7 +550,9 @@ function refreshPads(handle: Handle)
 			maxed = max ~= nil and level >= max
 		end
 		local visible = discovered and not maxed
-		pad:SetAttribute("Maxed", maxed)
+		if pad:GetAttribute("Maxed") ~= maxed then
+			pad:SetAttribute("Maxed", maxed)
+		end
 		if visible ~= handle.padShown[key] then
 			Parts.setVisible(pad, visible)
 			handle.padShown[key] = visible

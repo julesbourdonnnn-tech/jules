@@ -1711,6 +1711,12 @@ function SquishyBuilder.release(handle: Handle)
 	st.released = true
 	local rec = st.record
 	rec.model.Parent = nil
+	-- la lumière d'aura (allumée par le renderer pour ses 4 Légendaires) repart éteinte : un modèle
+	-- repris dans la réserve n'hérite jamais d'une lumière hors quota
+	local light = rec.light
+	if light and light.Enabled then
+		light.Enabled = false
+	end
 	local pool = pools[rec.signature]
 	if pool == nil then
 		pool = {}
