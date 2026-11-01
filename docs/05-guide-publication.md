@@ -314,7 +314,9 @@ Le jeu a **12 Nids** : un serveur ne doit jamais dépasser **12 joueurs**. Le fi
 
 ### 7.2 Appareils
 
-Cochez **téléphone, tablette, ordinateur**. Pour la **console** (PlayStation, Xbox), suivez d'abord le §11. Pas de VR. (Liste « Playable Devices » dans *Game Settings › Basic Info* : à vérifier.)
+Cochez **téléphone, tablette, ordinateur** et **console** (PlayStation, Xbox ; voir §11). **Pas de VR** : le jeu n'est pas prévu pour un casque.
+
+**Où** (vérifié le 1/11/2026) : Creator Hub › **Comet Conga** › menu de gauche **Audience › Paramètres avancés** › section **Type d'appareil** (en anglais : *Audience › Advanced Settings › Device type*), puis **Enregistrer**. Dans le Creator Hub en français, la case **Console** s'affiche par erreur sous le nom **« 4000 »** : c'est l'avant-dernière case, entre « Tablette » et « VR ».
 
 ### 7.3 Genre
 
@@ -473,7 +475,7 @@ Limite : l'agrandissement de l'interface et la zone sûre du téléviseur ne s'a
 
 Ajoutez **Console** aux appareils sur lesquels l'expérience peut être jouée. `docs/07-console-ps5.md` §12 demande de le faire **seulement après** les tests automatiques console (déjà verts) et l'essai de l'étape 11.3.
 
-- Emplacement exact du réglage (liste des appareils jouables, dans *Game Settings › Basic Info* de Studio ou dans le Creator Hub) : **à vérifier**, les documents officiels téléchargés ne le décrivent pas.
+- Emplacement du réglage : Creator Hub › Comet Conga › **Audience › Paramètres avancés › Type d'appareil** (§7.2). En français, la case Console s'appelle par erreur « 4000 ».
 - Une éventuelle validation supplémentaire de Roblox avant l'arrivée sur console : **à vérifier**.
 
 ### 11.5 Étape 4 : trouver et lancer le jeu sur la PS5
