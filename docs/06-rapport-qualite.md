@@ -1,6 +1,6 @@
 # Comet Conga — Rapport qualité avant publication
 
-> **Document 06.** Établi le 31 octobre 2026 à 22:10 UTC, sur le commit `e951d5e` (« QA tour 4 »). **Mis à jour le 1er novembre 2026 à 06:30 UTC**, sur le commit `bbded7a` (« QA tour 6 », arbre de travail propre) : vérification complète refaite (§1), section « Finition » (§6.3 : contre-audit anti-triche, revue des corrections du tour 4, sons, tours 5 et 6, petits constats encore ouverts revérifiés dans le code). **Dernière mise à jour le 1er novembre 2026**, après la contre-vérification finale (correction du verrou de session des sauvegardes, `Fix_final_data_lock`) : vérification complète refaite, chiffres des §1 et §2 mis à jour.
+> **Document 06.** Établi le 31 octobre 2026 à 22:10 UTC, sur le commit `e951d5e` (« QA tour 4 »). **Mis à jour le 1er novembre 2026 à 06:30 UTC**, sur le commit `bbded7a` (« QA tour 6 », arbre de travail propre) : vérification complète refaite (§1), section « Finition » (§6.3 : contre-audit anti-triche, revue des corrections du tour 4, sons, tours 5 et 6, petits constats encore ouverts revérifiés dans le code). **Dernière mise à jour le 1er novembre 2026 à 08:15 UTC**, sur le commit `84d009e`, après la contre-vérification finale (correction du verrou de session des sauvegardes, `Fix_final_data_lock`) : vérification complète refaite, chiffres des §1 et §2 mis à jour, bilan au §6.3.7.
 > Pour le propriétaire du jeu : ce rapport dit **ce qui est prouvé**, **ce qui ne peut l'être que dans Roblox Studio**, et **ce qu'il reste à décider**. Guide de publication : [`05-guide-publication.md`](05-guide-publication.md).
 
 ## En bref
@@ -10,17 +10,17 @@
 | Le jeu est-il complet ? | Oui pour la version 1.0 du GDD (§15.1) : île, boucle complète, progression, événements, social, boutique, FR/EN, téléphone, PC et manette (PS5 / Xbox) |
 | La vérification complète passe-t-elle ? | **Oui** : `./scripts/check.sh` → « ✅ Tout est vert. » (§1) |
 | Combien de tests automatiques ? | **1 628 tests**, dans **113 fichiers de tests**, **0 échec** |
-| La triche a-t-elle été vérifiée par quelqu'un d'autre ? | Oui : contre-audit indépendant ; la triche qu'il a trouvée est corrigée et reste testée à chaque modification (§6.3.1) |
+| La triche a-t-elle été vérifiée par quelqu'un d'autre ? | Oui : contre-audit indépendant ; la triche qu'il a trouvée est corrigée et reste testée à chaque modification (§6.3.1). Son test, rejoué sur la version finale : les 9 triches restent bloquées et les joueurs honnêtes ne sont pas punis (§6.3.7) |
 | Le jeu a-t-il du son ? | Oui : les 27 sons sont des sons publiés par Roblox. **Personne ne les a encore écoutés** : à faire dans Studio avant de publier (§6.3.4, test M12) |
 | Qu'est-ce qui n'est pas encore prouvé ? | Ce que seul le vrai moteur Roblox montre : rendu, physique, vraies sauvegardes et vrais achats, serveur avec 12 vrais joueurs, tenue des textes, aspect des particules, confort sur téléphone, rendu sur téléviseur (§4) |
 | Que reste-t-il à faire à la main ? | Le plan de test dans Studio (§5) et les réglages de publication ([`05-guide-publication.md`](05-guide-publication.md) §12) |
-| Y a-t-il des décisions à prendre ? | Oui, 7 questions de design (§7), plus deux petits choix (§6.3.6, n° 7 et 9) |
+| Y a-t-il des décisions à prendre ? | Oui, 7 questions de design (§7), plus trois petits choix (§6.3.6, n° 7 et 9 ; §6.3.7, n° 2) |
 
 ---
 
 ## 1. Résultat de la vérification complète
 
-Commande : `./scripts/check.sh`, relancée après la contre-vérification finale (commit `e6e2cad` plus la correction du verrou de session des sauvegardes et son test `Fix_final_data_lock`), terminée le 01/11/2026 à 07:41 UTC (environ 6 min), code de sortie 0, message final « ✅ Tout est vert. ».
+Commande : `./scripts/check.sh`, relancée après la contre-vérification finale sur le commit `84d009e` (« Contre-vérification finale : corrections » : `e6e2cad` plus la correction du verrou de session des sauvegardes et son test `Fix_final_data_lock`), sans modification du code ni des tests, terminée le 01/11/2026 à 08:09 UTC (environ 6 min), code de sortie 0, message final « ✅ Tout est vert. ».
 
 | Contrôle | Outil | Résultat |
 |---|---|---|
@@ -212,7 +212,7 @@ Corrections principales (tests `tests/specs/Fix_r4_*.spec.luau`) :
 
 ### 6.3 Finition : la dernière passe avant publication (1/11/2026)
 
-Après le tour 4, trois contrôles **indépendants** ont été faits par des ingénieurs qui n'avaient pas écrit le code concerné : un contre-audit anti-triche (§6.3.1), une relecture des corrections du tour 4 (§6.3.2) et une recherche de sons officiels Roblox (§6.3.4). Leurs résultats ont été corrigés dans le commit `81d5bdc` (§6.3.3). Deux tours de QA ont suivi (§6.3.5). Les petits constats encore ouverts sont au §6.3.6. Une dernière contre-vérification indépendante, juste avant la publication, a trouvé qu'un enfant qui revenait sur un **autre** serveur juste après une panne des sauvegardes pouvait perdre ce qu'il avait gagné pendant la panne : corrigé et testé avec deux serveurs simulés sur les mêmes sauvegardes (§6.3.5, tour 6, `Fix_final_data_lock`).
+Après le tour 4, trois contrôles **indépendants** ont été faits par des ingénieurs qui n'avaient pas écrit le code concerné : un contre-audit anti-triche (§6.3.1), une relecture des corrections du tour 4 (§6.3.2) et une recherche de sons officiels Roblox (§6.3.4). Leurs résultats ont été corrigés dans le commit `81d5bdc` (§6.3.3). Deux tours de QA ont suivi (§6.3.5). Les petits constats encore ouverts sont au §6.3.6. Une dernière contre-vérification indépendante, juste avant la publication, a trouvé qu'un enfant qui revenait sur un **autre** serveur juste après une panne des sauvegardes pouvait perdre ce qu'il avait gagné pendant la panne : corrigé et testé avec deux serveurs simulés sur les mêmes sauvegardes (§6.3.5, tour 6, `Fix_final_data_lock`). Le bilan de cette contre-vérification est au §6.3.7.
 
 #### 6.3.1 Contre-audit anti-triche indépendant (« red team »)
 
@@ -359,6 +359,42 @@ Aucun n'empêche de publier ni ne fait perdre de progression. Les n° 7 et 9 att
 
 Le constat n° 18 du tour 3 (bonus de coupe « tactile » déclaré par le client) reste la question n° 1 du §7.
 
+#### 6.3.7 Contre-vérification finale (1er novembre 2026)
+
+Juste avant la publication, trois ingénieurs qui n'avaient pas écrit le code concerné ont revérifié la version finale (commit `e6e2cad`, même code que `049a87e`) : un tricheur, un audit des sauvegardes et de l'écran, et une relecture « sécurité Roblox » de 9 fichiers clés. Tous leurs essais ont été faits sur des copies jetables, sans toucher au jeu.
+
+**Le test de triche de la red team (§6.3.1), rejoué tel quel sur la version finale.** Avant la finition, ses 26 scènes réussissaient toutes : chaque triche essayée marchait. Maintenant :
+
+- les **9 triches** sont bloquées : bond puis action, chaînes de pas, ramassage, vol et encaissement de la Comète, anneau de la Balise ;
+- le joueur honnête n'est **plus puni** après un gel réseau de 0,7 s (ni avertissement, ni retour en arrière, ni icône « instable ») ;
+- **toutes les scènes des joueurs honnêtes passent** toujours.
+
+Courir environ 1,5 fois trop vite en permanence n'est toujours pas signalé : c'est la marge voulue par le GDD (§6.3.1).
+
+**Les changements du tour 6, revérifiés**
+
+| Changement du tour 6 | Ce qui a été essayé | Résultat |
+|---|---|---|
+| Anti-triche : montées et vol plané | Bonds vers le haut, allers-retours au ras du sol pour ne jamais « planer », passage sous le sol. Côté honnête : marche, Dash, Foulée + Dash, paquets réseau par 2 ou 3, sauts, pentes, chutes, réapparition, rattrapage par sa porte, Balise à pied, gels jusqu'à 1,6 s | Joueurs honnêtes : **0 alerte, 0 avertissement**. Deux petits trous reproduits (n° 4 ci-dessous), **sans avantage de jeu** : capturer et couper demandent d'être à hauteur normale, et la Comète, les Gloomwisps et l'anneau de la Balise ne regardent que la distance au sol |
+| Comète : passage de porte « en attente » | Bond à travers la porte puis ressortie ; retour forcé ; vol, chute de la Comète, réapparition ; encaisser plus tôt ou de plus loin | **Aucun abus trouvé**. Un tricheur encaisse en 1 s au lieu de 1,6 s, comme avant le tour 6, dans la marge prévue. Un porteur honnête gelé jusqu'à 1,5 s devant sa porte encaisse bien |
+| Sauvegardes pendant une panne Roblox | Départ pendant la panne ; retour sur le même serveur ; retour sur un **autre** serveur (deux serveurs simulés sur les mêmes sauvegardes) ; achats ; arrêt du serveur pendant la panne (10 joueurs présents, 5 déjà partis) | Rien de grave : aucune donnée en double, aucun achat validé sans sauvegarde, les essais en arrière-plan ne bloquent ni les autres joueurs ni l'arrêt. **Un problème moyen** : le retour sur un autre serveur (n° 1, corrigé) |
+| Écran (mise en page) | Contour « queue menacée », Calendrier et quêtes des Objectifs, cartes d'Améliorer, textes ; téléphones 640 × 360 et 667 × 375, téléviseur 1920 × 1080 à la manette | **Aucune régression**. Seul texte sous 18 px : « Aujourd'hui » en français sur 568 × 320, déjà connu (§6.3.6, n° 7) |
+
+La relecture « sécurité Roblox » n'a trouvé aucun problème critique ni grave : chaque message d'un joueur au serveur est vérifié et limité en débit, les récompenses sont calculées par le serveur, et les commandes d'administration sont vérifiées côté serveur.
+
+**Suites données**
+
+| n° | Constat | Gravité | Suite | Pourquoi |
+|---|---|---|---|---|
+| 1 | Un enfant qui revenait sur un **autre** serveur juste après une panne des sauvegardes pouvait retrouver ses données d'avant la panne (2 à 5 essais sur 10) | Moyen | **Corrigé** (`DataService`, 9 tests dans `Fix_final_data_lock`) | Le nouveau serveur laisse maintenant à l'ancien le temps d'écrire ; au pire, il renvoie poliment l'enfant une fois (détails au §6.3.5, tour 6). 6 des 9 nouveaux tests échouaient sur l'ancien code |
+| 2 | Un gel réseau de **1,7 s ou plus** en courant donne un retour en arrière, l'icône « instable » et un avertissement ; 10 en moins de 10 minutes excluent le joueur **pour toujours** des deux tops 10 mondiaux | Moyen (ancien) | **Non changé**, **à décider** | La tolérance prévue va jusqu'à 1,5 s. L'exclusion ne touche que les tops 10 mondiaux (pas le tableau du serveur), où un enfant avec une telle connexion n'entre presque jamais. Tolérer plus laisserait passer une triche qu'un test existant refuse. **Votre choix** : garder l'exclusion à vie, ou la faire expirer (par exemple après 7 jours ou au changement de semaine) |
+| 3 | Le remboursement, à l'arrêt du serveur, des secondes payées et non utilisées d'une Fête de Glow dépend d'un ordre d'événements que Roblox ne garantit pas | Moyen (lu dans le code, non reproduit) | **Non changé** | Roblox prévient le jeu de l'arrêt quand les joueurs sont encore là, et le remboursement est écrit avant la sauvegarde (testé). Un acheteur déjà parti n'est pas remboursé : c'est la règle (docs/04, décision 9). Une nouvelle sauvegarde ajoutée au dernier moment serait plus risquée. À observer en ligne lors d'une mise à jour (« Migrate to latest update ») |
+| 4 | Anti-triche : après 1,5 s immobile, un bond de 31 studs vers le haut en un seul message passe ; la règle contre le vol plané repart de zéro après un seul message près du sol | Bas | Ouvert | Aucun avantage de jeu trouvé |
+| 5 | Sauvegardes, cas rares : les essais en arrière-plan s'arrêtent après 5 min même si l'enfant attend sur ce serveur ; une ligne « PERTE » peut apparaître alors que la sauvegarde a réussi ; à l'arrêt, une sauvegarde de départ attend la fin d'une sauvegarde automatique en cours ; une erreur dans une future mise à niveau des données laisserait le joueur en jeu sans profil | Bas | Ouvert | Pannes de plus de 5 min ou cas très rares, sans données en double. Avant de dédommager un joueur pour une ligne « PERTE », regardez ses données |
+| 6 | Sur un réseau lent, un double appui dans Améliorer peut acheter un niveau de trop (avec du Glow, jamais des Robux) ; deux limites de l'anti-triche sont lisibles par l'écran du joueur ; sur 568 × 320, les lignes de détail de l'Atlas en anglais font 17 px | Bas | Ouvert | Petites corrections pour une mise à jour |
+
+Après la correction : vérification complète verte, **1 628 tests**, 0 échec, aucun test instable (§1).
+
 ---
 
 ## 7. Questions de design ouvertes (à trancher par le propriétaire)
@@ -387,4 +423,4 @@ Les justifications des réglages d'économie déjà faits (Supernovas, formes m�
 | Questionnaire de maturité, icône, miniatures, taille de serveur 12, langues | Propriétaire | Guide §7 à §10 |
 | Plan de test manuel M1 à M13 | Propriétaire + testeurs | §5 |
 | Essai sur PS5 avant d'activer la console | Propriétaire | Guide §11 |
-| Répondre aux 7 questions de design | Propriétaire | §7 |
+| Répondre aux 7 questions de design et aux trois petits choix | Propriétaire | §7, §6.3.6 (n° 7 et 9), §6.3.7 (n° 2) |
