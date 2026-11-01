@@ -11,7 +11,8 @@
 --     la colonne de droite du HUD, setCardPlacer : jamais sur le Dash, le Ping ni le bouton de saut,
 --     zone sûre de l'appareil comprise ; les cartes en trop attendent), "atlasUnlocked" (fin de Q4,
 --     GDD §3 « l'Atlas se débloque, page qui tourne, 5/150 » : carte « Star Atlas débloqué ! N/T »
---     en tête de la file des cartes, son LevelUp quand elle entre, CardOpened("atlasUnlocked")
+--     en tête de la file des cartes, son LevelUp quand elle entre (Pop si le Reward de la quête vient
+--     de sonner : un seul jingle par moment, STINGER_GAP), CardOpened("atlasUnlocked")
 --     quand elle est VRAIMENT à l'écran : l'accueil pointe l'icône Collection pendant toute la
 --     carte), "atlasMilestone" (confettis), "questDone" (toast « Parade de 4 ✓ » pour une quête
 --     d'accueil, « Quête terminée ! » sinon) / "questClaimed" / "dailyClaimed" (récompense qui
@@ -21,7 +22,9 @@
 --     « Merci ! »), "cometBanked", "release",
 --     "unlock", "upgrade" (+ VFXController.playUpgrade, différé à la fermeture du panneau ouvert :
 --     l'onde de choc et le Nebby fantôme ne se jouent pas sous le voile ; le son LevelUp de l'achat,
---     GDD §9.4, part lui tout de suite, à chaque achat, et la reprise différée est muette),
+--     GDD §9.4, part lui tout de suite, à chaque achat, et la reprise différée est muette ; achat
+--     qui termine une quête dans le même envoi : le Reward de la quête répond seul, panneau ouvert
+--     ou non),
 --     "offline" (ReturnScreen ouvert par les abonnés de Celebrated)
 --   * tampons centraux (police LuckiestGuy, UIStroke 3 px) : « PARADE ×2,36 ! » (échelle 2 → 1,
 --     rotation −8° → 0 en 0,25 s Back Out, tenu 0,8 s), « SNIP ! » (Elastic Out), « COMÈTE VOLÉE ! »,
@@ -30,6 +33,13 @@
 --     vignette rose 0,4 s + secousse 0,25 s
 --   * floaters d'écran (« +35 ✦ »), confettis ; Mouvement réduit : fondus seulement (ni pièces
 --     volantes, ni confettis, ni rotation, ni secousse)
+--   * un seul jingle (Reward / LevelUp) par moment : quête terminée, jalon d'Atlas et carte « Atlas
+--     débloqué » se taisent (la carte joue Pop) moins de 1,5 s après un autre jingle ; ceux d'un
+--     geste du joueur (achat, calendrier, amélioration) jouent à chaque geste, sauf dans la même
+--     image qu'un jingle secondaire (amélioration qui termine une quête d'accueil)
+--   * cartes passagères d'autres modules (invitation d'équipage, Panels/Crew) : cardPlacement (même
+--     placeur du HUD que les « NOUVEAU ! ») et hudObstacles (blocs affichés du HUD et de la
+--     minicarte, coin des actions Dash / Ping / saut)
 -- Une seule connexion RenderStepped (pièces, confettis, floaters, tampons, vignette, cartes), temps
 -- d'animation = somme des dt des images (mesure purement graphique).
 -- Téléviseur / console (docs/07-console-ps5.md §3-§4) : tampons, titre et cartes sont dans Root.safe
@@ -85,6 +95,11 @@ export type StampStyle = "parade" | "snip" | "small" | "comet"
 -- droit, haut de la première carte, nombre de cartes qui tiennent (≥ 1)
 export type CardPlacement = { right: number, top: number, count: number }
 
+-- Rectangle d'écran dans l'espace AbsolutePosition des interfaces (px) : bords gauche, haut, droit,
+-- bas ; `soft` : bloc d'information (état, suivi de quête) qu'une carte passagère peut couvrir
+-- quand aucune autre place n'existe (jamais un bouton)
+export type ScreenRect = { x0: number, y0: number, x1: number, y1: number, soft: boolean? }
+
 -- Constantes (GDD §9.2, §9.4) ------------------------------------------------------------------
 
 local DISPLAY_ORDER = 45
@@ -126,6 +141,28 @@ local TOAST_MEMORY = 32 -- textes récents mémorisés pour l'anti-doublon (au-d
 local MAX_LEVEL = 1e6 -- niveau d'amélioration ou nombre d'étoiles absurde : ignoré
 local MAX_STARS = 5
 local MAX_ATLAS = 1e4 -- taille d'Atlas absurde (« N/T » du déblocage) : ignorée
+-- Ancres du HUD qui mènent à ses écrans (HUD, minicarte) pour hudObstacles : tous les blocs
+-- affichés de ces écrans comptent ; Dash et Ping forment le coin des actions
+local KEEP_CLEAR: { Types.HudElement } = {
+	"glow",
+	"stardust",
+	"crew",
+	"settings",
+	"rail",
+	"eventPill",
+	"minimap",
+	"status",
+	"questTracker",
+	"line",
+	"dash",
+	"ping",
+}
+local FAR = 1e6 -- px : le coin des actions s'étend jusqu'au bas droit de l'écran
+-- Un seul jingle (Reward / LevelUp, deux musiques de 2-2,5 s) par moment : un second qui part moins
+-- de 1,5 s après le premier (même envoi du serveur : fin de Q4 = quête terminée puis Atlas
+-- débloqué ; jalon d'Atlas pendant une quête terminée) est omis, ou remplacé par Pop pour une carte
+local STINGER_GAP = 1.5
+local STINGERS: { [string]: boolean } = { Reward = true, LevelUp = true }
 -- Amélioration achetée panneau ouvert : l'onde de choc et le Nebby fantôme (VFXController) se
 -- joueraient sous le voile et le flou de la fenêtre ; ils attendent sa fermeture (fondu de
 -- PanelController : 0,12 s), et sont oubliés si le panneau reste ouvert trop longtemps
@@ -254,6 +291,8 @@ local title: { label: TextLabel?, t0: number, graphemes: number, active: boolean
 local cards: { Card } = {}
 local cardQueue: { QueuedCard } = {}
 local lastCoinSound = -math.huge
+local lastStingerAt = -math.huge -- dernier jingle (Reward / LevelUp) joué par ScreenFX (fxTime)
+local lastSoftAt = -math.huge -- dernier jingle secondaire (quête, jalon, carte de l'Atlas) joué
 local lastToast: { [string]: number } = {}
 local rng = Random.new()
 local lastLineCount = 0
@@ -329,6 +368,49 @@ local function isShown(target: GuiObject?): boolean
 		end
 		parent = parent.Parent
 	end
+	return true
+end
+
+-- Rectangle d'écran d'un élément (espace AbsolutePosition)
+local function screenRect(target: GuiObject): ScreenRect
+	local p, s = target.AbsolutePosition, target.AbsoluteSize
+	return { x0 = p.X, y0 = p.Y, x1 = p.X + s.X, y1 = p.Y + s.Y }
+end
+
+local function union(a: ScreenRect, b: ScreenRect): ScreenRect
+	return {
+		x0 = math.min(a.x0, b.x0),
+		y0 = math.min(a.y0, b.y0),
+		x1 = math.max(a.x1, b.x1),
+		y1 = math.max(a.y1, b.y1),
+	}
+end
+
+-- Jingle d'un geste du joueur (achat, calendrier, amélioration) : joue à chaque geste, sauf si un
+-- jingle secondaire du même envoi du serveur (même image) vient de sonner — l'amélioration qui
+-- termine Q2 / Q5 arrive après la quête (Signals.UpgradeBought avant le Celebrate « upgrade ») :
+-- le Reward de la quête répond alors à l'achat
+local function stinger(name: string, pitchVariation: number?)
+	if fxTime == lastSoftAt then
+		return
+	end
+	lastStingerAt = fxTime
+	AudioController.play(name, pitchVariation)
+end
+
+-- Jingle secondaire d'un moment (quête terminée, jalon d'Atlas, carte « Atlas débloqué ») : omis si
+-- un autre jingle vient de partir (STINGER_GAP), `instead` joué à sa place s'il est donné. Vrai si
+-- le jingle a joué.
+local function softStinger(name: string, pitchVariation: number?, instead: string?): boolean
+	if fxTime - lastStingerAt < STINGER_GAP and fxTime >= lastStingerAt then
+		if instead then
+			AudioController.play(instead, pitchVariation)
+		end
+		return false
+	end
+	lastStingerAt = fxTime
+	lastSoftAt = fxTime
+	AudioController.play(name, pitchVariation)
 	return true
 end
 
@@ -721,16 +803,14 @@ end
 -- Pile en px de référence du conteneur Safe (bord droit, haut, nombre de cartes à l'écran)
 type CardStack = { right: number, top: number, count: number }
 
--- Place de la pile : celle que le HUD trouve libre dans sa colonne de droite (zone sûre de
--- l'appareil comprise : jamais sous l'encoche ; jamais sur le Dash, le Ping ni le bouton de saut,
--- GDD §10.1) ; nil sans HUD (colonne historique, 3 cartes). La couche de ScreenFX ignore les
--- insets (Safe commence au coin de la fenêtre) : px de la fenêtre ÷ échelle − marge intérieure.
-local function cardStack(): CardStack?
+-- Place libre que le HUD donne (setCardPlacer) pour `wanted` cartes de `size` px de référence
+-- séparées de `gap`, en px de la fenêtre ; nil sans HUD, ou réponse invalide
+local function hudPlacement(size: Vector2, gap: number, wanted: number): CardPlacement?
 	local place = cardPlacer
 	if place == nil then
 		return nil
 	end
-	local ok, result = pcall(place, CARD_SIZE, CARD_GAP, CARD_MAX_VISIBLE)
+	local ok, result = pcall(place, size, gap, wanted)
 	if not ok or type(result) ~= "table" then
 		return nil
 	end
@@ -738,6 +818,19 @@ local function cardStack(): CardStack?
 	if not (isFinite(right) and isFinite(top) and isFinite(count)) then
 		return nil
 	end
+	return { right = right, top = top, count = count }
+end
+
+-- Place de la pile : celle que le HUD trouve libre dans sa colonne de droite (zone sûre de
+-- l'appareil comprise : jamais sous l'encoche ; jamais sur le Dash, le Ping ni le bouton de saut,
+-- GDD §10.1) ; nil sans HUD (colonne historique, 3 cartes). La couche de ScreenFX ignore les
+-- insets (Safe commence au coin de la fenêtre) : px de la fenêtre ÷ échelle − marge intérieure.
+local function cardStack(): CardStack?
+	local result = hudPlacement(CARD_SIZE, CARD_GAP, CARD_MAX_VISIBLE)
+	if result == nil then
+		return nil
+	end
+	local right, top, count = result.right, result.top, result.count
 	local k = math.max(scale(), 0.01)
 	local _, c = ensureGui()
 	local padding = c:FindFirstChildOfClass("UIPadding")
@@ -819,8 +912,15 @@ local function openCard(text: string, stack: CardStack?, sound: string?, tag: st
 			0.2
 		)
 	end
-	-- son de la carte quand elle ENTRE (une carte mise en file attend avec son son)
-	AudioController.play(sound or "Pop", 0.05)
+	-- son de la carte quand elle ENTRE (une carte mise en file attend avec son son) ; un jingle juste
+	-- après un autre (fin de Q4 : Reward de la quête, puis la carte « Atlas débloqué » entrée tout de
+	-- suite) devient un Pop
+	local cue = sound or "Pop"
+	if STINGERS[cue] then
+		softStinger(cue, 0.05, "Pop")
+	else
+		AudioController.play(cue, 0.05)
+	end
 	if tag ~= nil then
 		ScreenFX.CardOpened:Fire(tag, CARD_TIME_IN + CARD_HOLD + CARD_TIME_OUT)
 	end
@@ -1121,6 +1221,104 @@ function ScreenFX.setCardPlacer(fn: ((size: Vector2, gap: number, wanted: number
 	cardPlacer = fn
 end
 
+-- Place libre du HUD pour une carte passagère venue d'ailleurs (invitation d'équipage, Panels/Crew) :
+-- même placeur que les cartes « NOUVEAU ! » (px de la fenêtre, barre Roblox comprise) ; nil sans
+-- HUD. Le placeur se replie au-dessus du Dash quand rien ne tient (quitte à couvrir l'état ou la
+-- minicarte) : l'appelant vérifie la place avec hudObstacles
+function ScreenFX.cardPlacement(size: Vector2, gap: number, wanted: number): CardPlacement?
+	if typeof(size) ~= "Vector2" or not (isFinite(size.X) and isFinite(size.Y) and isFinite(gap)) then
+		return nil
+	end
+	if not isFinite(wanted) then
+		return nil
+	end
+	return hudPlacement(size, gap, wanted)
+end
+
+-- Bloc d'un élément : l'enfant direct de la racine Safe de son écran qui le contient, et cette
+-- racine ; nil hors d'un écran (ou pour la racine elle-même)
+local function blockOf(target: Instance): (GuiObject?, Instance?)
+	local cur = target
+	local parent = cur.Parent
+	while parent ~= nil do
+		local grand = parent.Parent
+		if grand ~= nil and grand:IsA("LayerCollector") then
+			if cur:IsA("GuiObject") then
+				return cur :: GuiObject, parent
+			end
+			return nil, nil
+		end
+		cur = parent
+		parent = cur.Parent
+	end
+	return nil, nil
+end
+
+-- Rectangle d'un bloc : lui et ses enfants affichés (barre de la Balise, minuteurs de l'état…)
+local function blockRect(block: GuiObject): ScreenRect
+	local r = screenRect(block)
+	for _, child in block:GetChildren() do
+		if child:IsA("GuiObject") and (child :: GuiObject).Visible then
+			r = union(r, screenRect(child :: GuiObject))
+		end
+	end
+	return r
+end
+
+-- Rectangles d'écran (espace AbsolutePosition, px) des blocs AFFICHÉS du HUD et de la minicarte
+-- qu'une carte passagère ne recouvre jamais (GDD §10.1) : chaque bloc visible de leurs écrans
+-- (compteurs, Équipage / Réglages, rail, pastille d'événement et barre de la Balise, état, suivi
+-- de quête, compteur de file, ACCLAMER, minicarte…), enfants affichés compris, et le coin des
+-- actions (du Dash et du Ping jusqu'au bas droit de l'écran : bouton de saut tactile dessous). État
+-- et suivi de quête sont marqués `soft`. Les écrans sont trouvés par les ancres du HUD
+-- (setAnchorResolver) ; vide sans HUD.
+function ScreenFX.hudObstacles(): { ScreenRect }
+	local out: { ScreenRect } = {}
+	local resolve = anchorResolver
+	if resolve == nil then
+		return out
+	end
+	local roots: { Instance } = {}
+	local actions: { [Instance]: boolean } = {}
+	local soft: { [Instance]: boolean } = {}
+	local corner: ScreenRect? = nil
+	for _, element in KEEP_CLEAR do
+		local ok, visual = pcall(resolve, element)
+		if ok and typeof(visual) == "Instance" and visual:IsA("GuiObject") then
+			local block, root = blockOf(visual)
+			if block and root then
+				if not table.find(roots, root) then
+					table.insert(roots, root)
+				end
+				if element == "status" or element == "questTracker" then
+					soft[block] = true
+				elseif element == "dash" or element == "ping" then
+					actions[block] = true
+					if isShown(visual) then
+						local r = blockRect(block)
+						corner = if corner then union(corner, r) else r
+					end
+				end
+			end
+		end
+	end
+	for _, root in roots do
+		for _, child in root:GetChildren() do
+			if child:IsA("GuiObject") and not actions[child] and isShown(child :: GuiObject) then
+				local r = blockRect(child :: GuiObject)
+				if soft[child] then
+					r.soft = true
+				end
+				table.insert(out, r)
+			end
+		end
+	end
+	if corner then
+		table.insert(out, { x0 = corner.x0, y0 = corner.y0, x1 = corner.x0 + FAR, y1 = corner.y0 + FAR })
+	end
+	return out
+end
+
 -- Retour local (même chemin qu'un Feedback serveur : toast/tampon + FeedbackReceived)
 function ScreenFX.notify(key: string, vars: { [string]: any }?, tone: Types.FeedbackTone?)
 	ScreenFX._onFeedback({ key = key, vars = vars or {}, tone = tone or "info" })
@@ -1276,8 +1474,10 @@ local function onCelebrate(payload: any)
 			queueCard(text, "LevelUp", true, "atlasUnlocked")
 		end
 	elseif kind == "atlasMilestone" then
+		-- GDD §9.4 : confettis + LevelUp (la bannière personnelle qui suit ne doit pas rejouer de
+		-- jingle : UI/Banners) ; omis si une quête terminée du même encaissement vient de sonner
 		ScreenFX.confetti(60)
-		AudioController.play("LevelUp")
+		softStinger("LevelUp")
 	elseif kind == "questDone" then
 		-- quête d'accueil : son nom suivi d'une coche (« Parade de 4 ✓ », GDD §9.4) ; autres quêtes
 		-- (le panneau Objectifs les nomme) : « Quête terminée ! »
@@ -1287,7 +1487,7 @@ local function onCelebrate(payload: any)
 			then Prefs.t("quest.onboarding." .. id) .. " ✓"
 			else Prefs.t("celebrate.questDone")
 		Toast.show(text, "reward")
-		AudioController.play("Reward")
+		softStinger("Reward")
 	elseif kind == "questClaimed" or kind == "dailyClaimed" then
 		local glow, dust = num(data.glow), num(data.stardust)
 		if glow and glow > 0 then
@@ -1301,7 +1501,7 @@ local function onCelebrate(payload: any)
 			Toast.show(Prefs.t("feedback.boostOn", { minutes = math.ceil(boost / 60) }), "reward")
 		end
 		if kind == "dailyClaimed" then
-			AudioController.play("Reward")
+			stinger("Reward")
 		end
 	elseif kind == "starforge" then
 		local stars = num(data.stars)
@@ -1325,11 +1525,17 @@ local function onCelebrate(payload: any)
 				-- chaque achat (le bouton Acheter est muet) ; seul l'effet du monde attend la fermeture
 				-- du panneau (la carte d'accueil se ferme seule 0,6 s après l'achat), rejoué muet pour
 				-- le dernier achat
-				AudioController.play("LevelUp", 0.05)
+				stinger("LevelUp", 0.05)
 				pendingUpgrade = { track = data.track, level = math.floor(level), at = fxTime, readyAt = nil }
 			else
-				-- aucun panneau : effet et son tout de suite (VFXController joue LevelUp lui-même)
-				playUpgrade(data.track, level)
+				-- aucun panneau : effet et son tout de suite (VFXController joue LevelUp lui-même),
+				-- muet si l'achat vient de terminer une quête dont le Reward a sonné dans le même
+				-- envoi (même règle que stinger : un seul jingle par moment)
+				local quiet = fxTime == lastSoftAt
+				if not quiet then
+					lastStingerAt = fxTime
+				end
+				playUpgrade(data.track, level, if quiet then true else nil)
 			end
 			ScreenFX.floater(
 				Prefs.t("celebrate.upgrade", { level = math.floor(level) }),
@@ -1339,7 +1545,7 @@ local function onCelebrate(payload: any)
 		end
 	elseif kind == "purchase" then
 		showStamp(Prefs.t("stamp.thanks"), GOLD, "comet", nil)
-		AudioController.play("Reward")
+		stinger("Reward")
 		local target = anchor("glow")
 		if target and isShown(target) and not reduced() then
 			local size = viewportSize()

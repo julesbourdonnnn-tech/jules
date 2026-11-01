@@ -29,7 +29,9 @@ local Tuning = {
 
 	-- Sonde du sol réel (CongaService, workspace:Blockcast vers le bas depuis la racine) : la
 	-- hauteur du sol passée à MoveCheck tient compte de ce qui porte vraiment le personnage (stèle du
-	-- tableau, tête d'un autre joueur, poteaux…), que la formule de WorldLayout.groundY ignore.
+	-- tableau, poteaux… ; jamais un autre joueur : aucune collision entre personnages, groupe
+	-- Characters de CongaService, la sonde se fait dans ce groupe), que la formule de
+	-- WorldLayout.groundY ignore.
 	-- Pavé carré de FloorProbeWidth studs de côté (empreinte 2 × 1 de la racine, quelle que soit
 	-- son orientation, + marge : un personnage tient au bord d'une stèle de 0,8 stud), épaisseur
 	-- FloorProbeThickness, portée RootHeight + Snip.MaxDy + FloorProbeMargin sous la racine (un

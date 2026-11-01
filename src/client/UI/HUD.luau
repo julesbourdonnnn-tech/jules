@@ -2812,6 +2812,11 @@ function HUD.Init()
 		local element = PANEL_ELEMENT[name]
 		return element == nil or HUD.isRevealed(element)
 	end)
+	-- garde de la roue de pings : ni roue ni stick pris (Q / croix ↑) avant la présentation du
+	-- bouton Ping (GDD §3)
+	InputController.setPingGate(function(): boolean
+		return HUD.isRevealed("ping")
+	end)
 end
 
 function HUD.Start()

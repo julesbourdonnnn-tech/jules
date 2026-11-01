@@ -10,9 +10,10 @@
 -- jeu reste jouable ; un son qui ne se charge pas est retiré au préchargement (un avertissement par
 -- clé, aucune erreur). Deux clés qui partagent un enregistrement s'en distinguent par la hauteur,
 -- d'au moins 15 % (Fix_r4_partage_4.spec).
--- Encore vides, à choisir À L'ÉCOUTE parmi les sons publiés par Roblox (pistes trop incertaines,
--- notées sur leur ligne) : Scatter, Bank, Dash, CometWarn, CometSwipe, BeaconStart, WispPop, Ping,
--- Cheer. Avant la publication : écouter aussi chaque son rempli (docs/05 §6.4, docs/06 M12).
+-- Remplis en dernier, surtout par réemploi d'un enregistrement déjà retenu à une autre hauteur, et
+-- marqués « à confirmer à l'écoute » sur leur ligne : Scatter, Bank, Dash, CometWarn, CometSwipe,
+-- BeaconStart, WispPop, Ping, Cheer. Avant la publication : écouter chaque son rempli, ceux-ci en
+-- premier (docs/05 §6.4, docs/06 M12) ; un son qui déplaît se vide (id = "") sans rien casser.
 -- Garde-fous de lecture (AudioController), réglables par clé, sinon valeurs par défaut en bas :
 --   maxLength  s : une copie qui joue encore s'éteint alors en fondu (jingles, morceaux de fête
 --              joués en effet ; filet si Ended n'arrive jamais) ; ignoré par la musique (boucle)
@@ -43,18 +44,18 @@ local Sounds: { [string]: SoundDef } = {
 	Catch = { id = "rbxassetid://4110925712", volume = 0.45 }, -- Roblox/creator-docs tutorials/use-case-tutorials/audio/in-game-sounds.md:90 « simple chime » de ramassage ; hauteur 1 + min(0,5 ; 0,01 × n) (client)
 	CatchRare = { id = "rbxassetid://18635972230", volume = 0.55 }, -- Roblox/resources experiences/gold-rush/GoldRush.rbxl SoundService.GoldSound (pépite ramassée, StarterPlayerScripts.SoundManager)
 	Snip = { id = "rbxassetid://9125571221", volume = 0.6 }, -- Roblox/resources experiences/plant/Plant.rbxl SoundService.SoundEffects.Harvest (« a clip sound », creator-docs add-3D-audio.md:261) ; plus aigu côté coupeur
-	Scatter = { id = "", volume = 0.5 }, -- à choisir à l'écoute (aucune piste assez sûre)
-	Bank = { id = "", volume = 0.6 }, -- à choisir à l'écoute : piste rbxassetid://9118130272 (Roblox/resources experiences/plant/Plant.rbxl SoundService.SoundEffects.Purchase, joué quand on DÉPENSE), sinon Coins à hauteur 0,8
-	Dash = { id = "", volume = 0.5 }, -- à choisir à l'écoute : piste PROMPT_OPENED rbxassetid://17161253544 (Roblox/resources packages/feature-packages-core/src/Configs/SharedConstants.lua:38) à hauteur 1,5
-	CometWarn = { id = "", volume = 0.7 }, -- à choisir à l'écoute : piste rbxassetid://7743999789 (Roblox/creator-docs resources/modules/photo-booth.md:253 countdownBeepSound, peut-être trop discret)
+	Scatter = { id = "rbxassetid://17161253544", volume = 0.5, pitch = 0.8 }, -- Roblox/resources packages/feature-packages-core/src/Configs/SharedConstants.lua:38 PROMPT_OPENED, plus grave (Whoosh 1, Tab 1,25, Dash 1,5) ; à confirmer à l'écoute
+	Bank = { id = "rbxassetid://9113849651", volume = 0.6, pitch = 0.8 }, -- Roblox/resources experiences/plant/Plant.rbxl SoundService.SoundEffects.Coins, plus grave que Coin (joué juste après) ; à confirmer à l'écoute
+	Dash = { id = "rbxassetid://17161253544", volume = 0.5, pitch = 1.5 }, -- Roblox/resources packages/feature-packages-core/src/Configs/SharedConstants.lua:38 PROMPT_OPENED, plus vif que Tab ; à confirmer à l'écoute
+	CometWarn = { id = "rbxassetid://7743999789", volume = 0.7 }, -- Roblox/creator-docs resources/modules/photo-booth.md:253 countdownBeepSound ; à confirmer à l'écoute (peut-être trop discret)
 	CometImpact = { id = "rbxassetid://9125402735", volume = 0.5 }, -- Roblox/creator-docs projects/assets/index.md:18-19 (exemple d'asset audio « Boom-Impact »)
-	CometSwipe = { id = "", volume = 0.6 }, -- à choisir à l'écoute : piste GoldSound rbxassetid://18635972230 (Roblox/resources experiences/gold-rush/GoldRush.rbxl) à hauteur 1,3
-	BeaconStart = { id = "", volume = 0.6 }, -- à choisir à l'écoute (aucune piste trouvée)
+	CometSwipe = { id = "rbxassetid://18635972230", volume = 0.6, pitch = 1.3 }, -- Roblox/resources experiences/gold-rush/GoldRush.rbxl SoundService.GoldSound, plus aigu que CatchRare ; à confirmer à l'écoute
+	BeaconStart = { id = "rbxassetid://17161210152", volume = 0.6, pitch = 0.8, maxLength = 2.5 }, -- Roblox/resources packages/feature-packages-core/src/Configs/SharedConstants.lua:40 PURCHASE_EFFECT, plus grave que Reward ; à confirmer à l'écoute
 	BeaconWin = { id = "rbxassetid://1846248593", volume = 0.6, maxLength = 3.5 }, -- Roblox/creator-docs tutorials/use-case-tutorials/audio/add-3D-audio.md:296 « cheerful, celebratory audio track »
-	WispPop = { id = "", volume = 0.5 }, -- à choisir à l'écoute : piste BUTTON_ACTIVATED rbxassetid://17161216230 (Roblox/resources packages/feature-packages-core/src/Configs/SharedConstants.lua:42) à hauteur 1,7
+	WispPop = { id = "rbxassetid://17161216230", volume = 0.5, pitch = 1.7 }, -- Roblox/resources packages/feature-packages-core/src/Configs/SharedConstants.lua:42 BUTTON_ACTIVATED, plus aigu que Pop ; à confirmer à l'écoute
 	Supernova = { id = "rbxassetid://1846248593", volume = 0.7, pitch = 0.85, maxLength = 3 }, -- Roblox/creator-docs tutorials/use-case-tutorials/audio/add-3D-audio.md:296 « celebratory », plus grave (séquence de 2,5 s)
-	Ping = { id = "", volume = 0.5 }, -- à choisir à l'écoute : piste rbxassetid://9114112830 (Roblox/resources experiences/plant/Plant.rbxl SoundService.SoundEffects.Plant, « gentle clink »)
-	Cheer = { id = "", volume = 0.6 }, -- à choisir à l'écoute : piste rbxassetid://1846248593 (Roblox/creator-docs tutorials/use-case-tutorials/audio/add-3D-audio.md:296) à hauteur 1,2 ; aucun son de foule officiel
+	Ping = { id = "rbxassetid://9114112830", volume = 0.5 }, -- Roblox/resources experiences/plant/Plant.rbxl SoundService.SoundEffects.Plant (« gentle clink ») ; à confirmer à l'écoute
+	Cheer = { id = "rbxassetid://1846248593", volume = 0.6, pitch = 1.2, maxLength = 1.5 }, -- Roblox/creator-docs tutorials/use-case-tutorials/audio/add-3D-audio.md:296 « celebratory », plus aigu que BeaconWin, court ; à confirmer à l'écoute
 	-- Navigation manette (docs/07-console-ps5.md §9) : sélection déplacée, retour (○), onglet ou
 	-- panneau changé (L1/R1, L2/R2), bout de liste atteint
 	Select = { id = "rbxassetid://17161204665", volume = 0.3 }, -- Roblox/resources packages/feature-packages-core/src/Configs/SharedConstants.lua:43 BUTTON_HOVER

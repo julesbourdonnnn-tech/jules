@@ -278,9 +278,11 @@ Dans `src/shared/Config/Events.luau`, la ligne `LaunchWeek = 2966,` correspond a
 
 ### 6.4 Sons (à décider avant le lancement)
 
-`src/shared/Config/Sounds.luau` liste les sons du jeu. La plupart des sons sont déjà choisis : interface, navigation à la manette, musique, capture, coupe, impact de la Comète, Balise réussie, Supernova… (sons publiés par Roblox, utilisables sans téléversement ; la provenance est notée sur chaque ligne). **Neuf sons de jeu restent vides** (muets) : `Scatter`, `Bank`, `Dash`, `CometWarn`, `CometSwipe`, `BeaconStart`, `WispPop`, `Ping`, `Cheer`. Le jeu est entièrement jouable sans eux.
+`src/shared/Config/Sounds.luau` liste les sons du jeu. Tous les sons sont remplis avec des sons publiés par Roblox (utilisables sans téléversement ; la provenance est notée sur chaque ligne) : interface, navigation à la manette, musique, capture, coupe, Comète, Balise, Supernova…
 
-À faire avant le lancement : **écouter chaque son rempli** dans Studio (un son peut être retiré ou mal choisi) et décider pour les neuf vides (une piste est proposée en commentaire sur la plupart des lignes). Remplir un son = remplacer `""` par `"rbxassetid://<nombre>"` (format exact) et noter sa provenance en commentaire sur la même ligne : un test automatique l'exige.
+**Neuf sons ont été remplis en dernier** et portent la mention « à confirmer à l'écoute » sur leur ligne : `Scatter`, `Bank`, `Dash`, `CometWarn`, `CometSwipe`, `BeaconStart`, `WispPop`, `Ping`, `Cheer`. La plupart réemploient un enregistrement déjà retenu, joué à une autre hauteur (par exemple `Bank` = le son des pièces, plus grave ; `Dash` et `Scatter` = le « whoosh », plus aigu ou plus grave ; `Cheer` = le morceau de fête de la Balise, plus aigu et coupé à 1,5 s). Les deux **moins sûrs** sont des enregistrements nouveaux : `CometWarn` (bip de compte à rebours, peut-être trop discret) et `Ping` (petit « clink »).
+
+À faire avant le lancement : **écouter chaque son** dans Studio (un son peut être retiré ou mal choisi), **ces neuf-là en premier**, en commençant par `CometWarn` et `Ping`. Un son qui déplaît se vide (`id = ""`) : il devient muet et le jeu reste entièrement jouable. Remplacer un son = mettre `"rbxassetid://<nombre>"` (format exact) et noter sa provenance en commentaire sur la même ligne : un test automatique l'exige.
 
 ---
 
@@ -520,7 +522,7 @@ Exemples d'enchaînements : Améliorer = △ puis ✕ ; Boutique = △, ✕, pui
 - [ ] Administrateurs ajoutés dans `src/server/Data/Admins.luau` (§6.1).
 - [ ] `LaunchWeek` recalé sur la date réelle dans `src/shared/Config/Events.luau` (§6.3).
 - [ ] Code de lancement `COMETCONGA` vérifié dans `src/server/Data/Codes.luau` (§6.2).
-- [ ] Chaque son rempli écouté dans Studio ; les neuf sons vides choisis, ou décision assumée de les laisser muets (§6.4).
+- [ ] Chaque son écouté dans Studio, en commençant par les neuf « à confirmer à l'écoute » (`CometWarn` et `Ping` d'abord) ; un son qui déplaît vidé ou remplacé (§6.4).
 - [ ] Plan de test dans Studio déroulé ([`06-rapport-qualite.md`](06-rapport-qualite.md) §5) : seul, à plusieurs, téléphone, manette, latence, 30 minutes sans erreur.
 - [ ] 12 joueurs pendant 30 min sur un **vrai téléphone Android modeste** : au moins 30 images par seconde, aucune erreur (GDD §15.2, porte 3).
 - [ ] Sauvegardes : quitter et revenir garde la progression ; achat suivi d'une déconnexion : rien n'est perdu ni crédité deux fois (GDD §15.2, porte 4).
@@ -635,6 +637,6 @@ Toutes ces corrections sont des **réglages de chiffres** dans `src/shared/Confi
 | `src/server/Data/Admins.luau` | UserIds des administrateurs LiveOps | §6.1 |
 | `src/server/Data/Codes.luau` | Codes promo et leurs dates de fin | §6.2 |
 | `src/shared/Config/Events.luau` | `LaunchWeek` (semaine du premier Starfall Saturday) | §6.3 |
-| `src/shared/Config/Sounds.luau` | Les neuf sons de jeu encore vides, après écoute (avec l'équipe technique) | §6.4 |
+| `src/shared/Config/Sounds.luau` | Après écoute, les sons à vider ou remplacer (d'abord les neuf « à confirmer à l'écoute ») (avec l'équipe technique) | §6.4 |
 
 Rien d'autre n'est nécessaire pour publier. Tout le reste (île, interface, règles, textes FR/EN, manette) est déjà dans le code et testé ([`06-rapport-qualite.md`](06-rapport-qualite.md)).

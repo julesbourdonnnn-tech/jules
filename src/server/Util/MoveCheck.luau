@@ -33,8 +33,9 @@
 --     CFrame décalé vers le haut ou sous le sol) ; un vrai saut (JumpHeight 7,2) ne passe qu'≈ 0,36 s
 --     au-dessus. CongaService pose de toute façon les miettes à hauteur debout.
 --   * « sol » = hauteur fournie par CongaService : la formule de l'île, relevée par ce qui porte
---     vraiment le personnage (stèle, tête d'un autre joueur : sonde Blockcast) ; un joueur honnête
---     debout sur un appui n'est jamais en vol bas. Les règles de racine enfouie se mesurent à la
+--     vraiment le personnage (stèle, poteaux : sonde Blockcast dans le groupe Characters ; jamais un
+--     autre joueur, les personnages ne se heurtent pas) ; un joueur honnête debout sur un appui
+--     n'est jamais en vol bas. Les règles de racine enfouie se mesurent à la
 --     SURFACE de l'île : min(sol fourni, WorldLayout.groundY) ; sol inconnu (NaN) : seules les
 --     bornes absolues s'appliquent
 --   * une infraction SIGNALE seulement (verdict "flag" : ce tick ne peut ni attraper, ni couper, ni

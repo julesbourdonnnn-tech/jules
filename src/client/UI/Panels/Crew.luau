@@ -15,7 +15,14 @@
 --     du même joueur prolonge la carte ; un inviteur qui quitte le serveur retire sa carte ;
 --     panneau ouvert (PanelController.Opened / Closed) : la carte attend en file sa fermeture (elle
 --     recouvrirait la colonne de droite de la fenêtre, inatteignable à la manette), échéance
---     inchangée, pastille « ! » d'Équipage tant qu'elle n'a pas expiré
+--     inchangée, pastille « ! » d'Équipage tant qu'elle n'a pas expiré ; place (placeCard) : la
+--     place libre que le HUD donne aux cartes (ScreenFX.cardPlacement : colonne de droite sous la
+--     minicarte, l'état et le suivi de quête) si elle ne recouvre aucun élément affiché du HUD
+--     (ScreenFX.hudObstacles), sinon en haut au centre sous la rangée des bannières, plus bas ou
+--     décalée si un bloc y est ; jamais dans le coin des actions (Dash, Ping, bouton de saut), ni
+--     sur la pastille d'événement, la minicarte, l'état, le suivi, ni (toucher) dans le quart du
+--     joystick ; recalculée toutes les 0,5 s tant qu'elle est affichée (rotation, colonne du HUD
+--     qui bouge, élément révélé)
 --   * manette (docs/07-console-ps5.md §6.7, A22) : la carte est un SelectionGroup fermé (Stop) ;
 --     △ la sélectionne via PanelController.focusTarget() → Panel.inviteTarget() (Accepter) ;
 --     Accepter ↔ Refuser reliés (NextSelection) ; repère sur Accepter : △ (ButtonY) tant que rien
@@ -45,6 +52,7 @@ local Types = require(Shared.Types)
 
 local Client = script.Parent.Parent.Parent
 local AudioController = require(Client.Controllers.AudioController)
+local EventPill = require(Client.UI.Hud.EventPill)
 local Platform = require(Client.Util.Platform)
 local Prefs = require(Client.Util.Prefs)
 local Root = require(Client.UI.Root)
@@ -53,6 +61,7 @@ local Theme = require(Client.UI.Theme)
 local Create = require(Client.UI.Create)
 local Juice = require(Client.UI.Juice)
 local Toast = require(Client.UI.Toast)
+local ScreenFX = require(Client.UI.ScreenFX)
 local WorldState = require(Client.Controllers.WorldStateController)
 local PanelController = require(Client.Controllers.PanelController)
 local Widgets = require(script.Parent.Widgets)
@@ -69,9 +78,21 @@ local SLIDE_TIME = 0.3
 local MINUTE = 60
 local REFRESH_INTERVAL = 1 -- s : minuteurs « Envoyée ! » et recharge de Quitter
 local PAD_GLYPH = 40 -- repère ✕ du bouton Accepter (px de référence, ≥ Config/Console.GlyphSize)
+-- Place de la carte d'invitation (px de référence de Root.safe, zone intérieure) : jamais sur le
+-- HUD (ScreenFX.hudObstacles : Dash, Ping et bouton de saut, minicarte, état, suivi…)
+local CARD_MARGIN = 16 -- bord de la zone intérieure (marge du HUD)
+local CARD_CLEARANCE = 8 -- écart minimal avec un bloc du HUD (CLEARANCE du HUD)
+local BANNER_TOP, BANNER_HEIGHT = 72, 72 -- rangée des bannières (UI/Banners : y 72, 640 × 72)
+local BEACON_BAR_SPACE = 34 -- bannières plus bas sous la barre de la Balise (UI/Banners)
+local JOYSTICK_TOP = 0.75 -- toucher : le quart inférieur gauche reste au joystick (GDD §10.1)
+local PLACE_INTERVAL = 0.5 -- s : la carte affichée suit la mise en page (rotation, colonne du HUD)
+local PLACE_MOVE = 0.2 -- s : glissement vers une nouvelle place
+-- zone intérieure pas encore mesurée (ou trop petite) : place historique, bord droit à 42 %
+local CARD_FALLBACK = UDim2.new(1, -16, 0.42, -INVITE_SIZE.Y / 2)
 
 type PlayerRow = { frame: Frame, dot: Frame, name: TextLabel, invite: TextButton, tag: TextLabel }
 type Invite = { inviterId: number, expiresAt: number }
+type Box = { x0: number, y0: number, x1: number, y1: number, soft: boolean? }
 
 local built = false
 local isOpen = false
@@ -104,6 +125,8 @@ local cardGlyph: Glyph.Handle? = nil -- repère manette d'Accepter : △, ← de
 local cardGlyphKey: Enum.KeyCode? = nil
 local shown: Invite? = nil
 local cardConn: RBXScriptConnection? = nil -- Heartbeat tant qu'une carte est visible
+local cardTarget: UDim2? = nil -- place courante de la carte (ancre (1, 0))
+local placeAcc = 0
 local removingConn: RBXScriptConnection? = nil
 local panelsWatched = false -- PanelController.Opened / Closed branchés (carte suspendue)
 local inviteWatched = false -- SocialService.GameInvitePromptClosed branché
@@ -684,11 +707,223 @@ local function paintCardButtons()
 	end
 end
 
--- Échéance de l'invitation affichée, lue sur l'horloge du jeu (Clock), comme le serveur
-local function stepCard()
+-- Place de la carte ------------------------------------------------------------------------------
+
+local function box(x: number, y: number, w: number, h: number): Box
+	return { x0 = x, y0 = y, x1 = x + w, y1 = y + h }
+end
+
+-- Deux blocs plus proches que CARD_CLEARANCE
+local function hits(a: Box, b: Box): boolean
+	return a.x0 < b.x1 + CARD_CLEARANCE
+		and b.x0 < a.x1 + CARD_CLEARANCE
+		and a.y0 < b.y1 + CARD_CLEARANCE
+		and b.y0 < a.y1 + CARD_CLEARANCE
+end
+
+local function hitsAny(r: Box, list: { Box }): boolean
+	for _, other in list do
+		if hits(r, other) then
+			return true
+		end
+	end
+	return false
+end
+
+local function finite(x: number): boolean
+	return x == x and x ~= math.huge and x ~= -math.huge
+end
+
+-- Barre Roblox (GuiService:GetGuiInset) : les px de la fenêtre du placeur du HUD la comptent
+local function guiInset(): Vector2
+	local inset = Vector2.zero
+	pcall(function()
+		local topLeft = GuiService:GetGuiInset()
+		if typeof(topLeft) == "Vector2" then
+			inset = topLeft
+		end
+	end)
+	return inset
+end
+
+-- Bas de la rangée des bannières (UI/Banners : plus bas quand la barre de la Balise est affichée)
+local function bannerBottom(): number
+	local ok, state = pcall(EventPill.compute, WorldState.events(), Clock.now(), Prefs.t, function(_: number)
+		return nil
+	end)
+	local bar = ok and type(state) == "table" and state.bar ~= nil
+	return BANNER_TOP + BANNER_HEIGHT + (if bar then BEACON_BAR_SPACE else 0)
+end
+
+-- Plus haute place libre (puis la plus proche du centre) d'une carte w × h sous `top`, hors des
+-- obstacles ; hauteurs essayées : `top` et juste sous chaque obstacle ; abscisses : centre, puis
+-- juste à gauche ou à droite de chaque obstacle
+local function freeSpot(obstacles: { Box }, top: number, W: number, H: number, w: number, h: number): Box?
+	local ys = { top }
+	for _, o in obstacles do
+		local y = o.y1 + CARD_CLEARANCE
+		if y > top and finite(y) then
+			table.insert(ys, y)
+		end
+	end
+	table.sort(ys)
+	local centre = (W - w) / 2
+	local xs = { centre }
+	for _, o in obstacles do
+		for _, x in { o.x0 - CARD_CLEARANCE - w, o.x1 + CARD_CLEARANCE } do
+			if finite(x) and x >= CARD_MARGIN and x + w <= W - CARD_MARGIN then
+				table.insert(xs, x)
+			end
+		end
+	end
+	table.sort(xs, function(a: number, b: number): boolean
+		local da, db = math.abs(a - centre), math.abs(b - centre)
+		if da ~= db then
+			return da < db
+		end
+		return a > b -- à égalité : du côté droit (loin du joystick)
+	end)
+	for _, y in ys do
+		if y + h > H - CARD_MARGIN then
+			break
+		end
+		for _, x in xs do
+			local candidate = box(x, y, w, h)
+			if not hitsAny(candidate, obstacles) then
+				return candidate
+			end
+		end
+	end
+	return nil
+end
+
+-- Place de la carte (UDim2, ancre (1, 0), px de référence de Root.safe) :
+--   1. la place libre que le HUD donne dans sa colonne de droite (sous la minicarte, l'état et le
+--      suivi de quête, ou à gauche de la minicarte) si elle ne recouvre aucun bloc affiché ;
+--   2. sinon en haut au centre sous la rangée des bannières, plus bas ou décalée quand un bloc y
+--      est (jamais dans le coin des actions : Dash, Ping, bouton de saut ; ni sur la pastille
+--      d'événement, la minicarte, l'état, le suivi, ACCLAMER, ni le quart du joystick) ;
+--   3. écran trop chargé : la même recherche sans l'état ni le suivi de quête (information, jamais
+--      un bouton), sous les bannières puis jusque dans leur rangée ;
+--   4. aucune place : le repli du HUD (au-dessus du Dash et du Ping), sinon en haut au centre.
+-- Zone pas encore mesurée (ou plus petite que la carte) : place historique.
+local function placeCard(frame: GuiObject): UDim2
+	local parent = frame.Parent
+	if parent == nil or not parent:IsA("GuiObject") then
+		return CARD_FALLBACK
+	end
+	local safe = parent :: GuiObject
+	local k = math.max(Root.scale(), 0.01)
+	local padding = safe:FindFirstChildOfClass("UIPadding")
+	local padL = if padding then padding.PaddingLeft.Offset else 0
+	local padT = if padding then padding.PaddingTop.Offset else 0
+	local padR = if padding then padding.PaddingRight.Offset else 0
+	local padB = if padding then padding.PaddingBottom.Offset else 0
+	local abs = safe.AbsoluteSize
+	local W = abs.X / k - padL - padR
+	local H = abs.Y / k - padT - padB
+	local w, h = INVITE_SIZE.X, INVITE_SIZE.Y
+	if not (finite(W) and finite(H)) or W < w + 2 * CARD_MARGIN or H < h + 2 * CARD_MARGIN then
+		return CARD_FALLBACK
+	end
+	local origin = safe.AbsolutePosition
+	local function toLocal(r: ScreenFX.ScreenRect): Box
+		return {
+			x0 = (r.x0 - origin.X) / k - padL,
+			y0 = (r.y0 - origin.Y) / k - padT,
+			x1 = (r.x1 - origin.X) / k - padL,
+			y1 = (r.y1 - origin.Y) / k - padT,
+			soft = r.soft,
+		}
+	end
+	local obstacles: { Box } = {}
+	for _, r in ScreenFX.hudObstacles() do
+		table.insert(obstacles, toLocal(r))
+	end
+	if Platform.inputKind() == Platform.TOUCH then
+		table.insert(obstacles, box(0, JOYSTICK_TOP * H, W / 2, H))
+	end
+	local function at(b: Box): UDim2
+		return UDim2.new(1, b.x1 - W, 0, b.y0)
+	end
+	local function inside(b: Box): boolean
+		return b.x0 >= 0 and b.y0 >= 0 and b.x1 <= W + 0.5 and b.y1 <= H + 0.5
+	end
+	-- 1. place du HUD (px de la fenêtre, barre Roblox comprise)
+	local placement = ScreenFX.cardPlacement(INVITE_SIZE, 0, 1)
+	local hudSpot: Box? = nil
+	if placement then
+		local inset = guiInset()
+		local right = (placement.right - inset.X - origin.X) / k - padL
+		local top = (placement.top - inset.Y - origin.Y) / k - padT
+		local candidate = box(right - w, top, w, h)
+		if inside(candidate) then
+			if not hitsAny(candidate, obstacles) then
+				return at(candidate)
+			end
+			hudSpot = candidate
+		end
+	end
+	-- 2. en haut au centre sous les bannières, sinon plus bas / à côté
+	local top = bannerBottom()
+	local spot = freeSpot(obstacles, top, W, H, w, h)
+	if spot then
+		return at(spot)
+	end
+	-- 3. écran trop chargé (640 × 360 pendant ACCLAMER) : sur l'état ou le suivi de quête plutôt
+	-- que sur un bouton
+	local buttons: { Box } = {}
+	for _, o in obstacles do
+		if not o.soft then
+			table.insert(buttons, o)
+		end
+	end
+	-- sous les bannières, sinon jusque dans leur rangée (passagères, elles passent devant la carte)
+	spot = freeSpot(buttons, top, W, H, w, h) or freeSpot(buttons, CARD_MARGIN, W, H, w, h)
+	if spot then
+		return at(spot)
+	end
+	-- 4. aucune place : le repli du HUD (juste au-dessus du Dash et du Ping), sinon en haut au
+	-- centre sous les bannières
+	if hudSpot then
+		return at(hudSpot)
+	end
+	return at(box((W - w) / 2, math.min(top, H - h), w, h))
+end
+
+-- Échéance de l'invitation affichée, lue sur l'horloge du jeu (Clock), comme le serveur ; la carte
+-- suit la mise en page (rotation, colonne du HUD qui bouge, élément révélé) toutes les 0,5 s
+local function stepCard(dt: number)
 	local invite = shown
 	if invite and Clock.now() >= invite.expiresAt then
 		showNext()
+		return
+	end
+	local frame = card
+	if invite == nil or frame == nil then
+		return
+	end
+	placeAcc += if type(dt) == "number" and finite(dt) then math.clamp(dt, 0, 1) else 0
+	if placeAcc < PLACE_INTERVAL then
+		return
+	end
+	placeAcc = 0
+	local target = placeCard(frame)
+	local current = cardTarget
+	if
+		current
+		and current.X.Scale == target.X.Scale
+		and current.Y.Scale == target.Y.Scale
+		and math.abs(current.X.Offset - target.X.Offset) < 1
+		and math.abs(current.Y.Offset - target.Y.Offset) < 1
+	then
+		return
+	end
+	cardTarget = target
+	if Juice.reducedMotion() then
+		frame.Position = target
+	else
+		Juice.tween(frame, PLACE_MOVE, { Position = target })
 	end
 end
 
@@ -729,8 +964,8 @@ local function ensureCard(): Frame
 	local frame = Widgets.card({
 		name = "CrewInvite",
 		size = UDim2.fromOffset(INVITE_SIZE.X, INVITE_SIZE.Y),
-		position = UDim2.new(1, -16, 0.42, 0),
-		anchor = Vector2.new(1, 0.5),
+		position = CARD_FALLBACK,
+		anchor = Vector2.new(1, 0),
 		color = Color3.fromRGB(56, 74, 120),
 		parent = safe,
 	})
@@ -846,12 +1081,16 @@ function showNext()
 	end
 	frame.Visible = true
 	startTimer(invite)
+	-- place libre du HUD (jamais sur le Dash, le Ping, le suivi de quête…), suivie ensuite (stepCard)
+	local target = placeCard(frame)
+	cardTarget = target
+	placeAcc = 0
 	if Juice.reducedMotion() then
-		frame.Position = UDim2.new(1, -16, 0.42, 0)
+		frame.Position = target
 	else
 		-- glisse depuis la droite (0,3 s Back Out)
-		frame.Position = UDim2.new(1, INVITE_SIZE.X + 40, 0.42, 0)
-		Juice.tween(frame, SLIDE_TIME, { Position = UDim2.new(1, -16, 0.42, 0) }, Enum.EasingStyle.Back)
+		frame.Position = UDim2.new(1, INVITE_SIZE.X + 40, target.Y.Scale, target.Y.Offset)
+		Juice.tween(frame, SLIDE_TIME, { Position = target }, Enum.EasingStyle.Back)
 	end
 	AudioController.play("Pop")
 	if cardConn == nil then

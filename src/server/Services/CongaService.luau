@@ -17,8 +17,16 @@
 --     (Snip.MaxDy), ni pour les joueurs ni pour les Gloomwisps, ni hors de vue des autres clients
 --   * sol de MoveCheck : max(sol analytique, appui réel sous la racine) ; l'appui réel vient d'une
 --     sonde workspace:Blockcast vers le bas (pavé Tuning.FloorProbeWidth, portée RootHeight +
---     Snip.MaxDy + FloorProbeMargin, personnage du joueur exclu, RespectCanCollide) : debout sur la
---     stèle du tableau ou sur la tête d'un ami, un joueur honnête n'est jamais en « vol bas »
+--     Snip.MaxDy + FloorProbeMargin, personnage du joueur exclu, RespectCanCollide, groupe de
+--     collision des personnages) : debout sur la stèle du tableau, un joueur honnête n'est jamais
+--     en « vol bas » ; un autre joueur n'est jamais un appui (voir la ligne suivante)
+--   * aucune collision entre personnages : Init enregistre le groupe de collision CHARACTER_GROUP
+--     (« Characters »), non collidable avec lui-même (collidable avec le décor) ; bindCharacter y
+--     place chaque BasePart du personnage (présentes et ajoutées plus tard : accessoires, outils).
+--     Sinon un enfant debout sur la tête d'un ami serait PORTÉ par lui (vitesse de l'ami + la
+--     sienne) : MoveCheck, qui ne connaît que SON WalkSpeed, y verrait un excès de vitesse
+--     (rafales, retours « instable » comptés, puis flags.lbBanned, définitif). Évite aussi qu'un
+--     joueur bloque la porte d'un Nid ou une victime avec son corps
 --   * captures : joueurs avec place libre × SpawnService.query (rayon Attrait + 0,75, |Δy| ≤ 6,
 --     Snip Rush ×1,5) ; le plus proche gagne, égalité → ordre tiré au hasard à chaque tick ;
 --     file pleine → Feedback "feedback.lineFull" au plus toutes les 5 s ; plafond 1 500 captures/h
@@ -70,6 +78,7 @@
 -- Dépendances : TOUS les services précédents, Util/MoveCheck, Logic/*, Config/*, Signals,
 -- Util/Notify, Util/RateLimit, Util/Analytics, Shared/Util/Clock.
 
+local PhysicsService = game:GetService("PhysicsService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -133,6 +142,9 @@ local INPUT_KINDS = 3
 local POST_SNIP_QUIT_WINDOW = 60 -- analytique PostSnipQuit (GDD §14.3)
 local WALKSPEED_EPSILON = 1e-3
 local CATCH_COMPACT = 256 -- compactage de la file des captures récentes
+-- Groupe de collision de toutes les pièces des personnages : non collidable avec lui-même (aucun
+-- joueur ne porte, ne pousse ni ne bloque un autre), collidable avec le décor (Default)
+local CHARACTER_GROUP = "Characters"
 
 -- Raretés nommées (clés de Config/Nebbies)
 local function rarityId(key: string): number
@@ -242,6 +254,9 @@ local warnedAt: { [string]: number } = {}
 local heartbeat: RBXScriptConnection? = nil -- l'unique connexion Heartbeat du serveur
 local accumulator = 0
 local rng = Random.new()
+-- CHARACTER_GROUP enregistré et rendu non collidable avec lui-même (setupCharacterGroup) ; faux :
+-- aucune pièce n'y est placée (un groupe inconnu ne doit jamais être affecté)
+local characterGroupReady = false
 
 -- ---------------------------------------------------------------------------------------------
 -- Appels protégés vers les autres services
@@ -553,6 +568,34 @@ local function requestReset(state: PlayerState, character: Model?)
 	state.resetPos = if root and root:IsA("BasePart") then root.Position else nil
 end
 
+-- Aucune collision entre personnages (en-tête) : enregistre CHARACTER_GROUP s'il n'existe pas et
+-- le rend non collidable avec lui-même. Une seule fois (Init) ; en cas d'échec (plafond de groupes
+-- du lieu…), le jeu continue sans groupe et aucune pièce n'y est placée.
+local function setupCharacterGroup()
+	if characterGroupReady then
+		return
+	end
+	local ok, err = pcall(function()
+		if not PhysicsService:IsCollisionGroupRegistered(CHARACTER_GROUP) then
+			PhysicsService:RegisterCollisionGroup(CHARACTER_GROUP)
+		end
+		PhysicsService:CollisionGroupSetCollidable(CHARACTER_GROUP, CHARACTER_GROUP, false)
+	end)
+	if ok then
+		characterGroupReady = true
+	else
+		report("collision group " .. CHARACTER_GROUP, err)
+	end
+end
+
+-- Place une pièce du personnage dans CHARACTER_GROUP (les autres instances sont ignorées).
+-- DescendantAdded est émis pour chaque descendant d'un sous-arbre ajouté (Handle d'un accessoire).
+local function joinCharacterGroup(inst: Instance)
+	if characterGroupReady and inst:IsA("BasePart") and inst.CollisionGroup ~= CHARACTER_GROUP then
+		inst.CollisionGroup = CHARACTER_GROUP
+	end
+end
+
 local function bindCharacter(state: PlayerState, character: Model)
 	disconnectAll(state.charConns)
 	state.character = character
@@ -560,6 +603,12 @@ local function bindCharacter(state: PlayerState, character: Model)
 	requestReset(state, character)
 	state.prev = nil
 	state.walkSpeed = -1
+	if characterGroupReady then
+		for _, inst in character:GetDescendants() do
+			joinCharacterGroup(inst)
+		end
+		table.insert(state.charConns, character.DescendantAdded:Connect(joinCharacterGroup))
+	end
 	local humanoid = character:FindFirstChildOfClass("Humanoid")
 	if humanoid then
 		table.insert(
@@ -744,7 +793,9 @@ local function finiteVector(v: Vector3): boolean
 end
 
 -- Paramètres de la sonde du joueur : son propre personnage est exclu (sinon ses jambes porteraient
--- un HipHeight relevé), les pièces sans collision (décor) sont ignorées
+-- un HipHeight relevé), les pièces sans collision (décor) sont ignorées et la sonde se fait dans
+-- CHARACTER_GROUP : elle ne voit que ce qui peut porter un personnage, jamais un autre joueur
+-- (traversé, il ne relève pas le sol d'un tricheur qui plane au-dessus de lui)
 local function floorParamsOf(state: PlayerState, character: Model): RaycastParams
 	local params = state.floorParams
 	if params == nil then
@@ -752,6 +803,9 @@ local function floorParamsOf(state: PlayerState, character: Model): RaycastParam
 		created.FilterType = Enum.RaycastFilterType.Exclude
 		created.RespectCanCollide = true
 		created.IgnoreWater = true
+		if characterGroupReady then
+			created.CollisionGroup = CHARACTER_GROUP
+		end
 		state.floorParams = created
 		params = created
 	end
@@ -763,7 +817,8 @@ local function floorParamsOf(state: PlayerState, character: Model): RaycastParam
 end
 
 -- Sol vu par MoveCheck : le sol analytique, relevé par l'appui réel le plus haut sous la racine
--- (stèle du tableau, tête d'un autre joueur, poteau…) à portée de la sonde. Une sonde ne peut que
+-- (stèle du tableau, poteau… ; jamais un autre joueur : aucune collision entre personnages, un
+-- joueur ne peut donc pas tenir sur la tête d'un autre) à portée de la sonde. Une sonde ne peut que
 -- RELEVER le sol (jamais de racine « enfouie » à cause d'elle) ; un vol bas sans appui à portée
 -- reste un vol bas. Les miettes restent, elles, sur le sol analytique.
 local function moveCheckGround(state: PlayerState, character: Model, pos: Vector3, groundY: number): number
@@ -1841,6 +1896,7 @@ end
 
 function CongaService.Init()
 	getRemotes()
+	setupCharacterGroup()
 	call("setLineBanker", EconomyService.setLineBanker, function(player: Player)
 		CongaService.forceParade(player)
 	end)

@@ -26,6 +26,10 @@
 --     (pas de curseur virtuel) avec l'icône ✕ de Roblox (GetImageForKeyCode(ButtonA)) à côté ; tant
 --     que l'écran est là, une sélection perdue (○ / △ d'InputController, objet derrière l'écran) lui
 --     est rendue si la manette est en main (console, ou dernière entrée = manette)
+--   * écran bas (téléphone à l'horizontale, 640 × 360) : le bloc d'échec rétrécit jusqu'à tenir sous
+--     les points de chargement (« Réessayer » ≥ 48 px réels) et se colle en bas à 12 px : bouton et
+--     curseur entiers, loin de la barre d'accueil ; replacé à chaque changement de taille
+--     (Fix_r5_partage_2.spec)
 -- Une seule connexion RenderStepped, coupée à la fermeture. Le temps de l'écran est la somme des dt
 -- des images (mesure purement technique, sans Shared/Util/Clock qui n'est pas encore répliqué).
 -- GDD : §3 (chargement), §9.2, §10.3 (écrans Chargement / Échec), §12.2.
@@ -72,6 +76,20 @@ local SELECTION_EDGE = 2
 local SELECTION_OUTSET = 4 -- px de débord autour du bouton (de chaque côté)
 local SELECTION_RADIUS = 16
 local TAU = 2 * math.pi
+
+-- Écran d'échec (px avant mise à l'échelle) : message, puis « Réessayer » et son curseur de sélection
+local FAIL_WIDTH = 420
+local MESSAGE_HEIGHT = 44
+local RETRY_TOP = 62 -- haut de « Réessayer » dans le bloc
+local RETRY_SIZE = Vector2.new(200, 64)
+-- hauteur du bloc : jusqu'au bas du curseur de sélection (débord + trait blanc + liseré sombre)
+local FAIL_HEIGHT = RETRY_TOP + RETRY_SIZE.Y + SELECTION_OUTSET + SELECTION_THICKNESS + SELECTION_EDGE
+local FAIL_TOP = 0.68 -- haut du bloc (fraction de la hauteur de l'écran) quand il tient en dessous
+local FAIL_MARGIN = 12 -- px réels laissés sous le bloc et sur ses côtés (bord, barre d'accueil)
+local FAIL_GAP = 6 -- px réels au moins entre les points de chargement et le message
+-- « Réessayer » haut d'au moins 48 px réels (bouton secondaire, GDD §10 : 80 px × 0,6), sauf sur un
+-- écran de moins de 339 px de large, où tenir dans la largeur passe avant
+local MIN_RETRY_HEIGHT = 48
 
 -- Constantes graphiques (charte du jeu : crépuscule violet → orangé, Puffkin crème)
 local SKY_TOP = Color3.fromRGB(34, 22, 70)
@@ -304,21 +322,6 @@ local function main()
 	stage.Parent = root
 	local scale = Instance.new("UIScale")
 	scale.Parent = stage
-	-- écran d'échec : même échelle sur téléviseur (1 ailleurs, inchangé) ; failScale anime l'entrée
-	local failBase = 1
-	local failScale: UIScale? = nil
-	local function rescale()
-		local camera = workspace.CurrentCamera
-		local viewport = if camera then camera.ViewportSize else REFERENCE
-		local large = isLargeDisplay()
-		scale.Scale = screenScale(viewport, large)
-		failBase = if large then scale.Scale else 1
-		local fs = failScale
-		if fs then
-			fs.Scale = failBase
-		end
-	end
-	rescale()
 
 	-- Puffkin en Frames : ombre, corps, 3 bouffées, yeux (reflets), joues, sourire
 	local groundY = 190
@@ -400,19 +403,58 @@ local function main()
 	local fail = Instance.new("Frame")
 	fail.Name = "Fail"
 	fail.AnchorPoint = Vector2.new(0.5, 0)
-	fail.Position = UDim2.fromScale(0.5, 0.68)
-	fail.Size = UDim2.fromOffset(420, 150)
+	fail.Position = UDim2.fromScale(0.5, FAIL_TOP)
+	fail.Size = UDim2.fromOffset(FAIL_WIDTH, FAIL_HEIGHT)
 	fail.BackgroundTransparency = 1
 	fail.Visible = false
 	fail.Parent = root
 	local failUIScale = Instance.new("UIScale")
 	failUIScale.Name = "FailScale"
-	failUIScale.Scale = failBase
 	failUIScale.Parent = fail
-	failScale = failUIScale
+
+	-- Échelle et placement (docs/07-console-ps5.md §3). La scène suit l'échelle de l'écran. Le bloc
+	-- d'échec (failBase, que failUIScale anime à l'entrée) garde l'échelle « 10 pieds » sur
+	-- téléviseur (1 ailleurs) mais, sur un écran bas (téléphone à l'horizontale : 640 × 360,
+	-- 667 × 375), il rétrécit jusqu'à tenir sous les points de chargement (« Réessayer » ≥ 48 px
+	-- réels) et se colle en bas, à FAIL_MARGIN px : « Réessayer » et son curseur restent entiers
+	-- (IgnoreGuiInset : le bas de l'écran est aussi celui de la barre d'accueil). Si même la taille
+	-- minimale ne tient pas, la scène remonte d'autant, sans sortir par le haut.
+	local failBase = 1
+	local function rescale()
+		local camera = workspace.CurrentCamera
+		local viewport = if camera then camera.ViewportSize else REFERENCE
+		local width, height = viewport.X, viewport.Y
+		local large = isLargeDisplay()
+		local s = screenScale(viewport, large)
+		scale.Scale = s
+		local stageHalf = stage.Size.Y.Offset / 2
+		-- bas des points de chargement sous le centre de la scène (px avant mise à l'échelle)
+		local dotsBelow = dotsFrame.Position.Y.Offset + dotsFrame.Size.Y.Offset - stageHalf
+		local fitHeight = (height / 2 - dotsBelow * s - FAIL_GAP - FAIL_MARGIN) / FAIL_HEIGHT
+		local fitWidth = (width - 2 * FAIL_MARGIN) / FAIL_WIDTH
+		local base = if large then s else 1
+		failBase = math.min(base, fitWidth, math.max(MIN_RETRY_HEIGHT / RETRY_SIZE.Y, fitHeight))
+		local top = FAIL_TOP * height
+		local blockHeight = FAIL_HEIGHT * failBase
+		if top + blockHeight > height - FAIL_MARGIN then
+			-- collé en bas : l'entrée (UIScale autour de l'ancre) grandit alors vers le haut
+			top = height - FAIL_MARGIN - blockHeight
+			fail.AnchorPoint = Vector2.new(0.5, 1)
+			fail.Position = UDim2.new(0.5, 0, 1, -FAIL_MARGIN)
+		else
+			fail.AnchorPoint = Vector2.new(0.5, 0)
+			fail.Position = UDim2.fromScale(0.5, FAIL_TOP)
+		end
+		local shift = math.max(0, height / 2 + dotsBelow * s + FAIL_GAP - top)
+		shift = math.min(shift, math.max(0, height / 2 - stageHalf * s))
+		stage.Position = UDim2.new(0.5, 0, 0.5, -shift)
+		failUIScale.Scale = failBase
+	end
+	rescale()
+
 	local message = Instance.new("TextLabel")
 	message.Name = "Message"
-	message.Size = UDim2.new(1, 0, 0, 44)
+	message.Size = UDim2.new(1, 0, 0, MESSAGE_HEIGHT)
 	message.BackgroundTransparency = 1
 	message.Text = texts.wake
 	message.TextScaled = true
@@ -426,8 +468,8 @@ local function main()
 	local button = Instance.new("TextButton")
 	button.Name = "RetryButton"
 	button.AnchorPoint = Vector2.new(0.5, 0)
-	button.Position = UDim2.new(0.5, 0, 0, 62)
-	button.Size = UDim2.fromOffset(200, 64)
+	button.Position = UDim2.new(0.5, 0, 0, RETRY_TOP)
+	button.Size = UDim2.fromOffset(RETRY_SIZE.X, RETRY_SIZE.Y)
 	button.BackgroundColor3 = BUTTON_COLOR
 	button.AutoButtonColor = true
 	button.Text = texts.retry
@@ -561,7 +603,8 @@ local function main()
 		local holder = Instance.new("Frame")
 		holder.Name = "PadGlyph"
 		holder.AnchorPoint = Vector2.new(1, 0.5)
-		holder.Position = UDim2.new(0.5, -button.Size.X.Offset / 2 - 8, 0, 62 + button.Size.Y.Offset / 2)
+		holder.Position =
+			UDim2.new(0.5, -button.Size.X.Offset / 2 - 8, 0, RETRY_TOP + button.Size.Y.Offset / 2)
 		holder.Size = UDim2.fromOffset(GLYPH_SIZE, GLYPH_SIZE)
 		holder.BackgroundTransparency = 1
 		holder:SetAttribute("GlyphKey", Enum.KeyCode.ButtonA.Name)

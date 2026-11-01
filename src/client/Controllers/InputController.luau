@@ -7,12 +7,15 @@
 --     la Comète, remote Dash, VFXController.playDash, son Dash ; synchronisation sur l'attribut
 --     Player « DashReadyAt » ; panneau ouvert, □ est absorbé sans Dash (R2 l'est par PanelController)
 --   * roue de pings : Q (puis 1-6 ou clic), croix ↑ (puis stick ou croix ← / → en anneau, ✕
---     envoie, ○ ferme), bouton tactile 72 px ; 6 secteurs de 96 px dessinés en Frames ; aucune
---     sélection GuiService dans la roue (tout passe par ContextActionService) ; à la manette, repères
---     UI/Glyph ✕ « Envoyer » et ○ (« PadGlyph », au centre, à la place du « ✕ » dessiné, gardé au
---     toucher et au clavier) ; touches 1-6 affichées au clavier seulement ; remote Ping(kind) au
---     plus 1 / 1,5 s ; emote locale (Humanoid:PlayEmote) : Suis-moi → point, Bravo → cheer,
---     Merci → wave
+--     envoie, ○ ferme), bouton tactile 72 px ; garde posée par le HUD (setPingGate : Q / croix ↑
+--     passent tant que le bouton Ping n'est pas présenté par l'accueil, GDD §3) ; jamais ouverte
+--     avec un panneau (PanelController.Opened la referme, openPingWheel n'ouvre rien panneau ouvert ;
+--     écran « PingWheel » sur son propre plan, DisplayOrder 25 : entre le HUD et les panneaux) ;
+--     6 secteurs de 96 px dessinés en Frames ; aucune sélection GuiService dans la roue (tout passe
+--     par ContextActionService) ; à la manette, repères UI/Glyph ✕ « Envoyer » et ○ (« PadGlyph »,
+--     au centre, à la place du « ✕ » dessiné, gardé au toucher et au clavier) ; touches 1-6
+--     affichées au clavier seulement ; remote Ping(kind) au plus 1 / 1,5 s ; emote locale
+--     (Humanoid:PlayEmote) : Suis-moi → point, Bravo → cheer, Merci → wave
 --   * raccourcis : U, C, J, B, G → panneaux (PanelController) ; M / croix ↓ : minicarte ; F /
 --     croix → : acclamer ; croix ← : suivi de quête (QuestToggled)
 --   * retours (son « Back » à chaque pas en arrière, docs/07 §6.2-§6.3) : △ (ButtonY) : panneau
@@ -112,6 +115,9 @@ local SEND_HINT_Y = -(CENTER / 2 + HINT_GAP + Console.GlyphSize / 2)
 local CLOSE_HINT_HEIGHT = 24
 local CLOSE_HINT_Y = CENTER / 2 + HINT_GAP + CLOSE_HINT_HEIGHT / 2
 local STICK_DEADZONE = 0.45
+-- Plan de l'écran « PingWheel » : au-dessus du HUD (10), de la minicarte (11) et de l'accueil (20),
+-- sous les panneaux (30) : jamais d'égalité avec eux (ordre de dessin indéfini)
+local WHEEL_DISPLAY_ORDER = 25
 local REFUSE_TOAST_INTERVAL = 2
 local EMOTES: { [number]: string } = { [2] = "point", [4] = "cheer", [6] = "wave" }
 
@@ -181,6 +187,8 @@ local panelArgs: { [string]: any } = {}
 local uiTime = 0 -- s : somme des dt du Heartbeat (garde du double appui, avance aussi en test)
 local openedAt: { [string]: number } = {} -- panneau → uiTime de son dernier PanelController.Opened
 local panelGate: ((Types.PanelName) -> boolean)? = nil
+-- garde de la roue de pings posée par le HUD (setPingGate : bouton Ping présenté), nil = permise
+local pingGate: (() -> boolean)? = nil
 -- cible annoncée par une icône △ (accueil, carte d'invitation), posée par le HUD (setRailTarget)
 local railTarget: (() -> GuiObject?)? = nil
 local wheelGui: Frame? = nil
@@ -372,7 +380,7 @@ local function buildWheel(): Frame
 	if wheelGui and wheelGui.Parent then
 		return wheelGui :: Frame
 	end
-	local safe = Root.safe("PingWheel", 30)
+	local safe = Root.safe("PingWheel", WHEEL_DISPLAY_ORDER)
 	local wheel = Create("Frame", {
 		Name = "Wheel",
 		AnchorPoint = Vector2.new(0.5, 0.5),
@@ -655,6 +663,22 @@ function InputController.setPanelGate(fn: ((Types.PanelName) -> boolean)?)
 	panels("setGate", fn)
 end
 
+-- Garde de la roue de pings (posée par le HUD : bouton Ping présenté par l'accueil, GDD §3) : Q et
+-- la croix ↑ passent tant qu'elle répond autre chose que true (erreur comprise) ; une roue déjà
+-- ouverte se referme toujours. nil : roue permise
+function InputController.setPingGate(fn: (() -> boolean)?)
+	pingGate = fn
+end
+
+local function pingAllowed(): boolean
+	local gate = pingGate
+	if gate == nil then
+		return true
+	end
+	local ok, result = pcall(gate)
+	return ok and result == true
+end
+
 -- Acclamation : le HUD signale qu'une fenêtre est ouverte
 function InputController.setCheerAvailable(available: boolean)
 	cheerAvailable = available == true
@@ -699,8 +723,13 @@ local function onWheelAction(
 	_input: InputObject
 ): Enum.ContextActionResult
 	-- panneau ouvert : jamais de roue de pings derrière la fenêtre (Q au clavier ; à la manette,
-	-- PanelNavGuard de PanelController absorbe déjà la croix) ; une roue déjà ouverte se referme
-	if not began(state) or loadingShown() or (currentPanel() ~= nil and not wheelOpen) then
+	-- PanelNavGuard de PanelController absorbe déjà la croix) ; bouton Ping pas encore présenté par
+	-- l'accueil (garde du HUD) : ni roue, ni stick, ni ✕ pris (GDD §3) ; une roue déjà ouverte se
+	-- referme
+	if not began(state) or loadingShown() then
+		return Enum.ContextActionResult.Pass
+	end
+	if not wheelOpen and (currentPanel() ~= nil or not pingAllowed()) then
 		return Enum.ContextActionResult.Pass
 	end
 	if wheelOpen then
@@ -937,7 +966,9 @@ end
 -- Roue de pings ---------------------------------------------------------------------------------
 
 function InputController.openPingWheel()
-	if wheelOpen then
+	-- jamais avec un panneau ouvert (ex. bouton Ping du HUD cliqué derrière la fenêtre) : ses
+	-- actions de haute priorité (1-6, stick, ✕, croix) prendraient les entrées du panneau
+	if wheelOpen or currentPanel() ~= nil then
 		return
 	end
 	local wheel = buildWheel()
@@ -1136,8 +1167,11 @@ function InputController.Start()
 		end
 	end)
 	Prefs.LanguageChanged:Connect(refreshWheelTexts)
+	-- un panneau qui s'ouvre (raccourci, rail du HUD, ou seul comme ReturnScreen) referme la roue :
+	-- ses actions de haute priorité ne restent pas liées derrière la fenêtre
 	PanelController.Opened:Connect(function(name: Types.PanelName)
 		openedAt[name] = uiTime
+		InputController.closePingWheel()
 	end)
 	RunService.Heartbeat:Connect(function(dt: number)
 		if isFinite(dt) and dt > 0 then

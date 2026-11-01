@@ -268,7 +268,11 @@ local function present(entry: Entry)
 		Juice.tween(banner, SLIDE_IN, { Position = target }, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
 	end
 	local def = KINDS[entry.payload.kind]
-	local sound = if entry.payload.personal then "Reward" else def.sound
+	-- bannière personnelle : Reward, sauf le jalon d'Atlas dont ScreenFX joue déjà le LevelUp (GDD
+	-- §9.4, un seul jingle par moment) : sa bannière reste muette (KINDS sans son)
+	local sound = if entry.payload.personal and entry.payload.kind ~= "atlasMilestone"
+		then "Reward"
+		else def.sound
 	if sound then
 		AudioController.play(sound)
 	end

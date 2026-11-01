@@ -407,6 +407,8 @@ local API = {
 			"openPingWheel",
 			"closePingWheel",
 			"ping",
+			"setPanelGate",
+			"setPingGate",
 		},
 		signals = { "Dashed", "InputTypeChanged", "CheerRequested", "MinimapToggled" },
 	},

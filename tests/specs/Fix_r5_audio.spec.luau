@@ -1,9 +1,9 @@
 --!nocheck
 -- Correctif r5-audio (passe finale) : un jeu qui sonne, sans danger avec de vrais IDs
 --   * Config/Sounds : les sons de jeu de confiance haute ou moyenne sont remplis avec des sons publiés
---     par Roblox (provenance sur la ligne : Contract.spec, Fix_r4_partage_4.spec) ; les pistes trop
---     incertaines restent vides, à choisir à l'écoute ; garde-fous de lecture posés sur chaque clé
---     (maxLength, fade, perFrame, concurrent)
+--     par Roblox (provenance sur la ligne : Contract.spec, Fix_r4_partage_4.spec) ; les pistes les
+--     moins sûres sont remplies en dernier (release r5) et marquées « à confirmer à l'écoute » sur
+--     leur ligne ; garde-fous de lecture posés sur chaque clé (maxLength, fade, perFrame, concurrent)
 --   * AudioController : ID vide = rien ; échec de chargement = clé retirée, un avertissement, aucune
 --     erreur ; effets coupés = aucun Sound et les copies en cours s'arrêtent ; musique coupée dans le
 --     profil = la musique ne joue jamais (elle attend l'instantané du profil, puis monte en fondu) ;
@@ -41,8 +41,20 @@ return function(T)
 		Music = { id = "rbxassetid://1837849285", volume = 0.25, pitch = 1 },
 		Snip = { id = "rbxassetid://9125571221", volume = 0.6, pitch = 1 },
 		CometImpact = { id = "rbxassetid://9125402735", volume = 0.5, pitch = 1 },
+		-- remplis en dernier (release r5), surtout par réemploi d'un enregistrement à une autre hauteur ;
+		-- à confirmer à l'écoute avant la publication (docs/05 §6.4, docs/06 M12)
+		Bank = { id = "rbxassetid://9113849651", volume = 0.6, pitch = 0.8 },
+		Cheer = { id = "rbxassetid://1846248593", volume = 0.6, pitch = 1.2 },
+		CometWarn = { id = "rbxassetid://7743999789", volume = 0.7, pitch = 1 },
+		Ping = { id = "rbxassetid://9114112830", volume = 0.5, pitch = 1 },
+		Dash = { id = "rbxassetid://17161253544", volume = 0.5, pitch = 1.5 },
+		CometSwipe = { id = "rbxassetid://18635972230", volume = 0.6, pitch = 1.3 },
+		WispPop = { id = "rbxassetid://17161216230", volume = 0.5, pitch = 1.7 },
+		Scatter = { id = "rbxassetid://17161253544", volume = 0.5, pitch = 0.8 },
+		BeaconStart = { id = "rbxassetid://17161210152", volume = 0.6, pitch = 0.8 },
 	}
-	-- Pistes trop incertaines (ou aucune) : vides, à choisir à l'écoute
+	-- Pistes les moins sûres : remplies, mais « à confirmer à l'écoute » sur leur ligne (le
+	-- propriétaire les écoute en premier et peut les vider sans rien casser)
 	local BY_EAR =
 		{ "Bank", "Cheer", "CometWarn", "Ping", "Dash", "CometSwipe", "WispPop", "Scatter", "BeaconStart" }
 
@@ -130,21 +142,26 @@ return function(T)
 			end
 		end)
 
-		it("pistes incertaines : vides, avec un commentaire « à l'écoute » sur leur ligne", function()
-			local S = sounds(Harness.new({ mode = "client" }))
-			for _, key in BY_EAR do
-				local line = declarationLine(key)
-				expect({
-					key = key,
-					id = S[key].id,
-					byEar = line ~= nil and string.find(line, "écoute", 1, true) ~= nil,
-				}).toEqual({
-					key = key,
-					id = "",
-					byEar = true,
-				})
+		it(
+			"pistes les moins sûres : remplies (ID publié par Roblox), « à confirmer à l'écoute » sur leur ligne",
+			function()
+				local S = sounds(Harness.new({ mode = "client" }))
+				for _, key in BY_EAR do
+					local line = declarationLine(key)
+					expect({
+						key = key,
+						filled = string.match(S[key].id, "^rbxassetid://%d+$") ~= nil,
+						byEar = line ~= nil and string.find(line, "écoute", 1, true) ~= nil,
+						source = line ~= nil and string.find(line, "Roblox/", 1, true) ~= nil,
+					}).toEqual({
+						key = key,
+						filled = true,
+						byEar = true,
+						source = true,
+					})
+				end
 			end
-		end)
+		)
 
 		it(
 			"garde-fous sur chaque clé : maxLength ≤ 4 s, fondu, plafonds par image et simultané",
@@ -183,7 +200,12 @@ return function(T)
 
 	describe("Fix r5-audio › AudioController : sûr avec de vrais IDs", function()
 		it("ID vide : aucune instance, play() ne crée rien, aucun avertissement", function()
-			local h, Audio, S = audio()
+			-- clé vidée par le test (un son qui déplaît à l'écoute se vide ainsi, docs/05 §6.4)
+			local h, Audio, S = audio({
+				before = function(S)
+					S.Bank.id = ""
+				end,
+			})
 			expect(S.Bank.id).toBe("")
 			local folder = h.game:GetService("SoundService").GameSounds
 			expect(folder:FindFirstChild("Bank")).toBeNil()
