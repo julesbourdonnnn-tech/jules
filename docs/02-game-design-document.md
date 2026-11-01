@@ -1,6 +1,6 @@
 # Raise a Squishy — Game Design Document
 
-> **Document 02 : conception du jeu (GDD).** Version 1.2 du 1er novembre 2026. La version 1.1 a appliqué les critiques indépendantes (sécurité des enfants, console et ergonomie). La version 1.2 applique la **décision du propriétaire du 1er novembre 2026** : **console d'abord** (PS5 avec DualSense sur une télé, puis Xbox et PC ; pas de téléphone au lancement) et **zéro bug** au lancement. Cette décision passe avant l'étude de marché et le concept du jury quand ils se contredisent. Ce qui a changé, ce qui a été refusé et les questions ouvertes sont dans le **Journal de révision**, à la fin. Statut : à valider par le propriétaire, puis base de la production.
+> **Document 02 : conception du jeu (GDD).** Version 1.3 du 1er novembre 2026. La version 1.1 a appliqué les critiques indépendantes (sécurité des enfants, console et ergonomie). La version 1.2 applique la **décision du propriétaire du 1er novembre 2026** : **console d'abord** (PS5 avec DualSense sur une télé, puis Xbox et PC ; pas de téléphone au lancement) et **zéro bug** au lancement. Cette décision passe avant l'étude de marché et le concept du jury quand ils se contredisent. La version 1.3 traite les 42 remarques qui n'étaient pas parvenues aux versions précédentes (fin de la critique console, toute la critique technique et économique) : économie refaite et resimulée (prix des dalles, hors ligne, boosts, jauge), anti-triche des captures et des bonds, schéma, monture, textes du monde, vibrations. Ce qui a changé, ce qui a été refusé et les questions ouvertes sont dans le **Journal de révision**, à la fin. Statut : à valider par le propriétaire, puis base de la production.
 > Documents liés : [`01-analyse-marche-tycoon.md`](01-analyse-marche-tycoon.md) (étude de marché, citée « Étude §x ») et [`03-decision-du-jury.md`](03-decision-du-jury.md) (concept final au §8, idées greffées au §6, faiblesses corrigées au §7, calendrier au §8.10, risques au §9).
 > Modèle de format : le GDD de Comet Conga (`/home/user/jules/roblox-game/docs/02-game-design-document.md`), sa couche console (`07-console-ps5.md`) et les leçons de son rapport qualité (`06-rapport-qualite.md`).
 > **Règle de lecture.** Chaque chiffre de ce document est une **valeur de départ décidée**, à placer telle quelle dans `src/shared/Config/*`. Les valeurs d'économie sont vérifiées par la simulation Lune du §4.24, qui bloque la publication si un jalon sort de sa tolérance. Ensuite, les données réelles peuvent ajuster ces valeurs sans toucher au code.
@@ -26,7 +26,7 @@
 | **Plop** | La première espèce (Jelly, Commun). Ton premier Plop est ton Meilleur Ami n° 1 d'office |
 | **SPLORCH** (presser) | Appuyer sur un squishy : il s'écrase, rebondit et crache des pièces |
 | **PERFECT** | Presser au sommet du rebond : bonus, jamais d'échec |
-| **Dalle** (tile) | Pastille lumineuse au sol du ranch. On marche dessus pour acheter |
+| **Dalle** (tile) | Pastille lumineuse au sol du ranch. On s'arrête dessus 0,6 s pour acheter |
 | **Tapis à Goûter** (Snack Mat) | Dalle qui fait grossir plus vite tous les squishies du ranch |
 | **Cuve à Gelée** (Jelly Vat) | Machine gratuite qui fait naître des squishies au hasard (probabilités affichées) |
 | **Bassin de Fusion** (Fusion Pool) | Deux jumeaux lancés dedans fusionnent ; le résultat peut fusionner encore (combo) |
@@ -38,7 +38,7 @@
 | **Mode Rush / mode Cozy** | Chaque joueur choisit : participer au BOOP RUSH, ou rester tranquille. On est en Cozy tant qu'on n'a pas choisi |
 | **Wild Wobbler** | Créature sans propriétaire lâchée par le serveur pendant le Rush : quelques-unes pour tous, plus une personnelle pour chaque joueur (Rush ou Cozy) |
 | **MEGA SQUISH** | Un squishy géant atterrit sur la place ; tout le serveur le presse ensemble |
-| **Jauge du serveur** (Wobble Meter) | Remplie par les actions de tous ; pleine = ×2 pour tout le serveur pendant 5 min |
+| **Jauge du serveur** (Wobble Meter) | Remplie par les actions de tous ; pleine = ×2 pour tout le serveur pendant 5 min, puis 20 min de sieste de Big Plop |
 | **Grand Splorch** | La renaissance (rebirth) : le plus gros squishy éclate en cadeaux pour tout le serveur |
 | **Étagère à trophées** (Trophy Shelf) | Garde la taille record de chaque espèce, avec un petit bonus permanent |
 | **Squishydex** | Le livre de collection : 26 espèces, 234 entrées de mutation, des badges d'étoiles |
@@ -63,12 +63,12 @@
 | Genre | Tycoon de créatures : croissance automatique + collection + fusion + renaissance, avec des poursuites amicales et des événements coopératifs de serveur |
 | Joueurs | **16 par serveur** (`Players.MaxPlayers = 16`), **16 ranchs** |
 | Plateformes | **Console d'abord** (décision du propriétaire, 1er novembre 2026) : **PlayStation 5** avec DualSense sur une télé vue à 2,5-3 m, puis **Xbox**, puis **PC** (manette, ou clavier et souris). **Téléphones et tablettes : non visés au lancement** : aucun contrôle tactile, aucune disposition pour petit écran. Types d'appareils publiés : **Ordinateur + Console** (VR coupée). Le PC reste car c'est là qu'on teste dans Studio |
-| Contrôles | **Manette d'abord**, sans curseur virtuel : □ = action principale selon le contexte (presser, lancer, attraper, booper), ○ = Prendre / Poser, R2 = Bondir (qui attrape aussi), L2 = Monter, △ ou croix ↓ = Menu. Clavier et souris en second, même disposition (E, Q, Maj, R, Tab) |
+| Contrôles | **Manette d'abord**, sans curseur virtuel : □ = action principale selon le contexte (presser, lancer, attraper, booper), ○ = Prendre / Poser, R2 = Bondir (qui attrape aussi), L2 = Monter, △ ou croix ↓ = Menu. Clavier et souris en second, même disposition (E, Q, Maj, R, M) |
 | Qualité | **Zéro bug au lancement** : mécaniques vérifiées par le serveur (distances, états), jamais de physique ni d'animation dans les règles, un délai sur chaque état, 10 couches de tests (§12.10) et un panneau **Diagnostics** des erreurs en ligne pour les administrateurs (§12.11) |
 | Classification visée | **Minimal** au questionnaire de maturité (Mild au pire) ; éligible aux catalogues Roblox Kids et Select |
 | Session cible | 15 à 30 min. Le rythme fixe (fuite 60 s, Rush 10 min, MEGA 30 min) pousse au-delà de 10 min (seuil des Creator Rewards) |
 | Public | 6-14 ans au cœur, satisfaisant pour les ados et les adultes collectionneurs |
-| Monétisation | 4 passes « Pour toujours » et 3 familles de produits **à résultat connu**. Aucun hasard payant, aucune chance achetable (même avec des pièces), aucune pub vidéo |
+| Monétisation | 4 passes « Pour toujours » et 2 familles de produits **à résultat connu** (Squish Party, tenues). Aucun hasard payant, aucune chance achetable (même avec des pièces), **aucune monnaie vendue au lancement**, aucune pub vidéo |
 | Code | Luau `--!strict`, Rojo, aucun travail manuel dans Studio. Estimation ≈ 12 800 lignes de jeu au premier passage, hors tests ; ≈ 9 000 lignes de tests et d'outils en plus (§12.12). Comet Conga a fini à 58 500 lignes après 6 tours de QA : prévoir large |
 | Contenu au lancement | 24 espèces (6 familles × 4) + 2 secrètes, 7 raretés, 9 mutations, 1 ville, 16 ranchs, 6 événements récurrents (créature en fuite, Golden Wobbler, BOOP RUSH, MEGA SQUISH, jauge du serveur, Jelly Moon) |
 | Date visée | **Samedi 12 décembre 2026** (costume d'hiver). Repli : samedi 9 janvier 2027 si les portes de qualité ne sont pas vertes (§18). La barre « zéro bug » passe avant la date |
@@ -191,8 +191,8 @@ Repères GameAnalytics 2026 : médiane J1 10,3 % / J7 1,6 % / J30 0,5 % ; top 1 
 | Boucle | Durée | Contenu | But |
 |---|---|---|---|
 | **Rythme du serveur** | 60 s / 10 min / 30 min | Créature en fuite personnelle (60 s), Golden Wobbler (4 par heure), BOOP RUSH (90 s toutes les 10 min), MEGA SQUISH (toutes les 30 min), jauge du serveur | Un rendez-vous toutes les quelques minutes, sessions de plus de 10 min |
-| **Boucle de renaissance** | 14 min au début, puis de plus en plus long | Atteindre l'objectif de taille → Grand Splorch → tout regrandit 2 fois plus vite et la Cuve s'améliore | Le plaisir de « recommencer plus vite et plus gros » |
-| **Boucle quotidienne** | 1 jour | Croissance hors ligne visible, Nourrir Plop (jours au total), 3 objectifs du jour | Habitude J2-J7 |
+| **Boucle de renaissance** | 13 min au début, puis de plus en plus long | Atteindre l'objectif de taille → Grand Splorch → tout regrandit 2 fois plus vite et la Cuve s'améliore | Le plaisir de « recommencer plus vite et plus gros » |
+| **Boucle quotidienne** | 1 jour | Croissance hors ligne visible (jusqu'à 90 % de l'objectif : le Grand Splorch se fait en jeu), Nourrir Plop (jours au total, boost ×2 de 5 min), 3 objectifs du jour | Habitude J2-J7 |
 | **Boucle hebdomadaire** | 7 jours | Jelly Moon le samedi (et rattrapage le dimanche), 5 classements de la semaine, une nouvelle espèce par semaine (données) | Pic du samedi, rendez-vous |
 | **Boucle de collection** | jours → semaines | Squishydex (26 espèces, 234 mutations, badges d'étoiles), bonus de famille, Étagère à trophées, Fame | Profondeur J8-J28 |
 | **Boucle sociale** | continue | Ranchs voisins, bonus d'amis, pet-sitting, poursuites, MEGA, jauge, cadeaux du Grand Splorch, emotes, applaudissements | Jeu entre amis, signal de classement |
@@ -226,7 +226,7 @@ Toutes les phases viennent du module pur `EventClock` (§12.4), à partir de `Cl
 
 Heures à Paris en hiver : Jelly Moon à 17 h, 19 h, 21 h et 23 h le samedi, 17 h le dimanche. À New York en hiver : 11 h, 13 h, 15 h, 17 h.
 
-**Un seul grand spectacle à la fois** [`Events.SpectacleGap = 20`]. Les grands spectacles sont : BOOP RUSH, MEGA SQUISH, Grand Splorch, danse de Big Plop (jauge pleine). Deux grands spectacles sont toujours séparés d'au moins 20 s. Les horaires fixes le garantissent entre Rush, MEGA et Golden Wobbler (le Golden n'est pas un grand spectacle). Le Grand Splorch et la danse de Big Plop, déclenchés par les joueurs, attendent dans une **file du serveur** : le HUD affiche « Ton Grand Splorch passe dans 0:35 ». Un Grand Splorch au plus toutes les 20 s par serveur, dans l'ordre d'arrivée. Pendant un Rush (90 s), l'attente maximale est donc de 110 s. Une fois dans la file, le Grand Splorch est **garanti** (§4.15).
+**Un seul grand spectacle à la fois** [`Events.SpectacleGap = 20`]. Les grands spectacles sont : BOOP RUSH, MEGA SQUISH, Grand Splorch, danse de Big Plop (jauge pleine). Deux grands spectacles sont toujours séparés d'au moins 20 s. Les horaires fixes le garantissent entre Rush, MEGA et Golden Wobbler (le Golden n'est pas un grand spectacle). Le Grand Splorch et la danse de Big Plop, déclenchés par les joueurs, attendent dans une **file du serveur**. Un Grand Splorch au plus toutes les 20 s par serveur, dans l'ordre d'arrivée. L'attente vaut donc **« place dans la file × 20 s + reste du grand spectacle en cours »** (un Rush dure jusqu'à 90 s, un MEGA 65 s) : avec deux joueurs devant soi pendant un Rush, c'est jusqu'à 90 + 2 × 20 = 130 s. Le HUD affiche la place et l'attente prévue (« 2e dans la file · ≈ 0:40 »), recalculées à chaque changement. Une fois dans la file, le Grand Splorch est **garanti** (§4.15).
 
 ---
 
@@ -240,10 +240,10 @@ Heures à Paris en hiver : Jelly Moon à 17 h, 19 h, 21 h et 23 h le samedi, 17 
 |---|---|---|---|
 | Chargement | Écran construit en code (`ReplicatedFirst`) : un Plop rebondit, 3 points animés, aucun texte long | Chargement du profil avec verrou de session (§12.6). En cas d'échec : écran « Ton ranch se réveille… » et bouton Réessayer, jamais de profil vide sauvegardé | — |
 | 0:00 | Le personnage apparaît **dans son propre ranch**, face au Pot et au premier squishy. Les amis Roblox déjà sur le serveur ont le ranch voisin | `RanchService` attribue le ranch (à côté d'un ami s'il y en a un) | 1 « Chargé » |
-| 0:00-0:10 | Big Plop, la mascotte, arrive en rebondissant et pose **ton petit Plop** (taille 1, ton Meilleur Ami n° 1) à 5 studs devant le joueur : il n'a pas besoin de marcher. Le compteur au-dessus de lui défile : 2, 3, 4… Grand anneau au sol avec le glyphe □ (E au clavier) et le mot « Presser » | Croissance +1/s. Le reste du HUD est caché : seul le compteur de pièces (0) est visible | — |
+| 0:00-0:10 | Big Plop, la mascotte, arrive en rebondissant et pose **ton petit Plop** (taille 1, ton Meilleur Ami n° 1) à 5 studs devant le joueur : il n'a pas besoin de marcher. Le compteur au-dessus de lui défile : 2, 3, 4… Au-dessus de Plop, le glyphe □ (E au clavier) et le mot « Presser » (étiquette du monde en px TV, jamais posée au sol, §10.2) ; un anneau au sol, décoratif, entoure Plop | Croissance +1/s. Le reste du HUD est caché : seul le compteur de pièces (0) est visible | — |
 | ~0:10 | **Premier SPLORCH** : Plop s'écrase, rebondit, fontaine de pièces, « +10 » en gros, petite vibration (manette) | Récompense de pression `max(10, floor(12 × revenu))` = 10 (§4.7) | 2 « Première pression » |
-| 0:10-0:20 | Deuxième pression possible à 0:18 (anneau qui se remplit sous Plop) : 20 pièces. Les flèches au sol vers la première dalle, **Tapis à Goûter, 20**, n'apparaissent que quand les pièces suffisent ; avant, la dalle montre un anneau qui se remplit (« 10 / 20 »), jamais un refus | — | — |
-| ~0:20 | Le joueur marche sur la dalle (si le stick n'a pas bougé depuis 4 s, le glyphe du stick gauche apparaît avec « Marcher ») : le serveur voit qu'il est entré sur la dalle (§4.6) et le Tapis se construit en rebondissant. Plop passe à **+2/s** (le « +2 » flotte au-dessus de lui). **Première récompense en moins de 30 s** | Achat Tapis niveau 1 | 3 « Premier achat » |
+| 0:10-0:20 | Deuxième pression possible à 0:18 (anneau qui se remplit sous Plop) : 20 pièces. Les flèches au sol vers la première dalle, **Tapis à Goûter, 20**, n'apparaissent que quand les pièces suffisent ; avant, l'étiquette de prix de la dalle montre une barre qui se remplit (« 10 / 20 »), jamais un refus | — | — |
+| ~0:20 | Le joueur marche jusqu'à la dalle (si le stick n'a pas bougé depuis 4 s, le glyphe du stick gauche apparaît avec « Marcher ») et s'y arrête : un anneau blanc se remplit en 0,6 s (le serveur mesure ce temps, §4.6), puis le Tapis se construit en rebondissant. Plop passe à **+2/s** (le « +2 » flotte au-dessus de lui). **Première récompense en moins de 30 s** | Achat Tapis niveau 1 | 3 « Premier achat » |
 | ~0:40 | La **Cuve à Gelée** se construit toute seule (gratuite). Sa première goutte éclot : « **Jumeau de Plop** ! », annoncé comme tel. Ce n'est pas un tirage au hasard | Naissance scriptée : Plop, 0 étoile, taille 1 | 4 « Cuve » |
 | ~1:00 | Leçon de fusion. Invite « ○ Prendre » (Q au clavier) au-dessus du jumeau. Un cœur pulse sur Plop, qui attend déjà dans le Bassin (Big Plop l'y a posé). Trois pas, puis « □ Fusion ! » au bord du Bassin. SPLORCH géant, **une étoile apparaît**, le revenu saute. Taille ≈ (96 + 41) × 1,25 = 171 | Fusion (§4.10). Le joueur a compris : grandir, presser, fusionner | 5 « Première fusion » |
 | ~1:30 | Le **Pot à Pièces** brille : le joueur marche dessus, gros chiffre (≈ 240). Deux nouvelles dalles s'allument : Tapis niveau 2 (80) et la première décoration, Clôture rebondissante (80) | Encaissement du Pot (§4.8) | 6 « Premier Pot » |
@@ -251,10 +251,10 @@ Heures à Paris en hiver : Jelly Moon à 17 h, 19 h, 21 h et 23 h le samedi, 17 
 | ~2:45 | **Premier vrai tirage** de la Cuve. Les probabilités apparaissent en barres simples sur la Cuve, avec l'étiquette « Nouveauté garantie (3) » : les 3 premiers tirages donnent une espèce que le joueur n'a pas encore (§4.9). Un tirage Rare ou mieux lance une bannière serveur | Tirage normal (qualité de la Cuve 1 = 1 + R, §4.9) | 8 « Premier tirage » |
 | ~3:00 | Le HUD affiche l'horloge du prochain événement (« BOOP RUSH 2:00 »). Big Plop fait sa **démonstration** : il éternue devant ton portail (ATCHOUM) et s'enfuit en rebondissant. Le joueur le poursuit sans rien risquer et gagne un **bébé Plop** (10 % de la taille de son Plop). Son ranch porte le **bouclier débutant** pendant 15 min de jeu ; il est en mode Cozy tant qu'il n'a pas choisi. De retour au ranch, s'il n'a jamais changé de cible : glyphes L1 R1 avec « Choisir » pendant 4 s (clic au clavier-souris), une seule fois | Démonstration personnelle, toujours jouée (§4.21.6) | — |
 | ~4:30 | Plop atteint la **taille 1 200** : une selle apparaît, glyphe L2 avec « Monter ». Il rebondit 1,4 fois plus vite. Une flèche mène à la place : statue du plus gros squishy du serveur, Boutique (vente de squishies), Autel de la Lune avec le compte à rebours du samedi, jauge du serveur | Seuil de selle (§4.12) | 9 « Première balade » |
-| ~5:00 | Petite carte non bloquante (§10.3) : **3 objectifs du jour** (presser 30, attraper 2, fusionner 1) et « **Nourris Plop : Jour 1** » (avec le vrai nom du Meilleur Ami). Quand elle se range, la puce « Menu » du HUD apparaît avec le glyphe △ et la pastille « ! » : c'est la leçon du menu (△ ou croix ↓ ; Tab au clavier). Avant ce moment, le menu reste fermé : △ et croix ↓ ne font qu'un petit son `Bump`. Le HUD complet est affiché | Objectifs du jour 1 fixes (§7.4) | 10 « Objectifs » |
+| ~5:00 | Petite carte non bloquante (§10.3) : **3 objectifs du jour** (presser 30, attraper 2, fusionner 1) et « **Nourris Plop : Jour 1** » (avec le vrai nom du Meilleur Ami). Quand elle se range, la puce « Menu » du HUD apparaît avec le glyphe △ et la pastille « ! » : c'est la leçon du menu (△ ou croix ↓ ; M au clavier). Avant ce moment, le menu reste fermé : △ et croix ↓ ne font qu'un petit son `Bump`. Le HUD complet est affiché | Objectifs du jour 1 fixes (§7.4) | 10 « Objectifs » |
 | ~12-15 min | Le plus gros squishy atteint **15 000** : « Grand Splorch prêt ! » | Objectif R0 (§4.15) | 11 « Premier Grand Splorch » |
 
-**Cible à 5:00** (vérifiée par la simulation, §4.24) : 3 à 4 squishies, au moins 1 fusion, au moins 1 capture, la première balade faite, et assez de pièces pour la dalle Enclos. À 5:00, les 4 places d'enclos de départ sont pleines : la Cuve garde sa goutte suivante (« Plein ! ») et la dalle Enclos (1 200) devient le prochain objectif naturel.
+**Cible à 5:00** (vérifiée par la simulation, §4.24) : 3 à 4 squishies, au moins 1 fusion, au moins 1 capture, la première balade faite, et assez de pièces pour la dalle Enclos. À 5:00, les 4 places d'enclos de départ sont pleines : les naissances suivantes de la Cuve vont dormir dans la Boîte à dodo (bulle « Dodo » sur la Cuve, §4.9), où elles ne grandissent pas, et la dalle Enclos (1 200) devient le prochain objectif naturel.
 
 **Cas particuliers**
 - *Arrivée pendant un BOOP RUSH* : l'événement reste discret (règle ci-dessus). Le nouveau est en mode Cozy ; la carte du choix Rush/Cozy (§4.21.1) n'apparaît pas avant 15:00 de jeu, à la fin du bouclier débutant.
@@ -275,7 +275,7 @@ Une seule monnaie à dépenser, pour rester simple. Tout est calculé et gardé 
 
 | Ressource | Rôle | Sources | Puits | Remise à zéro |
 |---|---|---|---|---|
-| **Pièces** (Coins) | Construire le ranch de la boucle en cours | Revenu passif (Pot), pressions, combos, vente de squishies, récompenses d'événements, objectifs du jour, produits Robux « Paquet de pièces » | Dalles du ranch (Tapis, décorations), places d'enclos, Lit douillet. **Jamais une chance** (§8.1) | Oui, à chaque Grand Splorch |
+| **Pièces** (Coins) | Construire le ranch de la boucle en cours | Revenu passif (Pot), pressions, combos, vente de squishies, récompenses d'événements, objectifs du jour. **Jamais vendues contre des Robux au lancement** (§8.3) | Dalles du ranch (Tapis, décorations), places d'enclos, Lit douillet. **Jamais une chance** (§8.1) | Oui, à chaque Grand Splorch |
 | **Fame** (célébrité) | Score permanent, bonus de revenu | Pendant le Rush, 30 par jour au plus : être boopé (+1), Wild Wobbler attrapé (+1, Rush ou Cozy), capture « Héros » (+2). Puis : relâcher un squishy (+1), Grand Splorch (+5), participer au MEGA (+1) | Aucun (on ne la dépense pas) | Jamais |
 | **R** (niveau de Grand Splorch) | Prestige | +1 par Grand Splorch | — | Jamais |
 | **Jours de Plop** | Fidélité | +1 par jour UTC où l'on nourrit son Meilleur Ami au bol | — | Jamais (total, jamais une série) |
@@ -288,43 +288,45 @@ Une seule monnaie à dépenser, pour rester simple. Tout est calculé et gardé 
 | Pression | `max(10, floor(12 × revenu du squishy))`, ×2 si PERFECT, +10 % par PERFECT de suite (max +50 %) (§4.7) |
 | Combo de fusion | Étape k : `20 × k ×` revenu du squishy obtenu (§4.10) |
 | Vente d'un squishy | 60 s de son revenu (minimum 10) (§4.13) |
-| Créature dorée vue de près, MEGA réussi, cadeau de Grand Splorch | 60 s du revenu du joueur (§4.11, §4.22, §4.15) |
+| Créature dorée vue de près, MEGA réussi | 60 s du revenu du joueur (§4.11, §4.22) |
+| Cadeau de Grand Splorch | 60 s du revenu du joueur, 10 cadeaux en pièces par jour, ensuite 10 s (§4.15) |
 | Capture « Héros » de son propre squishy en fuite | 120 s du revenu du joueur (§4.21) |
 | Squishy boopé rendu au propriétaire | 60 s du revenu du propriétaire (§4.21) |
 | Joueur Rush à 30 studs au plus d'une capture du Rush | 20 s de son revenu (§4.21.3) |
-| Pet-sitting (presser chez un ami) | Le propriétaire : la pression normale ; le visiteur : 10 s de son propre revenu (§6.4) |
+| Pet-sitting (presser chez un ami) | Le propriétaire : la pression normale (100 reçues par jour) ; le visiteur : 2 s de son propre revenu, ×2 si PERFECT (100 par jour) (§6.4) |
 | Applaudir un Grand Splorch | 10 s du revenu (10 récompensés par jour) (§6.7) |
 | Objectifs du jour | 3, 6 ou 10 min de revenu (§7.4) |
 | Hors ligne | 25 % du revenu de départ, plafonné (§4.19) |
 
-« Revenu du joueur » = la somme des revenus de ses squishies dans les enclos, multiplicateurs compris, au moment de la récompense. Les récompenses « en secondes de revenu » restent ainsi justes à tous les niveaux.
+« Revenu du joueur » = la somme des revenus de ses squishies dans les enclos, multiplicateurs compris, au moment de la récompense. Les récompenses « en secondes de revenu » restent ainsi justes à tous les niveaux. P (×2 Pièces) et B (boost) sont **déjà dans ce revenu** : une récompense de « N s de revenu » vaut N × ce revenu, jamais multipliée une deuxième fois par P ou B (§8.2). Les minimums fixes (10 pièces par pression ou par vente) ne sont multipliés ni par P ni par B.
 
 ### 4.2 Nombres géants
 
 **Stockage.** Les tailles et les pièces sont des nombres `number` de Luau (double précision, jusqu'à ≈ 1,8e308). Sous 1e15, les pièces restent des entiers exacts (`floor` après chaque calcul). Au-dessus, l'arrondi du double est accepté (il ne se voit pas à l'écran). Le serveur borne toute valeur à `[0 ; 1e300]` et refuse `NaN` et l'infini avant chaque écriture (les DataStores refusent ces valeurs en JSON).
 
-**Affichage** (`Shared/Util/Format.abbreviate(n, lang)`) :
+**Affichage** (`Shared/Logic/BigNumber.abbreviate(n, lang)`, le seul formateur des nombres du jeu) :
 - moins de 10 000 : le nombre entier, avec séparateur des milliers (EN « 9,876 » ; FR « 9 876 » avec espace fine insécable U+202F) ;
 - à partir de 10 000 : **3 chiffres significatifs, tronqués** (jamais arrondis vers le haut : 999 999 s'affiche 999K, pas 1.00M), puis le suffixe ;
-- en français : virgule décimale et espace fine insécable avant le suffixe (« 1,23 M ») ;
+- **mêmes suffixes internationaux dans les deux langues** (K, M, B, T, Qa…) : ce sont ceux que les enfants voient dans les autres jeux et sur les vidéos, et une comparaison avec la statue ou un ami reste juste d'une langue à l'autre. À 3 m, « Md », « Bn » et « Bd » se ressemblaient, et « B » voulait dire 1e9 en anglais mais « Bn » 1e12 en français ;
+- en français : virgule décimale et espace fine insécable avant le suffixe (« 1,23 M », « 4,56 B ») ;
 - au-delà de 1e36 : notation « 1.23e36 » (EN) / « 1,23e36 » (FR) ;
-- les bannières de jalons écrivent le mot entier (« 1 TRILLION! », « 1 BILLION (1 000 milliards) ! »).
+- les bannières de jalons écrivent le mot entier dans la langue du joueur (EN « 1 TRILLION! », FR « 1 000 MILLIARDS ! »).
 
-| Puissance | EN | Mot EN | FR | Mot FR |
-|---|---|---|---|---|
-| 1e3 | K | thousand | k | mille |
-| 1e6 | M | million | M | million |
-| 1e9 | B | billion | Md | milliard |
-| 1e12 | T | trillion | Bn | billion (mille milliards) |
-| 1e15 | Qa | quadrillion | Bd | billiard |
-| 1e18 | Qi | quintillion | Tn | trillion |
-| 1e21 | Sx | sextillion | Td | trilliard |
-| 1e24 | Sp | septillion | Qn | quadrillion |
-| 1e27 | Oc | octillion | Qd | quadrilliard |
-| 1e30 | No | nonillion | Qt | quintillion |
-| 1e33 | Dc | decillion | Qtd | quintilliard |
+| Puissance | Suffixe (EN et FR) | Mot EN | Mot FR (fiche et info-bulle) |
+|---|---|---|---|
+| 1e3 | K | thousand | mille |
+| 1e6 | M | million | million |
+| 1e9 | B | billion | milliard |
+| 1e12 | T | trillion | mille milliards (billion) |
+| 1e15 | Qa | quadrillion | million de milliards (billiard) |
+| 1e18 | Qi | quintillion | milliard de milliards (trillion) |
+| 1e21 | Sx | sextillion | trilliard |
+| 1e24 | Sp | septillion | quadrillion |
+| 1e27 | Oc | octillion | quadrilliard |
+| 1e30 | No | nonillion | quintillion |
+| 1e33 | Dc | decillion | quintilliard |
 
-Exemples : 12 345 → EN « 12.3K », FR « 12,3 k » ; 4 560 000 000 → EN « 4.56B », FR « 4,56 Md » ; 7,8e12 → EN « 7.80T », FR « 7,80 Bn ». En français, la fiche d'un squishy et l'info-bulle de la taille montrent aussi le mot entier (« 7,80 Bn = 7,80 billions = 7 800 milliards »). Le choix des suffixes français est une question ouverte (Journal de révision, question 3).
+Exemples : 12 345 → EN « 12.3K », FR « 12,3 K » ; 4 560 000 000 → EN « 4.56B », FR « 4,56 B » ; 7,8e12 → EN « 7.80T », FR « 7,80 T ». En français, la fiche d'un squishy et l'info-bulle de la taille montrent aussi le mot entier (« 7,80 T = 7 800 milliards »). Décision de la version 1.3 (ancienne question 3 du Journal de révision).
 
 **Échelle de taille visuelle** (`Shared/Logic/SizeScale`) :
 
@@ -351,7 +353,7 @@ croissance = 1 × 2^R × (1 + niveauTapis) × (1 + 0,10 × familleJellyComplète
 ```
 
 - `niveauTapis` de 0 à 12 (§4.6) ; `familleJellyComplète` vaut 1 si les 4 espèces de la famille Jelly sont dans le Squishydex (§4.17) ;
-- `B` = 2 si un boost ×2 est actif (jauge du serveur, Squish Party, boost personnel), sinon 1. Les boosts ×2 ne se cumulent jamais entre eux (§4.25).
+- `B` = 2 si un boost ×2 est actif (Wobble Party de la jauge, Squish Party, boost personnel de Nourrir Plop), sinon 1. Les boosts ×2 ne se cumulent jamais entre eux (§4.25). Le joueur de référence passe environ 30 % de son temps de jeu en ×2 (simulation, §4.24) : un boost reste un moment, pas l'état normal.
 
 **Revenu** (pièces par seconde, pour un squishy dans un enclos) :
 
@@ -360,8 +362,8 @@ revenu = 0,02 × rareté × taille × mutation × (1 + 0,5 × étoiles) × A × 
 A = 1 + 0,05 × décorations          (18 au plus → +90 %)
       + 0,10 × amisPrésents         (4 au plus → +40 %)
       + 0,01 × min(300, Fame)       (+300 % au plus)
-      + bonus de l'Étagère à trophées (+208 % au plus, §4.16)
-      + 0,01 × pages dorées du Squishydex (+26 % au plus, §4.17)
+      + bonus de l'Étagère à trophées (+8 % au plus par espèce : +208 % avec les 26 du lancement, §4.16)
+      + 0,01 × pages dorées du Squishydex (+1 % par espèce : +26 % au lancement, §4.17)
 P = 2 avec le pass ×2 Pièces, sinon 1
 ```
 
@@ -402,28 +404,28 @@ Une mutation au plus par squishy. Elle multiplie le revenu. Une fusion garde la 
 - **Tirage** : un seul nombre au hasard dans [0 ; 1[, comparé aux chances cumulées en partant de la plus rare (Flop, puis Glitch… puis Gelée). Au-delà du total : pas de mutation. Total à buses 0 : 7,6 % ; buses 5 : 26,6 %.
 - **Buses à mutation** (pièce de la Cuve, niveau = `min(5, R)`, donné par le Grand Splorch, jamais acheté, §4.9) : toutes les chances sauf Lunaire × `(1 + 0,5 × niveau)`.
 - **Jelly Moon** : toutes les chances × 2, plus Lunaire 3 % (total à buses 5 : 56,2 %).
-- **Autres sources** : Golden Wobbler (Doré garanti), Goutte de Lune (Lunaire garanti, §4.23), bébés du MEGA (chances de mutation × 2), bébés du Rush (même mutation que l'original), cadeaux du Grand Splorch (sans mutation, sauf 10 % de chance de copier une mutation Doré ou plus faible).
+- **Autres sources** : Golden Wobbler (Doré garanti), Goutte de Lune (Lunaire garanti, §4.23), bébés du MEGA (chances de mutation × 2), bébés du Rush (la mutation de l'original si elle vaut ×5 ou moins, Doré ou plus faible ; sinon tirée avec des chances × 2 : une mutation rare ne passe jamais d'un compte à l'autre, §4.21.3), cadeaux du Grand Splorch (sans mutation, sauf 10 % de chance de copier une mutation Doré ou plus faible).
 - **Étiquette « 1 sur X »** lors d'une naissance rare : calculée en direct = 1 / (chance de la rareté × chance de la mutation) aux réglages du moment, arrondie à 2 chiffres significatifs. Jamais un chiffre inventé. Exemple au départ (R = 0, qualité 1, buses 0) : Flop Plop = 1 / (0,74 × 0,000005) ≈ **1 sur 270 000**.
 - **Naissance rare** : les mutations Arc-en-ciel, Glitch et Flop sont fêtées comme une naissance Légendaire, quelle que soit la rareté de l'espèce : ralenti, bannière serveur, clip automatique, grande étiquette « 1 sur X » (§9.4). Le verrou automatique les protège (§4.13).
 
 ### 4.6 Le ranch et ses dalles
 
-Le ranch se construit en marchant sur des dalles lumineuses. Chaque dalle montre une icône, le prix et le niveau. Un achat se construit en rebondissant (§9.4). Les dalles apparaissent dans l'ordre : une nouvelle dalle s'allume quand la précédente a été achetée une fois. **Une dalle trop chère ne refuse jamais** : quand on marche dessus, un anneau se remplit autour d'elle (« 1,2K / 3K ») avec un petit son doux (`Bump`), sans secousse rouge ni son `Error`.
+Le ranch se construit en s'arrêtant sur des dalles lumineuses. Chaque dalle porte son icône sur le disque ; son prix et son niveau sont écrits sur une étiquette au-dessus d'elle, en px TV, visible à 20 studs ou moins (texte du monde, §10.2). Un achat se construit en rebondissant (§9.4). Les dalles apparaissent dans l'ordre : une nouvelle dalle s'allume quand la précédente a été achetée une fois. **Une dalle trop chère ne refuse jamais** : quand on s'y arrête, la barre de l'étiquette montre ce qui manque (« 1,2K / 3K ») avec un petit son doux (`Bump`), sans secousse rouge ni son `Error`.
 
-**Comment l'achat est détecté (règle robuste).** Jamais par un événement physique `Touched` (il rate des contacts, en compte deux, et dépend des collisions). Le serveur regarde, à chaque tick de 10 Hz, la **position validée** du joueur (§12.8) : il est « sur » une dalle quand il est à **2,5 studs** au plus de son centre, et il en « sort » au-delà de **3,5 studs** (l'écart évite les achats en rafale au bord). **Un achat par entrée** : pour acheter le niveau suivant, on sort et on revient, ou on presse □ « Acheter » (E au clavier) tant qu'on est dessus. Le panneau Ranch, onglet *Dalles*, achète aussi (§10.3). Les pièces des dalles sont ancrées et non solides : elles ne gênent jamais la marche.
+**Comment l'achat est détecté (règle robuste).** Jamais par un événement physique `Touched` (il rate des contacts, en compte deux, et dépend des collisions). Le serveur regarde, à chaque tick de 10 Hz, la **position validée** du joueur (§12.8) : il est « sur » une dalle quand il est à **2,5 studs** au plus de son centre, et il en « sort » au-delà de **3,5 studs** (l'écart évite les achats en rafale au bord). **On achète en restant 0,6 s sur la dalle** [`Balance.Tiles.DwellSeconds = 0.6`] : un anneau blanc se remplit autour d'elle, puis l'achat part. Sortir de la dalle avant la fin, porter un squishy ou être dans un autre maintien (boop, bol, Grand Splorch) annule sans rien dépenser. Au stick, avec une caméra qui suit en retard, on traverse souvent une dalle sans le vouloir : un achat ne se rembourse pas, et un enfant ne doit jamais dépenser dans une décoration l'argent gardé pour le Tapis. **Un achat par entrée** : pour acheter le niveau suivant, on sort et on revient (0,6 s de nouveau), ou on presse □ « Acheter » (E au clavier) tant qu'on est dessus, qui achète tout de suite (geste voulu). Le panneau Ranch, onglet *Dalles*, achète aussi (§10.3). Les dalles sont à 8 studs au moins de tout autre point d'action (§11.2). Les pièces des dalles sont ancrées et non solides : elles ne gênent jamais la marche.
 
 **Les pièces n'achètent jamais de chance.** Elles construisent la croissance, le revenu et la place. La Cuve (qualité, vitesse, buses) s'améliore toute seule à chaque Grand Splorch (§4.9). Ainsi, aucun Robux, même passé par les pièces, ne change une probabilité (§8.1).
 
-Prix : `floor(base × croissance^L)` où L = niveau actuel (le premier achat coûte la base). Les dalles de la boucle sont **multipliées par 2^R** (comme la croissance), pour que la construction garde son sens à chaque boucle. Les places d'enclos et le Lit douillet ne le sont pas (ils sont permanents).
+Prix : `floor(base × croissance^L × 3,5^R)` pour les dalles de la boucle [`Balance.Tiles.RScale = 3.5`], où L = niveau actuel (le premier achat coûte la base). Les places d'enclos et le Lit douillet ne sont pas multipliés (ils sont permanents). **Pourquoi 3,5^R** : d'une boucle à l'autre, la croissance double, l'objectif est multiplié par 2,6 et la collection s'enrichit (raretés, mutations, étoiles) ; le revenu d'une boucle monte donc d'environ ×3,5 par R. Avec des prix ×2^R (version 1.2), toutes les dalles étaient au maximum 3 à 8 min après chaque Grand Splorch dès le jour 3, des milliards de pièces dormaient, et le choix « presser, acheter le Tapis ou préparer un combo » disparaissait. Avec ×3,5^R, le Tapis 12 est atteint vers 90 % de la boucle et les pièces perdues au Grand Splorch valent environ 3 fois le prix du Tapis 12 (simulation, §4.24).
 
 | Dalle | Effet par niveau | Niveaux | Base | Croissance | Grand Splorch |
 |---|---|---|---|---|---|
 | **Tapis à Goûter** (Snack Mat) | Croissance × (1 + niveau) : +1/s → +13/s au niveau 12 | 12 | 20 | ×4,0 | Remis à zéro |
-| **Décorations** (18 dalles différentes, une fois chacune) | +5 % de revenu chacune | 18 | 80 | ×2,2 | Remises à zéro |
+| **Décorations** (18 différentes, une fois chacune, achetées l'une après l'autre sur la même dalle) | +5 % de revenu chacune | 18 | 80 | ×2,2 | Remises à zéro |
 | **Enclos** | +1 place (4 → 18) | 14 | 1 200 | ×2,2 | **Gardé** |
-| **Lit douillet** (dès R = 1) | Limite hors ligne 8 h → 12 h | 1 | 250 000 | — | **Gardé** |
+| **Lit douillet** (dès R = 3) | Limite hors ligne 8 h → 12 h | 1 | 25 M | — | **Gardé** |
 
-**Coûts calculés (R = 0 ; multiplier par 2^R pour les dalles de la boucle)**
+**Coûts calculés (R = 0 ; multiplier par 3,5^R pour les dalles de la boucle)**
 
 | Niveau → | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
@@ -435,19 +437,19 @@ Décorations niveaux 12 à 17 : 1,03 M, 2,26 M, 4,98 M, 11,0 M, 24,1 M et 53,0 M
 
 **Les 18 décorations** (dans l'ordre d'apparition) : Bouncy Fence (clôture rebondissante), Candy Lamp (lampadaire bonbon), Jelly Flowers (fleurs de gelée), Gumdrop Path (chemin de bonbons), Cloud Bench (banc nuage), Lollipop Trees (arbres sucettes), Marshmallow Rocks (rochers guimauve), Bubble Pond (mare à bulles), Sprinkle Arch (arche à vermicelles), Pudding Hut (cabane pudding), Rainbow Kite (cerf-volant arc-en-ciel), Star Windmill (moulin étoilé), Jellybean Swing (balançoire dragée), Cupcake Fountain (fontaine cupcake), Gummy Bridge (pont gélifié), Cotton Candy Tree (arbre barbe à papa), Donut Carousel (manège beignet), Moon Telescope (télescope lunaire).
 
-**Ordre d'apparition des dalles** : Tapis → (Cuve, gratuite) → (Bassin, gratuit) → Tapis 2 + Bouncy Fence → Enclos (quand les enclos sont pleins) → autres décorations → Lit douillet (R ≥ 1). Après un Grand Splorch, toutes les dalles déjà découvertes restent visibles.
+**Ordre d'apparition des dalles** : Tapis → (Cuve, gratuite) → (Bassin, gratuit) → Tapis 2 + Bouncy Fence → Enclos (quand les enclos sont pleins) → autres décorations → Lit douillet (R ≥ 3). Après un Grand Splorch, toutes les dalles déjà découvertes restent visibles.
 
 **Ce qui ne s'achète jamais** : la Cuve et son niveau, le Bassin, la Fontaine de Gelée, le Pot, l'Étagère à trophées, le bol. Ils sont là dès l'accueil et ne sont jamais remis à zéro.
 
 ### 4.7 Presser (SPLORCH) et PERFECT
 
-- **Geste** : touche d'action principale (□ à la manette, E au clavier, ou clic sur le squishy) sur le squishy **ciblé** de son ranch, à 10 studs au plus. Le jeu choisit la cible lui-même (règle exacte au §10.4) : les squishies prêts passent avant ceux en recharge, et après une pression la cible passe au prochain squishy prêt en 0,15 s. **Presser a sa touche, Prendre a la sienne** (○ / Q, §4.10) : un enfant qui martèle □ ne prend jamais un squishy par erreur. L'invite « □ Presser » est dessinée par le jeu, en grand pour la télé, et la touche est liée par `ContextActionService` ; on n'utilise **pas** de `ProximityPrompt`, dont le choix de cible, la ligne de vue et la liaison de touche appartiennent au moteur et ne se testent pas hors de Roblox (§10.4).
+- **Geste** : touche d'action principale (□ à la manette, E au clavier, ou clic sur le squishy) sur le squishy **ciblé** de son ranch, à 10 studs au plus. Le serveur ne connaît pas la flânerie du squishy (dessinée par le client) : il mesure la distance **à plat (XZ)** entre la position validée du joueur et la **place** du squishy (`WorldLayout`), avec 2 studs de tolérance, car le client ne le fait jamais flâner à plus de 2 studs de sa place (§9.3). Même règle depuis la monture. Le jeu choisit la cible lui-même (règle exacte au §10.4) : les squishies prêts passent avant ceux en recharge, et après une pression la cible passe au prochain squishy prêt en 0,15 s. **Presser a sa touche, Prendre a la sienne** (○ / Q, §4.10) : un enfant qui martèle □ ne prend jamais un squishy par erreur. L'invite « □ Presser » est dessinée par le jeu, en grand pour la télé, et la touche est liée par `ContextActionService` ; on n'utilise **pas** de `ProximityPrompt`, dont le choix de cible, la ligne de vue et la liaison de touche appartiennent au moteur et ne se testent pas hors de Roblox (§10.4).
 - **Recharge** : 8 s par squishy [`Balance.Press.Cooldown`]. Un anneau se remplit sous le squishy ; prêt, il est un peu gonflé et brille.
 - **Récompense** : `floor(max(10, 12 × revenu) × (PERFECT ? 2 : 1) × (1 + 0,10 × min(5, série)) × (familleKittyComplète ? 1,10 : 1))`.
-- **PERFECT** : chaque squishy rebondit au repos avec une période de 1,2 s, calée sur `Clock.now()` et un décalage propre (`hash(uid)`), donc identique côté client et côté serveur. La fenêtre PERFECT va de **0,08 s avant à 0,20 s après le sommet** du rebond (0,28 s, soit 23 % du cycle). Elle est décalée vers le « tard » parce que le joueur réagit à une image qui arrive en retard : télé familiale 50 à 150 ms (mode Jeu souvent coupé), plus 1 à 2 images de rendu et la liaison sans fil de la manette. La même règle vaut pour tous les appareils, sans bonus déclaré par le client. Un petit anneau blanc se resserre et touche le corps au sommet.
+- **PERFECT** : chaque squishy rebondit au repos avec une période de 1,2 s, calée sur `Clock.now()` et un décalage propre (`hash(UserId du propriétaire, uid)` : l'uid n'est unique que dans un profil, et le squishy « 1 » de chaque joueur ne doit pas rebondir en même temps que les autres), donc identique côté client et côté serveur. La fenêtre PERFECT va de **0,08 s avant à 0,20 s après le sommet** du rebond (0,28 s, soit 23 % du cycle). Elle est décalée vers le « tard » parce que le joueur réagit à une image qui arrive en retard : télé familiale 50 à 150 ms (mode Jeu souvent coupé), plus 1 à 2 images de rendu et la liaison sans fil de la manette. La même règle vaut pour tous les appareils, sans bonus déclaré par le client. Un petit anneau blanc se resserre et touche le corps au sommet.
 - **Série PERFECT** : chaque PERFECT de suite ajoute +10 % (max +50 % à 5 de suite). Une pression non PERFECT remet la série à 0, sans aucune punition (la récompense de base reste). 6 s sans pression remettent aussi la série à 0. Le son monte d'un demi-ton à chaque marche.
 - **Vérification serveur** : le client envoie `Press(uid, tClient)`. Le serveur accepte `tClient` s'il est dans `[maintenant − 0,35 s ; maintenant + 0,05 s]`, sinon il prend `maintenant`. Il calcule la phase du rebond à `tClient`. Au pire, un tricheur obtient ce qu'obtient un joueur adroit (×2) : c'est borné et accepté. C'est aussi pourquoi **aucun classement ne compte les PERFECT** (§6.9).
-- **Jauge du serveur** : +1 par pression, +1 de plus si PERFECT (§4.23).
+- **Jauge du serveur** : +1 par pression **PERFECT** seulement ; une pression normale ne compte pas (§4.23).
 - Débit maximal accepté : 12 pressions/s par joueur (au-delà, ignorées sans message).
 
 ### 4.8 Le Pot à Pièces
@@ -459,7 +461,7 @@ Décorations niveaux 12 à 17 : 1,03 M, 2,26 M, 4,98 M, 11,0 M, 24,1 M et 53,0 M
 
 ### 4.9 La Cuve à Gelée
 
-- **Fonctionnement** : la Cuve se remplit (niveau de gelée visible) pendant l'intervalle, puis une goutte tombe et éclot en 2 s dans la première place d'enclos libre. Gratuit. Si les enclos sont pleins, la goutte attend dans la Cuve (« Plein ! ») et le minuteur s'arrête. La Cuve ne tourne que si le joueur est en ligne.
+- **Fonctionnement** : la Cuve se remplit (niveau de gelée visible) pendant l'intervalle, puis une goutte tombe et éclot en 2 s dans la première place d'enclos libre, **sinon dans la Boîte à dodo** (une bulle « Dodo » s'affiche sur la Cuve ; le nouveau-né y dort et ne grandit pas tant que le joueur ne lui fait pas de place). Gratuit. La goutte n'attend dans la Cuve (« Plein ! », minuteur arrêté) que si les enclos **et** la Boîte à dodo sont pleins. Même règle que les captures (§4.14) : le rythme ne dépend plus d'un rangement manuel qu'un enfant de 8 ans ne connaît pas (sans lui, la simulation de la critique technique tombait à 54 tampons au jour 7 au lieu de 94). La Cuve ne tourne que si le joueur est en ligne.
 - **Niveau de la Cuve, donné par R** : jamais acheté, ni avec des pièces ni avec des Robux. Il monte tout seul à chaque Grand Splorch et n'est jamais remis à zéro.
 
 | R | 0 | 1 | 2 | 3 | 4 | 5 | 6 | ≥ 7 |
@@ -522,7 +524,7 @@ Meilleur Ami, tenue, verrou : gardés si l'un des deux les avait
 - Elle saute de **ta** Fontaine de Gelée (devant ton portail, côté rue), 60 s après la fin de la précédente (50 s avec la famille Froggy complète). Première à 2:00 de jeu (accueil).
 - Elle n'est visible et attrapable **que par toi** (envoyée à ton seul client), avec un anneau à ta couleur.
 - Trajet : petits bonds (un bond de 4,5 studs toutes les 0,5 s, une pause de 0,6 s tous les 3 bonds, soit ≈ 7,5 studs/s en moyenne), à 35 studs au plus de la Fontaine, pendant **20 s** au plus. Ensuite elle replonge dans la Fontaine : aucune punition, la suivante viendra.
-- Attraper : □ à **5 studs** au plus (le serveur accepte jusqu'à 6,5 studs pour la latence), ou un bond qui atterrit à 5 studs au plus (capture automatique, §4.12).
+- Attraper : □ à **5 studs** au plus (le serveur accepte jusqu'à 6,5 studs, mesurés à plat, **à l'instant où le joueur a appuyé**, §12.5), ou un bond qui atterrit à 5 studs au plus (capture automatique, §4.12).
 - Contenu : rareté tirée dans la table de la Qualité de la Cuve (§4.9), familles débloquées, mutation tirée (buses comprises), **taille = 5 % du plus gros squishy du joueur** (minimum 1), 0 étoile.
 - En pause pendant : un BOOP RUSH (le Wild Wobbler personnel la remplace, §4.21.5), un MEGA SQUISH, son propre Grand Splorch, l'accueil entre 2:45 et 5:00, et quand enclos, Boîte à dodo et Boîte aux lettres sont pleins.
 
@@ -545,16 +547,16 @@ Meilleur Ami, tenue, verrou : gardés si l'un des deux les avait
 Les selles sont **gagnées pour toujours** : le palier compte la plus grande taille jamais atteinte par un de ses squishies (`stats.biggestEver`), pas la taille du moment. Juste après un Grand Splorch, on remonte donc tout de suite.
 
 - **Monture** : par défaut le plus gros squishy (n'importe lequel, dès que la première selle est gagnée) ; changeable dans le panneau Ranch. Sa **taille affichée dépend de la selle, pas de la taille du moment** : Petite selle 2,85× (Ø 5,7 studs), Grande 3,5× (Ø 7), Géante 4× (Ø 8). Le squishy garde sa vraie taille dans ses chiffres ; l'affichage reste stable et ne fait jamais grandir le personnage sans limite.
-- **Monter / descendre** : L2 (R au clavier), n'importe où. La monture saute vers le joueur (petit pop depuis le ranch). Le serveur règle trois valeurs fixes par selle et rien d'autre : `WalkSpeed` (22,4), `JumpHeight` (table ci-dessus) et `HipHeight` = valeur de base + 0,75 × diamètre affiché (+4,3 / +5,3 / +6 studs). Le client dessine la monture sous le personnage. Pas de soudure physique, pas de siège (`Seat`), pas d'animation qui décide de quoi que ce soit : monter et descendre sont des états du serveur. La monture disparaît toute seule à la mort, à la réapparition, en entrant dans le Bassin ou en prenant un squishy ; on remonte d'un appui.
+- **Monter / descendre** : L2 (R au clavier), n'importe où. La monture saute vers le joueur (petit pop depuis le ranch). Le serveur règle trois valeurs fixes par selle et rien d'autre : `WalkSpeed` (22,4), `JumpHeight` (table ci-dessus) et `HipHeight` = valeur de base + 0,75 × diamètre affiché (+4,3 / +5,3 / +6 studs). À chaque montée et descente, le serveur donne aussi au contrôle de déplacement la hausse de la racine et la hauteur de saut de la selle (§12.8) : un cavalier honnête, à chaque selle, court et saute sans jamais être signalé. Le client dessine la monture sous le personnage. Pas de soudure physique, pas de siège (`Seat`), pas d'animation qui décide de quoi que ce soit : monter et descendre sont des états du serveur. La monture disparaît toute seule à la mort, à la réapparition, en entrant dans le Bassin ou en prenant un squishy ; on remonte d'un appui.
 - La vitesse est la même pour toutes les selles : la monture est un plaisir et un signe de statut, pas un avantage acheté. Toutes les selles sont gagnées par la taille ; le pack Selles et Traînées ne change que l'apparence.
-- On descend tout seul pour « Prendre » un squishy, nourrir son Meilleur Ami au bol ou entrer dans le Bassin. On peut presser, attraper et booper depuis sa monture.
+- On descend tout seul pour « Prendre » un squishy, nourrir son Meilleur Ami au bol ou entrer dans le Bassin. On peut presser, attraper et booper depuis sa monture : toutes les portées d'action (presser 10, attraper 5 et 6,5, booper 8, Pot 5, bol 8, MEGA 20) se mesurent **à plat (XZ)**, et l'écart vertical se mesure depuis les **pieds** du joueur (racine − hauteur debout − hausse de la monture), jamais depuis la racine.
 
 **Bondir** (R2, Maj au clavier) : petit élan de **12 studs en 0,35 s**, recharge **4 s**.
 - **Un bond scripté, pas une impulsion physique** : le client déplace son personnage le long d'un arc fixe (12 studs au sol, sommet à 2,5 studs), image par image, et s'arrête devant le premier obstacle solide (un rayon vers l'avant, contre la liste des solides du §11). La longueur ne dépend donc ni du frottement, ni de la fréquence d'image, ni d'une collision qui rebondit.
 - **Visée automatique sur la position future** : le trajet des créatures est connu du client (`SeededPath`), qui vise la position qu'aura la créature à l'atterrissage, `pos(t + 0,35)`. Il vise si cette position est à **16 studs** au plus, dans un cône de **±40°** autour de la direction du stick gauche (au clavier, des touches de déplacement ; au repos, de la direction du personnage). **Jamais selon la caméra.** Sinon, le bond part droit devant. Le marqueur de cible ne change que si une autre créature est 20 % plus proche.
-- **Capture automatique à l'atterrissage** si la créature est à 5 studs au plus (8 pour le propriétaire de sa propre fuite du Rush, §4.21.2). Le serveur la tente lui-même à t + 0,35 s, avec sa tolérance (6,5 ; 9,5). Il calcule le point d'atterrissage **à partir de la géométrie du bond** (position validée au départ + direction × 12 studs, raccourci par le même rayon contre les solides), **pas** à partir de l'endroit où la physique a posé le personnage : le résultat est identique sur le client et sur le serveur, et testable hors de Roblox. Un seul bouton suffit donc pour attraper, à la manette comme au clavier.
+- **Capture automatique à l'atterrissage** si la créature est à 5 studs au plus (8 pour le propriétaire de sa propre fuite du Rush, §4.21.2). Le serveur la tente lui-même à `tClient + 0,35 s` (l'instant du bond chez le joueur, §12.5), avec sa tolérance (6,5 ; 9,5). Il calcule le point d'atterrissage **à partir de la géométrie du bond** (position validée au départ + direction × 12 studs, raccourci par le même rayon contre les solides), **pas** à partir de l'endroit où la physique a posé le personnage : le résultat est identique sur le client et sur le serveur, et testable hors de Roblox. Un seul bouton suffit donc pour attraper, à la manette comme au clavier.
 - □ / Attraper reste possible, avec un **tampon d'entrée de 0,25 s** : un appui juste avant d'entrer à portée compte.
-- Le client fait le bond tout de suite (sensation immédiate) et envoie `Leap(dirX, dirZ)` ; le serveur accorde la distance en plus au contrôle de déplacement seulement si la recharge est respectée (§12.8).
+- Le client fait le bond tout de suite (sensation immédiate) et envoie `Leap(dirX, dirZ, tClient)` ; si la recharge est respectée, le serveur accorde au contrôle de déplacement un **crédit de 12 studs** sur 0,35 s, rétroactif jusqu'à 0,3 s avant la réception du message (les positions du bond arrivent parfois avant lui), au plus un toutes les 4 s (§12.8). Un joueur qui attrape avec □ juste après l'atterrissage n'est donc jamais bloqué par une dette du bond.
 
 ### 4.13 Vendre, ranger et relâcher
 
@@ -571,49 +573,51 @@ Les selles sont **gagnées pour toujours** : le palier compte la plus grande tai
 | Boîte à dodo (Dodo Box) | 60 | Non (ils dorment) | Non |
 | Boîte aux lettres (cadeaux) | 20 | Non | Non |
 
-- Une naissance de la Cuve va dans un enclos libre, sinon la goutte attend dans la Cuve.
+- Une naissance de la Cuve va dans un enclos libre, sinon dans la Boîte à dodo ; la goutte n'attend dans la Cuve que si les deux sont pleins (§4.9).
 - Une créature attrapée ou un bébé reçu va dans un enclos libre, sinon dans la Boîte à dodo, sinon dans la Boîte aux lettres. Si les trois sont pleines : le bébé devient 60 s de revenu, avec un message clair. Jamais une perte silencieuse.
 - Échanger un squishy entre enclos et Boîte à dodo : panneau Ranch, 2 gestes.
 - **24 squishies affichés au plus par ranch** (16 ranchs × 24 = 384 sur le serveur), avec niveaux de détail (§5.2, §12.9).
 
 ### 4.15 Grand Splorch (renaissance)
 
-**Condition** : le plus gros squishy du joueur atteint l'objectif de son niveau R. Pour **entrer dans la file** (§2.4), le joueur doit être dans son ranch et ne rien porter. Ensuite, le Grand Splorch est **garanti** : rien n'est revérifié au départ, et le joueur peut sortir du ranch (pour sa créature en fuite, par exemple). Le squishy qui va s'envoler attend en tremblant : il ne vient pas à la clôture et ne peut être ni boopé, ni vendu, ni relâché, ni fusionné tant qu'il attend. Si le joueur porte un squishy au départ, celui-ci est posé tout seul.
+**Condition** : le plus gros squishy du joueur atteint l'objectif de son niveau R. Pour **entrer dans la file** (§2.4), le joueur doit être dans son ranch, ne rien porter et n'avoir **aucun squishy en fuite** (« Attends que Wibble rentre ! » : une fuite du Rush en cours au moment où les tailles repartent à 1 donnerait un bébé faux à l'attrapeur). Ces conditions ne sont vérifiées **qu'à l'entrée dans la file** : ensuite, le Grand Splorch est **garanti**, rien n'est revérifié au départ, il n'y a pas de second maintien, et le joueur peut sortir du ranch (pour sa créature en fuite, par exemple). Pendant l'attente, **aucun de ses squishies ne vient à la clôture** (aucune fuite ne peut commencer), et le squishy qui va s'envoler attend en tremblant : il ne peut être ni boopé, ni vendu, ni relâché, ni fusionné. Si le joueur porte un squishy au départ, celui-ci est posé tout seul.
 
 | R → R+1 | Objectif (taille du plus gros) | R → R+1 | Objectif |
 |---|---|---|---|
-| 0 → 1 | **15 000** | 10 → 11 | 310 M |
-| 1 → 2 | 40 000 | 11 → 12 | 830 M |
-| 2 → 3 | 110 000 | 12 → 13 | 2,3 B |
-| 3 → 4 | 300 000 | 13 → 14 | 6,1 B |
-| 4 → 5 | 800 000 | 14 → 15 | 16 B |
-| 5 → 6 | 2,2 M | 15 → 16 | 44 B |
-| 6 → 7 | 5,8 M | 16 → 17 | 120 B |
-| 7 → 8 | 16 M | 17 → 18 | 320 B |
-| 8 → 9 | 42 M | 18 → 19 | 870 B |
-| 9 → 10 | 110 M | 19 → 20 | 2,4 T |
-| R ≥ 20 | objectif précédent × 2,7, arrondi à 2 chiffres significatifs | | |
+| 0 → 1 | **15 000** | 10 → 11 | 210 M |
+| 1 → 2 | 39 000 | 11 → 12 | 550 M |
+| 2 → 3 | 100 000 | 12 → 13 | 1,4 B |
+| 3 → 4 | 260 000 | 13 → 14 | 3,7 B |
+| 4 → 5 | 690 000 | 14 → 15 | 9,7 B |
+| 5 → 6 | 1,8 M | 15 → 16 | 25 B |
+| 6 → 7 | 4,6 M | 16 → 17 | 65 B |
+| 7 → 8 | 12 M | 17 → 18 | 170 B |
+| 8 → 9 | 31 M | 18 → 19 | 440 B |
+| 9 → 10 | 81 M | 19 → 20 | 1,1 T |
+| R ≥ 20 | objectif précédent × 2,6, arrondi à 2 chiffres significatifs | | |
 
-La table vit en configuration [`Balance.Splorch.Targets`] : elle suit `15 000 × 2,7^R` arrondi, et la simulation peut l'ajuster ligne par ligne.
+La table vit en configuration [`Balance.Splorch.Targets`] : elle suit `15 000 × 2,6^R` arrondi à 2 chiffres significatifs [`Balance.Splorch.BeyondMult = 2.6`], et la simulation peut l'ajuster ligne par ligne. La version 1.2 suivait × 2,7 : avec les prix des dalles × 3,5^R, la croissance hors ligne arrêtée à 90 % et les boosts calculés d'après les règles (§4.24), × 2,6 garde R = 10 au jour 7 et R = 20 au jour 28.
 
 **Écran d'aperçu obligatoire**, fait pour des enfants qui lisent peu :
 1. En haut, **3 grandes tuiles « Tu gagnes »** : « Croissance ×2 pour toujours », le déblocage de ce niveau (nouvelle famille, Cuve meilleure ou Meilleur Ami en plus), « +5 Fame ».
 2. Une petite animation avant/après : le squishy redevient petit, puis regrandit très vite.
-3. S'il reste des pièces : une ligne rouge « **Tu vas perdre 1,2 M pièces** » et un bouton « **Dépenser d'abord** » qui ouvre l'onglet *Dalles* du panneau Ranch.
+3. S'il reste des pièces (Pot compris) : une ligne rouge « **Tu vas perdre 1,2 M pièces** » et un bouton « **Dépenser d'abord** » qui ouvre l'onglet *Dalles* du panneau Ranch, avec **d'abord les dalles gardées** au Grand Splorch (Enclos, Lit douillet), sélection par défaut sur la moins chère payable.
 4. Le choix du squishy qui s'envole : par défaut, le plus gros qui n'est pas un Meilleur Ami (s'ils le sont tous, le plus gros).
-5. Le bouton à **maintenir 1,5 s** (✕ à la manette) et la case « Filmer mon Grand Splorch ».
+5. Le bouton à **maintenir 1,5 s** (✕ à la manette) et la case « Filmer mon Grand Splorch ». Une fois dans la file, l'aperçu se ferme et le HUD montre la place et l'attente (« 2e dans la file · ≈ 0:40 », §2.4).
 
-Le détail en deux colonnes « Tu gardes » / « Repart de zéro » et le prochain objectif sont derrière un bouton « **Détails** ». Si le joueur a acheté un paquet de pièces il y a moins de 30 min et en garde encore au moins la moitié, une **deuxième confirmation** s'affiche avant le maintien (« Tu as acheté ces pièces il y a 12 min. Les dépenser d'abord ? »). Rien ne part par erreur.
+Le détail en deux colonnes « Tu gardes » / « Repart de zéro » et le prochain objectif sont derrière un bouton « **Détails** ». Aucune monnaie n'est vendue au lancement (§8.3) : les pièces qui repartent de zéro ont toujours été gagnées en jeu, et l'aperçu le dit avant. Rien ne part par erreur.
 
 | Gagné | Repart de zéro | Gardé |
 |---|---|---|
-| Croissance ×2 pour toujours (×2^(R+1)) ; **Cuve meilleure** (qualité +1 jusqu'à 8, vitesse +2 jusqu'à 10, buses +1 jusqu'à 5, §4.9) ; à R = 1 : famille Axolo, Lit douillet ; à R = 3 : famille Bunny, 2e Meilleur Ami ; à R = 5 : famille Spiky ; à R = 10 : 3e Meilleur Ami ; +5 Fame ; titres à R = 5, 10, 15, 20 | Pièces, Pot, Tapis à Goûter, décorations ; la **taille** de chaque squishy (retour à 1) | Tous les squishies (espèce, mutation, étoiles, tenue, verrou), niveau de la Cuve, selles gagnées (on remonte tout de suite), places d'enclos, Lit douillet, Boîte à dodo, Boîte aux lettres, Squishydex, bonus de famille, Fame, jours de Plop, Étagère à trophées, Meilleurs Amis, passes et achats « Pour toujours », réglages, statistiques |
+| Croissance ×2 pour toujours (×2^(R+1)) ; **Cuve meilleure** (qualité +1 jusqu'à 8, vitesse +2 jusqu'à 10, buses +1 jusqu'à 5, §4.9) ; à R = 1 : famille Axolo ; à R = 3 : famille Bunny, 2e Meilleur Ami, Lit douillet ; à R = 5 : famille Spiky ; à R = 10 : 3e Meilleur Ami ; +5 Fame ; titres à R = 5, 10, 15, 20 | Pièces, Pot, Tapis à Goûter, décorations ; la **taille** de chaque squishy (retour à 1) | Tous les squishies (espèce, mutation, étoiles, tenue, verrou), niveau de la Cuve, selles gagnées (on remonte tout de suite), places d'enclos, Lit douillet, Boîte à dodo, Boîte aux lettres, Squishydex, bonus de famille, Fame, jours de Plop, Étagère à trophées, Meilleurs Amis, passes et achats « Pour toujours », réglages, statistiques |
 
-**Le spectacle** (7,5 s, détail au §9.4) : le squishy choisi s'envole vers la place, gonfle et éclate au ralenti au-dessus du MEGA pad en un grand nuage de confettis de gelée. Une pluie de pièces et de bébés tombe sur **chaque joueur du serveur** (Cozy compris). Puis **le squishy sort du nuage, tout petit, fait coucou et rejoint le héros en rebondissant** ; la caméra du héros le suit et le texte dit « **Plop est là ! ×2 pour toujours** » (avec son vrai nom). Il garde tout, sauf sa taille. L'enfant voit son squishy revenir, pas seulement exploser. Bannière serveur. Forte vibration pour le héros. Capture vidéo proposée (§9.5).
+**Le spectacle** (7,5 s, détail au §9.4) : le squishy choisi s'envole vers la place, gonfle et éclate au ralenti au-dessus du MEGA pad en un grand nuage de confettis de gelée. Une pluie de pièces et de bébés tombe sur **chaque joueur du serveur** (Cozy compris ; en version courte pour un spectateur qui a vu un spectacle complet il y a moins de 3 min, voir plus bas). Puis **le squishy sort du nuage, tout petit, fait coucou et rejoint le héros en rebondissant** ; la caméra du héros le suit et le texte dit « **Plop est là ! ×2 pour toujours** » (avec son vrai nom). Il garde tout, sauf sa taille. L'enfant voit son squishy revenir, pas seulement exploser. Bannière serveur. Forte vibration pour le héros. Capture vidéo proposée (§9.5).
 
-**Cadeaux pour les autres joueurs** (payés par le jeu, jamais pris au héros) : 60 s de leur revenu + **1 bébé** de l'espèce qui s'est envolée ; si elle est Épique ou mieux, le bébé est l'espèce Peu commune de sa famille (Wibble pour un Secret), pour que le choix du squishy ne fasse pas pleuvoir des Mythiques (taille = 5 % de leur plus gros squishy, minimum 1 ; 0 étoile ; sans mutation, sauf 10 % de chance de copier une mutation Doré ou plus faible). 10 bébés de Grand Splorch au plus par jour et par joueur (ensuite, les pièces seulement). Réglage « Recevoir les cadeaux » (activé par défaut).
+**Cadeaux pour les autres joueurs** (payés par le jeu, jamais pris au héros) : 60 s de leur revenu (10 cadeaux en pièces par jour et par joueur, ensuite 10 s : sur un serveur de nouveaux joueurs, il y a jusqu'à un Grand Splorch par minute) + **1 bébé** de l'espèce qui s'est envolée ; si elle est Épique ou mieux, le bébé est l'espèce Peu commune de sa famille (Wibble pour un Secret), pour que le choix du squishy ne fasse pas pleuvoir des Mythiques (taille = 5 % de leur plus gros squishy, minimum 1 ; 0 étoile ; sans mutation, sauf 10 % de chance de copier une mutation Doré ou plus faible). 10 bébés de Grand Splorch au plus par jour et par joueur (ensuite, les pièces seulement). Réglage « Recevoir les cadeaux » (activé par défaut).
 
-**Applaudir** : chaque autre joueur voit une puce APPLAUDIR pendant 8 s (croix → à la manette, F au clavier). Voir §6.7.
+**Spectacle complet ou version courte, pour chaque spectateur.** Sur un serveur plein de nouveaux joueurs, il y a environ un Grand Splorch par minute ; chacun imposait aux 15 autres une bannière, une secousse, une capsule avec vibration et la puce APPLAUDIR. Pour un même spectateur, le **spectacle complet** (capsule qui tombe, secousse, vibration `catch`, puce APPLAUDIR) a lieu **au plus une fois toutes les 3 min** [`Balance.Splorch.FullShowGap = 180`] ; sinon, **version courte** : petite bannière, cadeau compté directement (pièces et bébé dans l'enclos, la Boîte à dodo ou la Boîte aux lettres, avec un message), sans capsule, sans secousse, sans vibration, sans APPLAUDIR. Le héros, lui, a toujours le spectacle complet.
+
+**Applaudir** : chaque autre joueur qui a la version complète voit une puce APPLAUDIR pendant 8 s (croix → à la manette, F au clavier), jamais pendant une poursuite, un maintien ou une fenêtre ouverte. Voir §6.7.
 
 **File du serveur** : voir §2.4. Pendant l'attente, le squishy « se prépare » (il tremble et brille) ; le joueur peut continuer à jouer, sa place est garantie (voir *Condition*). S'il quitte le serveur (ou si le serveur ferme) avant son tour, sa place est rendue et **rien n'est remis à zéro** : il refera son Grand Splorch plus tard. Le Grand Splorch est appliqué au profil **d'un seul bloc** au moment de l'éclatement (3,2 s, minuteur du serveur), puis sauvegardé tout de suite ; le spectacle du client suit l'heure envoyée, et un client qui ne le joue pas (chargement, Mouvement réduit) ne change rien au résultat.
 
@@ -629,7 +633,7 @@ Le détail en deux colonnes « Tu gardes » / « Repart de zéro » et le procha
 | ≥ 1 milliard | Or | +6 % |
 | ≥ 1e12 | Cristal | +8 % |
 
-Maximum : 26 × 8 % = +208 %.
+Maximum au lancement : 26 × 8 % = +208 %. Le bonus se compte **par espèce** : chaque espèce publiée ensuite ajoute sa place sur l'étagère (+8 % au plus). Les records sont gardés dans un tableau dense, une case par espèce (§12.6).
 
 ### 4.17 Le Squishydex
 
@@ -637,7 +641,7 @@ Maximum : 26 × 8 % = +208 %.
 - Une entrée est tamponnée dès que le joueur possède un squishy qui la remplit (naissance, capture, bébé, fusion, cadeau). Elle reste même si le squishy part.
 - Fiche d'espèce : nom, famille, rareté, aspect, mutations trouvées (silhouettes grises pour les autres), meilleur exemplaire, taille record.
 - **Page dorée** : les 8 mutations hors Lunaire d'une espèce trouvées → la page devient dorée, +1 % de revenu (additif dans A). La mutation Lunaire est en plus : elle pose un petit croissant d'argent sur la page, sans bonus. Rater les séances de la Lune n'empêche donc aucune page dorée.
-- **Bonus de famille** (les 4 espèces de la famille tamponnées) :
+- **Bonus de famille** (les 4 espèces de la famille tamponnées), **gagné pour toujours** : il est noté dans le profil au moment où il est gagné (`dex.fam`, §12.6), et une espèce ajoutée plus tard ne le retire jamais (pilier P2). Règle de contenu : les espèces de la semaine (§7.6) ne rejoignent jamais une famille déjà complète ; elles forment de **nouvelles familles de 4** (une famille par mois, son bonus est décidé avec le contenu et passe par la simulation), ou restent **sans famille**, comme les Secrets. Une nouvelle famille entre dans la Cuve dès R = 5 ; avant, on la trouve par les bébés.
 
 | Famille | Bonus permanent |
 |---|---|
@@ -660,14 +664,14 @@ Maximum : 26 × 8 % = +208 %.
 ### 4.19 Hors ligne
 
 - Calculé une seule fois au chargement : `durée = clamp(Clock.unix() − lastOnline, 0, limite)`.
-- **Croissance hors ligne** : chaque squishy des enclos grandit de `croissance sans boost × 50 % × durée`.
+- **Croissance hors ligne** : chaque squishy des enclos grandit de `croissance sans boost × 30 % × durée` [`Balance.Offline.GrowthShare = 0.3`], **et la croissance hors ligne du ranch s'arrête dès que le plus gros squishy des enclos atteint 90 % de l'objectif de Grand Splorch en cours** [`Balance.Offline.StopAt = 0.9`] (s'il y était déjà, rien ne grandit hors ligne). Comme toutes les tailles suivent le compteur de croissance du ranch (§12.3), c'est un seul plafond sur ce compteur. Les derniers 10 % se font en jeu, en 5 à 10 min : le Grand Splorch, avec son spectacle et ses cadeaux pour le serveur, reste un moment de la session. Avec les valeurs de la version 1.2, environ 9 Grands Splorch sur 20, et presque tous ceux de R = 6 à R = 11 (jours 3 à 10), devenaient prêts pendant l'absence : jouer faisait à peine avancer le prestige, et le suivi « Grand Splorch » du HUD n'était presque jamais atteint en jeu.
 - **Pièces hors ligne** : le Pot reçoit `revenu au départ (sans boost) × 25 % × durée`.
-- **Limite** : 8 h ; 12 h avec le Lit douillet (acheté avec des pièces, gardé pour toujours) ; +1 h avec la famille Spiky. Aucun achat Robux ne change cette limite.
-- **Écran de retour** (§7.2) : « Mochi Mew a grossi de +X pendant ton absence ! » (le vrai nom du Meilleur Ami n° 1, sinon du plus gros), et il est réellement plus gros. Si l'objectif de Grand Splorch est atteint, l'écran le dit.
+- **Limite** : 8 h ; 12 h avec le Lit douillet (acheté avec des pièces dès R = 3, gardé pour toujours) ; +1 h avec la famille Spiky. Aucun achat Robux ne change cette limite.
+- **Écran de retour** (§7.2) : « Mochi Mew a grossi de +X pendant ton absence ! » (le vrai nom du Meilleur Ami n° 1, sinon du plus gros), et il est réellement plus gros. Si le plus gros a atteint 90 % de l'objectif, l'écran le dit (« Presque prêt pour le Grand Splorch ! ») ; s'il l'avait déjà atteint en jeu à la session précédente, « Grand Splorch prêt ! ».
 
 ### 4.20 Nourrir Plop, objectifs du jour, carte « Plop a sommeil »
 
-- **Nourrir Plop** (nom du système, hérité du concept) : un grand bol dans le ranch. Le bol nourrit **ton Meilleur Ami n° 1** (au début, ton premier Plop) ; les textes écrivent son vrai nom (« Nourris Mochi Mew »). Une fois par jour UTC, maintenir □ **5 s** devant le bol : le Meilleur Ami accourt et mange (nom nom), le compteur de jours monte de 1. Les paliers comptent le **total de jours**, jamais une série : rater un jour ne fait rien perdre. « Jour 42 » flotte au-dessus du ranch. Paliers et récompenses : §7.3.
+- **Nourrir Plop** (nom du système, hérité du concept) : un grand bol dans le ranch. Le bol nourrit **ton Meilleur Ami n° 1** (au début, ton premier Plop) ; les textes écrivent son vrai nom (« Nourris Mochi Mew »). Une fois par jour UTC, maintenir □ **2 s** devant le bol : le Meilleur Ami accourt et mange (nom nom ; l'animation continue 3 s sans qu'on maintienne), le compteur de jours monte de 1 et un **boost personnel ×2 de 5 min** commence (§7.3). Un maintien de 5 s était long pour de petites mains sur une DualSense (§14). Les paliers comptent le **total de jours**, jamais une série : rater un jour ne fait rien perdre. « Jour 42 » flotte au-dessus du ranch. Paliers et récompenses : §7.3.
 - **Objectifs du jour** : 3 par jour (facile, moyen, difficile), §7.4.
 - **Carte « Plop a sommeil »** : après 60 min de jeu dans la session (puis après 120 min), une petite carte non bloquante (§10.3), où Big Plop bâille : « Tes squishies continuent de grandir pendant que tu te reposes. » Bouton « OK ». Aucune pénalité, aucun boost pour rester.
 
@@ -690,7 +694,7 @@ Interrupteur de configuration [`Features.BoopRush`] : `"on"` (lancement), `"even
 
 | Phase | Détail |
 |---|---|
-| Sirène (−10 s) | Le ciel vire au rose, musique de gloussements, double vibration (manette), bannière « BOOP RUSH dans 10 ! ». Pour un nouveau avant l'étape 9 de l'accueil : version discrète (§3) |
+| Sirène (−10 s) | Le ciel vire au rose, musique de gloussements, une vibration (manette, §10.5), bannière « BOOP RUSH dans 10 ! ». Pour un nouveau avant l'étape 9 de l'accueil : version discrète (§3) |
 | Début (:X5:00) | Dans chaque ranch boopable, jusqu'à **4 squishies curieux** éligibles viennent s'appuyer à la clôture, côté rue (choisis au hasard, renouvelés toutes les 20 s) ; **2 seulement** si ce ranch a été boopé au Rush précédent |
 | Booper | Un joueur Rush, depuis la rue, **maintient □ 2,5 s** sur le nez d'un squishy à la clôture (8 studs au plus). **5 s** si le propriétaire est à 25 studs au plus de sa clôture (s'il arrive pendant le maintien, le temps restant double). Lâcher, s'éloigner à plus de 8 studs ou une règle qui devient fausse = annulé. Le temps est mesuré par le serveur : un client qui n'envoie jamais « lâché » ne bloque rien, le maintien finit ou s'annule au plus tard 0,5 s après sa fin prévue |
 | ATCHOUM | Le squishy éternue (nuage pastel brillant, jamais de morve), saute la clôture et fait un **premier bond de 20 studs à l'opposé du boopeur**, puis rebondit dans la ville sur un **chemin calculé par le serveur** (§12.5). Le propriétaire reçoit **aussitôt une flèche** au bord de l'écran |
@@ -702,14 +706,16 @@ Interrupteur de configuration [`Features.BoopRush`] : `"on"` (lancement), `"even
 
 | Qui attrape | Le propriétaire | L'attrapeur |
 |---|---|---|
-| **Le propriétaire** | Capture « **Héros** » : +10 % de taille pour ce squishy, 120 s de son revenu, +2 Fame | — |
-| **Un autre joueur Rush** | **Son squishy rentre au ranch**, +1 Fame, 60 s de son revenu. Message, le retour d'abord : « **Wibble est rentré ! +1 Fame +X pièces · il a laissé un bébé à Noah** » | Un **bébé** : même espèce, même mutation, 0 étoile, taille = `min(10 % de l'original, 2 × son propre plus gros squishy)`, minimum 1 |
-| **Personne** (25 s écoulées) | Le squishy rentre tout seul avec **+5 % de taille** | — |
+| **Le propriétaire** | Capture « **Héros** » : **+1 h de croissance du ranch** pour ce squishy (croissance sans boost × 3 600 s, une fois par squishy et par jour UTC ; ensuite, les pièces et la Fame seulement), 120 s de son revenu, +2 Fame | — |
+| **Un autre joueur Rush** | **Son squishy rentre au ranch**, +1 Fame, 60 s de son revenu. Message, le retour d'abord : « **Wibble est rentré ! +1 Fame +X pièces · il a laissé un bébé à Noah** » | Un **bébé** : même espèce, 0 étoile, taille = `min(10 % de l'original, 0,5 × son propre plus gros squishy)`, minimum 1 ; mutation de l'original si elle vaut ×5 ou moins (Doré ou plus faible), sinon tirée avec des chances × 2 (§4.5) |
+| **Personne** (25 s écoulées) | Le squishy rentre tout seul avec **+30 min de croissance du ranch** (même règle : une fois par squishy et par jour) | — |
 | Les **autres joueurs Rush à 30 studs au plus** de la capture | — | 20 s de leur revenu et jauge +2 (« Bien joué ! ») : ceux qui ont couru gagnent aussi |
 
 **Mise en scène d'une capture par un autre joueur** (§9.4) : l'attrapeur ne touche **jamais** l'original. Le squishy reçoit une pichenette pleine d'étincelles et éternue une petite **bulle-bébé** brillante ; seule la bulle saute dans les bras de l'attrapeur. L'original fait coucou et rentre au ranch en rebondissant, avec une traînée de cœurs ; le propriétaire a une flèche vers lui. Les images et les clips montrent un cadeau qui naît, jamais un animal emporté (jury §7).
 
 Si le propriétaire quitte le serveur pendant la fuite, le squishy rentre aussitôt chez lui (sauvegardé à sa place).
+
+**Pourquoi « 1 h de croissance » et un bébé plafonné.** Un pourcentage se cumule : deux comptes complices qui se boopent (4 fuites par heure) pouvaient faire grossir un squishy de +46 % par heure, et un bébé valait jusqu'à 2 fois le plus gros squishy du receveur, mutation rare comprise (un Légendaire Glitch vaut ×8 000). Une durée de croissance une fois par jour, un bébé d'au plus la moitié du plus gros et une mutation rare jamais copiée gardent le plaisir sans ferme à deux comptes (§12.8).
 
 **Équilibre visé** (mesuré par `EscapeOutcome`, §16.3) : le propriétaire attrape au moins 25 % des fuites, personne ne les attrape dans 20 % des cas au plus. Réglages en cas d'écart : §16.4.
 
@@ -726,7 +732,7 @@ Si le propriétaire quitte le serveur pendant la fuite, le squishy rentre aussit
 | Propriétaire proche | Booper prend **2 fois plus longtemps** (5 s) si le propriétaire est à 25 studs au plus de sa clôture |
 | Bouclier débutant | Ranch non boopable tant que le joueur a **moins de 15 min de jeu cumulé** : ses squishies ne viennent pas à la clôture et une petite bulle « bouclier » s'affiche sur le panneau du ranch. Il peut booper les autres s'il a choisi le mode Rush dans les Réglages |
 | Petits serveurs | **Wild Wobblers partagés** en plus quand il y a moins de 6 joueurs ; le Wild Wobbler personnel existe à toute taille de serveur (§4.21.5) |
-| Pas de fuite en cascade | Un squishy rentré d'une fuite n'est plus boopable jusqu'à la fin de ce Rush ; un squishy porté, dans le Bassin, dans la Boîte à dodo, en attente de Grand Splorch ou né il y a moins de 60 s ne vient pas à la clôture |
+| Pas de fuite en cascade | Un squishy rentré d'une fuite n'est plus boopable jusqu'à la fin de ce Rush ; un squishy porté, dans le Bassin, dans la Boîte à dodo, né il y a moins de 60 s, ou dont le propriétaire attend son Grand Splorch dans la file (§4.15), ne vient pas à la clôture |
 | Limite du serveur | 10 fuites en même temps au plus sur le serveur (au-delà, boop refusé : « Trop de squishies en fuite ! ») |
 | Bébés | 10 bébés de Rush au plus par jour et par joueur (ensuite : 60 s de revenu à la place) |
 | Joueurs bloqués (règle souple) | Le client lit `StarterGui:GetBlockedUserIds()` et l'envoie au serveur (`ReportBlocked`, 200 identifiants au plus). Le serveur refuse les boops entre deux joueurs dont l'un a bloqué l'autre. C'est une liste fournie par le client : un plus, pas une garantie. Les vraies protections restent le mode Cozy (immédiat) et « Pas ce joueur » |
@@ -755,9 +761,12 @@ fin du maintien sans rupture → FUITE (chemin, premier bond opposé au boopeur,
 
 ```
 si attrapeur pas en mode Rush                                        → refus
-si attrapeur == boopeur et fuite de moins de 6 s                     → refus
+si attrapeur == boopeur et fuite de moins de 6 s (heure du serveur)  → refus
 rayon = 5 + 1,5 (tolérance), ou 8 + 1,5 si attrapeur == propriétaire
-si distance à pos(maintenant) > rayon, ou écart vertical > 8, ou pas canAct → refus
+t = tClient ramené dans [maintenant − 0,35 ; maintenant]
+si distance à plat (XZ) entre pos(t) et la position validée du joueur à t > rayon,
+   ou écart vertical (pieds du joueur / sol de la fuite) > 8, ou pas canAct → refus
+égalité entre deux attrapeurs                                       → ordre d'arrivée
 sinon → capture (Héros ou bébé) ; joueurs Rush à ≤ 30 studs : 20 s de revenu, jauge +2
 ```
 
@@ -780,7 +789,7 @@ Pendant l'accueil (§3), vers 3:00 de jeu, Big Plop éternue devant le portail d
 | Alerte (:19:45, :49:45) | Grande ombre ronde sur la place, bannière « MEGA SQUISH ! », compte à rebours de 15 s |
 | Atterrissage (:20:00, :50:00) | Un squishy géant (24 studs de diamètre, espèce de la semaine en rotation) tombe sur le MEGA pad. Onde de choc, vibration atténuée par la distance (§10.5) |
 | Pression (60 s) | Chaque joueur à 20 studs au plus du centre presse (action contextuelle). **1 point** par pression, **3 points** si PERFECT (le géant rebondit avec une période de 2 s ; fenêtre de 0,12 s avant à 0,28 s après le sommet, décalée pour le retard d'image comme au §4.7). Recharge 0,4 s par joueur. La barre de serveur se remplit au-dessus du géant |
-| Objectif | `ceil((30 + 50 × N) × indulgence)`, N = joueurs sur le serveur à l'atterrissage (Cozy compris). Indulgence 1 ; 0,8 après un échec ; 0,65 après 2 échecs de suite ; retour à 1 après une réussite. Cible de conception : **≈ 80 % de réussite** |
+| Objectif | `ceil((30 + 50 × N) × indulgence)`, N = **joueurs actifs** à l'atterrissage (Cozy compris), au moins 1 : un joueur est actif s'il a eu une intention acceptée ou un déplacement validé de 4 studs ou plus dans les 2 dernières minutes, ou s'il est à 60 studs au plus du centre de la place pendant l'alerte. Les absents du clavier, fréquents dans un tycoon à Pot automatique, ne rendent plus l'objectif impossible (avec 12 absents sur 16, 4 joueurs devaient faire 207 points chacun en 60 s). Indulgence 1 ; 0,8 après un échec ; 0,65 après 2 échecs de suite ; retour à 1 après une réussite. Cible de conception : **≈ 80 % de réussite** |
 | Réussite | Le géant ÉCLATE en pluie de bébés. Paliers fixes par participant : ≥ 10 points → 1 bébé ; ≥ 40 → 2 ; ≥ 80 → 3. Plus 60 s de revenu, +1 Fame, jauge +5 |
 | Échec | Le géant soupire et s'envole doucement. Chaque participant (≥ 10 points) : 60 s de revenu, « Presque ! » |
 
@@ -796,7 +805,7 @@ Le concept proposait d'additionner la taille de tous les squishies. Avec des tai
 
 | Action (n'importe quel joueur) | Points |
 |---|---|
-| Pression | 1 (+1 si PERFECT) |
+| Pression **PERFECT** (une pression normale ne compte pas) | 1 |
 | Naissance dans la Cuve | 2 |
 | Pression de pet-sitting | 2 |
 | Fusion (par étape de combo) | 3 |
@@ -807,8 +816,9 @@ Le concept proposait d'additionner la taille de tous les squishies. Avec des tai
 | Nourrir Plop | 10 |
 | Grand Splorch | 25 |
 
-- **Objectif** = `500 × max(2, N)` points (N = joueurs sur le serveur, recalculé en direct). Avec 16 joueurs actifs (≈ 30 points par minute chacun), la jauge se remplit en ≈ 15 à 20 min ; un joueur seul la remplit en ≈ 35 min.
-- **Pleine** : Big Plop danse sur la place (8 s, grand spectacle, file du §2.4), puis **WOBBLE PARTY** : ×2 pièces et croissance pour tout le serveur pendant **5 min**. La jauge est figée pendant la fête, puis repart de 0.
+- **Objectif** = `600 × max(2, N)` points [`Events.Gauge.TargetPerPlayer = 600`] (N = joueurs actifs, même définition que le MEGA, §4.22, recalculé en direct). Un joueur de référence donne ≈ 20 points par minute (12 PERFECT, naissances, captures, fusions) : la jauge se remplit en ≈ 30 min sur un serveur de 16 joueurs actifs, en ≈ 60 min pour un joueur seul. Dans la version 1.2, chaque pression comptait : un serveur actif (une pression par seconde et par joueur) la remplissait en 6 min, et le ×2 tournait 45 à 60 % du temps.
+- **Pleine** : Big Plop danse sur la place (8 s, grand spectacle, file du §2.4), puis **WOBBLE PARTY** : ×2 pièces et croissance pour tout le serveur pendant **5 min**. La jauge repart de 0 à la fin de la fête.
+- **Sieste de Big Plop** : après une Wobble Party, Big Plop se repose **20 min** [`Events.Gauge.RestSeconds = 1200`] (jarre grise, « Big Plop se repose 12:34 » dans le HUD). Les points continuent de compter (rien n'est perdu), mais la fête suivante attend la fin de la sieste : **au plus 5 min de ×2 toutes les 25 min**, quel que soit le serveur.
 - Grande jarre de gelée sur la place + petite barre dans le HUD.
 
 **Jelly Moon (samedi, et rattrapage le dimanche)**
@@ -820,11 +830,11 @@ Le concept proposait d'additionner la taille de tous les squishies. Avec des tai
 | Mutations | Chances × 2 et Lunaire 3 % (§4.5) |
 | BOOP RUSH | Les Rush de :05 et :15 rendent **Mythiques et Secrets boopables** |
 | Espèce de la Lune | Moonplop (Secret) peut naître ; ensuite, chaque semaine, une nouvelle espèce arrive en données et fait ses débuts pendant la Lune (§7.6) |
-| Autel de la Lune | Sur la place. Un joueur présent au moins 5 min pendant une séance reçoit **1 Goutte de Lune** à la fin de la séance : une naissance de Qualité (la sienne + 1) avec mutation **Lunaire garantie**. Une par séance au plus |
+| Autel de la Lune | Sur la place. Un joueur présent au moins 5 min pendant une séance reçoit **1 Goutte de Lune** à la fin de la séance : une naissance de Qualité (la sienne + 1) avec mutation **Lunaire garantie**. Une par séance et par compte au plus, notée dans le profil (`moon.lastSession`, §12.6) : changer de serveur ne la redonne pas |
 
 ### 4.24 Rythme de progression et simulation (porte de qualité)
 
-Joueur de référence : 35 min de jeu actif le premier jour, puis 30 min par jour ; une pression toutes les 2 s sur le squishy prêt le plus rentable, PERFECT 40 % du temps (fenêtre du §4.7) ; Pot encaissé toutes les 40 s ; achats au moins cher utile d'abord (Tapis, Enclos si plein, décorations, Lit douillet) ; fusion dès qu'une paire de jumeaux existe ; il garde toujours son plus gros squishy dans un enclos et range les plus faibles dans la Boîte à dodo pour laisser naître la Cuve ; 85 % des créatures en fuite attrapées ; hors ligne 16 h par nuit ; boosts ×2 20 % du temps ; événements moyens (60 % des Rush avec un bébé, 50 % des Wild Wobblers partagés, 85 % des Wild Wobblers personnels, 2 bébés par MEGA, 30 % des Golden, 1 cadeau de Grand Splorch toutes les 20 min) ; aucun achat Robux.
+**Joueur de référence** (politique exacte, la même dans la simulation et dans ce document) : 35 min de jeu actif le premier jour, puis 30 min par jour ; une pression toutes les 2 s sur le squishy prêt le plus rentable, PERFECT 40 % du temps (fenêtre du §4.7) ; Pot encaissé toutes les 40 s ; achat de la dalle la moins chère qui sert (Tapis, Enclos seulement si les enclos sont pleins et qu'un squishy dort, décorations, Lit douillet dès R = 3) ; « Tout fusionner » dès qu'une paire de jumeaux existe ; il garde dans les enclos les squishies qui rapportent le plus (échange gratuit au panneau Ranch), toujours son plus gros compris, les autres dorment dans la Boîte à dodo, et il vend le plus faible quand la Boîte à dodo est pleine ; 85 % de ses créatures en fuite attrapées ; hors ligne 16 h par nuit ; **boosts ×2 calculés d'après les règles**, jamais supposés : Nourrir Plop au début de chaque session (5 min), Wobble Party du serveur de référence (jauge pleine en ≈ 30 min, sieste de 20 min, §4.23), pas de Squish Party ; événements avec les **vraies parts d'un serveur plein de 16 joueurs** (60 % des Rush avec un bébé, Wild Wobbler partagé 19 %, Wild Wobbler personnel 85 %, 2 bébés par MEGA, Golden 6 %, un cadeau de Grand Splorch toutes les 20 min, 10 cadeaux en pièces par jour au plus) ; aucun achat Robux. La porte refait le même calcul pour des serveurs de **4 et 8 joueurs** (Golden 25 % et 12 %, Wild Wobbler partagé 75 % et 38 %) : chaque jalon doit tenir aux trois tailles.
 
 | Jalon | Cible (médiane) | Tolérance |
 |---|---|---|
@@ -835,30 +845,37 @@ Joueur de référence : 35 min de jeu actif le premier jour, puis 30 min par jou
 | À 5:00 : captures | 1-2 | ≥ 1 |
 | Première balade (taille 1 200) | 4:30 | ≤ 5:00 |
 | À 5:00 : la dalle Enclos (1 200) est payable | 100 % des joueurs | ≥ 90 % |
-| À 5:00 : pièces en poche (repère, pas une porte) | ≈ 10K | 6K-16K (valeur en dents de scie : elle dépend du dernier achat) |
-| Premier Grand Splorch | 14 min | **12-16 min** (médiane) ; 10-18 min pour 80 % des joueurs |
+| À 5:00 : pièces en poche (repère, pas une porte) | ≈ 10K | 5K-17K (valeur en dents de scie : elle dépend du dernier achat) |
+| Premier Grand Splorch | 13 min | **11-16 min** (médiane) ; 10-18 min pour 80 % des joueurs |
 | À 30 min : R | 2 | 1-3 |
 | À 30 min : tampons de Squishydex | 18 | 14-24 |
 | Fin du jour 1 (35 min) : R | 2 | 2-3 |
-| Fin du jour 1 : 3 objectifs du jour sur 3 en 30 min | ≥ 90 % des joueurs | ≥ 90 % (jalon nouveau, à mesurer par `EconomyPacing`) |
+| Fin du jour 1 : 3 objectifs du jour sur 3 en 30 min | ≥ 90 % des joueurs | ≥ 90 % |
 | Fin du jour 7 : R | 10 | 8-11 |
-| Fin du jour 7 : plus gros squishy (avant Grand Splorch) | ≈ 1,7e8 | 5e7-3e8 |
-| Fin du jour 7 : tampons de Squishydex (espèces + mutations) | 95 | 80-110 |
+| Fin du jour 7 : plus gros squishy (avant Grand Splorch) | ≈ 1e8 | 4e7-4e8 |
+| Fin du jour 7 : tampons de Squishydex (espèces + mutations) | 93 | 80-110 |
 | Fin du jour 7 : au moins un Épique ou mieux | 100 % des joueurs | ≥ 95 % |
+| Fin du jour 14 : R | 15 | 14-16 |
 | Fin du jour 28 : R | 20 | 17-22 |
-| Premier squishy de 1e12 (1 000 milliards) | vers le jour 24 (joueur à 30 min/jour) ; vers le jour 13 pour un joueur à 2 h/jour | — (longue traîne) |
+| Premier squishy de 1e12 (1 000 milliards) | vers le jour 27 (joueur à 30 min/jour ; 2 joueurs sur 3 l'ont avant la fin du jour 28) ; vers le jour 14 pour un joueur à 2 h/jour | — (longue traîne) |
+| **Santé de l'économie** (jours 1 à 14, médiane des boucles) : moment où le Tapis 12 est atteint | vers 90 % de la boucle | après 50 % de la boucle |
+| Santé de l'économie (jours 1 à 14) : pièces perdues au Grand Splorch | ≈ 3 × le prix du Tapis 12 de la boucle | ≤ 10 × |
+| Jour 7 : part des pressions dans les pièces gagnées en jeu (hors Pot hors ligne) | ≈ 60 % | ≥ 50 % |
+| Jours 2 à 14 : Grands Splorch déjà prêts à la connexion | 0 % | ≤ 50 % |
+| Part du temps de jeu en ×2 (boosts calculés) | ≈ 30 % | 20-40 % |
+| Gros acheteur (×2 Pièces, Grand Ranch, Squish Party la moitié du temps) : avance au jour 28 | 1 R | ≤ 2 R |
 
-**Simulation (porte bloquante).** Un test Lune (`tests/specs/EconomyPacing.spec.luau`) simule 200 joueurs de référence sur 28 jours avec les tables de `Shared/Config/Balance` et `Shared/Config/Squishies`, le même code de formules que le jeu (`Shared/Logic/Formulas`, `Odds`, `FusionRules`, `QuestRules`), et une graine fixe. Le test échoue si la médiane d'un jalon sort de sa tolérance.
+**Simulation (porte bloquante).** Un test Lune (`tests/specs/EconomyPacing.spec.luau`) simule les joueurs de référence sur 28 jours avec les tables de `Shared/Config/Balance` et `Shared/Config/Squishies`, le même code de formules que le jeu (`Shared/Logic/Formulas`, `Odds`, `FusionRules`, `QuestRules`), et une graine fixe : **50 joueurs par taille de serveur (4, 8 et 16) dans `./scripts/check.sh`**, 200 en lancement manuel avant chaque version. Le moteur saute d'un événement au suivant (pression, achat, naissance, capture, événement du serveur) avec les formules exactes du calcul paresseux (§12.3), au lieu de simuler chaque seconde : 28 jours de 200 joueurs restent sous la minute. Le test échoue si la médiane d'un jalon sort de sa tolérance.
 
-**Résultats de la révision 1.1.** Une simulation Lune hors moteur, écrite avec les valeurs exactes de ce document (80 joueurs de référence, 28 jours), donne : premier achat à 18 s, 4 squishies, 1 fusion et 2 captures à 5:00, première balade à 4:27, pièces à 5:00 médiane 10,1K (10 %-90 % : 6,7K-15,7K), premier Grand Splorch à 14,1 min (11,7-16,9), R = 2 à 30 min et en fin de jour 1, R = 10 au jour 7, R = 15 au jour 14, R = 20 au jour 28, 95 tampons au jour 7 et 132 au jour 28, premier 1e12 au jour 24. Avec Fame, trophées, bonus de famille et objectifs : mêmes R, premier Grand Splorch à 14,4 min, premier 1e12 au jour 22. Un gros acheteur (×2 Pièces, Grand Ranch, un gros paquet par jour, Squish Party la moitié du temps) a environ un R d'avance : 12,5 min, R = 11 au jour 7, R = 21 au jour 28 (c'est le « plus tôt, pas plus haut » du §8.1, n° 10).
+**Résultats de la révision 1.3.** Une simulation Lune hors moteur, écrite avec les valeurs exactes de ce document (80 joueurs de référence, serveur de 16, 28 jours), donne : premier achat à 18 s, 4 squishies, 1 fusion et 2 captures à 5:00, première balade à 4:26, pièces à 5:00 médiane 10,2K (10 %-90 % : 5,6K-16,5K), premier Grand Splorch à 12,5 min (10,6-15,3), R = 2 à 30 min et en fin de jour 1, 18 tampons à 30 min, R = 10 au jour 7 (plus gros 1,0e8 ; 3,8e7-3,5e8 ; 93 tampons), R = 15 au jour 14, R = 20 au jour 28 (131 tampons), premier 1e12 au jour 27 pour les deux tiers des joueurs. Tapis 12 atteint à 93 % de la boucle, pièces perdues au Grand Splorch = 3,0 fois le prix du Tapis 12, pressions = 61 % des pièces gagnées en jeu, aucun Grand Splorch prêt à la connexion, 31 % du temps en ×2. Avec Fame, trophées, bonus de famille et objectifs : premier Grand Splorch à 12,5 min, R = 10 / 16 / 20 aux jours 7 / 14 / 28, 97 tampons au jour 7, premier 1e12 au jour 24, Tapis 12 à 80 % de la boucle, pertes = 7,8 fois. Serveurs de 4 et de 8 joueurs : mêmes R (10 / 15 / 20), premier Grand Splorch à 11,6 et 12,2 min. Un joueur à 2 h par jour : R = 20 au jour 14, 24 au jour 28, premier 1e12 au jour 14. Un gros acheteur a un à deux R d'avance : 11,4 min, R = 12 au jour 7, R = 21 au jour 28, premier 1e12 au jour 21 (c'est le « plus tôt, pas plus haut » du §8.1, n° 10).
 
-Deux remarques honnêtes. (1) Le prototype cité dans la version 1.0 n'utilisait pas exactement ces valeurs (prix des dalles non multipliés par 2^R, objectifs ×3) : ses chiffres (balade à 3:52, R = 17 au jour 28, 1e12 au jour 35) étaient trop optimistes sur la balade et trop prudents sur R. (2) Environ 9 Grands Splorch sur 20 deviennent possibles pendant l'absence du joueur (croissance hors ligne) : il les trouve prêts à la connexion, ce que dit l'écran de retour. C'est un bon moment de retour, mais les boucles 3 à 10 se jouent alors en partie hors ligne ; à surveiller avec `SplorchReached` (levier : `Balance.Offline.*`).
+**Ce que la version 1.3 a corrigé** (simulation de la critique technique, refaite avec les valeurs de la version 1.2) : (1) avec des prix de dalles × 2^R, toutes les dalles étaient au maximum 3 à 8 min après chaque Grand Splorch dès le jour 3 et les pièces perdues valaient plus de 1 000 fois le prix du Tapis 12 ; ×2 Pièces ne changeait rien de mesurable ; (2) environ 9 Grands Splorch sur 20 devenaient possibles pendant l'absence ; (3) l'hypothèse « boosts ×2 20 % du temps » était fausse : avec les règles de la version 1.2 (chaque pression dans la jauge, boosts des objectifs et des paliers de Plop), le joueur de référence passait **95 %** de son temps en ×2. Le prototype cité dans la version 1.0 n'utilisait pas exactement les valeurs du document (prix des dalles non multipliés par R, objectifs × 3) ; ses chiffres ne servent plus.
 
-Leviers sans code : `Balance.Splorch.Targets`, `Balance.Tiles.*.Base/Growth`, `Balance.Vat.Interval` et `Balance.Vat.ByR` (qualité, vitesse et buses par R), `Balance.Income.Coef` (0,02), `Balance.Press.Seconds` (12), `Balance.Offline.*`.
+Leviers sans code : `Balance.Splorch.Targets`, `Balance.Tiles.*.Base/Growth`, `Balance.Tiles.RScale` (3,5), `Balance.Vat.Interval` et `Balance.Vat.ByR` (qualité, vitesse et buses par R), `Balance.Income.Coef` (0,02), `Balance.Press.Seconds` (12), `Balance.Offline.GrowthShare` (0,3), `Balance.Offline.StopAt` (0,9), `Events.Gauge.TargetPerPlayer` (600), `Events.Gauge.RestSeconds` (1 200).
 
 ### 4.25 Boosts, plafonds et limites anti-abus
 
-**Boosts ×2** : boost de serveur (Wobble Party gratuite, Squish Party payée, Squish Party d'administrateur) et boost personnel (objectifs, Nourrir Plop). Ils ne se cumulent jamais : `B` vaut 2 au plus. Une Squish Party payée n'est jamais « mangée » par un boost gratuit : la fête payée passe d'abord, la Wobble Party attend son tour. Un boost personnel est **mis en pause** pendant un boost de serveur (son minuteur s'arrête), pour que le joueur ne perde rien.
+**Boosts ×2** : boost de serveur (Wobble Party gratuite, Squish Party payée, Squish Party d'administrateur) et boost personnel (Nourrir Plop, 5 min par jour ; minutes de Squish Party non jouées d'un acheteur, §8.3). Les objectifs du jour ne donnent plus de boost (§7.4) : avec eux et les paliers de Plop à 15 min, le joueur de référence passait 95 % de son temps en ×2, et le boost ne voulait plus rien dire. Ils ne se cumulent jamais : `B` vaut 2 au plus. Une Squish Party payée n'est jamais « mangée » par un boost gratuit : la fête payée passe d'abord, la Wobble Party attend son tour. Un boost personnel est **mis en pause** pendant un boost de serveur (son minuteur s'arrête), pour que le joueur ne perde rien.
 
 | Plafond ou limite | Valeur |
 |---|---|
@@ -866,16 +883,21 @@ Leviers sans code : `Balance.Splorch.Targets`, `Balance.Tiles.*.Base/Growth`, `B
 | Wild Wobblers | 2 partagés + 1 personnel par joueur et par Rush |
 | Golden Wobbler | Le gagnant ne peut pas regagner pendant 20 min |
 | Bébés de Grand Splorch reçus | 10 par jour |
+| Cadeaux de Grand Splorch en pièces (60 s de revenu) | 10 par jour, ensuite 10 s de revenu |
+| Spectacle complet d'un Grand Splorch des autres | Au plus une fois toutes les 3 min par spectateur (sinon version courte, §4.15) |
 | Bébés du MEGA | 3 par MEGA (paliers) |
-| Taille de **tout** bébé ou cadeau | Au plus **2 × le plus gros squishy** du joueur qui le reçoit |
+| Taille de **tout** bébé ou cadeau | Au plus **0,5 × le plus gros squishy** du joueur qui le reçoit (le bébé du Rush : `min(10 % de l'original, 0,5 × le plus gros)`) |
+| Mutation d'un bébé du Rush | Copiée seulement si elle vaut ×5 ou moins ; sinon tirée avec des chances × 2 |
+| Croissance « Héros » (+1 h) et « rentré seul » (+30 min) | Une fois par squishy et par jour UTC |
 | Fame du Rush (boopé, Wild Wobblers, Héros) | 30 par jour, en mode Rush comme en mode Cozy |
 | Fame en relâchant | 20 par jour |
-| Pressions de pet-sitting récompensées | 300 par jour |
+| Pressions de pet-sitting récompensées | 100 par jour et par visiteur ; 100 reçues par jour et par propriétaire ; « Plus serviable » compte 20 pressions au plus par ami et par jour |
 | Applaudissements récompensés | 10 par jour |
 | Pressions | 12 par seconde au plus (au-delà, ignorées) |
 | Fuites du Rush | 2 par ranch et par Rush, 4 par ranch et par heure ; 10 en même temps sur le serveur ; une même paire boopeur → ranch au plus toutes les 30 min |
-| Squish Party | Vendue seulement si elle peut commencer aussitôt (une seule en attente au plus) ; 3 achats par joueur et par jour |
-| Comptes multiples qui se boopent | Bornés par les plafonds de bébés, la taille ≤ 2 × le plus gros, 1 boop par paire toutes les 30 min et 4 fuites par ranch et par heure |
+| Squish Party | Vendue seulement si aucune fête n'est en cours ; deux achats qui se croisent : la seconde fête prolonge la première de 10 min (aucune file d'attente en mémoire) ; 3 achats par joueur et par jour |
+| Wobble Party | Au plus 5 min de ×2 toutes les 25 min (sieste de Big Plop, §4.23) |
+| Comptes multiples qui se boopent | Bornés par les plafonds de bébés, la taille ≤ 0,5 × le plus gros, aucune mutation rare copiée, la croissance « Héros » une fois par squishy et par jour, 1 boop par paire toutes les 30 min et 4 fuites par ranch et par heure |
 | Vitesse, téléportation, bond sans recharge | Contrôle de déplacement avec budget d'action (§12.8) |
 | Rafales de messages réseau | Seau à jetons par action (§12.7) |
 | Échanges et dons de squishies | Aucun au lancement (les colis entre amis arrivent en janvier, §17) |
@@ -917,11 +939,11 @@ L'identifiant numérique est **définitif** (il est sauvegardé) : on ne réordo
 | 25 | `royal_plop` | Royal Plop | (Secret) | Secret | 1,05 / 1,05 / 1,05 | Couronne + petite cape | Étincelles | (140, 220, 255) / (255, 210, 80) | Goutte dorée | 1,0 Hz / 8 % | Plop couronné à cape rouge, goutte dorée sur la tête |
 | 26 | `moonplop` | Moonplop | (Secret) | Secret | 1,0 / 1,0 / 1,0 | Antenne en croissant | 3 yeux (un petit au milieu) | (210, 220, 255) / (150, 130, 255) | 2 gouttes brillantes qui flottent autour | 0,8 Hz / 7 % | Plop argenté de la Lune, avec un petit troisième œil tout mignon ; naît seulement pendant la Jelly Moon |
 
-Répartition : Commun 6, Peu commun 6, Rare 3, Épique 5, Légendaire 3, Mythique 1, Secret 2. Chaque famille a 4 espèces : un Commun, un Peu commun, puis deux plus rares. Les Secrets n'ont pas de famille (page « Secrets » du Squishydex) et ne comptent pas dans les bonus de famille.
+Répartition : Commun 6, Peu commun 6, Rare 3, Épique 5, Légendaire 3, Mythique 1, Secret 2. Chaque famille a 4 espèces : un Commun, un Peu commun, puis deux plus rares. Les Secrets n'ont pas de famille (page « Secrets » du Squishydex) et ne comptent pas dans les bonus de famille. **Espèces de la semaine** (§7.6) : elles ne rejoignent jamais une famille déjà complète (un bonus gagné ne se perd jamais, §4.17) ; elles forment une nouvelle famille de 4 (une famille par mois) ou restent sans famille. Rien dans les données ni dans le code ne suppose 26 espèces : tout ce qui est rangé par espèce (Squishydex, Étagère, rotation du MEGA) suit la liste publiée.
 
 **Champs réservés pour plus tard** dans chaque ligne (valeur au lancement) : `release = 0` (horodatage UTC d'arrivée ; les lignes futures sont publiées en avance et s'activent seules), `duo = false` (espèce Duo, janvier), `recipe = nil` (combinaison World First, janvier), `limitedUntil = 0` et `encore = {}` (semaines « Encore », février).
 
-**Rotation du MEGA SQUISH** : le géant prend l'espèce `((semaine + numéro du MEGA dans la semaine) mod 24) + 1`, Secrets exclus (semaine = `Clock.week()`).
+**Rotation du MEGA SQUISH** : le géant prend une espèce de la liste des espèces **non secrètes déjà publiées** (`release` ≤ maintenant), rangée par identifiant : l'élément `((semaine + numéro du MEGA dans la semaine) mod taille de la liste) + 1` (semaine = `Clock.week()`). Une espèce publiée le samedi entre donc dans la rotation toute seule ; un « mod 24 » écrit en dur l'aurait oubliée.
 
 **Noms** : tous inventés pour ce jeu. On évite tout ce qui rappelle Squishmallows (pas de « -mallow »), les personnages connus et les mèmes. Vérification de marque avant publication (§18).
 
@@ -1007,14 +1029,14 @@ Tout fonctionne **sans chat** : le chat exige une vérification d'âge (Étude �
 
 - Chaque ranch a une clôture et un **portail de gelée** : le propriétaire le traverse, les autres rebondissent dessus.
 - **La règle est vérifiée par le serveur, pas par la physique.** À chaque tick (10 Hz), un joueur dont la position validée est dans le ranch d'un autre (rectangle du ranch, module pur `WorldLayout`) est repoussé doucement à 6 studs devant le portail (`PivotTo`), avec un petit rebond et le message « C'est le ranch de Mira ! » (ou « C'est le ranch 7 ! » si le nom est caché). Aucune exception, même pour les amis.
-- **La physique n'est qu'un confort** : la clôture est doublée d'un mur invisible ancré de 12 studs de haut (personne ne l'enjambe, même en monture ou en bondissant) ; la membrane du portail est non solide pour le serveur, et chaque client la rend solide **pour lui seul** sur les ranchs des autres (réglage local de `CanCollide`, qui ne touche que son propre personnage). Si ce confort rate (latence, personnage en réapparition), la poussée du serveur rattrape tout.
+- **La physique n'est qu'un confort** : la clôture est doublée d'un mur invisible ancré et solide de **30 studs** de haut, plus haut que toute portée (saut de la selle géante 13 + hausse de la monture 6 + 3 de marge = 22) : personne ne l'enjambe, même en monture ou en bondissant, et aucune position « debout sur le mur » n'existe ; la membrane du portail est non solide pour le serveur, et chaque client la rend solide **pour lui seul** sur les ranchs des autres (réglage local de `CanCollide`, qui ne touche que son propre personnage). Si ce confort rate (latence, personnage en réapparition), la poussée du serveur rattrape tout.
 - Pendant le BOOP RUSH, on boope **par-dessus la clôture**, depuis la rue. La poursuite a lieu **dans la ville**.
 
 ### 6.4 Pet-sitting (presser chez un ami)
 
 - Quand un **ami Roblox** se tient devant ta clôture (à 10 studs au plus), jusqu'à 3 de tes squishies prêts viennent à la clôture (hors Rush ; ils ne s'enfuient jamais).
-- L'ami les presse depuis la rue (même geste que chez soi, PERFECT compris ; cible au choix avec L1 / R1 ou un clic, §10.4). **Le propriétaire** reçoit la récompense normale de la pression (sans PERFECT). **Le visiteur** reçoit 10 s de son propre revenu (×2 si PERFECT) et 1 point du classement « Plus serviable ». La recharge de 8 s du squishy s'applique.
-- 300 pressions de pet-sitting récompensées par jour et par visiteur. Fonctionne même si le propriétaire est occupé ailleurs sur le serveur.
+- L'ami les presse depuis la rue (même geste que chez soi, PERFECT compris ; cible au choix avec L1 / R1 ou un clic, §10.4), par un message à lui : `PetPress(ownerId, uid, tClient)` (§12.7). **Le propriétaire** reçoit la récompense normale de la pression (sans PERFECT). **Le visiteur** reçoit **2 s** de son propre revenu (×2 si PERFECT) et 1 point du classement « Plus serviable » (20 au plus par ami et par jour). La recharge de 8 s du squishy s'applique.
+- **100** pressions de pet-sitting récompensées par jour et par visiteur, et **100** reçues par jour et par propriétaire. Fonctionne même si le propriétaire est occupé ailleurs sur le serveur. Dans la version 1.2, le visiteur gagnait 10 s de **tout** son revenu par pression, sur 3 squishies toutes les 8 s : 2 à 4 fois plus que presser chez soi, et un second compte remplissait le classement.
 
 ### 6.5 Emotes et signaux
 
@@ -1040,31 +1062,31 @@ Tout fonctionne **sans chat** : le chat exige une vérification d'âge (Étude �
 ### 6.7 Grand Splorch des autres : cadeaux et applaudissements
 
 - Chaque Grand Splorch fait pleuvoir sur **tous** les autres joueurs : 60 s de leur revenu et un bébé (§4.15).
-- Pendant 8 s, chaque autre joueur voit une grande puce **APPLAUDIR** avec le glyphe croix → (F au clavier, ou clic sur la puce ; elle prend la place de la puce GRAND SPLORCH, §10.2). Appuyer joue l'emote `cheer` et lance un arc de confettis vers le héros. L'applaudisseur gagne 10 s de son revenu (10 applaudissements récompensés par jour) ; le héros voit « 12 joueurs t'applaudissent ! ».
+- Pendant 8 s, chaque autre joueur qui a la version complète du spectacle (au plus une fois toutes les 3 min, §4.15) voit une grande puce **APPLAUDIR** avec le glyphe croix → (F au clavier, ou clic sur la puce ; elle prend la place de la puce GRAND SPLORCH, §10.2). Elle n'apparaît jamais pendant une poursuite (créature attrapable à 30 studs ou moins), un maintien ou une fenêtre ouverte : la croix → garde alors son emote « Merci ». Appuyer joue l'emote `cheer` et lance un arc de confettis vers le héros. L'applaudisseur gagne 10 s de son revenu (10 applaudissements récompensés par jour) ; le héros voit « 12 joueurs t'applaudissent ! ».
 
 ### 6.8 Moments coopératifs
 
 - **MEGA SQUISH** (§4.22) : tout le serveur presse le géant ; chaque participant reçoit au moins un bébé en cas de réussite.
-- **Jauge du serveur** (§4.23) : chaque action de chacun compte ; pleine, tout le monde gagne ×2 pendant 5 min.
+- **Jauge du serveur** (§4.23) : les actions de chacun comptent (pressions PERFECT, naissances, captures, fusions…) ; pleine, tout le monde gagne ×2 pendant 5 min, puis Big Plop fait une sieste de 20 min.
 - **Golden Wobbler** (§4.11) : course amicale ; tous ceux qui sont près gagnent quelque chose.
 - **Squish Party** (§8.3) : un achat qui profite à tout le serveur.
 
 ### 6.9 Classements de la semaine
 
-**Règle honnête.** Aucun achat ne donne directement de points de classement. Mais ×2 Pièces, les paquets de pièces et la Squish Party accélèrent le ranch, donc indirectement tout ce qui suit la progression (taille, nombre de Grands Splorch, familles débloquées). C'est pourquoi **la taille n'est pas un classement mondial** : sur une semaine, « y arriver plus tôt » voudrait dire « plus haut ». Le plus gros squishy reste sur la statue de la place, au niveau du serveur, sans titre (§6.6).
+**Règle honnête.** Aucun achat ne donne directement de points de classement. Mais ×2 Pièces et la Squish Party accélèrent le ranch, donc indirectement tout ce qui suit la progression (taille, nombre de Grands Splorch, familles débloquées). C'est pourquoi **la taille n'est pas un classement mondial** : sur une semaine, « y arriver plus tôt » voudrait dire « plus haut ». Le plus gros squishy reste sur la statue de la place, au niveau du serveur, sans titre (§6.6).
 
 | Classement | Mesure | Égalité | Lien avec l'argent |
 |---|---|---|---|
 | **Plus de tampons** (Stamp Hunter) | Nouveaux tampons et badges d'étoiles du Squishydex gagnés cette semaine | Premier arrivé | Faible et indirect (familles débloquées plus tôt). Un nouveau joueur peut gagner sa première semaine |
 | **Meilleur combo** (Combo Star) | Plus long combo de fusion (×5 au plus, ×6 avec la famille Axolo) | **Premier arrivé**, jamais la taille | Aucun |
 | **Meilleure capture** (Top Catcher) | Plus forte valeur de capture = rareté × mutation de la créature attrapée (fuite, Golden, Rush, Wild Wobbler) | Premier arrivé | Faible et indirect (la qualité de la Cuve suit R) |
-| **Plus serviable** (Super Helper) | Pressions de pet-sitting récompensées (300 par jour au plus) | Premier arrivé | Aucun |
+| **Plus serviable** (Super Helper) | Pressions de pet-sitting récompensées (100 par jour au plus, 20 au plus par ami et par jour : il faut aider 5 amis différents pour compter 100) | Premier arrivé | Aucun |
 | **Plus généreux** (Big Heart) | Bébés donnés : bébés reçus par d'autres grâce à tes squishies en fuite et à tes Grands Splorch | Premier arrivé | Faible et indirect (un ranch plus rapide fait plus de Grands Splorch) |
 
 **Pourquoi pas « Meilleure série PERFECT »** : un PERFECT se vérifie avec l'heure envoyée par le client (§4.7). Un script peut donc réussir 100 % de PERFECT. Dans le ranch, le gain reste borné (×2) ; dans un classement mondial, le haut du tableau serait rempli de tricheurs.
 
 - **Onglet Classements** : d'abord « **Ma place sur ce serveur** » et « **Mon record contre la semaine dernière** » (flèche verte s'il est battu), puis le top 10 mondial. Un enfant voit un but à sa portée avant de voir les champions.
-- Stockage : un `OrderedDataStore` par classement et par semaine (`Weekly_<clé>_<semaine>`). Écriture quand un joueur bat son record de la semaine (file par serveur, vidée toutes les 60 s) ; lecture du top 10 toutes les 120 s. Tableau du serveur en direct. Le record de la semaine passée est gardé dans le profil (`weekly.prev`).
+- Stockage : un `OrderedDataStore` par classement et par semaine (`Weekly_<clé>_<semaine>`). Un `OrderedDataStore` ne garde que des **entiers** : la valeur écrite code le score, l'égalité « premier arrivé » et le nom caché dans un seul entier, `((score × 2^20) + (2^20 − 1 − secondes écoulées depuis lundi 00:00 UTC)) × 2 + caché` (une semaine compte 604 800 s < 2^20), décodé à l'affichage. Le plus grand score possible (meilleure capture : 5 000 × 100 = 500 000) donne ≈ 1,05e12, loin sous 2^53 : aucun arrondi. Aucune taille n'est écrite dans un classement. Écriture quand un joueur bat son record de la semaine (file par serveur, vidée toutes les 60 s) ; lecture du top 10 toutes les 120 s. Tableau du serveur en direct. Le record de la semaine passée est gardé dans le profil (`weekly.prev`).
 - Remise à zéro le lundi 00:00 UTC. Le top 10 de chaque classement porte le titre de la semaine pendant la semaine suivante.
 - Les joueurs exclus par l'anti-triche (§12.8) ne sont pas écrits.
 - **Cacher mon nom** (Réglages, désactivé par défaut) : le joueur apparaît comme « Squishy Fan #4821 » (nombre tiré du hash de son identifiant) dans les bannières, les classements, sur la statue et sur le panneau de son ranch.
@@ -1095,19 +1117,19 @@ Gratuits. **BOOP RUSH en mode Cozy pour tous par défaut** ; le propriétaire du
 
 | Horizon | Crochets |
 |---|---|
-| **J1** | Récompense à 10 s ; fusion à 1:00 ; capture à 2:00 ; monture vers 4:30 ; premier Grand Splorch vers 14 min ; choix Rush / Cozy à 15 min, au calme ; un événement de serveur au plus toutes les 10 min ; message « Tes squishies grandissent même quand tu dors » à 10 min de jeu et en bas du panneau Réglages |
+| **J1** | Récompense à 10 s ; fusion à 1:00 ; capture à 2:00 ; monture vers 4:30 ; premier Grand Splorch vers 13 min ; choix Rush / Cozy à 15 min, au calme ; un événement de serveur au plus toutes les 10 min ; message « Tes squishies grandissent même quand tu dors » à 10 min de jeu et en bas du panneau Réglages |
 | **J2-J7** | Écran de retour (croissance hors ligne visible) ; Nourrir Plop (jours au total) ; 3 objectifs du jour ; nouvelles familles à R = 1, 3, 5 ; Squishydex ; Meilleur Ami ; première Jelly Moon |
-| **J8-J28** | Grands Splorch 9 à 17 ; mutations rares (Galaxie, Arc-en-ciel, Glitch, Flop) ; étoiles ★5 ; Étagère à trophées ; Fame ; classements de la semaine ; une espèce nouvelle chaque semaine ; costumes de saison |
+| **J8-J28** | Grands Splorch 11 à 20 ; mutations rares (Galaxie, Arc-en-ciel, Glitch, Flop) ; étoiles ★5 ; Étagère à trophées ; Fame ; classements de la semaine ; une espèce nouvelle chaque semaine ; costumes de saison |
 
 ### 7.2 Écran de retour
 
-S'ouvre au chargement si le joueur a été absent au moins 10 min. Contenu : « Pendant ton absence (5 h 12) : **Mochi Mew a grossi de +X** » (le vrai nom du Meilleur Ami n° 1, sinon du plus gros), le squishy qui gonfle à l'écran (0,8 s, `Quint Out`), « +Y pièces dans ton Pot », et « Grand Splorch prêt ! » si l'objectif est atteint. Un bouton « Super ! » (360 × 112 px TV, texte de 40 px TV, glyphe ✕), sélectionné d'office à la manette ; ✕ ou ○ le ferment. Aucune publicité, aucune offre.
+S'ouvre au chargement si le joueur a été absent au moins 10 min. Contenu : « Pendant ton absence (5 h 12) : **Mochi Mew a grossi de +X** » (le vrai nom du Meilleur Ami n° 1, sinon du plus gros), le squishy qui gonfle à l'écran (0,8 s, `Quint Out`), « +Y pièces dans ton Pot », et « Presque prêt pour le Grand Splorch ! » si le plus gros a atteint 90 % de l'objectif (la croissance hors ligne s'arrête là, §4.19). Un bouton « Super ! » (360 × 112 px TV, texte de 40 px TV, glyphe ✕), sélectionné d'office à la manette ; ✕ ou ○ le ferment. Aucune publicité, aucune offre.
 
 ### 7.3 Nourrir Plop (jours au total)
 
-Une fois par jour UTC, maintenir 5 s devant le bol. Les jours sans palier : boost personnel ×2 (croissance et pièces) pendant 5 min. Les paliers comptent le total de jours, jamais une série.
+Une fois par jour UTC, maintenir 2 s devant le bol. Chaque jour : boost personnel ×2 (croissance et pièces) pendant 5 min. Les paliers comptent le total de jours, jamais une série.
 
-| Jours au total | Récompense (en plus d'un boost personnel ×2 de 15 min) |
+| Jours au total | Récompense (en plus du boost personnel ×2 de 5 min de chaque jour) |
 |---|---|
 | 1 | Autocollant « Jour 1 » au-dessus du ranch |
 | 2 | Pièces = 10 min de revenu |
@@ -1128,7 +1150,7 @@ Chaque jour UTC : 3 objectifs (facile, moyen, difficile), tirés à la première
 
 **Remise à zéro de 00:00 UTC en pleine session** (16 h à Los Angeles, 19 h à New York) : les objectifs terminés sont **réclamés tout seuls** ; ceux en cours restent jusqu'à la fin de la session. Les nouveaux arrivent à la connexion suivante, avec une carte « Nouveaux objectifs ! ». Rien de commencé n'est perdu.
 
-Récompenses : facile = 3 min de revenu ; moyen = 6 min de revenu + boost personnel ×2 de 5 min ; difficile = 10 min de revenu + boost personnel ×2 de 10 min. **Les 3 terminés** : une « Goutte chanceuse » (une naissance de Qualité + 1, chances de mutation × 2).
+Récompenses : facile = 3 min de revenu ; moyen = 6 min de revenu ; difficile = 10 min de revenu. **Les 3 terminés** : une « Goutte chanceuse » (une naissance de Qualité + 1, chances de mutation × 2). Les objectifs ne donnent plus de boost ×2 (version 1.3) : ajoutés aux boosts du bol, ils mettaient le joueur de référence en ×2 pendant 95 % de son temps de jeu (§4.25). Avec les prix des dalles × 3,5^R, les pièces gardent leur valeur, et la récompense aussi.
 
 | # | Niveau | Objectif | But | Proposé si |
 |---|---|---|---|---|
@@ -1173,7 +1195,7 @@ Rythme tenable (le créateur de Grow a Garden s'est épuisé en hebdomadaire, É
 
 ### 8.1 Principes non négociables
 
-1. **Aucun hasard payant, aucune chance achetable** : ni œuf, ni coffre, ni roue, ni chance payante, ni avantage payant pour attraper ou booper. **Les pièces, qu'on peut acheter en Robux, n'achètent jamais une probabilité ni un tirage** : la Cuve (qualité, vitesse, buses) progresse seulement avec R (§4.9). C'est la définition des « paid random items » de Roblox (`production/monetization/paid-random-items.md` : les « probability modifier items » achetés en Robux ou avec une monnaie achetable en Robux), appliquée à la lettre.
+1. **Aucun hasard payant, aucune chance achetable** : ni œuf, ni coffre, ni roue, ni chance payante, ni avantage payant pour attraper ou booper. **Les pièces, qu'on peut obtenir plus vite avec des Robux (×2 Pièces, Squish Party), n'achètent jamais une probabilité ni un tirage** : la Cuve (qualité, vitesse, buses) progresse seulement avec R (§4.9). C'est la définition des « paid random items » de Roblox (`production/monetization/paid-random-items.md` : les « probability modifier items » achetés en Robux ou avec une monnaie achetable en Robux), appliquée à la lettre.
 2. **Jamais payer pour sauter un minuteur** : ni la Cuve, ni la Gelée lente (janvier).
 3. **Pas de faux compte à rebours**, pas de « plus que 2 en stock », pas de prix caché derrière une monnaie intermédiaire. Chaque bouton montre le prix en Robux et exactement ce qu'on reçoit.
 4. **Aucune proposition d'achat pendant les 10 premières minutes de jeu cumulé** : la Boutique Robux est cachée, aucun écran ne propose d'acheter.
@@ -1181,16 +1203,16 @@ Rythme tenable (le créateur de Grow a Garden s'est épuisé en hebdomadaire, É
 6. **Boutique cachée tant que les identifiants sont à 0** : un article dont l'identifiant vaut `0` dans `Shared/Config/Monetization` est désactivé et invisible ; si tous valent 0, l'onglet Boutique Robux n'apparaît pas (leçon de Comet Conga).
 7. **Prix lus à l'exécution** (`MarketplaceService:GetProductInfoAsync`) pour la tarification gérée par Roblox (Managed Pricing) ; le prix en configuration n'est qu'un affichage de repli.
 8. **`ProcessReceipt` idempotent** (service repris de Comet Conga) : `PurchaseId` mémorisé (100 derniers), `PurchaseGranted` renvoyé seulement après une sauvegarde réussie.
-9. **PolicyService** : au chargement, `PolicyService:GetPolicyInfoForPlayerAsync` (sous `pcall`, 3 essais). Si `ArePaidRandomItemsRestricted` est vrai, le joueur ne voit pas les **Paquets de pièces** : c'est un achat direct de monnaie, et les pièces font avancer vers R, qui améliore la Cuve gratuite ; on reste donc prudent. ×2 Pièces et la Squish Party restent visibles : ils n'achètent aucune chance. Si l'appel échoue, on applique la règle la plus stricte. Les probabilités des naissances gratuites sont **toujours** affichées.
-10. Le pass ×2 Pièces ne touche **que les pièces**, jamais la taille ni les chances. Dit honnêtement : ×2 Pièces, les paquets et la Squish Party accélèrent le ranch, donc indirectement la taille et le rythme des Grands Splorch. C'est pourquoi la taille n'est pas un classement mondial, et les autres classements se départagent au premier arrivé (§6.9).
-11. **Des pièces payées ne disparaissent jamais par surprise** : paquets cachés quand « Grand Splorch prêt ! » est affiché, perte annoncée en rouge dans l'aperçu, deuxième confirmation après un achat récent (§4.15, §8.3).
+9. **PolicyService** : au chargement, `PolicyService:GetPolicyInfoForPlayerAsync` (sous `pcall`, 3 essais). Le jeu ne vend ni objet aléatoire payant ni monnaie : `ArePaidRandomItemsRestricted` ne cache donc aucun article (il est seulement compté par l'analytique) ; l'appel sert surtout à `IsContentSharingAllowed` (clips, §9.5). Si l'appel échoue, on applique la règle la plus stricte (clips coupés). Les probabilités des naissances gratuites sont **toujours** affichées. Au questionnaire de maturité, la réponse sur les objets aléatoires payants est « non » (§18).
+10. Le pass ×2 Pièces ne touche **que les pièces**, jamais la taille ni les chances. Dit honnêtement : ×2 Pièces et la Squish Party accélèrent le ranch, donc indirectement la taille et le rythme des Grands Splorch (un gros acheteur a un à deux R d'avance, §4.24). C'est pourquoi la taille n'est pas un classement mondial, et les autres classements se départagent au premier arrivé (§6.9).
+11. **Aucune monnaie vendue au lancement** (§8.3) : des Robux ne peuvent jamais disparaître dans un Grand Splorch. L'aperçu annonce quand même en rouge les pièces gagnées en jeu qui vont repartir de zéro, avec « Dépenser d'abord » (§4.15).
 
 ### 8.2 Passes (« Pour toujours », gardés après chaque Grand Splorch)
 
 | Clé | Nom | Prix de départ | Effet |
 |---|---|---|---|
 | `AutoPot` | Pot automatique | 149 R$ | Le Pot s'encaisse tout seul toutes les 5 s, où qu'on soit. Confort seulement |
-| `DoubleCoins` | ×2 Pièces | 249 R$ | ×2 sur toutes les pièces (revenu, pressions, combos, ventes, récompenses en pièces). Jamais la taille |
+| `DoubleCoins` | ×2 Pièces | 249 R$ | ×2 sur le revenu (facteur P, §4.3), donc sur tout ce qui se compte en revenu ou en secondes de revenu (Pot, pressions, combos, ventes, récompenses), **une seule fois** : une récompense de « N s de revenu » n'est jamais multipliée une deuxième fois par P (§4.1). Jamais la taille. Avec les prix des dalles × 3,5^R (§4.6), les pièces gardent leur valeur à toutes les boucles, et ce pass aussi |
 | `BigRanch` | Grand Ranch | 199 R$ | +6 places d'enclos (24 au plus) |
 | `SaddlesTrails` | Pack Selles et Traînées | 99 R$ | 6 selles et 6 traînées. Purement décoratif : aucun avantage de vitesse ni de capture |
 
@@ -1200,20 +1222,17 @@ Chaque carte de pass porte l'étiquette « Pour toujours » / « Forever ».
 
 | Clé | Nom | Prix de départ | Effet |
 |---|---|---|---|
-| `SquishParty` | Squish Party | 99 R$ | ×2 pièces **et** croissance pour **tout le serveur** pendant 10 min. Ne se cumule pas. **Vendue seulement si elle peut commencer aussitôt** : le bouton est caché pendant une Squish Party (si deux achats se croisent, le second suit le premier). **3 achats au plus par joueur et par jour** (« 2 sur 3 aujourd'hui »). Si l'acheteur quitte le serveur avant la fin de sa fête, ou si le serveur ferme, la fête continue pour les autres et il garde un **boost personnel ×2 de 10 min** pour sa prochaine session. Bannière « **SQUISH PARTY ×2 !** », qui ne parle pas d'achat ; « offerte par Noah » seulement si l'acheteur l'a choisi (case « Montrer mon nom », décochée par défaut) |
-| `CoinsSmall` | Petit paquet de pièces | 49 R$ | Pièces = **30 min** du revenu actuel (minimum 5 000) |
-| `CoinsBig` | Gros paquet de pièces | 149 R$ | Pièces = **120 min** du revenu actuel (minimum 20 000) |
+| `SquishParty` | Squish Party | 99 R$ | ×2 pièces **et** croissance pour **tout le serveur** pendant 10 min. Ne se cumule pas. **Vendue seulement si elle peut commencer aussitôt** : le bouton est caché pendant une Squish Party. Si deux achats se croisent (on ne peut pas refuser un reçu payé), la seconde fête **prolonge** la première de 10 min : aucune fête n'attend dans une file en mémoire du serveur. **3 achats au plus par joueur et par jour** (« 2 sur 3 aujourd'hui »). Si l'acheteur quitte le serveur avant la fin de sa fête, la fête continue pour les autres et il garde un **boost personnel ×2 de 10 min** pour sa prochaine session. Si le serveur ferme (mise à jour, panne) avant la fin, chaque acheteur dont les minutes n'ont pas été jouées les retrouve en boost personnel ×2 (10 min au plus par achat), écrit dans son profil avant la fermeture (`BindToClose`) : une fête payée n'est jamais perdue. Bannière « **SQUISH PARTY ×2 !** », qui ne parle pas d'achat ; « offerte par Noah » seulement si l'acheteur l'a choisi (case « Montrer mon nom », décochée par défaut) |
 | `OutfitSweater` | Pull douillet | 49 R$ | Une tenue, à mettre sur le squishy de son choix |
 | `OutfitCrown` | Couronne de gelée | 79 R$ | Idem |
 | `OutfitWinter` | Écharpe d'hiver | 49 R$ | Idem (costume de saison du lancement) |
 
-- **Paquets de pièces et Grand Splorch** : les pièces repartent de zéro à chaque Grand Splorch, et un paquet vaut le plus juste avant. Pour qu'aucun enfant ne perde un achat : (1) quand « Grand Splorch prêt ! » est affiché, les paquets sont cachés, avec le message « Fais d'abord ton Grand Splorch » ; (2) l'aperçu du Grand Splorch annonce la perte en rouge, avec un bouton « Dépenser d'abord » ; (3) après un achat de pièces de moins de 30 min dont il reste au moins la moitié, une deuxième confirmation avant le maintien (§4.15). Le retrait pur et simple des paquets au lancement est une question ouverte (Journal de révision).
-- Le montant des paquets de pièces est **calculé par le serveur au moment de l'attribution** et affiché avant l'achat (« ≈ 1,2 M pièces »), calculé par le client à partir du revenu répliqué.
+- **Paquets de pièces : retirés du lancement** (décision de la version 1.3, ancienne question 1). Trois raisons : (1) les pièces repartent de zéro à chaque Grand Splorch, et un enfant qui achète un paquet puis appuie sur GRAND SPLORCH perd ses Robux en quelques secondes, même avec des protections ; (2) le montant affiché était calculé avant l'achat, mais l'attribution le recalculait : un reçu rejoué par Roblox après une panne, juste après un Grand Splorch, donnait le minimum (20 000 pièces pour 149 R$ au lieu de « ≈ 1,2 M »), contraire au n° 3 du §8.1 ; (3) moins d'articles, moins de cas à tester (barre « zéro bug »). Les clés `CoinsSmall` et `CoinsBig` restent dans la configuration avec l'identifiant 0, donc invisibles. Ils ne reviendront (janvier au plus tôt, sur décision du propriétaire) qu'avec un porte-monnaie « Pièces de côté » qui survit au Grand Splorch et se dépense en premier, et un devis du serveur écrit dans le profil avant l'invite d'achat (champ réservé `packs`, §12.6, §17.2).
 - **Tenues** : on voit le squishy porter la tenue (aperçu 3D qui tourne) **avant** d'acheter. Une tenue achetée appartient au compte : on la met sur un squishy, on la change gratuitement ; une tenue va sur un squishy à la fois. Si ce squishy est vendu ou relâché, la tenue revient dans la garde-robe. Une fusion garde la tenue.
 
 ### 8.4 Ce qui est volontairement exclu
 
-Œufs, coffres, roues ; chance payante, y compris par une monnaie achetable (amélioration de la Cuve en pièces) ; avantage pour booper ou attraper ; immunité payante ; « passer le minuteur » ; plafond hors ligne payant (le pass « Offline Plus » du concept est supprimé : le Lit douillet s'achète en pièces) ; récompense d'invitation ; publicité vidéo récompensée ; nom de l'acheteur affiché par défaut.
+Œufs, coffres, roues ; chance payante, y compris par une monnaie achetable (amélioration de la Cuve en pièces) ; monnaie vendue (paquets de pièces) au lancement ; avantage pour booper ou attraper ; immunité payante ; « passer le minuteur » ; plafond hors ligne payant (le pass « Offline Plus » du concept est supprimé : le Lit douillet s'achète en pièces) ; récompense d'invitation ; publicité vidéo récompensée ; nom de l'acheteur affiché par défaut.
 
 **Plus tard (janvier)** : piste premium de la saison de 28 jours (≈ 399 R$), uniquement décorative, toutes les récompenses visibles avant l'achat (§17).
 
@@ -1265,7 +1284,7 @@ Tous les effets passent par le module client `UI/Juice` (repris de Comet Conga :
 
 | État | Animation |
 |---|---|
-| Au repos | Rebond de période 1,2 s (hauteur 0,18 D), écrasement au contact (1 + a ; 1 − a ; 1 + a) pendant 0,1 s puis tremblement amorti à la fréquence de l'espèce ; clignement toutes les 3-6 s ; flâne dans l'enclos (pas de 2 studs toutes les 4-8 s) ; regarde le joueur le plus proche |
+| Au repos | Rebond de période 1,2 s (hauteur 0,18 D), écrasement au contact (1 + a ; 1 − a ; 1 + a) pendant 0,1 s puis tremblement amorti à la fréquence de l'espèce ; clignement toutes les 3-6 s ; flâne dans l'enclos (pas de 2 studs toutes les 4-8 s, **jamais à plus de 2 studs de sa place** : le serveur mesure les portées depuis la place, §4.7) ; regarde le joueur le plus proche |
 | Prêt à presser | Corps gonflé de 4 %, petit reflet qui passe toutes les 2 s ; anneau PERFECT qui se resserre vers lui à chaque cycle quand il est la cible |
 | En recharge | Anneau qui se remplit au sol en 8 s ; corps normal |
 | Porté | Sur la tête du joueur, bat des pieds (oscillation ±10° à 3 Hz) |
@@ -1282,10 +1301,10 @@ Tous les effets passent par le module client `UI/Juice` (repris de Comet Conga :
 
 | Moment | Tweens et mouvement | Particules / 3D | Caméra / écran | Texte | Son | Vibration |
 |---|---|---|---|---|---|---|
-| **Presser** | Profil `press` : (1 ; 1 ; 1) → (1,35 ; 0,60 ; 1,35) en 0,06 (`Quad Out`) → (0,85 ; 1,25 ; 0,85) en 0,12 (`Quad Out`) → (1 ; 1 ; 1) en 0,35 (`Elastic Out`) | 8 gouttes couleur du corps ; 6 à 10 pièces (client) jaillissent en arc 0,5 puis volent vers le compteur en 0,4 (`Quad In`) | Pop du compteur | « +1,2K » : échelle 0 → 1,2 → 1 en 0,2 (`Back Out`), monte de 3 studs en 0,8 | `Press`, hauteur au hasard entre 0,92 et 1,08 (un son un peu différent à chaque fois) | `pressTick` (2 par seconde au plus) |
+| **Presser** | Profil `press` : (1 ; 1 ; 1) → (1,35 ; 0,60 ; 1,35) en 0,06 (`Quad Out`) → (0,85 ; 1,25 ; 0,85) en 0,12 (`Quad Out`) → (1 ; 1 ; 1) en 0,35 (`Elastic Out`) | 8 gouttes couleur du corps ; 6 à 10 pièces (client) jaillissent en arc 0,5 puis volent vers le compteur en 0,4 (`Quad In`) | Pop du compteur | « +1,2K » à **taille fixe à l'écran** (40 px TV, §10.2) : échelle 0 → 1,2 → 1 en 0,2 (`Back Out`), monte de 3 studs en 0,8 | `Press`, hauteur au hasard entre 0,92 et 1,08 (un son un peu différent à chaque fois) | — (seul le PERFECT vibre : une vibration à chaque pression surchargeait la manette) |
 | **PERFECT** | Profil `perfect` : (1,45 ; 0,50 ; 1,45) puis comme `press` | Anneau `Neon` blanc 0 → 1,6 D en 0,25 ; 14 étincelles | — | Tampon « PERFECT ! » doré : 0 → 1,3 → 1 en 0,25 (`Back Out`) ; « ×3 » sous le tampon pour la série | `Perfect`, hauteur 1,0595^série (un demi-ton de plus par marche) | `perfect` |
 | Série de 5 | — | 20 étincelles dorées en gerbe | Légère lueur dorée aux bords de l'écran 0,4 (pas en MR) | « PERFECT ×5 ! » | `StreakMax` | `perfect` |
-| **Dalle achetée** | L'objet sort du sol : échelle Y 0 → 1,15 → 1 en 0,45 (`Back Out`), puis (1,08 ; 0,92) → 1 en 0,3 | 12 vermicelles colorés | — | « Tapis à Goûter Niv. 2 » flottant | `TileBuild` | — |
+| **Dalle achetée** | Pendant l'attente de 0,6 s : anneau blanc qui se remplit autour de la dalle (il se vide en 0,15 si le joueur sort). Puis l'objet sort du sol : échelle Y 0 → 1,15 → 1 en 0,45 (`Back Out`), puis (1,08 ; 0,92) → 1 en 0,3 | 12 vermicelles colorés | — | « Tapis à Goûter Niv. 2 » flottant | `TileBuild` | — |
 | **Pot encaissé** | Couvercle qui saute (0,15) | Geyser de 12 à 20 pièces, qui volent vers le compteur (décalage 0,03) | Compteur `countTo` 0,5 + pop 1,15 | « +4,5K » doré | `PotCollect` puis `Coin` | — |
 | **Cuve qui se remplit** | Niveau de gelée qui monte en continu ; à 90 %, la Cuve tremble (échelle 1,03, sinus 3 Hz) | 2 bulles par seconde | — | — | `VatBubble` (petit blip à 90 %) | — |
 | **Naissance Commun / Peu commun** | La goutte tombe (0,3), s'écrase (1,4 ; 0,6 ; 1,4), la coque se fend en 6 gouttes, le squishy sort : 0 → 1,1 → 1 en 0,35 (`Back Out`) | 10 particules couleur de rareté | — | « + Mochi Mew » (taille selon la rareté : ×0,8 Commun → ×1,6 Secret) ; « NOUVEAU ! » doré si nouvelle entrée | `Hatch` | — |
@@ -1303,26 +1322,26 @@ Tous les effets passent par le module client `UI/Juice` (repris de Comet Conga :
 | **Créature en fuite apparaît** | La Fontaine crache une colonne de gelée (0,4), la créature sort en arc (0,6) et atterrit écrasée | Anneau à la couleur du joueur sous elle | Flèche au bord de l'écran si elle est hors champ | — | `RunawayAppear` | — |
 | **Bond d'une créature** (fuite, Rush, Wild, Golden) | Profil `hop` : étirement (0,85 ; 1,25 ; 0,85) au départ, écrasement (1,3 ; 0,7 ; 1,3) à l'atterrissage pendant 0,08 | 3 bouffées de poussière par atterrissage (pas en Graphismes légers) | — | — | `Giggle` toutes les 2 à 3 s (son 3D, portée 60 studs) | — |
 | **Booper** (maintien) | Anneau de progression autour du nez (2,5 ou 5 s) ; le nez remue ; le squishy inspire : Y 1 → 1,15 pendant le maintien | — | — | « Boop… » | `BoopHold` (petit souffle qui monte) | — |
-| **ATCHOUM** | Profil `sneeze` : (1,5 ; 0,6 ; 1,5) en 0,08, puis saut par-dessus la clôture (arc 0,7, sommet 8 studs) | Nuage pastel brillant (20 particules blanches et roses, **jamais vertes**) | — | « ACHOO! » / « ATCHOUM ! » (`Elastic Out`) | `Sneeze` | Boopeur : `boopDone` ; propriétaire : `booped` |
+| **ATCHOUM** | Profil `sneeze` : (1,5 ; 0,6 ; 1,5) en 0,08, puis saut par-dessus la clôture (arc 0,7, sommet 8 studs) | Nuage pastel brillant (20 particules blanches et roses, **jamais vertes**) | — | « ACHOO! » / « ATCHOUM ! » (`Elastic Out`) | `Sneeze` | Boopeur : `boopDone` ; propriétaire : aucune (une vibration de perte serait un signal négatif ; il vibre quand son squishy revient, `squishyBack`) |
 | **Poursuite** | Bonds en continu (profil `hop`) | Anneau à la couleur du propriétaire + contour `Highlight` ; traînée de 6 gouttes ; anneau de temps au-dessus (25 s qui se vident) | Flèche au bord de l'écran vers la fuite la plus proche à 120 studs (joueurs Rush) | — | `MusicRush` (pendant le Rush) | — |
 | **Bondir** | — | `Trail` sur la `HumanoidRootPart` pendant 0,35 ; 6 bouffées de poussière | Focale 70 → 76 en 0,1, retour en 0,4 (`Quad InOut`) (pas en MR) | L'indicateur R2 (bas droite, §10.2) montre un balayage de recharge (4 s), puis pop 1,15 quand il est prêt | `Leap` | — |
 | **Attraper** (fuite, Wild, Golden) | La créature se roule en boule, saute dans les bras du joueur (parabole 0,3), puis disparaît en rétrécissant (0,2) et réapparaît dans l'enclos | 14 particules | — | « +1 Mochi Mew » ; « NOUVEAU ! » si nouvelle entrée | `Catch` (Golden : `CatchGolden`) | `catch` |
-| Attraper le squishy d'un autre (Rush) | **L'attrapeur ne touche jamais l'original.** Pichenette pleine d'étincelles sur le squishy (0,15) ; il éternue une petite **bulle-bébé** brillante (Ø 1,5 stud, le bébé roulé en boule dedans) qui flotte jusqu'aux bras de l'attrapeur (parabole 0,4), éclate en paillettes, et le bébé saute vers son ranch. L'original fait coucou et rentre au ranch en rebondissant | 14 paillettes ; traînée de 6 cœurs par seconde derrière l'original | Propriétaire : flèche au bord de l'écran vers son squishy qui rentre | Attrapeur : « Bébé Wibble ! » ; propriétaire, le retour d'abord : « Wibble est rentré ! +1 Fame +X pièces · il a laissé un bébé à Noah » (« au Ranch 7 » si le nom est caché), avec le bouton « Pas ce joueur » | `BabyGet` ; propriétaire : `Return` | `catch` |
-| **Capture Héros** | Le squishy grossit de 10 % sous les yeux (0,3) | 30 particules | — | Tampon « HÉROS ! » / « HERO! » doré (0,4, `Back Out`) | `HeroCatch` | `catch` (force 0,5) |
-| Personne n'attrape | Le squishy rentre en bondissant ; au portail, il grossit de 5 % avec une étincelle | 8 étincelles | — | Propriétaire : « Wibble est rentré plus gros ! +5 % » | `Return` | — |
+| Attraper le squishy d'un autre (Rush) | **L'attrapeur ne touche jamais l'original.** Pichenette pleine d'étincelles sur le squishy (0,15) ; il éternue une petite **bulle-bébé** brillante (Ø 1,5 stud, le bébé roulé en boule dedans) qui flotte jusqu'aux bras de l'attrapeur (parabole 0,4), éclate en paillettes, et le bébé saute vers son ranch. L'original fait coucou et rentre au ranch en rebondissant | 14 paillettes ; traînée de 6 cœurs par seconde derrière l'original | Propriétaire : flèche au bord de l'écran vers son squishy qui rentre | Attrapeur : « Bébé Wibble ! » ; propriétaire, le retour d'abord : « Wibble est rentré ! +1 Fame +X pièces · il a laissé un bébé à Noah » (« au Ranch 7 » si le nom est caché), avec le bouton « Pas ce joueur » | `BabyGet` ; propriétaire : `Return` | Attrapeur : `catch` ; propriétaire, quand son squishy est rentré : `squishyBack` |
+| **Capture Héros** | Le squishy grossit sous les yeux (0,3) : +1 h de croissance du ranch, une fois par squishy et par jour (sinon, pas de grossissement, le reste est pareil) | 30 particules | — | Tampon « HÉROS ! » / « HERO! » doré (0,4, `Back Out`) | `HeroCatch` | `catch` (force 0,5) |
+| Personne n'attrape | Le squishy rentre en bondissant ; au portail, il grossit avec une étincelle (+30 min de croissance, une fois par squishy et par jour) | 8 étincelles | — | Propriétaire : « Wibble est rentré plus gros ! » | `Return` | `squishyBack` |
 | **Monter** | La monture apparaît (0 → 1 en 0,25, `Back Out`), le joueur saute dessus (arc 0,3) ; profil `mount` : (1,25 ; 0,75 ; 1,25) en 0,12 | — | — | — | `MountUp` | — |
 | Atterrissage en monture | (1,3 ; 0,7 ; 1,3) en 0,1 | 8 bouffées ; Grande selle : anneau d'éclaboussure ; Selle géante : onde 0 → 12 studs en 0,4 | — | — | `RideLand` | — |
-| **Grand Splorch** (7,5 s) | 0,0 : le squishy brille (pulsation blanche 0,3) et s'élève de 8 studs (0,6, `Quad Out`). 0,6 : il vole vers la place sur une courbe (1,4, `Sine InOut`). 2,0 : à 40 studs au-dessus du MEGA pad, il gonfle de ×1 à ×2,5 en 1,2 (`Quad In`), en tremblant (±6 % de 4 à 8 Hz). 3,2 : **éclatement au ralenti** (0,8 ; pas en MR) en un grand nuage de confettis. 5,2 : il sort du nuage tout petit (0 → 1 en 0,4, `Back Out`) et fait coucou (0,6). 5,8 : il rejoint le héros en 3 grands bonds magiques (1,5 au total, traînée d'étoiles), quelle que soit la distance, atterrit à ses pieds à 7,3, puis rentre à sa place | 3,2 : 60 gouttes de gelée qui retombent, onde 0 → 80 studs en 0,8, `Bloom` +0,6 pendant 0,4. 4,0 : pluie de cadeaux : pour **chaque** joueur, 6 à 10 pièces et une capsule de bébé tombent près de lui (1,2) | Héros : caméra qui suit le vol puis le retour du petit squishy (pas en MR : une flèche le montre) ; secousse 0,3, amplitude 0,35 à l'éclatement ; flash blanc 0,1 (pas en MR). Autres : secousse atténuée par la distance. Visible de toute la carte | 5,2 : titre « GRAND SPLORCH III » qui s'écrit en 0,6 (`MaxVisibleGraphemes`) ; 7,3 : « Plop est là ! ×2 pour toujours » (vrai nom) ; bannière serveur ; puce APPLAUDIR chez les autres (8 s) | 2,0 `SplorchCharge` ; 3,2 `SplorchPop` ; 4,0 `GiftRain` ; 5,2 `Reward` | Héros : `splorch` ; autres : `catch` à la capsule |
+| **Grand Splorch** (7,5 s) | 0,0 : le squishy brille (pulsation blanche 0,3) et s'élève de 8 studs (0,6, `Quad Out`). 0,6 : il vole vers la place sur une courbe (1,4, `Sine InOut`). 2,0 : à 40 studs au-dessus du MEGA pad, il gonfle de ×1 à ×2,5 en 1,2 (`Quad In`), en tremblant (±6 % de 4 à 8 Hz). 3,2 : **éclatement au ralenti** (0,8 ; pas en MR) en un grand nuage de confettis. 5,2 : il sort du nuage tout petit (0 → 1 en 0,4, `Back Out`) et fait coucou (0,6). 5,8 : il rejoint le héros en 3 grands bonds magiques (1,5 au total, traînée d'étoiles), quelle que soit la distance, atterrit à ses pieds à 7,3, puis rentre à sa place | 3,2 : 60 gouttes de gelée qui retombent, onde 0 → 80 studs en 0,8, `Bloom` +0,6 pendant 0,4. 4,0 : pluie de cadeaux : pour **chaque** joueur, 6 à 10 pièces et une capsule de bébé tombent près de lui (1,2) | Héros : caméra qui suit le vol puis le retour du petit squishy (pas en MR : une flèche le montre) ; secousse 0,3, amplitude 0,35 à l'éclatement ; flash blanc 0,1 (pas en MR). Autres : secousse atténuée par la distance. Visible de toute la carte | 5,2 : titre « GRAND SPLORCH III » qui s'écrit en 0,6 (`MaxVisibleGraphemes`) ; 7,3 : « Plop est là ! ×2 pour toujours » (vrai nom) ; bannière serveur ; puce APPLAUDIR chez les autres (8 s) | 2,0 `SplorchCharge` ; 3,2 `SplorchPop` ; 4,0 `GiftRain` ; 5,2 `Reward` | Héros : `splorch` ; autres : `catch` à la capsule (spectacle complet seulement, au plus une fois toutes les 3 min ; la version courte n'a ni capsule, ni secousse, ni vibration, ni APPLAUDIR, §4.15) |
 | **MEGA SQUISH : alerte** | Ombre ronde qui grandit de 0 à 24 studs en 15 s et pulse | — | — | Bannière « MEGA SQUISH ! » + compte à rebours | `MegaWarn` | — |
 | MEGA : atterrissage | Chute de 120 studs en 0,6 (`Quad In`) ; écrasement (1,4 ; 0,55 ; 1,4) en 0,15 puis `Elastic Out` 0,8 | 3 anneaux 0 → 60 studs décalés de 0,15 ; 40 bouffées de poussière | Secousse 0,3, amplitude `0,4 × (1 − d / 120)` si d < 120 studs | — | `MegaLand` | `megaLand` atténuée |
-| MEGA : pression | Creux local (1,04 ; 0,96 ; 1,04) en 0,08 à chaque pression locale ; le serveur envoie un battement toutes les 0,25 s, écrasement proportionnel au nombre de pressions | « +1 » / « +3 » flottants | Barre de serveur qui se remplit (`Back Out`, 0,3) ; à 90 %, le géant tremble (±4 % à 6 Hz) et écarquille les yeux | — | `MegaPress`, hauteur de 0,9 à 1,3 selon la progression | `pressTick` |
+| MEGA : pression | Creux local (1,04 ; 0,96 ; 1,04) en 0,08 à chaque pression locale ; le serveur envoie un battement toutes les 0,25 s, écrasement proportionnel au nombre de pressions | « +1 » / « +3 » flottants | Barre de serveur qui se remplit (`Back Out`, 0,3) ; à 90 %, le géant tremble (±4 % à 6 Hz) et écarquille les yeux | — | `MegaPress`, hauteur de 0,9 à 1,3 selon la progression | `pressTick` sur un PERFECT seulement |
 | MEGA : ÉCLATE | Gonfle 1 → 1,3 en 0,3 (`Quad In`) puis éclate | 80 gouttes ; pluie de capsules de bébés (une par bébé, près de chaque participant) ; 60 confettis | Flash blanc 0,12 (pas en MR) ; coup de focale | « MEGA SPLORCH ! » | `MegaPop` puis `GiftRain` | `megaPop` |
 | MEGA : échec | Le géant soupire (Y 1 → 0,9 → 1 en 1) et s'envole doucement (2) | — | — | « Presque ! » | `MegaSigh` | — |
 | **Jauge pleine** | La jarre déborde ; Big Plop danse 8 s (sauts, 2 tours sur lui-même, dandinements) ; un grand ballon Plop de 20 studs monte au-dessus de la place pendant la danse | 40 confettis | Ciel légèrement doré pendant 5 min ; pastille « WOBBLE PARTY ×2 5:00 » | Bannière | `GaugeFull` | — |
 | **Golden Wobbler** | Geyser doré de la fontaine, la créature sort en arc | 30 étincelles ; traînée dorée de 8 particules par seconde | — | Bannière à la capture | `GoldenAppear` ; à la capture `CatchGolden` | `catch` |
 | **Sirène du BOOP RUSH** | Les squishies curieux trottent vers la clôture (un bond de 0,3 par pas) | — | Ciel rose (`Tint` (255, 200, 225)) en 2 s ; pastille rose « BOOP RUSH 1:30 ». Nouveau avant l'étape 9 : teinte à 30 %, pastille seulement | « BOOP RUSH ! » (pas pour un nouveau avant l'étape 9) | `RushSiren` puis `MusicRush` pendant 90 s (−12 dB pour un nouveau avant l'étape 9) | `rushSiren` (pas pour un nouveau avant l'étape 9) |
 | **Jelly Moon** début / fin | Transition du ciel 4 s (nuit, grosse lune, teinte violet-sarcelle) ; les Lunaires ont 2 gouttes de gelée brillantes qui flottent autour d'eux (orbite de 3 s) | Lucioles lunaires (12 sur l'écran) | — | Bannière « JELLY MOON ! » | `MoonStart` puis `MusicMoon` | — |
-| **Nourrir Plop** (le Meilleur Ami n° 1) | Anneau de maintien 5 s autour du bol ; le Meilleur Ami ouvre et ferme la bouche 4 fois, gonfle à 1,05 et revient | 6 cœurs | — | Tampon « Jour 42 ! » | `FeedPlop` ; palier : `Reward` | — |
+| **Nourrir Plop** (le Meilleur Ami n° 1) | Anneau de maintien 2 s autour du bol ; puis, sans maintien, le Meilleur Ami ouvre et ferme la bouche 4 fois (3 s), gonfle à 1,05 et revient | 6 cœurs | — | Tampon « Jour 42 ! » | `FeedPlop` ; palier : `Reward` | — |
 | **Nouvelle entrée de Squishydex** | Carte qui glisse de la droite en 0,3 (`Back Out`), reflet `UIGradient` 0,6 | — | — | « NOUVEAU ! Gillygum · Néon » | `DexNew` | — |
 | **Objectif terminé** | Barre remplie en 0,3, carte qui pulse à 1,1, coche qui se dessine | La récompense vole vers son compteur | — | — | `ObjectiveDone` | — |
 | **Fanfare de record du serveur** | — | 3 feux d'artifice au-dessus de la place | — | Bannière dorée « Premier à 1 MILLIARD ! » | `Fanfare` | — |
@@ -1335,7 +1354,7 @@ Tous les effets passent par le module client `UI/Juice` (repris de Comet Conga :
 - Réglage « Clips » (activé par défaut), et seulement si `PolicyService` renvoie `IsContentSharingAllowed = true` pour ce joueur.
 - Capture vidéo automatique (`CaptureService:StartVideoCaptureAsync`, côté client) pour : naissance Légendaire ou mieux, mutation Arc-en-ciel, Glitch ou Flop, COMBO ×5, son propre Grand Splorch (case « Filmer mon Grand Splorch » sur l'écran d'aperçu, cochée par défaut). Arrêt après 8 s (`StopVideoCapture` ; Roblox arrête de toute façon à 30 s).
 - À la fin, une petite carte **non bloquante** (§10.3) : « Garder ton clip ? » avec Enregistrer (`PromptSaveCapturesToGallery`), Partager (`PromptShareCapture`) et Fermer. Si le joueur n'y répond pas, elle se range dans la pastille « ! » de la puce Menu jusqu'à la fin de la session. Le jeu **ne partage jamais tout seul**.
-- **Console** : chaque appel à `CaptureService` est protégé (`pcall`). Si la capture n'est pas disponible sur l'appareil, la case « Filmer » et la carte « Garder ton clip ? » n'apparaissent pas, sans message d'erreur ; le bouton Create de la PS5 (ou Partager de la Xbox) reste la capture du système.
+- **Console** : chaque appel à `CaptureService` est protégé (`pcall`). Si la capture n'est pas disponible sur l'appareil, la case « Filmer » et la carte « Garder ton clip ? » n'apparaissent pas ; si `StartVideoCaptureAsync` ne renvoie pas un succès, aucune carte pour cette capture ; jamais de message d'erreur ; le bouton Create de la PS5 (ou Partager de la Xbox) reste la capture du système.
 
 ### 9.6 Sons
 
@@ -1393,6 +1412,7 @@ Tous les effets passent par le module client `UI/Juice` (repris de Comet Conga :
 
   Pourquoi 28 : 28 px TV font 2,6 % de la hauteur de l'écran. Sur une télé de 55 pouces vue à 3 m, c'est environ 20 minutes d'arc, lisible par un enfant de 8 ans. Comet Conga s'arrêtait à 27 px réels en 1080p ; on monte d'un cran et on écrit le texte courant en 32.
 - **Contraste** : texte clair sur un fond foncé translucide (opacité ≥ 0,6) ou avec un contour `UIStroke` de 3 px. Jamais de texte posé directement sur le décor.
+- **Textes du monde** (prix des dalles, consigne de l'accueil, « +N », taille au-dessus d'un squishy, invites) : la règle des 28 px TV vaut aussi pour eux. Ils sont détaillés au §10.2 (*Textes du monde*) : `BillboardGui` en pixels fixes, jamais de texte à lire posé au sol ou dimensionné en studs.
 - **Peu d'éléments, grands** : en jeu calme, 8 éléments au plus sont visibles (pièces, Fame, puce Menu, pastille d'événement, jauge, suivi d'objectif, indicateurs, carte de la cible). Le reste n'apparaît que quand il sert (divulgation progressive) et disparaît ensuite.
 - **Aucun chevauchement, aucun texte coupé** : chaque élément du HUD a une place fixe dans une colonne (gauche, centre, droite, bas) ancrée à un bord de la zone sûre. Deux éléments ne se recouvrent jamais, à aucune des 3 résolutions visées (1920 × 1080, 3840 × 2160, 1280 × 720) ni sur un écran plus large ou plus haut que 16:9 (les colonnes s'écartent, elles ne se rapprochent pas). Chaque texte a `TextScaled` et un `UITextSizeConstraint` dont le minimum est 28 px TV : s'il ne tient pas à 28 en anglais **et** en français, le test échoue et on raccourcit le libellé (§12.10, couche d).
 - **Le focus n'est jamais perdu ni piégé** : règles au §10.6.
@@ -1405,23 +1425,25 @@ Tous les effets passent par le module client `UI/Juice` (repris de Comet Conga :
 |---|---|---|---|
 | Pastille Pièces | Haut gauche (96, 54) | 440 × 112 | Pièce dessinée de 80, montant en 56 px, revenu « +1,2K/s » en 32 px |
 | Pastille Fame et amis | Haut gauche (96, 178) | 320 × 56 | Étoile + Fame ; cœur + nombre d'amis présents (32 px) |
-| **Puce Menu** | Haut gauche (96, 246) | 260 × 80 | Glyphe △ (48) + « Menu » (40 px) ; « Tab » au clavier ; un clic l'ouvre aussi. Porte les pastilles « ! » (action possible, carte en attente) et « ♥ 3 » (paires de jumeaux) |
+| **Puce Menu** | Haut gauche (96, 246) | 260 × 80 | Glyphe △ (48) + « Menu » (40 px) ; « M » au clavier (affiché selon la disposition, `GetStringForKeyCode`) ; un clic l'ouvre aussi. Porte les pastilles « ! » (action possible, carte en attente) et « ♥ 3 » (paires de jumeaux) |
 | Menu ouvert (le rail) | À la place de la puce, (96, 246) vers le bas | Jusqu'à 7 boutons de 340 × 96, écart 12 (y 246 à 990) | Grand Splorch (seulement quand il est prêt), Ranch, Squishydex, Objectifs, Classements, Boutique (après 10 min de jeu et si un identifiant existe), Réglages. Icône de 56 + libellé de 36 px |
 | Pastille d'événement | Haut centre (y = 54) | 560 × 72 | Prochain événement « BOOP RUSH 3:12 » (36 px) ; événement en cours en couleur (Rush rose, MEGA jaune, Lune violet, Wobble Party orange) |
 | Barre du MEGA | Haut centre (y = 138) | 720 × 48 | Progression du serveur, objectif, temps restant (28 px) |
-| Jauge du serveur | Haut centre (y = 138, hors MEGA) | 400 × 28 + icône Plop de 40 | Remplissage |
+| Jauge du serveur | Haut centre (y = 138, hors MEGA) | 400 × 28 + icône Plop de 40 | Remplissage ; grise avec « Big Plop se repose 12:34 » (28 px) pendant la sieste (§4.23) |
 | **Emplacement de message** | Haut centre (y = 198) | Bannière 1000 × 112 ; message 760 × 88 | **Un seul à la fois.** Les bannières de serveur (§6.6 ; titre 48 px, ligne 32 px) passent d'abord ; les messages (module `UI/Toast` repris, 32 px) attendent, 3 au plus en file, 2,5 s chacun, les messages identiques fusionnés (« +X pièces ×3 ») |
-| Suivi d'objectif | Haut droite (−96, 54) | 440 × 104 | Anneau de 72 + « Grand Splorch » (32 px) + « 12K / 15K » (28 px) |
+| Suivi d'objectif | Haut droite (−96, 54) | 440 × 104 | Anneau de 72 + « Grand Splorch » (32 px) + « 12K / 15K » (28 px) ; dans la file : « 2e dans la file · ≈ 0:40 » (§2.4) |
 | Indicateurs d'état | Haut droite (−96, 170), en ligne | 64 × 64 chacun, écart 12, 3 au plus ; minutes en 28 px dessous (jusqu'à y = 266) | Bouclier débutant, boost ×2, mon mode (Rush ou Cozy). Affichage seul |
 | Carte non bloquante | Droite (−96, 330) | 520 × 220 au plus | Titre 40 px, texte 32 px, glyphe △ (48) + « Voir ». 8 s, puis rangée dans la pastille « ! » (§10.3) |
-| **Puce d'action spéciale** | Bas centre, bas à −162 (y 822-918) | 520 × 96 | « GRAND SPLORCH ! » avec le glyphe △ quand l'objectif est atteint (△ ou croix ↓ ouvre le menu sur l'entrée Grand Splorch : 2 appuis jusqu'à l'aperçu ; à la souris, un clic sur la puce) ; « APPLAUDIR » avec le glyphe croix → et un anneau de 8 s, à la place de la précédente (§6.7). Pendant l'accueil, cette place sert à la consigne du moment (glyphe 64 + mot 40 px) quand l'objet visé n'est pas à l'écran |
+| **Puce d'action spéciale** | Bas centre, bas à −162 (y 822-918) | 520 × 96 | « GRAND SPLORCH ! » avec le glyphe △ quand l'objectif est atteint (△ ou croix ↓ ouvre le menu sur l'entrée Grand Splorch : 2 appuis jusqu'à l'aperçu ; à la souris, un clic sur la puce) ; « APPLAUDIR » avec le glyphe croix → et un anneau de 8 s, à la place de la précédente (§6.7 ; jamais pendant une poursuite, un maintien ou une fenêtre ouverte). Pendant l'accueil, cette place sert à la consigne du moment (glyphe 64 + mot 40 px) quand l'objet visé n'est pas à l'écran |
 | Carte de la cible | Bas centre, bas à −54 (y 930-1026) | 680 × 96 | Squishy visé : nom (36 px), rareté (couleur + forme), taille, revenu, étoiles, mutation (28 px). Affichage seul |
 | Indicateur Bondir | Bas droite (−96, −54) | 96 × 96 | Glyphe R2 (64) et balayage de recharge. Visible seulement pendant la recharge, pendant la leçon de l'accueil, et en ville pendant un Rush ou un Golden |
-| Flèches de bord d'écran | Bord de la zone sûre | 72 × 72 | Vers sa créature en fuite, son squishy boopé, la fuite la plus proche (joueurs Rush) |
+| Flèches de bord d'écran | Bord de la zone sûre | 72 × 72 | **2 au plus**, pour tous les joueurs (Rush ou Cozy), vers une cible hors champ à 120 studs au plus : une vers le Golden Wobbler s'il est attrapable par moi ; une vers la créature attrapable la plus proche, dans cet ordre : mon squishy boopé, ma créature personnelle (fuite, Wild Wobbler personnel, démonstration), un Wild Wobbler partagé, une fuite du Rush (joueurs Rush seulement). Sur une télé à 3 m, un joueur Cozy ne voyait pas les Wild Wobblers hors champ |
 
 Vérification des colonnes (aucun recouvrement) : à gauche, x ≤ 536 jusqu'à y = 166, puis x ≤ 436 (menu ouvert compris) ; au centre, x de 460 à 1460 et y de 54 à 310 ; à droite, x ≥ 1304, y de 54 à 550 ; en bas, y ≥ 822, x de 620 à 1300, plus l'indicateur Bondir à x ≥ 1728. Le milieu de l'écran (y de 330 à 822, x de 460 à 1300) reste libre pour le personnage et ses squishies. `tests/harness/Layout` vérifie ces rectangles aux 3 résolutions, en anglais et en français.
 
-**Invites dans le monde** (dessinées par `UI/Prompt` au-dessus de la cible, en px TV mis à l'échelle comme le reste) : « □ Presser » (glyphe 64 + mot 40 px, plaque de 300 × 88) et, après la leçon de fusion, une deuxième ligne plus petite « ○ Prendre » (glyphe 48 + mot 32 px). Au clavier : « E Presser », « Q Prendre ». Jamais deux invites sur la même touche, jamais plus de 2 invites à la fois. L'anneau des maintiens (boop, bol) entoure le glyphe □ et suit l'heure de fin envoyée par le serveur.
+**Invites dans le monde** (dessinées par `UI/Prompt` au-dessus de la cible, en px TV mis à l'échelle comme le reste) : « □ Presser » (glyphe 64 + mot 40 px, plaque de 300 × 88) et, après la leçon de fusion, une deuxième ligne plus petite « ○ Prendre » (glyphe 48 + mot 32 px). Au clavier : « E Presser », « Q Prendre ». Jamais deux invites sur la même touche, jamais plus de 2 invites à la fois. L'anneau des maintiens (boop, bol) entoure le glyphe □ et suit l'heure de fin envoyée par le serveur. Une invite qui sortirait de la zone sûre est ramenée à son bord.
+
+**Textes du monde** (règle commune, `UI/WorldText`) : en vue à la troisième personne sur une télé à 3 m, un texte posé au sol ou dimensionné en studs devient illisible au-delà d'environ 15 studs, et un `SurfaceGui` vu de biais encore plus tôt. Tout texte du monde que le joueur **doit lire** est donc un `BillboardGui` dimensionné en **pixels fixes** (`Offset`) multipliés par l'échelle d'interface (`UIScale` du §10.1) : texte **≥ 32 px TV** (40 pour les « +N »), glyphes ≥ 48 px TV, `LightInfluence = 0`, fond foncé translucide ou contour, distance maximale fixée par usage. Cas : prix et niveau d'une dalle sur une étiquette au-dessus d'elle, visible à 20 studs ou moins (le disque garde seulement l'icône) ; glyphe et mot de la leçon d'accueil au-dessus de l'objet (jamais un anneau au sol) ; « +N » à taille fixe à l'écran ; taille au-dessus d'un squishy ciblé ; probabilités de la Cuve en barres sur la Cuve, chiffres seulement dans le Guide. Les `SurfaceGui` restent pour le décor et pour ce qui est aussi ailleurs (tableaux des classements, doublés par le panneau Classements ; compte à rebours de l'Autel, doublé par la pastille d'événement). Test (couche d, §12.10) : taille projetée de chaque texte du monde ≥ 28 px TV à 20 studs, aux 3 résolutions.
 
 ### 10.3 Écrans
 
@@ -1432,12 +1454,12 @@ Vérification des colonnes (aucun recouvrement) : à gauche, x ≤ 536 jusqu'à 
 | Écran de retour | Au chargement | §7.2 | « Super ! » sélectionné d'office |
 | Carte du choix Rush / Cozy | Au calme, dès 15:00 de jeu (§4.21.1) ; Réglages | Deux gros boutons, animation de 6 s en boucle, « Plop ne s'enfuit jamais » | Garde de 0,6 s ; sans réponse en 20 s : Cozy |
 | Carte « Wibble revient toujours ! » | Après le premier boop subi, au retour du squishy | « +X pièces +1 Fame », boutons « Continuer », « Mode Cozy », « Pas ce joueur » | Non bloquante |
-| **Ranch** | Menu | Onglets : *Enclos* (grille des squishies, tri, verrou, Meilleur Ami, monture ; les jumeaux portent un cœur ; boutons **Tout fusionner** et **Ranger**), *Dodo* (Boîte à dodo, échanger), *Lettres* (Boîte aux lettres), *Fusionner* (choisir A puis B, ou Tout fusionner), *Vendre / Relâcher* (sélection multiple ; maintien 0,6 s, confirmation en 2 étapes pour Épique+ ou mutation Doré+, §4.13), *Dalles* (liste de toutes les dalles avec prix : on peut aussi acheter d'ici) | Grille virtualisée ; la sélection suit l'index au défilement (leçon de Comet) |
-| **Squishydex** | Menu | Onglets : *Espèces* (26 pages), *Mutations* (grille 26 × 9), *Familles* (bonus), *Étoiles*, *Guide* (toutes les probabilités et règles) | Silhouettes grises pour ce qui manque |
+| **Ranch** | Menu | Onglets : *Enclos* (grille des squishies, tri, verrou, Meilleur Ami, monture ; les jumeaux portent un cœur ; boutons **Tout fusionner** et **Ranger**), *Dodo* (Boîte à dodo, échanger), *Lettres* (Boîte aux lettres), *Fusionner* (choisir A puis B, ou Tout fusionner), *Vendre / Relâcher* (sélection multiple ; ○ vide d'abord la sélection, puis recule d'un niveau ; maintien 0,6 s, confirmation en 2 étapes pour Épique+ ou mutation Doré+, §4.13), *Dalles* (liste de toutes les dalles avec prix : on peut aussi acheter d'ici) | Grille virtualisée ; la sélection suit l'index au défilement (leçon de Comet) |
+| **Squishydex** | Menu | Onglets : *Espèces* (une rangée par famille de 4, plus la rangée des Secrets ; ✕ ouvre la **fiche de l'espèce** : ses 9 mutations en 3 × 3, ses badges d'étoiles, sa taille record), *Familles* (bonus), *Guide* (toutes les probabilités et règles) | Silhouettes grises pour ce qui manque. La grille 26 × 9 de la version 1.2 demandait 25 appuis sur ↓ à la manette ; avec une fiche par espèce, la dernière rangée est à 6 appuis sur ↓ au lancement, et une espèce ajoutée chaque semaine ne fait qu'ajouter une case. Le stick droit fait défiler d'un écran |
 | **Objectifs** | Menu | *Aujourd'hui* (3 objectifs, relance), *Plop* (jours au total, paliers), *Accueil* (tant qu'il n'est pas fini) | |
 | **Classements** | Menu | 5 onglets (§6.9) : d'abord ma place sur ce serveur et mon record contre la semaine dernière, puis le top 10 mondial | |
-| **Boutique** | Menu (après 10 min) | *Passes*, *Fête et pièces*, *Tenues* (aperçu 3D) ; prix lus à l'exécution | Cachée si aucun identifiant ; masquage PolicyService (§8.1) ; paquets de pièces cachés quand « Grand Splorch prêt ! » (§8.3) |
-| **Aperçu du Grand Splorch** | Menu → Grand Splorch (entrée sélectionnée d'office quand il est prêt) | 3 tuiles « Tu gagnes », animation avant/après, perte de pièces en rouge et « Dépenser d'abord », choix du squishy qui s'envole, case « Filmer », bouton à maintenir 1,5 s (✕) ; « Détails » ouvre les deux colonnes (§4.15) | Hors du ranch : « Rentre dans ton ranch » (seulement pour entrer dans la file) |
+| **Boutique** | Menu (après 10 min) | *Passes*, *Fête*, *Tenues* (aperçu 3D) ; prix lus à l'exécution | Cachée si aucun identifiant ; aucune monnaie vendue (§8.3) |
+| **Aperçu du Grand Splorch** | Menu → Grand Splorch (entrée sélectionnée d'office quand il est prêt) | 3 tuiles « Tu gagnes », animation avant/après, perte de pièces en rouge et « Dépenser d'abord », choix du squishy qui s'envole, case « Filmer », bouton à maintenir 1,5 s (✕) ; « Détails » ouvre les deux colonnes (§4.15) | Hors du ranch : « Rentre dans ton ranch » ; un squishy en fuite : « Attends que Wibble rentre ! » (seulement pour entrer dans la file). Une fois dans la file, l'aperçu se ferme et le suivi d'objectif montre la place et l'attente (§2.4) |
 | **Réglages** | Menu | Mode Rush/Cozy, Cacher mon nom, Recevoir les cadeaux, Clips, Mouvement réduit, Graphismes légers, Musique, Effets sonores, Vibrations, Emote de la croix ← (Bravo, Belly Flop, Couronne), Langue (Auto / English / Français) ; propriétaire d'un serveur privé : « BOOP RUSH autorisé » ; administrateurs seulement : **Diagnostics** | Interrupteurs de 120 × 64 px TV ; message « Tes squishies grandissent même quand tu dors » en bas |
 | **Diagnostics** | Réglages → Diagnostics (visible et accessible **seulement** aux administrateurs, vérifié par le serveur) | Erreurs et avertissements comptés sur ce serveur et sur ses clients, derniers exemples, état du serveur et du client, totaux du jour (§12.11) | Lecture seule ; fait pour être photographié |
 
@@ -1458,12 +1480,12 @@ Noms PlayStation (DualSense) avec la `KeyCode` générique de Roblox entre paren
 | Se déplacer | Stick gauche (`Thumbstick1`) | WASD (ZQSD reconnu tout seul en AZERTY) / flèches |
 | Caméra | Stick droit (`Thumbstick2`). **La caméra ne bouge jamais toute seule** (sauf le travelling du Grand Splorch, coupé en Mouvement réduit) | Clic droit + souris |
 | Sauter (plus haut sur sa monture) | ✕ (`ButtonA`) | Espace |
-| **Action principale** : presser, lancer (en portant, près du Bassin), acheter (sur une dalle), attraper, booper (maintien 2,5 s), nourrir au bol (maintien 5 s) | **□** (`ButtonX`) | E, ou clic gauche sur la cible |
+| **Action principale** : presser, lancer (en portant, près du Bassin), acheter (sur une dalle), attraper, booper (maintien 2,5 s), nourrir au bol (maintien 2 s) | **□** (`ButtonX`) | E, ou clic gauche sur la cible |
 | **Prendre / Poser** (un squishy de son ranch) | **○** (`ButtonB`) | Q |
 | **Bondir** (visée automatique et capture à l'atterrissage, §4.12) | **R2** (`ButtonR2`) | Maj gauche |
 | **Monter / descendre** | **L2** (`ButtonL2`) | R |
 | Changer de cible (dans son ranch, et devant une clôture pour booper ou pet-sitter) | L1 / R1 (`ButtonL1` / `ButtonR1`) | Clic sur un squishy (il reste la cible 4 s) |
-| **Menu** | **△** (`ButtonY`) **ou croix ↓** (`DPadDown`) | Tab, ou clic sur la puce Menu |
+| **Menu** | **△** (`ButtonY`) **ou croix ↓** (`DPadDown`) | M, ou clic sur la puce Menu ; raccourcis directs : G Ranch, C Squishydex, J Objectifs, L Classements, B Boutique, P Réglages |
 | Emotes : salut, merci, bravo (§6.5) | Croix ↑, →, ← (`DPadUp/Right/Left`) | 1, 2, 3 |
 | Applaudir (pendant 8 s) | Croix → (remplace « merci » pendant ces 8 s) | F, ou clic sur la puce |
 | Menu Roblox | Options (`ButtonStart`, réservé) | Échap (**jamais lié par le jeu**, leçon de Comet) |
@@ -1472,6 +1494,7 @@ Noms PlayStation (DualSense) avec la `KeyCode` générique de Roblox entre paren
 
 - **Aucun appui simultané obligatoire**, aucun clic de stick, aucune combinaison : chaque action tient sur une touche (règle d'accessibilité, §14).
 - **Pas de verrouillage de la souris** (`StarterPlayer.EnableMouseLockOption = false`) : Maj sert à Bondir.
+- **Touches de Roblox laissées libres au clavier** : Tab ouvre la liste des joueurs de Roblox, il n'est donc jamais lié par le jeu (le menu passe sur M) ; le sac à objets de Roblox est coupé (`StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Backpack, false)`, sous `pcall`, nouveaux essais pendant 10 s) pour que 1, 2 et 3 ne servent qu'aux emotes. Les lettres affichées suivent la disposition du clavier (`GetStringForKeyCode`). Pour le menu, le jeu lie `KeyCode.M` **et** `KeyCode.Semicolon` : sur AZERTY, la touche marquée « M » est `KeyCode.Semicolon` ; la puce Menu affiche celle des deux qui donne « M » sur le clavier du joueur.
 - **Le jeu choisit la cible** (`PromptController`) :
   - Candidats : les squishies de son ranch à 10 studs au plus, ou les 4 au plus d'une clôture (boop, pet-sitting), ou la dalle sous ses pieds (□ = Acheter). Pour □, les squishies prêts passent toujours avant ceux en recharge.
   - Score = distance (studs) + 6 × (angle avec la direction du personnage ÷ 90°) ; le plus petit gagne.
@@ -1485,17 +1508,17 @@ Noms PlayStation (DualSense) avec la `KeyCode` générique de Roblox entre paren
 - Les actions passent par `ContextActionService`. Le déclenchement envoie une **intention** au serveur (§12.7) ; l'effet n'est montré qu'après sa réponse (sauf le geste lui-même : écrasement, bond).
 
 **Dans les menus**
-- **Manette** : croix ou stick gauche déplacent la sélection ; ✕ valide ; ○ recule d'un niveau (depuis le premier niveau, il rend la main au jeu) ; △ ferme tout et revient au jeu ; L1 / R1 changent d'onglet (en boucle) ; L2 / R2 changent de panneau (en boucle : Ranch → Squishydex → Objectifs → Classements → Boutique → Réglages) **seulement quand un panneau est ouvert**, sinon L2 = Monter et R2 = Bondir. La sélection fait défiler les listes toute seule ; le stick droit fait aussi défiler. **Règle des 3 touches** : la croix, ✕ et ○ suffisent pour atteindre chaque écran et en revenir (L1, R1, L2, R2 et △ ne sont que des raccourcis). Quand une sélection d'interface existe, ○ veut toujours dire « retour ».
-- **Clavier et souris** : la souris clique ; Retour arrière = retour (comme ○) ; Tab ouvre et ferme le menu ; Échap reste à Roblox. Pas de navigation obligatoire aux flèches : la souris suffit.
+- **Manette** : croix ou stick gauche déplacent la sélection ; ✕ valide ; ○ recule d'un niveau (depuis le premier niveau, il rend la main au jeu) ; △ ferme tout et revient au jeu ; L1 / R1 changent d'onglet (en boucle) ; L2 / R2 changent de panneau (en boucle : Ranch → Squishydex → Objectifs → Classements → Boutique → Réglages) **seulement quand un panneau est ouvert**, sinon L2 = Monter et R2 = Bondir. La sélection fait défiler les listes toute seule ; le stick droit fait aussi défiler. **Règle des 3 touches** : la croix, ✕ et ○ suffisent pour atteindre chaque écran et en revenir (L1, R1, L2, R2 et △ ne sont que des raccourcis). Quand une sélection d'interface existe, ○ veut toujours dire « retour » : en portant un squishy, ○ ferme d'abord le menu (le portage continue : seul un panneau ouvert le termine, §4.10), puis, en jeu, pose le squishy. En sélection multiple (*Vendre / Relâcher*), ○ vide d'abord la sélection.
+- **Clavier et souris** : la souris clique ; Retour arrière = retour (comme ○) ; M ouvre et ferme le menu ; G, C, J, L, B et P ouvrent directement leur panneau ; Échap et Tab restent à Roblox. Pas de navigation obligatoire aux flèches : la souris suffit.
 
 ### 10.5 Vibrations (DualSense et manettes Xbox)
 
-`Util/Haptics` (repris de Comet Conga) : `HapticEffect` du type indiqué (une instance réutilisée par type), repli `HapticService:SetMotor` pendant la durée. Les vibrations font partie du design : elles disent « c'est fait » à un joueur qui regarde la télé de loin. **Modération** : jamais au clavier-souris ; **délai minimal de 0,25 s** entre deux vibrations, sauf priorité supérieure ; atténuation < 0,35 ignorée ; réglage « Vibrations » (activé par défaut). Seuls les moteurs standard sont utilisés : aucun effet propre à la DualSense (gâchettes adaptatives) n'est supposé, car Roblox ne les expose pas. Jamais de vibration sur un déplacement de sélection, un bond ou une marche.
+`Util/Haptics` (repris de Comet Conga) : `HapticEffect` du type indiqué (une instance réutilisée par type), repli `HapticService:SetMotor` pendant la durée. Les vibrations font partie du design : elles disent « c'est fait » à un joueur qui regarde la télé de loin. **Modération** : jamais au clavier-souris ; **délai minimal de 0,25 s** entre deux vibrations, sauf priorité supérieure (et sauf `rushSiren`, joué une seule fois) ; une pression ordinaire ne vibre jamais (au MEGA, cela faisait 2 vibrations par seconde pendant 60 s) ; atténuation < 0,35 ignorée ; réglage « Vibrations » (activé par défaut). Seuls les moteurs standard sont utilisés : aucun effet propre à la DualSense (gâchettes adaptatives) n'est supposé, car Roblox ne les expose pas. Jamais de vibration sur un déplacement de sélection, un bond ou une marche.
 
 | Événement | Quand | `HapticEffectType` | Repli (moteur, force, durée) | Priorité |
 |---|---|---|---|---|
-| `pressTick` | Pression (et pression sur le MEGA) — **2 par seconde au plus** | UIClick | Small, 0,15, 0,03 s | 1 |
-| `perfect` | PERFECT ; série de 5 | UIClick | Small, 0,3, 0,05 s | 2 |
+| `pressTick` | Pression **PERFECT** sur le MEGA seulement (une pression normale ne vibre pas) | UIClick | Small, 0,15, 0,03 s | 1 |
+| `perfect` | PERFECT dans son ranch (force + 0,03 par marche de série) ; série de 5 | UIClick | Small, 0,3, 0,05 s | 2 |
 | `tileBuy` | Dalle achetée | UIClick | Small, 0,25, 0,05 s | 2 |
 | `refuse` | Bouton refusé | UIClick | Small, 0,25, 0,05 s | 1 |
 | `listEnd` | Bout de liste | UIClick | Small, 0,2, 0,04 s | 1 |
@@ -1506,8 +1529,8 @@ Noms PlayStation (DualSense) avec la `KeyCode` générique de Roblox entre paren
 | `fusion` | Chaque étape de fusion (force + 0,05 par étape) | GameplayCollision | Small, 0,4, 0,08 s | 2 |
 | `comboBig` | Combo ≥ 4 | GameplayCollision | Large, 0,6, 0,2 s | 3 |
 | `boopDone` | Mon boop a réussi | GameplayCollision | Small, 0,3, 0,06 s | 2 |
-| `booped` | Un de mes squishies s'enfuit | UINotification | Small, 0,3, 0,12 s | 2 |
-| `rushSiren` | Sirène du BOOP RUSH : **double impulsion** (2 × 0,1 s, écart 0,15 s) ; jamais pour un nouveau avant l'étape 9 de l'accueil | UINotification | Small, 0,4, 2 × 0,1 s | 3 |
+| `squishyBack` | Mon squishy boopé revient (rendu par un autre joueur, ou rentré seul ; la capture Héros joue `catch`) : une vibration douce et positive. Aucune vibration quand il s'enfuit (la version 1.2 avait `booped`, un signal négatif contraire au pilier P2) | GameplayCollision | Small, 0,3, 0,08 s | 2 |
+| `rushSiren` | Sirène du BOOP RUSH : **une seule impulsion** de 0,3 s, exemptée du délai minimal ; jamais pour un nouveau avant l'étape 9 de l'accueil | UINotification | Small, 0,4, 0,3 s | 3 |
 | `megaLand` | Atterrissage du MEGA à moins de 120 studs, atténué `1 − d/120` | GameplayExplosion | Large, 0,7, 0,25 s | 3 |
 | `megaPop` | Le MEGA éclate (participant) | GameplayExplosion | Large, 0,8, 0,3 s | 4 |
 | `hatchLegend` | Naissance Légendaire ou mieux ; Flop — **forte impulsion de 300 ms** | GameplayExplosion | Large, 0,8, 0,3 s | 4 |
@@ -1553,7 +1576,7 @@ Le joueur est assis à 2,5-3 m de la télé. Règles officielles retenues (docum
 | Jeu | aucune (le stick fait marcher) | Prendre / poser | Changer de cible (ranch, clôture) | Monter / Bondir |
 | Menu (après △ ou croix ↓) | Grand Splorch s'il est prêt, sinon le bouton à pastille « ! », sinon le dernier utilisé, sinon Ranch | Retour au jeu | — | — |
 | Ranch | 1re case de l'onglet ; *Fusionner* : « Choisir A » ; *Dalles* : la moins chère achetable | → bouton du menu d'origine | Onglets | Panneaux |
-| Squishydex | 1re entrée ; *Guide* : 1re ligne (↑ / ↓ font défiler de 70 % les listes en lecture seule) | → menu | Onglets | Panneaux |
+| Squishydex | 1re espèce ; fiche d'une espèce : 1re mutation (○ revient à la case de l'espèce) ; *Guide* : 1re ligne (↑ / ↓ font défiler de 70 % les listes en lecture seule) | → menu | Onglets | Panneaux |
 | Objectifs | « Réclamer » disponible, sinon 1re carte | → menu | Onglets | Panneaux |
 | Classements | Onglet en cours | → menu | Onglets | Panneaux |
 | Boutique | 1er « Acheter » de l'onglet | → menu | Onglets | Panneaux |
@@ -1599,22 +1622,22 @@ Le joueur est assis à 2,5-3 m de la télé. Règles officielles retenues (docum
 | Élément | Construction | Position / dimensions |
 |---|---|---|
 | Plateau | Cylinder vertical, matériau Grass menthe (200, 240, 210) | Rayon 320, dessus à Y = 0 |
-| Collines | 40 Balls aplaties pastel (rose, menthe, citron), tag `Float` lent pour quelques nuages | r 320-420, hauteur 10-40 ; murs invisibles à r = 322 |
+| Collines | 40 Balls aplaties pastel (rose, menthe, citron), tag `Float` lent pour quelques nuages | r 320-420, hauteur 10-40 ; murs invisibles à r = 322, 30 studs de haut |
 | Place | Disque de pavés crème (255, 245, 220), bordure rose | r < 50 |
 | MEGA pad | Cylinder rose clair Ø 30, épaisseur 0,6, anneau `Neon` qui s'allume à l'alerte | Centre de la place |
 | Statue | Socle Marble Ø 10 × 3 ; le squishy est dessiné par le client à partir de l'attribut `Statue` (espèce, mutation, taille) | Nord de la place (0, 0, −38) |
 | Boutique | Petite échoppe en Parts (toit rayé), comptoir avec invite « Vendre » et « Boutique » | Est de la place (38, 0, 0) |
-| Autel de la Lune | Arche Marble + croissant `Neon`, compte à rebours du samedi (`SurfaceGui`) | Ouest de la place (−38, 0, 0) |
+| Autel de la Lune | Arche Marble + croissant `Neon`, compte à rebours du samedi (étiquette du monde en px TV, aussi dans la pastille d'événement, §10.2) | Ouest de la place (−38, 0, 0) |
 | Jarre de la jauge | Cylinder `Glass` Ø 8 × 12 qui se remplit (gelée `Neon` dont la hauteur suit la jauge) | Sud de la place (0, 0, 38) |
 | Scène de Big Plop | Disque surélevé Ø 10 | Sud-est (27, 0, 27) |
 | Fontaine dorée | Vasque Ø 8 (départ du Golden Wobbler) | Nord-est (20, 0, −20) |
 | Tableaux des classements | 5 panneaux `SurfaceGui` en arc | Nord, r = 46 |
 | Rues | Pavés roses (255, 230, 240) : anneau intérieur r = 95 (10 de large), grand boulevard r = 166 (12 de large), 8 rues radiales de r = 50 à r = 166 | ≈ 400 pièces |
-| Quartiers | 24 maisons-bonbons non accessibles (corps Part + toit Wedge + 2 fenêtres `Neon`), sucettes, buissons-guimauves | Entre les rues |
+| Quartiers | 24 maisons-bonbons non accessibles (corps Part + toit Wedge + 2 fenêtres `Neon`, coiffées d'une boîte invisible solide jusqu'à 30 studs : aucun toit atteignable), sucettes, buissons-guimauves | Entre les rues |
 | Lampadaires | Poteau Cylinder + Ball `Neon` (couleurs pastel) ; `PointLight` seulement un sur quatre (budget de la console la plus faible, §12.9) ; non solides | 64 le long des rues (16 lumières) |
 | Prairie des copains | Champ de fleurs, panneau « Coucou ! » ; les 12 derniers squishies relâchés par le joueur y jouent (dessinés par son seul client) | r = 280, nord |
 
-**Ce qui est solide (règle robuste).** Tous les objets du monde sont **ancrés** (`Anchored = true`) et en `CanTouch = false` : le jeu n'écoute jamais `Touched`. Sont **solides** seulement : le plateau (sol), les murs invisibles du bord, les maisons-bonbons (boîtes simples, `CollisionFidelity = Box`), les clôtures des ranchs et leur mur invisible de 12 studs (§6.3). **Tout le reste est non solide** (`CanCollide = false`, `CanQuery = false`) : lampadaires, sucettes, buissons, fleurs, décorations, dalles, Pot, Cuve, Bassin, bol, coussin, étagère, statue, échoppe, autel, jarre, scène, fontaines, panneaux, membranes des portails (côté serveur). Deux solides sont toujours séparés d'au moins 6 studs ou collés sans fente : aucun recoin où un personnage reste coincé. `WorldBuild.spec` vérifie ces règles sur la carte construite (§12.10).
+**Ce qui est solide (règle robuste).** Tous les objets du monde sont **ancrés** (`Anchored = true`) et en `CanTouch = false` : le jeu n'écoute jamais `Touched`. Sont **solides** seulement : le plateau (sol), les murs invisibles du bord, les maisons-bonbons (boîtes simples, `CollisionFidelity = Box`, et leur coiffe invisible), les clôtures des ranchs et leur mur invisible (§6.3). **Chaque solide monte à 30 studs au moins au-dessus du sol** (décision du contrat d'architecture, docs/04 §3.1 et §20 n° 21) : c'est plus que la plus haute portée d'un joueur (saut de la selle géante 13 + hausse de la monture 6 + 3 de marge = 22). Personne n'enjambe une clôture ni ne monte sur un toit, même en monture, et aucune position « debout sur un toit » n'existe pour les règles du serveur. **Tout le reste est non solide** (`CanCollide = false`, `CanQuery = false`) : lampadaires, sucettes, buissons, fleurs, décorations, dalles, Pot, Cuve, Bassin, bol, coussin, étagère, statue, échoppe, autel, jarre, scène, fontaines, panneaux, membranes des portails (côté serveur). Deux solides sont toujours séparés d'au moins 6 studs ou collés sans fente : aucun recoin où un personnage reste coincé. `WorldBuild.spec` vérifie ces règles sur la carte construite (§12.10).
 
 **Graphe des rues** (`Shared/Logic/WorldLayout`, utilisé par `SeededPath`) : nœuds sur l'anneau de la place (r = 50, tous les 45°), sur l'anneau intérieur (r = 95, tous les 22,5°) et sur le boulevard (r = 166, tous les 11,25°, donc un nœud devant chaque portail) ; arêtes le long des rues. Les fuites, les Wild Wobblers et le Golden Wobbler ne quittent jamais ce graphe : ils n'entrent jamais dans un ranch.
 
@@ -1622,22 +1645,24 @@ Le joueur est assis à 2,5-3 m de la télé. Règles officielles retenues (docum
 
 | Pièce | Construction | Position locale |
 |---|---|---|
-| Clôture | Poteaux sucre d'orge tous les 8 studs + lisses arrondies, hauteur 4, couleur du ranch ; doublée d'un mur invisible ancré de 12 studs de haut (§6.3) | Tout le tour |
+| Clôture | Poteaux sucre d'orge tous les 8 studs + lisses arrondies, hauteur 4, couleur du ranch ; doublée d'un mur invisible ancré et solide de **30 studs** de haut (§6.3, §11.1) | Tout le tour |
 | Portail de gelée | Membrane `Glass` (seule transparence permise avec la gelée Jelly) entre deux poteaux, 8 de large ; non solide pour le serveur, solide pour les autres joueurs sur leur propre client ; la règle est la poussée du serveur (§6.3) | Z = 0, X = 0 |
 | Fontaine de Gelée | Vasque Ø 5 avec jet de gelée | Côté rue : Z = −6, X = +12 |
 | Panneau du ranch | BillboardGui : nom (ou « Ranch 7 »), couronne R, Fame, « Jour 42 », badge rose « boop » (ranch boopable) ou bulle « bouclier » ; rien pour un ranch Cozy | Au-dessus du portail, Y = 14, distance max 150 |
-| Enclos | Zone logique de 54 × 36 (4 rangées × 6 places), sol en tapis pastel | Z 8 à 44 |
+| Enclos | Zone logique de 54 × 32 (4 rangées × 6 places : colonnes tous les 9 studs, rangées Z = 16, 24, 32, 40), sol en tapis pastel | Z 12 à 44 |
 | Pot à Pièces | Grosse marmite dorée (Cylinder + Ball), montant au-dessus | Z = 6, X = −20 |
 | Tapis à Goûter | Grand tapis à motif biscuit sous les enclos ; il change de couleur et de motif à chaque niveau | Sous la zone des enclos |
 | Cuve à Gelée | Cylinder `Glass` Ø 6 × 9 + couvercle + tuyau ; niveau de gelée `Neon` visible | Z = 52, X = −20 |
 | Bassin de Fusion | Bassin Ø 12, eau pastel `Glass`, 5 (ou 6) places flottantes | Z = 52, X = +6 |
-| Dalles d'achat | Disques `Neon` Ø 4 avec icône et prix (`SurfaceGui`) | Rangée Z = 62, X de −24 à +24 |
+| Dalles d'achat | 4 disques `Neon` Ø 4 (Tapis, décoration suivante, Enclos, Lit douillet) avec leur icône (`SurfaceGui`) ; prix et niveau sur une étiquette du monde au-dessus de chaque dalle (§10.2) | Rangée Z = 67 : X = −18, −6, +6, +18 (une 5e prise, réservée à la Gelée lente de janvier, à côté de la Cuve : Z = 52, X = −28) |
 | Décorations | 18 emplacements fixes | Autour des enclos et du chemin |
 | Bol du Meilleur Ami | Grand bol rose Ø 4 | Z = 58, X = +22 |
-| Coussin du Meilleur Ami | Coussin rond Ø 4 | Z = 10, X = +22 |
+| Coussin du Meilleur Ami | Coussin rond Ø 4 | Z = 10, X = +22 (devant la première rangée d'enclos, hors de la zone des places) |
 | Étagère à trophées | 3 étagères de 9 places, petites statues dessinées par le client | Fond : Z = 70 |
 | Point d'apparition | Une position de `WorldLayout` (aucune pièce) : le serveur y place le personnage à chaque apparition (§6.1) | Z = 30, X = 0, face au Pot |
 | Silhouette | Le meilleur squishy (client) | Z = 36, Y = 40 |
+
+**Règle de plan (testée par `WorldLayout.spec`)** : au moins **8 studs** entre le centre d'une dalle et le centre du bol, de la Cuve, du Pot, du coussin et de la prise réservée, et entre le centre d'une dalle et le **bord** du Bassin (rayon 6) ; deux dalles à 12 studs l'une de l'autre ; aucune décoration à moins de 6 studs d'une dalle. Dans la version 1.2, la dalle de droite (X = +24, Z = 62) était à 4,5 studs du bol, qu'on approche pour nourrir, et la rangée de dalles à 2 studs du bord du Bassin, où l'on vient lancer : au stick, on achetait sans le vouloir. Avec la rangée à Z = 67, la dalle la plus proche du Bassin est à 9 studs de son bord, et celle du bol à 9,8 studs.
 
 Ranch k (k = 0…15) centré sur l'angle `22,5° × k + 11,25°`, portail à r = 178, orienté vers la place. Distance entre deux portails voisins : ≈ 69,8 studs.
 
@@ -1725,11 +1750,12 @@ src/
       LeapRules.luau                géométrie du bond, point d'atterrissage, capture à l'atterrissage
       StateTimeouts.luau            délai de sortie de chaque état (table du §12.10)
       DiagRules.luau                normalisation des messages d'erreur, clés, plafonds, nettoyage des noms
+      BigNumber.luau                affichage des nombres géants, suffixes K, M, B, T… dans les deux langues (§4.2)
       Hash.luau                     (repris)
     Render/
       SquishyBuilder.luau           recettes de modèles (client)
     Localization/Strings.luau       EN + FR
-    Util/                           (repris) Clock, Format (nombres géants §4.2), Signal, Tables, Trove, Validate
+    Util/                           (repris) Clock, Format, Signal, Tables, Trove, Validate
   server/           → ServerScriptService.Server
     Main.server.luau
     Data/Schema.luau, Data/Admins.luau
@@ -1764,7 +1790,7 @@ src/
       VFXController, AudioController, LightingController, OnboardingController
     UI/
       Root, Theme, Create, Juice, Toast, Glyph       (repris ; Root passe à la référence 1920 × 1080)
-      Prompt (invites du monde, §10.4), FocusGuard (focus jamais perdu, §10.6)
+      Prompt (invites du monde, §10.4), FocusGuard (focus jamais perdu, §10.6), WorldText (textes du monde en px TV, §10.2)
       HUD, Banners, ScreenFX, ReturnScreen, ModeCard, Cards (cartes en jeu et leur file, §10.3)
       Panels/ Ranch, Squishydex, Objectives, Leaderboards, Shop, Settings, SplorchPreview, OutfitPreview, Diagnostics
 tests/specs/                        §12.10
@@ -1792,11 +1818,11 @@ tools/opencloud/                    lancement des tests serveur dans de vrais se
 ```
 1. now = Clock.now()
 2. pour chaque joueur chargé avec personnage : MoveCheck.step(...) → position validée ? peut agir ?
-3. RanchService.step : intrus repoussés ; Pot encaissé si le joueur est à ≤ 5 studs ; entrée sur une dalle (≤ 2,5 studs, sortie > 3,5) = un achat (positions validées, ZoneRules)
+3. RanchService.step : intrus repoussés ; Pot encaissé si le joueur est à ≤ 5 studs ; dalle : entrée (≤ 2,5 studs, sortie > 3,5), puis 0,6 s dessus sans porter ni maintenir = un achat (positions validées, ZoneRules)
 4. EventService.step(now) : transitions de phase (Rush, MEGA, Golden, Lune, Wobble Party, file des spectacles)
 5. RushService.step(now) : clôtures (renouvellement toutes les 20 s), maintiens de boop terminés ou rompus
 6. Créatures : apparitions dues (fuites personnelles, Wild, Golden), fins (25 s, 20 s, 30 s)
-7. Captures : intentions `Catch` reçues depuis le tick précédent, vérifiées à la position SeededPath de maintenant
+7. Captures : intentions `Catch` reçues depuis le tick précédent, dans leur ordre d'arrivée, chacune vérifiée à **son** instant `tClient` (position SeededPath à tClient contre la position validée du joueur à tClient, §12.5) ; captures à l'atterrissage des bonds arrivés à échéance
 8. MEGA : pressions reçues agrégées, battement diffusé toutes les 0,25 s
 9. Diffusion groupée : ChaseEvent, EventState, RanchPatch
 10. Délais : tout état qui a dépassé son délai (StateTimeouts, §12.10) est fermé proprement, compté, et signalé à Diagnostics s'il n'aurait pas dû l'être
@@ -1804,13 +1830,13 @@ tools/opencloud/                    lancement des tests serveur dans de vrais se
 
 Chaque étape du tick est protégée : une erreur dans l'étape d'un joueur est attrapée (`pcall`), comptée par Diagnostics, et n'arrête ni les autres joueurs ni les étapes suivantes.
 
-**Calcul paresseux** (module pur `Formulas`). Entre deux événements, la croissance `g` du ranch est constante, donc chaque taille est linéaire : `z(t) = z0 + g × (t − t0)`. Le revenu total `I(t)` est donc lui aussi linéaire : `I(t) = I0 + I' × (t − t0)`, avec `I' = Σ 0,02 × rareté × mutation × (1 + 0,5 × étoiles) × A × P × B × g`. Le Pot est l'intégrale exacte :
+**Calcul paresseux** (module pur `Formulas`) avec un **compteur de croissance par ranch** : `G(t) = G0 + g × (t − t0)`, où `g` est la croissance par seconde du §4.3. La taille d'un squishy d'enclos ou du Bassin vaut `z + (G(t) − zg)`, où `z` et `zg` sont notés quand il entre dans l'enclos ; dans la Boîte à dodo ou la Boîte aux lettres, elle reste figée à `z`. Un changement de `g` (dalle, boost, famille Jelly) ne touche que le compteur du ranch, jamais les squishies : une Wobble Party qui touche les 16 ranchs à la fois envoie 16 petits messages, pas 384 mises à jour de squishies. `G` repart de 0 au Grand Splorch (les doubles restent précis). Le revenu total est linéaire en `G` : `I(t) = S1 + K × G(t)`, avec `K = Σ 0,02 × rareté × mutation × (1 + 0,5 × étoiles) × A × P × B` sur les squishies d'enclos et `S1 = Σ k × (z − zg)`. Le Pot est l'intégrale exacte :
 
 ```
-pot(t) = pot0 + I0 × Δ + ½ × I' × Δ²      (Δ = t − t0)
+pot(t) = pot0 + I(t0) × Δ + ½ × K × g × Δ²      (Δ = t − t0)
 ```
 
-Le serveur « règle » (`settle`) le ranch à chaque événement qui change `g`, `A`, `P` ou `B` (achat, naissance, fusion, vente, boost qui commence ou finit, ami qui arrive ou part, Grand Splorch), avant chaque sauvegarde, et toutes les 30 s (décalé selon le joueur). Le client prédit les tailles et le Pot avec les mêmes formules, corrigé à chaque patch.
+Le serveur « règle » (`settle`) le ranch à chaque événement qui change `g`, `A`, `P` ou `B` (achat, naissance, fusion, vente, boost qui commence ou finit, ami qui arrive ou part, Grand Splorch, **palier de trophée franchi, page dorée ou bonus de famille gagné, changement de Fame**), avant chaque sauvegarde, et toutes les 30 s (décalé selon le joueur). Chaque seconde n'est intégrée qu'une fois. Le client prédit les tailles et le Pot avec les mêmes formules, corrigé à chaque patch.
 
 ### 12.4 Le temps : `Clock` et `EventClock`
 
@@ -1833,9 +1859,9 @@ Tests à des instants clés : minuit, :04:50, :05:00, :06:30, :19:45, :20:00, :2
 ### 12.5 Trajets des créatures et réplication
 
 - **`SeededPath`** : `escape(seed, t0, startNode, awayAngle)` renvoie une fonction `pos(t)` : un premier bond de 20 studs dans la direction `awayAngle` (à l'opposé du boopeur), puis marche au hasard (graine) sur le graphe des rues, sans demi-tour immédiat, vitesse `v(t) = 16 − 0,32 × (t − t0)` studs/s (bornée à 8), bonds de 0,45 s (hauteur visuelle seulement). `hopAround(seed, t0, centre, rayon)` pour les créatures en fuite personnelles. Même code côté serveur et côté client : le serveur ne diffuse que la graine, l'instant de départ et le nœud de départ.
-- **Capture** : le serveur compare la position validée du joueur (MoveCheck) à `pos(maintenant)` : distance ≤ 6,5 studs (5 + 1,5 de tolérance de latence ; 9,5 = 8 + 1,5 pour le propriétaire de sa fuite du Rush), écart vertical ≤ 8. Après un bond accordé, le serveur tente lui-même la capture à l'atterrissage (t + 0,35 s), au point calculé par `LeapRules` à partir de la géométrie du bond (§4.12), jamais à partir de la position que la physique a donnée.
+- **Capture vérifiée à l'instant de l'appui.** Le joueur a vu la créature au moment où il a appuyé ; entre l'envoi et le tick du serveur, elle a avancé de `v × (latence aller + attente du tick)`. Comparer à `pos(maintenant)` coûtait 3,6 studs à 250 ms de ping et 16 studs/s : la marge réelle tombait de 5 à 2,9 studs, et les joueurs les plus loin du serveur perdaient leurs captures. Donc : le client envoie `Catch(id, tClient)` ; `tClient` est ramené dans `[maintenant − 0,35 ; maintenant]` ; le serveur compare `pos(tClient)` (trajet déterministe, donc exact) à la **position validée du joueur à `tClient`** (historique interpolé de 0,5 s des positions acceptées par MoveCheck) : distance **à plat (XZ)** ≤ 6,5 studs (5 + 1,5 de tolérance ; 9,5 = 8 + 1,5 pour le propriétaire de sa fuite du Rush) ; écart vertical entre les **pieds** du joueur (racine − hauteur debout − hausse de la monture) et le sol sous la créature ≤ 8 ; budget d'action positif (`canAct`). Deux captures de la même créature (Golden, fuite du Rush) : la première arrivée gagne. Un tricheur qui choisit son `tClient` gagne au plus 0,35 s de trajet : c'est borné, comme pour les pressions (§4.7). Après un bond accordé, le serveur tente lui-même la capture à l'atterrissage, à `tClient du bond + 0,35 s`, au point calculé par `LeapRules` à partir de la géométrie du bond (§4.12), jamais à partir de la position que la physique a donnée.
 - **`ChaseEvent`** (fiable, groupé à 4 Hz) : `spawn = { id (u16), kind (runaway | escape | wild | wildPersonal | golden | demo), species, mutation, size, ownerSlot?, booperSlot?, seed, t0, startNode, awayAngle, duration }` et `finish = { id, reason (caught | returned | expired), bySlot? }`. Les créatures personnelles (fuite, Wild Wobbler personnel, démonstration de Big Plop) ne sont envoyées qu'au client concerné.
-- **État des ranchs** : `RanchSnapshot` à l'arrivée (16 ranchs, ≈ 15 Ko), puis `RanchPatch` groupé par image : par ranch `{ g, gAt, tiles, decor, R, fame, day, mode, hidden, name }` et par squishy `{ op = add | remove | update, uid, s, m, st, z, zAt, bf, o, at }`. Le client calcule `z(t) = z + g × (t − zAt)`. Aucun envoi par seconde.
+- **État des ranchs** : `RanchSnapshot` à l'arrivée (16 ranchs, ≈ 15 Ko), puis `RanchPatch` groupé par image : par ranch `{ growth = { G, g, t }, tiles, decor, R, fame, day, mode, hidden, name }` et par squishy `{ op = add | remove | update, uid, s, m, st, z, zg, bf, o, at }`. Le client calcule la taille d'un squishy d'enclos par `z + (G(t) − zg)` (§12.3) ; un changement de croissance n'envoie que le compteur du ranch. Aucun envoi par seconde.
 - **Arrivée en cours de partie** : `RanchSnapshot` + `EventState` + créatures actives, une seule fois.
 - **Messages perdus ou en retard** : chaque patch porte un numéro de suite par destinataire ; un trou dans la suite fait redemander un `RanchSnapshot` (`RequestWorld`). Une créature dont l'heure de fin est passée disparaît chez le client même si le message `finish` n'est pas arrivé. Le client ne reste jamais sur un état faux.
 
@@ -1857,14 +1883,15 @@ function Schema.defaults()
   return {
     version = 1,
     -- économie (§4.1, §4.6, §4.8)
-    coins = 0, pot = 0, lastSettle = 0, lastOnline = 0, R = 0,
+    coins = 0, pot = 0, lastOnline = 0, R = 0,
+    growth = { G = 0, g = 1, t = 0 },   -- compteur de croissance du ranch (§12.3) ; t = Clock.now() du dernier règlement
     tiles = { snack = 0, decor = 0, pens = 0, cozyBed = false },   -- la Cuve n'est pas ici : son niveau se calcule à partir de R (§4.9)
-    boosts = { personalLeft = 0 },   -- secondes restantes du boost personnel (en pause pendant un boost de serveur ;
-                                     -- +600 si l'acheteur d'une Squish Party part avant la fin, §8.3)
-    coinBuy = { at = 0, amount = 0 },   -- dernier paquet de pièces (Clock.unix(), montant) : 2e confirmation du Grand Splorch
+    boosts = { personalLeft = 0 },   -- secondes restantes du boost personnel (en pause pendant un boost de serveur) :
+                                     -- Nourrir Plop (+300), minutes non jouées d'une Squish Party achetée (§8.3)
     -- collection (§4.3, §4.9, §4.14)
-    squishies = {},   -- [uid] = { s = id d'espèce (1-26 au lancement), m = 0-9, st = 0-5, z = taille, zAt = Clock.now() du dernier règlement,
-                      --           bf = 0-3, lk = bool, o = tenue ou "", at = "pen"|"pool"|"dodo"|"mail" }
+    squishies = {},   -- [uid] = { s = id d'espèce, m = 0-9, st = 0-5, z = taille notée, zg = compteur G noté avec z,
+                      --           bf = 0-3, lk = bool, o = tenue ou "" (seul endroit où la tenue portée est gardée),
+                      --           at = "pen"|"pool"|"dodo"|"mail", gd = Clock.day() du dernier bonus Héros / retour (§4.21.3) }
     nextUid = 1,
     mount = "",       -- uid de la monture choisie ("" = la plus grosse, dès que la première selle est gagnée)
     vat = { fillAt = 0, pending = false, pityRare = 0, pityEpic = 0, newPulls = 3 },
@@ -1873,16 +1900,21 @@ function Schema.defaults()
               -- arrive : sans limite (une espèce par semaine) et sans trou (les DataStores refusent les tableaux à trous)
       mut = {},       -- mut[s] = masque : bit 0 = page de l'espèce tamponnée, bit m = mutation m trouvée (m = 1-9)
       stars = {},     -- stars[s] = masque de 5 bits : bit (k − 1) = badge ★k
+      fam = {},       -- fam[f] = 1 si le bonus de la famille f est gagné (pour toujours, §4.17) ; dense, une case par famille
       rewards = 0,    -- dernier jalon réclamé
     },
     released = {},    -- 12 derniers squishies relâchés { s, m } (Prairie des copains, §4.13)
     trophies = {},    -- trophies[s] = taille record (tableau dense, 0 par défaut)
-    outfits = { owned = {}, worn = {} },   -- owned[id] = nombre ; worn[id] = uid
+    outfits = { owned = {} },   -- owned[id] = nombre d'exemplaires ; la tenue portée n'est gardée que dans squishy.o
+    moon = { lastSession = 0 },  -- dernière séance de la Lune où une Goutte de Lune a été donnée (une par séance et par compte, §4.23)
     -- social et rétention (§6, §7)
     fame = 0, plopDays = 0, lastFeedDay = 0,
     onboarding = { step = 0, done = false },
     objectives = { day = 0, list = {}, rerolls = 0, allClaimed = false },  -- list = { { id, p, done, claimed } × 3 }
-    caps = { day = 0, rushBabies = 0, splorchGifts = 0, fameRush = 0, fameRelease = 0, petSit = 0, claps = 0, partyBuys = 0 },
+    caps = { day = 0, rushBabies = 0, splorchGifts = 0, splorchCoins = 0, fameRush = 0, fameRelease = 0,
+             petSit = 0, petSitIn = 0, petSitBy = {}, claps = 0, partyBuys = 0 },
+             -- petSit = pressions récompensées comme visiteur (100) ; petSitIn = reçues comme propriétaire (100) ;
+             -- petSitBy[tostring(UserId du propriétaire)] = pressions comptées pour « Plus serviable » (20 par ami)
     mode = { rush = false, chosen = false, changedAt = 0, cardShown = false, postBoopCardShown = false },
     golden = { lastWinAt = 0 },
     weekly = { week = 0, stamps = 0, combo = 0, catchScore = 0, helpful = 0, generous = 0,
@@ -1901,14 +1933,16 @@ function Schema.defaults()
     fameLineage = 0,                                             -- lignée de Fame (registre séparé)
     worldFirst = {},                                             -- trouvailles World First
     costumes = {},                                               -- costumes de saison obtenus
+    packs = { side = 0, quoteProduct = "", quoteAmount = 0, quoteAt = 0 },  -- paquets de pièces (si le propriétaire les
+                                                                 -- rouvre) : porte-monnaie « Pièces de côté » et devis du serveur
     -- privé
     passes = {}, receipts = {}, flags = { strikes = 0, lbBanUntil = 0 },
   }
 end
 ```
 
-- **Taille** : au plus 24 + 60 + 20 = 104 squishies × ≈ 70 octets ≈ 7 Ko ; profil complet < 20 Ko.
-- **État de session, jamais sauvegardé** (mémoire du serveur) : paires boopeur → ranch et leur heure, fuites par ranch sur l'heure glissante, listes « Pas ce joueur », file des Grands Splorch, objectifs gardés jusqu'à la fin de la session.
+- **Taille** : au plus 24 + 60 + 20 = 104 squishies × ≈ 70 octets ≈ 7 Ko ; profil complet < 20 Ko. `Contract.spec` vérifie qu'un profil plein (104 squishies, trophées et Squishydex partiels, 64 espèces) passe `JSONEncode` puis `JSONDecode` sans aucun changement, et `Schema.spec` qu'un Squishydex de 64 espèces garde ses tampons et ses étoiles après sauvegarde puis rechargement (aucun masque de bits partagé entre espèces : en Luau, `bit32.lshift(1, 32) == 0`).
+- **État de session, jamais sauvegardé** (mémoire du serveur) : paires boopeur → ranch et leur heure, fuites par ranch sur l'heure glissante, listes « Pas ce joueur », file des Grands Splorch, objectifs gardés jusqu'à la fin de la session, historique de 0,5 s des positions validées (captures, §12.5), crédits de bond, attente sur une dalle, dernière activité de chaque joueur (N actifs du MEGA et de la jauge), dernier spectacle complet vu (§4.15), réglage « BOOP RUSH autorisé » d'un serveur privé (attribut du serveur, réglé par son propriétaire `PrivateServerOwnerId`).
 - **Données lues = données à revalider** : au chargement, `reconcile` revérifie chaque champ (type, bornes, `NaN`, tableaux denses, uid existants, emplacements de Meilleur Ami uniques) et répare ce qui est faux avec une valeur sûre, en le comptant dans Diagnostics. Une vieille sauvegarde ou un bug passé ne peut donc jamais faire planter le chargement.
 - **Règles** : `coins`, `pot`, `z` dans `[0 ; 1e300]`, jamais `NaN` ; uid = chaîne base 36 de `nextUid` (8 caractères au plus) ; invariants vérifiés en développement après chaque mutation (au plus 24 squishies `pen`/`pool`, 60 `dodo`, 20 `mail` ; un seul squishy par emplacement de Meilleur Ami ; tenue portée par un uid qui existe).
 - **Migrations** : `Schema.migrate(data, from)`, étapes pures testées sur une sauvegarde-témoin (`tests/fixtures/profiles/v<n>.json`) ; on n'efface jamais un champ dans la version qui le remplace ; `reconcile` ajoute les champs nouveaux avec leur valeur par défaut. Les champs réservés ci-dessus évitent toute migration pour les fonctions de janvier.
@@ -1923,13 +1957,14 @@ Déclarés dans `Shared/Remotes.luau`, créés par `Net.setup()`. Chaque handler
 
 | Remote | Charge utile | Validation serveur | Débit max |
 |---|---|---|---|
-| `Press` | `uid: string, tClient: number` | uid possédé, dans un enclos ou le Bassin, à ≤ 10 studs (position validée), recharge de 8 s écoulée ; `tClient` fini, accepté s'il est dans [maintenant − 0,35 ; maintenant + 0,05] | 12 / s |
+| `Press` | `uid: string, tClient: number` | uid possédé, dans un enclos ou le Bassin, à ≤ 10 + 2 studs à plat de la place du squishy (position validée, §4.7), recharge de 8 s écoulée ; `tClient` fini, accepté s'il est dans [maintenant − 0,35 ; maintenant + 0,05] | 12 / s |
+| `PetPress` | `ownerId: number, uid: string, tClient: number` | Pet-sitting (§6.4). Propriétaire présent et ami Roblox de l'envoyeur ; uid dans le dernier message `Fence` de pet-sitting de ce ranch ; envoyeur côté rue à ≤ 10 studs de la clôture ; recharge de 8 s du squishy ; plafonds du jour (100 visiteur, 100 propriétaire) ; `tClient` comme `Press` ; PERFECT calculé avec `hash(ownerId, uid)` | 12 / s |
 | `PickUp` | `uid: string` | Touche ○ / Q. Possédé, dans un enclos, à ≤ 10 studs, rien de porté, pas en monture, pas en attente de Grand Splorch | 4 / s |
 | `PutDown` | — | Quelque chose est porté | 4 / s |
 | `Throw` | — | Quelque chose est porté, à ≤ 12 studs du Bassin ; place ou jumeau disponible | 4 / s |
 | `FuseMenu` | `uidA: string, uidB: string` | Différents, possédés, jumeaux, hors Lettres, pas en attente de Grand Splorch (verrouillés acceptés : choix du joueur) | 2 / s |
 | `FuseAll` | — | Au moins une paire de jumeaux non verrouillés, hors Lettres ; le serveur fait toute la chaîne (§4.10) | 1 / 2 s |
-| `BuyTile` | `tile: string` | `tile` ∈ {snack, decor, pens, cozyBed} ; niveau < maximum ; condition R ; règlement puis pièces ≥ prix. Position non exigée (achat possible depuis le panneau Ranch ou par □ sur la dalle). L'entrée sur une dalle, elle, est détectée par le serveur sans aucun message (§4.6) | 10 / s |
+| `BuyTile` | `tile: string` | `tile` ∈ {snack, decor, pens, cozyBed} ; niveau < maximum ; condition R ; règlement puis pièces ≥ prix. Position non exigée (achat possible depuis le panneau Ranch ou par □ sur la dalle). L'achat en restant 0,6 s sur une dalle, lui, est détecté par le serveur sans aucun message (§4.6) | 10 / s |
 | `MoveSquishy` | `uid: string, to: string` | `to` ∈ {pen, dodo} ; place libre ; pas porté, pas en fuite | 4 / s |
 | `ClaimMail` | `uid: string` | Dans la Boîte aux lettres ; place libre | 4 / s |
 | `Sell` / `Release` | `uids: {string}, confirmed: boolean` | Table séquentielle de 1 à 84 chaînes uniques (enclos + Dodo, pour « Ranger »), possédées, ni Meilleur Ami, ni verrouillées, ni en fuite, ni en attente de Grand Splorch ; `confirmed = true` exigé s'il y a un Épique+ ou une mutation Doré+ (2e étape faite par le client, §4.13) | 2 / s |
@@ -1937,12 +1972,12 @@ Déclarés dans `Shared/Remotes.luau`, créés par `Net.setup()`. Chaque handler
 | `SetBestFriend` | `uid: string, slot: number` | Entier 1 à 3, emplacement débloqué (R), possédé | 2 / s |
 | `SetMount` | `uid: string` | Possédé, dans un enclos ; selle gagnée (record ≥ 1 200, §4.12) | 2 / s |
 | `Ride` | `on: boolean` | Une monture existe ; rien de porté | 2 / s |
-| `Leap` | `dirX: number, dirZ: number` | Finis, norme entre 0,5 et 1,5 ; recharge de 4 s écoulée ; pas en portage → MoveCheck accorde +12 studs pendant 0,35 s ; point d'atterrissage calculé par `LeapRules` ; capture tentée par le serveur à t + 0,35 s | 3 / s |
-| `Catch` | `id: number` | Entier ; créature active ; attrapable par ce joueur (personnelle, mode Rush pour une fuite du Rush, pas le boopeur pendant les 6 premières secondes, recharge du Golden) ; distance ≤ 6,5 à `pos(maintenant)` (9,5 pour le propriétaire de la fuite) ; `canAct` | 6 / s |
+| `Leap` | `dirX: number, dirZ: number, tClient: number` | Finis, norme entre 0,5 et 1,5 ; recharge de 4 s écoulée (horloge du serveur) ; pas en portage ; `tClient` ramené dans [maintenant − 0,35 ; maintenant] → MoveCheck accorde un crédit de 12 studs sur 0,35 s, rétroactif jusqu'à 0,3 s, un au plus toutes les 4 s (§12.8) ; point d'atterrissage calculé par `LeapRules` ; capture tentée par le serveur à `tClient + 0,35 s` | 3 / s |
+| `Catch` | `id: number, tClient: number` | Entier ; créature active ; attrapable par ce joueur (personnelle, mode Rush pour une fuite du Rush, pas le boopeur pendant les 6 premières secondes, recharge du Golden) ; `tClient` ramené dans [maintenant − 0,35 ; maintenant] ; distance à plat ≤ 6,5 entre `pos(tClient)` et la position validée du joueur à `tClient` (9,5 pour le propriétaire de la fuite) ; écart vertical depuis les pieds ≤ 8 ; `canAct` ; égalité : ordre d'arrivée (§12.5) | 6 / s |
 | `BoopHold` | `ownerId: number, uid: string, holding: boolean` | Entiers et chaîne bornés ; ordre `RushRules` (§4.21.4) au début et à chaque tick (distance ≤ 8, propriétaire toujours en mode Rush, pas de « Pas ce joueur ») ; le serveur termine le boop lui-même à 2,5 s ou 5 s | 4 / s |
 | `MegaPress` | `tClient: number` | MEGA actif, à ≤ 20 studs du centre, recharge de 0,4 s | 3 / s |
-| `FeedPlop` | `holding: boolean` | À ≤ 8 studs du bol, pas encore nourri aujourd'hui ; 5 s mesurées par le serveur | 2 / s |
-| `GrandSplorch` | `film: boolean, flyer: string` | Plus gros ≥ objectif ; dans son ranch ; rien de porté ; `flyer` possédé, dans un enclos ; maintien de 1,5 s mesuré côté client (geste). Vérifié **une seule fois**, à l'entrée dans la file : ensuite garanti (§4.15) | 1 / 2 s |
+| `FeedPlop` | `holding: boolean` | À ≤ 8 studs à plat du bol, pas encore nourri aujourd'hui ; 2 s mesurées par le serveur | 2 / s |
+| `GrandSplorch` | `film: boolean, flyer: string` | Plus gros ≥ objectif ; dans son ranch ; rien de porté ; aucun de ses squishies en fuite ; `flyer` possédé, dans un enclos ; maintien de 1,5 s mesuré côté client (geste). Vérifié **une seule fois**, à l'entrée dans la file : ensuite garanti (§4.15) | 1 / 2 s |
 | `ClaimObjective` / `RerollObjective` | `slot: number` | Entier 1 à 3 ; terminé et non réclamé / relance disponible et non terminé | 4 / s |
 | `ClaimDexReward` | — | Jalon atteint et non réclamé | 2 / s |
 | `SetMode` | `rush: boolean` | Vers Cozy : immédiat, sans recharge (clôture vidée, fuites en cours rentrées, boop impossible jusqu'à la fin du Rush). Vers Rush : recharge de 60 s, appliqué à la fin du Rush en cours ; serveur privé sans autorisation : refusé | 1 / s |
@@ -1966,15 +2001,15 @@ Aucun `RemoteFunction` ne va du serveur vers le client. Les achats Robux passent
 | `DataSnapshot`, `DataPatch` | Profil public, patchs groupés par image (repris) | Le joueur |
 | `RanchSnapshot`, `RanchPatch` | §12.5 | Tous |
 | `ChaseEvent` | §12.5 | Tous, ou un seul pour les créatures personnelles |
-| `EventState` | `{ rush, mega, golden, moon, gauge, boost, spectacleQueue }` | Tous, à chaque changement |
-| `MegaBeat` | `{ points, target, presses }` | Tous, 4 Hz pendant le MEGA |
+| `EventState` | `{ rush, mega, golden, moon, gauge (dont la fin de la sieste), boost, spectacleQueue (places et attentes prévues) }` | Tous, à chaque changement |
+| `MegaBeat` | `{ points, target, presses }` | Tous, 4 Hz pendant le MEGA (non fiable : battement visuel) |
 | `Fence` | `{ ranchSlot, uids }` (squishies à la clôture) | Tous, pendant le Rush et le pet-sitting |
 | `BoopState` | `{ booperSlot, ownerSlot, uid, endsAt }` (maintien en cours) | Tous |
 | `Banner` | `{ kind, args }` | Tous |
 | `Feedback` | `{ key, vars, tone }` | Le joueur |
 | `Celebrate` | `{ kind, data }` (naissance, fusion, combo, capture, Grand Splorch, palier, objectif) | Le joueur (et tous pour le Grand Splorch) |
 | `EmoteShow` | `{ userId, kind }` | Tous |
-| `ClapPrompt` | `{ heroId, endsAt }` | Tous sauf le héros |
+| `ClapPrompt` | `{ heroId, endsAt }` | Les spectateurs qui ont la version complète du spectacle (au plus une fois toutes les 3 min, §4.15) ; le client ne l'affiche pas pendant une poursuite, un maintien ou une fenêtre |
 | `ModePrompt` | — (carte du choix Rush / Cozy : envoyée une fois après 15:00 de jeu ; le client l'affiche au calme, §4.21.1) | Le joueur |
 | `DiagnosticsSnapshot` | `{ server, clients, samples, today }` (20 Ko au plus, §12.11) | L'administrateur qui l'a demandé |
 
@@ -1982,16 +2017,18 @@ Aucun `RemoteFunction` ne va du serveur vers le client. Les achats Robux passent
 
 | Menace | Parade |
 |---|---|
-| Vitesse, téléportation, bond sans recharge | **`MoveCheck` repris de Comet avec son budget d'action** : un « seau » de studs dont le plafond est la règle d'un tick (`vmax × dt × 1,5 + 4`), rempli à `vmax × 1,5` studs/s ; chaque position acceptée retire sa distance ; la dette passe d'un message à l'autre. Tant que la dette n'est pas remboursée, le joueur **ne peut pas agir** (attraper, booper, presser, encaisser le Pot, presser le MEGA). `vmax` = WalkSpeed serveur maximal des 0,5 dernières secondes (16, ou 22,4 en monture) ; un bond accordé par le serveur ajoute 12 studs sur 0,35 s. Une infraction **signale seulement** ; 3 en 5 s → retour à la dernière position valide (`PivotTo`), 3 s sans action, icône neutre « connexion instable » (jamais d'accusation). Gel réseau honnête jusqu'à 1,5 s toléré. Exemptions 3 s après une apparition ou un `PivotTo` du serveur |
+| Vitesse, téléportation, bond sans recharge | **`MoveCheck` repris de Comet avec son budget d'action** : un « seau » de studs dont le plafond est la règle d'un tick (`vmax × dt × 1,5 + 4`), rempli à `vmax × 1,5` studs/s ; chaque position acceptée retire sa distance ; la dette passe d'un message à l'autre. Tant que la dette n'est pas remboursée, le joueur **ne peut pas agir** (attraper, booper, presser, encaisser le Pot, presser le MEGA). `vmax` = WalkSpeed serveur maximal des 0,5 dernières secondes (16, ou 22,4 en monture). **Bond** : un bond accordé ajoute un **crédit de 12 studs** sur 0,35 s, ajouté au plafond par tick, au budget d'action et à la fenêtre soutenue d'1 s ; il est **rétroactif** jusqu'à 0,3 s avant la réception du message `Leap` (les positions du bond et le message passent par des canaux différents et arrivent parfois dans le désordre), et refusé si le bond accordé précédent date de moins de 4 s (horloge du serveur) : une rafale de faux `Leap` n'apporte jamais plus de 12 studs par 4 s. Sans ce crédit, un bond de 12 studs en courant laissait une dette d'environ 4,8 studs, et le joueur ne pouvait plus attraper pendant 0,6 s, au moment exact où il appuyait sur □. **Monture** : à chaque montée et descente, le contrôle reçoit la hausse de la racine (`HipHeight` − valeur de base, jusqu'à 6) et la hauteur de saut de la selle ; la racine debout, le vol bas et l'altitude maximale suivent la hausse, et la montée permise par tick devient `max(12, √(2 × 196,2 × JumpHeight)) × dt × 1,5 + 4` : le saut de 13 studs de la selle géante monte de 6,2 studs au premier tick, au-dessus des 5,8 permis par la règle reprise de Comet. Une infraction **signale seulement** ; 3 en 5 s → retour à la dernière position valide (`PivotTo`), 3 s sans action, icône neutre « connexion instable » (jamais d'accusation). Gel réseau honnête jusqu'à 1,5 s toléré. Exemptions 3 s après une apparition ou un `PivotTo` du serveur |
 | Vol, passe-muraille | Altitude > sol + 14 (+ la hausse de la monture, 4,3 à 6 studs, §4.12) pendant plus de 1,5 s, hors du plateau (r > 322) ou sous le sol → retour à la dernière position valide (règles de hauteur de Comet) |
 | Bond truqué | La direction est bornée (norme 0,5-1,5) ; la longueur est fixée par le serveur (12 studs, raccourcie par les solides) ; la capture se calcule sur le point d'atterrissage du serveur, jamais sur une position envoyée |
 | Entrer dans un ranch | Poussée hors du ranch à chaque tick (§6.3) ; position validée seulement |
 | Debout sur un autre joueur | **Aucune collision entre personnages** (groupe de collision `Characters` qui ne se touche pas lui-même) : personne ne porte personne, personne ne bloque un portail (leçon du tour 5 de Comet) |
-| Valeurs envoyées par le client | Aucune valeur économique acceptée. `tClient` des pressions borné à 0,35 s dans le passé (§4.7) ; comme un script peut alors viser le PERFECT à chaque fois, aucun classement ne compte les PERFECT (§6.9). Le type d'entrée et l'appareil sont seulement analytiques (aucun bonus selon l'appareil, leçon de Comet) |
+| Valeurs envoyées par le client | Aucune valeur économique acceptée. `tClient` des pressions, des captures et des bonds borné à 0,35 s dans le passé (§4.7, §12.5) ; comme un script peut alors viser le PERFECT à chaque fois, aucun classement ne compte les PERFECT (§6.9). Le type d'entrée et l'appareil sont seulement analytiques (aucun bonus selon l'appareil, leçon de Comet) |
 | Rafales de remotes | Seau à jetons par action (§12.7) |
-| Fermes de bébés (comptes complices) | Plafonds journaliers, taille ≤ 2 × le plus gros du receveur, 1 boop par paire toutes les 30 min, recharge de 20 s, 2 fuites par ranch et par Rush, 4 par heure ; bébés des Grands Splorch plafonnés à Peu commun pour une espèce Épique+ (§4.15) |
+| Fermes de bébés (comptes complices) | Plafonds journaliers, taille ≤ 0,5 × le plus gros du receveur, mutation du bébé du Rush copiée seulement jusqu'à ×5 (sinon tirée), 1 boop par paire toutes les 30 min, recharge de 20 s, 2 fuites par ranch et par Rush, 4 par heure ; bébés des Grands Splorch plafonnés à Peu commun pour une espèce Épique+ (§4.15) |
+| Croissance « Héros » à deux comptes | +1 h de croissance du ranch (et +30 min pour un retour seul), une fois par squishy et par jour, au lieu d'un pourcentage qui se cumulait (§4.21.3) |
+| Pet-sitting avec un second compte | 2 s de revenu par pression, 100 pressions récompensées par jour (et 100 reçues par propriétaire) ; « Plus serviable » compte 20 pressions au plus par ami et par jour (§6.4) |
 | Robots qui pressent | Rien à gagner hors de son propre ranch ; débit borné ; récompenses en secondes de revenu (un robot ne crée pas de valeur infinie) |
-| Classements | Exclusion après 10 retours forcés en 10 min, **jusqu'à la fin de la semaine suivante** (`flags.lbBanUntil`), jamais à vie (question laissée ouverte par Comet, tranchée ici) |
+| Classements | Exclusion après 10 retours forcés en 10 min, **jusqu'à la fin de la semaine suivante** (`flags.lbBanUntil`), jamais à vie (question laissée ouverte par Comet, tranchée ici). Valeurs entières codées (score, premier arrivé, nom caché), jamais une taille (§6.9) |
 | Lecture de secrets | Administrateurs LiveOps et réglages anti-triche dans `ServerScriptService` seulement |
 | Achats | `ProcessReceipt` unique et idempotent ; passes vérifiés à l'arrivée et à l'achat, vérifications bornées en débit (repris) |
 | Faux rapports d'erreur (Diagnostics) | Plafonds par joueur et par clé, tailles bornées, noms nettoyés ; un rapport ne change jamais rien au jeu et n'est lu que par les administrateurs ; un joueur qui dépasse ses plafonds est simplement ignoré jusqu'à la fin de la session (§12.11) |
@@ -2042,13 +2079,15 @@ Le propriétaire a vu en direct des bugs de Comet Conga que nos 1 600 tests hors
 | Attente du verrou d'un autre serveur | 5 lectures réussies (≥ 25 s), ou essais épuisés | Reprise du verrou, ou renvoi poli « reviens dans un instant » (§12.6) |
 | Placement du personnage | `HumanoidRootPart` attendu 10 s | Nouvel essai à la prochaine apparition, repli sur la place (§6.1) |
 | Portage d'un squishy | Mort, réapparition, sortie du ranch, fenêtre ouverte, monture, départ | Le squishy retourne à sa place (§4.10) |
-| Maintien de boop / du bol | 2,5 ou 5 s + 0,5 s / 5 s + 0,5 s | Effet, ou annulation |
-| Bond | 0,35 s | Fin du bond (capture tentée une seule fois) |
+| Maintien de boop / du bol | 2,5 ou 5 s + 0,5 s / 2 s + 0,5 s | Effet, ou annulation |
+| Attente sur une dalle | 0,6 s ; sortie de la dalle, portage ou autre maintien | Achat, ou annulation sans rien dépenser (§4.6) |
+| Bond | 0,35 s (crédit de déplacement : 0,35 s, un toutes les 4 s) | Fin du bond (capture tentée une seule fois) |
 | Créature en fuite / fuite du Rush / Wild Wobbler / Golden / démonstration | 20 / 25 / 25 / 30 / 20 s | Retour, éclatement ou disparition, même chez un client qui a raté le message de fin |
 | BOOP RUSH / MEGA SQUISH | 90 s (+ 25 s pour les fuites en cours) / 65 s | Fin de phase par `EventClock` |
-| File des Grands Splorch | Son tour (110 s au plus) ; départ du joueur | Spectacle, ou place rendue sans rien remettre à zéro (§4.15) |
+| File des Grands Splorch | Son tour (place × 20 s + reste du grand spectacle en cours, recalculé ; coupure dure à 8 min) ; départ du joueur | Spectacle, ou place rendue sans rien remettre à zéro (§4.15) |
 | Spectacle (Grand Splorch, danse de Big Plop) | 7,5 s / 8 s, coupure dure à 10 s | Fin du spectacle, file suivante |
-| Squish Party / Wobble Party / boost personnel | 10 min / 5 min / son minuteur | Fin du boost |
+| Squish Party / Wobble Party / boost personnel | 10 min par achat (prolongée par un achat croisé) / 5 min / son minuteur | Fin du boost ; à la fermeture du serveur, minutes de fête non jouées rendues aux acheteurs en boost personnel (§8.3) |
+| Sieste de Big Plop (jauge) | 20 min | Jauge active ; fête si elle est pleine (§4.23) |
 | Carte du choix Rush / Cozy | 20 s | Cozy |
 | Cartes non bloquantes | 8 s | Rangées dans la pastille « ! » |
 | Fenêtre d'achat ou d'invitation de Roblox | 60 s de sélection tenue | Sélection rendue de force (§10.6) |
@@ -2063,15 +2102,15 @@ Le propriétaire a vu en direct des bugs de Comet Conga que nos 1 600 tests hors
 | **a. Modules purs : cas exacts et propriétés** | Chaque module de `Shared/Logic` et `Util/Format` : les valeurs exactes de ce GDD **et** des propriétés vérifiées sur des milliers d'entrées tirées au hasard avec une graine fixe : jamais `NaN` ni négatif, monotonie, tables qui somment à 100 %, nombre de squishies conservé par une fusion (2 → 1), chemins jamais hors du graphe ni dans un ranch, même résultat côté client et côté serveur. Une entrée bizarre (`NaN`, ±inf, 1e308, −0) donne un résultat sûr, jamais une erreur | `Format`, `SizeScale`, `Formulas`, `Odds`, `FusionRules`, `RushRules`, `QuestRules`, `MegaRules`, `EventClock`, `SeededPath`, `PressTiming`, `ZoneRules`, `LeapRules`, `StateTimeouts`, `DiagRules` (`*.spec` et `Props_*.spec`) |
 | **b. Chaque remote attaqué** | Chaque message du §12.7 reçoit des charges hostiles : mauvais types, `nil`, `NaN`, ±inf, nombres énormes, chaînes de 100 000 caractères, UTF-8 invalide, tables profondes, mixtes ou à trous, uid d'un autre joueur, rafales de 1 000 messages par seconde. Attendu : **aucune mutation, aucune erreur**, au plus un `Feedback` neutre, et des seaux à jetons qui coupent au bon débit | `Remotes.spec`, `RateLimit.spec` |
 | **c. 16 robots, longue durée** | Un serveur complet avec 16 robots qui jouent (pressent, achètent, fusionnent, boopent, poursuivent, partent, reviennent, meurent, changent de mode) pendant **6 h de temps simulé** (horloge accélérée). À **chaque tick**, des invariants : aucune monnaie négative ou `NaN` ; chaque squishy existe une fois, à un seul endroit, chez un seul propriétaire ; aucun état plus vieux que son délai ; plafonds respectés ; instances et connexions stables après la mise en route (± 5 %) ; tick dans son budget ; **aucune erreur ni aucun avertissement**. Plus le démarrage et la fermeture (`BindToClose`) à 16 joueurs | `Soak.spec`, `Boot.spec` |
-| **d. Client complet, profil console, 3 résolutions** | Une partie serveur enregistrée est rejouée dans le vrai client, profil console (`IsTenFootInterface` vrai, manette), en **1920 × 1080, 3840 × 2160 et 1280 × 720**, en anglais puis en français. Un robot parcourt tous les écrans avec **la croix, ✕ et ○ seulement** (depuis le jeu, croix ↓ ouvre le menu) : chaque écran du §10.3 est atteint ; ○ revient toujours au niveau précédent, puis au jeu ; la sélection n'est jamais vide dans une fenêtre, jamais hors de la fenêtre active, jamais posée en jeu. À chaque étape : aucun chevauchement, aucun texte coupé ni sous 28 px TV, rien hors de la zone sûre, aucune touche du jeu active derrière une fenêtre, glyphes PlayStation partout (aucune lettre « X » ou « LB »). Même parcours au clavier-souris | `ClientReplay.spec`, `Console_*.spec`, `Layout.spec` |
+| **d. Client complet, profil console, 3 résolutions** | Une partie serveur enregistrée est rejouée dans le vrai client, profil console (`IsTenFootInterface` vrai, manette), en **1920 × 1080, 3840 × 2160 et 1280 × 720**, en anglais puis en français. Un robot parcourt tous les écrans avec **la croix, ✕ et ○ seulement** (depuis le jeu, croix ↓ ouvre le menu) : chaque écran du §10.3 est atteint ; ○ revient toujours au niveau précédent, puis au jeu ; la sélection n'est jamais vide dans une fenêtre, jamais hors de la fenêtre active, jamais posée en jeu. À chaque étape : aucun chevauchement, aucun texte coupé ni sous 28 px TV, rien hors de la zone sûre, aucune touche du jeu active derrière une fenêtre, glyphes PlayStation partout (aucune lettre « X » ou « LB »), chaque texte du monde (étiquettes des dalles, consignes, « +N ») d'une taille projetée ≥ 28 px TV à 20 studs. Même parcours au clavier-souris | `ClientReplay.spec`, `Console_*.spec`, `Layout.spec` |
 | **e. Données en désordre** | Pannes de DataStore injectées (erreurs, délais de 10 s, quotas), verrou de session entre 2 et 3 serveurs simulés, retour immédiat sur un autre serveur, fermeture avec 16 joueurs et un magasin lent, migrations depuis les sauvegardes-témoins, profils abîmés (`NaN`, champs manquants, tableaux à trous, uid inconnus) réparés par `reconcile`, reçu rejoué, achat pendant une panne (accordé seulement après une sauvegarde réussie) | `DataChaos.spec`, `DataService.spec`, `MonetizationService.spec`, `Schema.spec` |
-| **f. Rythme de l'économie** | Simulation du §4.24 : 200 joueurs × 28 jours, **porte bloquante** | `EconomyPacing.spec` |
-| **g. Contre-audit anti-triche** (« red team ») | Un fichier par menace, écrit comme une attaque : capture téléportée ou de loin, capture de sa propre fuite avant 6 s, capture d'une créature personnelle d'un autre, bond sans recharge ou de direction `NaN` ; boop à travers le mur, de loin, de son propre squishy, d'un Meilleur Ami, contournement de « Pas ce joueur » et des paires ; entrée dans un ranch (monture, saut, bond, téléportation, rester dans le portail) ; reçu rejoué, achat avant le chargement du profil ou pendant un Grand Splorch ; pressions chez un autre, `tClient` truqué ; deux messages contraires dans la même image (vendre pendant une fusion) | `RedTeam_Chase.spec`, `RedTeam_Boop.spec`, `RedTeam_Fence.spec`, `RedTeam_Purchase.spec`, `RedTeam_Press.spec`, `MoveCheck.spec` |
+| **f. Rythme de l'économie** | Simulation du §4.24 : 50 joueurs × 28 jours × 3 tailles de serveur (4, 8, 16) dans `check.sh`, 200 joueurs en lancement manuel ; moteur par événements ; jalons de rythme **et** de santé de l'économie (Tapis 12, pièces perdues, part des pressions, Grands Splorch prêts à la connexion, temps en ×2), **porte bloquante** | `EconomyPacing.spec` |
+| **g. Contre-audit anti-triche** (« red team ») | Un fichier par menace, écrit comme une attaque : capture téléportée ou de loin, capture avec un `tClient` truqué (dans le futur, trop ancien, `NaN`), capture de sa propre fuite avant 6 s, capture d'une créature personnelle d'un autre, bond sans recharge ou de direction `NaN`, rafale de faux `Leap` (jamais plus de 12 studs par 4 s) ; ferme de bébés et de croissance « Héros » à deux comptes, pet-sitting par un second compte ; boop à travers le mur, de loin, de son propre squishy, d'un Meilleur Ami, contournement de « Pas ce joueur » et des paires ; entrée dans un ranch (monture, saut, bond, téléportation, rester dans le portail) ; reçu rejoué, achat avant le chargement du profil ou pendant un Grand Splorch ; pressions chez un autre, `tClient` truqué ; deux messages contraires dans la même image (vendre pendant une fusion) | `RedTeam_Chase.spec`, `RedTeam_Boop.spec`, `RedTeam_Fence.spec`, `RedTeam_Purchase.spec`, `RedTeam_Press.spec`, `MoveCheck.spec` |
 | **h. Règle « zéro trace »** | Le harnais écoute `warn`, `error`, `ScriptContext.Error` et `LogService.MessageOut` pendant **chaque** spec : toute erreur ou tout avertissement imprévu la fait échouer. Un avertissement attendu doit être déclaré dans la spec (`expectWarning(motif)`), et la spec échoue s'il n'arrive pas | `tests/harness` (toutes les specs) |
 | **i. Vrai moteur Roblox** (prêt, lancé plus tard) | `tools/opencloud/` : un script Lune construit la place avec Rojo, la publie comme nouvelle version d'une **place de test privée** (API Open Cloud *Place Publishing*), lance la suite des tests serveur **dans de vrais serveurs Roblox** par l'API Open Cloud *Luau Execution* (`luau-execution-session-tasks`), récupère les journaux et échoue si un test échoue ou si une erreur ou un avertissement apparaît. Il tournera dès que le propriétaire fournira une clé d'API et l'accès réseau. Plus les listes de tests manuels dans Studio et sur une vraie PS5 (§18) | `tools/opencloud/run-server-tests.luau`, §18 |
 | **j. Diagnostics en ligne** | Ce qui échappe à tout cela est compté en ligne et montré aux administrateurs (§12.11). Chaque erreur vue en ligne devient d'abord un test qui la reproduit, puis une correction | `DiagnosticsService`, `Diagnostics.spec` |
 
-S'ajoutent les specs de services sur un serveur simulé (`Economy`, `Squishy`, `Splorch`, `Quest`, `Rush`, `Chase`, `Mega`), `WorldBuild.spec` (carte construite : tout ancré, `CanTouch = false`, solides seulement dans la liste du §11.1, aucune fente entre solides, budget de pièces) et `Contract.spec` (parité EN/FR, provenance de chaque son, identifiants de monétisation à 0 = articles cachés). Les outils repris de Comet restent (`harness/Wire` pour les règles des messages réseau, `ApiAudit` pour les API Roblox).
+S'ajoutent les specs de services sur un serveur simulé (`Economy`, `Squishy`, `Splorch`, `Quest`, `Rush`, `Chase`, `Mega`) — dont, pour `Chase`, des captures à 0, 100 et 250 ms de latence sur une créature qui fuit (au moins 95 % acceptées quand le client la voyait à 5 studs ou moins, aucune au-delà de 7) et un bond suivi d'une capture au tick suivant (acceptée), et pour `MoveCheck`, un cavalier à chaque selle qui court et saute 60 s sans aucune infraction —, `WorldLayout.spec` (règle de plan du §11.2), `WorldBuild.spec` (carte construite : tout ancré, `CanTouch = false`, solides seulement dans la liste du §11.1, aucune fente entre solides, budget de pièces) et `Contract.spec` (parité EN/FR, provenance de chaque son, identifiants de monétisation à 0 = articles cachés). Les outils repris de Comet restent (`harness/Wire` pour les règles des messages réseau, `ApiAudit` pour les API Roblox).
 
 **Règle d'équipe** : on ne supprime ni n'affaiblit jamais un test pour le faire passer. Un bug trouvé (en test, dans Studio ou en ligne) devient d'abord un test qui échoue.
 
@@ -2133,7 +2172,7 @@ Le retrait du téléphone économise environ 1 200 lignes d'interface tactile (b
 | **Rien de rare ne part par erreur** | Verrou automatique (Légendaire+, Galaxie+), confirmation en 2 étapes pour vendre ou relâcher un Épique+ ou un Doré+, maintien pour chaque relâche, aperçu avant « Ranger » (§4.13) |
 | **Ton** | Mignon, satisfaisant ; la Jelly Moon est « un peu étrange » (troisième œil mignon, gouttes, lueur), jamais effrayante ; aucune violence (un boop est une pichenette sur le nez, l'éternuement est un nuage pastel brillant, jamais de morve) ; pas de sang, pas de peur, pas de moquerie (aucun badge « cozy » public) ; un Grand Splorch montre toujours le squishy qui revient |
 | **Classification visée : Minimal** | Questionnaire de maturité rempli avant le lancement et avant d'activer la console (§18) ; catalogues Roblox Kids et Select visés |
-| **Argent** | Aucun hasard payant, aucune chance achetable (même avec des pièces), aucune pub vidéo récompensée, aucun faux minuteur, aucune proposition d'achat dans les 10 premières minutes, prix clairs, `PolicyService` respecté, des pièces payées qui ne disparaissent jamais par surprise (§8.1) |
+| **Argent** | Aucun hasard payant, aucune chance achetable (même avec des pièces), aucune pub vidéo récompensée, aucun faux minuteur, aucune proposition d'achat dans les 10 premières minutes, prix clairs, `PolicyService` respecté, aucune monnaie vendue au lancement : des Robux ne disparaissent jamais dans un Grand Splorch (§8.1, §8.3) |
 | **Pas de piège de conception** | Aucun chiffre (part en mode Rush, ventes) ne justifie de changer le choix par défaut, l'ordre ou la taille des boutons d'un choix (§16.4) |
 | **Pause** | Carte « Plop a sommeil » après 60 min, sans pénalité ni récompense pour rester (§4.20) |
 | **Partage** | Clips seulement si `IsContentSharingAllowed` ; le jeu ne partage jamais tout seul (§9.5) |
@@ -2151,7 +2190,7 @@ Le retrait du téléphone économise environ 1 200 lignes d'interface tactile (b
 | Sensibilité au mouvement | Mouvement réduit (§9.1) ; la caméra ne bouge jamais toute seule ; jamais plus de 3 changements de couleur par seconde (Glitch) ; aucun flash répété |
 | Lecture difficile, jeunes enfants | Aucun tutoriel écrit ; icônes, gestes de Big Plop, 4 mots au plus par consigne ; un bouton d'action principal ; aperçu du Grand Splorch en 3 tuiles |
 | Jeu sans son | Tout retour est d'abord visuel ; musique et effets réglables séparément |
-| Motricité | **Aucun appui simultané**, aucun clic de stick, aucune combinaison : chaque action tient sur une touche (§10.4) ; maintiens limités au boop (2,5 s), au bol (5 s) et à la confirmation du Grand Splorch (1,5 s) ; **aucun geste précis obligatoire** (le PERFECT est un bonus, jamais un échec) ; fusion au menu sans glisser-déposer et « Tout fusionner » ; un seul bouton pour attraper (bond avec capture à l'atterrissage) ; PERFECT décalé pour le retard des télés ; la cible est choisie par le jeu (pas besoin de viser) ; tout le menu se pilote avec la croix, ✕ et ○ |
+| Motricité | **Aucun appui simultané**, aucun clic de stick, aucune combinaison : chaque action tient sur une touche (§10.4) ; maintiens limités au boop (2,5 s), au bol (2 s) et à la confirmation du Grand Splorch (1,5 s) ; achat d'une dalle en restant 0,6 s dessus, sans maintenir de touche ; **aucun geste précis obligatoire** (le PERFECT est un bonus, jamais un échec) ; fusion au menu sans glisser-déposer et « Tout fusionner » ; un seul bouton pour attraper (bond avec capture à l'atterrissage) ; PERFECT décalé pour le retard des télés ; la cible est choisie par le jeu (pas besoin de viser) ; tout le menu se pilote avec la croix, ✕ et ○ |
 | Stress de la compétition | Mode Cozy (par défaut, immédiat, aussi rentable), serveurs privés en Cozy, bouclier débutant, « Pas ce joueur », Golden « course amicale », classements qui montrent d'abord ma place sur le serveur |
 | Appareils modestes | Graphismes légers, qualité adaptative, niveaux de détail, budgets du §12.9 (PS4 et Xbox One) |
 | Téléviseur et manette | Disposition télé unique, proportionnelle (référence 1920 × 1080), textes ≥ 28 px TV (32 pour le texte courant), contraste fort, zone sûre de 5 %, glyphes de l'appareil, tout à la manette sans curseur, focus toujours visible et jamais perdu, vibrations modérées et désactivables, sons d'interface, pas de fenêtre de chat (§10) |
@@ -2163,7 +2202,7 @@ Le retrait du téléphone économise environ 1 200 lignes d'interface tactile (b
 - **Détection** : `Localization.languageFor(player.LocaleId)` (module repris) : `fr-*` → français, sinon anglais. Le réglage « Langue » (Auto / English / Français) passe avant.
 - **Toutes les chaînes** dans `Shared/Localization/Strings.luau`, clés `domaine.nom`, variables `{n}`. Anglais **et** français écrits à la main ; un test vérifie la parité des clés et des variables (`Contract.spec`). Les autres langues : affichage anglais avec `AutoLocalize = true` (traduction automatique de Roblox) ; l'interface très illustrée limite la dépendance au texte.
 - **Consignes et glyphes** : une consigne ne cite jamais une touche dans une phrase ; le glyphe est posé **à côté** d'un mot court (□ + « Presser »), ce qui marche dans les deux langues et sur toutes les manettes.
-- **Nombres** : §4.2 (suffixes et séparateurs propres à chaque langue).
+- **Nombres** : §4.2 (mêmes suffixes internationaux K, M, B, T… dans les deux langues ; virgule et espace fine en français ; mot entier français dans la fiche et l'info-bulle).
 - **Longueur** : le français est ≈ 25 % plus long. Chaque texte a `TextScaled` + `UITextSizeConstraint` ; chaque écran est vérifié en français et en anglais en 1280 × 720, 1920 × 1080 et 3840 × 2160 sans passer sous 28 px TV (§12.10, couche d ; leçon de Comet : prévoir des libellés français courts dès le départ).
 
 | EN | FR |
@@ -2186,7 +2225,7 @@ Le retrait du téléphone économise environ 1 200 lignes d'interface tactile (b
 
 ## 16. Analytics
 
-Tout passe par `Server/Util/Analytics` (repris, appels protégés par `pcall`). Trois champs personnalisés pour segmenter : `device` (console manette / PC manette / PC clavier-souris ; tactile inattendu compté à part), `serverBand` (1-5, 6-10, 11-16 joueurs), `sessionBand` (1re session, 2-5, 6 et plus).
+Tout passe par `Server/Util/Analytics` (repris, appels protégés par `pcall`). **Budget** : Roblox accepte au plus `120 + 20 × joueurs` requêtes d'analytique par minute et par serveur ; au-delà, les événements sont perdus, y compris `PostBoopQuit`, l'indicateur de sécurité n° 1. Le jeu vise **10 requêtes au plus par joueur et par minute** (vérifié par `Analytics.spec` sur une partie simulée de 16 joueurs). Trois champs personnalisés pour segmenter : `device` (console manette / PC manette / PC clavier-souris ; tactile inattendu compté à part), `serverBand` (1-5, 6-10, 11-16 joueurs), `sessionBand` (1re session, 2-5, 6 et plus).
 
 ### 16.1 Entonnoir d'accueil (`LogOnboardingFunnelStepEvent`)
 
@@ -2208,8 +2247,10 @@ Tout passe par `Server/Util/Analytics` (repris, appels protégés par `pcall`). 
 
 | Flux | Monnaie | `itemSku` | Type de transaction |
 |---|---|---|---|
-| Source | Coins | `Pot` (cumulé, un événement par tranche de 5 min), `Press`, `Combo`, `Sell`, `Offline`, `Golden`, `Mega`, `RushHero`, `RushReturn`, `RushNear`, `SplorchGift`, `PetSit`, `Clap`, `Objective_<id>`, `Product_<clé>` | Gameplay, TimedReward, Onboarding, IAP |
-| Puits | Coins | `Tile_<dalle>_<niveau>`, `CozyBed` | Shop |
+| Source | Coins | `Pot`, `Press`, `Combo`, `Sell`, `Offline`, `Golden`, `Mega`, `RushHero`, `RushReturn`, `RushNear`, `SplorchGift`, `PetSit`, `Clap`, `Objective_<niveau>` (facile, moyen, difficile) | Gameplay, TimedReward, Onboarding |
+| Puits | Coins | `Tile_<dalle>` (snack, decor, pens), `CozyBed` | Shop |
+
+**Toutes les sources et tous les puits sont cumulés par joueur et par tranche de 5 min** : un événement par `itemSku` et par tranche (une pression par seconde aurait fait 180 événements par minute et par joueur). Les montants et le solde sont exprimés en **secondes de revenu** du joueur au moment de l'envoi (lisibles à tous les niveaux, alors que les pièces dépassent 1e19), et le niveau des dalles n'est pas dans l'`itemSku` (au-delà de 100 `itemSku`, Roblox range le reste dans « Other ») : il est mesuré par `TileLevelAtSplorch` (§16.3). Aucun achat Robux ne donne de pièces au lancement (§8.3).
 
 ### 16.3 Événements personnalisés (`LogCustomEvent`)
 
@@ -2224,16 +2265,18 @@ Tout passe par `Server/Util/Analytics` (repris, appels protégés par `pcall`). 
 | `QuitBaseline` | 1 par départ d'un joueur qui n'a pas été boopé dans les 2 dernières min (même tranche de temps de jeu) | Référence pour comparer `PostBoopQuit` |
 | `BoopDone`, `EscapeOutcome` | 1 ; 0 propriétaire / 1 autre / 2 personne | Équilibre de la poursuite (cible : propriétaire ≥ 25 %, personne ≤ 20 %) |
 | `RushCatchByInput` | 1 par capture, segmenté par `device` | La manette est-elle désavantagée face à la souris ? |
-| `MegaResult` | 1 réussite / 0 échec, avec N | Calibrage de l'objectif |
-| `GaugeFilled` | Minutes depuis la dernière fois | Calibrage de la jauge |
-| `SplorchReached` | R et minutes depuis le précédent | Rythme réel contre §4.24 |
+| `MegaResult` | 1 réussite / 0 échec, avec N (joueurs actifs) et le nombre de participants | Calibrage de l'objectif |
+| `GaugeFilled` | Minutes depuis la dernière fois (sieste comprise) | Calibrage de la jauge |
+| `SplorchReached` | R, minutes depuis le précédent, et 1 s'il était déjà prêt à la connexion | Rythme réel contre §4.24 ; le hors ligne fait-il le prestige ? |
+| `TileLevelAtSplorch` | Niveau du Tapis et nombre de décorations au Grand Splorch, avec R | Les dalles gardent-elles leur sens à chaque boucle (§4.6) ? |
+| `BoostShare` | Part de la session passée en ×2 (au départ) | Le ×2 reste-t-il un moment (cible ≈ 30 %, §4.24) ? |
 | `ComboLength` | n, et 1 si « Tout fusionner » | Les combos sont-ils compris ? |
 | `ObjectivesAllDone` | Minutes de session au 3e objectif terminé | Les objectifs sont-ils faisables ? |
-| `SplorchCoinsLost` | Pièces perdues au Grand Splorch, en minutes de revenu ; 1 si un paquet avait été acheté dans les 30 min | Des pièces payées se perdent-elles ? |
+| `SplorchCoinsLost` | Pièces perdues au Grand Splorch, en multiples du prix du Tapis 12 de la boucle | L'inflation des pièces revient-elle (cible ≈ 3, §4.24) ? |
 | `HatchRarity`, `MutationGot` | Rareté ; mutation | Tables réelles contre affichées |
 | `RideStart` | Secondes de jeu | La monture est-elle trouvée ? |
 | `PetSitPress`, `FriendsOnServer` | 1 ; nombre d'amis | Jeu entre amis |
-| `ShopOpened`, `ShopHiddenByPolicy` | 1 | Effet de `PolicyService` |
+| `ShopOpened`, `PolicyPaidRandomRestricted` | 1 | Fréquentation de la Boutique ; part des joueurs concernés par `ArePaidRandomItemsRestricted` (aucun article n'est caché pour eux, §8.1 n° 9) |
 | `MoveViolation` | Nombre d'infractions dans la session | Faux positifs de l'anti-triche |
 | `ServerFullKick` | 1 | Taille du serveur mal réglée ? |
 | `SleepyCardShown` | 60 ou 120 | Sessions très longues |
@@ -2254,7 +2297,10 @@ Tout passe par `Server/Util/Analytics` (repris, appels protégés par `pcall`). 
 | `EscapeOutcome` | propriétaire < 25 % ou personne > 20 % | Verrou du boopeur 6 → 8 s ; rayon du propriétaire 8 → 9 ; durée de fuite 25 → 22 s |
 | `ObjectivesAllDone` | < 85 % des sessions de 30 min finissent les 3 | Retirer ou assouplir l'objectif le moins fini (règle « Proposé si ») |
 | Réussite du MEGA | < 65 % ou > 92 % | Coefficient 50 par joueur ± 10 |
-| Médiane du premier Grand Splorch | hors 12-16 min | `Balance.Splorch.Targets[1]` |
+| Médiane du premier Grand Splorch | hors 11-16 min | `Balance.Splorch.Targets[1]` |
+| `SplorchReached` prêts à la connexion (jours 2 à 14) | > 50 % | `Balance.Offline.StopAt` 0,9 → 0,8, puis `Balance.Offline.GrowthShare` |
+| `TileLevelAtSplorch` : Tapis 12 atteint avant la moitié de la boucle, ou `SplorchCoinsLost` > 10 | médiane sur une semaine | `Balance.Tiles.RScale` 3,5 → 3,8 |
+| `BoostShare` | > 40 % ou < 20 % (médiane) | `Events.Gauge.TargetPerPlayer` ± 100 |
 | Perte entre les étapes 2 et 3 de l'accueil | > 10 % | Raccourcir le chemin vers le Tapis, renforcer le geste de Big Plop |
 | Écart de captures manette / clavier-souris | > 25 % | Rayon de capture 5 → 6 studs pour **tous** (jamais un bonus déclaré par le client) |
 | Sessions avec au moins une erreur (`ServerError`, `ClientError`) | > 0,5 % | Correctif sous 48 h ; la clé d'erreur devient d'abord un test qui échoue (§12.10) |
@@ -2272,7 +2318,7 @@ Tout passe par `Server/Util/Analytics` (repris, appels protégés par `pcall`). 
 - **Boucle** : grandir, presser + PERFECT et séries, Pot, dalles, Cuve à Gelée (tables, protections, nouveauté garantie), Bassin de Fusion et combos, créatures en fuite personnelles et Golden Wobbler, monture et bond.
 - **Social et événements** : BOOP RUSH (mode Rush/Cozy, interrupteur, « Pas ce joueur »), Wild Wobblers (partagés et personnels), bouclier débutant, démonstration de Big Plop, MEGA SQUISH, jauge du serveur et Wobble Party, Grand Splorch et ses cadeaux, applaudissements, Étagère à trophées, Jelly Moon (4 séances le samedi, rattrapage le dimanche), Flop Plop, ranchs voisins, bonus d'amis, pet-sitting, emotes, 5 classements de la semaine, nom caché.
 - **Rétention** : Nourrir Plop (jours au total), objectifs du jour faisables, Squishydex et bonus de famille, carte « Plop a sommeil », écran de retour.
-- **Monétisation** : 4 passes et 3 familles de produits du §8, sans publicité, PolicyService.
+- **Monétisation** : 4 passes et 2 familles de produits du §8 (Squish Party, tenues), sans publicité, sans monnaie vendue, PolicyService.
 - **Appareils** : PS5, PS4, Xbox Series, Xbox One et PC (types d'appareils Ordinateur + Console). Pas de téléphone ni de tablette.
 - **Technique** : schéma v1 avec champs réservés, disposition télé unique et couche console (glyphes, `FocusGuard`, vibrations, sons d'interface), anti-triche, analytics, Diagnostics et panneau des administrateurs, qualité adaptative, EN/FR, Mouvement réduit, Graphismes légers.
 
@@ -2290,7 +2336,8 @@ Tout passe par `Server/Util/Analytics` (repris, appels protégés par `pcall`). 
 | Février | **Grande Gelée entre serveurs** (risque technique) | `Features.GreatJelly = false` ; rien d'autre au lancement |
 | Février | **Semaines « Encore »** (retour d'espèces limitées) | Champs `limitedUntil` et `encore` dans les lignes d'espèces |
 | Février | Costumes Saint-Valentin et printemps | Calendrier `Events.Costumes` |
-| Chaque semaine après le lancement | Une nouvelle espèce | Champ `release` des lignes d'espèces (activation par la date) |
+| Chaque semaine après le lancement | Une nouvelle espèce (nouvelle famille de 4 par mois, ou sans famille, §4.17) | Champ `release` des lignes d'espèces (activation par la date) ; tableaux denses par espèce et par famille dans le profil (§12.6) ; rotation du MEGA sur les espèces publiées (§5.1) |
+| Janvier au plus tôt, sur décision du propriétaire | **Paquets de pièces** (retirés du lancement, §8.3) | Clés `CoinsSmall` et `CoinsBig` à l'identifiant 0 ; champ réservé `packs` (porte-monnaie « Pièces de côté » qui survit au Grand Splorch et se dépense en premier, devis du serveur écrit avant l'invite d'achat et honoré à l'attribution) |
 | Pas avant février, et seulement sur décision du propriétaire | Ouverture aux téléphones et tablettes | Rien au lancement (décision du 1er novembre 2026). Il faudrait une disposition tactile, ses commandes et tout un jeu de tests ; les tailles relatives et la cible choisie par le jeu facilitent ce travail le jour venu |
 
 ---
@@ -2302,7 +2349,7 @@ Tout passe par `Server/Util/Analytics` (repris, appels protégés par `pcall`). 
 2. Couche c : `Soak.spec` (16 robots, 6 h de temps simulé, invariants à chaque tick) et `Boot.spec` verts, **sans aucune erreur ni aucun avertissement**.
 3. Couche d : `ClientReplay.spec` et `Console_*.spec` verts en 1920 × 1080, 3840 × 2160 et 1280 × 720, en anglais et en français : chaque écran atteint avec la croix, ✕ et ○ ; ○ revient toujours ; aucun focus perdu ou piégé ; aucun chevauchement, aucun texte coupé ou sous 28 px TV ; rien hors de la zone sûre ; glyphes PlayStation.
 4. Couche e : échec de chargement (rien n'est sauvegardé), arrêt du serveur (`BindToClose` sauvegarde tout), retour sur un autre serveur après une panne (rien de perdu), rejeu de `ProcessReceipt` (aucun double crédit), profils abîmés réparés.
-5. Couche g : specs `RedTeam_*` vertes, plus un contre-audit indépendant (« red team ») sur le Rush, les captures, les bonds, le MEGA, les portails des ranchs et les achats.
+5. Couche g : specs `RedTeam_*` vertes, plus un contre-audit indépendant (« red team ») sur le Rush, les captures (dont `tClient`), les bonds (crédit de 12 studs), le MEGA, les portails des ranchs, les achats, les fermes de bébés et de croissance « Héros » à deux comptes et le pet-sitting par un second compte.
 6. Couche h : aucune spec ne laisse passer une erreur ou un avertissement imprévu.
 7. Couche i : dès que la clé de l'API Open Cloud est fournie, la suite des tests serveur est verte **dans de vrais serveurs Roblox**, sans erreur ni avertissement dans les journaux. Si la clé n'est pas là le 10 décembre, les tests manuels ci-dessous la remplacent et le manque est écrit dans le rapport qualité.
 8. Tests manuels M1 à M18 tous réussis, dont **une vraie PS5** et **une PS4 ou une Xbox One**.
@@ -2314,14 +2361,14 @@ Tout passe par `Server/Util/Analytics` (repris, appels protégés par `pcall`). 
 |---|---|---|
 | M1 | Première session seul, 5 min, **à la manette seulement**, sans rien lire d'autre que le jeu ; puis deux fois avec un Rush forcé à 0:30 et un MEGA forcé à 1:30 | Pression à 10 s, Tapis vers 0:20-0:25, fusion à 1:00, capture à 2:00, monture vers 4:30 ; jamais deux consignes à la fois ; chaque consigne montre le bon glyphe ; Rush et MEGA restent discrets ; Presser et Prendre jamais confondus ; aucune étape bloquée |
 | M2 | Rendu sur une vraie télé : tour de la ville et des ranchs, un Rush, un MEGA, une Jelly Moon (horloge avancée), Graphismes légers | Pastel lisible à 3 m, raretés reconnaissables par la couleur **et** la forme, rien qui clignote |
-| M3 | Physique : portails (propriétaire et intrus), mur invisible des clôtures, bords du plateau, monture (taille fixée par la selle), bond contre une maison, chute | L'intrus rebondit, personne n'entre ni n'enjambe la clôture, même en monture ; personne ne reste coincé dans le décor ; retour sur le plateau après une chute ; réapparition toujours dans son ranch |
+| M3 | Physique : portails (propriétaire et intrus), mur invisible des clôtures (30 studs), bords du plateau, monture à chaque selle (taille fixée par la selle ; courir et sauter 1 min, puis presser et attraper depuis la monture), bond contre une maison, chute | L'intrus rebondit, personne n'entre ni n'enjambe la clôture, même en monture ; aucun « connexion instable » pour un cavalier honnête ; presser et attraper marchent depuis la monture ; personne ne reste coincé dans le décor ; retour sur le plateau après une chute ; réapparition toujours dans son ranch |
 | M4 | Vraies sauvegardes : jouer, quitter, revenir, changer de serveur aussitôt, arrêter les serveurs | Rien de perdu, jamais de retour en arrière |
 | M5 | Achats : chaque pass et produit (essais gratuits), puis un vrai petit achat en privé, **dont un sur PS5** | Effet reçu une fois ; pass gardé après un Grand Splorch ; Squish Party pour tout le serveur ; nom caché par défaut ; après la fenêtre d'achat PlayStation, la sélection revient sur le bouton Acheter |
 | M6 | **16 vrais joueurs** pendant 30 min, dont **une PS4 ou une Xbox One** et une PS5 | ≥ 30 images/s en permanence sur la PS4 ou la Xbox One (la qualité adaptative peut descendre), 60 sur la PS5, mémoire < 900 Mo, aucune erreur dans Diagnostics |
 | M7 | Textes en français et en anglais en 1280 × 720, 1920 × 1080 et 4K (émulateur de Studio, puis une vraie télé 4K) | Rien de coupé ni sous 28 px TV ; aucun chevauchement ; nombres au format de la langue |
 | M8 | Particules : Grand Splorch, MEGA, naissance Secret, flocons d'hiver | Beaux, lisibles, budget tenu |
 | M9 | **Manette seule pendant 30 min sur une vraie PS5**, sans jamais toucher un clavier | Chaque écran atteint avec la croix, ✕ et ○ (et croix ↓ pour le menu) ; ○ revient toujours ; la sélection n'est jamais perdue ni bloquée ; aucune carte ne vole la manette ; marteler □ presse toujours un squishy prêt ; L3 et R3 enfoncés par erreur ne font rien |
-| M10 | Poursuite avec 250 ms de latence simulée | Les captures accordées correspondent à ce que voit le joueur (≤ 6,5 studs) ; un bond qui atterrit sur la créature l'attrape |
+| M10 | Poursuite avec 250 ms de latence simulée, sur une fuite du Rush à 16 studs/s | Les captures accordées correspondent à ce que voyait le joueur au moment de l'appui : au moins 95 % accordées quand il la voyait à 5 studs ou moins, aucune au-delà de 7 ; un bond qui atterrit sur la créature l'attrape ; une capture avec □ juste après un bond n'est jamais refusée |
 | M11 | **Vraie PS5 à 3 m** (télés de 43 et 55 pouces, mode Jeu coupé puis activé), puis une Xbox | Tout lisible, rien de coupé, zone sûre respectée ; vibrations modérées et au bon moment ; invites □ / ○ claires ; PERFECT réussi à peu près aussi souvent qu'au PC ; glyphes PlayStation sur PS5 et Xbox sur Xbox |
 | M12 | **Écouter chaque son** (d'abord ceux remplis en dernier), dont les sons d'interface | Agréables, pas trop forts, `Sneeze` drôle et doux ; un son qui déplaît est vidé (jeu jouable en silence) |
 | M13 | Session de 60 min à plusieurs | Aucune erreur dans Diagnostics, pas de ralentissement, mémoire stable, carte « Plop a sommeil » à 60 min |
@@ -2334,7 +2381,7 @@ Tout passe par `Server/Util/Analytics` (repris, appels protégés par `pcall`). 
 **Réglages de publication** (propriétaire)
 - Taille du serveur **16** (Creator Hub) et `Players.MaxPlayers = 16` dans le projet ; remplissage maximal, une place réservée aux amis.
 - **Types d'appareils : Ordinateur + Console**. Téléphone et Tablette décochés. VR coupée.
-- Questionnaire de maturité (cible Minimal) ; langues EN et FR ; traduction automatique activée ; console activée **seulement après** M6, M9 et M11.
+- Questionnaire de maturité (cible Minimal ; « non » aux objets aléatoires payants : aucun hasard payant, aucune chance achetable, aucune monnaie vendue, §8.1) ; langues EN et FR ; traduction automatique activée ; console activée **seulement après** M6, M9 et M11.
 - Créer les passes et produits, coller leurs identifiants, vérifier la Boutique (script de prépublication repris de Comet).
 - Administrateurs LiveOps et Diagnostics (`Data/Admins.luau`).
 - Pour la couche i : une **clé d'API Open Cloud** limitée à la place de test privée (publication de place et exécution Luau), donnée par une variable d'environnement, **jamais écrite dans le dépôt**.
@@ -2350,21 +2397,21 @@ Tout passe par `Server/Util/Analytics` (repris, appels protégés par `pcall`). 
 | # | Risque | Probabilité / impact | Parades | Indicateur |
 |---|---|---|---|---|
 | 1 | **Le BOOP RUSH semble être du vol** pour les plus jeunes | Moyenne / fort | Mode choisi des deux côtés, Cozy par défaut et immédiat, choix au calme après 15 min, boop par-dessus la clôture, propriétaire gagnant, attrapeur qui ne touche jamais l'original (bulle-bébé), Meilleur Ami protégé, paires limitées, « Pas ce joueur », bouclier de 15 min, interrupteur `"events"` / `"off"` | `PostBoopQuit` contre `QuitBaseline` (§16.4) |
-| 2 | **Économie déséquilibrée** (inflation par les bébés et les fusions, ou blocage) | Moyenne / moyen | Taille des bébés ≤ 2 × le plus gros, plafonds journaliers, récompenses en secondes de revenu, simulation bloquante, tables en configuration | Médianes du §4.24, `SplorchReached` |
+| 2 | **Économie déséquilibrée** (inflation par les bébés et les fusions, ou blocage) | Moyenne / moyen | Taille des bébés ≤ 0,5 × le plus gros, plafonds journaliers, récompenses en secondes de revenu, prix des dalles × 3,5^R, croissance hors ligne arrêtée à 90 % de l'objectif, boosts calculés d'après les règles, simulation bloquante (rythme et santé de l'économie, 3 tailles de serveur), tables en configuration | Médianes du §4.24, `SplorchReached`, `TileLevelAtSplorch`, `BoostShare` |
 | 3 | **Calendrier serré** (6 semaines), avec la barre « zéro bug » | Forte / fort | Base de Comet reprise, téléphone retiré (une seule disposition), ligne de coupe qui coupe le contenu et jamais la qualité (§12.12), date de repli du 9 janvier | Portes du §18 |
 | 4 | **Performance sur la console la plus faible** (PS4, Xbox One) : 16 ranchs, 384 squishies animés | Moyenne / fort | Rendu client, niveaux de détail, 80 animés au plus (40 en qualité réduite), `BulkMoveTo`, ShadowMap, budgets du §12.9, qualité adaptative, Graphismes légers, test M6 sur une vraie PS4 ou Xbox One | `QualityReduced`, images/s par appareil |
-| 5 | **Litiges « je l'ai attrapé ! »** avec la latence | Moyenne / moyen | Trajets déterministes identiques client/serveur, tolérance de 1,5 stud, effets seulement après confirmation, test M10 | Captures par type d'entrée |
+| 5 | **Litiges « je l'ai attrapé ! »** avec la latence | Moyenne / moyen | Trajets déterministes identiques client/serveur, capture vérifiée à l'instant de l'appui (`tClient` et historique des positions validées), tolérance de 1,5 stud, crédit de déplacement du bond, effets seulement après confirmation, test M10 | Captures par type d'entrée |
 | 6 | **Serveurs peu peuplés** sans poursuite | Moyenne / moyen | Wild Wobblers (jusqu'à 13, plus un personnel par joueur), démonstration de Big Plop, Golden, MEGA réussissable seul (objectif 80 pour 1 joueur) | `serverBand`, rétention par tranche |
 | 7 | **Noms non vérifiés** (titre, Plop, Wobbleton, espèces) | Inconnue / fort | Recherche Roblox et marques avant publication ; titre de secours Squishy Ranch | Checklist §18 |
 | 8 | **Formes simples moins belles** que des modèles 3D | Moyenne / moyen | Direction artistique forte (pastel, écrasement, rebond), test d'icône tôt | Taux de clic sur l'icône |
 | 9 | **Copies en 2 à 6 semaines** | Forte / moyen | Une espèce par semaine en données, mascotte forte, progression (Fame, Étagère, jours de Plop) gardée dans la sauvegarde | Joueurs simultanés |
 | 10 | **Classification** : le côté étrange de la Lune | Faible / fort | Rester mignon ; questionnaire avant le lancement | Note reçue |
-| 11 | **Dérive des règles de Roblox** (hasard payant, publicités, Kids/Select) | Faible / fort | Aucun hasard payant, aucune chance achetable même par les pièces (Cuve liée à R), `PolicyService` (paquets de pièces cachés si restreint), aucune publicité, revue à chaque version | Revue mensuelle |
+| 11 | **Dérive des règles de Roblox** (hasard payant, publicités, Kids/Select) | Faible / fort | Aucun hasard payant, aucune chance achetable même par les pièces (Cuve liée à R), aucune monnaie vendue au lancement, `PolicyService` lu, aucune publicité, revue à chaque version | Revue mensuelle |
 | 12 | **Faux positifs de l'anti-triche** | Moyenne / moyen | Signaler avant de ramener, gel de 1,5 s toléré, ton neutre, exclusion des classements limitée dans le temps | `MoveViolation` |
 | 13 | **Sons manquants ou désagréables** (bibliothèque officielle limitée) | Moyenne / faible | Jeu jouable en silence, écoute obligatoire (M12), replis documentés (§9.6) | Retours des testeurs |
 | 14 | **Audience plus petite** : console d'abord, sans téléphone (≈ 80 % des joueurs Roblox en 2024, ≈ 3 % sur console) | Certaine / moyen | Choix assumé du propriétaire : une seule disposition, polie et testée à fond ; PC gardé ; créneau des tycoons faits pour la manette peu servi ; aucun effet propre à la DualSense ; ouverture aux téléphones possible plus tard sur décision (§17.2) | `device`, joueurs simultanés |
 | 15 | **Plafond de revenus** d'une monétisation juste | Certaine / moyen | Assumé : fidélité d'abord ; Squish Party sociale ; Creator Rewards | ARPDAU |
-| 16 | **Pièces payées perdues au Grand Splorch** | Moyenne / fort | Paquets cachés quand le Grand Splorch est prêt, perte annoncée en rouge, deuxième confirmation (§8.3) ; question au propriétaire sur leur retrait au lancement | `SplorchCoinsLost`, demandes de remboursement |
+| 16 | **Pièces perdues au Grand Splorch** (ressenti de perte) | Moyenne / moyen | Aucune monnaie vendue au lancement (paquets retirés, §8.3) ; perte annoncée en rouge avec « Dépenser d'abord » (dalles gardées d'abord, §4.15) ; croissance hors ligne arrêtée à 90 % : le Grand Splorch se fait en jeu, après avoir dépensé | `SplorchCoinsLost` |
 | 17 | **Ciblage d'un enfant par un même joueur** | Moyenne / fort | Une paire au plus toutes les 30 min, 4 fuites par heure, « Pas ce joueur », Cozy immédiat | `RefuseBooper`, `CozyAfterBoop` |
 | 18 | **Des bugs visibles en ligne mais pas hors ligne** (ce qui est arrivé à Comet Conga) | Moyenne / fort | Mécaniques robustes (aucune règle physique ou liée à une animation, `StreamingEnabled` coupé, délais sur tous les états), 10 couches de tests dont les robots de 6 h, le parcours console aux 3 résolutions et la règle « zéro trace » ; tests dans de vrais serveurs par Open Cloud ; tests manuels sur PS5, PS4 ou Xbox One ; Diagnostics en ligne et correctif sous 48 h | `ServerError`, `ClientError`, `StateTimedOut` |
 | 19 | **Navigation à la manette qui se perd** (sélection vide, piégée, ou action derrière une fenêtre) | Moyenne / fort | `FocusGuard` (§10.6), règle des 3 touches vérifiée par un robot, touches du jeu déliées derrière une fenêtre, test M9 | `FocusRescued` |
@@ -2374,7 +2421,7 @@ Tout passe par `Server/Util/Analytics` (repris, appels protégés par `pcall`). 
 
 ## 20. Questions ouvertes pour le propriétaire
 
-La liste à jour est à la fin du document, dans le **Journal de révision**. La version 1.2 a changé la question 6 (date et test fermé) et ajouté la question 7 (matériel et accès pour les tests). Les questions 3 (PolicyService), 4 (classement « Plus gros squishy »), 6 (séance de la Lune de 22:00 UTC) et 10 (Wild Wobblers pour les joueurs Cozy) de la version 1.0 ont été tranchées par la révision ; les questions 8, 9 et 11 sont tranchées en gardant le choix actuel (voir le journal).
+La liste à jour est à la fin du document, dans le **Journal de révision**. La version 1.2 a changé la question 6 (date et test fermé) et ajouté la question 7 (matériel et accès pour les tests). La version 1.3 a tranché les questions 1 (paquets de pièces : retirés du lancement) et 3 (suffixes internationaux dans les deux langues) ; le propriétaire peut revenir sur ces deux choix. Les questions 3 (PolicyService), 4 (classement « Plus gros squishy »), 6 (séance de la Lune de 22:00 UTC) et 10 (Wild Wobblers pour les joueurs Cozy) de la version 1.0 ont été tranchées par la révision ; les questions 8, 9 et 11 sont tranchées en gardant le choix actuel (voir le journal).
 
 ---
 
@@ -2386,16 +2433,17 @@ Détails et justifications du concept : [`03-decision-du-jury.md`](03-decision-d
 |---|---|---|
 | Une goutte de Cuve toutes les 45 s au début | **90 s** pendant l'accueil, puis 55,3 s à R = 0 et 17,7 s dès R = 4 (vitesse donnée par R, §4.9) | Avec 45 s, le joueur aurait 6 squishies à 5:00 au lieu de 3-4 (cible du jury) ; la simulation tient la cible avec 90 s pendant l'accueil |
 | Selle à la taille 100 vers 4:00 | **Selle à 1 200** | Avec +1/s, le Tapis et la fusion de 1:00, Plop dépasse 100 avant 1:00 ; 1 200 tombe vers 4:30 |
-| Jauge du serveur = somme des tailles | **Jauge = actions de tous** (§4.23) | Avec des tailles de 1 à 1e30, un vétéran la remplirait seul et un débutant n'y compterait jamais |
+| Jauge du serveur = somme des tailles | **Jauge = actions de tous** (pressions PERFECT seulement, naissances, captures, fusions…), objectif 600 × joueurs actifs, sieste de 20 min après chaque fête (§4.23) | Avec des tailles de 1 à 1e30, un vétéran la remplirait seul et un débutant n'y compterait jamais ; en comptant chaque pression, un serveur actif était en ×2 la moitié du temps |
 | Rush à :00, :10… et MEGA à :00, :30 | **Rush à :05, :15… ; MEGA à :20, :50 ; Golden à :00:30, :10:30, :30:30, :40:30** | Un seul grand spectacle à la fois avec 20 s d'écart (greffe n° 9) |
-| « La croissance est doublée pour toujours » | Croissance × 2 par Grand Splorch, **objectif × 2,7** par niveau | Avec un objectif × 2, les boucles raccourciraient sans fin ; × 2,7 donne R = 10 au jour 7 et R = 20 au jour 28 (simulation, §4.24) |
+| « La croissance est doublée pour toujours » | Croissance × 2 par Grand Splorch, **objectif × 2,6** par niveau, **prix des dalles de la boucle × 3,5^R** | Avec un objectif × 2, les boucles raccourciraient sans fin ; × 2,6 donne R = 10 au jour 7 et R = 20 au jour 28 (simulation v1.3, §4.24). Des prix × 2^R laissaient toutes les dalles au maximum quelques minutes après chaque Grand Splorch (§4.6) |
 | Le rebirth remet à zéro « les constructions » | Tapis, décorations et Cuve repartent de zéro ; **les places d'enclos et le Lit douillet sont gardés** | Perdre des places ferait dormir des squishies : ressenti de perte, contraire au pilier P2 |
 | Revenu = … × rebirth × Fame | R agit par la croissance (donc la taille) ; Fame est un bonus additif plafonné à +300 % | Éviter de compter le rebirth deux fois et l'inflation |
 | À 5:00, « environ 1 000 à 2 000 pièces » | Assez de pièces pour la dalle Enclos ; ≈ 10K en poche (repère) | Les pièces en poche montent et descendent à chaque achat ; ce qui compte est que le prochain achat soit à portée |
-| Hors ligne 8 h (12 h avec des pièces) | Croissance hors ligne à 50 %, Pot à 25 %, 8 h ; 12 h avec le **Lit douillet** (250 000 pièces, gardé pour toujours) | Le hors ligne à 100 % rendait chaque retour égal à un Grand Splorch immédiat ; un achat en pièces doit survivre au rebirth |
+| Hors ligne 8 h (12 h avec des pièces) | Croissance hors ligne à **30 %, arrêtée à 90 % de l'objectif** de Grand Splorch, Pot à 25 %, 8 h ; 12 h avec le **Lit douillet** (25 M pièces, dès R = 3, gardé pour toujours) | Le hors ligne à 100 % rendait chaque retour égal à un Grand Splorch immédiat ; à 50 % sans arrêt, 9 Grands Splorch sur 20 se faisaient encore pendant l'absence (§4.19) ; un achat en pièces doit survivre au rebirth |
 | Squishydex « 26 × 9 = 234 entrées » | 26 pages d'espèces + **234 entrées de mutation** + 130 badges d'étoiles | Les 9 mutations comptent toutes ; la forme normale est la page de l'espèce |
 | Premier tirage au hasard pendant l'accueil | Hasard réel, avec « **Nouveauté garantie** » sur les 3 premiers tirages (espèce, jamais la rareté) | Éviter une fusion de plus à 5:00 et donner une découverte sans truquer les chances affichées |
 | Prix des passes « 249-299 » | ×2 Pièces à **249 R$** | Palier courant ; ajustable par les prix gérés de Roblox |
+| Paquets de pièces calibrés sur le revenu (30 ou 120 min) | **Retirés du lancement** (§8.3) | Les pièces repartent de zéro au Grand Splorch (Robux perdus en quelques secondes) et un reçu rejoué après une panne pouvait donner le minimum au lieu du montant affiché ; retour possible en janvier avec un porte-monnaie qui survit au Grand Splorch |
 | Codes promo (non cités au lancement) | **Pas de codes au lancement** | Aucun champ de texte libre (sécurité des enfants) ; à revoir plus tard |
 | Exclusion des classements par l'anti-triche | **Limitée dans le temps** (fin de la semaine suivante) | Question laissée ouverte par Comet Conga (rapport qualité §6.3.7) : on évite une punition à vie pour un mauvais réseau |
 | Améliorations de la Cuve achetées (« plus rapide, meilleures raretés, buses à mutation ») | **Niveau de la Cuve donné par R** (qualité, vitesse, buses), jamais acheté (§4.9) | Les pièces s'achètent en Robux : acheter des chances avec elles serait un « paid random item » au sens de Roblox, contraire au principe « aucune chance payante » |
@@ -2417,6 +2465,78 @@ Détails et justifications du concept : [`03-decision-du-jury.md`](03-decision-d
 
 ## Journal de révision
 
+### Version 1.3 : les 42 remarques qui n'étaient pas parvenues (fin de la critique console, critique technique et économique)
+
+Le texte des critiques donné aux versions 1.1 et 1.2 était coupé à 40 000 caractères : la critique console et UX s'arrêtait à sa 3e remarque, et la critique technique et économique (2 points bloquants, 12 majeurs, 8 mineurs) n'était jamais arrivée. La version 1.3 traite ces 42 remarques une par une. Les directives du propriétaire passent avant les critiques : les remarques qui supposaient un téléphone ou un écran tactile sont sans objet (décision du 1er novembre 2026). Bilan : **31 appliquées**, **8 déjà couvertes** par les versions 1.1 et 1.2, **3 sans objet** depuis le passage à la console, **aucune refusée en entier** (les parties refusées de remarques appliquées sont expliquées plus bas). L'économie a été **resimulée** avec toutes les nouvelles règles (§4.24).
+
+#### Ce qui a changé
+- **Économie** : prix des dalles de la boucle × 3,5^R au lieu de × 2^R (§4.6) ; objectifs de Grand Splorch × 2,6 au lieu de × 2,7, nouvelle table (§4.15) ; croissance hors ligne 30 % au lieu de 50 %, arrêtée à 90 % de l'objectif (§4.19) ; Lit douillet à 25 M pièces dès R = 3 (§4.6) ; jauge du serveur : seules les pressions PERFECT comptent, objectif 600 × joueurs actifs, sieste de 20 min après chaque fête (§4.23) ; plus de boost dans les objectifs du jour, boost du bol de 5 min chaque jour (§7.3, §7.4) ; naissances de la Cuve dans la Boîte à dodo quand les enclos sont pleins (§4.9) ; cadeaux de Grand Splorch en pièces plafonnés à 10 par jour (§4.15) ; simulation refaite : boosts calculés d'après les règles (la version 1.2 donnait 95 % du temps en ×2), vraies parts d'un serveur de 4, 8 et 16 joueurs, moteur par événements, nouveaux jalons de santé de l'économie (§4.24).
+- **Abus à plusieurs comptes** : bébé ≤ 0,5 × le plus gros du receveur, mutation rare jamais copiée (§4.21.3) ; « Héros » et retour = 1 h et 30 min de croissance, une fois par squishy et par jour (§4.21.3) ; pet-sitting à 2 s de revenu, 100 par jour, 20 par ami pour « Plus serviable » (§6.4).
+- **Réseau et anti-triche** : captures vérifiées à l'instant de l'appui (`Catch(id, tClient)`, historique des positions validées, distances à plat) (§12.5) ; bond = crédit de 12 studs rétroactif, un par 4 s (§12.8) ; monture : hauteur de saut connue du contrôle de déplacement, portées en XZ, écart vertical depuis les pieds (§4.12, §12.8) ; message `PetPress` (§12.7) ; N actifs pour le MEGA et la jauge (§4.22) ; Grand Splorch refusé pendant une fuite, aucune clôture pendant l'attente, attente affichée juste (§2.4, §4.15).
+- **Données** : compteur de croissance du ranch au lieu d'une heure par squishy (§12.3, §12.5) ; bonus de famille gagnés pour toujours (`dex.fam`), nouvelles espèces en nouvelles familles, rotation du MEGA sur les espèces publiées (§4.17, §5.1) ; `moon.lastSession`, plafonds de pet-sitting, `gd` par squishy, tenue portée seulement dans le squishy, champ réservé `packs`, test d'aller-retour JSON d'un profil plein (§12.6) ; classements en entiers codés (§6.9) ; analytique cumulée par tranche de 5 min, ≤ 10 requêtes par joueur et par minute (§16).
+- **Console et télé** : achat d'une dalle en restant 0,6 s dessus, dalles à 8 studs de tout point d'action, rangée Z = 67 (§4.6, §11.2) ; textes du monde en px TV (§10.2) ; spectacle complet d'un Grand Splorch des autres au plus toutes les 3 min (§4.15) ; vibrations : rien sur une pression ordinaire, une seule impulsion de sirène, `squishyBack` au lieu de `booped` (§10.5) ; bol en 2 s (§4.20) ; flèches vers le Golden et la créature attrapable la plus proche pour tous (§10.2) ; fiche par espèce au Squishydex (§10.3) ; ○ dans le bon ordre (§10.4) ; clavier : M pour le menu, raccourcis directs, sac à objets coupé (§10.4) ; suffixes internationaux (§4.2) ; carte du clip seulement si la capture a réussi (§9.5).
+- **Monétisation** : paquets de pièces retirés du lancement (§8.3) ; Squish Party croisée = fête prolongée, minutes non jouées rendues à la fermeture du serveur (§8.3) ; ×2 Pièces appliqué une seule fois (§4.1, §8.2).
+- **Monde** : murs invisibles des clôtures, du bord et coiffes des maisons à **30 studs** (décision du contrat d'architecture, docs/04 §3.1 et §20 n° 21), au lieu des 12 studs des clôtures en v1.2 (§6.3, §11.1, §11.2).
+
+#### Décision par remarque
+
+| Remarque | Décision | Où |
+|---|---|---|
+| C2-3 caméra qui cadre seule | Déjà couverte | v1.2 §10.4 (« La caméra ne bouge jamais toute seule »), Annexe A, journal v1.1 (« Caméra » ; option refusée) |
+| C2-4 visée du bond (18 studs pour 12) | Déjà couverte | v1.2 §4.12 (position future, 16 studs, ±40° autour du stick, jamais la caméra, capture à l'atterrissage, tampon de 0,25 s, marqueur à 20 %) et §10.4 |
+| C2-5 squishies non cliquables (`CanQuery`) | Déjà couverte | v1.2 §10.4 (clic par projection à l'écran) et §5.2 ; la partie tactile est sans objet |
+| C2-6 fenêtre PERFECT et retard des télés | Déjà couverte | v1.2 §4.7 ([−0,08 ; +0,20] s), §4.22 ([−0,12 ; +0,28] s), test M11 |
+| C2-7 cartes qui prennent la manette | Appliquée | Déjà en v1.2 §10.3 (une carte à la fois, seule la carte du choix est bloquante et s'ouvre au calme, garde de 0,6 s) ; ajouté : carte du clip seulement si `StartVideoCaptureAsync` réussit (§9.5) |
+| C2-8 HUD du téléphone | Sans objet (console) | Aucune disposition tactile (§10.1) |
+| C2-9 tailles tactiles | Sans objet (console) | Minimums télé du §10.1 |
+| C2-10 achats sans le vouloir sur les dalles | Appliquée | §4.6 (0,6 s sur la dalle), §11.2 (règle des 8 studs, rangée Z = 67), §3, §9.4, §12.3, §12.10 |
+| C2-11 trop de Grands Splorch pour les spectateurs | Appliquée | §4.15 (spectacle complet au plus toutes les 3 min, version courte), §6.7 et §10.2 (APPLAUDIR jamais en poursuite, maintien ou fenêtre), §2.4 (attente = place × 20 s + spectacle en cours), §12.10 |
+| C2-12 textes du monde illisibles | Appliquée | §10.1, §10.2 (*Textes du monde*), §3, §4.6, §9.4, §11.1, §11.2, §12.10 couche d |
+| C2-13 carte de la cible trop petite | Déjà couverte | v1.2 §10.2 (680 × 96, nom en 36 px, ligne en 28 px, affichage seul) |
+| C2-14 chemins manquants à la manette | Appliquée | Déjà en v1.2 §10.2-§10.6 (Réglages dans le menu, △ sur GRAND SPLORCH, HUD jamais sélectionnable) ; ajouté : ordre de ○ en portant, ○ vide d'abord une sélection multiple (§10.3, §10.4) |
+| C2-15 bannières et messages qui se chevauchent | Déjà couverte | v1.2 §10.2 (emplacement de message unique, colonnes vérifiées aux 3 résolutions, APPLAUDIR à la place de GRAND SPLORCH) ; la partie tactile est sans objet |
+| C2-16 vibrations trop nombreuses ou négatives | Appliquée | §10.5, §9.4, §4.21.2 |
+| C2-17 maintien de 5 s au bol | Appliquée | §4.20, §7.3, §9.4, §10.4, §12.7, §12.10, §14 (2 s) |
+| C2-18 « jouable à une main » au téléphone | Sans objet (console) | Pas de tactile ; M9 réécrit pour la PS5 en v1.2 ; §14 (une touche par action) |
+| C2-19 clavier : Tab, sac à objets, survol | Appliquée (survol refusé) | §10.4, §10.2, §0, §3 (M, raccourcis directs, sac coupé) |
+| C2-20 grille 26 × 9 du Squishydex | Appliquée | §10.3 (fiche par espèce) |
+| C2-21 suffixes français | Appliquée | §4.2, §15 ; question 3 tranchée |
+| C2-22 flèches pour les joueurs Cozy | Appliquée | §10.2 |
+| C3-1 monture et contrôle de déplacement (bloquant) | Appliquée | Déjà en v1.2 §4.12 (taille fixée par la selle) et au contrat (`setRootOffset`, sol pur, solides à 30 studs) ; ajouté : hauteur de saut, portées à plat, écart depuis les pieds, tests par selle (§4.12, §12.5, §12.8, §12.10, §18 M3) |
+| C3-2 Squishydex en bits (bloquant) | Appliquée | Débordement déjà corrigé en v1.1 (§12.6, tableaux denses) ; ajouté : `dex.fam`, règle des nouvelles familles, rotation du MEGA, bonus « par espèce », test à 64 espèces (§4.3, §4.16, §4.17, §5.1, §12.6) |
+| C3-3 simulation fausse | Appliquée | Écart de la v1.0 déjà corrigé en v1.1 ; v1.3 resimulée, objectif × 2,6, jalon du jour 14, politique exacte (§4.15, §4.24, Annexe A) |
+| C3-4 inflation des pièces | Appliquée | §4.6 (× 3,5^R), §4.24 (jalons de santé), §16 |
+| C3-5 prestige porté par le hors ligne | Appliquée | §4.19, §4.6, §4.15, §4.24, §7.2, Annexe A |
+| C3-6 paquets de pièces | Appliquée | §8.3 (retirés), §0, §4.1, §4.15, §8.1, §8.4, §10.3, §12.6, §13, §17.2, §19, Annexe A ; question 1 tranchée |
+| C3-7 capture vérifiée « maintenant » | Appliquée | §12.5, §12.3, §12.7, §4.11, §4.12, §4.21.4, §18 M10 |
+| C3-8 bond sans crédit de déplacement | Appliquée | §12.8, §4.12, §12.7, §12.10 |
+| C3-9 hasard payant par les pièces | Déjà couverte | v1.1 et v1.2 §4.6, §4.9, §8.1 n° 1, Annexe A (Cuve donnée par R) ; v1.3 précise la réponse « non » au questionnaire (§8.1 n° 9, §18) |
+| C3-10 classements en entiers | Appliquée | Déjà en v1.1 §6.9 (plus de classement de taille) ; ajouté : codage entier avec égalité au premier arrivé (§6.9, §12.8) |
+| C3-11 bébés, Héros et pet-sitting farmés | Appliquée | §4.21.3, §4.5, §4.25, §6.4, §6.9, §9.4, §12.8, §12.10 |
+| C3-12 jauge et ×2 trop fréquents | Appliquée | §4.23, §4.7, §4.24, §4.25, §7.3, §7.4 |
+| C3-13 Squish Party en file mémoire | Appliquée | §8.3, §4.25, §12.10 |
+| C3-14 budget de l'analytique | Appliquée | §16 |
+| C3-15 calcul paresseux par squishy | Appliquée | §12.3, §12.5, §12.6 (déjà choisi par le contrat, docs/04 §8.3) |
+| C3-16 détails du schéma | Appliquée | §12.6 (tenue, `moon`, réglage du serveur privé, aller-retour JSON) |
+| C3-17 pet-sitting sans message, position du squishy | Appliquée | §12.7 (`PetPress`, déjà au contrat), §4.7, §6.4, §9.3 |
+| C3-18 N du MEGA et absents | Appliquée | §4.22, §4.23, §16.3 |
+| C3-19 Cuve bloquée quand les enclos sont pleins | Appliquée | §4.9, §4.14, §3 |
+| C3-20 hypothèses de la simulation | Appliquée | §4.24, §4.15, §4.25, §12.10 |
+| C3-21 portail et groupes de collision, harnais | Déjà couverte | v1.2 §6.3 et §11.2 (membrane solide seulement chez chaque client, aucun groupe par propriétaire) ; harnais : voir le contrat |
+| C3-22 file du Grand Splorch et P | Appliquée | §4.15, §4.1, §8.2 |
+
+#### Ce qui a été refusé ou adapté, et pourquoi
+- **○ « Fermer » sur les cartes non bloquantes** (C2-7) : en jeu, ○ veut dire Prendre / Poser ; la carte se range seule après 8 s et △ l'ouvre.
+- **Visée au survol de la souris** (C2-19) : un curseur posé au milieu de l'écran aurait remplacé la cible automatique pendant qu'un joueur presse E (« les squishies prêts d'abord ») ; le clic fixe toujours la cible 4 s, par projection à l'écran.
+- **Facteur 2,9 des objectifs** (C3-3) : il était calculé sur les valeurs de la version 1.0 ; avec les règles de la v1.3, × 2,6 tient les jalons.
+- **Prix des dalles en secondes d'un « revenu de référence »** (C3-4) : la variante simple × 3,5^R donne le même résultat, se calcule à partir de R seul, sans champ sauvegardé, et se teste mieux.
+- **Lit douillet « 25 M ou R = 3 »** (C3-5) : les deux à la fois ; à prix fixe, seul le moment du déblocage compte vraiment.
+- **Objectif de la jauge 800** (C3-12) : 600, car les naissances, captures et fusions comptent toujours ; la sieste plafonne de toute façon le ×2 à 5 min toutes les 25 min.
+- **Champ `party.pending`** (C3-13, C3-16) : une fête croisée prolonge la fête en cours ; rien n'attend en mémoire, rien à reprendre ailleurs.
+- **Second compteur de croissance sans boost** (C3-10, C3-15) et **codage log10 des tailles** : il n'y a plus de classement de taille depuis la version 1.1.
+- **Garder les paquets de pièces avec des protections** (C3-6) : retirés du lancement ; leur retour demanderait le porte-monnaie et le devis décrits au §8.3.
+- **Sortir le coussin de la grille des enclos** (C2-10) : la grille des places commence à Z = 16 ; le coussin (Z = 10) est déjà hors des places, la zone des enclos est réécrite Z 12 à 44.
+
 ### Version 1.2 : décision du propriétaire du 1er novembre 2026 (console d'abord, zéro bug)
 
 Le propriétaire a joué Comet Conga en direct et a vu des bugs que nos tests hors ligne n'avaient pas vus. Il décide : **Raise a Squishy est fait d'abord pour la PS5** (DualSense, télé vue de 2,5-3 m), puis Xbox et PC ; **pas de téléphone ni de tablette au lancement** ; et **aucun bug au lancement**. Cette décision passe avant l'étude de marché et le concept du jury quand ils se contredisent (Annexe A).
@@ -2430,7 +2550,7 @@ Le propriétaire a joué Comet Conga en direct et a vu des bugs que nos tests ho
 - **Accueil** : chaque consigne montre le glyphe de la manette (ou la touche du clavier), le stick gauche, L1 R1 et △ sont enseignés ; **aucune étape ne peut bloquer** (90 s puis la consigne se range) ; mort ou changement de manette pendant l'accueil prévus (§3).
 - **Mécaniques rendues robustes** (rien ne dépend de la physique, d'une animation ou d'un objet pas encore arrivé) :
   - dalles achetées quand le serveur voit le joueur entrer (2,5 / 3,5 studs, un achat par entrée), jamais par `Touched` (§4.6) ;
-  - ranchs protégés par la poussée du serveur ; mur invisible de 12 studs sur les clôtures ; membrane du portail solide seulement chez chaque client, comme confort (§6.3) ;
+  - ranchs protégés par la poussée du serveur ; mur invisible de 12 studs sur les clôtures (30 studs depuis la v1.3, décision du contrat d'architecture) ; membrane du portail solide seulement chez chaque client, comme confort (§6.3) ;
   - personnage placé par le serveur dans son ranch, pas par les `SpawnLocation` (§6.1) ;
   - bond scripté sur un arc fixe et capture calculée sur la géométrie du bond (§4.12) ;
   - monture de taille fixée par la selle (2,85× à 4×), trois valeurs fixes réglées par le serveur, aucun siège ni soudure (§4.12) ;
@@ -2460,7 +2580,7 @@ Le propriétaire a joué Comet Conga en direct et a vu des bugs que nos tests ho
 
 ### Version 1.1 : réponses aux critiques indépendantes
 
-La version 1.0 a été relue par des critiques indépendants. Ce journal répond aux deux critiques détaillées que nous avons reçues : **sécurité des enfants et des parents** (1 point bloquant, 14 majeurs, 9 mineurs) et **console et ergonomie** (1 point bloquant et 6 majeurs détaillés ; la suite de cette critique nous est parvenue coupée, ses autres points sont traités d'après son résumé : HUD du téléphone, tailles tactiles, cartes qui prennent la manette ; la phrase coupée sur la capture vidéo est couverte par la règle des cartes non bloquantes, §10.3, et, en v1.2, par la protection de `CaptureService` sur console, §9.5). Une troisième critique (technique) était annoncée, mais son texte ne nous est pas parvenu ; beaucoup de points techniques sont couverts par la v1.2 (robustesse, délais, tests), et elle sera traitée dès qu'elle arrivera. Le concept approuvé (jury §8) est gardé ; les écarts sont listés à l'Annexe A.
+La version 1.0 a été relue par des critiques indépendants. Ce journal répond aux deux critiques détaillées que nous avons reçues : **sécurité des enfants et des parents** (1 point bloquant, 14 majeurs, 9 mineurs) et **console et ergonomie** (1 point bloquant et 6 majeurs détaillés ; la suite de cette critique nous est parvenue coupée, ses autres points sont traités d'après son résumé : HUD du téléphone, tailles tactiles, cartes qui prennent la manette ; la phrase coupée sur la capture vidéo est couverte par la règle des cartes non bloquantes, §10.3, et, en v1.2, par la protection de `CaptureService` sur console, §9.5). La fin de la critique console (à partir de sa 3e remarque) et toute la troisième critique (technique et économie, avec 2 points bloquants) nous sont parvenues après la version 1.2 : elles sont traitées une par une par la **version 1.3** (plus haut). Le concept approuvé (jury §8) est gardé ; les écarts sont listés à l'Annexe A.
 
 #### Ce qui a changé
 
@@ -2516,9 +2636,9 @@ La version 1.0 a été relue par des critiques indépendants. Ce journal répond
 - **2 % de Lunaire dans la Goutte chanceuse** : inutile, la page dorée ne demande plus la Lunaire.
 
 ### Questions ouvertes pour le propriétaire
-1. **Paquets de pièces au lancement** : les garder avec les 3 protections du §8.3, ou les retirer ? Les retirer supprime tout risque de pièces payées perdues au Grand Splorch et simplifie PolicyService, pour un revenu plus faible. Notre avis : les retirer au lancement, puis décider en janvier avec les mesures.
+1. ~~**Paquets de pièces au lancement**~~ : **tranchée en v1.3, retirés du lancement** (§8.3), comme nous le conseillions ; la critique technique a montré en plus qu'un reçu rejoué après une panne pouvait donner le minimum au lieu du montant affiché. Le propriétaire peut les rouvrir en janvier, avec un porte-monnaie qui survit au Grand Splorch et un devis du serveur (§17.2).
 2. **Titre** : Raise a Squishy ou Squishy Ranch, après la recherche de nom et de marque et le test d'icône ?
-3. **Suffixes français des grands nombres** : la version française correcte (k, M, Md, Bn…) ou les suffixes internationaux (K, M, B, T…) que les enfants voient déjà dans les jeux Roblox ? Un petit test avec des enfants français aiderait.
+3. ~~**Suffixes français des grands nombres**~~ : **tranchée en v1.3, suffixes internationaux (K, M, B, T…) dans les deux langues**, avec la virgule et l'espace françaises et le mot entier dans la fiche (§4.2) : « B » valait 1e9 en anglais et « Bn » 1e12 en français, ce qui faussait les comparaisons entre enfants, et « Md », « Bn », « Bd » se confondaient à 3 m. Un petit test avec des enfants français reste utile ; le propriétaire peut revenir sur ce choix.
 4. **Squish Party** : 99 R$, 10 min, 3 achats par jour, seulement si elle commence aussitôt, nom caché par défaut. D'accord ?
 5. **Clips automatiques** (moments rares, son Grand Splorch) activés par défaut, ou désactivés par défaut ?
 6. **Date et test fermé** : avec la barre « zéro bug », nous proposons un **test fermé d'une semaine** avant la sortie publique, avec 20 à 30 testeurs (PC, PS5, et si possible une PS4 ou une Xbox One) sur la place privée, panneau Diagnostics ouvert. Pour sortir le 12 décembre, ce test devrait commencer le 3 décembre avec un jeu complet ; sinon, test fermé en décembre et sortie le 9 janvier. Quelle option choisissez-vous ?

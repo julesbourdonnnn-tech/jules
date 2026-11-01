@@ -1,11 +1,13 @@
 --!strict
--- StateTimeouts (paquet logic) — STUB du contrat (docs/04). Implémenter = remplacer chaque
--- error("TODO(…)") par le comportement décrit dans docs/04, SANS changer les signatures.
+-- StateTimeouts (paquet logic, docs/04 §12.1, §17.2).
 -- Délai de sortie de chaque état (table du GDD §12.10) : aucun état ne peut rester bloqué. Chaque
 -- service ferme ses états échus dans son step et appelle DiagnosticsService.stateTimedOut quand un
 -- état a dû être fermé par son délai alors qu'il aurait dû finir seul.
 
 -- Délais (s) des états du GDD §12.10 ; math.huge = fermé par un événement (mort, départ…)
+-- Bibliothèques gardées en local : appels rapides, aussi dans l'environnement injecté du harnais
+local type, math, table = type, math, table
+
 local TABLE: { [string]: number } = {
 	profileLoad = 60,
 	characterPlace = 10,
@@ -45,27 +47,47 @@ local StateTimeouts = {}
 
 StateTimeouts.Table = TABLE
 
--- Délai de l'état (s) ; erreur claire pour un état inconnu
+-- Délai de l'état (s) ; erreur claire pour un état inconnu (faute de programmation, vue par les specs)
 function StateTimeouts.seconds(state: string): number
-	local _ = { state }
-	error("TODO(logic): StateTimeouts.seconds")
+	local value = if type(state) == "string" then TABLE[state] else nil
+	if value == nil then
+		error(`StateTimeouts : état inconnu « {tostring(state)} »`, 2)
+	end
+	return value
 end
 
--- Échéance = début + délai (+ extra)
+-- Échéance = début + délai (+ extra). Un début illisible (NaN, ±inf) donne une échéance déjà
+-- passée (−inf) : l'état est fermé au lieu de rester bloqué.
 function StateTimeouts.deadline(state: string, startedAt: number, extra: number?): number
-	local _ = { state, startedAt, extra }
-	error("TODO(logic): StateTimeouts.deadline")
+	local seconds = StateTimeouts.seconds(state)
+	if type(startedAt) ~= "number" or startedAt ~= startedAt or math.abs(startedAt) == math.huge then
+		return -math.huge
+	end
+	local more = 0
+	if type(extra) == "number" and extra == extra and math.abs(extra) ~= math.huge then
+		more = extra
+	end
+	return startedAt + seconds + more
 end
 
--- L'état a dépassé son délai
+-- L'état a dépassé son délai (strictement après l'échéance) ; un début illisible compte comme
+-- échu, un « maintenant » illisible jamais
 function StateTimeouts.expired(state: string, startedAt: number, now: number, extra: number?): boolean
-	local _ = { state, startedAt, now, extra }
-	error("TODO(logic): StateTimeouts.expired")
+	local deadline = StateTimeouts.deadline(state, startedAt, extra)
+	if type(now) ~= "number" or now ~= now or math.abs(now) == math.huge then
+		return false
+	end
+	return now > deadline
 end
 
--- Liste des états connus (tests : chaque état a un test de délai)
+-- Liste des états connus, triée (tests : chaque état a un test de délai)
 function StateTimeouts.names(): { string }
-	error("TODO(logic): StateTimeouts.names")
+	local out = {}
+	for name in TABLE do
+		table.insert(out, name)
+	end
+	table.sort(out)
+	return out
 end
 
 return StateTimeouts

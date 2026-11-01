@@ -350,7 +350,9 @@ Balance.Boosts = {
 	ObjectiveMedium = 300,
 	ObjectiveHard = 600,
 	FeedDay = 300, -- jour de Nourrir Plop sans palier
-	FeedMilestone = 900, -- jour de palier
+	-- jour de palier : 5 min comme les autres jours (GDD §7.3 et §4.25, révision 1.3 ; réglage logic
+	-- pour tenir la porte EconomyPacing : avec 900, premier Grand Splorch trop tôt)
+	FeedMilestone = 300,
 }
 
 -- Paquets de pièces (GDD §8.3) : montant calculé par le serveur à l'attribution
