@@ -80,7 +80,26 @@
 --   * jamais d'accusation : l'interface affiche « connexion instable » (ton neutre)
 -- Accepté par conception (Comet Conga, contre-audit) : courir jusqu'à ≈ 1,5 × la vitesse normale
 -- n'est jamais signalé (marge des réseaux lents).
+-- Note INT-MOVE (contrat v1.2, paquet chase) :
+--   MoveCheck.setRootOffset(player, studs, jumpHeight)   -- monture : hausse de la racine debout et
+--     hauteur de saut de la selle. Les règles de vol bas, de racine enfouie et d'altitude se mesurent
+--     depuis la racine debout RELEVÉE ; montée permise par tick = max(MaxClimbSpeed, √(2 g jumpHeight))
+--     × Δt × Margin + Slack ; une HAUSSE du décalage accorde une marge verticale ponctuelle égale au
+--     changement (un seul pas qui monte, au plus STILL_CREDIT s), sans remise à zéro de l'historique ni
+--     exemption (monter et descendre en boucle ne permet aucun vol : vol bas et altitude restent mesurés)
+--   MoveCheck.rootOffset(player)                         -- hausse en vigueur (0 à pied)
+--   MoveCheck.grant(player, studs, duration, tStart)     -- bond : crédit de `studs` sur la fenêtre
+--     [tStart ; tStart + duration] (+ GRANT_TAIL pour les positions en retard) ajouté au plafond par
+--     tick, à la fenêtre soutenue et au budget d'action (dette remboursée aussitôt) ; tStart ramené dans
+--     [réception − GrantRetro ; réception] ; refusé si le crédit précédent a moins de GrantMinGap s
+--     (horloge du serveur) : une rafale de faux bonds n'apporte jamais plus de `studs` par GrantMinGap
+--   MoveCheck.positionAt(player, t)                      -- position acceptée à l'instant t, interpolée
+--     dans un anneau de PositionHistory s (captures vérifiées à l'instant tClient du client) ; nil hors
+--     de l'anneau ; effacée par clear (départ)
 
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local Clock = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Util"):WaitForChild("Clock"))
 local Tuning = require(script.Parent.Parent.Movement.Tuning)
 
 local MoveCheck = {}
@@ -122,8 +141,28 @@ local HOVER_FREEZE_CREDIT = STILL_CREDIT
 local MAX_BELOW_GROUND = Tuning.MaxBelowGround
 -- Historique de vitesses conservé au-delà de la fenêtre utile (s)
 local SPEED_HISTORY = Cfg.SpeedWindow + MAX_ELAPSED + SUSTAIN_WINDOW
+-- Monture (INT-MOVE) : bornes de la hausse de la racine et de la hauteur de saut acceptées, gravité
+local MAX_ROOT_OFFSET = Tuning.MaxRootOffset
+local MAX_JUMP_HEIGHT = Tuning.MaxJumpHeight
+local GRAVITY = Tuning.Gravity
+-- Durée de validité de la marge verticale ponctuelle d'une hausse du décalage (s) : la position
+-- relevée arrive un ping plus tard ; jamais plus longtemps que le crédit d'arrêt
+local OFFSET_BONUS_TIME = STILL_CREDIT
+-- Bond accordé (INT-MOVE) : fenêtre du crédit prolongée de GRANT_TAIL s (positions du bond qui
+-- arrivent un ping et un tick après la fin du bond sur le client)
+local GRANT_RETRO = Tuning.GrantRetro
+local GRANT_MIN_GAP = Tuning.GrantMinGap
+local GRANT_TAIL = Tuning.GrantRetro + Tuning.TickStep
+-- Historique des positions acceptées (s) : MoveCheck.positionAt
+local POSITION_HISTORY = Tuning.PositionHistory
+-- Tolérance d'horloge de positionAt aux bords de l'anneau (s)
+local POSITION_EPSILON = 1e-6
 
 type SpeedNote = { t: number, v: number }
+type PositionSample = { t: number, pos: Vector3 }
+-- Monture du joueur (setRootOffset) : gardée à part de l'état de position (la montée peut précéder le
+-- premier tick) ; bonus = marge verticale ponctuelle d'une hausse, valable jusqu'à bonusUntil
+type Ride = { offset: number, jumpHeight: number?, bonus: number, bonusUntil: number }
 -- since : début de l'arrêt dont fait partie cet échantillon (= t pour une position qui a bougé)
 type Sample = { t: number, pos: Vector3, since: number }
 
@@ -137,6 +176,8 @@ type State = {
 	budgetAt: number, -- instant de la dernière mise à jour du budget (remplissage)
 	leftStillAt: number, -- instant du dernier départ d'un arrêt (fenêtre soutenue après un gel)
 	history: { Sample }, -- positions acceptées de la fenêtre soutenue
+	validAirborne: boolean, -- lastValid acceptée hors de portée verticale (vol bas, racine enfouie)
+	validHigh: boolean, -- lastValid acceptée au-dessus de l'altitude maximale
 	exemptUntil: number,
 	restrictedUntil: number,
 	highSince: number?, -- début d'un vol prolongé au-dessus du sol
@@ -145,10 +186,16 @@ type State = {
 	flags: { number }, -- instants des infractions (fenêtre FlagWindow)
 	rewinds: { number }, -- instants des retours comptés (fenêtre StrikeWindow)
 	violations: number, -- infractions de la session
+	positions: { PositionSample }, -- positions acceptées des PositionHistory dernières secondes
+	grantAt: number, -- instant (serveur) de réception du dernier bond accordé
+	grantStart: number, -- fenêtre du crédit de bond [grantStart ; grantEnd]
+	grantEnd: number,
+	grantStuds: number,
 }
 
 local states: { [Player]: State } = {}
 local speeds: { [Player]: { SpeedNote } } = {}
+local rides: { [Player]: Ride } = {}
 -- Surface analytique du jeu (pure, sans yield) : MoveCheck.setSurface ; nil = sol fourni seulement
 local surfaceAt: ((number, number) -> number)? = nil
 
@@ -183,6 +230,29 @@ local function surfaceUnder(ground: number, x: number, z: number): number
 	return ground
 end
 
+-- Position acceptée à l'instant `now` dans l'anneau de positionAt (instants croissants ; un instant
+-- répété remplace l'échantillon) ; les échantillons plus vieux que POSITION_HISTORY sont oubliés, sauf
+-- le dernier d'avant la limite (interpolation au bord de l'anneau)
+local function recordPosition(st: State, pos: Vector3, now: number)
+	local list = st.positions
+	local last = list[#list]
+	if last and now < last.t then
+		-- horloge revenue en arrière (specs) : l'anneau repart de ce point
+		table.clear(list)
+	elseif last and now == last.t then
+		list[#list] = nil
+	end
+	table.insert(list, { t = now, pos = pos })
+	local cutoff = now - POSITION_HISTORY
+	local first = 1
+	while first < #list and list[first + 1].t <= cutoff do
+		first += 1
+	end
+	if first > 1 then
+		table.move(list, first, #list + first - 1, 1)
+	end
+end
+
 -- Nouvelle référence : position acceptée et historique repartant de ce point
 local function anchor(st: State, pos: Vector3, now: number)
 	st.lastValid = pos
@@ -195,6 +265,9 @@ local function anchor(st: State, pos: Vector3, now: number)
 	st.budgetAt = now
 	st.leftStillAt = -math.huge
 	st.history = { { t = now, pos = pos, since = now } }
+	st.validAirborne = false
+	st.validHigh = false
+	recordPosition(st, pos, now)
 end
 
 local function newState(pos: Vector3, now: number): State
@@ -207,6 +280,8 @@ local function newState(pos: Vector3, now: number): State
 		budgetAt = now,
 		leftStillAt = -math.huge,
 		history = {},
+		validAirborne = false,
+		validHigh = false,
 		exemptUntil = -math.huge,
 		restrictedUntil = -math.huge,
 		highSince = nil,
@@ -215,6 +290,11 @@ local function newState(pos: Vector3, now: number): State
 		flags = {},
 		rewinds = {},
 		violations = 0,
+		positions = {},
+		grantAt = -math.huge,
+		grantStart = -math.huge,
+		grantEnd = -math.huge,
+		grantStuds = 0,
 	}
 	anchor(st, pos, now)
 	return st
@@ -289,14 +369,28 @@ local function accept(st: State, pos: Vector3, now: number)
 	if first > 1 then
 		table.move(history, first, #history + first - 1, 1)
 	end
+	recordPosition(st, pos, now)
 end
 
+-- Retour forcé vers la dernière position valide. Si cette position a elle-même été acceptée en l'air
+-- (pendant la tolérance de vol bas ou d'altitude), les chronomètres de vol en cours sont GARDÉS : sinon
+-- chaque retour les remettait à zéro sur une position déjà haute, et un tricheur qui monte sans cesse
+-- gagnait ≈ 15 studs par retour (échelle vers le ciel, trouvée par la spec INT-MOVE « monter et
+-- descendre en boucle »). Ses positions en l'air sont alors refusées tout de suite ; redescendre à
+-- portée verticale remet les chronomètres à zéro comme avant.
 local function rewind(st: State, now: number, grace: boolean): (Verdict, Vector3?, boolean)
+	local hoverSince = if st.validAirborne then st.hoverSince else nil
+	local hoverFrozen = st.hoverFrozen
+	local highSince = if st.validHigh then st.highSince else nil
+	local airborne, high = st.validAirborne, st.validHigh
 	table.clear(st.flags)
-	st.highSince = nil
-	st.hoverSince = nil
 	st.restrictedUntil = math.max(st.restrictedUntil, now + Cfg.RewindLockout)
 	anchor(st, st.lastValid, now)
+	st.hoverSince = hoverSince
+	st.hoverFrozen = if hoverSince then hoverFrozen else 0
+	st.highSince = highSince
+	st.validAirborne = airborne
+	st.validHigh = high
 	if not grace then
 		prune(st.rewinds, now - Cfg.StrikeWindow)
 		table.insert(st.rewinds, now)
@@ -304,8 +398,17 @@ local function rewind(st: State, now: number, grace: boolean): (Verdict, Vector3
 	return "rewind", st.lastValid, false
 end
 
+-- Crédit de bond (studs) applicable à une mesure sur [from ; to] : la fenêtre du dernier bond accordé
+-- [grantStart ; grantEnd + GRANT_TAIL] recoupe l'intervalle mesuré
+local function grantExtra(st: State, from: number, to: number): number
+	if st.grantStuds <= 0 or to < st.grantStart or from > st.grantEnd + GRANT_TAIL then
+		return 0
+	end
+	return st.grantStuds
+end
+
 -- Le déplacement de `from` (à l'instant `since`) jusqu'à `pos` est-il plausible ? (Δt pris en
--- compte borné à `maxElapsed`)
+-- compte borné à `maxElapsed` ; `extra` : crédit de bond en studs)
 local function plausible(
 	player: Player,
 	from: Vector3,
@@ -313,11 +416,22 @@ local function plausible(
 	pos: Vector3,
 	now: number,
 	step: number,
-	maxElapsed: number
+	maxElapsed: number,
+	extra: number
 ): boolean
 	local elapsed = math.clamp(now - since, step, math.max(step, maxElapsed))
 	local vmax = maxSpeed(player, since - Cfg.SpeedWindow, now)
-	return distXZ(pos, from) <= vmax * elapsed * Cfg.Margin + Cfg.Slack
+	return distXZ(pos, from) <= vmax * elapsed * Cfg.Margin + Cfg.Slack + extra
+end
+
+-- Vitesse verticale maximale permise (studs/s) : MaxClimbSpeed, ou la vitesse de départ d'un saut de
+-- la hauteur connue (monture, INT-MOVE) si elle est plus grande
+local function climbSpeed(ride: Ride?): number
+	local jump = ride and ride.jumpHeight
+	if jump == nil then
+		return Cfg.MaxClimbSpeed
+	end
+	return math.max(Cfg.MaxClimbSpeed, math.sqrt(2 * GRAVITY * jump))
 end
 
 -- ---------------------------------------------------------------------------------------------
@@ -410,12 +524,16 @@ function MoveCheck.step(
 	-- pas encore posé par le serveur), seulement refusée (étape 3), sans retour ni restriction
 	local underground = pos.Y < surface - MAX_BELOW_GROUND
 
+	-- Monture (INT-MOVE) : la racine debout est relevée de `offset` (vol bas, racine enfouie, altitude)
+	local ride = rides[player]
+	local offset = if ride then ride.offset else 0
+
 	-- 1) bornes absolues : hors du monde, sous le monde, vol prolongé
 	local dx, dz = pos.X - Cfg.CenterX, pos.Z - Cfg.CenterZ
 	local outOfBounds = math.sqrt(dx * dx + dz * dz) > Cfg.MaxRadius
 		or pos.Y < Cfg.MinY
 		or (underground and now >= st.exemptUntil)
-	if pos.Y > ground + Cfg.MaxAltitude then
+	if pos.Y > ground + Cfg.MaxAltitude + offset then
 		local since = st.highSince
 		if since == nil then
 			st.highSince = now
@@ -432,7 +550,8 @@ function MoveCheck.step(
 	-- vol bas ou racine enfouie prolongés, hors de portée verticale des actions (infraction à
 	-- l'étape 4)
 	local hovering = false
-	if pos.Y > ground + HOVER_ABOVE or pos.Y < surface + BURIED_BELOW then
+	local airborne = pos.Y > ground + HOVER_ABOVE + offset or pos.Y < surface + BURIED_BELOW + offset
+	if airborne then
 		local since = st.hoverSince
 		if since == nil then
 			st.hoverSince = now
@@ -459,13 +578,31 @@ function MoveCheck.step(
 	-- 2) déplacement par tick (depuis la dernière position valide), montée, puis vitesse soutenue ;
 	-- appliqué AUSSI pendant l'exemption (seule la sanction en est levée, étape 3)
 	local step = if isFinite(dt) then math.max(0, dt) else 0
-	local ok = plausible(player, st.lastValid, st.validAt, pos, now, step, MAX_ELAPSED)
+	local ok = plausible(
+		player,
+		st.lastValid,
+		st.validAt,
+		pos,
+		now,
+		step,
+		MAX_ELAPSED,
+		grantExtra(st, st.validAt, now)
+	)
+	local usedBonus = false
 	if ok then
 		-- montée : même crédit d'arrêt que la mesure XZ (validAt, au plus STILL_CREDIT à l'arrêt). Un
 		-- saut dont les premiers paquets arrivent groupés (gigue, fin de gel) monte de 6,7 à 7,1
 		-- studs en un tick ; le vol soutenu reste borné par les règles de vol bas et d'altitude.
+		-- Monture (INT-MOVE) : vitesse de départ du saut de la selle, et marge ponctuelle d'une hausse
+		-- du décalage (consommée par le premier pas qui en a besoin)
 		local climb = math.clamp(now - st.validAt, step, math.max(step, MAX_ELAPSED))
-		ok = pos.Y - st.lastValid.Y <= Cfg.MaxClimbSpeed * climb * Cfg.Margin + Cfg.Slack
+		local rise = pos.Y - st.lastValid.Y
+		local allowed = climbSpeed(ride) * climb * Cfg.Margin + Cfg.Slack
+		ok = rise <= allowed
+		if not ok and ride and ride.bonus > 0 and now <= ride.bonusUntil then
+			ok = rise <= allowed + ride.bonus
+			usedBonus = ok
+		end
 	end
 	if ok then
 		-- fenêtre soutenue : depuis la plus ancienne position valide de la dernière seconde (le
@@ -484,7 +621,7 @@ function MoveCheck.step(
 				from = oldest.since
 				window = SUSTAIN_WINDOW + math.max(0, now - left)
 			end
-			ok = plausible(player, oldest.pos, from, pos, now, step, window)
+			ok = plausible(player, oldest.pos, from, pos, now, step, window, grantExtra(st, from, now))
 		end
 	end
 	if ok and not hovering and not underground then
@@ -497,12 +634,20 @@ function MoveCheck.step(
 		local tick = math.clamp(now - tickStart, step, math.max(step, BURST_MAX_TICK))
 		local vmax = maxSpeed(player, now - tick - Cfg.SpeedWindow, now)
 		local cap = vmax * tick * Cfg.Margin + Cfg.Slack
+		-- bond accordé (INT-MOVE) : pendant sa fenêtre, le plafond est relevé du crédit (versé au budget
+		-- par grant) ; après, l'excédent est rogné
+		local ceiling = cap + grantExtra(st, now, now)
 		local refill = vmax * Cfg.Margin * math.max(0, now - st.budgetAt)
-		st.budget = math.min(cap, st.budget + refill) - distXZ(pos, st.lastValid)
+		st.budget = math.min(ceiling, st.budget + refill) - distXZ(pos, st.lastValid)
 		st.budgetAt = now
 		local burst = st.budget < 0
 		accept(st, pos, now)
+		st.validAirborne = airborne
+		st.validHigh = st.highSince ~= nil
 		st.burst = burst
+		if usedBonus and ride then
+			ride.bonus = 0
+		end
 		return "ok", nil, burst
 	end
 
@@ -522,6 +667,115 @@ function MoveCheck.step(
 		end
 	end
 	return "flag", nil, false
+end
+
+-- Monture (INT-MOVE) : la racine debout du joueur est relevée de `studs` (hausse de la monture,
+-- bornée à [0 ; MaxRootOffset]) et sa hauteur de saut vaut `jumpHeight` (bornée à
+-- [0 ; MaxJumpHeight]). Une HAUSSE accorde une marge verticale ponctuelle égale au changement, pour le
+-- premier pas qui monte dans les OFFSET_BONUS_TIME s (la racine relevée arrive un ping plus tard) ; ni
+-- remise à zéro de l'historique ni exemption. Valeurs non finies ignorées.
+function MoveCheck.setRootOffset(player: Player, studs: number, jumpHeight: number?, now: number?)
+	if type(studs) ~= "number" or not isFinite(studs) then
+		return
+	end
+	local jump: number? = nil
+	if type(jumpHeight) == "number" and isFinite(jumpHeight) then
+		jump = math.clamp(jumpHeight, 0, MAX_JUMP_HEIGHT)
+	end
+	local t = if type(now) == "number" and isFinite(now) then now else Clock.now()
+	local offset = math.clamp(studs, 0, MAX_ROOT_OFFSET)
+	local ride = rides[player]
+	if ride == nil then
+		ride = { offset = 0, jumpHeight = nil, bonus = 0, bonusUntil = -math.huge }
+		rides[player] = ride
+	end
+	local delta = offset - ride.offset
+	ride.offset = offset
+	if jump ~= nil then
+		ride.jumpHeight = jump
+	end
+	if delta > 0 then
+		ride.bonus = delta
+		ride.bonusUntil = t + OFFSET_BONUS_TIME
+	end
+end
+
+-- Hausse de la racine en vigueur (0 à pied) : TickActor.rootOffset, pieds = ZoneRules.feetY
+function MoveCheck.rootOffset(player: Player): number
+	local ride = rides[player]
+	return if ride then ride.offset else 0
+end
+
+-- Bond accordé (INT-MOVE) : crédit de `studs` (12) sur `duration` (0,35 s) à partir de `tStart`
+-- (instant du client, ramené dans [réception − GrantRetro ; réception]) au plafond par tick, à la
+-- fenêtre soutenue et au budget d'action (une dette en cours est remboursée aussitôt : crédit
+-- rétroactif). Refusé (false) si le crédit précédent a été reçu il y a moins de GrantMinGap s (horloge
+-- du serveur `now`, Clock.now() par défaut) ou si le joueur n'a pas encore de position suivie.
+function MoveCheck.grant(
+	player: Player,
+	studs: number?,
+	duration: number?,
+	tStart: number?,
+	now: number?
+): boolean
+	local st = states[player]
+	if st == nil then
+		return false
+	end
+	local t = if type(now) == "number" and isFinite(now) then now else Clock.now()
+	if t - st.grantAt < GRANT_MIN_GAP then
+		return false
+	end
+	local amount = if type(studs) == "number" and isFinite(studs)
+		then math.clamp(studs, 0, Tuning.GrantStuds)
+		else Tuning.GrantStuds
+	local length = if type(duration) == "number" and isFinite(duration)
+		then math.clamp(duration, 0, Tuning.GrantDuration)
+		else Tuning.GrantDuration
+	local start = if type(tStart) == "number" and isFinite(tStart) then tStart else t
+	start = math.clamp(start, t - GRANT_RETRO, t)
+	st.grantAt = t
+	st.grantStart = start
+	st.grantEnd = start + length
+	st.grantStuds = amount
+	st.budget += amount
+	return true
+end
+
+-- Position acceptée à l'instant `t` (Vector3), interpolée entre les deux échantillons de l'anneau qui
+-- l'encadrent (PositionHistory s de positions acceptées) ; nil hors de l'anneau ou joueur inconnu
+function MoveCheck.positionAt(player: Player, t: number): Vector3?
+	local st = states[player]
+	if st == nil or type(t) ~= "number" or not isFinite(t) then
+		return nil
+	end
+	local list = st.positions
+	local n = #list
+	if n == 0 then
+		return nil
+	end
+	local first, last = list[1], list[n]
+	if t < first.t - POSITION_EPSILON or t > last.t + POSITION_EPSILON then
+		return nil
+	end
+	if t >= last.t then
+		return last.pos
+	end
+	if t <= first.t then
+		return first.pos
+	end
+	for i = n - 1, 1, -1 do
+		local a = list[i]
+		if a.t <= t then
+			local b = list[i + 1]
+			local span = b.t - a.t
+			if span <= 0 then
+				return b.pos
+			end
+			return a.pos:Lerp(b.pos, (t - a.t) / span)
+		end
+	end
+	return first.pos
 end
 
 -- Actions interdites (3 s après un retour)
@@ -578,6 +832,7 @@ end
 function MoveCheck.clear(player: Player)
 	states[player] = nil
 	speeds[player] = nil
+	rides[player] = nil
 end
 
 return MoveCheck

@@ -43,6 +43,7 @@ local modelRadius = 4
 local orbitStart = 0
 local orbit: RBXScriptConnection? = nil
 local labels: { [string]: TextLabel } = {}
+local modelKey = "" -- squishy montré (uid, espèce, mutation, étoiles) : modèle reconstruit s'il change
 local wearButton: TextButton? = nil
 local buyButton: TextButton? = nil
 local prevButton: TextButton? = nil
@@ -125,9 +126,18 @@ local function placeCamera(t: number)
 	cam.CFrame = CFrame.lookAt(eye, Vector3.new(0, modelRadius * 0.15, 0))
 end
 
+local function lookKey(uid: string?): string
+	local rec = if uid then squishies()[uid] else nil
+	if type(rec) ~= "table" then
+		return tostring(uid)
+	end
+	return `{uid}:{tostring(rec.s)}:{tostring(rec.m)}:{tostring(rec.st)}`
+end
+
 local function buildModel()
 	releaseModel()
 	local uid = uids[index]
+	modelKey = lookKey(uid)
 	local rec = if uid then squishies()[uid] else nil
 	local species = if type(rec) == "table" and type(rec.s) == "number" then rec.s else 1
 	local mutation = if type(rec) == "table" and type(rec.m) == "number" then rec.m else 0
@@ -310,9 +320,18 @@ function OutfitPreview.build(container: Frame)
 		xAlign = Enum.TextXAlignment.Right,
 	})
 	Widgets.watch({ "squishies", "outfits" }, function()
-		if isOpen then
-			refresh()
+		if not isOpen then
+			return
 		end
+		-- squishy parti de l'enclos (Dodo, vendu, fusionné) pendant l'aperçu : la liste suit le profil,
+		-- « Mettre » ne vise jamais un squishy qui n'est plus là ; le modèle suit le squishy montré
+		local keep = uids[index]
+		uids = collectUids()
+		index = if keep then table.find(uids, keep) or 1 else 1
+		if lookKey(uids[index]) ~= modelKey then
+			buildModel()
+		end
+		refresh()
 	end)
 end
 

@@ -12,7 +12,9 @@
 --      Backspace tant qu'une fenêtre est ouverte (InputController ne lie que les touches du jeu) ;
 --   6. double appui : une fermeture moins de 0,35 s après l'ouverture de la même fenêtre est ignorée ;
 --   7. chaque fenêtre est un SelectionGroup aux comportements Stop (la sélection ne s'échappe pas) ;
---   8. chaque sauvetage est compté (rescues) et signalé à ErrorReporter (FocusRescued → Diagnostics).
+--   8. chaque sauvetage est compté (rescues) et signalé à ErrorReporter (FocusRescued → Diagnostics) ;
+--      un changement voulu du contenu (onglet, liste rechargée) passe par refocus(), qui rend la
+--      sélection aussitôt sans rien compter.
 -- Une fenêtre dont la racine est détruite sans fermeture est fermée d'office (sauvetage compté) :
 -- aucun état sans sortie. L'écran de chargement (ScreenGui « Loading », src/first) gère seul sa
 -- sélection (Réessayer) : il est exempté, comme tout ScreenGui portant l'attribut FocusExempt.
@@ -465,6 +467,26 @@ function FocusGuard.release()
 	elseif not validIn(GuiService.SelectedObject, top.window.root) then
 		restoreTop()
 	end
+end
+
+-- Le contenu de la fenêtre active vient de changer par une action voulue (onglet changé par L1 / R1,
+-- liste rechargée, entrée du rail cachée) : si la sélection n'y est plus valide, elle est rendue TOUT
+-- DE SUITE (dernier objet affiché, sinon défaut de l'écran). Ce n'est pas un sauvetage (rien n'est
+-- compté ni signalé : FocusRescued reste le signe d'un vrai bug) ; vrai si la sélection a été posée.
+function FocusGuard.refocus(): boolean
+	if isHeld() then
+		return false
+	end
+	local top = stack[#stack]
+	if top == nil then
+		return false
+	end
+	local selected = GuiService.SelectedObject
+	if selected ~= nil and (validIn(selected, top.window.root) or exempt(selected)) then
+		return false
+	end
+	badSince = nil
+	return restoreTop()
 end
 
 -- La sélection est-elle tenue (fenêtre de Roblox) ?

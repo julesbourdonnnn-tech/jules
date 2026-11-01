@@ -218,10 +218,18 @@ local function makeRow(frame: Frame, _slot: number): Row
 			if item == nil then
 				return
 			end
+			if not Widgets.send("SetSetting", item.key, value) then
+				-- retenu par le débit du client (interrupteur martelé) : rien n'est parti, donc aucun
+				-- DataPatch ne viendra le recaler ; il revient tout de suite, avec le refus
+				row.toggle.set(not value)
+				Widgets.refuse(row.toggle.button)
+				return
+			end
 			if item.key == "allowRush" then
 				allowRushLocal = value
 			end
-			Widgets.send("SetSetting", item.key, value)
+			-- refusé par le serveur (valeur, recharge) : aucun DataPatch, l'écran se recale peu après
+			resyncSoon()
 		end
 	)
 	local choice = Widgets.button({

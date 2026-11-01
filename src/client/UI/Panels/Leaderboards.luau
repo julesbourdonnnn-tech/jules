@@ -47,7 +47,7 @@ local function row(r: any): { rank: number, userId: number, name: string, value:
 	if rank ~= rank or value ~= value or value == math.huge or value == -math.huge then
 		return nil
 	end
-	local name = if type(r.name) == "string" then string.sub(r.name, 1, 40) else ""
+	local name = if type(r.name) == "string" then Widgets.clip(r.name, 40) else ""
 	return { rank = math.floor(rank), userId = userId, name = name, value = math.max(0, value) }
 end
 

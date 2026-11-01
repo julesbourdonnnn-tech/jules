@@ -184,13 +184,8 @@ local function bindSpeciesRow(row: SpeciesRow, _frame: Frame, index: number)
 	end
 end
 
-local function openSheet(cell: SpeciesCell)
-	local s = cell.species
-	if s <= 0 or sheet == nil then
-		return
-	end
-	sheetSpecies = s
-	sheetFrom = cell.button
+-- Contenu de la fiche d'une espèce (rappelé à chaque changement du profil tant qu'elle est ouverte)
+local function renderSheet(s: number)
 	local known = stamped(s)
 	local def = Species.ById[s]
 	Widgets.paintBlob(sheetBlob :: Frame, s, known)
@@ -241,8 +236,19 @@ local function openSheet(cell: SpeciesCell)
 	else
 		sheetLabels.trophy.Visible = false
 	end
+end
+
+local function openSheet(cell: SpeciesCell)
+	local s = cell.species
+	local f = sheet
+	if s <= 0 or f == nil then
+		return
+	end
+	sheetSpecies = s
+	sheetFrom = cell.button
+	renderSheet(s)
 	pages.species.Visible = false
-	sheet.Visible = true
+	f.Visible = true
 	GuiService.SelectedObject = sheetCells[1]
 end
 
@@ -435,8 +441,13 @@ local function onGuideInput(input: InputObject)
 		return
 	end
 	if input.KeyCode == Enum.KeyCode.DPadDown then
+		local before = guideScroll
 		guideScroll += guideViewH * GUIDE_STEP
 		applyGuideScroll(true)
+		if guideScroll <= before then
+			-- déjà en bas : le seul ↓ qui rebondit (son Bump, vibration listEnd)
+			Widgets.listEnd(guideScroller, "Down")
+		end
 	elseif input.KeyCode == Enum.KeyCode.DPadUp and guideScroll > 0 then
 		guideScroll -= guideViewH * GUIDE_STEP
 		applyGuideScroll(true)
@@ -462,6 +473,10 @@ end
 
 local function refresh()
 	families = buildFamilies()
+	-- fiche ouverte : elle suit le profil (mutation trouvée, record battu pendant qu'on la regarde)
+	if sheet and sheet.Visible and sheetSpecies > 0 then
+		renderSheet(sheetSpecies)
+	end
 	refreshHeader()
 	if speciesRows then
 		speciesRows.setCount(#families)
@@ -484,11 +499,13 @@ local function buildSpecies(page: Frame)
 		color = Widgets.Colors.Gold,
 		xAlign = Enum.TextXAlignment.Left,
 	})
+	-- 40 px d'écart avec « Réclamer » : le bouton pulse jusqu'à 1,08 (GDD §9.2) vers la gauche (ancré à
+	-- droite), soit 24 px, sans jamais toucher le texte
 	header.milestone = Widgets.label({
 		parent = page,
 		name = "Milestone",
-		size = UDim2.fromOffset(360, 48),
-		position = UDim2.new(1, -48 - 300 - 16, 0, 0),
+		size = UDim2.fromOffset(340, 48),
+		position = UDim2.new(1, -48 - 300 - 40, 0, 0),
 		anchor = Vector2.new(1, 0),
 		text = "",
 		textSize = 32,
@@ -804,6 +821,8 @@ local function buildGuide(page: Frame)
 	})
 	scroller.BackgroundTransparency = 0.4
 	scroller.ClipsDescendants = true
+	-- ↑ / ↓ font défiler le Guide (onGuideInput) : PanelController ne joue pas le bout de liste pour lui
+	scroller:SetAttribute("SelfScroll", true)
 	guideScroller = scroller
 	local holder = Widgets.group(scroller, "Holder", UDim2.fromOffset(width, guideViewH), UDim2.new())
 	guideHolder = holder

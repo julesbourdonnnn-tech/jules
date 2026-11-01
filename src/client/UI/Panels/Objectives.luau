@@ -331,11 +331,18 @@ local function infoGrid(
 	for i = 1, count do
 		local col = (i - 1) % cols
 		local line = (i - 1) // cols
+		-- ancrée au centre : la pulsation du prochain palier (1 → 1,08, GDD §9.2) et le grossissement de la
+		-- sélection débordent également des deux côtés, jamais sur la case voisine (écart de 16 px)
+		local h = cell.h - 24
 		local b = Widgets.button({
 			parent = page,
 			name = "Cell" .. i,
-			size = UDim2.fromOffset(cell.w, cell.h - 24),
-			position = UDim2.fromOffset(left + col * (cell.w + gap), top + line * (cell.h - 24 + gap)),
+			size = UDim2.fromOffset(cell.w, h),
+			position = UDim2.fromOffset(
+				left + col * (cell.w + gap) + math.floor(cell.w / 2),
+				top + line * (h + gap) + math.floor(h / 2)
+			),
+			anchor = Vector2.new(0.5, 0.5),
 			color = Widgets.Colors.Card,
 			sound = "",
 		})

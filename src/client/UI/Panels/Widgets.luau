@@ -42,7 +42,6 @@ local Glyph = require(Client.UI.Glyph)
 local Prefs = require(Client.Util.Prefs)
 local Haptics = require(Client.Util.Haptics)
 local AudioController = require(Client.Controllers.AudioController)
-local ErrorReporter = require(Client.Controllers.ErrorReporter)
 local State = require(Client.Controllers.StateController)
 local FocusGuard = require(Client.UI.FocusGuard)
 
@@ -129,6 +128,19 @@ function Widgets.setRaw(label: TextLabel | TextButton, text: string)
 	end
 end
 
+-- Texte coupé à maxBytes octets sur une frontière de caractère UTF-8 (jamais un caractère coupé en
+-- deux, qui s'afficherait en carré) ; un texte déjà invalide devient vide
+function Widgets.clip(text: string, maxBytes: number): string
+	if type(text) ~= "string" then
+		return ""
+	end
+	local out = if #text > maxBytes then string.sub(text, 1, maxBytes) else text
+	while #out > 0 and utf8.len(out) == nil do
+		out = string.sub(out, 1, #out - 1)
+	end
+	return out
+end
+
 -- Nom d'une espèce (EN = FR, GDD §15) ; « ??? » pour une espèce inconnue
 function Widgets.speciesName(species: number?): string
 	local def = if type(species) == "number" then Species.ById[species] else nil
@@ -160,7 +172,9 @@ end
 local reported: { [string]: boolean } = {}
 
 -- Appelle fn sous pcall ; un stub du contrat (« TODO(… ) ») rend simplement le repli. Une autre
--- erreur est signalée une fois par clé à ErrorReporter (Diagnostics) : jamais un plantage de l'UI.
+-- erreur (un vrai bug) est relancée une fois par clé dans un fil à part : ScriptContext.Error la voit
+-- (ErrorReporter → Diagnostics en ligne ; h.errors dans les specs, règle zéro trace), et l'interface
+-- continue avec le repli : jamais un plantage de l'UI, jamais une erreur avalée en silence.
 function Widgets.safe<T>(where: string, fallback: T, fn: (...any) -> T, ...: any): T
 	if type(fn) ~= "function" then
 		return fallback
@@ -172,9 +186,15 @@ function Widgets.safe<T>(where: string, fallback: T, fn: (...any) -> T, ...: any
 	local text = tostring(result)
 	if not string.find(text, "TODO(", 1, true) and not reported[where] then
 		reported[where] = true
-		pcall(ErrorReporter.report, 1, "[panels] " .. where .. " : " .. text, nil)
+		Widgets.raise(where, text)
 	end
 	return fallback
+end
+
+-- Relance une erreur attrapée dans un fil à part (visible par ScriptContext.Error, sans interrompre
+-- l'appelant)
+function Widgets.raise(where: string, text: string)
+	task.spawn(error, "[panels] " .. where .. " : " .. text, 0)
 end
 
 -- =============================================================================================
@@ -262,14 +282,42 @@ function Widgets.promptPurchase(kind: "pass" | "product", id: number): boolean
 	return ok
 end
 
--- UiSeen(écran) une fois par session (Config/Intents.UiSeen.set)
+-- UiSeen(écran) une fois par session (Config/Intents.UiSeen.set). Un écran n'est « vu » qu'une fois
+-- l'intention partie : retenue par le débit du client (panneaux ouverts d'affilée par L2 / R2), elle
+-- attend et repart dès que le seau le permet (boucle Heartbeat du module) ; UiSeen("objectives") est
+-- l'étape 10 de l'accueil, jamais perdue pour la session.
 local seen: { [string]: boolean } = {}
+local seenPending: { [string]: boolean } = {}
+local ensureLoops: () -> () -- défini plus bas (boucle Heartbeat du module)
+
+local function trySeen(screen: string): boolean
+	if not allow("UiSeen") then
+		return false
+	end
+	seenPending[screen] = nil
+	seen[screen] = true
+	pcall(function()
+		Net.event("UiSeen"):FireServer(screen)
+	end)
+	return true
+end
+
+local function flushSeen()
+	for screen in seenPending do
+		if not trySeen(screen) then
+			return
+		end
+	end
+end
+
 function Widgets.seen(screen: string)
-	if seen[screen] then
+	if type(screen) ~= "string" or seen[screen] or seenPending[screen] then
 		return
 	end
-	seen[screen] = true
-	Widgets.send("UiSeen", screen)
+	if not trySeen(screen) then
+		seenPending[screen] = true
+		ensureLoops()
+	end
 end
 
 -- =============================================================================================
@@ -509,6 +557,9 @@ end
 -- jamais son voisin. Mouvement réduit : aucune mise à l'échelle.
 local SELECT_GROW = Layout.Focus.Grow -- 1,05
 local selectedButtons: { [GuiButton]: boolean } = setmetatable({}, { __mode = "k" }) :: any
+local pressedButtons: { [GuiButton]: boolean } = setmetatable({}, { __mode = "k" }) :: any
+-- boutons qui pulsent (Widgets.attention) : leur UIScale est piloté par la boucle d'attention
+local attention: { [GuiObject]: boolean } = setmetatable({}, { __mode = "k" }) :: any
 
 local function rest(button: GuiButton): number
 	return if selectedButtons[button] then SELECT_GROW else 1
@@ -517,11 +568,13 @@ end
 local function pressFx(button: GuiButton)
 	local scale = Juice.scaleOf(button)
 	button.MouseButton1Down:Connect(function()
+		pressedButtons[button] = true
 		if not Juice.reducedMotion() then
 			Juice.tween(scale, 0.06, { Scale = 0.92 }, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 		end
 	end)
 	local function release()
+		pressedButtons[button] = nil
 		if Juice.reducedMotion() then
 			scale.Scale = 1
 			return
@@ -538,6 +591,9 @@ local function pressFx(button: GuiButton)
 	end)
 	button.SelectionLost:Connect(function()
 		selectedButtons[button] = nil
+		if attention[button] then
+			return -- la pulsation d'attention reprend la main dès l'image suivante
+		end
 		if Juice.reducedMotion() then
 			scale.Scale = 1
 		else
@@ -976,6 +1032,10 @@ local function beginHold(state: HoldState)
 	if not state.enabled or state.startedAt ~= nil then
 		return
 	end
+	-- bouton grisé : Activated joue le refus (un seul refus, jamais deux sons Error)
+	if disabledState[state.hold.button] then
+		return
+	end
 	if state.canStart and not state.canStart() then
 		Widgets.refuse(state.hold.button)
 		return
@@ -1016,8 +1076,10 @@ local function stepHolds()
 	end
 end
 
--- Boutons qui attirent l'attention (pulsation 1 → 1,08, sinus de 0,8 s ; GDD §9.2)
-local attention: { [GuiObject]: boolean } = setmetatable({}, { __mode = "k" }) :: any
+-- Boutons qui attirent l'attention (pulsation 1 → 1,08, sinus de 0,8 s ; GDD §9.2). La pulsation
+-- passe par le MÊME UIScale que l'appui et la sélection (Juice.scaleOf : « JuiceScale ») : Roblox
+-- n'applique qu'un UIScale par objet. Elle s'arrête tant que le bouton est sélectionné (il grossit à
+-- 1,05) ou enfoncé (0,92).
 local attentionTime = 0
 
 local function stepAttention(dt: number)
@@ -1025,8 +1087,13 @@ local function stepAttention(dt: number)
 	local reduced = Juice.reducedMotion()
 	local s = if reduced then 1 else 1 + 0.04 * (1 - math.cos(2 * math.pi * attentionTime / 0.8))
 	for gui in attention do
-		if gui.Parent ~= nil and gui.Visible and GuiService.SelectedObject ~= gui then
-			local scale = gui:FindFirstChild("AttentionScale")
+		if
+			gui.Parent ~= nil
+			and gui.Visible
+			and GuiService.SelectedObject ~= gui
+			and not pressedButtons[gui :: any]
+		then
+			local scale = gui:FindFirstChild("JuiceScale")
 			if scale and scale:IsA("UIScale") then
 				scale.Scale = s
 			end
@@ -1037,11 +1104,14 @@ end
 local heartbeat: RBXScriptConnection? = nil
 local inputHooked = false
 
-local function ensureLoops()
+ensureLoops = function()
 	if heartbeat == nil then
 		heartbeat = RunService.Heartbeat:Connect(function(dt: number)
 			stepHolds()
 			stepAttention(dt)
+			if next(seenPending) ~= nil then
+				flushSeen()
+			end
 		end)
 	end
 	if not inputHooked then
@@ -1083,18 +1153,16 @@ end
 -- Pulsation d'attention (boutons « Réclamer », Grand Splorch prêt) ; respecte Mouvement réduit
 function Widgets.attention(gui: GuiObject, on: boolean)
 	ensureLoops()
-	local scale = gui:FindFirstChild("AttentionScale")
 	if on then
-		if scale == nil then
-			local created = Instance.new("UIScale")
-			created.Name = "AttentionScale"
-			created.Parent = gui
-		end
+		Juice.scaleOf(gui)
 		attention[gui] = true
-	else
+	elseif attention[gui] then
 		attention[gui] = nil
-		if scale and scale:IsA("UIScale") then
-			scale.Scale = 1
+		if GuiService.SelectedObject ~= gui and not pressedButtons[gui :: any] then
+			local scale = gui:FindFirstChild("JuiceScale")
+			if scale and scale:IsA("UIScale") then
+				scale.Scale = 1
+			end
 		end
 	end
 end
@@ -1230,21 +1298,39 @@ export type Rows = {
 	page: (dir: number) -> (),
 }
 
+-- Place du curseur de sélection autour des cases (px TV) : le cadre de la liste coupe ce qui dépasse
+-- (ClipsDescendants), et le curseur de UI/Root déborde de 4 px + trait de 6 px + liseré de 2 px,
+-- plus le grossissement 1,05 de la case sélectionnée (≈ 10 px sur une case de 208, autour de son
+-- ancrage en haut à gauche). Le cadre est donc plus large de ROW_ROOM de chaque côté, et la 1re et la
+-- dernière rangée gardent ROW_ROOM au-dessus et au-dessous d'elles.
+local ROW_ROOM = Layout.Spacing.Normal -- 24
+
 function Widgets.rows(p: RowsProps): Rows
 	local stride = p.rowHeight + p.gap
 	local visible = p.visibleRows or (p.size.Y + p.gap) / stride
+	local room = ROW_ROOM / stride -- en rangées
 	local poolSize = math.ceil(visible) + 2
-	local frame = Widgets.group(p.parent, p.name, UDim2.fromOffset(p.size.X, p.size.Y), p.position)
+	local frame = Widgets.group(
+		p.parent,
+		p.name,
+		UDim2.fromOffset(p.size.X + 2 * ROW_ROOM, p.size.Y),
+		(p.position or UDim2.new()) - UDim2.fromOffset(ROW_ROOM, 0)
+	)
 	frame.ClipsDescendants = true
-	local holder = Widgets.group(frame, "Holder", UDim2.fromOffset(p.size.X, p.size.Y), UDim2.new())
+	local holder =
+		Widgets.group(frame, "Holder", UDim2.fromOffset(p.size.X, p.size.Y), UDim2.fromOffset(ROW_ROOM, 0))
 	holder:SetAttribute("BumpTarget", true)
+	holder:SetAttribute("RestPosition", holder.Position)
 	local slots: { { frame: Frame, row: any, index: number, cells: { GuiObject } } } = {}
 	local n = 0
 	local scroll = 0 -- rangées défilées (peut être fractionnaire : demi-rangée visible)
 	local rows: Rows
 
 	local function maxScroll(): number
-		return math.max(0, n - visible)
+		if n <= 0 then
+			return 0
+		end
+		return math.max(0, n - visible + 2 * room)
 	end
 
 	local function placeAll()
@@ -1262,7 +1348,7 @@ function Widgets.rows(p: RowsProps): Rows
 					cell:SetAttribute("Column", column)
 				end
 			end
-			slot.frame.Position = UDim2.fromOffset(0, (i - 1) * stride)
+			slot.frame.Position = UDim2.fromOffset(0, (i - 1) * stride + ROW_ROOM)
 			slot.frame.Visible = true
 		end
 		for slotIndex, slot in slots do
@@ -1274,7 +1360,9 @@ function Widgets.rows(p: RowsProps): Rows
 	end
 
 	local function applyScroll(animate: boolean)
-		local goal = UDim2.fromOffset(0, -scroll * stride)
+		local goal = UDim2.fromOffset(ROW_ROOM, -scroll * stride)
+		-- position de repos lue par le rebond de bout de liste (Widgets.bump)
+		holder:SetAttribute("RestPosition", goal)
 		if animate and not Juice.reducedMotion() then
 			Juice.tween(holder, 0.15, { Position = goal })
 		else
@@ -1322,8 +1410,10 @@ function Widgets.rows(p: RowsProps): Rows
 			placeAll()
 		end,
 		ensureVisible = function(index: number)
-			local top = (index - 1) - 1 -- une rangée de marge au-dessus
-			local bottom = index + 1 -- une rangée de marge en dessous (en rangées depuis le haut)
+			-- une rangée de marge au-dessus et en dessous (en rangées depuis le haut du contenu, qui
+			-- commence ROW_ROOM plus bas)
+			local top = (index - 1) - 1 + room
+			local bottom = index + 1 + room
 			local target = scroll
 			if target > top then
 				target = top
@@ -1410,7 +1500,10 @@ function Widgets.bump(from: GuiObject?, direction: string)
 		end
 		cur = cur.Parent
 	end
-	local origin = bumping[target] or target.Position
+	-- position de repos : celle que vise le défilement en cours (liste virtualisée, rail qui glisse),
+	-- jamais une position intermédiaire de tween (la liste resterait décalée après le rebond)
+	local restAttr = target:GetAttribute("RestPosition")
+	local origin = if typeof(restAttr) == "UDim2" then restAttr else (bumping[target] or target.Position)
 	bumping[target] = origin
 	local dx = if direction == "Left" then -8 elseif direction == "Right" then 8 else 0
 	local dy = if direction == "Up" then -8 elseif direction == "Down" then 8 else 0
@@ -1423,6 +1516,13 @@ function Widgets.bump(from: GuiObject?, direction: string)
 			end
 		end)
 	end)
+end
+
+-- Bout de liste (GDD §9.2, §10.5) : son Bump, vibration listEnd, rebond de 8 px en 0,15 s
+function Widgets.listEnd(from: GuiObject?, direction: string)
+	AudioController.play("Bump")
+	Haptics.play("listEnd")
+	Widgets.bump(from, direction)
 end
 
 -- Premier objet sélectionnable visible sous root (ordre stable : GetDescendants)
@@ -1509,6 +1609,9 @@ function Widgets.watch(keys: { string }, fn: () -> ())
 		task.defer(function()
 			pending = false
 			fn()
+			-- liste rechargée, bouton caché (fête qui commence, squishy vendu) : la sélection perdue est
+			-- rendue tout de suite, sans compter un sauvetage (FocusGuard.refocus)
+			FocusGuard.refocus()
 		end)
 	end)
 end

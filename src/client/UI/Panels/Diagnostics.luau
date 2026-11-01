@@ -103,7 +103,7 @@ local sampleLabels: { TextLabel } = {}
 local samplesFor: TextButton? = nil
 
 local function str(v: any, max: number): string
-	return if type(v) == "string" then string.sub(v, 1, max) else ""
+	return if type(v) == "string" then Widgets.clip(v, max) else ""
 end
 
 local function isStudio(): boolean

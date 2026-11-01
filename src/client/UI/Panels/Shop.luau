@@ -12,6 +12,7 @@
 -- Sélection par défaut : le 1er « Acheter » de l'onglet.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared", 30) :: Folder
 local Monetization = require(Shared.Config.Monetization)
@@ -23,6 +24,7 @@ local Client = script.Parent.Parent.Parent
 local Prices = require(Client.Util.Prices)
 local Prefs = require(Client.Util.Prefs)
 local WorldStateController = require(Client.Controllers.WorldStateController)
+local FocusGuard = require(Client.UI.FocusGuard)
 local Widgets = require(script.Parent.Widgets)
 
 type Nav = { open: (panel: string, tab: string?) -> (), back: () -> () }
@@ -60,6 +62,8 @@ local current = "passes"
 local isOpen = false
 local pages: { [string]: Frame } = {}
 local cardsByTab: { [string]: { CardUi } } = {}
+local partyShown: boolean? = nil -- état de fête affiché (le bouton Squish Party suit la fête en direct)
+local partyWatch: RBXScriptConnection? = nil
 
 -- Articles vendus au lancement : id ≠ 0 et jamais `hidden` (contrat v1.2)
 local function sellable(def: any): boolean
@@ -163,6 +167,7 @@ end
 
 local function refreshCards()
 	local active = partyActive()
+	partyShown = active
 	for _, list in cardsByTab do
 		for _, ui in list do
 			local item = ui.item
@@ -376,6 +381,31 @@ function Shop.build(container: Frame)
 	end)
 end
 
+-- La fête a commencé ou fini pendant que la Boutique est ouverte : le bouton Squish Party suit
+-- (EventState par WorldStateController.EventChanged, et fin à l'heure même sans nouveau message) ; la
+-- sélection posée sur le bouton caché revient aussitôt (FocusGuard.refocus, pas un sauvetage)
+local function onPartyMaybeChanged()
+	if isOpen and partyActive() ~= partyShown then
+		refresh()
+		FocusGuard.refocus()
+	end
+end
+
+-- Connexions faites au démarrage du client (PanelController.Start)
+local startedListening = false
+function Shop.start()
+	if startedListening then
+		return
+	end
+	startedListening = true
+	local changed = (WorldStateController :: any).EventChanged
+	if type(changed) == "table" then
+		pcall(function()
+			changed:Connect(onPartyMaybeChanged)
+		end)
+	end
+end
+
 -- Affiche le panneau (onglet demandé ou le dernier) ; ClientEvent("shopOpened") à chaque ouverture
 function Shop.open(tab: string?)
 	isOpen = true
@@ -385,11 +415,20 @@ function Shop.open(tab: string?)
 		current = tab
 	end
 	refresh()
+	-- fin de la fête à son heure : vérifiée à chaque image tant que la Boutique est ouverte (deux lectures)
+	if partyWatch == nil then
+		partyWatch = RunService.Heartbeat:Connect(onPartyMaybeChanged)
+	end
 end
 
 -- Cache le panneau
 function Shop.close()
 	isOpen = false
+	local c = partyWatch
+	partyWatch = nil
+	if c then
+		c:Disconnect()
+	end
 end
 
 -- Onglets, dans l'ordre (L1 / R1) : seulement ceux qui ont un article

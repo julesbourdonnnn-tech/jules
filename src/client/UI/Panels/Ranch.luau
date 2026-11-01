@@ -1738,21 +1738,31 @@ function Ranch.build(container: Frame)
 			refresh()
 		end
 	end)
-	-- titres de la semaine débloqués pour la session (le client ne peut pas les déduire du profil)
+	showTab()
+end
+
+-- Connexions faites au démarrage du client (PanelController.Start), AVANT toute ouverture : les titres
+-- de la semaine arrivent par Celebrate « unlock » dès l'arrivée (CommunityService.unlockSession), bien
+-- avant que le panneau soit construit ; le client ne peut pas les déduire du profil
+local startedListening = false
+function Ranch.start()
+	if startedListening then
+		return
+	end
+	startedListening = true
 	pcall(function()
 		Net.event("Celebrate").OnClientEvent:Connect(function(payload: any)
 			if type(payload) == "table" and payload.kind == "unlock" and type(payload.data) == "table" then
 				local kind, id = payload.data.kind, payload.data.id
 				if type(kind) == "string" and type(id) == "string" and #kind <= 16 and #id <= 32 then
 					sessionUnlocks[kind .. ":" .. id] = true
-					if isOpen and current == "style" then
+					if isOpen and current == "style" and tabBar ~= nil then
 						refreshStyle()
 					end
 				end
 			end
 		end)
 	end)
-	showTab()
 end
 
 -- Affiche le panneau (onglet demandé ou le dernier) ; « padsKept » : Dalles, gardées d'abord
@@ -1769,6 +1779,8 @@ function Ranch.open(tab: string?)
 	end
 	fuseA = ""
 	table.clear(selected)
+	-- Style s'ouvre toujours sur la 1re sous-liste (Selle) : sélection par défaut = son objet équipé
+	styleKind = STYLE_KINDS[1]
 	showTab()
 	refresh()
 end
@@ -1801,6 +1813,9 @@ function Ranch.setTab(tab: string)
 		current = "pads"
 		keptFirst = true
 	elseif table.find(TABS, tab) then
+		if tab == "style" and current ~= "style" then
+			styleKind = STYLE_KINDS[1] -- entrée dans Style : 1re sous-liste (Selle)
+		end
 		current = tab
 		if tab ~= "pads" then
 			keptFirst = false

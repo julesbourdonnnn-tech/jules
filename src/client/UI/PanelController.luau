@@ -40,7 +40,6 @@ local Juice = require(Client.UI.Juice)
 local FocusGuard = require(Client.UI.FocusGuard)
 local Cards = require(Client.UI.Cards)
 local Prefs = require(Client.Util.Prefs)
-local Haptics = require(Client.Util.Haptics)
 local AudioController = require(Client.Controllers.AudioController)
 local State = require(Client.Controllers.StateController)
 local WorldStateController = require(Client.Controllers.WorldStateController)
@@ -129,6 +128,7 @@ local blur: BlurEffect? = nil
 local windows: { [string]: Frame } = {}
 local bodies: { [string]: Frame } = {}
 local built: { [string]: boolean } = {}
+local broken: { [string]: boolean } = {} -- build a échoué : jamais ouvert à moitié
 local openOrder: { string } = {} -- panneaux ouverts, du plus ancien à l'actif
 local lastEntry: string? = nil
 local preferredEntry: string? = nil
@@ -138,6 +138,9 @@ local railTop = RAIL_RECT.y - SAFE.y
 local selectionChanges = 0
 local selectionFrame = 0
 local frameNo = 0
+-- un panneau en remplace un autre (L2 / R2, raccourci, carte) : le voile, le flou et l'écran des
+-- panneaux restent affichés et Changed ne passe pas par nil entre les deux
+local switching = false
 
 -- =============================================================================================
 -- Outils
@@ -213,6 +216,9 @@ local function buildRail()
 		UDim2.fromOffset(RAIL_RECT.x - SAFE.x, RAIL_RECT.y - SAFE.y)
 	)
 	frame.Visible = false
+	-- bout du rail (↑ sur la 1re entrée, ↓ sur la dernière) : c'est le rail entier qui rebondit (ses
+	-- boutons sont placés par l'UIListLayout)
+	frame:SetAttribute("BumpTarget", true)
 	local list = Instance.new("UIListLayout")
 	list.FillDirection = Enum.FillDirection.Vertical
 	list.Padding = UDim.new(0, RAIL_CONTENT.gap)
@@ -402,7 +408,7 @@ end
 -- Construit un panneau une seule fois (setNavigator AVANT build)
 local function ensureBuilt(name: string): boolean
 	if built[name] then
-		return true
+		return not broken[name]
 	end
 	local mod = Panels[name]
 	if mod == nil or panelsSafe == nil then
@@ -411,11 +417,17 @@ local function ensureBuilt(name: string): boolean
 	local win, body = buildWindow(name)
 	windows[name] = win
 	bodies[name] = body
-	local ok = pcall(function()
+	local ok, err = pcall(function()
 		mod.setNavigator(navigatorFor(name))
 		mod.build(body)
 	end)
 	built[name] = true
+	if not ok then
+		-- un panneau à moitié construit ne s'ouvre jamais ; l'erreur est relancée dans un fil à part
+		-- (ScriptContext.Error → ErrorReporter → Diagnostics), jamais avalée
+		broken[name] = true
+		Widgets.raise(name .. ".build", tostring(err))
+	end
 	return ok
 end
 
@@ -478,6 +490,7 @@ local function refreshRail()
 	end
 	railTop = top
 	frame.Position = UDim2.fromOffset(RAIL_RECT.x - SAFE.x, top)
+	frame:SetAttribute("RestPosition", frame.Position)
 	frame.Size = UDim2.fromOffset(RAIL_RECT.w, needed)
 	local labelX = 16 + RAIL_CONTENT.icon + 16
 	for _, entry in RAIL do
@@ -495,6 +508,12 @@ local function refreshRail()
 		end
 	end
 	Widgets.attention(railButtons.SplorchPreview, railButtons.SplorchPreview.Visible)
+	-- entrée sélectionnée qui vient d'être cachée (carte « ! » rangée, Grand Splorch plus prêt) : la
+	-- sélection passe aussitôt à l'entrée par défaut, sans sauvetage compté
+	local top = FocusGuard.top()
+	if top and top.name == MENU then
+		FocusGuard.refocus()
+	end
 end
 
 local function menuDefault(): GuiObject?
@@ -564,15 +583,25 @@ local function setOverlay(on: boolean)
 		end
 		if not lowGraphics() then
 			local camera = workspace.CurrentCamera
-			if blur == nil and camera then
-				local b = Instance.new("BlurEffect")
-				b.Name = "PanelBlur"
-				b.Size = 0
-				b.Parent = camera
-				blur = b
+			local b = blur
+			-- caméra remplacée (ou flou détruit avec l'ancienne) : un nouveau flou sur la caméra courante
+			if b and (b.Parent == nil or b.Parent ~= camera) then
+				if b.Parent ~= nil then
+					b:Destroy()
+				end
+				b = nil
+				blur = nil
 			end
-			if blur then
-				Juice.tween(blur, 0.2, { Size = BLUR_SIZE })
+			if b == nil and camera then
+				local created = Instance.new("BlurEffect")
+				created.Name = "PanelBlur"
+				created.Size = 0
+				created.Parent = camera
+				blur = created
+				b = created
+			end
+			if b then
+				Juice.tween(b, 0.2, { Size = BLUR_SIZE })
 			end
 		end
 	else
@@ -618,6 +647,8 @@ local function cycleTab(dir: number)
 	local nextTab = tabs[((i - 1 + dir) % #tabs) + 1]
 	AudioController.play("Tab")
 	safe(name .. ".setTab", nil, mod.setTab, nextTab)
+	-- la sélection restée sur la page cachée revient tout de suite (onglet changé : pas un sauvetage)
+	FocusGuard.refocus()
 end
 
 local function cyclePanel(dir: number)
@@ -680,6 +711,7 @@ local function bindPanelKeys()
 	end)
 end
 
+-- Fermeture / retour (GDD §9.2) : UIScale 1 → 0,9 en 0,12 s (Quad In), puis caché
 local function hidePanelFrame(name: string)
 	local win = windows[name]
 	if win == nil then
@@ -688,9 +720,13 @@ local function hidePanelFrame(name: string)
 	if Juice.reducedMotion() then
 		win.Visible = false
 	else
-		Juice.popOut(win, function()
-			if not panelOpen(name) then
+		local scale = Juice.scaleOf(win)
+		local tween =
+			Juice.tween(scale, 0.12, { Scale = 0.9 }, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+		tween.Completed:Once(function(state)
+			if state == Enum.PlaybackState.Completed and not panelOpen(name) then
 				win.Visible = false
+				scale.Scale = 1
 			end
 		end)
 		-- filet : jamais un cadre fantôme si la fin du tween n'arrive pas
@@ -730,22 +766,33 @@ local function onWindowClosed(windowName: string)
 	end
 	hidePanelFrame(name)
 	if #openOrder == 0 then
-		setOverlay(false)
 		unbindPanelKeys()
-		refreshRail()
+		if not switching then
+			setOverlay(false)
+			refreshRail()
+		end
 	else
 		unbindPanelKeys()
 		bindPanelKeys()
 	end
-	PanelController.Changed:Fire(topPanel())
+	if not switching then
+		PanelController.Changed:Fire(topPanel())
+	end
 end
 
 local function showPanel(name: string, tab: string?)
 	local mod = Panels[name]
 	local win = windows[name]
 	setOverlay(true)
+	-- ouverture (GDD §9.2) : UIScale 0,85 → 1 en 0,22 s (Back Out) ; le voile fond en 0,15 s
 	win.Visible = true
-	Juice.popIn(win)
+	local scale = Juice.scaleOf(win)
+	if Juice.reducedMotion() then
+		scale.Scale = 1
+	else
+		scale.Scale = 0.85
+		Juice.tween(scale, 0.22, { Scale = 1 }, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+	end
 	table.insert(openOrder, name)
 	safe(name .. ".open", nil, mod.open, tab)
 	-- ouvrir un panneau termine le portage (le rail, non)
@@ -803,6 +850,11 @@ local function onNavInput(input: InputObject)
 	if before == nil then
 		return
 	end
+	-- objet qui fait défiler lui-même sa liste à la croix (Guide du Squishydex) : il joue seul son bout
+	-- de liste, au vrai bout (sinon chaque ↓ qui défile rebondirait)
+	if before:GetAttribute("SelfScroll") == true then
+		return
+	end
 	local count = selectionChanges
 	local frame = frameNo
 	task.defer(function()
@@ -814,9 +866,7 @@ local function onNavInput(input: InputObject)
 		if selected == nil or not ourWindowOnTop() then
 			return
 		end
-		AudioController.play("Bump")
-		Haptics.play("listEnd")
-		Widgets.bump(selected, dir)
+		Widgets.listEnd(selected, dir)
 	end)
 end
 
@@ -942,6 +992,7 @@ function PanelController.open(panel: string, tab: string?)
 	if topPanel() == panel then
 		if type(tab) == "string" then
 			safe(panel .. ".setTab", nil, Panels[panel].setTab, tab)
+			FocusGuard.refocus()
 		end
 		return
 	end
@@ -953,9 +1004,12 @@ function PanelController.open(panel: string, tab: string?)
 		openMenuWindow()
 	end
 	if not STACKED[panel] then
+		-- le panneau remplacé se ferme sans retirer le voile ni signaler « aucun panneau »
+		switching = #openOrder > 0
 		for i = #openOrder, 1, -1 do
 			FocusGuard.closeNow(PANEL_PREFIX .. openOrder[i])
 		end
+		switching = false
 		-- la sélection revient au bouton du rail de ce panneau (ouvreur de la fenêtre)
 		local b = railButtons[panel]
 		if b and b.Visible then
