@@ -82,6 +82,7 @@ tests/
   sim/      → simulation du rythme de l'économie
 docs/       → marché, GDD, jury, architecture, publication, qualité, console
 .claude/skills/ → savoir-faire Roblox réutilisable par Claude
+tools/workflows/ → recettes de fabrication avec Claude Code (hors du jeu)
 ```
 
 ## Skills Claude du projet
