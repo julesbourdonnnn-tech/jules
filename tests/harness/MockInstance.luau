@@ -1098,10 +1098,24 @@ MT.__newindex = function(self, key, value)
 		end
 		return
 	end
+	-- propriété écrite au moins une fois par le code (tests/harness/Props : sinon, valeur par défaut
+	-- du VRAI moteur, qui diffère parfois de celle du harnais)
+	local written = st.written
+	if written == nil then
+		written = {}
+		st.written = written
+	end
+	written[key] = true
 	if st.props[key] ~= value then
 		st.props[key] = value
 		fireChanged(st, key)
 	end
+end
+
+-- La propriété `key` a-t-elle été écrite par le code (Create, affectation, tween) ?
+function MockInstance.wasWritten(inst: any, key: string): boolean
+	local st = stateOf(inst)
+	return st ~= nil and st.written ~= nil and st.written[key] == true
 end
 
 -- itérer une instance ne montre rien (la clé privée de l'état reste cachée), comme avant
