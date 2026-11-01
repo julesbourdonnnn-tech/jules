@@ -12,6 +12,10 @@ function Signal.new()
 	return setmetatable({ _handlers = {} :: { any } }, Signal)
 end
 
+-- Connexions vivantes de tous les signaux simulés (Harness:counts(), invariant 8 du robot de longue
+-- durée : connexions stables après la mise en route)
+Signal.live = 0
+
 function Signal:Connect(fn: (...any) -> ())
 	local handlers = self._handlers
 	local conn
@@ -19,6 +23,9 @@ function Signal:Connect(fn: (...any) -> ())
 		Connected = true,
 		_fn = fn,
 		Disconnect = function(c)
+			if c.Connected then
+				Signal.live -= 1
+			end
 			c.Connected = false
 			local i = table.find(handlers, c)
 			if i then
@@ -26,6 +33,7 @@ function Signal:Connect(fn: (...any) -> ())
 			end
 		end,
 	}
+	Signal.live += 1
 	table.insert(handlers, conn)
 	return conn
 end

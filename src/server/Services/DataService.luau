@@ -54,6 +54,9 @@
 --                                                   écriture ; release = true pour la sauvegarde de
 --                                                   départ / BindToClose (règlement d'un revenu
 --                                                   passif, travail « de départ »)
+--   DataService.onPrepare(fn)                    -- fn(player, data) au chargement, sans yield, APRÈS
+--                                                   migrate + reconcile (+ réparation) et AVANT
+--                                                   l'instantané et Loaded (rebase hors ligne)
 --   DataService.setStreamOrder(key, fn)          -- fn(data) -> sous-clés de data[key] par priorité
 --                                                   d'envoi (instantané puis flux) ; sans crochet :
 --                                                   ordre quelconque
@@ -184,6 +187,8 @@ local rejoinWaits: { [number]: number } = {}
 -- dernière fois tout de suite (attendus par la boucle de fermeture, dans CLOSE_TIMEOUT)
 local closing = false
 local beforeSave: { (Player, { [string]: any }, boolean?) -> () } = {}
+-- crochets de préparation d'un profil chargé (DataService.onPrepare), avant l'instantané et Loaded
+local prepareHooks: { (Player, { [string]: any }) -> () } = {}
 
 local snapshotRemote: RemoteEvent
 local patchRemote: RemoteEvent
@@ -880,6 +885,13 @@ local function onPlayerAdded(player: Player)
 		return
 	end
 	local data = prepare(raw)
+	-- crochets de préparation (synchrones, protégés) : personne d'autre n'a encore vu ce profil
+	for _, fn in prepareHooks do
+		local hookOk, err = pcall(fn, player, data)
+		if not hookOk then
+			warn("[DataService] crochet onPrepare en échec :", err)
+		end
+	end
 	sessions[player] = session
 	profiles[player] = data
 	releasedOk[player] = nil
@@ -1092,6 +1104,14 @@ end
 -- dans l'arbre (BindToClose) et aucune sauvegarde ne suivra.
 function DataService.onBeforeSave(fn: (Player, { [string]: any }, boolean?) -> ())
 	table.insert(beforeSave, fn)
+end
+
+-- Enregistre un crochet appelé une fois par chargement, SANS yield, après migrate + reconcile (et la
+-- réparation du profil) et AVANT l'instantané envoyé au client et le signal Loaded : aucun autre code
+-- n'a encore vu le profil (ex. rebase hors ligne de l'économie : jamais de règlement sur un horodatage
+-- d'une session précédente). Une erreur est attrapée et signalée (warn) ; le chargement continue.
+function DataService.onPrepare(fn: (Player, { [string]: any }) -> ())
+	table.insert(prepareHooks, fn)
 end
 
 -- Ordre d'envoi des entrées d'une grande table à l'arrivée (instantané puis flux) : fn(data)

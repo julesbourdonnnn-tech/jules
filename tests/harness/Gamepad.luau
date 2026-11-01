@@ -283,7 +283,7 @@ end
 -- Écarts aux règles console des interfaces visibles (consignes console de Roblox) :
 --   * glyphes (attribut « GlyphKey » posé par UI/Glyph) : image PlayStation sur console ;
 --   * aucun texte visible égal à une lettre ou un nom de bouton Xbox (A, B, X, Y, LB, RB…) ;
---   * texte lisible : ≥ minText px de référence (défaut 18 ; TextScaled : la plus grande taille où
+--   * texte lisible : ≥ minText px TV (défaut 28, console d'abord ; TextScaled : la plus grande taille où
 --     le texte tient en largeur ET en hauteur, retours à la ligne compris (TextWrapped), bornée par
 --     MaxTextSize, largeur estimée par classe de caractère) ; « texte coupé » quand il ne tient pas
 --     même à MinTextSize ≥ minText (le moteur le tronquerait) ;
@@ -295,7 +295,7 @@ function Gamepad.audit(h, opts)
 	opts = opts or {}
 	Layout.apply(h)
 	local root = opts.root or h.localPlayer:FindFirstChildOfClass("PlayerGui")
-	local minText = opts.minText or 18
+	local minText = opts.minText or 28
 	local margin = opts.margin or 0.05
 	local issues = {}
 	local vx, vy = h.viewport.X, h.viewport.Y

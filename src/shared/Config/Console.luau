@@ -4,6 +4,9 @@
 -- Client/UI/Root, Client/UI/Glyph, Client/Util/Haptics, Client/Controllers/AudioController et les
 -- specs. src/first/Loading.client.luau, autonome, en recopie les valeurs d'échelle (vérifié par une
 -- spec).
+-- Raise a Squishy : CONSOLE D'ABORD (décision du propriétaire du 1er novembre 2026, note INT-TV
+-- appliquée par le contrat, docs/04 §14.1, §22). Une seule disposition, la disposition télé
+-- 1920 × 1080 (= Config/Layout), sur console comme sur PC ; aucun téléphone au lancement.
 
 export type HapticDef = {
 	effect: string, -- Enum.HapticEffectType (HapticEffect, manette)
@@ -11,26 +14,22 @@ export type HapticDef = {
 	strength: number, -- 0-1 (repli SetMotor, et force atténuée)
 	duration: number, -- s (repli SetMotor)
 	priority: number, -- une vibration plus prioritaire passe pendant le délai minimal
-	mobile: boolean?, -- jouée aussi sur téléphone (réservé aux grands moments)
 }
 
 local Console = {
-	-- Résolution de référence des interfaces
-	Reference = { X = 1280, Y = 720 },
-	-- Écrans ordinaires : UIScale = clamp(min(L / 1280 ; H / 720) ; 0,6 ; 1,25)
-	Scale = { Min = 0.6, Max = 1.25 },
-	-- Écran Large (téléviseur) ou console : UIScale = max(0,6 ; min(L / 1280 ; H / 720)), sans
-	-- plafond (1,5 en 1920 × 1080) : la référence 1280 × 720 occupe tout l'écran, comme sur un
-	-- téléphone vu à bout de bras
-	TvScale = { Min = 0.6 },
-	-- Zone sûre TV : fraction de l'écran laissée libre de chaque côté
+	-- Résolution de référence des interfaces : « px TV » d'un écran de 1920 × 1080 (= Layout.Reference)
+	Reference = { X = 1920, Y = 1080 },
+	-- TOUS les écrans (console, télé, moniteur de PC) : UIScale = max(0,5 ; min(L / 1920 ; H / 1080)),
+	-- sans plafond (1 en 1080p, 2 en 4K, 0,667 en 720p) : la taille vue du canapé ne change pas
+	TvScale = { Min = 0.5 },
+	-- Zone sûre TV sur TOUS les écrans : fraction de l'écran laissée libre de chaque côté
 	TvSafeMargin = 0.05,
-	-- Marge intérieure ordinaire de Root.safe (px de référence)
-	BasePadding = { X = 12, Y = 8 },
-	-- Texte lisible minimal (px de référence) : 27 px réels en 1080p sur téléviseur
-	MinTextSize = 18,
-	-- Icône de touche (px de référence)
-	GlyphSize = 36,
+	-- Marge intérieure minimale de Root.safe (px TV), si la zone sûre est plus petite
+	BasePadding = { X = 18, Y = 12 },
+	-- Texte lisible minimal (px TV, = Layout.Text.Min) : lu à 2,5-3 m sur un téléviseur
+	MinTextSize = 28,
+	-- Icône de touche (px TV, = Layout.Glyph.Min)
+	GlyphSize = 48,
 	-- s : attente bornée des configurations de TextChatService (règle « pas de fenêtre de chat »)
 	ChatWaitTimeout = 10,
 	-- s entre deux essais de StarterGui:SetCoreGuiEnabled(Chat, false) (CoreGui pas encore prêt)
@@ -57,6 +56,106 @@ local Console = {
 				strength = 0.25,
 				duration = 0.05,
 				priority = 1,
+			},
+			-- Raise a Squishy (contrat, GDD §10.5) : jamais sur une sélection, un bond ou une marche ;
+			-- délai minimal Cooldown sauf priorité supérieure. Le joueur de l'événement est seul à vibrer.
+			-- pressTick : 2 par seconde au plus (InputController / VFXController le bornent)
+			pressTick = {
+				effect = "UIClick",
+				motor = "Small",
+				strength = 0.15,
+				duration = 0.03,
+				priority = 1,
+			},
+			perfect = { effect = "UIClick", motor = "Small", strength = 0.3, duration = 0.05, priority = 2 },
+			tileBuy = { effect = "UIClick", motor = "Small", strength = 0.25, duration = 0.05, priority = 2 },
+			holdDone = {
+				effect = "UINotification",
+				motor = "Small",
+				strength = 0.35,
+				duration = 0.08,
+				priority = 2,
+			},
+			cardIn = {
+				effect = "UINotification",
+				motor = "Small",
+				strength = 0.2,
+				duration = 0.06,
+				priority = 2,
+			},
+			catch = {
+				effect = "GameplayCollision",
+				motor = "Small",
+				strength = 0.35,
+				duration = 0.08,
+				priority = 2,
+			},
+			-- fusion : force + 0,05 par étape de combo (Haptics.play("fusion", 1 + 0,05 × k / 0,4))
+			fusion = {
+				effect = "GameplayCollision",
+				motor = "Small",
+				strength = 0.4,
+				duration = 0.08,
+				priority = 2,
+			},
+			comboBig = {
+				effect = "GameplayCollision",
+				motor = "Large",
+				strength = 0.6,
+				duration = 0.2,
+				priority = 3,
+			},
+			boopDone = {
+				effect = "GameplayCollision",
+				motor = "Small",
+				strength = 0.3,
+				duration = 0.06,
+				priority = 2,
+			},
+			booped = {
+				effect = "UINotification",
+				motor = "Small",
+				strength = 0.3,
+				duration = 0.12,
+				priority = 2,
+			},
+			-- double impulsion (2 × 0,1 s, écart 0,15 s) : le contrôleur appelle play deux fois ;
+			-- jamais pour un nouveau avant l'étape 9 de l'accueil
+			rushSiren = {
+				effect = "UINotification",
+				motor = "Small",
+				strength = 0.4,
+				duration = 0.1,
+				priority = 3,
+			},
+			-- atténuée 1 − d / 120 (MinScale 0,35)
+			megaLand = {
+				effect = "GameplayExplosion",
+				motor = "Large",
+				strength = 0.7,
+				duration = 0.25,
+				priority = 3,
+			},
+			megaPop = {
+				effect = "GameplayExplosion",
+				motor = "Large",
+				strength = 0.8,
+				duration = 0.3,
+				priority = 4,
+			},
+			hatchLegend = {
+				effect = "GameplayExplosion",
+				motor = "Large",
+				strength = 0.8,
+				duration = 0.3,
+				priority = 4,
+			},
+			splorch = {
+				effect = "GameplayExplosion",
+				motor = "Large",
+				strength = 1.0,
+				duration = 0.4,
+				priority = 5,
 			},
 		} :: { [string]: HapticDef },
 	},

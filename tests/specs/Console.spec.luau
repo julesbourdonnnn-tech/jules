@@ -6,7 +6,7 @@
 -- API Roblox auditée (tests/harness/ApiAudit).
 -- Adaptations : vibrations de jeu de Comet Conga (coupe, parade, Comète, Supernova) remplacées par
 -- des événements neutres ajoutés à la carte le temps du test (hit, notice, boom, impact, grab,
--- bigHatch « mobile ») ; démarrage complet vérifié sur un écran-témoin (le HUD du jeu n'existe pas
+-- bigHatch) ; démarrage complet vérifié sur un écran-témoin (le HUD du jeu n'existe pas
 -- encore) ; test d'interface InputController / PanelController retiré (modules du jeu).
 local roblox = require("@lune/roblox")
 local MockInstance = require("../harness/MockInstance")
@@ -170,44 +170,52 @@ return function(T)
 			expect(P.glyph(Enum.KeyCode.Q).text).toBe("A")
 		end)
 
-		it("échelle : ordinaire bornée à 1,25, téléviseur proportionnelle (1,5 en 1080p)", function()
-			local h = client()
-			local P = platform(h)
-			expect(P.uiScale(Vector2.new(1280, 720), false)).toBe(1)
-			expect(P.uiScale(Vector2.new(1920, 1080), false)).toBe(1.25)
-			expect(P.uiScale(Vector2.new(844, 390), false)).toBe(0.6)
-			expect(P.uiScale(Vector2.new(1920, 1080), true)).toBe(1.5)
-			expect(P.uiScale(Vector2.new(3840, 2160), true)).toBe(3)
-			expect(P.uiScale(Vector2.new(1280, 720), true)).toBe(1)
-			expect(P.uiScale(Vector2.new(2560, 1080), true)).toBe(1.5)
-			expect(P.uiScale(Vector2.new(0, 0), true)).toBe(1)
-			-- sans argument : caméra et écran courants (PC 1280 × 720)
-			expect(P.uiScale()).toBe(1)
-		end)
+		-- Raise a Squishy, console d'abord (note INT-TV, docs/04 §14.1) : une seule règle sur TOUS les
+		-- écrans, référence 1920 × 1080 px TV, sans plafond, au moins 0,5 ; `large` sans effet
+		it(
+			"échelle : une seule règle télé sur tous les écrans (1 en 1080p, 2 en 4K, 0,667 en 720p)",
+			function()
+				local h = client()
+				local P = platform(h)
+				for _, large in { false, true } do
+					expect(P.uiScale(Vector2.new(1920, 1080), large)).toBe(1)
+					expect(P.uiScale(Vector2.new(3840, 2160), large)).toBe(2)
+					expect(math.abs(P.uiScale(Vector2.new(1280, 720), large) - 2 / 3) < 1e-9).toBe(true)
+					expect(P.uiScale(Vector2.new(2560, 1080), large)).toBe(1) -- 21:9 : la hauteur décide
+					expect(P.uiScale(Vector2.new(844, 390), large)).toBe(0.5) -- plancher
+					expect(P.uiScale(Vector2.new(0, 0), large)).toBe(1)
+				end
+				-- sans argument : caméra et écran courants (PC 1280 × 720)
+				expect(math.abs(P.uiScale() - 2 / 3) < 1e-9).toBe(true)
+			end
+		)
 
-		it("zone sûre : marges ordinaires, 5 % de l'écran sur téléviseur", function()
+		it("zone sûre : 5 % de l'écran sur tous les écrans (96 × 54 px TV)", function()
 			local h = client()
 			local P = platform(h)
-			expect(P.safePadding(Vector2.new(1920, 1080), false)).toBe(Vector2.new(12, 8))
-			expect(P.safePadding(Vector2.new(1920, 1080), true)).toBe(Vector2.new(64, 36))
-			expect(P.safePadding(Vector2.new(1280, 720), true)).toBe(Vector2.new(64, 36))
-			expect(P.safePadding(Vector2.new(3840, 2160), true)).toBe(Vector2.new(64, 36))
+			for _, large in { false, true } do
+				expect(P.safePadding(Vector2.new(1920, 1080), large)).toBe(Vector2.new(96, 54))
+				expect(P.safePadding(Vector2.new(1280, 720), large)).toBe(Vector2.new(96, 54))
+				expect(P.safePadding(Vector2.new(3840, 2160), large)).toBe(Vector2.new(96, 54))
+			end
+			-- écran plus large (21:9) : 5 % de la largeur réelle, en px TV
+			expect(P.safePadding(Vector2.new(2560, 1080), false)).toBe(Vector2.new(128, 54))
 		end)
 	end)
 
 	describe("Console › Root sur téléviseur", function()
-		it("console 1920 × 1080 : UIScale 1,5 et zone sûre TV (64 × 36 px de référence)", function()
+		it("console 1920 × 1080 : UIScale 1 et zone sûre TV (96 × 54 px TV)", function()
 			local h = client({ console = true })
 			local Root = h:require(CLIENT .. "UI.Root")
 			Root.Init()
 			local safe = Root.safe("Test", 1)
-			expect(safe.RootScale.Scale).toBe(1.5)
+			expect(safe.RootScale.Scale).toBe(1)
 			local pad = safe:FindFirstChildOfClass("UIPadding")
-			expect(pad.PaddingLeft.Offset).toBe(64)
-			expect(pad.PaddingRight.Offset).toBe(64)
-			expect(pad.PaddingTop.Offset).toBe(36)
-			expect(pad.PaddingBottom.Offset).toBe(36)
-			expect(Root.padding()).toBe(Vector2.new(64, 36))
+			expect(pad.PaddingLeft.Offset).toBe(96)
+			expect(pad.PaddingRight.Offset).toBe(96)
+			expect(pad.PaddingTop.Offset).toBe(54)
+			expect(pad.PaddingBottom.Offset).toBe(54)
+			expect(Root.padding()).toBe(Vector2.new(96, 54))
 			-- un bouton collé au coin haut gauche de Safe reste dans la zone sûre TV
 			local button = h.globals.Instance.new("TextButton")
 			button.Size = UDim2.fromOffset(80, 80)
@@ -217,7 +225,7 @@ return function(T)
 			local r = Layout.rect(button)
 			expect(r.x).toBe(96) -- 5 % de 1920
 			expect(r.y >= 54).toBe(true) -- 5 % de 1080 (sous la barre Roblox)
-			expect(r.w).toBe(120) -- 80 × 1,5
+			expect(r.w).toBe(80) -- 80 px TV × 1
 			expect(#Gamepad.audit(h)).toBe(0)
 		end)
 
@@ -241,23 +249,26 @@ return function(T)
 			expect(image.Size).toBe(UDim2.new(1, 8, 1, 8))
 		end)
 
-		it("PC : échelle et marges inchangées ; écran devenu Large : recalculées", function()
-			local h = client()
-			local Root = h:require(CLIENT .. "UI.Root")
-			local P = platform(h)
-			P.Init()
-			Root.Init()
-			local safe = Root.safe("Test", 1)
-			expect(safe.RootScale.Scale).toBe(1)
-			expect(safe:FindFirstChildOfClass("UIPadding").PaddingLeft.Offset).toBe(12)
-			h.game.Workspace.CurrentCamera.ViewportSize = Vector2.new(1920, 1080)
-			h:settle(1)
-			expect(safe.RootScale.Scale).toBe(1.25)
-			h.game.GuiService.ViewportDisplaySize = Enum.DisplaySize.Large
-			h:settle(2)
-			expect(safe.RootScale.Scale).toBe(1.5)
-			expect(safe:FindFirstChildOfClass("UIPadding").PaddingLeft.Offset).toBe(64)
-		end)
+		it(
+			"PC : même disposition télé ; fenêtre redimensionnée ou écran devenu Large : recalculée",
+			function()
+				local h = client()
+				local Root = h:require(CLIENT .. "UI.Root")
+				local P = platform(h)
+				P.Init()
+				Root.Init()
+				local safe = Root.safe("Test", 1)
+				expect(math.abs(safe.RootScale.Scale - 2 / 3) < 1e-9).toBe(true) -- 1280 × 720
+				expect(safe:FindFirstChildOfClass("UIPadding").PaddingLeft.Offset).toBe(96)
+				h.game.Workspace.CurrentCamera.ViewportSize = Vector2.new(1920, 1080)
+				h:settle(1)
+				expect(safe.RootScale.Scale).toBe(1)
+				h.game.GuiService.ViewportDisplaySize = Enum.DisplaySize.Large
+				h:settle(2)
+				expect(safe.RootScale.Scale).toBe(1)
+				expect(safe:FindFirstChildOfClass("UIPadding").PaddingLeft.Offset).toBe(96)
+			end
+		)
 	end)
 
 	describe("Console › règle du chat", function()
@@ -323,11 +334,11 @@ return function(T)
 				expect(g.frame.Visible).toBe(true)
 				expect(g.frame:GetAttribute("GlyphMode")).toBe("text")
 				expect(g.frame.Text.Text).toBe("E")
-				expect(g.frame.Size).toBe(UDim2.fromOffset(36, 36))
+				expect(g.frame.Size).toBe(UDim2.fromOffset(48, 48))
 				-- touche longue : pastille élargie, texte lisible
 				local shift = Glyph.new(parent, { keyboard = Enum.KeyCode.LeftShift })
 				expect(shift.frame.Text.Text).toBe("Shift")
-				expect(shift.frame.Size).toBe(UDim2.fromOffset(90, 36))
+				expect(shift.frame.Size).toBe(UDim2.fromOffset(120, 48))
 				shift:destroy()
 				local uis = h.game.UserInputService
 				h.console = true -- icônes PlayStation (PlayStation branchée)
@@ -426,7 +437,6 @@ return function(T)
 				strength = 0.4,
 				duration = 0.08,
 				priority = 2,
-				mobile = true,
 			},
 		}
 
@@ -528,12 +538,11 @@ return function(T)
 			end
 		)
 
-		it("clavier-souris : jamais ; téléphone : seulement les événements « mobile »", function()
+		it("clavier-souris : jamais ; appareil tactile : jamais (console d'abord, note INT-TV)", function()
 			local h, _, _, Haptics = setup()
 			expect(Haptics.play("boom")).toBe(false)
 			local h2, _, _, Haptics2 = setup({ touch = true })
 			expect(Haptics2.play("hit")).toBe(false)
-			-- téléphone sans vibration (harnais) : bigHatch (« mobile ») demandé mais non pris en charge
 			expect(Haptics2.play("bigHatch")).toBe(false)
 			expect(#h.log.haptics + #h2.log.haptics).toBe(0)
 		end)
@@ -738,7 +747,7 @@ return function(T)
 			local cap = Instance.new("TextLabel")
 			cap.Name = "Cap"
 			cap.Text = "X"
-			cap.TextSize = 24
+			cap.TextSize = 32
 			cap.Size = UDim2.fromOffset(40, 40)
 			cap.Position = UDim2.fromOffset(400, 400)
 			cap.Parent = gui
@@ -816,11 +825,11 @@ return function(T)
 				-- un bouton atteignable à la manette, audit console propre
 				local Root = h:require(CLIENT .. "UI.Root")
 				local safe = Root.safe("Probe", 5)
-				expect(safe.RootScale.Scale).toBe(1.5)
+				expect(safe.RootScale.Scale).toBe(1)
 				local button = h.globals.Instance.new("TextButton")
-				button.Size = UDim2.fromOffset(120, 64)
+				button.Size = UDim2.fromOffset(180, 96)
 				button.Text = "OK"
-				button.TextSize = 24
+				button.TextSize = 36
 				button.SelectionImageObject = Root.selectionImage()
 				button.Parent = safe
 				Layout.apply(h)

@@ -10,8 +10,7 @@
 --   * vibration atténuée (`scale` < FULL_SCALE, ex. événement lointain) : jamais l'effet
 --     préréglé, qui se joue toujours à pleine force, mais SetMotor(Gamepad1, moteur, force × scale)
 --     pendant la durée ; manette sans moteur pris en charge : rien (modération)
---   * téléphone : seulement les événements marqués « mobile » (grands moments), via SetMotor(Touch) si
---     l'appareil le permet
+--   * appareil tactile : jamais (console d'abord, aucun chemin de code tactile : note INT-TV)
 --   * clavier-souris : jamais (une manette branchée mais inutilisée ne vibre pas)
 --   * délai minimal Config/Console.Haptics.Cooldown entre deux vibrations, sauf priorité supérieure
 --   * réglage « vibration » (Prefs) à false : aucune vibration ; réglage absent : activé
@@ -129,8 +128,6 @@ function Haptics.play(name: string, scale: number?): boolean
 	local inputType: Enum.UserInputType
 	if kind == Platform.GAMEPAD then
 		inputType = Enum.UserInputType.Gamepad1
-	elseif kind == Platform.TOUCH and def.mobile == true then
-		inputType = Enum.UserInputType.Touch
 	else
 		return false
 	end

@@ -1,6 +1,6 @@
 --!strict
--- Fournit les ScreenGui du jeu, avec une mise à l'échelle responsive commune
--- (référence 1280×720, bornée 0,6–1,25 ; écran « 10 pieds » : proportionnelle, sans plafond) et
+-- Fournit les ScreenGui du jeu, avec une mise à l'échelle commune à TOUS les écrans (console d'abord,
+-- note INT-TV : référence 1920 × 1080 px TV, proportionnelle, sans plafond, au moins 0,5) et
 -- ResetOnSpawn désactivé.
 --   local gui = Root.screen("HUD", 10)
 --
@@ -8,9 +8,10 @@
 -- point d'ancrage (ici le coin haut gauche) : Safe mesure donc 1/s de l'écran pour couvrir
 -- exactement tout l'écran une fois mis à l'échelle (sinon, à 0,6, tout le HUD tiendrait dans les
 -- 60 % haut gauche de l'écran, et à 1,4 il déborderait à droite et en bas).
--- Règles d'échelle et de zone sûre : Client/Util/Platform. Sur
--- console ou écran Large, la marge intérieure de Safe devient la zone sûre TV (5 % de l'écran de
--- chaque côté) : tout ce qui est placé dans Safe reste visible sur un téléviseur.
+-- Règles d'échelle et de zone sûre : Client/Util/Platform. Sur tous les écrans, la marge intérieure
+-- de Safe est la zone sûre TV (5 % de l'écran de chaque côté) : tout ce qui est placé dans Safe
+-- reste visible sur un téléviseur. En 1920 × 1080, le contenu de Safe commence donc à (96, 54) px TV :
+-- un rectangle de Config/Layout (coordonnées d'écran) se place à (x − 96, y − 54) dans Safe.
 
 local GuiService = game:GetService("GuiService")
 local Players = game:GetService("Players")
@@ -19,10 +20,9 @@ local RunService = game:GetService("RunService")
 local Platform = require(script.Parent.Parent.Util.Platform)
 local Juice = require(script.Parent.Juice)
 
--- UIScale = clamp(min(L / 1280 ; H / 720) ; 0,6 ; 1,25) : le plus petit des rapports hauteur ET
--- largeur, pour que le cadre de référence 1280 × 720 tienne aussi sur les écrans étroits (4:3,
--- 16:10, fenêtres). Console / écran Large : max(0,6 ; min(L / 1280 ; H / 720)), soit 1,5 en
--- 1920 × 1080.
+-- UIScale = max(0,5 ; min(L / 1920 ; H / 1080)) : le plus petit des rapports hauteur ET largeur,
+-- pour que le cadre de référence 1920 × 1080 tienne aussi sur les écrans étroits (4:3, 16:10,
+-- fenêtres) ; 1 en 1080p, 2 en 4K, 0,667 en 720p.
 
 local Root = {}
 

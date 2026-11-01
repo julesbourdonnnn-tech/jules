@@ -298,31 +298,27 @@ local function viewportOr(viewport: Vector2?): Vector2?
 	return if camera then camera.ViewportSize else nil
 end
 
--- UIScale commun des écrans : écran ordinaire clamp(min(L/1280, H/720), 0,6, 1,25) ;
--- écran Large ou console max(0,6, min(L/1280, H/720)) (1,5 en 1920 × 1080)
-function Platform.uiScale(viewport: Vector2?, large: boolean?): number
+-- UIScale commun de TOUS les écrans (console d'abord, note INT-TV) : max(0,5, min(L/1920, H/1080)),
+-- sans plafond (1 en 1080p, 2 en 4K, 0,667 en 720p). `large` est gardé pour la compatibilité de
+-- l'API et n'a plus d'effet : la disposition télé est la seule disposition.
+function Platform.uiScale(viewport: Vector2?, _large: boolean?): number
 	local size = viewportOr(viewport)
 	if size == nil or size.X <= 1 or size.Y <= 1 then
 		return 1
 	end
 	local s = math.min(size.X / Console.Reference.X, size.Y / Console.Reference.Y)
-	local isLarge = if large == nil then Platform.isLargeDisplay() else large
-	if isLarge then
-		return math.max(s, Console.TvScale.Min)
-	end
-	return math.clamp(s, Console.Scale.Min, Console.Scale.Max)
+	return math.max(s, Console.TvScale.Min)
 end
 
--- Marges intérieures de Root.safe (px de référence, horizontale et verticale) : marges ordinaires,
--- ou zone sûre TV (5 % de l'écran de chaque côté) sur écran Large / console
-function Platform.safePadding(viewport: Vector2?, large: boolean?): Vector2
+-- Marges intérieures de Root.safe (px TV, horizontale et verticale) : zone sûre TV (5 % de l'écran
+-- de chaque côté) sur TOUS les écrans, jamais moins que Console.BasePadding. `large` : sans effet.
+function Platform.safePadding(viewport: Vector2?, _large: boolean?): Vector2
 	local base = Vector2.new(Console.BasePadding.X, Console.BasePadding.Y)
-	local isLarge = if large == nil then Platform.isLargeDisplay() else large
 	local size = viewportOr(viewport)
-	if not isLarge or size == nil or size.X <= 1 or size.Y <= 1 then
+	if size == nil or size.X <= 1 or size.Y <= 1 then
 		return base
 	end
-	local s = Platform.uiScale(size, true)
+	local s = Platform.uiScale(size)
 	local x = math.ceil(size.X * Console.TvSafeMargin / s)
 	local y = math.ceil(size.Y * Console.TvSafeMargin / s)
 	return Vector2.new(math.max(base.X, x), math.max(base.Y, y))

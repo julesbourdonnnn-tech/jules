@@ -1,6 +1,6 @@
 --!strict
 -- Charte graphique de l'interface (couleurs, polices, rayons). Une seule source de vérité.
--- Socle : couleurs de base de Comet Conga (contrastes vérifiés sur téléphone et téléviseur). La
+-- Socle : couleurs de base de Comet Conga (contrastes vérifiés sur téléviseur). La
 -- direction artistique du jeu (pastel de Wobbleton, couleurs des 7 raretés, couleur ET forme pour
 -- les daltoniens) les remplacera ici, sans changer les noms des champs.
 
@@ -31,9 +31,9 @@ Theme.Corner = UDim.new(0, 14)
 Theme.CornerSmall = UDim.new(0, 8)
 Theme.StrokeThickness = 3
 
--- Tailles minimales (pixels de référence 1280×720, mis à l'échelle par UIScale)
-Theme.MinTouch = 48 -- cible tactile minimale
-Theme.ButtonHeight = 64
-Theme.MinTextSize = 18 -- = Config/Console.MinTextSize (lisible à 3 m sur téléviseur)
+-- Tailles minimales (px TV d'un écran 1920 × 1080, mis à l'échelle par UIScale ; console d'abord :
+-- aucune cible tactile, note INT-TV)
+Theme.ButtonHeight = 80 -- = Config/Layout.Button.MinHeight
+Theme.MinTextSize = 28 -- = Config/Console.MinTextSize (lisible à 3 m sur téléviseur)
 
 return Theme

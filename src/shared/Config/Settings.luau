@@ -35,6 +35,27 @@ local Settings = {
 		saved = true,
 		order = 6,
 	},
+	-- Réglages du jeu (contrat de Raise a Squishy, GDD §10.3). Le mode Rush / Cozy n'est PAS un
+	-- réglage : il a ses règles (recharge, fin du Rush en cours) et son remote SetMode (RushService).
+	-- « Cacher mon nom » : bannières, classements, statue et panneau du ranch montrent
+	-- « Squishy Fan #NNNN » (GDD §6.9)
+	hideName = { kind = "boolean", default = false, saved = true, order = 7 },
+	-- cadeaux du Grand Splorch des autres joueurs (GDD §4.15)
+	receiveGifts = { kind = "boolean", default = true, saved = true, order = 8 },
+	-- captures vidéo automatiques des grands moments (GDD §9.5)
+	clips = { kind = "boolean", default = true, saved = true, order = 9 },
+	-- emote de la croix ← (à la place de Bravo), débloquée (Config/Cosmetics, kind "emote")
+	emoteLeft = {
+		kind = "string",
+		default = "bravo",
+		values = { bravo = true, bellyFlop = true, crown = true },
+		saved = true,
+		order = 10,
+	},
+	-- « offerte par … » sur la bannière de SA Squish Party (case de la Boutique, décochée par défaut)
+	partyShowName = { kind = "boolean", default = false, saved = true, order = 11 },
+	-- serveur privé : « BOOP RUSH autorisé » (propriétaire seulement, réglage de serveur en mémoire)
+	allowRush = { kind = "boolean", default = false, saved = false, order = 12, ownerOnly = true },
 } :: { [string]: SettingDef }
 
 return Settings

@@ -325,15 +325,33 @@ function Harness:_makeGlobals()
 		end
 		return thread
 	end
+	-- Couche « zéro trace » (docs/04 §17.1 h) : une erreur dans un thread lancé par le code monté
+	-- (task.spawn/defer/delay, donc aussi chaque handler de Shared/Util/Signal) n'est jamais
+	-- silencieuse. Comme dans Roblox, elle ne remonte pas à l'appelant ; elle est ajoutée à h.errors
+	-- et déclenche ScriptContext.Error et LogService.MessageOut (MessageError). Un thread passé tel
+	-- quel (reprise d'une coroutine) n'est pas enveloppé.
+	local function guard(f)
+		if type(f) ~= "function" then
+			return f
+		end
+		return function(...)
+			local ok, err = xpcall(f, function(e)
+				return { message = tostring(e), trace = debug.traceback(nil, 2) }
+			end, ...)
+			if not ok then
+				h:_threadError(err.message, err.trace)
+			end
+		end
+	end
 	g.task = table.freeze({
 		spawn = function(f, ...)
-			return track(task.spawn(f, ...))
+			return track(task.spawn(guard(f), ...))
 		end,
 		defer = function(f, ...)
-			return track(task.defer(f, ...))
+			return track(task.defer(guard(f), ...))
 		end,
 		delay = function(t, f, ...)
-			return track(task.delay(t, f, ...))
+			return track(task.delay(t, guard(f), ...))
 		end,
 		wait = function(t)
 			track(coroutine.running())
@@ -368,14 +386,18 @@ function Harness:_makeGlobals()
 		for i = 1, select("#", ...) do
 			parts[i] = tostring((select(i, ...)))
 		end
-		table.insert(h.log.output, table.concat(parts, " "))
+		local text = table.concat(parts, " ")
+		table.insert(h.log.output, text)
+		h:_logMessage(text, roblox.Enum.MessageType.MessageOutput)
 	end
 	g.warn = function(...)
 		local parts = {}
 		for i = 1, select("#", ...) do
 			parts[i] = tostring((select(i, ...)))
 		end
-		table.insert(h.log.output, "WARN " .. table.concat(parts, " "))
+		local text = table.concat(parts, " ")
+		table.insert(h.log.output, "WARN " .. text)
+		h:_logMessage(text, roblox.Enum.MessageType.MessageWarning)
 	end
 	g.tick = os.clock
 	local t0 = os.clock()
@@ -407,6 +429,29 @@ function Harness:_makeGlobals()
 		return h:_require(target)
 	end
 	return g
+end
+
+-- Journal du moteur simulé : LogService.MessageOut(message, type) et GetLogHistory
+function Harness:_logMessage(text: string, messageType)
+	local history = self.logHistory
+	if history then
+		table.insert(history, { message = text, messageType = messageType, timestamp = os.clock() })
+	end
+	local logService = self.game:FindFirstChild("LogService")
+	if logService then
+		logService.MessageOut:Fire(text, messageType)
+	end
+end
+
+-- Erreur d'un thread du code monté (ou d'un script lancé par h:run) : h.errors, ScriptContext.Error
+-- et LogService.MessageOut, comme la sortie rouge de Roblox
+function Harness:_threadError(message: string, trace: string?)
+	table.insert(self.errors, "[thread] " .. message .. "\n" .. (trace or ""))
+	local scriptContext = self.game:FindFirstChild("ScriptContext")
+	if scriptContext then
+		scriptContext.Error:Fire(message, trace or "", nil)
+	end
+	self:_logMessage(message, roblox.Enum.MessageType.MessageError)
 end
 
 function Harness:_envFor(node)
@@ -468,6 +513,11 @@ function Harness:run(path: string)
 	local ok, err = pcall(chunk)
 	if not ok then
 		table.insert(self.errors, `{src}: {err}`)
+		local scriptContext = self.game:FindFirstChild("ScriptContext")
+		if scriptContext then
+			scriptContext.Error:Fire(tostring(err), "", node)
+		end
+		self:_logMessage(tostring(err), roblox.Enum.MessageType.MessageError)
 		error(err, 0)
 	end
 end
@@ -647,6 +697,29 @@ function Harness:dispose()
 		end
 	end
 	table.clear(self.threads)
+end
+
+-- Harnais vivants (créés depuis le dernier Harness.disposeAll()) : lus par tests/harness/ZeroLog
+-- pour vérifier, après chaque test, les erreurs et avertissements de chaque harnais du test
+function Harness.live()
+	return table.clone(live)
+end
+
+-- Compteurs de ressources (invariant 8 du robot de longue durée, docs/04 §17.2) : instances sous
+-- game (descendants), connexions vivantes des signaux simulés (tous harnais confondus) et threads
+-- suivis encore en attente
+function Harness:counts(): { instances: number, connections: number, threads: number }
+	local waiting = 0
+	for thread in self.threads do
+		if coroutine.status(thread) == "suspended" then
+			waiting += 1
+		end
+	end
+	return {
+		instances = #self.game:GetDescendants(),
+		connections = Signal.live,
+		threads = waiting,
+	}
 end
 
 -- Libère tous les harnais créés depuis le dernier appel (le lanceur l'appelle après chaque spec ;

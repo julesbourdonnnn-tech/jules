@@ -30,6 +30,7 @@ local function checkSerializable(value: any, path: string)
 	local t = typeof(value)
 	if t == "table" then
 		local isArray = #value > 0
+		local numeric = 0
 		for k, v in value do
 			if type(k) ~= "string" and type(k) ~= "number" then
 				error(`[DataStore simulé] clé non sérialisable à {path}`, 4)
@@ -40,7 +41,15 @@ local function checkSerializable(value: any, path: string)
 					4
 				)
 			end
+			if type(k) == "number" then
+				numeric += 1
+			end
 			checkSerializable(v, path .. "." .. tostring(k))
+		end
+		-- clés numériques : seulement un tableau 1..n sans trou (Roblox refuse ou tronque le reste ;
+		-- docs/04 §8.5 : tableaux denses)
+		if numeric > 0 and numeric ~= #value then
+			error(`[DataStore simulé] tableau à trous à {path} : clés numériques non contiguës 1..n`, 4)
 		end
 	elseif t ~= "string" and t ~= "number" and t ~= "boolean" and t ~= "nil" then
 		error(`[DataStore simulé] type {t} non sérialisable à {path}`, 4)
@@ -182,10 +191,113 @@ function Services.install(h)
 			"AvatarEditorService",
 			"GroupService",
 			"TextService",
+			-- couche « zéro trace » et diagnostics (docs/04 §11.2, §17.1 couche h)
+			"ScriptContext",
+			"LogService",
+			"Stats",
+			"CaptureService",
+			"UserService",
 		}
 	do
 		service(name)
 	end
+
+	-- ScriptContext.Error(message, trace, script) : déclenché par le harnais pour chaque erreur d'un
+	-- thread du code monté (task.spawn/defer/delay, handlers de signaux) et de h:run. LogService :
+	-- MessageOut(message, type) pour print, warn et ces erreurs ; GetLogHistory rend le journal.
+	h.logHistory = {}
+	cm.LogService = {
+		GetLogHistory = function()
+			local out = {}
+			for i, e in h.logHistory do
+				out[i] = { message = e.message, messageType = e.messageType, timestamp = e.timestamp }
+			end
+			return out
+		end,
+		ClearOutput = function() end,
+	}
+	cm.ScriptContext = {
+		SetTimeout = function() end,
+	}
+	-- Stats : valeurs fixes et plausibles (le panneau Diagnostics et ErrorReporter.stats les lisent)
+	local stats = game.Stats
+	stats.InstanceCount = 5000
+	stats.DataReceiveKbps = 12
+	stats.DataSendKbps = 4
+	stats.HeartbeatTimeMs = 16
+	stats.PhysicsStepTimeMs = 1
+	stats.PrimitivesCount = 1000
+	cm.Stats = {
+		GetTotalMemoryUsageMb = function()
+			return 512
+		end,
+		GetMemoryUsageMbForTag = function()
+			return 10
+		end,
+	}
+	-- CaptureService : par défaut, capture vidéo indisponible (comme sur un appareil sans prise en
+	-- charge) ; h.captureAvailable = true la rend possible. Les appels sont journalisés dans
+	-- h.log.captures.
+	h.log.captures = {}
+	h.captureAvailable = false
+	cm.CaptureService = {
+		StartVideoCaptureAsync = function(_, onReady, _params)
+			table.insert(h.log.captures, { kind = "start" })
+			if not h.captureAvailable then
+				return Enum.VideoCaptureStartedResult.NoDeviceSupport
+			end
+			h.pendingCapture = onReady
+			return Enum.VideoCaptureStartedResult.Success
+		end,
+		StopVideoCapture = function()
+			table.insert(h.log.captures, { kind = "stop" })
+			local onReady = h.pendingCapture
+			h.pendingCapture = nil
+			if onReady then
+				task.spawn(onReady, MockInstance.new("VideoCapture"))
+			end
+		end,
+		TakeCapture = function(_, onReady)
+			table.insert(h.log.captures, { kind = "photo" })
+			if h.captureAvailable and onReady then
+				task.spawn(onReady, MockInstance.new("ScreenshotCapture"))
+			end
+		end,
+		PromptSaveCapturesToGallery = function(_, captures, onResult)
+			table.insert(h.log.captures, { kind = "save", n = #captures })
+			if onResult then
+				task.spawn(onResult, {})
+			end
+		end,
+		PromptShareCapture = function(_, _capture, _launchData, _onAccepted, onDenied)
+			table.insert(h.log.captures, { kind = "share" })
+			if onDenied then
+				task.spawn(onDenied)
+			end
+		end,
+	}
+	-- UserService : informations publiques des comptes (noms du top 10 mondial) ; h.userInfoFails
+	-- = true simule une panne
+	h.userInfoFails = false
+	cm.UserService = {
+		GetUserInfosByUserIdsAsync = function(_, userIds)
+			assert(type(userIds) == "table", "GetUserInfosByUserIdsAsync : liste d'identifiants attendue")
+			task.wait()
+			if h.userInfoFails then
+				error("HTTP 503 (UserService simulé)", 2)
+			end
+			local out = {}
+			for _, id in userIds do
+				table.insert(out, {
+					Id = id,
+					Username = "User" .. tostring(id),
+					DisplayName = "User" .. tostring(id),
+					HasVerifiedBadge = false,
+				})
+			end
+			return out
+		end,
+	}
 
 	local starterPlayer = service("StarterPlayer")
 	local sps = MockInstance.new("StarterPlayerScripts")

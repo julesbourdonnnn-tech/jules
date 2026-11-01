@@ -64,10 +64,15 @@ local MAX_RESELECTS_PER_FRAME = 4 -- garde-fou contre une sélection disputée i
 local FADE_TIME = 0.3
 local RETRY_COOLDOWN = 5 -- s entre deux tentatives de téléportation
 local PLAYER_WAIT = 10 -- s au plus pour LocalPlayer / PlayerGui
-local REFERENCE = Vector2.new(1280, 720) -- = Config/Console.Reference
--- Écran Large ou console : UIScale = max(TV_SCALE_MIN ; min(L / 1280 ; H / 720)), sans plafond (1,5 en
--- 1920 × 1080) ; recopie de Config/Console.TvScale (non répliqué ici)
-local TV_SCALE_MIN = 0.6 -- = Config/Console.TvScale.Min
+local REFERENCE = Vector2.new(1920, 1080) -- = Config/Console.Reference (px TV, note INT-TV)
+-- Écran Large ou console : UIScale = max(TV_SCALE_MIN ; min(L / 1920 ; H / 1080)) × DRAWN_UNIT, sans
+-- plafond (1,5 en 1920 × 1080) ; recopie de Config/Console.TvScale (non répliqué ici)
+local TV_SCALE_MIN = 0.5 -- = Config/Console.TvScale.Min
+-- Les dimensions de cet écran (px « avant mise à l'échelle ») sont dessinées dans l'ancienne unité de
+-- Comet Conga (1280 × 720) : 1 px de cet écran = 1,5 px TV. Le paquet world refait cet habillage en
+-- px TV (docs/04 §22, INT-TV, partie Loading) et retire alors ce facteur et la mise en page « écran
+-- bas » de téléphone.
+local DRAWN_UNIT = 1.5
 local GLYPH_SIZE = 48 -- px (avant mise à l'échelle) : icône ✕ à côté de « Réessayer »
 -- curseur de sélection (recopie de UI/Root.selectionImage) : trait blanc de 6 px, liseré sombre de 2 px
 local SELECTION_COLOR = Color3.fromRGB(255, 255, 255)
@@ -160,13 +165,13 @@ local function padInUse(): boolean
 	return ok and value == true
 end
 
--- Échelle de l'écran (Config/Console : Reference, TvScale)
+-- Échelle de l'écran (Config/Console : Reference, TvScale), en unités dessinées (DRAWN_UNIT)
 local function screenScale(viewport: Vector2, large: boolean): number
 	local s = math.min(viewport.X / REFERENCE.X, viewport.Y / REFERENCE.Y)
 	if large then
-		return math.max(s, TV_SCALE_MIN)
+		return math.max(s, TV_SCALE_MIN) * DRAWN_UNIT
 	end
-	return math.clamp(s * 1.2, 0.6, 1.4)
+	return math.clamp(s * DRAWN_UNIT * 1.2, 0.6, 1.4)
 end
 
 -- Icône Roblox de la touche (PlayStation sur PlayStation) ; nil si indisponible

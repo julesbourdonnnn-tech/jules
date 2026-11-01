@@ -206,6 +206,12 @@ local EVENTS = {
 	Unequipped = true,
 	PromptGamePassPurchaseFinished = true,
 	PromptProductPurchaseFinished = true,
+	-- ScriptContext.Error, LogService.MessageOut, CaptureService (couche « zéro trace », docs/04 §17)
+	Error = true,
+	MessageOut = true,
+	CaptureBegan = true,
+	CaptureEnded = true,
+	UserCaptureSaved = true,
 	PromptPurchaseFinished = true,
 	GameInvitePromptClosed = true,
 	TouchTap = true,

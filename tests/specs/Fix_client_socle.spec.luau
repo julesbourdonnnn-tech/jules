@@ -1,7 +1,8 @@
 --!nocheck
 -- Socle client (Comet Conga) :
 --   * Root : le conteneur Safe couvre tout l'écran APRÈS la mise à l'échelle (UIScale autour du coin
---     haut gauche), à toutes les résolutions ; échelle bornée 0,6–1,25 (divers r1)
+--     haut gauche), à toutes les résolutions (divers r1) ; Raise a Squishy, console d'abord (note
+--     INT-TV) : une seule règle télé, max(0,5 ; min(L / 1920 ; H / 1080)), sans plafond
 --   * Root.screen sans PlayerGui : erreur claire, jamais d'attente infinie (finition panels-console)
 --   * Toast : la pile commence sous la zone des bannières (Toast.TopY), 3 toasts au plus (divers r1)
 --   * Juice.press : doigt relevé hors du bouton → le bouton revient à 1 (finition hud-onboarding)
@@ -48,35 +49,35 @@ return function(T)
 	end
 
 	describe("Fix divers r1 › Root : Safe plein écran à toutes les résolutions", function()
-		it("1280×720 : échelle 1, Safe = écran", function()
+		it("1920×1080 : échelle 1, Safe = écran", function()
 			local h, Root = uiSetup()
+			h.workspace.CurrentCamera.ViewportSize = Vector2.new(1920, 1080)
 			local safe = Root.safe("TestA", 5)
 			expect(Root.scale()).toBe(1)
 			expectCovers(safe, 1)
 			expect(h.localPlayer.PlayerGui.TestA.ResetOnSpawn).toBe(false)
 		end)
 
-		it("téléphone 844×390 : échelle 0,6 et Safe agrandi de 1/0,6", function()
+		it("petite fenêtre 844×390 : échelle plancher 0,5 et Safe agrandi de 1/0,5", function()
 			local h, Root = uiSetup()
 			h.workspace.CurrentCamera.ViewportSize = Vector2.new(844, 390)
 			local safe = Root.safe("TestB", 5)
-			expect(Root.scale()).toBe(0.6)
-			expectCovers(safe, 0.6)
+			expect(Root.scale()).toBe(0.5)
+			expectCovers(safe, 0.5)
 		end)
 
-		it("PC 1920×1080 : échelle plafonnée à 1,25 , Safe réduit d'autant", function()
+		it("1280×720 : 0,667 ; 4K : 2, sans plafond ; Safe suit", function()
 			local h, Root = uiSetup()
-			h.workspace.CurrentCamera.ViewportSize = Vector2.new(1920, 1080)
 			local safe = Root.safe("TestC", 5)
-			expect(Root.scale()).toBe(1.25)
-			expectCovers(safe, 1.25)
+			expect(near(Root.scale(), 2 / 3)).toBe(true)
+			expectCovers(safe, 2 / 3)
 			h.workspace.CurrentCamera.ViewportSize = Vector2.new(3840, 2160)
-			expect(Root.scale()).toBe(1.25)
+			expect(Root.scale()).toBe(2)
 		end)
 
-		it("écran 4:3 : le cadre de référence 1280 de large tient (rapport de largeur)", function()
+		it("écran 4:3 : le cadre de référence 1920 de large tient (rapport de largeur)", function()
 			local h, Root = uiSetup()
-			h.workspace.CurrentCamera.ViewportSize = Vector2.new(1024, 768)
+			h.workspace.CurrentCamera.ViewportSize = Vector2.new(1536, 1152)
 			expect(near(Root.scale(), 0.8)).toBe(true)
 			expectCovers(Root.safe("TestD", 5), 0.8)
 		end)
@@ -89,9 +90,9 @@ return function(T)
 			gone:Destroy()
 			h.workspace.CurrentCamera.ViewportSize = Vector2.new(844, 390)
 			h:settle(1)
-			expectCovers(a, 0.6)
-			expectCovers(b, 0.6)
-			h.workspace.CurrentCamera.ViewportSize = Vector2.new(1280, 720)
+			expectCovers(a, 0.5)
+			expectCovers(b, 0.5)
+			h.workspace.CurrentCamera.ViewportSize = Vector2.new(1920, 1080)
 			h:settle(1)
 			expectCovers(a, 1)
 			expectCovers(b, 1)
@@ -147,7 +148,7 @@ return function(T)
 	-- OnboardingPlan (règles pures) -------------------------------------------------------------
 
 	describe("Socle client › Toast.TopY réglable", function()
-		it("le HUD du jeu peut placer la pile ; textes jamais sous 18 px", function()
+		it("le HUD du jeu peut placer la pile ; textes jamais sous 28 px TV", function()
 			local h = uiSetup()
 			local Toast = h:require(CLIENT .. "UI.Toast")
 			Toast.TopY = 240
@@ -155,7 +156,7 @@ return function(T)
 			local stack = h.localPlayer.PlayerGui.Toasts.Safe.Stack
 			expect(stack.Position.Y.Offset).toBe(240)
 			local label = stack:FindFirstChild("Toast").Label
-			expect(label:FindFirstChildOfClass("UITextSizeConstraint").MinTextSize >= 18).toBe(true)
+			expect(label:FindFirstChildOfClass("UITextSizeConstraint").MinTextSize >= 28).toBe(true)
 		end)
 	end)
 

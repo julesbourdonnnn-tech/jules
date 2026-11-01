@@ -35,6 +35,15 @@ local T = {
 	Harness = Harness,
 }
 
+-- Couche « zéro trace » (docs/04 §17.1 h, note INT-HARNESS) : dès que tests/harness/ZeroLog.luau
+-- existe (paquet meta), chaque spec reçoit ZeroLog.forSpec(chemin, T) : un T dont chaque `it` échoue
+-- sur toute erreur ou tout avertissement imprévu des harnais créés pendant le test ; les specs du
+-- socle listées par ZeroLog reçoivent T tel quel.
+local ZeroLog = nil
+if fs.isFile("tests/harness/ZeroLog.luau") then
+	ZeroLog = require("./harness/ZeroLog")
+end
+
 local loadErrors = {}
 for _, path in specs do
 	if filter == nil or string.find(path, filter, 1, true) then
@@ -43,7 +52,7 @@ for _, path in specs do
 		local rel = "./" .. path:gsub("^tests/", ""):gsub("%.luau$", "")
 		local ok, err = pcall(function()
 			local spec = require(rel)
-			spec(T)
+			spec(if ZeroLog then ZeroLog.forSpec(path, T) else T)
 		end)
 		if not ok then
 			table.insert(loadErrors, path .. " : " .. tostring(err))
