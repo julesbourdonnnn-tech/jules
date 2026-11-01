@@ -16,7 +16,9 @@
 --   * Atlas débloqué après Q4 (profil onboarding) ; hasAction : une fusion est possible
 --   * manette (docs/07-console-ps5.md §7, A19-A20) : la sélection de la Réserve suit l'index du
 --     Nebby quand la grille réaffecte ses cases, la croix fait défiler la grille (VirtualGrid) ;
---     consignes neutres « Choisis… » (clés *.pad) à la manette, mises à jour sur Platform.Changed
+--     consignes neutres « Choisis… » (clés *.pad) à la manette, mises à jour sur Platform.Changed ;
+--     ○ recule d'un niveau dans la Réserve (Panel.onBack : libération armée désarmée, mode
+--     sélection annulé) avant de fermer
 --   * textes via Prefs.t (ré-appliqués sur Prefs.LanguageChanged), nombres via Prefs.number ;
 --     intentions seulement (le serveur valide tout)
 -- GDD : §4.9, §4.13, §4.14, §4.3 (probabilités affichées), §9.4 (Starforge, Atlas, Libération), §10.3.
@@ -41,6 +43,7 @@ local Theme = require(Client.UI.Theme)
 local Create = require(Client.UI.Create)
 local Juice = require(Client.UI.Juice)
 local Toast = require(Client.UI.Toast)
+local Text = require(Client.UI.Hud.Text)
 local ScreenFX = require(Client.UI.ScreenFX)
 local Model = require(script.Parent.Model)
 local Widgets = require(script.Parent.Widgets)
@@ -66,6 +69,8 @@ local STASH_CELL = Vector2.new(88, 108)
 local ATLAS_CELL = 52
 local ATLAS_ROW = 84 -- nom (28 px) + détail sur deux lignes de 18 px (GDD §10.1)
 local SHRINK_TIME = 0.2
+local GUIDE_LINE_CHARS = 60 -- Guide : caractères au plus par ligne de probabilités (≥ 18 px)
+local GUIDE_INDENT = 24 -- px de retrait des lignes de probabilités suivantes
 -- Animation Starforge (§9.4) : orbite 1,2 s, flash 0,15 s, résultat 0,3 s, étoiles 0,1 s
 local ORBIT_TIME, FLASH_TIME, RESULT_TIME, STAR_EVERY, ANIM_HOLD = 1.2, 0.15, 0.3, 0.1, 1.4
 
@@ -1121,9 +1126,9 @@ local function renderGuide()
 		end
 	end
 	local order = 0
-	local function line(text: string, header: boolean?, color: Color3?)
+	local function line(text: string, header: boolean?, color: Color3?, indent: boolean?)
 		order += 1
-		Widgets.label({
+		local label = Widgets.label({
 			name = if header then "Header" .. order else "Line" .. order,
 			text = text,
 			size = UDim2.new(1, -16, 0, if header then 36 else 28),
@@ -1134,6 +1139,32 @@ local function renderGuide()
 			order = order,
 			parent = list,
 		})
+		if indent then
+			Create("UIPadding", { PaddingLeft = UDim.new(0, GUIDE_INDENT), Parent = label })
+		end
+	end
+	-- Probabilités « A : x · B : y · … » : coupées aux « · » en lignes d'au plus GUIDE_LINE_CHARS
+	-- caractères (lignes suivantes en retrait) ; en français, « Cratère — Peu commun : 25 % · … »
+	-- tombait à 17,6 px sur une seule ligne
+	local function oddsLines(prefix: string, parts: { string })
+		local current = prefix
+		local count = 0 -- parties sur la ligne en cours
+		local done = 0 -- lignes déjà écrites
+		for _, part in parts do
+			local candidate = if count == 0 then current .. part else current .. " · " .. part
+			if count > 0 and (utf8.len(candidate) or #candidate) > GUIDE_LINE_CHARS then
+				line(current, false, nil, done > 0)
+				done += 1
+				current = part
+				count = 1
+			else
+				current = candidate
+				count += 1
+			end
+		end
+		if count > 0 then
+			line(current, false, nil, done > 0)
+		end
 	end
 	local function rarityName(id: number): string
 		local def = Nebbies.Rarities[id]
@@ -1157,7 +1188,7 @@ local function renderGuide()
 				)
 			)
 		end
-		line(Prefs.t("zone." .. zone.key) .. " — " .. table.concat(parts, " · "))
+		oddsLines(Prefs.t("zone." .. zone.key) .. " — ", parts)
 	end
 	-- météo (§4.4, §4.15.1)
 	line(Prefs.t("guide.weather"), true)
@@ -1180,13 +1211,13 @@ local function renderGuide()
 				line(Prefs.t("guide.formLine", {
 					weather = Prefs.t("weather." .. kind.key),
 					form = Prefs.t("form." .. form.key),
-					mult = form.mult,
+					mult = Text.mult(form.mult, lang),
 					chance = freq,
 				}))
 			else
 				line(Prefs.t("guide.spawnsLine", {
 					weather = Prefs.t("weather." .. kind.key),
-					div = kind.intervalDiv or 1,
+					div = Text.mult(kind.intervalDiv or 1, lang),
 					chance = freq,
 				}))
 			end
@@ -1208,7 +1239,7 @@ local function renderGuide()
 			)
 		)
 	end
-	line(table.concat(cometParts, " · "))
+	oddsLines("", cometParts)
 	-- variantes (§4.4)
 	line(Prefs.t("guide.variants"), true)
 	for _, key in Nebbies.VARIANT_ORDER do
@@ -1216,7 +1247,7 @@ local function renderGuide()
 		if def then
 			line(Prefs.t("guide.variantLine", {
 				name = Prefs.t("variant." .. key),
-				mult = def.mult,
+				mult = Text.mult(def.mult, lang),
 				chance = if def.chance then pct(def.chance * 100) else Prefs.t("guide.eventOnly"),
 			}))
 		end
@@ -1590,6 +1621,26 @@ function Panel.onClose()
 	if fx.root then
 		fx.root.Visible = false
 	end
+end
+
+-- ○ / Échap / Retour (PanelController.back) : recule d'un niveau dans la Réserve avant de fermer
+-- (docs/07 §7) : une libération armée est désarmée (la sélection reste sur Libérer) ; le mode
+-- sélection est annulé (les Nebbies choisis à ✕ sont relâchés) et la manette retrouve
+-- « Sélectionner ». Sinon false : PanelController ferme la Collection.
+function Panel.onBack(): (boolean, GuiObject?)
+	if not isOpen or currentTab ~= "stash" then
+		return false, nil
+	end
+	if armedAt ~= nil and armedClock - armedAt <= CONFIRM_WINDOW then
+		disarm()
+		renderAction()
+		return true, nil
+	end
+	if selectMode then
+		setSelectMode(false)
+		return true, selectButton
+	end
+	return false, nil
 end
 
 function Panel.hasAction(): boolean

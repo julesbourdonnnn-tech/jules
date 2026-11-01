@@ -44,7 +44,8 @@
 -- Dépendances : DataService, NestService, EconomyService, AtlasService, SpawnService,
 -- Logic/EventClock, Logic/SeededPath, Logic/Formulas, Logic/Trail, Logic/WorldLayout, Logic/Hash,
 -- Config/*, Data/Admins, Signals, Util/Notify, Util/RateLimit, Util/Analytics, Shared/Util/Clock,
--- Events/Safe, Events/Tuning.
+-- Util/MoveCheck (lecture seule : positions des récompenses de proximité), Events/Safe,
+-- Events/Tuning.
 
 local MessagingService = game:GetService("MessagingService")
 local Players = game:GetService("Players")
@@ -71,6 +72,7 @@ local Signals = require(Server.Signals)
 local Analytics = require(Server.Util.Analytics)
 local Notify = require(Server.Util.Notify)
 local RateLimit = require(Server.Util.RateLimit)
+local MoveCheck = require(Server.Util.MoveCheck)
 local Safe = require(Server.Events.Safe)
 local Tuning = require(Server.Events.Tuning)
 
@@ -107,7 +109,7 @@ type CometRun = {
 	burstAt: number,
 	forced: boolean,
 	phase: CometPhase,
-	pos: Vector3, -- point au sol (impact, chute) ou dernière position valide du porteur
+	pos: Vector3, -- point au sol (impact, chute) ou position du porteur (acteur de CongaService)
 	code: number,
 	carrier: Player?,
 	carrierSince: number,
@@ -262,11 +264,14 @@ local function hasLiveCharacter(player: Player): boolean
 	return humanoid ~= nil and humanoid.Health > 0
 end
 
--- Positions de tous les joueurs (filet sans acteurs : résolution de l'explosion depuis step)
-local function characterPositions(): { Positioned }
+-- Positions de tous les joueurs (filet sans acteurs : résolution de l'explosion depuis step) :
+-- jamais la racine brute (le client possède son personnage), seulement la dernière position
+-- validée par MoveCheck d'un joueur qui peut agir (ni restreint, ni en dette de budget d'action :
+-- même règle que les acteurs de CongaService)
+local function characterPositions(now: number): { Positioned }
 	local out: { Positioned } = {}
 	for _, player in Players:GetPlayers() do
-		local pos = rootPosition(player)
+		local pos = if MoveCheck.canAct(player, now) then MoveCheck.lastValid(player) else nil
 		if pos then
 			table.insert(out, {
 				player = player,
@@ -278,10 +283,18 @@ local function characterPositions(): { Positioned }
 	return out
 end
 
-local function positionsOfActors(actors: { Types.Actor }): { Positioned }
+-- Positions des récompenses de proximité (+15 Stardust, 30 s de revenu à ≤ 20 studs) : un acteur
+-- `valid` à sa position ; un acteur refusé (tick signalé) à sa dernière position validée (prev),
+-- seulement s'il peut agir ; un tick en rafale ou une dette de budget d'action (bond d'une
+-- position éloignée, même un tick avant l'instant déterministe de l'explosion), ou une
+-- restriction MoveCheck, ne rapporte rien
+local function positionsOfActors(actors: { Types.Actor }, now: number): { Positioned }
 	local out: { Positioned } = {}
 	for _, a in actors do
-		table.insert(out, { player = a.player, pos = a.pos, slot = a.slot })
+		local pos = if a.valid then a.pos elseif MoveCheck.canAct(a.player, now) then a.prev else nil
+		if pos then
+			table.insert(out, { player = a.player, pos = pos, slot = a.slot })
+		end
 	end
 	return out
 end
@@ -904,7 +917,7 @@ local function bankComet(c: CometRun, now: number, actor: Types.Actor, actors: {
 	Notify.celebrate(player, "cometBanked", { glow = glow, code = bankedCode })
 	-- bannière d'événement (une par Comète) : jamais retenue par la limite par joueur
 	Notify.banner("cometBanked", { userId = player.UserId, name = player.DisplayName, code = c.code })
-	nearRewards(c, actor.pos, positionsOfActors(actors), player)
+	nearRewards(c, actor.pos, positionsOfActors(actors, now), player)
 	crewRewards(player, actor.crewId)
 	Signals.EventPhase:Fire("comet", "bank")
 	Signals.CometEvent:Fire({ kind = "bank", id = c.id, player = player })
@@ -950,7 +963,7 @@ local function stepCometPhases(now: number)
 		end
 		-- filet : stepComet n'a pas résolu l'explosion (erreur en amont) → résolution sans acteurs
 		if now >= c.burstAt + Tuning.SlowStepInterval then
-			burstComet(c, now, characterPositions())
+			burstComet(c, now, characterPositions(now))
 		end
 	end
 	if c ~= nil and c.endedAt ~= nil and now >= (c.endedAt :: number) + Tuning.ResultLinger then
@@ -1036,9 +1049,11 @@ local function stepCarried(c: CometRun, now: number, actors: { Types.Actor })
 		EventService.dropComet(carrier)
 		return
 	end
-	if actor.valid then
-		c.pos = actor.pos
-	end
+	-- la Comète suit le porteur à CHAQUE tick : sur un tick refusé, actor.pos est déjà sa dernière
+	-- position validée (CongaService) ; sur un tick en rafale (rattrapage honnête après un gel
+	-- réseau, budget d'action de MoveCheck en dette), sa position acceptée — l'orbe ne se fige pas
+	-- pendant le rattrapage. L'encaissement et le vol, eux, exigent un acteur `valid`.
+	c.pos = actor.pos
 	checkHoldReward(c, carrier, now)
 	-- encaissement : le porteur traverse la porte de SON Nid
 	if actor.valid and actor.slot > 0 and sweptThroughGate(actor.slot, actor.prev, actor.pos) then
@@ -1511,7 +1526,7 @@ function EventService.stepComet(now: number, actors: { Types.Actor })
 	end
 	local list: { Types.Actor } = if type(actors) == "table" then actors else {}
 	if now >= c.burstAt then
-		burstComet(c, now, positionsOfActors(list))
+		burstComet(c, now, positionsOfActors(list, now))
 		return
 	end
 	if c.phase == "carried" and c.carrier ~= nil then

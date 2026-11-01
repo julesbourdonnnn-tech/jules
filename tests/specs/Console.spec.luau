@@ -442,6 +442,37 @@ return function(T)
 			expect(h.log.haptics[2].value).toBe(0)
 		end)
 
+		it(
+			"atténuation (Comète à 75 studs) : moteur à force × facteur, jamais le préréglé pleine force",
+			function()
+				local h, Clock, _, Haptics = setup({ console = true })
+				local Console = h:require("ReplicatedStorage.Shared.Config.Console")
+				local def = Console.Haptics.Events.cometImpact
+				-- VFXController : 1 − d / 120 à 75 studs
+				local k = 1 - 75 / 120
+				expect(Haptics.play("cometImpact", k)).toBe(true)
+				expect(#h.log.haptics).toBe(1)
+				local far = h.log.haptics[1]
+				expect(far.kind).toBe("motor")
+				expect(far.inputType).toBe(Enum.UserInputType.Gamepad1)
+				expect(far.motor).toBe(Enum.VibrationMotor.Large)
+				expect(math.abs(far.value - def.strength * k) < 1e-6).toBe(true)
+				expect(far.value <= 0.4).toBe(true)
+				-- impact proche (10 studs) : l'effet de la carte, comme une vibration non atténuée
+				Clock.advance(1)
+				expect(Haptics.play("cometImpact", 1 - 10 / 120)).toBe(true)
+				local near = h.log.haptics[#h.log.haptics]
+				expect(near.kind).toBe("effect")
+				expect(near.type).toBe(Enum.HapticEffectType.GameplayExplosion)
+				-- manette sans moteur pris en charge : la vibration atténuée n'est pas jouée du tout
+				Clock.advance(1)
+				h.game.UserInputService.GamepadEnabled = false
+				local before = #h.log.haptics
+				expect(Haptics.play("cometImpact", 0.5)).toBe(false)
+				expect(#h.log.haptics).toBe(before)
+			end
+		)
+
 		it("clavier-souris : jamais ; téléphone : seulement les événements « mobile »", function()
 			local h, _, _, Haptics = setup()
 			expect(Haptics.play("supernova")).toBe(false)

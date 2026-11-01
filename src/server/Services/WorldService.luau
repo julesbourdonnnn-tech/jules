@@ -105,7 +105,24 @@ local function countParts(root: Instance): number
 	return n
 end
 
--- Construit workspace.Lumora une seule fois (synchrone : aucun yield)
+-- Étapes de construction dans `root` (pas encore parenté)
+local function buildInto(root: Folder)
+	-- Hasard purement visuel (teintes, tailles) : seed fixe, même île à chaque démarrage
+	local rng = Random.new(Zones.Decor.Seed)
+	Island.build(root, rng)
+	beaconModel = Beacon.build(root)
+	Nests.build(root)
+	Island.buildPaths(root)
+	Island.buildLanterns(root)
+	Decor.build(root, rng)
+	Decor.buildIslets(root, rng)
+	Decor.buildClouds(root, rng)
+end
+
+-- Construit workspace.Lumora une seule fois (synchrone : aucun yield). Une étape qui lève ne laisse
+-- jamais le drapeau `building` posé (chaque accès suivant aurait masqué la vraie erreur derrière
+-- « construction réentrante ») : racine partielle détruite, erreur d'origine relancée telle quelle,
+-- l'accès suivant retente la construction.
 local function ensureBuilt(): Folder
 	local existing = rootFolder
 	if existing then
@@ -119,19 +136,15 @@ local function ensureBuilt(): Folder
 	end
 	local root = Instance.new("Folder")
 	root.Name = "Lumora"
-	-- Hasard purement visuel (teintes, tailles) : seed fixe, même île à chaque démarrage
-	local rng = Random.new(Zones.Decor.Seed)
-	Island.build(root, rng)
-	beaconModel = Beacon.build(root)
-	Nests.build(root)
-	Island.buildPaths(root)
-	Island.buildLanterns(root)
-	Decor.build(root, rng)
-	Decor.buildIslets(root, rng)
-	Decor.buildClouds(root, rng)
+	local ok, err = pcall(buildInto, root)
+	building = false
+	if not ok then
+		beaconModel = nil
+		root:Destroy()
+		error(err, 0)
+	end
 	root.Parent = workspace -- un seul parentage : une seule réplication du monde
 	rootFolder = root
-	building = false
 	local parts = countParts(root)
 	if parts > Zones.PartBudget then
 		warn(`[WorldService] budget de pièces dépassé : {parts} > {Zones.PartBudget}`)

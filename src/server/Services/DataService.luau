@@ -9,7 +9,9 @@
 --    ≈ 65 o par entrée, 40 Ko pour 640 Nebbies) ne part dans l'instantané qu'avec ses
 --    SNAPSHOT_INLINE premières entrées (ordre setStreamOrder : les perchés d'abord) ; le reste suit
 --    en entrées DataPatch de STREAM_CHUNK toutes les STREAM_INTERVAL s, après STREAM_DELAY s
---    (horloge partagée Clock) : le client (StateController) les applique comme n'importe quel patch
+--    (horloge partagée Clock) : le client (StateController) les applique comme n'importe quel patch.
+--    Aucune connexion Heartbeat (contrat §1, règle 7 : seul le tick de CongaService) : une boucle
+--    task.spawn ne vit que tant qu'un flux est en cours (lancée par l'instantané, finie à vide)
 --  * une écriture n'a lieu que si CETTE session détient encore le verrou (même JobId ET même jeton) :
 --    verrou absent, étranger ou d'une autre session = session terminée, jamais d'écrasement
 --  * profil écrit par un schéma PLUS RÉCENT (serveur déjà mis à jour) : jamais réparé, jamais
@@ -19,7 +21,12 @@
 --    attend (sauvegarde de départ d'une reconnexion, verrou d'un autre serveur, backoff) ; nil dès
 --    que loadRecord a rendu sa réponse (avant l'instantané ou le renvoi) : l'écran de chargement
 --    (src/first/Loading.client) retient « Réessayer » tant qu'il est posé
---  * repli en mémoire dans Studio quand l'accès API est désactivé
+--  * repli en mémoire dans Studio SEULEMENT, quand l'accès API est désactivé. Serveur en ligne :
+--    GetDataStore en échec = DataStore indisponible, jamais de repli en mémoire (une session jamais
+--    sauvegardée, des achats Robux acquittés puis perdus) ; nouvel essai en arrière-plan avec
+--    backoff, et d'ici là chaque chargement échoue (renvoi LOAD_FAILED_MESSAGE) : aucun profil créé
+--  * chaque écriture UpdateAsync d'un profil passe { UserId } (clé liée au joueur pour les demandes
+--    d'effacement de données personnelles de Roblox)
 --
 -- API :
 --   DataService.get(player) -> données vivantes ou nil (pas encore chargées)
@@ -72,6 +79,12 @@ local Settings = {
 	STREAM_CHUNK = 50,
 	STREAM_INTERVAL = 0.25, -- s entre deux morceaux
 	STREAM_DELAY = 1, -- s avant le premier morceau (la seconde d'arrivée est celle du WorldSnapshot)
+	-- s entre deux passages de la boucle du flux (0 = chaque image) ; les échéances des morceaux
+	-- viennent de Clock (STREAM_DELAY, STREAM_INTERVAL), la boucle s'arrête dès que plus rien n'est dû
+	STREAM_POLL = 0,
+	-- serveur en ligne, GetDataStore en échec : nouvel essai après 5 s, puis 10, 20, 40, 60, 60…
+	STORE_RETRY_DELAY = 5,
+	STORE_RETRY_MAX = 60,
 }
 
 -- Tables envoyées par morceaux après l'instantané (au-delà de SNAPSHOT_INLINE entrées)
@@ -94,9 +107,12 @@ type Record = {
 	meta: { created: number?, lastSave: number?, saves: number? }?,
 }
 
+-- Transformation d'UpdateAsync : (nouvelle valeur ou nil = rien n'est écrit, userIds de la clé)
+type Transform = (any, any?) -> (any, { number }?)
+
 type Store = {
 	GetAsync: (self: any, key: string) -> any,
-	UpdateAsync: (self: any, key: string, fn: (any) -> any) -> any,
+	UpdateAsync: (self: any, key: string, fn: Transform) -> any,
 }
 
 local DataService = {}
@@ -107,7 +123,8 @@ DataService.Settings = Settings
 -- Réplication en attente de la fin de la frame : clés entières et entrées (clé → sous-clés)
 type Pending = { keys: { [string]: boolean }, entries: { [string]: { [string]: boolean } } }
 
-local store: Store
+-- nil = DataStore indisponible (serveur en ligne, GetDataStore en échec) : aucun profil créé
+local store: Store? = nil
 local profiles: { [Player]: { [string]: any } } = {}
 local saving: { [Player]: boolean } = {}
 local pending: { [Player]: Pending } = {}
@@ -130,6 +147,8 @@ type StreamPart = { key: string, order: { string }, index: number }
 type Stream = { data: { [string]: any }, parts: { StreamPart }, nextAt: number }
 local streams: { [Player]: Stream } = {}
 local streamOrder: { [string]: ({ [string]: any }) -> { string } } = {}
+-- boucle du flux en cours (une seule, vivante tant que `streams` n'est pas vide)
+local streamLoopRunning = false
 
 -- Stockage mémoire (Studio sans accès API)
 local function memoryStore(): Store
@@ -138,14 +157,47 @@ local function memoryStore(): Store
 	function mem.GetAsync(_self, key: string)
 		return Tables.deepCopy(data[key])
 	end
-	function mem.UpdateAsync(_self, key: string, fn: (any) -> any)
-		local new = fn(Tables.deepCopy(data[key]))
+	function mem.UpdateAsync(_self, key: string, fn: Transform)
+		-- valeurs suivantes de la transformation (userIds) acceptées : sans objet en mémoire
+		local new = fn(Tables.deepCopy(data[key]), nil)
 		if new ~= nil then
 			data[key] = Tables.deepCopy(new)
 		end
 		return Tables.deepCopy(data[key])
 	end
 	return mem :: any
+end
+
+-- Magasin courant ; lève (dans le pcall de l'appelant) si le DataStore est indisponible
+local function currentStore(): Store
+	local s = store
+	if s == nil then
+		error("DataStore indisponible (GetDataStore en échec, nouvel essai en cours)", 0)
+	end
+	return s
+end
+
+local function openStore(): (boolean, any)
+	return pcall(function()
+		return DataStoreService:GetDataStore(Schema.STORE_NAME)
+	end)
+end
+
+-- Serveur en ligne sans DataStore : nouvel essai de GetDataStore en arrière-plan avec backoff ;
+-- les chargements reprennent dès qu'il répond (jamais de repli en mémoire hors de Studio)
+local function retryStore()
+	local delay = Settings.STORE_RETRY_DELAY
+	while store == nil do
+		task.wait(delay)
+		local ok, result = openStore()
+		if ok and result ~= nil then
+			store = result :: any
+			warn("[DataService] DataStore de nouveau disponible : chargements rétablis")
+			return
+		end
+		warn("[DataService] GetDataStore toujours en échec :", result)
+		delay = math.min(delay * 2, Settings.STORE_RETRY_MAX)
+	end
 end
 
 local function keyFor(player: Player): string
@@ -188,36 +240,6 @@ local function orderedSubKeys(key: string, data: { [string]: any }, container: {
 		end
 	end
 	return out
-end
-
--- Instantané (arrivée, RequestSnapshot) : les grandes tables n'y portent que leurs SNAPSHOT_INLINE
--- premières entrées, le reste part ensuite en flux (DataPatch, entrées) ; un nouvel instantané
--- remplace le flux en cours
-local function sendSnapshot(player: Player, data: { [string]: any })
-	local view = publicView(data)
-	local parts: { StreamPart } = {}
-	local inlineCount = math.max(0, math.floor(Settings.SNAPSHOT_INLINE))
-	for _, key in STREAMED_KEYS do
-		local container = view[key]
-		if type(container) == "table" and not Schema.PRIVATE_KEYS[key] then
-			local order = orderedSubKeys(key, data, container)
-			if #order > inlineCount then
-				local inline: { [string]: any } = {}
-				for i = 1, inlineCount do
-					local sub = order[i]
-					inline[sub] = container[sub]
-				end
-				view[key] = inline
-				table.insert(parts, { key = key, order = order, index = inlineCount + 1 })
-			end
-		end
-	end
-	snapshotRemote:FireClient(player, view)
-	if #parts > 0 then
-		streams[player] = { data = data, parts = parts, nextAt = Clock.now() + Settings.STREAM_DELAY }
-	else
-		streams[player] = nil
-	end
 end
 
 -- Envoie le morceau suivant d'un flux d'arrivée ; vrai quand le flux est terminé. Les valeurs sont
@@ -264,7 +286,8 @@ local function sendStreamChunk(player: Player, stream: Stream): boolean
 	return true
 end
 
--- Avance les flux d'arrivée (Heartbeat, horloge partagée)
+-- Avance les flux d'arrivée (horloge partagée Clock). Un morceau en erreur (charge refusée par
+-- le remote…) abandonne seulement le flux de ce joueur, jamais la boucle des autres.
 local function stepStreams()
 	if next(streams) == nil then
 		return
@@ -274,12 +297,64 @@ local function stepStreams()
 		if profiles[player] ~= stream.data or player.Parent == nil then
 			streams[player] = nil
 		elseif now >= stream.nextAt then
-			if sendStreamChunk(player, stream) then
+			local ok, done = pcall(sendStreamChunk, player, stream)
+			if not ok then
+				warn(`[DataService] flux d'arrivée de {player.Name} abandonné :`, done)
+				streams[player] = nil
+			elseif done then
 				streams[player] = nil
 			else
 				stream.nextAt = now + Settings.STREAM_INTERVAL
 			end
 		end
+	end
+end
+
+-- Boucle du flux (contrat §1, règle 7 : aucune connexion Heartbeat hors du tick de CongaService) :
+-- lancée par l'instantané qui ouvre un flux, elle s'arrête dès que plus aucun flux n'est en cours
+local function runStreams()
+	repeat
+		task.wait(Settings.STREAM_POLL)
+		stepStreams()
+	until next(streams) == nil
+	streamLoopRunning = false
+end
+
+local function ensureStreamLoop()
+	if not streamLoopRunning and next(streams) ~= nil then
+		streamLoopRunning = true
+		task.spawn(runStreams)
+	end
+end
+
+-- Instantané (arrivée, RequestSnapshot) : les grandes tables n'y portent que leurs SNAPSHOT_INLINE
+-- premières entrées, le reste part ensuite en flux (DataPatch, entrées) ; un nouvel instantané
+-- remplace le flux en cours
+local function sendSnapshot(player: Player, data: { [string]: any })
+	local view = publicView(data)
+	local parts: { StreamPart } = {}
+	local inlineCount = math.max(0, math.floor(Settings.SNAPSHOT_INLINE))
+	for _, key in STREAMED_KEYS do
+		local container = view[key]
+		if type(container) == "table" and not Schema.PRIVATE_KEYS[key] then
+			local order = orderedSubKeys(key, data, container)
+			if #order > inlineCount then
+				local inline: { [string]: any } = {}
+				for i = 1, inlineCount do
+					local sub = order[i]
+					inline[sub] = container[sub]
+				end
+				view[key] = inline
+				table.insert(parts, { key = key, order = order, index = inlineCount + 1 })
+			end
+		end
+	end
+	snapshotRemote:FireClient(player, view)
+	if #parts > 0 then
+		streams[player] = { data = data, parts = parts, nextAt = Clock.now() + Settings.STREAM_DELAY }
+		ensureStreamLoop()
+	else
+		streams[player] = nil
 	end
 end
 
@@ -398,6 +473,8 @@ end
 -- (chargé, données, schéma plus récent) ; `session` : jeton posé dans le verrou
 local function loadRecord(player: Player, session: string): (boolean, { [string]: any }?, boolean)
 	local key = keyFor(player)
+	-- clé liée au joueur (demandes d'effacement Roblox) : passée à chaque écriture
+	local userIds = { player.UserId }
 	for attempt = 1, Settings.LOAD_ATTEMPTS do
 		if player.Parent == nil then
 			return false, nil, false
@@ -405,8 +482,10 @@ local function loadRecord(player: Player, session: string): (boolean, { [string]
 		setLoading(player, attempt)
 		local lockedByOther = false
 		local newer = false
+		-- DataStore indisponible (currentStore lève) : essai en échec comme une panne, avec backoff ;
+		-- toujours indisponible au dernier essai = renvoi, jamais de profil vide
 		local ok, result = pcall(function()
-			return store:UpdateAsync(key, function(old: Record?)
+			return currentStore():UpdateAsync(key, function(old: Record?): (Record?, { number }?)
 				local record: Record = old or {}
 				-- schéma plus récent : rien n'est écrit, pas même le verrou (celui d'un serveur à jour
 				-- reste intact) ; inutile d'attendre l'expiration d'un verrou
@@ -428,7 +507,7 @@ local function loadRecord(player: Player, session: string): (boolean, { [string]
 				lockedByOther = false
 				record.lock = { jobId = game.JobId, time = os.time(), session = session }
 				record.meta = record.meta or { created = os.time(), saves = 0 }
-				return record
+				return record, userIds
 			end)
 		end)
 		if ok and newer then
@@ -443,7 +522,11 @@ local function loadRecord(player: Player, session: string): (boolean, { [string]
 			task.wait(Settings.LOCKED_RETRY_DELAY)
 		else
 			warn(`[DataService] échec de chargement pour {player.Name} (essai {attempt}) :`, result)
-			task.wait(math.min(2 ^ attempt, 16) * Settings.RETRY_BASE_DELAY)
+			-- après le dernier essai : renvoi aussitôt (attendre ne ferait que retarder l'enfant sur
+			-- l'écran de chargement). Pire cas : 2 + 4 + 8 + 16 + 16 = 46 s d'attente (× base)
+			if attempt < Settings.LOAD_ATTEMPTS then
+				task.wait(math.min(2 ^ attempt, 16) * Settings.RETRY_BASE_DELAY)
+			end
 		end
 	end
 	return false, nil, false
@@ -453,12 +536,13 @@ end
 -- chargement). Le jeton évite d'effacer le verrou d'une reconnexion du même UserId sur ce serveur
 -- (même JobId), chargée entre-temps.
 local function releaseLoadLock(player: Player, session: string)
+	local userIds = { player.UserId }
 	local ok, err = pcall(function()
-		store:UpdateAsync(keyFor(player), function(old: Record?)
+		currentStore():UpdateAsync(keyFor(player), function(old: Record?): (Record?, { number }?)
 			local lock = if old then old.lock else nil
 			if old and lock and lock.jobId == game.JobId and lock.session == session then
 				old.lock = nil
-				return old
+				return old, userIds
 			end
 			return nil
 		end)
@@ -472,10 +556,11 @@ local function writeRecord(player: Player, data: { [string]: any }, release: boo
 	local key = keyFor(player)
 	local snapshot = Tables.deepCopy(data)
 	local session = sessions[player]
+	local userIds = { player.UserId }
 	for attempt = 1, Settings.SAVE_ATTEMPTS do
 		local lostLock = false
 		local ok, err = pcall(function()
-			store:UpdateAsync(key, function(old: Record?)
+			currentStore():UpdateAsync(key, function(old: Record?): (Record?, { number }?)
 				local record: Record = old or {}
 				local lock = record.lock
 				-- n'écrit que si CETTE session détient encore le verrou. Après un chargement réussi, le
@@ -502,7 +587,7 @@ local function writeRecord(player: Player, data: { [string]: any }, release: boo
 				meta.lastSave = os.time()
 				meta.saves = (meta.saves or 0) + 1
 				record.meta = meta
-				return record
+				return record, userIds
 			end)
 		end)
 		if ok then
@@ -660,14 +745,13 @@ function DataService.Init()
 	snapshotRemote = Net.event("DataSnapshot")
 	patchRemote = Net.event("DataPatch")
 
-	local ok, result = pcall(function()
-		return DataStoreService:GetDataStore(Schema.STORE_NAME)
-	end)
-	if ok then
-		store = result :: any
+	local ok, result = openStore()
+	if ok and result ~= nil then
+		local opened = result :: Store
+		store = opened
 		if RunService:IsStudio() then
 			local probeOk, probeErr = pcall(function()
-				store:GetAsync("__studio_probe")
+				opened:GetAsync("__studio_probe")
 			end)
 			if not probeOk then
 				warn(
@@ -679,10 +763,25 @@ function DataService.Init()
 				DataService.usingMemoryStore = true
 			end
 		end
-	else
-		warn("[DataService] GetDataStore a échoué :", result, "— sauvegarde en mémoire.")
+	elseif RunService:IsStudio() then
+		warn(
+			"[DataService] GetDataStore a échoué dans Studio :",
+			result,
+			"— sauvegarde EN MÉMOIRE uniquement."
+		)
 		store = memoryStore()
 		DataService.usingMemoryStore = true
+	else
+		-- serveur en ligne : jamais de repli en mémoire (session jamais sauvegardée, achats Robux
+		-- acquittés puis perdus). Aucun profil n'est créé tant que le DataStore manque : chaque
+		-- chargement échoue (renvoi LOAD_FAILED_MESSAGE) ; nouvel essai en arrière-plan.
+		warn(
+			"[DataService] GetDataStore a échoué :",
+			result,
+			"— DataStore indisponible : chargements refusés, nouvel essai en arrière-plan."
+		)
+		store = nil
+		task.spawn(retryStore)
 	end
 
 	-- le client redemande un instantané s'il a raté le premier (chargement lent)
@@ -700,7 +799,7 @@ end
 function DataService.Start()
 	Players.PlayerAdded:Connect(onPlayerAdded)
 	Players.PlayerRemoving:Connect(onPlayerRemoving)
-	RunService.Heartbeat:Connect(stepStreams)
+	-- flux d'arrivée : boucle lancée à la demande par sendSnapshot (aucune connexion Heartbeat)
 	for _, player in Players:GetPlayers() do
 		task.spawn(onPlayerAdded, player)
 	end

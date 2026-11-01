@@ -870,28 +870,77 @@ return function(T)
 			expect(S.privateNoSnip.saved).toBe(false)
 		end)
 
-		it("sons : toutes les clés du §9 existent et sont vides par défaut", function()
-			for _, key in
-				{
-					"Catch",
-					"CatchRare",
-					"Snip",
-					"Scatter",
-					"Bank",
-					"Dash",
-					"CometWarn",
-					"CometImpact",
-					"CometSwipe",
-				}
-			do
-				expect(Sounds[key] ~= nil and Sounds[key].id == "").toBe(true)
+		-- Changement de contrat voulu par le propriétaire (passe finale) : un jeu animé et drôle ne
+		-- part pas muet. Ancienne règle « toutes les clés du §9 existent et sont vides par défaut »
+		-- remplacée : un ID est vide (son désactivé) ou exactement rbxassetid://<nombre>, et un ID
+		-- rempli porte sur sa ligne de Config/Sounds un commentaire de provenance (dépôt officiel
+		-- Roblox/resources ou Roblox/creator-docs et fichier source).
+		it(
+			"sons : toutes les clés du §9 existent ; ID vide ou rbxassetid://<nombre> ; ID rempli = provenance sur sa ligne",
+			function()
+				local lines = {}
+				for line in string.gmatch(fs.readFile("src/shared/Config/Sounds.luau"), "[^\n]+") do
+					local key = string.match(line, "^%s*(%w+)%s*=%s*{")
+					if key then
+						lines[key] = line
+					end
+				end
+				for _, key in
+					{
+						"Click",
+						"Pop",
+						"Coin",
+						"Reward",
+						"LevelUp",
+						"Error",
+						"Whoosh",
+						"Music",
+						"Catch",
+						"CatchRare",
+						"Snip",
+						"Scatter",
+						"Bank",
+						"Dash",
+						"CometWarn",
+						"CometImpact",
+						"CometSwipe",
+						"BeaconStart",
+						"BeaconWin",
+						"WispPop",
+						"Supernova",
+						"Ping",
+						"Cheer",
+						"Select",
+						"Back",
+						"Tab",
+						"Bump",
+					}
+				do
+					expect({ key = key, declared = Sounds[key] ~= nil }).toEqual({
+						key = key,
+						declared = true,
+					})
+				end
+				for key, def in Sounds do
+					local id = def.id
+					local okId = id == "" or string.match(id, "^rbxassetid://%d+$") ~= nil
+					expect({ key = key, id = id, ok = okId }).toEqual({ key = key, id = id, ok = true })
+					if id ~= "" then
+						local line = lines[key] or ""
+						local comment = string.match(line, "%-%-%s*(.+)$") or ""
+						local declared = string.find(line, 'id%s*=%s*"' .. id .. '"') ~= nil
+						local repo = string.find(comment, "Roblox/resources", 1, true) ~= nil
+							or string.find(comment, "Roblox/creator-docs", 1, true) ~= nil
+						local file = string.match(comment, "[%w_%-/%.]+%.%a+") ~= nil
+						expect({ key = key, declared = declared, provenance = repo and file }).toEqual({
+							key = key,
+							declared = true,
+							provenance = true,
+						})
+					end
+				end
 			end
-			for _, key in
-				{ "BeaconStart", "BeaconWin", "WispPop", "Supernova", "Ping", "Cheer", "Click", "Coin" }
-			do
-				expect(Sounds[key] ~= nil and Sounds[key].id == "").toBe(true)
-			end
-		end)
+		)
 	end)
 
 	describe("Contrat › Localisation", function()

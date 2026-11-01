@@ -3,10 +3,13 @@
 --   * Select, Back, Tab, Bump, Whoosh, Error et Pop ont un vrai ID « rbxassetid://<nombre> » : avant,
 --     tous vides, AudioController.Init les sautait et la PS5 n'avait aucun retour sonore (sélection
 --     déplacée, ○, L1/R1, L2/R2, bout de liste, refus)
---   * provenance : jeu de sons d'interface publié par Roblox lui-même (feature-packages-core des
---     Feature Packages officiels, utilisables sans téléversement)
+--   * provenance (passe finale, même règle que Contract.spec) : chaque ID rempli de Config/Sounds porte
+--     sur sa ligne un commentaire qui nomme le dépôt officiel (Roblox/resources ou Roblox/creator-docs)
+--     et le fichier source ; plus de liste figée d'IDs autorisés (le propriétaire peut changer un son
+--     après l'avoir écouté, en citant sa source)
 --   * deux clés qui partagent un enregistrement s'en distinguent par la hauteur (≥ 15 %)
---   * de bout en bout sur le client console : chaque clé crée un vrai Sound qui joue cet ID
+--   * de bout en bout sur le client console : un Sound par ID rempli, qui joue cet ID
+local fs = require("@lune/fs")
 local MockInstance = require("../harness/MockInstance")
 
 return function(T)
@@ -15,23 +18,35 @@ return function(T)
 	local CLIENT = "StarterPlayer.StarterPlayerScripts.Client."
 
 	-- Clés de navigation (docs/07 §9.2) et retours d'interface joués à la manette (activation,
-	-- ouverture de panneau, refus, apparition). Click attend la levée de la règle « vides par
-	-- défaut » de Contract.spec (notes d'intégration) : pas exigé ici.
-	local UI_KEYS = { "Select", "Back", "Tab", "Bump", "Whoosh", "Error", "Pop" }
-
-	-- Sons d'interface publiés par Roblox : github.com/Roblox/resources,
-	-- packages/feature-packages-core/src/Configs/SharedConstants.lua (Sounds.Ids)
-	local ROBLOX_UI_SET = {
-		["rbxassetid://17161204665"] = "BUTTON_HOVER",
-		["rbxassetid://17161216230"] = "BUTTON_ACTIVATED",
-		["rbxassetid://17161253544"] = "PROMPT_OPENED",
-		["rbxassetid://17161255584"] = "PROMPT_CLOSED",
-		["rbxassetid://17161225362"] = "PURCHASE_BUTTON_ACTIVATED",
-		["rbxassetid://17161210152"] = "PURCHASE_EFFECT",
-	}
+	-- ouverture de panneau, refus, apparition)
+	local UI_KEYS = { "Select", "Back", "Tab", "Bump", "Whoosh", "Error", "Pop", "Click" }
 
 	local function loadSounds(h)
 		return h:require("ReplicatedStorage.Shared.Config.Sounds")
+	end
+
+	-- Clés à ID rempli, triées (la musique joue en boucle, jamais par play())
+	local function filledKeys(Sounds)
+		local out = {}
+		for name, def in Sounds do
+			if def.id ~= "" then
+				table.insert(out, name)
+			end
+		end
+		table.sort(out)
+		return out
+	end
+
+	-- Ligne de déclaration de chaque clé dans Config/Sounds (source lue sur le disque)
+	local function declarationLines()
+		local lines = {}
+		for line in string.gmatch(fs.readFile("src/shared/Config/Sounds.luau"), "[^\n]+") do
+			local key = string.match(line, "^%s*(%w+)%s*=%s*{")
+			if key then
+				lines[key] = line
+			end
+		end
+		return lines
 	end
 
 	-- Nouveau Sound apparu dans SoundService depuis `known` (copie jouée par AudioController.play)
@@ -55,7 +70,7 @@ return function(T)
 
 	describe("Fix r4-partage-4 › Config/Sounds : retours de navigation audibles (R9)", function()
 		it(
-			"Select, Back, Tab, Bump, Whoosh, Error, Pop : ID rempli, exactement rbxassetid://<nombre>",
+			"Select, Back, Tab, Bump, Whoosh, Error, Pop, Click : ID rempli, exactement rbxassetid://<nombre>",
 			function()
 				local Sounds = loadSounds(Harness.new({ mode = "client" }))
 				for _, key in UI_KEYS do
@@ -69,17 +84,38 @@ return function(T)
 			end
 		)
 
-		it("provenance : chaque clé d'interface vient du jeu de sons publié par Roblox", function()
-			local Sounds = loadSounds(Harness.new({ mode = "client" }))
-			for _, key in UI_KEYS do
-				local id = Sounds[key].id
-				expect({ key = key, id = id, roblox = ROBLOX_UI_SET[id] ~= nil }).toEqual({
-					key = key,
-					id = id,
-					roblox = true,
-				})
+		it(
+			"provenance : chaque ID rempli porte sur sa ligne le dépôt Roblox et le fichier source",
+			function()
+				local Sounds = loadSounds(Harness.new({ mode = "client" }))
+				local lines = declarationLines()
+				for _, key in filledKeys(Sounds) do
+					local line = lines[key] or ""
+					local comment = string.match(line, "%-%-%s*(.+)$") or ""
+					local repo = string.find(comment, "Roblox/resources", 1, true) ~= nil
+						or string.find(comment, "Roblox/creator-docs", 1, true) ~= nil
+					local file = string.match(comment, "[%w_%-/%.]+%.%a+") ~= nil
+					expect({
+						key = key,
+						declared = string.find(line, Sounds[key].id, 1, true) ~= nil,
+						repo = repo,
+						file = file,
+					}).toEqual({
+						key = key,
+						declared = true,
+						repo = true,
+						file = true,
+					})
+				end
+				-- les clés d'interface en font partie
+				for _, key in UI_KEYS do
+					expect({ key = key, filled = table.find(filledKeys(Sounds), key) ~= nil }).toEqual({
+						key = key,
+						filled = true,
+					})
+				end
 			end
-		end)
+		)
 
 		it("même enregistrement pour deux clés : hauteurs distinctes d'au moins 15 %", function()
 			local Sounds = loadSounds(Harness.new({ mode = "client" }))
@@ -137,28 +173,28 @@ return function(T)
 			return h, Sounds, Audio, preloaded
 		end
 
-		it(
-			"Init : un Sound préchargé par clé d'interface dans SoundService.GameSounds, avec son ID",
-			function()
-				local h, Sounds, _, preloaded = consoleAudio()
-				local folder = h.game:GetService("SoundService"):FindFirstChild("GameSounds")
-				expect(folder ~= nil).toBe(true)
-				for _, key in UI_KEYS do
-					local s = folder:FindFirstChild(key)
-					expect({ key = key, soundId = s and s.SoundId }).toEqual({
-						key = key,
-						soundId = Sounds[key].id,
-					})
-					expect(s.Volume).toBe(Sounds[key].volume)
-					expect(s.PlaybackSpeed).toBeNear(Sounds[key].pitch or 1, 1e-6)
-					expect({ key = key, preloaded = preloaded[key] }).toEqual({
-						key = key,
-						preloaded = Sounds[key].id,
-					})
-				end
-				expect(#h.errors).toBe(0)
+		it("Init : un Sound préchargé par ID rempli dans SoundService.GameSounds, avec son ID", function()
+			local h, Sounds, _, preloaded = consoleAudio()
+			local folder = h.game:GetService("SoundService"):FindFirstChild("GameSounds")
+			expect(folder ~= nil).toBe(true)
+			local filled = filledKeys(Sounds)
+			expect(#filled >= #UI_KEYS).toBe(true)
+			expect(#folder:GetChildren()).toBe(#filled)
+			for _, key in filled do
+				local s = folder:FindFirstChild(key)
+				expect({ key = key, soundId = s and s.SoundId }).toEqual({
+					key = key,
+					soundId = Sounds[key].id,
+				})
+				expect(s.Volume).toBe(Sounds[key].volume)
+				expect(s.PlaybackSpeed).toBeNear(Sounds[key].pitch or 1, 1e-6)
+				expect({ key = key, preloaded = preloaded[key] }).toEqual({
+					key = key,
+					preloaded = Sounds[key].id,
+				})
 			end
-		)
+			expect(#h.errors).toBe(0)
+		end)
 
 		it("sélection déplacée à la manette : un Sound « Select » joue l'ID déclaré", function()
 			local h, Sounds = consoleAudio()
@@ -183,26 +219,32 @@ return function(T)
 			expect(#h.errors).toBe(0)
 		end)
 
-		it("○, L1/R1, bout de liste, ouverture, refus, apparition : chaque clé joue son ID", function()
-			local h, Sounds, Audio = consoleAudio()
-			for _, key in UI_KEYS do
+		it(
+			"○, L1/R1, bout de liste, ouverture, refus, apparition, jeu : chaque clé remplie joue son ID",
+			function()
+				local h, Sounds, Audio = consoleAudio()
+				for _, key in filledKeys(Sounds) do
+					if key == "Music" then
+						continue -- la musique joue en boucle (AudioController), jamais comme un effet
+					end
+					local known = snapshotChildren(h)
+					Audio.play(key)
+					local s = newSound(h, known)
+					expect({ key = key, soundId = s and s.SoundId, playing = s and s.Playing }).toEqual({
+						key = key,
+						soundId = Sounds[key].id,
+						playing = true,
+					})
+					expect(s.PlaybackSpeed).toBeNear(Sounds[key].pitch or 1, 1e-6)
+				end
+				-- réglage « Effets sonores » coupé : plus rien (comportement existant)
+				Audio.enabled = false
 				local known = snapshotChildren(h)
-				Audio.play(key)
-				local s = newSound(h, known)
-				expect({ key = key, soundId = s and s.SoundId, playing = s and s.Playing }).toEqual({
-					key = key,
-					soundId = Sounds[key].id,
-					playing = true,
-				})
-				expect(s.PlaybackSpeed).toBeNear(Sounds[key].pitch or 1, 1e-6)
+				Audio.play("Back")
+				expect(newSound(h, known)).toBeNil()
+				Audio.enabled = true
+				expect(#h.errors).toBe(0)
 			end
-			-- réglage « Effets sonores » coupé : plus rien (comportement existant)
-			Audio.enabled = false
-			local known = snapshotChildren(h)
-			Audio.play("Back")
-			expect(newSound(h, known)).toBeNil()
-			Audio.enabled = true
-			expect(#h.errors).toBe(0)
-		end)
+		)
 	end)
 end

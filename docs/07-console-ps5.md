@@ -325,7 +325,7 @@ Retours : seul ○ (`PanelController.back()`) rend la sélection au bouton du ra
 
 `VFXController.haptic(force, durée)` (contrat) reste et passe par le même délai minimal.
 
-### 9.2 Sons de navigation (`Config/Sounds`, clés ajoutées, ID vides par défaut)
+### 9.2 Sons de navigation (`Config/Sounds`, clés ajoutées, sons publiés par Roblox depuis r4)
 
 | Clé | Quand | Joué par |
 |---|---|---|

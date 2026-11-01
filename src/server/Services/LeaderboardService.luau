@@ -12,7 +12,9 @@
 --     deux tops 10 toutes les 120 s (l'une après l'autre) ; joueurs flags.lbBanned jamais écrits,
 --     et retirés de l'affichage s'ils sont présents
 --   * titre « Roi / Reine de la Conga » : à l'arrivée, top 10 de la semaine précédente →
---     NestService.grantTemporary(player, "titles", "conga_royal")
+--     NestService.grantTemporary(player, "titles", "conga_royal") ; à chaque relecture du top 10
+--     (changement de semaine pendant la session), retiré aux joueurs présents qui n'y sont plus
+--     (NestService.revokeTemporary)
 --   * aucune boucle propre : step(now) est appelé par le tick de CongaService ; les appels
 --     DataStore se font en task.spawn (jamais de yield dans step)
 -- GDD : §6.4 (tableau), §6.7, §12.8 (budget DataStore).
@@ -334,8 +336,21 @@ local function fetchCrown(week: number)
 			end
 			crownWeek = previous
 			for _, player in Players:GetPlayers() do
-				if DataService.isLoaded(player) then
-					crownIfTop(player)
+				if crownIds[player.UserId] then
+					if DataService.isLoaded(player) then
+						crownIfTop(player)
+					end
+				else
+					-- semaine passée pendant la session : le titre ne vaut que la semaine suivant le
+					-- classement (GDD §5.3) ; un ancien Roi / une ancienne Reine absent(e) du nouveau
+					-- top 10 le perd tout de suite (un joueur couronné de nouveau le garde)
+					Safe.call(
+						TAG .. ".revokeTemporary",
+						NestService.revokeTemporary,
+						player,
+						"titles",
+						CROWN_TITLE
+					)
 				end
 			end
 		end

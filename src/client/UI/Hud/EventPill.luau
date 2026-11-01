@@ -1,6 +1,7 @@
 --!strict
 -- Hud/EventPill — contenu de la pastille d'événement du HUD (GDD §10.2, §2.4, §9.4), fonction PURE.
--- Priorité de l'affichage : Comète (alerte, au sol, portée : « ☄ COMÈTE 0:45 — Mira ») > Nuit de la
+-- Priorité de l'affichage : Comète (alerte, au sol, portée : « ☄ COMÈTE 0:45 — Mira », nom du porteur
+-- coupé à 10 caractères + « … ») > Nuit de la
 -- Balise (alerte puis trêve, avec la barre de serveur points / objectif) > Starfall Frenzy > Starfall
 -- Saturday > Nuit d'Or (boost de serveur de 5 min après une Balise réussie, ou LiveOps) > météo en
 -- cours > autre boost de serveur (Glow Party, jusqu'à 60 min en file), seulement si aucun événement
@@ -18,6 +19,8 @@ local Events = require(Shared.Config.Events)
 local Types = require(Shared.Types)
 local EventClock = require(Shared.Logic.EventClock)
 local Format = require(Shared.Util.Format)
+
+local Text = require(script.Parent.Text)
 
 local EventPill = {}
 
@@ -63,6 +66,10 @@ local EVENT_BOOSTS: { [string]: boolean } = {
 
 -- s : un boost long laisse la place au compte à rebours d'un événement aussi proche
 local BOOST_YIELD = 60
+-- caractères du nom du porteur de la Comète : « ☄ COMÈTE 0:45 — SuperLongP… » tient à 18 px de
+-- référence ou plus dans la pastille (296 × 38, texte mis à l'échelle), en français comme en anglais
+local CARRIER_NAME_CHARS = 10
+local ELLIPSIS = "…"
 
 local NEXT_KEYS: { [string]: string } = {
 	comet = "hud.event.nextComet",
@@ -125,6 +132,10 @@ function EventPill.compute(
 			elseif c.phase == "carried" and now < c.burstAt then
 				local carrier = c.carrierId
 				local name = if finite(carrier) then nameOf(carrier :: number) else nil
+				if name ~= nil then
+					local short = Text.truncate(name, CARRIER_NAME_CHARS)
+					name = if short ~= name then short .. ELLIPSIS else short
+				end
 				return {
 					kind = "comet",
 					key = "hud.event.cometCarried",

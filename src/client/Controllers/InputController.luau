@@ -16,7 +16,9 @@
 --   * raccourcis : U, C, J, B, G → panneaux (PanelController) ; M / croix ↓ : minicarte ; F /
 --     croix → : acclamer ; croix ← : suivi de quête (QuestToggled)
 --   * retours (son « Back » à chaque pas en arrière, docs/07 §6.2-§6.3) : △ (ButtonY) : panneau
---     ouvert → tout fermer et effacer la sélection ; sinon sélection active (menu du HUD, carte
+--     ouvert → tout fermer et effacer la sélection ; sinon sélection dans le menu du HUD alors
+--     qu'une icône △ annonce une autre cible (setRailTarget : Améliorer de l'accueil, carte
+--     d'invitation) → cette cible sélectionnée ; sinon sélection active (menu du HUD, carte
 --     d'invitation) → effacée ; sinon RailRequested (le HUD sélectionne le rail) ; ○ / Échap : roue
 --     ouverte → fermée ; sinon, sans panneau, sélection active → effacée ; sinon laissé aux autres
 --     (panneau ouvert : ○ / Échap / L1 / R1 liés et absorbés par PanelController à plus haute
@@ -179,6 +181,8 @@ local panelArgs: { [string]: any } = {}
 local uiTime = 0 -- s : somme des dt du Heartbeat (garde du double appui, avance aussi en test)
 local openedAt: { [string]: number } = {} -- panneau → uiTime de son dernier PanelController.Opened
 local panelGate: ((Types.PanelName) -> boolean)? = nil
+-- cible annoncée par une icône △ (accueil, carte d'invitation), posée par le HUD (setRailTarget)
+local railTarget: (() -> GuiObject?)? = nil
 local wheelGui: Frame? = nil
 local wheelSectors: { TextButton } = {}
 local wheelOpen = false
@@ -240,6 +244,28 @@ local function clearSelection()
 	pcall(function()
 		GuiService.SelectedObject = nil
 	end)
+end
+
+-- Sélection dans le menu du HUD (écrans « HUD » ou « Minimap »)
+local function inHudMenu(selected: GuiObject): boolean
+	local ok, gui = pcall(function()
+		return selected:FindFirstAncestorWhichIsA("ScreenGui")
+	end)
+	return ok and gui ~= nil and (gui.Name == "HUD" or gui.Name == "Minimap")
+end
+
+-- Cible que △ désigne (icône △ posée à côté d'elle par l'accueil, le HUD ou la carte d'invitation),
+-- nil sans cible
+local function announcedTarget(): GuiObject?
+	local fn = railTarget
+	if fn == nil then
+		return nil
+	end
+	local ok, target = pcall(fn)
+	if ok and typeof(target) == "Instance" and (target :: Instance):IsA("GuiObject") then
+		return target :: GuiObject
+	end
+	return nil
 end
 
 -- Écran de chargement (src/first/Loading.client, ScreenGui « Loading » du PlayerGui) encore là :
@@ -617,6 +643,12 @@ function InputController.setPanelArgs(name: Types.PanelName, args: any?)
 	panelArgs[name] = args
 end
 
+-- Cible annoncée par une icône △ (posée par le HUD : carte d'invitation, cible de l'accueil) : en
+-- mode menu, △ la sélectionne au lieu de rendre la main tant que la sélection n'y est pas
+function InputController.setRailTarget(fn: (() -> GuiObject?)?)
+	railTarget = fn
+end
+
 function InputController.setPanelGate(fn: ((Types.PanelName) -> boolean)?)
 	panelGate = fn
 	-- la même garde vaut pour le changement de panneau à la manette (L2 / R2, docs/07 §6)
@@ -734,7 +766,18 @@ local function onRailAction(
 		AudioController.play("Back")
 		return Enum.ContextActionResult.Sink
 	end
-	if selection() ~= nil then
+	local selected = selection()
+	if selected ~= nil then
+		-- mode menu du HUD (ex. sur le Dash après ○ qui a fermé un panneau) : une icône △ annonce
+		-- encore une cible ailleurs (Améliorer de l'accueil, carte d'invitation) → △ la désigne ;
+		-- sinon △ rend la main au jeu
+		local target = announcedTarget()
+		if target ~= nil and target ~= selected and inHudMenu(selected) then
+			pcall(function()
+				GuiService.SelectedObject = target
+			end)
+			return Enum.ContextActionResult.Sink
+		end
 		clearSelection()
 		AudioController.play("Back")
 		return Enum.ContextActionResult.Sink

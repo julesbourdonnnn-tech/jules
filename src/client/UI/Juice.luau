@@ -7,6 +7,7 @@ local GuiService = game:GetService("GuiService")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
 
 local Juice = {}
 
@@ -96,15 +97,70 @@ function Juice.pulse(gui: GuiObject, amount: number?)
 	end)
 end
 
--- Bouton qui s'enfonce au toucher et rebondit au relâchement
+-- Boutons enfoncés → entrée (toucher, clic gauche) qui les a enfoncés ; clés faibles : un bouton
+-- détruit s'en va seul. Une seule connexion à UserInputService.InputEnded pour tous les boutons :
+-- un doigt relevé HORS du bouton (ni MouseButton1Up ni MouseLeave sur mobile) le relâche aussi.
+local pressedBy: { [GuiButton]: InputObject } = setmetatable({}, { __mode = "k" }) :: any
+local endWatcher: RBXScriptConnection? = nil
+
+local function isPointer(input: any): boolean
+	if typeof(input) ~= "InputObject" and type(input) ~= "table" then
+		return false
+	end
+	local kind = input.UserInputType
+	return kind == Enum.UserInputType.Touch or kind == Enum.UserInputType.MouseButton1
+end
+
+-- Même geste : le même InputObject (un toucher garde le sien de InputBegan à InputEnded) ou, pour
+-- la souris, le clic gauche (Roblox peut en créer un nouveau au relâchement)
+local function sameGesture(source: any, input: any): boolean
+	if source == input then
+		return true
+	end
+	return source.UserInputType == Enum.UserInputType.MouseButton1
+		and input.UserInputType == Enum.UserInputType.MouseButton1
+end
+
+local function watchInputEnded()
+	if endWatcher ~= nil then
+		return
+	end
+	endWatcher = UserInputService.InputEnded:Connect(function(input: InputObject)
+		if not isPointer(input) then
+			return
+		end
+		local done: { GuiButton } = {}
+		for button, source in pressedBy do
+			if sameGesture(source, input) then
+				table.insert(done, button)
+			end
+		end
+		for _, button in done do
+			pressedBy[button] = nil
+			local scale = button:FindFirstChild("JuiceScale")
+			if scale and scale:IsA("UIScale") then
+				Juice.tween(scale, 0.2, { Scale = 1 }, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+			end
+		end
+	end)
+end
+
+-- Bouton qui s'enfonce au toucher et rebondit au relâchement (y compris doigt relevé ailleurs)
 function Juice.press(button: GuiButton)
 	local scale = Juice.scaleOf(button)
 	button.MouseButton1Down:Connect(function()
 		Juice.tween(scale, 0.08, { Scale = 0.9 })
 	end)
 	local function release()
+		pressedBy[button] = nil
 		Juice.tween(scale, 0.2, { Scale = 1 }, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
 	end
+	button.InputBegan:Connect(function(input: InputObject)
+		if isPointer(input) then
+			pressedBy[button] = input
+			watchInputEnded()
+		end
+	end)
 	button.MouseButton1Up:Connect(release)
 	button.MouseLeave:Connect(release)
 	button.SelectionGained:Connect(function()

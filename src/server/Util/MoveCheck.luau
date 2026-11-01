@@ -57,7 +57,8 @@
 --     CongaService pose ses miettes et balaie seulement sa propre porte (parade d'un rattrapage
 --     honnête). Jamais une infraction, jamais de retour. Coût honnête : après un gel réseau de f s
 --     à la vitesse v, ≈ (v × (f + 0,1) − plafond) / (0,05 × v) ticks sans action en continuant de
---     courir (gel de 0,7 s : 0,8 s ; 1 s : 1,4 s), trois fois moins à l'arrêt
+--     courir à pleine vitesse (à 16 : gel de 0,7 s → ≈ 0,9 s ; 1 s → ≈ 1,5 s ; 1,5 s → ≈ 2,5 s),
+--     moins d'une seconde en s'arrêtant (remplissage trois fois plus rapide)
 --   * période de grâce (exemption de 3 s après reset, ou restriction après un retour) : les
 --     positions encore « en vol » ne déclenchent pas de nouveau retour par infractions et aucun
 --     retour n'y compte comme récidive (recentRewinds) — un joueur honnête qui décroche n'est jamais
@@ -250,9 +251,14 @@ local function accept(st: State, pos: Vector3, now: number)
 		st.validAt = math.max(st.validAt, now - STILL_CREDIT)
 	end
 	local history = st.history
-	-- arrêt : l'échantillon garde le début de l'arrêt en cours ; départ d'un arrêt noté
+	-- arrêt : l'échantillon garde le début de l'arrêt en cours, tant que le serveur l'a observé sans
+	-- trou (au plus BURST_MAX_TICK entre deux positions acceptées : un trou d'observation repart de
+	-- zéro, comme la fenêtre soutenue) ; départ d'un arrêt noté
 	local last = history[#history]
-	local since = if last and (pos - last.pos).Magnitude <= STILL_EPSILON then last.since else now
+	local still = last ~= nil
+		and (pos - last.pos).Magnitude <= STILL_EPSILON
+		and now - last.t <= BURST_MAX_TICK + 1e-6
+	local since = if still and last then last.since else now
 	if last and since == now and last.since < last.t then
 		st.leftStillAt = now
 	end

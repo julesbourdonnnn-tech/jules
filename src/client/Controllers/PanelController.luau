@@ -18,11 +18,15 @@
 --         jamais vers le HUD derrière ; après un changement d'onglet ou de contenu (achat, fusion,
 --         liste reconstruite), une sélection masquée ou détruite revient à la sélection par défaut
 --       - sélection effacée (pavé tactile / Créer, menu du système refermé) : rendue à l'image
---         suivante ; vide seulement tant qu'une fenêtre Roblox tient la manette (achat ouvert par ✕,
---         PanelController.holdSelection, menu du système) ; croix ↑ / ↓ / → sans sélection
---         absorbées (PanelNavGuard) : ni roue de pings, ni minicarte, ni ACCLAMER derrière la fenêtre
---       - ○ (Retour) recule d'un niveau (Supernova → Améliorer → bouton d'origine hors fenêtre,
---         ex. le bouton du rail, rendu à la manette s'il est encore affiché) avec le son « Back »
+--         suivante ; vide seulement tant qu'une fenêtre Roblox tient la manette, signalée
+--         explicitement par le panneau qui l'ouvre (PanelController.holdSelection : achat de la
+--         Boutique, invitation de l'Équipage) ou menu du système ; croix ↑ / ↓ / ← / → sans
+--         sélection absorbées (PanelNavGuard) : ni roue de pings, ni minicarte, ni suivi de quête,
+--         ni ACCLAMER derrière la fenêtre
+--       - ○ (Retour) recule d'un niveau : d'abord dans le panneau (Panel.onBack : ex. Réserve de la
+--         Collection, libération armée ou mode sélection annulé), puis Supernova → Améliorer →
+--         bouton d'origine hors fenêtre (ex. le bouton du rail, rendu à la manette s'il est encore
+--         affiché), avec le son « Back »
 --       - L1 / R1 : onglets en boucle (son « Tab ») ; L2 / R2 : panneau précédent / suivant en boucle
 --         (Améliorer, Collection, Objectifs, Boutique, Équipage, Réglages ; Supernova compte comme
 --         Améliorer ; garde du HUD : PanelController.allowed), absorbés : R2 ne Dash pas
@@ -105,6 +109,9 @@ export type Panel = {
 	tabVisible: ((tab: string) -> boolean)?, -- onglet masqué (Accueil une fois la chaîne finie)
 	step: ((dt: number) -> ())?, -- chaque image tant que le panneau est ouvert
 	defaultSelection: (() -> GuiObject?)?, -- premier objet sélectionné à la manette
+	-- ○ / Échap / Retour, appelé avant de reculer : true = le panneau a reculé d'un niveau lui-même
+	-- (ex. mode sélection annulé), avec l'objet à sélectionner ensuite à la manette (optionnel)
+	onBack: (() -> (boolean, GuiObject?))?,
 }
 
 PanelController.Opened = Signal.new() :: Signal.Signal<Types.PanelName>
@@ -146,11 +153,11 @@ local ACTION_PRIORITY = Enum.ContextActionPriority.High.Value + 50
 local ACTION_BACK, ACTION_PREV, ACTION_NEXT = "PanelBack", "PanelTabPrev", "PanelTabNext"
 local ACTION_CYCLE_PREV, ACTION_CYCLE_NEXT = "PanelPrev", "PanelNext" -- L2 / R2
 local ACTION_SCROLL = "PanelScroll" -- stick droit
--- croix ↑ / ↓ / → sans sélection : jamais la roue de pings, la minicarte ni ACCLAMER derrière la
--- fenêtre (← : le suivi de quête d'InputController s'efface déjà, panneau ouvert)
+-- croix ↑ / ↓ / ← / → sans sélection : jamais la roue de pings, la minicarte, le suivi de quête
+-- ni ACCLAMER derrière la fenêtre ; la sélection de la fenêtre est rendue
 local ACTION_NAV_GUARD = "PanelNavGuard"
--- s : sélection effacée au plus tant après ✕ sur un objet de la fenêtre = fenêtre Roblox ouverte
--- par ce bouton (Config/Console.PromptHoldWindow)
+-- s : une retenue (holdSelection) dont la fenêtre Roblox n'a jamais pris la manette tombe après ce
+-- délai (Config/Console.PromptHoldWindow)
 local PROMPT_HOLD_WINDOW = Console.PromptHoldWindow
 -- Panneaux parcourus par L2 / R2 (docs/07 §6.3) ; Supernova compte comme Améliorer
 local CYCLE: { Types.PanelName } = { "Upgrades", "Collection", "Goals", "Shop", "Crew", "Settings" }
@@ -229,15 +236,14 @@ local frameNo = 0
 local selectionChangedAt = -1
 local bump: BumpProbe? = nil
 -- Sélection laissée vide pendant qu'une fenêtre Roblox tient la manette (docs/07 §6.6, §7) :
--- `heldByPanel` (PanelController.holdSelection, ex. Panels/Shop pendant la fenêtre d'achat),
--- `heldByPrompt` (sélection effacée juste après ✕ sur `confirmTarget`, à `confirmAt`), menu du système
+-- `heldByPanel` (PanelController.holdSelection, posé par le panneau qui ouvre la fenêtre : achat
+-- de la Boutique, invitation de l'Équipage), menu du système. Jamais deviné d'après « ✕ puis
+-- sélection effacée » : un bouton sans fenêtre Roblox (Acheter d'Améliorer…) laissait la sélection
+-- vide et le stick gauche promenait le personnage derrière la fenêtre.
 local uiTime = 0 -- s : somme des dt (mesure de l'interface)
 local heldByPanel = false
 local heldAt = -math.huge -- uiTime de holdSelection(true)
 local heldTaken = false -- la sélection a été vide pendant la retenue (la fenêtre a pris la manette)
-local heldByPrompt = false
-local confirmAt = -math.huge
-local confirmTarget: GuiObject? = nil
 
 -- ---------------------------------------------------------------------------------------------
 -- Aides
@@ -328,15 +334,13 @@ end
 -- Une fenêtre Roblox tient-elle la manette ? (achat, menu du système) : une sélection effacée reste
 -- alors vide, la reposer volerait la manette à cette fenêtre
 local function selectionHeld(): boolean
-	return heldByPanel or heldByPrompt or systemMenuOpen()
+	return heldByPanel or systemMenuOpen()
 end
 
 -- La fenêtre Roblox est refermée (fin d'achat, sélection posée, panneau fermé)
 local function releaseHold()
 	heldByPanel = false
 	heldTaken = false
-	heldByPrompt = false
-	confirmTarget = nil
 end
 
 -- ---------------------------------------------------------------------------------------------
@@ -964,7 +968,7 @@ local function onAction(
 		end
 		-- sans sélection, la croix arrive au jeu : aucune fenêtre Roblox ne tient la manette ; la
 		-- sélection de la fenêtre est rendue et la croix absorbée (pas de roue de pings, de
-		-- minicarte ni d'ACCLAMER derrière le panneau)
+		-- minicarte, de suivi de quête ni d'ACCLAMER derrière le panneau)
 		if inputState == Enum.UserInputState.Begin then
 			releaseHold()
 			ensureSelection()
@@ -1043,6 +1047,7 @@ local function bindActions()
 		ACTION_PRIORITY,
 		Enum.KeyCode.DPadUp,
 		Enum.KeyCode.DPadDown,
+		Enum.KeyCode.DPadLeft,
 		Enum.KeyCode.DPadRight
 	)
 end
@@ -1189,7 +1194,8 @@ function PanelController.close()
 	closeInternal(false)
 end
 
--- ○ / Échap / bouton Retour : recule d'un niveau (son « Back ») : Supernova → Améliorer (bouton
+-- ○ / Échap / bouton Retour : recule d'un niveau (son « Back ») : d'abord dans le panneau
+-- (Panel.onBack, ex. mode sélection de la Réserve annulé), puis Supernova → Améliorer (bouton
 -- Supernova resélectionné à la manette) → fermeture (bouton d'origine hors fenêtre resélectionné)
 function PanelController.back()
 	local name = currentName
@@ -1198,6 +1204,26 @@ function PanelController.back()
 	end
 	AudioController.play("Back")
 	local panel = panels[name]
+	local hook = if panel then panel.onBack else nil
+	if type(hook) == "function" then
+		local ok, handled, focus = pcall(hook)
+		if not ok then
+			warn(`[PanelController] {name}.onBack :`, handled)
+		elseif handled == true then
+			-- le panneau a reculé lui-même : la manette retrouve l'objet indiqué (sinon la sélection
+			-- courante, ou la sélection par défaut si elle a disparu)
+			local page = pages[name]
+			if page ~= nil and gamepadActive() then
+				if typeof(focus) == "Instance" and focus:IsA("GuiObject") and inWindow(focus) then
+					GuiService.SelectedObject = focus
+					lastInWindow = focus
+				else
+					ensureSelection()
+				end
+			end
+			return
+		end
+	end
 	local parent = panel and panel.parent
 	if parent and VALID[parent] then
 		local target = opener
@@ -1364,8 +1390,8 @@ end
 -- la fenêtre, revient à la sélection par défaut. Une sélection effacée (pavé tactile / Créer de la
 -- DualSense, menu du système refermé…) est rendue : dernier objet de la fenêtre s'il est encore
 -- affiché, sinon la sélection par défaut. Elle ne reste vide que tant qu'une fenêtre Roblox tient
--- la manette : effacée juste après ✕ sur ce même objet (fenêtre d'achat ouverte par ce bouton,
--- jusqu'à la fin de l'achat), PanelController.holdSelection, menu du système ouvert.
+-- la manette : PanelController.holdSelection (posé par le panneau qui ouvre la fenêtre, jusqu'à sa
+-- fermeture), menu du système ouvert.
 ensureSelection = function()
 	local name = currentName
 	local page = if name then pages[name] else nil
@@ -1375,7 +1401,6 @@ ensureSelection = function()
 	end
 	local selected = GuiService.SelectedObject
 	if selected ~= nil then
-		heldByPrompt = false
 		-- retenue dont la fenêtre Roblox n'a jamais pris la manette (sélection restée posée plus de
 		-- PROMPT_HOLD_WINDOW s : fenêtre jamais montrée) : elle tombe, un effacement plus tard est rendu
 		if heldByPanel and not heldTaken and uiTime - heldAt > PROMPT_HOLD_WINDOW then
@@ -1395,10 +1420,6 @@ ensureSelection = function()
 		end
 		local last = lastInWindow
 		local shown = last ~= nil and inWindow(last)
-		if shown and confirmTarget == last and uiTime - confirmAt <= PROMPT_HOLD_WINDOW then
-			heldByPrompt = true
-		end
-		confirmTarget = nil
 		if selectionHeld() then
 			return
 		end
@@ -1695,21 +1716,6 @@ local function onNavInput(input: InputObject)
 		return
 	end
 	local key = input.KeyCode
-	if key == Enum.KeyCode.ButtonA then
-		-- ✕ sur un objet de la fenêtre : s'il ouvre une fenêtre Roblox (achat), elle effacera la
-		-- sélection dans les PROMPT_HOLD_WINDOW s (ensureSelection la laisse alors vide)
-		local target = GuiService.SelectedObject
-		local w = window
-		if target ~= nil and w ~= nil and target:IsDescendantOf(w) then
-			confirmAt = uiTime
-			confirmTarget = target
-		end
-		return
-	elseif key == Enum.KeyCode.ButtonSelect then
-		-- pavé tactile / Créer : bascule de sélection de Roblox, jamais une fenêtre d'achat
-		confirmTarget = nil
-		return
-	end
 	if not NAV_KEYS[key] then
 		return
 	end

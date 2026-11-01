@@ -12,8 +12,9 @@
 -- L'instruction affichée doit toujours être réalisable MAINTENANT (GDD §3) : rentrer dès que la
 -- file contient de quoi réussir la quête, chercher des Nebbies quand les Puffkins ont disparu ou
 -- que le Glow manque, attendre la météo (compte à rebours) quand aucun Nebby météo n'existe ;
--- pendant une Pluie de météores (aucune forme), « Météo dans {time} » jusqu'à la prochaine météo
--- qui en donne une (Plan.formWeatherIn).
+-- pendant une Pluie de météores (aucune forme), ou quand la PROCHAINE fenêtre en est une, « Météo
+-- dans {time} » jusqu'à la prochaine météo qui en donne une (Plan.formWeatherIn) ; au Nid à côté de
+-- l'arche avec une file à encaisser : « Passe sous l'arche ! » (la parade ne part que sous l'arche).
 -- Étapes : 0 pas commencé, 1-7 = quête Q1-Q7 en cours, 8 = accueil terminé.
 -- Manette (fait `gamepad`, docs/07-console-ps5.md §6.2) : aucune consigne tactile — « Ouvre
 -- Améliorer » (posée à côté de l'icône △ / ✕ par le contrôleur) au lieu de « Touche Améliorer ».
@@ -48,9 +49,13 @@ export type Facts = {
 	weatherActive: boolean?, -- fenêtre météo en cours, avec une forme météo
 	weatherFormless: boolean?, -- fenêtre météo en cours SANS forme (Pluie de météores) : la pastille
 	-- d'événement affiche son compte à rebours à elle, pas celui de la prochaine météo utile
+	nextWeatherFormless: boolean?, -- aucune fenêtre ouverte et la PROCHAINE est sans forme : la
+	-- pastille compte à rebours une météo qui ne donnera aucun Nebby météo
 	weatherTarget: boolean?, -- un Nebby météo attrapable est connu (Q6)
 	cometActive: boolean?, -- Comète au sol ou portée (Q6 accepte aussi la Comète)
 	gamepad: boolean?, -- entrée préférée : manette (consignes sans geste tactile)
+	inHarborNotGate: boolean?, -- file non vide, au Nid (plateforme ou port de sa porte) hors de la
+	-- boîte de la porte : la parade ne part pas encore
 }
 
 export type Guide = "toPuffkins" | "toGate" | "toNebbies" | "toRare" | "toWeather" | "toComet"
@@ -138,6 +143,13 @@ local function eventFactsKnown(f: Facts): boolean
 		or f.weatherTarget ~= nil
 		or f.cometActive ~= nil
 		or f.weatherFormless ~= nil
+		or f.nextWeatherFormless ~= nil
+end
+
+-- Rentrer encaisser : « Retourne au Nid », ou « Passe sous l'arche ! » quand l'enfant y est déjà
+-- (plateforme du Nid, port de sa porte) sans être passé sous l'arche
+local function home(f: Facts): string
+	return if f.inHarborNotGate == true then "onboarding.throughArch" else "onboarding.goHome"
 end
 
 -- Avant la toute première parade : les Puffkins de bienvenue ont disparu (réinitialisation, mort,
@@ -165,13 +177,13 @@ function Plan.hint(f: Facts): string?
 			-- n'apparaissent qu'à la première session (QuestService, step 0) : un joueur qui revient
 			-- est guidé vers les Nebbies sauvages
 			if f.lineFull or f.lineCount >= 3 then
-				return "onboarding.goHome"
+				return home(f)
 			end
 			return if puffkinsGone(f) then "onboarding.findNebbies" else "onboarding.catch"
 		end
 		if f.conga < 1 then
 			if congaShort(f) then
-				return if f.lineFull then "onboarding.goHome" else "onboarding.findNebbies"
+				return if f.lineFull then home(f) else "onboarding.findNebbies"
 			end
 			if f.upgradesOpen then
 				return "onboarding.buyConga"
@@ -180,14 +192,14 @@ function Plan.hint(f: Facts): string?
 		end
 	end
 	if f.lineFull then
-		return "onboarding.goHome"
+		return home(f)
 	end
 	local def = Quests.Onboarding[step]
 	if def == nil then
 		return nil
 	end
 	if goalInLine(f, def) then
-		return "onboarding.goHome"
+		return home(f)
 	end
 	if def.goal.kind == "weatherOrComet" and eventFactsKnown(f) then
 		if f.weatherTarget or f.weatherActive then
@@ -196,10 +208,13 @@ function Plan.hint(f: Facts): string?
 		if f.cometActive then
 			return "onboarding.joinComet"
 		end
-		-- Pluie de météores en cours : « Météo bientôt ! » à côté d'une pastille qui compte à rebours
-		-- la fin de la pluie mentirait (rien ne se passe à 0) ; l'instruction porte son propre compte
-		-- à rebours jusqu'à la prochaine météo à forme (Plan.formWeatherIn, variable {time})
-		return if f.weatherFormless then "onboarding.waitWeatherIn" else "onboarding.waitWeather"
+		-- Pluie de météores en cours, ou prochaine fenêtre : « Météo bientôt ! » à côté d'une pastille
+		-- qui compte à rebours la fin (ou le début) de la pluie mentirait (rien ne se passe à 0) ;
+		-- l'instruction porte son propre compte à rebours jusqu'à la prochaine météo à forme
+		-- (Plan.formWeatherIn, variable {time})
+		return if f.weatherFormless or f.nextWeatherFormless
+			then "onboarding.waitWeatherIn"
+			else "onboarding.waitWeather"
 	end
 	-- quêtes d'achat : n'inviter à acheter que si c'est possible, sinon guider vers les Nebbies
 	if def.goal.kind == "upgrade" then
@@ -283,7 +298,8 @@ function Plan.attention(f: Facts): { [Types.HudElement]: boolean }
 	elseif hint == "onboarding.waitWeather" then
 		out.eventPill = true -- le compte à rebours de la prochaine météo pulse
 	end
-	-- « onboarding.waitWeatherIn » : rien ne pulse, la pastille montre la Pluie de météores en cours
+	-- « onboarding.waitWeatherIn » : rien ne pulse, la pastille montre la Pluie de météores (en cours
+	-- ou à venir)
 	return out
 end
 

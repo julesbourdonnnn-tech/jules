@@ -5,6 +5,9 @@
 --      en un tick, ne doit AGIR sur rien : ni coupe, ni capture, ni ramassage ou vol de Comète, ni
 --      Gloomwisp, ni parade à l'anneau de la Balise. Seule SA porte est balayée (rattrapage honnête
 --      après un gel réseau). CongaService ignorait cette valeur : l'acteur restait `valid`.
+--      Contrat r5 (plus strict, Fix_r5_serveur_anticheat) : la rafale vient d'un budget d'action à
+--      mémoire ; le tick qui SUIT le bond n'agit pas non plus, le joueur ré-agit une fois la dette
+--      remboursée (arrêt ou marche lente), jamais au tick suivant.
 --   2. Explosion de la Comète : 5 Épiques libres, 1 au plus par joueur (groupe "burst:<id>",
 --      groupCap 1). Le plafond n'était vérifié qu'à la collecte des candidatures, avant toute
 --      capture : un même joueur en attrapait 3 à 5 dans le même tick.
@@ -294,6 +297,11 @@ return function(T)
 				tick(env, 3)
 				expect(#snips(env)).toBe(0)
 				expect(env.Conga.lineLength(B)).toBe(10)
+				-- contrat r5 : budget d'action encore en dette juste après le bond ; à l'arrêt, il se
+				-- rembourse en moins d'une seconde
+				expect(env.MoveCheck.canAct(A, env.Clock.now())).toBe(false)
+				tick(env, 10)
+				expect(env.MoveCheck.canAct(A, env.Clock.now())).toBe(true)
 				-- contrôle : la même traversée à pied coupe bien la file (la géométrie est la bonne)
 				walk(env, A, start, 14)
 				expect(#snips(env)).toBe(1)
@@ -302,26 +310,41 @@ return function(T)
 			end
 		)
 
-		it("bond sur un Nebby sauvage : aucune capture au tick du bond ; le tick suivant, si", function()
-			local env = setup()
-			local p = join(env, 1, 1)
-			local start = env.V3.new(-60, 3, 40)
-			local landing = env.V3.new(-60, 3, 67)
-			place(env, p, start)
-			tick(env, 40) -- exemption terminée
-			env.Spawn.spawnPersonal(p, env.Neb.pack(1, 0, 0), landing)
-			tick(env, 12) -- 1,2 s à l'arrêt, hors de portée de l'Attrait
-			expect(env.Conga.lineLength(p)).toBe(0)
-			env.h:moveTo(p, landing)
-			tick(env)
-			expect(env.MoveCheck.lastWasBurst(p)).toBe(true)
-			expect(env.MoveCheck.violations(p)).toBe(0)
-			expect(env.Conga.lineLength(p)).toBe(0)
-			-- rattrapage honnête (gel réseau) : dès le tick suivant, il joue normalement d'où il est
-			tick(env)
-			expect(env.MoveCheck.lastWasBurst(p)).toBe(false)
-			expect(env.Conga.lineLength(p)).toBe(1)
-		end)
+		it(
+			"bond sur un Nebby sauvage : aucune capture au tick du bond ni au suivant ; une fois le budget remboursé, si",
+			function()
+				local env = setup()
+				local p = join(env, 1, 1)
+				local start = env.V3.new(-60, 3, 40)
+				local landing = env.V3.new(-60, 3, 67)
+				place(env, p, start)
+				tick(env, 40) -- exemption terminée
+				env.Spawn.spawnPersonal(p, env.Neb.pack(1, 0, 0), landing)
+				tick(env, 12) -- 1,2 s à l'arrêt, hors de portée de l'Attrait
+				expect(env.Conga.lineLength(p)).toBe(0)
+				env.h:moveTo(p, landing)
+				tick(env)
+				expect(env.MoveCheck.lastWasBurst(p)).toBe(true)
+				expect(env.MoveCheck.violations(p)).toBe(0)
+				expect(env.Conga.lineLength(p)).toBe(0)
+				-- contrat r5 : le tick suivant reste une rafale (dette de budget d'action) : toujours rien
+				tick(env)
+				expect(env.MoveCheck.lastWasBurst(p)).toBe(true)
+				expect(env.Conga.lineLength(p)).toBe(0)
+				-- rattrapage honnête (gel réseau) : immobile, la dette se rembourse en moins d'une seconde,
+				-- puis il joue normalement d'où il est (capture au premier tick « agissant »)
+				local waited = 1
+				while env.MoveCheck.lastWasBurst(p) and waited < 30 do
+					expect(env.Conga.lineLength(p)).toBe(0)
+					tick(env)
+					waited += 1
+				end
+				expect(waited <= 10).toBe(true)
+				expect(env.MoveCheck.lastWasBurst(p)).toBe(false)
+				expect(env.Conga.lineLength(p)).toBe(1)
+				expect(env.MoveCheck.violations(p)).toBe(0)
+			end
+		)
 
 		it(
 			"Comète et Gloomwisps : l'acteur d'un tick en rafale n'est jamais `valid` pour EventService",
@@ -349,8 +372,15 @@ return function(T)
 					expect(actor.valid).toBe(false)
 					expect(near(actor.pos, landing)).toBe(true)
 				end
+				-- contrat r5 : le tick suivant n'est pas `valid` non plus (dette de budget d'action)
 				tick(env)
+				expect(actorIn(env.cometActors, p).valid).toBe(false)
+				expect(actorIn(env.wispActors, p).valid).toBe(false)
+				-- immobile, la dette se rembourse en moins d'une seconde : de nouveau `valid`
+				tick(env, 10)
 				expect(actorIn(env.cometActors, p).valid).toBe(true)
+				expect(actorIn(env.wispActors, p).valid).toBe(true)
+				expect(env.MoveCheck.violations(p)).toBe(violations)
 			end
 		)
 
@@ -455,9 +485,20 @@ return function(T)
 				expect(MoveCheck.violations(A)).toBe(violationsA)
 				expect(w.Event.carrier()).toBeNil()
 				expect(w.Event.snapshot().comet.phase).toBe("ground")
-				-- le tick suivant, il est vraiment sur la Comète : ramassage normal
+				-- contrat r5 : le tick suivant, il est sur la Comète mais encore en dette de budget
+				-- d'action : toujours pas de ramassage
 				Bots.frame()
+				expect(MoveCheck.lastWasBurst(A)).toBe(true)
+				expect(w.Event.carrier()).toBeNil()
+				-- immobile, la dette se rembourse en moins d'une seconde : ramassage normal
+				local waited = 1
+				while w.Event.carrier() == nil and waited < 30 do
+					Bots.frame()
+					waited += 1
+				end
+				expect(waited <= 11).toBe(true)
 				expect(w.Event.carrier()).toBe(A)
+				expect(MoveCheck.violations(A)).toBe(violationsA)
 				-- immunité du porteur (2 s) écoulée, C immobile depuis plus d'1 s
 				Bots.frames(25)
 				expect(w.Event.carrier()).toBe(A)

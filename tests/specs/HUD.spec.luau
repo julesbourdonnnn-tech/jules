@@ -147,7 +147,14 @@ return function(T)
 			local frame = c.g.Instance.new("Frame")
 			c.HUD.registerElement("minimap", frame)
 			expect(frame.Visible).toBe(true)
+			-- boutique sans article (tous les ids à 0) : pas d'icône Boutique, même au HUD complet
 			c.HUD.revealAll()
+			expect(c.HUD.isRevealed("rail.Shop")).toBe(false)
+			expect(hud(c).Rail.Shop.Visible).toBe(false)
+			-- un article visible (id renseigné) : l'icône apparaît à la mise à jour suivante
+			local Monetization = c.h:require("ReplicatedStorage.Shared.Config.Monetization")
+			Monetization.Passes.DoubleGlow.id = 1234
+			frames(c, 8)
 			for _, element in
 				{
 					"stardust",
@@ -567,7 +574,13 @@ return function(T)
 					{ onboarding = { step = 8, p = 0 }, glow = 100000 },
 					{}
 				)
+				-- quête réussie (GDD §9.4) : barre pleine et coche, puis l'objectif suivant
 				frames(c, 7)
+				expect(pill.Icon.Text).toBe("✓")
+				frames(c, 10)
+				expect(pill.Icon.Text).toBe("✓")
+				expect(pill.Bar.Fill.Size).toEqual(UDim2.fromScale(1, 1))
+				frames(c, 30)
 				expect(pill.Title.Text).toBe("Supernova · 400,000")
 				expect(pill.Bar.Fill.Size).toEqual(UDim2.fromScale(0.25, 1))
 				pill.Toggle.Button.Activated:Fire()
@@ -774,7 +787,8 @@ return function(T)
 				c.h:settle(1)
 				expect(#sent(c, "Dash")).toBe(1) -- avant le relâchement
 				frames(c, 3)
-				button.Activated:Fire() -- relâchement du même geste
+				-- relâchement du même geste (Roblox passe l'InputObject du toucher à Activated)
+				button.Activated:Fire({ UserInputType = roblox.Enum.UserInputType.Touch }, 1)
 				c.h:settle(1)
 				expect(#sent(c, "Dash")).toBe(1)
 				expect(refused).toBe(0) -- pas de secousse « recharge » parasite

@@ -974,7 +974,7 @@ Tous les effets passent par le module client `UI/Juice` (existant : `tween`, `pu
 | `fovPunch(delta, outTime, backTime)` | Coup de focale |
 | `haptic(strength, duration)` | Vibration mobile via `HapticService` si supportée |
 
-**Règles** : une seule animation par propriété à la fois (annuler l'ancienne) ; aucune création d'instances en rafale (réserves) ; secousse caméra via `Humanoid.CameraOffset` (bruit de Perlin, amplitude ≤ 0,4, durée ≤ 0,3 s) ; les fondus de pièces 3D se font en **rétrécissant** la pièce (on garde Transparency à 0 ou 1). Les sons sont optionnels : chaque clé de `Shared/Config/Sounds` a un ID vide par défaut et le jeu reste entièrement jouable en silence.
+**Règles** : une seule animation par propriété à la fois (annuler l'ancienne) ; aucune création d'instances en rafale (réserves) ; secousse caméra via `Humanoid.CameraOffset` (bruit de Perlin, amplitude ≤ 0,4, durée ≤ 0,3 s) ; les fondus de pièces 3D se font en **rétrécissant** la pièce (on garde Transparency à 0 ou 1). Les sons de `Shared/Config/Sounds` sont des sons publiés par Roblox (provenance notée sur chaque ligne) ; une clé vide est muette et le jeu reste entièrement jouable en silence.
 
 **Réglages.** *Mouvement réduit* (suit aussi `GuiService.ReducedMotionEnabled`) : pas de secousse, pas de coup de focale, pas de flash, pas de travelling d'arrivée ; les déplacements d'interface deviennent des fondus. *Graphismes légers* : particules ×0,3, pas de `Trail` sauf la Comète, `Highlight` seulement sur le porteur de la Comète, distances de détail ×0,6, lumières coupées au-delà de 60 studs.
 
@@ -1261,7 +1261,7 @@ src/
       Quests.luau                 accueil, pool quotidien, hebdo, calendrier, jalons d'Atlas
       Cosmetics.luau              styles, auras, titres, thèmes, palette des Nids
       Monetization.luau           (existant, rempli : 6 passes, 6 produits, IDs à 0)
-      Sounds.luau                 (existant, clés ajoutées, IDs vides)
+      Sounds.luau                 (existant, clés ajoutées, sons publiés par Roblox ou vides)
     Logic/                        modules PURS (aucun service Roblox) testés sous Lune
       Formulas.luau               coûts, bonus, M, valeurs, revenu, hors ligne, plafonds
       Trail.luau                  (déjà écrit) miettes de chemin, position des nœuds (`sample`), coupe point à point (`findCut`) ;
@@ -1607,6 +1607,7 @@ Tout passe par `Server/Util/Analytics` (existant, appels protégés par `pcall`)
 | `RookieShieldEnded` | Minutes jouées | Durée réelle du bouclier |
 | `SupernovaReached` | R | Rythme réel vs §4.18 |
 | `MoveViolation` | Nombre d'infractions dans la session | Faux positifs de l'anti-triche |
+| `ServerFullKick` | 1 = joueur sans Nid renvoyé (taille de serveur réglée au-delà de 12) | La taille du serveur du Creator Hub est-elle mal réglée ? |
 | `SessionLength` | Minutes (au départ) | Durée de session |
 | `CrewFormed` | Taille | Co-play |
 

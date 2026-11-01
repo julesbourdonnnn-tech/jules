@@ -11,9 +11,11 @@
 --     la colonne de droite du HUD, setCardPlacer : jamais sur le Dash, le Ping ni le bouton de saut,
 --     zone sûre de l'appareil comprise ; les cartes en trop attendent), "atlasUnlocked" (fin de Q4,
 --     GDD §3 « l'Atlas se débloque, page qui tourne, 5/150 » : carte « Star Atlas débloqué ! N/T »
---     en tête de la file des cartes, son LevelUp quand elle entre ; l'accueil pointe l'icône
---     Collection via Celebrated), "atlasMilestone" (confettis),
---     "questDone" / "questClaimed" / "dailyClaimed" (récompense qui vole vers son compteur),
+--     en tête de la file des cartes, son LevelUp quand elle entre, CardOpened("atlasUnlocked")
+--     quand elle est VRAIMENT à l'écran : l'accueil pointe l'icône Collection pendant toute la
+--     carte), "atlasMilestone" (confettis), "questDone" (toast « Parade de 4 ✓ » pour une quête
+--     d'accueil, « Quête terminée ! » sinon) / "questClaimed" / "dailyClaimed" (récompense qui
+--     vole vers son compteur),
 --     "starforge" (tampon « ★N ! », sauf panneau Collection ouvert : il joue lui-même la révélation
 --     du GDD §9.4, orbite de 1,2 s puis résultat et son tampon), "purchase" (pluie de 30 pièces,
 --     « Merci ! »), "cometBanked", "release",
@@ -47,6 +49,7 @@ local Types = require(Shared.Types)
 local Net = require(Shared.Net)
 local Nebbies = require(Shared.Config.Nebbies)
 local Balance = require(Shared.Config.Balance)
+local Quests = require(Shared.Config.Quests)
 local Formulas = require(Shared.Logic.Formulas)
 local WorldLayout = require(Shared.Logic.WorldLayout)
 
@@ -71,6 +74,10 @@ local ScreenFX = {}
 ScreenFX.FeedbackReceived = Signal.new() :: Signal.Signal<Types.FeedbackPayload>
 -- Chaque Celebrate reçu (les panneaux y branchent leurs animations internes)
 ScreenFX.Celebrated = Signal.new() :: Signal.Signal<Types.CelebratePayload>
+-- Une carte marquée (genre de Celebrate, ex. "atlasUnlocked") entre VRAIMENT à l'écran (elle peut
+-- attendre derrière d'autres cartes) ; second argument : secondes pendant lesquelles elle reste
+-- visible (entrée + tenue + sortie). L'accueil y cale la main sur l'icône Collection.
+ScreenFX.CardOpened = Signal.new() :: Signal.Signal<string, number>
 
 export type StampStyle = "parade" | "snip" | "small" | "comet"
 
@@ -168,6 +175,12 @@ local CELEBRATE_KINDS: { [string]: boolean } = {
 	unlock = true,
 }
 
+-- Ids des quêtes d'accueil (toast « questDone » nommé)
+local ONBOARDING_IDS: { [string]: boolean } = {}
+for _, def in Quests.Onboarding do
+	ONBOARDING_IDS[def.id] = true
+end
+
 local UNLOCK_PREFIX: { [string]: string } = {
 	styles = "style.",
 	style = "style.",
@@ -216,8 +229,8 @@ type StampSlot = {
 
 type Card = { frame: CanvasGroup, t0: number, outAt: number, goneAt: number, index: number }
 -- Carte en attente de place : son joué à son entrée (défaut Pop) ; `first` : passe devant les
--- autres (moment unique, jamais perdu quand la file est pleine)
-type QueuedCard = { text: string, sound: string?, first: boolean }
+-- autres (moment unique, jamais perdu quand la file est pleine) ; `tag` : CardOpened à son entrée
+type QueuedCard = { text: string, sound: string?, first: boolean, tag: string? }
 
 local started = false
 local fxTime = 0
@@ -750,7 +763,7 @@ local function cardY(index: number, stack: CardStack?): UDim2
 	return UDim2.new(1, -8, 0.42, offset)
 end
 
-local function openCard(text: string, stack: CardStack?, sound: string?)
+local function openCard(text: string, stack: CardStack?, sound: string?, tag: string?)
 	local _, c = ensureGui()
 	local index = #cards + 1
 	local target = cardY(index, stack)
@@ -808,18 +821,21 @@ local function openCard(text: string, stack: CardStack?, sound: string?)
 	end
 	-- son de la carte quand elle ENTRE (une carte mise en file attend avec son son)
 	AudioController.play(sound or "Pop", 0.05)
+	if tag ~= nil then
+		ScreenFX.CardOpened:Fire(tag, CARD_TIME_IN + CARD_HOLD + CARD_TIME_OUT)
+	end
 end
 
 -- Carte affichée tout de suite s'il reste de la place dans la pile, sinon mise en file ; `first` :
 -- devant les cartes ordinaires (après les autres `first`), la dernière carte ordinaire cède sa
 -- place si la file est pleine
-local function queueCard(text: string, sound: string?, first: boolean?)
+local function queueCard(text: string, sound: string?, first: boolean?, tag: string?)
 	local stack = cardStack()
 	if #cards < cardCapacity(stack) then
-		openCard(text, stack, sound)
+		openCard(text, stack, sound, tag)
 		return
 	end
-	local entry: QueuedCard = { text = text, sound = sound, first = first == true }
+	local entry: QueuedCard = { text = text, sound = sound, first = first == true, tag = tag }
 	if entry.first then
 		local at = 1
 		while cardQueue[at] ~= nil and cardQueue[at].first do
@@ -862,7 +878,7 @@ local function stepCards()
 	end
 	while #cards < cardCapacity(stack) and #cardQueue > 0 do
 		local entry = table.remove(cardQueue, 1) :: QueuedCard
-		openCard(entry.text, stack, entry.sound)
+		openCard(entry.text, stack, entry.sound, entry.tag)
 	end
 end
 
@@ -1257,13 +1273,20 @@ local function onCelebrate(payload: any)
 				count = Prefs.number(math.min(math.floor(n), whole)),
 				total = Prefs.number(whole),
 			})
-			queueCard(text, "LevelUp", true)
+			queueCard(text, "LevelUp", true, "atlasUnlocked")
 		end
 	elseif kind == "atlasMilestone" then
 		ScreenFX.confetti(60)
 		AudioController.play("LevelUp")
 	elseif kind == "questDone" then
-		Toast.show(Prefs.t("celebrate.questDone"), "reward")
+		-- quête d'accueil : son nom suivi d'une coche (« Parade de 4 ✓ », GDD §9.4) ; autres quêtes
+		-- (le panneau Objectifs les nomme) : « Quête terminée ! »
+		local id = data.id
+		local named = data.kind == "onboarding" and type(id) == "string" and ONBOARDING_IDS[id] == true
+		local text = if named
+			then Prefs.t("quest.onboarding." .. id) .. " ✓"
+			else Prefs.t("celebrate.questDone")
+		Toast.show(text, "reward")
 		AudioController.play("Reward")
 	elseif kind == "questClaimed" or kind == "dailyClaimed" then
 		local glow, dust = num(data.glow), num(data.stardust)

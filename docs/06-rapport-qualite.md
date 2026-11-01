@@ -1,6 +1,6 @@
 # Comet Conga — Rapport qualité avant publication
 
-> **Document 06.** Établi le 31 octobre 2026 à 22:10 UTC, sur le commit `e951d5e` (« QA tour 4 »), arbre de travail propre (seuls les documents 05 et 06 étaient en cours d'écriture).
+> **Document 06.** Établi le 31 octobre 2026 à 22:10 UTC, sur le commit `e951d5e` (« QA tour 4 »). **Mis à jour le 1er novembre 2026 à 02:30 UTC** après la passe de finition (§6.3), sur l'arbre de travail au-dessus du commit `863af92` : chiffres des §1-§2 et états du §6.1 refaits sur cet arbre ; l'historique du §3 s'arrête au tour 4.
 > Pour le propriétaire du jeu : ce rapport dit **ce qui est prouvé**, **ce qui ne peut l'être que dans Roblox Studio**, et **ce qu'il reste à décider**. Guide de publication : [`05-guide-publication.md`](05-guide-publication.md).
 
 ## En bref
@@ -9,7 +9,7 @@
 |---|---|
 | Le jeu est-il complet ? | Oui pour la version 1.0 du GDD (§15.1) : île, boucle complète, progression, événements, social, boutique, FR/EN, téléphone, PC et manette (PS5 / Xbox) |
 | La vérification complète passe-t-elle ? | **Oui** : `./scripts/check.sh` → « ✅ Tout est vert. » (§1) |
-| Combien de tests automatiques ? | **1 396 tests**, dans **89 fichiers de tests**, **0 échec** |
+| Combien de tests automatiques ? | **1 513 tests**, dans **100 fichiers de tests**, **0 échec** |
 | Qu'est-ce qui n'est pas encore prouvé ? | Ce que seul le vrai moteur Roblox montre : rendu, physique, vraies sauvegardes et vrais achats, serveur avec 12 vrais joueurs, tenue des textes, aspect des particules, confort sur téléphone, rendu sur téléviseur (§4) |
 | Que reste-t-il à faire à la main ? | Le plan de test dans Studio (§5) et les réglages de publication ([`05-guide-publication.md`](05-guide-publication.md) §12) |
 | Y a-t-il des décisions à prendre ? | Oui, 7 questions de design (§7) |
@@ -18,39 +18,39 @@
 
 ## 1. Résultat de la vérification complète
 
-Commande : `./scripts/check.sh`, lancée le 31/10/2026 à 22:05 UTC, durée 4 min 47 s, code de sortie 0.
+Commande : `./scripts/check.sh`, terminée le 01/11/2026 à 02:14 UTC (environ 7 min), code de sortie 0.
 
 | Contrôle | Outil | Résultat |
 |---|---|---|
 | Formatage du code | StyLua | Conforme |
 | Analyse du code (erreurs probables, mauvaises pratiques) | Selene | **0 erreur, 0 avertissement**, 0 erreur de lecture |
-| Tests automatiques | Lune (`tests/run.luau`) | **1 396 réussis, 0 échoué, 0 fichier de test non chargé** |
+| Tests automatiques | Lune (`tests/run.luau`) | **1 513 réussis, 0 échoué, 0 fichier de test non chargé** |
 | Construction du jeu | Rojo 7.7.1 | `build/Game.rbxl` construit |
 | Contrôle du fichier construit | `scripts/verify-place.luau` | Structure valide : 1 Script serveur, 2 LocalScript, 113 ModuleScript |
 
-Lors des validations de publication des tours 3 et 4, la suite complète a été relancée deux fois de plus pour repérer des tests instables (résultat qui change d'une exécution à l'autre) ; ceux trouvés ont été corrigés (horloge réelle de la limite de débit, ordre de parcours des tables).
+Lors des validations de publication des tours 3 et 4 et de la passe de finition, la suite complète a été relancée deux fois de plus pour repérer des tests instables (résultat qui change d'une exécution à l'autre) ; ceux trouvés aux tours 3 et 4 ont été corrigés (horloge réelle de la limite de débit, ordre de parcours des tables). À la finition, un test instable a été trouvé et corrigé : `Boot.spec`, scène de coupe (l'ordre de traitement des joueurs n'est pas reproductible d'un processus à l'autre ; la victime pouvait ne rien attraper en 6 s quand le coupeur, resté à portée, prenait ses Nebbies libres à la fin de leur étourdissement, ce que permettent les règles, ou rattraper autant de sauvages pendant la traversée qu'elle en perdait). La scène ne dépend plus de ces courses, la priorité de la victime est maintenant vérifiée de façon déterministe, et la scène a été rejouée 60 fois sans échec, puis la suite complète deux fois de plus.
 
 ## 2. Taille du projet et des tests
 
 | Partie | Fichiers | Lignes |
 |---|---|---|
-| Serveur (`src/server`) | 36 | 15 373 |
-| Client (`src/client`) | 47 | 30 516 |
-| Partagé (`src/shared`) | 32 | 9 336 |
-| Écran de chargement (`src/first`) | 1 | 740 |
-| **Total du jeu** | **116** | **55 965** |
-| Tests (`tests/`, dont harnais et simulation) | — | 52 164 |
+| Serveur (`src/server`) | 36 | 15 744 |
+| Client (`src/client`) | 47 | 31 769 |
+| Partagé (`src/shared`) | 32 | 9 368 |
+| Écran de chargement (`src/first`) | 1 | 744 |
+| **Total du jeu** | **116** | **57 625** |
+| Tests (`tests/`, dont harnais et simulation) | — | 58 045 |
 
 Tous les modules du jeu sont en Luau `--!strict` (typage strict).
 
 | Famille de tests | Fichiers | Tests | Exemples |
 |---|---|---|---|
 | Tests unitaires et de services | 40 | 839 | `Formulas`, `SnipRules`, `EventClock`, `CongaService`, `EconomyService`, `DataService`, `MonetizationService`, `Panels`, `HUD`, `Contract` |
-| Tests de correction (un par défaut trouvé en QA) | 39 | 429 | `Fix_r3_serveur_3_data`, `Fix_r4_serveur_3`, `Fix_r4_partage_4`… |
-| Console et manette | 5 | 82 | `Console`, `Console_input`, `Console_hud`, `Console_panels`, `Console_release` |
+| Tests de correction (un par défaut trouvé en QA) | 50 | 542 | `Fix_r3_serveur_3_data`, `Fix_r4_serveur_3`, `Fix_r5_serveur_anticheat`, `Fix_fin_client_hud_onboarding`… |
+| Console et manette | 5 | 86 | `Console`, `Console_input`, `Console_hud`, `Console_panels`, `Console_release` |
 | Intégration (jeu entier) | 3 | 32 | `Boot` (serveur de 12 joueurs), `ClientGame` (partie rejouée dans le vrai client), `ClientBoot` |
 | Harnais de test lui-même | 2 | 14 | `harness/Harness`, `harness/Wire` |
-| **Total** | **89** | **1 396** | |
+| **Total** | **100** | **1 513** | |
 
 ---
 
@@ -122,7 +122,7 @@ Les tests tournent **hors de Roblox** : le harnais (`tests/harness/`) imite le m
 | **Ergonomie sur téléphone** | Le pouce atteint-il le Dash ? Un bouton est-il caché par le joystick ? | M9 |
 | **Équité des coupes avec latence** | Le serveur décide ; la sensation « je l'ai touché ! » à 250 ms de latence se juge en vrai | M10 |
 | **Téléviseur et PS5** | Lisibilité à 3 m, zone sûre réelle, vibrations, achats sur PlayStation | M11 |
-| **Sons** | Les sons de jeu et la musique sont encore vides (choix à faire, guide §6.4) ; les sons d'interface sont à écouter | M12 |
+| **Sons** | La plupart des sons (interface, manette, musique, capture, coupe, Comète, Supernova…) sont des sons publiés par Roblox, à écouter ; neuf sons de jeu restent vides (choix à faire, guide §6.4) | M12 |
 
 Limites connues du harnais (sans effet sur le jeu) : la sélection à la croix de la manette est une approximation (Roblox ne publie pas sa règle exacte : les tests vérifient que tout est **atteignable**, pas le chemin exact) ; un bouton grossi à la sélection peut, au bord gauche d'une grille, faire dévier la simulation (docs/07 §10.1).
 
@@ -145,7 +145,7 @@ Limites connues du harnais (sans effet sur le jeu) : la sélection à la croix d
 | M9 | **Téléphone en main** | Sur un vrai téléphone : jouer 15 min à une main, ouvrir chaque menu, replier le suivi de quête, glisser le doigt hors d'un bouton | Dash atteignable au pouce, rien sous le joystick, boutons faciles à toucher (voir constats mineurs n°6 et n°8, question n°3) |
 | M10 | **Coupes avec latence** | Studio : 2 à 4 joueurs en *Local Server*, latence simulée de 250 ms (réglages réseau de Studio, nom exact à vérifier) ; 100 traversées franches de files | ≥ 95 coupes accordées, aucune coupe à plus de 3,5 studs de distance visible (GDD §15.2, porte 2) |
 | M11 | **Manette et PS5** | Controller Emulator ou manette USB dans Studio, puis vraie PS5 (guide §11) | Tout se fait à la manette ; à 3 m sur le téléviseur, tout est lisible et rien n'est coupé ; vibrations agréables |
-| M12 | **Sons** | Jouer avec le son : naviguer dans les menus, à la manette et au toucher | Sons d'interface agréables et pas trop forts ; décision prise pour les sons de jeu et la musique (guide §6.4) |
+| M12 | **Sons** | Jouer avec le son : naviguer dans les menus, à la manette et au toucher | Chaque son rempli agréable et pas trop fort (musique comprise) ; décision prise pour les neuf sons encore vides (guide §6.4) |
 | M13 | **Session longue** | 30 minutes de jeu à plusieurs, en ligne | Aucune erreur dans la console développeur, pas de ralentissement progressif |
 
 ---
@@ -170,29 +170,29 @@ Autres groupes du tour 3 (un fichier de test chacun) : écran de chargement qui 
 
 **Les 19 constats mineurs du tour 3**, avec leur état vérifié dans le code au moment de ce rapport :
 
-| n° | Fichier | Constat | État au 31/10, 22:10 UTC |
+| n° | Fichier | Constat | État (mis à jour le 1/11 après la passe de finition, §6.3) |
 |---|---|---|---|
 | 1 | `src/server/Services/DataService.luau` | `writeRecord` traitait un verrou absent comme le sien et pouvait écraser des données plus récentes d'un autre serveur | **Corrigé** au tour 3 (verrou absent = pas d'écriture ; `Fix_r3_serveur_3_data`) |
-| 2 | `src/client/Controllers/WorldFXController.luau` | L'animation du décor déplace 184 pièces une par une à chaque image et lit environ 570 attributs | Ouvert (performance, à mesurer en M6) |
-| 3 | `src/client/World/RigPool.luau` | La réserve de modèles ne libère jamais de place : avec le temps, elle ne réutilise plus | À revérifier au prochain tour |
-| 4 | `src/client/Controllers/VFXController.luau` | Le budget de 300 particules ne compte pas les étincelles d'immunité, ni le feu et les étincelles de la Comète du ciel | À revérifier (M8) |
-| 5 | `src/client/UI/HUD.luau` | Fin d'une quête d'accueil : la barre du suivi ne se remplit pas et n'affiche pas de coche | À revérifier (M1) |
-| 6 | `src/client/UI/HUD.luau` | Le bouton pour replier le suivi de quête fait 17 × 34 px : trop petit au doigt | À revérifier (M9) |
-| 7 | `src/client/UI/HUD.luau` | Deux consignes à l'écran : « Attrape des Nebbies ! » (file vide) et la consigne d'accueil | À revérifier (M1) |
-| 8 | `src/client/UI/Juice.luau` | Sur téléphone, un bouton reste rétréci (0,9) si le doigt glisse hors du bouton | À revérifier (M9) |
-| 9 | `src/client/UI/Hud/OnboardingPlan.luau` | « Retourne au Nid » est validé si l'enfant est déjà sur le Nid sans passer sous l'arche | À revérifier (M1) |
-| 10 | `src/client/UI/Panels/Collection.luau` | ○ en mode sélection de la Réserve (ou libération armée) ferme toute la Collection au lieu d'annuler | À revérifier (M11) |
-| 11 | `src/client/Util/Haptics.luau` | Sur PS5, l'atténuation par la distance est ignorée : chaque impact de Comète proche vibre à pleine force | Ouvert : la vibration PlayStation (`HapticEffect`) ne reçoit pas l'atténuation, seul le repli l'utilise (M11) |
-| 12 | `src/shared/Config/Sounds.luau` | Aucun son de navigation sur console (ID vides) ; « Select » s'empile lors des déplacements faits par le code | **Corrigé** au tour 4 pour les ID (sons publiés par Roblox, `Fix_r4_partage_4`) ; à écouter (M12) |
+| 2 | `src/client/Controllers/WorldFXController.luau` | L'animation du décor déplace 184 pièces une par une à chaque image et lit environ 570 attributs | **Corrigé** à la finition (attributs lus au suivi, un `BulkMoveTo`, pièces lointaines ralenties ; `Fix_fin_client_world_perf`) ; à mesurer en M6 |
+| 3 | `src/client/World/RigPool.luau` | La réserve de modèles ne libère jamais de place : avec le temps, elle ne réutilise plus | **Corrigé** à la finition (réserve LRU, au plus 24 modèles par clé ; `Fix_fin_client_world_perf`) |
+| 4 | `src/client/Controllers/VFXController.luau` | Le budget de 300 particules ne compte pas les étincelles d'immunité, ni le feu et les étincelles de la Comète du ciel | **Corrigé** à la finition (étincelles d'immunité et Comète du ciel comptées ; `Fix_fin_client_world_perf`) ; à regarder en M8 |
+| 5 | `src/client/UI/HUD.luau` | Fin d'une quête d'accueil : la barre du suivi ne se remplit pas et n'affiche pas de coche | **Corrigé** à la finition (barre remplie, coche, puis quête suivante ; `Fix_fin_client_hud_onboarding`) |
+| 6 | `src/client/UI/HUD.luau` | Le bouton pour replier le suivi de quête fait 17 × 34 px : trop petit au doigt | **Corrigé** à la finition (toute la pastille replie, zone ≥ 44 px réels ; `Fix_fin_client_hud_onboarding`) ; à revérifier au doigt (M9) |
+| 7 | `src/client/UI/HUD.luau` | Deux consignes à l'écran : « Attrape des Nebbies ! » (file vide) et la consigne d'accueil | **Corrigé** à la finition (pendant l'accueil le compteur montre « 0/3 » ; `Fix_fin_client_hud_onboarding`) |
+| 8 | `src/client/UI/Juice.luau` | Sur téléphone, un bouton reste rétréci (0,9) si le doigt glisse hors du bouton | **Corrigé** à la finition (doigt relevé hors du bouton → taille normale ; `Fix_fin_client_hud_onboarding`) ; à revérifier (M9) |
+| 9 | `src/client/UI/Hud/OnboardingPlan.luau` | « Retourne au Nid » est validé si l'enfant est déjà sur le Nid sans passer sous l'arche | **Corrigé** à la finition (« Passe sous l'arche ! » tant que l'arche n'est pas franchie ; `Fix_fin_client_hud_onboarding`) |
+| 10 | `src/client/UI/Panels/Collection.luau` | ○ en mode sélection de la Réserve (ou libération armée) ferme toute la Collection au lieu d'annuler | **Corrigé** à la finition (○ recule d'un niveau ; `Fix_r5_panels`) |
+| 11 | `src/client/Util/Haptics.luau` | Sur PS5, l'atténuation par la distance est ignorée : chaque impact de Comète proche vibre à pleine force | **Corrigé** à la finition (vibration atténuée jouée au moteur à force × facteur, jamais l'effet pleine force ; `Console.spec`) ; à ressentir sur PS5 (M11) |
+| 12 | `src/shared/Config/Sounds.luau` | Aucun son de navigation sur console (ID vides) ; « Select » s'empile lors des déplacements faits par le code | **Corrigé** au tour 4 pour les ID (sons publiés par Roblox, `Fix_r4_partage_4`) et à la finition pour « Select » (`Fix_r5_audio`) ; à écouter (M12) |
 | 13 | `src/client/Controllers/PanelController.luau` | Contour rose « queue menacée » affiché pendant la trêve après une Balise réussie et pendant l'immunité | **Corrigé** au tour 4 (`Fix_r4_client_0_panels`) |
-| 14 | `src/server/Services/LeaderboardService.luau` | La couronne « Conga Royal » n'est pas retirée quand la semaine change pendant une session | À revérifier au prochain tour |
-| 15 | `src/client/UI/Panels/Collection.luau` | L'onglet Guide affiche les multiplicateurs avec des décimales à l'anglaise en français | À revérifier (M7) |
+| 14 | `src/server/Services/LeaderboardService.luau` | La couronne « Conga Royal » n'est pas retirée quand la semaine change pendant une session | **Corrigé** à la finition (couronne retirée au changement de semaine ; `Fix_fin_server_anticheat_services`) |
+| 15 | `src/client/UI/Panels/Collection.luau` | L'onglet Guide affiche les multiplicateurs avec des décimales à l'anglaise en français | **Corrigé** à la finition (« Givrée ×2,5 » en français ; `Fix_fin_client_panels_console`) |
 | 16 | `src/client/Controllers/OnboardingController.luau` | « Ton Nid travaille même quand tu dors » absent du menu | À revérifier (le pied du panneau Réglages affiche ce texte) |
-| 17 | `src/server/Services/MonetizationService.luau` | Un faux signal de fin d'achat de pass peut relancer sans délai des vérifications auprès de Roblox | Ouvert (sans gain pour le tricheur : le pass n'est accordé que si Roblox confirme l'achat) |
+| 17 | `src/server/Services/MonetizationService.luau` | Un faux signal de fin d'achat de pass peut relancer sans délai des vérifications auprès de Roblox | **Corrigé** à la finition (vérifications bornées par `RateLimit`, réponse « non possédé » retenue ; `Fix_r5_serveur_data`) |
 | 18 | `src/server/Services/CongaService.luau` | Le type d'appareil déclaré par le client élargit le rayon de coupe (l'aide au tactile peut être simulée) | En attente de **votre décision** (question n°1, §7) |
-| 19 | `src/server/Services/WorldService.luau` | Après une erreur pendant la construction du monde, `building` reste vrai : chaque accès suivant échoue avec un message trompeur | Ouvert (seulement si la construction échoue, ce qu'aucun test n'a produit) |
+| 19 | `src/server/Services/WorldService.luau` | Après une erreur pendant la construction du monde, `building` reste vrai : chaque accès suivant échoue avec un message trompeur | **Corrigé** à la finition (drapeau remis à zéro, erreur d'origine relancée ; `Fix_fin_server_data_publish`) |
 
-« À revérifier » : constat non retenu au tour 3 ; ce rapport n'a pas pu confirmer son état dans le code sans refaire l'audit. Tous ces constats ont été classés **mineurs** par les auditeurs ; aucun n'a fait échouer un test ni une partie simulée. Ils sont à reprendre dans le prochain tour, en commençant par les n° 11 (PS5), 6 et 8 (téléphone).
+Tous ces constats ont été classés **mineurs** par les auditeurs ; aucun n'a fait échouer un test ni une partie simulée. Après la passe de finition, il reste : le n° 16 (« À revérifier » : constat non retenu au tour 3, état non confirmé dans le code) et le n° 18 (votre décision, question n° 1 du §7). Chaque correction a son test ; les n° 2, 4, 6, 8, 11 et 12 restent à confirmer dans Roblox (M6, M8, M9, M11, M12).
 
 ### 6.2 Tour 4 (commit `e951d5e`)
 
@@ -203,6 +203,16 @@ Corrections principales (tests `tests/specs/Fix_r4_*.spec.luau`) :
 - **Téléphone** : la consigne d'accueil ne recouvre plus le bouton Ping ; la pastille d'événement ne recouvre plus Équipage ni Réglages sur les petits écrans (`Fix_r4_client_0`, `Fix_r4_ui_1_hud`).
 - **Accueil** : progression juste des quêtes d'achat, pas de double achat au double appui (`Fix_r4_ui_1`) ; quête météo claire pendant une pluie de météores (`Fix_r4_ui_1_plan`) ; moment « Atlas débloqué » avec sa carte et son son (`Fix_r4_ui_2`).
 - Validation croisée de publication (`Fix_r4_release`).
+
+### 6.3 Passe de finition (dernière passe avant publication, 1/11/2026)
+
+Corrections (tests `tests/specs/Fix_r5_*.spec.luau`, `Fix_fin_*.spec.luau`, `Fix_final_release.spec.luau`) :
+
+- **Anti-triche : budget d'action** (`MoveCheck`, `Fix_r5_serveur_anticheat`). L'ancienne règle de « rafale » ne regardait qu'un tick et redonnait la tolérance de 4 studs à chaque tick : un bond suivi d'un petit pas agissait au tick suivant, et une chaîne de pas un peu trop longs n'était jamais une rafale. Le budget (un « seau » de studs, plafond = règle d'un tick du GDD, rempli à 1,5 × la vitesse max) garde maintenant sa dette d'un tick à l'autre : le joueur n'agit de nouveau qu'une fois la dette remboursée. Exploits reproduits puis **bloqués** (0 infraction, aucun retour : la tolérance des gels réseau est inchangée) : V1 (bond puis coupe), V2 et V3 (chaînes de pas, à pied ou au Dash), V9 (anneau de la Balise), K1 à K5 (ramassage, vol et encaissement de la Comète). Les contrôles honnêtes restent propres : paquets groupés, Dash, sauts sur la pente, réapparition, rattrapage par sa propre porte. Même règle pour le port sûr (Zen, Supernova) et les récompenses de proximité de la Comète (`Fix_fin_server_anticheat_services`).
+- **Gel réseau en courant** (« freeze-strike ») : un gel honnête de 0,7 à 1,5 s en courant pouvait déclencher un retour, 3 s de restriction, l'icône « instable » et un avertissement vers l'exclusion des classements. Corrigé : 0 infraction, aucun retour, jamais « instable » ; la téléportation reste détectée. **Coût honnête** : en continuant de courir à pleine vitesse après un gel de 0,7 / 1,0 / 1,5 s, le joueur ne peut rien attraper ni couper pendant environ 0,9 / 1,5 / 2,5 s ; en s'arrêtant, moins d'une seconde.
+- **Serveur trop grand** : si la taille du serveur est réglée au-delà de 12, les joueurs sans Nid voient un message puis sont renvoyés poliment après 30 s (« Cette île est pleine ! »), sauf si un Nid se libère (`Fix_fin_server_anticheat_services`, analytics `ServerFullKick`).
+- **Données** (`Fix_r5_serveur_data`, `Fix_fin_server_data_publish`) : en ligne, plus aucun repli en mémoire si les sauvegardes Roblox sont indisponibles (constat bas n° 0 du tour 4) : le joueur est renvoyé avec un message et rien n'est acheté sans sauvegarde, jusqu'au retour du service ; chaque sauvegarde est liée au UserId (droit à l'effacement, procédure dans docs/04 §8) ; faux signaux d'achat de pass bornés (constat mineur n° 17) ; erreur de construction du monde rapportée telle quelle (n° 19) ; script `lune run scripts/prepublish` pour vérifier les 12 numéros de la boutique (guide §5.5).
+- **Interface, accueil, console, performances** (`Fix_fin_client_hud_onboarding`, `Fix_fin_client_panels_console`, `Fix_fin_client_world_perf`, `Fix_r5_hud`, `Fix_r5_panels`, `Fix_r5_audio`) : la plupart des constats mineurs du tour 3 (§6.1) ; icône Boutique masquée tant qu'aucun article n'a son numéro ; sons plafonnés par clé et toujours arrêtés ; « Snip » plus aigu pour le coupeur (GDD §9.4, `Fix_final_release`).
 
 ---
 
@@ -224,10 +234,10 @@ Les justifications des réglages d'économie déjà faits (Supernovas, formes m�
 
 | Action | Qui | Où |
 |---|---|---|
-| Créer les 6 passes et 6 produits, coller leurs numéros | Propriétaire | Guide §5, `src/shared/Config/Monetization.luau` |
+| Créer les 6 passes et 6 produits, coller leurs numéros, puis `lune run scripts/prepublish` (« ✅ Boutique prête ») | Propriétaire | Guide §5, `src/shared/Config/Monetization.luau` |
 | Ajouter les administrateurs LiveOps | Propriétaire | Guide §6.1, `src/server/Data/Admins.luau` |
 | Recaler la semaine du premier Starfall Saturday | Propriétaire | Guide §6.3, `src/shared/Config/Events.luau` |
-| Choisir les sons de jeu et la musique (ou lancer en silence) | Propriétaire + équipe technique (un test vérifie aujourd'hui que ces sons sont vides) | Guide §6.4, `src/shared/Config/Sounds.luau` |
+| Écouter les sons remplis ; choisir les neuf sons encore vides (ou les laisser muets) | Propriétaire + équipe technique (un test exige le format `rbxassetid://<nombre>` et la provenance sur la ligne) | Guide §6.4, `src/shared/Config/Sounds.luau` |
 | Vérifier les noms « Comet Conga » et « Nebbies » (Roblox et marques) | Propriétaire | GDD §16, risque 7 |
 | Questionnaire de maturité, icône, miniatures, taille de serveur 12, langues | Propriétaire | Guide §7 à §10 |
 | Plan de test manuel M1 à M13 | Propriétaire + testeurs | §5 |

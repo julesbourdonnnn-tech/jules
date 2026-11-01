@@ -35,7 +35,11 @@
 --     pendant la fête, le ping « Merci » (6, cœur) envoie des cœurs qui volent vers l'acheteur
 -- Particules à l'écran ≤ 300 (§12.8) : les rafales n'utilisent que le reste, une fois déduits les
 -- effets continus du rendu (CongaRenderer.fxParticles : Fire / Sparkles / orbites des Nebbies et
--- paillettes des files) et la neige active du ciel (émetteurs de workspace.ClientSky).
+-- paillettes des files), la neige active du ciel (émetteurs de workspace.ClientSky) et les effets
+-- continus d'ici : étincelles d'immunité (Sparkles héritées, ≈ IMMUNITY_PARTICLES chacune) et Comète
+-- du ciel (Fire + Sparkles, ≈ SKY_COMET_PARTICLES). Étincelles d'immunité attribuées du plus proche
+-- au plus lointain des immunisés, tant que les effets continus restent ≤ 300 (en pratique le plus
+-- proche en a toujours : part du rendu ≤ 150, neige ≈ 90, Comète 35).
 -- Une seule connexion RenderStepped (animations suivies image par image).
 -- GDD : §9.1 (fonctions), §9.4, §11.6, §13.2.
 -- Dépendances : StateController, AudioController, Util/{Prefs,Platform,Haptics}, UI/Juice,
@@ -84,6 +88,9 @@ local EMITTERS = 6
 local MAX_EMIT = 60 -- particules par appel
 local PARTICLE_WINDOW = 1 -- s : durée de vie typique d'une particule (budget ≤ 300 à l'écran)
 local SKY_SCAN_INTERVAL = 0.25 -- s : émetteurs du ciel (neige) recomptés au plus 4 fois par seconde
+-- Effets continus hérités (débit non réglable), mêmes estimations que Render/NebbyBuilder
+local IMMUNITY_PARTICLES = 15 -- Sparkles roses d'un immunisé
+local SKY_COMET_PARTICLES = 35 -- Comète du ciel : Fire (≈ 20) + Sparkles (≈ 15)
 local RING_START_THICKNESS, RING_END_THICKNESS = 0.4, 0.05
 local PILLAR_DIAMETER = 1.5
 local PILLAR_HEIGHT = 30
@@ -106,6 +113,7 @@ local DASH_SECONDS = Balance.Dash.Duration
 local MYTHIC_FLASH_ALPHA, MYTHIC_FLASH_SECONDS = 0.35, 0.12
 local MYTHIC_SHAKE, SHAKE_SECONDS = 0.3, 0.3
 local SNIP_SPARKS = 12
+local SNIPPER_PITCH = 1.2 -- « Snip » entendu par le coupeur : plus aigu (GDD §9.4)
 local SNIP_RUSH_DIAMETER = 6
 local WISP_PUFFS = 6
 local WISP_SPARKS = 16
@@ -234,6 +242,9 @@ local lastHero: { slot: number, at: number }? = nil
 local zenRings: { [Player]: BasePart } = {}
 local crewStars: { [Player]: BillboardGui } = {}
 local immunity: { [Player]: Sparkles } = {}
+local immuneOrder: { Player } = {} -- immunisés du plus proche au plus lointain (listes réutilisées)
+local immuneRoot: { [Player]: BasePart } = {}
+local immuneDist: { [Player]: number } = {}
 local pings: { PingEntry } = {}
 local pingCursor = 0
 local sky: Model? = nil
@@ -310,9 +321,10 @@ local function near(pos: Vector3, range: number): boolean
 	return (pos - focus()).Magnitude <= range
 end
 
-local function playSound(name: string, pos: Vector3?, variation: number?)
+-- `pitch` (facultatif) multiplie la hauteur déclarée du son (AudioController.play)
+local function playSound(name: string, pos: Vector3?, variation: number?, pitch: number?)
 	if pos == nil or near(pos, SOUND_RANGE) then
-		AudioController.play(name, variation)
+		AudioController.play(name, variation, pitch)
 	end
 end
 
@@ -440,10 +452,26 @@ local function ambientParticles(now: number): number
 	return total
 end
 
+-- Effets continus d'ici : Comète du ciel tant qu'elle existe, étincelles d'immunité allumées
+local function skyCometParticles(): number
+	return if sky ~= nil then SKY_COMET_PARTICLES else 0
+end
+
+local function immunityParticles(): number
+	local n = 0
+	for _ in immunity do
+		n += 1
+	end
+	return n * IMMUNITY_PARTICLES
+end
+
 -- Place des rafales (budget ≤ Render.MaxParticles à l'écran) : ce que laissent les effets continus
--- du rendu, la neige du ciel et les rafales encore vivantes
+-- (rendu, neige du ciel, immunité, Comète du ciel) et les rafales encore vivantes
 local function particleBudget(now: number): number
-	local continuous = CongaRenderer.fxParticles() + ambientParticles(now)
+	local continuous = CongaRenderer.fxParticles()
+		+ ambientParticles(now)
+		+ immunityParticles()
+		+ skyCometParticles()
 	local free = Render.MaxParticles - continuous - burstsAlive(now)
 	if free ~= free then
 		return 0
@@ -1011,7 +1039,12 @@ local function onSnipped(payload: Types.SnipEventPayload)
 		FloatText.show(point + Vector3.new(0, 5, 0), Prefs.t("stamp.nom"), Color3.fromRGB(200, 170, 255), 0.9)
 		VFXController.burst(point, WISP_DARK, WISP_PUFFS)
 	end
-	playSound("Snip", point, if snipper then 0.02 else 0.08)
+	-- GDD §9.4 : côté coupeur, « Snip » plus aigu (SNIPPER_PITCH)
+	if snipper then
+		playSound("Snip", point, 0.02, SNIPPER_PITCH)
+	else
+		playSound("Snip", point, 0.08)
+	end
 	if payload.count > 0 then
 		playSound("Scatter", point)
 	end
@@ -1798,26 +1831,54 @@ local function crewStarFor(player: Player, on: boolean)
 	end
 end
 
-local function immunityFor(player: Player, now: number)
-	local untilAt = player:GetAttribute("ImmuneUntil")
-	local on = type(untilAt) == "number" and untilAt > now
-	local sparkles = immunity[player]
-	local character = player.Character
-	local root = if character then character:FindFirstChild("HumanoidRootPart") else nil
-	if on and root then
-		if sparkles == nil or sparkles.Parent ~= root then
-			if sparkles then
-				sparkles:Destroy()
+-- Étincelles roses des immunisés (10 Hz) : du plus proche au plus lointain, tant que la place
+-- laissée par les autres effets continus (rendu, neige, Comète du ciel) le permet (≤ 300, §12.8)
+local function refreshImmunity(now: number)
+	table.clear(immuneOrder)
+	table.clear(immuneRoot)
+	table.clear(immuneDist)
+	local origin = focus()
+	for _, player in Players:GetPlayers() do
+		local untilAt = player:GetAttribute("ImmuneUntil")
+		if type(untilAt) == "number" and untilAt > now then
+			local character = player.Character
+			local root = if character then character:FindFirstChild("HumanoidRootPart") else nil
+			if root and root:IsA("BasePart") then
+				local d = (root.Position - origin).Magnitude
+				immuneRoot[player] = root
+				immuneDist[player] = if d == d then d else math.huge
+				table.insert(immuneOrder, player)
 			end
+		end
+	end
+	table.sort(immuneOrder, function(a: Player, b: Player): boolean
+		return immuneDist[a] < immuneDist[b]
+	end)
+	local room = Render.MaxParticles
+		- CongaRenderer.fxParticles()
+		- ambientParticles(now)
+		- skyCometParticles()
+	for _, player in immuneOrder do
+		if room >= IMMUNITY_PARTICLES then
+			room -= IMMUNITY_PARTICLES
+		else
+			immuneRoot[player] = nil -- plus de place : les plus lointains n'en ont pas
+		end
+	end
+	for player, sparkles in immunity do
+		if immuneRoot[player] == nil or sparkles.Parent ~= immuneRoot[player] then
+			immunity[player] = nil
+			sparkles:Destroy()
+		end
+	end
+	for player, root in immuneRoot do
+		if immunity[player] == nil then
 			local s = Instance.new("Sparkles")
 			s.Name = "Immunity"
 			s.SparkleColor = Cosmetics.Readability.Immune
 			s.Parent = root
 			immunity[player] = s
 		end
-	elseif sparkles then
-		immunity[player] = nil
-		sparkles:Destroy()
 	end
 end
 
@@ -2129,8 +2190,8 @@ local function onFrame()
 	end
 	if t - lastStatus >= 0.1 or t < lastStatus then
 		lastStatus = t
+		refreshImmunity(t)
 		for _, player in Players:GetPlayers() do
-			immunityFor(player, t)
 			-- étoile d'équipier entretenue à 10 Hz : une tête répliquée en retard (streaming,
 			-- réapparition) la retrouve sans attendre le prochain CrewState
 			crewStarFor(player, WorldStateController.isCrewmate(player.UserId))

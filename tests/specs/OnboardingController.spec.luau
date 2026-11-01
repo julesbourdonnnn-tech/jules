@@ -432,6 +432,8 @@ return function(T)
 	describe("Onboarding › joueur qui revient, fin, robustesse", function()
 		it("accueil terminé : tout le HUD sans animation ni travelling, aucune instruction", function()
 			local c = setup()
+			-- boutique avec au moins un article : son icône fait partie du HUD complet
+			c.h:require("ReplicatedStorage.Shared.Config.Monetization").Passes.DoubleGlow.id = 1
 			local camera = c.h.workspace.CurrentCamera
 			load(c, { onboarding = { step = 8, p = 0 }, stats = { parades = 40 } })
 			run(c, 2)
@@ -445,6 +447,8 @@ return function(T)
 
 		it("pas la première session : HUD complet, l'accueil continue", function()
 			local c = setup({ reduced = true })
+			-- boutique avec au moins un article : son icône fait partie du HUD complet
+			c.h:require("ReplicatedStorage.Shared.Config.Monetization").Passes.DoubleGlow.id = 1
 			-- l'instantané d'arrivée est envoyé AVANT le +1 de la session courante (QuestService, sur
 			-- DataService.Loaded) : sessions = 1 dans l'instantané = une session déjà jouée
 			load(c, {

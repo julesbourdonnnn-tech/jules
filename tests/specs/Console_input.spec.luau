@@ -47,7 +47,7 @@ return function(T)
 			ApiAudit.start()
 		end
 		h:boot()
-		local snapshot = { glow = 5, onboarding = { step = 8, p = 0 } }
+		local snapshot = opts.snapshot or { glow = 5, onboarding = { step = 8, p = 0 } }
 		if opts.settings then
 			snapshot.settings = opts.settings
 		end
@@ -267,6 +267,44 @@ return function(T)
 			end
 		)
 
+		it(
+			"mode menu à Q2 (sélection sur le Dash) : un seul △ sélectionne Améliorer, la cible annoncée",
+			function()
+				local c = boot({
+					snapshot = {
+						glow = 5000,
+						onboarding = { step = 2, p = 0 },
+						upgrades = { conga = 1 },
+						stats = { parades = 3, sessions = 0 },
+					},
+				})
+				c.h:step(1 / 30, 30)
+				c.h:settle(2)
+				local Onboarding = c.h:require(CLIENT .. "Controllers.OnboardingController")
+				expect(Onboarding._state().attention["rail.Upgrades"]).toBe(true)
+				local hud = gui(c, "HUD").Safe
+				local upgrades = hud.Rail.Upgrades.Button
+				-- mode menu sur le Dash (ex. ○ vient de fermer un panneau ouvert depuis le menu)
+				c.h.game.GuiService.SelectedObject = hud.Dash.Button
+				c.h:settle(1)
+				table.clear(c.sounds)
+				-- l'icône △ posée à côté d'Améliorer le promet : △ y va (pas de retour au jeu)
+				expect(Gamepad.tap(c.h, K.ButtonY)).toBe("CC_Rail")
+				expect(Gamepad.selected(c.h)).toBe(upgrades)
+				expect(count(c.sounds, "Back")).toBe(0)
+				-- déjà sur la cible : △ rend la main au jeu (inchangé)
+				expect(Gamepad.tap(c.h, K.ButtonY)).toBe("CC_Rail")
+				expect(Gamepad.selected(c.h)).toBeNil()
+				expect(count(c.sounds, "Back")).toBe(1)
+				-- ○ rend toujours la main, même loin de la cible
+				c.h.game.GuiService.SelectedObject = hud.Dash.Button
+				c.h:settle(1)
+				expect(Gamepad.tap(c.h, K.ButtonB)).toBe("CC_Close")
+				expect(Gamepad.selected(c.h)).toBeNil()
+				finish(c)
+			end
+		)
+
 		it("croix ← : suivi de quête replié / déplié (QuestToggled), seulement en jeu", function()
 			local c = boot()
 			expect(Gamepad.tap(c.h, K.DPadLeft)).toBe("CC_Quest")
@@ -275,11 +313,13 @@ return function(T)
 			Gamepad.tap(c.h, K.ButtonY)
 			Gamepad.tap(c.h, K.DPadLeft)
 			expect(c.quest).toBe(1)
-			-- panneau ouvert, même sans sélection : le suivi derrière la fenêtre ne bouge pas
+			-- panneau ouvert, même sans sélection : le suivi derrière la fenêtre ne bouge pas (la croix
+			-- ← passe, ou est absorbée par la garde de navigation du panneau, PanelNavGuard)
 			Gamepad.tap(c.h, K.ButtonY)
 			expect(c.Input.openPanel("Upgrades")).toBe(true)
 			c.h.game.GuiService.SelectedObject = nil
-			expect(Gamepad.tap(c.h, K.DPadLeft)).toBeNil()
+			local sunk = Gamepad.tap(c.h, K.DPadLeft)
+			expect(sunk == nil or sunk == "PanelNavGuard").toBe(true)
 			expect(c.quest).toBe(1)
 			c.Panels.close()
 			c.h:step(1 / 30, 10)

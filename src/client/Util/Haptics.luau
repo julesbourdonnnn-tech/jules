@@ -7,6 +7,9 @@
 --     (UIClick, GameplayCollision…), une instance réutilisée par type ; repli
 --     HapticService:SetMotor(Gamepad1, moteur, force) pendant la durée si HapticEffect est
 --     indisponible
+--   * vibration atténuée (`scale` < FULL_SCALE, ex. impact de Comète à 75 studs) : jamais l'effet
+--     préréglé, qui se joue toujours à pleine force, mais SetMotor(Gamepad1, moteur, force × scale)
+--     pendant la durée ; manette sans moteur pris en charge : rien (modération, docs/07 §9.1)
 --   * téléphone : seulement les événements marqués « mobile » (GDD §9.1), via SetMotor(Touch) si
 --     l'appareil le permet
 --   * clavier-souris : jamais (une manette branchée mais inutilisée ne vibre pas)
@@ -29,6 +32,10 @@ local Prefs = require(Client.Util.Prefs)
 local Haptics = {}
 
 Haptics.Played = Signal.new() :: Signal.Signal<string>
+
+-- Au-dessus de ce facteur d'atténuation, l'effet préréglé (pleine force) reste le bon rendu ;
+-- en dessous, la force est réglée au moteur (force de la carte × facteur)
+local FULL_SCALE = 0.9
 
 local lastAt = -math.huge
 local lastPriority = 0
@@ -106,8 +113,9 @@ local function runMotor(
 	end)
 end
 
--- Joue l'événement `name` de la carte ; `scale` (0-1) atténue la force (repli SetMotor) et coupe
--- la vibration sous Haptics.MinScale. Retourne true si une vibration a été demandée.
+-- Joue l'événement `name` de la carte ; `scale` (0-1) atténue la force (moteur à force × scale
+-- sous FULL_SCALE, l'effet préréglé ne sachant pas s'atténuer) et coupe la vibration sous
+-- Haptics.MinScale. Retourne true si une vibration a été demandée.
 function Haptics.play(name: string, scale: number?): boolean
 	local def = Console.Haptics.Events[name]
 	if def == nil or not Haptics.enabled() then
@@ -134,7 +142,7 @@ function Haptics.play(name: string, scale: number?): boolean
 		enumItem(Enum.VibrationMotor, def.motor) or Enum.VibrationMotor.Small
 	) :: Enum.VibrationMotor
 	local played = false
-	if inputType == Enum.UserInputType.Gamepad1 then
+	if inputType == Enum.UserInputType.Gamepad1 and k >= FULL_SCALE then
 		local effect = effectFor(def.effect)
 		if effect then
 			played = pcall(function()

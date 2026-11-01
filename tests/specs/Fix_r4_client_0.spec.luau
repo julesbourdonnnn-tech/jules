@@ -249,6 +249,82 @@ return function(T)
 				end
 			end)
 
+			it(
+				"barre Roblox de 58 px (568 × 320, 640 × 360), Q6 avec les 4 boutons du rail : rien de recouvert",
+				function()
+					local c = obSetup()
+					-- boutique avec un article : l'icône Boutique (case bas droite de la grille) est là
+					c.h:require("ReplicatedStorage.Shared.Config.Monetization").Passes.DoubleGlow.id = 1
+					obLoad(c, { onboarding = { step = 6, p = 0 }, stats = { parades = 12, sessions = 0 } })
+					obRun(c, 12)
+					expect(c.Onboarding.currentHint() ~= nil).toBe(true)
+					expect(c.HUD.isRevealed("rail.Shop")).toBe(true)
+					for _, size in { { 568, 320, 58 }, { 640, 360, 58 }, { 568, 320, 36 }, { 667, 375, 58 } } do
+						screen(c, size[1], size[2], size[3])
+						obRun(c, 4)
+						local label = size[1] .. "x" .. size[2] .. "/" .. size[3]
+						local W, H = content(c)
+						local h = placed(c, hint(c))
+						expect({ screen = label, visible = hint(c).Visible }).toEqual({
+							screen = label,
+							visible = true,
+						})
+						-- cases AFFICHÉES de la grille du rail (80 × 80, écart 8, ruban de 6 px de chaque côté)
+						local rail = hudSafe(c).Rail
+						local grid = rail:FindFirstChildOfClass("UIGridLayout")
+						local perRow = grid.FillDirectionMaxCells
+						local i = 0
+						for _, name in { "Upgrades", "Collection", "Goals", "Shop" } do
+							if rail[name].Visible then
+								local col, row = i % perRow, i // perRow
+								local x = rail.Position.X.Offset + col * 88
+								local y = rail.Position.Y.Offset + row * 88
+								local cell = { x0 = x - 6, y0 = y, x1 = x + 86, y1 = y + 80 }
+								expect({ screen = label, button = name, hit = overlaps(h, cell) }).toEqual({
+									screen = label,
+									button = name,
+									hit = false,
+								})
+								i += 1
+							end
+						end
+						expect(i).toBe(4)
+						for _, name in { "Ping", "Dash", "QuestTracker", "Status", "EventPill" } do
+							expect({
+								screen = label,
+								button = name,
+								hit = overlaps(h, placed(c, hudSafe(c)[name])),
+							}).toEqual({
+								screen = label,
+								button = name,
+								hit = false,
+							})
+						end
+						-- dans l'écran, sous la pastille d'événement (16 + 48 + 8), au-dessus du compteur de file
+						expect({ screen = label, inside = h.x0 >= 0 and h.x1 <= W and h.y0 >= 72 }).toEqual({
+							screen = label,
+							inside = true,
+						})
+						local line = placed(c, hudSafe(c).LineCounter)
+						expect({ screen = label, line = overlaps(h, line) }).toEqual({
+							screen = label,
+							line = false,
+						})
+					end
+					-- 640 × 360 : toujours sous la pile de toasts (règle du HUD), décalée à gauche du Ping
+					screen(c, 640, 360, 58)
+					obRun(c, 4)
+					expect(math.abs(placed(c, hint(c)).y0 - c.HUD.hintTop()) <= 0.5).toBe(true)
+					expect(hint(c).Position.X.Scale).toBe(0)
+					-- 568 × 320 sous 58 px : pas de place entre le rail et le Ping → centrée, remontée
+					screen(c, 568, 320, 58)
+					obRun(c, 4)
+					expect(hint(c).Position.X).toEqual(roblox.UDim.new(0.5, 0))
+					expect(placed(c, hint(c)).y0 < c.HUD.hintTop()).toBe(true)
+					expect(#c.h:signalErrors()).toBe(0)
+				end
+			)
+
 			it("Q1 (Ping pas encore affiché) en 667 × 375 : instruction centrée, Dash libre", function()
 				local c = obSetup()
 				obLoad(c, { onboarding = { step = 1, p = 0 } })

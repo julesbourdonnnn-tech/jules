@@ -10,9 +10,17 @@
 --     d'information (un Nid libéré plus tard lui est attribué) ; player.RespawnLocation = Spawn du
 --     Nid ; personnage placé sur son Nid tourné vers le centre (PivotTo → Signals.ServerMoved) à
 --     chaque apparition
+--   * serveur trop grand (taille réglée au-delà de 12 dans le Creator Hub : seuls 12 Nids existent,
+--     un joueur sans Nid ne peut pas jouer) : après Settings.NoNestKickDelay s sans Nid libéré, le
+--     joueur est renvoyé poliment (Player:Kick, message « kick.serverFull » dans sa langue,
+--     Analytics ServerFullKick) ; un Nid libéré pendant ce délai lui est attribué et annule le
+--     renvoi. Pas de TeleportService : le matchmaking pourrait le renvoyer sur ce même serveur
 --   * port sûr (inOwnHarbor) : jamais la seule position du client (il possède son personnage) ;
 --     la position de confiance est la dernière validée par MoveCheck (tick de CongaService), ou le
 --     placement serveur tant qu'aucun tick ne l'a remplacé ; refus pendant une restriction MoveCheck
+--     ou une dette de budget d'action (MoveCheck.canAct : bond dans son port puis Zen ou Supernova
+--     dans le même tick), même règle que les captures et les coupes ; refus neutre, un nouvel
+--     essai une fois le budget remboursé passe
 --   * attributs de Nest_XX (OwnerUserId, OwnerName, Color, Supernovas, PerchCount, PerchData, Title,
 --     NestTheme, LineStyle) et du Player (Slot, Zen, VIP, Title, LineStyle, NestTheme, Supernovas) —
 --     docs §3.2 et §3.3 ; couleur du propriétaire (Cosmetics.NestColors[slot]) ou thème, via
@@ -33,12 +41,13 @@
 --     sinon « réinitialiser, couper le Zen, tout reprendre » contournerait le plafond ; privateNoSnip :
 --     propriétaire du serveur privé (réglage de serveur en mémoire) ; Signals.SettingChanged
 --   * cosmétiques : remote EquipCosmetic, unlock() (stocké + Celebrate "unlock"), grantTemporary()
---     (session), hasUnlock() (gratuit, stocké, temporaire, pass, R atteint, statistique, Atlas)
+--     (session), revokeTemporary() (fin de la semaine du titre de Conga Royal), hasUnlock()
+--     (gratuit, stocké, temporaire, pass, R atteint, statistique, Atlas)
 -- GDD : §3 (0,0 s), §4.16 (Zen, serveurs privés), §5.3, §6.1, §6.6, §10.3, §11.3.
 -- Dépendances : DataService, MonetizationService (via Economy/PassEffects), WorldService,
 -- Logic/WorldLayout, Config/{Settings,Cosmetics,Zones,Balance}, Signals, Util/Notify,
 -- Util/RateLimit, Util/Analytics, Util/MoveCheck (lecture seule), Shared/Util/Clock,
--- Economy/Collection.
+-- Shared/Localization (message de renvoi), Economy/Collection.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -52,6 +61,7 @@ local WorldLayout = require(Shared.Logic.WorldLayout)
 local Net = require(Shared.Net)
 local Clock = require(Shared.Util.Clock)
 local Validate = require(Shared.Util.Validate)
+local Localization = require(Shared.Localization)
 
 local Server = script.Parent.Parent
 local Signals = require(Server.Signals)
@@ -71,6 +81,10 @@ local NestService = {}
 NestService.Settings = {
 	-- attente maximale (s) des réponses d'amitié avant de choisir un Nid : au-delà, plus petit libre
 	FriendLookupDeadline = 1,
+	-- délai (s) laissé à un joueur resté sans Nid (serveur réglé au-delà de Zones.Nests.Count places
+	-- dans le Creator Hub) avant de le renvoyer poliment vers un autre serveur ; un Nid libéré
+	-- pendant ce délai lui est attribué et annule le renvoi
+	NoNestKickDelay = 30,
 }
 
 -- Hauteur du personnage au-dessus du repère du Nid au sol (placement, studs)
@@ -126,6 +140,8 @@ local paraded: { [Player]: boolean } = {}
 -- Fin (Clock) de la fenêtre où une file Zen lâchée sans parade gît encore au sol, reprenable par son
 -- propriétaire (priorité) : quitter le Zen y est refusé
 local zenDropUntil: { [Player]: number } = {}
+-- Renvoi programmé d'un joueur sans Nid (jeton : un Nid attribué entre-temps l'annule)
+local noNestKick: { [Player]: {} } = {}
 -- Durée de vie d'un Nebby libre, arc de dispersion compris
 local LOOSE_WINDOW = Balance.Snip.LooseLifetime + Balance.Snip.ScatterTime
 -- joueurs partis (faible) : un thread d'attribution qui reprend après un yield s'arrête
@@ -278,7 +294,8 @@ end
 -- à chaque tick), ou le placement serveur tant que MoveCheck n'a pas encore pris le relais ; nil
 -- pendant une restriction (retour forcé récent) ou sans aucune référence.
 local function trustedPosition(player: Player): Vector3?
-	if MoveCheck.isRestricted(player, Clock.now()) then
+	local now = Clock.now()
+	if MoveCheck.isRestricted(player, now) then
 		return nil
 	end
 	local valid = MoveCheck.lastValid(player)
@@ -288,6 +305,12 @@ local function trustedPosition(player: Player): Vector3?
 			return mark.pos
 		end
 		placed[player] = nil -- MoveCheck a une référence plus récente (ou nouveau personnage)
+	end
+	-- dernière position validée, mais pas pendant une dette de budget d'action (rafale : bond
+	-- d'≈ 27 studs dans son port, puis Zen ou Supernova dans le même tick) : même règle que les
+	-- captures et les coupes ; un nouvel essai une fois le budget remboursé passe
+	if not MoveCheck.canAct(player, now) then
+		return nil
 	end
 	return valid
 end
@@ -348,6 +371,42 @@ local function lookupFriendSlots(player: Player): { FriendSlot }
 	return found
 end
 
+-- Renvoi poli d'un joueur toujours sans Nid à la fin du délai (jeton inchangé : aucun Nid ne lui a
+-- été attribué entre-temps). Jamais d'erreur (Studio, harnais) : Kick sous pcall.
+local function kickWithoutNest(player: Player, token: {})
+	if noNestKick[player] ~= token then
+		return
+	end
+	noNestKick[player] = nil
+	if gone[player] or player.Parent == nil or playerSlot[player] ~= 0 then
+		return
+	end
+	local ok, message = pcall(function(): string
+		return Localization.get(Localization.languageFor(player.LocaleId), "kick.serverFull")
+	end)
+	if not ok then
+		message = Localization.get("en", "kick.serverFull")
+	end
+	Analytics.event(player, "ServerFullKick", 1)
+	local kicked, err = pcall(function()
+		player:Kick(message)
+	end)
+	if not kicked then
+		warn(`[NestService] renvoi de {player.Name} (serveur plein) impossible :`, err)
+	end
+end
+
+-- Programme le renvoi d'un joueur sans Nid (une seule fois : le délai court depuis la première
+-- attribution manquée, un nouvel essai d'attribution ne le relance pas)
+local function scheduleNoNestKick(player: Player)
+	if noNestKick[player] ~= nil then
+		return
+	end
+	local token = {}
+	noNestKick[player] = token
+	task.delay(NestService.Settings.NoNestKickDelay, kickWithoutNest, player, token)
+end
+
 local function assign(player: Player)
 	if playerSlot[player] ~= nil or assigning[player] or gone[player] then
 		return
@@ -372,8 +431,10 @@ local function assign(player: Player)
 	if slot == 0 then
 		player:SetAttribute("Slot", 0)
 		Notify.feedback(player, "feedback.noNest", {}, "info")
+		scheduleNoNestKick(player)
 		return
 	end
+	noNestKick[player] = nil -- Nid libéré pendant le délai : renvoi annulé
 	slotOwner[slot] = player
 	player.RespawnLocation = WorldService.spawnLocation(slot)
 	applyIdentity(player)
@@ -430,6 +491,7 @@ local function onPlayerRemoving(player: Player)
 	zenLine[player] = nil
 	paraded[player] = nil
 	zenDropUntil[player] = nil
+	noNestKick[player] = nil
 	for _, cache in friendCache do
 		cache[player.UserId] = nil
 	end
@@ -826,6 +888,31 @@ function NestService.grantTemporary(player: Player, kind: string, id: string)
 	applyIdentity(player)
 end
 
+-- Retire un déblocage de session (titre « Roi / Reine de la Conga » de la semaine écoulée : le
+-- classement hebdomadaire a changé pendant la session) ; identité réappliquée (un titre équipé
+-- mais plus possédé s'affiche par défaut). Sans effet si rien n'était accordé.
+function NestService.revokeTemporary(player: Player, kind: string, id: string)
+	local info = kindInfo(kind)
+	if not info or type(id) ~= "string" then
+		return
+	end
+	local mine = temporary[player]
+	local list = if mine then mine[info.kind] else nil
+	if mine == nil or list == nil or not list[id] then
+		return
+	end
+	list[id] = nil
+	if next(list) == nil then
+		mine[info.kind] = nil
+	end
+	if next(mine) == nil then
+		temporary[player] = nil
+	end
+	if player.Parent ~= nil and not gone[player] then
+		applyIdentity(player)
+	end
+end
+
 function NestService.hasUnlock(player: Player, kind: string, id: string): boolean
 	local info = kindInfo(kind)
 	if not info or type(id) ~= "string" then
@@ -916,6 +1003,7 @@ function NestService.debugTracked(player: Player): boolean
 		or zenLine[player] ~= nil
 		or paraded[player] ~= nil
 		or zenDropUntil[player] ~= nil
+		or noNestKick[player] ~= nil
 	then
 		return true
 	end

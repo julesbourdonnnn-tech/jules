@@ -3,6 +3,8 @@
 --   1. MoveCheck : 1 s d'immobilité, Dash, puis un bond de 42 studs en UN tick était accepté et
 --      agissait (coupe, vol de Comète) ; la position reste acceptée (gels réseau tolérés), mais le
 --      tick est signalé « rafale » (règle du GDD §12.7 pour un tick : vmax × dt × 1,5 + 4).
+--      Contrat r5 (plus strict) : la rafale vient d'un budget d'action à mémoire ; le tick qui suit
+--      le bond reste une rafale jusqu'au remboursement de la dette (Fix_r5_serveur_anticheat).
 --   2. Zen : « attraper en Zen, se réinitialiser, couper le Zen, tout reprendre » contournait le
 --      plafond Zen du Conga Bonus ; quitter le Zen est refusé tant que la file lâchée gît au sol.
 --   3. Quêtes : reprendre SES propres Nebbies lâchés (coupe, mort) ne compte plus comme de
@@ -63,11 +65,27 @@ return function(T)
 				-- … mais ce tick ne doit agir sur rien
 				expect(burst).toBe(true)
 				expect(MC.lastWasBurst(p.player)).toBe(true)
-				-- tick suivant : plus de rafale
+				expect(MC.canAct(p.player, p.now)).toBe(false)
+				-- contrat r5 (plus strict) : le tick SUIVANT reste une rafale — le bond a laissé une
+				-- dette de budget d'action, il ne se « ré-utilise » pas un tick plus tard
 				local v2, _, b2 = move(MC, p, V3.new(0, 0, 0))
 				expect(v2).toBe("ok")
-				expect(b2).toBe(false)
+				expect(b2).toBe(true)
+				expect(MC.lastWasBurst(p.player)).toBe(true)
+				expect(MC.canAct(p.player, p.now)).toBe(false)
+				-- à l'arrêt, la dette se rembourse à vmax × 1,5 studs/s : de nouveau « agissant » en
+				-- moins d'une seconde (34 studs de dette, 3,9 studs par tick à 26)
+				local stillTicks = 1
+				while MC.lastWasBurst(p.player) and stillTicks < 30 do
+					local v, _, _ = move(MC, p, V3.new(0, 0, 0))
+					expect(v).toBe("ok")
+					stillTicks += 1
+				end
 				expect(MC.lastWasBurst(p.player)).toBe(false)
+				expect(MC.canAct(p.player, p.now)).toBe(true)
+				expect(stillTicks >= 5).toBe(true)
+				expect(stillTicks <= 10).toBe(true)
+				expect(MC.violations(p.player)).toBe(0)
 			end
 		)
 

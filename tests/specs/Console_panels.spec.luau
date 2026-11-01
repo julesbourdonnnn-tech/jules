@@ -18,6 +18,8 @@
 --   * changement de contenu (fusion) : sélection toujours valide ; consignes « Choisis… » à la manette
 --   * carte d'invitation : focusTarget → Accepter, Accepter ↔ Refuser, repère ✕
 --   * API Roblox auditée (ApiAudit) : 0 écart ; 0 erreur, 0 avertissement
+-- L'audit des textes ≥ 18 px en anglais ET en français, chaque liste défilante parcourue sur tout
+-- son canevas, vit dans Fix_fin_client_panels_console.spec (ici : anglais, partie visible).
 local roblox = require("@lune/roblox")
 local Gamepad = require("../harness/Gamepad")
 local Layout = require("../harness/Layout")

@@ -33,11 +33,13 @@ return function(T)
 	local T0 = 1800000000
 	local PS = Gamepad.PS_GLYPHS
 
-	-- Client console complet (Main.client) avec un instantané de profil
-	local function boot(snapshot)
+	-- Client console complet (Main.client) avec un instantané de profil. La boutique a un article
+	-- (id renseigné) : son icône fait partie du HUD complet (sans article, elle reste cachée)
+	local function boot(snapshot, locale)
 		local h = Harness.new({ mode = "client", console = true })
-		h.localPlayer.LocaleId = "en-us"
+		h.localPlayer.LocaleId = locale or "en-us"
 		h:createRemotes()
+		h:require("ReplicatedStorage.Shared.Config.Monetization").Passes.DoubleGlow.id = 1
 		local Clock = h:require("ReplicatedStorage.Shared.Util.Clock")
 		Clock.freeze(T0)
 		h:boot()
@@ -321,6 +323,53 @@ return function(T)
 		)
 	end)
 
+	describe("Console HUD › textes en français et en anglais", function()
+		it(
+			"audit ≥ 18 px en en-us et fr-fr : Comète portée par un nom long, HUD complet, ACCLAMER",
+			function()
+				for _, locale in { "en-us", "fr-fr" } do
+					local c = boot({ glow = 5000, onboarding = { step = 8, p = 0 } }, locale)
+					local player = c.h.localPlayer
+					player.DisplayName = "SuperLongPlayerName20"
+					cheerPrompt(c)
+					c.h:fireClient("ReplicatedStorage.Remotes.EventState", {
+						t = c.Clock.now(),
+						wisps = {},
+						snipsDisabled = false,
+						activePlayers = 2,
+						comet = {
+							id = T0 - 10,
+							phase = "carried",
+							x = 0,
+							z = 0,
+							code = 1700,
+							warnAt = T0 - 30,
+							impactAt = T0 - 10,
+							burstAt = T0 + 45,
+							carrierId = player.UserId,
+							carrierSince = T0 - 2,
+						},
+					})
+					c.h:settle(2)
+					frames(c, 12)
+					local label = gui(c, "HUD").EventPill.Pill.Text
+					local expected = if locale == "fr-fr" then "COMÈTE" else "COMET"
+					expect({ locale = locale, comet = string.find(label.Text, expected, 1, true) ~= nil }).toEqual({
+						locale = locale,
+						comet = true,
+					})
+					-- nom coupé, jamais le nom entier qui ferait rétrécir le texte sous 18 px
+					expect({ locale = locale, cut = string.find(label.Text, "SuperLongP…", 1, true) ~= nil }).toEqual({
+						locale = locale,
+						cut = true,
+					})
+					expectEmpty(Gamepad.audit(c.h), "audit " .. locale)
+					expect(#c.h.errors).toBe(0)
+				end
+			end
+		)
+	end)
+
 	describe("Console HUD › △ et navigation", function()
 		it("△ : premier bouton, dernier panneau du rail ouvert, pastille « ! », focusTarget", function()
 			local c = full()
@@ -478,6 +527,45 @@ return function(T)
 				Gamepad.tap(c.h, Enum.KeyCode.ButtonA)
 				c.h:settle(2)
 				expect(c.Panels.current()).toBe("Upgrades")
+				expect(#c.h.errors).toBe(0)
+			end
+		)
+
+		it(
+			"Q6 (« Weather soon! ») : la pastille d'événement qui pulse ne touche jamais Réglages (zone sûre TV)",
+			function()
+				local c = boot({
+					glow = 5000,
+					onboarding = { step = 6, p = 0 },
+					stats = { parades = 12, sessions = 0 },
+					upgrades = { conga = 3 },
+				})
+				-- aucune fenêtre météo ouverte, la prochaine donne une forme : la pastille pulse
+				local EventClock = c.h:require("ReplicatedStorage.Shared.Logic.EventClock")
+				local t = T0
+				for _ = 1, 200 do
+					local w = EventClock.nextWeather(t)
+					if w.form ~= nil then
+						break
+					end
+					t = w.endsAt + 1
+				end
+				c.Clock.freeze(t)
+				frames(c, 40)
+				expect(c.Onboarding.currentHint()).toBe("onboarding.waitWeather")
+				expect(c.Onboarding._state().attention.eventPill).toBe(true)
+				local hud = gui(c, "HUD")
+				local biggest = 1
+				for _ = 1, 30 do -- plus d'une période de pulsation (0,8 s)
+					frames(c, 1)
+					biggest = math.max(biggest, hud.EventPill.HudScale.Scale)
+					expectEmpty(overlaps(c), "chevauchements Q6")
+					Layout.apply(c.h)
+					local pill, settings = Layout.rect(hud.EventPill.Pill), Layout.rect(hud.settings)
+					-- au moins 8 px de référence (12 px à l'échelle 1,5) entre Réglages et la pastille
+					expect(pill.x - (settings.x + settings.w) >= 12 - 1e-3).toBe(true)
+				end
+				expect(biggest > 1.075).toBe(true)
 				expect(#c.h.errors).toBe(0)
 			end
 		)

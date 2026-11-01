@@ -85,6 +85,8 @@ Le fichier `build/Game.rbxl` contient tout le jeu : l'île, l'interface, les eff
 
 Cette commande enchaîne cinq contrôles : formatage du code, analyse du code, **tous les tests automatiques**, construction de `build/Game.rbxl` et contrôle du fichier construit. Elle doit finir par **« ✅ Tout est vert. »**. Si un contrôle échoue, ne publiez pas : transmettez le message à l'équipe technique.
 
+Avant une publication **en ligne**, lancez aussi `lune run scripts/prepublish` : il doit afficher « ✅ Boutique prête » (les 12 numéros du Creator Hub sont collés, §5.5). Tant que ce n'est pas le cas, il liste les articles encore à `0` et échoue ; `./scripts/check.sh` reste vert, lui, car la boutique vide est un état normal pendant le développement (l'icône Boutique est alors masquée).
+
 ### 2.3 Variante « en direct » (facultatif)
 
 ```bash
@@ -206,8 +208,9 @@ Ne touchez à rien d'autre (virgules, accolades). Si vous avez changé un prix d
 Ensuite :
 
 1. `./scripts/check.sh` → « ✅ Tout est vert. » ;
-2. `rojo build -o build/Game.rbxl`, ouvrir le fichier, *File › Publish to Roblox* vers **la même expérience** (étape 15) ;
-3. dans Studio, **Play**, ouvrez la **Boutique** : les articles apparaissent avec leur prix. Achetez chaque article : **dans Studio, les achats sont des achats d'essai, gratuits**. Vérifiez que chaque effet arrive (Glow, Stardust, Nebbies, styles, ×2…).
+2. lancer `lune run scripts/prepublish` avant de publier (doit afficher « ✅ Boutique prête ») : tant qu'un des 12 numéros est encore à 0, le script liste les articles à compléter et échoue ;
+3. `rojo build -o build/Game.rbxl`, ouvrir le fichier, *File › Publish to Roblox* vers **la même expérience** (étape 15) ;
+4. dans Studio, **Play**, ouvrez la **Boutique** : les articles apparaissent avec leur prix. Achetez chaque article : **dans Studio, les achats sont des achats d'essai, gratuits**. Vérifiez que chaque effet arrive (Glow, Stardust, Nebbies, styles, ×2…).
 
 ---
 
@@ -275,9 +278,9 @@ Dans `src/shared/Config/Events.luau`, la ligne `LaunchWeek = 2966,` correspond a
 
 ### 6.4 Sons (à décider avant le lancement)
 
-`src/shared/Config/Sounds.luau` liste les sons du jeu. Les sons d'**interface** et de **navigation à la manette** sont déjà choisis (sons publiés par Roblox, utilisables sans téléversement). Les sons de **jeu** (capture, parade, coupe, Comète, Supernova…) et la **musique** sont **vides** : le jeu est entièrement jouable en silence, mais il sera plus vivant avec eux.
+`src/shared/Config/Sounds.luau` liste les sons du jeu. La plupart des sons sont déjà choisis : interface, navigation à la manette, musique, capture, coupe, impact de la Comète, Balise réussie, Supernova… (sons publiés par Roblox, utilisables sans téléversement ; la provenance est notée sur chaque ligne). **Neuf sons de jeu restent vides** (muets) : `Scatter`, `Bank`, `Dash`, `CometWarn`, `CometSwipe`, `BeaconStart`, `WispPop`, `Ping`, `Cheer`. Le jeu est entièrement jouable sans eux.
 
-Choisir ces sons est une décision artistique, puis un petit travail technique : un test automatique vérifie aujourd'hui que ces sons sont vides, l'équipe technique doit donc le mettre à jour en même temps. Format obligatoire : `rbxassetid://<nombre>`.
+À faire avant le lancement : **écouter chaque son rempli** dans Studio (un son peut être retiré ou mal choisi) et décider pour les neuf vides (une piste est proposée en commentaire sur la plupart des lignes). Remplir un son = remplacer `""` par `"rbxassetid://<nombre>"` (format exact) et noter sa provenance en commentaire sur la même ligne : un test automatique l'exige.
 
 ---
 
@@ -290,6 +293,7 @@ Ces réglages se font dans le **Creator Hub** (page de l'expérience) ou dans **
 Le jeu a **12 Nids** : un serveur ne doit jamais dépasser **12 joueurs**. Le fichier du projet indique déjà 12, mais **c'est le réglage du Creator Hub qui fait foi** en ligne (docs/04 §16, point 24).
 
 - Creator Hub › expérience › **Places** › place de départ › réglages d'accès : **taille du serveur (Server Size / Max Players) = 12** (à vérifier).
+- Avec une taille plus grande, les joueurs au-delà du 12e n'ont pas de Nid : ils voient un message, puis sont renvoyés poliment après 30 s (« Cette île est pleine ! Rejoins un autre serveur. ») sauf si un Nid se libère entre-temps. Gardez donc **12**.
 - Remplissage des serveurs (*Server Fill*) : **remplir au maximum** (GDD §16, risque 6 : un serveur plein est plus amusant) (à vérifier).
 
 ### 7.2 Appareils
@@ -511,12 +515,12 @@ Exemples d'enchaînements : Améliorer = △ puis ✕ ; Boutique = △, ✕, pui
 **Technique**
 
 - [ ] `./scripts/check.sh` se termine par « ✅ Tout est vert. » (§2.2).
-- [ ] Numéros des 6 passes et 6 produits collés dans `src/shared/Config/Monetization.luau` (§5).
+- [ ] Numéros des 6 passes et 6 produits collés dans `src/shared/Config/Monetization.luau` (§5) : `lune run scripts/prepublish` affiche « ✅ Boutique prête ».
 - [ ] Chaque achat testé dans Studio (achats d'essai gratuits) : l'effet arrive, une seule fois.
 - [ ] Administrateurs ajoutés dans `src/server/Data/Admins.luau` (§6.1).
 - [ ] `LaunchWeek` recalé sur la date réelle dans `src/shared/Config/Events.luau` (§6.3).
 - [ ] Code de lancement `COMETCONGA` vérifié dans `src/server/Data/Codes.luau` (§6.2).
-- [ ] Sons de jeu et musique choisis, ou décision assumée de lancer en silence (§6.4).
+- [ ] Chaque son rempli écouté dans Studio ; les neuf sons vides choisis, ou décision assumée de les laisser muets (§6.4).
 - [ ] Plan de test dans Studio déroulé ([`06-rapport-qualite.md`](06-rapport-qualite.md) §5) : seul, à plusieurs, téléphone, manette, latence, 30 minutes sans erreur.
 - [ ] 12 joueurs pendant 30 min sur un **vrai téléphone Android modeste** : au moins 30 images par seconde, aucune erreur (GDD §15.2, porte 3).
 - [ ] Sauvegardes : quitter et revenir garde la progression ; achat suivi d'une déconnexion : rien n'est perdu ni crédité deux fois (GDD §15.2, porte 4).
@@ -631,6 +635,6 @@ Toutes ces corrections sont des **réglages de chiffres** dans `src/shared/Confi
 | `src/server/Data/Admins.luau` | UserIds des administrateurs LiveOps | §6.1 |
 | `src/server/Data/Codes.luau` | Codes promo et leurs dates de fin | §6.2 |
 | `src/shared/Config/Events.luau` | `LaunchWeek` (semaine du premier Starfall Saturday) | §6.3 |
-| `src/shared/Config/Sounds.luau` | Sons de jeu et musique (avec l'équipe technique) | §6.4 |
+| `src/shared/Config/Sounds.luau` | Les neuf sons de jeu encore vides, après écoute (avec l'équipe technique) | §6.4 |
 
 Rien d'autre n'est nécessaire pour publier. Tout le reste (île, interface, règles, textes FR/EN, manette) est déjà dans le code et testé ([`06-rapport-qualite.md`](06-rapport-qualite.md)).

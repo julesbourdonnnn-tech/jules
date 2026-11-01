@@ -253,6 +253,9 @@ return function(T)
 		local h = Harness.new({ mode = "client", touch = true })
 		h.localPlayer.LocaleId = "en-us"
 		h:createRemotes()
+		-- une boutique non vide (un id de passe renseigné) : l'icône Boutique fait partie du rail
+		-- (avec tous les ids à 0, elle est masquée par conception : Model.shopHasItems)
+		h:require("ReplicatedStorage.Shared.Config.Monetization").Passes.DoubleGlow.id = 1
 		local Clock = h:require("ReplicatedStorage.Shared.Util.Clock")
 		Clock.freeze(T0)
 		local c = {

@@ -15,19 +15,26 @@
 --     l'icône Améliorer (HUD.attention) ; pastille d'événement qui pulse quand Q6 attend la météo ;
 --     carte unique en surbrillance dans Améliorer (arguments { focus = "conga" } posés via
 --     InputController.setPanelArgs) ; le Dash pulse au début de Q5 ; fin de Q4 (Celebrate
---     "atlasUnlocked" via ScreenFX.Celebrated) : l'icône Collection rejoint le rail avec la main
---     pendant COLLECTION_PULSE s, et la prochaine ouverture de Collection montre l'onglet Atlas
+--     "atlasUnlocked" via ScreenFX.Celebrated) : l'icône Collection rejoint le rail, la main s'y
+--     pose quand la carte « Star Atlas débloqué ! » entre VRAIMENT à l'écran (ScreenFX.CardOpened,
+--     après les « NOUVEAU ! » du même Rare) et y reste jusqu'à sa sortie (au moins
+--     COLLECTION_PULSE s), et la prochaine ouverture de Collection montre l'onglet Atlas
 --   * faits de terrain fournis aux règles (gather) : Rare déjà dans la file (Q4), Puffkins de
 --     bienvenue restants (Q1), fenêtre météo avec forme, ou SANS forme (Pluie de météores : « Météo
---     dans {time} », compte à rebours Plan.formWeatherIn rafraîchi chaque seconde), Nebby météo
---     visible, Comète au sol ou portée (Q6) — l'instruction affichée est toujours réalisable
---     maintenant (GDD §3)
+--     dans {time} », compte à rebours Plan.formWeatherIn rafraîchi chaque seconde), aucune fenêtre
+--     ouverte et la PROCHAINE sans forme (EventClock.nextWeather : même « Météo dans {time} », la
+--     pastille ne pulse pas), Nebby météo visible, Comète au sol ou portée (Q6), au Nid hors de la
+--     boîte de la porte avec une file à encaisser (« Passe sous l'arche ! ») — l'instruction
+--     affichée est toujours réalisable maintenant (GDD §3)
 --   * jamais plus d'une instruction à l'écran (≤ 4 mots, "onboarding.*"), aucune fenêtre modale
---     (l'accueil n'ouvre jamais de panneau lui-même)
+--     (l'accueil n'ouvre jamais de panneau lui-même) ; pendant l'accueil, le compteur de file vide
+--     montre « 0/3 » au lieu de « Attrape des Nebbies ! » (HUD.setLineEmptyHint)
 --   * place de l'instruction : sous la pile COMPLÈTE de toasts (HUD.hintTop, règle partagée avec la
 --     colonne de droite du HUD), centrée, sauf si elle toucherait le coin des actions affichées
 --     (Dash, Ping et le bouton de saut dessous : téléphones de 640 × 360 à 667 × 375 dès Q3) :
---     elle se décale alors à sa gauche (GDD §10.1) ; effacée pendant les 10 s du bouton ACCLAMER
+--     elle se décale alors à sa gauche sans toucher les boutons du rail (HUD.railRects), ou, faute
+--     de place (568 × 320 sous la barre Roblox de 58 px), reste centrée et remonte au-dessus de ce
+--     coin (GDD §10.1) ; effacée pendant les 10 s du bouton ACCLAMER
 --     quand il occupe sa place (téléphones) ; panneau ouvert : une instruction qui le concerne
 --     (achats dans Améliorer) passe au-dessus de la fenêtre (écran relevé à 35), ancrée sur son
 --     bord haut, toute autre instruction s'efface jusqu'à la fermeture
@@ -41,7 +48,8 @@
 -- GDD : §3, §7.1, §7.4, §10.1 (affichage progressif).
 -- Dépendances : StateController, Util/Prefs, Util/Platform, UI/Juice, UI/Glyph,
 -- WorldStateController, CongaRenderer, PanelController, HUD, Hud/EventPill, Logic/WorldLayout,
--- ScreenFX (Celebrated), Config/Quests, Config/Events, Shared/Util/{Clock,Format}.
+-- ScreenFX (Celebrated, CardOpened), Config/Quests, Config/Events, Logic/EventClock,
+-- Shared/Util/{Clock,Format}.
 
 local GuiService = game:GetService("GuiService")
 local Players = game:GetService("Players")
@@ -59,6 +67,7 @@ local Zones = require(Shared.Config.Zones)
 local Events = require(Shared.Config.Events)
 local Formulas = require(Shared.Logic.Formulas)
 local WorldLayout = require(Shared.Logic.WorldLayout)
+local EventClock = require(Shared.Logic.EventClock)
 
 local Client = script.Parent.Parent
 local State = require(Client.Controllers.StateController)
@@ -113,7 +122,14 @@ local TRAVEL_SAFETY = 3 -- s : la caméra est rendue quoi qu'il arrive
 local INTRO_WAIT = 2.5
 local GUIDE_REFRESH = 0.2
 local DASH_PULSE = 1.6
-local COLLECTION_PULSE = 3 -- s : main et pulsation sur l'icône Collection qui rejoint le rail (Q4)
+local COLLECTION_PULSE = 3 -- s : main et pulsation sur l'icône Collection qui rejoint le rail (Q4), au moins
+-- s : la carte « Star Atlas débloqué ! » attend au plus la sortie d'une carte « NOUVEAU ! » (2,95 s) ;
+-- sans elle (données invalides), la main part quand même après ce délai
+local COLLECTION_CARD_WAIT = 4
+local COLLECTION_CARD_MARGIN = 0.25 -- s : la main reste un peu après la sortie de la carte
+-- haut minimal de l'instruction remontée au-dessus du coin des actions : sous la pastille
+-- d'événement (16 + 48 + 8, comme les bannières)
+local HINT_ABOVE_MIN = 72
 local ATLAS_ARGS = table.freeze({ tab = "atlas" })
 local WAIT_WEATHER_IN = "onboarding.waitWeatherIn" -- instruction à compte à rebours ({time})
 local NEST_WORKS_AT = 600 -- 10 min de jeu
@@ -130,6 +146,7 @@ local WELCOME = Nebbies.Named.Welcome
 local HINT_ICONS: { [string]: string } = {
 	["onboarding.catch"] = "◉",
 	["onboarding.goHome"] = "⌂",
+	["onboarding.throughArch"] = "⌂",
 	["onboarding.tapUpgrade"] = "▲",
 	["onboarding.openUpgrade"] = "▲",
 	["onboarding.buyConga"] = "✚",
@@ -208,7 +225,10 @@ local nestWorksShown = false
 local nestWorksUntil = -math.huge
 local dashPulsed = false
 local dashPulseUntil = -math.huge
-local collectionPending = false -- "atlasUnlocked" reçu : pulsation dès que l'icône est affichée
+local collectionPending = false -- "atlasUnlocked" reçu : pulsation à l'entrée de sa carte
+local collectionSince = -math.huge -- frameTime de la réception de "atlasUnlocked"
+local atlasCardUntil: number? = nil -- frameTime de sortie de la carte de l'Atlas, une fois entrée
+local atlasCardAt = -math.huge -- frameTime de l'entrée de la dernière carte de l'Atlas
 local collectionPulseUntil = -math.huge
 local hintSecond: number? = nil -- seconde (Clock) du dernier texte de WAIT_WEATHER_IN
 local upgradesOpen = false
@@ -462,12 +482,20 @@ local function gather(): Plan.Facts
 	end
 	local weatherActive: boolean? = nil
 	local weatherFormless: boolean? = nil
+	local nextWeatherFormless: boolean? = nil
 	local weatherTarget: boolean? = nil
 	local cometActive: boolean? = nil
 	if kind == "weatherOrComet" then
 		local ev: any = WorldStateController.events()
-		weatherActive = weatherOpen(ev, Clock.now())
-		weatherFormless = weatherFormlessNow(ev, Clock.now())
+		local now = Clock.now()
+		weatherActive = weatherOpen(ev, now)
+		weatherFormless = weatherFormlessNow(ev, now)
+		-- aucune fenêtre ouverte : la prochaine (horloge commune) est-elle une Pluie de météores ?
+		-- « Météo bientôt ! » + pastille qui pulse mènerait alors à une météo sans Nebby météo
+		if not weatherActive and not weatherFormless then
+			local ok, nextWindow = pcall(EventClock.nextWeather, now)
+			nextWeatherFormless = ok and type(nextWindow) == "table" and nextWindow.form == nil
+		end
 		cometActive = cometJoinable(ev)
 		local id = if root then nearestWild(root.Position, isWeatherForm) else nil
 		weatherWildId = id
@@ -484,6 +512,15 @@ local function gather(): Plan.Facts
 	end
 	local sessions = math.max(num(rookie.sessions, 0), num(stats.sessions, 0))
 	local seen = snapshotSessions
+	-- au Nid (plateforme ou port de sa porte) avec une file à encaisser, mais pas sous l'arche : la
+	-- parade ne part que dans la boîte de la porte (« Passe sous l'arche ! »)
+	local inHarborNotGate: boolean? = nil
+	if root ~= nil and slot ~= 0 then
+		local pos = root.Position
+		inHarborNotGate = n > 0
+			and WorldLayout.inOwnHarbor(slot, pos)
+			and not WorldLayout.inGateBox(slot, pos)
+	end
 	return {
 		step = step,
 		-- instantané d'arrivée (avant le +1 du serveur) ≥ 1, ou valeur courante ≥ 2 (après le +1) ;
@@ -503,8 +540,10 @@ local function gather(): Plan.Facts
 		puffkinsLeft = welcomeLeft(step, slot),
 		weatherActive = weatherActive,
 		weatherFormless = weatherFormless,
+		nextWeatherFormless = nextWeatherFormless,
 		weatherTarget = weatherTarget,
 		cometActive = cometActive,
+		inHarborNotGate = inHarborNotGate,
 		gamepad = Platform.usingGamepad(),
 	}
 end
@@ -700,13 +739,15 @@ local function contentOf(safe: GuiObject): Vector2?
 	return abs / k - pad
 end
 
--- Centre horizontal de l'instruction posée à `top` (px de référence de la zone intérieure) quand
--- elle toucherait le coin des actions affichées — de leur bord haut gauche jusqu'au coin bas droit
--- de l'écran (Dash, Ping et le bouton de saut tactile dessous, même coin que les cartes du HUD) :
--- juste à gauche de ce coin. nil : centrée (rien à éviter, HUD pas encore construit ni mesuré).
--- Positions de mise en page (pas AbsolutePosition) : le pouls d'attention du Dash ne la fait pas
--- trembler.
-local function hintCenterX(top: number): number?
+-- Place de l'instruction posée à `top` (px de référence de la zone intérieure) : centre horizontal
+-- (nil : centrée) et haut. Elle évite le coin des actions affichées — de leur bord haut gauche
+-- jusqu'au coin bas droit de l'écran (Dash, Ping et le bouton de saut tactile dessous, même coin
+-- que les cartes du HUD) — en se décalant juste à sa gauche, sans toucher les boutons affichés du
+-- rail (HUD.railRects, ruban compris) ; si elle ne tient pas entre le rail et ce coin (568 × 320
+-- sous la barre Roblox de 58 px), elle reste centrée et remonte au-dessus du coin des actions
+-- (jamais sur la pastille d'événement). Positions de mise en page (pas AbsolutePosition) : le pouls
+-- d'attention du Dash ne la fait pas trembler.
+local function hintPlace(top: number): (number?, number)
 	local x0, y0 = math.huge, math.huge
 	local content: Vector2? = nil
 	for _, name in ACTION_ELEMENTS do
@@ -724,17 +765,50 @@ local function hintCenterX(top: number): number?
 			end
 		end
 	end
-	if content == nil or not (isFinite(x0) and isFinite(y0) and isFinite(top)) then
-		return nil
+	local frame = hintFrame
+	local hintSafe = if frame then frame.Parent else nil
+	if content == nil and hintSafe ~= nil and hintSafe:IsA("GuiObject") then
+		content = contentOf(hintSafe :: GuiObject)
+	end
+	if content == nil or not isFinite(top) then
+		return nil, top
 	end
 	local W, H = content.X, content.Y
 	local half = HINT_SIZE.X / 2
 	local center = W / 2
-	-- [W/2 ± 200] × [top, top + 56] contre [x0, W] × [y0, H]
-	if not (center - half < W and x0 < center + half and top < H and y0 < top + HINT_SIZE.Y) then
-		return nil
+	local bottom = top + HINT_SIZE.Y
+	-- coin des actions concerné à cette hauteur : [x0, W] × [y0, H]
+	local corner = isFinite(x0) and isFinite(y0) and top < H and y0 < bottom
+	local hitsCorner = corner and x0 < center + half
+	-- boutons du rail à cette hauteur : bord droit le plus à droite
+	local railRight = -math.huge
+	local okRail, rects = pcall(HUD.railRects)
+	if okRail and type(rects) == "table" then
+		for _, r in rects do
+			if r.y0 < bottom and top < r.y1 then
+				railRight = math.max(railRight, r.x1)
+			end
+		end
 	end
-	return math.max(half, math.min(center, x0 - HINT_CLEARANCE - half))
+	local hitsRail = center - half < railRight
+	if not hitsCorner and not hitsRail then
+		return nil, top
+	end
+	local lo = math.max(half, railRight + HINT_CLEARANCE + half)
+	local hi = if corner then x0 - HINT_CLEARANCE - half else W - half
+	if lo <= hi then
+		return math.clamp(center, lo, hi), top
+	end
+	-- trop étroit : centrée, au-dessus du coin des actions, sous la pastille d'événement
+	if corner then
+		local above = y0 - HINT_CLEARANCE - HINT_SIZE.Y
+		if above >= HINT_ABOVE_MIN then
+			return nil, above
+		end
+		-- ni l'un ni l'autre : le coin des actions d'abord (Dash, Ping)
+		return math.max(half, hi), top
+	end
+	return nil, top
 end
 
 -- Place et montre l'instruction selon l'écran : sous la pile de toasts (HUD.hintTop), effacée sous
@@ -765,8 +839,9 @@ local function layoutHint(pop: boolean)
 		local top = windowTop(panel)
 		y = if top ~= nil then math.max(HINT_DOCK_MIN, top - HINT_SIZE.Y / 2) else HINT_DOCK_MIN
 	else
-		-- jamais sur le Dash ni le Ping (petits téléphones) : décalée à gauche de leur coin
-		centerX = hintCenterX(y)
+		-- jamais sur le Dash, le Ping ni le rail (petits téléphones) : décalée à gauche du coin des
+		-- actions, ou remontée au-dessus
+		centerX, y = hintPlace(y)
 	end
 	local top = math.floor(y + 0.5)
 	local position = if centerX ~= nil
@@ -1285,6 +1360,9 @@ local function evaluate()
 		end
 	end
 	profileSeen = true
+	-- une seule instruction à l'écran (GDD §3) : pendant l'accueil, le compteur de file vide montre
+	-- « 0/3 » et sa barre au lieu de « Attrape des Nebbies ! »
+	HUD.setLineEmptyHint(f.step < 1 or Plan.complete(f))
 	-- une seule instruction (le message de fin de 10 min passe devant)
 	local hint = Plan.hint(f)
 	if Clock.now() < nestWorksUntil then
@@ -1296,10 +1374,16 @@ local function evaluate()
 		dashPulsed = true
 		dashPulseUntil = frameTime + DASH_PULSE
 	end
-	-- l'icône Collection rejoint le rail (fin de Q4) : main et pulsation dès qu'elle est affichée
+	-- l'icône Collection rejoint le rail (fin de Q4) : main et pulsation quand la carte « Star Atlas
+	-- débloqué ! » entre VRAIMENT à l'écran (elle attend derrière les « NOUVEAU ! » du même Rare),
+	-- et jusqu'à sa sortie ; sans carte après COLLECTION_CARD_WAIT s, tout de suite
 	if collectionPending and HUD.isRevealed("rail.Collection") then
-		collectionPending = false
-		collectionPulseUntil = frameTime + COLLECTION_PULSE
+		local cardUntil = atlasCardUntil
+		if cardUntil ~= nil or frameTime - collectionSince >= COLLECTION_CARD_WAIT then
+			collectionPending = false
+			atlasCardUntil = nil
+			collectionPulseUntil = math.max(frameTime + COLLECTION_PULSE, cardUntil or -math.huge)
+		end
 	end
 	local attention = Plan.attention(f)
 	for _, element in ATTENTION_ELEMENTS do
@@ -1440,9 +1524,41 @@ function OnboardingController.Start()
 	-- s'ouvrira sur l'Atlas
 	ScreenFX.Celebrated:Connect(function(payload: Types.CelebratePayload)
 		if type(payload) == "table" and payload.kind == "atlasUnlocked" then
-			collectionPending = true
+			-- carte déjà entrée dans le même appel (pile libre : CardOpened passe avant Celebrated) :
+			-- la main est déjà réglée sur elle, rien à attendre
+			if atlasCardAt ~= frameTime then
+				if not collectionPending then
+					collectionSince = frameTime
+				end
+				collectionPending = true
+			end
 			InputController.setPanelArgs("Collection", ATLAS_ARGS)
 			dirty = true
+		end
+	end)
+	-- la carte « Star Atlas débloqué ! » entre à l'écran (parfois après la file des « NOUVEAU ! ») :
+	-- la main sur Collection dure jusqu'à sa sortie (souvent avant Celebrated, même appel)
+	ScreenFX.CardOpened:Connect(function(tag: string, visible: number)
+		if tag ~= "atlasUnlocked" then
+			return
+		end
+		atlasCardAt = frameTime
+		if not collectionPending then
+			collectionSince = frameTime
+		end
+		local cardUntil = frameTime
+			+ math.clamp(num(visible, COLLECTION_PULSE), 0, 10)
+			+ COLLECTION_CARD_MARGIN
+		dirty = true
+		if introDone and HUD.isRevealed("rail.Collection") then
+			-- la main apparaît avec la carte (même image), sans attendre la prochaine évaluation
+			collectionPending = false
+			atlasCardUntil = nil
+			collectionPulseUntil = math.max(frameTime + COLLECTION_PULSE, cardUntil)
+			setAttention("rail.Collection", true)
+		else
+			collectionPending = true
+			atlasCardUntil = cardUntil
 		end
 	end)
 	PanelController.Closed:Connect(function(name: Types.PanelName)

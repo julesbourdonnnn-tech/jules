@@ -240,7 +240,10 @@ return function(T)
 				error(`coupe mise en scène : {staged.count} SnipEvent ({staged.why or ""})`)
 			end
 			local ev = staged.event
-			expect(w.Conga.lineLength(victim) < n).toBe(true)
+			-- la coupe a détaché au moins un Nebby ; les captures de la victime pendant la traversée
+			-- (un sauvage qui flâne jusqu'à elle, `caughtDuring`) ne masquent pas la perte
+			expect(ev.count >= 1).toBe(true)
+			expect(w.Conga.lineLength(victim) - staged.caughtDuring < n).toBe(true)
 			expect(#ev.loose).toBe(ev.count)
 			expect(w.DS.get(snipper).stardust > staged.dust).toBe(true)
 			expect(ev.dust > 0).toBe(true)
@@ -274,10 +277,47 @@ return function(T)
 				end
 				return best
 			end
-			for _ = 1, 60 do
-				local target = nearestLoose() or nearestWild(victim, 40)
+			-- priorité de la victime sur SES Nebbies libres (déterministe) : jamais étourdis pour elle ;
+			-- pour les autres (le coupeur), étourdis jusqu'à `dizzyUntil` (1,2 s), ensuite libres pour
+			-- tous (le coupeur resté à portée peut alors les attraper : règle du jeu)
+			do
+				local t = now()
+				local root = rootOf(victim)
+				local checked = 0
+				for _, wild in w.Spawn.query(root.Position, 200, t, victim) do
+					if mine[wild.id] then
+						checked += 1
+						expect(w.Spawn.canCatch(victim, w.Nest.slotOf(victim), wild, t)).toBe(true)
+						if t < wild.dizzyUntil then
+							expect(w.Spawn.canCatch(snipper, w.Nest.slotOf(snipper), wild, t)).toBe(false)
+						end
+					end
+				end
+				expect(checked + staged.caughtDuring >= 1).toBe(true)
+			end
+			-- le coupeur repart de son côté (il ne dispute plus les Nebbies libres restants) ; la victime
+			-- vise SES Nebbies, puis tout sauvage attrapable (rayon 40, puis 60 si la zone est vide),
+			-- jusqu'à une capture : l'ordre de traitement des joueurs n'est pas reproductible d'un
+			-- processus à l'autre, la scène ne doit pas dépendre d'une course gagnée en 6 s
+			local snipperRoot = rootOf(snipper)
+			local away = nil
+			if snipperRoot then
+				local cut = w.V3.new(ev.x, snipperRoot.Position.Y, ev.z)
+				local dir = snipperRoot.Position - cut
+				dir = w.V3.new(dir.X, 0, dir.Z)
+				away = snipperRoot.Position
+					+ (if dir.Magnitude > 1e-3 then dir.Unit else w.V3.new(1, 0, 0)) * 20
+			end
+			for tick = 1, 150 do
+				if w.Conga.lineLength(victim) > before then
+					break
+				end
+				local target = nearestLoose() or nearestWild(victim, if tick <= 60 then 40 else 60)
 				if target then
 					stepToward(victim, target)
+				end
+				if away then
+					stepToward(snipper, away)
 				end
 				frame()
 			end

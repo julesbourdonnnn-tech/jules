@@ -121,9 +121,13 @@ export type LabelProps = {
 	zIndex: number?,
 	order: number?,
 	parent: Instance?,
+	-- false pour un texte qui contient un nom de joueur (DisplayName) : la traduction automatique
+	-- de Roblox ne doit ni le traduire ni le capturer (un pseudo qui est un mot du dictionnaire)
+	autoLocalize: boolean?,
 }
 
--- Libellé TextScaled + UITextSizeConstraint ; AutoLocalize pour les autres langues (GDD §13.1)
+-- Libellé TextScaled + UITextSizeConstraint ; AutoLocalize pour les autres langues (GDD §13.1),
+-- sauf `autoLocalize = false` (noms de joueurs)
 function Widgets.label(p: LabelProps): TextLabel
 	return Create("TextLabel", {
 		Name = p.name,
@@ -140,7 +144,7 @@ function Widgets.label(p: LabelProps): TextLabel
 		TextYAlignment = p.yAlign or Enum.TextYAlignment.Center,
 		ZIndex = p.zIndex or 2,
 		LayoutOrder = p.order or 0,
-		AutoLocalize = true,
+		AutoLocalize = p.autoLocalize ~= false,
 		Parent = p.parent,
 	}, {
 		Create("UITextSizeConstraint", { MaxTextSize = p.maxSize or 24, MinTextSize = 8 }),

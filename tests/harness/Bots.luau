@@ -384,14 +384,20 @@ function Bots.stageSnip(victim, snipper, minLine)
 	for _ = 1, 4 do
 		local spot = Bots.zonePoint(victim, 85, 0)
 		Bots.walkAll({ [victim] = spot }, 400, Bots.brains)
-		for _ = 1, 600 do
+		-- 60 s de chasse autour du point (rayon 40) ; si la zone a été vidée par les autres chasseurs
+		-- (l'ordre de traitement des joueurs n'est pas reproductible d'un processus à l'autre), encore
+		-- 60 s au rayon de chasse des cerveaux (60) avant de conclure à un échec
+		for tick = 1, 1200 do
 			if w.Conga.lineLength(victim) >= minLine then
 				break
 			end
-			Bots.stepToward(victim, Bots.nearestWild(victim, 40) or spot)
+			Bots.stepToward(victim, Bots.nearestWild(victim, if tick <= 600 then 40 else 60) or spot)
 			Bots.frame(Bots.brains)
 		end
-		assert(w.Conga.lineLength(victim) >= minLine, "stageSnip : la victime n'a pas constitué sa file")
+		assert(
+			w.Conga.lineLength(victim) >= minLine,
+			`stageSnip : la victime n'a pas constitué sa file ({w.Conga.lineLength(victim)}/{minLine})`
+		)
 		-- point de départ loin de tout port sûr (portes à r ≈ 131, ports de 25 studs) : r = 75,
 		-- entre deux Nids ; la file suit
 		Bots.walkAll({ [victim] = Bots.zonePoint(victim, 75, math.pi / 12) }, 400, Bots.brains)

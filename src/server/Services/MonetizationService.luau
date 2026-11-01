@@ -6,6 +6,11 @@
 --    UserOwnsGamePassAsync fait foi : PromptGamePassPurchaseFinished n'est qu'un indice (un exploit
 --    peut l'émettre avec wasPurchased = true) ; un pass enregistré mais plus possédé (remboursé,
 --    ou accordé autrefois sur un signal non vérifié) est retiré à l'arrivée.
+--  * ce signal falsifiable ne peut pas noyer les appels web : vérifications limitées par joueur
+--    (RateLimit « PassVerify ») et réponse « non possédé » retenue NOT_OWNED_MEMORY s par
+--    (joueur, pass) ; sinon checkPasses des joueurs qui arrivent manquerait de budget
+--  * magasin de données en mémoire hors de Studio (rien ne serait jamais sauvegardé) : aucun reçu
+--    acquitté (défense en profondeur ; DataService ne crée de toute façon aucun profil sans DataStore)
 --
 -- API :
 --   MonetizationService.registerProduct("Coins1000", function(player, data) ... return true end)
@@ -17,11 +22,14 @@
 local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Monetization = require(Shared.Config.Monetization)
+local Clock = require(Shared.Util.Clock)
 local Signal = require(Shared.Util.Signal)
 local DataService = require(script.Parent.DataService)
+local RateLimit = require(script.Parent.Parent.Util.RateLimit)
 
 local MAX_STORED_RECEIPTS = 100
 local RECEIPT_DATA_TIMEOUT = 15
@@ -30,6 +38,12 @@ local RECEIPT_DATA_TIMEOUT = 15
 local Settings = {
 	VERIFY_ATTEMPTS = 3, -- vérifications de possession après un achat en jeu
 	VERIFY_RETRY_DELAY = 2, -- s, multiplié par le numéro de l'essai
+	-- vérifications lancées par le signal d'achat : au plus VERIFY_RATE_CALLS par VERIFY_RATE_WINDOW s
+	-- et par joueur (6 = un achat de chacun des 6 passes d'affilée, chacune ≤ VERIFY_ATTEMPTS appels)
+	VERIFY_RATE_CALLS = 6,
+	VERIFY_RATE_WINDOW = 60,
+	-- s pendant lesquels une réponse « non possédé » fait ignorer le signal pour ce pass
+	NOT_OWNED_MEMORY = 60,
 }
 
 type ProductHandler = (player: Player, data: { [string]: any }) -> boolean
@@ -49,6 +63,8 @@ local passKeyById: { [number]: string } = {}
 -- vérifications d'achat en cours, et passes confirmés par Roblox pendant cette session
 local verifying: { [Player]: { [string]: boolean } } = {}
 local confirmed: { [Player]: { [string]: boolean } } = {}
+-- dernière réponse « non possédé » d'une vérification d'achat : passKey → Clock.now() d'expiration
+local notOwnedUntil: { [Player]: { [string]: number } } = {}
 -- arrêt du serveur commencé (BindToClose) : plus aucun reçu acquitté ici
 local closing = false
 
@@ -156,6 +172,8 @@ local function verifyPurchase(player: Player, passKey: string, passId: number)
 		return -- déjà vérifié ou en cours (signal répété)
 	end
 	mine[passKey] = true
+	-- dernière réponse de Roblox = « non possédé » (une panne ne compte pas)
+	local denied = false
 	for attempt = 1, Settings.VERIFY_ATTEMPTS do
 		local ok, owns = pcall(function()
 			return MarketplaceService:UserOwnsGamePassAsync(player.UserId, passId)
@@ -170,6 +188,7 @@ local function verifyPurchase(player: Player, passKey: string, passId: number)
 			end
 			break
 		end
+		denied = ok
 		if attempt >= Settings.VERIFY_ATTEMPTS then
 			warn(
 				`[Monetization] achat du pass {passKey} non confirmé par Roblox pour {player.Name} :`,
@@ -181,7 +200,38 @@ local function verifyPurchase(player: Player, passKey: string, passId: number)
 	end
 	if verifying[player] == mine then
 		mine[passKey] = nil
+		-- signal sans achat (exploit, ou propagation plus lente que les essais : pass rendu à
+		-- l'arrivée suivante) : les signaux suivants de ce pass sont ignorés un moment
+		if denied and player.Parent ~= nil and not MonetizationService.ownsPass(player, passKey) then
+			local memo = notOwnedUntil[player]
+			if memo == nil then
+				memo = {}
+				notOwnedUntil[player] = memo
+			end
+			memo[passKey] = Clock.now() + Settings.NOT_OWNED_MEMORY
+		end
 	end
+end
+
+-- Signal d'achat de pass (falsifiable) : lance une vérification seulement si elle peut servir
+-- (pas déjà possédé, pas déjà en cours, pas de « non possédé » récent) et sous la limite par joueur
+local function onPassPurchaseSignal(player: Player, passKey: string, passId: number)
+	if player.Parent == nil or MonetizationService.ownsPass(player, passKey) then
+		return
+	end
+	local mine = verifying[player]
+	if mine and mine[passKey] then
+		return -- signal répété pendant la vérification
+	end
+	local memo = notOwnedUntil[player]
+	local expiry = if memo then memo[passKey] else nil
+	if expiry ~= nil and Clock.now() < expiry then
+		return
+	end
+	if not RateLimit.allow(player, "PassVerify", Settings.VERIFY_RATE_CALLS, Settings.VERIFY_RATE_WINDOW) then
+		return
+	end
+	task.spawn(verifyPurchase, player, passKey, passId)
 end
 
 -- Acquitte un reçu seulement après une sauvegarde réussie (GDD §8.1.4). Serveur en fermeture :
@@ -197,6 +247,11 @@ local function acknowledgeAfterSave(player: Player): Enum.ProductPurchaseDecisio
 end
 
 local function processReceipt(receipt: { [string]: any }): Enum.ProductPurchaseDecision
+	-- défense en profondeur : magasin en mémoire hors de Studio = rien ne sera jamais sauvegardé,
+	-- un reçu acquitté serait perdu (Roblox ne le redélivre plus). Studio : achats d'essai acquittés.
+	if DataService.usingMemoryStore and not RunService:IsStudio() then
+		return Enum.ProductPurchaseDecision.NotProcessedYet
+	end
 	if closing then
 		return Enum.ProductPurchaseDecision.NotProcessedYet -- crédité à la session suivante
 	end
@@ -266,13 +321,14 @@ function MonetizationService.Start()
 		function(player: Player, passId: number, wasPurchased: boolean)
 			local passKey = if type(passId) == "number" then passKeyById[passId] else nil
 			if wasPurchased == true and passKey then
-				task.spawn(verifyPurchase, player, passKey, passId)
+				onPassPurchaseSignal(player, passKey, passId)
 			end
 		end
 	)
 	Players.PlayerRemoving:Connect(function(player: Player)
 		verifying[player] = nil
 		confirmed[player] = nil
+		notOwnedUntil[player] = nil
 	end)
 
 	DataService.Loaded:Connect(function(player: Player)

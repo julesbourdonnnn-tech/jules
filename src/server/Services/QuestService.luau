@@ -401,8 +401,14 @@ local function allDailyClaimed(list: { any }): boolean
 	return true
 end
 
+-- « Étoile du jour » (GDD §7.5) : boost ×2 annoncé par UN toast dédié (celebrate.dailyStar, durée
+-- en variable) au lieu du « Glow ×2 » générique de grantReward ; rien d'annoncé si le boost a échoué
 local function payDailyStar(player: Player)
-	grantReward(player, Quests.DailyStar :: any, "Quest_DailyStar", nil, "quest")
+	local granted = grantReward(player, Quests.DailyStar :: any, "Quest_DailyStar", nil, "quest", true)
+	local boost = granted.boostSeconds
+	if boost ~= nil and boost > 0 then
+		Notify.feedback(player, "celebrate.dailyStar", { minutes = math.ceil(boost / 60) }, "reward")
+	end
 end
 
 -- Grand Défilé terminé : récompense (Légendaire de la semaine `rotationWeek`, nil = courante) et

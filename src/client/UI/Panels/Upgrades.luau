@@ -69,6 +69,7 @@ local ACCENTS: { [string]: Color3 } = {
 }
 
 local CARD_HEIGHT = 112
+local NAME_SHARE = 0.4 -- part du nom sur sa ligne (le reste : description)
 local BUY_SIZE = Vector2.new(184, 96) -- bouton principal 96 px (§10.1)
 local SUPERNOVA_HEIGHT = 100
 local PULSE_PERIOD, PULSE_AMOUNT = 0.8, 0.08
@@ -251,16 +252,19 @@ local function buildCard(track: string, order: number, parent: Instance): CardRe
 	local textW = -(textX + BUY_SIZE.X + 24)
 	local name = Widgets.label({
 		name = "Name",
-		size = UDim2.new(0.45, textW * 0.45, 0, 34),
+		size = UDim2.new(NAME_SHARE, textW * NAME_SHARE, 0, 34),
 		position = UDim2.fromOffset(textX, 8),
 		xAlign = Enum.TextXAlignment.Left,
 		maxSize = 28,
 		parent = visual,
 	})
+	-- description : 60 % de la ligne du nom, et cadre de 40 px (deux lignes au besoin, TextWrapped)
+	-- qui finit au-dessus de l'effet (y = 44) ; « +1 perchoir (gardé à la Supernova) » tombait à
+	-- 17,8 px sur 55 % d'une ligne de 26 px
 	local desc = Widgets.label({
 		name = "Desc",
-		size = UDim2.new(0.55, textW * 0.55, 0, 26),
-		position = UDim2.new(0.45, textX + textW * 0.45 + 6, 0, 12),
+		size = UDim2.new(1 - NAME_SHARE, textW * (1 - NAME_SHARE), 0, 40),
+		position = UDim2.new(NAME_SHARE, textX + textW * NAME_SHARE + 6, 0, 4),
 		xAlign = Enum.TextXAlignment.Left,
 		color = Theme.Colors.TextDim,
 		font = Theme.Fonts.Body,

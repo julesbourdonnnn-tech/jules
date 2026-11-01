@@ -2,7 +2,8 @@
 -- LightingController — paquet « world » (docs/04-architecture.md §13.4).
 -- Ambiance animée CÔTÉ CLIENT à partir de l'horloge commune, sans réplication (GDD §11.5, §9.4).
 --   * cycle crépuscule ↔ nuit de 12 min : ClockTime = 17,6 + 2,9 × (0,5 − 0,5 cos(2π t / 720)),
---     t = Clock.now() (Events.Lighting.Cycle) ; une seule connexion RenderStepped
+--     t = Clock.now() (Events.Lighting.Cycle) ; une seule connexion RenderStepped ; ClockTime écrit
+--     par paliers d'une minute de jeu (≈ 1 écriture / 1,3 s au plus fort de la pente, §12.8)
 --   * préréglages Events.Lighting.Presets, chacun avec un poids 0 → 1 adouci en Sine InOut
 --     (Events.Lighting.TweenSeconds = 3 s à l'aller comme au retour ; Nuit de la Balise 4 s,
 --     alerte Comète 2 s) ; plusieurs préréglages se superposent (météo + Nuit d'Or + alerte…)
@@ -61,6 +62,10 @@ local FLASH_SECONDS = 0.15
 local DEPOSIT_GROW = 0.4
 local DEPOSIT_SHRINK = 0.3
 local STAR_QUANTUM = 100 -- StarCount écrit par paliers (régénération du ciel)
+-- ClockTime écrit par paliers d'une minute de jeu : chaque écriture fait recalculer au moteur la
+-- lumière du soleil et les ombres ; au plus fort de la pente du cycle (2,9 h × π / 720 s ≈ 0,0127 h/s)
+-- une écriture toutes les ≈ 1,3 s, invisible (0,25° de course du soleil par palier)
+local CLOCK_STEPS_PER_HOUR = 60
 local EPSILON = 1e-3
 local COLOR_EPSILON = 1 / 512
 local GOLDEN_SOURCES = { goldenNight = true, liveOps = true }
@@ -435,8 +440,16 @@ local function write(cacheKey: string, inst: Instance?, prop: string, value: any
 	target[prop] = value
 end
 
+-- ClockTime arrondi à la minute de jeu (fondus de la Balise et des préréglages compris)
+local function quantizeClock(clockTime: number): number
+	if not finite(clockTime) then
+		return clockTime
+	end
+	return math.floor(clockTime * CLOCK_STEPS_PER_HOUR + 0.5) / CLOCK_STEPS_PER_HOUR
+end
+
 local function apply(v: Values)
-	write("ClockTime", Lighting, "ClockTime", v.ClockTime)
+	write("ClockTime", Lighting, "ClockTime", quantizeClock(v.ClockTime))
 	write("Brightness", Lighting, "Brightness", v.Brightness)
 	write("Ambient", Lighting, "Ambient", v.Ambient)
 	write("OutdoorAmbient", Lighting, "OutdoorAmbient", v.OutdoorAmbient)

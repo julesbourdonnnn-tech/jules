@@ -785,6 +785,44 @@ return function(T)
 			end
 		end)
 
+		it(
+			"pastille d'événement qui pulse (accueil Q6, ×1,08 autour du haut centre) : jamais sur Réglages ni la minicarte",
+			function()
+				local c = hudSetup()
+				for _, size in
+					{
+						{ 640, 360, 36 },
+						{ 667, 375, 36 },
+						{ 640, 360, 58 },
+						{ 568, 320, 36 },
+						{ 844, 390, 36 },
+					}
+				do
+					screen(c, size[1], size[2], size[3])
+					local label = size[1] .. "x" .. size[2] .. "/" .. size[3]
+					local r = checkLayout(c, label)
+					-- pastille à son plus gros (HUD : 1 + ATTENTION_AMPLITUDE = 1,08), ancrée en haut au centre
+					local pill = r.pill
+					local cx = (pill.x0 + pill.x1) / 2
+					local half = (pill.x1 - pill.x0) * 1.08 / 2
+					local grown = {
+						x0 = cx - half,
+						y0 = pill.y0,
+						x1 = cx + half,
+						y1 = pill.y0 + (pill.y1 - pill.y0) * 1.08,
+					}
+					expect({ screen = label, gap = grown.x0 - r.settings.x1 >= 8 - 1e-6 }).toEqual({
+						screen = label,
+						gap = true,
+					})
+					expect({ screen = label, gap = r.minimap.x0 - grown.x1 >= 8 - 1e-6 }).toEqual({
+						screen = label,
+						gap = true,
+					})
+				end
+			end
+		)
+
 		it("place retrouvée (tablette, PC) : positions du GDD rétablies", function()
 			local c = hudSetup()
 			local tracker, status = hud(c).QuestTracker, hud(c).Status

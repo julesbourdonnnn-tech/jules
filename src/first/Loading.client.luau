@@ -49,7 +49,11 @@ local FAIL_AFTER = 20 -- s avant « Ton Nid se réveille… » (et « Réessayer
 -- attribut Player répliqué posé par DataService pendant ses essais de chargement (numéro d'essai)
 local PROFILE_LOADING = "ProfileLoading"
 local RETRY_GRACE = 10 -- s après la fin du chargement serveur / de la réplication avant « Réessayer »
--- au-delà du pire cas de DataService (verrou : 5 × 5 s ; erreurs : 2 + 4 + 8 + 16 + 16 s d'attente)
+-- au-delà du pire cas de DataService, attribut ProfileLoading posé (6 essais au plus) : verrou d'un
+-- autre serveur 5 × 5 s = 25 s ; pannes : backoff 2 + 4 + 8 + 16 + 16 = 46 s, aucune attente après
+-- le 6e et dernier essai (renvoi aussitôt), soit ≈ 46 s + la latence des 6 UpdateAsync ; DataStore
+-- indisponible (GetDataStore en échec) : même chemin, 46 s puis renvoi. Seul cas plus long, rare :
+-- reconnexion sur le MÊME serveur pendant une panne (REJOIN_WAIT ≤ 25 s avant le chargement)
 local RETRY_MAX_WAIT = 60
 local MAX_RESELECTS_PER_FRAME = 4 -- garde-fou contre une sélection disputée image après image
 local FADE_TIME = 0.3

@@ -7,28 +7,35 @@
 --     + glowCarry (Hud/Glow), défilement countTo 0,5 s Quint Out + pop sur gain, défilement continu
 --     sans pop pour le revenu passif, « +1,2K/s » ; pastille Stardust (16, 88 ; apparaît à Q4)
 --   * compteur de file (bas centre, 360 × 56) : « 7/15 », barre, « ×1,48 » (Formulas.congaBonus),
---     vide « Attrape des Nebbies ! », pop 1,15 à la capture, 2 clignotements rouges + flèche vers le
---     Nid (Feedback lineFull ; le tampon « PLEINE » est joué par ScreenFX), icône bouclier débutant
+--     vide « Attrape des Nebbies ! » (« 0/3 » et la barre pendant l'accueil : HUD.setLineEmptyHint),
+--     pop 1,15 à la capture, 2 clignotements rouges + flèche vers le Nid (Feedback lineFull ; le
+--     tampon « PLEINE » est joué par ScreenFX), icône bouclier débutant
 --   * bouton Dash (112 × 112, au-dessus à gauche du bouton de saut tactile lu dans
 --     TouchGui.TouchControlFrame.JumpButton — recherche bornée et non bloquante, décalage −16 px ;
---     PC/manette : bas droite) avec balayage radial de recharge et pop + éclair au retour ; bouton
---     Ping (72 × 72) à sa gauche ; sur les écrans bas (téléphones de 360-390 dp), la colonne de
---     droite (état, suivi de quête) passe à gauche de la minicarte si le Dash la recouvrirait
+--     PC/manette : bas droite) avec balayage radial de recharge et pop + éclair au retour ; Dash dès
+--     l'appui du doigt ou de la souris, jamais relancé au relâchement (Activated : manette et
+--     clavier seulement) ; bouton Ping (72 × 72) à sa gauche ; sur les écrans bas (téléphones de
+--     360-390 dp), la colonne de droite (état, suivi de quête) passe à gauche de la minicarte si le
+--     Dash la recouvrirait (sur une rangée quand la colonne ne tient pas)
 --   * pastille d'événement (haut centre, 320 × 48 ; Hud/EventPill) : prochain événement avec compte à
 --     rebours, événement en cours en couleur, « ☄ COMÈTE 0:45 — Mira », barre de la Balise (420 × 28) ;
---     sur les écrans étroits (640 × 360, 667 × 375) elle glisse à droite d'Équipage / Réglages sans
---     toucher la minicarte (pillGeometry)
+--     sur les écrans étroits (640 × 360, 667 × 375) et au téléviseur elle glisse à droite
+--     d'Équipage / Réglages sans toucher la minicarte, écarts comptés pastille grossie par sa
+--     pulsation (pillGeometry)
 --     ; indicateurs d'état (Zen, boost ×2 avec minuteur, connexion instable) ; suivi de quête
 --     (260 × 72, repliable : icône + titre de 200 px jamais sous 18 px, barre + bouton de repli
---     dessous ; coût de la Supernova abrégé s'il ne tient pas) ; icônes Équipage et Réglages
+--     dessous ; au doigt toute la pastille replie, zone ≥ 44 px réels ; coût de la Supernova abrégé
+--     s'il ne tient pas ; quête d'accueil réussie : barre remplie en 0,3 s, coche « ✓ » 0,8 s, puis
+--     la suivante) ; icônes Équipage et Réglages
 --   * crochets de ScreenFX : cibles des pièces (HUD.anchor), panneau ouvert, place libre des cartes
 --     « NOUVEAU ! » (cardPlacement : colonne de droite sous la minicarte, l'état et le suivi, jamais
 --     sur le Dash, le Ping ni le bouton de saut ; zone sûre de l'appareil comprise)
 --   * rail de menus (gauche, y 150-470, 4 boutons 80 × 80) : Améliorer, Collection, Objectifs,
---     Boutique → InputController.togglePanel (PanelController) ; pastille « ! » (hasAction /
---     BadgeChanged) ; sur les écrans bas (téléphones de 360-390 dp) où la colonne descendrait dans
---     le quart inférieur (joystick dynamique, GDD §10.1), grille 2 × 2 (168 × 168 dès y = 144),
---     navigation manette recâblée sur les boutons affichés
+--     Boutique → InputController.togglePanel (PanelController) ; Boutique seulement si elle montre
+--     au moins un article (Panels/Model.shopHasItems : ids encore à 0 → ni icône, ni B, ni L2 / R2) ;
+--     pastille « ! » (hasAction / BadgeChanged) ; sur les écrans bas (téléphones de 360-390 dp) où
+--     la colonne descendrait dans le quart inférieur (joystick dynamique, GDD §10.1), grille 2 × 2
+--     (168 × 168 dès y = 144), navigation manette recâblée sur les boutons affichés
 --   * bouton ACCLAMER (200 × 88, 10 s, anneau de temps) : propriétaire du remote CheerPrompt,
 --     envoie Cheer(heroId) (appui, F ou croix droite : InputController.CheerRequested)
 --   * icône « connexion instable » (attribut Player « Unstable »)
@@ -41,7 +48,8 @@
 --     du rail), touches clavier « KeyCap » masquées à la manette ; △ (HUD.selectRail) sélectionne la
 --     carte d'invitation d'équipage (PanelController.focusTarget(), passagère), sinon la cible de
 --     l'accueil, sinon le bouton du rail à pastille « ! », sinon le dernier panneau du rail ouvert,
---     sinon le premier bouton affiché ; graphe
+--     sinon le premier bouton affiché ; en mode menu, △ désigne d'abord la cible annoncée par une
+--     icône △ (InputController.setRailTarget : carte d'invitation, cible de l'accueil) ; graphe
 --     NextSelection* complet (rail, Équipage, Réglages, minicarte, suivi de quête, Ping, Dash,
 --     ACCLAMER) posé à la manette ; croix ← (InputController.QuestToggled) replie le suivi ; main
 --     d'accueil remplacée par l'icône de la touche (△, puis ✕ une fois le bouton sélectionné ; R2 sur
@@ -54,8 +62,9 @@
 -- purement graphique), le temps de jeu vient de Shared/Util/Clock.
 -- GDD : §3 (HUD progressif), §6.6 (acclamer), §9.2, §10.1, §10.2.
 -- Dépendances : StateController, AudioController, Util/Prefs, Util/Platform, UI/Root, UI/Theme,
--- UI/Create, UI/Juice, UI/Glyph, WorldStateController, ScreenFX, Banners, PanelController,
--- InputController, Logic/Formulas, Logic/EventClock, Config/*, Shared/Net, Shared/Util/Clock.
+-- UI/Create, UI/Juice, UI/Glyph, UI/Panels/Model, WorldStateController, ScreenFX, Banners,
+-- PanelController, InputController, Logic/Formulas, Logic/EventClock, Config/*, Shared/Net,
+-- Shared/Util/Clock.
 
 local GuiService = game:GetService("GuiService")
 local Players = game:GetService("Players")
@@ -93,6 +102,7 @@ local Counter = require(Client.UI.Hud.Counter)
 local Glow = require(Client.UI.Hud.Glow)
 local Text = require(Client.UI.Hud.Text)
 local EventPill = require(Client.UI.Hud.EventPill)
+local Model = require(Client.UI.Panels.Model)
 
 local HUD = {}
 
@@ -115,6 +125,11 @@ local TRACKER_ICON = 32
 local TRACKER_TITLE_X = 54
 local TRACKER_TITLE_W = TRACKER_SIZE.X - TRACKER_TITLE_X - 6
 local TRACKER_TOGGLE = Vector2.new(52, 32)
+-- px RÉELS : zone tactile du repli (toute la pastille, au moins 44 × 44, GDD §10.1)
+local TRACKER_MIN_TAP = 44
+-- s : quête d'accueil réussie, la barre se remplit (0,3 s) puis la coche reste avant la suivante
+local TRACKER_FILL_TIME = 0.3
+local TRACKER_DONE_HOLD = 0.8
 -- Caractères qui tiennent sur une ligne du titre à 18 px (0,55 em par caractère, estimation
 -- prudente pour FredokaOne) ; au-delà, le coût de la Supernova est abrégé (« 10M »)
 local TRACKER_TITLE_CHARS = math.floor(TRACKER_TITLE_W / (0.55 * 18))
@@ -174,7 +189,6 @@ local CHEER_SLIDE = 0.3
 local CHEER_EMOTE = "cheer"
 local MIN_TOUCH = 56 -- px RÉELS : cible tactile absolue de Dash et Ping (GDD §10.1, §13.2)
 local TRACKER_SLIDE = 0.3
-local PRESS_ACTIVATED_WINDOW = 1.5 -- s : Activated qui suit un appui déjà traité (même geste)
 local LINE_BAR = Theme.Colors.Primary
 local LINE_BAR_FULL = Theme.Colors.Gold
 -- Manette (docs/07-console-ps5.md §3, §5) : icônes de touches de 36 px de référence
@@ -272,15 +286,32 @@ type Element = {
 type Cheer = { heroId: number, level: number, expiresAt: number, total: number }
 
 -- Rectangle en px de référence du HUD (zone intérieure de Safe)
-type Rect = { x0: number, y0: number, x1: number, y1: number }
+export type Rect = { x0: number, y0: number, x1: number, y1: number }
 
 local started = false
 local built = false
 local uiTime = 0
-local lastSlow = -math.huge
-local lastTouchCheck = -math.huge
-local lastShine = 0
-local lastCoinSound = -math.huge
+-- Horloges et drapeaux d'animation réunis dans une table : le bloc principal de ce module approche
+-- la limite de 200 registres locaux de Luau
+local ticks = {
+	slow = -math.huge, -- dernière mise à jour lente
+	touchCheck = -math.huge, -- dernière recherche du bouton de saut / taille d'écran
+	shine = 0, -- dernier reflet des boutons
+	coinSound = -math.huge,
+	fullFlashAt = -math.huge, -- file pleine : clignotement rouge
+	arrowUntil = -math.huge, -- file pleine : flèche vers le Nid
+	dashWasReady = true,
+	glowDirty = false,
+	lastGlowTarget = 0,
+	lastBarRatio = -1,
+	-- file vide : « Attrape des Nebbies ! » ; faux pendant l'accueil (OnboardingController), qui
+	-- affiche déjà SA consigne : « 0/3 » et la barre à la place (une seule instruction, GDD §3)
+	lineEmptyHint = true,
+	-- icône Boutique demandée (accueil Q6, HUD complet) sans article à montrer (ids à 0) : elle
+	-- attend le premier article visible (Model.shopHasItems), réévalué à chaque mise à jour lente
+	shopPending = false,
+	shopAnimate = false,
+}
 local safe: Frame? = nil
 local elements: { [string]: Element } = {}
 local earlyReveals: { [string]: boolean } = {}
@@ -309,8 +340,6 @@ local railMenuMode = false -- icône du rail sur ○ (sélection dans le HUD ou 
 
 local glowCounter: Counter.Counter? = nil
 local dustCounter: Counter.Counter? = nil
-local glowDirty = false
-local lastGlowTarget = 0
 local rateLabel: TextLabel? = nil
 
 local lineParts: {
@@ -325,13 +354,9 @@ local lineParts: {
 } =
 	{}
 local lineCount = 0
-local fullFlashAt = -math.huge
-local arrowUntil = -math.huge
 
 local dashParts: { holder: Frame?, button: TextButton?, radial: Widgets.Radial?, flash: Frame? } = {}
 local pingHolder: Frame? = nil
-local dashWasReady = true
-local lastPressDash = -math.huge
 local jumpButton: GuiObject? = nil
 -- place courante de la colonne de droite (positions du GDD, ou colonne de repli sur écran bas)
 local columnHome: { [string]: UDim2 } = { status = STATUS_HOME, questTracker = TRACKER_HOME }
@@ -339,7 +364,6 @@ local columnHome: { [string]: UDim2 } = { status = STATUS_HOME, questTracker = T
 local eventParts: { label: TextLabel?, stroke: UIStroke?, bar: Frame?, fill: Frame?, barLabel: TextLabel? } =
 	{}
 local lastPill: EventPill.PillState? = nil
-local lastBarRatio = -1
 
 local statusParts: {
 	rookie: Frame?,
@@ -356,11 +380,14 @@ local trackerParts: {
 	title: TextLabel?,
 	fill: Frame?,
 	toggle: TextButton?,
+	hit: TextButton?, -- zone tactile transparente sur toute la pastille (repli au doigt)
 	collapsed: boolean,
 	progress: number,
 	key: string,
+	step: number, -- étape d'accueil affichée (−1 : pas encore lue)
+	doneUntil: number, -- uiTime : quête réussie (barre pleine + coche) jusqu'à cet instant
 } =
-	{ collapsed = false, progress = -1, key = "" }
+	{ collapsed = false, progress = -1, key = "", step = -1, doneUntil = -math.huge }
 
 local cheer: Cheer? = nil
 local cheerParts: { holder: Frame?, button: TextButton?, ring: Widgets.Radial?, name: TextLabel?, shownAt: number } =
@@ -407,6 +434,15 @@ end
 
 local function localPlayer(): Player?
 	return Players.LocalPlayer
+end
+
+-- Toucher ou clic gauche (le geste qui presse un bouton du doigt ou de la souris)
+local function isPointer(input: any): boolean
+	if typeof(input) ~= "InputObject" and type(input) ~= "table" then
+		return false
+	end
+	local kind = input.UserInputType
+	return kind == Enum.UserInputType.Touch or kind == Enum.UserInputType.MouseButton1
 end
 
 local function localSlot(): number
@@ -490,8 +526,8 @@ local function buildGlow(parent: Frame)
 	local counter = Counter.new(value, money, 0)
 	counter.onPop = function()
 		Juice.pulse(pill, 1.15)
-		if uiTime - lastCoinSound >= COIN_SOUND_INTERVAL then
-			lastCoinSound = uiTime
+		if uiTime - ticks.coinSound >= COIN_SOUND_INTERVAL then
+			ticks.coinSound = uiTime
 			AudioController.play("Coin", 0.05)
 		end
 	end
@@ -683,8 +719,24 @@ local function buildStatus(parent: Frame)
 	register("status", holder, row)
 end
 
+-- Zone tactile du repli : toute la pastille (dépliée ou repliée), jamais sous 44 px réels
+local function sizeTrackerHit()
+	local hit = trackerParts.hit
+	if hit == nil then
+		return
+	end
+	local k = math.max(Root.scale(), 0.01)
+	local minimum = math.ceil(TRACKER_MIN_TAP / k)
+	local width = if trackerParts.collapsed then TRACKER_SIZE.Y else TRACKER_SIZE.X
+	local size = UDim2.fromOffset(math.max(width, minimum), math.max(TRACKER_SIZE.Y, minimum))
+	if hit.Size ~= size then
+		hit.Size = size
+	end
+end
+
 local function setTrackerCollapsed(collapsed: boolean)
 	trackerParts.collapsed = collapsed
+	sizeTrackerHit()
 	local pill = trackerParts.pill
 	if pill == nil then
 		return
@@ -788,6 +840,32 @@ local function buildTracker(parent: Frame)
 	toggle.Activated:Connect(function()
 		setTrackerCollapsed(not trackerParts.collapsed)
 	end)
+	-- au doigt : TOUTE la pastille replie / déplie (le petit bouton ferait ~31 × 19 px réels à
+	-- l'échelle 0,6) ; bouton transparent au-dessus d'elle, hors du graphe de sélection (la manette
+	-- garde le petit bouton et la croix ←) ; la pastille s'enfonce un instant à l'appui
+	local hit = Create("TextButton", {
+		Name = "Hit",
+		Text = "",
+		AutoButtonColor = false,
+		AutoLocalize = false,
+		BackgroundTransparency = 1,
+		Selectable = false,
+		SelectionImageObject = Root.selectionImage(),
+		AnchorPoint = Vector2.new(1, 0.5),
+		Position = UDim2.new(1, 0, 0.5, 0),
+		Size = UDim2.fromOffset(TRACKER_SIZE.X, TRACKER_SIZE.Y),
+		ZIndex = 6,
+		Parent = holder,
+	}) :: TextButton
+	hit.InputBegan:Connect(function(input: InputObject)
+		if isPointer(input) and not reduced() then
+			Juice.pulse(pill, 0.94)
+		end
+	end)
+	hit.Activated:Connect(function()
+		setTrackerCollapsed(not trackerParts.collapsed)
+	end)
+	trackerParts.hit = hit
 	trackerParts.pill = pill
 	trackerParts.icon = icon
 	trackerParts.title = title
@@ -802,6 +880,7 @@ local function buildTracker(parent: Frame)
 		Vector2.new(1, 0.5)
 	)
 	register("questTracker", holder, pill)
+	sizeTrackerHit()
 end
 
 local function buildRail(parent: Frame)
@@ -1017,17 +1096,17 @@ local function buildDash(parent: Frame)
 	)
 	-- R2 (manette, docs/07 §6.1) dans le coin haut gauche, hors du disque
 	padGlyph("dash", button, Enum.KeyCode.ButtonR2, UDim2.fromOffset(-4, -4), Vector2.zero)
-	-- Dash dès l'appui (tactile, souris) : Activated n'arrive qu'au relâchement du doigt ;
-	-- Activated reste la voie de la manette (bouton sélectionné + A) et ignore l'appui déjà traité
+	-- Dash dès l'appui (tactile, souris) : Activated n'arrive qu'au relâchement du doigt, qui ne
+	-- relance jamais un second Dash (doigt maintenu plus longtemps que la recharge : ni Dash ni
+	-- secousse de refus) ; Activated reste la voie de la manette et du clavier (bouton sélectionné
+	-- + ✕ / Entrée)
 	button.InputBegan:Connect(function(input: InputObject)
-		local kind = input.UserInputType
-		if kind == Enum.UserInputType.Touch or kind == Enum.UserInputType.MouseButton1 then
-			lastPressDash = uiTime
+		if isPointer(input) then
 			InputController.dash()
 		end
 	end)
-	button.Activated:Connect(function()
-		if uiTime - lastPressDash < PRESS_ACTIVATED_WINDOW and uiTime >= lastPressDash then
+	button.Activated:Connect(function(input: InputObject?)
+		if input ~= nil and isPointer(input) then
 			return
 		end
 		InputController.dash()
@@ -1160,7 +1239,7 @@ local function updateLine(animate: boolean)
 	local slot = localSlot()
 	local n = if slot ~= 0 then WorldStateController.lineLength(slot) else 0
 	local cap = Formulas.congaCapacity(upgradeLevel("conga"))
-	local isEmpty = n <= 0
+	local isEmpty = n <= 0 and ticks.lineEmptyHint
 	local barBack = fill.Parent :: GuiObject
 	empty.Visible = isEmpty
 	count.Visible = not isEmpty
@@ -1264,6 +1343,26 @@ local function updateTracker(now: number)
 	end
 	local ob = State.get("onboarding")
 	local step = if type(ob) == "table" then math.floor(num(ob.step, 0)) else 0
+	-- quête d'accueil réussie (GDD §9.4) : le serveur passe p à n puis à l'étape suivante dans la
+	-- même image ; la barre se remplit (0,3 s), une coche remplace l'icône, puis la quête suivante
+	local last = trackerParts.step
+	trackerParts.step = step
+	local lastDef = if last >= 1 and step > last then Quests.Onboarding[last] else nil
+	if lastDef ~= nil and trackerParts.key == "quest.onboarding." .. lastDef.id then
+		trackerParts.doneUntil = uiTime + TRACKER_FILL_TIME + TRACKER_DONE_HOLD
+		trackerParts.progress = 1
+		icon.Text = "✓"
+		if reduced() then
+			fill.Size = UDim2.fromScale(1, 1)
+		else
+			Juice.tween(fill, TRACKER_FILL_TIME, { Size = UDim2.fromScale(1, 1) })
+			Juice.pulse(pill, 1.1)
+		end
+		return
+	end
+	if uiTime < trackerParts.doneUntil then
+		return
+	end
 	local def, p, n = questGoal(step)
 	local key: string
 	local progress: number
@@ -1333,8 +1432,8 @@ local function updateEventPill(now: number)
 	if barState then
 		local ratio = math.clamp(barState.points / barState.goal, 0, 1)
 		barLabel.Text = Prefs.t("hud.event.beaconBar", { points = barState.points, goal = barState.goal })
-		if math.abs(ratio - lastBarRatio) > 1e-4 then
-			lastBarRatio = ratio
+		if math.abs(ratio - ticks.lastBarRatio) > 1e-4 then
+			ticks.lastBarRatio = ratio
 			if reduced() then
 				fill.Size = UDim2.fromScale(ratio, 1)
 			else
@@ -1349,7 +1448,7 @@ local function updateEventPill(now: number)
 			end
 		end
 	else
-		lastBarRatio = -1
+		ticks.lastBarRatio = -1
 	end
 end
 
@@ -1435,15 +1534,20 @@ end
 -- écrans étroits (640 × 360, 667 × 375 : zone intérieure < 1136 px) elle glisse vers la droite
 -- sans toucher la minicarte, et ne rétrécit qu'en dernier recours. La barre de la Balise, centrée
 -- sous elle (y 70-98, à hauteur de Réglages et de la minicarte), tient dans le même couloir.
+-- Écarts comptés pastille GROSSIE : elle pulse (accueil Q6, apparition) jusqu'à
+-- 1 + ATTENTION_AMPLITUDE autour de son centre haut (UIScale du conteneur, barre comprise) — au
+-- téléviseur (zone intérieure 1152 px) elle se décale de 13 px pour ne jamais toucher Réglages.
 local function pillGeometry(W: number): (number, number, number)
+	local grow = 1 + ATTENTION_AMPLITUDE
 	local minLeft = TOP_ROW_RIGHT + CLEARANCE
 	local maxRight = W - MARGIN - MINIMAP - CLEARANCE
-	local width = math.floor(math.clamp(maxRight - minLeft, EVENT_MIN_WIDTH, EVENT_SIZE.X))
-	local shift = math.max(0, math.ceil(minLeft - (W - width) / 2))
-	shift = math.min(shift, math.max(0, math.floor(maxRight - (W + width) / 2)))
+	local width = math.floor(math.clamp((maxRight - minLeft) / grow, EVENT_MIN_WIDTH, EVENT_SIZE.X))
+	local halfGrown = width * grow / 2
+	local shift = math.max(0, math.ceil(minLeft + halfGrown - W / 2))
+	shift = math.min(shift, math.max(0, math.floor(maxRight - halfGrown - W / 2)))
 	local center = W / 2 + shift
 	local half = math.min(center - minLeft, maxRight - center)
-	local bar = math.clamp(math.floor(2 * half), width, BEACON_BAR.X)
+	local bar = math.clamp(math.floor(2 * half / grow), width, BEACON_BAR.X)
 	return shift, width, bar
 end
 
@@ -1699,7 +1803,8 @@ end
 -- si le Dash ou le Ping les recouvrent (téléphones de 360-390 dp de haut : le bouton de saut remonte
 -- le Dash jusqu'à y ≈ 217-304). Elles passent alors dans une colonne à gauche de la minicarte, au
 -- plus haut sans toucher la pastille d'événement (et sa barre de Balise si la largeur le permet),
--- l'instruction d'accueil, le compteur de file ni ACCLAMER (GDD §10.1, §10.2).
+-- l'instruction d'accueil, le compteur de file ni ACCLAMER (GDD §10.1, §10.2) ; si la colonne ne
+-- tient pas (640 × 360 sous la barre de 58 px), sur une rangée : état à gauche du suivi.
 local function layoutColumn(dashPos: UDim2, dashSize: number, pingSize: number)
 	local size = contentSize()
 	local statusAt, trackerAt = STATUS_HOME, TRACKER_HOME
@@ -1734,6 +1839,7 @@ local function layoutColumn(dashPos: UDim2, dashSize: number, pingSize: number)
 				{ top = withBar, bottom = H },
 				{ top = pill, bottom = H },
 			}
+			local placed = false
 			for _, pass in passes do
 				local obstacles = table.clone(fixed)
 				table.insert(obstacles, pass.top)
@@ -1749,6 +1855,25 @@ local function layoutColumn(dashPos: UDim2, dashSize: number, pingSize: number)
 					if sy ~= nil or not hitsAny(statusHome, obstacles) then
 						trackerAt = UDim2.new(1, -SIDE_RIGHT, 0, ty)
 						statusAt = if sy ~= nil then UDim2.new(1, -SIDE_RIGHT, 0, sy) else STATUS_HOME
+						placed = true
+						break
+					end
+				end
+			end
+			-- dernier recours (640 × 360 sous la barre Roblox de 58 px : ni colonne au-dessus du Dash,
+			-- ni place sous le suivi) : une rangée, état à GAUCHE du suivi de quête, au-dessus du Dash
+			if not placed then
+				local row = Vector2.new(
+					TRACKER_SIZE.X + CLEARANCE + STATUS_WIDTH,
+					math.max(TRACKER_SIZE.Y, STATUS_HEIGHT)
+				)
+				for _, pass in passes do
+					local obstacles = table.clone(fixed)
+					table.insert(obstacles, pass.top)
+					local y = firstFree(right, row, MARGIN, pass.bottom, obstacles)
+					if y ~= nil then
+						trackerAt = UDim2.new(1, -SIDE_RIGHT, 0, y)
+						statusAt = UDim2.new(1, -(SIDE_RIGHT + TRACKER_SIZE.X + CLEARANCE), 0, y)
 						break
 					end
 				end
@@ -1852,6 +1977,7 @@ end
 
 local function layoutActions()
 	layoutRail()
+	sizeTrackerHit()
 	local dash, ping, s = dashParts.holder, pingHolder, safe
 	if dash == nil or ping == nil or s == nil then
 		return
@@ -2016,6 +2142,15 @@ local function onPlayerRemoving(player: Player)
 	end
 end
 
+-- Boutique ---------------------------------------------------------------------------------------
+
+-- Au moins un article visible dans la boutique (passe ou produit, Panels/Model)
+local function shopHasItems(): boolean
+	local ok, result =
+		pcall(Model.shopHasItems, Model.view(State.get), WorldStateController.events(), Clock.now())
+	return ok and result == true
+end
+
 -- Image -----------------------------------------------------------------------------------------
 
 local function stepGlow(now: number)
@@ -2024,9 +2159,9 @@ local function stepGlow(now: number)
 		return
 	end
 	local predicted = Glow.predicted(now)
-	if glowDirty then
-		glowDirty = false
-		local jump = predicted - lastGlowTarget
+	if ticks.glowDirty then
+		ticks.glowDirty = false
+		local jump = predicted - ticks.lastGlowTarget
 		-- gain ou dépense discrets (parade, quête, achat) ≠ dérive du revenu passif
 		local threshold = Glow.rate() + 1
 		if math.abs(jump) > threshold then
@@ -2037,7 +2172,7 @@ local function stepGlow(now: number)
 	else
 		counter:set(predicted, uiTime, false)
 	end
-	lastGlowTarget = predicted
+	ticks.lastGlowTarget = predicted
 	counter:step(uiTime)
 end
 
@@ -2139,7 +2274,7 @@ local function stepDash(now: number)
 	local progress = InputController.dashProgress(now)
 	radial.set(1 - progress)
 	local ready = progress >= 1
-	if ready and not dashWasReady then
+	if ready and not ticks.dashWasReady then
 		-- prêt : pop 1,15 + éclair
 		Juice.pulse(button, 1.15)
 		if not reduced() then
@@ -2147,7 +2282,7 @@ local function stepDash(now: number)
 			Juice.tween(flash, 0.25, { BackgroundTransparency = 1 })
 		end
 	end
-	dashWasReady = ready
+	ticks.dashWasReady = ready
 end
 
 local function stepCheer(now: number)
@@ -2168,7 +2303,7 @@ end
 local function stepLineFx()
 	local stroke, arrow = lineParts.stroke, lineParts.arrow
 	if stroke then
-		local age = uiTime - fullFlashAt
+		local age = uiTime - ticks.fullFlashAt
 		if age >= 0 and age < FULL_FLASH_TIME then
 			-- 2 clignotements rouges en 0,3 s ; Mouvement réduit : contour rouge fixe (pas de flash
 			-- répété, GDD §9.1, §13.2)
@@ -2179,7 +2314,7 @@ local function stepLineFx()
 		end
 	end
 	if arrow then
-		local visible = uiTime < arrowUntil
+		local visible = uiTime < ticks.arrowUntil
 		arrow.Visible = visible
 		if visible then
 			local slot = localSlot()
@@ -2193,10 +2328,10 @@ local function stepLineFx()
 end
 
 local function stepShine()
-	if reduced() or uiTime - lastShine < SHINE_EVERY then
+	if reduced() or uiTime - ticks.shine < SHINE_EVERY then
 		return
 	end
-	lastShine = uiTime
+	ticks.shine = uiTime
 	for _, gradient in shines do
 		gradient.Offset = Vector2.new(-1, 0)
 		Juice.tween(gradient, SHINE_TIME, { Offset = Vector2.new(1, 0) }, Enum.EasingStyle.Linear)
@@ -2233,16 +2368,24 @@ local function onFrame(dt: number)
 	stepLineFx()
 	stepShine()
 	stepEventBlink()
-	if uiTime - lastSlow >= SLOW_UPDATE or uiTime < lastSlow then
-		lastSlow = uiTime
+	if uiTime - ticks.slow >= SLOW_UPDATE or uiTime < ticks.slow then
+		ticks.slow = uiTime
 		updateEventPill(now)
 		updateStatus(now)
 		updateTracker(now)
 		updateRate()
+		-- icône Boutique en attente : affichée dès qu'un article devient visible (ids renseignés,
+		-- Starter Kit ou Glow Party de nouveau proposés)
+		if ticks.shopPending and shopHasItems() then
+			ticks.shopPending = false
+			local animate = ticks.shopAnimate
+			ticks.shopAnimate = false
+			HUD.reveal("rail.Shop", animate)
+		end
 	end
 	-- bouton de saut tactile (apparu, déplacé) et taille d'écran (rotation, fenêtre PC)
-	if uiTime - lastTouchCheck >= TOUCH_CHECK then
-		lastTouchCheck = uiTime
+	if uiTime - ticks.touchCheck >= TOUCH_CHECK then
+		ticks.touchCheck = uiTime
 		layoutActions()
 	end
 end
@@ -2271,7 +2414,7 @@ local function applyTexts()
 	end
 	updateLine(false)
 	trackerParts.key = ""
-	lastSlow = -math.huge
+	ticks.slow = -math.huge
 end
 
 -- API publique ----------------------------------------------------------------------------------
@@ -2284,6 +2427,13 @@ function HUD.reveal(element: Types.HudElement, animate: boolean?)
 		return
 	end
 	if e.revealed then
+		return
+	end
+	if element == "rail.Shop" and not shopHasItems() then
+		-- boutique vide (tous les ids à 0) : ni icône, ni ouverture par B ou L2 / R2 (garde des
+		-- panneaux) ; l'icône apparaît avec le premier article visible (stepShopReveal)
+		ticks.shopPending = true
+		ticks.shopAnimate = ticks.shopAnimate or animate == true
 		return
 	end
 	if string.sub(element, 1, 5) == "rail." then
@@ -2469,6 +2619,30 @@ local function refreshRailHint()
 	end
 end
 
+-- Cible annoncée par une icône △ (InputController.setRailTarget) : la carte d'invitation d'équipage
+-- (son icône △ sur Accepter), sinon le bouton du rail désigné par l'accueil (icône △ de la main) ;
+-- nil sinon. Le Dash qui pulse (Q5) s'annonce par R2, jamais par △.
+local function announcedTarget(): GuiObject?
+	local invite = invitationTarget()
+	if invite then
+		return invite
+	end
+	for _, name in HAND_ELEMENTS do
+		local e = elements[name]
+		if
+			name ~= "dash"
+			and e
+			and e.attention
+			and e.revealed
+			and e.visual:IsA("GuiButton")
+			and onScreen(e.visual)
+		then
+			return e.visual
+		end
+	end
+	return nil
+end
+
 function HUD.selectRail(): boolean
 	-- écran de chargement encore là (src/first/Loading.client) : le rail est caché derrière lui,
 	-- jamais un bouton invisible sélectionné (✕ l'activerait à l'aveugle)
@@ -2510,6 +2684,38 @@ function HUD.selectRail(): boolean
 	return false
 end
 
+-- Rectangles (px de référence de la zone intérieure) des boutons AFFICHÉS du rail, ruban de libellé
+-- compris : cases de la grille dans l'ordre du rail (la grille tasse les boutons affichés).
+-- Positions de mise en page : le pouls d'attention n'y change rien. Vide tant que le rail est caché.
+function HUD.railRects(): { Rect }
+	local out: { Rect } = {}
+	local rail = railHolder
+	local railElement = elements.rail
+	if rail == nil or railElement == nil or not railElement.revealed then
+		return out
+	end
+	local x, y = rail.Position.X.Offset, rail.Position.Y.Offset
+	local columns = math.max(1, railColumns)
+	local i = 0
+	for _, def in RAIL do
+		local e = elements[def.element]
+		if e and e.revealed then
+			local column, row = i % columns, i // columns
+			table.insert(
+				out,
+				box(
+					x + column * (RAIL_BUTTON + RAIL_GAP) - RAIL_LABEL_OVERHANG,
+					y + row * (RAIL_BUTTON + RAIL_GAP),
+					RAIL_BUTTON + 2 * RAIL_LABEL_OVERHANG,
+					RAIL_BUTTON
+				)
+			)
+			i += 1
+		end
+	end
+	return out
+end
+
 -- Haut de l'instruction d'accueil (écran Onboarding) pour la hauteur courante de l'écran : une seule
 -- règle pour l'accueil qui la place et pour la colonne de droite qui l'évite (layoutColumn)
 function HUD.hintTop(): number
@@ -2530,6 +2736,17 @@ function HUD.cheerOverHint(): boolean
 	end
 	local cheerTop = size.Y - LINE_Y - LINE_SIZE.Y - 16 - CHEER_SIZE.Y
 	return hintTop(size.Y) + HINT_SIZE.Y + CLEARANCE > cheerTop
+end
+
+-- Texte d'invitation du compteur de file vide (« Attrape des Nebbies ! ») ; false : « 0/3 » et la
+-- barre, l'accueil montrant déjà sa propre instruction (une seule à l'écran, GDD §3)
+function HUD.setLineEmptyHint(on: boolean)
+	local value = on ~= false
+	if value == ticks.lineEmptyHint then
+		return
+	end
+	ticks.lineEmptyHint = value
+	updateLine(false)
 end
 
 -- Exposé pour les tests
@@ -2588,6 +2805,8 @@ function HUD.Init()
 	ScreenFX.setPanelResolver(function(): string?
 		return PanelController.current()
 	end)
+	-- mode menu : △ désigne la cible annoncée par une icône △ avant de rendre la main au jeu
+	InputController.setRailTarget(announcedTarget)
 	-- garde des raccourcis : pas de panneau dont l'icône n'est pas encore affichée
 	InputController.setPanelGate(function(name: Types.PanelName): boolean
 		local element = PANEL_ELEMENT[name]
@@ -2605,7 +2824,7 @@ function HUD.Start()
 	-- monnaies : gains discrets détectés à l'image suivante (patchs appliqués clé par clé)
 	for _, key in { "glow", "glowCarry", "lastSettle", "idleRate" } do
 		State.observe(key, function()
-			glowDirty = true
+			ticks.glowDirty = true
 		end)
 	end
 	State.observe("stardust", function(value: any)
@@ -2629,8 +2848,8 @@ function HUD.Start()
 	local function onReady()
 		local glow, dust = glowCounter, dustCounter
 		if glow then
-			lastGlowTarget = Glow.predicted()
-			glow:snap(lastGlowTarget)
+			ticks.lastGlowTarget = Glow.predicted()
+			glow:snap(ticks.lastGlowTarget)
 		end
 		if dust then
 			dust:snap(math.max(0, math.floor(num(State.get("stardust"), 0))))
@@ -2661,8 +2880,8 @@ function HUD.Start()
 	end)
 	ScreenFX.FeedbackReceived:Connect(function(payload: Types.FeedbackPayload)
 		if payload.key == "feedback.lineFull" then
-			fullFlashAt = uiTime
-			arrowUntil = uiTime + FULL_ARROW_TIME
+			ticks.fullFlashAt = uiTime
+			ticks.arrowUntil = uiTime + FULL_ARROW_TIME
 		end
 	end)
 	-- pastilles « ! » : PanelController réévalue hasAction() et signale chaque changement

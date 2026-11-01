@@ -9,7 +9,8 @@
 --   * collection : tri des perchoirs identique à Server/Economy/Collection.rank, groupes Starforge,
 --     Atlas (bits), réserve
 --   * objectifs : calendrier, quêtes du jour, Grand Défilé, chaîne d'accueil
---   * boutique : montants « ≈ » des produits Glow, visibilité (id 0, Starter Kit, Glow Party)
+--   * boutique : montants « ≈ » des produits Glow, visibilité (id 0, Starter Kit, Glow Party),
+--     boutique non vide (shopHasItems : icône Boutique du HUD)
 --   * cosmétiques possédés (miroir de NestService.hasUnlock, hors déblocages temporaires)
 -- GDD : §4.9-§4.14, §7.3-§7.5, §8, §5.3.
 
@@ -701,6 +702,23 @@ end
 
 function Model.passVisible(def: Monetization.PassDef): boolean
 	return def.id > 0
+end
+
+-- La boutique montre au moins un article (passe ou produit visible) : sinon ses onglets Passes et
+-- Boosts n'affichent que « La boutique ouvre bientôt ! » (ids encore à 0) et le HUD n'en montre pas
+-- l'icône (le rail, B et L2 / R2 ne l'ouvrent pas)
+function Model.shopHasItems(p: Profile, events: Types.EventStatePayload?, now: number): boolean
+	for _, def in Monetization.Passes do
+		if Model.passVisible(def) then
+			return true
+		end
+	end
+	for key, def in Monetization.Products do
+		if Model.productVisible(key, def, p, events, now) then
+			return true
+		end
+	end
+	return false
 end
 
 -- Clés triées par `order`

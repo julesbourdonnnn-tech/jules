@@ -2,8 +2,9 @@
 -- Correctifs r4 « client-0 » (PanelController) :
 --   * sélection manette effacée pendant qu'un panneau est ouvert (pavé tactile / Créer de la
 --     DualSense, menu du système…) : rendue tout de suite (dernier objet de la fenêtre, sinon
---     sélection par défaut) ; vide seulement tant qu'une fenêtre Roblox tient la manette (achat :
---     effacée juste après ✕ dans la fenêtre, PanelController.holdSelection, menu du système) ; la
+--     sélection par défaut) ; vide seulement tant qu'une fenêtre Roblox tient la manette (retenue
+--     explicite PanelController.holdSelection posée par la Boutique ou l'Équipage, menu du
+--     système ; plus de « ✕ puis effacement » deviné, voir Fix_r5_panels.spec) ; la
 --     croix sans sélection n'ouvre jamais la roue de pings, la minicarte ni ACCLAMER derrière la
 --     fenêtre
 --   * contour rose « queue menacée » (panneau ouvert) aligné sur les règles du serveur et du contour
@@ -271,7 +272,7 @@ return function(T)
 		end)
 
 		it(
-			"fenêtre d'achat Roblox (effacée juste après ✕ sur Acheter) : vide jusqu'à la fin de l'achat",
+			"fenêtre d'achat Roblox (retenue posée par la Boutique après ✕ sur Acheter) : vide jusqu'à la fin de l'achat",
 			function()
 				local c = boot()
 				openFresh(c, "Shop", "passes")

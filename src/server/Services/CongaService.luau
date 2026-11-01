@@ -58,10 +58,13 @@
 --     Acteur d'un tick refusé : à sa dernière position VALIDÉE (prev = pos) ; le balayage d'un tick
 --     valide part toujours de la dernière position validée (jamais d'une position signalée) ; la
 --     référence d'une apparition / d'un déplacement serveur est lue à l'instant du déplacement.
---     Tick en RAFALE (troisième valeur de MoveCheck.step : position acceptée, mais bond plus long
---     que la règle d'UN tick du GDD §12.7, ex. 1 s d'arrêt puis 27 à 58 studs) : miettes posées,
---     prev → pos = le bond accepté, mais acteur NON `valid` (ni capture, ni coupe, ni ramassage ou
---     vol de Comète, ni Gloomwisp, ni anneau de la Balise) ; seule SA porte est balayée
+--     Tick en RAFALE (troisième valeur de MoveCheck.step : position acceptée, mais budget d'action
+--     du joueur en dette — seau à jetons de plafond « règle d'UN tick du GDD §12.7 », rempli à
+--     vmax × 1,5 studs/s ; ex. 1 s d'arrêt puis 19 à 58 studs, ou une chaîne de pas trop longs) :
+--     miettes posées, prev → pos = le pas accepté, mais acteur NON `valid` (ni capture, ni coupe,
+--     ni ramassage, vol ou encaissement de Comète, ni Gloomwisp, ni anneau de la Balise) ; seule SA
+--     porte est balayée. La dette survit au tick : le tick qui suit un bond n'agit pas non plus,
+--     le joueur ré-agit une fois la dette remboursée (arrêt ou marche), jamais au tick suivant
 --   * pose le crochet EconomyService.setLineBanker(forceParade) dans Init
 -- GDD : §4.5-§4.8, §4.15.2, §4.15.4, §4.16, §4.17, §12.1, §12.3, §12.4, §12.7, §14.3.
 -- Dépendances : TOUS les services précédents, Util/MoveCheck, Logic/*, Config/*, Signals,
@@ -157,9 +160,9 @@ type PlayerState = {
 	nodes: { Types.LineNode },
 	nodeCache: { Vector3 }?,
 	prev: Vector3?, -- dernière position VALIDÉE (départ du balayage des coupes, vols, portes)
-	-- tick en rafale (MoveCheck.step, troisième valeur) : position acceptée mais plus longue que la
-	-- règle d'UN tick ; l'acteur n'est pas `valid` (ni capture, ni coupe, ni Comète, ni Gloomwisp,
-	-- ni anneau de la Balise), seule SA porte est balayée (stepParades)
+	-- tick en rafale (MoveCheck.step, troisième valeur) : position acceptée mais budget d'action en
+	-- dette ; l'acteur n'est pas `valid` (ni capture, ni coupe, ni Comète, ni Gloomwisp, ni anneau
+	-- de la Balise), seule SA porte est balayée (stepParades)
 	burst: boolean,
 	resetPending: boolean, -- apparition ou déplacement serveur à prendre en compte
 	resetPos: Vector3?, -- position posée par le serveur, lue à l'instant du déplacement
@@ -865,10 +868,11 @@ local function buildActors(now: number): { Types.Actor }
 		if verdict == "rewind" and back ~= nil then
 			onRewind(state, root, back, now, MoveCheck.recentRewinds(player, now) > rewindsBefore)
 		end
-		-- tick accepté (hors restriction après un retour) ; en rafale (bond plus long que la règle
-		-- d'UN tick du GDD §12.7, toléré pour les gels réseau), il n'agit sur rien : l'acteur n'est
-		-- pas `valid` (captures, coupes, Comète, Gloomwisps, anneau de la Balise), mais sa position
-		-- est acceptée (miettes, prev → pos) et SA porte reste balayée (stepParades)
+		-- tick accepté (hors restriction après un retour) ; en rafale (budget d'action de MoveCheck
+		-- en dette : bond ou chaîne de pas plus longs que la règle d'UN tick du GDD §12.7, tolérés
+		-- pour les gels réseau, et tant que la dette n'est pas remboursée), il n'agit sur rien :
+		-- l'acteur n'est pas `valid` (captures, coupes, Comète, Gloomwisps, anneau de la Balise),
+		-- mais sa position est acceptée (miettes, prev → pos) et SA porte reste balayée (stepParades)
 		local accepted = verdict == "ok" and not MoveCheck.isRestricted(player, now)
 		state.burst = accepted and burst == true
 		if verdict == "ok" then
@@ -912,12 +916,15 @@ end
 type Claim = { actor: number, wild: Types.WildNebby, d2: number }
 type AddEntry = { state: PlayerState, op: Types.LineAddOp, recovered: boolean }
 
+-- Appels externes protégés (safe, comme tout appel hors du paquet) : une erreur de SpawnService
+-- rend le Nebby « non attrapable » pour ce tick, sans jamais interrompre les étapes suivantes
+-- (Comète, coupes, parades, entretien, diffusion)
 local function catchable(actor: Types.Actor, wild: Types.WildNebby, now: number): (boolean, number)
-	local p = SpawnService.positionOf(wild, now)
-	if math.abs(p.Y - actor.pos.Y) > Catch.MaxDy then
+	local p = safe("positionOf", nil :: Vector3?, SpawnService.positionOf, wild, now)
+	if p == nil or typeof(p) ~= "Vector3" or math.abs(p.Y - actor.pos.Y) > Catch.MaxDy then
 		return false, 0
 	end
-	if not SpawnService.canCatch(actor.player, actor.slot, wild, now) then
+	if not safe("canCatch", false, SpawnService.canCatch, actor.player, actor.slot, wild, now) then
 		return false, 0
 	end
 	local dx, dz = p.X - actor.pos.X, p.Z - actor.pos.Z
@@ -1539,7 +1546,7 @@ local function sweepEnters(prev: Vector3, pos: Vector3, slot: number): boolean
 	return false
 end
 
--- Un tick en rafale (state.burst : bond accepté mais plus long que la règle d'UN tick) balaie
+-- Un tick en rafale (state.burst : pas accepté, budget d'action de MoveCheck en dette) balaie
 -- seulement SA porte : un rattrapage honnête après un gel réseau qui la traverse encaisse ; jamais
 -- l'anneau de la Balise, commun à tous (un bond ne doit agir sur rien d'autre)
 local function stepParades(actors: { Types.Actor }, beaconOpen: boolean)

@@ -24,7 +24,9 @@
 --     « Rejoindre » / « Non merci » à la place des « ✓ » / « ✕ » dessinés (sur une DualSense, ✕ veut
 --     dire valider) ; carte retirée : sa sélection est effacée (le stick refait marcher)
 --   * panneau ouvert : rafraîchi chaque seconde (« Inviter » revient après 20 s, Quitter après 5 s)
---   * textes via Prefs.t (ré-appliqués sur Prefs.LanguageChanged) ; intentions seulement
+--   * textes via Prefs.t (ré-appliqués sur Prefs.LanguageChanged) ; noms de joueurs (puces des
+--     équipiers, lignes des joueurs, texte de la carte d'invitation) en AutoLocalize = false : la
+--     traduction automatique de Roblox ne touche jamais un pseudo ; intentions seulement
 --     (le serveur valide tout)
 -- GDD : §6.1, §6.2, §9.4 (Équipage), §10.3.
 
@@ -189,6 +191,7 @@ local function memberChip(userId: number, order: number, parent: Instance)
 		xAlign = Enum.TextXAlignment.Left,
 		maxSize = 20,
 		parent = chip,
+		autoLocalize = false, -- nom de joueur
 	})
 end
 
@@ -213,6 +216,7 @@ local function playerRow(player: Player, parent: Instance): PlayerRow
 		xAlign = Enum.TextXAlignment.Left,
 		maxSize = 22,
 		parent = frame,
+		autoLocalize = false, -- nom de joueur
 	})
 	local userId = player.UserId
 	local invite = Widgets.button({
@@ -745,6 +749,8 @@ local function ensureCard(): Frame
 		maxSize = 26,
 		zIndex = 41,
 		parent = frame,
+		-- « {name} t'invite ! » : déjà traduit par Prefs.t, et contient un nom de joueur
+		autoLocalize = false,
 	})
 	local bar = Widgets.bar({
 		name = "Timer",

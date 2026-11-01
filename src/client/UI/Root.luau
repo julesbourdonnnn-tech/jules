@@ -29,6 +29,11 @@ local Root = {}
 local screens: { [string]: ScreenGui } = {}
 local scales: { UIScale } = {}
 
+-- s : attente bornée de PlayerGui (règle 6 du contrat, docs/04 §1 : jamais de WaitForChild sans
+-- délai côté client) ; même borne que PLAYER_WAIT de src/first/Loading.client.luau. Champ du
+-- module pour que les specs puissent la raccourcir.
+Root.PlayerGuiWait = 10
+
 local function viewport(): Vector2?
 	local camera = workspace.CurrentCamera
 	return if camera then camera.ViewportSize else nil
@@ -77,7 +82,18 @@ function Root.screen(name: string, displayOrder: number?): ScreenGui
 	if existing and existing.Parent then
 		return existing
 	end
-	local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
+	local player = Players.LocalPlayer
+	local playerGui = if player
+		then player:FindFirstChildOfClass("PlayerGui") or player:WaitForChild("PlayerGui", Root.PlayerGuiWait)
+		else nil
+	if playerGui == nil then
+		-- jamais d'attente infinie : l'erreur nomme Root et l'écran (Main.client l'isole et la signale,
+		-- les autres contrôleurs démarrent quand même)
+		error(
+			`[Root] PlayerGui introuvable après {Root.PlayerGuiWait} s : impossible de créer l'écran « {name} »`,
+			2
+		)
+	end
 	local gui = Instance.new("ScreenGui")
 	gui.Name = name
 	gui.ResetOnSpawn = false
