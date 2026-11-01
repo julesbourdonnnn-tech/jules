@@ -1,6 +1,6 @@
 # Comet Conga — Guide de publication (du dépôt au jeu en ligne)
 
-> **Document 05.** Version du 31 octobre 2026. Pour le propriétaire du jeu : aucune connaissance en programmation n'est nécessaire.
+> **Document 05.** Version du 31 octobre 2026, mise à jour le 1er novembre 2026 (sons, sauvegardes en panne, serveur trop grand). Pour le propriétaire du jeu : aucune connaissance en programmation n'est nécessaire.
 > Le jeu est entièrement écrit en code dans ce dossier. Ce guide explique comment le transformer en jeu Roblox publié, pas à pas.
 > Documents liés : [`06-rapport-qualite.md`](06-rapport-qualite.md) (ce qui est vérifié, plan de test dans Studio), [`07-console-ps5.md`](07-console-ps5.md) (manette et téléviseur), [`02-game-design-document.md`](02-game-design-document.md) (règles du jeu, §8 monétisation, §14 analytics, §15 lancement).
 
@@ -143,6 +143,8 @@ Sans ce réglage, les essais dans Studio n'enregistrent rien (sauvegarde en mém
 
 **Attention après le lancement** : avec ce réglage, les essais dans Studio écrivent dans les **vraies** sauvegardes des joueurs (dont la vôtre). Une fois le jeu public, faites vos essais risqués dans une **copie** du jeu (une seconde expérience privée) ou désactivez ce réglage.
 
+**En ligne, jamais de sauvegarde « en mémoire »** : ce repli n'existe que dans Studio. Si les sauvegardes de Roblox sont en panne quand un joueur arrive sur un serveur en ligne, il est renvoyé avec le message « Tes données n'ont pas pu être chargées, reviens dans un instant. » et peut revenir plus tard ; aucun achat n'est validé tant que sa progression ne peut pas être sauvegardée. Si la panne arrive pendant la partie, le serveur réessaie de sauvegarder les joueurs qui partent pendant 5 minutes au plus ; au-delà, il écrit une ligne `[DataService] PERTE` dans le journal (§14.4).
+
 ---
 
 ## 5. Créer les 6 passes et les 6 produits, puis coller leurs numéros
@@ -276,13 +278,22 @@ Dans `src/shared/Config/Events.luau`, la ligne `LaunchWeek = 2966,` correspond a
 
 (Une semaine plus tard = +1.) Le GDD (§7.6) conseille aussi de déclarer ce show comme **Experience Event** dans le Creator Hub (à vérifier : emplacement exact du menu).
 
-### 6.4 Sons (à décider avant le lancement)
+### 6.4 Sons (à écouter avant le lancement)
 
-`src/shared/Config/Sounds.luau` liste les sons du jeu. Tous les sons sont remplis avec des sons publiés par Roblox (utilisables sans téléversement ; la provenance est notée sur chaque ligne) : interface, navigation à la manette, musique, capture, coupe, Comète, Balise, Supernova…
+**Ce qui est déjà fait.** Le jeu a ses 27 sons, déjà branchés : boutons, navigation à la manette, musique de fond, capture, coupe « SNIP ! », parade, Dash, Comète, Balise, Supernova, pings… Ce sont tous des **sons publiés par Roblox lui-même** dans ses dépôts officiels (Roblox/resources et Roblox/creator-docs sur GitHub). Ils sont donc publics et utilisables sans rien téléverser. La liste est dans `src/shared/Config/Sounds.luau` : une ligne par son, avec sa source écrite au bout de la ligne. Le détail (quel son pour quel moment, d'où il vient) est dans le rapport qualité ([`06-rapport-qualite.md`](06-rapport-qualite.md) §6.3.4).
 
-**Neuf sons ont été remplis en dernier** et portent la mention « à confirmer à l'écoute » sur leur ligne : `Scatter`, `Bank`, `Dash`, `CometWarn`, `CometSwipe`, `BeaconStart`, `WispPop`, `Ping`, `Cheer`. La plupart réemploient un enregistrement déjà retenu, joué à une autre hauteur (par exemple `Bank` = le son des pièces, plus grave ; `Dash` et `Scatter` = le « whoosh », plus aigu ou plus grave ; `Cheer` = le morceau de fête de la Balise, plus aigu et coupé à 1,5 s). Les deux **moins sûrs** sont des enregistrements nouveaux : `CometWarn` (bip de compte à rebours, peut-être trop discret) et `Ping` (petit « clink »).
+**Ce qui reste à faire : écouter.** Aucun test automatique ne peut dire si un son est joli, pas trop fort, ou toujours disponible chez Roblox. Avant le lancement, jouez dans Studio **avec le son** (test M12 du rapport qualité) et notez les sons qui ne vont pas.
 
-À faire avant le lancement : **écouter chaque son** dans Studio (un son peut être retiré ou mal choisi), **ces neuf-là en premier**, en commençant par `CometWarn` et `Ping`. Un son qui déplaît se vide (`id = ""`) : il devient muet et le jeu reste entièrement jouable. Remplacer un son = mettre `"rbxassetid://<nombre>"` (format exact) et noter sa provenance en commentaire sur la même ligne : un test automatique l'exige.
+- Écoutez d'abord les **neuf sons « à confirmer à l'écoute »** (mention écrite sur leur ligne) : `CometWarn` (alerte de la Comète, peut-être trop discret) et `Ping` (petit « clink ») en premier, car ce sont des enregistrements nouveaux ; puis `Scatter` (Nebbies dispersés après une coupe), `Bank` (encaissement), `Dash`, `CometSwipe` (Comète volée), `BeaconStart` (début de la Nuit de la Balise), `WispPop` (Gloomwisp éclaté) et `Cheer` (acclamation). Ces sept-là réemploient un son déjà choisi, joué plus grave ou plus aigu.
+- Puis tous les autres, musique comprise, en naviguant dans les menus au toucher et à la manette.
+
+**Changer un son qui ne vous plaît pas : demandez-le à l'équipe technique (ou à Claude).** Ce n'est pas difficile, mais trois règles sont vérifiées par les tests :
+
+1. **Le vider** : remplacer le numéro par `""` (exemple : `CometWarn = { id = "", volume = 0.7 },`). Le son devient muet ; le jeu reste entièrement jouable. Exception : les huit sons d'interface (`Click`, `Pop`, `Error`, `Whoosh`, `Select`, `Back`, `Tab`, `Bump`) doivent rester remplis, car la PS5 a besoin de retours sonores : on les remplace, on ne les vide pas.
+2. **Le remplacer** : mettre un autre numéro, au format exact `"rbxassetid://<nombre>"` (un nombre seul ou une adresse de page donnerait un son muet), et écrire sa source en commentaire au bout de la même ligne. Aujourd'hui, les tests n'acceptent que des sons tirés des deux dépôts officiels de Roblox (le commentaire doit citer `Roblox/resources` ou `Roblox/creator-docs` et le fichier source). Un son pris ailleurs, par exemple dans le Creator Store, demande d'adapter cette règle, et de vérifier qu'il est bien utilisable dans votre jeu (droits d'utilisation : à vérifier sur sa page).
+3. **Mettre le test des sons à jour en même temps** : `tests/specs/Fix_r5_audio.spec.luau` garde le numéro, le volume et la hauteur de 20 des 27 sons (tous sauf sept sons d'interface). Après un changement, `./scripts/check.sh` signale ce test en rouge tant qu'il n'est pas mis à jour : c'est normal, il sert à éviter les changements par erreur. Ne publiez qu'une fois la vérification de nouveau verte.
+
+Le volume (`volume` : 0.5 = moyen, plus petit = plus doux) et la hauteur (`pitch` : 1 = normale, plus grand = plus aigu) se règlent sur la même ligne, avec la même mise à jour du test.
 
 ---
 
@@ -522,7 +533,7 @@ Exemples d'enchaînements : Améliorer = △ puis ✕ ; Boutique = △, ✕, pui
 - [ ] Administrateurs ajoutés dans `src/server/Data/Admins.luau` (§6.1).
 - [ ] `LaunchWeek` recalé sur la date réelle dans `src/shared/Config/Events.luau` (§6.3).
 - [ ] Code de lancement `COMETCONGA` vérifié dans `src/server/Data/Codes.luau` (§6.2).
-- [ ] Chaque son écouté dans Studio, en commençant par les neuf « à confirmer à l'écoute » (`CometWarn` et `Ping` d'abord) ; un son qui déplaît vidé ou remplacé (§6.4).
+- [ ] Chaque son écouté dans Studio, en commençant par les neuf « à confirmer à l'écoute » (`CometWarn` et `Ping` d'abord) ; un son qui déplaît vidé ou remplacé par l'équipe technique, avec le test des sons mis à jour (§6.4).
 - [ ] Plan de test dans Studio déroulé ([`06-rapport-qualite.md`](06-rapport-qualite.md) §5) : seul, à plusieurs, téléphone, manette, latence, 30 minutes sans erreur.
 - [ ] 12 joueurs pendant 30 min sur un **vrai téléphone Android modeste** : au moins 30 images par seconde, aucune erreur (GDD §15.2, porte 3).
 - [ ] Sauvegardes : quitter et revenir garde la progression ; achat suivi d'une déconnexion : rien n'est perdu ni crédité deux fois (GDD §15.2, porte 4).
@@ -611,10 +622,11 @@ Toutes ces corrections sont des **réglages de chiffres** dans `src/shared/Confi
 
 ### 14.4 Routine
 
-- [ ] **Chaque jour, la première semaine** : erreurs du jeu (console développeur en ligne, ou rapports d'erreurs du Creator Hub, à vérifier), `ProductEffectFailed_*` (doit rester à 0), signalements de joueurs.
+- [ ] **Chaque jour, la première semaine** : erreurs du jeu (console développeur en ligne, ou rapports d'erreurs du Creator Hub, à vérifier), `ProductEffectFailed_*` (doit rester à 0), lignes `[DataService] PERTE` dans les erreurs (sauvegarde perdue après une longue panne de Roblox : à transmettre à l'équipe technique), signalements de joueurs.
 - [ ] **Chaque semaine** : rétention J1/J7, durée de session, entonnoir, conversion ; un nouveau code (§6.2) ; Starfall Saturday automatique.
 - [ ] **Toutes les 2 semaines** : un ajout de contenu par la configuration, publié le samedi à 17:00 UTC (GDD §7.7).
 - [ ] **À chaque mise à jour** : refaire le questionnaire de maturité si le contenu change (§8).
+- [ ] **Si Roblox vous demande d'effacer les données d'un joueur** (droit à l'effacement) : transmettre la demande à l'équipe technique, dans le délai indiqué par Roblox ; la procédure est dans [`04-architecture.md`](04-architecture.md) §8.
 
 ---
 
@@ -637,6 +649,6 @@ Toutes ces corrections sont des **réglages de chiffres** dans `src/shared/Confi
 | `src/server/Data/Admins.luau` | UserIds des administrateurs LiveOps | §6.1 |
 | `src/server/Data/Codes.luau` | Codes promo et leurs dates de fin | §6.2 |
 | `src/shared/Config/Events.luau` | `LaunchWeek` (semaine du premier Starfall Saturday) | §6.3 |
-| `src/shared/Config/Sounds.luau` | Après écoute, les sons à vider ou remplacer (d'abord les neuf « à confirmer à l'écoute ») (avec l'équipe technique) | §6.4 |
+| `src/shared/Config/Sounds.luau` et `tests/specs/Fix_r5_audio.spec.luau` | Après écoute, les sons à vider ou remplacer (d'abord les neuf « à confirmer à l'écoute ») : par l'équipe technique, qui met le test à jour | §6.4 |
 
 Rien d'autre n'est nécessaire pour publier. Tout le reste (île, interface, règles, textes FR/EN, manette) est déjà dans le code et testé ([`06-rapport-qualite.md`](06-rapport-qualite.md)).

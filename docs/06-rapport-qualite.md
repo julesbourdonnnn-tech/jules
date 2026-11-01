@@ -1,6 +1,6 @@
 # Comet Conga — Rapport qualité avant publication
 
-> **Document 06.** Établi le 31 octobre 2026 à 22:10 UTC, sur le commit `e951d5e` (« QA tour 4 »). **Mis à jour le 1er novembre 2026 à 06:15 UTC** après le tour 6 et sa validation de publication (§6.5), sur l'arbre de travail au-dessus du commit `7ed5583` : chiffres des §1-§2 refaits sur cet arbre ; l'historique du §3 s'arrête au tour 4.
+> **Document 06.** Établi le 31 octobre 2026 à 22:10 UTC, sur le commit `e951d5e` (« QA tour 4 »). **Mis à jour le 1er novembre 2026 à 06:30 UTC**, sur le commit `bbded7a` (« QA tour 6 », arbre de travail propre) : vérification complète refaite (§1), section « Finition » (§6.3 : contre-audit anti-triche, revue des corrections du tour 4, sons, tours 5 et 6, petits constats encore ouverts revérifiés dans le code).
 > Pour le propriétaire du jeu : ce rapport dit **ce qui est prouvé**, **ce qui ne peut l'être que dans Roblox Studio**, et **ce qu'il reste à décider**. Guide de publication : [`05-guide-publication.md`](05-guide-publication.md).
 
 ## En bref
@@ -10,15 +10,17 @@
 | Le jeu est-il complet ? | Oui pour la version 1.0 du GDD (§15.1) : île, boucle complète, progression, événements, social, boutique, FR/EN, téléphone, PC et manette (PS5 / Xbox) |
 | La vérification complète passe-t-elle ? | **Oui** : `./scripts/check.sh` → « ✅ Tout est vert. » (§1) |
 | Combien de tests automatiques ? | **1 619 tests**, dans **112 fichiers de tests**, **0 échec** |
+| La triche a-t-elle été vérifiée par quelqu'un d'autre ? | Oui : contre-audit indépendant ; la triche qu'il a trouvée est corrigée et reste testée à chaque modification (§6.3.1) |
+| Le jeu a-t-il du son ? | Oui : les 27 sons sont des sons publiés par Roblox. **Personne ne les a encore écoutés** : à faire dans Studio avant de publier (§6.3.4, test M12) |
 | Qu'est-ce qui n'est pas encore prouvé ? | Ce que seul le vrai moteur Roblox montre : rendu, physique, vraies sauvegardes et vrais achats, serveur avec 12 vrais joueurs, tenue des textes, aspect des particules, confort sur téléphone, rendu sur téléviseur (§4) |
 | Que reste-t-il à faire à la main ? | Le plan de test dans Studio (§5) et les réglages de publication ([`05-guide-publication.md`](05-guide-publication.md) §12) |
-| Y a-t-il des décisions à prendre ? | Oui, 7 questions de design (§7) |
+| Y a-t-il des décisions à prendre ? | Oui, 7 questions de design (§7), plus deux petits choix (§6.3.6, n° 7 et 9) |
 
 ---
 
 ## 1. Résultat de la vérification complète
 
-Commande : `./scripts/check.sh`, terminée le 01/11/2026 à 06:03 UTC (environ 6 min), code de sortie 0.
+Commande : `./scripts/check.sh`, lancée sur le commit `bbded7a` sans modification locale, terminée le 01/11/2026 à 06:20 UTC (environ 6 min), code de sortie 0, message final « ✅ Tout est vert. ».
 
 | Contrôle | Outil | Résultat |
 |---|---|---|
@@ -28,7 +30,7 @@ Commande : `./scripts/check.sh`, terminée le 01/11/2026 à 06:03 UTC (environ 6
 | Construction du jeu | Rojo 7.7.1 | `build/Game.rbxl` construit |
 | Contrôle du fichier construit | `scripts/verify-place.luau` | Structure valide : 1 Script serveur, 2 LocalScript, 113 ModuleScript |
 
-Lors des validations de publication des tours 3 et 4 et de la passe de finition, la suite complète a été relancée deux fois de plus pour repérer des tests instables (résultat qui change d'une exécution à l'autre) ; ceux trouvés aux tours 3 et 4 ont été corrigés (horloge réelle de la limite de débit, ordre de parcours des tables). À la finition, un test instable a été trouvé et corrigé : `Boot.spec`, scène de coupe (l'ordre de traitement des joueurs n'est pas reproductible d'un processus à l'autre ; la victime pouvait ne rien attraper en 6 s quand le coupeur, resté à portée, prenait ses Nebbies libres à la fin de leur étourdissement, ce que permettent les règles, ou rattraper autant de sauvages pendant la traversée qu'elle en perdait). La scène ne dépend plus de ces courses, la priorité de la victime est maintenant vérifiée de façon déterministe, et la scène a été rejouée 60 fois sans échec, puis la suite complète deux fois de plus. À la validation du tour 5, la suite complète a été relancée deux fois de plus avant les dernières corrections, puis deux fois après (deux exécutions en parallèle, machine chargée) : aucun test instable. À la validation du tour 6, après les corrections : vérification complète, puis la suite complète deux fois de plus (en parallèle), les tests du tour 6 rejoués 8 fois et ceux des sauvegardes en panne 8 fois de plus à quatre exécutions simultanées : aucun test instable. Le nouveau test du débit des pings fige l'horloge de la limite de débit (aucune attente réelle).
+Lors des validations de publication des tours 3 et 4 et de la passe de finition, la suite complète a été relancée deux fois de plus pour repérer des tests instables (résultat qui change d'une exécution à l'autre) ; ceux trouvés aux tours 3 et 4 ont été corrigés (horloge réelle de la limite de débit, ordre de parcours des tables). À la finition, un test instable a été trouvé et corrigé : `Boot.spec`, scène de coupe (l'ordre de traitement des joueurs n'est pas reproductible d'un processus à l'autre ; la victime pouvait ne rien attraper en 6 s quand le coupeur, resté à portée, prenait ses Nebbies libres à la fin de leur étourdissement, ce que permettent les règles, ou rattraper autant de sauvages pendant la traversée qu'elle en perdait). La scène ne dépend plus de ces courses, la priorité de la victime est maintenant vérifiée de façon déterministe, et la scène a été rejouée 60 fois sans échec, puis la suite complète deux fois de plus. À la validation du tour 5, la suite complète a été relancée deux fois de plus avant les dernières corrections, puis deux fois après (deux exécutions en parallèle, machine chargée) : aucun test instable. À la validation du tour 6, après les corrections : vérification complète, puis la suite complète deux fois de plus (en parallèle), les tests du tour 6 rejoués 8 fois et ceux des sauvegardes en panne 8 fois de plus à quatre exécutions simultanées : aucun test instable. Le nouveau test du débit des pings fige l'horloge de la limite de débit (aucune attente réelle). Pour ce rapport, la vérification complète a été refaite une fois de plus sur le commit `bbded7a` : mêmes chiffres, aucun échec.
 
 ## 2. Taille du projet et des tests
 
@@ -56,7 +58,7 @@ Tous les modules du jeu sont en Luau `--!strict` (typage strict).
 
 ## 3. Comment le jeu a été construit et vérifié
 
-Historique tiré de `git log` (34 commits jusqu'à `e951d5e`, heures UTC).
+Historique tiré de `git log` (40 commits jusqu'à `bbded7a`, heures UTC).
 
 | Étape | Quand | Ce qui a été fait |
 |---|---|---|
@@ -71,6 +73,10 @@ Historique tiré de `git log` (34 commits jusqu'à `e951d5e`, heures UTC).
 | **Console PS5** | 31/10, 14:35-16:12 | Manette DualSense, interface « 10 pieds », icônes PlayStation, navigation complète (docs/07) |
 | **QA tour 3** | 31/10, 19:21 | Corrections (sécurité, données, robustesse, expérience joueur, conformité) ; résultats au §6 |
 | **QA tour 4** | 31/10, 20:46-22:02 | Corrections (mêmes axes) ; résumé au §6 |
+| **Documentation** | 31/10, 22:16 | Guide de publication (docs/05), ce rapport, README |
+| **Finition** | 31/10, 23:22 - 01/11, 02:26 | Contre-audit anti-triche et revue des corrections du tour 4, faits par d'autres ingénieurs ; sons officiels Roblox ; restes des tours 3 et 4 (§6.3) |
+| **QA tour 5** | 01/11, 04:20 | Corrections (mêmes axes) ; §6.3.5 |
+| **QA tour 6** | 01/11, 06:13 | Corrections (mêmes axes) ; §6.3.5 |
 
 **Les tours de QA.** À chaque tour, des auditeurs indépendants relisent tout le jeu, chacun avec une « lentille » :
 
@@ -122,7 +128,7 @@ Les tests tournent **hors de Roblox** : le harnais (`tests/harness/`) imite le m
 | **Ergonomie sur téléphone** | Le pouce atteint-il le Dash ? Un bouton est-il caché par le joystick ? | M9 |
 | **Équité des coupes avec latence** | Le serveur décide ; la sensation « je l'ai touché ! » à 250 ms de latence se juge en vrai | M10 |
 | **Téléviseur et PS5** | Lisibilité à 3 m, zone sûre réelle, vibrations, achats sur PlayStation | M11 |
-| **Sons** | Tous les sons (interface, manette, musique, capture, coupe, Comète, Supernova…) sont des sons publiés par Roblox, à écouter ; neuf ont été remplis en dernier et sont « à confirmer à l'écoute » (`Scatter`, `Bank`, `Dash`, `CometWarn`, `CometSwipe`, `BeaconStart`, `WispPop`, `Ping`, `Cheer` ; guide §6.4) | M12 |
+| **Sons** | Les tests vérifient le format et la provenance de chaque numéro, pas le son lui-même. Les 27 sons (interface, manette, musique, capture, coupe, Comète, Supernova…) sont publiés par Roblox, mais personne ne les a écoutés ; neuf ont été remplis en dernier et sont « à confirmer à l'écoute » (`Scatter`, `Bank`, `Dash`, `CometWarn`, `CometSwipe`, `BeaconStart`, `WispPop`, `Ping`, `Cheer` ; §6.3.4, guide §6.4) | M12 |
 
 Limites connues du harnais (sans effet sur le jeu) : la sélection à la croix de la manette est une approximation (Roblox ne publie pas sa règle exacte : les tests vérifient que tout est **atteignable**, pas le chemin exact) ; un bouton grossi à la sélection peut, au bord gauche d'une grille, faire dévier la simulation (docs/07 §10.1).
 
@@ -145,7 +151,7 @@ Limites connues du harnais (sans effet sur le jeu) : la sélection à la croix d
 | M9 | **Téléphone en main** | Sur un vrai téléphone : jouer 15 min à une main, ouvrir chaque menu, replier le suivi de quête, glisser le doigt hors d'un bouton | Dash atteignable au pouce, rien sous le joystick, boutons faciles à toucher (voir constats mineurs n°6 et n°8, question n°3) |
 | M10 | **Coupes avec latence** | Studio : 2 à 4 joueurs en *Local Server*, latence simulée de 250 ms (réglages réseau de Studio, nom exact à vérifier) ; 100 traversées franches de files | ≥ 95 coupes accordées, aucune coupe à plus de 3,5 studs de distance visible (GDD §15.2, porte 2) |
 | M11 | **Manette et PS5** | Controller Emulator ou manette USB dans Studio, puis vraie PS5 (guide §11) | Tout se fait à la manette ; à 3 m sur le téléviseur, tout est lisible et rien n'est coupé ; vibrations agréables |
-| M12 | **Sons** | Jouer avec le son : naviguer dans les menus, à la manette et au toucher. **Écouter d'abord** les neuf sons « à confirmer à l'écoute » : `CometWarn` (alerte Comète, enregistrement nouveau, peut-être trop discret) et `Ping` (enregistrement nouveau) en premier, puis `Scatter`, `Bank`, `Dash`, `CometSwipe`, `BeaconStart`, `WispPop`, `Cheer` | Chaque son agréable et pas trop fort (musique comprise) ; un seul jingle à la fois (quête, jalon d'Atlas, achat) ; un son qui déplaît vidé (`id = ""`, muet, jeu jouable) ou remplacé (guide §6.4) |
+| M12 | **Sons** | Jouer avec le son : naviguer dans les menus, à la manette et au toucher. **Écouter d'abord** les neuf sons « à confirmer à l'écoute » : `CometWarn` (alerte Comète, enregistrement nouveau, peut-être trop discret) et `Ping` (enregistrement nouveau) en premier, puis `Scatter`, `Bank`, `Dash`, `CometSwipe`, `BeaconStart`, `WispPop`, `Cheer` | Chaque son agréable et pas trop fort (musique comprise) ; un seul jingle à la fois (quête, jalon d'Atlas, achat) ; noter les sons qui déplaisent ; l'équipe technique les vide (`id = ""` : muet, jeu jouable) ou les remplace, en mettant le test des sons à jour (guide §6.4) |
 | M13 | **Session longue** | 30 minutes de jeu à plusieurs, en ligne | Aucune erreur dans la console développeur, pas de ralentissement progressif |
 
 ---
@@ -170,7 +176,7 @@ Autres groupes du tour 3 (un fichier de test chacun) : écran de chargement qui 
 
 **Les 19 constats mineurs du tour 3**, avec leur état vérifié dans le code au moment de ce rapport :
 
-| n° | Fichier | Constat | État (mis à jour le 1/11 après la passe de finition, §6.3) |
+| n° | Fichier | Constat | État (revérifié dans le code le 1/11, après la finition et les tours 5 et 6) |
 |---|---|---|---|
 | 1 | `src/server/Services/DataService.luau` | `writeRecord` traitait un verrou absent comme le sien et pouvait écraser des données plus récentes d'un autre serveur | **Corrigé** au tour 3 (verrou absent = pas d'écriture ; `Fix_r3_serveur_3_data`) |
 | 2 | `src/client/Controllers/WorldFXController.luau` | L'animation du décor déplace 184 pièces une par une à chaque image et lit environ 570 attributs | **Corrigé** à la finition (attributs lus au suivi, un `BulkMoveTo`, pièces lointaines ralenties ; `Fix_fin_client_world_perf`) ; à mesurer en M6 |
@@ -187,12 +193,12 @@ Autres groupes du tour 3 (un fichier de test chacun) : écran de chargement qui 
 | 13 | `src/client/Controllers/PanelController.luau` | Contour rose « queue menacée » affiché pendant la trêve après une Balise réussie et pendant l'immunité | **Corrigé** au tour 4 (`Fix_r4_client_0_panels`) |
 | 14 | `src/server/Services/LeaderboardService.luau` | La couronne « Conga Royal » n'est pas retirée quand la semaine change pendant une session | **Corrigé** à la finition (couronne retirée au changement de semaine ; `Fix_fin_server_anticheat_services`) |
 | 15 | `src/client/UI/Panels/Collection.luau` | L'onglet Guide affiche les multiplicateurs avec des décimales à l'anglaise en français | **Corrigé** à la finition (« Givrée ×2,5 » en français ; `Fix_fin_client_panels_console`) |
-| 16 | `src/client/Controllers/OnboardingController.luau` | « Ton Nid travaille même quand tu dors » absent du menu | À revérifier (le pied du panneau Réglages affiche ce texte) |
+| 16 | `src/client/Controllers/OnboardingController.luau` | « Ton Nid travaille même quand tu dors » absent du menu | **Conforme** (revérifié dans le code le 1/11) : le message s'affiche après 10 min de jeu pour un joueur qui a moins de 2 h de jeu, et toujours en pied du panneau Réglages, comme le demande le GDD (§7, J1) |
 | 17 | `src/server/Services/MonetizationService.luau` | Un faux signal de fin d'achat de pass peut relancer sans délai des vérifications auprès de Roblox | **Corrigé** à la finition (vérifications bornées par `RateLimit`, réponse « non possédé » retenue ; `Fix_r5_serveur_data`) |
 | 18 | `src/server/Services/CongaService.luau` | Le type d'appareil déclaré par le client élargit le rayon de coupe (l'aide au tactile peut être simulée) | En attente de **votre décision** (question n°1, §7) |
 | 19 | `src/server/Services/WorldService.luau` | Après une erreur pendant la construction du monde, `building` reste vrai : chaque accès suivant échoue avec un message trompeur | **Corrigé** à la finition (drapeau remis à zéro, erreur d'origine relancée ; `Fix_fin_server_data_publish`) |
 
-Tous ces constats ont été classés **mineurs** par les auditeurs ; aucun n'a fait échouer un test ni une partie simulée. Après la passe de finition, il reste : le n° 16 (« À revérifier » : constat non retenu au tour 3, état non confirmé dans le code) et le n° 18 (votre décision, question n° 1 du §7). Chaque correction a son test ; les n° 2, 4, 6, 8, 11 et 12 restent à confirmer dans Roblox (M6, M8, M9, M11, M12).
+Tous ces constats ont été classés **mineurs** par les auditeurs ; aucun n'a fait échouer un test ni une partie simulée. Après la passe de finition, il ne reste que le n° 18 (votre décision, question n° 1 du §7). Chaque correction a son test ; les n° 2, 4, 6, 8, 11 et 12 restent à confirmer dans Roblox (M6, M8, M9, M11, M12).
 
 ### 6.2 Tour 4 (commit `e951d5e`)
 
@@ -204,38 +210,154 @@ Corrections principales (tests `tests/specs/Fix_r4_*.spec.luau`) :
 - **Accueil** : progression juste des quêtes d'achat, pas de double achat au double appui (`Fix_r4_ui_1`) ; quête météo claire pendant une pluie de météores (`Fix_r4_ui_1_plan`) ; moment « Atlas débloqué » avec sa carte et son son (`Fix_r4_ui_2`).
 - Validation croisée de publication (`Fix_r4_release`).
 
-### 6.3 Passe de finition (dernière passe avant publication, 1/11/2026)
+### 6.3 Finition : la dernière passe avant publication (1/11/2026)
 
-Corrections (tests `tests/specs/Fix_r5_*.spec.luau`, `Fix_fin_*.spec.luau`, `Fix_final_release.spec.luau`) :
+Après le tour 4, trois contrôles **indépendants** ont été faits par des ingénieurs qui n'avaient pas écrit le code concerné : un contre-audit anti-triche (§6.3.1), une relecture des corrections du tour 4 (§6.3.2) et une recherche de sons officiels Roblox (§6.3.4). Leurs résultats ont été corrigés dans le commit `81d5bdc` (§6.3.3). Deux tours de QA ont suivi (§6.3.5). Les petits constats encore ouverts sont au §6.3.6.
 
-- **Anti-triche : budget d'action** (`MoveCheck`, `Fix_r5_serveur_anticheat`). L'ancienne règle de « rafale » ne regardait qu'un tick et redonnait la tolérance de 4 studs à chaque tick : un bond suivi d'un petit pas agissait au tick suivant, et une chaîne de pas un peu trop longs n'était jamais une rafale. Le budget (un « seau » de studs, plafond = règle d'un tick du GDD, rempli à 1,5 × la vitesse max) garde maintenant sa dette d'un tick à l'autre : le joueur n'agit de nouveau qu'une fois la dette remboursée. Exploits reproduits puis **bloqués** (0 infraction, aucun retour : la tolérance des gels réseau est inchangée) : V1 (bond puis coupe), V2 et V3 (chaînes de pas, à pied ou au Dash), V9 (anneau de la Balise), K1 à K5 (ramassage, vol et encaissement de la Comète). Les contrôles honnêtes restent propres : paquets groupés, Dash, sauts sur la pente, réapparition, rattrapage par sa propre porte. Même règle pour le port sûr (Zen, Supernova) et les récompenses de proximité de la Comète (`Fix_fin_server_anticheat_services`).
-- **Gel réseau en courant** (« freeze-strike ») : un gel honnête de 0,7 à 1,5 s en courant pouvait déclencher un retour, 3 s de restriction, l'icône « instable » et un avertissement vers l'exclusion des classements. Corrigé : 0 infraction, aucun retour, jamais « instable » ; la téléportation reste détectée. **Coût honnête** : en continuant de courir à pleine vitesse après un gel de 0,7 / 1,0 / 1,5 s, le joueur ne peut rien attraper ni couper pendant environ 0,9 / 1,5 / 2,5 s ; en s'arrêtant, moins d'une seconde.
-- **Serveur trop grand** : si la taille du serveur est réglée au-delà de 12, les joueurs sans Nid voient un message puis sont renvoyés poliment après 30 s (« Cette île est pleine ! »), sauf si un Nid se libère (`Fix_fin_server_anticheat_services`, analytics `ServerFullKick`).
-- **Données** (`Fix_r5_serveur_data`, `Fix_fin_server_data_publish`) : en ligne, plus aucun repli en mémoire si les sauvegardes Roblox sont indisponibles (constat bas n° 0 du tour 4) : le joueur est renvoyé avec un message et rien n'est acheté sans sauvegarde, jusqu'au retour du service ; chaque sauvegarde est liée au UserId (droit à l'effacement, procédure dans docs/04 §8) ; faux signaux d'achat de pass bornés (constat mineur n° 17) ; erreur de construction du monde rapportée telle quelle (n° 19) ; script `lune run scripts/prepublish` pour vérifier les 12 numéros de la boutique (guide §5.5).
-- **Interface, accueil, console, performances** (`Fix_fin_client_hud_onboarding`, `Fix_fin_client_panels_console`, `Fix_fin_client_world_perf`, `Fix_r5_hud`, `Fix_r5_panels`, `Fix_r5_audio`) : la plupart des constats mineurs du tour 3 (§6.1) ; icône Boutique masquée tant qu'aucun article n'a son numéro ; sons plafonnés par clé et toujours arrêtés ; « Snip » plus aigu pour le coupeur (GDD §9.4, `Fix_final_release`).
+#### 6.3.1 Contre-audit anti-triche indépendant (« red team »)
 
-### 6.4 Tour 5 et validation de publication (1/11/2026)
+**Méthode.** Un ingénieur a joué le rôle d'un tricheur débutant : un programme de triche qui déplace son personnage plus vite ou plus loin que permis. Il a écrit un test jetable de 26 scènes, joué sur le serveur simulé complet, puis supprimé (aucun fichier du jeu modifié). Dans ce test, une scène « triche » qui réussit veut dire que la triche marche.
 
-Corrections (tests `tests/specs/Fix_r5_client_0`, `Fix_r5_ui_1`, `Fix_r5_ui_1_audio`, `Fix_r5_partage_2`, `Fix_r5_serveur_3`, `Fix_r5_release`) :
+**Ce qui a été essayé**
 
-- **Roue de pings** : plus de roue (Q, croix ↑) avant que l'accueil présente le bouton Ping (GDD §3) ; un menu qui s'ouvre referme la roue ; la roue a son propre plan d'affichage, entre le HUD et les menus.
-- **Un seul jingle à la fois** : fin de Q4 (quête terminée + « Atlas débloqué ! »), jalon d'Atlas (confettis + LevelUp, la bannière du jalon est muette), amélioration qui termine une quête (le Reward de la quête répond seul, menu ouvert ou non). Les achats gardent toujours leur son.
-- **Carte d'invitation d'équipage** : posée dans une place libre du HUD (jamais sur Dash, Ping, saut, minicarte ni pastille d'événement), replacée toutes les 0,5 s.
-- **Écran de chargement sur téléphone à l'horizontale** : le bloc « Réessayer » rétrécit (bouton d'au moins 48 px) et se colle en bas de l'écran, entier.
-- **Aucune collision entre personnages** : un enfant debout sur la tête d'un ami n'est plus porté par lui (ce qui pouvait le faire passer pour un tricheur trop rapide) ; personne ne bloque une porte de Nid avec son corps.
-- **Sons** : les neuf sons encore vides sont remplis (sons publiés par Roblox, surtout des enregistrements déjà retenus joués à une autre hauteur), « à confirmer à l'écoute » (M12, guide §6.4).
+| Essai | Ce que tente le tricheur |
+|---|---|
+| Bond en un seul message | Rester immobile 1 s, puis sauter de 27 studs (à pied), 42 (avec le Dash) ou 57 (Foulée au maximum et Dash) en un seul message réseau, pour couper une file ou prendre la Comète |
+| Bond, puis action (V1) | Le même bond, puis agir au message suivant, 0,2 s plus tard |
+| Chaînes de pas (V2, V3) | 4 à 6 pas de suite, chacun juste sous la limite : jusqu'à 64 studs/s pendant 0,4 s (environ 97 avec Foulée au maximum et Dash) |
+| Vitesse un peu trop forte (V4, V5) | Courir trop vite en permanence, ou alterner arrêts et chaînes de pas |
+| Cas limites (V6 à V8, V10) | Faux décalages réseau, bond juste après une réapparition, bord de la zone de capture, chaîne de pas le long d'une file |
+| Grande Comète (K1 à K5) | Gagner la course au ramassage depuis 27 studs, voler la Comète, l'encaisser depuis 23 studs en 0,2 s |
+| Balise (V9) | Bond jusqu'au bord de l'anneau de la Balise, puis entrer et encaisser |
+| Plafond de la Comète (C1, C2) | Obtenir plus d'un Épique à l'explosion de la Comète : en quittant puis revenant, ou à cinq joueurs autour du point |
+| Contrôle des joueurs honnêtes (Hn1 à Hn5) | Paquets réseau qui arrivent par 2 ou 3, Dash, sauts sur la pente, chute d'une structure, gel réseau |
 
-### 6.5 Tour 6 et validation de publication (1/11/2026)
+**Déjà corrigé au tour 4, confirmé.** Le serveur lit bien le signal « bond » de l'anti-triche ; le bond lui-même n'agit plus (aucune coupe aux trois distances) ; l'anneau de la Balise demande une position validée ; une capture est revérifiée au moment même où elle a lieu ; l'explosion de la Comète donne **un seul Épique par joueur**, y compris dans le même instant sous cinq angles et après un retour sur le serveur.
 
-Corrections (tests `tests/specs/Fix_r6_client_0`, `Fix_r6_ui_1`, `Fix_r6_serveur_2_data`, `Fix_r6_serveur_2_movecheck`, `Fix_r6_serveur_2_comet`, `Fix_r6_release`) :
+**Trouvé par le contre-audit, corrigé à la finition** (détails au §6.3.3)
 
-- **Sauvegarde pendant une panne des sauvegardes Roblox** : un joueur qui part pendant la panne ne perd plus ce qu'il a gagné depuis son début. Le serveur réessaie en arrière-plan pendant 5 minutes au plus ; un joueur qui revient sur le même serveur attend quelques secondes et retrouve ses données à jour (jamais des données anciennes) ; un achat fait pendant la panne est gardé une seule fois. Si la panne dure plus de 5 minutes, la perte est journalisée « PERTE ».
-- **Anti-triche, sauts honnêtes** : un saut dont les premiers messages réseau arrivent d'un coup, ou un gel réseau en haut d'un saut, ne comptent plus comme une triche (plus d'icône « instable » ni de retour) ; planer reste détecté.
-- **Comète** : un porteur qui passe sa porte pendant un rattrapage réseau honnête encaisse la Comète au tick suivant s'il est toujours côté Nid (le bond suivi d'une ressortie reste refusé).
-- **Contour rose « queue menacée »** : le port sûr compte point par point, comme la règle des coupes : un joueur arrêté dans le port sûr dont la queue dépasse dehors est prévenu ; une queue entièrement dans le port sûr ne l'est plus (menu ouvert et pointillés sur la file).
-- **Téléphone** : tous les menus et onglets passent l'audit des textes (≥ 18 px) en anglais et en français sur 640 × 360 et 667 × 375 (Objectifs, et la description française « +1 perchoir (gardé à la Supernova) » des Améliorations).
-- **Pings** : le serveur accepte 1 ping / 1,2 s (le client garde 1 / 1,5 s) : un ping n'est plus perdu quand le réseau rapproche deux envois.
-- **Reste à trancher (mineur)** : sur le plus petit téléphone (568 × 320, iPhone SE de 1re génération), l'étiquette française « Aujourd'hui » du Calendrier tombe à 16 px ; un libellé français plus court réglerait cela (à choisir).
+- **Critique** : la règle du bond ne regardait qu'un message à la fois et redonnait la tolérance de 4 studs à chaque message. Un bond suivi d'une action au message suivant, ou une chaîne de pas un peu trop longs, permettait de couper la file d'un enfant, de gagner la course à la Comète, de la voler, de l'encaisser et d'encaisser à la Balise, sans aucune alerte. Corrigé par un **budget d'action** : les 8 variantes reproduites sont bloquées ; les joueurs honnêtes (paquets groupés, Dash, sauts) restent sans aucune alerte. Les anciens tests qui disaient « au message après le bond, il agit » ont été rendus **plus stricts** ; aucun n'a été affaibli.
+- **Moyen** (présent depuis la première version) : un joueur honnête qui court pendant un gel réseau de 0,7 s ou plus était ramené d'environ 20 studs en arrière, bloqué 3 s, marqué « instable », et recevait un avertissement qui compte pour l'exclusion des classements. Corrigé.
+- **Bas** : les récompenses de proximité de la Comète et le contrôle du port sûr (Zen, Supernova) croyaient le point d'arrivée d'un bond ; une erreur dans le contrôle des captures pouvait arrêter tout un tick du serveur ; la couronne « Conga Royal » restait après le changement de semaine. Corrigés.
+
+**Accepté par conception (ce ne sont pas des défauts)**
+
+- Courir jusqu'à environ 1,5 fois la vitesse normale n'est jamais signalé : c'est la marge prévue par le GDD pour les réseaux lents.
+- Un bond qui traverse **sa propre** porte de Nid compte encore, pour ne jamais punir un rattrapage réseau honnête : un tricheur immobile 1 s peut encaisser **sa propre** file depuis environ 27 studs. Il ne prend rien aux autres.
+- Une personne qui joue avec plusieurs comptes (ou une bande d'amis) reçoit un Épique de Comète par compte.
+- Quitter puis revenir ne remet pas les plafonds à zéro (Comète, récompenses) : ils suivent le compte Roblox. C'est voulu : on ne gagne rien à se reconnecter.
+
+**Encore ouvert (bas)** : un équipier qui fait un bond à côté d'une victime compte comme escorte pendant ce tick et peut empêcher une coupe (il faut un complice ; §6.3.6, n° 1).
+
+#### 6.3.2 Revue indépendante des corrections du tour 4
+
+Un autre ingénieur a relu toutes les modifications du tour 4 (22 fichiers, environ 950 lignes) et vérifié chaque correction avec des tests jetables, de bout en bout quand c'était possible : vrai serveur simulé, puis réseau, puis vrai client avec la vraie géométrie de l'écran. À ce moment, la suite comptait 1 396 tests, tous verts, sans aucun avertissement d'analyse. Les anciens tests modifiés au tour 4 avaient été corrigés proprement, pas affaiblis.
+
+| Résultat de la revue | Corrections | Suite donnée |
+|---|---|---|
+| **Confirmées de bout en bout** | Réserve pleine qui ne libère jamais une récompense ni un Starborn ; cartes des quêtes Q2, Q5 et Q7 visibles à l'ouverture d'Améliorer ; « Réessayer » de l'écran de chargement atteignable à la manette ; « Atlas débloqué » n'est plus perdu par l'écran du joueur ; double appui sur Acheter ; pastille d'événement et consigne d'accueil qui ne cachent plus Réglages ni Ping ; alerte de queue menacée ; △ vers l'invitation d'équipage ; sélection rendue quand un menu est ouvert ; chat coupé sur console ; curseur blanc | — |
+| **Partielles** | Son d'achat et carte « Atlas débloqué » muets (leur son, « LevelUp », était vide) ; main sur Collection arrêtée 0,1 s avant la carte de l'Atlas ; « Météo bientôt ! » affiché 112 s avant une pluie de météores, alors que la météo utile était à 473 s ; sons du jeu encore vides | **Finies à la finition** : sons remplis (§6.3.4), main tenue jusqu'à la carte, compte à rebours de la météo utile |
+| **Petites régressions** | Consigne d'accueil sur le bouton Boutique à 568 × 320 sous la barre Roblox de 58 px ; supposition « fenêtre d'achat ouverte » après ✕ appliquée à tous les boutons ; croix ← non protégée dans les menus | **Corrigées à la finition** |
+| | Le test des sons figeait la liste des numéros autorisés | **Partiellement** : assoupli dans `Fix_r4_partage_4`, mais `Fix_r5_audio` fige de nouveau 20 des 27 sons (§6.3.6, n° 8) |
+| **Effets de bord mineurs** | Pendant un pic de latence, la Comète portée et l'escorte d'équipage n'étaient pas mises à jour pendant un tick | La Comète suit maintenant son porteur à chaque tick ; l'escorte (un tick, sans effet notable) n'a pas été retravaillée |
+
+À vérifier sur une vraie PS5, car le harnais ne peut pas le prouver (M11) : une fenêtre d'achat ou d'invitation de Roblox efface-t-elle la sélection ? La croix directionnelle arrive-t-elle au jeu pendant cette fenêtre ? Le chat de l'interface Roblox est-il bien coupé ?
+
+#### 6.3.3 Corrections de la finition
+
+Tests : `tests/specs/Fix_r5_serveur_anticheat`, `Fix_r5_serveur_data`, `Fix_r5_hud`, `Fix_r5_panels`, `Fix_r5_audio`, `Fix_fin_*`, `Fix_final_release`.
+
+- **Anti-triche : budget d'action** (`MoveCheck`, `Fix_r5_serveur_anticheat`). Le budget est un « seau » de studs : son plafond est la règle d'un tick du GDD, il se remplit à 1,5 fois la vitesse maximale, et sa dette passe d'un message à l'autre. Le joueur n'agit de nouveau (capturer, couper, Comète, port sûr) qu'une fois la dette remboursée. Exploits reproduits puis **bloqués**, sans alerte ni retour en arrière (la tolérance des gels réseau ne change pas) : V1, V2, V3, V9, K1 à K5. Les contrôles honnêtes restent propres : paquets groupés, Dash, sauts sur la pente, réapparition, rattrapage par sa propre porte, anneau de la Balise à pied. Même règle pour le port sûr (Zen, Supernova) et les récompenses de proximité de la Comète (`Fix_fin_server_anticheat_services`).
+- **Gel réseau en courant** : un gel honnête de 0,7 à 1,5 s en courant ne donne plus de retour, ni de blocage de 3 s, ni d'icône « instable », ni d'avertissement ; la téléportation reste détectée. **Coût pour un joueur honnête** : s'il continue de courir à pleine vitesse après un gel de 0,7 / 1,0 / 1,5 s, il ne peut rien attraper ni couper pendant environ 0,9 / 1,5 / 2,5 s ; s'il s'arrête, moins d'une seconde (à décider : §6.3.6, n° 9).
+- **Serveur trop grand** : si la taille du serveur est réglée au-delà de 12 dans le Creator Hub, un joueur sans Nid voit un message, puis est renvoyé poliment après 30 s (« Cette île est pleine ! Rejoins un autre serveur. »), sauf si un Nid se libère entre-temps (analytics `ServerFullKick`).
+- **Données** (`Fix_r5_serveur_data`, `Fix_fin_server_data_publish`) : en ligne, plus aucune sauvegarde de secours en mémoire si les sauvegardes Roblox sont indisponibles : le joueur est renvoyé avec un message et aucun achat n'est validé sans sauvegarde, jusqu'au retour du service ; chaque sauvegarde est liée au compte du joueur (droit à l'effacement, procédure dans docs/04 §8) ; faux signaux d'achat de pass bornés ; erreur de construction du monde rapportée telle quelle ; nouveau script `lune run scripts/prepublish` qui vérifie les 12 numéros de la boutique (guide §5.5).
+- **Interface, accueil, console, performances** (`Fix_fin_client_hud_onboarding`, `Fix_fin_client_panels_console`, `Fix_fin_client_world_perf`, `Fix_r5_hud`, `Fix_r5_panels`, `Fix_r5_audio`) : la plupart des constats mineurs du tour 3 (§6.1) ; icône Boutique masquée tant qu'aucun article n'a son numéro ; sons plafonnés et toujours arrêtés ; « Snip » plus aigu pour le coupeur (GDD §9.4).
+
+#### 6.3.4 Sons
+
+**D'où viennent les sons.** Un ingénieur a fouillé, hors ligne, les deux dépôts officiels de Roblox sur GitHub : **Roblox/resources** (modules « Feature Packages » et jeux d'exemple *Plant* et *Gold Rush*) et **Roblox/creator-docs** (la documentation officielle et ses tutoriels). Il a ouvert chaque fichier de jeu et de modèle (105 fichiers), listé chaque son, puis lu les scripts qui les jouent pour savoir **à quel moment Roblox s'en sert**. Ces sons sont publiés par Roblox lui-même : publics et utilisables dans toute expérience, sans rien téléverser. La source exacte (dépôt et fichier) est écrite à côté de chaque son dans `src/shared/Config/Sounds.luau`.
+
+**État : les 27 sons du jeu sont remplis, aucun n'est vide.** Avant le tour 4, les 27 étaient vides (jeu muet). Le tour 4 a rempli les 7 sons d'interface et de navigation ; la finition, les 11 sons les plus sûrs ; le tour 5, les 9 derniers.
+
+| Moment du jeu (GDD §9.4) | Son | Source officielle Roblox |
+|---|---|---|
+| Bouton pressé ; petite apparition (« NOUVEAU ! », libération, équipage formé) | `Click`, `Pop` | Son joué par Roblox à chaque bouton (*Feature Packages*, `BUTTON_ACTIVATED`) ; `Pop` plus aigu |
+| Pièces gagnées (parade, Balise, retour hors ligne) | `Coin` | Son « Coins » du jeu d'exemple *Plant* |
+| Récompense : quête, achat, Calendrier, Comète encaissée, fin du bouclier débutant | `Reward` | Effet d'achat de Roblox (*Feature Packages*, `PURCHASE_EFFECT`) |
+| Amélioration, jalon de l'Atlas, Starforge | `LevelUp` | « Retro jingle » du tutoriel audio 2D |
+| Refus (file pleine…) ; ouverture d'un menu, bannières de météo et de fête | `Error`, `Whoosh` | Fermeture et ouverture de fenêtre (*Feature Packages*) |
+| Musique de fond | `Music` | « Upbeat Electronica », tutoriel de musique de fond |
+| Capture ; capture Rare et plus | `Catch`, `CatchRare` | Carillon de ramassage du tutoriel des sons en jeu ; pépite d'or du jeu d'exemple *Gold Rush* |
+| Coupe « SNIP ! » | `Snip` | Son « Harvest » de *Plant* (« un son de coupe ») ; plus aigu pour le coupeur |
+| Impact de la Comète | `CometImpact` | Exemple « Boom-Impact » de la documentation |
+| Victoire de la Balise ; Supernova | `BeaconWin`, `Supernova` | Morceau « joyeux, festif » du tutoriel audio 3D (Supernova plus grave) |
+| Navigation à la manette (sélection, ○, onglet, bout de liste) | `Select`, `Back`, `Tab`, `Bump` | Survol, fermeture et ouverture (*Feature Packages*), à des hauteurs différentes |
+| **À confirmer à l'écoute** (remplis en dernier) | `CometWarn` (alerte Comète), `Ping` | Deux enregistrements **nouveaux** : bip de compte à rebours du module *Photo Booth* de la documentation (peut-être trop discret) ; petit « clink » de *Plant* |
+| **À confirmer à l'écoute** | `Scatter` (dispersion), `Bank` (encaissement), `Dash`, `CometSwipe` (vol de Comète), `BeaconStart` (début de la Nuit), `WispPop` (Gloomwisp éclaté), `Cheer` (acclamation) | Réemploi d'un son déjà retenu à une autre hauteur : « whoosh » plus grave ou plus aigu, pièces plus graves, pépite plus aiguë, effet d'achat plus grave, clic très aigu, morceau festif plus aigu et court |
+
+Quand deux moments partagent un enregistrement, leurs hauteurs diffèrent d'au moins 15 % (vérifié par un test). Rien dans les deux dépôts ne correspond vraiment au **début de la Nuit de la Balise** (tombée de la nuit, trêve) : `BeaconStart` est un choix par défaut. Restent **sans son, comme le prévoit le GDD** : le grignotage d'un Gloomwisp, l'échec de la Balise, le porteur de la Comète, et les captures Épiques et plus (aucun son en plus de `CatchRare`).
+
+**Lecture sans danger** (`AudioController`, `Fix_r5_audio`) : un son vide ou qui ne se charge pas reste muet (un avertissement, aucune erreur) ; les réglages Musique et Effets sont respectés ; un même son ne s'empile pas (au plus 3 copies par image et 4 en même temps) ; chaque son s'arrête en fondu au plus tard après sa durée maximale (4 s par défaut) ; un seul jingle à la fois.
+
+**Ce qu'aucun test ne peut faire : écouter.** Les tests vérifient le format et la provenance des numéros, pas qu'un son est joli, pas trop fort, ni toujours en ligne. **Avant de publier, écoutez chaque son dans Roblox Studio** (test M12 du §5) : d'abord `CometWarn` et `Ping`, puis les sept autres « à confirmer ». Pour changer un son : guide §6.4.
+
+#### 6.3.5 Tours de QA 5 et 6
+
+**Tour 5** (après la finition, commit `7ed5583`)
+
+| Constats | À corriger | Graves | Mineurs non retenus pour ce tour |
+|---|---|---|---|
+| **13** | **7** | **2** | **6** |
+
+Les deux constats graves, **corrigés** :
+
+- **Un enfant debout sur la tête d'un ami** était porté par lui : l'anti-triche le prenait pour un tricheur trop rapide, le ramenait en arrière plusieurs fois, puis l'excluait pour toujours des classements. Corrigé : aucune collision entre personnages (personne ne bloque non plus une porte de Nid avec son corps).
+- **Carte d'invitation d'équipage** posée sur les boutons Dash et Ping des téléphones, et sur le suivi de quête sur PS5. Corrigé : elle se pose dans une place libre de l'écran, recalculée toutes les 0,5 s.
+
+Autres corrections (tests `Fix_r5_client_0`, `Fix_r5_ui_1`, `Fix_r5_ui_1_audio`, `Fix_r5_partage_2`, `Fix_r5_serveur_3`, `Fix_r5_release`) :
+
+- **Roue de pings** : plus de roue (Q, croix ↑) avant que l'accueil ait présenté le bouton Ping (GDD §3) ; un menu qui s'ouvre referme la roue ; la roue s'affiche entre le HUD et les menus.
+- **Un seul jingle à la fois** : fin de Q4 (quête terminée et « Atlas débloqué ! »), jalon de l'Atlas, amélioration qui termine une quête. Les achats gardent toujours leur son.
+- **Écran de chargement sur téléphone à l'horizontale** : le bloc « Réessayer » rétrécit (bouton d'au moins 48 px) et reste entier en bas de l'écran.
+- **Sons** : les 9 derniers sons vides sont remplis, « à confirmer à l'écoute » (§6.3.4).
+
+Les 6 constats mineurs du tour 5, revérifiés dans le code :
+
+| Constat | État |
+|---|---|
+| Un porteur de Comète qui passe sa porte pendant un rattrapage réseau n'encaisse pas | **Corrigé** au tour 6 |
+| Objectifs : textes sous 18 px sur un téléphone 640 × 360 | **Corrigé** au tour 6 (sauf « Aujourd'hui » en 568 × 320 : §6.3.6, n° 7) |
+| « Rentre au Nid » dit à un joueur déjà dans son Nid (Supernova, Zen) | Ouvert (§6.3.6, n° 2) |
+| Rien n'empêche un second achat du Starter Kit avant que le serveur ait prévenu l'écran | Ouvert (§6.3.6, n° 3) |
+| Échap liée pour fermer les menus, alors que Roblox garde cette touche | Ouvert (§6.3.6, n° 4) |
+| Type des réglages du profil sans `vibration` | Ouvert (§6.3.6, n° 5) |
+
+**Tour 6** (commit `bbded7a`). Corrections (tests `Fix_r6_client_0`, `Fix_r6_ui_1`, `Fix_r6_serveur_2_data`, `Fix_r6_serveur_2_movecheck`, `Fix_r6_serveur_2_comet`, `Fix_r6_release`) :
+
+- **Sauvegarde pendant une panne des sauvegardes Roblox** : un joueur qui part pendant la panne ne perd plus ce qu'il a gagné depuis le début de la panne. Le serveur réessaie en arrière-plan pendant 5 minutes au plus ; un joueur qui revient sur le même serveur attend quelques secondes et retrouve ses données à jour (jamais des données anciennes) ; un achat fait pendant la panne n'est compté qu'une fois. Si la panne dure plus de 5 minutes, la perte est notée « PERTE » dans le journal du serveur.
+- **Anti-triche et sauts honnêtes** : un saut dont les premiers messages réseau arrivent d'un coup, ou un gel réseau en haut d'un saut, ne comptent plus comme une triche (plus d'icône « instable » ni de retour) ; planer reste détecté.
+- **Comète** : un porteur qui passe sa porte pendant un rattrapage réseau honnête encaisse la Comète au tick suivant s'il est toujours du côté du Nid (un bond suivi d'une ressortie reste refusé).
+- **Contour rose « queue menacée »** : il suit maintenant point par point la règle des coupes. Un joueur arrêté dans son port sûr dont la queue dépasse dehors est prévenu ; une queue entièrement à l'abri ne l'est plus.
+- **Téléphone** : tous les menus et onglets passent l'audit des textes (au moins 18 px) en anglais et en français, en 640 × 360 et 667 × 375.
+- **Pings** : le serveur accepte un ping toutes les 1,2 s (l'écran en propose un toutes les 1,5 s) : un ping n'est plus perdu quand le réseau rapproche deux envois.
+
+#### 6.3.6 Petits constats encore ouverts (revérifiés dans le code le 1/11/2026, commit `bbded7a`)
+
+Aucun n'empêche de publier ni ne fait perdre de progression. Les n° 7 et 9 attendent **votre choix** ; les autres sont de petites corrections pour une mise à jour.
+
+| n° | Où | Constat | Ce que voit le joueur | Proposition |
+|---|---|---|---|---|
+| 1 | `src/server/Services/CongaService.luau` (escorte) | Un équipier compte comme escorte même pendant un tick où il fait un bond | Un tricheur avec un complice d'équipage peut empêcher une coupe pendant un tick | Ne compter que les équipiers dont la position est validée |
+| 2 | `src/server/Services/NestService.luau` | Juste après un retour forcé ou un rattrapage réseau, Supernova et Mode Zen sont refusés avec « Rentre au Nid » même si le joueur est dans son Nid | Message trompeur ; réessayer quelques secondes plus tard marche | Un message plus juste (« Attends un instant ») |
+| 3 | `src/client/UI/Panels/Shop.luau` | Juste après l'achat du Starter Kit, son bouton reste proposé jusqu'à ce que le serveur ait prévenu l'écran | Dans ce court moment, un enfant peut le racheter : il confirme et paie une seconde fois, et reçoit le contenu deux fois | Masquer le bouton dès la fin du premier achat |
+| 4 | `src/client/Controllers/PanelController.luau` | Échap est liée pour fermer les menus, alors que Roblox garde cette touche pour son propre menu | Sur ordinateur, Échap ouvre le menu de Roblox et ne ferme pas forcément celui du jeu (le bouton ✕ du menu et ○ à la manette marchent) | Retirer Échap ou utiliser une autre touche |
+| 5 | `src/shared/Types.luau` | Le type des réglages du profil oublie le réglage `vibration` | Rien (détail technique) | Ajouter le champ |
+| 6 | `src/client/UI/ScreenFX.luau`, `src/client/UI/Panels/Crew.luau` | Sur ordinateur et tablette, une carte « NOUVEAU ! » peut passer environ 3 s par-dessus le haut de la carte d'invitation d'équipage | Invitation à moitié cachée pendant 3 s | Faire placer les deux cartes par le même calcul |
+| 7 | `src/client/UI/Panels/Goals.luau` | Sur le plus petit téléphone (568 × 320, iPhone SE de 1re génération), l'étiquette française « Aujourd'hui » du Calendrier tombe à 16 px | Texte un peu petit | **À choisir** : un libellé français plus court |
+| 8 | `tests/specs/Fix_r5_audio.spec.luau` | Le test des sons fige le numéro, le volume et la hauteur de 20 des 27 sons | Rien pour le joueur ; mais changer ou vider un son fait échouer `./scripts/check.sh` | Mettre le test à jour en même temps que le son (guide §6.4) |
+| 9 | `src/server/Util/MoveCheck.luau` | Coût honnête du budget d'action après un gel réseau (§6.3.3) | Après un gel, en continuant de courir, rien n'est attrapé pendant 0,9 à 2,5 s | **À décider** : un remboursement plus rapide demande un nouveau réglage, mais un tricheur pourrait agir plus tôt après un bond. Conseil : garder tel quel et surveiller les plaintes |
+
+Le constat n° 18 du tour 3 (bonus de coupe « tactile » déclaré par le client) reste la question n° 1 du §7.
 
 ---
 
@@ -260,7 +382,7 @@ Les justifications des réglages d'économie déjà faits (Supernovas, formes m�
 | Créer les 6 passes et 6 produits, coller leurs numéros, puis `lune run scripts/prepublish` (« ✅ Boutique prête ») | Propriétaire | Guide §5, `src/shared/Config/Monetization.luau` |
 | Ajouter les administrateurs LiveOps | Propriétaire | Guide §6.1, `src/server/Data/Admins.luau` |
 | Recaler la semaine du premier Starfall Saturday | Propriétaire | Guide §6.3, `src/shared/Config/Events.luau` |
-| Écouter tous les sons, d'abord les neuf « à confirmer à l'écoute » (`CometWarn` et `Ping` en premier) ; vider ou remplacer ceux qui déplaisent | Propriétaire + équipe technique (un test exige le format `rbxassetid://<nombre>` et la provenance sur la ligne) | Guide §6.4, `src/shared/Config/Sounds.luau` |
+| Écouter tous les sons dans Studio, d'abord les neuf « à confirmer à l'écoute » (`CometWarn` et `Ping` en premier) ; faire vider ou remplacer ceux qui déplaisent | Propriétaire (écoute) + équipe technique (changement : un test fige aujourd'hui la plupart des sons et doit être mis à jour en même temps) | Guide §6.4, `src/shared/Config/Sounds.luau` |
 | Vérifier les noms « Comet Conga » et « Nebbies » (Roblox et marques) | Propriétaire | GDD §16, risque 7 |
 | Questionnaire de maturité, icône, miniatures, taille de serveur 12, langues | Propriétaire | Guide §7 à §10 |
 | Plan de test manuel M1 à M13 | Propriétaire + testeurs | §5 |

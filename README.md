@@ -17,15 +17,16 @@ Sur **Lumora**, une île flottante au crépuscule, des bébés comètes (les **N
 
 Le choix du concept vient d'une étude de marché Roblox 2025-2026 et d'un jury de 3 concepts concurrents : voir les documents ci-dessous.
 
-## État du projet (31 octobre 2026)
+## État du projet (1er novembre 2026)
 
 | | |
 |---|---|
 | **Jouable sur** | Téléphone et tablette (tactile), ordinateur (clavier-souris), **PlayStation 5** et Xbox (manette, interface adaptée au téléviseur) |
 | **Langues** | Français et anglais, choisis automatiquement (ou dans Réglages) |
-| **Vérification** | `./scripts/check.sh` vert : **1 619 tests automatiques** (112 fichiers), 0 échec ; 0 erreur et 0 avertissement d'analyse |
-| **Fait** | Version 1.0 du GDD complète, 4 tours de QA (sécurité, données, robustesse, expérience joueur, conformité, bonnes pratiques Roblox) |
-| **Reste à faire à la main avant de publier** | Créer les 6 passes et 6 produits dans le Creator Hub et coller leurs numéros ; administrateurs et date du premier Starfall Saturday ; écouter les sons et la musique (d'abord les neuf « à confirmer à l'écoute ») ; questionnaire de maturité, icône, miniatures ; tests dans Roblox Studio (rendu, physique, vraies sauvegardes et vrais achats, 12 vrais joueurs, téléphone modeste) et essai sur une vraie PS5 ; répondre à 7 questions de design |
+| **Vérification** | `./scripts/check.sh` vert le 1/11/2026 : **1 619 tests automatiques** (112 fichiers), 0 échec ; 0 erreur et 0 avertissement d'analyse |
+| **Sons** | Les 27 sons sont branchés : tous publiés par Roblox lui-même (source notée sur chaque ligne de `src/shared/Config/Sounds.luau`). Personne ne les a encore écoutés ; neuf sont « à confirmer à l'écoute » ([guide](docs/05-guide-publication.md) §6.4) |
+| **Fait** | Version 1.0 du GDD complète ; 6 tours de QA (sécurité, données, robustesse, expérience joueur, conformité, bonnes pratiques Roblox) ; passe de finition avec contre-audit anti-triche et revue des corrections faits par d'autres ingénieurs ([rapport qualité](docs/06-rapport-qualite.md) §6.3) |
+| **Reste à faire à la main avant de publier** | Créer les 6 passes et 6 produits dans le Creator Hub et coller leurs numéros ; administrateurs et date du premier Starfall Saturday ; écouter les sons et la musique dans Studio (d'abord les neuf « à confirmer à l'écoute ») et faire changer par l'équipe technique ceux qui déplaisent ; questionnaire de maturité, icône, miniatures ; tests dans Roblox Studio (rendu, physique, vraies sauvegardes et vrais achats, 12 vrais joueurs, téléphone modeste) et essai sur une vraie PS5 ; répondre à 7 questions de design |
 
 Détails : [guide de publication](docs/05-guide-publication.md) · [rapport qualité](docs/06-rapport-qualite.md) · [console PS5](docs/07-console-ps5.md).
 
