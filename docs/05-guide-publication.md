@@ -101,7 +101,9 @@ Puis, dans Studio, ouvrez le plugin Rojo et cliquez sur **Connect** (adresse `lo
 
 ### 3.1 Ouvrir le jeu
 
-Double-cliquez sur `build/Game.rbxl` : Studio s'ouvre sur l'île de Lumora. (Ou, dans Studio : *File › Open from File*.)
+Double-cliquez sur `build/Game.rbxl` : Studio s'ouvre. (Ou, dans Studio : *File › Open from File*.)
+
+Avant **Play**, la scène est presque vide (seulement le ciel) : c'est normal. L'île de Lumora est construite par le jeu lui-même au moment où vous cliquez sur **Play**.
 
 ### 3.2 Jouer seul (Play)
 
