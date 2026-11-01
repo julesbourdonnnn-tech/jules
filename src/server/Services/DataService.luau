@@ -76,6 +76,8 @@ local Signal = require(Shared.Util.Signal)
 local Tables = require(Shared.Util.Tables)
 local Types = require(Shared.Types)
 local Schema = require(script.Parent.Parent.Data.Schema)
+local ProfileRepair = require(script.Parent.Parent.Data.ProfileRepair)
+local Signals = require(script.Parent.Parent.Signals)
 local RateLimit = require(script.Parent.Parent.Util.RateLimit)
 
 -- Réglages (modifiables par les tests avant le démarrage)
@@ -885,6 +887,12 @@ local function onPlayerAdded(player: Player)
 		return
 	end
 	local data = prepare(raw)
+	-- réparation du profil (note INT-REPAIR, docs/04 §8.5, §22.2) : après migrate + reconcile, AVANT
+	-- les crochets onPrepare ; une réparation en échec est signalée (warn) et le chargement continue
+	local repairOk, fixes = pcall(ProfileRepair.repair, data)
+	if not repairOk then
+		warn("[DataService] réparation du profil en échec :", fixes)
+	end
 	-- crochets de préparation (synchrones, protégés) : personne d'autre n'a encore vu ce profil
 	for _, fn in prepareHooks do
 		local hookOk, err = pcall(fn, player, data)
@@ -898,6 +906,10 @@ local function onPlayerAdded(player: Player)
 	releasing[player] = nil
 	sendSnapshot(player, data)
 	DataService.Loaded:Fire(player, data)
+	-- réparations comptées par DiagnosticsService (« ProfileRepaired:<champ> »)
+	if repairOk and type(fixes) == "table" and #fixes > 0 then
+		Signals.ProfileRepaired:Fire(player, fixes)
+	end
 end
 
 local function onPlayerRemoving(player: Player)

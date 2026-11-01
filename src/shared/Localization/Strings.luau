@@ -226,6 +226,13 @@ Strings.en = {
 	["panel.ranch.count"] = "{n} / {max}",
 	["panel.ranch.sellValue"] = "+{coins}",
 	["panel.ranch.tileLocked"] = "From Grand Splorch {n}",
+	-- client-panels : sélection multiple, monnaie du panneau, guide du Squishydex
+	["panel.ranch.selected"] = "{n} selected",
+	["panel.ranch.coins"] = "{coins} coins",
+	["panel.dex.guide.goldenLine"] = "Always Golden (×5)",
+	["panel.dex.guide.megaLine"] = "Up to {n} babies, mutations ×{m}",
+	["panel.dex.guide.wildLine"] = "Quality {q}, in Rush or Cozy",
+	["panel.dex.guide.giftsLine"] = "1 baby + {n} s of income",
 	-- Dalles et objets du ranch
 	["pad.snack"] = "Snack Mat",
 	["pad.decor"] = "Decoration",
@@ -1017,6 +1024,13 @@ Strings.fr = {
 	["panel.ranch.count"] = "{n} / {max}",
 	["panel.ranch.sellValue"] = "+{coins}",
 	["panel.ranch.tileLocked"] = "Dès le Grand Splorch {n}",
+	-- client-panels : sélection multiple, monnaie du panneau, guide du Squishydex
+	["panel.ranch.selected"] = "{n} choisis",
+	["panel.ranch.coins"] = "{coins} pièces",
+	["panel.dex.guide.goldenLine"] = "Toujours Doré (×5)",
+	["panel.dex.guide.megaLine"] = "Jusqu'à {n} bébés, mutations ×{m}",
+	["panel.dex.guide.wildLine"] = "Qualité {q}, en Rush ou Cozy",
+	["panel.dex.guide.giftsLine"] = "1 bébé + {n} s de revenu",
 	-- Dalles et objets du ranch
 	["pad.snack"] = "Tapis à Goûter",
 	["pad.decor"] = "Décoration",
