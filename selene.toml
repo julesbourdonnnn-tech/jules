@@ -1,0 +1,12 @@
+# Lint Luau/Roblox. « roblox_lite » déclare les API Roblox utilisées par le jeu
+# (le std officiel se génère avec `selene generate-roblox-std` quand le réseau le permet).
+std = "luau+roblox_lite"
+exclude = ["tests/_lune_shims/**"]
+
+[lints]
+shadowing = "allow"
+unused_variable = "warn"
+global_usage = "deny"
+incorrect_standard_library_use = "deny"
+mixed_table = "allow"
+multiple_statements = "allow"

@@ -1,0 +1,10 @@
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local player = Players.LocalPlayer
+local gui = Instance.new("ScreenGui")
+gui.Name = "HUD"
+gui.ResetOnSpawn = false
+gui.Parent = player:WaitForChild("PlayerGui")
+local label = Instance.new("TextLabel")
+label.Parent = gui
+TweenService:Create(label, TweenInfo.new(0.2), { TextTransparency = 1 }):Play()
