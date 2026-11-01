@@ -342,7 +342,9 @@ Le GDD prévoit des **serveurs privés gratuits** (§4.16) : le propriétaire d'
 3. **Start** (ou **Restart** si vous l'avez déjà rempli), répondez à chaque page, **Save and Continue**.
 4. La page **Questionnaire Preview** montre vos réponses, l'étiquette obtenue et les régions éventuellement non conformes. **Edit** pour corriger, sinon **Submit** : l'étiquette s'affiche aussitôt sur la page du jeu.
 
-**Objectif** : étiquette **Minimal** (au pire **Mild**). Les deux rendent le jeu accessible aux catalogues enfants de Roblox (*Roblox Kids*, 5-8 ans, et *Roblox Select*, 9-15 ans). Roblox ajoute pour ces catalogues d'autres conditions de publication que nos documents ne détaillent pas : à vérifier dans la page officielle *Roblox Kids and Select*.
+**Objectif** : étiquette **Minimal** (au pire **Mild**). Les deux rendent le jeu **admissible** aux comptes enfants de Roblox (*Roblox Kids*, 5-8 ans, et *Roblox Select*, 9-15 ans), mais ne suffisent pas : voir §8.1.
+
+**Attention** : dans la fenêtre *Publish* de Studio, répondre seulement **Non** à la première question donne l'étiquette **Content May Vary** : le jeu n'est alors ouvert qu'aux joueurs de **16 ans et plus** dont l'âge a été vérifié. Il faut remplir **tout** le questionnaire dans le Creator Hub (étapes ci-dessus).
 
 **Répondez toujours honnêtement**, en pensant au contenu **le plus fort** du jeu. Une réponse fausse peut entraîner une modération du jeu et du compte. Réponses qui décrivent Comet Conga tel qu'il est :
 
@@ -364,6 +366,27 @@ Le GDD prévoit des **serveurs privés gratuits** (§4.16) : le propriétaire d'
 | Interaction avec une IA générative | Non | Aucune IA dans le jeu |
 
 À **refaire** à chaque mise à jour qui changerait une de ces réponses (règle officielle).
+
+### 8.1 Ouvrir le jeu aux moins de 16 ans
+
+Règle de Roblox (page officielle *Roblox Kids and Select*, relue le 1/11/2026) : **tout nouveau jeu commence ouvert seulement aux joueurs de 16 ans et plus** dont l'âge a été vérifié. Pour l'ouvrir à **tous les âges**, il faut remplir les six conditions suivantes :
+
+1. **Compte en règle** (aucune sanction en cours).
+2. **Identité vérifiée** du propriétaire du jeu : pour un adulte, avec une **pièce d'identité** (carte d'identité, passeport ou permis). Sur roblox.com : roue dentée en haut à droite › **Settings** › onglet **Account Info** › sous la date de naissance, **Continue with ID**, puis suivre les instructions (il faut un téléphone avec appareil photo).
+3. **Validation en deux étapes** (2FA) activée sur le compte (Settings › **Security**).
+4. **Questionnaire de maturité rempli en entier** (§8), avec une étiquette Minimal, Mild ou Moderate.
+5. **Frais ou abonnement**, au choix :
+   - un abonnement **Roblox Plus** ou **Roblox Premium** actif depuis **2 mois de suite** ;
+   - ou des **frais de publication de 1 000 Robux**, payés une seule fois et **remboursés** plus tard (90 jours après que le jeu est devenu accessible à tous, ou 90 jours après le paiement s'il ne l'est jamais devenu), sauf si le jeu est supprimé pour non-respect des règles. Où : Creator Hub › Comet Conga › **Audience › Reach** › *Refundable publishing fee* › **Pay**.
+6. **Période d'essai** : le jeu doit atteindre **250 joueurs uniques « très engagés »** (comptes anciens, qui jouent vraiment, ayant fait un achat sur Roblox dans les 60 derniers jours, pas forcément dans notre jeu) **de 16 ans et plus**, en **60 jours** au plus. Roblox vérifie aussi que le jeu convient aux enfants. Ensuite le jeu s'ouvre aux comptes *Kids* et *Select*. L'avancement se suit en direct dans **Audience › Reach** (tableau *Audience Reach*).
+
+Raccourci possible, mais cher : un **examen accéléré** à **50 000 Robux** (remboursable sous conditions après 90 jours), qui évite d'attendre les 250 joueurs. Inutile pour un lancement sans date imposée.
+
+Conséquences pour le lancement :
+- Faire les points 1 à 5 **dès la publication**, pour que seule la période d'essai reste à franchir.
+- Pendant l'essai, faire venir des joueurs de 16 ans et plus : amis, famille, publicités Roblox (Ads Manager), réseaux sociaux.
+- Un parent peut déjà autoriser le jeu pour son enfant : contrôle parental **Approved Experience**.
+- Sur PS5, le propriétaire du jeu peut jouer dès maintenant si son compte a 16 ans ou plus et que son âge est vérifié.
 
 ---
 
