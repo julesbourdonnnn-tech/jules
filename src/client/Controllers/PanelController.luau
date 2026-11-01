@@ -1548,19 +1548,25 @@ local function tailThreatened(): boolean
 	end
 	local pos = root.Position
 	local guard = localGuardLinks(player)
-	-- zone protégée des coupes = port sûr de TOUTES les portes (SnipRules, WorldLayout.inHarbor) ;
-	-- pas « chez soi » (inOwnHarbor) : l'arrière de sa plateforme de Nid est hors de cette zone.
 	-- Une file entièrement en Guard Links (Lead Trio) n'a rien de coupable.
-	if WorldLayout.inHarbor(pos) or WorldState.lineLength(slot) <= guard then
+	if WorldState.lineLength(slot) <= guard then
 		return false
 	end
+	-- zone protégée des coupes = port sûr de TOUTES les portes (WorldLayout.inHarbor) ; pas « chez
+	-- soi » (inOwnHarbor) : l'arrière de sa plateforme de Nid est hors de cette zone. Comme
+	-- SnipRules.findCut, elle s'applique POINT PAR POINT et non selon la position du joueur : un
+	-- joueur arrêté dans le port sûr dont la queue dépasse dehors peut être coupé, une queue
+	-- entièrement dans le port sûr ne le peut pas (GDD §4.7)
 	local okNodes, nodes = pcall(CongaRenderer.nodePositions, slot)
 	local points: { Vector3 } = {}
 	if okNodes and type(nodes) == "table" and #nodes > 0 then
 		for i = guard + 1, #nodes do
-			table.insert(points, nodes[i])
+			local node = nodes[i]
+			if typeof(node) == "Vector3" and not WorldLayout.inHarbor(node) then
+				table.insert(points, node)
+			end
 		end
-	else
+	elseif not WorldLayout.inHarbor(pos) then
 		points = { pos } -- file pas encore rendue : position du joueur
 	end
 	if #points == 0 then

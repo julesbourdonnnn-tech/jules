@@ -96,7 +96,12 @@ return function(T)
 	local function boot(over, opts)
 		opts = opts or {}
 		local lang = opts.lang or "en"
-		local h = Harness.new({ mode = "client", console = opts.console ~= false })
+		local h = Harness.new({
+			mode = "client",
+			console = opts.console ~= false and not opts.touch,
+			touch = opts.touch,
+			viewport = opts.viewport,
+		})
 		h.localPlayer.LocaleId = if lang == "fr" then "fr-fr" else "en-us"
 		h:createRemotes()
 		local Clock = h:require("ReplicatedStorage.Shared.Util.Clock")
@@ -287,6 +292,46 @@ return function(T)
 			end
 		end
 	)
+
+	-- Téléphones à l'horizontale (échelle 0,6) : même audit, client tactile (validation r6 : seul
+	-- l'onglet Objectifs était audité sur téléphone ; « +1 perchoir (gardé à la Supernova) » de la
+	-- carte Perchoirs tombait à 16,3 px en 640 × 360)
+	local PHONES = { Vector2.new(640, 360), Vector2.new(667, 375) }
+
+	describe("Fin panels-console › téléphone : textes ≥ 18 px, chaque panneau, EN et FR", function()
+		for _, size in PHONES do
+			for _, lang in { "en", "fr" } do
+				it(
+					`{size.X} × {size.Y} tactile ({lang}) : chaque panneau, chaque onglet, listes défilées`,
+					function()
+						local c = boot({ stash = 60 }, { lang = lang, touch = true, viewport = size })
+						expect(c.Prefs.language()).toBe(lang)
+						local Root = c.h:require(CLIENT .. "UI.Root")
+						expect(Root.scale()).toBe(0.6)
+						for i = 2, 4 do
+							c.h:addPlayer({ userId = i, name = "P" .. i })
+						end
+						local WSC = c.h:require(CLIENT .. "Controllers.WorldStateController")
+						local me = c.h.localPlayer.UserId
+						WSC.crews = function()
+							return { crews = { { id = 1, userIds = { me, 2 } } } }
+						end
+						c.h:settle(2)
+						local all = {}
+						for _, case in CASES do
+							openFresh(c, case[1], case[2])
+							expect(c.PC.current()).toBe(case[1])
+							for _, issue in scrolledAudit(c) do
+								table.insert(all, table.concat(case, "/") .. " : " .. issue)
+							end
+						end
+						expect(table.concat(all, "\n")).toBe("")
+						finish(c)
+					end
+				)
+			end
+		end
+	end)
 
 	-- =============================================================================================
 	describe("Fin panels-console › Guide de la Collection", function()

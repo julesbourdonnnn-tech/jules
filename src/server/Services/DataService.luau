@@ -2,6 +2,12 @@
 -- DataService : sauvegarde joueur sans perte.
 --  * verrou de session (un seul serveur écrit les données d'un joueur)
 --  * UpdateAsync partout, retries avec backoff, autosave, BindToClose
+--  * sauvegarde de départ en échec sur une panne DataStore (verrou toujours à nous) : le serveur
+--    continue avec les autres joueurs, il réessaie donc en arrière-plan (même instantané, crochets
+--    onBeforeSave jamais rejoués, même jeton de session) avec un backoff plafonné pendant
+--    RELEASE_RETRY_WINDOW s ; arrêt au premier succès ou verrou perdu. Une reconnexion sur ce
+--    serveur attend (REJOIN_WAIT, essais rapprochés) puis est renvoyée poliment : jamais de données
+--    périmées. BindToClose attend ces essais (dernier essai complet, dans CLOSE_TIMEOUT)
 --  * schéma versionné (Data/Schema.luau) : defaults + migrations + reconcile
 --  * réplication vers le client : instantané au chargement, puis patchs groupés par frame
 --    (clés entières, ou entrées d'une grande table : DataPatch(patch, removed, entries?))
@@ -73,6 +79,14 @@ local Settings = {
 	CLOSE_TIMEOUT = 25,
 	-- reconnexion sur le même serveur : attente max de la sauvegarde de départ de l'ancienne session
 	REJOIN_WAIT = 25,
+	-- sauvegarde de départ en échec (panne DataStore, verrou toujours à nous) : nouveaux essais en
+	-- arrière-plan tant que le serveur vit, après 5 s, puis 10, 20, 30, 30… pendant au plus
+	-- RELEASE_RETRY_WINDOW s (une panne DataStore dure souvent de 1 à 5 min)
+	RELEASE_RETRY_DELAY = 5,
+	RELEASE_RETRY_MAX = 30,
+	RELEASE_RETRY_WINDOW = 300,
+	-- s entre deux réveils pendant l'attente (arrêt du serveur ou reconnexion : essai aussitôt)
+	RELEASE_RETRY_POLL = 0.25,
 	-- grandes tables (STREAMED_KEYS) : entrées dans l'instantané, puis flux d'entrées DataPatch
 	-- (≈ 65 o par entrée : 50 entrées ≈ 3,3 Ko, 13 Ko/s pendant le flux)
 	SNAPSHOT_INLINE = 50,
@@ -137,6 +151,27 @@ local releasing: { [Player]: boolean } = {}
 local sessions: { [Player]: string } = {}
 -- sauvegardes de départ en cours, par UserId (l'instance Player change à la reconnexion)
 local pendingRelease: { [number]: number } = {}
+-- sauvegarde de libération en échec sur des ERREURS DataStore (verrou toujours à nous) : instantané
+-- déjà écrit par les crochets onBeforeSave et jeton de session, repris par les nouveaux essais
+type Unsaved = { snapshot: { [string]: any }, session: string? }
+local unsaved: { [Player]: Unsaved } = {}
+-- nouveaux essais en arrière-plan d'une sauvegarde de départ (le serveur continue avec les autres
+-- joueurs) : pendingRelease[userId] reste posé jusqu'à leur fin (succès, verrou perdu, fenêtre
+-- écoulée ou arrêt du serveur) ; poke = essayer tout de suite (reconnexion, arrêt du serveur)
+type ReleaseJob = {
+	player: Player,
+	userId: number,
+	snapshot: { [string]: any },
+	session: string?,
+	poke: boolean,
+}
+local releaseJobs: { [ReleaseJob]: boolean } = {}
+-- reconnexion sur ce serveur qui attend la sauvegarde de départ de ce UserId : fin de son attente
+-- (os.clock) ; pendant ce temps, les nouveaux essais sont rapprochés
+local rejoinWaits: { [number]: number } = {}
+-- BindToClose a commencé : plus de nouvel essai en arrière-plan, ceux en cours essaient une
+-- dernière fois tout de suite (attendus par la boucle de fermeture, dans CLOSE_TIMEOUT)
+local closing = false
 local beforeSave: { (Player, { [string]: any }, boolean?) -> () } = {}
 
 local snapshotRemote: RemoteEvent
@@ -552,12 +587,21 @@ local function releaseLoadLock(player: Player, session: string)
 	end
 end
 
-local function writeRecord(player: Player, data: { [string]: any }, release: boolean): boolean
+-- Écrit `snapshot` (copie profonde, plus jamais modifiée) si la session `session` détient encore
+-- le verrou ; jusqu'à `attempts` essais avec backoff. Rend (écrit, verrou perdu) : (false, false) =
+-- échec sur des erreurs DataStore (le verrou est toujours à nous, un nouvel essai peut écrire).
+-- Le jeton est passé par l'appelant : sessions[player] est effacé au départ, avant les nouveaux
+-- essais en arrière-plan.
+local function writeRecord(
+	player: Player,
+	snapshot: { [string]: any },
+	release: boolean,
+	session: string?,
+	attempts: number
+): (boolean, boolean)
 	local key = keyFor(player)
-	local snapshot = Tables.deepCopy(data)
-	local session = sessions[player]
 	local userIds = { player.UserId }
-	for attempt = 1, Settings.SAVE_ATTEMPTS do
+	for attempt = 1, attempts do
 		local lostLock = false
 		local ok, err = pcall(function()
 			currentStore():UpdateAsync(key, function(old: Record?): (Record?, { number }?)
@@ -602,16 +646,16 @@ local function writeRecord(player: Player, data: { [string]: any }, release: boo
 						`[DataService] session de {player.Name} reprise par un autre serveur : sauvegarde ignorée`
 					)
 				end
-				return false
+				return false, true
 			end
-			return true
+			return true, false
 		end
 		warn(`[DataService] échec de sauvegarde pour {player.Name} (essai {attempt}) :`, err)
-		if attempt < Settings.SAVE_ATTEMPTS then
+		if attempt < attempts then
 			task.wait(math.min(2 ^ attempt, 8) * Settings.RETRY_BASE_DELAY)
 		end
 	end
-	return false
+	return false, false
 end
 
 local function save(player: Player, release: boolean): boolean
@@ -648,13 +692,95 @@ local function save(player: Player, release: boolean): boolean
 			warn("[DataService] crochet onBeforeSave en échec :", err)
 		end
 	end
+	local snapshot = Tables.deepCopy(data)
+	local session = sessions[player]
 	saving[player] = true
-	local ok = writeRecord(player, data, release)
+	local ok, lostLock = writeRecord(player, snapshot, release, session, Settings.SAVE_ATTEMPTS)
 	saving[player] = nil
 	if release then
 		releasedOk[player] = ok
+		if not ok and not lostLock then
+			-- panne DataStore : instantané gardé pour les nouveaux essais de départ (onPlayerRemoving)
+			unsaved[player] = { snapshot = snapshot, session = session }
+		end
 	end
 	return ok
+end
+
+-- Fin d'une sauvegarde de départ (réussie, abandonnée ou en erreur) : une reconnexion sur ce
+-- serveur peut charger
+local function endRelease(userId: number)
+	local left = (pendingRelease[userId] or 1) - 1
+	pendingRelease[userId] = if left > 0 then left else nil
+end
+
+-- Attend `seconds` (temps réel) ; réveillé plus tôt par une reconnexion ou l'arrêt du serveur
+local function releaseSleep(job: ReleaseJob, seconds: number)
+	local start = os.clock()
+	while not job.poke and not closing do
+		local left = seconds - (os.clock() - start)
+		if left <= 0 then
+			return
+		end
+		task.wait(math.min(left, Settings.RELEASE_RETRY_POLL))
+	end
+end
+
+-- Nouveaux essais en arrière-plan d'une sauvegarde de départ en panne : le même instantané (les
+-- crochets onBeforeSave ont déjà tourné, jamais rejoués : pas de double règlement), le même jeton
+-- de session (la transformation refuse d'écraser un serveur qui a repris le verrou entre-temps).
+-- Backoff plafonné pendant RELEASE_RETRY_WINDOW s ; arrêt au premier succès ou verrou perdu.
+-- Reconnexion sur ce serveur : un essai aussitôt, puis le backoff court des sauvegardes (2, 4, 8,
+-- 8… × RETRY_BASE_DELAY) tant qu'elle attend (REJOIN_WAIT, puis renvoi poli : jamais de données
+-- périmées). Arrêt du serveur : un dernier essai complet (SAVE_ATTEMPTS), attendu par la boucle
+-- de fermeture.
+local function retryRelease(job: ReleaseJob)
+	local start = os.clock()
+	local delay = Settings.RELEASE_RETRY_DELAY
+	local tries = 0
+	local urgent = 0
+	local pause = delay
+	while true do
+		releaseSleep(job, pause)
+		job.poke = false
+		local final = closing
+		tries += 1
+		local ok, written, lostLock = pcall(
+			writeRecord,
+			job.player,
+			job.snapshot,
+			true,
+			job.session,
+			if final then Settings.SAVE_ATTEMPTS else 1
+		)
+		if ok and written then
+			warn(`[DataService] sauvegarde de départ de {job.player.Name} écrite au nouvel essai {tries}`)
+			break
+		end
+		if ok and lostLock then
+			break -- writeRecord a journalisé la perte
+		end
+		if not ok then
+			warn(`[DataService] nouvel essai de départ de {job.player.Name} en erreur :`, written)
+		end
+		if final or os.clock() - start >= Settings.RELEASE_RETRY_WINDOW then
+			warn(
+				`[DataService] PERTE : sauvegarde de départ de {job.player.Name} abandonnée après {tries} nouveaux essais (DataStore indisponible)`
+			)
+			break
+		end
+		if os.clock() < (rejoinWaits[job.userId] or -math.huge) then
+			-- le joueur attend sur ce serveur : essais rapprochés (backoff normal mis en pause)
+			urgent += 1
+			pause = math.min(math.min(2 ^ urgent, 8) * Settings.RETRY_BASE_DELAY, delay)
+		else
+			urgent = 0
+			delay = math.min(delay * 2, Settings.RELEASE_RETRY_MAX)
+			pause = delay
+		end
+	end
+	releaseJobs[job] = nil
+	endRelease(job.userId)
 end
 
 local function onPlayerAdded(player: Player)
@@ -669,10 +795,19 @@ local function onPlayerAdded(player: Player)
 	-- cette session réécrirait ensuite : on attend qu'elle se termine.
 	local userId = player.UserId
 	if pendingRelease[userId] then
+		-- sauvegarde de départ en panne, nouveaux essais en arrière-plan : un essai tout de suite,
+		-- puis rapprochés tant que ce joueur attend
 		local start = os.clock()
+		rejoinWaits[userId] = start + Settings.REJOIN_WAIT
+		for job in releaseJobs do
+			if job.userId == userId then
+				job.poke = true
+			end
+		end
 		while pendingRelease[userId] and player.Parent ~= nil and os.clock() - start < Settings.REJOIN_WAIT do
 			task.wait(0.1)
 		end
+		rejoinWaits[userId] = nil
 		if player.Parent == nil then
 			return
 		end
@@ -721,6 +856,7 @@ local function onPlayerAdded(player: Player)
 end
 
 local function onPlayerRemoving(player: Player)
+	local job: ReleaseJob? = nil
 	if profiles[player] then
 		local userId = player.UserId
 		pendingRelease[userId] = (pendingRelease[userId] or 0) + 1
@@ -729,8 +865,22 @@ local function onPlayerRemoving(player: Player)
 		if not ok then
 			warn(`[DataService] sauvegarde de départ de {player.Name} en erreur :`, err)
 		end
-		local left = (pendingRelease[userId] or 1) - 1
-		pendingRelease[userId] = if left > 0 then left else nil
+		local failed = unsaved[player]
+		if ok and failed ~= nil and not closing then
+			-- panne DataStore au départ : le serveur continue avec les autres joueurs, il a le temps
+			-- de réessayer (sinon tout ce qui a été gagné depuis le début de la panne serait perdu, et
+			-- notre verrou resterait dans l'enregistrement) ; pendingRelease reste posé jusqu'à la fin
+			job = {
+				player = player,
+				userId = userId,
+				snapshot = failed.snapshot,
+				session = failed.session,
+				-- une reconnexion attend déjà (pendant les essais de départ) : nouvel essai aussitôt
+				poke = rejoinWaits[userId] ~= nil,
+			}
+		else
+			endRelease(userId)
+		end
 	end
 	profiles[player] = nil
 	pending[player] = nil
@@ -739,6 +889,14 @@ local function onPlayerRemoving(player: Player)
 	releasing[player] = nil
 	sessions[player] = nil
 	streams[player] = nil
+	unsaved[player] = nil
+	if job ~= nil then
+		warn(
+			`[DataService] sauvegarde de départ de {player.Name} en échec : nouveaux essais en arrière-plan`
+		)
+		releaseJobs[job] = true
+		task.spawn(retryRelease, job)
+	end
 end
 
 function DataService.Init()
@@ -814,6 +972,12 @@ function DataService.Start()
 	end)
 
 	game:BindToClose(function()
+		-- plus de nouvel essai de départ en arrière-plan ; ceux en cours essaient tout de suite une
+		-- dernière fois et sont attendus ci-dessous
+		closing = true
+		for job in releaseJobs do
+			job.poke = true
+		end
 		local remaining = 0
 		for player in profiles do
 			remaining += 1
@@ -823,7 +987,7 @@ function DataService.Start()
 			end)
 		end
 		local start = os.clock()
-		while remaining > 0 and os.clock() - start < Settings.CLOSE_TIMEOUT do
+		while (remaining > 0 or next(releaseJobs) ~= nil) and os.clock() - start < Settings.CLOSE_TIMEOUT do
 			task.wait(0.1)
 		end
 	end)

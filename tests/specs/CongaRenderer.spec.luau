@@ -589,6 +589,56 @@ return function(T)
 			frames(c, 3)
 			expect(c.CR.lineMode(2)).toBe("warn")
 		end)
+
+		-- port sûr appliqué nœud par nœud, comme SnipRules.findCut et le cadre de PanelController
+		local function walkFromGate(c, fromDist, toDist)
+			local gateCf = c.WorldLayout.gateCFrame(2)
+			local gate = V(gateCf.Position.X, 3, gateCf.Position.Z)
+			local look = gateCf.LookVector
+			local inward = V(look.X, 0, look.Z).Unit -- vers le centre de l'île
+			local step = if toDist >= fromDist then 1 else -1
+			for d = fromDist, toDist, step do
+				placeLocal(c, gate + inward * d)
+				frames(c, 1)
+			end
+		end
+
+		it(
+			"queue entièrement dans le port sûr : pas de pointillés, même avec un non-équipier collé",
+			function()
+				local c = setup()
+				c.h.localPlayer:SetAttribute("Slot", 2)
+				snapshot(c, { { slot = 2, userId = 1, ver = 1, codes = codes(8) } })
+				walkFromGate(c, 0, 18)
+				local nodes = c.CR.nodePositions(2)
+				expect(#nodes >= 8).toBe(true)
+				for _, p in nodes do
+					expect(c.WorldLayout.inHarbor(p)).toBe(true)
+				end
+				addOther(c, 77, 9, nodes[#nodes] + V(0, 0, 3))
+				frames(c, 3)
+				expect(c.CR.lineMode(2)).toBe("style")
+			end
+		)
+
+		it("joueur arrêté dans le port sûr, queue qui dépasse dehors : pointillés", function()
+			local c = setup()
+			c.h.localPlayer:SetAttribute("Slot", 2)
+			snapshot(c, { { slot = 2, userId = 1, ver = 1, codes = codes(8) } })
+			walkFromGate(c, 60, 20)
+			local root = c.h.localPlayer.Character.HumanoidRootPart.Position
+			expect(c.WorldLayout.inHarbor(root)).toBe(true)
+			local outside = nil
+			for _, p in c.CR.nodePositions(2) do
+				if not c.WorldLayout.inHarbor(p) then
+					outside = p
+				end
+			end
+			expect(outside ~= nil).toBe(true)
+			addOther(c, 77, 9, outside + V(0, 0, 3))
+			frames(c, 3)
+			expect(c.CR.lineMode(2)).toBe("warn")
+		end)
 	end)
 
 	describe("CongaRenderer › Nids, stèle, Gloomwisps et Comète", function()

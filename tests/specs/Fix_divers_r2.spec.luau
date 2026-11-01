@@ -113,35 +113,42 @@ return function(T)
 			end
 		)
 
-		it("départ pendant la panne : jamais acquitté ; session suivante crédite et acquitte", function()
-			local ctx = boot()
-			local h, DS, Enum = ctx.h, ctx.DS, ctx.Enum
-			local p = join(ctx, 72)
-			local before = DS.get(p).stardust
-			h.dataStoreFailures = 1000
-			expect(h:purchaseProduct(p, PRODUCT_ID, "jar-72")).toBe(
-				Enum.ProductPurchaseDecision.NotProcessedYet
-			)
-			-- la sauvegarde de départ échoue aussi (tous ses essais) : le crédit en mémoire est perdu
-			h:removePlayer(p)
-			task.wait(0.3)
-			expect(DS.get(p)).toBe(nil)
-			expect(h:purchaseProduct(p, PRODUCT_ID, "jar-72")).toBe(
-				Enum.ProductPurchaseDecision.NotProcessedYet
-			)
-			h.dataStoreFailures = 0
-			expect(table.find(storedReceipts(stored(ctx, 72)), "jar-72")).toBe(nil)
-			-- retour du joueur : Roblox redélivre le reçu, crédité puis acquitté (l'achat n'est pas perdu)
-			local q = join(ctx, 72)
-			expect(DS.get(q).stardust).toBe(before)
-			expect(h:purchaseProduct(q, PRODUCT_ID, "jar-72")).toBe(
-				Enum.ProductPurchaseDecision.PurchaseGranted
-			)
-			expect(DS.get(q).stardust).toBe(before + AMOUNT)
-			local record = stored(ctx, 72)
-			expect(table.find(storedReceipts(record), "jar-72") ~= nil).toBe(true)
-			expect(record.data.stardust).toBe(before + AMOUNT)
-		end)
+		it(
+			"départ pendant la panne : jamais acquitté ; reconnexion : crédit déjà persisté, acquitté sans recréditer",
+			function()
+				local ctx = boot()
+				local h, DS, Enum = ctx.h, ctx.DS, ctx.Enum
+				local p = join(ctx, 72)
+				local before = DS.get(p).stardust
+				h.dataStoreFailures = 1000
+				expect(h:purchaseProduct(p, PRODUCT_ID, "jar-72")).toBe(
+					Enum.ProductPurchaseDecision.NotProcessedYet
+				)
+				-- la sauvegarde de départ échoue aussi (tous ses essais) : la sauvegarde de départ
+				-- réessaie en arrière-plan (même instantané, crédit et reçu compris)
+				h:removePlayer(p)
+				task.wait(0.3)
+				expect(DS.get(p)).toBe(nil)
+				expect(h:purchaseProduct(p, PRODUCT_ID, "jar-72")).toBe(
+					Enum.ProductPurchaseDecision.NotProcessedYet
+				)
+				h.dataStoreFailures = 0
+				expect(table.find(storedReceipts(stored(ctx, 72)), "jar-72")).toBe(nil)
+				-- retour du joueur sur ce serveur : la sauvegarde de départ réessaie en arrière-plan, donc
+				-- à la reconnexion, crédit et reçu sont déjà persistés ; Roblox redélivre le reçu :
+				-- acquitté sans second crédit (l'achat n'est ni perdu ni doublé)
+				local q = join(ctx, 72)
+				expect(DS.get(q).stardust).toBe(before + AMOUNT)
+				expect(h:purchaseProduct(q, PRODUCT_ID, "jar-72")).toBe(
+					Enum.ProductPurchaseDecision.PurchaseGranted
+				)
+				expect(ctx.handlerCalls).toBe(1)
+				expect(DS.get(q).stardust).toBe(before + AMOUNT)
+				local record = stored(ctx, 72)
+				expect(table.find(storedReceipts(record), "jar-72") ~= nil).toBe(true)
+				expect(record.data.stardust).toBe(before + AMOUNT)
+			end
+		)
 
 		it(
 			"reçu non acquitté mais sauvé au départ : la session suivante acquitte sans recréditer",

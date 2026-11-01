@@ -1,6 +1,6 @@
 # Comet Conga — Rapport qualité avant publication
 
-> **Document 06.** Établi le 31 octobre 2026 à 22:10 UTC, sur le commit `e951d5e` (« QA tour 4 »). **Mis à jour le 1er novembre 2026 à 04:20 UTC** après le tour 5 et sa validation de publication (§6.4), sur l'arbre de travail au-dessus du commit `81d5bdc` : chiffres des §1-§2 refaits sur cet arbre ; l'historique du §3 s'arrête au tour 4.
+> **Document 06.** Établi le 31 octobre 2026 à 22:10 UTC, sur le commit `e951d5e` (« QA tour 4 »). **Mis à jour le 1er novembre 2026 à 06:15 UTC** après le tour 6 et sa validation de publication (§6.5), sur l'arbre de travail au-dessus du commit `7ed5583` : chiffres des §1-§2 refaits sur cet arbre ; l'historique du §3 s'arrête au tour 4.
 > Pour le propriétaire du jeu : ce rapport dit **ce qui est prouvé**, **ce qui ne peut l'être que dans Roblox Studio**, et **ce qu'il reste à décider**. Guide de publication : [`05-guide-publication.md`](05-guide-publication.md).
 
 ## En bref
@@ -9,7 +9,7 @@
 |---|---|
 | Le jeu est-il complet ? | Oui pour la version 1.0 du GDD (§15.1) : île, boucle complète, progression, événements, social, boutique, FR/EN, téléphone, PC et manette (PS5 / Xbox) |
 | La vérification complète passe-t-elle ? | **Oui** : `./scripts/check.sh` → « ✅ Tout est vert. » (§1) |
-| Combien de tests automatiques ? | **1 572 tests**, dans **106 fichiers de tests**, **0 échec** |
+| Combien de tests automatiques ? | **1 619 tests**, dans **112 fichiers de tests**, **0 échec** |
 | Qu'est-ce qui n'est pas encore prouvé ? | Ce que seul le vrai moteur Roblox montre : rendu, physique, vraies sauvegardes et vrais achats, serveur avec 12 vrais joueurs, tenue des textes, aspect des particules, confort sur téléphone, rendu sur téléviseur (§4) |
 | Que reste-t-il à faire à la main ? | Le plan de test dans Studio (§5) et les réglages de publication ([`05-guide-publication.md`](05-guide-publication.md) §12) |
 | Y a-t-il des décisions à prendre ? | Oui, 7 questions de design (§7) |
@@ -18,39 +18,39 @@
 
 ## 1. Résultat de la vérification complète
 
-Commande : `./scripts/check.sh`, terminée le 01/11/2026 à 04:15 UTC (environ 10 min, sur une machine chargée par d'autres exécutions de la suite), code de sortie 0.
+Commande : `./scripts/check.sh`, terminée le 01/11/2026 à 06:03 UTC (environ 6 min), code de sortie 0.
 
 | Contrôle | Outil | Résultat |
 |---|---|---|
 | Formatage du code | StyLua | Conforme |
 | Analyse du code (erreurs probables, mauvaises pratiques) | Selene | **0 erreur, 0 avertissement**, 0 erreur de lecture |
-| Tests automatiques | Lune (`tests/run.luau`) | **1 572 réussis, 0 échoué, 0 fichier de test non chargé** |
+| Tests automatiques | Lune (`tests/run.luau`) | **1 619 réussis, 0 échoué, 0 fichier de test non chargé** |
 | Construction du jeu | Rojo 7.7.1 | `build/Game.rbxl` construit |
 | Contrôle du fichier construit | `scripts/verify-place.luau` | Structure valide : 1 Script serveur, 2 LocalScript, 113 ModuleScript |
 
-Lors des validations de publication des tours 3 et 4 et de la passe de finition, la suite complète a été relancée deux fois de plus pour repérer des tests instables (résultat qui change d'une exécution à l'autre) ; ceux trouvés aux tours 3 et 4 ont été corrigés (horloge réelle de la limite de débit, ordre de parcours des tables). À la finition, un test instable a été trouvé et corrigé : `Boot.spec`, scène de coupe (l'ordre de traitement des joueurs n'est pas reproductible d'un processus à l'autre ; la victime pouvait ne rien attraper en 6 s quand le coupeur, resté à portée, prenait ses Nebbies libres à la fin de leur étourdissement, ce que permettent les règles, ou rattraper autant de sauvages pendant la traversée qu'elle en perdait). La scène ne dépend plus de ces courses, la priorité de la victime est maintenant vérifiée de façon déterministe, et la scène a été rejouée 60 fois sans échec, puis la suite complète deux fois de plus. À la validation du tour 5, la suite complète a été relancée deux fois de plus avant les dernières corrections, puis deux fois après (deux exécutions en parallèle, machine chargée) : aucun test instable.
+Lors des validations de publication des tours 3 et 4 et de la passe de finition, la suite complète a été relancée deux fois de plus pour repérer des tests instables (résultat qui change d'une exécution à l'autre) ; ceux trouvés aux tours 3 et 4 ont été corrigés (horloge réelle de la limite de débit, ordre de parcours des tables). À la finition, un test instable a été trouvé et corrigé : `Boot.spec`, scène de coupe (l'ordre de traitement des joueurs n'est pas reproductible d'un processus à l'autre ; la victime pouvait ne rien attraper en 6 s quand le coupeur, resté à portée, prenait ses Nebbies libres à la fin de leur étourdissement, ce que permettent les règles, ou rattraper autant de sauvages pendant la traversée qu'elle en perdait). La scène ne dépend plus de ces courses, la priorité de la victime est maintenant vérifiée de façon déterministe, et la scène a été rejouée 60 fois sans échec, puis la suite complète deux fois de plus. À la validation du tour 5, la suite complète a été relancée deux fois de plus avant les dernières corrections, puis deux fois après (deux exécutions en parallèle, machine chargée) : aucun test instable. À la validation du tour 6, après les corrections : vérification complète, puis la suite complète deux fois de plus (en parallèle), les tests du tour 6 rejoués 8 fois et ceux des sauvegardes en panne 8 fois de plus à quatre exécutions simultanées : aucun test instable. Le nouveau test du débit des pings fige l'horloge de la limite de débit (aucune attente réelle).
 
 ## 2. Taille du projet et des tests
 
 | Partie | Fichiers | Lignes |
 |---|---|---|
-| Serveur (`src/server`) | 36 | 15 803 |
-| Client (`src/client`) | 47 | 32 257 |
-| Partagé (`src/shared`) | 32 | 9 369 |
+| Serveur (`src/server`) | 36 | 16 027 |
+| Client (`src/client`) | 47 | 32 288 |
+| Partagé (`src/shared`) | 32 | 9 372 |
 | Écran de chargement (`src/first`) | 1 | 787 |
-| **Total du jeu** | **116** | **58 216** |
-| Tests (`tests/`, dont harnais et simulation) | — | 60 179 |
+| **Total du jeu** | **116** | **58 474** |
+| Tests (`tests/`, dont harnais et simulation) | — | 61 728 |
 
 Tous les modules du jeu sont en Luau `--!strict` (typage strict).
 
 | Famille de tests | Fichiers | Tests | Exemples |
 |---|---|---|---|
-| Tests unitaires et de services | 40 | 839 | `Formulas`, `SnipRules`, `EventClock`, `CongaService`, `EconomyService`, `DataService`, `MonetizationService`, `Panels`, `HUD`, `Contract` |
-| Tests de correction (un par défaut trouvé en QA) | 56 | 601 | `Fix_r3_serveur_3_data`, `Fix_r4_serveur_3`, `Fix_r5_serveur_anticheat`, `Fix_fin_client_hud_onboarding`, `Fix_r5_release`… |
+| Tests unitaires et de services | 40 | 841 | `Formulas`, `SnipRules`, `EventClock`, `CongaService`, `EconomyService`, `DataService`, `MonetizationService`, `Panels`, `HUD`, `Contract` |
+| Tests de correction (un par défaut trouvé en QA) | 62 | 646 | `Fix_r3_serveur_3_data`, `Fix_r4_serveur_3`, `Fix_r5_serveur_anticheat`, `Fix_fin_client_hud_onboarding`, `Fix_r6_serveur_2_data`, `Fix_r6_release`… |
 | Console et manette | 5 | 86 | `Console`, `Console_input`, `Console_hud`, `Console_panels`, `Console_release` |
 | Intégration (jeu entier) | 3 | 32 | `Boot` (serveur de 12 joueurs), `ClientGame` (partie rejouée dans le vrai client), `ClientBoot` |
 | Harnais de test lui-même | 2 | 14 | `harness/Harness`, `harness/Wire` |
-| **Total** | **106** | **1 572** | |
+| **Total** | **112** | **1 619** | |
 
 ---
 
@@ -224,6 +224,18 @@ Corrections (tests `tests/specs/Fix_r5_client_0`, `Fix_r5_ui_1`, `Fix_r5_ui_1_au
 - **Écran de chargement sur téléphone à l'horizontale** : le bloc « Réessayer » rétrécit (bouton d'au moins 48 px) et se colle en bas de l'écran, entier.
 - **Aucune collision entre personnages** : un enfant debout sur la tête d'un ami n'est plus porté par lui (ce qui pouvait le faire passer pour un tricheur trop rapide) ; personne ne bloque une porte de Nid avec son corps.
 - **Sons** : les neuf sons encore vides sont remplis (sons publiés par Roblox, surtout des enregistrements déjà retenus joués à une autre hauteur), « à confirmer à l'écoute » (M12, guide §6.4).
+
+### 6.5 Tour 6 et validation de publication (1/11/2026)
+
+Corrections (tests `tests/specs/Fix_r6_client_0`, `Fix_r6_ui_1`, `Fix_r6_serveur_2_data`, `Fix_r6_serveur_2_movecheck`, `Fix_r6_serveur_2_comet`, `Fix_r6_release`) :
+
+- **Sauvegarde pendant une panne des sauvegardes Roblox** : un joueur qui part pendant la panne ne perd plus ce qu'il a gagné depuis son début. Le serveur réessaie en arrière-plan pendant 5 minutes au plus ; un joueur qui revient sur le même serveur attend quelques secondes et retrouve ses données à jour (jamais des données anciennes) ; un achat fait pendant la panne est gardé une seule fois. Si la panne dure plus de 5 minutes, la perte est journalisée « PERTE ».
+- **Anti-triche, sauts honnêtes** : un saut dont les premiers messages réseau arrivent d'un coup, ou un gel réseau en haut d'un saut, ne comptent plus comme une triche (plus d'icône « instable » ni de retour) ; planer reste détecté.
+- **Comète** : un porteur qui passe sa porte pendant un rattrapage réseau honnête encaisse la Comète au tick suivant s'il est toujours côté Nid (le bond suivi d'une ressortie reste refusé).
+- **Contour rose « queue menacée »** : le port sûr compte point par point, comme la règle des coupes : un joueur arrêté dans le port sûr dont la queue dépasse dehors est prévenu ; une queue entièrement dans le port sûr ne l'est plus (menu ouvert et pointillés sur la file).
+- **Téléphone** : tous les menus et onglets passent l'audit des textes (≥ 18 px) en anglais et en français sur 640 × 360 et 667 × 375 (Objectifs, et la description française « +1 perchoir (gardé à la Supernova) » des Améliorations).
+- **Pings** : le serveur accepte 1 ping / 1,2 s (le client garde 1 / 1,5 s) : un ping n'est plus perdu quand le réseau rapproche deux envois.
+- **Reste à trancher (mineur)** : sur le plus petit téléphone (568 × 320, iPhone SE de 1re génération), l'étiquette française « Aujourd'hui » du Calendrier tombe à 16 px ; un libellé français plus court réglerait cela (à choisir).
 
 ---
 

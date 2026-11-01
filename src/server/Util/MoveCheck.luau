@@ -5,7 +5,8 @@
 -- Règles (Conga/Tuning.MoveCheck, serveur seulement, exposé en MoveCheck.Config) :
 --   * déplacement XZ autorisé = vmax × Δt × 1,5 + 4, vmax = WalkSpeed serveur maximal des 0,5 s
 --     précédant la position de référence jusqu'à maintenant (noteSpeed) ; montée verticale
---     ≤ 12 studs/s (même marge : un saut normal passe) ; chute libre ignorée
+--     ≤ 12 studs/s (même marge, même crédit d'arrêt que la mesure XZ : un saut normal passe, même
+--     quand ses premiers paquets arrivent groupés ou à la fin d'un gel) ; chute libre ignorée
 --   * deux mesures, la règle s'appliquant à chacune :
 --       - par tick, depuis la DERNIÈRE POSITION VALIDE (et non la position du tick précédent) : une
 --         téléportation reste signalée tick après tick, elle ne « passe » jamais au tick suivant ;
@@ -31,7 +32,10 @@
 --     Conga/Tuning) → chaque tick est une INFRACTION (signalée, comptée, 3 en 5 s → retour) et la
 --     position n'est pas acceptée. Un joueur ne doit jamais pouvoir y rester (HipHeight relevé,
 --     CFrame décalé vers le haut ou sous le sol) ; un vrai saut (JumpHeight 7,2) ne passe qu'≈ 0,36 s
---     au-dessus. CongaService pose de toute façon les miettes à hauteur debout.
+--     au-dessus. Gel réseau (position figée, le serveur garde la racine reçue en haut d'un saut) :
+--     les ticks figés ne font pas avancer ce chronomètre, au plus 1,5 s par écart (un gel de 0,7 à
+--     1,5 s n'est jamais compté ; planer immobile finit signalé). CongaService pose de toute façon
+--     les miettes à hauteur debout.
 --   * « sol » = hauteur fournie par CongaService : la formule de l'île, relevée par ce qui porte
 --     vraiment le personnage (stèle, poteaux : sonde Blockcast dans le groupe Characters ; jamais un
 --     autre joueur, les personnages ne se heurtent pas) ; un joueur honnête debout sur un appui
@@ -116,6 +120,9 @@ local DEFAULT_VMAX = Balance.Speed.Base
 local HOVER_ABOVE = Tuning.RootHeight + Balance.Snip.MaxDy
 local BURIED_BELOW = Tuning.RootHeight - Balance.Snip.MaxDy
 local HOVER_TIME = Tuning.HoverTime
+-- Temps de gel réseau (position figée) qui ne fait pas avancer le chronomètre de vol bas, par écart
+-- (s) : la même tolérance que le crédit d'arrêt de la mesure XZ
+local HOVER_FREEZE_CREDIT = STILL_CREDIT
 -- Profondeur de la racine sous la surface du sol au-delà de laquelle elle est hors du monde
 local MAX_BELOW_GROUND = Tuning.MaxBelowGround
 -- Historique de vitesses conservé au-delà de la fenêtre utile (s)
@@ -127,8 +134,8 @@ type Sample = { t: number, pos: Vector3, since: number }
 
 type State = {
 	lastValid: Vector3, -- dernière position acceptée (référence du contrôle et point de retour)
-	validAt: number, -- instant depuis lequel le déplacement autorisé s'accumule (crédit d'arrêt)
-	acceptedAt: number, -- instant de la dernière position acceptée (montée verticale)
+	validAt: number, -- instant depuis lequel le déplacement autorisé s'accumule (crédit d'arrêt :
+	-- mesure XZ par tick ET montée verticale)
 	steppedAt: number, -- instant du dernier appel de step (ou de la dernière référence) : durée du tick
 	burst: boolean, -- dernier tick accepté en dette de budget d'action (rafale : n'agit pas)
 	budget: number, -- budget d'action (studs) après le dernier tick accepté ; < 0 : en dette
@@ -139,6 +146,7 @@ type State = {
 	restrictedUntil: number,
 	highSince: number?, -- début d'un vol prolongé au-dessus du sol
 	hoverSince: number?, -- début d'un écart hors de portée verticale des coupes (vol bas ou racine enfouie)
+	hoverFrozen: number, -- temps de gel réseau (position figée) déjà décalé de hoverSince dans cet écart
 	flags: { number }, -- instants des infractions (fenêtre FlagWindow)
 	rewinds: { number }, -- instants des retours comptés (fenêtre StrikeWindow)
 	violations: number, -- infractions de la session
@@ -168,7 +176,6 @@ end
 local function anchor(st: State, pos: Vector3, now: number)
 	st.lastValid = pos
 	st.validAt = now
-	st.acceptedAt = now
 	st.steppedAt = now
 	st.burst = false
 	-- budget plein (borné au plafond du premier tick) : un déplacement imposé par le serveur ne
@@ -183,7 +190,6 @@ local function newState(pos: Vector3, now: number): State
 	local st: State = {
 		lastValid = pos,
 		validAt = now,
-		acceptedAt = now,
 		steppedAt = now,
 		burst = false,
 		budget = math.huge,
@@ -194,6 +200,7 @@ local function newState(pos: Vector3, now: number): State
 		restrictedUntil = -math.huge,
 		highSince = nil,
 		hoverSince = nil,
+		hoverFrozen = 0,
 		flags = {},
 		rewinds = {},
 		violations = 0,
@@ -245,7 +252,6 @@ end
 local function accept(st: State, pos: Vector3, now: number)
 	local moved = (pos - st.lastValid).Magnitude > STILL_EPSILON
 	st.lastValid = pos
-	st.acceptedAt = now
 	if moved then
 		st.validAt = now
 	else
@@ -411,8 +417,21 @@ function MoveCheck.step(
 		local since = st.hoverSince
 		if since == nil then
 			st.hoverSince = now
-		elseif now - since > HOVER_TIME then
-			hovering = true
+			st.hoverFrozen = 0
+		else
+			-- gel réseau : position figée (aucun nouveau paquet), le serveur garde la racine reçue en
+			-- haut d'un saut. Le chronomètre est décalé de la durée du tick au lieu d'avancer, au plus
+			-- HOVER_FREEZE_CREDIT par écart : un gel de 0,7 à 1,5 s n'est jamais une infraction, mais
+			-- planer immobile finit signalé (et planer en bougeant l'est toujours après HoverTime)
+			if (pos - st.lastValid).Magnitude <= STILL_EPSILON and st.hoverFrozen < HOVER_FREEZE_CREDIT then
+				local shift = math.min(math.max(0, now - tickStart), HOVER_FREEZE_CREDIT - st.hoverFrozen)
+				st.hoverFrozen += shift
+				since += shift
+				st.hoverSince = since
+			end
+			if now - since > HOVER_TIME then
+				hovering = true
+			end
 		end
 	else
 		st.hoverSince = nil
@@ -423,7 +442,10 @@ function MoveCheck.step(
 	local step = if isFinite(dt) then math.max(0, dt) else 0
 	local ok = plausible(player, st.lastValid, st.validAt, pos, now, step, MAX_ELAPSED)
 	if ok then
-		local climb = math.clamp(now - st.acceptedAt, step, math.max(step, MAX_ELAPSED))
+		-- montée : même crédit d'arrêt que la mesure XZ (validAt, au plus STILL_CREDIT à l'arrêt). Un
+		-- saut dont les premiers paquets arrivent groupés (gigue, fin de gel) monte de 6,7 à 7,1
+		-- studs en un tick ; le vol soutenu reste borné par les règles de vol bas et d'altitude.
+		local climb = math.clamp(now - st.validAt, step, math.max(step, MAX_ELAPSED))
 		ok = pos.Y - st.lastValid.Y <= Cfg.MaxClimbSpeed * climb * Cfg.Margin + Cfg.Slack
 	end
 	if ok then

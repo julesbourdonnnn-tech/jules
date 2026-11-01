@@ -354,7 +354,7 @@ return function(T)
 
 	-- ---------------------------------------------------------------------------------------------
 	describe("CrewService › pings et acclamations (§6.3, §6.6)", function()
-		it("ping 1-6 diffusé à tous ; débit 1 / 1,5 s", function()
+		it("ping 1-6 diffusé à tous ; débit serveur 1 / 1,2 s (client 1 / 1,5 s)", function()
 			local ctx = boot()
 			local a = join(ctx, 1)
 			ctx.h:fireServer(R .. "Ping", a, 3)

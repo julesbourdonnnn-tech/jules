@@ -1666,10 +1666,13 @@ local function readability(view: LineView, t: number)
 			return
 		end
 		local warnDistance = Render.TailWarnDistance
+		-- port sûr appliqué POINT PAR POINT comme SnipRules.findCut (et le cadre de PanelController) :
+		-- un nœud dans le port sûr n'est pas coupable, une queue qui dépasse dehors l'est
 		for _, o in others do
 			if not WorldStateController.isCrewmate(o.userId) then
 				for i = view.guard + 1, #view.nodes do
-					if (view.nodes[i].pos - o.pos).Magnitude <= warnDistance then
+					local nodePos = view.nodes[i].pos
+					if (nodePos - o.pos).Magnitude <= warnDistance and not WorldLayout.inHarbor(nodePos) then
 						view.mode = "warn"
 						return
 					end

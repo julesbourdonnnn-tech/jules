@@ -51,6 +51,10 @@ local TIER_COLORS: { [string]: Color3 } = {
 }
 local QUEST_HEIGHT = 120
 local QUEST_BAR = 0.32 -- part de la largeur d'une carte de quête prise par la barre de progression
+-- récompense d'une quête : deux lignes de 18 px (2 × 1,2 × 18 = 43,2 px), de 70 à 114 px dans la
+-- carte de QUEST_HEIGHT px (description : 44 à 68 px ; barre : 82 à 96 px)
+local REWARD_TOP = 70
+local REWARD_HEIGHT = 44
 local CLAIM_GUARD = 0.6 -- s : un appui par récompense (le serveur est idempotent de toute façon)
 local FLIP_TIME = 0.15
 local PULSE_EVERY = 1.2
@@ -149,8 +153,20 @@ local function speciesName(s: number?): string
 	return if def then def.name else "?"
 end
 
--- Texte d'une récompense de Config/Quests (Glow « ≈ » calculé sur le revenu passif répliqué)
-local function rewardText(reward: Quests.Reward, weekIndex: number): string
+-- Texte d'une récompense de Config/Quests (Glow « ≈ » calculé sur le revenu passif répliqué).
+-- withIcon : face du Calendrier dont l'icône montre déjà le Nebby (face de ≈ 90 px de référence
+-- sur un téléphone 640 × 360, texte ≥ 18 px, GDD §10.1) : le nom de l'espèce n'est écrit que s'il
+-- est toute la récompense (« Daybreak Puff ») ; sinon l'icône suffit et le reste est court
+-- (« +100 ✦ » et non « Glimmerwhale + 100 Stardust », dont le seul mot « Glimmerwhale » ne tient
+-- pas à 18 px dans la face)
+local function rewardText(reward: Quests.Reward, weekIndex: number, withIcon: boolean?): string
+	local hasSpecies = reward.species ~= nil or reward.rotation ~= nil
+	local hasOther = reward.glow ~= nil
+		or reward.idleSeconds ~= nil
+		or reward.stardust ~= nil
+		or reward.boostSeconds ~= nil
+		or reward.unlock == "atlas"
+	local iconOnly = withIcon == true and hasSpecies and hasOther
 	local parts = {}
 	if reward.glow then
 		table.insert(parts, Prefs.t("calendar.reward.glow", { amount = Prefs.number(reward.glow) }))
@@ -165,10 +181,10 @@ local function rewardText(reward: Quests.Reward, weekIndex: number): string
 			)
 		)
 	end
-	if reward.species then
+	if reward.species and not iconOnly then
 		table.insert(parts, Prefs.t("calendar.reward.species", { species = speciesName(reward.species) }))
 	end
-	if reward.rotation then
+	if reward.rotation and not iconOnly then
 		local ok, s = pcall(EventClock.rotation, reward.rotation, weekIndex)
 		table.insert(
 			parts,
@@ -176,7 +192,10 @@ local function rewardText(reward: Quests.Reward, weekIndex: number): string
 		)
 	end
 	if reward.stardust then
-		table.insert(parts, Prefs.t("calendar.reward.stardust", { amount = Prefs.number(reward.stardust) }))
+		-- « +100 ✦ » : seule autre chose que le Nebby de l'icône (jamais « … + +100 ✦ »)
+		local short = iconOnly and #parts == 0 and reward.boostSeconds == nil and reward.unlock == nil
+		local key = if short then "calendar.reward.stardustShort" else "calendar.reward.stardust"
+		table.insert(parts, Prefs.t(key, { amount = Prefs.number(reward.stardust) }))
 	end
 	if reward.boostSeconds then
 		table.insert(
@@ -337,8 +356,10 @@ local function buildQuestCard(slot: number, parent: Instance): QuestCard
 		maxSize = 18,
 		parent = frame,
 	})
-	-- rangée du bas : barre (QUEST_BAR de la largeur), progression, récompense (« ≈ 21.6K Glow +
-	-- 40 Stardust » tient à 18 px dans le reste de la rangée, fenêtre console comprise)
+	-- rangée du bas : barre (QUEST_BAR de la largeur), progression, récompense sur deux lignes
+	-- (REWARD_TOP, REWARD_HEIGHT : « ≈ 21,6 k Glow + 40 Stardust » ne tient pas à 18 px sur une
+	-- ligne de ≈ 160-220 px de référence, téléphones 568 × 320 à 640 × 360 ; deux lignes de 18 px
+	-- dans 44 px, sous la description, au-dessus du bas de la carte)
 	local bar = Widgets.bar({
 		name = "Bar",
 		size = UDim2.new(QUEST_BAR, -10, 0, 14),
@@ -356,8 +377,8 @@ local function buildQuestCard(slot: number, parent: Instance): QuestCard
 	})
 	local reward = Widgets.label({
 		name = "Reward",
-		size = UDim2.new(1 - QUEST_BAR, -(96 + 170), 0, 26),
-		position = UDim2.new(QUEST_BAR, 90, 0, 76),
+		size = UDim2.new(1 - QUEST_BAR, -(96 + 170), 0, REWARD_HEIGHT),
+		position = UDim2.new(QUEST_BAR, 90, 0, REWARD_TOP),
 		xAlign = Enum.TextXAlignment.Left,
 		color = Theme.Colors.Gold,
 		maxSize = 18,
@@ -520,7 +541,7 @@ local function renderDay(card: DayCard, index: number, state: string, weekIndex:
 	else
 		card.glyph.Text = rewardGlyph(reward)
 	end
-	card.reward.Text = rewardText(reward, weekIndex)
+	card.reward.Text = rewardText(reward, weekIndex, card.icon.Visible)
 	card.check.Visible = state == "claimed"
 	card.face.BackgroundColor3 = if state == "claimed"
 		then Color3.fromRGB(52, 70, 60)

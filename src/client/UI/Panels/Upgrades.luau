@@ -258,12 +258,13 @@ local function buildCard(track: string, order: number, parent: Instance): CardRe
 		maxSize = 28,
 		parent = visual,
 	})
-	-- description : 60 % de la ligne du nom, et cadre de 40 px (deux lignes au besoin, TextWrapped)
-	-- qui finit au-dessus de l'effet (y = 44) ; « +1 perchoir (gardé à la Supernova) » tombait à
-	-- 17,8 px sur 55 % d'une ligne de 26 px
+	-- description : 60 % de la ligne du nom, et cadre de 44 px (deux lignes de 18 px au besoin,
+	-- TextWrapped : 2 × 1,2 × 18 = 43,2 px) qui finit au-dessus de l'effet (y = 48) ;
+	-- « +1 perchoir (gardé à la Supernova) » tombait à 17,8 px sur 55 % d'une ligne de 26 px, puis à
+	-- 16,3 px sur téléphone 640 × 360 dans un cadre de 40 px (deux lignes de 18 px n'y tenaient pas)
 	local desc = Widgets.label({
 		name = "Desc",
-		size = UDim2.new(1 - NAME_SHARE, textW * (1 - NAME_SHARE), 0, 40),
+		size = UDim2.new(1 - NAME_SHARE, textW * (1 - NAME_SHARE), 0, 44),
 		position = UDim2.new(NAME_SHARE, textX + textW * NAME_SHARE + 6, 0, 4),
 		xAlign = Enum.TextXAlignment.Left,
 		color = Theme.Colors.TextDim,
@@ -273,8 +274,8 @@ local function buildCard(track: string, order: number, parent: Instance): CardRe
 	})
 	local effect = Widgets.label({
 		name = "Effect",
-		size = UDim2.new(1, textW, 0, 28),
-		position = UDim2.fromOffset(textX, 44),
+		size = UDim2.new(1, textW, 0, 26),
+		position = UDim2.fromOffset(textX, 48),
 		xAlign = Enum.TextXAlignment.Left,
 		color = Theme.Colors.Gold,
 		maxSize = 22,

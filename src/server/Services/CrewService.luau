@@ -12,7 +12,7 @@
 --     (équipiers présents ET actifs, ≤ 3) ; Analytics CrewFormed
 --   * escorte : API escortersOf(victim) utilisée par CongaService (le calcul géométrique et le temps
 --     d'escorte sont faits par CongaService, qui possède les nœuds)
---   * pings : remote Ping(kind 1-6) 1/1,5 s → PingShow à tous
+--   * pings : remote Ping(kind 1-6) 1/1,2 s (client 1/1,5 s + gigue) → PingShow à tous
 --   * acclamations : sur Signals.Supernova, CheerPrompt à tous sauf le héros (fenêtre 10 s) ;
 --     remote Cheer(heroId) 2/s : une fois par héros et par Supernova ; +5 Stardust plafonnée
 --     (cheers, 10/jour) ; Signals.Cheered ; Feedback « N joueurs t'acclament » au héros à la fermeture
@@ -58,7 +58,9 @@ local RATE = {
 	inviteMinute = { n = CrewCfg.InvitesPerMinute, per = 60 },
 	respond = { n = 2, per = 1 },
 	leave = { n = 1, per = CrewCfg.LeaveCooldown },
-	ping = { n = 1, per = Balance.Ping.Cooldown },
+	-- client : 1 / 1,5 s ; serveur : 1 / 1,2 s, sinon deux pings envoyés à 1,5 s d'écart mais
+	-- arrivés plus près (gigue réseau) verraient le second refusé en silence
+	ping = { n = 1, per = Balance.Ping.Cooldown - Balance.Ping.NetTolerance },
 	cheer = { n = 2, per = 1 },
 }
 

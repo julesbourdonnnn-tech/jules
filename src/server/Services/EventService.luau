@@ -9,7 +9,9 @@
 --   * Comète : alerte −8 s, impact au point déterministe, ramassage (premier joueur valide à ≤ 4 studs,
 --     pas en Zen), vol « chat perché » (non-équipier, test balayé ≤ 4 studs ; nouveau porteur
 --     immunisé 2 s, ancien interdit 4 s ; port sûr et bouclier ne protègent PAS), encaissement à la
---     porte de son Nid (Nebby → AtlasService.addNebbies "comet" + 120 s de revenu passif),
+--     porte de son Nid (Nebby → AtlasService.addNebbies "comet" + 120 s de revenu passif ; une
+--     traversée en rafale — rattrapage après un gel réseau — est encaissée au premier tick valide
+--     si le porteur est toujours côté Nid, oubliée sinon),
 --     explosion à +75 s (5 Épiques libres, 1 par joueur, SpawnService.spawnLoose), participations
 --     (≥ 3 s : +50 ; ≤ 20 studs à la fin : +15 et 30 s de revenu ; équipiers de l'encaisseur : +25),
 --     chute si le porteur part, meurt ou passe en Zen (dropComet)
@@ -44,7 +46,8 @@
 -- Dépendances : DataService, NestService, EconomyService, AtlasService, SpawnService,
 -- Logic/EventClock, Logic/SeededPath, Logic/Formulas, Logic/Trail, Logic/WorldLayout, Logic/Hash,
 -- Config/*, Data/Admins, Signals, Util/Notify, Util/RateLimit, Util/Analytics, Shared/Util/Clock,
--- Util/MoveCheck (lecture seule : positions des récompenses de proximité), Events/Safe,
+-- Util/MoveCheck (lecture seule : positions des récompenses de proximité, rafale et restriction du
+-- porteur à la porte), Events/Safe,
 -- Events/Tuning.
 
 local MessagingService = game:GetService("MessagingService")
@@ -121,6 +124,9 @@ type CometRun = {
 	holdRewarded: { [number]: boolean },
 	nearRewarded: { [number]: boolean },
 	endedAt: number?,
+	-- traversée de SA porte (slot) par le porteur sur un tick en rafale (rattrapage honnête après
+	-- un gel réseau) : encaissée au premier tick valide s'il est toujours côté Nid, oubliée sinon
+	gatePending: number?,
 }
 
 type BeaconPhase = "warn" | "active" | "success" | "fail"
@@ -736,6 +742,7 @@ local function newComet(
 		holdRewarded = {},
 		nearRewarded = {},
 		endedAt = nil,
+		gatePending = nil,
 	}
 end
 
@@ -814,6 +821,7 @@ local function takeComet(c: CometRun, now: number, actor: Types.Actor, from: Pla
 	c.immuneUntil = now + CometCfg.NewCarrierImmunity
 	c.phase = "carried"
 	c.pos = actor.pos
+	c.gatePending = nil
 	dirty = true
 	if from ~= nil then
 		Notify.banner("cometStolen", {
@@ -1036,6 +1044,16 @@ local function sweptThroughGate(slot: number, prev: Vector3, pos: Vector3): bool
 	return false
 end
 
+-- Le porteur est-il côté Nid de SA porte : dans le port sûr de son Nid et derrière le plan de la
+-- porte (LookVector vers le centre de l'île) ?
+local function nestSideOfGate(slot: number, pos: Vector3): boolean
+	if not WorldLayout.inOwnHarbor(slot, pos) then
+		return false
+	end
+	local gate = WorldLayout.gateCFrame(slot)
+	return (pos - gate.Position):Dot(gate.LookVector) < 0
+end
+
 local function stepCarried(c: CometRun, now: number, actors: { Types.Actor })
 	local carrier = c.carrier :: Player
 	local actor = findActor(actors, carrier)
@@ -1055,10 +1073,27 @@ local function stepCarried(c: CometRun, now: number, actors: { Types.Actor })
 	-- pendant le rattrapage. L'encaissement et le vol, eux, exigent un acteur `valid`.
 	c.pos = actor.pos
 	checkHoldReward(c, carrier, now)
-	-- encaissement : le porteur traverse la porte de SON Nid
-	if actor.valid and actor.slot > 0 and sweptThroughGate(actor.slot, actor.prev, actor.pos) then
-		bankComet(c, now, actor, actors)
-		return
+	-- encaissement : le porteur traverse la porte de SON Nid sur un tick valide. Une traversée sur
+	-- un tick en rafale (rattrapage honnête après un gel réseau, comme la parade de CongaService
+	-- qui balaie SA porte) reste « en attente » : encaissée au premier tick valide si le porteur est
+	-- toujours côté Nid (port sûr de son Nid, derrière la porte : le Nid n'a pas de murs, il n'a
+	-- aucune raison de la retraverser), oubliée sinon. Un bond suivi d'une traversée puis d'une
+	-- ressortie (K5) n'encaisse donc rien ; une traversée pendant la restriction qui suit un
+	-- retour non plus.
+	local slot = actor.slot
+	local crossed = slot > 0 and sweptThroughGate(slot, actor.prev, actor.pos)
+	if MoveCheck.isRestricted(carrier, now) then
+		c.gatePending = nil
+	elseif crossed and not actor.valid and MoveCheck.lastWasBurst(carrier) then
+		c.gatePending = slot
+	end
+	if actor.valid then
+		local pending = slot > 0 and c.gatePending == slot
+		c.gatePending = nil
+		if crossed or (pending and nestSideOfGate(slot, actor.pos)) then
+			bankComet(c, now, actor, actors)
+			return
+		end
 	end
 	if now < c.immuneUntil then
 		return
@@ -1657,6 +1692,7 @@ function EventService.dropComet(player: Player)
 	local now = Clock.now()
 	releaseHold(c, player, now)
 	c.phase = "ground"
+	c.gatePending = nil
 	c.retake[player.UserId] = now + CometCfg.RetakeCooldown
 	local p = WorldLayout.clampToIsland(c.pos)
 	c.pos = Vector3.new(p.X, WorldLayout.groundY(p.X, p.Z), p.Z)

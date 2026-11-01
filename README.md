@@ -23,7 +23,7 @@ Le choix du concept vient d'une étude de marché Roblox 2025-2026 et d'un jury 
 |---|---|
 | **Jouable sur** | Téléphone et tablette (tactile), ordinateur (clavier-souris), **PlayStation 5** et Xbox (manette, interface adaptée au téléviseur) |
 | **Langues** | Français et anglais, choisis automatiquement (ou dans Réglages) |
-| **Vérification** | `./scripts/check.sh` vert : **1 572 tests automatiques** (106 fichiers), 0 échec ; 0 erreur et 0 avertissement d'analyse |
+| **Vérification** | `./scripts/check.sh` vert : **1 619 tests automatiques** (112 fichiers), 0 échec ; 0 erreur et 0 avertissement d'analyse |
 | **Fait** | Version 1.0 du GDD complète, 4 tours de QA (sécurité, données, robustesse, expérience joueur, conformité, bonnes pratiques Roblox) |
 | **Reste à faire à la main avant de publier** | Créer les 6 passes et 6 produits dans le Creator Hub et coller leurs numéros ; administrateurs et date du premier Starfall Saturday ; écouter les sons et la musique (d'abord les neuf « à confirmer à l'écoute ») ; questionnaire de maturité, icône, miniatures ; tests dans Roblox Studio (rendu, physique, vraies sauvegardes et vrais achats, 12 vrais joueurs, téléphone modeste) et essai sur une vraie PS5 ; répondre à 7 questions de design |
 

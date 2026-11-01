@@ -315,6 +315,7 @@ Balance.Ping = {
 	Cooldown = 1.5,
 	Duration = 2.5,
 	Range = 200,
+	NetTolerance = 0.3, -- s : gigue réseau absorbée par le débit serveur (le client garde 1 / 1,5 s, GDD 6.3)
 }
 
 -- Glow Party (§8.3, §4.17)

@@ -780,7 +780,7 @@ L'escorte crée un vrai rôle de **garde du corps** : le corps d'un équipier ne
 | Attention ! | Point d'exclamation | — |
 | Merci | Cœur | `wave` |
 
-Ouverture : touche Q, croix directionnelle haut, ou bouton tactile (72 px). Sélection : 1-6, clic, ou stick. Affichage : BillboardGui de 4 × 4 studs au-dessus de la tête pendant 2,5 s, visible jusqu'à 200 studs. Limite : 1 ping / 1,5 s. Les emotes sont jouées par le client sur son propre personnage (`Humanoid:PlayEmote`).
+Ouverture : touche Q, croix directionnelle haut, ou bouton tactile (72 px). Sélection : 1-6, clic, ou stick. Affichage : BillboardGui de 4 × 4 studs au-dessus de la tête pendant 2,5 s, visible jusqu'à 200 studs. Limite : 1 ping / 1,5 s (le serveur accepte 1 / 1,2 s pour absorber la gigue réseau, `Balance.Ping.NetTolerance`). Les emotes sont jouées par le client sur son propre personnage (`Humanoid:PlayEmote`).
 
 ### 6.4 Voir ce que font les autres
 
@@ -1379,7 +1379,7 @@ Déclarés dans `Shared/Remotes.luau`, créés par `Net.setup()`. Chaque handler
 | `CrewInvite` | Event | `userId: number` | Entier ; joueur présent, différent ; pas déjà équipiers ; équipage < 4 ; la cible accepte les invitations | 1 / 3 s et 5 / min |
 | `CrewRespond` | Event | `inviterId: number, accept: boolean` | Invitation en attente et non expirée (20 s) | 2 / s |
 | `CrewLeave` | Event | — | Dans un équipage | 1 / 5 s |
-| `Ping` | Event | `kind: number` | Entier 1-6 | 1 / 1,5 s |
+| `Ping` | Event | `kind: number` | Entier 1-6 | client 1 / 1,5 s ; serveur 1 / 1,2 s (gigue) |
 | `Cheer` | Event | `heroId: number` | Fenêtre d'acclamation ouverte pour ce héros ; pas déjà acclamé | 2 / s |
 | `SetSetting` | Event | `key: string, value: boolean \| string` | Clé dans la liste ; type attendu ; `zen` : dans le port sûr et recharge de 60 s ; `lang` ∈ {auto, en, fr} ; `privateNoSnip` : propriétaire du serveur privé | 4 / s |
 | `SetInputType` | Event | `kind: number` | Entier 1-3 (tactile, clavier-souris, manette) | 1 / 5 s |
@@ -1558,7 +1558,7 @@ Appareil de référence : téléphone Android bas de gamme (≈ 3 Go de RAM). L'
 | Jeu sans son | Tout retour est d'abord visuel ; sons optionnels désactivables séparément (musique, effets) |
 | Motricité | Jouable à une main sur téléphone (joystick + Dash) ; aucun appui maintenu sauf la confirmation de Supernova (1 s) ; cibles ≥ 56 px |
 | Stress de la compétition | Mode Zen, serveurs privés sans coupe, bouclier débutant |
-| Menus ouverts hors du Nid | Le jeu continue (multijoueur) : quand un panneau est ouvert hors du port sûr, un contour rose de l'écran prévient si un non-équipier approche de la file |
+| Menus ouverts hors du Nid | Le jeu continue (multijoueur) : quand un panneau est ouvert et que la queue coupable dépasse du port sûr, un contour rose de l'écran prévient si un non-équipier approche de cette partie de la file |
 | Appareils modestes | Graphismes légers, niveaux de détail, budgets du §12.8 |
 | Téléviseur et manette (console) | Interface proportionnelle à l'écran (UIScale 1,5 en 1080p), textes ≥ 27 px réels, zone sûre TV de 5 %, icônes de boutons de l'appareil, tout à la manette sans curseur, vibrations modérées et désactivables, pas de fenêtre de chat ([`07-console-ps5.md`](07-console-ps5.md)) |
 
