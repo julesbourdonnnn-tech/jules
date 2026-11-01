@@ -86,7 +86,10 @@ end
 
 for _, profile in Screens.PROFILES do
 	if onlyProfiles == nil or onlyProfiles[profile.id] then
-		table.insert(manifest.profiles, { id = profile.id, label = profile.label, w = profile.w, h = profile.h })
+		table.insert(
+			manifest.profiles,
+			{ id = profile.id, label = profile.label, w = profile.w, h = profile.h }
+		)
 		for _, lang in Screens.LANGS do
 			if onlyLangs == nil or onlyLangs[lang] then
 				local folder = profile.id .. "-" .. lang
@@ -97,11 +100,15 @@ for _, profile in Screens.PROFILES do
 						if group.loading then
 							for _, screen in group.screens do
 								if wanted(screen.id) then
-									local ok, c = pcall(Screens.bootLoading, Harness, profile, lang, screen.failed)
+									local ok, c =
+										pcall(Screens.bootLoading, Harness, profile, lang, screen.failed)
 									if ok then
 										local issues = write(dir, screen.id, c, { id = screen.id })
 										issuesByCase[folder .. "/" .. screen.id] = issues
-										table.insert(manifest.cases, { folder = folder, screen = screen.id, issues = #issues })
+										table.insert(
+											manifest.cases,
+											{ folder = folder, screen = screen.id, issues = #issues }
+										)
 									else
 										print("✗ " .. folder .. "/" .. screen.id .. " : " .. tostring(c))
 									end
@@ -119,7 +126,8 @@ for _, profile in Screens.PROFILES do
 										if not shown then
 											print("✗ " .. folder .. "/" .. screen.id .. " : " .. err)
 										end
-										local issues = write(dir, screen.id, c, { id = screen.id, error = err })
+										local issues =
+											write(dir, screen.id, c, { id = screen.id, error = err })
 										issuesByCase[folder .. "/" .. screen.id] = issues
 										table.insert(manifest.cases, {
 											folder = folder,
@@ -162,3 +170,5 @@ if args.pending then
 end
 
 print(string.format("%d instantanés JSON dans %s (%.0f s)", count, OUT, os.clock() - t0))
+-- des threads du jeu attendent encore (boucles réelles) : on sort sans les attendre
+process.exit(0)

@@ -8,8 +8,9 @@
 --     une ligne ;
 --   * TextScaled : la plus grande taille ENTIÈRE ≤ 100, bornée par UITextSizeConstraint
 --     (MinTextSize / MaxTextSize), à laquelle le texte tient dans la boîte (en largeur ET en
---     hauteur, retours à la ligne compris si TextWrapped) ; sous MinTextSize le texte est dessiné à
---     MinTextSize et déborde (« texte coupé ») ;
+--     hauteur, retours à la ligne compris) ; sous MinTextSize le texte est dessiné à MinTextSize et
+--     déborde (« texte coupé »). Documentation Roblox (TextLabel.TextScaled) : TextScaled active
+--     IMPLICITEMENT TextWrapped (SCALED_WRAPS) ;
 --   * TextTruncate AtEnd : ce qui ne tient pas est remplacé par « … » ;
 --   * UIPadding du libellé retiré de la boîte ; les tailles réelles (px d'écran) = taille × k
 --     (UIScale cumulés, tests/harness/Layout).
@@ -30,6 +31,9 @@ local Layout = require("./Layout")
 local TextFit = {}
 
 TextFit.MIN_READABLE = 18 -- px de référence (docs/07-console-ps5.md §3, Config/Console.MinTextSize)
+-- TextScaled implique les retours à la ligne (documentation Roblox de TextLabel.TextScaled ; dans
+-- Studio, cocher TextScaled coche TextWrapped)
+TextFit.SCALED_WRAPS = true
 TextFit.ELLIPSIS = "…"
 
 local DEFAULT_KEY = "GothamSSm@400"
@@ -359,8 +363,8 @@ function TextFit.layout(obj, rect)
 	local w, h = math.max(0, bw - pl - pr), math.max(0, bh - pt - pb)
 	local text = TextFit.displayText(obj)
 	local font = Props.get(obj, "FontFace")
-	local wrapped = Props.get(obj, "TextWrapped") == true
 	local scaled = Props.get(obj, "TextScaled") == true
+	local wrapped = Props.get(obj, "TextWrapped") == true or (scaled and TextFit.SCALED_WRAPS)
 	local lineHeight = Props.get(obj, "LineHeight") or 1
 	local minS, maxS = sizeConstraint(obj)
 	local size, fitsScaled
@@ -421,6 +425,7 @@ function TextFit.layout(obj, rect)
 		textHeight = block.height,
 		boxW = w,
 		boxH = h,
+		pad = { pl, pt, pr, pb }, -- UIPadding du libellé (px de mise en page)
 		overflowX = overflowX,
 		overflowY = overflowY,
 		splitWord = block.split,
@@ -428,6 +433,31 @@ function TextFit.layout(obj, rect)
 		hidden = hidden,
 		decorative = decorative(obj),
 	}
+end
+
+-- Ligne sans lettre ni chiffre (« ! », « ? », « ★ », « · »…) : un signe resté seul après un retour
+-- à la ligne (lettres accentuées du français : octet de tête UTF-8 0xC3 ou 0xC5)
+function TextFit.onlyPunctuation(line: string): boolean
+	return string.find(line, "[%w\195\197]") == nil
+end
+
+-- Partie cachée par « … » : un mot ENTIER (au moins 2 lettres) au-delà de la fin du mot coupé ?
+-- (couper seulement la fin d'un nom trop long est toléré ; cacher un mot entier ne l'est pas)
+function TextFit.hidesWord(hidden: string): string?
+	local rest = string.match(hidden, "^%S*%s+(.*)$") -- fin du mot coupé retirée
+	if rest == nil then
+		return nil
+	end
+	for word in string.gmatch(rest, "%S+") do
+		local letters = 0
+		for _ in string.gmatch(word, "[%a\128-\255]") do
+			letters += 1
+		end
+		if letters >= 2 then
+			return word
+		end
+	end
+	return nil
 end
 
 -- Débordement vertical toléré : l'intérieur d'une ligne (au-dessus des capitales et sous les
@@ -453,10 +483,7 @@ function TextFit.fits(obj, opts)
 	local trimmed = string.gsub(string.gsub(text, "^%s+", ""), "%s+$", "")
 	if trimmed ~= "" then
 		if not d.fitsScaled then
-			add(
-				"overflow",
-				string.format("ne tient pas même à MinTextSize %d (TextScaled)", d.minSize)
-			)
+			add("overflow", string.format("ne tient pas même à MinTextSize %d (TextScaled)", d.minSize))
 		elseif d.overflowX > 0.5 then
 			add("overflow", string.format("déborde de %.0f px en largeur", d.overflowX * d.k))
 		elseif d.overflowY > verticalSlack(d.size) then
@@ -465,8 +492,22 @@ function TextFit.fits(obj, opts)
 		if d.splitWord then
 			add("splitWord", "mot coupé par le retour à la ligne")
 		end
-		if d.truncated and string.find(d.hidden, "%d") then
-			add("truncated", "« … » cache un nombre : « " .. d.hidden .. " »")
+		if #d.lines > 1 and not TextFit.onlyPunctuation(text) then
+			for _, line in d.lines do
+				-- signe seul sur sa ligne (« ACCLAMER » / « ! ») : espace normale devant « ! », « · ★ »…
+				if string.find(line, "%S") and TextFit.onlyPunctuation(line) then
+					add("orphan", "« " .. line .. " » seul sur une ligne")
+					break
+				end
+			end
+		end
+		if d.truncated then
+			local hiddenWord = TextFit.hidesWord(d.hidden)
+			if string.find(d.hidden, "%d") then
+				add("truncated", "« … » cache un nombre : « " .. d.hidden .. " »")
+			elseif hiddenWord then
+				add("truncated", "« … » cache le mot « " .. hiddenWord .. " »")
+			end
 		end
 		if not d.decorative then
 			local minReadable = opts.minReadable or TextFit.MIN_READABLE
@@ -494,7 +535,10 @@ function TextFit.measureAuto(obj, maxWidth: number?): (number, number)
 	local text = TextFit.displayText(obj)
 	local font = Props.get(obj, "FontFace")
 	local size = Props.get(obj, "TextSize") or 8
-	local wrapped = Props.get(obj, "TextWrapped") == true and maxWidth ~= nil
+	local wrapped = (
+		Props.get(obj, "TextWrapped") == true
+		or (Props.get(obj, "TextScaled") == true and TextFit.SCALED_WRAPS)
+	) and maxWidth ~= nil
 	local block = blockOf(text, font, size, maxWidth or math.huge, wrapped, Props.get(obj, "LineHeight") or 1)
 	return block.width, block.height
 end

@@ -318,7 +318,10 @@ autoSizeOf = function(obj, w, h)
 		local slots, total = listSlots(list, kids, 0, 0, innerW, innerH)
 		local cross = 0
 		for _, slot in slots do
-			cross = math.max(cross, if list.FillDirection == Enum.FillDirection.Horizontal then slot.h else slot.w)
+			cross = math.max(
+				cross,
+				if list.FillDirection == Enum.FillDirection.Horizontal then slot.h else slot.w
+			)
 		end
 		if list.FillDirection == Enum.FillDirection.Horizontal then
 			extentW, extentH = math.max(extentW, total), math.max(extentH, cross)
@@ -462,7 +465,17 @@ function Layout.applyRoot(root, w, h, opts)
 	fidelity = if opts and opts.fidelity then opts else nil
 	local saved = setAbsolute
 	setAbsolute = function() end
-	local ok, err = pcall(layoutChildren, root, 0, 0, w, h, { ox = 0, oy = 0, k = 1 }, { top = 0, gui = root }, nil)
+	local ok, err = pcall(
+		layoutChildren,
+		root,
+		0,
+		0,
+		w,
+		h,
+		{ ox = 0, oy = 0, k = 1 },
+		{ top = 0, gui = root },
+		nil
+	)
 	setAbsolute = saved
 	fidelity = nil
 	if not ok then

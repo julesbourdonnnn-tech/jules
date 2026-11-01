@@ -5,7 +5,7 @@ local Signal = require("./Signal")
 
 local Test = {}
 
-local results = { passed = 0, failed = 0, failures = {} :: { string } }
+local results = { passed = 0, failed = 0, failures = {} :: { string }, skipped = 0, skips = {} :: { string } }
 local stack: { string } = {}
 
 local function fullName(name: string): string
@@ -79,6 +79,15 @@ function Test.it(name: string, fn: () -> ())
 		table.insert(results.failures, label .. "\n    " .. tostring(err):gsub("\n", "\n    "))
 		print("  \27[31m✗ " .. label .. "\27[0m")
 	end
+end
+
+-- Cas EN ATTENTE : ni réussi ni échoué, affiché en jaune avec sa raison (ex. textes qui ne tiennent
+-- pas encore, tests/specs/TextFit_all.spec.luau) ; ne change pas le code de sortie
+function Test.skip(name: string, reason: string)
+	local label = fullName(name)
+	results.skipped += 1
+	table.insert(results.skips, label .. " — " .. reason)
+	print("  \27[33m○ " .. label .. " — EN ATTENTE : " .. reason .. "\27[0m")
 end
 
 function Test.expect(actual: any)

@@ -134,7 +134,8 @@ local function textOf(obj, k, rootScale)
 		shown = text,
 		placeholder = placeholder,
 		color = rgb(
-			if placeholder then Props.get(obj, "PlaceholderColor3") or Props.get(obj, "TextColor3")
+			if placeholder
+				then Props.get(obj, "PlaceholderColor3") or Props.get(obj, "TextColor3")
 				else Props.get(obj, "TextColor3")
 		),
 		t = round(Props.get(obj, "TextTransparency") or 0, 3),
@@ -161,6 +162,14 @@ local function textOf(obj, k, rootScale)
 				lines = d.lines,
 				boxW = round(d.boxW, 2),
 				boxH = round(d.boxH, 2),
+				pad = {
+					round(d.pad[1] * k, 2),
+					round(d.pad[2] * k, 2),
+					round(d.pad[3] * k, 2),
+					round(d.pad[4] * k, 2),
+				},
+				hidden = d.hidden,
+				truncated = d.truncated,
 				issues = issues,
 			}
 			else nil,
@@ -236,7 +245,12 @@ local function dumpTree(gui, guiIndex, nodes, index, rootScale, isVisible, prefi
 						z = Props.get(obj, "ZIndex") or 1,
 						o = order,
 						clip = if r.clip
-							then { round(r.clip.x, 2), round(r.clip.y, 2), round(r.clip.w, 2), round(r.clip.h, 2) }
+							then {
+								round(r.clip.x, 2),
+								round(r.clip.y, 2),
+								round(r.clip.w, 2),
+								round(r.clip.h, 2),
+							}
 							else nil,
 						bg = rgb(Props.get(obj, "BackgroundColor3")),
 						bgt = round(Props.get(obj, "BackgroundTransparency") or 0, 3),

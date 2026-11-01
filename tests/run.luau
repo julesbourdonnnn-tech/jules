@@ -32,6 +32,7 @@ local T = {
 	describe = Test.describe,
 	it = Test.it,
 	expect = Test.expect,
+	skip = Test.skip,
 	Harness = Harness,
 }
 
@@ -57,6 +58,9 @@ end
 
 local r = Test.results()
 print(string.format("\n%d réussis, %d échoués, %d specs non chargées", r.passed, r.failed, #loadErrors))
+if r.skipped > 0 then
+	print(string.format("%d cas en attente (sautés, voir les lignes jaunes ○)", r.skipped))
+end
 for _, f in r.failures do
 	print("\n\27[31m✗ " .. f .. "\27[0m")
 end

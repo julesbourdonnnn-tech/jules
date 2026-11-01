@@ -329,8 +329,51 @@ function Screens.boot(Harness, profile, lang: string, state: string)
 		table.insert(c.players, p)
 	end
 	me:SetAttribute("Slot", 1)
+	Screens.worldNests(c)
 	frames(c, 10)
 	return c
+end
+
+-- Nids du monde (modèles étiquetés « Nest », comme ceux du serveur) : panneaux BillboardGui de
+-- NestDisplay avec les noms les plus longs, le badge VIP, le rang et le titre français le plus long
+function Screens.worldNests(c)
+	local h = c.h
+	local nests = {
+		{
+			slot = 1,
+			owner = h.localPlayer,
+			supernovas = if c.state == "huge" then 40 else 12,
+			title = "conga_royal",
+		},
+		{ slot = 2, owner = c.players[1], supernovas = 7, title = "beacon_keeper" },
+		{ slot = 3, owner = c.players[4], supernovas = 0, title = "" },
+		{ slot = 4, owner = nil, supernovas = 0, title = "" },
+	}
+	c.players[1]:SetAttribute("VIP", true)
+	for _, n in nests do
+		local model = h.globals.Instance.new("Model")
+		model.Name = string.format("Nest_%02d", n.slot)
+		local attrs = {
+			Slot = n.slot,
+			OwnerUserId = if n.owner then n.owner.UserId else 0,
+			OwnerName = if n.owner then n.owner.DisplayName else "",
+			Color = h.globals.Color3.fromRGB(255, 196, 92),
+			Supernovas = n.supernovas,
+			PerchCount = 0,
+			PerchData = "",
+			Title = n.title,
+			NestTheme = "default",
+			LineStyle = "default",
+		}
+		for k, v in attrs do
+			model:SetAttribute(k, v)
+		end
+		local perches = h.globals.Instance.new("Folder")
+		perches.Name = "Perches"
+		perches.Parent = model
+		model.Parent = h.workspace
+		h.game.CollectionService:AddTag(model, "Nest")
+	end
 end
 
 local function panel(c, name)
@@ -359,8 +402,24 @@ local function goAway(c)
 	end
 end
 
+-- Toasts encore affichés par l'écran précédent masqués (un toast vit 3 s réelles ; chaque écran
+-- montre seulement les siens)
+local function hideToasts(c)
+	local toasts = c.h.localPlayer.PlayerGui:FindFirstChild("Toasts")
+	local stack = toasts and toasts:FindFirstChild("Safe") and toasts.Safe:FindFirstChild("Stack")
+	if stack then
+		for _, t in stack:GetChildren() do
+			if t.Name == "Toast" then
+				t.Visible = false
+			end
+		end
+	end
+end
+Screens.hideToasts = hideToasts
+
 -- Panneau ouvert depuis le jeu (fermé avant), comme au rail
 local function open(c, name, args)
+	hideToasts(c)
 	c.PC.close()
 	frames(c, 8)
 	c.h.game.GuiService.SelectedObject = nil
@@ -370,6 +429,7 @@ end
 Screens.open = open
 
 local function closeAll(c)
+	hideToasts(c)
 	c.PC.close()
 	frames(c, 8)
 	c.h.game.GuiService.SelectedObject = nil
@@ -543,6 +603,7 @@ local function bannerScreen(kind)
 	return {
 		id = "banner." .. kind,
 		run = function(c)
+			hideToasts(c)
 			flushBanners(c)
 			c.h:fireClient(REMOTES .. "Banner", {
 				kind = kind,
@@ -638,7 +699,13 @@ function Screens.groups()
 				closeAll(c)
 				local data = { onboarding = { step = step, p = 0 } }
 				if step >= 2 then
-					data.upgrades = { conga = math.min(step, 3), stride = if step >= 5 then 1 else 0, lure = 0, perches = 0, guard = 0 }
+					data.upgrades = {
+						conga = math.min(step, 3),
+						stride = if step >= 5 then 1 else 0,
+						lure = 0,
+						perches = 0,
+						guard = 0,
+					}
 					data.stats = { parades = 12, sessions = 1, catches = 40 }
 				end
 				Screens.patch(c, data)
@@ -810,8 +877,15 @@ function Screens.groups()
 				open(c, "Collection", { tab = "stash" })
 				local Collection = panel(c, "Collection")
 				Collection._setSelectMode(true)
-				for _, uid in { "u1", "u2", "u3" } do
-					Collection._tap(uid)
+				frames(c, 2)
+				-- trois cases de la grille touchées (Panel._tap reçoit la case, attribut Uid)
+				local tapped = 0
+				for _, d in c.h.localPlayer.PlayerGui.Panels:GetDescendants() do
+					local uid = d:GetAttribute("Uid")
+					if tapped < 3 and type(uid) == "string" and uid ~= "" then
+						Collection._tap(d)
+						tapped += 1
+					end
 				end
 				frames(c, 6)
 			end,
@@ -1078,7 +1152,10 @@ function Screens.groups()
 		id = "toasts.stack",
 		run = function(c)
 			closeAll(c)
-			c.Toast.show(c.Prefs.t("feedback.notEnoughGlow", { missing = c.Prefs.number(1.23456789e18) }), "error")
+			c.Toast.show(
+				c.Prefs.t("feedback.notEnoughGlow", { missing = c.Prefs.number(1.23456789e18) }),
+				"error"
+			)
 			c.Toast.show(c.Prefs.t("hud.status.boost", { time = "59:59" }), "reward")
 			c.Toast.show(c.Prefs.t("common.notEnough", { currency = "Stardust" }), "warning")
 			frames(c, 4)
@@ -1233,6 +1310,17 @@ function Screens.visibleTexts(c)
 	return out
 end
 
+-- « ? » montré à la place d'une donnée (nom, espèce, nombre manquant). Les silhouettes voulues
+-- (case « Q » de l'Atlas, marque « Mark » d'un Nebby inconnu) ne comptent pas.
+local SILHOUETTES = { Q = true, Mark = true }
+function Screens.isQuestion(obj, trimmed: string): boolean
+	if trimmed == "?" then
+		return not SILHOUETTES[obj.Name]
+	end
+	-- « ? ×3 » (Collection : espèce inconnue) ; un « ? » en fin de phrase est de la ponctuation
+	return string.sub(trimmed, 1, 2) == "? "
+end
+
 local function isKey(c, text)
 	return c.Strings.en[text] ~= nil
 end
@@ -1256,6 +1344,7 @@ function Screens.textIssues(c, opts)
 				kind = kind,
 				message = message,
 				realSize = d and d.realSize or 0,
+				scaled = d ~= nil and d.scaled == true,
 			})
 		end
 		if not ok then
@@ -1265,15 +1354,18 @@ function Screens.textIssues(c, opts)
 		end
 		local text = d and d.text or ""
 		local trimmed = string.gsub(string.gsub(text, "^%s+", ""), "%s+$", "")
-		if trimmed == "?" then
-			add("question", "« ? » affiché au joueur")
+		if Screens.isQuestion(obj, trimmed) then
+			add("question", "« ? » affiché au joueur à la place d'une donnée")
 		elseif isKey(c, trimmed) then
 			add("rawKey", "clé de localisation affichée telle quelle")
 		elseif string.find(text, "{%w+}") then
 			add("placeholder", "variable non remplacée")
 		end
 		if not Props.written(obj, "Text") and obj.ClassName ~= "TextBox" then
-			add("defaultText", "texte jamais posé : le moteur affiche « " .. tostring(Props.get(obj, "Text")) .. " »")
+			add(
+				"defaultText",
+				"texte jamais posé : le moteur affiche « " .. tostring(Props.get(obj, "Text")) .. " »"
+			)
 		end
 	end
 	table.sort(out, function(a, b)

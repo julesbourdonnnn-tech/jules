@@ -94,8 +94,12 @@ export async function launch() {
 }
 
 // Page vide avec les polices Google déclarées ; attend leur chargement pour `sample`
-export async function fontPage(browser, viewport) {
-  const page = await browser.newPage({ viewport: viewport || { width: 800, height: 600 } });
+export async function fontPage(owner, viewport) {
+  // owner : Browser (page dans un nouveau contexte) ou BrowserContext (polices en cache partagé)
+  const page =
+    typeof owner.contexts === 'function'
+      ? await owner.newPage({ viewport: viewport || { width: 800, height: 600 } })
+      : await owner.newPage();
   await page.setContent(
     `<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="${GOOGLE_CSS}"></head>` +
       '<body style="margin:0;background:#000"></body></html>',
