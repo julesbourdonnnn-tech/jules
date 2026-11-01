@@ -5,7 +5,10 @@
 -- déplacer dans Shared/Config (vérifié par MoveCheck_config.spec).
 -- Valeurs reprises de Comet Conga (6 tours de QA, contre-audit anti-triche) ; seules les bornes du
 -- monde (Center, MaxRadius) et la vitesse maximale par défaut dépendent de la carte et des
--- déplacements du jeu : à régler par l'architecte quand Wobbleton et la monture existent.
+-- déplacements du jeu. Note INT-MOVE (contrat v1.2, paquet chase, seul éditeur) : bornes de Wobbleton
+-- (centre (0, 0), MaxRadius 330 : murs invisibles à r = 322), monture (hausse de la racine, montée
+-- permise d'après la hauteur de saut de la selle), crédit de bond (MoveCheck.grant) et historique des
+-- positions validées (MoveCheck.positionAt).
 
 local Tuning = {
 	-- Tick du service qui appelle MoveCheck.step (s) et nombre maximal de pas rattrapés au même
@@ -21,8 +24,30 @@ local Tuning = {
 	DefaultMaxSpeed = 40,
 
 	-- Hauteur de la HumanoidRootPart au-dessus du sol pour un personnage debout (HipHeight 2 +
-	-- demi-hauteur de la racine 1, en R15 comme en R6).
+	-- demi-hauteur de la racine 1, en R15 comme en R6). Partagée avec les portées du jeu :
+	-- WorldLayout.Const.RootHeight (ZoneRules.feetY) doit rester égale (vérifié par ZoneRules.spec).
 	RootHeight = 3,
+
+	-- Monture (note INT-MOVE, MoveCheck.setRootOffset) : hausse maximale acceptée de la racine (la
+	-- selle géante relève la racine de 6 studs ; au-delà, valeur bornée) et gravité du jeu (Workspace,
+	-- studs/s²) pour la vitesse verticale d'un saut : v0 = √(2 × Gravity × JumpHeight).
+	MaxRootOffset = 8,
+	Gravity = 196.2,
+	-- Hauteur de saut au-delà de laquelle la valeur est bornée (selle géante 13 + marge)
+	MaxJumpHeight = 20,
+
+	-- Bond accordé (note INT-MOVE, MoveCheck.grant, GDD §12.8) : crédit rétroactif jusqu'à GrantRetro s
+	-- avant la réception du message Leap (positions et message arrivent parfois dans le désordre) ;
+	-- refusé si le crédit précédent date de moins de GrantMinGap s (horloge du serveur). Valeurs par
+	-- défaut du crédit (Balance.Leap.Distance, Balance.Leap.Duration : ChaseService les passe).
+	GrantRetro = 0.3,
+	GrantMinGap = 4,
+	GrantStuds = 12,
+	GrantDuration = 0.35,
+
+	-- Historique des positions ACCEPTÉES (s) : MoveCheck.positionAt(player, t) interpole dans cet
+	-- anneau (captures vérifiées à l'instant tClient du client, GDD §12.5)
+	PositionHistory = 0.5,
 
 	-- Portée verticale des actions (studs) : une racine à plus de ActionReachY au-dessus ou au-dessous
 	-- de la hauteur debout (sol + RootHeight) est hors de portée des actions au sol (Comet Conga :
@@ -44,18 +69,19 @@ local Tuning = {
 		Margin = 1.5, -- déplacement XZ autorisé = vmax × dt × Margin + Slack
 		Slack = 4,
 		SpeedWindow = 0.5, -- vmax = WalkSpeed max des 0,5 dernières s
-		MaxClimbSpeed = 12,
+		MaxClimbSpeed = 12, -- studs/s ; avec une hauteur de saut connue : max(12, √(2 g JumpHeight))
 		FlagsToRewind = 3,
 		FlagWindow = 5,
 		RewindLockout = 3, -- s sans action après un retour
 		Exemption = 3, -- après apparition ou PivotTo serveur
 		MaxAltitude = 14, -- au-dessus du sol…
 		AltitudeTime = 1.5, -- … pendant plus de 1,5 s
-		-- Bornes du monde : distance XZ maximale au centre (Center). Comet Conga : île de rayon 182.
-		-- À régler sur la carte de Wobbleton.
+		-- Bornes du monde : distance XZ maximale au centre (Center). Wobbleton (note INT-MOVE) : centre
+		-- de la place (0, 0), murs invisibles du bord à r = 322 (WorldLayout.Const.WallRadius) ; une
+		-- seule valeur partout (remarque A29).
 		CenterX = 0,
 		CenterZ = 0,
-		MaxRadius = 1000,
+		MaxRadius = 330,
 		MinY = -5,
 		StrikesForBan = 10, -- retours forcés…
 		StrikeWindow = 600, -- … en 10 min → exclusion des classements
