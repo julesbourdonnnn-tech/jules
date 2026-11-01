@@ -1,5 +1,5 @@
 --!nocheck
--- Manette simulée et audit « console » pour les specs (docs/07-console-ps5.md §10).
+-- Manette simulée et audit « console » pour les specs (couche console reprise de Comet Conga).
 --
 --   local h = Harness.new({ mode = "client", console = true })  -- PS5 : 10 pieds, manette seule
 --   h:createRemotes(); h:boot()
@@ -280,7 +280,7 @@ local function decorative(obj)
 	return false
 end
 
--- Écarts aux règles console des interfaces visibles (docs/07-console-ps5.md §3, §5, §10) :
+-- Écarts aux règles console des interfaces visibles (consignes console de Roblox) :
 --   * glyphes (attribut « GlyphKey » posé par UI/Glyph) : image PlayStation sur console ;
 --   * aucun texte visible égal à une lettre ou un nom de bouton Xbox (A, B, X, Y, LB, RB…) ;
 --   * texte lisible : ≥ minText px de référence (défaut 18 ; TextScaled : la plus grande taille où

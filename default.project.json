@@ -1,5 +1,5 @@
 {
-  "name": "Game",
+  "name": "RaiseASquishy",
   "tree": {
     "$className": "DataModel",
     "ReplicatedFirst": {
@@ -35,7 +35,7 @@
     },
     "Players": {
       "$properties": {
-        "MaxPlayers": 12
+        "MaxPlayers": 16
       }
     },
     "Workspace": {

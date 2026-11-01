@@ -1,6 +1,6 @@
 --!nocheck
 -- Mise en page et navigation manette SIMULÉES (approximation du moteur Roblox) pour les specs
--- console (docs/07-console-ps5.md §10). Le harnais ne calcule aucune géométrie : AbsoluteSize vaut
+-- console. Le harnais ne calcule aucune géométrie : AbsoluteSize vaut
 -- 100 × 100 partout. Layout.apply(h) calcule les rectangles de toutes les interfaces visibles de
 -- PlayerGui à partir de Size / Position / AnchorPoint, UIPadding, UIScale (cumulés),
 -- UISizeConstraint, UIAspectRatioConstraint, UIListLayout, UIGridLayout, ScrollingFrame

@@ -1,6 +1,6 @@
 ---
 name: roblox-luau-engineering
-description: Standards d'ingénierie Luau/Roblox de ce projet (Rojo, structure des modules, typage, cycle de vie, nettoyage des connexions, performance, outils selene/stylua/lune). À charger AVANT d'écrire ou de modifier du code Luau dans src/, ou quand on demande « ajoute un système », « nouveau module », « refactor Luau », « Roblox code », « Rojo ».
+description: Standards d'ingénierie Luau/Roblox de Raise a Squishy (Rojo, structure des modules, socle repris de Comet Conga, typage, cycle de vie, nettoyage des connexions, performance, outils selene/stylua/lune). À charger AVANT d'écrire ou de modifier du code Luau dans src/, ou quand on demande « ajoute un système », « nouveau module », « refactor Luau », « Roblox code », « Rojo ».
 ---
 
 # Ingénierie Luau / Roblox — standards du projet
@@ -12,6 +12,9 @@ description: Standards d'ingénierie Luau/Roblox de ce projet (Rojo, structure d
 | `src/shared/`   | `ReplicatedStorage.Shared`                        | Config, constantes, logique pure, types, utilitaires partagés |
 | `src/server/`   | `ServerScriptService.Server`                      | Services serveur (autorité absolue sur l'état du jeu) |
 | `src/client/`   | `StarterPlayer.StarterPlayerScripts.Client`       | Contrôleurs client : UI, effets, entrées, caméra |
+| `src/first/`    | `ReplicatedFirst`                                 | Écran de chargement autonome (n'exige rien de ReplicatedStorage) |
+
+Projet Rojo « RaiseASquishy » : 16 joueurs par serveur, `StreamingEnabled`, `SignalBehavior = Deferred`, `TextChatService`, curseur virtuel désactivé (navigation manette directionnelle), personnage neutre (WalkSpeed 16, JumpHeight 7,2).
 
 Conventions de fichiers Rojo :
 - `Nom.luau` → ModuleScript ; `Nom.server.luau` → Script ; `Nom.client.luau` → LocalScript.
@@ -25,7 +28,7 @@ Conventions de fichiers Rojo :
 local Players = game:GetService("Players")
 
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
-local Config = require(Shared.Config)
+local Settings = require(Shared.Config.Settings) -- les nombres viennent de Shared/Config/*
 
 local MyService = {}
 
@@ -58,22 +61,33 @@ return MyService
 14. Le code serveur (logique, config secrète, économie) vit dans `ServerScriptService` ; `ReplicatedStorage` ne contient que ce que le client a le droit de lire.
 15. Charges utiles des remotes et des sauvegardes : tables **soit tableau, soit dictionnaire à clés chaîne** (jamais mixtes ni à trous), pas de NaN/inf, pas d'Instance dans les sauvegardes.
 16. Contenu **data-driven** : objets, zones, quêtes et événements sont des entrées dans `src/shared/Config/*.luau`. Ajouter du contenu ne doit pas demander de nouveau code.
+17. **Temps** : toujours `Shared/Util/Clock` (`Clock.now()`, `Clock.unix()`…), jamais `os.time()` / `workspace:GetServerTimeNow()` directement, pour que les tests voyagent dans le temps. Exceptions : `RateLimit` et les mesures purement techniques (`os.clock`).
+18. **Textes** : toujours une clé de `Shared/Localization/Strings.luau`, en anglais ET en français (même jeu de variables `{x}`) ; le serveur envoie des clés, le client traduit (`Prefs.t`).
+19. Ordres de démarrage explicites : `ORDER` de `Main.server.luau` (un service n'appelle directement que ceux d'avant ; vers le haut, `Server/Signals`) et `ORDER` de `Main.client.luau`. Chaque `require`, `Init` et `Start` est isolé (`xpcall`) : une panne est signalée, la suite démarre.
 
-## Socle existant (à réutiliser, ne pas réécrire)
+## Socle existant (repris de Comet Conga : à réutiliser, ne pas réécrire)
+
+Chaque module garde les correctifs de 6 tours de QA et d'un contre-audit anti-triche ; leurs tests sont dans `tests/specs` (fichiers `Fix_*` d'origine gardés pour la traçabilité). La surface d'API est figée par `tests/specs/Contract.spec.luau` : on peut ajouter, jamais retirer ni renommer.
 
 | Module | Usage |
 |--------|-------|
-| `Shared/Net` + `Shared/Remotes` | déclarer un remote dans `Remotes.luau`, puis `Net.event("Nom")` |
-| `Shared/Util/Signal`, `Trove`, `Tables`, `Format`, `Validate` | signaux, nettoyage, copies/reconcile, affichage, validation d'entrées |
+| `Shared/Net` + `Shared/Remotes` | déclarer un remote dans `Remotes.luau` (une ligne : type, charge utile, propriétaire), puis `Net.event("Nom")` |
+| `Shared/Util/Clock` | heure UTC commune serveur/client ; `freeze`, `advance` pour les tests |
+| `Shared/Util/Signal`, `Trove`, `Tables`, `Format`, `Validate` | signaux, nettoyage, copies/reconcile, affichage (nombres géants : suffixes puis « 1.23e45 », FR « 1,24 M »), validation d'entrées |
 | `Shared/Localization` (+ `Strings.luau`) | textes EN/FR, `Localization.translator(lang)` |
-| `Server/Services/DataService` + `Server/Data/Schema` | données joueur, `DataService.get/set/increment/markDirty/saveNow`, `DataService.Loaded` |
-| `Server/Services/MonetizationService` | `registerProduct`, `ownsPass`, `PassGranted` |
-| `Server/Util/RateLimit` | `RateLimit.allow(player, "Action", n, perSeconds)` |
+| `Shared/Config/Settings`, `Console`, `Sounds`, `Monetization` | réglages joueur, couche console (échelle TV, zone sûre, vibrations), sons officiels Roblox, boutique (modèle vide) |
+| `Server/Services/DataService` + `Server/Data/Schema` | données joueur : `get`, `waitFor`, `set`, `increment`, `markDirty`, `markDirtyEntry` (une entrée d'une grande table), `saveNow`, `onBeforeSave`, `setStreamOrder`, `Loaded` ; grandes tables envoyées par morceaux (`Schema.STREAMED_KEYS`) |
+| `Server/Services/MonetizationService` | `registerProduct`, `ownsPass`, `PassGranted`, `PassPurchased`, `PassRevoked`, `ProductGranted` |
+| `Server/Util/RateLimit`, `Analytics`, `Notify` | débit par joueur, analytique sans risque, retours au joueur (`feedback`, `celebrate`, `banner`, `personalBanner`) |
+| `Server/Util/MoveCheck` + `Server/Movement/Tuning` | anti-triche de déplacement (budget d'action, gels réseau tolérés) ; seuils serveur seulement |
+| `Server/Signals` | bus interne (`ServerMoved`, `MoveViolation`, `BannerRequested`, + ceux du jeu) |
+| `Client/Util/Platform`, `Haptics`, `Prefs`, `Prices` | console/écran/entrée et règle du chat, vibrations modérées, réglages appliqués + `Prefs.t`, prix Robux en direct |
 | `Client/Controllers/StateController` | `State.get(key)`, `State.observe(key, fn)` |
-| `Client/Controllers/AudioController` | `AudioController.play("Coin")` |
-| `Client/UI/Root`, `Theme`, `Create`, `Juice`, `Toast` | écrans responsives, charte, construction d'UI, effets, notifications |
+| `Client/Controllers/AudioController` | `AudioController.play("Click")`, son de navigation manette |
+| `Client/UI/Root`, `Theme`, `Create`, `Juice`, `Toast`, `Glyph` | écrans responsives (échelle TV, zone sûre), charte, construction d'UI, effets, notifications, icônes de touches PlayStation/Xbox |
+| `src/first/Loading.client.luau` | écran de chargement (Réessayer à la manette, échelle TV, attend `ClientReady`) |
 
-## Performance (mobile d'abord)
+## Performance (mobile d'abord, 16 joueurs)
 
 - Viser ≤ 3 000 parts dans le monde généré, `Anchored = true` et `CanCollide/CanTouch/CanQuery = false` sur tout le décoratif.
 - `CastShadow = false` sur les petites pièces décoratives.

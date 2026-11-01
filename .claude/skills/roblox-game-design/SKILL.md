@@ -1,11 +1,24 @@
 ---
 name: roblox-game-design
-description: Game design Roblox fondé sur l'analyse de marché 2025-2026 (docs/01-analyse-marche.md) — boucles qui fonctionnent, première minute, rétention J1/J7/J28, co-op, événements live, monétisation équitable et conforme, équilibrage de l'économie, ajout de contenu data-driven. À charger pour concevoir/équilibrer une fonctionnalité, ajouter du contenu, planifier une mise à jour ou un événement, ou fixer des prix.
+description: Game design Roblox fondé sur l'analyse de marché tycoon d'octobre 2026 (docs/01-analyse-marche-tycoon.md) et le concept retenu Raise a Squishy (docs/03-decision-du-jury.md §8) — boucles qui fonctionnent, première minute, rétention J1/J7/J28, co-op, événements live, monétisation équitable et conforme, équilibrage de l'économie et simulation, ajout de contenu data-driven. À charger pour concevoir/équilibrer une fonctionnalité, ajouter du contenu, planifier une mise à jour ou un événement, ou fixer des prix.
 ---
 
 # Game design Roblox (marché 2025-2026)
 
-Sources détaillées : `docs/01-analyse-marche.md` (rapport), `docs/02-game-design-document.md` (GDD du jeu), `docs/03-decision-du-jury.md`.
+Sources détaillées : `docs/01-analyse-marche-tycoon.md` (étude de marché tycoon), `docs/03-decision-du-jury.md` (concept final au §8, idées greffées au §6, faiblesses corrigées au §7, périmètre du lancement au §8.10, risques au §9), et le GDD du jeu (`docs/02-…`, en cours d'écriture). Le jeu précédent du studio, Comet Conga (`/home/user/jules/roblox-game`, lecture seule), sert de modèle : ses docs disent ce qui a marché et ce qui a coûté des tours de QA.
+
+## Ce projet : Raise a Squishy
+
+Tycoon de créatures en gelée, **16 joueurs par serveur**, téléphone, PC et PS5 (manette DualSense sur une télé), public enfant (classification visée : Minimal). Principes à garder pour chaque nouvelle fonctionnalité :
+
+- **Personne ne perd jamais rien** : être boopé rapporte (taille, Fame, pièces) ; la poursuite du BOOP RUSH donne une *copie bébé* au gagnant, jamais l'original.
+- **Le rebirth fait des cadeaux à tout le serveur** (Grand Splorch) ; la taille se voit vraiment (échelle logarithmique).
+- **Contenu en données** : une espèce = une ligne de config ; une mutation = des données (matériau, couleur, particules).
+- **Horloge UTC commune** à tous les serveurs pour les rendez-vous (créature en fuite 60 s, BOOP RUSH 10 min, MEGA SQUISH 30 min, Lune de Gelée le samedi) : `Shared/Util/Clock`.
+- **Économie validée par simulation** avant le lancement (obligatoire, docs/03 §9) : écrire le modèle au-dessus de `tests/sim/Sim.luau` avec les vraies tables du jeu ; portes de rythme (premier rebirth vers 12-15 min…) vérifiées par une spec.
+- **Jamais** de tirage payant, de chance payante, d'avantage payant pour attraper ou booper, de minuteur sautable contre des Robux, de faux compte à rebours, ni d'offre d'achat dans les 10 premières minutes.
+
+Exemple tiré de Comet Conga (à ne pas recopier tel quel) : sa simulation de 200 joueurs × 28 jours a fait doubler les coûts des Supernovas 4 à 12 avant la sortie ; sans elle, le jeu se « finissait » en une semaine.
 
 ## Ce que l'algorithme récompense (depuis 2026)
 

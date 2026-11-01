@@ -193,7 +193,7 @@ function Harness.new(options: {
 	options = options or {}
 	local h = setmetatable({}, Harness)
 	h.mode = options.mode or "server"
-	-- console (docs/07-console-ps5.md §8) : GuiService:IsTenFootInterface() vrai, écran Large de
+	-- console : GuiService:IsTenFootInterface() vrai, écran Large de
 	-- 1920 × 1080, manette seule (ni tactile, ni clavier, ni souris), glyphes PlayStation
 	h.console = options.console == true
 	h.touch = options.touch == true and not h.console

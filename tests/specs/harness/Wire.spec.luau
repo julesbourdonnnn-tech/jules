@@ -1,6 +1,7 @@
 --!nocheck
 -- Fil réseau simulé (tests/harness/Wire) : règles de sérialisation des remotes Roblox, copie
--- profonde, enregistrement des envois d'un serveur et contexte du harnais.
+-- profonde, enregistrement des envois d'un serveur (monde générique, dossiers suivis) et contexte du
+-- harnais.
 local roblox = require("@lune/roblox")
 local Wire = require("../../harness/Wire")
 local MockInstance = require("../../harness/MockInstance")
@@ -99,6 +100,65 @@ return function(T)
 			-- le journal du harnais reste alimenté
 			expect(#h:sentTo(a, "Test")).toBe(2)
 		end)
+
+		it(
+			"monde générique : copie du dossier, attributs suivis, dossiers suivis rejoués côté client",
+			function()
+				local h = Harness.new()
+				local Clock = h:require("ReplicatedStorage.Shared.Util.Clock")
+				Clock.freeze(2000)
+				local world = MockInstance.new("Folder")
+				world.Name = "World"
+				local ranch = MockInstance.new("Folder")
+				ranch.Name = "Ranch1"
+				ranch.Parent = world
+				local pen = MockInstance.new("Folder")
+				pen.Name = "Pen"
+				pen.Parent = ranch
+				world.Parent = h.workspace
+				h:addPlayer({ userId = 1, spawn = false })
+				local rec = Wire.record(h, {
+					userId = 1,
+					Clock = Clock,
+					track = function(root)
+						return { ["Ranch1.Pen"] = root.Ranch1:FindFirstChild("Pen") }
+					end,
+				})
+				expect(rec.world ~= nil and rec.world:FindFirstChild("Ranch1") ~= nil).toBe(true)
+				ranch:SetAttribute("Level", 2)
+				local creature = MockInstance.new("Model")
+				creature.Name = "Squishy1"
+				creature.Parent = pen
+				Clock.advance(0.1)
+				rec:frame()
+				rec:frame() -- pas de changement : rien de plus
+				rec:stop()
+				local folders, attrs = 0, 0
+				for _, e in rec.events do
+					if e.kind == "folder" then
+						folders += 1
+						expect(e.path).toBe("Ranch1.Pen")
+					elseif e.kind == "attr" and e.path == "Ranch1" then
+						attrs += 1
+					end
+				end
+				expect(folders).toBe(1)
+				expect(attrs).toBe(1)
+				-- rejeu dans un client
+				local ctx = Wire.saveContext()
+				local c = Harness.new({ mode = "client" })
+				c:createRemotes()
+				local ClientClock = c:require("ReplicatedStorage.Shared.Util.Clock")
+				ClientClock.freeze(2000)
+				Wire.installWorld(rec, c)
+				Wire.replay(rec, c, { Clock = ClientClock })
+				local cw = c.workspace:FindFirstChild("World")
+				expect(cw ~= nil).toBe(true)
+				expect(cw.Ranch1:GetAttribute("Level")).toBe(2)
+				expect(cw.Ranch1.Pen:FindFirstChild("Squishy1") ~= nil).toBe(true)
+				Wire.restoreContext(ctx)
+			end
+		)
 
 		it("sauvegarde et restaure les crochets globaux d'un harnais", function()
 			local h1 = Harness.new()

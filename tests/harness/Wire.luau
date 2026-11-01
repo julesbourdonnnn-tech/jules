@@ -1,16 +1,19 @@
 --!nocheck
--- Fil réseau simulé entre un serveur complet et un client complet (tests d'intégration).
+-- Fil réseau simulé entre un serveur complet et un client complet (tests d'intégration ; repris de
+-- Comet Conga, monde générique).
 --
 -- Le harnais n'admet qu'un DataModel « actif » à la fois (crochets globaux de MockInstance :
 -- FireClient, méthodes de classe des services, personnages…). On ne fait donc pas tourner serveur
 -- et client en même temps : on ENREGISTRE ce que le vrai serveur envoie à un joueur (remotes
--- FireClient / FireAllClients, attributs répliqués des joueurs et du monde, perchoirs, position de
--- son personnage), puis on le REJOUE dans le vrai client, au même instant de l'horloge partagée.
+-- FireClient / FireAllClients, attributs répliqués des joueurs et du monde, dossiers suivis du monde,
+-- position de son personnage), puis on le REJOUE dans le vrai client, au même instant de l'horloge
+-- partagée.
 -- Chaque charge utile est copiée avec les règles de sérialisation des remotes Roblox ; toute
 -- violation (table mixte ou à trous, clés non chaînes d'un dictionnaire, NaN/±inf, fonction,
 -- Instance, métatable, buffer non fiable > 900 octets) est consignée dans `rec.problems`.
 --
---   local rec = Wire.record(serverH, { userId = 1, Clock = ServerClock })
+--   local rec = Wire.record(serverH, { userId = 1, Clock = ServerClock, world = "World",
+--       track = function(world) return { ["Ranches.R1.Pen"] = … } end })
 --   … partie serveur (Bots) avec w.onFrame = function() rec:frame() end …
 --   rec:stop()
 --   local server = Wire.saveContext()           -- avant Harness.new du client
@@ -181,7 +184,11 @@ end
 -- h : harnais serveur DÉJÀ démarré (h:boot) ; opts.userId : joueur observé (nil = vérifier la
 -- sérialisation de tous les envois sans rien enregistrer pour un client) ; opts.Clock : horloge
 -- partagée du serveur ; opts.remotes : noms de remotes dont on garde aussi TOUS les envois
--- (`rec.sent[nom]`, pour vérifier les textes par exemple)
+-- (`rec.sent[nom]`, pour vérifier les textes par exemple) ; opts.world : nom du dossier du monde
+-- construit par le serveur dans Workspace (défaut "World" ; copié au début, ses attributs suivis) ;
+-- opts.track(worldRoot) → { [chemin relatif] = dossier } : dossiers dont le nombre d'enfants est
+-- suivi à chaque rec:frame() (ex. créatures d'un enclos) ; un changement est rejoué en remplaçant le
+-- dossier entier côté client
 function Wire.record(h, opts)
 	local rec = setmetatable({
 		h = h,
@@ -192,7 +199,8 @@ function Wire.record(h, opts)
 		counts = {},
 		sent = {},
 		keep = {},
-		perchCounts = {},
+		trackCounts = {},
+		track = opts.track,
 		lastPos = nil,
 		active = true,
 	}, Recorder)
@@ -200,13 +208,14 @@ function Wire.record(h, opts)
 		rec.keep[name] = true
 		rec.sent[name] = {}
 	end
-	local lumora = h.workspace:FindFirstChild("Lumora")
-	rec.lumora = lumora
-	if lumora and rec.userId then
-		rec.world = lumora:Clone()
-		for _, nest in lumora.Nests:GetChildren() do
-			local perches = nest:FindFirstChild("Perches")
-			rec.perchCounts[nest.Name] = if perches then #perches:GetChildren() else 0
+	local worldName = opts.world or "World"
+	rec.worldName = worldName
+	local worldRoot = h.workspace:FindFirstChild(worldName)
+	rec.worldRoot = worldRoot
+	if worldRoot and rec.userId then
+		rec.world = worldRoot:Clone()
+		for path, folder in rec:tracked() do
+			rec.trackCounts[path] = if folder then #folder:GetChildren() else 0
 		end
 	end
 
@@ -262,8 +271,8 @@ function Wire.record(h, opts)
 			end
 			if self.ClassName == "Player" and self.Parent == h.game.Players then
 				push({ kind = "attr", userId = self.UserId, name = name, value = value })
-			elseif lumora and self:IsDescendantOf(lumora) then
-				local path = relativePath(self, lumora)
+			elseif worldRoot and self:IsDescendantOf(worldRoot) then
+				local path = relativePath(self, worldRoot)
 				if path then
 					push({ kind = "attr", path = path, name = name, value = value })
 				end
@@ -314,7 +323,17 @@ function Wire.record(h, opts)
 	return rec
 end
 
--- À appeler à chaque tick serveur (Bots : w.onFrame) : position du personnage observé, perchoirs
+-- Dossiers suivis du monde (opts.track), par chemin relatif ; vide sans opts.track
+function Recorder:tracked()
+	if self.track == nil or self.worldRoot == nil then
+		return {}
+	end
+	local ok, list = pcall(self.track, self.worldRoot)
+	return if ok and type(list) == "table" then list else {}
+end
+
+-- À appeler à chaque tick serveur (Bots : w.onFrame) : position du personnage observé, dossiers
+-- suivis du monde
 function Recorder:frame()
 	if not self.active or not self.userId then
 		return
@@ -328,17 +347,16 @@ function Recorder:frame()
 			table.insert(self.events, { kind = "pos", t = self.Clock.now(), pos = pos })
 		end
 	end
-	if self.lumora then
-		for _, nest in self.lumora.Nests:GetChildren() do
-			local perches = nest:FindFirstChild("Perches")
-			local n = if perches then #perches:GetChildren() else 0
-			if n ~= self.perchCounts[nest.Name] then
-				self.perchCounts[nest.Name] = n
+	if self.worldRoot then
+		for path, folder in self:tracked() do
+			local n = if folder then #folder:GetChildren() else 0
+			if n ~= self.trackCounts[path] then
+				self.trackCounts[path] = n
 				table.insert(self.events, {
-					kind = "perches",
+					kind = "folder",
 					t = self.Clock.now(),
-					nest = nest.Name,
-					folder = if perches then perches:Clone() else nil,
+					path = path,
+					folder = if folder then folder:Clone() else nil,
 				})
 			end
 		end
@@ -405,6 +423,7 @@ local function resolve(root, path)
 end
 
 -- Rejoue les événements [from, to] dans le client `c` (démarré). opts.Clock : horloge du client ;
+-- opts.world : nom du dossier du monde côté client (défaut : celui de l'enregistrement) ;
 -- opts.frameDt : pas des images (0,1 par défaut) ; opts.maxGap : au-delà, saut dans le temps ;
 -- opts.onFrame(t) : appelé après chaque image ; opts.onEvent(e) : événements d'un autre type
 -- (points de contrôle ajoutés par la spec). Retourne l'index du dernier événement rejoué.
@@ -414,7 +433,7 @@ function Wire.replay(rec, c, opts)
 	local maxGap = opts.maxGap or 3
 	local from = opts.from or 1
 	local to = opts.to or #rec.events
-	local lumora = c.workspace:FindFirstChild("Lumora")
+	local worldRoot = c.workspace:FindFirstChild(opts.world or rec.worldName or "World")
 	local localPlayer = c.localPlayer
 	local function frame()
 		c:step(dt)
@@ -439,8 +458,8 @@ function Wire.replay(rec, c, opts)
 			local target
 			if e.userId then
 				target = if e.userId == localPlayer.UserId then localPlayer else clientPlayer(c, e.userId)
-			elseif lumora then
-				target = resolve(lumora, e.path)
+			elseif worldRoot then
+				target = resolve(worldRoot, e.path)
 			end
 			if target then
 				target:SetAttribute(e.name, e.value)
@@ -461,15 +480,20 @@ function Wire.replay(rec, c, opts)
 			if root then
 				root.CFrame = c.globals.CFrame.new(e.pos)
 			end
-		elseif e.kind == "perches" and lumora then
-			local nest = lumora.Nests:FindFirstChild(e.nest)
-			if nest then
-				local old = nest:FindFirstChild("Perches")
+		elseif e.kind == "folder" and worldRoot then
+			-- dossier suivi remplacé : parent = chemin sans son dernier segment
+			local parentPath, name = string.match(e.path, "^(.*)%.([^%.]+)$")
+			local parent = if parentPath then resolve(worldRoot, parentPath) else worldRoot
+			name = name or e.path
+			if parent then
+				local old = parent:FindFirstChild(name)
 				if old then
 					old:Destroy()
 				end
 				if e.folder then
-					e.folder:Clone().Parent = nest
+					local copy = e.folder:Clone()
+					copy.Name = name
+					copy.Parent = parent
 				end
 			end
 		elseif opts.onEvent then

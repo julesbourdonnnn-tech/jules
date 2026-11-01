@@ -40,9 +40,24 @@ expect("ServerScriptService.Server.Main", "Script")
 expect("StarterPlayer.StarterPlayerScripts.Client.Main", "LocalScript")
 expect("ReplicatedStorage.Shared.Net", "ModuleScript")
 expect("ReplicatedStorage.Shared.Remotes", "ModuleScript")
+expect("ReplicatedFirst.Loading", "LocalScript")
+-- seuils de l'anti-triche : serveur seulement (jamais répliqués)
+expect("ServerScriptService.Server.Movement.Tuning", "ModuleScript")
+if game:FindFirstChild("ReplicatedStorage") and game.ReplicatedStorage:FindFirstChild("Tuning", true) then
+	table.insert(
+		problems,
+		"Tuning répliqué dans ReplicatedStorage (seuils anti-triche lisibles par le client)"
+	)
+end
 
--- Chat : TextChatService explicite (docs/07 §8 ; la base de réflexion par défaut donnerait
--- LegacyChatService, l'ancien chat que Platform ne sait pas couper sur console)
+-- Taille du serveur : 16 joueurs (concept du jeu, budgets réseau et DataStore calculés pour 16)
+local players = game:FindFirstChildOfClass("Players")
+if players == nil or players.MaxPlayers ~= 16 then
+	table.insert(problems, `Players.MaxPlayers = {players and players.MaxPlayers} (attendu 16)`)
+end
+
+-- Chat : TextChatService explicite (règle console reprise de Comet Conga ; la base de réflexion par
+-- défaut donnerait LegacyChatService, l'ancien chat que Platform ne sait pas couper sur console)
 local tcs = game:FindFirstChildOfClass("TextChatService")
 if tcs == nil then
 	table.insert(problems, "manquant : TextChatService")

@@ -1,6 +1,6 @@
 ---
 name: roblox-qa-testing
-description: Assurance qualité du jeu Roblox — harnais de tests Lune (tests/harness) qui simule Roblox (require Rojo, Players, DataStore, Marketplace, remotes), écriture de specs, classes de bugs Roblox à traquer et checklist avant publication. À charger pour écrire/lancer des tests, chasser un bug, faire une revue de code ou préparer une release.
+description: Assurance qualité de Raise a Squishy — harnais de tests Lune (tests/harness, repris de Comet Conga) qui simule Roblox (require Rojo, Players, DataStore, Marketplace, remotes, console), joueurs simulés génériques (Bots), simulation d'économie (tests/sim), écriture de specs, classes de bugs Roblox à traquer et checklist avant publication. À charger pour écrire/lancer des tests, chasser un bug, faire une revue de code ou préparer une release.
 ---
 
 # QA & tests
@@ -13,6 +13,8 @@ selene src                   # lint
 lune run tests/run           # tous les tests
 lune run tests/run -- Data   # seulement les specs dont le chemin contient « Data »
 rojo build -o build/Game.rbxl
+./scripts/check.sh           # les cinq contrôles d'un coup (porte avant commit)
+lune run scripts/prepublish  # avant de publier : chaque article de la boutique a son numéro
 ```
 
 ## Le harnais (tests/harness)
@@ -48,11 +50,13 @@ Aides d'intégration (même dossier) :
 
 | Module | Rôle |
 |--------|------|
-| `Bots` | serveur complet (`Bots.boot(Harness, { t0, before })`), marche honnête (`stepToward`, `walkAll`), cerveaux qui chassent et paradent (`hunt`, `brains`), voyage dans le temps (`travelTo`), coupe mise en scène (`stageSnip`), scène réservée (`sendHome` / `resume`) |
-| `Wire` | enregistre ce que le serveur envoie à un joueur (règles de sérialisation des remotes Roblox : tables mixtes ou à trous, NaN, Instances, buffer > 900 octets…) puis le rejoue dans un client complet ; `saveContext` / `restoreContext` pour reparler au serveur après le client |
+| `Bots` | boîte à outils générique de joueurs simulés : serveur complet (`Bots.boot(Harness, { t0, before, schema, groundY })`), N joueurs avec personnages et profils (`spawn(16)`, `join`, `leave`, `respawn`, `place`), marche honnête (`stepToward`, `walkAll`), réseau simulé (`jitter(p, 2 ou 3)` : paquets groupés, `freeze(p, s)` : gel puis rattrapage), cerveaux (`setBrain`, `brains`, exemple `wander`), voyage dans le temps (`travelTo`), MoveCheck appelé à chaque tick (`moveCheck()` → `count(p, "flag")`, `problems()`), clés de jeu fictives pour les specs du socle (`extendSchema`), `os.clock` contrôlé (`fakeOsClock`). Les paquets du jeu l'étendent avec leurs cerveaux et leurs scènes (exemple Comet Conga : `hunt`, `stageSnip`) |
+| `Wire` | enregistre ce que le serveur envoie à un joueur (règles de sérialisation des remotes Roblox : tables mixtes ou à trous, NaN, Instances, buffer > 900 octets…), le monde construit (`world = "World"`, attributs, dossiers suivis par `track`) puis le rejoue dans un client complet ; `saveContext` / `restoreContext` pour reparler au serveur après le client |
 | `ApiAudit` | pendant un test, confronte classes, propriétés écrites (tweens compris), types et droits d'écriture à la base de réflexion de Roblox livrée avec Lune |
 | `Layout` | géométrie simulée des interfaces de PlayerGui (`Layout.apply(h)` → `AbsolutePosition` / `AbsoluteSize` ; Size, Position, AnchorPoint, UIPadding, UIScale, contraintes, UIListLayout, UIGridLayout, ScrollingFrame) et navigation manette (`step`, `reachable`, `unreachable`, `escapes` : NextSelection* puis sélection directionnelle, SelectionGroup + SelectionBehavior) |
-| `Gamepad` | manette simulée (`press`, `release`, `tap`, `stick` : croix = navigation si une sélection existe, ✕ = `Activated`, sinon actions CAS par priorité) et `Gamepad.audit(h, { root })` : glyphes non PlayStation, lettres Xbox, textes < 18 px, débordement de la zone sûre TV (docs/07-console-ps5.md §10) |
+| `Gamepad` | manette simulée (`press`, `release`, `tap`, `stick` : croix = navigation si une sélection existe, ✕ = `Activated`, sinon actions CAS par priorité) et `Gamepad.audit(h, { root })` : glyphes non PlayStation, lettres Xbox, textes < 18 px, débordement de la zone sûre TV |
+
+Simulation (`tests/sim/Sim.luau`) : cadre déterministe pour la simulation d'économie obligatoire (`Sim.run({ players, days, simulate, gates, reported })`, médianes et p10/p90, `Sim.failures`, `Sim.report`). Le modèle du jeu l'utilise avec les vraies tables de `Shared/Config`.
 
 Console : `Harness.new({ mode = "client", console = true })` simule une PS5 sur téléviseur (`IsTenFootInterface()` vrai, `ViewportDisplaySize = Large`, écran 1920 × 1080, manette seule, `PreferredInput = Gamepad`, icônes PlayStation de `GetImageForKeyCode`). Vibrations journalisées dans `h.log.haptics`. Liaisons ContextActionService (touches, priorité) : `h.actionBindings`.
 
@@ -84,7 +88,9 @@ return function(T)
 end
 ```
 
-Fichiers : `tests/specs/<Système>.spec.luau`. Une spec par système, et des tests de **démarrage complet** (`Boot.spec.luau`) qui lancent serveur et client et simulent 3 joueurs pendant plusieurs centaines de frames.
+Fichiers : `tests/specs/<Système>.spec.luau`. Une spec par système, et des tests de **démarrage complet** (`Boot.spec.luau`, à écrire pour le jeu) qui lancent un serveur de **16 joueurs** (Bots) pendant plusieurs centaines de ticks, puis rejouent une partie dans le vrai client (Wire). Un défaut trouvé en QA = un test qui échoue d'abord, puis la correction ; le test reste (`Fix_*`). On ne supprime ni n'affaiblit jamais un test pour le faire passer.
+
+Leçons de Comet Conga (docs/06 de Comet Conga) : figer `Clock` et `os.clock` (`Bots.fakeOsClock`) plutôt qu'attendre en temps réel ; ne jamais dépendre de l'ordre de parcours d'une table ; relancer la suite deux fois avant une publication pour repérer les tests instables.
 
 ## Classes de bugs Roblox à traquer systématiquement
 
@@ -109,4 +115,7 @@ Fichiers : `tests/specs/<Système>.spec.luau`. Une spec par système, et des tes
 - [ ] Test DataStore : pannes simulées → retries → aucune perte ; données corrompues → migration/reconcile.
 - [ ] Achats : ProcessReceipt idempotent (même PurchaseId deux fois = un seul crédit).
 - [ ] Studio : jouer en mode « Local Server » avec 3 joueurs, émulateur téléphone (iPhone SE + tablette) et manette.
-- [ ] Console : specs `Console*.spec` vertes (manette seule, glyphes PlayStation, zone sûre, pas de fenêtre de chat) puis essai sur une vraie PS5 à 3 m (docs/07-console-ps5.md §12).
+- [ ] Console : specs `Console*.spec` vertes (manette seule, glyphes PlayStation, zone sûre, pas de fenêtre de chat) puis essai sur une vraie PS5 à 3 m.
+- [ ] Anti-triche : 16 joueurs honnêtes simulés (gigue, gels de 0,7 à 1,5 s, réapparitions) sans aucune infraction ; chaque triche reproduite reste bloquée.
+- [ ] Économie : la spec de simulation passe (portes de rythme dans leurs tolérances).
+- [ ] Sons : chaque son écouté dans Studio ; `scripts/prepublish` vert.

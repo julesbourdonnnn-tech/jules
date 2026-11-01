@@ -433,7 +433,7 @@ function Services.install(h)
 		GetGuiInset = function()
 			return Vector2.new(0, 58), Vector2.zero
 		end,
-		-- seule détection garantie d'une console (docs/07-console-ps5.md §2) ; une spec peut la
+		-- seule détection garantie d'une console ; une spec peut la
 		-- remplacer (ex. pour vérifier la garde pcall)
 		IsTenFootInterface = function()
 			return h.console == true
@@ -632,7 +632,7 @@ function Services.install(h)
 			return NUMBER_KEYS[kc.Name] or kc.Name
 		end,
 		-- icône Roblox de la touche : PlayStation sur console, Xbox (défaut PC) sinon ; vide pour le
-		-- clavier (docs/07-console-ps5.md §5)
+		-- clavier
 		GetImageForKeyCode = function(_, kc)
 			return Services.glyphImage(h.console == true, kc)
 		end,
