@@ -90,9 +90,9 @@ Events.Starfall = {
 	-- Semaine w = floor((t − Calendar.WeekEpoch) / Calendar.Week) (Logic/EventClock.week).
 	-- Toute modification de Rotations.FeaturedSpecies après la publication impose de revoir ce
 	-- calendrier (Events.starbornAllowed).
-	-- 1er show après la publication : samedi 14/11/2026 16:00 UTC pour une publication le samedi
-	-- 07/11/2026 à 17:00 UTC (GDD §15.3) ; À RECALER sur la date réelle de publication
-	LaunchWeek = 2966,
+	-- 1er show après la publication : samedi 07/11/2026 16:00 UTC pour une publication le dimanche
+	-- 01/11/2026 ; À RECALER si la date réelle de publication change (+1 par semaine)
+	LaunchWeek = 2965,
 	Encores = {} :: { [number]: boolean }, -- [semaine] = true, ex. [3018] = true (samedi 13/11/2027)
 }
 

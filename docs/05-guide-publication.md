@@ -257,14 +257,15 @@ Chaque code ne marche **qu'une fois par compte**. Pour en ajouter un, copiez le 
 
 Le GDD (§7.7) prévoit un nouveau code chaque semaine, annoncé sur les réseaux, publié le samedi à 17:00 UTC.
 
-### 6.3 Date du premier Starfall Saturday (obligatoire si vous ne publiez pas le 7 novembre 2026)
+### 6.3 Date du premier Starfall Saturday (déjà réglée pour une publication le 1er novembre 2026)
 
 Chaque samedi à 16:00 UTC, le show **Starfall Saturday** met en avant une espèce. Pendant les **12 premières semaines** après le lancement, chaque espèce vedette peut porter la variante rare **Starborn**, une seule fois (vraie rareté, GDD §8.1). Le jeu doit donc connaître la **semaine du premier show**.
 
-Dans `src/shared/Config/Events.luau`, la ligne `LaunchWeek = 2966,` correspond au show du **samedi 14/11/2026**, pour une publication le samedi 07/11/2026. Si vous publiez à une autre date, remplacez 2966 par le numéro du **premier samedi qui suit la publication** :
+Dans `src/shared/Config/Events.luau`, la ligne `LaunchWeek = 2965,` correspond au show du **samedi 07/11/2026**, pour une publication le dimanche 01/11/2026. Si vous publiez à une autre date, remplacez 2965 par le numéro du **premier samedi qui suit la publication** :
 
 | Premier show (samedi, 16:00 UTC) | `LaunchWeek` |
 |---|---|
+| 07/11/2026 | 2965 |
 | 14/11/2026 | 2966 |
 | 21/11/2026 | 2967 |
 | 28/11/2026 | 2968 |
