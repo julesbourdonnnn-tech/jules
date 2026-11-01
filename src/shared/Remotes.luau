@@ -42,8 +42,8 @@ return {
 	SetMount = "event", -- (uid) SquishyService
 	Ride = "event", -- (on) SquishyService
 	EquipOutfit = "event", -- (outfit, uid?) SquishyService
-	Leap = "event", -- (dirX, dirZ) ChaseService
-	Catch = "event", -- (id) ChaseService
+	Leap = "event", -- (dirX, dirZ, tClient) ChaseService
+	Catch = "event", -- (id, tClient) ChaseService (capture vérifiée à son instant tClient)
 	BoopHold = "event", -- (ownerId, uid, holding) RushService
 	SetMode = "event", -- (rush) RushService
 	RefuseBooper = "event", -- (userId) RushService
@@ -65,6 +65,7 @@ return {
 	SetInputType = "event", -- (kind, tenFoot) DiagnosticsService (analytique seulement)
 	ReportError = "event", -- (kind, key, message, trace, ctx) DiagnosticsService
 	RequestDiagnostics = "event", -- (tab) DiagnosticsService (administrateurs seulement)
+	ClientEvent = "event", -- (kind) DiagnosticsService : analytique seulement (qualityReduced, shopOpened)
 
 	-- =========================================================================================
 	-- Serveur → client
@@ -77,9 +78,9 @@ return {
 	MegaBeat = "unreliable", -- (Types.MegaBeatPayload) EventService : tous, 4 Hz pendant le MEGA
 	BoopState = "event", -- (Types.BoopStatePayload) RushService : tous
 	ModePrompt = "event", -- () RushService : le joueur (carte du choix Rush / Cozy, au calme)
-	HoldState = "event", -- (Types.HoldStatePayload) QuestService : le joueur (anneau du bol)
+	HoldState = "event", -- (Types.HoldStatePayload) QuestService (bol) et RanchService (dalle) : le joueur
 	EmoteShow = "event", -- (Types.EmoteShowPayload) CommunityService : tous
-	ClapPrompt = "event", -- (Types.ClapPromptPayload) CommunityService : tous sauf le héros
+	ClapPrompt = "event", -- (Types.ClapPromptPayload) CommunityService : spectateurs du spectacle complet
 	LeaderboardState = "event", -- (Types.LeaderboardPayload) LeaderboardService : le joueur
 	DiagnosticsSnapshot = "event", -- (Types.DiagnosticsSnapshot) DiagnosticsService : l'administrateur demandeur
 } :: { [string]: string }

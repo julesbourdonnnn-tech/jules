@@ -10,6 +10,12 @@
 --     de sélection restent entiers ; la scène remonte si même la taille minimale ne tient pas
 --   * PC et téléviseur : placement et échelle inchangés (68 %, échelle 1 ou « 10 pieds »)
 -- Géométrie : tests/harness/Layout (UIScale autour de l'ancre, comme Roblox).
+-- Note INT-TV, partie Loading (paquet world, étape 0, docs/04 §22.2) : aucun téléphone au lancement
+-- (console d'abord). La mise en page « écran bas » est retirée et l'écran suit LA règle télé de tous
+-- les écrans (px TV × max(0,5 ; min(L / 1920 ; H / 1080))). Les cas de téléphone deviennent les
+-- écrans réels du jeu (consoles 720p / 1080p / 4K, télés 16:10 et 21:9, fenêtres de PC) avec les
+-- MÊMES exigences (Réessayer et son curseur entiers, message sous les points, bloc dans la largeur,
+-- scène entière) et deux de plus : tout dans la zone sûre TV de 5 %, Réessayer ≥ 80 px TV de haut.
 local roblox = require("@lune/roblox")
 local MockInstance = require("../harness/MockInstance")
 local Layout = require("../harness/Layout")
@@ -22,15 +28,15 @@ return function(T)
 
 	-- curseur de sélection de « Réessayer » : débord 4 + trait blanc 6 + liseré sombre 2 (px du bouton)
 	local CURSOR = 12
-	local MARGIN = 8 -- px réels au moins entre le bas du curseur et le bas de l'écran
-	local MIN_RETRY = 48 -- px réels : bouton secondaire (80 px × 0,6)
+	local SAFE = 0.05 -- zone sûre TV : 5 % de chaque côté (docs/04 §14.1)
+	local MIN_RETRY = 48 -- px réels au plus petit écran du jeu (720p : 96 px TV × 0,667 = 64)
+	local MIN_RETRY_TV = 80 -- px TV : hauteur minimale d'un bouton (docs/04 §14.1)
 	local EPS = 1e-3 -- UDim2 garde des float32
 
 	-- Le vrai script Loading, en français, sur l'écran `viewport` ; ClientReady jamais posé
 	local function run(opts)
 		local h = Harness.new({
 			mode = "client",
-			touch = opts.touch,
 			console = opts.console,
 			viewport = opts.viewport,
 		})
@@ -86,12 +92,15 @@ return function(T)
 		local W, H = viewport.X, viewport.Y
 		local report = {
 			label = label,
-			-- « Réessayer » et son curseur entiers, à MARGIN px au moins du bas
-			retryOnScreen = bottom(b) + CURSOR * b.k <= H - MARGIN + EPS and b.y >= 0,
-			-- cible tactile
-			retryTall = b.h >= MIN_RETRY - EPS,
-			-- bloc dans la largeur
-			blockInWidth = r.fail.x >= -EPS and r.fail.x + r.fail.w <= W + EPS,
+			-- « Réessayer » et son curseur entiers, dans la zone sûre TV (5 % de chaque côté)
+			retryOnScreen = bottom(b) + CURSOR * b.k <= H * (1 - SAFE) + EPS
+				and b.y - CURSOR * b.k >= H * SAFE - EPS
+				and b.x - CURSOR * b.k >= W * SAFE - EPS
+				and b.x + b.w + CURSOR * b.k <= W * (1 - SAFE) + EPS,
+			-- bouton télé : ≥ 80 px TV, et assez grand en px réels au plus petit écran
+			retryTall = b.h >= MIN_RETRY - EPS and b.h / b.k >= MIN_RETRY_TV - EPS,
+			-- bloc (message compris) dans la largeur de la zone sûre
+			blockInWidth = r.fail.x >= W * SAFE - EPS and r.fail.x + r.fail.w <= W * (1 - SAFE) + EPS,
 			-- message sous les points de chargement, jamais par-dessus
 			messageBelowDots = r.message.y >= bottom(r.dots) - EPS,
 			-- message au-dessus du bouton
@@ -111,35 +120,37 @@ return function(T)
 		return r, p
 	end
 
-	describe("Fix r5-partage-2 › Chargement : « Réessayer » entier sur un téléphone", function()
-		it("640 × 360 et 667 × 375 (cas du rapport) : « Réessayer » à 8 px au moins du bas", function()
-			for _, viewport in { Vector2.new(640, 360), Vector2.new(667, 375) } do
-				local h, loading = run({ touch = true, viewport = viewport })
-				h:step(1, 45)
-				local label = `{viewport.X}x{viewport.Y}`
-				local r = expectFits(h, loading, viewport, label)
-				expect({ label = label, bottomOk = bottom(r.button) <= viewport.Y - MARGIN }).toEqual({
-					label = label,
-					bottomOk = true,
-				})
-				expect(#h.errors).toBe(0)
+	describe("Fix r5-partage-2 › Chargement : « Réessayer » entier sur chaque écran du jeu", function()
+		it(
+			"consoles 720p, 1080p et 4K : « Réessayer » et son curseur entiers, dans la zone sûre",
+			function()
+				for _, viewport in
+					{ Vector2.new(1280, 720), Vector2.new(1920, 1080), Vector2.new(3840, 2160) }
+				do
+					local h, loading = run({ console = true, viewport = viewport })
+					h:step(1, 45)
+					local label = `{viewport.X}x{viewport.Y}`
+					expectFits(h, loading, viewport, label)
+					expect(#h.errors).toBe(0)
+				end
 			end
-		end)
+		)
 
-		it("autres téléphones et tablette à l'horizontale, FR et EN : tout tient", function()
+		it("télés 16:10 et 21:9, fenêtres de PC, FR et EN : tout tient", function()
 			for _, viewport in
 				{
-					Vector2.new(568, 320), -- 4 pouces : taille minimale, la scène remonte
-					Vector2.new(740, 360),
-					Vector2.new(812, 375),
-					Vector2.new(844, 390),
-					Vector2.new(932, 430),
+					Vector2.new(1920, 1200), -- 16:10
+					Vector2.new(2560, 1080), -- 21:9
+					Vector2.new(3440, 1440), -- 21:9 1440p
+					Vector2.new(1600, 900),
+					Vector2.new(1366, 768),
+					Vector2.new(1280, 1024), -- 5:4
 					Vector2.new(1024, 768),
-					Vector2.new(360, 640), -- portrait
+					Vector2.new(800, 600), -- plus petite fenêtre : plancher d'échelle 0,5
 				}
 			do
 				for _, locale in { "fr-fr", "en-us" } do
-					local h, loading = run({ touch = true, viewport = viewport, locale = locale })
+					local h, loading = run({ viewport = viewport, locale = locale })
 					h:step(1, 45)
 					expectFits(h, loading, viewport, `{viewport.X}x{viewport.Y} {locale}`)
 					expect(#h.errors).toBe(0)
@@ -147,66 +158,78 @@ return function(T)
 			end
 		end)
 
-		it("animation d'entrée (rebond) : « Réessayer » ne sort jamais de l'écran", function()
-			local viewport = Vector2.new(640, 360)
-			local h, loading = run({ touch = true, viewport = viewport })
-			h:step(1, 19)
-			h:step(0.5, 1)
-			local worst, frames = -math.huge, 0
-			for _ = 1, 60 do -- 19,5 s → 20,5 s : apparition (0,3 s, Back Out) image par image
-				h:step(1 / 60, 1)
-				local p = parts(loading)
-				if p.button.Visible then
-					frames += 1
-					Layout.apply(h)
-					worst = math.max(worst, bottom(Layout.rect(p.button)))
+		it(
+			"animation d'entrée (rebond) : « Réessayer » ne sort jamais de la zone sûre (720p)",
+			function()
+				local viewport = Vector2.new(1280, 720)
+				local h, loading = run({ console = true, viewport = viewport })
+				h:step(1, 19)
+				h:step(0.5, 1)
+				local worst, frames = -math.huge, 0
+				for _ = 1, 60 do -- 19,5 s → 20,5 s : apparition (0,3 s, Back Out) image par image
+					h:step(1 / 60, 1)
+					local p = parts(loading)
+					if p.button.Visible then
+						frames += 1
+						Layout.apply(h)
+						worst = math.max(worst, bottom(Layout.rect(p.button)))
+					end
 				end
+				expect(frames).toBeGreaterThan(18)
+				expect(worst <= viewport.Y * (1 - SAFE) + EPS).toBe(true)
 			end
-			expect(frames).toBeGreaterThan(18)
-			expect(worst <= viewport.Y - MARGIN + EPS).toBe(true)
-		end)
+		)
 
 		it("Mouvement réduit : même placement, sans animation", function()
-			local viewport = Vector2.new(667, 375)
-			local h, loading = run({ touch = true, viewport = viewport, reducedMotion = true })
+			local viewport = Vector2.new(1280, 720)
+			local h, loading = run({ console = true, viewport = viewport, reducedMotion = true })
 			h:step(1, 21)
 			expectFits(h, loading, viewport, "réduit")
 		end)
 
-		it("écran tourné ou redimensionné pendant l'échec : replacé à chaque fois", function()
-			local h, loading = run({ viewport = Vector2.new(1280, 720) })
-			h:step(1, 21)
-			local camera = h.game.Workspace.CurrentCamera
-			local r0, p = rects(h, loading)
-			local stageY0 = r0.stage.y
-			for _, viewport in { Vector2.new(640, 360), Vector2.new(568, 320), Vector2.new(1280, 720) } do
-				camera.ViewportSize = viewport
-				h:step(1 / 60, 2)
-				expectFits(h, loading, viewport, `redimensionné {viewport.X}x{viewport.Y}`)
+		it(
+			"résolution changée pendant l'échec (télé, fenêtre de PC) : replacé à chaque fois",
+			function()
+				local h, loading = run({ viewport = Vector2.new(1920, 1080) })
+				h:step(1, 21)
+				local camera = h.game.Workspace.CurrentCamera
+				local r0, p = rects(h, loading)
+				local stageY0 = r0.stage.y
+				for _, viewport in
+					{ Vector2.new(1280, 720), Vector2.new(3840, 2160), Vector2.new(1920, 1080) }
+				do
+					camera.ViewportSize = viewport
+					h:step(1 / 60, 2)
+					expectFits(h, loading, viewport, `redimensionné {viewport.X}x{viewport.Y}`)
+				end
+				-- retour à 1080p : placement d'origine
+				local r = rects(h, loading)
+				expect(r.fail.y).toBeNear(0.68 * 1080, EPS)
+				expect(p.fail.FailScale.Scale).toBe(1)
+				expect(r.stage.y).toBeNear(stageY0, EPS)
+				expect(#h.errors).toBe(0)
 			end
-			-- retour au PC : placement d'origine
-			local r = rects(h, loading)
-			expect(r.fail.y).toBeNear(0.68 * 720, EPS)
-			expect(p.fail.FailScale.Scale).toBe(1)
-			expect(r.stage.y).toBeNear(stageY0, EPS)
-			expect(#h.errors).toBe(0)
-		end)
+		)
 	end)
 
 	describe("Fix r5-partage-2 › Chargement : PC et téléviseur inchangés", function()
-		it("PC 1280 × 720 et 1920 × 1080 : haut du bloc à 68 %, échelle 1, scène centrée", function()
-			for _, viewport in { Vector2.new(1280, 720), Vector2.new(1920, 1080) } do
-				local h, loading = run({ viewport = viewport })
-				h:step(1, 21)
-				local r, p = expectFits(h, loading, viewport, `PC {viewport.X}x{viewport.Y}`)
-				expect(p.fail.FailScale.Scale).toBe(1)
-				expect(r.fail.y).toBeNear(0.68 * viewport.Y, EPS)
-				expect(r.stage.y + r.stage.h / 2).toBeNear(viewport.Y / 2, EPS)
+		it(
+			"PC 1280 × 720 et 1920 × 1080 : haut du bloc à 68 %, échelle télé (0,667 ; 1), scène centrée",
+			function()
+				for _, case in { { Vector2.new(1280, 720), 2 / 3 }, { Vector2.new(1920, 1080), 1 } } do
+					local viewport = case[1]
+					local h, loading = run({ viewport = viewport })
+					h:step(1, 21)
+					local r, p = expectFits(h, loading, viewport, `PC {viewport.X}x{viewport.Y}`)
+					expect(p.fail.FailScale.Scale).toBeNear(case[2], 1e-9)
+					expect(r.fail.y).toBeNear(0.68 * viewport.Y, EPS)
+					expect(r.stage.y + r.stage.h / 2).toBeNear(viewport.Y / 2, EPS)
+				end
 			end
-		end)
+		)
 
-		it("console 1080p et 4K : échelle « 10 pieds » (1,5 ; 3), haut du bloc à 68 %", function()
-			for _, case in { { Vector2.new(1920, 1080), 1.5 }, { Vector2.new(3840, 2160), 3 } } do
+		it("console 1080p et 4K : échelle télé (1 ; 2), haut du bloc à 68 %", function()
+			for _, case in { { Vector2.new(1920, 1080), 1 }, { Vector2.new(3840, 2160), 2 } } do
 				local viewport = case[1]
 				local h, loading = run({ console = true, viewport = viewport })
 				h:step(1, 21)
@@ -218,12 +241,12 @@ return function(T)
 			end
 		end)
 
-		it("API Roblox valide (ApiAudit) : téléphone tourné, manette prise en main", function()
+		it("API Roblox valide (ApiAudit) : fenêtre redimensionnée, manette prise en main", function()
 			ApiAudit.start()
 			local ok, err = pcall(function()
-				local h, loading = run({ touch = true, viewport = Vector2.new(640, 360) })
+				local h, loading = run({ viewport = Vector2.new(1280, 720) })
 				h:step(1, 21)
-				h.game.Workspace.CurrentCamera.ViewportSize = Vector2.new(360, 640)
+				h.game.Workspace.CurrentCamera.ViewportSize = Vector2.new(1920, 1080)
 				h:step(1 / 60, 2)
 				h.game.UserInputService.LastInputTypeChanged:Fire(roblox.Enum.UserInputType.Gamepad1)
 				h:step(1 / 60, 2)

@@ -1,13 +1,25 @@
 --!strict
 -- Économie et rythme (GDD §4). Contrat : la STRUCTURE est figée par l'architecte ; seul le paquet
 -- logic règle les VALEURS, et seulement pour tenir la porte de simulation (tests/specs/
--- EconomyPacing.spec.luau, GDD §4.24). Chaque réglage est écrit dans docs/04 §17.
+-- EconomyPacing.spec.luau, GDD §4.24). Chaque réglage est écrit dans docs/04 §21.
 -- Règles : aucun service n'écrit un nombre du GDD en dur ; tout passe par ce module (ou Events,
 -- Quests, Pads pour les horaires, objectifs et dalles). Les durées sont en secondes, les tailles en
 -- unités de taille, les distances en studs. Les récompenses « en secondes de revenu » s'appliquent
 -- au revenu du joueur au moment de la récompense (GDD §4.1).
 
 local Balance = {}
+
+-- Version du GDD dont les VALEURS d'économie sont appliquées (docs/04 §16, §25). Contrat v1.2 : la
+-- STRUCTURE suit déjà le GDD v1.3 (clés ajoutées ci-dessous avec leur valeur du GDD) ; les valeurs
+-- des clés existantes qui changent en v1.3 sont réglées par le paquet logic (notes du contrat v1.2,
+-- avec leurs specs et la porte EconomyPacing), qui passe alors cette marque à "1.3". Contract_game
+-- vérifie les valeurs témoins de la version annoncée ici ; la publication exige "1.3" (docs/04 §23).
+-- Valeurs en attente (logic) : Tiles.cozyBed.Base 25e6 et MinR 3 ; Splorch.Targets (table v1.3),
+-- Splorch.BeyondMult 2.6 et Unlocks (« pad.cozyBed » à R = 3) ; Offline.GrowthShare 0.3 ;
+-- Babies.MaxOfBiggest 0.5 ; Caps.petSit 100 ; Rewards.PetSitVisitor 2 ; Boosts.ObjectiveMedium et
+-- ObjectiveHard 0 ; retrait de Splorch.RecentBuyWindow / RecentBuyShare et de CoinPacks (paquets de
+-- pièces retirés du lancement) ; Formulas.tileCost passe de 2^R à Tiles.RScale^R.
+Balance.GddValues = "1.2"
 
 -- Nombres géants (GDD §4.2) : toute valeur de pièces, de Pot ou de taille est bornée à [0 ; Max] et
 -- jamais NaN ni infinie avant chaque écriture ; sous ExactBelow, les pièces restent des entiers.
@@ -62,6 +74,10 @@ Balance.Press = {
 	StreakTimeout = 6, -- s sans pression : la série retombe à 0
 	KittyBonus = 0.10,
 	Range = 10, -- studs (position validée)
+	-- Press et PetPress : distance À PLAT (XZ, ZoneRules.distXZ) entre la position validée et le
+	-- CENTRE DE LA PLACE du squishy (WorldLayout.penSlot / poolSlot / fencePoint) ≤ Range + RangeTolerance,
+	-- et écart vertical depuis les pieds (ZoneRules.feetY) ≤ Catch.MaxDY (GDD §4.7, §12.7)
+	RangeTolerance = 2,
 	MaxPerSecond = 12, -- au-delà : ignorées sans message
 	-- PERFECT : rebond de période Period, calé sur Clock.now() + décalage hash(uid) ; fenêtre de
 	-- PerfectBefore avant à PerfectAfter après le sommet (décalée vers le tard : retard des télés)
@@ -81,10 +97,17 @@ Balance.Pot = {
 	AutoInterval = 5, -- s : pass Pot automatique
 }
 
--- Dalles (GDD §4.6) : prix = floor(Base × Growth^L × (ScaleWithR ? 2^R : 1)), L = niveau actuel
+-- Dalles (GDD §4.6) : prix = floor(Base × Growth^L × (ScaleWithR ? RScale^R : 1)), L = niveau actuel.
+-- ScaleWithR : la dalle suit R (Tapis, décorations) ; Enclos et Lit douillet ne sont jamais multipliés.
+-- Achat sur la dalle (RanchService.step, ZoneRules, positions validées) : entrée à EnterRadius, sortie
+-- au-delà de ExitRadius, puis DwellSeconds sur la dalle sans porter ni être dans un autre maintien
+-- (boop, bol, Grand Splorch) = UN achat par entrée (HoldState kind "tile" pour l'anneau du client).
+-- □ « Acheter » (BuyTile) sur la dalle ou depuis le panneau achète tout de suite.
 Balance.Tiles = {
 	EnterRadius = 2.5, -- studs : « sur » la dalle
 	ExitRadius = 3.5, -- studs : « sortie » (écart contre les achats en rafale)
+	DwellSeconds = 0.6, -- s sur la dalle avant l'achat automatique (GDD v1.3)
+	RScale = 3.5, -- prix des dalles de la boucle × RScale^R (GDD v1.3 ; remplace 2^R)
 	snack = { Base = 20, Growth = 4.0, Levels = 12, ScaleWithR = true, ResetOnSplorch = true, MinR = 0 },
 	decor = { Base = 80, Growth = 2.2, Levels = 18, ScaleWithR = true, ResetOnSplorch = true, MinR = 0 },
 	pens = { Base = 1200, Growth = 2.2, Levels = 14, ScaleWithR = false, ResetOnSplorch = false, MinR = 0 },
@@ -186,6 +209,10 @@ Balance.Catch = {
 	MaxDY = 8, -- écart vertical maximal
 	NearRadius = 30, -- « de près » (Golden, captures du Rush)
 	InputBuffer = 0.25, -- s : appui □ juste avant d'entrer à portée (client)
+	-- Catch(id, tClient) et Leap(dirX, dirZ, tClient) : tClient ramené dans [maintenant − ClientPast ;
+	-- maintenant] ; la capture compare SeededPath.pos(tClient) à MoveCheck.positionAt(joueur, tClient),
+	-- distance À PLAT ≤ rayon + Tolerance, écart vertical depuis les PIEDS ≤ MaxDY (GDD §12.5)
+	ClientPast = 0.35,
 }
 
 -- Golden Wobbler (GDD §4.11) ; horaires dans Events.Golden
@@ -223,8 +250,9 @@ Balance.Leap = {
 	SwitchRatio = 0.8, -- le marqueur change si une autre créature est 20 % plus proche
 	DirMin = 0.5, -- norme de (dirX, dirZ) acceptée
 	DirMax = 1.5,
-	-- vitesse notée à MoveCheck pendant le bond accordé (noteSpeed), 12 studs en 0,35 s ≈ 34,3
-	GrantSpeed = 36,
+	-- Bond accordé (contrat v1.2, note INT-MOVE) : ChaseService appelle MoveCheck.grant(player,
+	-- Distance, Duration, tStart) ; crédit rétroactif et écart minimal entre deux crédits dans
+	-- Server/Movement/Tuning (GrantRetro 0,3 s, GrantMinGap 4 s). Plus de GrantSpeed (noteSpeed).
 }
 
 -- Échelle de taille visuelle (GDD §4.2) : échelle = 1 + LogFactor × log10(max(1, S)) ; Ø = 2 × échelle
@@ -245,7 +273,7 @@ Balance.Splorch = {
 		44e9, 120e9, 320e9, 870e9, 2.4e12,
 	} :: { number }, -- Targets[R + 1] = objectif pour passer de R à R + 1
 	-- stylua: ignore end
-	BeyondMult = 2.7, -- R ≥ 20 : objectif précédent × 2,7, arrondi à 2 chiffres significatifs
+	BeyondMult = 2.7, -- R ≥ 20 : objectif précédent × BeyondMult, arrondi à 2 chiffres significatifs (v1.3 : 2,6, logic)
 	Fame = 5,
 	HoldConfirm = 1.5, -- s (geste client)
 	BurstAt = 3.2, -- s après le début du spectacle : application au profil d'un seul bloc
@@ -256,8 +284,12 @@ Balance.Splorch = {
 	GiftMinSize = 1,
 	GiftMutationCopyChance = 0.10, -- copie une mutation de multiplicateur ≤ GiftMutationMaxMult
 	GiftMutationMaxMult = 5, -- Doré
-	-- Deuxième confirmation : paquet de pièces acheté il y a moins de RecentBuyWindow s et dont il
-	-- reste au moins RecentBuyShare
+	-- Spectateurs (GDD §4.15) : spectacle complet (capsule, secousse, vibration, APPLAUDIR) au plus une
+	-- fois toutes les FullShowGap s par spectateur (mémoire de session de SplorchService) ; sinon
+	-- version courte (Celebrate "splorch" avec short = true : cadeau compté directement)
+	FullShowGap = 180,
+	-- OBSOLÈTE (contrat v1.2 : paquets de pièces retirés du lancement, plus de 2e confirmation) : lu
+	-- seulement par Formulas.splorchPreview (recentBuy) ; logic l'en retire puis supprime ces deux clés
 	RecentBuyWindow = 1800,
 	RecentBuyShare = 0.5,
 	-- Emplacements de Meilleur Ami débloqués : 1 dès le départ, 2 à R = 3, 3 à R = 10
@@ -277,7 +309,11 @@ Balance.Splorch = {
 Balance.Offline = {
 	CapHours = 8,
 	CozyBedHours = 12,
-	GrowthShare = 0.5, -- croissance sans boost × 50 % × durée
+	GrowthShare = 0.5, -- croissance sans boost × GrowthShare × durée (v1.3 : 0,3, logic)
+	-- La croissance hors ligne du ranch s'arrête quand le plus gros squishy d'enclos ou du Bassin atteint
+	-- StopAt × objectif(R) : ΔG = clamp(g sans boost × GrowthShare × durée, 0, max(0, StopAt × objectif(R)
+	-- − plus gros)) (GDD v1.3, §4.19 ; Formulas.offlineGrowth, rebase de DataService.onPrepare)
+	StopAt = 0.9,
 	PotShare = 0.25, -- revenu de départ sans boost × 25 % × durée
 	ReturnScreenMin = 600, -- s d'absence : écran de retour (GDD §7.2)
 }
@@ -298,17 +334,28 @@ Balance.Caps = {
 	splorchGifts = 10,
 	fameRush = 30, -- Fame du Rush (boopé, Wild Wobblers, Héros), Rush ou Cozy
 	fameRelease = 20,
-	petSit = 300,
+	petSit = 300, -- pressions de pet-sitting RÉCOMPENSÉES comme visiteur (v1.3 : 100, logic)
+	petSitIn = 100, -- pressions de pet-sitting reçues comme propriétaire (GDD v1.3, §6.4)
+	splorchCoins = 10, -- cadeaux en pièces des Grands Splorch des autres (60 s), ensuite Rewards.GiftSecondsAfterCap
 	claps = 10,
 	partyBuys = 3,
+}
+
+-- Plafonds journaliers PAR AMI (clé de profil caps.petSitBy[tostring(UserId du propriétaire)]) : hors de
+-- Balance.Caps, dont chaque clé est un compteur scalaire de `caps` (Logic/Invariants les vérifie un par un)
+Balance.CapsPerFriend = {
+	petSit = 20, -- pressions comptées pour « Plus serviable » par ami et par jour (GDD v1.3, §6.4, §6.9)
 }
 
 -- Bébés et cadeaux : taille = part du plus gros squishy du RECEVEUR (min), et jamais plus de
 -- MaxOfBiggest × ce plus gros (GDD §4.25)
 Balance.Babies = {
-	MaxOfBiggest = 2,
+	MaxOfBiggest = 2, -- (v1.3 : 0,5 pour chaque bébé et chaque cadeau, logic)
 	RushShare = 0.10, -- de l'ORIGINAL (bébé du Rush), borné par MaxOfBiggest
 	RushMin = 1,
+	-- Bébé du Rush : mutation de l'original copiée si son multiplicateur ≤ RushMutationMaxMult (Doré),
+	-- sinon tirée avec des chances × LuckyMutationMult (GDD v1.3, §4.21.3)
+	RushMutationMaxMult = 5,
 	WildShare = 0.15,
 	WildMin = 5,
 	MegaShare = 0.20,
@@ -329,15 +376,18 @@ Balance.Rewards = {
 	Hero = 120, -- capture Héros de son propre squishy en fuite
 	OwnerReturn = 60, -- squishy boopé rendu au propriétaire
 	RushNear = 20, -- joueur Rush à NearRadius d'une capture du Rush
-	PetSitVisitor = 10, -- ×2 si PERFECT
+	PetSitVisitor = 10, -- ×2 si PERFECT (v1.3 : 2, logic)
 	Clap = 10,
+	GiftSecondsAfterCap = 10, -- cadeau en pièces d'un Grand Splorch au-delà de Caps.splorchCoins (GDD v1.3)
 	PlopDay2 = 600, -- palier « Jour 2 » de Nourrir Plop
 }
 
--- Effets de taille sur le squishy en fuite du Rush (GDD §4.21.3)
+-- Effets de taille sur le squishy en fuite du Rush (GDD v1.3, §4.21.3) : z += g sans boost × secondes,
+-- au plus une fois par squishy et par jour UTC (SquishyRecord.gd = Clock.day() du dernier bonus ;
+-- SquishyService.growFor). Remplace les pourcentages de la v1.2 (cumulables à deux comptes).
 Balance.RushSize = {
-	HeroBonus = 0.10, -- capture Héros : + 10 % de taille
-	ReturnBonus = 0.05, -- personne ne l'attrape : + 5 %
+	HeroGrowthSeconds = 3600, -- capture Héros : + 1 h de croissance du ranch pour ce squishy
+	ReturnGrowthSeconds = 1800, -- personne ne l'attrape : + 30 min
 }
 
 -- Boosts (GDD §4.25, §7.3, §7.4, §8.3) : ×2 jamais cumulés ; un boost personnel est en pause pendant
@@ -347,15 +397,16 @@ Balance.Boosts = {
 	SquishParty = 600,
 	AdminParty = 600,
 	SquishPartyLeaver = 600, -- l'acheteur part avant la fin : boost personnel gardé
-	ObjectiveMedium = 300,
-	ObjectiveHard = 600,
+	ObjectiveMedium = 300, -- (v1.3 : 0, plus de boost dans les objectifs, logic)
+	ObjectiveHard = 600, -- (v1.3 : 0, logic)
 	FeedDay = 300, -- jour de Nourrir Plop sans palier
 	-- jour de palier : 5 min comme les autres jours (GDD §7.3 et §4.25, révision 1.3 ; réglage logic
 	-- pour tenir la porte EconomyPacing : avec 900, premier Grand Splorch trop tôt)
 	FeedMilestone = 300,
 }
 
--- Paquets de pièces (GDD §8.3) : montant calculé par le serveur à l'attribution
+-- OBSOLÈTE (contrat v1.2 : paquets de pièces retirés du lancement, GDD §8.3) : lu seulement par
+-- Formulas.coinPack ; logic retire coinPack puis supprime cette table (autorisé par le contrat)
 Balance.CoinPacks = {
 	CoinsSmall = { minutes = 30, min = 5000 },
 	CoinsBig = { minutes = 120, min = 20000 },

@@ -103,7 +103,8 @@ return function(T)
 			end
 			local minY, maxY = math.min(table.unpack(ys)), math.max(table.unpack(ys))
 			expect(maxY - minY).toBeGreaterThan(30)
-			expect(math.max(table.unpack(widths))).toBeGreaterThan(120) -- écrasement : plus large au sol
+			-- écrasement : plus large au sol que le corps au repos (180 px TV depuis la note INT-TV)
+			expect(math.max(table.unpack(widths))).toBeGreaterThan(180)
 			expect(math.max(table.unpack(alphas)) - math.min(table.unpack(alphas))).toBeGreaterThan(0.2)
 		end)
 
@@ -194,7 +195,7 @@ return function(T)
 				expect(find(fail, "Message").Text).toBe("Presque prêt…")
 				local button = find(fail, "RetryButton")
 				expect(button.Text).toBe("Réessayer")
-				expect(button.Size.Y.Offset).toBeGreaterThanOrEqual(44) -- cible tactile
+				expect(button.Size.Y.Offset).toBeGreaterThanOrEqual(80) -- bouton télé (px TV, note INT-TV)
 				button.Activated:Fire()
 				button.Activated:Fire()
 				button.Activated:Fire()

@@ -1,5 +1,5 @@
 --!nocheck
--- Contrat du JEU (docs/04) : surface d'API des 65 modules des 8 paquets, ordres d'initialisation,
+-- Contrat du JEU (docs/04, v1.2) : surface d'API des 66 modules des 8 paquets, ordres d'initialisation,
 -- catalogue des intentions (Config/Intents) et registre des remotes, propriétaires des clés du profil,
 -- données réelles des configurations (26 espèces, raretés, mutations, tables de la Cuve, prix des
 -- dalles, objectifs, paliers, bannières, cosmétiques, sons, vibrations) et disposition télé du HUD.
@@ -268,6 +268,7 @@ local API = {
 			"isReady",
 			"place",
 			"step",
+			"onPad",
 			"setPublic",
 			"squishyOp",
 			"setFence",
@@ -306,7 +307,8 @@ local API = {
 			"setServerBoost",
 			"boostActive",
 			"setFriendsPresent",
-			"noteCoinBuy",
+			"consumeFriendCap",
+			"gNoBoost",
 			"applySplorch",
 			"onSettle",
 			"incomeCtx",
@@ -333,7 +335,9 @@ local API = {
 			"dismount",
 			"resetSizes",
 			"setWaiting",
-			"growBy",
+			"growFor",
+			"waiting",
+			"anyEscaping",
 			"setEscaping",
 			"bestFriend",
 			"fenceCandidates",
@@ -345,7 +349,7 @@ local API = {
 	},
 	["ServerScriptService.Server.Services.ProductService"] = {
 		pkg = "ranch",
-		fns = { "Init", "Start", "coinsHidden", "partyBuysToday" },
+		fns = { "Init", "Start", "partyBuysToday" },
 		signals = {},
 	},
 	["ServerScriptService.Server.Data.ProfileRepair"] = { pkg = "ranch", fns = { "repair" }, signals = {} },
@@ -384,7 +388,10 @@ local API = {
 			"cancelSpectacle",
 			"canStartParty",
 			"startSquishParty",
+			"partyUnplayed",
 			"playerCount",
+			"isActive",
+			"activeCount",
 			"openStates",
 		},
 		signals = {},
@@ -551,6 +558,11 @@ local API = {
 	["StarterPlayer.StarterPlayerScripts.Client.UI.Prompt"] = {
 		pkg = "client-hud",
 		fns = { "Init", "Start", "setHold", "plates" },
+		signals = {},
+	},
+	["StarterPlayer.StarterPlayerScripts.Client.UI.WorldText"] = {
+		pkg = "client-hud",
+		fns = { "create", "setText", "pixelSize", "projectedPx", "clampToSafe", "rescale", "release" },
 		signals = {},
 	},
 	["StarterPlayer.StarterPlayerScripts.Client.Controllers.InputController"] = {
@@ -888,7 +900,7 @@ return function(T)
 					})
 				end
 			end
-			expect(count).toBe(65)
+			expect(count).toBe(66)
 			expect(#hs.errors + #hc.errors).toBe(0)
 		end)
 
@@ -1193,7 +1205,8 @@ return function(T)
 			expect(B.Tiles.snack.Levels).toBe(12)
 			expect(B.Tiles.decor.Levels).toBe(18)
 			expect(B.Tiles.pens.Levels).toBe(14)
-			expect(B.Tiles.cozyBed.MinR).toBe(1)
+			-- Lit douillet : témoin de la version des valeurs annoncée (Balance.GddValues, docs/04 §16, §25)
+			expect(B.Tiles.cozyBed.MinR).toBe(if B.GddValues == "1.3" then 3 else 1)
 			expect(B.Pens.Base + B.Tiles.pens.Levels).toBe(18)
 			expect(B.Pens.Base + B.Tiles.pens.Levels + B.Pens.BigRanchBonus).toBe(B.Pens.Max)
 		end)
@@ -1206,7 +1219,7 @@ return function(T)
 			for i = 2, 20 do
 				expect(B.Splorch.Targets[i] > B.Splorch.Targets[i - 1]).toBe(true)
 			end
-			expect(B.Splorch.BeyondMult).toBe(2.7)
+			expect(B.Splorch.BeyondMult).toBe(if B.GddValues == "1.3" then 2.6 else 2.7)
 		end)
 	end)
 
@@ -1269,24 +1282,36 @@ return function(T)
 		end)
 
 		it(
-			"boutique : identifiants à 0 au départ, effets déclarés ; paquets liés à Balance.CoinPacks",
+			"boutique : identifiants à 0 au départ, effets déclarés ; paquets de pièces retirés (cachés)",
 			function()
 				local h = Harness.new()
 				local M = shared(h, "Config.Monetization")
-				local B = shared(h, "Config.Balance")
 				for _, list in { M.Passes, M.Products } do
 					for key, def in list do
 						expect({ key = key, id = def.id }).toEqual({ key = key, id = 0 })
+						-- plus aucun article caché par PolicyService ni « Grand Splorch prêt » (contrat v1.2)
+						expect({
+							key = key,
+							policy = def.hideIfRandomRestricted,
+							ready = def.hideWhenSplorchReady,
+						}).toEqual({
+							key = key,
+						})
 					end
 				end
 				for _, key in { "AutoPot", "DoubleCoins", "BigRanch", "SaddlesTrails" } do
 					expect(M.Passes[key].forever).toBe(true)
 				end
 				for _, key in { "CoinsSmall", "CoinsBig" } do
-					expect(M.Products[key].coinMinutes).toBe(B.CoinPacks[key].minutes)
-					expect(M.Products[key].hideIfRandomRestricted).toBe(true)
+					expect({ key = key, hidden = M.Products[key].hidden }).toEqual({
+						key = key,
+						hidden = true,
+					})
+					expect(M.Products[key].coinMinutes).toBeNil()
 				end
+				expect(M.Passes.SeasonPass.hidden).toBe(true)
 				expect(M.Products.SquishParty.dailyLimit).toBe(3)
+				expect(M.Products.SquishParty.hidden).toBeNil()
 			end
 		)
 
@@ -1367,7 +1392,7 @@ return function(T)
 					"fusion",
 					"comboBig",
 					"boopDone",
-					"booped",
+					"squishyBack",
 					"rushSiren",
 					"megaLand",
 					"megaPop",
@@ -1379,6 +1404,19 @@ return function(T)
 				expect({ name = name, declared = def ~= nil }).toEqual({ name = name, declared = true })
 				expect(def.mobile).toBeNil() -- console d'abord : aucune vibration de téléphone
 			end
+			-- GDD v1.3 §10.5 : plus de vibration quand un squishy s'enfuit ; sirène en une seule impulsion
+			-- de 0,3 s, jouée même pendant le délai minimal
+			expect(Console.Haptics.Events.booped).toBeNil()
+			local back = Console.Haptics.Events.squishyBack
+			expect({ back.effect, back.motor, back.strength, back.duration, back.priority }).toEqual({
+				"GameplayCollision",
+				"Small",
+				0.3,
+				0.08,
+				2,
+			})
+			expect(Console.Haptics.Events.rushSiren.duration).toBe(0.3)
+			expect(Console.Haptics.Events.rushSiren.cooldownExempt).toBe(true)
 		end)
 	end)
 
@@ -1594,15 +1632,13 @@ return function(T)
 						"splorch",
 					}
 				do
-					expect({
-						key = key,
-						ok = type(E.Gauge.Points[key]) == "number" and E.Gauge.Points[key] > 0,
-					}).toEqual({
-						key = key,
-						ok = true,
-					})
+					-- GDD v1.3 §4.23 : une pression ordinaire ne compte pas (press = 0) ; tout le reste compte
+					local value = E.Gauge.Points[key]
+					local ok = type(value) == "number" and (if key == "press" then value == 0 else value > 0)
+					expect({ key = key, ok = ok }).toEqual({ key = key, ok = true })
 				end
 				expect(E.Gauge.Points.splorch).toBe(25)
+				expect(E.Gauge.Points.perfect).toBe(1)
 			end
 		)
 
@@ -1718,5 +1754,424 @@ return function(T)
 			end
 			expect(table.concat(found, "\n")).toBe("")
 		end)
+	end)
+
+	-- Contrat v1.2 : GDD v1.3 et remarques A20-A29 de la revue d'architecture (docs/04 §25) ---------
+
+	describe("Contrat du jeu › Contrat v1.2 (GDD v1.3, remarques A20-A29)", function()
+		local GAMEPLAY = {
+			"Press",
+			"PickUp",
+			"PutDown",
+			"Throw",
+			"FuseMenu",
+			"FuseAll",
+			"BuyTile",
+			"MoveSquishy",
+			"ClaimMail",
+			"Sell",
+			"Release",
+			"SetLock",
+			"SetBestFriend",
+			"SetMount",
+			"Ride",
+			"EquipOutfit",
+			"Leap",
+			"Catch",
+			"BoopHold",
+			"MegaPress",
+			"GrandSplorch",
+			"FeedPlop",
+			"ClaimObjective",
+			"RerollObjective",
+			"ClaimDexReward",
+			"PetPress",
+			"EquipCosmetic",
+			"Emote",
+			"Clap",
+		}
+
+		it(
+			"intentions : Catch et Leap portent tClient ; ClientEvent (analytique) ; activity sur les seules intentions de jeu",
+			function()
+				local h = Harness.new()
+				local Intents = shared(h, "Config.Intents")
+				local R = shared(h, "Remotes")
+				local function argNames(name)
+					local out = {}
+					for _, arg in Intents[name].args do
+						table.insert(out, arg.name .. ":" .. arg.kind)
+					end
+					return out
+				end
+				expect(argNames("Catch")).toEqual({ "id:int", "tClient:time" })
+				expect(argNames("Leap")).toEqual({ "dirX:dir", "dirZ:dir", "tClient:time" })
+				expect(Intents.ClientEvent.owner).toBe("DiagnosticsService")
+				expect(Intents.ClientEvent.rate).toEqual({ 1, 5 })
+				expect(Intents.ClientEvent.args[1].set).toEqual({ "qualityReduced", "shopOpened" })
+				expect(R.ClientEvent).toBe("event")
+				local expected = {}
+				for _, name in GAMEPLAY do
+					expected[name] = true
+				end
+				for name, spec in Intents do
+					expect({ name = name, activity = spec.activity == true }).toEqual({
+						name = name,
+						activity = expected[name] == true,
+					})
+				end
+			end
+		)
+
+		it(
+			"types : sortes de Celebrate = table du §10.3 de docs/04 ; champs ajoutés par le contrat v1.2",
+			function()
+				local source = fs.readFile("src/shared/Types.luau")
+				local union =
+					string.match(source, "export type CelebrateKind =(.-)\nexport type CelebratePayload")
+				expect(union ~= nil).toBe(true)
+				local kinds = {}
+				for kind in string.gmatch(union, '"(%w+)"') do
+					kinds[kind] = true
+				end
+				local doc = fs.readFile("docs/04-architecture.md")
+				local section = string.match(doc, "### 10%.3 Célébrations.-\n(.-)\n### 10%.4")
+				expect(section ~= nil).toBe(true)
+				local documented = 0
+				for line in string.gmatch(section, "[^\n]+") do
+					for kind in string.gmatch(string.match(line, "^| ([^|]+) |") or "", "`(%w+)`") do
+						documented += 1
+						expect({ kind = kind, typed = kinds[kind] == true }).toEqual({
+							kind = kind,
+							typed = true,
+						})
+					end
+				end
+				expect(documented >= 30).toBe(true)
+				for _, needle in
+					{
+						"\tgd: number,",
+						"best: { s: SpeciesId, m: MutationId, z: number, zg: number },",
+						"restUntil: number",
+						'kind: "feed" | "tile"',
+						"position: number,",
+						"eta: number,",
+						"rootOffset: number,",
+						"short: boolean,",
+						"nearlyReady: boolean,",
+					}
+				do
+					expect({ needle = needle, found = string.find(source, needle, 1, true) ~= nil }).toEqual({
+						needle = needle,
+						found = true,
+					})
+				end
+				-- RanchPatch : aucun champ optionnel dans RanchPublic (un nil ne voyage pas, remarque A27)
+				local ranch = string.match(source, "export type RanchPublic = (%b{})")
+				expect(string.find(ranch, "}?", 1, true)).toBeNil()
+			end
+		)
+
+		it(
+			"schéma : coinBuy retiré, packs réservé, moon (EventService), dex.fam dense, plafonds de pet-sitting",
+			function()
+				local h = Harness.new()
+				local Schema = h:require("ServerScriptService.Server.Data.Schema")
+				local Species = shared(h, "Config.Species")
+				local B = shared(h, "Config.Balance")
+				local d = Schema.defaults()
+				expect(d.coinBuy).toBeNil()
+				expect(Schema.OWNERS.coinBuy).toBeNil()
+				expect(d.packs).toEqual({ side = 0, quoteProduct = "", quoteAmount = 0, quoteAt = 0 })
+				expect(string.find(Schema.OWNERS.packs, "(réservé", 1, true)).toBe(1)
+				expect(d.moon).toEqual({ lastSession = 0 })
+				expect(Schema.OWNERS.moon).toBe("EventService")
+				expect(#d.dex.fam).toBe(#Species.FamilyOrder)
+				for f, v in d.dex.fam do
+					expect(type(f) == "number" and v == 0).toBe(true)
+				end
+				for _, key in { "splorchCoins", "petSitIn" } do
+					expect({ key = key, value = d.caps[key] }).toEqual({ key = key, value = 0 })
+				end
+				expect(d.caps.petSitBy).toEqual({})
+				-- chaque plafond scalaire de Balance.Caps a son compteur dans caps (Logic/Invariants)
+				for key in B.Caps do
+					expect({ key = key, counter = type(d.caps[key]) }).toEqual({
+						key = key,
+						counter = "number",
+					})
+				end
+				expect(B.CapsPerFriend.petSit).toBe(20)
+				-- tenue portée : seulement dans squishies[uid].o ; outfits.worn obsolète, toujours vide
+				expect(d.outfits.worn).toEqual({})
+			end
+		)
+
+		it(
+			"profil plein (104 squishies, trophées et Squishydex partiels, 64 espèces) : JSON aller-retour sans changement",
+			function()
+				local h = Harness.new()
+				local Schema = h:require("ServerScriptService.Server.Data.Schema")
+				local Http = h.game.HttpService
+				local d = Schema.defaults()
+				local places = { "pen", "pool", "dodo", "mail" }
+				local counts = { pen = 19, pool = 5, dodo = 60, mail = 20 }
+				local n = 0
+				for _, at in places do
+					for _ = 1, counts[at] do
+						n += 1
+						local uid = string.format("%x", n)
+						d.squishies[uid] = {
+							s = (n % 64) + 1,
+							m = n % 10,
+							st = n % 6,
+							z = 1 + n * 1234.5,
+							zg = n * 0.25,
+							bf = if n <= 3 then n else 0,
+							lk = n % 7 == 0,
+							o = if n == 5 then "sweater" else "",
+							at = at,
+							b = 1797033600 + n,
+							gd = if n % 2 == 0 then 20800 else 0,
+						}
+					end
+				end
+				expect(n).toBe(104)
+				d.nextUid = 105
+				for s = 1, 64 do
+					d.dex.mut[s] = if s % 3 == 0 then 0 else bit32.bor(1, bit32.lshift(1, (s % 9) + 1))
+					d.dex.stars[s] = s % 32
+					d.trophies[s] = if s % 4 == 0 then 0 else s * 1e9
+				end
+				d.dex.fam = { 1, 0, 1, 0, 0, 0, 0, 1 }
+				d.outfits.owned.sweater = 1
+				d.caps.petSitBy["123456"] = 7
+				local back = Http:JSONDecode(Http:JSONEncode(d))
+				expect(back).toEqual(d)
+				expect(#Http:JSONEncode(d) < 20000).toBe(true)
+				-- le DataStore simulé l'accepte (aucun tableau à trous, aucune table mixte)
+				local store = h.game.DataStoreService:GetDataStore("ContractFull")
+				expect(function()
+					store:SetAsync("k", d)
+				end).notToThrow()
+			end
+		)
+
+		it(
+			"Squishydex de 64 espèces : tampons et étoiles gardés après sauvegarde et rechargement (DataService)",
+			function()
+				local h = Harness.new()
+				local DS = h:require("ServerScriptService.Server.Services.DataService")
+				DS.Settings.LOCKED_RETRY_DELAY = 0.01
+				DS.Settings.RETRY_BASE_DELAY = 0.001
+				h:boot()
+				local p = h:addPlayer({ userId = 301, name = "Mia" })
+				local data = DS.waitFor(p, 2)
+				expect(data ~= nil).toBe(true)
+				for s = 1, 64 do
+					data.dex.mut[s] = bit32.bor(1, bit32.lshift(1, (s % 9) + 1))
+					data.dex.stars[s] = s % 32
+					data.trophies[s] = s * 1000
+				end
+				DS.markDirty(p, "dex")
+				DS.markDirty(p, "trophies")
+				h:removePlayer(p)
+				h:settle(5)
+				local p2 = h:addPlayer({ userId = 301, name = "Mia" })
+				local d2 = DS.waitFor(p2, 2)
+				expect(d2 ~= nil).toBe(true)
+				expect(#d2.dex.mut).toBe(64)
+				expect(#d2.dex.stars).toBe(64)
+				for s = 1, 64 do
+					expect({ s = s, mut = d2.dex.mut[s], stars = d2.dex.stars[s], trophy = d2.trophies[s] }).toEqual({
+						s = s,
+						mut = bit32.bor(1, bit32.lshift(1, (s % 9) + 1)),
+						stars = s % 32,
+						trophy = s * 1000,
+					})
+				end
+				expect(table.concat(h.errors, "\n")).toBe("")
+			end
+		)
+
+		it(
+			"valeurs du GDD v1.3 tenues par le contrat : jauge, activité, bol, objectifs, nouvelles clés",
+			function()
+				local h = Harness.new()
+				local E = shared(h, "Config.Events")
+				local Q = shared(h, "Config.Quests")
+				local B = shared(h, "Config.Balance")
+				local S = shared(h, "Config.Species")
+				expect(E.Gauge.TargetPerPlayer).toBe(600)
+				expect(E.Gauge.RestSeconds).toBe(1200)
+				expect(E.Gauge.Points.press).toBe(0)
+				expect(E.Activity).toEqual({
+					Window = 120,
+					MoveStuds = 4,
+					MegaAlertRadius = 60,
+					MinPlayers = 1,
+				})
+				expect(E.SplorchQueueHardCut).toBe(480)
+				expect(Q.Feed.Hold).toBe(2)
+				for tier, reward in Q.ObjectiveRules.Rewards do
+					expect({ tier = tier, boost = reward.boost }).toEqual({ tier = tier, boost = 0 })
+				end
+				expect(B.Tiles.DwellSeconds).toBe(0.6)
+				expect(B.Tiles.RScale).toBe(3.5)
+				expect(B.Offline.StopAt).toBe(0.9)
+				expect(B.Caps.petSitIn).toBe(100)
+				expect(B.Caps.splorchCoins).toBe(10)
+				expect(B.Rewards.GiftSecondsAfterCap).toBe(10)
+				expect(B.Babies.RushMutationMaxMult).toBe(5)
+				expect(B.RushSize).toEqual({ HeroGrowthSeconds = 3600, ReturnGrowthSeconds = 1800 })
+				expect(B.Splorch.FullShowGap).toBe(180)
+				expect(B.Press.RangeTolerance).toBe(2)
+				expect(B.Catch.ClientPast).toBe(0.35)
+				expect(B.Leap.GrantSpeed).toBeNil() -- remplacé par MoveCheck.grant (note INT-MOVE)
+				expect(S.NewFamilyUnlockR).toBe(5)
+				-- familles : liste en ajout seul = index de dex.fam
+				expect(#S.FamilyOrder).toBe(7)
+				local seen = {}
+				for i, key in S.FamilyOrder do
+					expect(S.Families[key].order).toBe(i)
+					seen[key] = true
+				end
+				for key in S.Families do
+					expect({ key = key, listed = seen[key] == true }).toEqual({ key = key, listed = true })
+				end
+				-- valeurs témoins de la version annoncée (logic passe GddValues à "1.3" en appliquant ses notes)
+				expect(B.GddValues == "1.2" or B.GddValues == "1.3").toBe(true)
+				if B.GddValues == "1.3" then
+					expect(B.Tiles.cozyBed.Base).toBe(25e6)
+					expect(B.Splorch.Targets[2]).toBe(39000)
+					expect(B.Splorch.Targets[20]).toBe(1.1e12)
+					expect(B.Offline.GrowthShare).toBe(0.3)
+					expect(B.Babies.MaxOfBiggest).toBe(0.5)
+					expect(B.Caps.petSit).toBe(100)
+					expect(B.Rewards.PetSitVisitor).toBe(2)
+					expect(B.Boosts.ObjectiveMedium).toBe(0)
+					expect(B.Boosts.ObjectiveHard).toBe(0)
+					expect(B.Splorch.RecentBuyWindow).toBeNil()
+					expect(B.CoinPacks).toBeNil()
+				end
+			end
+		)
+
+		it("nouveaux textes EN / FR du contrat v1.2", function()
+			local h = Harness.new()
+			local Strings = shared(h, "Localization.Strings")
+			for _, key in
+				{
+					"feedback.waitEscape",
+					"hud.gauge.rest",
+					"hud.queue.next",
+					"hud.queue.place",
+					"world.vat.dodo",
+					"celebrate.giftShort",
+					"return.nearly",
+					"panel.dex.sheet.mutations",
+					"panel.dex.sheet.stars",
+					"panel.dex.sheet.record",
+					"panel.dex.sheet.found",
+				}
+			do
+				expectString(Strings, key)
+			end
+			expect(Strings.fr["num.word.12"]).toBe("1 000 MILLIARDS")
+		end)
+
+		it(
+			"projet Rojo : StreamingEnabled coupé, curseur virtuel désactivé, Lighting ShadowMap (remarque A28)",
+			function()
+				local serde = require("@lune/serde")
+				local project = serde.decode("json", fs.readFile("default.project.json"))
+				local tree = project.tree
+				expect(tree.Workspace["$properties"].StreamingEnabled).toBe(false)
+				local lighting = tree.Lighting["$properties"].Technology
+				local tech = if type(lighting) == "table" then lighting.Enum or lighting[1] else lighting
+				expect(tostring(tech)).toBe("ShadowMap")
+				local starterGui = tree.StarterGui and tree.StarterGui["$properties"] or {}
+				local cursor = starterGui.VirtualCursorMode
+				local mode = if type(cursor) == "table" then cursor.Enum or cursor[1] else cursor
+				expect(tostring(mode)).toBe("Disabled")
+			end
+		)
+
+		it(
+			"clavier : menu sur M et Semicolon (AZERTY), jamais Tab ; raccourcis directs des panneaux",
+			function()
+				local h = Harness.new()
+				local L = shared(h, "Config.Layout")
+				expect(L.Keyboard.Menu).toEqual({ "M", "Semicolon" })
+				expect(L.Keyboard.Panels).toEqual({
+					Ranch = "G",
+					Squishydex = "C",
+					Objectives = "J",
+					Leaderboards = "L",
+					Shop = "B",
+					Settings = "P",
+				})
+				for _, key in L.Keyboard.Menu do
+					expect(key ~= "Tab").toBe(true)
+				end
+				expect(L.HudContent.edgeArrow.max).toBe(2)
+				expect(L.WorldText.Text >= 32 and L.WorldText.Plus >= 40 and L.WorldText.Glyph >= 48).toBe(
+					true
+				)
+				expect(L.WorldText.MinProjected).toBe(28)
+			end
+		)
+
+		it(
+			"Main.server : Net.setup() après l'attach de DiagnosticsService, avant les autres require (remarque A29)",
+			function()
+				local source = fs.readFile("src/server/Main.server.luau")
+				local attachAt = string.find(source, 'run(name, "attach", m.attach)', 1, true)
+				local setupAt = string.find(source, "\t\tNet.setup()", 1, true)
+				expect(attachAt ~= nil and setupAt ~= nil and setupAt > attachAt).toBe(true)
+				expect(string.find(source, "\nNet.setup()", 1, true)).toBeNil()
+				local h = Harness.new()
+				h:boot()
+				h:step(1 / 60, 5)
+				expect(h.game.ReplicatedStorage:FindFirstChild("Remotes") ~= nil).toBe(true)
+				expect(table.concat(h.errors, "\n")).toBe("")
+			end
+		)
+
+		it(
+			'harnais : StarterGui:GetCore("GetBlockedUserIds") simulé ({} par défaut, liste par joueur, panne)',
+			function()
+				local hc = Harness.new({ mode = "client" })
+				local gui = hc.game.StarterGui
+				expect(gui:GetCore("GetBlockedUserIds")).toEqual({})
+				hc:setBlocked(hc.localPlayer, { 7, 8 })
+				local list = gui:GetCore("GetBlockedUserIds")
+				expect(list).toEqual({ 7, 8 })
+				list[1] = 99 -- copie : la liste du harnais ne change pas
+				expect(gui:GetCore("GetBlockedUserIds")).toEqual({ 7, 8 })
+				hc:setBlocked(hc.localPlayer, false)
+				expect(pcall(function()
+					return gui:GetCore("GetBlockedUserIds")
+				end)).toBe(false)
+			end
+		)
+
+		it(
+			"vibrations : la sirène du Rush (cooldownExempt) passe pendant le délai minimal, pas les autres",
+			function()
+				local hc = Harness.new({ mode = "client", console = true })
+				hc:createRemotes()
+				local Clock = hc:require("ReplicatedStorage.Shared.Util.Clock")
+				Clock.freeze(1800000000)
+				hc:require("StarterPlayer.StarterPlayerScripts.Client.Util.Platform").Init()
+				local Haptics = hc:require("StarterPlayer.StarterPlayerScripts.Client.Util.Haptics")
+				Haptics._reset()
+				expect(Haptics.play("splorch")).toBe(true) -- priorité 5
+				expect(Haptics.play("catch")).toBe(false) -- délai minimal, priorité plus basse
+				expect(Haptics.play("rushSiren")).toBe(true) -- exemptée du délai minimal
+				Clock.unfreeze()
+				expect(#hc.errors).toBe(0)
+			end
+		)
 	end)
 end

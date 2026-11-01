@@ -687,7 +687,17 @@ function Services.install(h)
 	}
 	cm.StarterGui = {
 		SetCore = function() end,
-		GetCore = function()
+		-- « GetBlockedUserIds » : liste de blocage du joueur local (h:setBlocked), {} par défaut ;
+		-- false simule un appel qui lève (CoreScripts pas encore prêts) : le jeu l'appelle sous pcall
+		GetCore = function(_, key)
+			if key == "GetBlockedUserIds" then
+				local me = MockInstance.localPlayer
+				local list = if me then h.blocked[me.UserId] else nil
+				if list == false then
+					error("GetCore: GetBlockedUserIds has not been registered by the CoreScripts", 2)
+				end
+				return table.clone(list or {})
+			end
 			return nil
 		end,
 		SetCoreGuiEnabled = function() end,

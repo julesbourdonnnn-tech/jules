@@ -5,13 +5,17 @@
 -- (GDD §4.1-§4.8, §4.16-§4.19, §4.25, §12.3). Calcul paresseux : settle() règle le Pot (intégrale
 -- exacte sur [growth.t ; now], deux Clock.now() : jamais deux fois la même seconde) et avance growth.G
 -- à chaque événement qui change g, A, P ou B, avant chaque sauvegarde (onBeforeSave), et toutes les
--- 30 s (décalé par joueur). Hors ligne : rebase pur et synchrone dans DataService.onPrepare (avant
--- l'instantané et Loaded) : G += croissance sans boost × 50 % × durée, Pot += revenu de départ sans
--- boost × 25 % × durée (8 h au plus), growth.t = Clock.now() ; écran de retour (Celebrate "return")
--- si ≥ 10 min, sur Loaded. Départ : onBeforeSave(release = true) règle et pose lastOnline. Grand
--- Splorch appliqué d'un bloc (applySplorch). Analytics économie (§16.2). Émet TileBought,
--- PotCollected. Remotes : BuyTile. Clés : lastOnline, coins, pot, R, growth, tiles, fame, boosts,
--- coinBuy, caps.
+-- 30 s (décalé par joueur), et aussi à chaque palier de trophée franchi, page dorée, bonus de famille
+-- gagné ou changement de Fame (contrat v1.2). Hors ligne : rebase pur et synchrone dans
+-- DataService.onPrepare (avant l'instantané et Loaded) : G += Formulas.offlineGrowth (croissance sans
+-- boost × Offline.GrowthShare × durée, arrêtée à Offline.StopAt × objectif(R) pour le plus gros),
+-- Pot += revenu de départ sans boost × 25 % × durée (8 h au plus), growth.t = Clock.now() ; écran de
+-- retour (Celebrate "return") si ≥ 10 min, sur Loaded. Départ : onBeforeSave(release = true) règle et
+-- pose lastOnline. Dalles : achat sur la dalle après Tiles.DwellSeconds (crochet "pad" de RanchService)
+-- ou □ / panneau (BuyTile), prix × Tiles.RScale^R pour les dalles de la boucle. Grand Splorch appliqué
+-- d'un bloc (applySplorch). Analytics économie (§16.2) cumulées par joueur, tranche de 5 min et
+-- itemSku, en secondes de revenu (note INT-ANALYTICS). Émet TileBought, PotCollected. Remotes :
+-- BuyTile. Clés : lastOnline, coins, pot, R, growth, tiles, fame, boosts, caps.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -102,7 +106,7 @@ function EconomyService.G(player: Player, t: number?): number
 	error("TODO(ranch): EconomyService.G")
 end
 
--- Achète le niveau suivant (condition R, prix × 2^R si la dalle suit R) ; refus doux sur une dalle (anneau)
+-- Achète le niveau suivant (condition R, prix × Tiles.RScale^R si la dalle suit R) ; refus doux sur une dalle (anneau)
 function EconomyService.buyTile(player: Player, tile: string, source: "pad" | "panel"): boolean
 	local _ = { player, tile, source }
 	error("TODO(ranch): EconomyService.buyTile")
@@ -160,10 +164,23 @@ function EconomyService.setFriendsPresent(player: Player, count: number)
 	error("TODO(ranch): EconomyService.setFriendsPresent")
 end
 
--- Paquet de pièces acheté (coinBuy : 2e confirmation du Grand Splorch)
-function EconomyService.noteCoinBuy(player: Player, amount: number)
-	local _ = { player, amount }
-	error("TODO(ranch): EconomyService.noteCoinBuy")
+-- Plafond journalier PAR AMI (caps.petSitBy[tostring(friendUserId)], Balance.CapsPerFriend[capKey]) :
+-- rend la part accordée (0 = plafond atteint) ; remis à zéro avec caps au changement de jour UTC
+function EconomyService.consumeFriendCap(
+	player: Player,
+	capKey: string,
+	friendUserId: number,
+	wanted: number
+): number
+	local _ = { player, capKey, friendUserId, wanted }
+	error("TODO(ranch): EconomyService.consumeFriendCap")
+end
+
+-- Croissance par seconde SANS boost (Formulas.growthRate avec boost = false) : bonus du Rush
+-- (SquishyService.growFor), hors ligne
+function EconomyService.gNoBoost(player: Player): number
+	local _ = { player }
+	error("TODO(ranch): EconomyService.gNoBoost")
 end
 
 -- Grand Splorch d'un bloc : pièces, Pot, Tapis, décorations à 0, R + 1, Fame + 5, G = 0 ; rend les pièces perdues

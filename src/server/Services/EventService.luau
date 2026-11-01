@@ -4,15 +4,19 @@
 -- Événements du serveur (GDD §2.4, §4.22, §4.23, §7.5) : transitions de phase par EventClock (Rush,
 -- MEGA, Golden, Lune) diffusées par Signals.EventPhase et EventState ; MEGA SQUISH (objectif adapté,
 -- indulgence, pressions agrégées, MegaBeat 4 Hz, paliers de bébés, MEGA MOON) ; jauge du serveur
--- (objectif 500 × max(2, N), points UNIQUEMENT ici, depuis les signaux et Events.Gauge.Points, danse
--- de Big Plop, WOBBLE PARTY 5 min) ; Jelly Moon (Autel : 5 min de
--- présence → Goutte de Lune) ; file des grands spectacles (≥ 20 s d'écart, Signals.SpectacleStarted) ;
--- boosts de serveur (EconomyService.setServerBoost : payé d'abord, jamais cumulés) ; Squish Party ;
+-- (objectif 600 × max(2, N actifs), points UNIQUEMENT ici, depuis les signaux et Events.Gauge.Points :
+-- une pression ne compte que PERFECT ; danse de Big Plop, WOBBLE PARTY 5 min, puis sieste de 20 min
+-- sans fête, EventState.gauge.restUntil) ; joueurs ACTIFS (Server/Util/Activity, Events.Activity : N du
+-- MEGA et de la jauge) ; Jelly Moon (Autel : 5 min de présence → Goutte de Lune, une par séance et
+-- par compte : clé moon.lastSession) ; file des grands spectacles (≥ 20 s d'écart, place et attente
+-- prévue par entrée, coupure dure à 480 s, Signals.SpectacleStarted ; héros parti avant l'éclatement :
+-- spectacle effacé aussitôt) ; boosts de serveur (EconomyService.setServerBoost : payé d'abord, jamais
+-- cumulés) ; Squish Party (un achat croisé PROLONGE de 600 s ; segments suivis par acheteur) ;
 -- LiveOps (MessagingService, administrateurs) et commandes de développement (AdminCommand ; "clock"
 -- en Studio seulement). EventState porte les interrupteurs en vigueur (features), renvoyé à chaque
 -- Features.set appliqué.
 -- Émet EventPhase, SpectacleStarted, MegaJoined. Remotes : MegaPress, AdminCommand ; EventState,
--- MegaBeat. Clés : aucune.
+-- MegaBeat. Clé : moon.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -80,15 +84,36 @@ function EventService.canStartParty(): boolean
 	error("TODO(chase): EventService.canStartParty")
 end
 
--- Démarre la fête payée (10 min, ×2 serveur)
+-- Démarre la fête payée (10 min, ×2 serveur) ; pendant une fête en cours, la PROLONGE de 600 s (reçu
+-- croisé : jamais refusé, aucune file en mémoire) ; segment de 600 s noté pour cet acheteur
 function EventService.startSquishParty(buyer: Player, showName: boolean): boolean
 	local _ = { buyer, showName }
 	error("TODO(chase): EventService.startSquishParty")
 end
 
+-- Secondes de Squish Party achetées par ce joueur et pas encore jouées (≤ 600 par achat) : rendues en
+-- boost personnel par ProductService au départ de l'acheteur et à la fermeture du serveur
+function EventService.partyUnplayed(userId: number): number
+	local _ = { userId }
+	error("TODO(chase): EventService.partyUnplayed")
+end
+
 -- Joueurs sur le serveur (N)
 function EventService.playerCount(): number
 	error("TODO(chase): EventService.playerCount")
+end
+
+-- Joueur ACTIF (Activity.isActive, ou à Events.Activity.MegaAlertRadius du centre de la place pendant
+-- l'alerte du MEGA, position validée)
+function EventService.isActive(player: Player, now: number): boolean
+	local _ = { player, now }
+	error("TODO(chase): EventService.isActive")
+end
+
+-- N actifs (au moins Events.Activity.MinPlayers) : objectif du MEGA à l'atterrissage, objectif de la jauge
+function EventService.activeCount(now: number): number
+	local _ = { now }
+	error("TODO(chase): EventService.activeCount")
 end
 
 -- États minutés ouverts (débogage, robot de longue durée : docs/04 §17.2 invariant 6) : « mega », « spectacle », « squishParty », « wobbleParty » ;

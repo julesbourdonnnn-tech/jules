@@ -214,15 +214,22 @@ local Species = {
 	ById = ById,
 	ByKey = ByKey,
 	Families = Families,
+	-- Liste des familles en AJOUT SEUL (contrat v1.2, GDD §4.17) : l'index f est celui de dex.fam[f] (bonus
+	-- gagné pour toujours) ; on n'en change jamais l'ordre, une nouvelle famille s'ajoute à la fin. Les
+	-- espèces de la semaine ne rejoignent jamais une famille complète : elles forment de nouvelles
+	-- familles de 4 (unlockR = NewFamilyUnlockR) ou restent sans famille, comme les Secrets.
 	FamilyOrder = { "jelly", "kitty", "froggy", "axolo", "bunny", "spiky", "secret" } :: { FamilyKey },
+	-- R à partir duquel une famille AJOUTÉE après le lancement entre dans la Cuve (avant : bébés seulement)
+	NewFamilyUnlockR = 5,
 	-- Secrets : un tirage Secret de la Cuve donne ROYAL ; pendant la Jelly Moon, ROYAL ou MOON à chances
 	-- égales (GDD §4.9)
 	ROYAL = 25,
 	MOON = 26,
 	PLOP = 1,
 	MOCHI_MEW = 5,
-	-- Rotation du MEGA SQUISH : ((semaine + numéro du MEGA dans la semaine) mod MegaRotation) + 1,
-	-- Secrets exclus (GDD §5.1)
+	-- OBSOLÈTE (contrat v1.2, GDD §5.1) : la rotation du MEGA indexe la liste des espèces PUBLIÉES et non
+	-- secrètes à l'instant t, triées par id (EventClock.megaSpecies, MegaRules.species) avec
+	-- (semaine + numéro du MEGA) mod #liste, jamais mod 24 ; lu par MegaRules jusqu'à la note logic
 	MegaRotation = 24,
 }
 

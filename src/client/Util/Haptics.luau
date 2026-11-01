@@ -13,6 +13,7 @@
 --   * appareil tactile : jamais (console d'abord, aucun chemin de code tactile : note INT-TV)
 --   * clavier-souris : jamais (une manette branchée mais inutilisée ne vibre pas)
 --   * délai minimal Config/Console.Haptics.Cooldown entre deux vibrations, sauf priorité supérieure
+--     ou événement `cooldownExempt` (sirène du Rush : contrat v1.2, note INT-HAPTICS)
 --   * réglage « vibration » (Prefs) à false : aucune vibration ; réglage absent : activé
 -- Haptics.Played(événement) est émis à chaque vibration jouée (specs, débogage).
 
@@ -132,7 +133,12 @@ function Haptics.play(name: string, scale: number?): boolean
 		return false
 	end
 	local now = Clock.now()
-	if now - lastAt < Console.Haptics.Cooldown and now >= lastAt and def.priority <= lastPriority then
+	if
+		not def.cooldownExempt
+		and now - lastAt < Console.Haptics.Cooldown
+		and now >= lastAt
+		and def.priority <= lastPriority
+	then
 		return false
 	end
 	local motor = (

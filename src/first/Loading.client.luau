@@ -2,7 +2,7 @@
 -- Loading : écran de chargement (LocalScript de ReplicatedFirst), construit en code, AUTONOME
 -- (n'exige rien de ReplicatedStorage : il s'affiche avant la réplication). Repris de Comet Conga
 -- avec tous ses correctifs (Réessayer retenu pendant le chargement, Réessayer à la manette, échelle
--- TV, écran bas de téléphone), habillage neutre : ciel pastel, une petite gelée qui rebondit.
+-- TV), habillage neutre : ciel pastel, une petite gelée qui rebondit. Propriété du paquet world.
 --   * ReplicatedFirst:RemoveDefaultLoadingScreen() puis ScreenGui « Loading » plein écran dans
 --     PlayerGui (IgnoreGuiInset, DisplayOrder élevé, ResetOnSpawn = false) : ciel pastel, étoiles
 --     qui scintillent, une gelée en Frames (« Blob ») qui rebondit (écrasement à l'atterrissage,
@@ -21,16 +21,16 @@
 --     serveur jusqu'à 30 s, backoff) ou réplication initiale pas finie (game:IsLoaded() faux) ;
 --     message rassurant seul pendant ce temps, Réessayer RETRY_GRACE s après la fin de ces attentes,
 --     et au plus tard RETRY_MAX_WAIT s après l'ouverture de l'écran (attribut resté posé)
---   * console / téléviseur : échelle « 10 pieds » recopiée de Config/Console (écran Large ou
---     console : max(0,6 ; min(L / 1280 ; H / 720)), sans plafond ; sinon la règle d'origine ×1,2
---     bornée 0,6-1,4 ; égalité vérifiée par une spec) ; à la manette (IsTenFootInterface sous pcall,
---     ou GamepadEnabled), « Réessayer » est sélectionné d'office (pas de curseur virtuel) avec
---     l'icône ✕ de Roblox (GetImageForKeyCode(ButtonA)) à côté ; tant que l'écran est là, une
---     sélection perdue (bouton retour du jeu, objet derrière l'écran) lui est rendue si la manette
---     est en main (console, ou dernière entrée = manette)
---   * écran bas (téléphone à l'horizontale, 640 × 360) : le bloc d'échec rétrécit jusqu'à tenir sous
---     les points de chargement (« Réessayer » ≥ 48 px réels) et se colle en bas à 12 px : bouton et
---     curseur entiers, loin de la barre d'accueil ; replacé à chaque changement de taille
+--   * console d'abord (note INT-TV, partie Loading, paquet world) : tout est dessiné en px TV
+--     (référence 1920 × 1080) et mis à l'échelle par LA règle télé de tous les écrans, recopiée de
+--     Config/Console (= Platform.uiScale) : max(0,5 ; min(L / 1920 ; H / 1080)), sans plafond (1 en
+--     1080p, 2 en 4K, 0,667 en 720p ; égalité vérifiée par une spec). Une seule disposition : scène
+--     centrée, bloc d'échec à 68 % de la hauteur, dans la zone sûre de 5 % (aucune mise en page de
+--     téléphone). Textes ≥ 28 px TV (UITextSizeConstraint), « Réessayer » de 96 px TV de haut
+--   * à la manette (IsTenFootInterface sous pcall, ou GamepadEnabled), « Réessayer » est sélectionné
+--     d'office (pas de curseur virtuel) avec l'icône ✕ de Roblox (GetImageForKeyCode(ButtonA)) à
+--     côté ; tant que l'écran est là, une sélection perdue (bouton retour du jeu, objet derrière
+--     l'écran) lui est rendue si la manette est en main (console, ou dernière entrée = manette)
 -- Une seule connexion RenderStepped, coupée à la fermeture. Le temps de l'écran est la somme des dt
 -- des images (mesure purement technique, sans Shared/Util/Clock qui n'est pas encore répliqué).
 -- Dépendances : aucune (services Roblox uniquement).
@@ -65,15 +65,14 @@ local FADE_TIME = 0.3
 local RETRY_COOLDOWN = 5 -- s entre deux tentatives de téléportation
 local PLAYER_WAIT = 10 -- s au plus pour LocalPlayer / PlayerGui
 local REFERENCE = Vector2.new(1920, 1080) -- = Config/Console.Reference (px TV, note INT-TV)
--- Écran Large ou console : UIScale = max(TV_SCALE_MIN ; min(L / 1920 ; H / 1080)) × DRAWN_UNIT, sans
--- plafond (1,5 en 1920 × 1080) ; recopie de Config/Console.TvScale (non répliqué ici)
+-- TOUS les écrans : UIScale = max(TV_SCALE_MIN ; min(L / 1920 ; H / 1080)), sans plafond ; recopie
+-- de Config/Console.TvScale (non répliqué ici), même règle que Platform.uiScale
 local TV_SCALE_MIN = 0.5 -- = Config/Console.TvScale.Min
--- Les dimensions de cet écran (px « avant mise à l'échelle ») sont dessinées dans l'ancienne unité de
--- Comet Conga (1280 × 720) : 1 px de cet écran = 1,5 px TV. Le paquet world refait cet habillage en
--- px TV (docs/04 §22, INT-TV, partie Loading) et retire alors ce facteur et la mise en page « écran
--- bas » de téléphone.
-local DRAWN_UNIT = 1.5
-local GLYPH_SIZE = 48 -- px (avant mise à l'échelle) : icône ✕ à côté de « Réessayer »
+-- Toutes les dimensions ci-dessous sont en px TV (écran de référence 1920 × 1080)
+local GLYPH_SIZE = 72 -- icône ✕ à côté de « Réessayer » (≥ Config/Console.GlyphSize)
+local GLYPH_GAP = 12 -- entre l'icône et le bouton
+local MIN_TEXT = 28 -- = Config/Console.MinTextSize : texte lisible à 3 m
+local MAX_TEXT = 72
 -- curseur de sélection (recopie de UI/Root.selectionImage) : trait blanc de 6 px, liseré sombre de 2 px
 local SELECTION_COLOR = Color3.fromRGB(255, 255, 255)
 local SELECTION_EDGE_COLOR = Color3.fromRGB(16, 12, 30)
@@ -83,19 +82,15 @@ local SELECTION_OUTSET = 4 -- px de débord autour du bouton (de chaque côté)
 local SELECTION_RADIUS = 16
 local TAU = 2 * math.pi
 
--- Écran d'échec (px avant mise à l'échelle) : message, puis « Réessayer » et son curseur de sélection
-local FAIL_WIDTH = 420
-local MESSAGE_HEIGHT = 44
-local RETRY_TOP = 62 -- haut de « Réessayer » dans le bloc
-local RETRY_SIZE = Vector2.new(200, 64)
+-- Écran d'échec (px TV) : message, puis « Réessayer » (bouton principal, 96 de haut) et son curseur
+local FAIL_WIDTH = 630
+local MESSAGE_HEIGHT = 66
+local RETRY_TOP = 93 -- haut de « Réessayer » dans le bloc
+local RETRY_SIZE = Vector2.new(300, 96)
+local RETRY_PADDING = 15
 -- hauteur du bloc : jusqu'au bas du curseur de sélection (débord + trait blanc + liseré sombre)
 local FAIL_HEIGHT = RETRY_TOP + RETRY_SIZE.Y + SELECTION_OUTSET + SELECTION_THICKNESS + SELECTION_EDGE
-local FAIL_TOP = 0.68 -- haut du bloc (fraction de la hauteur de l'écran) quand il tient en dessous
-local FAIL_MARGIN = 12 -- px réels laissés sous le bloc et sur ses côtés (bord, barre d'accueil)
-local FAIL_GAP = 6 -- px réels au moins entre les points de chargement et le message
--- « Réessayer » haut d'au moins 48 px réels (bouton secondaire : 80 px × 0,6), sauf sur un écran de
--- moins de 339 px de large, où tenir dans la largeur passe avant
-local MIN_RETRY_HEIGHT = 48
+local FAIL_TOP = 0.68 -- haut du bloc (fraction de la hauteur de l'écran) : sous la gelée, dans la zone sûre
 
 -- Constantes graphiques (habillage neutre : ciel pastel lavande → rose → pêche, gelée menthe)
 local SKY_TOP = Color3.fromRGB(92, 72, 168)
@@ -110,8 +105,19 @@ local DOT_COLOR = Color3.fromRGB(255, 226, 150)
 local BUTTON_COLOR = Color3.fromRGB(255, 200, 70)
 local TEXT_COLOR = Color3.fromRGB(255, 255, 255)
 local STAR_COUNT = 16
-local BODY = 120 -- px (avant mise à l'échelle)
-local BOUNCE_HEIGHT = 60
+local STAR_MIN, STAR_MAX = 5, 9 -- px TV
+local STROKE = 4.5 -- contour bleu nuit (px TV)
+local STAGE_SIZE = Vector2.new(390, 450)
+local STAGE_CENTER_X = 195
+local GROUND_Y = 285 -- sol de la gelée dans la scène
+local SHADOW_SIZE = Vector2.new(144, 27)
+local SHADOW_DROP = 12
+local DOTS_TOP = 54 -- sous le sol
+local DOTS_SIZE = Vector2.new(135, 36)
+local DOT_SIZE = 21
+local DOT_GROW = 9
+local BODY = 180
+local BOUNCE_HEIGHT = 90
 local BOUNCE_PERIOD = 0.9
 local SQUASH = 0.2
 local BLINK_EVERY = 3.2
@@ -131,16 +137,6 @@ local function isTenFoot(): boolean
 		return GuiService:IsTenFootInterface()
 	end)
 	return ok and value == true
-end
-
-local function isLargeDisplay(): boolean
-	if isTenFoot() then
-		return true
-	end
-	local ok, value = pcall(function()
-		return GuiService.ViewportDisplaySize
-	end)
-	return ok and value == Enum.DisplaySize.Large
 end
 
 -- Manette : console, ou manette branchée (sans curseur virtuel, seule la sélection l'atteint)
@@ -165,13 +161,13 @@ local function padInUse(): boolean
 	return ok and value == true
 end
 
--- Échelle de l'écran (Config/Console : Reference, TvScale), en unités dessinées (DRAWN_UNIT)
-local function screenScale(viewport: Vector2, large: boolean): number
-	local s = math.min(viewport.X / REFERENCE.X, viewport.Y / REFERENCE.Y)
-	if large then
-		return math.max(s, TV_SCALE_MIN) * DRAWN_UNIT
+-- Échelle de l'écran (Config/Console : Reference, TvScale) : la règle télé, sur tous les écrans
+local function screenScale(viewport: Vector2): number
+	if viewport.X <= 1 or viewport.Y <= 1 then
+		return 1
 	end
-	return math.clamp(s * DRAWN_UNIT * 1.2, 0.6, 1.4)
+	local s = math.min(viewport.X / REFERENCE.X, viewport.Y / REFERENCE.Y)
+	return math.max(s, TV_SCALE_MIN)
 end
 
 -- Icône Roblox de la touche (PlayStation sur PlayStation) ; nil si indisponible
@@ -226,6 +222,14 @@ local function frame(
 	f.ZIndex = z or 1
 	f.Parent = parent
 	return f
+end
+
+-- Texte télé : TextScaled borné à MIN_TEXT … MAX_TEXT px TV
+local function textSize(label: TextLabel | TextButton)
+	local constraint = Instance.new("UITextSizeConstraint")
+	constraint.MinTextSize = MIN_TEXT
+	constraint.MaxTextSize = MAX_TEXT
+	constraint.Parent = label
 end
 
 local function outline(gui: GuiObject, thickness: number)
@@ -291,8 +295,9 @@ local function main()
 	stars:SetAttribute("Decorative", true) -- fond plein écran, hors zone sûre TV (audit console)
 	stars.Parent = root
 	local rng = Random.new(20261031)
+	local starSizes: { [Frame]: number } = {} -- px TV de chaque étoile (remises à l'échelle de l'écran)
 	for i = 1, STAR_COUNT do
-		local size = rng:NextInteger(3, 6)
+		local size = rng:NextInteger(STAR_MIN, STAR_MAX)
 		local star = frame(
 			"Star" .. i,
 			stars,
@@ -301,6 +306,7 @@ local function main()
 			TEXT_COLOR
 		)
 		star.BackgroundTransparency = rng:NextNumber(0.1, 0.5)
+		starSizes[star] = size
 		round(star)
 		if not calm then
 			TweenService:Create(
@@ -323,19 +329,19 @@ local function main()
 	stage.Name = "Stage"
 	stage.AnchorPoint = Vector2.new(0.5, 0.5)
 	stage.Position = UDim2.fromScale(0.5, 0.5)
-	stage.Size = UDim2.fromOffset(260, 300)
+	stage.Size = UDim2.fromOffset(STAGE_SIZE.X, STAGE_SIZE.Y)
 	stage.BackgroundTransparency = 1
 	stage.Parent = root
 	local scale = Instance.new("UIScale")
 	scale.Parent = stage
 
 	-- Gelée en Frames : ombre, corps, 2 petites oreilles, yeux (reflets), joues, sourire
-	local groundY = 190
+	local groundY = GROUND_Y
 	local shadow = frame(
 		"Shadow",
 		stage,
-		UDim2.fromOffset(96, 18),
-		UDim2.fromOffset(130, groundY + 8),
+		UDim2.fromOffset(SHADOW_SIZE.X, SHADOW_SIZE.Y),
+		UDim2.fromOffset(STAGE_CENTER_X, groundY + SHADOW_DROP),
 		Color3.new(0, 0, 0)
 	)
 	shadow.BackgroundTransparency = 0.65
@@ -345,7 +351,7 @@ local function main()
 	blob.Name = "Blob"
 	blob.AnchorPoint = Vector2.new(0.5, 1)
 	blob.Size = UDim2.fromOffset(BODY, BODY)
-	blob.Position = UDim2.fromOffset(130, groundY)
+	blob.Position = UDim2.fromOffset(STAGE_CENTER_X, groundY)
 	blob.BackgroundTransparency = 1
 	blob.ZIndex = 2
 	blob.Parent = stage
@@ -354,11 +360,11 @@ local function main()
 		local ear =
 			frame("Ear" .. i, blob, UDim2.fromScale(0.3, 0.3), UDim2.fromScale(pos.X, pos.Y), PUFF_COLOR, 2)
 		round(ear)
-		outline(ear, 3)
+		outline(ear, STROKE)
 	end
 	local body = frame("Body", blob, UDim2.fromScale(1, 0.9), UDim2.fromScale(0.5, 0.55), BODY_COLOR, 3)
 	round(body)
-	outline(body, 3)
+	outline(body, STROKE)
 
 	local eyes: { Frame } = {}
 	for i, x in { 0.33, 0.67 } do
@@ -382,8 +388,8 @@ local function main()
 	local dotsFrame = Instance.new("Frame")
 	dotsFrame.Name = "Dots"
 	dotsFrame.AnchorPoint = Vector2.new(0.5, 0)
-	dotsFrame.Position = UDim2.fromOffset(130, groundY + 36)
-	dotsFrame.Size = UDim2.fromOffset(90, 24)
+	dotsFrame.Position = UDim2.fromOffset(STAGE_CENTER_X, groundY + DOTS_TOP)
+	dotsFrame.Size = UDim2.fromOffset(DOTS_SIZE.X, DOTS_SIZE.Y)
 	dotsFrame.BackgroundTransparency = 1
 	dotsFrame.Parent = stage
 	local dots: { Frame } = {}
@@ -391,7 +397,7 @@ local function main()
 		local dot = frame(
 			"Dot" .. i,
 			dotsFrame,
-			UDim2.fromOffset(14, 14),
+			UDim2.fromOffset(DOT_SIZE, DOT_SIZE),
 			UDim2.fromScale((i - 0.5) / 3, 0.5),
 			DOT_COLOR
 		)
@@ -412,43 +418,20 @@ local function main()
 	failUIScale.Name = "FailScale"
 	failUIScale.Parent = fail
 
-	-- Échelle et placement. La scène suit l'échelle de l'écran. Le bloc
-	-- d'échec (failBase, que failUIScale anime à l'entrée) garde l'échelle « 10 pieds » sur
-	-- téléviseur (1 ailleurs) mais, sur un écran bas (téléphone à l'horizontale : 640 × 360,
-	-- 667 × 375), il rétrécit jusqu'à tenir sous les points de chargement (« Réessayer » ≥ 48 px
-	-- réels) et se colle en bas, à FAIL_MARGIN px : « Réessayer » et son curseur restent entiers
-	-- (IgnoreGuiInset : le bas de l'écran est aussi celui de la barre d'accueil). Si même la taille
-	-- minimale ne tient pas, la scène remonte d'autant, sans sortir par le haut.
+	-- Échelle : une seule règle télé (px TV × échelle de l'écran) pour la scène, le bloc d'échec (que
+	-- failUIScale anime à l'entrée autour de son ancre) et les étoiles ; scène centrée, bloc à 68 %
+	-- de la hauteur (dans la zone sûre de 5 % aux résolutions télé : 720p, 1080p, 4K, 16:10, 21:9)
 	local failBase = 1
 	local function rescale()
 		local camera = workspace.CurrentCamera
 		local viewport = if camera then camera.ViewportSize else REFERENCE
-		local width, height = viewport.X, viewport.Y
-		local large = isLargeDisplay()
-		local s = screenScale(viewport, large)
+		local s = screenScale(viewport)
 		scale.Scale = s
-		local stageHalf = stage.Size.Y.Offset / 2
-		-- bas des points de chargement sous le centre de la scène (px avant mise à l'échelle)
-		local dotsBelow = dotsFrame.Position.Y.Offset + dotsFrame.Size.Y.Offset - stageHalf
-		local fitHeight = (height / 2 - dotsBelow * s - FAIL_GAP - FAIL_MARGIN) / FAIL_HEIGHT
-		local fitWidth = (width - 2 * FAIL_MARGIN) / FAIL_WIDTH
-		local base = if large then s else 1
-		failBase = math.min(base, fitWidth, math.max(MIN_RETRY_HEIGHT / RETRY_SIZE.Y, fitHeight))
-		local top = FAIL_TOP * height
-		local blockHeight = FAIL_HEIGHT * failBase
-		if top + blockHeight > height - FAIL_MARGIN then
-			-- collé en bas : l'entrée (UIScale autour de l'ancre) grandit alors vers le haut
-			top = height - FAIL_MARGIN - blockHeight
-			fail.AnchorPoint = Vector2.new(0.5, 1)
-			fail.Position = UDim2.new(0.5, 0, 1, -FAIL_MARGIN)
-		else
-			fail.AnchorPoint = Vector2.new(0.5, 0)
-			fail.Position = UDim2.fromScale(0.5, FAIL_TOP)
-		end
-		local shift = math.max(0, height / 2 + dotsBelow * s + FAIL_GAP - top)
-		shift = math.min(shift, math.max(0, height / 2 - stageHalf * s))
-		stage.Position = UDim2.new(0.5, 0, 0.5, -shift)
+		failBase = s
 		failUIScale.Scale = failBase
+		for star, size in starSizes do
+			star.Size = UDim2.fromOffset(size * s, size * s)
+		end
 	end
 	rescale()
 
@@ -460,9 +443,10 @@ local function main()
 	message.TextScaled = true
 	message.TextColor3 = TEXT_COLOR
 	message.FontFace = Font.fromEnum(Enum.Font.FredokaOne)
+	textSize(message)
 	message.Parent = fail
 	local messageStroke = Instance.new("UIStroke")
-	messageStroke.Thickness = 2
+	messageStroke.Thickness = 3
 	messageStroke.Color = OUTLINE
 	messageStroke.Parent = message
 	local button = Instance.new("TextButton")
@@ -477,12 +461,13 @@ local function main()
 	button.TextColor3 = OUTLINE
 	button.FontFace = Font.fromEnum(Enum.Font.FredokaOne)
 	button.Visible = false -- montré par showRetry (chargement qui n'avance plus)
+	textSize(button)
 	button.Parent = fail
-	round(button, UDim.new(0, 16))
-	outline(button, 3)
+	round(button, UDim.new(0, 24))
+	outline(button, STROKE)
 	local buttonPadding = Instance.new("UIPadding")
-	buttonPadding.PaddingTop = UDim.new(0, 10)
-	buttonPadding.PaddingBottom = UDim.new(0, 10)
+	buttonPadding.PaddingTop = UDim.new(0, RETRY_PADDING)
+	buttonPadding.PaddingBottom = UDim.new(0, RETRY_PADDING)
 	buttonPadding.Parent = button
 	local buttonScale = Instance.new("UIScale")
 	buttonScale.Parent = button
@@ -604,7 +589,7 @@ local function main()
 		holder.Name = "PadGlyph"
 		holder.AnchorPoint = Vector2.new(1, 0.5)
 		holder.Position =
-			UDim2.new(0.5, -button.Size.X.Offset / 2 - 8, 0, RETRY_TOP + button.Size.Y.Offset / 2)
+			UDim2.new(0.5, -button.Size.X.Offset / 2 - GLYPH_GAP, 0, RETRY_TOP + button.Size.Y.Offset / 2)
 		holder.Size = UDim2.fromOffset(GLYPH_SIZE, GLYPH_SIZE)
 		holder.BackgroundTransparency = 1
 		holder:SetAttribute("GlyphKey", Enum.KeyCode.ButtonA.Name)
@@ -715,9 +700,9 @@ local function main()
 			local p = (elapsed % BOUNCE_PERIOD) / BOUNCE_PERIOD
 			local h = math.sin(math.pi * p)
 			local s = (1 - h) ^ 6
-			blob.Position = UDim2.fromOffset(130, groundY - h * BOUNCE_HEIGHT)
+			blob.Position = UDim2.fromOffset(STAGE_CENTER_X, groundY - h * BOUNCE_HEIGHT)
 			blob.Size = UDim2.fromOffset(BODY * (1 + SQUASH * s), BODY * (1 - SQUASH * s))
-			shadow.Size = UDim2.fromOffset(96 * (1 - 0.4 * h), 18 * (1 - 0.4 * h))
+			shadow.Size = UDim2.fromOffset(SHADOW_SIZE.X * (1 - 0.4 * h), SHADOW_SIZE.Y * (1 - 0.4 * h))
 			shadow.BackgroundTransparency = 0.65 + 0.25 * h
 			local blink = (elapsed % BLINK_EVERY) < BLINK_TIME
 			for _, eye in eyes do
@@ -728,7 +713,7 @@ local function main()
 			local k = 0.5 + 0.5 * math.sin(TAU * elapsed / DOT_PERIOD - (i - 1) * 0.9)
 			dot.BackgroundTransparency = 0.6 - 0.6 * k
 			if not calm then
-				local size = 10 + 6 * k
+				local size = DOT_SIZE - DOT_GROW / 2 + DOT_GROW * k
 				dot.Size = UDim2.fromOffset(size, size)
 			end
 		end
@@ -756,9 +741,6 @@ local function main()
 	if camera then
 		table.insert(connections, camera:GetPropertyChangedSignal("ViewportSize"):Connect(rescale))
 	end
-	pcall(function()
-		table.insert(connections, GuiService:GetPropertyChangedSignal("ViewportDisplaySize"):Connect(rescale))
-	end)
 	-- manette prise en main pendant l'écran d'échec (PC) : « Réessayer » sélectionné à ce moment-là
 	table.insert(
 		connections,

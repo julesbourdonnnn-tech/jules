@@ -6,8 +6,11 @@
 -- Logic/WorldLayout (padSocket, decorSlot), jamais d'une recherche dans le workspace.
 --
 -- Une dalle est « sur » le joueur quand sa position validée est à Balance.Tiles.EnterRadius de son
--- centre ; « sortie » au-delà de ExitRadius (ZoneRules) ; un achat par entrée (RanchService.step).
--- Une dalle trop chère ne refuse jamais : anneau qui se remplit (« 1,2K / 3K »), son Bump.
+-- centre (à plat) ; « sortie » au-delà de ExitRadius (ZoneRules) ; achat après DwellSeconds dessus
+-- sans porter ni autre maintien, un achat par entrée (RanchService.step) ; □ (BuyTile) achète aussitôt.
+-- Une dalle trop chère ne refuse jamais : anneau qui se remplit (« 1,2K / 3K »), son Bump ; un joueur
+-- resté dessus achète au premier tick où ses pièces suffisent (une fois par entrée, remarque A24).
+-- Les prises sont à 8 studs au moins de tout point d'action (WorldLayout, GDD v1.3 §11.2).
 
 export type TileKey = "snack" | "decor" | "pens" | "cozyBed"
 
@@ -18,7 +21,7 @@ export type PadDef = {
 	seenBit: number, -- bit de profile.tiles.seen (dalle déjà découverte : reste visible après un Grand Splorch)
 	-- Découverte (première apparition) :
 	revealStep: number, -- étape d'accueil atteinte (ou accueil fini) à partir de laquelle la dalle peut apparaître
-	rule: "always" | "snackBought" | "pensFull" | "rMin", -- condition de découverte
+	rule: "always" | "snackBought" | "pensFull" | "rMin", -- condition de découverte (rMin : R ≥ Balance.Tiles[key].MinR)
 	relightStep: number?, -- pendant l'accueil, une dalle déjà achetée une fois ne se rallume qu'à cette étape
 }
 

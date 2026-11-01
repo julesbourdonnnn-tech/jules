@@ -230,6 +230,10 @@ function Harness.new(options: {
 	}
 	h.stats = { tweens = 0, dataStoreCalls = 0 }
 	h.friends = {} -- [userId] = { userId… } : amitiés simulées (h:makeFriends(a, b))
+	-- [userId] = { userId… } | false : liste de blocage de Roblox simulée, lue par
+	-- StarterGui:GetCore("GetBlockedUserIds") côté client ({} par défaut ; false : l'appel lève,
+	-- comme avant l'enregistrement des CoreScripts) — h:setBlocked(joueur, liste) (contrat v1.2, C3-21)
+	h.blocked = {}
 	-- threads du code monté (task.spawn/defer/delay, et tout thread qui attend via task.wait) :
 	-- annulés par h:dispose() pour que les boucles sans fin des services (autosave…) ne gardent
 	-- pas le harnais entier en mémoire jusqu'à la fin de la suite
@@ -578,6 +582,13 @@ function Harness:makeFriends(a, b)
 	self.friends[idb] = self.friends[idb] or {}
 	table.insert(self.friends[ida], idb)
 	table.insert(self.friends[idb], ida)
+end
+
+-- Liste de blocage de Roblox d'un joueur (StarterGui:GetCore("GetBlockedUserIds") côté client) :
+-- table d'UserIds, ou false pour un appel qui lève (contrat v1.2, C3-21)
+function Harness:setBlocked(player, list)
+	local id = if type(player) == "number" then player else player.UserId
+	self.blocked[id] = list
 end
 
 -- Déplace le personnage d'un joueur (côté serveur) : met à jour HumanoidRootPart

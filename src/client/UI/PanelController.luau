@@ -30,7 +30,7 @@ function PanelController.Start()
 	-- stub inoffensif : le démarrage complet reste sans erreur ni avertissement
 end
 
--- △ / croix ↓ / Tab
+-- △ / croix ↓ / M (KeyCode.M et Semicolon ; jamais Tab, laissé à Roblox)
 function PanelController.toggleMenu()
 	error("TODO(client-panels): PanelController.toggleMenu")
 end

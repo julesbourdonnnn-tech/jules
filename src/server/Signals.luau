@@ -67,8 +67,9 @@ local Signals = {
 	-- Ranch et collection
 	-- =========================================================================================
 	-- Émis par SquishyService (Press et pet-sitting) → QuestService (stats, objectifs), EventService
-	-- (jauge : press, perfect, petSit). « Plus serviable » ne se compte PAS ici (une pression au-delà
-	-- du plafond du jour n'est pas récompensée) : voir PetSitRewarded.
+	-- (jauge : perfect seulement chez soi, petSit au visiteur ; Events.Gauge.Points.press = 0). « Plus
+	-- serviable » ne se compte PAS ici (une pression au-delà des plafonds n'est pas récompensée) : voir
+	-- PetSitRewarded.
 	Pressed = Signal.new() :: Signal.Signal<Player, PressInfo>,
 	-- Émis par EconomyService : dalle achetée (tile, nouveau niveau) → QuestService (étape 3, objectif)
 	TileBought = Signal.new() :: Signal.Signal<Player, string, number>,
@@ -142,9 +143,12 @@ local Signals = {
 	-- Émis par CommunityService : nombre d'amis Roblox présents de ce joueur changé (arrivée ou départ
 	-- d'un ami) → QuestService (QuestCtx.friendOnServer, objectif 12, stats.lastFriendDay)
 	FriendsChanged = Signal.new() :: Signal.Signal<Player, number>,
-	-- Émis par CommunityService : pression de pet-sitting RÉCOMPENSÉE (visiteur, propriétaire), donc
-	-- dans le plafond du jour (caps.petSit) → LeaderboardService (« Plus serviable »), QuestService
-	PetSitRewarded = Signal.new() :: Signal.Signal<Player, Player>,
+	-- Émis par CommunityService : pression de pet-sitting RÉCOMPENSÉE (visiteur, propriétaire, compte pour
+	-- « Plus serviable »), donc dans les plafonds du jour (caps.petSit du visiteur, caps.petSitIn du
+	-- propriétaire) ; le 3e argument est vrai si caps.petSitBy[propriétaire] du visiteur était encore sous
+	-- Balance.CapsPerFriend.petSit (20 par ami et par jour, EconomyService.consumeFriendCap) →
+	-- LeaderboardService (« Plus serviable » : seulement si le 3e argument est vrai), QuestService
+	PetSitRewarded = Signal.new() :: Signal.Signal<Player, Player, boolean>,
 }
 
 return Signals

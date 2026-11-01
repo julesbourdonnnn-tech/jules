@@ -91,7 +91,8 @@ Events.Mega = {
 	PerfectBefore = 0.12,
 	PerfectAfter = 0.28,
 	Cooldown = 0.4, -- s par joueur
-	-- objectif = ceil((Base + PerPlayer × N) × indulgence)
+	-- objectif = ceil((Base + PerPlayer × N) × indulgence), N = joueurs ACTIFS à l'atterrissage (Cozy
+	-- compris, au moins Events.Activity.MinPlayers ; Server/Util/Activity et Events.Activity)
 	TargetBase = 30,
 	TargetPerPlayer = 50,
 	Leniency = { 1, 0.8, 0.65 }, -- après 0, 1, 2+ échecs de suite
@@ -114,8 +115,12 @@ Events.Moon = {
 	BoopableRushes = { 5, 15 }, -- Rush de :05 et :15 pendant une séance : Mythiques et Secrets boopables
 }
 
--- Un seul grand spectacle à la fois (GDD §2.4) : file du serveur, au plus un toutes les SpectacleGap
+-- Un seul grand spectacle à la fois (GDD §2.4) : file du serveur, au plus un toutes les SpectacleGap.
+-- Attente affichée d'une entrée de la file (EventState.spectacle.queue[i].eta) : position × SpectacleGap
+-- + reste du grand spectacle en cours (Rush, MEGA, Grand Splorch, danse), recalculée à chaque
+-- changement ; coupure dure de l'attente à SplorchQueueHardCut (StateTimeouts « splorchQueue »).
 Events.SpectacleGap = 20
+Events.SplorchQueueHardCut = 480
 Events.Spectacles = {
 	splorch = { duration = 7.5, hardCut = 10 },
 	dance = { duration = 8, hardCut = 10 }, -- danse de Big Plop (jauge pleine)
@@ -134,13 +139,18 @@ Events.WeeklyReset = "monday" -- Clock.week()
 -- la réussite du MEGA qu'il calcule lui-même. Aucun autre service n'appelle EventService.addGauge
 -- (réservé aux commandes d'administrateur et aux specs) ; aucune autre configuration ne porte de
 -- points de jauge (Contract_game le vérifie).
+-- GDD v1.3 : seules les pressions PERFECT comptent ; N = joueurs ACTIFS (Events.Activity) ; après
+-- chaque WOBBLE PARTY, sieste de Big Plop de RestSeconds : les points continuent de compter, mais
+-- aucune fête ne commence avant la fin de la sieste (EventState.gauge.restUntil) : au plus 5 min de
+-- ×2 toutes les 25 min.
 Events.Gauge = {
-	TargetPerPlayer = 500, -- objectif = 500 × max(MinPlayers, N)
+	TargetPerPlayer = 600, -- objectif = 600 × max(MinPlayers, N actifs)
 	MinPlayers = 2,
 	PartyDuration = 300, -- WOBBLE PARTY ×2 pièces et croissance
+	RestSeconds = 1200, -- sieste de Big Plop après la fête (jarre grise, « Big Plop se repose mm:ss »)
 	Points = {
-		press = 1, -- Pressed chez soi (PressInfo.visitor == nil)
-		perfect = 1, -- en plus de press si PressInfo.perfect
+		press = 0, -- Pressed chez soi (PressInfo.visitor == nil) : une pression ordinaire ne compte pas
+		perfect = 1, -- en plus de press si PressInfo.perfect (seule une pression PERFECT compte)
 		petSit = 2, -- Pressed avec PressInfo.visitor (au visiteur)
 		hatch = 2, -- Hatched
 		fuseStep = 3, -- Fused, par étape du combo
@@ -153,6 +163,18 @@ Events.Gauge = {
 	},
 }
 
+-- Joueurs ACTIFS (GDD v1.3, §4.22, §4.23) : N du MEGA et de la jauge. Un joueur est actif s'il a eu
+-- une intention de jeu acceptée (Config/Intents, activity = true) ou un déplacement validé d'au moins
+-- MoveStuds dans les Window dernières secondes (Server/Util/Activity), ou s'il est à MegaAlertRadius
+-- studs au plus du centre de la place pendant l'alerte du MEGA (EventService) ; N vaut au moins
+-- MinPlayers. Analytique MegaResult : N et participants.
+Events.Activity = {
+	Window = 120,
+	MoveStuds = 4,
+	MegaAlertRadius = 60,
+	MinPlayers = 1,
+}
+
 -- =============================================================================================
 -- Démonstration de Big Plop, bouclier, LiveOps, fêtes
 -- =============================================================================================
@@ -163,10 +185,14 @@ Events.Demo = {
 	Speed = 8,
 }
 
--- Squish Party (produit, GDD §8.3) et fête d'administrateur (GDD §7.5)
+-- Squish Party (produit, GDD §8.3) et fête d'administrateur (GDD §7.5). Vendue seulement si elle peut
+-- commencer aussitôt (bouton caché pendant une fête) ; un reçu qui arrive pendant une fête la PROLONGE
+-- de SquishPartyDuration (aucune file en mémoire) ; segments suivis par acheteur : à la fermeture du
+-- serveur (BindToClose), les secondes non jouées de chaque achat (≤ SquishPartyDuration) passent en
+-- boost personnel de l'acheteur (boosts.personalLeft), sauvegardé avant la fermeture.
 Events.Party = {
 	SquishPartyDuration = 600,
-	MaxQueued = 1, -- vendue seulement si elle peut commencer aussitôt (une seule en attente au plus)
+	MaxQueued = 1, -- OBSOLÈTE (contrat v1.2) : plus aucune fête en attente (un achat croisé prolonge)
 	AdminGoldens = 5, -- 5 Golden Wobblers en 5 min
 	AdminGoldenWindow = 300,
 	AdminBoostDuration = 600,

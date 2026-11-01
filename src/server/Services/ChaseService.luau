@@ -6,8 +6,11 @@
 -- sol = WorldLayout.supportY(position), jamais un Blockcast),
 -- créatures en fuite personnelles (toutes les 60 s, 50 avec Froggy), Golden Wobbler, Wild Wobblers
 -- (partagés et personnels), fuites du Rush (sur Signals.Booped), démonstration de Big Plop, bonds
--- (Leap : recharge 4 s, MoveCheck.noteSpeed(GrantSpeed) pendant 0,35 s, capture à l'atterrissage
--- calculée par LeapRules), captures (Catch : position validée contre SeededPath, tolérance 1,5 stud),
+-- (Leap(dirX, dirZ, tClient) : recharge 4 s, crédit MoveCheck.grant(12 studs, 0,35 s, tClient)
+-- rétroactif et un par 4 s, capture à l'atterrissage à tClient + 0,35 s au point de LeapRules),
+-- captures (Catch(id, tClient) : vérifiée à SON instant, SeededPath.pos(tClient) contre
+-- MoveCheck.positionAt(joueur, tClient), à plat ≤ rayon + 1,5, pieds ≤ 8 ; ordre d'arrivée), activité
+-- (Activity.noteMove avec la position validée), MoveCheck.clear au départ,
 -- récompenses (bébés, Héros, retours, « de près »), ChaseEvent groupé à 4 Hz, fin des créatures par
 -- délai, anti-triche (strikes, exclusion des classements jusqu'à la fin de la semaine suivante).
 -- Émet MoveViolation, Caught, NearCatch, EscapeEnded. Remotes : Leap, Catch ; ChaseEvent.

@@ -3,12 +3,16 @@
 -- error("TODO(…)") par le comportement décrit dans docs/04, SANS changer les signatures.
 -- Collection et gestes du ranch (GDD §4.3, §4.7, §4.9, §4.10, §4.12-§4.16) : squishies (uid base 36,
 -- espèce, taille paresseuse, étoiles, mutation, Meilleur Ami, verrou, tenue, lieu), presser SPLORCH
--- (recharge 8 s par squishy, PERFECT, série, 12 / s), Cuve à Gelée (minuteur du serveur, Odds, goutte
--- en attente si plein, accueil scripté), Bassin et combos (minuteurs 0,4 / 0,6 s dans step), portage
+-- (recharge 8 s par squishy, PERFECT, série, 12 / s ; portée à plat ≤ 10 + 2 du centre de la place du
+-- squishy, pieds), Cuve à Gelée (minuteur du serveur, Odds ; naissance en enclos, sinon dans la Boîte à
+-- dodo ; goutte en attente seulement si enclos ET Dodo sont pleins ; accueil scripté), Bassin et combos
+-- (minuteurs 0,4 / 0,6 s dans step), bonus de croissance du Rush une fois par squishy et par jour
+-- (growFor, champ gd), portage
 -- (état du serveur, fin dans 6 cas), Tout fusionner, Dodo, Lettres, vendre / ranger / relâcher (12
 -- derniers dans la Prairie), verrou automatique, Meilleurs Amis (1 / 2 / 3 selon R), monture (selle
--- gagnée par le record, WalkSpeed / JumpHeight / HipHeight fixes, MoveCheck.setRootOffset à chaque
--- montée et descente), tenues, trophées. Un squishy qui quitte l'enclos (portage, lancer, Dodo,
+-- gagnée par le record, WalkSpeed / JumpHeight / HipHeight fixes, MoveCheck.setRootOffset(player,
+-- hausse, hauteur de saut) à chaque montée et descente), tenues (portées gardées dans rec.o seulement),
+-- trophées. Un squishy qui quitte l'enclos (portage, lancer, Dodo,
 -- fusion, attente, vente, relâche) est retiré AUSSITÔT de sa clôture (RanchService.setFence). Émet Pressed,
 -- SquishyObtained, Hatched, Fused, SquishyRemoved. Remotes : Press, PickUp, PutDown, Throw, FuseMenu,
 -- FuseAll, MoveSquishy, ClaimMail, Sell, Release, SetLock, SetBestFriend, SetMount, Ride, EquipOutfit.
@@ -132,10 +136,25 @@ function SquishyService.setWaiting(player: Player, uid: string?)
 	error("TODO(ranch): SquishyService.setWaiting")
 end
 
--- Taille × (1 + ratio) (Héros + 10 %, retour + 5 %)
-function SquishyService.growBy(player: Player, uid: string, ratio: number)
-	local _ = { player, uid, ratio }
-	error("TODO(ranch): SquishyService.growBy")
+-- Bonus de croissance du Rush : z += EconomyService.gNoBoost × seconds (Héros 3 600 s, retour seul
+-- 1 800 s : Balance.RushSize), au plus une fois par squishy et par jour UTC (rec.gd = Clock.day()) ;
+-- rend false si déjà accordé aujourd'hui (les pièces et la Fame restent dues)
+function SquishyService.growFor(player: Player, uid: string, seconds: number): boolean
+	local _ = { player, uid, seconds }
+	error("TODO(ranch): SquishyService.growFor")
+end
+
+-- uid en attente de Grand Splorch (nil = aucun) : RushService n'amène aucun squishy de ce joueur à la clôture
+function SquishyService.waiting(player: Player): string?
+	local _ = { player }
+	error("TODO(ranch): SquishyService.waiting")
+end
+
+-- uid d'un squishy du joueur en fuite (setEscaping), nil = aucun : SplorchService refuse l'entrée dans la
+-- file du Grand Splorch (Feedback waitEscape ; ChaseService, plus tardif, n'est jamais appelé)
+function SquishyService.anyEscaping(player: Player): string?
+	local _ = { player }
+	error("TODO(ranch): SquishyService.anyEscaping")
 end
 
 -- En fuite (exclu du portage, de la vente, de la fusion)

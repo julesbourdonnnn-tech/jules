@@ -47,8 +47,40 @@ export type FeedbackPayload = {
 	tone: FeedbackTone,
 }
 
--- Celebrate : moments personnels (Server/Util/Notify.celebrate). Sortes : CelebrateKinds ci-dessous.
-export type CelebrateKind = string
+-- Celebrate : moments personnels (Server/Util/Notify.celebrate). Sortes : CelebrateKind ci-dessous
+-- (liste fermée, docs/04 §10.3, vérifiée par Contract_game) ; données de chaque sorte : types
+-- Celebrate<Sorte> plus bas (section « Célébrations »). `data` reste un dictionnaire à clés chaînes.
+export type CelebrateKind =
+	"press"
+	| "tile"
+	| "pot"
+	| "hatch"
+	| "fusion"
+	| "catch"
+	| "ownerReturn"
+	| "returnedBigger"
+	| "booped"
+	| "boopDone"
+	| "splorch"
+	| "giftRain"
+	| "megaResult"
+	| "lunarDrop"
+	| "luckyDrop"
+	| "dexNew"
+	| "objectiveDone"
+	| "objectivesCard"
+	| "newObjectives"
+	| "plopDay"
+	| "onboarding"
+	| "sleepy"
+	| "return"
+	| "unlock"
+	| "saddle"
+	| "purchase"
+	| "clapCount"
+	| "fanfare"
+	| "photo"
+	| "testError"
 export type CelebratePayload = {
 	kind: CelebrateKind,
 	data: { [string]: any },
@@ -87,6 +119,9 @@ export type SquishyRecord = {
 	o: string, -- tenue portée (Config/Cosmetics) ou ""
 	at: SquishyLocation,
 	b: number, -- naissance (Clock.unix()) : « né il y a moins de 60 s » ne vient pas à la clôture
+	-- Clock.day() du dernier bonus de croissance du Rush (Héros + 1 h, retour seul + 30 min, GDD v1.3
+	-- §4.21.3) : au plus un par squishy et par jour UTC (SquishyService.growFor) ; 0 = jamais
+	gd: number,
 }
 
 -- Squishy visible des autres joueurs (enclos et Bassin seulement), RanchSnapshot / RanchPatch
@@ -151,7 +186,9 @@ export type RanchPublic = {
 	title: string,
 	saddleColor: string,
 	trail: string,
-	best: { s: SpeciesId, m: MutationId, z: number, zg: number }?, -- silhouette au-dessus du ranch
+	-- silhouette au-dessus du ranch ; TOUJOURS présent (un champ nil ne voyage pas dans un RanchPatch,
+	-- remarque A27) : s = 0 = aucune silhouette (ranch libre, enclos vides)
+	best: { s: SpeciesId, m: MutationId, z: number, zg: number },
 }
 
 export type RanchSnapshotPayload = {
@@ -173,7 +210,10 @@ export type RanchPatchPayload = {
 	ops: { SquishyOp },
 }
 
--- Clôture (Rush ou pet-sitting) : squishies du ranch `slot` posés à la clôture côté rue
+-- Clôture (Rush ou pet-sitting) : squishies du ranch `slot` posés à la clôture côté rue. Effacer :
+-- RanchService.setFence(slot, {}, maRaison) n'efface que si la raison actuelle est la sienne ; ""
+-- est réservé à RanchService (ranch libéré). Après la fin du Rush, CommunityService réapplique le
+-- pet-sitting à son step suivant (remarque A25).
 export type FencePayload = {
 	slot: number,
 	uids: { Uid }, -- vide : clôture libérée
@@ -243,6 +283,11 @@ export type SpectacleEntry = {
 	kind: "splorch" | "dance",
 	userId: number, -- héros (0 pour la danse)
 	startAt: number, -- Clock.now() prévu
+	slot: number, -- ranch du héros (0 pour la danse)
+	position: number, -- place dans la file (1 = prochain)
+	-- attente prévue en s à l'envoi : position × Events.SpectacleGap + reste du grand spectacle en cours
+	-- (Rush, MEGA, Grand Splorch, danse) ; recalculée à chaque changement (suivi du HUD « 2e · ≈ 0:40 »)
+	eta: number,
 }
 
 export type SpectacleCurrent = {
@@ -285,7 +330,9 @@ export type EventStatePayload = {
 	},
 	golden: { active: boolean, id: number, endsAt: number },
 	moon: { active: boolean, session: number, endsAt: number, nextAt: number },
-	gauge: { points: number, target: number, partyUntil: number },
+	-- restUntil : fin de la sieste de Big Plop (Clock.now(), 0 = aucune) : jarre grise, « Big Plop se
+	-- repose mm:ss » ; les points continuent de compter, aucune fête avant la fin (GDD v1.3, §4.23)
+	gauge: { points: number, target: number, partyUntil: number, restUntil: number },
 	boost: { kind: "" | "wobble" | "squish" | "admin", untilT: number, byName: string },
 	spectacle: { current: SpectacleCurrent?, queue: { SpectacleEntry } },
 	features: EventFeatures,
@@ -302,7 +349,9 @@ export type BoopStatePayload = {
 	state: "hold" | "done" | "cancel",
 }
 
-export type HoldStatePayload = { kind: "feed", endsAt: number, active: boolean }
+-- Maintiens mesurés par le serveur pour l'anneau du client : bol de Plop (QuestService, 2 s) et attente
+-- sur une dalle (RanchService, Balance.Tiles.DwellSeconds) ; tile = clé de la dalle ("" pour le bol)
+export type HoldStatePayload = { kind: "feed" | "tile", endsAt: number, active: boolean, tile: string }
 
 export type EmoteShowPayload = { userId: number, kind: number, emote: string }
 export type ClapPromptPayload = { heroId: number, endsAt: number }
@@ -372,6 +421,7 @@ export type ReturnScreenData = {
 	grew: number, -- + taille pendant l'absence
 	pot: number, -- + pièces dans le Pot
 	splorchReady: boolean,
+	nearlyReady: boolean, -- le plus gros a atteint Balance.Offline.StopAt × objectif (« Presque prêt ! »)
 }
 
 -- Aperçu du Grand Splorch (calculé par le client à partir du profil répliqué, mêmes formules
@@ -383,7 +433,9 @@ export type SplorchPreview = {
 	level: number, -- R après le Grand Splorch
 	unlocks: { string }, -- clés de texte des déblocages (Balance.Splorch.Unlocks)
 	coinsLost: number,
-	recentBuy: boolean, -- 2e confirmation (paquet acheté il y a < 30 min, ≥ moitié restante)
+	-- OBSOLÈTE (contrat v1.2 : paquets de pièces retirés, plus de 2e confirmation) : jamais lu par le
+	-- client ; logic arrête de le remplir (Formulas.splorchPreview)
+	recentBuy: boolean?,
 	nextTarget: number,
 	defaultFlyer: Uid,
 }
@@ -404,6 +456,81 @@ export type TickActor = {
 	pos: Vector3, -- dernière position valide (MoveCheck.lastValid) ; jamais la racine brute du client
 	canAct: boolean, -- verdict "ok", pas de rafale, pas de restriction (MoveCheck.canAct)
 	riding: boolean,
+	-- hausse de la racine de la monture (MoveCheck.rootOffset, 0 à pied) : pieds = ZoneRules.feetY(pos.Y,
+	-- rootOffset) pour les écarts verticaux des portées (GDD v1.3, §12.5, §12.8)
+	rootOffset: number,
 }
+
+-- =============================================================================================
+-- Célébrations : données de chaque sorte (CelebratePayload.data, docs/04 §10.3)
+-- =============================================================================================
+
+export type CelebratePress = { uid: Uid, coins: number, perfect: boolean, streak: number, petsit: boolean }
+export type CelebrateTile = { tile: TileKey, level: number }
+export type CelebratePot = { coins: number, auto: boolean }
+export type CelebrateHatch = {
+	uid: Uid,
+	species: SpeciesId,
+	rarity: RarityId,
+	mutation: MutationId,
+	oneIn: number,
+	isNew: boolean,
+	scripted: boolean,
+	at: SquishyLocation, -- "pen", ou "dodo" quand les enclos sont pleins (bulle « Dodo » sur la Cuve)
+}
+export type CelebrateFusion = { uid: Uid, step: number, stars: number, coins: number }
+export type CelebrateCatch = {
+	kind: CreatureKind,
+	species: SpeciesId,
+	mutation: MutationId,
+	uid: Uid,
+	coins: number,
+	hero: boolean,
+	byLeap: boolean,
+}
+export type CelebrateOwnerReturn = {
+	uid: Uid,
+	species: SpeciesId,
+	coins: number,
+	catcherId: number,
+	catcherName: string, -- "" si caché
+	firstBoop: boolean,
+}
+export type CelebrateReturnedBigger = { uid: Uid, species: SpeciesId }
+export type CelebrateBooped = { uid: Uid, species: SpeciesId, booperId: number }
+export type CelebrateBoopDone = { ownerId: number, uid: Uid }
+-- short = version courte du spectacle pour ce spectateur (GDD v1.3, §4.15) : ni capsule, ni secousse,
+-- ni vibration, ni APPLAUDIR ; le héros a toujours short = false
+export type CelebrateSplorch = {
+	userId: number,
+	level: number,
+	flyer: { s: SpeciesId, m: MutationId, st: number, z: number },
+	startedAt: number,
+	burstAt: number,
+	endsAt: number,
+	short: boolean,
+}
+export type CelebrateGiftRain = {
+	heroId: number,
+	heroName: string,
+	coins: number,
+	uid: Uid, -- bébé reçu ("" : pièces seulement)
+	species: SpeciesId,
+	short: boolean, -- cadeau compté directement, sans capsule (message seulement)
+}
+export type CelebrateMegaResult = { success: boolean, points: number, babies: number, coins: number }
+export type CelebrateDrop = { uid: Uid, species: SpeciesId, mutation: MutationId } -- lunarDrop, luckyDrop
+export type CelebrateDexNew = { species: SpeciesId, mutation: MutationId, star: number }
+export type CelebrateObjectiveDone = { slot: number, id: number }
+export type CelebrateDay = { day: number } -- objectivesCard, newObjectives
+export type CelebratePlopDay = { day: number, reward: string }
+export type CelebrateOnboarding = { step: number, hint: string }
+export type CelebrateSleepy = { minutes: number }
+export type CelebrateUnlock = { kind: string, id: string }
+export type CelebrateSaddle = { saddle: number }
+export type CelebratePurchase = { key: string }
+export type CelebrateClapCount = { n: number }
+export type CelebrateFanfare = { threshold: number }
+export type CelebratePhoto = { on: boolean }
 
 return {}

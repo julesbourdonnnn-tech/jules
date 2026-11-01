@@ -11,7 +11,9 @@
 --   "uid"        chaîne base 36 de 1 à 8 caractères ([0-9a-z]) ; doit être possédée par l'envoyeur
 --   "uidOpt"     "uid" ou nil
 --   "uids"       table séquentielle de 1 à `max` uids UNIQUES (aucun trou, aucune clé non entière)
---   "time"       nombre fini (horodatage Clock.now() du client ; borné par le handler)
+--   "time"       nombre fini (horodatage Clock.now() du client ; borné par le handler) : Press, PetPress et
+--                MegaPress par PressTiming.clampClientTime ([maintenant − 0,35 ; maintenant + 0,05]) ;
+--                Catch et Leap ramenés dans [maintenant − Balance.Catch.ClientPast ; maintenant]
 --   "dir"        nombre fini (composante d'une direction ; la norme est vérifiée par le handler)
 --   "bool"       booléen
 --   "int"        entier dans [min ; max]
@@ -35,6 +37,10 @@ export type IntentSpec = {
 	rate: { number }, -- { appels, par secondes } (seau à jetons, Server/Util/RateLimit)
 	args: { ArgSpec },
 	clientRate: { number }?, -- débit côté client quand il diffère (Emote)
+	-- intention de JEU : une fois acceptée (après débit, types et règles), le handler appelle
+	-- Activity.note(player, Clock.now()) (Server/Util/Activity : joueurs actifs du MEGA et de la jauge,
+	-- GDD v1.3 §4.22). Les intentions d'interface, de réglage et de diagnostic ne comptent pas.
+	activity: boolean?,
 }
 
 local TILES = { "snack", "decor", "pens", "cozyBed" }
@@ -44,49 +50,51 @@ local COSMETIC_KINDS = { "saddle", "trail", "title", "theme", "flag" }
 -- stylua: ignore start
 local Intents: { [string]: IntentSpec } = {
 	-- Ranch, collection (SquishyService, EconomyService)
-	Press = { owner = "SquishyService", rate = { 12, 1 }, args = { { name = "uid", kind = "uid" }, { name = "tClient", kind = "time" } } },
-	PickUp = { owner = "SquishyService", rate = { 4, 1 }, args = { { name = "uid", kind = "uid" } } },
-	PutDown = { owner = "SquishyService", rate = { 4, 1 }, args = {} },
-	Throw = { owner = "SquishyService", rate = { 4, 1 }, args = {} },
-	FuseMenu = { owner = "SquishyService", rate = { 2, 1 }, args = { { name = "uidA", kind = "uid" }, { name = "uidB", kind = "uid" } } },
-	FuseAll = { owner = "SquishyService", rate = { 1, 2 }, args = {} },
-	BuyTile = { owner = "EconomyService", rate = { 10, 1 }, args = { { name = "tile", kind = "key", set = TILES } } },
-	MoveSquishy = { owner = "SquishyService", rate = { 4, 1 }, args = { { name = "uid", kind = "uid" }, { name = "to", kind = "key", set = MOVE_TO } } },
-	ClaimMail = { owner = "SquishyService", rate = { 4, 1 }, args = { { name = "uid", kind = "uid" } } },
-	Sell = { owner = "SquishyService", rate = { 2, 1 }, args = { { name = "uids", kind = "uids", max = 84 }, { name = "confirmed", kind = "bool" } } },
-	Release = { owner = "SquishyService", rate = { 2, 1 }, args = { { name = "uids", kind = "uids", max = 84 }, { name = "confirmed", kind = "bool" } } },
-	SetLock = { owner = "SquishyService", rate = { 6, 1 }, args = { { name = "uid", kind = "uid" }, { name = "locked", kind = "bool" } } },
-	SetBestFriend = { owner = "SquishyService", rate = { 2, 1 }, args = { { name = "uid", kind = "uid" }, { name = "slot", kind = "int", min = 1, max = 3 } } },
-	SetMount = { owner = "SquishyService", rate = { 2, 1 }, args = { { name = "uid", kind = "uid" } } },
-	Ride = { owner = "SquishyService", rate = { 2, 1 }, args = { { name = "on", kind = "bool" } } },
-	EquipOutfit = { owner = "SquishyService", rate = { 2, 1 }, args = { { name = "outfit", kind = "str", max = 32 }, { name = "uid", kind = "uidOpt" } } },
+	Press = { owner = "SquishyService", rate = { 12, 1 }, activity = true, args = { { name = "uid", kind = "uid" }, { name = "tClient", kind = "time" } } },
+	PickUp = { owner = "SquishyService", rate = { 4, 1 }, activity = true, args = { { name = "uid", kind = "uid" } } },
+	PutDown = { owner = "SquishyService", rate = { 4, 1 }, activity = true, args = {} },
+	Throw = { owner = "SquishyService", rate = { 4, 1 }, activity = true, args = {} },
+	FuseMenu = { owner = "SquishyService", rate = { 2, 1 }, activity = true, args = { { name = "uidA", kind = "uid" }, { name = "uidB", kind = "uid" } } },
+	FuseAll = { owner = "SquishyService", rate = { 1, 2 }, activity = true, args = {} },
+	BuyTile = { owner = "EconomyService", rate = { 10, 1 }, activity = true, args = { { name = "tile", kind = "key", set = TILES } } },
+	MoveSquishy = { owner = "SquishyService", rate = { 4, 1 }, activity = true, args = { { name = "uid", kind = "uid" }, { name = "to", kind = "key", set = MOVE_TO } } },
+	ClaimMail = { owner = "SquishyService", rate = { 4, 1 }, activity = true, args = { { name = "uid", kind = "uid" } } },
+	Sell = { owner = "SquishyService", rate = { 2, 1 }, activity = true, args = { { name = "uids", kind = "uids", max = 84 }, { name = "confirmed", kind = "bool" } } },
+	Release = { owner = "SquishyService", rate = { 2, 1 }, activity = true, args = { { name = "uids", kind = "uids", max = 84 }, { name = "confirmed", kind = "bool" } } },
+	SetLock = { owner = "SquishyService", rate = { 6, 1 }, activity = true, args = { { name = "uid", kind = "uid" }, { name = "locked", kind = "bool" } } },
+	SetBestFriend = { owner = "SquishyService", rate = { 2, 1 }, activity = true, args = { { name = "uid", kind = "uid" }, { name = "slot", kind = "int", min = 1, max = 3 } } },
+	SetMount = { owner = "SquishyService", rate = { 2, 1 }, activity = true, args = { { name = "uid", kind = "uid" } } },
+	Ride = { owner = "SquishyService", rate = { 2, 1 }, activity = true, args = { { name = "on", kind = "bool" } } },
+	EquipOutfit = { owner = "SquishyService", rate = { 2, 1 }, activity = true, args = { { name = "outfit", kind = "str", max = 32 }, { name = "uid", kind = "uidOpt" } } },
 	-- Poursuites (ChaseService)
-	Leap = { owner = "ChaseService", rate = { 3, 1 }, args = { { name = "dirX", kind = "dir" }, { name = "dirZ", kind = "dir" } } },
-	Catch = { owner = "ChaseService", rate = { 6, 1 }, args = { { name = "id", kind = "int", min = 1, max = 65535 } } },
+	-- tClient (contrat v1.2, GDD §12.5, §12.8) : bond = crédit MoveCheck.grant rétroactif, capture à
+	-- l'atterrissage tentée à tClient + Balance.Leap.Duration ; capture vérifiée à SON instant tClient
+	Leap = { owner = "ChaseService", rate = { 3, 1 }, activity = true, args = { { name = "dirX", kind = "dir" }, { name = "dirZ", kind = "dir" }, { name = "tClient", kind = "time" } } },
+	Catch = { owner = "ChaseService", rate = { 6, 1 }, activity = true, args = { { name = "id", kind = "int", min = 1, max = 65535 }, { name = "tClient", kind = "time" } } },
 	-- BOOP RUSH (RushService)
-	BoopHold = { owner = "RushService", rate = { 4, 1 }, args = { { name = "ownerId", kind = "userId" }, { name = "uid", kind = "uid" }, { name = "holding", kind = "bool" } } },
+	BoopHold = { owner = "RushService", rate = { 4, 1 }, activity = true, args = { { name = "ownerId", kind = "userId" }, { name = "uid", kind = "uid" }, { name = "holding", kind = "bool" } } },
 	SetMode = { owner = "RushService", rate = { 1, 1 }, args = { { name = "rush", kind = "bool" } } },
 	RefuseBooper = { owner = "RushService", rate = { 2, 1 }, args = { { name = "userId", kind = "userId" } } },
 	-- Événements (EventService)
-	MegaPress = { owner = "EventService", rate = { 3, 1 }, args = { { name = "tClient", kind = "time" } } },
+	MegaPress = { owner = "EventService", rate = { 3, 1 }, activity = true, args = { { name = "tClient", kind = "time" } } },
 	AdminCommand = { owner = "EventService", rate = { 2, 1 }, args = { { name = "command", kind = "str", max = 32 }, { name = "arg", kind = "str", max = 64 } } },
 	-- Grand Splorch (SplorchService)
-	GrandSplorch = { owner = "SplorchService", rate = { 1, 2 }, args = { { name = "film", kind = "bool" }, { name = "flyer", kind = "uid" } } },
+	GrandSplorch = { owner = "SplorchService", rate = { 1, 2 }, activity = true, args = { { name = "film", kind = "bool" }, { name = "flyer", kind = "uid" } } },
 	-- Accueil, objectifs, Nourrir Plop, Squishydex (QuestService)
-	FeedPlop = { owner = "QuestService", rate = { 2, 1 }, args = { { name = "holding", kind = "bool" } } },
-	ClaimObjective = { owner = "QuestService", rate = { 4, 1 }, args = { { name = "slot", kind = "int", min = 1, max = 3 } } },
-	RerollObjective = { owner = "QuestService", rate = { 4, 1 }, args = { { name = "slot", kind = "int", min = 1, max = 3 } } },
-	ClaimDexReward = { owner = "QuestService", rate = { 2, 1 }, args = {} },
+	FeedPlop = { owner = "QuestService", rate = { 2, 1 }, activity = true, args = { { name = "holding", kind = "bool" } } },
+	ClaimObjective = { owner = "QuestService", rate = { 4, 1 }, activity = true, args = { { name = "slot", kind = "int", min = 1, max = 3 } } },
+	RerollObjective = { owner = "QuestService", rate = { 4, 1 }, activity = true, args = { { name = "slot", kind = "int", min = 1, max = 3 } } },
+	ClaimDexReward = { owner = "QuestService", rate = { 2, 1 }, activity = true, args = {} },
 	-- Écran vu par le joueur (fait que seul le client connaît) : étape 10 de l'accueil (objectifs vus),
 	-- départ du délai de la carte du choix (RushModeChosen = −1 sans réponse), analytique. Une fois par
 	-- écran et par session ; ne donne jamais rien (aucune récompense, aucune mutation économique).
 	UiSeen = { owner = "QuestService", rate = { 2, 1 }, args = { { name = "screen", kind = "key", set = { "objectives", "modeCard", "postBoop", "booped", "shop", "dex", "leaderboards" } } } },
 	-- Social (CommunityService)
-	PetPress = { owner = "CommunityService", rate = { 12, 1 }, args = { { name = "ownerId", kind = "userId" }, { name = "uid", kind = "uid" }, { name = "tClient", kind = "time" } } },
+	PetPress = { owner = "CommunityService", rate = { 12, 1 }, activity = true, args = { { name = "ownerId", kind = "userId" }, { name = "uid", kind = "uid" }, { name = "tClient", kind = "time" } } },
 	SetSetting = { owner = "CommunityService", rate = { 4, 1 }, args = { { name = "key", kind = "str", max = 32 }, { name = "value", kind = "setting" } } },
-	EquipCosmetic = { owner = "CommunityService", rate = { 2, 1 }, args = { { name = "kind", kind = "key", set = COSMETIC_KINDS }, { name = "id", kind = "str", max = 32 } } },
-	Emote = { owner = "CommunityService", rate = { 1, 1.2 }, clientRate = { 1, 1.5 }, args = { { name = "kind", kind = "int", min = 1, max = 3 } } },
-	Clap = { owner = "CommunityService", rate = { 2, 1 }, args = { { name = "heroId", kind = "userId" } } },
+	EquipCosmetic = { owner = "CommunityService", rate = { 2, 1 }, activity = true, args = { { name = "kind", kind = "key", set = COSMETIC_KINDS }, { name = "id", kind = "str", max = 32 } } },
+	Emote = { owner = "CommunityService", rate = { 1, 1.2 }, activity = true, clientRate = { 1, 1.5 }, args = { { name = "kind", kind = "int", min = 1, max = 3 } } },
+	Clap = { owner = "CommunityService", rate = { 2, 1 }, activity = true, args = { { name = "heroId", kind = "userId" } } },
 	ReportBlocked = { owner = "CommunityService", rate = { 1, 10 }, args = { { name = "userIds", kind = "userIds", max = 200 } } },
 	-- Monde (RanchService) : redemande de l'état des ranchs, des événements et des créatures
 	RequestWorld = { owner = "RanchService", rate = { 1, 2 }, args = {} },
@@ -100,6 +108,11 @@ local Intents: { [string]: IntentSpec } = {
 		{ name = "ctx", kind = "str", max = 120, truncate = true },
 	} },
 	RequestDiagnostics = { owner = "DiagnosticsService", rate = { 1, 2 }, args = { { name = "tab", kind = "int", min = 1, max = 3 } } },
+	-- Faits d'analytique que seul le client connaît (contrat v1.2, remarque A21) : « qualityReduced »
+	-- (QualityController : qualité adaptative descendue), « shopOpened » (Panels/Shop : chaque
+	-- ouverture). Analytique SEULEMENT (QualityReduced, ShopOpened), 20 par session au plus ; ne change
+	-- jamais rien au jeu. « Objectifs vus » (étape 10 de l'accueil) passe par UiSeen("objectives").
+	ClientEvent = { owner = "DiagnosticsService", rate = { 1, 5 }, args = { { name = "kind", kind = "key", set = { "qualityReduced", "shopOpened" } } } },
 }
 -- stylua: ignore end
 

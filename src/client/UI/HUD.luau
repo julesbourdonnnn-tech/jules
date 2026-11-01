@@ -5,7 +5,12 @@
 -- Fame et amis, puce Menu (△, pastilles « ! » et « ♥ N »), pastille d'événement (comptes à rebours
 -- Rush / MEGA / Lune / fêtes), barre du MEGA, jauge, suivi d'objectif (Grand Splorch), indicateurs
 -- d'état (bouclier, ×2, mode), puce d'action spéciale (GRAND SPLORCH ! / APPLAUDIR), carte de la
--- cible, indicateur Bondir, flèches de bord d'écran. Affichage progressif pendant l'accueil. Aucun
+-- cible, indicateur Bondir, flèches de bord d'écran (2 au plus dans tous les modes : Golden puis la
+-- créature attrapable la plus proche, ≤ 120 studs). Contrat v1.2 : jauge grise « Big Plop se repose
+-- mm:ss » pendant la sieste (EventState.gauge.restUntil) ; suivi : place et attente dans la file du
+-- Grand Splorch (EventState.spectacle.queue[i].position / eta) ; vibration squishyBack au retour de mon
+-- squishy boopé (Celebrate ownerReturn / returnedBigger ; aucune quand il s'enfuit) ; puce APPLAUDIR
+-- cachée pendant une poursuite (créature attrapable ≤ 30 studs), un maintien ou une fenêtre. Aucun
 -- chevauchement, texte ≥ 28 px TV, glyphes de l'appareil. Pose ClientReady une fois construit.
 
 local HUD = {}

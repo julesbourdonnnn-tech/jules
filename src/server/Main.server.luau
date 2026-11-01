@@ -1,16 +1,17 @@
 --!strict
--- Point d'entrée serveur : crée les remotes, puis Init() de tous les services dans l'ordre, puis
--- Start() de tous les services. Chaque appel est isolé (xpcall) : une erreur est signalée par warn
+-- Point d'entrée serveur : branche DiagnosticsService (attach), crée les remotes (Net.setup), puis
+-- Init() de tous les services dans l'ordre, puis Start() de tous les services. Chaque appel est isolé (xpcall) : une erreur est signalée par warn
 -- et le service suivant démarre quand même (leçon de Comet Conga : un Start en panne en amont
 -- empêchait le tick de jeu de démarrer, serveur ouvert mais injouable).
 -- Crochet « attach » (docs/04 §5.1) : un module qui le définit l'exécute JUSTE APRÈS son require,
 -- avant le require des suivants. Réservé à DiagnosticsService, premier de la liste, qui doit voir
--- les erreurs de tout le démarrage (GDD §12.3, §12.11).
+-- les erreurs de tout le démarrage, Net.setup() compris (GDD §12.3, §12.11 ; contrat v1.2, remarque
+-- A29) : Net.setup() est appelé juste après le require et l'attach du PREMIER module de la liste
+-- (DiagnosticsService ne touche à aucun remote avant son Init), et avant le require des autres.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Net = require(ReplicatedStorage:WaitForChild("Shared").Net)
-Net.setup()
 
 local Services = script.Parent.Services
 
@@ -43,13 +44,18 @@ local function run(name: string, phase: string, fn: () -> ())
 end
 
 local modules: { [string]: any } = {}
-for _, name in ORDER do
+for index, name in ORDER do
 	run(name, "require", function()
 		modules[name] = require(Services:FindFirstChild(name) :: ModuleScript) :: any
 	end)
 	local m = modules[name]
 	if m and type(m.attach) == "function" then
 		run(name, "attach", m.attach)
+	end
+	if index == 1 then
+		-- remotes créés une fois Diagnostics branché, avant tout autre service (même si le premier
+		-- module est en panne : run isole l'erreur, la suite démarre)
+		Net.setup()
 	end
 end
 for _, name in ORDER do

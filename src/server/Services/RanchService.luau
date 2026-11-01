@@ -6,7 +6,10 @@
 -- chaque apparition (HumanoidRootPart attendu 10 s, PivotTo sur WorldLayout.spawnCFrame, repli sur la
 -- place), serveur plein (message puis renvoi après 30 s sauf ranch libéré), poussée des intrus à
 -- chaque tick (6 studs devant le portail, message « C'est le ranch de … »), Pot encaissé à ≤ 5 studs,
--- entrée sur une dalle = un achat (ZoneRules, hystérésis), état public des ranchs (RanchSnapshot à
+-- dalles : entrée (ZoneRules, hystérésis 2,5 / 3,5, à plat) puis Balance.Tiles.DwellSeconds dessus sans
+-- porter ni autre maintien = un achat par entrée (HoldState kind "tile" pour l'anneau ; pièces
+-- insuffisantes : achat au premier tick où elles suffisent, toujours une fois par entrée), état public
+-- des ranchs (RanchSnapshot à
 -- l'arrivée, RanchPatch groupé et numéroté par destinataire), clôtures (Fence, pour RushService et
 -- CommunityService). PlayerReady au premier placement et au plus tard 15 s après le chargement
 -- (StateTimeouts playerReady), même si le placement échoue. Attribut Player « RanchSlot ». Émet
@@ -54,10 +57,17 @@ function RanchService.place(player: Player)
 	error("TODO(ranch): RanchService.place")
 end
 
--- Tick : intrus repoussés, Pot, entrées sur les dalles (positions validées, canAct)
+-- Tick : intrus repoussés, Pot, entrées sur les dalles et attente de DwellSeconds (positions validées, canAct)
 function RanchService.step(now: number, actors: { [Player]: Types.TickActor })
 	local _ = { now, actors }
 	error("TODO(ranch): RanchService.step")
+end
+
+-- Clé de la dalle sur laquelle le joueur se tient (état « dedans » du tick), "" sinon : BuyTile choisit
+-- source = "pad" (refus doux, aucun Feedback) ou "panel" (remarque A24)
+function RanchService.onPad(player: Player): string
+	local _ = { player }
+	error("TODO(ranch): RanchService.onPad")
 end
 
 -- Champs de RanchPublic changés (fusionnés dans le prochain RanchPatch)
@@ -77,7 +87,8 @@ function RanchService.squishyOp(
 	error("TODO(ranch): RanchService.squishyOp")
 end
 
--- Squishies posés à la clôture ("rush" passe avant "petsit")
+-- Squishies posés à la clôture ("rush" passe avant "petsit") ; effacer = setFence(slot, {}, maRaison),
+-- sans effet si la raison actuelle est une autre ; "" réservé à RanchService (ranch libéré)
 function RanchService.setFence(slot: number, uids: { string }, reason: "rush" | "petsit" | "")
 	local _ = { slot, uids, reason }
 	error("TODO(ranch): RanchService.setFence")

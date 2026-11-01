@@ -14,6 +14,7 @@ export type HapticDef = {
 	strength: number, -- 0-1 (repli SetMotor, et force atténuée)
 	duration: number, -- s (repli SetMotor)
 	priority: number, -- une vibration plus prioritaire passe pendant le délai minimal
+	cooldownExempt: boolean?, -- joue même pendant le délai minimal (sirène du Rush, contrat v1.2)
 }
 
 local Console = {
@@ -59,7 +60,10 @@ local Console = {
 			},
 			-- Raise a Squishy (contrat, GDD §10.5) : jamais sur une sélection, un bond ou une marche ;
 			-- délai minimal Cooldown sauf priorité supérieure. Le joueur de l'événement est seul à vibrer.
-			-- pressTick : 2 par seconde au plus (InputController / VFXController le bornent)
+			-- Force variable : la force de la carte est le MAXIMUM, le contrôleur passe une échelle ≤ 1
+			-- (Haptics.play(nom, force voulue / force de la carte), jamais au-dessus de 1).
+			-- pressTick : seulement une pression PERFECT du MEGA (une pression ordinaire, chez soi ou au
+			-- MEGA, ne vibre jamais : GDD v1.3), 2 par seconde au plus ; VFXController est le SEUL à la borner
 			pressTick = {
 				effect = "UIClick",
 				motor = "Small",
@@ -67,7 +71,8 @@ local Console = {
 				duration = 0.03,
 				priority = 1,
 			},
-			perfect = { effect = "UIClick", motor = "Small", strength = 0.3, duration = 0.05, priority = 2 },
+			-- perfect : 0,3 + 0,03 par cran de série (0 … 5) : Haptics.play("perfect", (0,3 + 0,03 × série) / 0,45)
+			perfect = { effect = "UIClick", motor = "Small", strength = 0.45, duration = 0.05, priority = 2 },
 			tileBuy = { effect = "UIClick", motor = "Small", strength = 0.25, duration = 0.05, priority = 2 },
 			holdDone = {
 				effect = "UINotification",
@@ -90,11 +95,12 @@ local Console = {
 				duration = 0.08,
 				priority = 2,
 			},
-			-- fusion : force + 0,05 par étape de combo (Haptics.play("fusion", 1 + 0,05 × k / 0,4))
+			-- fusion : 0,4 + 0,05 par étape au-delà de la première (k = 1 … 6) :
+			-- Haptics.play("fusion", (0,4 + 0,05 × (k − 1)) / 0,65)
 			fusion = {
 				effect = "GameplayCollision",
 				motor = "Small",
-				strength = 0.4,
+				strength = 0.65,
 				duration = 0.08,
 				priority = 2,
 			},
@@ -112,21 +118,25 @@ local Console = {
 				duration = 0.06,
 				priority = 2,
 			},
-			booped = {
-				effect = "UINotification",
+			-- squishyBack (GDD v1.3, remplace `booped`) : mon squishy boopé revient, rendu par un autre
+			-- joueur ou rentré seul (Celebrate "ownerReturn" / "returnedBigger" ; la capture Héros joue
+			-- `catch`). Aucune vibration quand il s'enfuit (signal négatif, pilier P2)
+			squishyBack = {
+				effect = "GameplayCollision",
 				motor = "Small",
 				strength = 0.3,
-				duration = 0.12,
+				duration = 0.08,
 				priority = 2,
 			},
-			-- double impulsion (2 × 0,1 s, écart 0,15 s) : le contrôleur appelle play deux fois ;
-			-- jamais pour un nouveau avant l'étape 9 de l'accueil
+			-- une seule impulsion de 0,3 s (GDD v1.3), jouée même pendant le délai minimal ; jamais pour un
+			-- nouveau avant l'étape 9 de l'accueil
 			rushSiren = {
 				effect = "UINotification",
 				motor = "Small",
 				strength = 0.4,
-				duration = 0.1,
+				duration = 0.3,
 				priority = 3,
+				cooldownExempt = true,
 			},
 			-- atténuée 1 − d / 120 (MinScale 0,35)
 			megaLand = {

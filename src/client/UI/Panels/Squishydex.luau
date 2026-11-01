@@ -1,9 +1,11 @@
 --!strict
 -- Squishydex (paquet client-panels) — STUB du contrat (docs/04). Implémenter = remplacer chaque
 -- error("TODO(…)") par le comportement décrit dans docs/04, SANS changer les signatures.
--- Panneau Squishydex (GDD §4.17) : Espèces (26 pages, silhouettes grises), Mutations (grille 26 ×
--- 9), Familles (bonus), Étoiles, Guide (toutes les probabilités, protection contre la malchance,
--- règles du BOOP RUSH) ; jalons à réclamer ; nombres géants avec le mot entier.
+-- Panneau Squishydex (GDD §4.17, §10.3 v1.3) : Espèces (grille par famille, silhouettes grises) et
+-- fiche d'une espèce (✕ : 9 mutations en 3 × 3, badges d'étoiles, record), Familles (bonus gagnés
+-- pour toujours, dex.fam), Guide (toutes les probabilités, protection contre la malchance, règles du
+-- BOOP RUSH) ; plus d'onglets Mutations (26 × 9) ni Étoiles (contrat v1.2) ; jalons à réclamer ;
+-- nombres géants avec le mot entier.
 
 local Squishydex = {}
 

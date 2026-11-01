@@ -1,10 +1,11 @@
 --!strict
 -- Shop (paquet client-panels) — STUB du contrat (docs/04). Implémenter = remplacer chaque
 -- error("TODO(…)") par le comportement décrit dans docs/04, SANS changer les signatures.
--- Panneau Boutique (GDD §8) : Passes, Fête et pièces, Tenues (aperçu 3D) ; prix lus à l'exécution
--- (Prices.observe) ; articles à id 0 cachés, onglet absent si tous à 0 ; caché les 10 premières
--- minutes ; paquets cachés par PolicyService ou quand « Grand Splorch prêt ! » ; sélection tenue
--- pendant la fenêtre d'achat (FocusGuard.hold).
+-- Panneau Boutique (GDD §8) : onglets Passes / Fête / Tenues (aperçu 3D) ; prix lus à l'exécution
+-- (Prices.observe) ; articles à id 0 ou hidden cachés (paquets de pièces retirés du lancement,
+-- contrat v1.2), onglet absent si tous cachés ; caché les 10 premières minutes ; bouton Squish Party
+-- caché pendant une fête ; aucun article caché par PolicyService ; ClientEvent("shopOpened") à chaque
+-- ouverture ; sélection tenue pendant la fenêtre d'achat (FocusGuard.hold).
 
 local Shop = {}
 

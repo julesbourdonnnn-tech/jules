@@ -9,7 +9,10 @@
 -- budgets de QualityController, Mouvement réduit, vibrations (Haptics) au bon moment. Clips
 -- automatiques (CaptureService sous pcall : Légendaire+, Arc-en-ciel / Glitch / Flop, COMBO ×5, mon
 -- Grand Splorch ; réglage clips, interrupteur du serveur, PolicyService IsContentSharingAllowed en
--- cache ; arrêt au plus tard 8 s après) → carte « clip » de Cards. Bannières et effets d'événement
+-- cache ; arrêt au plus tard 8 s après) → carte « clip » de Cards SEULEMENT si StartVideoCaptureAsync a
+-- réussi (contrat v1.2). Grand Splorch d'un autre en version courte (data.short) : ni capsule, ni
+-- secousse, ni vibration ; « +N » par UI/WorldText ; vibration pressTick seulement sur une pression
+-- PERFECT du MEGA (VFXController seul la borne à 2 par seconde) ; perfect + 0,03 par cran de série. Bannières et effets d'événement
 -- seulement si l'interrupteur du serveur est vrai (WorldStateController.event().features).
 
 local VFXController = {}

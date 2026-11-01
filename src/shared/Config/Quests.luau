@@ -95,11 +95,12 @@ Quests.ObjectiveRules = {
 	FeasibleWithin = 1200, -- s : un objectif n'est proposé que s'il est faisable en 20 min
 	MegaSoonWithin = 1200, -- « Un MEGA commence dans les 20 min »
 	StampsUnder = 120,
-	-- Récompenses : minutes de revenu et boost personnel ×2
+	-- Récompenses : minutes de revenu ; plus aucun boost ×2 dans les objectifs (GDD v1.3, §7.4 : les
+	-- sources de ×2 du joueur sont le bol de Plop et la Wobble Party)
 	Rewards = {
 		easy = { incomeSeconds = 180, boost = 0 },
-		medium = { incomeSeconds = 360, boost = 300 },
-		hard = { incomeSeconds = 600, boost = 600 },
+		medium = { incomeSeconds = 360, boost = 0 },
+		hard = { incomeSeconds = 600, boost = 0 },
 	},
 	-- Les 3 terminés : une Goutte chanceuse (naissance de qualité + 1, mutations × 2 ; Balance.Babies)
 	AllDoneReward = "luckyDrop",
@@ -117,9 +118,9 @@ export type PlopReward = {
 }
 
 Quests.Feed = {
-	Hold = 5, -- s de maintien de □ devant le bol (mesuré par le serveur)
+	Hold = 2, -- s de maintien de □ devant le bol (mesuré par le serveur ; GDD v1.3, §4.20)
 	HoldGrace = 0.5,
-	Radius = 8, -- studs du bol
+	Radius = 8, -- studs du bol, à plat (ZoneRules.distXZ), écart vertical depuis les pieds ≤ Balance.Catch.MaxDY
 	Milestones = {
 		{ day = 1, key = "day1", kind = "sticker", id = "day1" },
 		{ day = 2, key = "day2", kind = "coins", id = "" },

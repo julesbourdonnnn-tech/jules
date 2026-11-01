@@ -90,7 +90,9 @@ Layout.HudContent = {
 	specialChip = { glyph = 48, text = 40, clapRing = 8 },
 	targetCard = { name = 36, details = 28 },
 	leap = { glyph = 64 },
-	edgeArrow = { size = 72 },
+	-- flèches de bord d'écran (GDD v1.3 §10.2) : 2 au plus dans tous les modes (Golden, puis la créature
+	-- attrapable la plus proche par priorité), seulement pour une cible à range studs au plus
+	edgeArrow = { size = 72, max = 2, range = 120 },
 }
 
 -- Colonnes (vérification sans recouvrement, GDD §10.2) ; le milieu reste libre pour le personnage
@@ -110,6 +112,37 @@ Layout.Prompt = {
 	SecondGlyph = 48,
 	SecondText = 32,
 	MaxPrompts = 2,
+}
+
+-- Textes du monde (UI/WorldText, GDD v1.3 §10.2) : tout texte du monde que le joueur doit lire est un
+-- BillboardGui dimensionné en Offset (px TV × UIScale), LightInfluence = 0, fond foncé translucide ou
+-- contour, distance maximale fixée par usage ; jamais un texte posé au sol ni dimensionné en studs.
+Layout.WorldText = {
+	Text = 32, -- texte à lire (prix et niveau d'une dalle, consigne, taille d'un squishy ciblé)
+	Plus = 40, -- « +N » (taille fixe à l'écran)
+	Glyph = 48, -- glyphes (leçon de l'accueil au-dessus de l'objet, invites)
+	MinProjected = 28, -- taille projetée minimale à TestDistance studs, aux 3 résolutions (couche d)
+	TestDistance = 20,
+	TileLabelDistance = 20, -- étiquette d'une dalle visible à 20 studs ou moins (le disque garde l'icône)
+	Background = 0.35, -- transparence du fond foncé (opacité ≥ 0,6)
+}
+
+-- Clavier et souris (GDD v1.3 §10.4, docs/04 §14.6) : le menu est lié à KeyCode.M ET KeyCode.Semicolon
+-- (sur AZERTY, la touche marquée « M » est Semicolon ; la puce affiche celle qui donne « M » par
+-- GetStringForKeyCode), JAMAIS à Tab (liste des joueurs de Roblox) ; raccourcis directs des panneaux ;
+-- sac à objets de Roblox coupé (StarterGui:SetCoreGuiEnabled(Backpack, false) sous pcall, nouveaux
+-- essais pendant BackpackRetry s) pour que 1, 2, 3 ne servent qu'aux emotes.
+Layout.Keyboard = {
+	Menu = { "M", "Semicolon" }, -- noms d'Enum.KeyCode
+	Panels = {
+		Ranch = "G",
+		Squishydex = "C",
+		Objectives = "J",
+		Leaderboards = "L",
+		Shop = "B",
+		Settings = "P",
+	} :: { [string]: string },
+	BackpackRetry = 10,
 }
 
 -- Fenêtres (GDD §10.3)

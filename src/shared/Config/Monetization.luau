@@ -9,6 +9,10 @@
 -- nom et une description EN/FR (nameKey, descKey).
 -- MonetizationService (socle) ne lit que id et les handlers des produits ; les effets ci-dessous
 -- sont appliqués par ProductService (paquet ranch) et les services qui lisent ownsPass.
+-- Contrat v1.2 (GDD v1.3, §8.3) : paquets de pièces RETIRÉS du lancement (CoinsSmall, CoinsBig : id 0
+-- et hidden = true, comme SeasonPass ; aucun handler) ; plus aucun article caché par PolicyService
+-- (ArePaidRandomItemsRestricted ne sert qu'à l'analytique PolicyPaidRandomRestricted : aucun article du
+-- jeu n'est aléatoire) ; plus de 2e confirmation du Grand Splorch.
 
 export type PassDef = {
 	id: number,
@@ -27,12 +31,10 @@ export type ProductDef = {
 	descKey: string,
 	order: number,
 	oncePerAccount: boolean?, -- un seul achat par compte (vérifié par le handler du produit)
-	tab: "party" | "outfits", -- onglet de la Boutique
+	tab: "party" | "outfits", -- onglet de la Boutique (Passes / Fête / Tenues)
 	dailyLimit: number?, -- achats par joueur et par jour (Squish Party : 3)
-	hideIfRandomRestricted: boolean?, -- caché si PolicyService.ArePaidRandomItemsRestricted (ou appel en échec)
-	hideWhenSplorchReady: boolean?, -- paquets de pièces cachés quand « Grand Splorch prêt ! » (GDD §8.3)
-	coinMinutes: number?, -- paquets : minutes du revenu actuel (Balance.CoinPacks)
 	outfit: string?, -- tenue accordée (Config/Cosmetics, kind "outfit")
+	hidden: boolean?, -- jamais affiché ni vendu au lancement (paquets de pièces, réservés : GDD §8.3, §17.2)
 }
 
 local Monetization = {}
@@ -99,9 +101,7 @@ Monetization.Products = {
 		descKey = "shop.product.CoinsSmall.desc",
 		order = 2,
 		tab = "party",
-		hideIfRandomRestricted = true,
-		hideWhenSplorchReady = true,
-		coinMinutes = 30,
+		hidden = true, -- retiré du lancement (GDD v1.3, §8.3)
 	},
 	CoinsBig = {
 		id = 0,
@@ -110,9 +110,7 @@ Monetization.Products = {
 		descKey = "shop.product.CoinsBig.desc",
 		order = 3,
 		tab = "party",
-		hideIfRandomRestricted = true,
-		hideWhenSplorchReady = true,
-		coinMinutes = 120,
+		hidden = true, -- retiré du lancement (GDD v1.3, §8.3)
 	},
 	OutfitSweater = {
 		id = 0,

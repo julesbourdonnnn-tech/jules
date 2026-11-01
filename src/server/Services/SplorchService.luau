@@ -2,12 +2,17 @@
 -- SplorchService (paquet chase) — STUB du contrat (docs/04). Implémenter = remplacer chaque
 -- error("TODO(…)") par le comportement décrit dans docs/04, SANS changer les signatures.
 -- Grand Splorch (GDD §4.15, §6.7) : entrée dans la file (GrandSplorch : plus gros ≥ objectif, dans
--- son ranch, rien de porté ; vérifié UNE seule fois puis garanti), squishy en attente (tremble, ni
--- boopable ni vendable), départ par Signals.SpectacleStarted, application au profil d'un bloc à
--- l'éclatement (3,2 s, minuteur du serveur : EconomyService.applySplorch, SquishyService.resetSizes,
--- trophées), sauvegarde immédiate, cadeaux aux autres joueurs (60 s de revenu + 1 bébé, plafonds,
--- réglage « Recevoir les cadeaux »), fenêtre d'applaudissement (CommunityService), bannière,
--- célébration pour tous. Départ avant son tour : place rendue, rien remis à zéro. Émet
+-- son ranch, rien de porté, AUCUN de ses squishies en fuite (Feedback waitEscape) ; vérifié UNE seule
+-- fois puis garanti), squishy en attente (tremble, ni boopable ni vendable ; pendant l'attente, aucun
+-- squishy du joueur ne vient à la clôture), départ par Signals.SpectacleStarted, application au profil
+-- d'un bloc à l'éclatement (3,2 s, minuteur du serveur : EconomyService.applySplorch,
+-- SquishyService.resetSizes, trophées), sauvegarde immédiate, cadeaux aux autres joueurs (60 s de revenu
+-- 10 fois par jour puis 10 s, + 1 bébé, plafonds, réglage « Recevoir les cadeaux »), spectacle complet
+-- au plus toutes les 180 s par spectateur (mémoire de session ; sinon Celebrate short = true, cadeau
+-- compté directement), fenêtre d'applaudissement aux seuls spectateurs du spectacle complet
+-- (CommunityService.openClapWindow(hero, fin, spectateurs)), bannière. Départ avant son tour : place
+-- rendue, rien remis à zéro ; départ pendant le spectacle avant l'éclatement : spectacle effacé par
+-- EventService, aucune pluie de cadeaux. Émet
 -- Splorched(héros, nouveau R, bébés-cadeaux donnés) ; jamais EventService.addGauge (la jauge vient
 -- de Splorched).
 -- Remote : GrandSplorch. Clés : aucune.

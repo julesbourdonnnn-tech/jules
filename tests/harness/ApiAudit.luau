@@ -37,6 +37,11 @@ local METHODS = {
 	["HapticService.SetMotor"] = true,
 	-- emotes des pings et de l'acclamation (InputController.playEmote, sous pcall)
 	["Humanoid.PlayEmote"] = true,
+	-- liste de blocage de Roblox : StarterGui:GetCore("GetBlockedUserIds"), sous pcall, une fois au
+	-- démarrage du client (WorldStateController → ReportBlocked ; contrat v1.2, C3-21)
+	["StarterGui.GetCore"] = true,
+	-- sac à objets coupé (InputController, sous pcall, nouveaux essais 10 s ; contrat v1.2)
+	["StarterGui.SetCoreGuiEnabled"] = true,
 }
 local IGNORED_READS = {}
 

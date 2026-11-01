@@ -56,7 +56,6 @@ Schema.OWNERS = {
 	tiles = "EconomyService",
 	fame = "EconomyService",
 	boosts = "EconomyService",
-	coinBuy = "EconomyService",
 	caps = "EconomyService",
 	-- collection
 	squishies = "SquishyService",
@@ -69,6 +68,8 @@ Schema.OWNERS = {
 	biggestEver = "SquishyService",
 	-- poursuites
 	golden = "ChaseService",
+	-- événements : Goutte de Lune (une par séance et par compte, GDD §4.23)
+	moon = "EventService",
 	-- BOOP RUSH
 	mode = "RushService",
 	-- accueil, objectifs, Squishydex, statistiques
@@ -90,6 +91,7 @@ Schema.OWNERS = {
 	fameLineage = "(réservé : lignée de Fame)",
 	worldFirst = "(réservé : World First)",
 	costumes = "(réservé : costumes)",
+	packs = "(réservé : paquets)",
 } :: { [string]: string }
 
 local function defaultSettings(): { [string]: any }
@@ -133,16 +135,21 @@ function Schema.defaults(): { [string]: any }
 		fame = 0,
 		-- boost personnel ×2 : secondes restantes (en pause pendant un boost de serveur)
 		boosts = { personalLeft = 0 },
-		-- dernier paquet de pièces (Clock.unix(), montant) : 2e confirmation du Grand Splorch
-		coinBuy = { at = 0, amount = 0 },
-		-- plafonds journaliers (Balance.Caps), remis à zéro au changement de jour UTC (Clock.day())
+		-- plafonds journaliers (Balance.Caps), remis à zéro au changement de jour UTC (Clock.day()) :
+		-- petSit = pressions de pet-sitting récompensées comme visiteur ; petSitIn = reçues comme
+		-- propriétaire ; petSitBy[tostring(UserId du propriétaire)] = pressions comptées pour « Plus
+		-- serviable » (Balance.CapsPerFriend.petSit par ami) ; splorchCoins = cadeaux en pièces des
+		-- Grands Splorch des autres (au-delà : Balance.Rewards.GiftSecondsAfterCap)
 		caps = {
 			day = 0,
 			rushBabies = 0,
 			splorchGifts = 0,
+			splorchCoins = 0,
 			fameRush = 0,
 			fameRelease = 0,
 			petSit = 0,
+			petSitIn = 0,
+			petSitBy = {},
 			claps = 0,
 			partyBuys = 0,
 		},
@@ -157,11 +164,19 @@ function Schema.defaults(): { [string]: any }
 		vat = { fillAt = 0, pending = false, pityRare = 0, pityEpic = 0, newPulls = 3, pulls = 0 },
 		released = {}, -- 12 derniers relâchés { s, m } (Prairie des copains), le plus récent à la fin
 		trophies = table.create(#Species.List, 0), -- trophies[s] = taille record (tableau dense, une case par espèce)
-		outfits = { owned = {}, worn = {} }, -- owned[id] = nombre ; worn[id] = { uid… } (une tenue par squishy)
+		-- owned[id] = nombre d'exemplaires. La tenue portée n'est gardée QUE dans squishies[uid].o (une tenue
+		-- par squishy ; portées = nombre de squishies dont o == id, ≤ owned[id]). `worn` est OBSOLÈTE
+		-- (contrat v1.2) : gardé vide, jamais lu ni écrit par le jeu (règle : on n'efface pas un champ),
+		-- vidé par ProfileRepair
+		outfits = { owned = {}, worn = {} },
 		biggestEver = 0, -- plus grande taille jamais atteinte (selles gagnées pour toujours)
 
 		-- poursuites — ChaseService
 		golden = { lastWinAt = 0 }, -- Clock.unix() du dernier Golden Wobbler gagné (recharge 20 min)
+
+		-- événements — EventService : séance de Jelly Moon (EventClock.moon(t).session, numéro global) où
+		-- une Goutte de Lune a été donnée ; une par séance et par compte, même après un changement de serveur
+		moon = { lastSession = 0 },
 
 		-- BOOP RUSH (GDD §4.21.1) — RushService
 		mode = { rush = false, chosen = false, changedAt = 0, cardShown = false, postBoopCardShown = false },
@@ -173,6 +188,10 @@ function Schema.defaults(): { [string]: any }
 			-- mutation m) ; stars[s] = masque de 5 bits (bit k − 1 = badge ★k)
 			mut = table.create(#Species.List, 0),
 			stars = table.create(#Species.List, 0),
+			-- fam[f] = 1 quand le bonus de la famille Species.FamilyOrder[f] est gagné (les 4 espèces
+			-- tamponnées) : gagné POUR TOUJOURS (une espèce ajoutée plus tard ne le retire jamais, GDD
+			-- §4.17) ; tableau dense, une case par famille (liste de familles en ajout seul)
+			fam = table.create(#Species.FamilyOrder, 0),
 			rewards = 0, -- dernier jalon réclamé (Quests.Dex.Milestones, nombre de tampons)
 		},
 		plopDays = 0, -- jours de Plop au total (jamais une série)
@@ -219,6 +238,9 @@ function Schema.defaults(): { [string]: any }
 		fameLineage = 0,
 		worldFirst = {},
 		costumes = {},
+		-- paquets de pièces, si le propriétaire les rouvre (janvier au plus tôt, GDD §8.3, §17.2) :
+		-- porte-monnaie « Pièces de côté » qui survit au Grand Splorch, devis du serveur écrit avant l'invite
+		packs = { side = 0, quoteProduct = "", quoteAmount = 0, quoteAt = 0 },
 	}
 end
 

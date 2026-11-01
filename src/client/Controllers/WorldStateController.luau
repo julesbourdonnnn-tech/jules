@@ -7,7 +7,9 @@
 -- MegaBeat ; phases recalculées par EventClock entre deux messages), boops (BoopState), emotes
 -- (EmoteShow). Applique EventState.offset à Clock. Jamais d'état faux durable : après un trou, les
 -- patchs sont ignorés et RequestWorld est renvoyé toutes les 3 s (StateTimeouts worldResync, jamais
--- plus vite que le débit d'Intents) jusqu'à l'instantané suivant.
+-- plus vite que le débit d'Intents) jusqu'à l'instantané suivant. RanchPublic.best toujours présent
+-- (s = 0 : aucune silhouette). Start envoie UNE fois ReportBlocked avec
+-- StarterGui:GetCore("GetBlockedUserIds") sous pcall (liste vide en cas d'échec ; contrat v1.2, A21).
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 

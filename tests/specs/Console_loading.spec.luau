@@ -4,6 +4,11 @@
 -- manette avec l'icône ✕ PlayStation, audit console propre, sélection rendue au stick à la fermeture,
 -- constantes d'échelle recopiées de Config/Console (écran autonome, non répliqué) ; API Roblox
 -- auditée (ApiAudit).
+-- Note INT-TV, partie Loading (paquet world, étape 0, docs/04 §22.2) : l'écran est désormais dessiné
+-- en px TV (facteur DRAWN_UNIT de 1,5 retiré, dimensions × 1,5) et suit LA règle télé de tous les
+-- écrans (Platform.uiScale). Mêmes tailles réelles à l'écran : l'échelle attendue passe de 1,5 à 1
+-- en 1080p et de 3 à 2 en 4K ; sur PC, la règle d'origine « × 1,2 bornée » (écran ordinaire et
+-- téléphone) disparaît au profit de la règle télé (0,667 en 1280 × 720).
 local fs = require("@lune/fs")
 local roblox = require("@lune/roblox")
 local MockInstance = require("../harness/MockInstance")
@@ -59,15 +64,15 @@ return function(T)
 		end
 
 		it(
-			"console 1080p : échelle 1,5, « Réessayer » sélectionné avec l'icône ✕ PlayStation",
+			"console 1080p : échelle 1 (px TV), « Réessayer » sélectionné avec l'icône ✕ PlayStation",
 			function()
 				local h, loading = run({ console = true })
-				expect(stageScale(loading)).toBe(1.5)
+				expect(stageScale(loading)).toBe(1)
 				expect(Gamepad.selected(h)).toBeNil()
 				h:step(1, 21)
 				local fail = loading:FindFirstChild("Fail", true)
 				expect(fail.Visible).toBe(true)
-				expect(fail.FailScale.Scale).toBe(1.5)
+				expect(fail.FailScale.Scale).toBe(1)
 				local button = fail.RetryButton
 				expect(Gamepad.selected(h)).toBe(button)
 				expect(button.SelectionImageObject ~= nil).toBe(true)
@@ -93,16 +98,16 @@ return function(T)
 		)
 
 		it(
-			"téléviseur 4K : sans plafond (3) ; PC et téléphone : règle d'origine, rien de sélectionné",
+			"téléviseur 4K : sans plafond (2) ; PC 1280 × 720 : même règle télé (0,667), rien de sélectionné",
 			function()
 				local _, tv = run({ console = true, viewport = Vector2.new(3840, 2160) })
-				expect(stageScale(tv)).toBe(3)
+				expect(stageScale(tv)).toBe(2)
 				local h, pc = run()
-				expect(stageScale(pc)).toBe(1.2)
+				expect(math.abs(stageScale(pc) - 2 / 3) < 1e-9).toBe(true)
 				h:step(1, 21)
 				local fail = pc:FindFirstChild("Fail", true)
 				expect(fail.Visible).toBe(true)
-				expect(fail.FailScale.Scale).toBe(1)
+				expect(math.abs(fail.FailScale.Scale - 2 / 3) < 1e-9).toBe(true)
 				expect(fail:FindFirstChild("PadGlyph")).toBeNil()
 				expect(Gamepad.selected(h)).toBeNil()
 				-- manette prise en main pendant l'écran d'échec : « Réessayer » sélectionné, icône ✕

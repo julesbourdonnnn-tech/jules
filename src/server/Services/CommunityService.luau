@@ -2,7 +2,10 @@
 -- CommunityService (paquet meta) — STUB du contrat (docs/04). Implémenter = remplacer chaque
 -- error("TODO(…)") par le comportement décrit dans docs/04, SANS changer les signatures.
 -- Social sans chat (GDD §6) : amis Roblox présents (bonus de revenu poussé à EconomyService, ranchs
--- voisins), pet-sitting (clôture d'un ami à ≤ 10 studs : 3 squishies prêts, PetPress, 300 / jour),
+-- voisins), pet-sitting (clôture d'un ami à ≤ 10 studs : 3 squishies prêts, PetPress ; 100 récompensées
+-- par jour et par visiteur (2 s de revenu, ×2 PERFECT), 100 reçues par propriétaire, « Plus serviable » :
+-- 20 par ami et par jour), réception de la liste de blocage (ReportBlocked, envoyée une fois par
+-- WorldStateController.Start depuis StarterGui:GetCore("GetBlockedUserIds") sous pcall),
 -- emotes de la croix (EmoteShow, 1 / 1,2 s), applaudissements du Grand Splorch (8 s, 10 récompensés
 -- / jour), file des bannières de serveur (Signals.BannerRequested : priorité Events.Banners, 3 au
 -- plus, 10 s par joueur source, nouveaux avant l'étape 9), réglages (SetSetting, Config/Settings),
@@ -65,9 +68,11 @@ function CommunityService.setting(player: Player, key: string): any
 	error("TODO(meta): CommunityService.setting")
 end
 
--- Fenêtre APPLAUDIR de 8 s chez les autres joueurs
-function CommunityService.openClapWindow(hero: Player, endsAt: number)
-	local _ = { hero, endsAt }
+-- Fenêtre APPLAUDIR de 8 s : ClapPrompt aux seuls `viewers` (spectateurs du spectacle complet, choisis
+-- par SplorchService ; nil = tous les autres joueurs) ; le client la cache pendant une poursuite, un
+-- maintien ou une fenêtre ouverte
+function CommunityService.openClapWindow(hero: Player, endsAt: number, viewers: { Player }?)
+	local _ = { hero, endsAt, viewers }
 	error("TODO(meta): CommunityService.openClapWindow")
 end
 
