@@ -63,6 +63,8 @@ Fidélité volontaire :
 - `wait()`, `spawn()`, `delay()` lèvent une erreur.
 - `Random.new(seed)` est déterministe.
 
+Limite connue : deux harnais vivants en même temps (deux « serveurs » sur les mêmes sauvegardes) partagent les crochets globaux de `MockInstance` : méthodes de classe `DataStoreService` / `DataModel`, `onKick` et `onFireClient` vont toutes au harnais créé **en dernier**. Contournement (voir `tests/specs/Fix_final_data_lock.spec.luau`) : remplacer `MockInstance.classMethods.DataStoreService.GetDataStore` seulement pendant chaque `Init` du DataService, lire `player.KickedWith` plutôt que `h.log.kicks`, et ne démarrer que le DataService (pas `h:boot()`) sur le second serveur.
+
 Une spec :
 
 ```lua

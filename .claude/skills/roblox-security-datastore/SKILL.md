@@ -43,7 +43,7 @@ Règles :
 ## 2. DataStore sans perte
 
 - Une clé par joueur : `"player_" .. userId`.
-- **Session lock** : à l'écriture, stocker `{ lockId = game.JobId, lockTime = os.time() }` ; au chargement, si un verrou d'un autre serveur a moins de 30 min, réessayer (jusqu'à ~5 fois, 5 s d'écart) puis voler le verrou.
+- **Session lock** : au chargement, poser `record.lock = { jobId = game.JobId, time = os.time(), session = jeton }` (jeton propre à ce chargement) ; chaque écriture vérifie que le verrou porte encore notre `jobId` et notre jeton. Verrou d'un autre serveur de moins de 30 min : réessayer toutes les 5 s, et ne le reprendre qu'après **5 lectures réussies** qui l'ont vu (≥ 25 s d'observation pendant que le DataStore répond ; compter hors de la transformation d'`UpdateAsync`, qui peut être rejouée). **Jamais** le reprendre parce que des erreurs DataStore ont épuisé les essais : renvoi poli (« reviens dans un instant »), rien d'écrit. Le serveur qui détient le verrou réessaie sa sauvegarde de départ après une panne : garder son intervalle maximal au moins 10 s plus court que l'observation, `RELEASE_RETRY_MAX + 10 ≤ LOCKED_RETRY_DELAY × (LOAD_ATTEMPTS − 1)` (sinon l'enfant qui revient sur un autre serveur perd ses gains de la panne).
 - Toujours `UpdateAsync` (jamais `SetAsync` pour les données joueur).
 - Retries avec backoff exponentiel (1, 2, 4, 8 s) sur erreur ; respecter `DataStoreService:GetRequestBudgetForRequestType`.
 - Autosave toutes les 60-120 s, sauvegarde à `PlayerRemoving`, et `game:BindToClose` qui sauvegarde tous les joueurs **en parallèle** et attend la fin (≤ 25 s).

@@ -1,6 +1,6 @@
 # Comet Conga — Rapport qualité avant publication
 
-> **Document 06.** Établi le 31 octobre 2026 à 22:10 UTC, sur le commit `e951d5e` (« QA tour 4 »). **Mis à jour le 1er novembre 2026 à 06:30 UTC**, sur le commit `bbded7a` (« QA tour 6 », arbre de travail propre) : vérification complète refaite (§1), section « Finition » (§6.3 : contre-audit anti-triche, revue des corrections du tour 4, sons, tours 5 et 6, petits constats encore ouverts revérifiés dans le code).
+> **Document 06.** Établi le 31 octobre 2026 à 22:10 UTC, sur le commit `e951d5e` (« QA tour 4 »). **Mis à jour le 1er novembre 2026 à 06:30 UTC**, sur le commit `bbded7a` (« QA tour 6 », arbre de travail propre) : vérification complète refaite (§1), section « Finition » (§6.3 : contre-audit anti-triche, revue des corrections du tour 4, sons, tours 5 et 6, petits constats encore ouverts revérifiés dans le code). **Dernière mise à jour le 1er novembre 2026**, après la contre-vérification finale (correction du verrou de session des sauvegardes, `Fix_final_data_lock`) : vérification complète refaite, chiffres des §1 et §2 mis à jour.
 > Pour le propriétaire du jeu : ce rapport dit **ce qui est prouvé**, **ce qui ne peut l'être que dans Roblox Studio**, et **ce qu'il reste à décider**. Guide de publication : [`05-guide-publication.md`](05-guide-publication.md).
 
 ## En bref
@@ -9,7 +9,7 @@
 |---|---|
 | Le jeu est-il complet ? | Oui pour la version 1.0 du GDD (§15.1) : île, boucle complète, progression, événements, social, boutique, FR/EN, téléphone, PC et manette (PS5 / Xbox) |
 | La vérification complète passe-t-elle ? | **Oui** : `./scripts/check.sh` → « ✅ Tout est vert. » (§1) |
-| Combien de tests automatiques ? | **1 619 tests**, dans **112 fichiers de tests**, **0 échec** |
+| Combien de tests automatiques ? | **1 628 tests**, dans **113 fichiers de tests**, **0 échec** |
 | La triche a-t-elle été vérifiée par quelqu'un d'autre ? | Oui : contre-audit indépendant ; la triche qu'il a trouvée est corrigée et reste testée à chaque modification (§6.3.1) |
 | Le jeu a-t-il du son ? | Oui : les 27 sons sont des sons publiés par Roblox. **Personne ne les a encore écoutés** : à faire dans Studio avant de publier (§6.3.4, test M12) |
 | Qu'est-ce qui n'est pas encore prouvé ? | Ce que seul le vrai moteur Roblox montre : rendu, physique, vraies sauvegardes et vrais achats, serveur avec 12 vrais joueurs, tenue des textes, aspect des particules, confort sur téléphone, rendu sur téléviseur (§4) |
@@ -20,39 +20,39 @@
 
 ## 1. Résultat de la vérification complète
 
-Commande : `./scripts/check.sh`, lancée sur le commit `bbded7a` sans modification locale, terminée le 01/11/2026 à 06:20 UTC (environ 6 min), code de sortie 0, message final « ✅ Tout est vert. ».
+Commande : `./scripts/check.sh`, relancée après la contre-vérification finale (commit `e6e2cad` plus la correction du verrou de session des sauvegardes et son test `Fix_final_data_lock`), terminée le 01/11/2026 à 07:41 UTC (environ 6 min), code de sortie 0, message final « ✅ Tout est vert. ».
 
 | Contrôle | Outil | Résultat |
 |---|---|---|
 | Formatage du code | StyLua | Conforme |
 | Analyse du code (erreurs probables, mauvaises pratiques) | Selene | **0 erreur, 0 avertissement**, 0 erreur de lecture |
-| Tests automatiques | Lune (`tests/run.luau`) | **1 619 réussis, 0 échoué, 0 fichier de test non chargé** |
+| Tests automatiques | Lune (`tests/run.luau`) | **1 628 réussis, 0 échoué, 0 fichier de test non chargé** |
 | Construction du jeu | Rojo 7.7.1 | `build/Game.rbxl` construit |
 | Contrôle du fichier construit | `scripts/verify-place.luau` | Structure valide : 1 Script serveur, 2 LocalScript, 113 ModuleScript |
 
-Lors des validations de publication des tours 3 et 4 et de la passe de finition, la suite complète a été relancée deux fois de plus pour repérer des tests instables (résultat qui change d'une exécution à l'autre) ; ceux trouvés aux tours 3 et 4 ont été corrigés (horloge réelle de la limite de débit, ordre de parcours des tables). À la finition, un test instable a été trouvé et corrigé : `Boot.spec`, scène de coupe (l'ordre de traitement des joueurs n'est pas reproductible d'un processus à l'autre ; la victime pouvait ne rien attraper en 6 s quand le coupeur, resté à portée, prenait ses Nebbies libres à la fin de leur étourdissement, ce que permettent les règles, ou rattraper autant de sauvages pendant la traversée qu'elle en perdait). La scène ne dépend plus de ces courses, la priorité de la victime est maintenant vérifiée de façon déterministe, et la scène a été rejouée 60 fois sans échec, puis la suite complète deux fois de plus. À la validation du tour 5, la suite complète a été relancée deux fois de plus avant les dernières corrections, puis deux fois après (deux exécutions en parallèle, machine chargée) : aucun test instable. À la validation du tour 6, après les corrections : vérification complète, puis la suite complète deux fois de plus (en parallèle), les tests du tour 6 rejoués 8 fois et ceux des sauvegardes en panne 8 fois de plus à quatre exécutions simultanées : aucun test instable. Le nouveau test du débit des pings fige l'horloge de la limite de débit (aucune attente réelle). Pour ce rapport, la vérification complète a été refaite une fois de plus sur le commit `bbded7a` : mêmes chiffres, aucun échec.
+Lors des validations de publication des tours 3 et 4 et de la passe de finition, la suite complète a été relancée deux fois de plus pour repérer des tests instables (résultat qui change d'une exécution à l'autre) ; ceux trouvés aux tours 3 et 4 ont été corrigés (horloge réelle de la limite de débit, ordre de parcours des tables). À la finition, un test instable a été trouvé et corrigé : `Boot.spec`, scène de coupe (l'ordre de traitement des joueurs n'est pas reproductible d'un processus à l'autre ; la victime pouvait ne rien attraper en 6 s quand le coupeur, resté à portée, prenait ses Nebbies libres à la fin de leur étourdissement, ce que permettent les règles, ou rattraper autant de sauvages pendant la traversée qu'elle en perdait). La scène ne dépend plus de ces courses, la priorité de la victime est maintenant vérifiée de façon déterministe, et la scène a été rejouée 60 fois sans échec, puis la suite complète deux fois de plus. À la validation du tour 5, la suite complète a été relancée deux fois de plus avant les dernières corrections, puis deux fois après (deux exécutions en parallèle, machine chargée) : aucun test instable. À la validation du tour 6, après les corrections : vérification complète, puis la suite complète deux fois de plus (en parallèle), les tests du tour 6 rejoués 8 fois et ceux des sauvegardes en panne 8 fois de plus à quatre exécutions simultanées : aucun test instable. Le nouveau test du débit des pings fige l'horloge de la limite de débit (aucune attente réelle). Pour ce rapport, la vérification complète a été refaite une fois de plus sur le commit `bbded7a` : mêmes chiffres, aucun échec. Après la contre-vérification finale (correction du verrou de session des sauvegardes, 9 tests de plus dans `Fix_final_data_lock`) : vérification complète refaite (1 628 tests réussis), puis la suite complète deux fois de plus, les 9 nouveaux tests rejoués 20 fois (quatre exécutions simultanées, machine chargée) et les tests des sauvegardes 8 fois de plus : aucun test instable. Le test jetable du contre-audit anti-triche (§6.3.1) a été rejoué sur une copie de l'arbre : les 9 triches restent bloquées, le gel réseau honnête de 0,7 s ne compte toujours pas comme une triche, et tous les contrôles des joueurs honnêtes passent (17 scènes réussies, 10 en échec, ce qui veut dire « bloqué »).
 
 ## 2. Taille du projet et des tests
 
 | Partie | Fichiers | Lignes |
 |---|---|---|
-| Serveur (`src/server`) | 36 | 16 027 |
+| Serveur (`src/server`) | 36 | 16 055 |
 | Client (`src/client`) | 47 | 32 288 |
 | Partagé (`src/shared`) | 32 | 9 372 |
 | Écran de chargement (`src/first`) | 1 | 787 |
-| **Total du jeu** | **116** | **58 474** |
-| Tests (`tests/`, dont harnais et simulation) | — | 61 728 |
+| **Total du jeu** | **116** | **58 502** |
+| Tests (`tests/`, dont harnais et simulation) | — | 62 148 |
 
 Tous les modules du jeu sont en Luau `--!strict` (typage strict).
 
 | Famille de tests | Fichiers | Tests | Exemples |
 |---|---|---|---|
 | Tests unitaires et de services | 40 | 841 | `Formulas`, `SnipRules`, `EventClock`, `CongaService`, `EconomyService`, `DataService`, `MonetizationService`, `Panels`, `HUD`, `Contract` |
-| Tests de correction (un par défaut trouvé en QA) | 62 | 646 | `Fix_r3_serveur_3_data`, `Fix_r4_serveur_3`, `Fix_r5_serveur_anticheat`, `Fix_fin_client_hud_onboarding`, `Fix_r6_serveur_2_data`, `Fix_r6_release`… |
+| Tests de correction (un par défaut trouvé en QA) | 63 | 655 | `Fix_r3_serveur_3_data`, `Fix_r4_serveur_3`, `Fix_r5_serveur_anticheat`, `Fix_fin_client_hud_onboarding`, `Fix_r6_serveur_2_data`, `Fix_r6_release`, `Fix_final_data_lock`… |
 | Console et manette | 5 | 86 | `Console`, `Console_input`, `Console_hud`, `Console_panels`, `Console_release` |
 | Intégration (jeu entier) | 3 | 32 | `Boot` (serveur de 12 joueurs), `ClientGame` (partie rejouée dans le vrai client), `ClientBoot` |
 | Harnais de test lui-même | 2 | 14 | `harness/Harness`, `harness/Wire` |
-| **Total** | **112** | **1 619** | |
+| **Total** | **113** | **1 628** | |
 
 ---
 
@@ -212,7 +212,7 @@ Corrections principales (tests `tests/specs/Fix_r4_*.spec.luau`) :
 
 ### 6.3 Finition : la dernière passe avant publication (1/11/2026)
 
-Après le tour 4, trois contrôles **indépendants** ont été faits par des ingénieurs qui n'avaient pas écrit le code concerné : un contre-audit anti-triche (§6.3.1), une relecture des corrections du tour 4 (§6.3.2) et une recherche de sons officiels Roblox (§6.3.4). Leurs résultats ont été corrigés dans le commit `81d5bdc` (§6.3.3). Deux tours de QA ont suivi (§6.3.5). Les petits constats encore ouverts sont au §6.3.6.
+Après le tour 4, trois contrôles **indépendants** ont été faits par des ingénieurs qui n'avaient pas écrit le code concerné : un contre-audit anti-triche (§6.3.1), une relecture des corrections du tour 4 (§6.3.2) et une recherche de sons officiels Roblox (§6.3.4). Leurs résultats ont été corrigés dans le commit `81d5bdc` (§6.3.3). Deux tours de QA ont suivi (§6.3.5). Les petits constats encore ouverts sont au §6.3.6. Une dernière contre-vérification indépendante, juste avant la publication, a trouvé qu'un enfant qui revenait sur un **autre** serveur juste après une panne des sauvegardes pouvait perdre ce qu'il avait gagné pendant la panne : corrigé et testé avec deux serveurs simulés sur les mêmes sauvegardes (§6.3.5, tour 6, `Fix_final_data_lock`).
 
 #### 6.3.1 Contre-audit anti-triche indépendant (« red team »)
 
@@ -334,7 +334,7 @@ Les 6 constats mineurs du tour 5, revérifiés dans le code :
 
 **Tour 6** (commit `bbded7a`). Corrections (tests `Fix_r6_client_0`, `Fix_r6_ui_1`, `Fix_r6_serveur_2_data`, `Fix_r6_serveur_2_movecheck`, `Fix_r6_serveur_2_comet`, `Fix_r6_release`) :
 
-- **Sauvegarde pendant une panne des sauvegardes Roblox** : un joueur qui part pendant la panne ne perd plus ce qu'il a gagné depuis le début de la panne. Le serveur réessaie en arrière-plan pendant 5 minutes au plus ; un joueur qui revient sur le même serveur attend quelques secondes et retrouve ses données à jour (jamais des données anciennes) ; un achat fait pendant la panne n'est compté qu'une fois. Si la panne dure plus de 5 minutes, la perte est notée « PERTE » dans le journal du serveur.
+- **Sauvegarde pendant une panne des sauvegardes Roblox** : un joueur qui part pendant la panne ne perd plus ce qu'il a gagné depuis le début de la panne. Le serveur réessaie en arrière-plan pendant 5 minutes au plus ; un joueur qui revient sur le même serveur attend quelques secondes et retrouve ses données à jour (jamais des données anciennes) ; un achat fait pendant la panne n'est compté qu'une fois. Si la panne dure plus de 5 minutes, la perte est notée « PERTE » dans le journal du serveur. **Retour sur un autre serveur** (le cas le plus courant : « Réessayer » de l'écran de chargement, ou le renvoi après l'attente, envoient l'enfant ailleurs) : corrigé à la dernière contre-vérification. Avant, le nouveau serveur pouvait reprendre les données au bout de 25 s, ou même après les seules erreurs de la panne, avant que l'ancien serveur ait réessayé (toutes les 30 s) : l'enfant retrouvait ses données d'avant la panne. Maintenant, le nouveau serveur ne reprend les données qu'après les avoir vues occupées 5 fois de suite pendant que les sauvegardes répondent (au moins 25 s), jamais à cause des erreurs (sinon il renvoie poliment l'enfant, sans rien écrire), et l'ancien serveur réessaie toutes les 15 s au plus : il écrit bien avant. Reste un cas rare : une panne partielle où l'ancien serveur ne peut toujours pas écrire alors que le nouveau lit normalement depuis plus de 25 s (perte notée « PERTE »).
 - **Anti-triche et sauts honnêtes** : un saut dont les premiers messages réseau arrivent d'un coup, ou un gel réseau en haut d'un saut, ne comptent plus comme une triche (plus d'icône « instable » ni de retour) ; planer reste détecté.
 - **Comète** : un porteur qui passe sa porte pendant un rattrapage réseau honnête encaisse la Comète au tick suivant s'il est toujours du côté du Nid (un bond suivi d'une ressortie reste refusé).
 - **Contour rose « queue menacée »** : il suit maintenant point par point la règle des coupes. Un joueur arrêté dans son port sûr dont la queue dépasse dehors est prévenu ; une queue entièrement à l'abri ne l'est plus.

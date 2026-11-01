@@ -1,6 +1,10 @@
 --!strict
 -- DataService : sauvegarde joueur sans perte.
---  * verrou de session (un seul serveur écrit les données d'un joueur)
+--  * verrou de session (un seul serveur écrit les données d'un joueur). Verrou frais d'un autre
+--    serveur : repris seulement après LOAD_ATTEMPTS - 1 lectures RÉUSSIES qui l'ont vu (≥ 25 s
+--    d'observation, DataStore en marche), jamais parce que des erreurs ont épuisé les essais :
+--    sinon renvoi poli sans rien écrire (son serveur réessaie peut-être encore sa sauvegarde de
+--    départ après une panne, toutes les RELEASE_RETRY_MAX = 15 s au plus)
 --  * UpdateAsync partout, retries avec backoff, autosave, BindToClose
 --  * sauvegarde de départ en échec sur une panne DataStore (verrou toujours à nous) : le serveur
 --    continue avec les autres joueurs, il réessaie donc en arrière-plan (même instantané, crochets
@@ -80,10 +84,13 @@ local Settings = {
 	-- reconnexion sur le même serveur : attente max de la sauvegarde de départ de l'ancienne session
 	REJOIN_WAIT = 25,
 	-- sauvegarde de départ en échec (panne DataStore, verrou toujours à nous) : nouveaux essais en
-	-- arrière-plan tant que le serveur vit, après 5 s, puis 10, 20, 30, 30… pendant au plus
-	-- RELEASE_RETRY_WINDOW s (une panne DataStore dure souvent de 1 à 5 min)
+	-- arrière-plan tant que le serveur vit, après 5 s, puis 10, 15, 15… pendant au plus
+	-- RELEASE_RETRY_WINDOW s (une panne DataStore dure souvent de 1 à 5 min). RELEASE_RETRY_MAX + 10
+	-- ≤ LOCKED_RETRY_DELAY × (LOAD_ATTEMPTS - 1) : après la panne, ce serveur écrit et libère le
+	-- verrou bien avant qu'un autre serveur (reconnexion ailleurs) l'ait observé assez pour le
+	-- reprendre ; 4 essais par minute et par joueur parti, sous le budget de base d'UpdateAsync
 	RELEASE_RETRY_DELAY = 5,
-	RELEASE_RETRY_MAX = 30,
+	RELEASE_RETRY_MAX = 15,
 	RELEASE_RETRY_WINDOW = 300,
 	-- s entre deux réveils pendant l'attente (arrêt du serveur ou reconnexion : essai aussitôt)
 	RELEASE_RETRY_POLL = 0.25,
@@ -505,11 +512,21 @@ local function setLoading(player: Player, attempt: number?)
 	end
 end
 
--- (chargé, données, schéma plus récent) ; `session` : jeton posé dans le verrou
+-- (chargé, données, schéma plus récent) ; `session` : jeton posé dans le verrou.
+-- Verrou frais d'un autre serveur : repris seulement après LOAD_ATTEMPTS - 1 lectures RÉUSSIES qui
+-- l'ont vu, chacune suivie de LOCKED_RETRY_DELAY (≥ 25 s d'observation, DataStore en marche).
+-- Jamais parce que des ERREURS ont épuisé les essais : après une panne, le serveur qui détient le
+-- verrou réessaie sa sauvegarde de départ toutes les RELEASE_RETRY_MAX s au plus (invariant :
+-- LOCKED_RETRY_DELAY × (LOAD_ATTEMPTS - 1) ≥ RELEASE_RETRY_MAX + 10) ; le lui prendre plus tôt
+-- effacerait tout ce que l'enfant a gagné pendant la panne. Essais épuisés sans assez de lectures :
+-- rien n'est écrit, échec (renvoi poli LOAD_FAILED_MESSAGE), aucune attente après le dernier essai.
 local function loadRecord(player: Player, session: string): (boolean, { [string]: any }?, boolean)
 	local key = keyFor(player)
 	-- clé liée au joueur (demandes d'effacement Roblox) : passée à chaque écriture
 	local userIds = { player.UserId }
+	-- lectures réussies qui ont vu le verrou frais d'un autre serveur ; comptées HORS de la
+	-- transformation (UpdateAsync peut la rejouer plusieurs fois pour un seul appel)
+	local sightings = 0
 	for attempt = 1, Settings.LOAD_ATTEMPTS do
 		if player.Parent == nil then
 			return false, nil, false
@@ -534,10 +551,10 @@ local function loadRecord(player: Player, session: string): (boolean, { [string]
 					lock
 					and lock.jobId ~= game.JobId
 					and os.time() - lock.time < Settings.LOCK_EXPIRY
-					and attempt < Settings.LOAD_ATTEMPTS
+					and sightings < Settings.LOAD_ATTEMPTS - 1
 				then
 					lockedByOther = true
-					return nil -- n'écrit rien : on réessaie plus tard
+					return nil -- n'écrit rien : on réessaie plus tard (ou renvoi au dernier essai)
 				end
 				lockedByOther = false
 				record.lock = { jobId = game.JobId, time = os.time(), session = session }
@@ -551,14 +568,25 @@ local function loadRecord(player: Player, session: string): (boolean, { [string]
 			local record = result :: Record?
 			return true, if record then record.data else nil, false
 		elseif ok then
+			sightings += 1
 			warn(
-				`[DataService] données de {player.Name} verrouillées par un autre serveur, essai {attempt}/{Settings.LOAD_ATTEMPTS}`
+				`[DataService] données de {player.Name} verrouillées par un autre serveur, essai {attempt}/{Settings.LOAD_ATTEMPTS} (lecture {sightings})`
 			)
-			task.wait(Settings.LOCKED_RETRY_DELAY)
+			if attempt < Settings.LOAD_ATTEMPTS then
+				task.wait(Settings.LOCKED_RETRY_DELAY)
+			else
+				-- des erreurs ont pris des essais : verrou pas assez observé pour le reprendre
+				-- (son serveur réessaie peut-être encore sa sauvegarde de départ) ; renvoi poli
+				warn(
+					`[DataService] verrou de {player.Name} vu {sightings} fois seulement : chargement refusé, rien d'écrit`
+				)
+			end
 		else
 			warn(`[DataService] échec de chargement pour {player.Name} (essai {attempt}) :`, result)
 			-- après le dernier essai : renvoi aussitôt (attendre ne ferait que retarder l'enfant sur
-			-- l'écran de chargement). Pire cas : 2 + 4 + 8 + 16 + 16 = 46 s d'attente (× base)
+			-- l'écran de chargement). Pire cas : 2 + 4 + 8 + 16 + 16 = 46 s d'attente (× base) ;
+			-- lectures du verrou aux essais 1 et 2 (5 s chacune) puis erreurs : 50 s, sous les 60 s
+			-- (RETRY_MAX_WAIT) de l'écran de chargement
 			if attempt < Settings.LOAD_ATTEMPTS then
 				task.wait(math.min(2 ^ attempt, 16) * Settings.RETRY_BASE_DELAY)
 			end
