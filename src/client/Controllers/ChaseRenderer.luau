@@ -480,4 +480,13 @@ function ChaseRenderer.stats(): { [string]: number }
 	return table.clone(lastStats)
 end
 
+-- Coupe les connexions (fin de session, specs)
+function ChaseRenderer._stop()
+	for _, c in connections do
+		c:Disconnect()
+	end
+	table.clear(connections)
+	started = false
+end
+
 return ChaseRenderer

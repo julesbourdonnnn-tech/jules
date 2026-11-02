@@ -11,7 +11,10 @@
 --   * aucun instantané 15 s après le Start (StateTimeouts « playerReady ») : même renvoi toutes les 3 s ;
 --   * une créature est retirée à t0 + duration, un maintien de boop à endsAt + 0,5 s.
 -- Start envoie UNE fois ReportBlocked avec StarterGui:GetCore("GetBlockedUserIds") sous pcall (liste
--- vide en cas d'échec, 200 au plus ; contrat v1.2, A21).
+-- vide en cas d'échec, 200 au plus ; contrat v1.2, A21). Si GetCore a levé (CoreScripts pas encore
+-- prêts, cas réel au démarrage), il est réessayé toutes les 2 s pendant 30 s ; dès qu'il répond une
+-- liste non vide, elle repart UNE fois, au débit du serveur (1 / 10 s, CommunityService remplace la
+-- liste) : sinon un joueur bloqué ne serait jamais filtré de la session (revue client-world).
 -- Toute charge utile est vérifiée (types, nombres finis, bornes) : une charge hostile ou abîmée est
 -- ignorée sans erreur ni avertissement. Une seule connexion Heartbeat (ménage à 4 Hz).
 
@@ -53,6 +56,8 @@ local FIRST_WAIT = StateTimeouts.seconds("playerReady")
 local HOUSEKEEP = 0.25 -- s : ménage à 4 Hz (créatures et maintiens finis, renvois)
 local BOOP_GRACE = 0.5 -- s après endsAt : maintien retiré sans message de fin (docs/04 §10.5)
 local MAX_BLOCKED = 200
+local BLOCKED_RETRY = 2 -- s entre deux essais de GetCore après un échec au Start
+local BLOCKED_GIVE_UP = 30 -- s après le Start : plus aucun essai
 local MAX_SQUISHIES = 84 -- par ranch (enclos + Bassin ≤ 24 ; marge pour un patch en vol)
 local MAX_CREATURE_LIFE = 120 -- s : durée d'une créature acceptée au plus
 local MAX_FENCE = 4
@@ -110,6 +115,8 @@ local resyncing = false -- trou vu : patchs ignorés jusqu'au prochain instantan
 local lastRequestAt = -math.huge
 local startedAt = math.huge
 local blockedSent = false
+local blockedRetry = false -- GetCore a levé au Start : réessayé (housekeep) jusqu'à BLOCKED_GIVE_UP
+local blockedTriedAt = -math.huge
 local started = false
 local connections: { RBXScriptConnection } = {}
 local accum = 0
@@ -485,7 +492,9 @@ local function onChaseEvent(payload: any)
 			if type(f) == "table" then
 				local id = Util.int(f.id, 1, 65535)
 				if id then
-					local reason = if f.reason == "caught" or f.reason == "returned" then f.reason else "expired"
+					local reason = if f.reason == "caught" or f.reason == "returned"
+						then f.reason
+						else "expired"
 					finishCreature(id, reason, Util.int(f.bySlot, 0, RANCHES) or 0, Util.num(f.t, now))
 				end
 			end
@@ -585,7 +594,68 @@ local function onEmote(payload: any)
 	if userId == nil or kind == nil then
 		return
 	end
-	WorldStateController.EmoteShown:Fire({ userId = userId, kind = kind, emote = Util.str(payload.emote, "", 32) })
+	WorldStateController.EmoteShown:Fire({
+		userId = userId,
+		kind = kind,
+		emote = Util.str(payload.emote, "", 32),
+	})
+end
+
+-- =============================================================================================
+-- Liste de blocage (une fois)
+-- =============================================================================================
+
+local function blockedList(): ({ number }, boolean)
+	local ok, list = pcall(StarterGui.GetCore, StarterGui, "GetBlockedUserIds")
+	local out: { number } = {}
+	if not ok or type(list) ~= "table" then
+		return out, false
+	end
+	for _, id in ipairs(list) do
+		if #out >= MAX_BLOCKED then
+			break
+		end
+		local n = Util.int(id, 1, 2 ^ 53)
+		if n then
+			table.insert(out, n)
+		end
+	end
+	return out, true
+end
+
+local function reportBlocked()
+	if blockedSent then
+		return
+	end
+	blockedSent = true
+	local list, ok = blockedList()
+	Util.send("ReportBlocked", list)
+	blockedRetry = not ok
+	blockedTriedAt = Clock.now()
+end
+
+-- Nouvel essai de GetCore après un échec au Start (ménage à 4 Hz) : la vraie liste part une fois
+local function retryBlocked(now: number)
+	if not blockedRetry then
+		return
+	end
+	if now - startedAt > BLOCKED_GIVE_UP or now < startedAt then
+		blockedRetry = false -- abandon : la liste vide envoyée au Start reste en vigueur
+		return
+	end
+	if now - blockedTriedAt < BLOCKED_RETRY then
+		return
+	end
+	blockedTriedAt = now
+	local list, ok = blockedList()
+	if not ok then
+		return
+	end
+	-- liste vide : rien de bloqué, la liste vide du Start est la bonne ; sinon elle part dès que le
+	-- débit du client (1 / 10 s, celui du serveur) le permet, réessayée au prochain pas d'ici là
+	if #list == 0 or Util.send("ReportBlocked", list) then
+		blockedRetry = false
+	end
 end
 
 -- =============================================================================================
@@ -602,16 +672,20 @@ local function housekeep()
 	for key, b in boopMap do
 		if now > b.endsAt + BOOP_GRACE then
 			boopMap[key] = nil
-			local ended: Types.BoopStatePayload =
-				{ booperId = b.booperId, ownerId = b.ownerId, uid = b.uid, endsAt = b.endsAt, state = "cancel" }
+			local ended: Types.BoopStatePayload = {
+				booperId = b.booperId,
+				ownerId = b.ownerId,
+				uid = b.uid,
+				endsAt = b.endsAt,
+				state = "cancel",
+			}
 			WorldStateController.BoopChanged:Fire(ended)
 		end
 	end
-	if resyncing then
-		requestWorld(false)
-	elseif not isReady and now - startedAt >= FIRST_WAIT then
+	if resyncing or (not isReady and now - startedAt >= FIRST_WAIT) then
 		requestWorld(false)
 	end
+	retryBlocked(now)
 end
 
 -- Pas du ménage (exposé aux specs ; appelé par la connexion Heartbeat)
@@ -622,36 +696,6 @@ function WorldStateController._step(dt: number)
 	end
 	accum = 0
 	housekeep()
-end
-
--- =============================================================================================
--- Liste de blocage (une fois)
--- =============================================================================================
-
-local function blockedList(): { number }
-	local ok, list = pcall(StarterGui.GetCore, StarterGui, "GetBlockedUserIds")
-	local out: { number } = {}
-	if not ok or type(list) ~= "table" then
-		return out
-	end
-	for _, id in ipairs(list) do
-		if #out >= MAX_BLOCKED then
-			break
-		end
-		local n = Util.int(id, 1, 2 ^ 53)
-		if n then
-			table.insert(out, n)
-		end
-	end
-	return out
-end
-
-local function reportBlocked()
-	if blockedSent then
-		return
-	end
-	blockedSent = true
-	Util.send("ReportBlocked", blockedList())
 end
 
 -- =============================================================================================
@@ -746,6 +790,15 @@ function WorldStateController.squishies(slot: number): { [string]: Types.PublicS
 	return table.clone(list)
 end
 
+local EMPTY: { [string]: Types.PublicSquishy } = table.freeze({}) :: any
+
+-- Squishies visibles d'un ranch SANS copie, pour le rendu à chaque image (RanchRenderer : budget PS4) :
+-- LECTURE SEULE ; la table change entre deux images (handlers des remotes), jamais pendant un parcours
+function WorldStateController.squishiesView(slot: number): { [string]: Types.PublicSquishy }
+	local list = if type(slot) == "number" then squish[slot] else nil
+	return list or EMPTY
+end
+
 -- Taille prédite (z + G(t) − zg) ; 0 pour un squishy inconnu
 function WorldStateController.sizeOf(slot: number, uid: string, t: number?): number
 	local list = if type(slot) == "number" then squish[slot] else nil
@@ -814,6 +867,15 @@ function WorldStateController.stats(): { [string]: number }
 		seq = lastSeq,
 		resyncing = if resyncing then 1 else 0,
 	}
+end
+
+-- Coupe les connexions (fin de session, specs)
+function WorldStateController._stop()
+	for _, c in connections do
+		c:Disconnect()
+	end
+	table.clear(connections)
+	started = false
 end
 
 return WorldStateController

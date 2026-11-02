@@ -43,6 +43,7 @@ Analytics.BucketSeconds = 300 -- tranche de cumul de l'économie
 Analytics.PerPlayerPerMinute = 10 -- requêtes par joueur sur 60 s glissantes
 Analytics.Window = 60
 Analytics.QueueMax = 40
+Analytics.MaxSeconds = 1e9 -- borne d'un montant ou d'un solde en secondes (jamais infini, jamais NaN)
 
 -- Catalogue des événements personnalisés du jeu (GDD §16.3) ; un nom hors catalogue part quand même
 -- (compté dans stats().unknown : une faute de frappe se voit dans les specs). ShopHiddenByPolicy est
@@ -351,12 +352,12 @@ local function closeBucket(player: Player, s: State)
 		return
 	end
 	local ips = if s.ips > 0 then s.ips else 1
-	local balanceSeconds = math.floor(math.max(0, s.balance) / ips)
+	local balanceSeconds = math.floor(math.clamp(math.max(0, s.balance) / ips, 0, Analytics.MaxSeconds))
 	local entries, order = s.entries, s.order
 	s.entries, s.order = {}, {}
 	for _, key in order do
 		local e = entries[key]
-		local seconds = math.max(1, math.floor(e.seconds + 0.5))
+		local seconds = math.clamp(math.floor(e.seconds + 0.5), 1, Analytics.MaxSeconds)
 		local flow = if e.flow == "Sink"
 			then Enum.AnalyticsEconomyFlowType.Sink
 			else Enum.AnalyticsEconomyFlowType.Source
@@ -402,7 +403,9 @@ local function accumulate(
 		table.insert(s.order, key)
 	end
 	-- montant converti au revenu de son instant (un revenu nul compte 1 pièce = 1 s)
-	e.seconds += coins / (if ips > 0 then ips else 1)
+	local add = coins / (if ips > 0 then ips else 1)
+	e.seconds =
+		math.min(e.seconds + (if finite(add) then add else Analytics.MaxSeconds), Analytics.MaxSeconds)
 end
 
 -- Source de pièces cumulée (balance : solde en pièces après la source, facultatif)

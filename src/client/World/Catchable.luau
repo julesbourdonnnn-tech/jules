@@ -71,7 +71,12 @@ end
 
 -- Rayon de capture de la créature pour moi (8 pour le propriétaire de sa fuite du Rush, sinon 5)
 function Catchable.radius(spawn: any, mySlot: number): number
-	if type(spawn) == "table" and spawn.kind == "escape" and mySlot > 0 and num(spawn.ownerSlot, 0) == mySlot then
+	if
+		type(spawn) == "table"
+		and spawn.kind == "escape"
+		and mySlot > 0
+		and num(spawn.ownerSlot, 0) == mySlot
+	then
 		return Balance.Catch.OwnerRadius
 	end
 	return Balance.Catch.Radius

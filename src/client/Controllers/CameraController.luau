@@ -50,7 +50,14 @@ local SPECTACLE_TIMEOUT = StateTimeouts.seconds("spectacle")
 local EPIC = 4
 local LEGENDARY = 5
 
-type Travel = { slot: number, startedAt: number, burstAt: number, endsAt: number, frames: number, shaken: boolean }
+type Travel = {
+	slot: number,
+	startedAt: number,
+	burstAt: number,
+	endsAt: number,
+	frames: number,
+	shaken: boolean,
+}
 type Punch = { degrees: number, duration: number, t: number }
 type Shake = { amplitude: number, duration: number, t: number }
 
@@ -105,7 +112,8 @@ function CameraController.splorch(startedAt: number, burstAt: number, endsAt: nu
 	if slot == 0 then
 		return
 	end
-	travel = { slot = slot, startedAt = startedAt, burstAt = burstAt, endsAt = endsAt, frames = 0, shaken = false }
+	travel =
+		{ slot = slot, startedAt = startedAt, burstAt = burstAt, endsAt = endsAt, frames = 0, shaken = false }
 end
 
 -- Coup de focale (pas en Mouvement réduit) ; un nouveau coup remplace l'ancien
@@ -120,7 +128,8 @@ function CameraController.fovPunch(degrees: number, duration: number)
 	if baseFov == nil then
 		baseFov = cam.FieldOfView
 	end
-	punch = { degrees = math.clamp(degrees, -CAM.MaxFov, CAM.MaxFov), duration = math.min(duration, 2), t = 0 }
+	punch =
+		{ degrees = math.clamp(degrees, -CAM.MaxFov, CAM.MaxFov), duration = math.min(duration, 2), t = 0 }
 end
 
 -- Secousse bornée (pas en Mouvement réduit) ; la plus forte des deux gagne
@@ -351,6 +360,15 @@ function CameraController.Start()
 	if type(ev) == "table" and type(ev.mega) == "table" then
 		megaLandSeen = Util.num(ev.mega.index, 0)
 	end
+end
+
+-- Coupe les connexions (fin de session, specs)
+function CameraController._stop()
+	for _, c in connections do
+		c:Disconnect()
+	end
+	table.clear(connections)
+	started = false
 end
 
 return CameraController

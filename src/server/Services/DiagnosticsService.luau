@@ -493,12 +493,18 @@ function DiagnosticsService.report(
 	guarded(function()
 		local k = if kind == 2 then 2 else 1
 		local who = names(player)
-		local normalized =
-			DiagRules.truncate(DiagRules.normalize(if type(text) == "string" then text else "", who), LIMITS.Message)
-		local normTrace =
-			DiagRules.truncate(DiagRules.normalize(if type(trace) == "string" then trace else "", who), LIMITS.Trace)
-		local normCtx =
-			DiagRules.truncate(DiagRules.normalize(if type(ctx) == "string" then ctx else "", who), LIMITS.Context)
+		local normalized = DiagRules.truncate(
+			DiagRules.normalize(if type(text) == "string" then text else "", who),
+			LIMITS.Message
+		)
+		local normTrace = DiagRules.truncate(
+			DiagRules.normalize(if type(trace) == "string" then trace else "", who),
+			LIMITS.Trace
+		)
+		local normCtx = DiagRules.truncate(
+			DiagRules.normalize(if type(ctx) == "string" then ctx else "", who),
+			LIMITS.Context
+		)
 		local src: "server" | "client" = if source == "client" then "client" else "server"
 		local key = DiagRules.key(normalized, src .. ":" .. scriptOf(normTrace))
 		record(key, k, normalized, normTrace, normCtx, src, player)
@@ -690,6 +696,19 @@ end
 -- Débogage (specs) : lignes comptées (dont « autres ») et pannes internes de Diagnostics
 function DiagnosticsService.debugState(): { others: number, internal: number, keys: number }
 	return { others = others, internal = internalErrors, keys = #order }
+end
+
+-- Erreurs attrapées comptées (lignes « [caught] ») : clé → { count, text } (tests : règle zéro trace,
+-- tests/harness/ZeroLog)
+function DiagnosticsService.caught(): { [string]: { count: number, text: string } }
+	local out = {}
+	for _, key in order do
+		local e = entries[key]
+		if string.sub(e.text, 1, 8) == "[caught]" then
+			out[key] = { count = e.count, text = e.text }
+		end
+	end
+	return out
 end
 
 -- Branché au chargement du module : les autres modules du paquet comptent leurs erreurs attrapées ici

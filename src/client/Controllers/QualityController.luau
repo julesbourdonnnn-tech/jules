@@ -216,4 +216,13 @@ function QualityController._reset()
 	reports = 0
 end
 
+-- Coupe les connexions (fin de session, specs)
+function QualityController._stop()
+	for _, c in connections do
+		c:Disconnect()
+	end
+	table.clear(connections)
+	started = false
+end
+
 return QualityController

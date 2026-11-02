@@ -178,7 +178,8 @@ function Guard.arg(spec: Intents.ArgSpec, value: any): (boolean, any)
 		end
 		return true, value
 	elseif kind == "setting" then
-		return type(value) == "boolean" or (type(value) == "string" and #value <= 64 and utf8.len(value) ~= nil),
+		return type(value) == "boolean"
+			or (type(value) == "string" and #value <= 64 and utf8.len(value) ~= nil),
 			value
 	end
 	return false, nil

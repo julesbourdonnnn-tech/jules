@@ -1,0 +1,46 @@
+{
+  "name": "EngineTests",
+  "tree": {
+    "$className": "DataModel",
+    "ReplicatedFirst": {
+      "$path": "../src/first"
+    },
+    "ReplicatedStorage": {
+      "Shared": {
+        "$path": "../src/shared"
+      }
+    },
+    "ServerScriptService": {
+      "Server": {
+        "$path": "../src/server"
+      }
+    },
+    "ServerStorage": {
+      "EngineTests": {
+        "$path": "engine"
+      }
+    },
+    "StarterPlayer": {
+      "StarterPlayerScripts": {
+        "Client": {
+          "$path": "../src/client"
+        }
+      }
+    },
+    "Workspace": {
+      "$properties": {
+        "StreamingEnabled": false
+      }
+    },
+    "StarterGui": {
+      "$properties": {
+        "VirtualCursorMode": "Disabled"
+      }
+    },
+    "Lighting": {
+      "$properties": {
+        "Technology": "ShadowMap"
+      }
+    }
+  }
+}

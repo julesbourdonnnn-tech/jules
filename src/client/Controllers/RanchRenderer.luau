@@ -137,7 +137,16 @@ local started = false
 local connections: { any } = {}
 local bulkParts: { BasePart } = {}
 local bulkCFrames: { CFrame } = {}
-local lastStats = { models = 0, parts = 0, animated = 0, highlights = 0, lights = 0, labels = 0, silhouettes = 0 }
+local lastStats = {
+	models = 0,
+	parts = 0,
+	animated = 0,
+	highlights = 0,
+	lights = 0,
+	labels = 0,
+	silhouettes = 0,
+	fullRate = 0,
+}
 
 -- =============================================================================================
 -- Outils
@@ -246,8 +255,17 @@ local function rarityOf(species: number): number
 	return if def then def.rarity else 1
 end
 
+-- Squishies d'un ranch sans copie (lecture seule, à chaque image : budget PS4) ; repli : la copie
+local function squishiesOf(slot: number): { [string]: Types.PublicSquishy }
+	local view = (WorldStateController :: any).squishiesView
+	if type(view) == "function" then
+		return view(slot)
+	end
+	return WorldStateController.squishies(slot)
+end
+
 local function computeRanks(slot: number)
-	local list = WorldStateController.squishies(slot)
+	local list = squishiesOf(slot)
 	local byAt: { [string]: { string } } = { pen = {}, pool = {} }
 	for uid, rec in list do
 		local bucket = byAt[rec.at]
@@ -396,7 +414,8 @@ local function placement(
 		end
 		if ranch.ride == uid then
 			local s = SizeScale.display(size, "ride", ranch.saddle)
-			local hip = Balance.Ride.BaseHipHeight + Balance.Ride.HipFactor * s * Balance.SizeScale.BaseDiameter
+			local hip = Balance.Ride.BaseHipHeight
+				+ Balance.Ride.HipFactor * s * Balance.SizeScale.BaseDiameter
 			return "ride", root.Position - Vector3.new(0, hip + 1, 0), s
 		end
 		local s = math.min(SizeScale.display(size, "pen"), 1.5)
@@ -431,7 +450,10 @@ local function stepSquishy(
 	if where == "carry" or where == "ride" then
 		lod = math.min(lod, 2)
 	end
-	d.where = where
+	if d.where ~= where then
+		d.where = where
+		d.animAt = -math.huge -- changement de lieu : nouvelle pose même immobile
+	end
 	if d.handle == nil then
 		if buildBudget.n <= 0 then
 			return
@@ -449,6 +471,7 @@ local function stepSquishy(
 	end
 	if math.abs(d.scale - scale) > d.scale * 0.01 then
 		d.scale = scale
+		d.animAt = -math.huge
 		pcall(SquishyBuilder.setScale, h, scale)
 	end
 	-- cadence : complet à chaque image (budget animated), 15 Hz entre 60 et 140 studs, immobile au-delà
@@ -456,10 +479,8 @@ local function stepSquishy(
 	if lod == 1 and animBudget.n > 0 then
 		animBudget.n -= 1
 		animate = true
-	elseif lod <= 2 and animT - d.animAt >= 1 / LOD.MidHz then
-		animate = true
-	elseif lod == 3 and d.animAt == -math.huge then
-		animate = true -- première pose
+	elseif (lod <= 2 and animT - d.animAt >= 1 / LOD.MidHz) or (lod == 3 and d.animAt == -math.huge) then
+		animate = true -- 15 Hz, ou première pose d'un squishy immobile
 	end
 	if not animate then
 		return
@@ -479,7 +500,8 @@ local function stepSquishy(
 	local amp = (if def then def.wobble.amp else 0.1) * (if reducedMotion() then 0.5 else 1)
 	local sx, sy, sz, hop = 1, 1, 1, 0
 	if d.profile then
-		local ok, a, bb, c, done = pcall(Squash.sample, d.profile, animT - d.profileT, if reducedMotion() then 0.5 else 1)
+		local ok, a, bb, c, done =
+			pcall(Squash.sample, d.profile, animT - d.profileT, if reducedMotion() then 0.5 else 1)
 		if ok then
 			sx, sy, sz = a, bb, c
 			if done then
@@ -570,13 +592,21 @@ local function dressMount(d: Drawn, ranch: Types.RanchPublic)
 		trail.Attachment0 = a0
 		trail.Attachment1 = a1
 		trail.Lifetime = 0.5
-		trail.Color = ColorSequence.new(if def and def.color then def.color else Color3.fromRGB(255, 220, 240))
+		trail.Color =
+			ColorSequence.new(if def and def.color then def.color else Color3.fromRGB(255, 220, 240))
 		trail.Parent = body
 		d.trail = trail
 	end
 end
 
-local function stepRanch(slot: number, cam: Vector3, b: any, now: number, animBudget: { n: number }, buildBudget: { n: number })
+local function stepRanch(
+	slot: number,
+	cam: Vector3,
+	b: any,
+	now: number,
+	animBudget: { n: number },
+	buildBudget: { n: number }
+)
 	local ranch = WorldStateController.ranch(slot)
 	if ranch == nil or ranch.userId == 0 then
 		dropSlot(slot)
@@ -592,7 +622,7 @@ local function stepRanch(slot: number, cam: Vector3, b: any, now: number, animBu
 		far = true
 	end
 	farRanch[slot] = far
-	local list = WorldStateController.squishies(slot)
+	local list = squishiesOf(slot)
 	local mine = drawn[slot] or {}
 	-- squishies disparus du miroir
 	for uid, d in mine do
@@ -607,9 +637,14 @@ local function stepRanch(slot: number, cam: Vector3, b: any, now: number, animBu
 		fenceIndex[uid] = i
 	end
 	for uid, rec in list do
-		local where, base, scale = placement(slot, uid, rec, ranch, fenceIndex)
-		local onPlayer = where == "carry" or where == "ride"
-		if where == nil or base == nil or (far and not onPlayer) then
+		-- ranch lointain : silhouette seule, ni place ni taille calculées (sauf porté / monture, dessinés
+		-- sur le personnage) ; budget PS4 : 16 ranchs × 24 squishies à chaque image sinon
+		local onPlayer = uid == ranch.carry or uid == ranch.ride
+		local where, base, scale = nil, nil, 1
+		if not far or onPlayer then
+			where, base, scale = placement(slot, uid, rec, ranch, fenceIndex)
+		end
+		if where == nil or base == nil then
 			local d = mine[uid]
 			if d then
 				release(d)
@@ -664,7 +699,8 @@ local function stepSilhouette(slot: number)
 	local center = WorldLayout.anchor(slot, "silhouette")
 	local pos = Vector3.new(center.X, LOD.SilhouetteY, center.Z)
 	if entry.sig ~= sig then
-		local first = entry.handle == nil or not string.find(entry.sig, string.format("^%d:%d:", best.s, best.m))
+		local first = entry.handle == nil
+			or not string.find(entry.sig, string.format("^%d:%d:", best.s, best.m))
 		if first then
 			if entry.handle then
 				pcall(SquishyBuilder.release, entry.handle)
@@ -758,7 +794,8 @@ local function stepStatue()
 		statue.handle = h
 		local top = part.Position + Vector3.new(0, part.Size.Y * 0.5, 0)
 		local dia = Balance.SizeScale.BaseDiameter * scale
-		local okp, parts, cframes = pcall(SquishyBuilder.pose, h, CFrame.new(top + Vector3.new(0, dia * 0.5, 0)))
+		local okp, parts, cframes =
+			pcall(SquishyBuilder.pose, h, CFrame.new(top + Vector3.new(0, dia * 0.5, 0)))
 		if okp and type(parts) == "table" then
 			for i, p in parts do
 				table.insert(bulkParts, p)
@@ -768,7 +805,11 @@ local function stepStatue()
 	end
 	if statue.label then
 		local shown = if name ~= "" then name else Util.t("world.statueEmpty")
-		pcall(WorldText.setText, statue.label, Util.t("world.statue", { name = shown, size = Util.number(z) }))
+		pcall(
+			WorldText.setText,
+			statue.label,
+			Util.t("world.statue", { name = shown, size = Util.number(z) })
+		)
 	end
 end
 
@@ -1153,7 +1194,9 @@ local function stepHearts()
 	for _, d in list do
 		if d.heartUntil > animT and d.handle then
 			local part = heartPart()
-			local s = if reducedMotion() then 1 else 1 + 0.25 * (0.5 + 0.5 * math.sin(animT * math.pi * 2 * 1.5))
+			local s = if reducedMotion()
+				then 1
+				else 1 + 0.25 * (0.5 + 0.5 * math.sin(animT * math.pi * 2 * 1.5))
 			part.Size = Vector3.new(0.6, 0.6, 0.6) * s
 			local dia = Balance.SizeScale.BaseDiameter * d.scale
 			part.CFrame = CFrame.new(d.pos + Vector3.new(0, dia * 0.6 + 0.8, 0))
@@ -1258,7 +1301,7 @@ end
 -- Image
 -- =============================================================================================
 
-local function countStats()
+local function countStats(fullRate: number)
 	local models, parts, animated, lights = 0, 0, 0, 0
 	for _, ranch in drawn do
 		for _, d in ranch do
@@ -1301,6 +1344,7 @@ local function countStats()
 		lights = lights,
 		labels = labels,
 		silhouettes = sil,
+		fullRate = fullRate,
 	}
 end
 
@@ -1316,7 +1360,9 @@ function RanchRenderer._step(dt: number)
 	local buildBudget = { n = LOD.BuildsPerFrame }
 	if WorldStateController.ready() then
 		for slot = 1, WorldLayout.Const.Ranches do
-			stepRanch(slot, cam, b, now, animBudget, buildBudget)
+			-- pas isolé par ranch : une donnée abîmée dans un ranch ne fige jamais tout le monde (sans
+			-- cela, l'image s'arrêtait avant BulkMoveTo pour les 16 ranchs, erreur signalée une fois)
+			Util.guard("RanchRenderer.ranch", stepRanch, slot, cam, b, now, animBudget, buildBudget)
 		end
 	end
 	slowAcc += Util.num(dt, 0, 0, 1)
@@ -1346,7 +1392,7 @@ function RanchRenderer._step(dt: number)
 			Util.raise("RanchRenderer.bulk", tostring(err))
 		end
 	end
-	countStats()
+	countStats(Util.num(b.animated, 80, 0, 400) - animBudget.n)
 end
 
 -- =============================================================================================
@@ -1362,6 +1408,16 @@ local function onCelebrate(payload: any)
 		showDodo()
 	elseif payload.kind == "press" and type(data.uid) == "string" then
 		local slot = WorldStateController.mySlot()
+		if data.petsit == true then
+			-- pet-sitting : le squishy pressé est celui de l'ami, à SA clôture
+			slot = 0
+			for s = 1, WorldLayout.Const.Ranches do
+				if squishiesOf(s)[data.uid] ~= nil then
+					slot = s
+					break
+				end
+			end
+		end
 		RanchRenderer.play(slot, data.uid, if data.perfect == true then "perfect" else "press")
 	elseif payload.kind == "fusion" and type(data.uid) == "string" then
 		RanchRenderer.play(WorldStateController.mySlot(), data.uid, "fuse")
@@ -1518,7 +1574,10 @@ function RanchRenderer.projected(camera: Camera): { TargetRules.Projected }
 				local fov = math.rad(Util.num(camera.FieldOfView, 70, 1, 120))
 				local vh = Util.num(camera.ViewportSize.Y, 1080, 1)
 				local radius = (dia * 0.5) / (screen.Z * math.tan(fov / 2)) * vh * 0.5
-				table.insert(out, { id = uid, screen = Vector2.new(screen.X, screen.Y), radius = radius, depth = screen.Z })
+				table.insert(
+					out,
+					{ id = uid, screen = Vector2.new(screen.X, screen.Y), radius = radius, depth = screen.Z }
+				)
 			end
 		end
 	end
@@ -1532,5 +1591,14 @@ end
 
 -- Rarities et Types gardés pour les types publics
 local _ = Rarities
+
+-- Coupe les connexions (fin de session, specs)
+function RanchRenderer._stop()
+	for _, c in connections do
+		c:Disconnect()
+	end
+	table.clear(connections)
+	started = false
+end
 
 return RanchRenderer
