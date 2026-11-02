@@ -284,8 +284,9 @@ local function compute(now: number): Target?
 		local pool = WorldLayout.anchor(slot, "pool")
 		if ranch.pool and ZoneRules.distXZ(pos, pool) <= Balance.Fusion.ThrowRange then
 			local t = make("pool", slot, pool)
-			-- □ lance toujours ; l'invite dit « Fusion ! » quand un jumeau attend dans le Bassin (GDD §4.9)
-			t.primary = "throw"
+			-- □ lance toujours ; l'invite dit « Fusion ! » quand un jumeau attend dans le Bassin, sinon
+			-- « Poser dans le Bassin » (GDD §4.9, note INT-CWR-3) : InputController traite les deux en lancer
+			t.primary = "putInPool"
 			local list = WorldStateController.squishies(slot)
 			local carried = list[ranch.carry]
 			if carried then

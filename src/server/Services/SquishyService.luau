@@ -1685,7 +1685,8 @@ local function stepPlayer(player: Player, data: { [string]: any }, actor: Types.
 	stepMerge(player)
 	-- Cuve naturelle
 	stepVat(player, data)
-	-- portage : fini à la sortie du ranch (position validée), ou sans acteur (mort, réapparition)
+	-- portage : fini à la sortie du ranch (position validée), ou sans acteur (mort, réapparition), ou
+	-- après le délai de sûreté (Balance.Carry.SafetySeconds, note INT-LR10 : le squishy retourne à sa place)
 	local c = carried[player]
 	if c ~= nil then
 		local slot = RanchService.slotOf(player)
@@ -1696,6 +1697,8 @@ local function stepPlayer(player: Player, data: { [string]: any }, actor: Types.
 			or data.squishies[c.uid] == nil
 		then
 			SquishyService.endCarry(player, "leftRanch")
+		elseif not (now - c.since < Balance.Carry.SafetySeconds) then
+			SquishyService.endCarry(player, "timeout")
 		end
 	end
 	-- monture : descente sans personnage vivant ou en entrant dans le Bassin

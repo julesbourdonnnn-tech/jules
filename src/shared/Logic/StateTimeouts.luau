@@ -22,7 +22,9 @@ local TABLE: { [string]: number } = {
 	serverFull = 30, -- serveur plein : renvoi après 30 s (annulé si un ranch se libère)
 	worldResync = 3, -- client : trou de suite → RequestWorld renvoyé toutes les 3 s jusqu'à l'instantané
 	unstable = 3, -- attribut Unstable après un retour forcé
-	carry = math.huge,
+	-- portage : fermé par un événement (GDD §12.10) ou par le délai de sûreté de SquishyService (+ 1 s de
+	-- grâce pour le contrôle du robot de longue durée, note INT-LR10)
+	carry = Balance.Carry.SafetySeconds + 1,
 	boopHold = 5.5, -- 5 s + 0,5 s de grâce (2,5 s + 0,5 s sans propriétaire proche) ; extendHold une seule fois
 	feedHold = Quests.Feed.Hold + Quests.Feed.HoldGrace, -- bol : 2 s + 0,5 s (contrat v1.2)
 	-- attente de 0,6 s sur une dalle avant l'achat (contrat v1.2, HoldState « tile » de RanchService)

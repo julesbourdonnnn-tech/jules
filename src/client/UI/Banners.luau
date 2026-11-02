@@ -316,12 +316,38 @@ local function eventBanner(kind: string, index: number, at: number, now: number,
 	})
 end
 
+-- BOOP RUSH programmé visible : mode « on », ou mode « events » pendant la Jelly Moon ou une fête
+-- d'administrateur (même règle que RushService côté serveur et LightingController pour le ciel)
+local function rushAllowed(f: any, now: number): boolean
+	if f.boopRush == "on" then
+		return true
+	end
+	if f.boopRush ~= "events" then
+		return false
+	end
+	local ev: any = Util.safe("WorldStateController.event", nil, WorldStateController.event)
+	if type(ev) ~= "table" then
+		return false
+	end
+	if f.jellyMoon == true then
+		local m: any = ev.moon
+		if type(m) == "table" and m.active == true and type(m.endsAt) == "number" and now < m.endsAt then
+			return true
+		end
+		if EventClock.moon(now).active then
+			return true
+		end
+	end
+	local b: any = ev.boost
+	return type(b) == "table" and b.kind == "admin" and type(b.untilT) == "number" and now < b.untilT
+end
+
 local function checkEvents(now: number)
 	local f = features()
 	if f == nil then
 		return
 	end
-	if f.boopRush == "on" then
+	if rushAllowed(f, now) then
 		local rush = EventClock.rush(now)
 		eventBanner("rushSoon", rush.index, rush.sirenAt, now, 0)
 		eventBanner("rushStart", rush.index, rush.startsAt, now, 0)

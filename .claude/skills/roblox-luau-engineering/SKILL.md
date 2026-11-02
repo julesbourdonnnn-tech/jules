@@ -14,7 +14,7 @@ description: Standards d'ingénierie Luau/Roblox de Raise a Squishy (Rojo, struc
 | `src/client/`   | `StarterPlayer.StarterPlayerScripts.Client`       | Contrôleurs client : UI, effets, entrées, caméra |
 | `src/first/`    | `ReplicatedFirst`                                 | Écran de chargement autonome (n'exige rien de ReplicatedStorage) |
 
-Projet Rojo « RaiseASquishy » : 16 joueurs par serveur, `StreamingEnabled`, `SignalBehavior = Deferred`, `TextChatService`, curseur virtuel désactivé (navigation manette directionnelle), personnage neutre (WalkSpeed 16, JumpHeight 7,2).
+Projet Rojo « RaiseASquishy » : 16 joueurs par serveur, console d'abord (PS5, puis Xbox, puis PC ; aucun code tactile), **`StreamingEnabled = false`** (choix délibéré, GDD §12.9 : tout le monde est toujours là côté client, vérifié par `scripts/verify-place`), `Lighting.Technology = ShadowMap` (console la plus faible), `SignalBehavior = Deferred`, `TextChatService` sans fenêtre de chat sur console, curseur virtuel désactivé (navigation manette directionnelle), personnage neutre (WalkSpeed 16, JumpHeight 7,2).
 
 Conventions de fichiers Rojo :
 - `Nom.luau` → ModuleScript ; `Nom.server.luau` → Script ; `Nom.client.luau` → LocalScript.
@@ -87,11 +87,12 @@ Chaque module garde les correctifs de 6 tours de QA et d'un contre-audit anti-tr
 | `Client/UI/Root`, `Theme`, `Create`, `Juice`, `Toast`, `Glyph` | écrans responsives (échelle TV, zone sûre), charte, construction d'UI, effets, notifications, icônes de touches PlayStation/Xbox |
 | `src/first/Loading.client.luau` | écran de chargement (Réessayer à la manette, échelle TV, attend `ClientReady`) |
 
-## Performance (mobile d'abord, 16 joueurs)
+## Performance (budgets PS4 / Xbox One, 16 joueurs)
 
 - Viser ≤ 3 000 parts dans le monde généré, `Anchored = true` et `CanCollide/CanTouch/CanQuery = false` sur tout le décoratif.
 - `CastShadow = false` sur les petites pièces décoratives.
-- `StreamingEnabled` activé ; ne jamais supposer qu'une part lointaine existe côté client.
+- `StreamingEnabled` coupé, mais un objet peut arriver en retard : côté client, `WaitForChild(nom, délai)` **toujours** avec un délai et un repli ; jamais de règle du jeu qui lit la physique (`Touched`, fin d'animation) : distances sur la position validée et minuteurs du serveur (`Clock`) ; chaque état a un délai et une sortie (`Logic/StateTimeouts`).
+- Instances en pool, **une seule boucle Heartbeat par système**, budgets nommés (quotas de `RanchRenderer`, `ChaseRenderer`, `VFXController` ; ≤ 3 000 `GuiObject`) ; aucune `ProximityPrompt` (invites dessinées par `UI/Prompt`).
 - Effets visuels **côté client** uniquement ; le serveur envoie des événements compacts.
 - Remotes : regrouper les mises à jour (au plus ~10 envois/s/joueur), payloads petits (ids, nombres).
 - Pas de `:GetDescendants()` par frame ; mettre en cache.

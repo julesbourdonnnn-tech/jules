@@ -5,11 +5,11 @@ description: Game design Roblox fondé sur l'analyse de marché tycoon d'octobre
 
 # Game design Roblox (marché 2025-2026)
 
-Sources détaillées : `docs/01-analyse-marche-tycoon.md` (étude de marché tycoon), `docs/03-decision-du-jury.md` (concept final au §8, idées greffées au §6, faiblesses corrigées au §7, périmètre du lancement au §8.10, risques au §9), et le GDD du jeu (`docs/02-…`, en cours d'écriture). Le jeu précédent du studio, Comet Conga (`/home/user/jules/roblox-game`, lecture seule), sert de modèle : ses docs disent ce qui a marché et ce qui a coûté des tours de QA.
+Sources détaillées : `docs/01-analyse-marche-tycoon.md` (étude de marché tycoon), `docs/03-decision-du-jury.md` (concept final au §8, idées greffées au §6, faiblesses corrigées au §7, périmètre du lancement au §8.10, risques au §9), et le GDD du jeu (`docs/02-game-design-document.md`, v1.3 : tous les nombres y sont). Le jeu précédent du studio, Comet Conga (`/home/user/jules/roblox-game`, lecture seule), sert de modèle : ses docs disent ce qui a marché et ce qui a coûté des tours de QA.
 
 ## Ce projet : Raise a Squishy
 
-Tycoon de créatures en gelée, **16 joueurs par serveur**, téléphone, PC et PS5 (manette DualSense sur une télé), public enfant (classification visée : Minimal). Principes à garder pour chaque nouvelle fonctionnalité :
+Tycoon de créatures en gelée, **16 joueurs par serveur**, **console d'abord** : PS5 (manette DualSense sur une télé à 3 m), puis Xbox, puis PC (clavier et souris) ; ni téléphone ni tablette. Public enfant (classification visée : Minimal). Principes à garder pour chaque nouvelle fonctionnalité :
 
 - **Personne ne perd jamais rien** : être boopé rapporte (taille, Fame, pièces) ; la poursuite du BOOP RUSH donne une *copie bébé* au gagnant, jamais l'original.
 - **Le rebirth fait des cadeaux à tout le serveur** (Grand Splorch) ; la taille se voit vraiment (échelle logarithmique).

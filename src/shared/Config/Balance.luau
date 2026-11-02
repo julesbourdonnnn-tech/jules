@@ -65,7 +65,7 @@ Balance.Trophies = {
 --   × (1 + StreakStep × min(StreakMax, série)) × (familleKitty ? 1 + KittyBonus : 1))
 Balance.Press = {
 	Cooldown = 8,
-	-- 22 s (GDD : 12) : réglage logic du 01/11/2026 pour la porte EconomyPacing v1.2 (docs/04 §21) :
+	-- 22 s (GDD v1.3 aligné le 02/11/2026, avant : 12) : réglage logic du 01/11/2026 pour la porte EconomyPacing v1.2 (docs/04 §21) :
 	-- avec 12, les pressions ne faisaient que 40 % des pièces gagnées en jeu au jour 7 (porte ≥ 50 %)
 	Seconds = 22,
 	Min = 10,
@@ -109,7 +109,7 @@ Balance.Tiles = {
 	ExitRadius = 3.5, -- studs : « sortie » (écart contre les achats en rafale)
 	DwellSeconds = 0.6, -- s sur la dalle avant l'achat automatique (GDD v1.3)
 	RScale = 3.5, -- prix des dalles de la boucle × RScale^R (GDD v1.3 ; remplace 2^R)
-	-- Growth 4,5 (GDD §4.6 : 4,0) : réglage logic du 01/11/2026 pour la porte EconomyPacing v1.2 (docs/04
+	-- Growth 4,5 (GDD §4.6 aligné le 02/11/2026, avant : 4,0) : réglage logic du 01/11/2026 pour la porte EconomyPacing v1.2 (docs/04
 	-- §21) : avec 4,0, les pièces perdues au Grand Splorch valaient 13 à 17 fois le prix du Tapis 12 (santé
 	-- ≤ 10) ; le GDD ne retrouve « 3 fois, Tapis 12 à 93 % de la boucle » qu'avec A = 1 (sans décorations,
 	-- Fame ni trophées). Niveaux 0 à 3 presque inchangés (20, 90, 405, 1 822). Témoin de Contract_game à
@@ -180,6 +180,9 @@ Balance.Fusion = {
 -- Portage (GDD §4.10) et cible (GDD §10.4)
 Balance.Carry = {
 	PickRange = 10, -- studs
+	-- délai de sûreté (consigne du propriétaire : chaque état a un délai, note INT-LR10) : après 300 s
+	-- de portage, le squishy retourne à sa place, comme un « Poser » (GDD §4.10 : sorties par événement)
+	SafetySeconds = 300,
 }
 
 -- Vendre, ranger, relâcher, verrou (GDD §4.13)

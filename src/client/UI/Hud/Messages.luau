@@ -23,8 +23,10 @@ local Messages = {}
 
 local QUEUE_MAX = 3
 local STALE = 12 -- s : un message qui attend plus longtemps est jeté
--- s : durée d'affichage (Toast du socle : 3 s de vie + 0,15 s de sortie ; une seule à l'écran)
-local DISPLAY = 3.2
+-- s : vie d'un message (GDD §10.2 : « 2,5 s chacun »), posée sur Toast.Lifetime (lue à chaque show)
+local LIFETIME = 2.5
+-- s : durée d'affichage (vie du Toast + 0,15 s de sortie + marge ; un seul message à l'écran)
+local DISPLAY = LIFETIME + 0.2
 local TEXT_MAX = 160
 
 type Item = { text: string, kind: string, count: number, at: number }
@@ -38,6 +40,7 @@ local shown: { text: string, at: number }? = nil
 -- dès le chargement (un Toast montré directement par un panneau s'y place aussi)
 Messages.TopY = Layout.Hud.message.rect.y - Layout.Safe.y
 Toast.TopY = Messages.TopY
+Toast.Lifetime = LIFETIME
 
 local function held(): boolean
 	return next(holds) ~= nil

@@ -19,7 +19,7 @@ lune run scripts/prepublish  # avant de publier : chaque article de la boutique 
 
 ## Le harnais (tests/harness)
 
-`Harness.new({ mode = "server" | "client", touch = bool })` monte `src/` comme Rojo dans un DataModel simulé :
+`Harness.new({ mode = "server" | "client", console = bool })` monte `src/` comme Rojo dans un DataModel simulé (l'option `touch` du socle ne sert qu'au message `device.touch` : le jeu n'a aucun chemin tactile) :
 
 | API | Effet |
 |-----|-------|
@@ -90,6 +90,8 @@ end
 
 Fichiers : `tests/specs/<Système>.spec.luau`. Une spec par système, et des tests de **démarrage complet** (`Boot.spec.luau`, à écrire pour le jeu) qui lancent un serveur de **16 joueurs** (Bots) pendant plusieurs centaines de ticks, puis rejouent une partie dans le vrai client (Wire). Un défaut trouvé en QA = un test qui échoue d'abord, puis la correction ; le test reste (`Fix_*`). On ne supprime ni n'affaiblit jamais un test pour le faire passer.
 
+Specs d'intégration du jeu (docs/04 §18.3) : `Boot.spec` (serveur complet, 16 joueurs, par les remotes), `Soak.spec` (robot de longue durée, 0,5 h dans `check.sh`, 6 h avec `scripts/soak.sh`), `ClientReplay.spec` (partie réelle du serveur rejouée dans le client complet, PS5 1080p / 4K / 720p, EN et FR, puis clavier et souris), `EconomyPacing` (porte de rythme de l'économie). Règle zéro trace : une erreur ou un avertissement inattendu fait échouer la spec (`tests/harness/ZeroLog`, `T.expectWarning` pour un avertissement voulu).
+
 Leçons de Comet Conga (docs/06 de Comet Conga) : figer `Clock` et `os.clock` (`Bots.fakeOsClock`) plutôt qu'attendre en temps réel ; ne jamais dépendre de l'ordre de parcours d'une table ; relancer la suite deux fois avant une publication pour repérer les tests instables.
 
 ## Classes de bugs Roblox à traquer systématiquement
@@ -102,10 +104,10 @@ Leçons de Comet Conga (docs/06 de Comet Conga) : figer `Clock` et `os.clock` (`
 6. **Remotes abusés** : spam, types inattendus (table, NaN, chaîne énorme), objets hors de portée, ids inexistants.
 7. **Double récompense** : clic multiple, ProcessReceipt rejoué, quête validée deux fois, récompense quotidienne réclamée en boucle (comparer avec l'horodatage serveur `os.time()`, jamais celui du client).
 8. **Économie** : nombres négatifs, débordements, arrondis (toujours `math.floor` pour la monnaie), multiplicateurs cumulés involontairement.
-9. **UI** : textes qui débordent sur petit écran, boutons sous le joystick/saut mobile, tweens concurrents sur la même propriété, panneaux ouverts en double.
+9. **UI** : textes qui débordent ou passent sous 28 px TV (1920 × 1080, 3840 × 2160, 1280 × 720, EN et FR), éléments hors de la zone sûre de 5 %, sélection manette vide ou hors de la fenêtre, touche du jeu liée derrière une fenêtre, tweens concurrents sur la même propriété, panneaux ouverts en double (`TvAudit.run`).
 10. **Respawn** : UI détruite à la réapparition (`ResetOnSpawn = false`), effets attachés à l'ancien personnage.
 11. **Arrêt serveur** : `BindToClose` doit sauvegarder tout le monde avant 30 s.
-12. **StreamingEnabled** : le client suppose qu'une part lointaine existe → `WaitForChild` infini.
+12. **Objet en retard côté client** (`StreamingEnabled` est coupé, mais la réplication n'est pas instantanée) : `WaitForChild` sans délai → attente infinie ; toujours un délai et un repli.
 
 ## Checklist release
 
@@ -114,7 +116,7 @@ Leçons de Comet Conga (docs/06 de Comet Conga) : figer `Clock` et `os.clock` (`
 - [ ] Test « tricheur » : chaque remote reçoit des charges invalides sans erreur ni effet.
 - [ ] Test DataStore : pannes simulées → retries → aucune perte ; données corrompues → migration/reconcile.
 - [ ] Achats : ProcessReceipt idempotent (même PurchaseId deux fois = un seul crédit).
-- [ ] Studio : jouer en mode « Local Server » avec 3 joueurs, émulateur téléphone (iPhone SE + tablette) et manette.
+- [ ] Studio : jouer en mode « Local Server » avec 3 joueurs, à la manette (émulateur console 1080p et 4K), puis au clavier et à la souris.
 - [ ] Console : specs `Console*.spec` vertes (manette seule, glyphes PlayStation, zone sûre, pas de fenêtre de chat) puis essai sur une vraie PS5 à 3 m.
 - [ ] Anti-triche : 16 joueurs honnêtes simulés (gigue, gels de 0,7 à 1,5 s, réapparitions) sans aucune infraction ; chaque triche reproduite reste bloquée.
 - [ ] Économie : la spec de simulation passe (portes de rythme dans leurs tolérances).

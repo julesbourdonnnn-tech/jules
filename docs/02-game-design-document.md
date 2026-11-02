@@ -179,7 +179,7 @@ Repères GameAnalytics 2026 : médiane J1 10,3 % / J7 1,6 % / J30 0,5 % ; top 1 
 ```
 
 1. **Grandir.** Chaque squishy grossit tout seul (+1 par seconde au départ) et remplit le Pot à Pièces.
-2. **Presser.** Le joueur presse un squishy prêt : il gagne 12 secondes de revenu de ce squishy d'un coup, ×2 si PERFECT. Chaque squishy se recharge en 8 s.
+2. **Presser.** Le joueur presse un squishy prêt : il gagne 22 secondes de revenu de ce squishy d'un coup, ×2 si PERFECT. Chaque squishy se recharge en 8 s.
 3. **Construire.** Les pièces achètent des dalles : le Tapis à Goûter (croissance), des décorations (+5 % de revenu chacune) et des places d'enclos. Elles n'achètent jamais de chance : la Cuve s'améliore toute seule à chaque Grand Splorch (§4.9).
 4. **Faire naître.** La Cuve fait naître un squishy gratuit à intervalle fixe. Les créatures en fuite, le Golden Wobbler, le BOOP RUSH et le MEGA SQUISH en apportent d'autres.
 5. **Fusionner.** Deux jumeaux lancés dans le Bassin fusionnent : taille (a + b) × 1,25 et une étoile de plus. Le résultat peut fusionner encore (combo).
@@ -241,7 +241,7 @@ Heures à Paris en hiver : Jelly Moon à 17 h, 19 h, 21 h et 23 h le samedi, 17 
 | Chargement | Écran construit en code (`ReplicatedFirst`) : un Plop rebondit, 3 points animés, aucun texte long | Chargement du profil avec verrou de session (§12.6). En cas d'échec : écran « Ton ranch se réveille… » et bouton Réessayer, jamais de profil vide sauvegardé | — |
 | 0:00 | Le personnage apparaît **dans son propre ranch**, face au Pot et au premier squishy. Les amis Roblox déjà sur le serveur ont le ranch voisin | `RanchService` attribue le ranch (à côté d'un ami s'il y en a un) | 1 « Chargé » |
 | 0:00-0:10 | Big Plop, la mascotte, arrive en rebondissant et pose **ton petit Plop** (taille 1, ton Meilleur Ami n° 1) à 5 studs devant le joueur : il n'a pas besoin de marcher. Le compteur au-dessus de lui défile : 2, 3, 4… Au-dessus de Plop, le glyphe □ (E au clavier) et le mot « Presser » (étiquette du monde en px TV, jamais posée au sol, §10.2) ; un anneau au sol, décoratif, entoure Plop | Croissance +1/s. Le reste du HUD est caché : seul le compteur de pièces (0) est visible | — |
-| ~0:10 | **Premier SPLORCH** : Plop s'écrase, rebondit, fontaine de pièces, « +10 » en gros, petite vibration (manette) | Récompense de pression `max(10, floor(12 × revenu))` = 10 (§4.7) | 2 « Première pression » |
+| ~0:10 | **Premier SPLORCH** : Plop s'écrase, rebondit, fontaine de pièces, « +10 » en gros, petite vibration (manette) | Récompense de pression `max(10, floor(22 × revenu))` = 10 (§4.7) | 2 « Première pression » |
 | 0:10-0:20 | Deuxième pression possible à 0:18 (anneau qui se remplit sous Plop) : 20 pièces. Les flèches au sol vers la première dalle, **Tapis à Goûter, 20**, n'apparaissent que quand les pièces suffisent ; avant, l'étiquette de prix de la dalle montre une barre qui se remplit (« 10 / 20 »), jamais un refus | — | — |
 | ~0:20 | Le joueur marche jusqu'à la dalle (si le stick n'a pas bougé depuis 4 s, le glyphe du stick gauche apparaît avec « Marcher ») et s'y arrête : un anneau blanc se remplit en 0,6 s (le serveur mesure ce temps, §4.6), puis le Tapis se construit en rebondissant. Plop passe à **+2/s** (le « +2 » flotte au-dessus de lui). **Première récompense en moins de 30 s** | Achat Tapis niveau 1 | 3 « Premier achat » |
 | ~0:40 | La **Cuve à Gelée** se construit toute seule (gratuite). Sa première goutte éclot : « **Jumeau de Plop** ! », annoncé comme tel. Ce n'est pas un tirage au hasard | Naissance scriptée : Plop, 0 étoile, taille 1 | 4 « Cuve » |
@@ -285,7 +285,7 @@ Une seule monnaie à dépenser, pour rester simple. Tout est calculé et gardé 
 | Source | Montant |
 |---|---|
 | Revenu passif | Somme des revenus des squishies du ranch (§4.3), versée dans le Pot |
-| Pression | `max(10, floor(12 × revenu du squishy))`, ×2 si PERFECT, +10 % par PERFECT de suite (max +50 %) (§4.7) |
+| Pression | `max(10, floor(22 × revenu du squishy))`, ×2 si PERFECT, +10 % par PERFECT de suite (max +50 %) (§4.7) |
 | Combo de fusion | Étape k : `20 × k ×` revenu du squishy obtenu (§4.10) |
 | Vente d'un squishy | 60 s de son revenu (minimum 10) (§4.13) |
 | Créature dorée vue de près, MEGA réussi | 60 s du revenu du joueur (§4.11, §4.22) |
@@ -420,7 +420,7 @@ Prix : `floor(base × croissance^L × 3,5^R)` pour les dalles de la boucle [`Bal
 
 | Dalle | Effet par niveau | Niveaux | Base | Croissance | Grand Splorch |
 |---|---|---|---|---|---|
-| **Tapis à Goûter** (Snack Mat) | Croissance × (1 + niveau) : +1/s → +13/s au niveau 12 | 12 | 20 | ×4,0 | Remis à zéro |
+| **Tapis à Goûter** (Snack Mat) | Croissance × (1 + niveau) : +1/s → +13/s au niveau 12 | 12 | 20 | ×4,5 | Remis à zéro |
 | **Décorations** (18 différentes, une fois chacune, achetées l'une après l'autre sur la même dalle) | +5 % de revenu chacune | 18 | 80 | ×2,2 | Remises à zéro |
 | **Enclos** | +1 place (4 → 18) | 14 | 1 200 | ×2,2 | **Gardé** |
 | **Lit douillet** (dès R = 3) | Limite hors ligne 8 h → 12 h | 1 | 25 M | — | **Gardé** |
@@ -429,7 +429,7 @@ Prix : `floor(base × croissance^L × 3,5^R)` pour les dalles de la boucle [`Bal
 
 | Niveau → | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| Tapis à Goûter | 20 | 80 | 320 | 1 280 | 5 120 | 20 480 | 81 920 | 327 680 | 1,31 M | 5,24 M | 21,0 M | 83,9 M |
+| Tapis à Goûter | 20 | 90 | 405 | 1 822 | 8 201 | 36 905 | 166 075 | 747 338 | 3,36 M | 15,1 M | 68,1 M | 306 M |
 | Décorations | 80 | 176 | 387 | 851 | 1 874 | 4 122 | 9 070 | 19 954 | 43 900 | 96 581 | 212 479 | 467 454 |
 | Enclos | 1 200 | 2 640 | 5 808 | 12 777 | 28 110 | 61 843 | 136 055 | 299 322 | 658 510 | 1,45 M | 3,19 M | 7,01 M |
 
@@ -445,7 +445,7 @@ Décorations niveaux 12 à 17 : 1,03 M, 2,26 M, 4,98 M, 11,0 M, 24,1 M et 53,0 M
 
 - **Geste** : touche d'action principale (□ à la manette, E au clavier, ou clic sur le squishy) sur le squishy **ciblé** de son ranch, à 10 studs au plus. Le serveur ne connaît pas la flânerie du squishy (dessinée par le client) : il mesure la distance **à plat (XZ)** entre la position validée du joueur et la **place** du squishy (`WorldLayout`), avec 2 studs de tolérance, car le client ne le fait jamais flâner à plus de 2 studs de sa place (§9.3). Même règle depuis la monture. Le jeu choisit la cible lui-même (règle exacte au §10.4) : les squishies prêts passent avant ceux en recharge, et après une pression la cible passe au prochain squishy prêt en 0,15 s. **Presser a sa touche, Prendre a la sienne** (○ / Q, §4.10) : un enfant qui martèle □ ne prend jamais un squishy par erreur. L'invite « □ Presser » est dessinée par le jeu, en grand pour la télé, et la touche est liée par `ContextActionService` ; on n'utilise **pas** de `ProximityPrompt`, dont le choix de cible, la ligne de vue et la liaison de touche appartiennent au moteur et ne se testent pas hors de Roblox (§10.4).
 - **Recharge** : 8 s par squishy [`Balance.Press.Cooldown`]. Un anneau se remplit sous le squishy ; prêt, il est un peu gonflé et brille.
-- **Récompense** : `floor(max(10, 12 × revenu) × (PERFECT ? 2 : 1) × (1 + 0,10 × min(5, série)) × (familleKittyComplète ? 1,10 : 1))`.
+- **Récompense** : `floor(max(10, 22 × revenu) × (PERFECT ? 2 : 1) × (1 + 0,10 × min(5, série)) × (familleKittyComplète ? 1,10 : 1))`.
 - **PERFECT** : chaque squishy rebondit au repos avec une période de 1,2 s, calée sur `Clock.now()` et un décalage propre (`hash(UserId du propriétaire, uid)` : l'uid n'est unique que dans un profil, et le squishy « 1 » de chaque joueur ne doit pas rebondir en même temps que les autres), donc identique côté client et côté serveur. La fenêtre PERFECT va de **0,08 s avant à 0,20 s après le sommet** du rebond (0,28 s, soit 23 % du cycle). Elle est décalée vers le « tard » parce que le joueur réagit à une image qui arrive en retard : télé familiale 50 à 150 ms (mode Jeu souvent coupé), plus 1 à 2 images de rendu et la liaison sans fil de la manette. La même règle vaut pour tous les appareils, sans bonus déclaré par le client. Un petit anneau blanc se resserre et touche le corps au sommet.
 - **Série PERFECT** : chaque PERFECT de suite ajoute +10 % (max +50 % à 5 de suite). Une pression non PERFECT remet la série à 0, sans aucune punition (la récompense de base reste). 6 s sans pression remettent aussi la série à 0. Le son monte d'un demi-ton à chaque marche.
 - **Vérification serveur** : le client envoie `Press(uid, tClient)`. Le serveur accepte `tClient` s'il est dans `[maintenant − 0,35 s ; maintenant + 0,05 s]`, sinon il prend `maintenant`. Il calcule la phase du rebond à `tClient`. Au pire, un tricheur obtient ce qu'obtient un joueur adroit (×2) : c'est borné et accepté. C'est aussi pourquoi **aucun classement ne compte les PERFECT** (§6.9).
@@ -871,7 +871,7 @@ Le concept proposait d'additionner la taille de tous les squishies. Avec des tai
 
 **Ce que la version 1.3 a corrigé** (simulation de la critique technique, refaite avec les valeurs de la version 1.2) : (1) avec des prix de dalles × 2^R, toutes les dalles étaient au maximum 3 à 8 min après chaque Grand Splorch dès le jour 3 et les pièces perdues valaient plus de 1 000 fois le prix du Tapis 12 ; ×2 Pièces ne changeait rien de mesurable ; (2) environ 9 Grands Splorch sur 20 devenaient possibles pendant l'absence ; (3) l'hypothèse « boosts ×2 20 % du temps » était fausse : avec les règles de la version 1.2 (chaque pression dans la jauge, boosts des objectifs et des paliers de Plop), le joueur de référence passait **95 %** de son temps en ×2. Le prototype cité dans la version 1.0 n'utilisait pas exactement les valeurs du document (prix des dalles non multipliés par R, objectifs × 3) ; ses chiffres ne servent plus.
 
-Leviers sans code : `Balance.Splorch.Targets`, `Balance.Tiles.*.Base/Growth`, `Balance.Tiles.RScale` (3,5), `Balance.Vat.Interval` et `Balance.Vat.ByR` (qualité, vitesse et buses par R), `Balance.Income.Coef` (0,02), `Balance.Press.Seconds` (12), `Balance.Offline.GrowthShare` (0,3), `Balance.Offline.StopAt` (0,9), `Events.Gauge.TargetPerPlayer` (600), `Events.Gauge.RestSeconds` (1 200).
+Leviers sans code : `Balance.Splorch.Targets`, `Balance.Tiles.*.Base/Growth`, `Balance.Tiles.RScale` (3,5), `Balance.Vat.Interval` et `Balance.Vat.ByR` (qualité, vitesse et buses par R), `Balance.Income.Coef` (0,02), `Balance.Press.Seconds` (22), `Balance.Offline.GrowthShare` (0,3), `Balance.Offline.StopAt` (0,9), `Events.Gauge.TargetPerPlayer` (600), `Events.Gauge.RestSeconds` (1 200).
 
 ### 4.25 Boosts, plafonds et limites anti-abus
 

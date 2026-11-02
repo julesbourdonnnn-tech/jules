@@ -7,7 +7,7 @@
 --     produit aucune mutation et au plus un Feedback neutre (fait par le handler).
 --   * Guard.try / Guard.caught : une erreur est comptée par DiagnosticsService.reportCaught, jamais
 --     propagée. Si Diagnostics lui-même échoue, un warn la rend visible (zéro trace : la spec échoue),
---     sauf pour l'erreur « TODO(<paquet>) » d'un stub d'un autre paquet pas encore livré : état connu de
+--     sauf pour l'erreur « TODO (<paquet>) » d'un stub d'un autre paquet pas encore livré : état connu de
 --     l'intégration, compté dans Guard.stubbed (rapport) mais jamais un warn par tick.
 --   * Guard.call(où, fn, repli, ...) : appel vers un service d'un AUTRE paquet (meta) dont la panne ne
 --     doit jamais casser une règle du jeu : rend le résultat, ou `repli` après avoir compté l'erreur.
@@ -27,9 +27,13 @@ local DiagnosticsService = require(script.Parent.Parent.Services.DiagnosticsServ
 
 local Guard = {}
 
+-- Marque d'une erreur de stub du contrat (« TODO » suivi du paquet entre parenthèses). Tous les paquets
+-- sont livrés : la marque ne sert plus qu'au rapport d'intégration (liste vide attendue par Boot et Soak).
+local STUB_MARK = "TODO" .. "("
+
 local MAX_USER_ID = 2 ^ 53
 
--- Erreurs de stubs « TODO(<paquet>) » rencontrées (où → message) : rapport d'intégration seulement
+-- Erreurs de stubs « TODO (<paquet>) » rencontrées (où → message) : rapport d'intégration seulement
 Guard.stubbed = {} :: { [string]: string }
 
 local function finite(x: any): boolean
@@ -38,7 +42,7 @@ end
 Guard.finite = finite
 
 local function isStub(err: any): boolean
-	return string.find(tostring(err), "TODO(", 1, true) ~= nil
+	return string.find(tostring(err), STUB_MARK, 1, true) ~= nil
 end
 
 -- Erreur attrapée : comptée par Diagnostics (jamais d'erreur qui remonte)

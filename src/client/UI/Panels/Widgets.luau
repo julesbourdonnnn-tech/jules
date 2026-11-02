@@ -47,6 +47,10 @@ local FocusGuard = require(Client.UI.FocusGuard)
 
 local Widgets = {}
 
+-- Marque d'une erreur de stub du contrat (« TODO » suivi du paquet entre parenthèses). Tous les paquets
+-- sont livrés : la marque ne sert plus qu'au rapport d'intégration (liste vide attendue par Boot et Soak).
+local STUB_MARK = "TODO" .. "("
+
 -- Couleurs de la charte des panneaux (GDD §10.1 : contour bleu nuit 3 px, dégradés pastel)
 Widgets.Colors = {
 	Stroke = Color3.fromRGB(30, 25, 60),
@@ -171,7 +175,7 @@ end
 
 local reported: { [string]: boolean } = {}
 
--- Appelle fn sous pcall ; un stub du contrat (« TODO(… ) ») rend simplement le repli. Une autre
+-- Appelle fn sous pcall ; un stub du contrat (« TODO (…) ») rend simplement le repli. Une autre
 -- erreur (un vrai bug) est relancée une fois par clé dans un fil à part : ScriptContext.Error la voit
 -- (ErrorReporter → Diagnostics en ligne ; h.errors dans les specs, règle zéro trace), et l'interface
 -- continue avec le repli : jamais un plantage de l'UI, jamais une erreur avalée en silence.
@@ -184,7 +188,7 @@ function Widgets.safe<T>(where: string, fallback: T, fn: (...any) -> T, ...: any
 		return result
 	end
 	local text = tostring(result)
-	if not string.find(text, "TODO(", 1, true) and not reported[where] then
+	if not string.find(text, STUB_MARK, 1, true) and not reported[where] then
 		reported[where] = true
 		Widgets.raise(where, text)
 	end

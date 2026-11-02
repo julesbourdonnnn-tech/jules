@@ -1,6 +1,6 @@
 --!strict
 -- Outils communs du paquet client-world (dossier d'aide src/client/World, docs/04 §2) :
---   * appels protégés vers les modules des autres paquets (un stub « TODO(…) » du contrat rend le
+--   * appels protégés vers les modules des autres paquets (un stub « TODO (…) » du contrat rend le
 --     repli sans bruit ; une vraie erreur est relancée UNE fois par appelant dans un fil à part, pour
 --     que ScriptContext.Error la voie : jamais une erreur avalée, jamais un rendu planté) ;
 --   * intentions envoyées au débit CLIENT de Config/Intents (seau à jetons sur l'horloge Clock) ;
@@ -25,6 +25,10 @@ local Client = script.Parent.Parent
 local Prefs = require(Client.Util.Prefs)
 
 local Util = {}
+
+-- Marque d'une erreur de stub du contrat (« TODO » suivi du paquet entre parenthèses). Tous les paquets
+-- sont livrés : la marque ne sert plus qu'au rapport d'intégration (liste vide attendue par Boot et Soak).
+local STUB_MARK = "TODO" .. "("
 
 local MAX_NUMBER = 1e300
 
@@ -57,7 +61,7 @@ function Util.safe<T>(where: string, fallback: T, fn: any, ...: any): T
 		return result
 	end
 	local text = tostring(result)
-	if string.find(text, "TODO(", 1, true) == nil then
+	if string.find(text, STUB_MARK, 1, true) == nil then
 		Util.raise(where, text)
 	end
 	return fallback

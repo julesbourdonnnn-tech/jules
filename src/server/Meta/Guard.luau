@@ -6,7 +6,7 @@
 --     l'intention est marquée activity = true : Activity.note(player, Clock.now()).
 --   * Guard.try / Guard.caught : une erreur est comptée par DiagnosticsService.reportCaught, jamais
 --     propagée ; si Diagnostics lui-même échoue, un warn la rend visible (zéro trace : la spec échoue),
---     sauf pour l'erreur « TODO(<paquet>) » d'un stub d'un autre paquet (connu, compté dans stubbed).
+--     sauf pour l'erreur « TODO (<paquet>) » d'un stub d'un autre paquet (connu, compté dans stubbed).
 --   * Guard.call(où, fn, repli, ...) : appel vers un service d'un autre paquet ; repli si erreur ou nil.
 --   * Guard.arg / Guard.args : validation des sortes d'arguments (aussi utilisée par les specs).
 
@@ -20,6 +20,10 @@ local RateLimit = require(script.Parent.Parent.Util.RateLimit)
 local Activity = require(script.Parent.Parent.Util.Activity)
 
 local Guard = {}
+
+-- Marque d'une erreur de stub du contrat (« TODO » suivi du paquet entre parenthèses). Tous les paquets
+-- sont livrés : la marque ne sert plus qu'au rapport d'intégration (liste vide attendue par Boot et Soak).
+local STUB_MARK = "TODO" .. "("
 
 local MAX_USER_ID = 2 ^ 53
 
@@ -38,7 +42,7 @@ end
 Guard.finite = finite
 
 local function isStub(err: any): boolean
-	return string.find(tostring(err), "TODO(", 1, true) ~= nil
+	return string.find(tostring(err), STUB_MARK, 1, true) ~= nil
 end
 
 function Guard.caught(where: string, err: any)

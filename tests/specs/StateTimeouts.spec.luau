@@ -15,7 +15,7 @@ return function(T)
 		serverFull = 30,
 		worldResync = 3,
 		unstable = 3,
-		carry = math.huge,
+		carry = 301, -- note INT-LR10 : délai de sûreté de 300 s (Balance.Carry.SafetySeconds) + 1 s de grâce
 		boopHold = 5.5,
 		feedHold = 2.5, -- contrat v1.2 : bol en 2 s + 0,5 s (GDD v1.3 §12.10)
 		leap = 0.35,
