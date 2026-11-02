@@ -24,6 +24,7 @@
 -- boutons pour une carte rouverte ; file et rangement bornés. Temps : Clock (specs : voyage dans le
 -- temps) ; une seule connexion par image.
 
+local GuiService = game:GetService("GuiService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -85,6 +86,10 @@ local STILL_FOR = Events.Rush.CardStillFor
 local STILL_EPS = 0.5 -- studs : en dessous, le joueur est immobile
 local SLIDE = 0.3
 local CALM_EVERY = 0.25 -- s entre deux vérifications du calme (créatures proches, événements)
+-- ✕ de la carte du choix : montré seulement sur le bouton sélectionné (✕ active la sélection ; « Je
+-- reste tranquille » l'est d'office). ○ reste toujours sur « Je reste tranquille » (○ = Cozy).
+local RUSH_GLYPH = { gamepad = Enum.KeyCode.ButtonA, keyboard = Enum.KeyCode.Return }
+local NO_GLYPH = {}
 
 type Entry = { card: Card, seq: number }
 
@@ -315,6 +320,19 @@ end
 -- =============================================================================================
 -- Construction
 -- =============================================================================================
+
+-- Chaque glyphe montré dit vrai : ✕ sur « Je joue au BOOP RUSH » seulement quand ✕ le choisit
+local function refreshModeGlyphs()
+	local rush = modeRush
+	local handle = if rush then Util.buttonGlyph(rush) else nil
+	if handle == nil then
+		return
+	end
+	local wanted = if GuiService.SelectedObject == rush then RUSH_GLYPH else NO_GLYPH
+	if handle._binding ~= wanted then
+		handle:set(wanted)
+	end
+end
 
 local function build()
 	if screen ~= nil and screen.Parent ~= nil then
@@ -570,8 +588,11 @@ local function build()
 	local cozy = modeCozy :: TextButton
 	rush.NextSelectionRight = cozy
 	cozy.NextSelectionLeft = rush
+	rush.SelectionGained:Connect(refreshModeGlyphs)
+	rush.SelectionLost:Connect(refreshModeGlyphs)
 	mf.Parent = safe
 	modeFrame = mf
+	refreshModeGlyphs()
 end
 
 local function setLabel(parent: Instance, name: string, text: string)
@@ -858,6 +879,7 @@ local function openMode(entry: Entry)
 		end,
 		opener = nil,
 	})
+	refreshModeGlyphs()
 	seen(entry)
 	changed()
 end
@@ -956,6 +978,7 @@ local function step(now: number)
 	local win = windowEntry
 	if win ~= nil and win.card.kind == "mode" then
 		setModeButtonsEnabled(not modeGuardActive(now))
+		refreshModeGlyphs()
 		animateMode(now)
 		if now - windowOpenedAt >= MODE_TIMEOUT or now < windowOpenedAt - 1 then
 			-- sans réponse : la carte se ferme ; le serveur garde Cozy (délai lancé par UiSeen)

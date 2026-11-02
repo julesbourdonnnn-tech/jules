@@ -32,6 +32,7 @@ local RushRules = require(Shared.Logic.RushRules)
 local ZoneRules = require(Shared.Logic.ZoneRules)
 local EventClock = require(Shared.Logic.EventClock)
 local WorldLayout = require(Shared.Logic.WorldLayout)
+local StateTimeouts = require(Shared.Logic.StateTimeouts)
 
 local Server = script.Parent.Parent
 local Signals = require(Server.Signals)
@@ -75,7 +76,10 @@ local escapesHour: { [Player]: { number } } = {}
 local boopedThisRush: { [Player]: boolean } = {}
 local boopedLastRush: { [Player]: boolean } = {}
 local returnedThisRush: { [Player]: { [string]: boolean } } = {}
-local activeEscapes: { [string]: boolean } = {} -- "UserId:uid"
+-- "UserId:uid" → instant du boop ; fermée par EscapeEnded, sinon au délai d'une fuite (fuite jamais
+-- créée : erreur attrapée dans ChaseService.startEscape) — jamais une place bloquée pour la session
+local activeEscapes: { [string]: number } = {}
+local ESCAPE_SECONDS = StateTimeouts.seconds("escape")
 local refused: { [Player]: { [number]: boolean } } = {} -- propriétaire → boopeurs refusés
 local boopedBy: { [Player]: { [number]: boolean } } = {} -- propriétaire → boopeurs de la session
 local pendingRush: { [Player]: boolean } = {}
@@ -329,7 +333,7 @@ local function boopCtx(booper: Player, owner: Player, uid: string, now: number):
 	local def = if rec then Species.ById[rec.s] else nil
 	local atFence = slot ~= 0 and reason == "rush" and index ~= nil
 	local eligible = rec ~= nil
-		and not activeEscapes[escapeKey(owner, uid)]
+		and activeEscapes[escapeKey(owner, uid)] == nil
 		and RushRules.fenceEligible(rec, fenceCtx(owner), uid)
 	local distance = math.huge
 	local pos = MoveCheck.lastValid(booper)
@@ -426,7 +430,7 @@ local function boopSucceeded(booper: Player, hold: Hold, now: number)
 		boopedBy[owner] = by
 	end
 	by[booper.UserId] = true
-	activeEscapes[escapeKey(owner, hold.uid)] = true
+	activeEscapes[escapeKey(owner, hold.uid)] = now
 	-- premier bond à l'opposé du boopeur : direction boopeur → squishy à la clôture
 	local angle = 0
 	local pos = MoveCheck.lastValid(booper)
@@ -733,6 +737,12 @@ function RushService.step(now: number, actors: { [Player]: Types.TickActor })
 	local _ = actors
 	if not finite(now) then
 		return
+	end
+	-- places de fuite au-delà du délai d'une fuite : la fuite n'existe plus (ou n'a jamais existé)
+	for key, at in activeEscapes do
+		if not finite(at) or now - at > ESCAPE_SECONDS then
+			activeEscapes[key] = nil
+		end
 	end
 	Guard.try("rush:fences", stepFences, now)
 	Guard.try("rush:holds", stepHolds, now)

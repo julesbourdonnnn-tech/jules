@@ -25,66 +25,72 @@ return function(T)
 	end
 
 	describe("EventService (revue) › EventState", function()
-		it("une arrivée (RequestWorld, PlayerReady) n'efface jamais l'envoi en attente pour les autres", function()
-			-- pendant un Rush : une entrée de la file attend la fin du Rush + 20 s (aucun départ au tick)
-			local w = Brains.boot(Harness, { t0 = H0 + 310 })
-			local a = Brains.join(w, 1)
-			local b = Brains.join(w, 2)
-			Brains.frames(w, 5)
-			expect(#lastState(w, a).spectacle.queue).toBe(0)
-			w.Event.enqueueSpectacle("splorch", a.UserId) -- changement hors du tick
-			w.Signals.WorldRequested:Fire(b) -- état envoyé à b seul
-			Brains.frames(w, 2)
-			local st = lastState(w, a)
-			expect(#st.spectacle.queue).toBe(1)
-			expect(st.spectacle.queue[1].userId).toBe(a.UserId)
-			-- même chose avec l'arrivée d'un joueur (PlayerReady)
-			w.Event.cancelSpectacle(a.UserId)
-			Brains.frames(w, 2)
-			expect(#lastState(w, a).spectacle.queue).toBe(0)
-			w.Event.enqueueSpectacle("splorch", b.UserId)
-			local c = Brains.join(w, 3)
-			Brains.frames(w, 2)
-			expect(#lastState(w, a).spectacle.queue).toBe(1)
-			expect(#lastState(w, c).spectacle.queue).toBe(1)
-			clean(w)
-		end)
+		it(
+			"une arrivée (RequestWorld, PlayerReady) n'efface jamais l'envoi en attente pour les autres",
+			function()
+				-- pendant un Rush : une entrée de la file attend la fin du Rush + 20 s (aucun départ au tick)
+				local w = Brains.boot(Harness, { t0 = H0 + 310 })
+				local a = Brains.join(w, 1)
+				local b = Brains.join(w, 2)
+				Brains.frames(w, 5)
+				expect(#lastState(w, a).spectacle.queue).toBe(0)
+				w.Event.enqueueSpectacle("splorch", a.UserId) -- changement hors du tick
+				w.Signals.WorldRequested:Fire(b) -- état envoyé à b seul
+				Brains.frames(w, 2)
+				local st = lastState(w, a)
+				expect(#st.spectacle.queue).toBe(1)
+				expect(st.spectacle.queue[1].userId).toBe(a.UserId)
+				-- même chose avec l'arrivée d'un joueur (PlayerReady)
+				w.Event.cancelSpectacle(a.UserId)
+				Brains.frames(w, 2)
+				expect(#lastState(w, a).spectacle.queue).toBe(0)
+				w.Event.enqueueSpectacle("splorch", b.UserId)
+				local c = Brains.join(w, 3)
+				Brains.frames(w, 2)
+				expect(#lastState(w, a).spectacle.queue).toBe(1)
+				expect(#lastState(w, c).spectacle.queue).toBe(1)
+				clean(w)
+			end
+		)
 	end)
 
 	describe("EventService (revue) › phases des fêtes", function()
-		it("fêtes qui se chevauchent : chaque « party:start » a exactement une « party:end » du même index", function()
-			local w = Brains.boot(Harness, { t0 = H0 + 60 })
-			local a = Brains.join(w, 1)
-			w.meta.admins[1] = true
-			Brains.frames(w, 2)
-			local starts, ends = {}, {}
-			w.Signals.EventPhase:Connect(function(kind, phase, index)
-				if kind == "party" and phase == "start" then
-					table.insert(starts, index)
-				elseif kind == "party" and phase == "end" then
-					table.insert(ends, index)
+		it(
+			"fêtes qui se chevauchent : chaque « party:start » a exactement une « party:end » du même index",
+			function()
+				local w = Brains.boot(Harness, { t0 = H0 + 60 })
+				local a = Brains.join(w, 1)
+				w.meta.admins[1] = true
+				Brains.frames(w, 2)
+				local starts, ends = {}, {}
+				w.Signals.EventPhase:Connect(function(kind, phase, index)
+					if kind == "party" and phase == "start" then
+						table.insert(starts, index)
+					elseif kind == "party" and phase == "end" then
+						table.insert(ends, index)
+					end
+				end)
+				-- fête d'administrateur, puis une Squish Party payée par-dessus (l'administrateur passe en pause)
+				w.h:fireServer("ReplicatedStorage.Remotes.AdminCommand", a, "party", "")
+				Brains.frames(w, 2)
+				w.Event.startSquishParty(a, false)
+				Brains.frames(w, 2)
+				expect(#starts).toBe(2)
+				-- la Squish Party finit (600 s), puis la fête d'administrateur reprend et finit
+				w.Clock.freeze(w.Clock.now() + 601)
+				Brains.frames(w, 2)
+				w.Clock.freeze(w.Clock.now() + 601)
+				Brains.frames(w, 2)
+				expect(w.Event.state().boost.kind).toBe("")
+				table.sort(starts)
+				table.sort(ends)
+				expect(#ends).toBe(#starts)
+				for i = 1, #starts do
+					expect(ends[i]).toBe(starts[i])
 				end
-			end)
-			-- fête d'administrateur, puis une Squish Party payée par-dessus (l'administrateur passe en pause)
-			w.h:fireServer("ReplicatedStorage.Remotes.AdminCommand", a, "party", "")
-			Brains.frames(w, 2)
-			w.Event.startSquishParty(a, false)
-			Brains.frames(w, 2)
-			expect(#starts).toBe(2)
-			-- la Squish Party finit (600 s), puis la fête d'administrateur reprend et finit
-			w.Clock.freeze(w.Clock.now() + 601)
-			Brains.frames(w, 2)
-			w.Clock.freeze(w.Clock.now() + 601)
-			Brains.frames(w, 2)
-			expect(w.Event.state().boost.kind).toBe("")
-			table.sort(starts)
-			table.sort(ends)
-			expect(#ends).toBe(#starts)
-			for i = 1, #starts do
-				expect(ends[i]).toBe(starts[i])
+				clean(w)
 			end
-			clean(w)
-		end)
+		)
 	end)
 
 	describe("EventService (revue) › Squish Party payée, jamais rendue deux fois", function()

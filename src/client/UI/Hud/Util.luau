@@ -369,6 +369,8 @@ export type ButtonProps = {
 	onActivate: () -> (),
 }
 
+local buttonGlyphs: { [Instance]: Glyph.Handle } = setmetatable({}, { __mode = "k" }) :: any
+
 -- Bouton de fenêtre (cartes) : sélectionnable à la manette (cadre de sélection commun de UI/Root),
 -- retour d'appui du GDD §9.2 (0,92 à l'appui, 1,05 puis 1 au relâchement, 1,05 sélectionné ; un seul
 -- UIScale « JuiceScale » par objet), libellé ≥ 28 px TV, glyphe facultatif
@@ -390,7 +392,7 @@ function Util.button(p: ButtonProps): TextButton
 	local glyphW = 0
 	if p.glyph then
 		local size = Layout.Glyph.Min
-		Glyph.new(b, p.glyph, {
+		buttonGlyphs[b] = Glyph.new(b, p.glyph, {
 			name = "Glyph",
 			size = size,
 			position = UDim2.new(0, 14, 0.5, 0),
@@ -450,6 +452,11 @@ function Util.menuKey(): Enum.KeyCode
 		end
 	end
 	return Enum.KeyCode.M
+end
+
+-- Glyphe d'un bouton créé avec `glyph` (nil sinon)
+function Util.buttonGlyph(b: Instance): Glyph.Handle?
+	return buttonGlyphs[b]
 end
 
 -- Libellé d'un bouton (specs)

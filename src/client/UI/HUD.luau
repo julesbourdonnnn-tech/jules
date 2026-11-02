@@ -38,6 +38,7 @@ local Net = require(Shared.Net)
 local Clock = require(Shared.Util.Clock)
 local Layout = require(Shared.Config.Layout)
 local Events = require(Shared.Config.Events)
+local Balance = require(Shared.Config.Balance)
 local Species = require(Shared.Config.Species)
 local Rarities = require(Shared.Config.Rarities)
 local Formulas = require(Shared.Logic.Formulas)
@@ -73,9 +74,8 @@ local C = Layout.HudContent
 local DISPLAY_ORDER = 10
 local REFRESH = 0.1 -- s entre deux mises à jour des textes minutés (comptes à rebours)
 local COIN_SOUND_GAP = 1 / 8 -- s : son Coin 8 fois par seconde au plus
-local LEAP_COOLDOWN = 4 -- s (Balance.Leap.Cooldown) : balayage de l'indicateur Bondir
 local CLAP_SECONDS = C.specialChip.clapRing -- 8 s
-local HOLD_GRACE = 0.5 -- s : un maintien dont endsAt + 0,5 s est passé est retiré (docs/04 §10.5)
+local HOLD_GRACE = Events.Rush.HoldGrace -- s : un maintien dont endsAt + grâce est passé est retiré
 local EVENT_COLORS: { [string]: Color3 } = {
 	rush = Color3.fromRGB(255, 120, 180),
 	mega = Color3.fromRGB(255, 200, 60),
@@ -1203,7 +1203,8 @@ local function updateLeap(now: number)
 		Util.num(Util.safe("ChaseController.cooldownLeft", 0, ChaseController.cooldownLeft), 0, 0, 60)
 	local cooling = left > 0
 	local sweep = refs.leapSweep :: Frame
-	sweep.Size = UDim2.fromScale(1, math.clamp(left / LEAP_COOLDOWN, 0, 1))
+	local cooldown = math.max(0.1, Util.num(Balance.Leap.Cooldown, 4, 0.1, 60))
+	sweep.Size = UDim2.fromScale(1, math.clamp(left / cooldown, 0, 1))
 	if leapWasCooling and not cooling and f.Visible and not Prefs.reducedMotion() then
 		Juice.pulse(f, 1.15) -- prêt
 	end
@@ -1359,6 +1360,8 @@ local function onCelebrate(payload: any)
 		if gui then
 			gui.Enabled = not photo
 		end
+		-- vignettes : aucun message à l'écran pendant le mode photo (ils attendent, puis s'affichent)
+		Messages.hold("photo", photo)
 	elseif COIN_KINDS[kind] then
 		refreshAcc = math.huge -- revenu et suivi recalculés à l'image suivante
 	end

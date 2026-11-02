@@ -10,8 +10,9 @@
 --     fuites du Rush (Signals.Booped), démonstration de Big Plop. Fin de chaque créature par son heure.
 --   * Bond (Leap(dirX, dirZ, tClient)) : recharge 4 s (horloge du serveur), direction bornée, pas en
 --     portage, canAct au départ ; tClient ramené dans [maintenant − ClientPast ; maintenant] ;
---     MoveCheck.grant (12 studs sur 0,35 s, rétroactif, un par 4 s) ; atterrissage
---     LeapRules.landing(MoveCheck.positionAt(tClient), dir) ; capture tentée à tClient + 0,35 s.
+--     MoveCheck.grant (12 studs sur 0,35 s, rétroactif, un par 4 s) ; atterrissage LeapRules.landing
+--     depuis la position reçue à l'ARRIVÉE du message (MoveCheck.positionAt(arrivée) : celle du client
+--     à tClient, comme pour Catch ; note d'intégration 1) ; capture tentée à tClient + 0,35 s.
 --   * Capture (Catch(id, tClient)) : mise en file, vérifiée au tick suivant dans l'ordre d'arrivée, à SON
 --     instant : SeededPath.pos(tClient) contre la position validée du joueur interpolée dans l'anneau de
 --     MoveCheck.positionAt à l'ARRIVÉE du message (ses positions et son message font le même trajet :
@@ -104,7 +105,16 @@ type Creature = {
 	lastPos: Vector3, -- dernière position calculée (récompense « de près » d'un Golden raté)
 }
 
-type Leap = { at: number, landing: Vector3, rootOffset: number, startedAt: number }
+-- landing : point d'atterrissage provisoire (position validée à la réception) ; recalculé à l'échéance
+-- depuis la position reçue à l'ARRIVÉE du message (celle du client à tClient : même trajet réseau)
+type Leap = {
+	at: number,
+	landing: Vector3,
+	dir: Vector3,
+	arrival: number,
+	rootOffset: number,
+	startedAt: number,
+}
 type QueuedCatch = { player: Player, id: number, t: number, arrival: number }
 type Outbox = { spawns: { Types.ChaseSpawn }, finishes: { Types.ChaseFinish } }
 type WildPlan = {
@@ -811,6 +821,10 @@ local function stepLeaps(now: number)
 		if now >= leap.at then
 			leaps[player] = nil
 			if player.Parent ~= nil then
+				local from = MoveCheck.positionAt(player, leap.arrival)
+				if from then
+					leap.landing = LeapRules.landing(from, leap.dir)
+				end
 				local best: Creature? = nil
 				local bestDist = math.huge
 				for _, c in creatures do
@@ -1165,10 +1179,14 @@ local function onLeap(player: Player, dirX: number, dirZ: number, tClient: numbe
 		return false
 	end
 	leapAt[player] = now
-	local from = MoveCheck.positionAt(player, t) or actor.pos
+	-- départ du bond : position reçue à l'arrivée du message (latence compensée, comme Catch) ; repli
+	-- provisoire : position à tClient, sinon dernière position validée
+	local from = MoveCheck.positionAt(player, now) or MoveCheck.positionAt(player, t) or actor.pos
 	leaps[player] = {
 		at = t + LEAP.Duration,
 		landing = LeapRules.landing(from, dir),
+		dir = dir,
+		arrival = now,
 		rootOffset = actor.rootOffset,
 		startedAt = t,
 	}

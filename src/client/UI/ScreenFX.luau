@@ -39,6 +39,9 @@ local GLOW_WIDTH = 160 -- px TV de la lueur de chaque bord
 local ARROW = Layout.HudContent.edgeArrow
 local DISPLAY_ORDER = 8
 local ARROW_PULSE = 0.8 -- s
+-- studs : deux demandes plus proches visent la même créature (flèche automatique + flèche d'un autre
+-- module) ; seule la plus prioritaire est dessinée, la place libre va à la cible suivante
+local SAME_TARGET = 3
 
 -- Priorité des sortes de flèches (plus petit = plus prioritaire, GDD v1.3 §10.2)
 local ARROW_PRIORITY: { [string]: number } = {
@@ -320,6 +323,24 @@ local function stepArrows(dt: number)
 		end
 		return a.id < b.id
 	end)
+	-- une seule flèche par cible : les doublons (même position) sont retirés, dans l'ordre de priorité
+	local distinct: { Candidate } = {}
+	for _, c in candidates do
+		local dup = false
+		for _, kept in distinct do
+			if (kept.req.pos - c.req.pos).Magnitude <= SAME_TARGET then
+				dup = true
+				break
+			end
+		end
+		if not dup then
+			table.insert(distinct, c)
+			if #distinct >= #arrowViews then
+				break
+			end
+		end
+	end
+	candidates = distinct
 	local reduced = Prefs.reducedMotion()
 	pulseClock = (pulseClock + dt) % ARROW_PULSE
 	local pulse = if reduced then 1 else 1 + 0.08 * math.sin(2 * math.pi * pulseClock / ARROW_PULSE)

@@ -60,7 +60,16 @@ function Messages.push(text: string, kind: string?)
 	if type(text) ~= "string" or text == "" then
 		return
 	end
-	local value = if #text > TEXT_MAX then string.sub(text, 1, TEXT_MAX) else text
+	local value = text
+	if #value > TEXT_MAX then
+		-- coupe sur un caractère entier (accents, ★, ♥) : jamais un UTF-8 cassé dans le libellé
+		local ok, start = pcall(utf8.offset, value, 0, TEXT_MAX + 1)
+		local cut = if ok and type(start) == "number" then start - 1 else TEXT_MAX
+		value = string.sub(value, 1, cut)
+		if utf8.len(value) == nil then
+			value = (string.gsub(value, "[\128-\255]", ""))
+		end
+	end
 	local tone = if type(kind) == "string" then kind else "info"
 	for _, item in queue do
 		if item.text == value then

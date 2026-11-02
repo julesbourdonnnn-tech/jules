@@ -349,6 +349,21 @@ local function onMenu(_name: string, state: Enum.UserInputState, _input: any): E
 		return Enum.ContextActionResult.Sink
 	end
 	endHold()
+	-- carte rouverte à la souris, sans menu dessous : △ / M « ferment tout » (GDD §10.4), jamais un
+	-- menu ouvert par-dessus la carte
+	local top = Util.safe("FocusGuard.top", nil, FocusGuard.top)
+	if
+		type(top) == "table"
+		and type(top.name) == "string"
+		and string.sub(top.name, 1, 5) == "card:"
+		and top.blocking ~= true
+		and not Util.safe("FocusGuard.isOpen", false, FocusGuard.isOpen, "menu")
+	then
+		AudioController.play("Back")
+		Util.safe("FocusGuard.closeNow", nil, FocusGuard.closeNow, top.name)
+		fire("menu")
+		return Enum.ContextActionResult.Sink
+	end
 	Util.safe("PanelController.toggleMenu", nil, PanelController.toggleMenu)
 	fire("menu")
 	return Enum.ContextActionResult.Sink

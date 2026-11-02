@@ -45,7 +45,7 @@ local Prompt = {}
 Prompt.HoldEnded = Signal.new() :: Signal.Signal<string, boolean>
 
 local P = Layout.Prompt
-local HOLD_GRACE = 0.5
+local HOLD_GRACE = Quests.Feed.HoldGrace -- s (= Events.Rush.HoldGrace) : fin au plus tard après endsAt
 local MAX_HOLD = 10 -- s : jamais un anneau plus long (heure de fin abîmée)
 local STUDS_ABOVE = 4 -- studs au-dessus du centre de la cible
 local MAX_DISTANCE = 80 -- studs : au-delà, aucune invite (la cible est de toute façon plus proche)

@@ -59,6 +59,7 @@ type Entry = {
 	glyphSize: number,
 	w: number, -- px TV de la plaque
 	h: number,
+	watch: RBXScriptConnection?, -- objet porteur détruit : étiquette rendue à la réserve
 }
 
 local WorldText = {}
@@ -221,9 +222,22 @@ local function build(kind: Kind): Entry
 		glyphSize = Layout.WorldText.Glyph,
 		w = MIN_WIDTH,
 		h = 0,
+		watch = nil,
 	}
 	gui.Destroying:Connect(function()
+		-- détruite au lieu d'être rendue (ou dossier vidé) : ni vivante ni réutilisée
 		live[gui] = nil
+		local w = e.watch
+		e.watch = nil
+		if w then
+			w:Disconnect()
+		end
+		local list = pool[kind]
+		for i = #list, 1, -1 do
+			if list[i] == e then
+				table.remove(list, i)
+			end
+		end
 	end)
 	return e
 end
@@ -249,6 +263,20 @@ function WorldText.create(adornee: Instance, options: Options): BillboardGui
 		gui.Name = opts.name
 	end
 	gui.Adornee = if typeof(adornee) == "Instance" then adornee else nil
+	if e.watch then
+		(e.watch :: RBXScriptConnection):Disconnect()
+		e.watch = nil
+	end
+	if typeof(adornee) == "Instance" then
+		-- l'appelant détruit l'objet sans release (dalle retirée, « +N » fini, ranch remis à zéro) :
+		-- l'étiquette revient quand même à la réserve (aucune fuite sur une longue session)
+		local owner = adornee
+		e.watch = owner.Destroying:Connect(function()
+			if live[gui] == e and gui.Adornee == owner then
+				WorldText.release(gui)
+			end
+		end)
+	end
 	gui.MaxDistance = Util.num(opts.maxDistance, Layout.WorldText.TestDistance, 1, 10000)
 	gui.StudsOffsetWorldSpace = if typeof(opts.studsOffset) == "Vector3"
 		then opts.studsOffset
@@ -417,6 +445,11 @@ function WorldText.release(gui: BillboardGui)
 		return
 	end
 	live[gui] = nil
+	local w = e.watch
+	e.watch = nil
+	if w then
+		w:Disconnect()
+	end
 	if e.glyph then
 		e.glyph:destroy()
 		e.glyph = nil

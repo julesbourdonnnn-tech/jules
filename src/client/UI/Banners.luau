@@ -73,6 +73,7 @@ local queue: { Entry } = {}
 local current: Entry? = nil
 local currentUntil = 0
 local quiet = false
+local photo = false -- mode photo (vignettes) : aucune bannière à l'écran, la file attend
 local seq = 0
 local started = false
 local frame: Frame? = nil
@@ -239,6 +240,12 @@ local function step(now: number)
 			table.remove(queue, i)
 		end
 	end
+	if photo then
+		if current ~= nil then
+			hideCurrent()
+		end
+		return
+	end
 	local cur = current
 	if cur ~= nil then
 		if cur.lineUntil > 0 and lineLabel then
@@ -395,6 +402,12 @@ function Banners.Start()
 	started = true
 	build()
 	Net.event("Banner").OnClientEvent:Connect(onBanner)
+	Net.event("Celebrate").OnClientEvent:Connect(function(payload: any)
+		if type(payload) == "table" and payload.kind == "photo" and type(payload.data) == "table" then
+			photo = payload.data.on == true
+			step(Clock.now())
+		end
+	end)
 	RunService.Heartbeat:Connect(function(dt: number)
 		local now = Clock.now()
 		checkAcc += Util.num(dt, 0, 0, 1)

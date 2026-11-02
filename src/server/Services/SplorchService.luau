@@ -54,6 +54,12 @@ local SPLORCH = Balance.Splorch
 local CLAP_WINDOW = StateTimeouts.seconds("clapWindow")
 local HARD_CUT = Events.Spectacles.splorch.hardCut
 local SNACK_LOOP_LEVEL = Balance.Tiles.snack.Levels - 1 -- Tapis 12 (niveau 11 → 12)
+-- Borne absolue d'une attente tenue par EventService : coupure dure de la tête de file, puis un grand
+-- spectacle par place (16 Grands Splorch et une danse, écart compris) et le dernier spectacle
+local MAX_SPECTACLES = 17
+local QUEUE_LIMIT = Events.SplorchQueueHardCut
+	+ MAX_SPECTACLES * (Events.SpectacleGap + StateTimeouts.seconds("spectacle"))
+	+ StateTimeouts.seconds("spectacle")
 
 type Queued = { flyer: string, at: number, film: boolean }
 type Show = {
@@ -379,19 +385,26 @@ function SplorchService.step(now: number)
 		local show = shows[hero]
 		if show then
 			if not show.burst and now >= show.burstAt then
-				Guard.try("splorch:burst", burst, show, now)
+				local ok = Guard.try("splorch:burst", burst, show, now)
 				show.burst = true
+				-- éclatement en erreur (attrapée) : l'attente du flyer est levée quand même, jamais un
+				-- squishy bloqué « en attente » pour la session
+				if not ok and SquishyService.waiting(hero) ~= nil then
+					Guard.try("splorch:waiting", SquishyService.setWaiting, hero, nil)
+				end
 			end
 			if now >= math.min(show.endsAt, show.startedAt + HARD_CUT) then
 				shows[hero] = nil
 			end
 		end
 	end
-	-- filet : attente plus longue que la file et le spectacle réunis (coupure, panne) → attente rendue,
-	-- place annulée, rien remis à zéro
-	local limit = StateTimeouts.seconds("splorchQueue") + StateTimeouts.seconds("spectacle")
+	-- filet : place perdue par EventService (coupure, panne : plus dans sa file, spectacle jamais lancé)
+	-- ou attente au-delà de la borne absolue → attente rendue, place annulée, rien remis à zéro. Une
+	-- place encore tenue par EventService n'est jamais annulée ici (sa coupure dure la fait partir)
 	for player, entry in queued do
-		if now - entry.at > limit then
+		local held = Guard.call("splorch:queuedStartAt", EventService.queuedStartAt, nil, player.UserId)
+			~= nil
+		if (not held and now > entry.at) or now - entry.at > QUEUE_LIMIT then
 			queued[player] = nil
 			Guard.try("splorch:waiting", SquishyService.setWaiting, player, nil)
 			EventService.cancelSpectacle(player.UserId)

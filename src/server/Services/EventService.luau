@@ -92,7 +92,16 @@ type QueueEntry = {
 	enqueuedAt: number,
 	startAt: number,
 }
-type Segment = { userId: number, name: string, showName: boolean, seconds: number, startedAt: number? }
+-- refunded : acheteur parti puis revenu sur ce serveur (ProductService lui a rendu ces secondes à son
+-- départ) : le segment se joue jusqu'au bout pour tous, mais ne compte plus dans partyUnplayed
+type Segment = {
+	userId: number,
+	name: string,
+	showName: boolean,
+	seconds: number,
+	startedAt: number?,
+	refunded: boolean?,
+}
 
 local lastStepAt: number? = nil
 local fired: { [string]: number } = {} -- "sorte:phase" → dernier index émis
@@ -139,6 +148,8 @@ local adminGoldenCount = 0
 local wobbleRemaining = 0
 local boostApplied = { kind = "", untilT = 0 }
 local partyCount = 0
+-- index de « party:start » de chaque fête (chacune finit avec SON index, même chevauchée)
+local partyIndex = { squish = 0, admin = 0, wobble = 0 }
 
 local queue: { QueueEntry } = {}
 local current: Types.SpectacleCurrent? = nil
@@ -281,10 +292,14 @@ local function addPoints(points: number)
 end
 
 local function startWobbleParty()
+	local running = wobbleRemaining > 0
 	wobbleRemaining = GAUGE.PartyDuration
-	partyCount += 1
+	if not running then
+		partyCount += 1
+		partyIndex.wobble = partyCount
+		fire("party", "start", partyCount)
+	end
 	Notify.banner("wobbleParty", { userId = 0, name = "" }, nil)
-	fire("party", "start", partyCount)
 	dirty = true
 end
 
@@ -453,7 +468,7 @@ local function stepBoosts(now: number, dt: number)
 				table.remove(squish, 1)
 				dirty = true
 				if #squish == 0 then
-					fire("party", "end", partyCount)
+					fire("party", "end", partyIndex.squish)
 				else
 					squish[1].startedAt = now - left
 				end
@@ -465,7 +480,7 @@ local function stepBoosts(now: number, dt: number)
 			if adminRemaining <= 1e-9 then
 				adminRemaining = 0
 				dirty = true
-				fire("party", "end", partyCount)
+				fire("party", "end", partyIndex.admin)
 			end
 		elseif wobbleRemaining > 0 then
 			local used = math.min(left, wobbleRemaining)
@@ -478,7 +493,7 @@ local function stepBoosts(now: number, dt: number)
 				gauge.restUntil = now - left + GAUGE.RestSeconds
 				gauge.danceQueued = false
 				dirty = true
-				fire("party", "end", partyCount)
+				fire("party", "end", partyIndex.wobble)
 			end
 		else
 			break
@@ -504,7 +519,12 @@ local function stepBoosts(now: number, dt: number)
 end
 
 local function startAdminParty(now: number)
-	partyCount += 1
+	-- deuxième commande pendant la fête d'administrateur : durée relancée, même fête (même index)
+	if adminRemaining <= 0 then
+		partyCount += 1
+		partyIndex.admin = partyCount
+		fire("party", "start", partyCount)
+	end
 	adminRemaining = PARTY.AdminBoostDuration
 	adminStartedAt = now
 	adminGoldens = {}
@@ -513,7 +533,6 @@ local function startAdminParty(now: number)
 		table.insert(adminGoldens, now + i * PARTY.AdminGoldenWindow / count)
 	end
 	Notify.banner("adminParty", { userId = 0, name = "" }, nil)
-	fire("party", "start", partyCount)
 	dirty = true
 end
 
@@ -861,11 +880,10 @@ local function buildState(now: number): Types.EventStatePayload
 	}
 end
 
+-- `only` : envoi à ce seul joueur (arrivée, RequestWorld) ; l'envoi en attente pour les autres reste
+-- dû (drapeaux intacts)
 local function sendState(now: number, only: Player?)
 	local state = buildState(now)
-	dirty = false
-	gaugeDirty = false
-	nextGaugeSendAt = now + GAUGE_SEND
 	local remote = Net.event("EventState")
 	if only then
 		if only.Parent ~= nil then
@@ -873,6 +891,9 @@ local function sendState(now: number, only: Player?)
 		end
 		return
 	end
+	dirty = false
+	gaugeDirty = false
+	nextGaugeSendAt = now + GAUGE_SEND
 	for _, player in readyPlayers() do
 		remote:FireClient(player, state)
 	end
@@ -1051,6 +1072,16 @@ local function connectGauge()
 	end)
 end
 
+-- Retour d'un acheteur sur ce serveur : ses segments encore en file datent de sa session précédente,
+-- rendus à son départ (ProductService, sauvegarde de départ) : ils ne lui sont plus dus
+local function onPlayerAdded(player: Player)
+	for _, seg in squish do
+		if seg.userId == player.UserId then
+			seg.refunded = true
+		end
+	end
+end
+
 local function onPlayerRemoving(player: Player)
 	EventService.cancelSpectacle(player.UserId)
 	moonPresence[player] = nil
@@ -1076,6 +1107,9 @@ function EventService.Start()
 	end)
 	Signals.WorldRequested:Connect(function(player: Player)
 		Guard.try("event:world", sendState, Clock.now(), player)
+	end)
+	Players.PlayerAdded:Connect(function(player: Player)
+		Guard.try("event:join", onPlayerAdded, player)
 	end)
 	Players.PlayerRemoving:Connect(function(player: Player)
 		Guard.try("event:leave", onPlayerRemoving, player)
@@ -1230,6 +1264,7 @@ function EventService.startSquishParty(buyer: Player, showName: boolean): boolea
 	})
 	if first then
 		partyCount += 1
+		partyIndex.squish = partyCount
 		fire("party", "start", partyCount)
 	end
 	if showName == true and name ~= "" then
@@ -1245,7 +1280,7 @@ end
 function EventService.partyUnplayed(userId: number): number
 	local total = 0
 	for _, seg in squish do
-		if seg.userId == userId then
+		if seg.userId == userId and seg.refunded ~= true then
 			total += math.clamp(seg.seconds, 0, PARTY.SquishPartyDuration)
 		end
 	end
