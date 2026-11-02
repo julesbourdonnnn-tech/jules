@@ -22,6 +22,15 @@
 --
 -- Approximations assumées : pas de mesure du texte (AutomaticSize des textes, TextScaled), pas de
 -- UIFlexItem, pas de rotation ; la fonction de score n'est pas celle, non documentée, de Roblox.
+--
+-- Mode fidèle (outil d'écrans tools/screens, tests/harness/TextFit et Screens ; repris de Comet Conga) :
+--   Layout.apply(h, { fidelity = true, measureText = TextFit.measureAuto })
+-- ajoute les tailles automatiques IMBRIQUÉES (un cadre AutomaticSize dans une liste pousse les
+-- suivants, un cadre AutomaticSize grandit avec ses enfants AutomaticSize) et l'AutomaticSize des
+-- textes (mesurés par measureText(obj, largeurMax) → largeur, hauteur). Sans options, rien ne
+-- change pour les specs existantes.
+--   Layout.applyRoot(root, w, h, opts) : même calcul pour une interface hors de PlayerGui
+-- (BillboardGui à sa taille en pixels), origine (0, 0).
 
 local roblox = require("@lune/roblox")
 
@@ -34,6 +43,9 @@ Layout.GUI_INSET = 58 -- px : barre Roblox (GuiService:GetGuiInset simulé)
 
 -- rects[obj] = { x, y, w, h (px d'écran), k (px d'écran par px de mise en page), clip, gui }
 local rects = setmetatable({}, { __mode = "k" })
+
+-- options du mode fidèle pendant un Layout.apply (nil : comportement historique)
+local fidelity = nil
 
 local DIRECTIONS = {
 	Up = Vector2.new(0, -1),
@@ -154,6 +166,8 @@ end
 
 -- Dispositions -----------------------------------------------------------------------------------
 
+local autoSizeOf -- (obj, w, h) → w, h : taille automatique (mode fidèle), définie plus bas
+
 local function listSlots(layout, kids, cx, cy, cw, ch)
 	local slots = {}
 	local vertical = layout.FillDirection ~= Enum.FillDirection.Horizontal
@@ -162,6 +176,9 @@ local function listSlots(layout, kids, cx, cy, cw, ch)
 	local total = 0
 	for i, kid in list do
 		local w, h = constrain(kid, udim2(kid.Size, cw, ch))
+		if fidelity then
+			w, h = autoSizeOf(kid, w, h)
+		end
 		slots[kid] = { w = w, h = h }
 		total += (if vertical then h else w) + (if i > 1 then gap else 0)
 	end
@@ -237,11 +254,16 @@ local function gridSlots(layout, kids, cx, cy, cw, ch)
 	return slots, extent
 end
 
+local isTextClass = { TextLabel = true, TextButton = true, TextBox = true }
+
 -- Taille automatique d'un conteneur à liste ou grille (le texte n'est pas mesuré)
 local function autoSize(obj, w, h)
 	local auto = obj.AutomaticSize
 	if auto == nil or auto == Enum.AutomaticSize.None then
 		return w, h
+	end
+	if fidelity then
+		return autoSizeOf(obj, w, h)
 	end
 	local list = childOfClass(obj, "UIListLayout")
 	local grid = childOfClass(obj, "UIGridLayout")
@@ -270,6 +292,70 @@ local function autoSize(obj, w, h)
 	end
 	if auto == Enum.AutomaticSize.Y or auto == Enum.AutomaticSize.XY then
 		h = math.max(h, extentH + pt + pb)
+	end
+	return w, h
+end
+
+-- Mode fidèle : tailles automatiques imbriquées et textes mesurés (Roblox les résout de bas en haut)
+autoSizeOf = function(obj, w, h)
+	local auto = obj.AutomaticSize
+	if auto == nil or auto == Enum.AutomaticSize.None then
+		return w, h
+	end
+	local growX = auto == Enum.AutomaticSize.X or auto == Enum.AutomaticSize.XY
+	local growY = auto == Enum.AutomaticSize.Y or auto == Enum.AutomaticSize.XY
+	local pl, pt, pr, pb = paddingOf(obj, w, h)
+	local innerW, innerH = w - pl - pr, h - pt - pb
+	local extentW, extentH = 0, 0
+	if isTextClass[obj.ClassName] and fidelity.measureText then
+		local tw, th = fidelity.measureText(obj, if growX then nil else math.max(0, innerW))
+		extentW, extentH = tw, th
+	end
+	local list = childOfClass(obj, "UIListLayout")
+	local grid = childOfClass(obj, "UIGridLayout")
+	local kids = guiChildren(obj)
+	if list then
+		local slots, total = listSlots(list, kids, 0, 0, innerW, innerH)
+		local cross = 0
+		for _, slot in slots do
+			cross = math.max(
+				cross,
+				if list.FillDirection == Enum.FillDirection.Horizontal then slot.h else slot.w
+			)
+		end
+		if list.FillDirection == Enum.FillDirection.Horizontal then
+			extentW, extentH = math.max(extentW, total), math.max(extentH, cross)
+		else
+			extentW, extentH = math.max(extentW, cross), math.max(extentH, total)
+		end
+	elseif grid then
+		local _, extent = gridSlots(grid, kids, 0, 0, innerW, innerH)
+		extentH = math.max(extentH, extent)
+	else
+		for _, kid in kids do
+			local kw, kh = constrain(kid, udim2(kid.Size, innerW, innerH))
+			kw, kh = autoSizeOf(kid, kw, kh)
+			local pos = kid.Position
+			local anchor = kid.AnchorPoint or Vector2.zero
+			local x0 = (if pos then pos.X.Offset + innerW * pos.X.Scale else 0) - anchor.X * kw
+			local y0 = (if pos then pos.Y.Offset + innerH * pos.Y.Scale else 0) - anchor.Y * kh
+			extentW = math.max(extentW, x0 + kw)
+			extentH = math.max(extentH, y0 + kh)
+		end
+	end
+	if growX then
+		w = math.max(w, extentW + pl + pr)
+	end
+	if growY then
+		h = math.max(h, extentH + pt + pb)
+	end
+	-- UISizeConstraint borne aussi la taille automatique
+	local sc = childOfClass(obj, "UISizeConstraint")
+	if sc then
+		local mn = sc.MinSize or Vector2.zero
+		local mx = sc.MaxSize or Vector2.new(math.huge, math.huge)
+		w = math.clamp(w, mn.X, math.max(mn.X, mx.X))
+		h = math.clamp(h, mn.Y, math.max(mn.Y, mx.Y))
 	end
 	return w, h
 end
@@ -349,12 +435,14 @@ layoutChildren = function(obj, x, y, w, h, T, gui, clip)
 end
 
 -- Calcule la mise en page de toutes les interfaces activées de PlayerGui (écran h.viewport)
-function Layout.apply(h)
+-- opts (facultatif) : { fidelity = true, measureText = function(obj, maxWidth) → w, h } (mode fidèle)
+function Layout.apply(h, opts)
 	local player = h.localPlayer
 	local playerGui = player and player:FindFirstChildOfClass("PlayerGui")
 	if playerGui == nil then
 		return
 	end
+	fidelity = if opts and opts.fidelity then opts else nil
 	local camera = h.game.Workspace.CurrentCamera
 	local size = (camera and camera.ViewportSize) or h.viewport
 	for _, gui in playerGui:GetChildren() do
@@ -366,6 +454,32 @@ function Layout.apply(h)
 			setAbsolute(gui, "AbsoluteSize", Vector2.new(size.X, size.Y - top))
 			layoutChildren(gui, 0, top, size.X, size.Y - top, { ox = 0, oy = 0, k = 1 }, info, nil)
 		end
+	end
+	fidelity = nil
+end
+
+-- Mise en page d'une interface quelconque (BillboardGui, SurfaceGui…) de w × h px, origine (0, 0) ;
+-- mêmes options que Layout.apply. AbsolutePosition / AbsoluteSize ne sont pas écrits (interfaces du
+-- monde : seul Layout.rect sert).
+function Layout.applyRoot(root, w, h, opts)
+	fidelity = if opts and opts.fidelity then opts else nil
+	local saved = setAbsolute
+	setAbsolute = function() end
+	local ok, err = pcall(
+		layoutChildren,
+		root,
+		0,
+		0,
+		w,
+		h,
+		{ ox = 0, oy = 0, k = 1 },
+		{ top = 0, gui = root },
+		nil
+	)
+	setAbsolute = saved
+	fidelity = nil
+	if not ok then
+		error(err, 2)
 	end
 end
 
