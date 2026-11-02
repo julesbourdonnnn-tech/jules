@@ -284,6 +284,11 @@ local function onHoldDone()
 	end
 	local film = filmOn and not clipsUnavailable()
 	if Widgets.send("GrandSplorch", film, flyers[flyerIndex]) then
+		-- choix « Filmer » lu par VFXController au Celebrate "splorch" (note INT-CW-2) : il ne voyage pas
+		local me = Players.LocalPlayer
+		if me then
+			pcall(me.SetAttribute, me, "SplorchFilm", film)
+		end
 		local n = nav
 		if n then
 			if n.closeAll then

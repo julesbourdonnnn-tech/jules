@@ -6,19 +6,36 @@
 -- avoir son vrai numéro du Creator Hub (un id à 0 cache l'article : boutique vide « bientôt »).
 -- Échoue (code 1) en listant les articles à compléter, les numéros invalides ou en double, avec la
 -- marche à suivre (guide de publication, section boutique). Code 0 : boutique prête (ou vide).
+-- Note INT-PREPUBLISH (docs/04 §22.2) : les articles `hidden = true` (passes ET produits : SeasonPass,
+-- CoinsSmall, CoinsBig) ne sont jamais vendus au lancement et sont ignorés ; la publication est
+-- refusée tant que `Balance.GddValues ~= "1.3"` (valeurs du GDD pas encore reportées, docs/04 §23).
 
 local process = require("@lune/process")
 
 -- Modules sans require : chargés tels quels
 local Monetization = require("../src/shared/Config/Monetization")
 local Strings = require("../src/shared/Localization/Strings")
+local Balance = require("../src/shared/Config/Balance")
+
+local EXPECTED_GDD = "1.3"
+if Balance.GddValues ~= EXPECTED_GDD then
+	print(
+		`❌ Ne publiez pas : Balance.GddValues = {tostring(Balance.GddValues)} (attendu « {EXPECTED_GDD} »).`
+			.. " Les valeurs du GDD ne sont pas encore reportées dans src/shared/Config/Balance.luau"
+			.. " (docs/04 §23)."
+	)
+	process.exit(1)
+end
 
 type Item = { kind: string, key: string, def: { [string]: any } }
 
 local function sorted(list: { [string]: any }, kind: string): { Item }
 	local out: { Item } = {}
 	for key, def in list do
-		table.insert(out, { kind = kind, key = key, def = def })
+		-- article caché : jamais affiché ni vendu au lancement, aucun numéro exigé
+		if type(def) == "table" and def.hidden ~= true then
+			table.insert(out, { kind = kind, key = key, def = def })
+		end
 	end
 	table.sort(out, function(a, b)
 		local oa = tonumber(a.def.order) or math.huge

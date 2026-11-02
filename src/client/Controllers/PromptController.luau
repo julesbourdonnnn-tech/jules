@@ -477,6 +477,18 @@ function PromptController.Start()
 				end
 			end)
 		)
+		-- fenêtres ouvertes avant ce Start (pendant l'Init d'un module plus tardif) : lues une fois
+		-- ici, après tous les Init (note INT-CWR-5)
+		local okNames, names = pcall(function()
+			return FocusGuard.names()
+		end)
+		if okNames and type(names) == "table" then
+			for _, name in names do
+				if type(name) == "string" then
+					windows[name] = true
+				end
+			end
+		end
 	end
 	table.insert(
 		connections,

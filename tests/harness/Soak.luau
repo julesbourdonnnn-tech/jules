@@ -147,8 +147,11 @@ function Soak.run(Harness, opts)
 	local hours = opts.hours or Soak.hours()
 	local nPlayers = opts.players or 16
 	local seed = opts.seed or 42
-	local w =
-		Brains.boot(Harness, { t0 = opts.t0 or (1800000000 + 3600 * 24 * 2 + 50), stubMeta = opts.stubMeta })
+	local w = Brains.boot(Harness, {
+		t0 = opts.t0 or (1800000000 + 3600 * 24 * 2 + 50),
+		-- paquet meta livré : vrais services par défaut (opts.stubMeta = true : doublures)
+		stubMeta = opts.stubMeta == true,
+	})
 	local Invariants = w.h:require("ReplicatedStorage.Shared.Logic.Invariants")
 	local Balance = w.Balance
 	local rng = Brains.rng(seed)

@@ -80,6 +80,9 @@ return function(T)
 
 	describe("RedTeam_Purchase › reçus", function()
 		it("produit inconnu, joueur absent : rien d'accordé", function()
+			if T.expectWarning then
+				T.expectWarning("[Monetization] produit sans handler")
+			end
 			local w = boot()
 			local p = Bots.join(1)
 			expect(w.h:purchaseProduct(p, 999999, "u1").Name).toBe("NotProcessedYet")
@@ -112,6 +115,9 @@ return function(T)
 		it(
 			"paquet de pièces caché : aucune pièce ; faux signal d'achat du pass ×2 Pièces : rien",
 			function()
+				if T.expectWarning then
+					T.expectWarning("[Monetization] produit sans handler")
+				end
 				local w = boot()
 				local p = Bots.join(1)
 				expect(w.h:purchaseProduct(p, 803, "c1").Name).toBe("NotProcessedYet")

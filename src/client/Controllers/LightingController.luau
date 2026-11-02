@@ -31,6 +31,8 @@
 --     des pressions (interrupteur megaSquish), éteint au calme (GDD §11.1) ; jarre de la jauge grise
 --     pendant la sieste de Big Plop (EventState.gauge.restUntil, GDD §4.23) ; tout finit à son heure,
 --     sans message ;
+--   * musique (INT-AUDIO) : AudioController.setMusic("MusicRush" pendant les 90 s du Rush,
+--     "MusicMoon" pendant la Jelly Moon, sinon "Music"), −12 dB pour un nouveau avant l'étape 9 ;
 -- Une seule connexion par image (RenderStepped) : flocons à chaque image, le reste toutes les 0,5 s. Toute lecture d'un module plus précoce encore en cours d'écriture passe
 -- par pcall avec un repli (jamais d'erreur ni d'avertissement). Positions : Render/WorldDecor.
 
@@ -56,6 +58,7 @@ local WorldStateController = require(script.Parent.WorldStateController)
 local QualityController = require(script.Parent.QualityController)
 local Prefs = require(Client.Util.Prefs)
 local Haptics = require(Client.Util.Haptics)
+local AudioController = require(script.Parent.AudioController)
 local Root = require(Client.UI.Root)
 
 local LightingController = {}
@@ -110,6 +113,8 @@ local state = {
 	resolved = nil :: Resolved?,
 	tweens = {} :: { [Instance]: Tween },
 	sirenIndex = -1,
+	musicTrack = "", -- dernière piste demandée à AudioController (INT-AUDIO)
+	musicDb = 0,
 	accumulator = 0,
 	started = false,
 	world = nil :: Folder?,
@@ -820,6 +825,22 @@ local function evaluate(force: boolean, siren: boolean)
 	end
 	refreshSnow()
 	refreshPlaza(payload, now)
+	-- musique (INT-AUDIO, GDD §9.6) : MusicRush pendant le Rush (après la sirène), MusicMoon pendant la
+	-- Jelly Moon, sinon Music ; musique d'événement à −12 dB pour un nouveau avant l'étape 9 (GDD §3)
+	local rushPhase = EventClock.rush(now)
+	local inSiren = now >= rushPhase.sirenAt and now < rushPhase.startsAt
+	local forcedRush = field(field(payload, "rush"), "active") == true
+	local track = if resolved.rush and (forcedRush or not inSiren)
+		then "MusicRush"
+		elseif resolved.moon then "MusicMoon"
+		else "Music"
+	local db = if quiet and track ~= "Music" then Quests.Onboarding.QuietMusicDb else 0
+	-- seulement quand la décision change (une piste choisie ailleurs n'est pas écrasée toutes les 0,5 s)
+	if track ~= state.musicTrack or db ~= state.musicDb then
+		state.musicTrack = track
+		state.musicDb = db
+		pcall(AudioController.setMusic, track, db)
+	end
 	-- sirène du BOOP RUSH : une impulsion de 0,3 s (Config/Console), un seul appel par Rush ; jamais
 	-- pour un nouveau : une sirène commencée en version discrète reste muette jusqu'au bout (aucune
 	-- vibration tardive à l'étape 9) ; profil pas encore arrivé : rien, la sirène reste à jouer

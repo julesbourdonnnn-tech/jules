@@ -47,8 +47,19 @@ local StateTimeouts = require(Shared.Logic.StateTimeouts)
 local Signals = require(script.Parent.Parent.Signals)
 local Notify = require(script.Parent.Parent.Util.Notify)
 local MoveCheck = require(script.Parent.Parent.Util.MoveCheck)
+local Analytics = require(script.Parent.Parent.Util.Analytics)
 local Guard = require(script.Parent.Parent.Ranch.Guard)
 local Places = require(script.Parent.Parent.Ranch.Places)
+
+-- Analytique du GDD §16.3 (HatchRarity, MutationGot, ComboLength, RideStart) : budgétée par
+-- Util/Analytics, jamais une erreur (pcall)
+local rideTracked: { [Player]: boolean } = setmetatable({} :: any, { __mode = "k" })
+local function track(player: Player, name: string, value: number, fields: { [string]: any }?)
+	local ok, err = pcall(Analytics.custom, player, name, value, fields)
+	if not ok then
+		Guard.caught("squishy:analytics", err)
+	end
+end
 local DiagnosticsService = require(script.Parent.DiagnosticsService)
 local DataService = require(script.Parent.DataService)
 local MonetizationService = require(script.Parent.MonetizationService)
@@ -616,6 +627,10 @@ local function executeHatch(player: Player, entry: Hatch)
 		return
 	end
 	Signals.Hatched:Fire(player, uid, rarity)
+	track(player, "HatchRarity", rarity)
+	if spec.m ~= 0 then
+		track(player, "MutationGot", spec.m)
+	end
 	Notify.celebrate(player, "hatch", {
 		uid = uid,
 		species = spec.s,
@@ -826,11 +841,16 @@ local function executeFuse(player: Player, job: FuseJob): string?
 		lockFusing(player, keep, true) -- le résultat reste réservé pour la paire suivante du plan
 	end
 	-- combo en chaîne : un jumeau du résultat attend dans le Bassin
+	local chained = false
 	if not job.auto and result.at == "pool" then
 		local nextUid = FusionRules.nextInChain(poolRecords(data), keep)
 		if nextUid ~= nil and busySquishy(player, nextUid) == nil then
 			scheduleFuse(player, keep, nextUid, job.step + 1, Balance.Fusion.ComboDelay, false)
+			chained = true
 		end
+	end
+	if not job.auto and not chained then
+		track(player, "ComboLength", job.step, { all = 0 }) -- fin d'une chaîne
 	end
 	publishBest(player, false)
 	return keep
@@ -848,6 +868,7 @@ local function stepMerge(player: Player)
 	local pair = plan.pairs[plan.index]
 	if pair == nil then
 		mergePlans[player] = nil
+		track(player, "ComboLength", #plan.pairs, { all = 1 }) -- « Tout fusionner » terminé
 		local set = fusing[player]
 		if set then
 			table.clear(set)
@@ -1390,6 +1411,12 @@ local function onRide(player: Player, on: boolean): boolean
 	riding[player] = uid
 	setRootOffset(player, stats.hipHeight - Balance.Ride.BaseHipHeight, stats.jumpHeight)
 	RanchService.setPublic(player, { ride = uid, saddle = saddle })
+	if not rideTracked[player] then
+		-- première balade de la session : secondes de jeu (la monture est-elle trouvée ?)
+		rideTracked[player] = true
+		local played = if type(data.stats) == "table" then data.stats.playSeconds else 0
+		track(player, "RideStart", if type(played) == "number" then math.floor(played) else 0)
+	end
 	return true
 end
 

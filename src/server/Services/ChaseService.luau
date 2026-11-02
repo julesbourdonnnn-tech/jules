@@ -578,6 +578,9 @@ local function onCaught(catcher: Player, c: Creature, now: number, byLeap: boole
 	local kind = c.spawn.kind
 	local slot = RanchService.slotOf(catcher)
 	if kind == "escape" then
+		-- GDD §16.3 : une capture du Rush, segmentée par appareil (champ « device » posé par
+		-- DiagnosticsService via Analytics.setSegment)
+		Guard.analytics(catcher, "RushCatchByInput", 1)
 		local owner = c.owner
 		local uid = c.spawn.uid
 		if owner == catcher then
@@ -1355,6 +1358,7 @@ function ChaseService.tick(now: number)
 	if not finite(now) then
 		return
 	end
+	local startedAt = os.clock()
 	local previous = lastTickAt
 	local dt = if previous then math.clamp(now - previous, 0, MAX_DT) else TICK
 	lastTickAt = now
@@ -1375,6 +1379,8 @@ function ChaseService.tick(now: number)
 	Guard.try("tick:ranchFlush", RanchService.flush)
 	Guard.try("tick:leaderboard", LeaderboardService.step, now)
 	Guard.try("tick:diagnostics", DiagnosticsService.step, now)
+	-- durée du tick (panneau Diagnostics, GDD §12.11 : moyenne et maximum)
+	Guard.try("tick:noteTick", DiagnosticsService.noteTick, (os.clock() - startedAt) * 1000)
 end
 
 -- Acteurs du dernier tick (positions validées)

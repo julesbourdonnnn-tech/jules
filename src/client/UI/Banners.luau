@@ -32,6 +32,7 @@ local Root = require(Client.UI.Root)
 local Theme = require(Client.UI.Theme)
 local Juice = require(Client.UI.Juice)
 local Prefs = require(Client.Util.Prefs)
+local AudioController = require(Client.Controllers.AudioController)
 local WorldStateController = require(Client.Controllers.WorldStateController)
 local HUD = require(Client.UI.HUD)
 local Util = require(Client.UI.Hud.Util)
@@ -44,6 +45,12 @@ local SLOT = Layout.Hud.message
 local CONTENT = Layout.HudContent.message
 local EVENT_PRIORITY = 0 -- bannières d'événement : avant celles des joueurs
 local EVENT_WINDOW = 6 -- s : une bannière d'événement manquée de plus de 6 s n'est plus montrée
+-- Son de chaque bannière d'événement (GDD §9.4, §9.6) ; jamais pour un nouveau avant l'étape 9
+local EVENT_SOUNDS: { [string]: string } = {
+	rushSoon = "RushSiren",
+	megaWarn = "MegaWarn",
+	moonStart = "MoonStart",
+}
 local CHECK_EVERY = 0.25 -- s entre deux calculs des bannières d'événement
 
 local ACCENTS: { [string]: Color3 } = {
@@ -288,6 +295,10 @@ local function eventBanner(kind: string, index: number, at: number, now: number,
 	shownEvents[kind] = index
 	if quiet then
 		return -- nouveau avant l'étape 9 : aucune bannière d'événement
+	end
+	local sound = EVENT_SOUNDS[kind]
+	if sound then
+		Util.safe("AudioController.play", nil, AudioController.play, sound)
 	end
 	local key = "banner." .. kind
 	if not Util.has(key) then

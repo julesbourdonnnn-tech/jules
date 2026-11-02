@@ -208,6 +208,9 @@ return function(T)
 		end)
 
 		it("paquets de pièces cachés : aucun handler, aucune pièce (même avec un id)", function()
+			if T.expectWarning then
+				T.expectWarning("[Monetization] produit sans handler")
+			end
 			local w = boot()
 			local p = Bots.join(1)
 			expect(w.h:purchaseProduct(p, IDS.CoinsSmall, "c1").Name).toBe("NotProcessedYet")

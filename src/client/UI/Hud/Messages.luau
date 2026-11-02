@@ -134,4 +134,7 @@ function Messages._reset()
 	shown = nil
 end
 
+-- Les messages des panneaux (Toast.message) passent par cette file (note client-hud n° 1)
+Toast.router = Messages.push
+
 return Messages

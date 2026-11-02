@@ -53,9 +53,9 @@ local Sounds: { [string]: SoundDef } = {
 	Reward = { id = "", volume = 0.5 }, -- récompense, achat Robux
 	LevelUp = { id = "", volume = 0.5 }, -- palier
 	-- Musiques
-	Music = { id = "", volume = 0.3 }, -- musique de jour (en boucle)
-	MusicMoon = { id = "", volume = 0.3 }, -- Jelly Moon (plus douce)
-	MusicRush = { id = "", volume = 0.35 }, -- BOOP RUSH (gloussements, rapide)
+	Music = { id = "", volume = 0.3, fade = 2 }, -- musique de jour (en boucle ; fondu croisé de 2 s)
+	MusicMoon = { id = "", volume = 0.3, fade = 2 }, -- Jelly Moon (plus douce)
+	MusicRush = { id = "", volume = 0.35, fade = 1 }, -- BOOP RUSH (gloussements, rapide)
 	-- Presser
 	Press = { id = "", volume = 0.5 }, -- SPLORCH (hauteur au hasard 0,92-1,08)
 	Perfect = { id = "", volume = 0.55 }, -- PERFECT (hauteur 1,0595^série)

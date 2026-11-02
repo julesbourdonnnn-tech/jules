@@ -14,12 +14,14 @@
 -- marqués Decorative = true. Une seule connexion par image (RenderStepped) ; temps par Clock.
 
 local GuiService = game:GetService("GuiService")
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared", 30) :: Folder
 local Clock = require(Shared.Util.Clock)
 local Layout = require(Shared.Config.Layout)
+local WorldLayout = require(Shared.Logic.WorldLayout)
 
 local Client = script.Parent.Parent
 local Root = require(Client.UI.Root)
@@ -75,6 +77,11 @@ local lastGlowAt = -math.huge
 local glowToken = 0
 local photo = false
 local started = false
+-- Mon Grand Splorch en Mouvement réduit (note INT-CW-3, GDD §9.4) : pas de travelling, une flèche
+-- montre le spectacle jusqu'à son heure de fin (bornée)
+local SPLORCH_ARROW = "splorch"
+local SPLORCH_ARROW_MAX = 15 -- s
+local splorchArrowUntil = -math.huge
 local pulseClock = 0
 local autoAcc = math.huge
 local AUTO_EVERY = 0.1 -- s entre deux choix des flèches automatiques (créatures attrapables)
@@ -387,13 +394,39 @@ function ScreenFX.Start()
 	started = true
 	ScreenFX.Init()
 	RunService.RenderStepped:Connect(function(dt: number)
+		if splorchArrowUntil > -math.huge and Clock.now() >= splorchArrowUntil then
+			splorchArrowUntil = -math.huge
+			ScreenFX.arrow(SPLORCH_ARROW, nil, "booped")
+		end
 		stepArrows(Util.num(dt, 1 / 60, 0, 1))
 	end)
 	pcall(function()
 		local Net = require(Shared.Net)
 		Net.event("Celebrate").OnClientEvent:Connect(function(payload: any)
-			if type(payload) == "table" and payload.kind == "photo" and type(payload.data) == "table" then
-				photo = payload.data.on == true
+			if type(payload) ~= "table" or type(payload.data) ~= "table" then
+				return
+			end
+			local data = payload.data
+			if payload.kind == "photo" then
+				photo = data.on == true
+			elseif payload.kind == "splorch" then
+				local me = Players.LocalPlayer
+				if
+					me
+					and data.userId == me.UserId
+					and data.short ~= true
+					and Util.safe("Prefs.reducedMotion", false, Prefs.reducedMotion)
+				then
+					local now = Clock.now()
+					local endsAt = Util.num(data.endsAt, now, now, now + SPLORCH_ARROW_MAX)
+					if endsAt > now then
+						splorchArrowUntil = endsAt
+						local ok, pad = pcall(WorldLayout.plaza, "megaPad")
+						if ok and typeof(pad) == "Vector3" then
+							ScreenFX.arrow(SPLORCH_ARROW, pad + Vector3.new(0, 40, 0), "booped")
+						end
+					end
+				end
 			end
 		end)
 	end)

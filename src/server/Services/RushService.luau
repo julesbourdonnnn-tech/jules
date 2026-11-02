@@ -85,6 +85,11 @@ local boopedBy: { [Player]: { [number]: boolean } } = {} -- propriétaire → bo
 local pendingRush: { [Player]: boolean } = {}
 local cozyThisRush: { [Player]: boolean } = {}
 local cardOpenAt: { [Player]: number } = {}
+-- analytique de sécurité (GDD §16.3 : CozyAfterBoop, PostBoopQuit, QuitBaseline) : premier et dernier
+-- boop SUBI de la session (Clock.now)
+local firstBoopedAt: { [Player]: number } = {}
+local lastBoopedAt: { [Player]: number } = {}
+local FRUSTRATION_WINDOW = 120 -- s : « dans les 2 min après un boop subi » (GDD §16.3)
 local published: { [Player]: string } = {}
 
 local fenceRush: number? = nil -- index du Rush dont les clôtures sont posées
@@ -431,6 +436,10 @@ local function boopSucceeded(booper: Player, hold: Hold, now: number)
 	end
 	by[booper.UserId] = true
 	activeEscapes[escapeKey(owner, hold.uid)] = now
+	if firstBoopedAt[owner] == nil then
+		firstBoopedAt[owner] = now
+	end
+	lastBoopedAt[owner] = now
 	-- premier bond à l'opposé du boopeur : direction boopeur → squishy à la clôture
 	local angle = 0
 	local pos = MoveCheck.lastValid(booper)
@@ -593,6 +602,10 @@ local function onSetMode(player: Player, rush: boolean): boolean
 		end
 		if wasRush then
 			Notify.feedback(player, "feedback.modeCozy", {}, "info")
+			local booped = lastBoopedAt[player]
+			if booped ~= nil and Clock.now() - booped <= FRUSTRATION_WINDOW then
+				Guard.analytics(player, "CozyAfterBoop", 1)
+			end
 		end
 	else
 		if privateServer() and not RushService.allowRush() then
@@ -643,10 +656,23 @@ local function onRefuseBooper(player: Player, userId: number): boolean
 		end
 	end
 	Notify.feedback(player, "feedback.refused", {}, "success")
+	Guard.analytics(player, "RefuseBooper", 1)
 	return false
 end
 
 local function onPlayerRemoving(player: Player)
+	-- fin de session (GDD §16.3) : mode final, puis frustration après un boop subi ou référence
+	local rush = Guard.call("rush:isRush", RushService.isRush, false, player)
+	Guard.analytics(player, "ModeAtSessionEnd", if rush == true then 1 else 0)
+	local now = Clock.now()
+	local first, last = firstBoopedAt[player], lastBoopedAt[player]
+	if first ~= nil and now - first < FRUSTRATION_WINDOW then
+		Guard.analytics(player, "PostBoopQuit", math.max(0, math.floor(now - first)))
+	elseif last == nil or now - last > FRUSTRATION_WINDOW then
+		Guard.analytics(player, "QuitBaseline", 1)
+	end
+	firstBoopedAt[player] = nil
+	lastBoopedAt[player] = nil
 	cancelHold(player, false)
 	for booper, hold in holds do
 		if hold.owner == player then

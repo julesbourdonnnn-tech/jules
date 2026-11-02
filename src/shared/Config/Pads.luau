@@ -49,7 +49,7 @@ Pads.Order = { "snack", "decor", "pens", "cozyBed" } :: { TileKey }
 -- Un joueur dont l'accueil est fini (ou a dépassé l'étape) les a toujours.
 Pads.FreeBuilds = {
 	vat = { atStep = 4 }, -- la Cuve se construit toute seule (≈ 0:40)
-	pool = { atStep = 5 }, -- le Bassin est là pour la leçon de fusion (≈ 1:00)
+	pool = { atStep = 4 }, -- le Bassin est là dès la Cuve : Plop y attend avant la leçon de fusion (GDD §3, ≈ 1:00)
 	fountain = { atStep = 1 }, -- Fontaine de Gelée (devant le portail)
 	pot = { atStep = 1 },
 	bowl = { atStep = 1 },

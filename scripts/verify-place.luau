@@ -65,6 +65,26 @@ elseif tcs.ChatVersion ~= roblox.Enum.ChatVersion.TextChatService then
 	table.insert(problems, `TextChatService.ChatVersion = {tcs.ChatVersion} (attendu TextChatService)`)
 end
 
+-- Note INT-PREPUBLISH (docs/04 §17.3, remarque A28) : la place CONSTRUITE garde les réglages de
+-- robustesse (aucun streaming : les clients ne supposent jamais une pièce absente ; pas de curseur
+-- virtuel sur console ; éclairage ShadowMap, budget PS4 / Xbox One)
+local function setting(serviceName: string, prop: string, expected: any, label: string)
+	local service = game:FindFirstChildOfClass(serviceName)
+	if service == nil then
+		table.insert(problems, `manquant : {serviceName}`)
+		return
+	end
+	local ok, value = pcall(function()
+		return service[prop]
+	end)
+	if not ok or value ~= expected then
+		table.insert(problems, `{serviceName}.{prop} = {tostring(value)} (attendu {label})`)
+	end
+end
+setting("Workspace", "StreamingEnabled", false, "false")
+setting("StarterGui", "VirtualCursorMode", roblox.Enum.VirtualCursorMode.Disabled, "Disabled")
+setting("Lighting", "Technology", roblox.Enum.Technology.ShadowMap, "ShadowMap")
+
 print(
 	string.format(
 		"Place %s : %d Script, %d LocalScript, %d ModuleScript",

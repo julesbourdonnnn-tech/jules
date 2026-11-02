@@ -1194,8 +1194,9 @@ return function(T)
 				return math.floor(t.Base * t.Growth ^ level)
 			end
 			expect(cost("snack", 0)).toBe(20)
-			expect(cost("snack", 3)).toBe(1280)
-			expect(cost("snack", 11)).toBe(83886080)
+			-- Growth 4,0 → 4,5 (docs/04 §21, revue logic, note INT-LR1) : 1 822 et 306 455 660
+			expect(cost("snack", 3)).toBe(1822)
+			expect(cost("snack", 11)).toBe(306455660)
 			expect(cost("decor", 0)).toBe(80)
 			expect(cost("decor", 5)).toBe(4122)
 			expect(cost("decor", 11)).toBe(467454)

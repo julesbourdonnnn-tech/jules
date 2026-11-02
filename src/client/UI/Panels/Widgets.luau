@@ -709,6 +709,20 @@ function Widgets.glyph(
 	})
 end
 
+-- Le libellé d'un bouton suit la largeur RÉELLE de son glyphe : une touche longue du clavier
+-- (« Enter », « Shift ») élargit la pastille (UI/Glyph) et ne recouvre jamais le texte. `left` : marge
+-- avant le glyphe, `gap` : espace glyphe → texte, `right` : marge à droite du texte (px TV)
+function Widgets.followGlyph(label: GuiObject, glyph: GuiObject, left: number, gap: number, right: number)
+	local function place()
+		local w = glyph.Size.X.Offset
+		local x = left + w + gap
+		label.Position = UDim2.new(0, x, label.Position.Y.Scale, label.Position.Y.Offset)
+		label.Size = UDim2.new(1, -(x + right), label.Size.Y.Scale, label.Size.Y.Offset)
+	end
+	place()
+	glyph:GetPropertyChangedSignal("Size"):Connect(place)
+end
+
 -- Petit squishy dessiné en formes (aucune image téléversée) : corps rond aux couleurs de l'espèce,
 -- ventre clair, deux yeux ; gris pour une silhouette inconnue
 function Widgets.blob(parent: Instance, name: string?): Frame
@@ -1212,7 +1226,7 @@ function Widgets.hold(p: HoldProps): Hold
 		Vector2.new(0, 0.5)
 	)
 	g.frame.ZIndex = b.ZIndex + 3
-	Widgets.label({
+	local holdLabel = Widgets.label({
 		parent = b,
 		name = "Label",
 		size = UDim2.new(1, -(glyphSize + 48), 1, -12),
@@ -1223,6 +1237,7 @@ function Widgets.hold(p: HoldProps): Hold
 		textSize = p.textSize or Layout.Text.Button,
 		zIndex = b.ZIndex + 2,
 	})
+	Widgets.followGlyph(holdLabel, g.frame, 16, 16, 16)
 	local hold: Hold
 	local state: HoldState
 	hold = {

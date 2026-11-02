@@ -151,7 +151,11 @@ function Brains.boot(Harness, opts)
 	w.DS.Settings.LOCKED_RETRY_DELAY = 0.01
 	w.DS.Settings.AUTOSAVE_INTERVAL = 1e6
 	Bots.use(w)
-	-- opts.stubMeta = false : vrais services du paquet meta (intégration, une fois livrés)
+	-- opts.stubMeta = false : vrais services du paquet meta (intégration : Boot.spec, Soak.run par
+	-- défaut, specs du paquet meta). Sans rien, les specs unitaires du paquet chase gardent les
+	-- doublures réglables (isolation, docs/04 §18.1) : elles lisent w.meta (claps, playSeconds, quiet,
+	-- admins) et un profil vierge y serait sinon un nouveau en accueil (note meta n° 2, interprétée :
+	-- 19 tests du paquet chase dépendent de ces doublures).
 	if opts.stubMeta ~= false then
 		Brains.stubMeta(w, opts)
 	else

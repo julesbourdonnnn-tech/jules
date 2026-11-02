@@ -43,6 +43,7 @@ local AudioController = require(Client.Controllers.AudioController)
 local WorldStateController = require(Client.Controllers.WorldStateController)
 local PromptController = require(Client.Controllers.PromptController)
 local ChaseController = require(Client.Controllers.ChaseController)
+local VFXController = require(Client.Controllers.VFXController)
 local FocusGuard = require(Client.UI.FocusGuard)
 local PanelController = require(Client.UI.PanelController)
 local HUD = require(Client.UI.HUD)
@@ -208,6 +209,8 @@ local function primaryBegin(byMouse: boolean)
 	if p == "press" then
 		if t.kind == "mega" then
 			if Util.send("MegaPress", now) then
+				-- « +3 » / « +1 » au-dessus du géant, pressTick sur un PERFECT (note INT-CW-1)
+				Util.safe("VFXController.megaPress", false, VFXController.megaPress, now)
 				fire("press")
 			end
 			return

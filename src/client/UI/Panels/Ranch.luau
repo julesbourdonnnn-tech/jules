@@ -607,7 +607,7 @@ local function refreshDetail()
 	local isMount = Widgets.state("mount") == detailUid
 	Widgets.setDisabled(detailButtons.mount, saddle <= 0 or isMount, function()
 		if saddle <= 0 then
-			pcall(Toast.show, Prefs.t("feedback.noMount"), "info")
+			pcall(Toast.message, Prefs.t("feedback.noMount"), "info")
 		end
 	end)
 	Widgets.setDisabled(detailButtons.toDodo, counts().dodo >= Balance.Pens.Dodo or detailUid == waitingUid())
@@ -862,7 +862,7 @@ local function refreshPads()
 		Widgets.setDisabled(b, info.maxed or info.locked or coins < info.cost, function()
 			if not info.maxed and not info.locked and coins < info.cost then
 				pcall(
-					Toast.show,
+					Toast.message,
 					Prefs.t("feedback.notEnoughCoins", { missing = Widgets.num(info.cost - coins) }),
 					"warning"
 				)
@@ -1124,7 +1124,7 @@ function Ranch._activateCell(uid: string, button: TextButton)
 	elseif current == "dodo" then
 		if counts().pen >= penCapacity() then
 			Widgets.refuse(button)
-			pcall(Toast.show, Prefs.t("feedback.penFull"), "warning")
+			pcall(Toast.message, Prefs.t("feedback.penFull"), "warning")
 			return
 		end
 		Widgets.send("MoveSquishy", uid, "pen")
@@ -1132,7 +1132,7 @@ function Ranch._activateCell(uid: string, button: TextButton)
 		local c = counts()
 		if c.pen >= penCapacity() and c.dodo >= Balance.Pens.Dodo then
 			Widgets.refuse(button)
-			pcall(Toast.show, Prefs.t("feedback.dodoFull"), "warning")
+			pcall(Toast.message, Prefs.t("feedback.dodoFull"), "warning")
 			return
 		end
 		Widgets.send("ClaimMail", uid)
@@ -1247,7 +1247,7 @@ local function buildGridPage(container: Frame, top: number)
 			local uids = tidyCandidates()
 			if #uids == 0 then
 				Widgets.refuse(buttons.tidy)
-				pcall(Toast.show, Prefs.t("panel.ranch.tidyNone"), "info")
+				pcall(Toast.message, Prefs.t("panel.ranch.tidyNone"), "info")
 				return
 			end
 			openOverlay("tidy", uids, "Sell")
@@ -1468,7 +1468,7 @@ local function buildDetail(container: Frame, top: number)
 		end
 	end)
 	Widgets.setDisabled(detailButtons.mount, false, function()
-		pcall(Toast.show, Prefs.t("feedback.noMount"), "info")
+		pcall(Toast.message, Prefs.t("feedback.noMount"), "info")
 	end)
 end
 
@@ -1925,7 +1925,7 @@ function Ranch._mergeAll(button: TextButton)
 	local pairs = Widgets.safe("FusionRules.twinPairs", 0, FusionRules.twinPairs, squishies())
 	if type(pairs) ~= "number" or pairs <= 0 then
 		Widgets.refuse(button)
-		pcall(Toast.show, Prefs.t("feedback.nothingToFuse"), "info")
+		pcall(Toast.message, Prefs.t("feedback.nothingToFuse"), "info")
 		return
 	end
 	Widgets.send("FuseAll")

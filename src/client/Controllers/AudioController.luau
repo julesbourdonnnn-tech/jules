@@ -11,8 +11,13 @@
 --     plus ancienne est coupée) ; copie détruite à Ended, au plus tard éteinte en fondu à maxLength
 --   * réglage « Effets sonores » (AudioController.enabled, posé par Client/Util/Prefs) : rien ne joue
 --     quand il est coupé, et les copies en cours s'arrêtent à l'image suivante
---   * musique (« Music ») : boucle seulement, jamais jouée par play() ; elle attend l'instantané du
---     profil (StateController, réglage « Musique » appliqué par Prefs) puis monte en fondu
+--   * musique (INT-AUDIO, docs/04 §22.2) : trois pistes en boucle (« Music » de jour, « MusicMoon »,
+--     « MusicRush »), jamais jouées par play() et sans maxLength ; une seule piste voulue à la fois
+--     (setMusic, appelé par LightingController selon les événements) : l'ancienne descend en fondu
+--     puis s'arrête, la nouvelle monte en fondu (fade de la clé) ; volume relatif en dB
+--     (setMusicVolumeDb : −12 dB pour un nouveau avant l'étape 9, GDD §9.6) ; elle attend
+--     l'instantané du profil (StateController, réglage « Musique » appliqué par Prefs) ; réglage coupé :
+--     silence tout de suite
 -- Son de navigation (consoles) : « Select » quand GuiService.SelectedObject passe
 -- d'un objet à un autre, entrée préférée = manette (Client/Util/Platform), au plus 1 par
 -- Config/Console.NavSoundInterval ; rien quand le code pose la première sélection ou l'efface.
@@ -42,6 +47,9 @@ local AudioController = {}
 AudioController.enabled = true -- effets sonores (réglage « sfx », posé par Client/Util/Prefs)
 
 local MUSIC = "Music"
+-- Pistes de musique (en boucle, jamais jouées par play())
+local MUSIC_KEYS: { [string]: true } = { Music = true, MusicMoon = true, MusicRush = true }
+local MUSIC_MIN_DB = -60
 local SELECT = "Select"
 -- Autres retours d'interface et de navigation : « Select » ne les double pas dans la même action
 local UI_FEEDBACK: { [string]: true } = {
@@ -68,7 +76,10 @@ local voices: { [string]: { Voice } } = {}
 local liveCount = 0
 local musicEnabled = true
 local musicReady = false -- instantané du profil reçu : le réglage « Musique » est connu
-local musicTween: Tween? = nil
+local musicKey = MUSIC -- piste voulue (setMusic)
+local musicGain = 1 -- facteur de volume (setMusicVolumeDb)
+local musicTweens: { [string]: Tween } = {}
+local musicEpoch: { [string]: number } = {} -- +1 à chaque décision sur une piste (fin de fondu périmée)
 local started = false
 local initialized = false
 local lastSelected: Instance? = nil -- dernière sélection GuiService vue
@@ -187,7 +198,7 @@ function AudioController.Init()
 			sound.SoundId = def.id
 			sound.Volume = def.volume
 			sound.PlaybackSpeed = def.pitch or 1
-			sound.Looped = name == MUSIC
+			sound.Looped = MUSIC_KEYS[name] == true
 			sound.Parent = folder
 			instances[name] = sound
 			table.insert(toPreload, sound)
@@ -206,30 +217,65 @@ function AudioController.Init()
 	end
 end
 
--- Musique : joue (fondu d'entrée) ou s'arrête selon le réglage, une fois le profil connu
-local function updateMusic()
-	local music = instances[MUSIC]
-	if not music or not musicReady then
+-- Fondu d'une piste de musique vers `volume` (un seul tween par piste : le nouveau annule l'ancien)
+local function tweenMusic(name: string, sound: Sound, volume: number, fade: number)
+	local old = musicTweens[name]
+	if old then
+		old:Cancel()
+		musicTweens[name] = nil
+	end
+	if fade <= 0 then
+		sound.Volume = volume
 		return
 	end
-	if musicEnabled and not music.Playing then
-		local def = Sounds[MUSIC]
-		local tween = musicTween
-		if tween then
-			tween:Cancel()
+	local tween = TweenService:Create(sound, TweenInfo.new(fade), { Volume = volume })
+	musicTweens[name] = tween
+	tween:Play()
+end
+
+-- Musique : la piste voulue joue (fondu d'entrée) au volume de sa clé × gain ; les autres
+-- descendent en fondu puis s'arrêtent ; réglage coupé : tout s'arrête tout de suite ; rien avant
+-- l'instantané du profil
+local function updateMusic()
+	if not musicReady then
+		return
+	end
+	for name in MUSIC_KEYS do
+		local sound = instances[name]
+		local def = Sounds[name]
+		if sound and def then
+			local fade = def.fade :: number
+			local epoch = (musicEpoch[name] or 0) + 1
+			musicEpoch[name] = epoch
+			if musicEnabled and name == musicKey then
+				local volume = def.volume * musicGain
+				if not sound.Playing then
+					sound.Volume = 0
+					sound:Play()
+					tweenMusic(name, sound, volume, fade)
+				elseif math.abs(sound.Volume - volume) > 1e-4 or musicTweens[name] ~= nil then
+					tweenMusic(name, sound, volume, fade)
+				end
+			elseif sound.Playing then
+				if not musicEnabled then
+					local old = musicTweens[name]
+					if old then
+						old:Cancel()
+						musicTweens[name] = nil
+					end
+					sound:Stop()
+				else
+					-- changement de piste : fondu de sortie, puis arrêt si personne ne l'a reprise
+					tweenMusic(name, sound, 0, fade)
+					task.delay(fade, function()
+						if musicEpoch[name] == epoch and sound.Playing then
+							musicTweens[name] = nil
+							sound:Stop()
+						end
+					end)
+				end
+			end
 		end
-		music.Volume = 0
-		music:Play()
-		local fadeIn = TweenService:Create(music, TweenInfo.new(def.fade :: number), { Volume = def.volume })
-		musicTween = fadeIn
-		fadeIn:Play()
-	elseif not musicEnabled and music.Playing then
-		local tween = musicTween
-		if tween then
-			tween:Cancel()
-			musicTween = nil
-		end
-		music:Stop()
 	end
 end
 
@@ -301,6 +347,46 @@ function AudioController.isMusicEnabled(): boolean
 	return musicEnabled
 end
 
+-- Facteur de volume d'un niveau en dB borné à [−60 ; 0] (valeur non finie = 0 dB)
+local function gainOf(db: number?): number
+	local v = if type(db) == "number" and db == db and db > -math.huge and db < math.huge then db else 0
+	return 10 ^ (math.clamp(v, MUSIC_MIN_DB, 0) / 20)
+end
+
+-- Piste de musique voulue (INT-AUDIO) : "Music" (jour, défaut), "MusicMoon" ou "MusicRush" ; nil ou
+-- clé inconnue = "Music". `db` (facultatif) : volume relatif, comme setMusicVolumeDb. Même piste et
+-- même volume : rien (aucun fondu relancé)
+function AudioController.setMusic(key: string?, db: number?)
+	local wanted = if type(key) == "string" and MUSIC_KEYS[key] then key else MUSIC
+	local changed = wanted ~= musicKey
+	musicKey = wanted
+	if db ~= nil then
+		local gain = gainOf(db)
+		if math.abs(gain - musicGain) >= 1e-6 then
+			musicGain = gain
+			changed = true
+		end
+	end
+	if changed then
+		updateMusic()
+	end
+end
+
+-- Volume relatif de la musique en dB (0 = volume de la clé ; −12 = nouveau pendant l'accueil)
+function AudioController.setMusicVolumeDb(db: number)
+	local gain = gainOf(db)
+	if math.abs(gain - musicGain) < 1e-6 then
+		return
+	end
+	musicGain = gain
+	updateMusic()
+end
+
+-- Piste voulue et gain (specs, Diagnostics)
+function AudioController.music(): (string, number)
+	return musicKey, musicGain
+end
+
 -- Hauteur demandée par l'appelant : nombre fini et positif, sinon 1 (hauteur du son déclaré)
 local function validPitch(pitch: number?): number
 	if type(pitch) == "number" and pitch == pitch and pitch > 0 and pitch < math.huge then
@@ -327,7 +413,7 @@ end
 -- série de pressions qui monte : 1 + min(0,5 ; 0,01 × n)) × (1 ± `pitchVariation` au hasard)
 function AudioController.play(name: string, pitchVariation: number?, pitch: number?)
 	noteFeedback(name)
-	if not AudioController.enabled or name == MUSIC then
+	if not AudioController.enabled or MUSIC_KEYS[name] then
 		return
 	end
 	local template = instances[name]

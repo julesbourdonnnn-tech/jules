@@ -19,6 +19,7 @@ local Signal = require(Shared.Util.Signal)
 
 local Client = script.Parent.Parent
 local Prefs = require(Client.Util.Prefs)
+local ErrorReporter = require(Client.Controllers.ErrorReporter)
 local Util = require(Client.World.Util)
 
 export type Budgets = {
@@ -193,6 +194,8 @@ function QualityController.Start()
 	if ok then
 		table.insert(connections, conn)
 	end
+	-- onglet « Mon client » du panneau Diagnostics : qualité réduite (note meta n° 5)
+	pcall(ErrorReporter.setProbe, "reduced", QualityController.reduced)
 	refresh()
 end
 

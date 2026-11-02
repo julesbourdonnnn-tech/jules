@@ -26,13 +26,17 @@ return function(T)
 	end
 
 	-- Copie du script dans un dossier temporaire avec une configuration de boutique donnée
-	local function runWith(monetizationSource)
+	local function runWith(monetizationSource, balanceSource)
 		local dir = "build/prepublish-test-" .. tostring(math.random(1, 1e9))
 		fs.writeDir(dir .. "/scripts")
 		fs.writeDir(dir .. "/src/shared/Config")
 		fs.writeDir(dir .. "/src/shared/Localization")
 		fs.writeFile(dir .. "/scripts/prepublish.luau", fs.readFile("scripts/prepublish.luau"))
 		fs.writeFile(dir .. "/src/shared/Config/Monetization.luau", monetizationSource)
+		fs.writeFile(
+			dir .. "/src/shared/Config/Balance.luau",
+			balanceSource or fs.readFile("src/shared/Config/Balance.luau")
+		)
 		fs.writeFile(
 			dir .. "/src/shared/Localization/Strings.luau",
 			fs.readFile("src/shared/Localization/Strings.luau")
@@ -46,13 +50,14 @@ return function(T)
 		it("boutique du dépôt : le script tourne et répond selon les ids", function()
 			local Monetization = require("../../src/shared/Config/Monetization")
 			local zero = {}
+			-- INT-PREPUBLISH : un article caché (hidden = true) n'est jamais vendu, il est ignoré
 			for key, def in Monetization.Passes do
-				if def.id == 0 then
+				if def.id == 0 and def.hidden ~= true then
 					table.insert(zero, key)
 				end
 			end
 			for key, def in Monetization.Products do
-				if def.id == 0 then
+				if def.id == 0 and def.hidden ~= true then
 					table.insert(zero, key)
 				end
 			end
@@ -99,6 +104,74 @@ M.Products = { B = { id = 8, price = 1, nameKey = "x", descKey = "x", order = 1 
 return M
 ]])
 			expect(ready.code).toBe(0)
+		end)
+
+		it("INT-PREPUBLISH : articles cachés ignorés (passes et produits)", function()
+			local result = runWith([[
+local M = {}
+M.Passes = {
+	A = { id = 7, price = 1, nameKey = "x", descKey = "x", order = 1 },
+	SeasonPass = { id = 0, price = 1, nameKey = "x", descKey = "x", order = 2, hidden = true },
+}
+M.Products = {
+	B = { id = 8, price = 1, nameKey = "x", descKey = "x", order = 1 },
+	CoinsSmall = { id = 0, price = 1, nameKey = "x", descKey = "x", order = 2, hidden = true },
+}
+return M
+]])
+			expect(result.code).toBe(0)
+			local out = result.stdout .. result.stderr
+			expect(string.find(out, "SeasonPass", 1, true)).toBe(nil)
+			expect(string.find(out, "CoinsSmall", 1, true)).toBe(nil)
+		end)
+
+		it("INT-PREPUBLISH : publication refusée si Balance.GddValues ~= « 1.3 »", function()
+			local shop = [[
+local M = {}
+M.Passes = { A = { id = 7, price = 1, nameKey = "x", descKey = "x", order = 1 } }
+M.Products = {}
+return M
+]]
+			local old = runWith(shop, 'return { GddValues = "1.2" }')
+			expect(old.code ~= 0).toBe(true)
+			expect(string.find(old.stdout .. old.stderr, "GddValues", 1, true) ~= nil).toBe(true)
+			local missing = runWith(shop, "return {}")
+			expect(missing.code ~= 0).toBe(true)
+			local ok = runWith(shop, 'return { GddValues = "1.3" }')
+			expect(ok.code).toBe(0)
+		end)
+	end)
+
+	describe("scripts/verify-place.luau (INT-PREPUBLISH)", function()
+		it("place construite : streaming coupé, curseur virtuel désactivé, ShadowMap", function()
+			local roblox = require("@lune/roblox")
+			local function placeWith(streaming, cursor, tech)
+				local game = roblox.Instance.new("DataModel")
+				local ws = game:GetService("Workspace")
+				ws.StreamingEnabled = streaming
+				game:GetService("StarterGui").VirtualCursorMode = cursor
+				game:GetService("Lighting").Technology = tech
+				local path = "build/verify-place-test-" .. tostring(math.random(1, 1e9)) .. ".rbxl"
+				fs.writeFile(path, roblox.serializePlace(game))
+				local r = lune({ "run", "scripts/verify-place", path })
+				fs.removeFile(path)
+				return r
+			end
+			local E = roblox.Enum
+			local bad = placeWith(true, E.VirtualCursorMode.Enabled, E.Technology.Future)
+			expect(bad ~= nil).toBe(true)
+			expect(bad.code ~= 0).toBe(true)
+			local out = bad.stdout .. bad.stderr
+			expect(string.find(out, "StreamingEnabled", 1, true) ~= nil).toBe(true)
+			expect(string.find(out, "VirtualCursorMode", 1, true) ~= nil).toBe(true)
+			expect(string.find(out, "Technology", 1, true) ~= nil).toBe(true)
+			-- réglages justes : plus aucune ligne sur ces trois propriétés (le reste de la structure
+			-- manque dans cette place vide)
+			local good = placeWith(false, E.VirtualCursorMode.Disabled, E.Technology.ShadowMap)
+			local goodOut = good.stdout .. good.stderr
+			expect(string.find(goodOut, "StreamingEnabled =", 1, true)).toBe(nil)
+			expect(string.find(goodOut, "VirtualCursorMode =", 1, true)).toBe(nil)
+			expect(string.find(goodOut, "Technology =", 1, true)).toBe(nil)
 		end)
 	end)
 end

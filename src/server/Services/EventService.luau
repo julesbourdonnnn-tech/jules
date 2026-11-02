@@ -947,6 +947,9 @@ local function applyFeature(arg: string): boolean
 	return Features.set(key, value)
 end
 
+-- Mode photo de chaque administrateur (Diagnostics › Outils envoie « photo » sans argument : bascule)
+local photoOn: { [Player]: boolean } = setmetatable({} :: any, { __mode = "k" })
+
 local function onAdminCommand(player: Player, command: string, arg: string): boolean
 	if not isAdmin(player) then
 		return false -- ignoré sans réponse
@@ -995,7 +998,10 @@ local function onAdminCommand(player: Player, command: string, arg: string): boo
 			Guard.caught("admin:testError", "testError (server)")
 		end
 	elseif command == "photo" then
-		Notify.celebrate(player, "photo", { on = arg ~= "off" })
+		-- « on » / « off » imposent l'état ; tout autre argument (dont "") bascule
+		local on = if arg == "on" then true elseif arg == "off" then false else not photoOn[player]
+		photoOn[player] = on
+		Notify.celebrate(player, "photo", { on = on })
 	end
 	return false
 end

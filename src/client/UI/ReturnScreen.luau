@@ -157,7 +157,7 @@ local function build()
 		end,
 	})
 	local glyph = Layout.Glyph.Min
-	Widgets.glyph(
+	local okGlyph = Widgets.glyph(
 		ok,
 		Enum.KeyCode.ButtonA,
 		Enum.KeyCode.Return,
@@ -165,7 +165,7 @@ local function build()
 		UDim2.new(0, 20, 0.5, 0),
 		Vector2.new(0, 0.5)
 	)
-	Widgets.label({
+	local okLabel = Widgets.label({
 		parent = ok,
 		name = "Label",
 		size = UDim2.new(1, -(glyph + 56), 1, -16),
@@ -175,6 +175,8 @@ local function build()
 		textSize = BUTTON.text,
 		zIndex = ok.ZIndex + 1,
 	})
+	-- « Enter » au clavier : le texte se pousse à droite de la pastille élargie
+	Widgets.followGlyph(okLabel, okGlyph.frame, 20, 16, 20)
 	okButton = ok
 end
 
