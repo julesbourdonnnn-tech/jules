@@ -76,6 +76,8 @@ local CFG = {
 	StampTime = 1.1,
 	StampText = 96, -- px TV (au plus : TextScaled le réduit pour tenir dans la zone sûre)
 	StampHeight = 150, -- px TV
+	StampWidth = 680, -- px TV : zone libre du HUD entre ses colonnes (voir stamp)
+	StampOffsetY = -54, -- px TV : centre à 486 px TV en 1080p (milieu de la zone sûre, remonté)
 	PolicyRetry = 30, -- s entre deux demandes à PolicyService restée sans réponse
 	PressTickPerSecond = 2,
 	MegaRange = 120,
@@ -403,10 +405,14 @@ function VFXController.stamp(key: string, vars: { [string]: any }?, color: Color
 		local created = Instance.new("TextLabel")
 		created.Name = "Stamp"
 		created.AnchorPoint = Vector2.new(0.5, 0.5)
-		created.Position = UDim2.fromScale(0.5, 0.32)
-		-- toute la largeur de la zone sûre ; TextScaled borné à 96 px (et 28 px TV au moins) : une longue
-		-- cote (« SECRET … · 1 sur 1 000 000 000 ») tient toujours à l'écran (télé à 3 m)
-		created.Size = UDim2.new(1, 0, 0, CFG.StampHeight)
+		-- au milieu de l'écran, dans la zone que le HUD laisse libre : sous l'emplacement de message
+		-- (Layout.Hud.message, bas à 310 px TV), entre la colonne de gauche (536) et la carte de droite
+		-- (1 304), au-dessus de la puce d'action (822). Avant : toute la largeur de la zone sûre à 32 %
+		-- de la hauteur, un long tampon passait sur la puce Menu (outil d'écrans, Screens_display.spec).
+		-- TextScaled borné à 96 px (et 28 px TV au moins) : une longue cote
+		-- (« SECRET … · 1 sur 1 000 000 000 ») tient sur deux lignes
+		created.Position = UDim2.new(0.5, 0, 0.5, CFG.StampOffsetY)
+		created.Size = UDim2.fromOffset(CFG.StampWidth, CFG.StampHeight)
 		created.BackgroundTransparency = 1
 		created.Font = Enum.Font.FredokaOne
 		created.TextSize = CFG.StampText

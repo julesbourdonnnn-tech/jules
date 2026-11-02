@@ -92,6 +92,7 @@ const WEIGHT = {
   truncated: 1,
   smallFixed: 1,
   capRisk: 0,
+  peek: 0,
   selection: 4,
   noChange: 1,
 };
@@ -209,7 +210,7 @@ async function main() {
   const norm = (p) => p.replace(/\d+/g, '#');
   for (const r of results) {
     for (const it of r.items) {
-      if (it.kind === 'capRisk') continue;
+      if (it.kind === 'capRisk' || it.kind === 'peek') continue;
       const key = `${it.kind}|${norm(it.path)}`;
       let g = groups.get(key);
       if (!g) {
@@ -227,7 +228,7 @@ async function main() {
     .map((g) => ({ ...g, formats: [...g.formats].sort(), screens: [...g.screens].sort() }))
     .sort((a, b) => b.score * Math.log2(1 + b.count) - a.score * Math.log2(1 + a.count));
   const worst = results
-    .flatMap((r) => r.items.filter((i) => i.kind !== 'capRisk').map((i) => ({ ...i, folder: r.folder, screen: r.id })))
+    .flatMap((r) => r.items.filter((i) => i.kind !== 'capRisk' && i.kind !== 'peek').map((i) => ({ ...i, folder: r.folder, screen: r.id })))
     .sort((a, b) => b.score - a.score)
     .slice(0, 200);
   const calibration = { n: 0, same: 0, off1: 0, off2: 0, max: 0 };
@@ -316,16 +317,16 @@ code{color:var(--accent);word-break:break-all}
 <script>
 const D=${data};
 const $=s=>document.querySelector(s);
-const HELP={overflow:"texte plus grand que sa boîte à la taille qu'utiliserait Roblox",clipped:"texte coupé par un parent (ClipsDescendants, CanvasGroup)",truncated:"« … » : texte tronqué",small:"texte sous le minimum lisible (28 px de référence × échelle de Root)",smallFixed:"taille fixe sous le minimum lisible",splitWord:"mot coupé en deux par le retour à la ligne",orphan:"ponctuation seule sur sa ligne",offscreen:"objet hors de l'écran",unsafe:"hors de la zone sûre TV (5 %)",overlap:"chevauchement de textes ou de boutons",contrast:"contraste < 3",tinted:"texte teinté par l'UIGradient d'un CanvasGroup",empty:"boîte visible sans texte",rawKey:"clé de traduction affichée",placeholder:"variable {x} affichée",question:"« ? » à la place d'une donnée",defaultText:"texte jamais posé (« Label »)",noChange:"« 60 → 60 » : flèche sans changement",capRisk:"information : taille qui dépend de l'ordre bornes TextScaled / UIScale (à vérifier sur console)",selection:"curseur de sélection invisible, hors écran ou caché par un parent"};
-$('#totals').innerHTML=Object.entries(D.totals).sort((a,b)=>(a[0]==='capRisk')-(b[0]==='capRisk')||b[1]-a[1]).map(([k,v])=>'<span title="'+(HELP[k]||'')+'">'+k+(k==='capRisk'?' (info)':'')+' : '+v+'</span>').join('');
+const HELP={overflow:"texte plus grand que sa boîte à la taille qu'utiliserait Roblox",clipped:"texte coupé par un parent (ClipsDescendants, CanvasGroup)",truncated:"« … » : texte tronqué",small:"texte sous le minimum lisible (28 px de référence × échelle de Root)",smallFixed:"taille fixe sous le minimum lisible",splitWord:"mot coupé en deux par le retour à la ligne",orphan:"ponctuation seule sur sa ligne",offscreen:"objet hors de l'écran",unsafe:"hors de la zone sûre TV (5 %)",overlap:"chevauchement de textes ou de boutons",contrast:"contraste < 3",tinted:"texte teinté par l'UIGradient d'un CanvasGroup",empty:"boîte visible sans texte",rawKey:"clé de traduction affichée",placeholder:"variable {x} affichée",question:"« ? » à la place d'une donnée",defaultText:"texte jamais posé (« Label »)",noChange:"« 60 → 60 » : flèche sans changement",capRisk:"information : taille qui dépend de l'ordre bornes TextScaled / UIScale (à vérifier sur console)",selection:"curseur de sélection invisible, hors écran ou caché par un parent",peek:"information : rangée entrouverte voulue d'une liste (annonce la suite)"};
+$('#totals').innerHTML=Object.entries(D.totals).sort((a,b)=>(a[0]==='capRisk'||a[0]==='peek')-(b[0]==='capRisk'||b[0]==='peek')||b[1]-a[1]).map(([k,v])=>'<span title="'+(HELP[k]||'')+'">'+k+(k==='capRisk'||k==='peek'?' (info)':'')+' : '+v+'</span>').join('');
 for(const f of D.formats){const o=document.createElement('option');o.value=f;o.textContent=f;$('#fmt').appendChild(o);}
 for(const k of Object.keys(D.totals).sort()){const o=document.createElement('option');o.value=k;o.textContent=k;$('#kind').appendChild(o);}
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 $('#grouped tbody').innerHTML=D.grouped.map(g=>'<tr><td>'+g.kind+'</td><td><code>'+esc(g.path)+'</code></td><td>'+g.count+'</td><td>'+g.formats.length+' : '+esc(g.formats.join(', '))+'</td><td><a href="'+g.example.folder+'/'+g.example.screen+'.png" target="_blank">'+esc(g.example.folder+'/'+g.example.screen)+'</a><br>'+esc(g.example.text?('« '+g.example.text.slice(0,60)+' » '):'')+esc(g.example.message)+'</td></tr>').join('');
 function draw(){
  const f=$('#fmt').value,q=$('#q').value.trim(),only=$('#only').value,kind=$('#kind').value;
- const rows=D.perScreen.filter(s=>(!f||s.folder===f)&&(!q||s.id.includes(q))&&(!only||Object.keys(s.counts).some(k=>k!=='capRisk'))&&(!kind||s.counts[kind]));
- $('#grid').innerHTML=rows.map(s=>{const b=Object.entries(s.counts).filter(([k])=>k!=='capRisk').map(([k,v])=>'<span class="badge">'+k+' '+v+'</span>').join('');
+ const rows=D.perScreen.filter(s=>(!f||s.folder===f)&&(!q||s.id.includes(q))&&(!only||Object.keys(s.counts).some(k=>k!=='capRisk'&&k!=='peek'))&&(!kind||s.counts[kind]));
+ $('#grid').innerHTML=rows.map(s=>{const b=Object.entries(s.counts).filter(([k])=>k!=='capRisk'&&k!=='peek').map(([k,v])=>'<span class="badge">'+k+' '+v+'</span>').join('');
   return '<div class="card"><a href="'+s.folder+'/'+s.id+'.png" target="_blank"><img loading="lazy" src="thumbs/'+s.folder+'/'+s.id+'.jpg" alt="'+esc(s.id)+'"></a><div class="meta"><a href="'+s.folder+'/'+s.id+'.report.json" target="_blank"><b>'+esc(s.id)+'</b> · '+s.folder+'</a><br>'+(b||'<span class="clean">aucun problème</span>')+(s.error?'<br><span class="badge">erreur de capture</span>':'')+'</div></div>';}).join('');
 }
 for(const id of ['#fmt','#q','#only','#kind'])$(id).addEventListener('input',draw);

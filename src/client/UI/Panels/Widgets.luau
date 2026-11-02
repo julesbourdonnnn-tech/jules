@@ -21,6 +21,7 @@ local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local TextService = game:GetService("TextService")
 local UserInputService = game:GetService("UserInputService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared", 30) :: Folder
@@ -67,6 +68,9 @@ Widgets.Colors = {
 	Gold = Theme.Colors.Gold,
 	Pink = Color3.fromRGB(255, 130, 180),
 	Locked = Color3.fromRGB(90, 86, 110),
+	-- texte « pas encore gagné » (badges d'étoiles grisés) : grisé mais lisible, contraste ≥ 3 sur
+	-- les panneaux (Locked, trop sombre pour un texte : 1,9 ; outil d'écrans, Screens_display.spec)
+	LockedText = Color3.fromRGB(140, 134, 170),
 	Silhouette = Color3.fromRGB(70, 68, 84),
 }
 
@@ -345,6 +349,8 @@ export type LabelProps = {
 	wrapped: boolean?,
 	zIndex: number?,
 	order: number?,
+	-- contour sombre du texte : par défaut (lisible sur tous les fonds, y compris les boutons et cases
+	-- de couleur vive dont la couleur change : case choisie, jour fait, onglet actif) ; false : aucun
 	stroke: boolean?,
 	background: Color3?,
 	backgroundTransparency: number?,
@@ -389,7 +395,10 @@ local function applyLabel(label: TextLabel | TextButton, p: LabelProps)
 	c.MinTextSize = p.minSize or Widgets.MIN_TEXT
 	c.MaxTextSize = math.max(p.textSize or Layout.Text.Body, c.MinTextSize)
 	c.Parent = label
-	if p.stroke then
+	-- contour sombre de 2 px (Contextual : autour des lettres) sur TOUS les libellés : un texte blanc,
+	-- doré ou grisé reste lisible (contraste ≥ 3) sur un bouton vert, rose, bleu ou doré et sur une
+	-- case qui change de couleur (outil d'écrans : contrastes de 1,1 à 2,3 avant ce contour)
+	if p.stroke ~= false then
 		local s = stroke(label, Widgets.Colors.Stroke, 2, true)
 		s.Name = "TextStroke"
 	end
@@ -397,6 +406,83 @@ local function applyLabel(label: TextLabel | TextButton, p: LabelProps)
 		Widgets.setText(label, p.key, p.vars)
 	else
 		label.Text = p.text or ""
+	end
+	Widgets.keepWords(label, c)
+end
+
+-- TextScaled ne coupe jamais un mot : TextScaled implique les retours à la ligne, et Roblox coupe
+-- entre deux lettres un mot plus large que la boîte (« Squishyde / x » dans le rail quand la pastille
+-- « ! » resserre le libellé). La taille maximale est donc bornée pour que le mot le plus long tienne
+-- sur une ligne : largeur de la boîte (px TV) × 100 / largeur du mot à la taille 100
+-- (TextService:GetTextSize, mesure du moteur ; repli : Widgets.textEm), jamais sous MinTextSize (un
+-- mot qui ne tient pas même au minimum est un défaut de place, relevé par l'outil d'écrans).
+local WORD_REF = 100
+local wordCache: { [string]: number } = {}
+local wordCacheSize = 0
+
+local function wordWidth(word: string): number
+	local cached = wordCache[word]
+	if cached then
+		return cached
+	end
+	local ok, size = pcall(function()
+		return TextService:GetTextSize(word, WORD_REF, Enum.Font.FredokaOne, Vector2.new(1e5, 1e5))
+	end)
+	local w = if ok
+			and typeof(size) == "Vector2"
+			and size.X > 0
+		then size.X
+		else Widgets.textEm(word) * WORD_REF
+	if wordCacheSize > 2000 then
+		table.clear(wordCache)
+		wordCacheSize = 0
+	end
+	wordCache[word] = w
+	wordCacheSize += 1
+	return w
+end
+
+function Widgets.longestWord(text: string): number
+	local best = 0
+	-- espaces ordinaires seulement : Roblox ne coupe jamais à l'espace insécable (« 1,2 K »)
+	for word in string.gmatch(text, "[^ \t\n]+") do
+		best = math.max(best, wordWidth(word))
+	end
+	return best
+end
+
+local wordLimits: { [Instance]: number } = setmetatable({}, { __mode = "k" }) :: any
+
+function Widgets.keepWords(label: TextLabel | TextButton, c: UITextSizeConstraint)
+	local base = c.MaxTextSize
+	wordLimits[label] = base
+	local function apply()
+		local limit = wordLimits[label] or base
+		local scale = math.max(Widgets.scale(), 1e-3)
+		local width = label.AbsoluteSize.X / scale
+		local text = if label.RichText then string.gsub(label.Text, "<[^<>]->", "") else label.Text
+		local wordW = Widgets.longestWord(text)
+		local maxSize = limit
+		if width > 1 and wordW > 0 then
+			maxSize = math.min(limit, math.floor(width * WORD_REF / wordW))
+		end
+		maxSize = math.max(c.MinTextSize, maxSize)
+		if c.MaxTextSize ~= maxSize then
+			c.MaxTextSize = maxSize
+		end
+	end
+	label:GetPropertyChangedSignal("Text"):Connect(apply)
+	label:GetPropertyChangedSignal("AbsoluteSize"):Connect(apply)
+	apply()
+end
+
+-- Taille maximale habituelle d'un libellé (avant la borne des mots) ; à utiliser au lieu d'écrire
+-- MaxTextSize directement
+function Widgets.setMaxText(label: TextLabel | TextButton, size: number)
+	wordLimits[label] = size
+	local c = label:FindFirstChildOfClass("UITextSizeConstraint")
+	if c then
+		c.MaxTextSize = math.max(c.MinTextSize, size)
 	end
 end
 
@@ -560,13 +646,30 @@ end
 -- 1,05 et non 1,06 : avec 24 px entre deux boutons de 432 px, un bouton sélectionné ne touche
 -- jamais son voisin. Mouvement réduit : aucune mise à l'échelle.
 local SELECT_GROW = Layout.Focus.Grow -- 1,05
+-- Grossissement borné à SELECT_GROW_MAX px TV en largeur : un grand bouton (Guide du Squishydex,
+-- 1 344 px ; dalle en pleine largeur) qui grossissait de 5 % (67 px) dépassait de son panneau et de
+-- la zone sûre ; un bouton de 480 px TV ou moins garde exactement 1,05.
+local SELECT_GROW_MAX = 24
 local selectedButtons: { [GuiButton]: boolean } = setmetatable({}, { __mode = "k" }) :: any
 local pressedButtons: { [GuiButton]: boolean } = setmetatable({}, { __mode = "k" }) :: any
 -- boutons qui pulsent (Widgets.attention) : leur UIScale est piloté par la boucle d'attention
 local attention: { [GuiObject]: boolean } = setmetatable({}, { __mode = "k" }) :: any
 
+-- Échelle d'un bouton sélectionné : 1,05, ou moins pour un bouton de plus de 480 px TV de large
+-- (largeur en px TV : taille Offset, sinon taille affichée hors grossissement en cours)
+local function growOf(button: GuiButton): number
+	local width = button.Size.X.Offset
+	if button.Size.X.Scale > 0 or width <= 0 then
+		local scale = button:FindFirstChild("JuiceScale")
+		local current = if scale and scale:IsA("UIScale") then math.max(scale.Scale, 1e-3) else 1
+		width = math.max(width, button.AbsoluteSize.X / math.max(Root.scale(), 1e-3) / current)
+	end
+	return 1 + math.min(SELECT_GROW - 1, SELECT_GROW_MAX / math.max(width, 1))
+end
+Widgets.growOf = growOf
+
 local function rest(button: GuiButton): number
-	return if selectedButtons[button] then SELECT_GROW else 1
+	return if selectedButtons[button] then growOf(button) else 1
 end
 
 local function pressFx(button: GuiButton)
@@ -590,7 +693,19 @@ local function pressFx(button: GuiButton)
 	button.SelectionGained:Connect(function()
 		selectedButtons[button] = true
 		if not Juice.reducedMotion() then
-			Juice.tween(scale, 0.12, { Scale = SELECT_GROW })
+			Juice.tween(scale, 0.12, { Scale = growOf(button) })
+		end
+	end)
+	-- largeur connue après la mise en page (bouton en taille relative) : grossissement recalculé
+	button:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+		if selectedButtons[button] and not pressedButtons[button] and not attention[button] then
+			if Juice.reducedMotion() then
+				return
+			end
+			local goal = growOf(button)
+			if math.abs(scale.Scale - goal) > 0.002 then
+				scale.Scale = goal
+			end
 		end
 	end)
 	button.SelectionLost:Connect(function()
@@ -1336,6 +1451,9 @@ function Widgets.rows(p: RowsProps): Rows
 		(p.position or UDim2.new()) - UDim2.fromOffset(ROW_ROOM, 0)
 	)
 	frame.ClipsDescendants = true
+	-- rangée entrouverte voulue en bas (ou en haut) de la liste : elle annonce la suite (GDD §10.6
+	-- règle 7) ; l'outil d'écrans la classe à part (« peek ») au lieu d'un texte coupé
+	frame:SetAttribute("PeekRows", true)
 	local holder =
 		Widgets.group(frame, "Holder", UDim2.fromOffset(p.size.X, p.size.Y), UDim2.fromOffset(ROW_ROOM, 0))
 	holder:SetAttribute("BumpTarget", true)

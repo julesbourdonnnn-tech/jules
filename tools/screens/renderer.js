@@ -991,7 +991,11 @@
       if (clip && area(visible) + 2 < area(ink)) {
         const clipper = nearestClipper(n);
         const boxCut = area(inter(e.box, clip)) + 2 < area(e.box);
-        if (!(clipper && clipper.c === 'ScrollingFrame' && boxCut))
+        // rangée entrouverte d'une liste virtuelle (attribut PeekRows, Widgets.rows) : voulue, classée
+        // à part (information)
+        if (clipper && clipper.peek)
+          add('peek', n, `rangée entrouverte de ${clipper.path} (voulue : annonce la suite de la liste)`, { rect: R(ink) });
+        else if (!(clipper && clipper.c === 'ScrollingFrame' && boxCut))
           add('clipped', n, `coupé par ${clipper ? clipper.path : 'un parent'} (${Math.round(area(ink) - area(visible))} px² cachés)`, {
             rect: R(ink),
           });

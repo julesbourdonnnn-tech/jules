@@ -1,14 +1,18 @@
 --!nocheck
--- Captures d'écrans hors moteur (outil, jamais livré : Rojo ne prend que src/).
+-- Captures d'écrans hors moteur de Raise a Squishy (outil, jamais livré : Rojo ne prend que src/).
 -- Démarre le VRAI client dans le harnais pour chaque appareil × langue × état, joue chaque écran
 -- (tests/harness/Screens), applique la mise en page fidèle (textes mesurés) et écrit un instantané
 -- JSON par écran (tests/harness/ScreenDump) : <sortie>/<appareil>-<langue>/<écran>.json, plus
 -- <sortie>/manifest.json (liste des écrans et problèmes de texte vus côté Luau).
 --
 --   lune run tools/screens/capture -- --out /tmp/captures
---   options : --profiles tv1080,phone   --langs fr   --groups mid,fx   --screens upgrades
+--   options : --profiles tv1080,pc   --langs fr   --groups mid,fx   --screens panel.Ranch
 --             --pending tests/fixtures/TextFitPending.luau  (régénère la liste des cas en attente
 --             de tests/specs/TextFit_all.spec.luau à partir des problèmes vus aujourd'hui)
+--             --keys-pending tests/fixtures/TextFitKeysPending.luau  (régénère la liste des clés pas
+--             encore prouvées, raisons écrites à la main gardées)
+-- Écrit aussi <sortie>/keys.json : chaque clé de localisation prouvée (nombre de boîtes), en échec
+-- (messages) ou jamais affichée.
 -- À lancer depuis la racine du projet (le harnais monte src/ depuis le dossier courant).
 
 local fs = require("@lune/fs")
@@ -19,6 +23,7 @@ local Harness = require("../../tests/harness/Harness")
 local Screens = require("../../tests/harness/Screens")
 local ScreenDump = require("../../tests/harness/ScreenDump")
 local Pending = require("../../tests/harness/TextFitPending")
+local TextFitKeys = require("../../tests/harness/TextFitKeys")
 
 local args = { out = "captures" }
 do
@@ -74,8 +79,15 @@ local function wanted(id)
 	return screenFilter == nil or string.find(id, screenFilter, 1, true) ~= nil
 end
 
+local keyStore = TextFitKeys.new()
+local lastClient = nil
+
 local function write(dir, screenId, c, meta)
 	Screens.layout(c)
+	if c.Species then
+		lastClient = c
+	end
+	TextFitKeys.collect(keyStore, c, c.profile.id, Screens)
 	local rootScale = Screens.rootScale(c)
 	local issues = Screens.textIssues(c)
 	local data = ScreenDump.dump(c, meta, rootScale, Screens.LAYOUT_OPTIONS, { luauIssues = issues })
@@ -162,6 +174,146 @@ for _, case in manifest.cases do
 	end
 end
 fs.writeFile(OUT .. "/manifest.json", serde.encode("json", manifest, true))
+
+do
+	local keysResult = nil
+	if lastClient then
+		local Localization = lastClient.Localization
+		local Strings = lastClient.Strings
+		keysResult = TextFitKeys.check(keyStore, Localization, Strings, function(lang, key)
+			return Screens.varsFor(lastClient, key, lang)
+		end)
+		local nProven, nFail, nUnseen, nFamily = 0, 0, 0, 0
+		for _ in keysResult.proven do
+			nProven += 1
+		end
+		for _ in keysResult.failures do
+			nFail += 1
+		end
+		for _ in keysResult.unseen do
+			nUnseen += 1
+		end
+		for _ in keysResult.viaFamily do
+			nFamily += 1
+		end
+		fs.writeFile(OUT .. "/keys.json", serde.encode("json", keysResult, true))
+		print(
+			string.format(
+				"clés : %d prouvées (dont %d par leur famille), %d en échec, %d jamais affichées",
+				nProven,
+				nFamily,
+				nFail,
+				nUnseen
+			)
+		)
+		if args["keys-pending"] then
+			local path = if type(args["keys-pending"]) == "string"
+				then args["keys-pending"]
+				else "tests/fixtures/TextFitKeysPending.luau"
+			local reasons = {}
+			if fs.isFile(path) then
+				local ok, list = pcall(function()
+					return require("../../" .. string.gsub(path, "%.luau$", ""))
+				end)
+				if ok and type(list) == "table" then
+					reasons = list
+				end
+			end
+			-- une raison automatique (« jamais affichée », « ne tient pas », classement par les sources) est
+			-- recalculée ; une raison écrite à la main est gardée
+			for key, reason in reasons do
+				if
+					string.find(reason, "^jamais affichée par les scénarios")
+					or string.find(reason, "^ne tient pas : ")
+					or string.find(reason, "^%[auto%]")
+				then
+					reasons[key] = nil
+				end
+			end
+			-- classement des clés jamais affichées d'après les sources (src/client, src/first, src/server)
+			local sources = { client = {}, server = {} }
+			local function walk(dir, side)
+				for _, entry in fs.readDir(dir) do
+					local full = dir .. "/" .. entry
+					if fs.isDir(full) then
+						walk(full, side)
+					elseif string.match(entry, "%.luau$") then
+						sources[side][full] = fs.readFile(full)
+					end
+				end
+			end
+			walk("src/client", "client")
+			walk("src/first", "client")
+			-- code partagé (BigNumber, Formulas…) : exécuté aussi par le client ; le registre des textes
+			-- lui-même ne compte pas
+			walk("src/shared", "client")
+			sources.client["src/shared/Localization/Strings.luau"] = nil
+			walk("src/server", "server")
+			local function find(side, needle)
+				local files = {}
+				for file in sources[side] do
+					table.insert(files, file)
+				end
+				table.sort(files)
+				for _, file in files do
+					if string.find(sources[side][file], needle, 1, true) then
+						return (string.gsub(file, "^src/", ""))
+					end
+				end
+				return nil
+			end
+			local SPECIAL = {
+				["kick.serverFull"] = "message d'expulsion affiché par Roblox (Player:Kick), hors de l'interface du jeu",
+				["device.touch"] = "aucun appareil tactile au lancement (console d'abord, décision du propriétaire)",
+				["shop.product.CoinsSmall"] = "article caché au lancement (hidden, Config/Monetization)",
+				["shop.product.CoinsSmall.desc"] = "article caché au lancement (hidden, Config/Monetization)",
+				["shop.product.CoinsBig"] = "article caché au lancement (hidden, Config/Monetization)",
+				["shop.product.CoinsBig.desc"] = "article caché au lancement (hidden, Config/Monetization)",
+				["shop.pass.SeasonPass"] = "passe caché au lancement (hidden ; jamais de piste décorative payante)",
+				["shop.pass.SeasonPass.desc"] = "passe caché au lancement (hidden ; jamais de piste décorative payante)",
+			}
+			for key in keysResult.unseen do
+				if reasons[key] == nil then
+					local reason = SPECIAL[key]
+					if reason == nil then
+						local prefix = string.match(key, "^(.*%.)[^%.]+$")
+						local direct = find("client", '"' .. key .. '"')
+						local built = if prefix then find("client", '"' .. prefix .. '"') else nil
+						local server = find("server", '"' .. key .. '"')
+						local serverBuilt = if prefix then find("server", '"' .. prefix .. '"') else nil
+						if direct then
+							reason = "[auto] affichée par le client ("
+								.. direct
+								.. ") dans un état que les scénarios ne montrent pas encore"
+						elseif built then
+							reason = "[auto] clé construite par le client (préfixe « "
+								.. prefix
+								.. " », "
+								.. built
+								.. ") dans un état que les scénarios ne montrent pas encore"
+						elseif server then
+							reason = "[auto] texte envoyé par le serveur ("
+								.. server
+								.. ") ; son emplacement n'est pas encore montré par les scénarios"
+						elseif serverBuilt then
+							reason = "[auto] clé construite par le serveur (préfixe « "
+								.. prefix
+								.. " », "
+								.. serverBuilt
+								.. ") ; emplacement pas encore montré"
+						else
+							reason =
+								"[auto] aucune référence littérale dans src/ : clé inutilisée ou construite autrement (à vérifier)"
+						end
+					end
+					reasons[key] = reason
+				end
+			end
+			fs.writeFile(path, TextFitKeys.renderPending(keysResult, reasons))
+			print("clés en attente écrites dans " .. path)
+		end
+	end
+end
 
 if args.pending then
 	local path = if type(args.pending) == "string" then args.pending else "tests/fixtures/TextFitPending.luau"

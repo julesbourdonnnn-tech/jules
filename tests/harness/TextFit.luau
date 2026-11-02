@@ -463,6 +463,21 @@ function TextFit.hidesWord(hidden: string): string?
 	return nil
 end
 
+-- Ligne qui commence par une unité (s, min, h, j, %, K, M, B, Qa…, pièces, px) suivie d'une fin de mot
+local UNITS =
+	{ "s", "min", "h", "j", "%", "K", "M", "B", "T", "Qa", "Qi", "Sx", "Sp", "Oc", "No", "Dc", "px" }
+function TextFit.startsWithUnit(line: string): boolean
+	for _, u in UNITS do
+		if string.sub(line, 1, #u) == u then
+			local nextCh = string.sub(line, #u + 1, #u + 1)
+			if nextCh == "" or string.find(nextCh, "[%s%.,;:!%?%)/]") then
+				return true
+			end
+		end
+	end
+	return false
+end
+
 -- Débordement vertical toléré : l'intérieur d'une ligne (au-dessus des capitales et sous les
 -- jambages) peut dépasser sans qu'aucun trait ne sorte de la boîte
 local function verticalSlack(size: number): number
@@ -502,6 +517,23 @@ function TextFit.fits(obj, opts)
 					add("orphan", "« " .. line .. " » seul sur une ligne")
 					break
 				end
+			end
+		end
+		-- unité séparée de son nombre par le retour à la ligne (« toutes les 5 » / « s. ») : l'espace
+		-- entre un nombre et son unité doit être insécable
+		for i = 2, #d.lines do
+			local prev = string.gsub(d.lines[i - 1], "%s+$", "")
+			local cur = string.gsub(d.lines[i], "^%s+", "")
+			if string.find(prev, "%d$") and TextFit.startsWithUnit(cur) then
+				add(
+					"unitSplit",
+					"« "
+						.. string.sub(prev, -6)
+						.. " » / « "
+						.. string.sub(cur, 1, 6)
+						.. " » : unité séparée de son nombre"
+				)
+				break
 			end
 		end
 		if d.truncated then

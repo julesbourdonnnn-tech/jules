@@ -280,10 +280,20 @@ local function main()
 	local root = Instance.new("CanvasGroup")
 	root.Name = "Root"
 	root.Size = UDim2.fromScale(1, 1)
-	root.BackgroundColor3 = Color3.new(1, 1, 1)
+	root.BackgroundTransparency = 1
 	root.BorderSizePixel = 0
 	root.GroupTransparency = 0
 	root.Parent = gui
+	-- ciel : cadre plein écran à part, sous tout le reste. Le dégradé n'est JAMAIS posé sur le
+	-- CanvasGroup : Roblox applique l'UIGradient d'un CanvasGroup à TOUT son contenu (le message, la
+	-- mascotte et « Réessayer » étaient teintés de violet ; outil d'écrans, Screens_display.spec)
+	local sky = Instance.new("Frame")
+	sky.Name = "Sky"
+	sky.Size = UDim2.fromScale(1, 1)
+	sky.BackgroundColor3 = Color3.new(1, 1, 1)
+	sky.BorderSizePixel = 0
+	sky.ZIndex = 0
+	sky.Parent = root
 	local gradient = Instance.new("UIGradient")
 	gradient.Rotation = 90
 	gradient.Color = ColorSequence.new({
@@ -291,7 +301,7 @@ local function main()
 		ColorSequenceKeypoint.new(0.6, SKY_MID),
 		ColorSequenceKeypoint.new(1, SKY_BOTTOM),
 	})
-	gradient.Parent = root
+	gradient.Parent = sky
 
 	-- Étoiles qui scintillent (tweens en boucle gérés par le moteur)
 	local stars = Instance.new("Frame")

@@ -265,6 +265,7 @@ local function dumpTree(gui, guiIndex, nodes, index, rootScale, isVisible, prefi
 						sel = Layout.selectable(obj),
 						deco = decorative(obj),
 						auto = obj:GetAttribute("Decorative") == true,
+						peek = obj:GetAttribute("PeekRows") == true,
 					}
 					if obj.ClassName == "CanvasGroup" then
 						node.gt = round(Props.get(obj, "GroupTransparency") or 0, 3)

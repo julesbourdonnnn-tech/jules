@@ -9,6 +9,7 @@
 -- « Label » / « Button »…), celle qu'un joueur verrait vraiment.
 --
 --   EngineProps.install()                 -- suivi des écritures (idempotent, avant Harness.new)
+--   EngineProps.uninstall()               -- retire le suivi (fin d'une spec d'écrans)
 --   EngineProps.get(obj, "BackgroundColor3")
 --   EngineProps.written(obj, "Text")      -- la propriété a-t-elle été écrite par le code ?
 --
@@ -25,6 +26,7 @@ local EngineProps = {}
 local cache = {} -- [className] = { [prop] = valeur | NONE }
 local NONE = {}
 local installed = false
+local restore = nil -- () -> () : remet __newindex et Clone d'origine
 
 function EngineProps.install()
 	if installed then
@@ -57,7 +59,27 @@ function EngineProps.install()
 		end
 		return copy
 	end
+	restore = function()
+		mt.__newindex = setter
+		Methods.Clone = clone
+	end
 	probe:Destroy()
+end
+
+-- Retire le suivi (fin d'une spec d'écrans : les specs suivantes retrouvent MockInstance tel quel)
+function EngineProps.uninstall()
+	if not installed then
+		return
+	end
+	installed = false
+	if restore then
+		restore()
+		restore = nil
+	end
+end
+
+function EngineProps.installed(): boolean
+	return installed
 end
 
 function EngineProps.written(obj, key: string): boolean

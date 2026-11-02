@@ -67,6 +67,7 @@ local WorldText = {}
 local PAD_X = 16 -- px TV de marge intérieure
 local PAD_Y = 8
 local GAP = 12 -- px TV entre le glyphe et le mot
+local TEXT_MARGIN = 1.15 -- marge de la largeur estimée d'un texte (voir layoutEntry)
 local MIN_WIDTH = 64
 local POOL_MAX = 64
 local FOLDER_NAME = "WorldText"
@@ -128,7 +129,10 @@ local function layoutEntry(e: Entry)
 	if g and g:shown() then
 		glyphW = math.max(e.glyphSize, g.frame.Size.X.Offset)
 	end
-	local textW = if e.text ~= "" then math.ceil(Util.textEm(e.text) * e.textSize) else 0
+	-- largeur estimée (Util.textEm) avec 15 % de marge : l'estimation par classe de caractère sous-estime
+	-- jusqu'à 12 % les mots courts aux lettres larges de FredokaOne (« Off », « Attraper » : 3 px de
+	-- débord à 40 px, outil d'écrans) ; le texte est en taille fixe, il ne rétrécit pas
+	local textW = if e.text ~= "" then math.ceil(Util.textEm(e.text) * e.textSize * TEXT_MARGIN) else 0
 	local gap = if glyphW > 0 and textW > 0 then GAP else 0
 	local h = math.max(e.textSize * 1.25, if glyphW > 0 then e.glyphSize else 0) + 2 * PAD_Y
 	local w = math.max(MIN_WIDTH, glyphW + gap + textW + 2 * PAD_X)

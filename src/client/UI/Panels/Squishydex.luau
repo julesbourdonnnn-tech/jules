@@ -49,7 +49,8 @@ local TABS = { "species", "families", "guide" }
 local CELL = Layout.Panel.cell
 local LABEL_W = 260
 local PER_ROW = 4
-local GUIDE_STEP = 0.7 -- ↑ / ↓ : 70 % de la hauteur visible
+local GUIDE_STEP = 0.7 -- ↑ / ↓ : 70 % de la hauteur visible (arrondi à des lignes entières)
+local GUIDE_LINE = 48 -- px TV : pas des lignes du Guide
 
 local nav: Nav? = nil
 local tabBar: Widgets.TabBar? = nil
@@ -223,7 +224,7 @@ local function renderSheet(s: number)
 	local stars = maskOf("stars", s)
 	for k, label in sheetStars do
 		local lit = hasBit(stars, k - 1)
-		label.TextColor3 = if lit then Widgets.Colors.Gold else Widgets.Colors.Locked
+		label.TextColor3 = if lit then Widgets.Colors.Gold else Widgets.Colors.LockedText
 	end
 	local trophies = Widgets.tbl(Widgets.state("trophies"))
 	local record = math.max(0, Widgets.n(trophies[s]))
@@ -399,8 +400,10 @@ local function applyGuideScroll(animate: boolean)
 	if holder == nil then
 		return
 	end
+	-- défilement par lignes entières (GUIDE_LINE) et cadre d'un nombre entier de lignes : aucune
+	-- ligne coupée en deux en haut ni en bas (outil d'écrans : « Givré ×3 » à moitié caché)
 	local maxScroll = math.max(0, guideTotalH - guideViewH)
-	guideScroll = math.clamp(guideScroll, 0, maxScroll)
+	guideScroll = math.clamp(math.floor(guideScroll / GUIDE_LINE + 0.5) * GUIDE_LINE, 0, maxScroll)
 	local goal = UDim2.fromOffset(0, -guideScroll)
 	if animate and not Juice.reducedMotion() then
 		Juice.tween(holder, 0.15, { Position = goal })
@@ -429,7 +432,7 @@ local function refreshGuide()
 			Widgets.setRaw(label, entry.text)
 			label.TextColor3 = if entry.title then Widgets.Colors.Gold else Widgets.Colors.Text
 			label.Position = UDim2.fromOffset(if entry.title then 0 else 32, y)
-			y += 48
+			y += GUIDE_LINE
 		end
 	end
 	guideTotalH = y
@@ -440,16 +443,17 @@ local function onGuideInput(input: InputObject)
 	if not isOpen or current ~= "guide" or GuiService.SelectedObject ~= guideScroller then
 		return
 	end
+	local step = math.max(GUIDE_LINE, math.floor(guideViewH * GUIDE_STEP / GUIDE_LINE) * GUIDE_LINE)
 	if input.KeyCode == Enum.KeyCode.DPadDown then
 		local before = guideScroll
-		guideScroll += guideViewH * GUIDE_STEP
+		guideScroll += step
 		applyGuideScroll(true)
 		if guideScroll <= before then
 			-- déjà en bas : le seul ↓ qui rebondit (son Bump, vibration listEnd)
 			Widgets.listEnd(guideScroller, "Down")
 		end
 	elseif input.KeyCode == Enum.KeyCode.DPadUp and guideScroll > 0 then
-		guideScroll -= guideViewH * GUIDE_STEP
+		guideScroll -= step
 		applyGuideScroll(true)
 	end
 end
@@ -736,7 +740,7 @@ local function buildSheet(container: Frame, top: number)
 			key = "panel.dex.starBadge",
 			vars = { n = k },
 			textSize = 40,
-			color = Widgets.Colors.Locked,
+			color = Widgets.Colors.LockedText,
 		})
 	end
 end
@@ -810,7 +814,8 @@ end
 
 local function buildGuide(page: Frame)
 	local width = page.Size.X.Offset - 96
-	guideViewH = page.Size.Y.Offset - 16
+	-- hauteur visible : un nombre entier de lignes (voir applyGuideScroll)
+	guideViewH = math.max(GUIDE_LINE, math.floor((page.Size.Y.Offset - 16) / GUIDE_LINE) * GUIDE_LINE)
 	local scroller = Widgets.button({
 		parent = page,
 		name = "Guide",
@@ -841,7 +846,8 @@ local function buildGuide(page: Frame)
 	end
 	local pad = Instance.new("UIPadding")
 	pad.PaddingLeft = UDim.new(0, 24)
-	pad.PaddingTop = UDim.new(0, 12)
+	-- ligne de 44 px dans un pas de 48 : 2 px au-dessus et au-dessous de chaque ligne
+	pad.PaddingTop = UDim.new(0, (GUIDE_LINE - 44) / 2)
 	pad.Parent = holder
 	UserInputService.InputBegan:Connect(onGuideInput)
 end
