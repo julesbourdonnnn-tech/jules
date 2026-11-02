@@ -370,6 +370,38 @@ return function(T)
 	end)
 
 	-- =========================================================================================
+	describe("MoveCheck › un instant jugé une seule fois", function()
+		it(
+			"second appel au même instant (même position ou position de retour) : même verdict, rien recompté",
+			function()
+				local MC, V3 = setup()
+				local p = newPlayer(MC, V3, V3.new(0, 3, 0), 16)
+				local far = V3.new(60, 3, 0)
+				local verdicts = {}
+				for _ = 1, 3 do
+					p.now += DT
+					local v1, back1 = MC.step(p.player, far, DT, p.now, 0)
+					local violations = MC.violations(p.player)
+					-- deuxième appelant du même tick : position vue après l'éventuel retour
+					local again = if v1 == "rewind" and back1 then back1 else far
+					local v2, back2 = MC.step(p.player, again, DT, p.now, 0)
+					expect(v2).toBe(v1)
+					expect(back2).toBe(back1)
+					expect(MC.violations(p.player)).toBe(violations)
+					table.insert(verdicts, v1)
+				end
+				expect(verdicts[3]).toBe("rewind")
+				expect(MC.recentRewinds(p.player, p.now)).toBe(1)
+				-- même instant, position NOUVELLE : jugée normalement
+				local q = newPlayer(MC, V3, V3.new(100, 3, 0), 16)
+				q.now += DT
+				expect((MC.step(q.player, V3.new(101, 3, 0), DT, q.now, 0))).toBe("ok")
+				expect((MC.step(q.player, V3.new(180, 3, 0), DT, q.now, 0))).toBe("flag")
+			end
+		)
+	end)
+
+	-- =========================================================================================
 	describe("MoveCheck › INT-MOVE : positionAt", function()
 		it(
 			"interpolée entre deux positions acceptées, nil hors de l'anneau de 0,5 s, effacée par clear",

@@ -13,9 +13,11 @@
 --     MoveCheck.grant (12 studs sur 0,35 s, rétroactif, un par 4 s) ; atterrissage
 --     LeapRules.landing(MoveCheck.positionAt(tClient), dir) ; capture tentée à tClient + 0,35 s.
 --   * Capture (Catch(id, tClient)) : mise en file, vérifiée au tick suivant dans l'ordre d'arrivée, à SON
---     instant : SeededPath.pos(tClient) contre MoveCheck.positionAt(joueur, tClient), à plat ≤ rayon +
---     1,5, pieds ≤ 8, canAct ; règles de RushRules.checkCatch pour les fuites du Rush ; la première
---     arrivée gagne. Récompenses (bébés, Héros, retours, « de près ») ; Caught / NearCatch (la jauge
+--     instant : SeededPath.pos(tClient) contre la position validée du joueur interpolée dans l'anneau de
+--     MoveCheck.positionAt à l'ARRIVÉE du message (ses positions et son message font le même trajet :
+--     c'est sa position chez lui à tClient ; Chase.spec à 0, 100 et 250 ms), à plat ≤ rayon + 1,5,
+--     pieds ≤ 8, canAct ; règles de RushRules.checkCatch pour les fuites du Rush ; la première arrivée
+--     gagne. Récompenses (bébés, Héros, retours, « de près ») ; Caught / NearCatch (la jauge
 --     vient de ces signaux, jamais d'un appel direct).
 --   * ChaseEvent groupé à 4 Hz (tous, ou le seul concerné pour une créature personnelle).
 --   * Anti-triche : « rewind » → PivotTo, attribut Unstable 3 s, flags.strikes, exclusion des
@@ -796,7 +798,8 @@ local function stepCatches(now: number)
 			-- position du joueur : celle que le serveur avait reçue à l'ARRIVÉE du message (interpolée dans
 			-- l'anneau de MoveCheck.positionAt) ; ses positions et son message ont fait le même trajet,
 			-- elle vaut donc sa position chez lui à l'instant tClient de l'appui (latence compensée)
-			local from = MoveCheck.positionAt(entry.player, entry.arrival) or MoveCheck.positionAt(entry.player, entry.t)
+			local from = MoveCheck.positionAt(entry.player, entry.arrival)
+				or MoveCheck.positionAt(entry.player, entry.t)
 			Guard.try("chase:catch", attempt, entry.player, c, entry.t, now, false, from)
 		end
 	end
@@ -860,15 +863,11 @@ local function runawayPaused(player: Player): boolean
 	if Guard.call("chase:rushActive", EventService.rushActive, false) == true then
 		return true
 	end
-	local state = Guard.call("chase:eventState", EventService.state, nil)
-	if type(state) == "table" then
-		if type(state.mega) == "table" and state.mega.phase ~= "idle" then
-			return true
-		end
-		local current = type(state.spectacle) == "table" and state.spectacle.current or nil
-		if type(current) == "table" and current.userId == player.UserId then
-			return true
-		end
+	if Guard.call("chase:mega", EventService.megaActive, false) == true then
+		return true
+	end
+	if Guard.call("chase:spectacle", EventService.spectacleUserId, 0) == player.UserId then
+		return true
 	end
 	if Guard.call("chase:queued", SplorchService.queued, nil, player) ~= nil then
 		return true
@@ -1201,7 +1200,7 @@ local function onCatch(player: Player, id: number, tClient: number): boolean
 	local now = Clock.now()
 	table.insert(
 		catchQueue,
-		{ player = player, id = id, t = math.clamp(tClient, now - CATCH.ClientPast, now) }
+		{ player = player, id = id, t = math.clamp(tClient, now - CATCH.ClientPast, now), arrival = now }
 	)
 	return true
 end

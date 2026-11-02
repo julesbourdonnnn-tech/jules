@@ -119,6 +119,7 @@ local mega = {
 	lastPress = {} :: { [Player]: number },
 	nextBeatAt = 0,
 	failStreak = 0,
+	landed = -math.huge, -- index du dernier MEGA posé (une seule fois par index)
 }
 
 local gauge = {
@@ -127,6 +128,7 @@ local gauge = {
 	danceQueued = false,
 	lastFilledAt = nil :: number?,
 	lastRatio = -1,
+	lastTarget = 0,
 }
 
 local squish: { Segment } = {}
@@ -145,7 +147,6 @@ local lastStartAt = -math.huge
 local moonPresence: { [Player]: number } = {}
 local moonSession: { id: number, endsAt: number }? = nil
 
-local lastState: Types.EventStatePayload? = nil
 local dirty = true
 local gaugeDirty = false
 local nextGaugeSendAt = 0
@@ -434,35 +435,57 @@ local function activeBoost(now: number): (string, number, string)
 end
 
 local function stepBoosts(now: number, dt: number)
-	if #squish > 0 then
-		local head = squish[1]
-		if head.startedAt == nil then
-			head.startedAt = now
+	-- temps écoulé consommé par le boost actif, puis par les suivants (accroc ou saut d'horloge)
+	local left = math.max(0, dt)
+	for _ = 1, 64 do
+		if left <= 0 then
+			break
 		end
-		head.seconds -= dt
-		if head.seconds <= 0 then
-			table.remove(squish, 1)
-			dirty = true
-			if #squish == 0 then
+		if #squish > 0 then
+			local head = squish[1]
+			if head.startedAt == nil then
+				head.startedAt = now - left
+			end
+			local used = math.min(left, head.seconds)
+			head.seconds -= used
+			left -= used
+			if head.seconds <= 1e-9 then
+				table.remove(squish, 1)
+				dirty = true
+				if #squish == 0 then
+					fire("party", "end", partyCount)
+				else
+					squish[1].startedAt = now - left
+				end
+			end
+		elseif adminRemaining > 0 then
+			local used = math.min(left, adminRemaining)
+			adminRemaining -= used
+			left -= used
+			if adminRemaining <= 1e-9 then
+				adminRemaining = 0
+				dirty = true
 				fire("party", "end", partyCount)
 			end
+		elseif wobbleRemaining > 0 then
+			local used = math.min(left, wobbleRemaining)
+			wobbleRemaining -= used
+			left -= used
+			if wobbleRemaining <= 1e-9 then
+				-- fin de la WOBBLE PARTY : jauge à 0, sieste de Big Plop
+				wobbleRemaining = 0
+				gauge.points = 0
+				gauge.restUntil = now - left + GAUGE.RestSeconds
+				gauge.danceQueued = false
+				dirty = true
+				fire("party", "end", partyCount)
+			end
+		else
+			break
 		end
-	elseif adminRemaining > 0 then
-		adminRemaining = math.max(0, adminRemaining - dt)
-		if adminRemaining == 0 then
-			dirty = true
-			fire("party", "end", partyCount)
-		end
-	elseif wobbleRemaining > 0 then
-		wobbleRemaining = math.max(0, wobbleRemaining - dt)
-		if wobbleRemaining == 0 then
-			-- fin de la WOBBLE PARTY : jauge à 0, sieste de Big Plop
-			gauge.points = 0
-			gauge.restUntil = now + GAUGE.RestSeconds
-			gauge.danceQueued = false
-			dirty = true
-			fire("party", "end", partyCount)
-		end
+	end
+	if #squish > 0 and squish[1].startedAt == nil then
+		squish[1].startedAt = now
 	end
 	local kind, untilT = activeBoost(now)
 	if kind ~= boostApplied.kind or math.abs(untilT - boostApplied.untilT) > 0.5 then
@@ -610,7 +633,8 @@ local function stepMega(now: number)
 		return
 	end
 	if now >= phase.landsAt and now < phase.endsAt then
-		if mega.index ~= phase.index then
+		if mega.landed ~= phase.index then
+			mega.landed = phase.index
 			megaLand(phase, now)
 			fire("mega", "land", phase.index)
 		end
@@ -737,6 +761,10 @@ local function stepGauge(now: number)
 		return
 	end
 	local target = gaugeTarget(now)
+	if target ~= gauge.lastTarget then
+		gauge.lastTarget = target
+		gaugeDirty = true
+	end
 	if gauge.points > target and not partyRunning() then
 		gauge.points = target
 		gaugeDirty = true
@@ -835,7 +863,6 @@ end
 
 local function sendState(now: number, only: Player?)
 	local state = buildState(now)
-	lastState = state
 	dirty = false
 	gaugeDirty = false
 	nextGaugeSendAt = now + GAUGE_SEND
@@ -1066,7 +1093,7 @@ function EventService.step(now: number, actors: { [Player]: Types.TickActor })
 	lastStepAt = now
 	Guard.try("event:phases", stepPhases, now)
 	Guard.try("event:mega", stepMega, now)
-	Guard.try("event:boosts", stepBoosts, now, dt)
+	Guard.try("event:boosts", stepBoosts, now, if previous then math.max(0, now - previous) else 0)
 	Guard.try("event:gauge", stepGauge, now)
 	Guard.try("event:spectacles", stepSpectacles, now)
 	Guard.try("event:moon", stepMoon, now, dt, actors or {})
@@ -1075,14 +1102,31 @@ function EventService.step(now: number, actors: { [Player]: Types.TickActor })
 	end
 end
 
--- État diffusé (dernier envoyé)
+-- État diffusé (construit à l'instant : mêmes champs que le dernier EventState, points du MEGA et de
+-- la jauge à jour)
 function EventService.state(): Types.EventStatePayload
-	local state = lastState
-	if state == nil then
-		state = buildState(Clock.now())
-		lastState = state
+	return buildState(Clock.now())
+end
+
+-- Fonction ajoutée : MEGA en cours (alerte, pression ou éclatement) — ChaseService (fuites en pause)
+function EventService.megaActive(): boolean
+	return mega.phase ~= "idle"
+end
+
+-- Fonction ajoutée : départ prévu d'un Grand Splorch en file (nil = pas en file) — SplorchService.queued
+function EventService.queuedStartAt(userId: number): number?
+	for _, entry in queue do
+		if entry.kind == "splorch" and entry.userId == userId then
+			return entry.startAt
+		end
 	end
-	return state
+	return nil
+end
+
+-- Fonction ajoutée : héros du grand spectacle en cours (0 = aucun ou danse) — ChaseService
+function EventService.spectacleUserId(): number
+	local c = current
+	return if c and c.kind == "splorch" then c.userId else 0
 end
 
 -- Rush en cours

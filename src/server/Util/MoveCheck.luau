@@ -191,6 +191,7 @@ type State = {
 	grantStart: number, -- fenêtre du crédit de bond [grantStart ; grantEnd]
 	grantEnd: number,
 	grantStuds: number,
+	memo: { now: number, pos: Vector3, verdict: Verdict, back: Vector3?, burst: boolean }?, -- verdict de l'instant
 }
 
 local states: { [Player]: State } = {}
@@ -267,6 +268,7 @@ local function anchor(st: State, pos: Vector3, now: number)
 	st.history = { { t = now, pos = pos, since = now } }
 	st.validAirborne = false
 	st.validHigh = false
+	st.memo = nil
 	recordPosition(st, pos, now)
 end
 
@@ -485,7 +487,7 @@ end
 
 -- Vérifie le déplacement du tick ; "rewind" fournit la position de retour. Troisième valeur :
 -- rafale (seulement avec "ok") — position acceptée, mais le tick ne doit agir sur rien (en-tête)
-function MoveCheck.step(
+local function stepOnce(
 	player: Player,
 	pos: Vector3,
 	dt: number,
@@ -667,6 +669,36 @@ function MoveCheck.step(
 		end
 	end
 	return "flag", nil, false
+end
+
+-- Vérifie le déplacement du tick (voir stepOnce). Un même instant n'est jugé qu'UNE fois : un second
+-- appel au même `now` avec la même position, ou avec la position de retour que le premier a imposée,
+-- rend le même verdict sans rien recompter (deux appelants dans le même tick, rattrapage au même
+-- instant). Toute nouvelle référence (reset, retour) oublie ce verdict.
+function MoveCheck.step(
+	player: Player,
+	pos: Vector3,
+	dt: number,
+	now: number,
+	groundY: number
+): (Verdict, Vector3?, boolean)
+	local st = states[player]
+	local memo = st and st.memo
+	if memo and memo.now == now and typeof(pos) == "Vector3" and finiteVector(pos) then
+		local back = memo.back
+		if
+			(pos - memo.pos).Magnitude <= STILL_EPSILON
+			or (back ~= nil and (pos - back).Magnitude <= STILL_EPSILON)
+		then
+			return memo.verdict, back, memo.burst
+		end
+	end
+	local verdict, back, burst = stepOnce(player, pos, dt, now, groundY)
+	local after = states[player]
+	if after and finiteVector(pos) and isFinite(now) then
+		after.memo = { now = now, pos = pos, verdict = verdict, back = back, burst = burst }
+	end
+	return verdict, back, burst
 end
 
 -- Monture (INT-MOVE) : la racine debout du joueur est relevée de `studs` (hausse de la monture,

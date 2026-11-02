@@ -151,7 +151,23 @@ function Brains.boot(Harness, opts)
 	w.DS.Settings.LOCKED_RETRY_DELAY = 0.01
 	w.DS.Settings.AUTOSAVE_INTERVAL = 1e6
 	Bots.use(w)
-	Brains.stubMeta(w, opts)
+	-- opts.stubMeta = false : vrais services du paquet meta (intégration, une fois livrés)
+	if opts.stubMeta ~= false then
+		Brains.stubMeta(w, opts)
+	else
+		w.meta = {
+			caught = {},
+			timedOut = {},
+			playSeconds = {},
+			quiet = {},
+			scripts = {},
+			names = {},
+			settings = {},
+			blocked = {},
+			claps = {},
+			admins = {},
+		}
+	end
 	if opts.before then
 		opts.before(w)
 	end
@@ -219,6 +235,8 @@ function Brains.profile(w, opts)
 		}
 	end
 	d.nextUid = n + 1
+	-- places d'enclos pour tous les squishies donnés (capacité 4 + niveau de la dalle Enclos)
+	d.tiles.pens = math.max(d.tiles.pens or 0, math.clamp(n - 4, 0, 14))
 	if opts.tiles then
 		for k, v in opts.tiles do
 			d.tiles[k] = v
@@ -433,6 +451,7 @@ function Brains.player(w, seed)
 				elseif choice < 0.8 then
 					target = Bots.ground(r:NextNumber(-60, 60), r:NextNumber(-60, 60))
 				else
+					-- devant sa propre clôture, côté ranch (propriétaire proche pendant un Rush)
 					local fp = w.WL.fencePoint(slot, 1)
 					target = Bots.ground(fp.X, fp.Z)
 				end
@@ -464,8 +483,10 @@ function Brains.player(w, seed)
 					local uids, reason = w.Ranch.fenceOf(oslot)
 					if reason == "rush" and #uids > 0 then
 						Bots.fire("BoopHold", p, other.UserId, uids[1], true)
-						local fp = w.WL.fencePoint(oslot, 1)
-						target = Bots.ground(fp.X, fp.Z)
+						-- côté rue de la place n° 1 de la clôture (local Z < 0), à portée de boop
+						local lp = w.WL.fencePointsLocal()[1]
+						local q = w.WL.toWorld(oslot, w.V3.new(lp.X, 0, -2))
+						target = Bots.ground(q.X, q.Z)
 						break
 					end
 				end

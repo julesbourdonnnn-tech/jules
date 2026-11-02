@@ -499,7 +499,10 @@ local function stepCards(now: number)
 			if mode.cardShown ~= true and playSeconds(player) >= RUSH.CardPlaySeconds then
 				mode.cardShown = true
 				DataService.markDirty(player, "mode")
-				Net.event("ModePrompt"):FireClient(player)
+				-- déjà choisi dans les Réglages : la carte n'a plus rien à demander
+				if mode.chosen ~= true then
+					Net.event("ModePrompt"):FireClient(player)
+				end
 			end
 			local opened = cardOpenAt[player]
 			if opened and now >= opened + RUSH.CardTimeout + RUSH.HoldGrace then

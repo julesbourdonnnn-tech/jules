@@ -387,34 +387,26 @@ function SplorchService.step(now: number)
 			end
 		end
 	end
-	-- filet : entrée de la file disparue d'EventService (coupure, panne) → attente rendue, rien remis à zéro
-	local state = Guard.call("splorch:state", EventService.state, nil)
-	if type(state) == "table" and type(state.spectacle) == "table" then
-		for player, entry in queued do
-			if
-				now - entry.at
-				> StateTimeouts.seconds("splorchQueue") + StateTimeouts.seconds("spectacle")
-			then
-				queued[player] = nil
-				Guard.try("splorch:waiting", SquishyService.setWaiting, player, nil)
-				EventService.cancelSpectacle(player.UserId)
-			end
+	-- filet : attente plus longue que la file et le spectacle réunis (coupure, panne) → attente rendue,
+	-- place annulée, rien remis à zéro
+	local limit = StateTimeouts.seconds("splorchQueue") + StateTimeouts.seconds("spectacle")
+	for player, entry in queued do
+		if now - entry.at > limit then
+			queued[player] = nil
+			Guard.try("splorch:waiting", SquishyService.setWaiting, player, nil)
+			EventService.cancelSpectacle(player.UserId)
 		end
 	end
 end
 
 -- Clock.now() de départ prévu si le joueur est dans la file
 function SplorchService.queued(player: Player): number?
-	if queued[player] == nil then
+	local entry = queued[player]
+	if entry == nil then
 		return nil
 	end
-	local state = EventService.state()
-	for _, entry in state.spectacle.queue do
-		if entry.userId == player.UserId and entry.kind == "splorch" then
-			return entry.startAt
-		end
-	end
-	return queued[player].at
+	local startAt = EventService.queuedStartAt(player.UserId)
+	return if startAt ~= nil then startAt else entry.at
 end
 
 -- Ce squishy attend son Grand Splorch
