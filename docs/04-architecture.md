@@ -2738,6 +2738,20 @@ Conventions du §18.1 inchangées (ZeroLog, `Clock.freeze`, jamais un test suppr
 - **C23. Propriétaires oubliés** : `DiagnosticsService` (compteurs et panneau TextProbe côté serveur, §27.14) va à A4 (propriétaire v1.3 : meta) ; `Server/Util/Activity` (module du contrat, N23) à A3 pour le seul ajout `lastIntent`.
 - **C24. Sauvegarde-témoin `v2.json`** (`contract-changes.md` §1.2, point 6) : créée depuis `v1.json` par la migration du dépôt (aucune valeur écrite à la main) et comparée valeur par valeur, pas en bloc : un champ v2 ajouté plus tard au schéma (contrat) ne casse pas le témoin, une valeur de migration changée le casse (mutation faite : `confetti` 139 → 138 fait échouer le cas).
 
+**Journal du lot A1, étape 1 (3 novembre 2026)** — lectures du §27.7 alignées sur le GDD et la simulation du design (détail : `scratchpad/v2/a1-decisions.md`) :
+
+- **A1-1. Prix** : `max(1, floor((base × g^L) × RScale^r × F(A)))`, chaque facteur en table construite au chargement par multiplications successives ; égal à chaque témoin de `Contract_upgrades` et à chaque valeur du GDD §4.6 (`UpgradeMath.spec`) ; le module est le seul calcul (client = serveur).
+- **A1-2. Monuments** : base = T12 avant `floor` (comme le Tapis Étoilé et la simulation), × RScale^(r − bestR) par divisions successives, jamais F(A) ; le GDD les écrit arrondis, les autres tables tronquées.
+- **A1-3. `Prestige.apply` idempotent par construction** : appliqué seulement si le prestige est possible (plus gros squishy, tous lieux compris, ≥ objectif(r) ; `ascendReady`) ; après lui la condition est fausse, aucun champ marqueur.
+- **A1-4. `apply` rend `(changed, report)`** : `changed` = ensemble des clés pour `markDirty` ; Confettis (prestige, retour +10, enclos plein +25), Fame et niveaux du cadeau sont RENDUS et versés par l'appelant dans le même bloc (`EconomyService.addConfetti` reste le seul point d'entrée, GDD §4.26 m2).
+- **A1-5. Sorte effective** : un « splorch » qui ne bat pas le record paie comme un Petit Splorch et inversement ; la file se choisit par `Prestige.nextKind`.
+- **A1-6. Décorations gardées** au Record R d'avant le prestige (comme la simulation), aussi à l'Ascension ; **A1-7. cadeau du Splorch** aussi pour la boucle qui suit une Ascension (simulation).
+- **A1-8. Tremplin** : sautés payés = `StartR(A, Tremplin) − StartR(A, 0)` (GDD) ; la simulation paie `min(StartR, Tremplin)`, différent seulement pour A ≥ 42 environ.
+- **A1-9. Note INT-A1-MEMORY** : la 1re boucle record (×1,25) ne se distingue pas des suivantes avec les champs du schéma v2 ; champ `memoryR` (0-400, SplorchService via `Prestige.apply`) proposé au contrat ; en attendant `Prestige.firstRecordLoop` rend faux.
+- **A1-10. Note INT-A1-BALANCE** : « ReqR[A+1] − 10 », « +3 décorations par niveau », 0,95 et × 2,5 dès r = 16 sont des constantes de `Prestige` faute de clé dans `Config/Balance` (structure au contrat) ; 5 clés proposées.
+- **A1-11. Plancher de StartR** par `math.log` (pas une puissance), une fois au chargement ; à plus de 0,0138 d'un entier pour A = 1 … 60 (même valeur partout).
+- **A1-12. Objectifs** : table propre de `Prestige` (égale à `Formulas.splorchTarget` de r = 0 à 400), pour que `Formulas` puisse lire `Prestige` sans cycle ; note **INT-A1-TILECOST** : `Formulas.tileCost` diffère d'une pièce dans un seul cas sous 1e15 (décoration 10 à r = 17) : `BuyTile`, dalles et aperçu passent par `UpgradeMath` quand `UpgradesScreen` s'ouvre (A2, B4).
+
 **État au 3 novembre 2026** : code du contrat v2.0 en place (§27.0), tous les interrupteurs coupés ; `Contract_v2.spec` (25 cas, dont la sauvegarde-témoin `v2.json`), `Contract_upgrades.spec` (13 cas), `Contract_unlocks.spec` (10 cas) et `Contract_glyphs.spec` (7 cas, dont les formateurs) verts ; jeu de base inchangé (les specs du jeu de base passent telles quelles, `Contract_game` seulement étendu aux remotes v2.0).
 
 ### 27.13 Changements de comportement du jeu de base (N1-N25) : où, qui, quelles specs
