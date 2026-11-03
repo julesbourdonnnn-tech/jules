@@ -409,6 +409,280 @@ return function(T)
 			end)
 		end)
 
+		-- ---------------------------------------------------------------------------------------
+		-- GDD v2.0 (paquet A1, N2-N6) : interrupteurs coupés = v1.3 bit à bit ; ouverts = formules du
+		-- GDD et de la simulation du design (scratchpad/v2/gdd/sim, EconomyModel.luau)
+		-- ---------------------------------------------------------------------------------------
+		local Features = h:require("ReplicatedStorage.Shared.Config.Features")
+		local Prestige = h:require("ReplicatedStorage.Shared.Logic.Prestige")
+		local ALL_V2 =
+			{ "JellyAscend", "StarMat", "UpgradesScreen", "Monuments", "Gloves", "Workshop", "RecordR" }
+		local function withFlags(names, fn)
+			for _, name in names do
+				assert(Features.set(name, true), name)
+			end
+			local okRun, err = pcall(fn)
+			Features.reset()
+			if not okRun then
+				error(err, 0)
+			end
+		end
+		local function same(a, b)
+			return a == b or (a ~= a and b ~= b)
+		end
+		local function near(a, b, rel)
+			return math.abs(a - b) <= rel * math.max(1, math.abs(a), math.abs(b))
+		end
+		-- contexte v2.0 tiré au hasard (valeurs légales et hostiles)
+		local v2Gen = Props.tuple(
+			Props.oneOf({ 0, 1, 5, 15, 40, 400, 1000, -3, 0 / 0, math.huge }),
+			Props.oneOf({ 0, 3, 11, 12, 13, -1, 0 / 0 }),
+			anyBool,
+			anyBool,
+			Props.oneOf({ 0, 1, 4, 5, 30, 60, 61, -2, 0 / 0, math.huge }),
+			Props.oneOf({ 0, 2, 15, 16, 20, 400, -1, 0 / 0, nil }),
+			Props.oneOf({ 0, 1, 4, 8, 9, -1, 0 / 0, nil }),
+			anyBool
+		)
+		local function growthCtx(v, withV2)
+			local c = { R = v[1], snack = v[2], jellyFamily = v[3], boost = v[4] }
+			if withV2 then
+				c.A, c.bestR, c.star, c.firstRecordLoop = v[5], v[6], v[7], v[8]
+			end
+			return c
+		end
+
+		it("v2.0 coupé : chaque formule ignore les champs v2.0 (bit à bit, 5 000 cas)", function()
+			for _, name in ALL_V2 do
+				assert(Features.get(name) == false, name)
+			end
+			Props.check(5000, Props.tuple(v2Gen, ctxGen, any, any, any, any), function(v)
+				local g = v[1]
+				local ctx2 = table.clone(v[2])
+				ctx2.monuments = g[5]
+				local x, y = v[3], v[4]
+				return same(F.growthRate(growthCtx(g, true)), F.growthRate(growthCtx(g, false)))
+					and same(F.maxGrowthRate(growthCtx(g, true)), F.maxGrowthRate(growthCtx(g, false)))
+					and same(F.income(x, 1, 0, 1, ctx2), F.income(x, 1, 0, 1, v[2]))
+					and same(
+						F.pressReward(x, g[3], g[5], g[4], g[6], g[7]),
+						F.pressReward(x, g[3], g[5], g[4])
+					)
+					and same(F.offlineSeconds(x, y, g[3], g[4], g[7]), F.offlineSeconds(x, y, g[3], g[4]))
+					and same(F.offlinePot(x, y, g[7]), F.offlinePot(x, y))
+					and same(F.offlineGrowth(x, y, g[1], v[5], v[6]), F.offlineGrowth(x, y, g[1], v[5]))
+					and same(F.tileCost("decor", g[2], g[1], g[5]), F.tileCost("decor", g[2], g[1]))
+			end)
+		end)
+
+		it(
+			"v2.0 ouvert : croissance et croissance maximale = celles de la simulation du design (1e-12)",
+			function()
+				withFlags(ALL_V2, function()
+					Props.check(
+						5000,
+						Props.tuple(
+							Props.int(0, 60),
+							Props.int(0, 12),
+							Props.bool(),
+							Props.bool(),
+							Props.int(0, 20)
+						),
+						function(v)
+							local R, snack, jelly, boost, A = v[1], v[2], v[3], v[4], v[5]
+							local cap = if snack == 12 then Prestige.starCap(R) else 0
+							local star = math.min(cap, (R * 7 + A) % 9)
+							local bestR = math.min(400, R + (A % 5))
+							local first = (A % 2) == 1 and bestR == R
+							local ctx = {
+								R = R,
+								snack = snack,
+								jellyFamily = jelly,
+								boost = boost,
+								A = A,
+								bestR = bestR,
+								star = star,
+								firstRecordLoop = first,
+							}
+							-- simulation : growthRate v1.3 × (1 + Tapis + Étoilé) / (1 + Tapis) × 3^A × Souvenir
+							local v13 = (2 ^ R)
+								* (1 + snack)
+								* (if jelly then 1.1 else 1)
+								* (if boost then 2 else 1)
+							local gap = bestR - R
+							local memory = if gap >= 3
+								then 3
+								elseif gap == 2 then 2
+								elseif gap == 1 then 1.5
+								elseif first and A >= 1 then 1.25
+								else 1
+							local sim = v13 * (1 + snack + star) / (1 + snack) * 3 ^ A * memory
+							local simMax = v13
+								/ (if boost then 2 else 1)
+								* (1 + 12 + Prestige.starCap(R))
+								/ (1 + snack)
+								* 2
+								* 3 ^ A
+								* memory
+							return near(F.growthRate(ctx), sim, 1e-12)
+								and near(F.maxGrowthRate(ctx), simMax, 1e-12)
+						end
+					)
+				end)
+			end
+		)
+
+		it("v2.0 ouvert : croissance croissante en A, Tapis Étoilé et Souvenir ; toujours finie", function()
+			withFlags(ALL_V2, function()
+				Props.check(
+					4000,
+					Props.tuple(Props.int(0, 400), Props.int(0, 59), Props.int(0, 7)),
+					function(v)
+						local R, A, star = v[1], v[2], v[3]
+						local function g(a, s, best)
+							return F.growthRate({
+								R = R,
+								snack = 12,
+								jellyFamily = false,
+								boost = false,
+								A = a,
+								star = s,
+								bestR = best,
+							})
+						end
+						local base = g(A, star, R)
+						return ok(base)
+							and base > 0
+							and (g(A + 1, star, R) > base or base == MAX)
+							and g(A, star + 1, R) >= base
+							and g(A, star, R + 3) >= g(A, star, R + 1)
+							and F.maxGrowthRate({
+									R = R,
+									snack = 0,
+									jellyFamily = false,
+									boost = false,
+									A = A,
+								})
+								>= base
+					end
+				)
+				Props.check(2000, v2Gen, function(v)
+					return ok(F.growthRate(growthCtx(v, true))) and ok(F.maxGrowthRate(growthCtx(v, true)))
+				end)
+			end)
+		end)
+
+		it(
+			"v2.0 ouvert : pression = formule du GDD (un floor) ; écart avec la simulation (deux floor) < 4",
+			function()
+				withFlags(ALL_V2, function()
+					Props.check(
+						5000,
+						Props.tuple(
+							Props.number(0, 1e12),
+							Props.bool(),
+							Props.int(0, 9),
+							Props.bool(),
+							Props.int(0, 40),
+							Props.int(0, 2)
+						),
+						function(v)
+							local inc, perfect, streak, kitty, gloves, super =
+								v[1], v[2], v[3], v[4], v[5], v[6]
+							local got = F.pressReward(inc, perfect, streak, kitty, gloves, super)
+							local s = math.min(streak, 5 + super)
+							-- même ordre des multiplications que le module : floor(base × (PERFECT × série × Kitty × Gants))
+							local mult = (if perfect then 2 else 1) * (1 + 0.1 * s)
+							if kitty then
+								mult *= 1.1
+							end
+							mult *= 1 + 0.025 * gloves
+							local gdd = math.max(10, 22 * inc) * mult
+							-- simulation : pression v1.3 (série ≤ 5, floor), × (1 + 0,1 s) / 1,5 au-delà de 5, × Gants
+							local sim = F.clampCoins(
+								math.max(10, 22 * inc)
+									* (if perfect then 2 else 1)
+									* (1 + 0.1 * math.min(s, 5))
+									* (if kitty then 1.1 else 1)
+							)
+							if s > 5 then
+								sim *= (1 + 0.1 * s) / 1.5
+							end
+							sim *= 1 + 0.025 * gloves
+							local exact = if gdd < 1e15 then math.floor(gdd) else gdd
+							return (got == exact or near(got, exact, 1e-12))
+								and math.abs(got - sim) < 4 + 1e-12 * got
+						end
+					)
+				end)
+			end
+		)
+
+		it(
+			"v2.0 ouvert : hors ligne (Sac 16 h au plus, Pot 25-35 %, arrêt 120 s) = simulation du design",
+			function()
+				withFlags(ALL_V2, function()
+					Props.check(
+						5000,
+						Props.tuple(
+							Props.number(0, 1e9),
+							Props.number(0, 1e6),
+							Props.int(0, 30),
+							Props.number(0, 1e13),
+							Props.number(0, 1e9),
+							Props.int(0, 3),
+							Props.int(0, 2),
+							Props.bool(),
+							Props.bool()
+						),
+						function(v)
+							local g, seconds, R, big, gMax, bag, pot, cozy, spiky =
+								v[1], v[2], v[3], v[4], v[5], v[6], v[7], v[8], v[9]
+							-- simulation : offlineSeconds v1.3 + 3 600 × Sac (≤ absence) ; Pot × (0,25 + 0,05 × Pot de nuit) / 0,25
+							local hours = (if cozy then 12 else 8) + (if spiky then 1 else 0)
+							local last = 1e9 - seconds
+							local away = 1e9 - last
+							local simSeconds = if away <= 0
+								then 0
+								else math.min(away, math.min(away, hours * 3600) + 3600 * bag)
+							local simPot = F.offlinePot(g, seconds) * (0.25 + 0.05 * pot) / 0.25
+							local target = F.splorchTarget(R)
+							local simGrowth = math.min(
+								math.min(g * 0.3 * seconds, math.max(0, 0.9 * target - big)),
+								math.max(0, target - 120 * gMax - big)
+							)
+							local grown = F.offlineGrowth(g, seconds, R, big, gMax)
+							return F.offlineSeconds(1e9, last, cozy, spiky, bag) == simSeconds
+								and F.offlineSeconds(1e9, 1, cozy, spiky, bag) <= 16 * 3600
+								and near(F.offlinePot(g, seconds, pot), simPot, 1e-12)
+								and near(grown, simGrowth, 1e-12)
+								and (grown == 0 or big + grown <= target - 120 * gMax + 1e-9 * target)
+						end
+					)
+				end)
+			end
+		)
+
+		it("v2.0 ouvert : Monuments, Gants, Super Série et prix bornés pour toute entrée", function()
+			withFlags(ALL_V2, function()
+				Props.check(4000, Props.tuple(any, any, any, any), function(v)
+					local m, gl, ss = F.monumentMult(v[1]), F.glovesMult(v[2]), F.streakMax(v[3])
+					local price = F.tileCost("snack", v[4], v[1], v[2])
+					return m >= 1
+						and m <= 1.1 + 1e-12
+						and gl >= 1
+						and gl <= 2 + 1e-12
+						and ss >= 5
+						and ss <= 7
+						and ss % 1 == 0
+						and (price == math.huge or (price >= 1 and price <= MAX and price % 1 == 0))
+						and ok(F.pressReward(v[1], true, v[3], true, v[2], v[3]))
+						and ok(F.offlinePot(v[1], v[2], v[3]))
+						and ok(F.offlineGrowth(v[1], v[2], v[3], v[4], v[1]))
+				end)
+			end)
+		end)
+
 		it("zéro trace", function()
 			expect(#h.errors).toBe(0)
 			expect(#h:warnings()).toBe(0)

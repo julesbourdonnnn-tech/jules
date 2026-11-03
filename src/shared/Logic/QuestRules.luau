@@ -8,6 +8,10 @@
 -- dex.stars[s] = masque de 5 bits (bit k − 1 = badge ★k). Atteindre ★k remplit les badges ★1 … ★k.
 -- Progression (apply) : un objectif avance sur l'événement de sa statistique ; l'objectif « série
 -- PERFECT » (streak) écoute aussi chaque pression ("press") : PERFECT → +1, pression ratée → 0.
+-- GDD v2.0 §7.5 (lot A1, docs/04 §27.7) : semaine UTC unique (weekIndex), période de la piste (la
+-- première va de la 1re connexion v2 au 2e lundi qui suit), Défis de Splorch faisables dans la
+-- situation du joueur (challengeFeasible, drawChallenges), paliers de la piste et du Carnet. Lus
+-- seulement quand WeeklyTrack, Carnet sont ouverts (QuestService, A4) ; purs, jamais d'erreur.
 
 -- Bibliothèques gardées en local : appels rapides, aussi dans l'environnement injecté du harnais
 local type, math, table, bit32 = type, math, table, bit32
@@ -17,6 +21,7 @@ local Quests = require(script.Parent.Parent.Config.Quests)
 local Species = require(script.Parent.Parent.Config.Species)
 local Mutations = require(script.Parent.Parent.Config.Mutations)
 local Hash = require(script.Parent.Hash)
+local Features = require(script.Parent.Parent.Config.Features)
 
 export type QuestCtx = {
 	R: number,
@@ -25,6 +30,25 @@ export type QuestCtx = {
 	friendOnServer: boolean,
 	splorchEta: number, -- s estimées jusqu'à l'objectif (taille qui manque ÷ croissance)
 	stamps: number,
+}
+
+-- Période de la piste de la semaine (QuestRules.trackPeriod)
+export type TrackPeriod = {
+	period: number, -- numéro de période : weekIndex de sa DERNIÈRE semaine (jamais une semaine de l'année)
+	startsAt: number, -- lundi 00:00 UTC de sa première semaine
+	endsAt: number, -- fin exclue : lundi 00:00 UTC
+	first: boolean, -- 1re période du compte (de la 1re connexion v2 au 2e lundi qui suit)
+	firstPeriodEnd: number, -- valeur de weeklyTrack.firstPeriodEnd à garder (fixée si elle valait 0)
+}
+
+-- Situation du joueur pour les Défis de Splorch (QuestRules.challengeFeasible) ; tout est facultatif
+export type ChallengeCtx = {
+	playMedian: number?, -- s : temps de jeu médian des 7 derniers jours (borné à 30 min … 2 h)
+	daysPlayed: number?, -- jours joués la semaine précédente (minDays : « Nourris Plop 3 jours »)
+	workshopDone: boolean?, -- Atelier et « Pour le plaisir » complets (« Gagne 20 Confettis » retiré)
+	-- s estimées par l'appelant pour finir le Défi, par statistique (Quests.Challenges[].stat) ;
+	-- OBLIGATOIRE pour les Défis qui dépendent de la situation (ETA_REQUIRED) : absente = non faisable
+	eta: { [string]: number }?,
 }
 
 local QuestRules = {}
@@ -371,6 +395,225 @@ function QuestRules.isNewStamp(
 		end
 	end
 	return false
+end
+
+-- =============================================================================================
+-- GDD v2.0 §7.5 : semaine UTC, piste de la semaine, Défis de Splorch, Carnet du Ranch
+-- =============================================================================================
+
+local TRACK = Quests.WeeklyTrack
+local EPOCH = TRACK.EpochOffset -- lundi 5 janvier 1970 00:00 UTC
+local WEEK = TRACK.Week
+local DAY = 86400
+local MAX_UNIX = 2 ^ 53 -- au-delà, un horodatage n'est plus un entier exact
+local TRACK_TIERS = #TRACK.Tiers
+-- Temps de jeu d'un Défi (GDD §7.5, critique M15) : médiane des 7 derniers jours, au plus 2 h, au
+-- moins 30 min ; un nouveau compte prend 30 min (constantes du GDD sans clé dans Config/Quests :
+-- note INT-A1-BALANCE)
+local PLAY_MIN = 1800
+local PLAY_MAX = 7200
+-- Défis qui dépendent de la situation du joueur : faisables seulement avec une estimation (eta) de
+-- l'appelant ≤ temps de jeu (2 Grands Splorch qui battent le record, record battu, Ascension, 2 MEGA
+-- SQUISH : le calendrier du serveur). Les autres se font en jouant normalement (achats, combo, Cuve,
+-- tampons, créatures, PERFECT), sous leurs conditions (minDays, dropWhenWorkshopDone).
+local ETA_REQUIRED = { splorches = true, recordBeaten = true, ascends = true, megas = true }
+local CHALLENGE_SALT = 0x5D3F1 -- sel figé : changer = changer les Défis de tout le monde
+
+-- Horodatage UTC sûr (NaN, ±inf, autre type → l'époque de la piste ; borné à [EPOCH ; 2^53])
+local function unixOf(x: any): number
+	local v = finite(x, EPOCH)
+	return math.floor(math.clamp(v, EPOCH, MAX_UNIX))
+end
+
+-- Numéro de semaine UTC : floor((unix − 345 600) / 604 800), comptée depuis le lundi 5 janvier 1970
+-- 00:00 UTC ; une seule définition pour la piste, les Défis et les classements (GDD §7.5). Entrée
+-- illisible ou antérieure : 0
+function QuestRules.weekIndex(unix: number): number
+	return (unixOf(unix) - EPOCH) // WEEK
+end
+
+-- Lundi 00:00 UTC qui commence la semaine `index`
+function QuestRules.weekStart(index: number): number
+	return EPOCH + math.max(0, math.floor(finite(index, 0))) * WEEK
+end
+
+-- Période de la piste à l'instant `unix` (GDD §7.5). Première période d'un compte : de sa 1re
+-- connexion v2 au 2e lundi qui suit (8 à 14 jours de calendrier) ; weeklyTrack.firstPeriodEnd = 0
+-- (migration, nouveau compte) la fixe ici (QuestService garde la valeur rendue). Une fin abîmée
+-- (pas un lundi 00:00, ou plus de 2 semaines plus tard) compte comme une première période finie :
+-- jamais une période qui recule ni une piste remise à zéro en pleine semaine.
+function QuestRules.trackPeriod(profile: { [string]: any }, unix: number): TrackPeriod
+	local now = unixOf(unix)
+	local week = QuestRules.weekIndex(now)
+	local track = if type(profile) == "table" and type(profile.weeklyTrack) == "table"
+		then profile.weeklyTrack
+		else nil
+	-- absente (profil v1, piste neuve) : 0, à fixer ; illisible (NaN, ±inf, autre type) : abîmée
+	local raw = if track then track.firstPeriodEnd else nil
+	local stored = if raw == nil then 0 else finite(raw, -1)
+	local fpe: number
+	if stored == 0 then
+		fpe = QuestRules.weekStart(week + 2)
+	elseif stored > 0 and stored % 1 == 0 and (stored - EPOCH) % WEEK == 0 then
+		fpe = stored
+	else
+		fpe = QuestRules.weekStart(week) -- abîmée : première période finie
+	end
+	local ahead = (fpe - EPOCH) // WEEK - week
+	if ahead > 2 then
+		fpe = QuestRules.weekStart(week) -- plus de 2 semaines plus tard : abîmée
+		ahead = 0
+	end
+	if now < fpe and ahead >= 1 then
+		local last = (fpe - EPOCH) // WEEK - 1
+		return {
+			period = last,
+			startsAt = fpe - 2 * WEEK,
+			endsAt = fpe,
+			first = true,
+			firstPeriodEnd = fpe,
+		}
+	end
+	return {
+		period = week,
+		startsAt = QuestRules.weekStart(week),
+		endsAt = QuestRules.weekStart(week + 1),
+		first = false,
+		firstPeriodEnd = fpe,
+	}
+end
+
+-- Paliers de la piste atteints avec `points` (1 palier = PointsPerTier points ; 12 au plus)
+function QuestRules.trackTier(points: number): number
+	local p = math.max(0, math.floor(finite(points, 0)))
+	return math.min(TRACK_TIERS, p // TRACK.PointsPerTier)
+end
+
+-- Points de piste qu'un joueur PEUT gagner entre fromUnix et toUnix (bornes de la période, ou sa 1re
+-- connexion) : jours UTC ENTIERS de l'intervalle (seulement ceux de `weekdays`, 0 = lundi … 6 =
+-- dimanche, si donné) × objectifs du jour × 2, + les Défis d'une semaine × 5 (borne basse : GDD §7.5,
+-- « chaque période permet d'atteindre 24 points », 27 pour le joueur du week-end)
+function QuestRules.trackMaxPoints(fromUnix: number, toUnix: number, weekdays: { [number]: boolean }?): number
+	local a = unixOf(fromUnix)
+	local b = unixOf(toUnix)
+	local firstDay = (a + DAY - 1) // DAY -- premier jour entier
+	local lastDay = b // DAY - 1 -- dernier jour entier
+	local days = 0
+	for d = firstDay, math.min(lastDay, firstDay + 400) do
+		if weekdays == nil or weekdays[(d + 3) % 7] == true then
+			days += 1
+		end
+	end
+	return days * Quests.ObjectiveRules.PerDay * TRACK.PointsPerObjective
+		+ TRACK.ChallengesPerWeek * TRACK.PointsPerChallenge
+end
+
+-- Ligne de Config/Quests.Challenges (identifiant définitif = position)
+type ChallengeDef = {
+	id: number,
+	key: string,
+	stat: string,
+	target: number,
+	minDays: number?,
+	dropWhenWorkshopDone: boolean?,
+}
+
+local function challengeDef(id: any): ChallengeDef?
+	if type(id) ~= "number" then
+		return nil
+	end
+	local def = (Quests.Challenges :: { any })[id]
+	if type(def) == "table" and def.id == id then
+		return def :: ChallengeDef
+	end
+	return nil
+end
+
+-- Temps de jeu d'un Défi : médiane des 7 derniers jours bornée à [30 min ; 2 h] (absente : 30 min)
+function QuestRules.challengePlaySeconds(ctx: ChallengeCtx?): number
+	local c: any = if type(ctx) == "table" then ctx else {}
+	return math.clamp(finite(c.playMedian, PLAY_MIN), PLAY_MIN, PLAY_MAX)
+end
+
+-- Le Défi `id` est faisable dans la situation du joueur (GDD §7.5, critique M15) : jamais dépendant
+-- des autres joueurs ; « Gagne 20 Confettis » retiré quand l'Atelier est complet ; « Nourris Plop
+-- 3 jours » seulement après 3 jours joués la semaine précédente ; « Fais une Jelly Ascend »
+-- seulement si l'interrupteur JellyAscend est ouvert ; un Défi de situation (ETA_REQUIRED) seulement
+-- si son estimation tient dans le temps de jeu ; une estimation donnée pour un autre Défi aussi.
+function QuestRules.challengeFeasible(id: number, ctx: ChallengeCtx?): boolean
+	local def = challengeDef(id)
+	if def == nil then
+		return false
+	end
+	local c: any = if type(ctx) == "table" then ctx else {}
+	if def.dropWhenWorkshopDone == true and c.workshopDone == true then
+		return false
+	end
+	if def.minDays ~= nil and finite(c.daysPlayed, 0) < def.minDays then
+		return false
+	end
+	if def.stat == "ascends" and Features.get("JellyAscend") ~= true then
+		return false
+	end
+	local etas = if type(c.eta) == "table" then c.eta else {}
+	local eta = etas[def.stat]
+	if eta == nil then
+		return not ETA_REQUIRED[def.stat]
+	end
+	local seconds = finite(eta, math.huge)
+	return seconds >= 0 and seconds <= QuestRules.challengePlaySeconds(c)
+end
+
+-- Les 3 Défis d'une période (Quests.WeeklyTrack.ChallengesPerWeek), tirés parmi les faisables,
+-- jamais deux fois le même, déterministes par (joueur, période) ; s'il en manque, complétés par les
+-- Défis qui se font toujours en jouant (ni estimation, ni condition), dans l'ordre des identifiants
+function QuestRules.drawChallenges(userId: number, period: number, ctx: ChallengeCtx?): { number }
+	local n = TRACK.ChallengesPerWeek
+	local pool = {}
+	local defs = Quests.Challenges :: { any }
+	for _, def in defs do
+		if QuestRules.challengeFeasible(def.id, ctx) then
+			table.insert(pool, def.id)
+		end
+	end
+	local out = {}
+	local user = finite(userId, 0)
+	local p = finite(period, 0)
+	for slot = 1, n do
+		if #pool == 0 then
+			break
+		end
+		local i = Hash.int(1, #pool, user, p, slot, CHALLENGE_SALT)
+		table.insert(out, table.remove(pool, i))
+	end
+	for _, def in defs do
+		if #out >= n then
+			break
+		end
+		local basic = not ETA_REQUIRED[def.stat] and def.minDays == nil and def.dropWhenWorkshopDone ~= true
+		if basic and table.find(out, def.id) == nil then
+			table.insert(out, def.id)
+		end
+	end
+	return out
+end
+
+-- Paliers du Carnet du Ranch atteints avec n niveaux achetés à vie (0 … 8 ; GDD §7.5)
+function QuestRules.carnetTier(n: number): number
+	local bought = math.max(0, math.floor(finite(n, 0)))
+	local tier = 0
+	for i, at in Quests.Carnet.Tiers do
+		if bought >= at then
+			tier = i
+		end
+	end
+	return tier
+end
+
+-- Prochain seuil du Carnet (nil : tous atteints)
+function QuestRules.carnetNext(n: number): number?
+	local tier = QuestRules.carnetTier(n)
+	return Quests.Carnet.Tiers[tier + 1]
 end
 
 return QuestRules

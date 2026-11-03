@@ -1,19 +1,29 @@
 --!strict
--- BigNumber (paquet logic, docs/04 §12.1). Affichage des nombres géants (GDD §4.2), anglais et
--- français. Remplace Format.abbreviate du socle pour tout nombre du jeu (note INT-FORMAT) :
---   * moins de 10 000 : entier avec séparateur des milliers (EN « , », FR espace fine insécable
---     U+202F) ;
+-- BigNumber (paquet logic, docs/04 §12.1 ; lot A1, docs/04 §27.7). Affichage des nombres géants
+-- (GDD v2.0 §4.2), anglais et français. Remplace Format.abbreviate du socle pour tout nombre du jeu
+-- (note INT-FORMAT) :
+--   * moins de 10 000 : entier avec séparateur des milliers (EN « 9,876 ») ; en français, aucun
+--     séparateur à 4 chiffres (« 9876 », espace facultative en français) ;
 --   * ensuite 3 chiffres significatifs TRONQUÉS, jamais arrondis vers le haut (999 999 → « 999K »),
---     zéro final gardé (« 7.80T ») et suffixe : MÊMES suffixes internationaux dans les deux langues
---     (K M B T Qa Qi Sx Sp Oc No Dc, GDD v1.3 §4.2) ; en français, virgule décimale et espace fine
---     insécable avant le suffixe (« 12,3 K », « 4,56 B », « 7,80 T ») ;
---   * à partir de 1e36 : « 1.23e36 » / « 1,23e36 ».
--- NaN → « 0 », ±inf → « ∞ », −0 → « 0 » : jamais d'erreur (propriétés : Props_BigNumber.spec).
+--     zéro final gardé (« 7.80T ») et suffixe : MÊMES suffixes internationaux dans les deux langues,
+--     de K (1e3) à Tg (1e93) (GDD v2.0 §4.2, critique M11) ; en français, virgule décimale et le
+--     suffixe COLLÉ au nombre (« 12,3K », « 4,56B », « 7,80T ») ;
+--   * à partir de 1e96 : « 1.23e96 » / « 1,23e96 » (aucun profil simulé n'y arrive avant le jour 140).
+-- Note INT-V2-GLYPHS (d), docs/04 §27.11 : les deux polices du texte (FredokaOne, LuckiestGuy)
+-- n'ont AUCUNE espace insécable (ni U+00A0, ni U+202F, ni U+2007…) : la seule espace commune est
+-- U+0020, où un libellé à retours à la ligne (défaut de UI/Text) peut couper. Un montant abrégé ne
+-- contient donc jamais d'espace (« 12,3K » tient toujours sur une ligne) ; full() et words() (fiche,
+-- au-delà de 4 chiffres en français) groupent par U+0020 : à poser dans un libellé SANS retour à la
+-- ligne. Chaque caractère écrit est dans les deux polices (Contract_glyphs › formateurs).
+-- NaN → « 0 », −0 → « 0 », ±inf (valeur hostile) → le plafond affiché « 1.00e300 » (jamais « inf »,
+-- « nan » ni « ∞ », absent des deux polices) : jamais d'erreur (propriétés : Props_BigNumber.spec).
 -- Les chiffres viennent de string.format("%.14e") (15 chiffres significatifs : exact pour tout
 -- entier < 1e15, et une petite erreur d'arrondi flottant — 4,5599999999999995e9 — s'affiche 4.56B).
 -- Les mots entiers viennent des clés num.name.<p> de Localization/Strings (table du GDD §4.2) : EN
--- « 7.80 trillion » ; FR « 7 800 milliards » (un mot « mille X » s'écrit en milliers de X), « 7,80
+-- « 7.80 trillion » ; FR « 7800 milliards » (un mot « mille X » s'écrit en milliers de X), « 7,80
 -- millions de milliards » (pluriel du premier mot d'un mot composé « X de Y »), « 2,50 trilliards ».
+-- Un palier sans clé (au-delà de Dc tant que les clés num.name.36 … 93 n'existent pas, note
+-- INT-A1-WORDS) rend la forme courte comme mot : jamais un mot vide.
 
 -- Bibliothèques gardées en local : appels rapides, aussi dans l'environnement injecté du harnais
 local type, math, string, table = type, math, string, table
@@ -22,13 +32,21 @@ local Strings = require(script.Parent.Parent.Localization.Strings)
 
 local BigNumber = {}
 
-local NNBSP = "\226\128\175" -- U+202F, espace fine insécable (UTF-8)
-local SCIENTIFIC_EXP = 36 -- à partir de 1e36 : notation « 1.23e36 »
+local SPACE = " " -- U+0020 : la seule espace des deux polices (groupes de full() et words() en français)
+local SCIENTIFIC_EXP = 96 -- à partir de 1e96 : notation « 1.23e96 »
 local EXACT_BELOW = 1e15 -- full() : entier exact en dessous
 local SHORT_FROM = 10000 -- abbreviate() : abrégé à partir de 10 000
+local SHOWN_MAX = 1e300 -- plafond affiché (Balance.Numbers.Max) : ±inf, valeur hostile
 
-local SUFFIXES_EN = { "K", "M", "B", "T", "Qa", "Qi", "Sx", "Sp", "Oc", "No", "Dc" }
-local SUFFIXES_FR = SUFFIXES_EN -- GDD v1.3 §4.2 : mêmes suffixes internationaux (virgule et U+202F en FR)
+-- GDD v2.0 §4.2 : 31 suffixes, 1e3 … 1e93 (Config/Visuals.SuffixColors en donne les couleurs)
+-- stylua: ignore start
+local SUFFIXES_EN = {
+	"K", "M", "B", "T", "Qa", "Qi", "Sx", "Sp", "Oc", "No", "Dc",
+	"Ud", "Dd", "Td", "Qad", "Qid", "Sxd", "Spd", "Ocd", "Nvd",
+	"Vg", "Uvg", "Dvg", "Tvg", "Qavg", "Qivg", "Sxvg", "Spvg", "Ocvg", "Nvvg", "Tg",
+}
+-- stylua: ignore end
+local SUFFIXES_FR = SUFFIXES_EN -- GDD §4.2 : mêmes suffixes internationaux (virgule décimale en FR)
 
 -- Jalons des bannières (Events.Banners.RecordThresholds) : puissance → clé de texte
 local MILESTONES = { 6, 9, 12, 15 }
@@ -37,7 +55,7 @@ local function isFr(lang: string?): boolean
 	return lang == "fr"
 end
 
--- Nombre sûr : NaN → 0, −0 → 0 ; ±inf gardés (affichés « ∞ »)
+-- Nombre sûr : NaN → 0, −0 → 0 ; ±inf → ±plafond affiché (valeur hostile : jamais « ∞ »)
 local function sane(n: any): number
 	if type(n) ~= "number" or n ~= n then
 		return 0
@@ -45,13 +63,23 @@ local function sane(n: any): number
 	if n == 0 then
 		return 0 -- efface −0
 	end
+	if n > SHOWN_MAX then
+		return if n == math.huge then SHOWN_MAX else n
+	end
+	if n == -math.huge then
+		return -SHOWN_MAX
+	end
 	return n
 end
 
--- Entier positif (déjà tronqué, < 1e15) avec séparateur des milliers
+-- Entier positif (déjà tronqué, < 1e15) avec séparateur des milliers ; français : aucun séparateur
+-- à 4 chiffres, U+0020 au-delà (seule espace des deux polices)
 local function groupDigits(int: number, fr: boolean): string
 	local s = string.format("%d", int)
-	local sep = if fr then NNBSP else ","
+	if fr and #s <= 4 then
+		return s
+	end
+	local sep = if fr then SPACE else ","
 	local first = #s % 3
 	local parts = {}
 	if first > 0 then
@@ -85,7 +113,7 @@ local function threeDigits(digits: string, intDigits: number, fr: boolean): stri
 	return string.sub(d, 1, intDigits) .. mark .. string.sub(d, intDigits + 1)
 end
 
--- Forme abrégée d'une valeur absolue finie ≥ 10 000 : (texte du nombre, palier de mille 1 … 11, ou
+-- Forme abrégée d'une valeur absolue finie ≥ 10 000 : (texte du nombre, palier de mille 1 … 31, ou
 -- 0 en notation scientifique, puis les 3 chiffres tronqués en entier (« 780 ») et le nombre de chiffres
 -- avant la virgule, 1 … 3)
 local function shortParts(x: number, fr: boolean): (string, number, number, number)
@@ -117,13 +145,10 @@ local function frPlural(word: string): string
 	return word .. "s"
 end
 
--- Forme courte du HUD, des étiquettes et des « +N »
+-- Forme courte du HUD, des étiquettes et des « +N » (jamais d'espace : une seule ligne)
 function BigNumber.abbreviate(n: number, lang: string?): string
 	local x = sane(n)
 	local fr = isFr(lang)
-	if x == math.huge or x == -math.huge then
-		return "∞"
-	end
 	local negative = x < 0
 	local a = math.abs(x)
 	local text
@@ -133,10 +158,8 @@ function BigNumber.abbreviate(n: number, lang: string?): string
 		local num, tier = shortParts(a, fr)
 		if tier == 0 then
 			text = num
-		elseif fr then
-			text = num .. NNBSP .. SUFFIXES_FR[tier]
 		else
-			text = num .. SUFFIXES_EN[tier]
+			text = num .. (if fr then SUFFIXES_FR[tier] else SUFFIXES_EN[tier])
 		end
 	end
 	if negative and text ~= "0" then
@@ -148,9 +171,6 @@ end
 -- Entier exact avec séparateurs sous 1e15, sinon abbreviate
 function BigNumber.full(n: number, lang: string?): string
 	local x = sane(n)
-	if x == math.huge or x == -math.huge then
-		return "∞"
-	end
 	local a = math.abs(x)
 	if a >= EXACT_BELOW then
 		return BigNumber.abbreviate(x, lang)
@@ -166,9 +186,6 @@ end
 function BigNumber.words(n: number, lang: string?): (string, string)
 	local short = BigNumber.abbreviate(n, lang)
 	local x = sane(n)
-	if x == math.huge or x == -math.huge then
-		return short, short
-	end
 	local fr = isFr(lang)
 	local a = math.abs(x)
 	if a < SHORT_FROM then
@@ -180,11 +197,14 @@ function BigNumber.words(n: number, lang: string?): (string, string)
 	end
 	local key = "num.name." .. tostring(tier * 3)
 	local texts = Strings[if fr then "fr" else "en"] or Strings.en
-	local word = texts[key] or Strings.en[key] or ""
+	local word = texts[key] or Strings.en[key]
+	if type(word) ~= "string" or word == "" then
+		return short, short -- palier sans clé de mot (note INT-A1-WORDS) : jamais un mot vide
+	end
 	local text
 	local thousandsOf = if fr then string.match(word, "^mille (.+)$") else nil
 	if thousandsOf then
-		-- GDD §4.2 : « 7,80 T = 7 800 milliards » (« mille milliards » : le second mot est déjà au pluriel)
+		-- GDD §4.2 : « 7,80T = 7800 milliards » (« mille milliards » : le second mot est déjà au pluriel)
 		text = groupDigits(three * 10 ^ intDigits, true) .. " " .. thousandsOf
 	else
 		-- français : pluriel dès 2 (« 4,56 milliards »), « mille » est invariable

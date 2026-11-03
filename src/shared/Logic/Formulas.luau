@@ -8,6 +8,19 @@
 -- Pot : intégrale exacte du revenu entre deux règlements (GDD §12.3) :
 --   revenu(t) = S1 + K × G(t) ; ∫ revenu = S1 × Δ + K × (G(t0) × Δ + ½ × g × Δ²).
 -- Aucun nombre du GDD en dur : tout vient de Config/Balance (et Species, Rarities, Mutations).
+--
+-- GDD v2.0 (paquet A1, docs/04 §27.7, §27.13 N2-N6) : chaque terme nouveau est derrière son
+-- interrupteur Config/Features, lu à chaque appel (jamais copié). Interrupteurs coupés, ou champ v2.0
+-- absent du contexte : le résultat est EXACTEMENT celui de la v1.3 (mêmes opérations, dans le même
+-- ordre) :
+--   * N2 croissance × Prestige.growthFactor (3^A × Souvenir de gelée) [JellyAscend] ; Tapis Étoilé
+--     (niveaux 13 à 20, au-dessus du Tapis 12, plafonné par r) [StarMat] ;
+--   * N3 prix des dalles = UpgradeMath.price (le seul calcul des prix, × F(A)) [UpgradesScreen ou
+--     JellyAscend] ;
+--   * N4 revenu × (1 + 0,01 × Monuments), multiplicateur à part [Monuments] ;
+--   * N5 pression × (1 + 0,025 × Gants) [Gloves] ; série PERFECT jusqu'à 5 + Super Série [Workshop] ;
+--   * N6 hors ligne : + 1 h par Sac de nuit (16 h au plus), Pot 25 / 30 / 35 % [Workshop] ; arrêt de
+--     la croissance à 120 s de croissance maximale de la boucle avant l'objectif [RecordR].
 
 -- Bibliothèques gardées en local : appels rapides, aussi dans l'environnement injecté du harnais
 local type, math, string, table = type, math, string, table
@@ -17,12 +30,21 @@ local Balance = require(script.Parent.Parent.Config.Balance)
 local Species = require(script.Parent.Parent.Config.Species)
 local Rarities = require(script.Parent.Parent.Config.Rarities)
 local Mutations = require(script.Parent.Parent.Config.Mutations)
+local Features = require(script.Parent.Parent.Config.Features)
+local Upgrades = require(script.Parent.Parent.Config.Upgrades)
+local Prestige = require(script.Parent.Prestige)
+local UpgradeMath = require(script.Parent.UpgradeMath)
 
 export type GrowthCtx = {
 	R: number,
 	snack: number, -- niveau du Tapis à Goûter
 	jellyFamily: boolean,
 	boost: boolean, -- B = 2 (un seul ×2, jamais cumulé)
+	-- v2.0 (facultatifs ; lus seulement quand leur interrupteur est ouvert)
+	star: number?, -- Tapis Étoilé 0-8 [StarMat] : compté au-dessus du Tapis 12, plafonné par r
+	A: number?, -- Jelly Ascend 0-60 [JellyAscend]
+	bestR: number?, -- Record R (Souvenir de gelée) ; absent : r (aucun Souvenir)
+	firstRecordLoop: boolean?, -- 1re boucle record après le retour au record (Prestige.firstRecordLoop)
 }
 
 export type IncomeCtx = {
@@ -33,6 +55,7 @@ export type IncomeCtx = {
 	goldenPages: number, -- pages dorées du Squishydex
 	doubleCoins: boolean, -- P = 2
 	boost: boolean, -- B = 2
+	monuments: number?, -- v2.0 : Monuments construits 0-10 [Monuments], multiplicateur à part
 }
 
 export type VatLevel = { quality: number, speed: number, nozzles: number }
@@ -50,6 +73,20 @@ local MAX = Balance.Numbers.Max
 local EXACT_BELOW = Balance.Numbers.ExactBelow
 local HOUR = 3600
 local MAX_R = 1000 -- au-delà, 2^R n'a plus de sens (borné à Max de toute façon)
+
+-- Bornes des niveaux v2.0 (Config/Balance, Config/Upgrades : une seule source)
+local SNACK_LEVELS = Balance.Tiles.snack.Levels
+local STAR_LEVELS = Balance.UpgradePrices.star.Levels
+local GLOVES_LEVELS = Balance.UpgradePrices.gloves.Levels
+local MONUMENT_LEVELS = Balance.UpgradePrices.monument.Levels
+local SUPER_STREAK_MAX = Balance.PressV2.SuperStreakMax
+local NIGHT_BAG_MAX = #Upgrades.WorkshopRows[Upgrades.WorkshopIndex.nightBag].costs
+local NIGHT_POT_MAX = #Upgrades.WorkshopRows[Upgrades.WorkshopIndex.nightPot].costs
+
+-- Interrupteur v2.0 ouvert (lu à chaque appel : LiveOps peut le changer en direct)
+local function flag(key: string): boolean
+	return Features.get(key) == true
+end
 
 -- =============================================================================================
 -- Nombres sûrs
@@ -175,20 +212,58 @@ function Formulas.sizeAt(rec: Types.SquishyRecord, G: number): number
 	return z
 end
 
--- g = Base × 2^R × (1 + niveauTapis) × (1 + 0,10 × Jelly) × B
-function Formulas.growthRate(ctx: GrowthCtx): number
-	local c: any = if type(ctx) == "table" then ctx else {}
+-- r d'un contexte de croissance (seule lecture du champ : Static_PrestigeOnly compte les lectures)
+local function ctxLoop(c: any): number
+	return level(c.R, MAX_R)
+end
+
+-- Niveau du Tapis compté dans la croissance : Tapis à Goûter 0-12, + Tapis Étoilé [StarMat] au-dessus
+-- du Tapis 12 seulement, jamais au-delà du plafond de la boucle (Prestige.starCap(r), GDD §4.6)
+local function matLevel(c: any, R: number, snack: number): number
+	if snack < SNACK_LEVELS or not flag("StarMat") then
+		return snack
+	end
+	return snack + math.min(level(c.star, STAR_LEVELS), Prestige.starCap(R))
+end
+
+-- Croissance (GDD v2.0 §4.3) pour un r, un niveau de Tapis et un boost donnés, le reste du contexte
+local function rate(c: any, R: number, mat: number, boost: boolean): number
 	local cfg = Balance.Growth
-	local R = level(c.R, MAX_R)
-	local snack = level(c.snack, Balance.Tiles.snack.Levels)
-	local g = cfg.Base * cfg.RebirthMult ^ R * (1 + cfg.SnackPerLevel * snack)
+	local g = cfg.Base * cfg.RebirthMult ^ R * (1 + cfg.SnackPerLevel * mat)
 	if bool(c.jellyFamily) then
 		g *= 1 + cfg.JellyFamilyBonus
 	end
-	if bool(c.boost) then
+	if boost then
 		g *= cfg.BoostMult
 	end
+	-- N2 : × 3^A × Souvenir de gelée (Prestige, seule source ; tables par multiplications successives)
+	if flag("JellyAscend") then
+		local bestR = if c.bestR == nil then R else c.bestR
+		g *= Prestige.growthFactor(R, num(c.A, 0), num(bestR, R), c.firstRecordLoop == true)
+	end
 	return clampNum(g, 0, MAX)
+end
+
+-- g = Base × 2^R × (1 + niveauTapis) × (1 + 0,10 × Jelly) × B ; v2.0 : × 3^A × Souvenir [JellyAscend],
+-- niveauTapis jusqu'à 20 avec le Tapis Étoilé [StarMat]
+function Formulas.growthRate(ctx: GrowthCtx): number
+	local c: any = if type(ctx) == "table" then ctx else {}
+	local R = ctxLoop(c)
+	local snack = level(c.snack, SNACK_LEVELS)
+	return rate(c, R, matLevel(c, R, snack), bool(c.boost))
+end
+
+-- Croissance MAXIMALE de la boucle (GDD v2.0 §4.19) : Tapis et Tapis Étoilé au plafond de r, boost
+-- ×2, le reste du contexte (famille Jelly, A, Souvenir) tel quel. Sert à l'arrêt hors ligne à
+-- OfflineV2.MinPlaySeconds de l'objectif (Formulas.offlineGrowth, 5e argument)
+function Formulas.maxGrowthRate(ctx: GrowthCtx): number
+	local c: any = if type(ctx) == "table" then ctx else {}
+	local R = ctxLoop(c)
+	local mat = SNACK_LEVELS
+	if flag("StarMat") then
+		mat += Prestige.starCap(R)
+	end
+	return rate(c, R, mat, true)
 end
 
 -- =============================================================================================
@@ -218,7 +293,15 @@ function Formulas.A(ctx: IncomeCtx): number
 		+ cfg.GoldenPageBonus * pages
 end
 
--- Produit A × P × B du contexte (commun à tous les squishies du ranch)
+-- Multiplicateur des Monuments (GDD v2.0 §4.3, N4) : 1 + 0,01 × Monuments [Monuments], 1 sinon
+function Formulas.monumentMult(monuments: number): number
+	if not flag("Monuments") then
+		return 1
+	end
+	return 1 + Balance.Monuments.IncomeStep * level(monuments, MONUMENT_LEVELS)
+end
+
+-- Produit A × P × B du contexte (commun à tous les squishies du ranch) ; v2.0 : × Monuments
 local function ctxMult(ctx: any): number
 	local c: any = if type(ctx) == "table" then ctx else {}
 	local m = Formulas.A(c)
@@ -227,6 +310,9 @@ local function ctxMult(ctx: any): number
 	end
 	if bool(c.boost) then
 		m *= Balance.Growth.BoostMult
+	end
+	if c.monuments ~= nil and flag("Monuments") then
+		m *= Formulas.monumentMult(c.monuments)
 	end
 	return m
 end
@@ -309,15 +395,44 @@ function Formulas.potGain(K: number, S1: number, growth: Types.Growth, t0: numbe
 	return amount(s1 * dt + k * integralG)
 end
 
--- floor(max(Min, Seconds × revenu) × PERFECT × série × Kitty)
-function Formulas.pressReward(income: number, perfect: boolean, streak: number, kittyFamily: boolean): number
+-- Série PERFECT maximale (GDD v2.0 §4.7, N5) : 5, + niveau de Super Série de l'Atelier (2 au plus)
+-- [Workshop]. Le compteur de série du serveur s'arrête là (au-delà, la pression ne paie pas plus)
+function Formulas.streakMax(superStreak: number?): number
+	local max = Balance.Press.StreakMax
+	if flag("Workshop") then
+		max += level(superStreak, SUPER_STREAK_MAX)
+	end
+	return max
+end
+
+-- Multiplicateur des Gants Moelleux (GDD v2.0 §4.7, N5) : 1 + 0,025 × niveau [Gloves], 1 sinon
+function Formulas.glovesMult(gloves: number): number
+	if not flag("Gloves") then
+		return 1
+	end
+	return 1 + Balance.Gloves.StepPerLevel * level(gloves, GLOVES_LEVELS)
+end
+
+-- floor(max(Min, Seconds × revenu) × PERFECT × série × Kitty) ; v2.0 : série jusqu'à 5 + Super
+-- Série [Workshop], × (1 + 0,025 × Gants) [Gloves], UN seul floor à la fin (GDD v2.0 §4.3)
+function Formulas.pressReward(
+	income: number,
+	perfect: boolean,
+	streak: number,
+	kittyFamily: boolean,
+	gloves: number?,
+	superStreak: number?
+): number
 	local cfg = Balance.Press
 	local base = math.max(cfg.Min, cfg.Seconds * clampNum(income, 0, MAX))
 	local mult = (if bool(perfect) then cfg.PerfectMult else 1)
-		* (1 + cfg.StreakStep * level(streak, cfg.StreakMax))
+		* (1 + cfg.StreakStep * level(streak, Formulas.streakMax(superStreak)))
 	if bool(kittyFamily) then
 		local kitty = Species.Families.kitty.bonus
 		mult *= 1 + (if kitty then kitty.value else cfg.KittyBonus)
+	end
+	if gloves ~= nil and flag("Gloves") then
+		mult *= Formulas.glovesMult(gloves)
 	end
 	return Formulas.clampCoins(base * mult)
 end
@@ -330,13 +445,21 @@ end
 -- GDD v1.3 §4.6 : × 3,5^R pour les dalles de la boucle) ; math.huge si niveau maximal ou dalle inconnue.
 -- Balance.Tiles porte aussi des nombres (EnterRadius, DwellSeconds, RScale…) : seule une TABLE est une
 -- dalle.
-function Formulas.tileCost(tile: string, lvl: number, R: number): number
+-- v2.0 (N3, note INT-A1-TILECOST) : dès que l'écran Améliorations ou la Jelly Ascend est ouvert, le
+-- prix d'une dalle EST UpgradeMath.price (le seul calcul des prix, sans puissance, × F(A) quand A ≥ 1
+-- [JellyAscend]) : dalle, étiquette, écran, aperçu et débit du serveur montrent le même nombre.
+function Formulas.tileCost(tile: string, lvl: number, R: number, A: number?): number
 	if type(tile) ~= "string" then
 		return math.huge
 	end
 	local def = (Balance.Tiles :: any)[tile]
 	if type(def) ~= "table" or type(def.Base) ~= "number" or type(def.Levels) ~= "number" then
 		return math.huge
+	end
+	if flag("UpgradesScreen") or flag("JellyAscend") then
+		local a = if flag("JellyAscend") then num(A, 0) else 0
+		local r = num(R, 0)
+		return UpgradeMath.price(tile, lvl, r, a, r)
 	end
 	local L = level(lvl, math.huge)
 	if L >= def.Levels then
@@ -475,12 +598,15 @@ end
 -- Hors ligne
 -- =============================================================================================
 
--- Absence comptée, bornée à la limite (8 h, 12 h Lit douillet, + 1 h Spiky) ; 0 au premier chargement
+-- Absence comptée, bornée à la limite (8 h, 12 h Lit douillet, + 1 h Spiky) ; 0 au premier chargement.
+-- v2.0 (N6) : + NightBagHours par niveau du Sac de nuit (3 au plus) [Workshop], limite totale
+-- OfflineV2.MaxHours (16 h)
 function Formulas.offlineSeconds(
 	nowUnix: number,
 	lastOnline: number,
 	cozyBed: boolean,
-	spikyFamily: boolean
+	spikyFamily: boolean,
+	nightBag: number?
 ): number
 	local now = num(nowUnix, 0)
 	local last = num(lastOnline, 0)
@@ -493,6 +619,10 @@ function Formulas.offlineSeconds(
 		local bonus = Species.Families.spiky.bonus
 		hours += if bonus then bonus.value else 0
 	end
+	if nightBag ~= nil and flag("Workshop") then
+		local v2 = Balance.OfflineV2
+		hours = math.min(v2.MaxHours, hours + v2.NightBagHours * level(nightBag, NIGHT_BAG_MAX))
+	end
 	return math.min(now - last, hours * HOUR)
 end
 
@@ -501,20 +631,46 @@ end
 -- Le plus gros squishy d'enclos ou du Bassin s'arrête à StopAt (90 %) de l'objectif en cours : le
 -- Grand Splorch se fait en jeu. Sans R ou sans plus gros (nil), pas d'arrêt. Un R illisible vaut 0 ;
 -- un plus gros illisible (NaN) vaut 0, +inf arrête tout.
-function Formulas.offlineGrowth(gNoBoost: number, seconds: number, R: number?, biggest: number?): number
+-- v2.0 (N6, GDD v2.0 §4.19) [RecordR] : avec gMax (Formulas.maxGrowthRate : croissance maximale de
+-- la boucle), la croissance s'arrête AUSSI quand il ne manque plus que OfflineV2.MinPlaySeconds
+-- (120 s) de croissance maximale, si c'est plus tôt que 90 % : toujours au moins 2 min de jeu
+function Formulas.offlineGrowth(
+	gNoBoost: number,
+	seconds: number,
+	R: number?,
+	biggest: number?,
+	gMax: number?
+): number
 	local cfg = Balance.Offline
 	local grown = clampNum(clampNum(gNoBoost, 0, MAX) * cfg.GrowthShare * clampNum(seconds, 0, MAX), 0, MAX)
 	if R == nil or biggest == nil then
 		return grown
 	end
-	local stopAt = cfg.StopAt * Formulas.splorchTarget(R :: number)
-	local room = math.max(0, stopAt - clampNum(biggest, 0, MAX))
+	local target = Formulas.splorchTarget(R :: number)
+	local stopAt = cfg.StopAt * target
+	local big = clampNum(biggest, 0, MAX)
+	local room = math.max(0, stopAt - big)
+	if gMax ~= nil and flag("RecordR") then
+		local reserve = Balance.OfflineV2.MinPlaySeconds * clampNum(gMax, 0, MAX)
+		room = math.min(room, math.max(0, target - reserve - big))
+	end
 	return math.min(grown, room)
 end
 
--- Pièces hors ligne versées au Pot (× PotShare) ; montant réel, borné
-function Formulas.offlinePot(incomeNoBoost: number, seconds: number): number
-	return amount(clampNum(incomeNoBoost, 0, MAX) * Balance.Offline.PotShare * clampNum(seconds, 0, MAX))
+-- Part du revenu hors ligne versée au Pot : 25 % ; v2.0 (N6) : 25 / 30 / 35 % selon le Pot de nuit
+-- de l'Atelier (Balance.OfflineV2.NightPotShares) [Workshop]
+function Formulas.offlinePotShare(nightPot: number?): number
+	if nightPot == nil or not flag("Workshop") then
+		return Balance.Offline.PotShare
+	end
+	return Balance.OfflineV2.NightPotShares[level(nightPot, NIGHT_POT_MAX) + 1]
+end
+
+-- Pièces hors ligne versées au Pot (× part du Pot) ; montant réel, borné
+function Formulas.offlinePot(incomeNoBoost: number, seconds: number, nightPot: number?): number
+	return amount(
+		clampNum(incomeNoBoost, 0, MAX) * Formulas.offlinePotShare(nightPot) * clampNum(seconds, 0, MAX)
+	)
 end
 
 -- =============================================================================================

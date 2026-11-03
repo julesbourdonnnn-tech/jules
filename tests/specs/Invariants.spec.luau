@@ -1,6 +1,11 @@
 --!nocheck
 -- Invariants (paquet logic, docs/04 §8.5, §12.1, §17.2) : un profil neuf est sain ; chaque violation
 -- est nommée ; tableaux denses, uid, nombres bornés, capacités, Meilleurs Amis, tenues.
+-- Profil v2 (lot A1, docs/04 §27.2) : bornes de chaque champ v2, plafonds des niveaux, ensembles de
+-- bits, piste, Déco perso, cœurs ; juste après un prestige (afterPrestige) ; profil v1 inchangé.
+local fs = require("@lune/fs")
+local serde = require("@lune/serde")
+
 return function(T)
 	local describe, it, expect, Harness = T.describe, T.it, T.expect, T.Harness
 
@@ -268,7 +273,455 @@ return function(T)
 			expect(I.profile(nil)).toEqual({ "profile" })
 			expect(#I.profile({}) > 10).toBe(true)
 		end)
+	end)
 
+	-- ---------------------------------------------------------------------------------------------
+	-- Profil v2 (lot A1, docs/04 §27.2) : seulement pour version ≥ 2 (schéma derrière SchemaV2)
+	-- ---------------------------------------------------------------------------------------------
+	local Prestige = h:require("ReplicatedStorage.Shared.Logic.Prestige")
+	local Upgrades = h:require("ReplicatedStorage.Shared.Config.Upgrades")
+	local Tables = h:require("ReplicatedStorage.Shared.Util.Tables")
+	local Features = h:require("ReplicatedStorage.Shared.Config.Features")
+	local W = Upgrades.WorkshopIndex
+
+	local function healthyV2(fields)
+		local d = Schema.defaultsFor(2)
+		d.squishies = { ["1"] = rec({ bf = 1 }), ["2"] = rec({ s = 5, at = "pool" }) }
+		d.nextUid = 3
+		for k, v in fields or {} do
+			d[k] = v
+		end
+		return d
+	end
+	-- Témoins de tests/fixtures/profiles : leurs squishies n'ont pas `b` (heure de naissance, posée à
+	-- 0 par ProfileRepair au chargement, comme DataService le fait avant tout invariant)
+	local function readJson(name)
+		local d = serde.decode("json", fs.readFile("tests/fixtures/profiles/" .. name))
+		for _, r in d.squishies do
+			if r.b == nil then
+				r.b = 0
+			end
+		end
+		return d
+	end
+
+	describe("Invariants › profil v2", function()
+		it(
+			"profils v2 sains : défauts, sauvegarde-témoin v2.json, v1.json migré, profil de jeu",
+			function()
+				expect(Features.Defaults.SchemaV2).toBe(false) -- schéma v2 coupé : rien ne change en v1
+				expect(I.profile(Schema.defaultsFor(2))).toEqual({})
+				expect(I.profile(healthyV2())).toEqual({})
+				local v2 = readJson("v2.json")
+				Tables.reconcile(v2, Schema.defaultsFor(2))
+				expect(I.profile(v2)).toEqual({})
+				local migrated = Schema.migrate(readJson("v1.json"), 1, 2)
+				Tables.reconcile(migrated, Schema.defaultsFor(2))
+				expect(I.profile(migrated)).toEqual({})
+				-- en cours de jeu après une Ascension : r 9, Record R 21, A 2, Tapis Étoilé plafonné par r
+				local d = healthyV2({
+					R = 9,
+					bestR = 21,
+					ascend = 2,
+					regainBonusA = 1,
+					confetti = 40,
+					confettiTotal = 900,
+				})
+				d.tiles.snack, d.tiles.star, d.tiles.gloves, d.tiles.school, d.tiles.monuments =
+					12, 4, 40, 20, 8
+				d.atelier[W.springboard] = 3
+				d.atelier[W.plume] = 1
+				d.unlocksSeen = 21
+				expect(I.profile(d)).toEqual({})
+			end
+		)
+
+		it("profil v1 : exactement les invariants de la v1.3 (les champs v2 ne sont pas lus)", function()
+			local d = healthy()
+			expect(d.version).toBe(1)
+			d.bestR = -7
+			d.confetti = 0 / 0
+			d.weeklyTrack = "x"
+			d.R = 500 -- v1 : R borné à 1e6, pas à MaxR
+			expect(I.profile(d)).toEqual({})
+		end)
+
+		it("progression : R ≤ bestR ≤ MaxR, A ≤ MaxA, bonus de retour ≤ A", function()
+			local cases = {
+				{ { R = 401, bestR = 401 }, "R" },
+				{ { R = 5, bestR = 4 }, "bestR" },
+				{ { R = 5, bestR = 401 }, "bestR" },
+				{ { bestR = 2.5 }, "bestR" },
+				{ { bestR = 0 / 0 }, "bestR" },
+				{ { ascend = 61 }, "ascend" },
+				{ { ascend = -1 }, "ascend" },
+				{ { ascend = 2, regainBonusA = 3 }, "regainBonusA" },
+			}
+			for _, case in cases do
+				local v = I.profile(healthyV2(case[1]))
+				expect({ case = case[2], found = has(v, case[2]) }).toEqual({ case = case[2], found = true })
+			end
+		end)
+
+		it("Confettis : entiers de 0 à 1e9, en poche ≤ total gagné", function()
+			expect(has(I.profile(healthyV2({ confetti = -1 })), "confetti")).toBe(true)
+			expect(has(I.profile(healthyV2({ confetti = 1.5, confettiTotal = 9 })), "confetti")).toBe(true)
+			expect(has(I.profile(healthyV2({ confettiTotal = 2e9 })), "confettiTotal")).toBe(true)
+			expect(has(I.profile(healthyV2({ confetti = 10, confettiTotal = 9 })), "confetti.total")).toBe(
+				true
+			)
+			expect(I.profile(healthyV2({ confetti = 1e9, confettiTotal = 1e9 }))).toEqual({})
+		end)
+
+		it(
+			"niveaux : bornes, Tapis Étoilé après le Tapis 12 et sous le plafond de r, plafond de chaque ligne",
+			function()
+				local function tiles(R, bestR, t)
+					local d = healthyV2({ R = R, bestR = bestR, unlocksSeen = 0 })
+					for k, v in t do
+						d.tiles[k] = v
+					end
+					return I.profile(d)
+				end
+				expect(has(tiles(10, 10, { star = 9, snack = 12 }), "tiles.star")).toBe(true)
+				expect(has(tiles(10, 10, { star = 2, snack = 11 }), "tiles.star.snack")).toBe(true)
+				expect(has(tiles(7, 7, { star = 3, snack = 12 }), "tiles.star.loopCap")).toBe(true)
+				expect(tiles(7, 7, { star = 2, snack = 12 })).toEqual({})
+				expect(has(tiles(10, 10, { gloves = 41 }), "tiles.gloves")).toBe(true)
+				expect(has(tiles(10, 10, { school = 21 }), "tiles.school")).toBe(true)
+				expect(has(tiles(30, 30, { monuments = 11 }), "tiles.monuments")).toBe(true)
+				-- plafonds par le Record R : Gants dès 1, École dès 2, Monument n à 6, 8 … 24, Lit dès 3
+				expect(has(tiles(0, 0, { gloves = 1 }), "gloves.cap")).toBe(true)
+				expect(tiles(1, 1, { gloves = 40 })).toEqual({})
+				expect(has(tiles(1, 1, { school = 1 }), "school.cap")).toBe(true)
+				expect(has(tiles(9, 9, { monuments = 3 }), "monument.cap")).toBe(true)
+				expect(tiles(9, 9, { monuments = 2 })).toEqual({})
+				expect(has(tiles(2, 2, { cozyBed = true }), "cozyBed.cap")).toBe(true)
+				-- après une Ascension, r redescend : les Monuments et les Gants (Record R) restent valables
+				expect(tiles(0, 24, { monuments = 10, gloves = 12 })).toEqual({})
+			end
+		)
+
+		it("Atelier : une case par ligne, ≤ son nombre de niveaux, ouverte par le Record R ou A", function()
+			local d = healthyV2({ bestR = 1, R = 1 })
+			d.atelier[W.gift] = 3
+			expect(has(I.profile(d), "atelier.gift")).toBe(true)
+			local e = healthyV2()
+			table.remove(e.atelier)
+			expect(has(I.profile(e), "atelier")).toBe(true)
+			local f = healthyV2({ bestR = 20, R = 20 })
+			f.atelier[W.springboard] = 1 -- Tremplin : A ≥ 1
+			expect(has(I.profile(f), "springboard.cap")).toBe(true)
+			local g = healthyV2({ bestR = 11, R = 11 })
+			g.atelier[W.plume] = 1 -- Plume : Record R ≥ 12
+			expect(has(I.profile(g), "plume.cap")).toBe(true)
+			local k = healthyV2()
+			k.atelier[W.magnet] = 1 -- rien avant le premier Grand Splorch
+			expect(has(I.profile(k), "magnet.cap")).toBe(true)
+		end)
+
+		it("ensembles de bits, décorations dorées, statistiques, cartes « Nouveau »", function()
+			local cases = {
+				{
+					"atelierCosmetics",
+					function(d)
+						d.atelierCosmetics = {}
+					end,
+				},
+				{
+					"carnet",
+					function(d)
+						d.carnet = { -1 }
+					end,
+				},
+				{
+					"mastery",
+					function(d)
+						d.mastery = { 2 ^ 32 }
+					end,
+				},
+				{
+					"decorBuilds",
+					function(d)
+						d.decorBuilds = { 1, 2 }
+					end,
+				},
+				{
+					"decorBuilds.4",
+					function(d)
+						d.decorBuilds[4] = 11
+					end,
+				},
+				{
+					"stats.upgradesBought",
+					function(d)
+						d.stats.upgradesBought = -1
+					end,
+				},
+				{
+					"stats.petitSplorches",
+					function(d)
+						d.stats.petitSplorches = 0.5
+					end,
+				},
+				{
+					"unlocksSeen",
+					function(d)
+						d.unlocksSeen = 1
+					end,
+				}, -- au-delà du Record R 0
+			}
+			for _, case in cases do
+				local d = healthyV2()
+				case[2](d)
+				local v = I.profile(d)
+				expect({ case = case[1], found = has(v, case[1]) }).toEqual({ case = case[1], found = true })
+			end
+			local big = healthyV2()
+			big.mastery = table.create(200, 0) -- 200 mots : au-delà de Bitset.MaxBits
+			expect(has(I.profile(big), "mastery")).toBe(true)
+		end)
+
+		it("piste de la semaine, accueil, saison, plafonds du jour v2", function()
+			local cases = {
+				{
+					"weeklyTrack",
+					function(d)
+						d.weeklyTrack = nil
+					end,
+				},
+				{
+					"weeklyTrack.points",
+					function(d)
+						d.weeklyTrack.points = -2
+					end,
+				},
+				{
+					"weeklyTrack.claimed",
+					function(d)
+						d.weeklyTrack.claimed = {}
+					end,
+				},
+				{
+					"weeklyTrack.firstPeriodEnd",
+					function(d)
+						d.weeklyTrack.firstPeriodEnd = 0 / 0
+					end,
+				},
+				{
+					"weeklyTrack.challenges",
+					function(d)
+						d.weeklyTrack.challenges = {
+							{ id = 1, p = 0, done = false },
+							{ id = 2, p = 0, done = false },
+							{ id = 3, p = 0, done = false },
+							{ id = 4, p = 0, done = false },
+						}
+					end,
+				},
+				{
+					"weeklyTrack.challenges.2",
+					function(d)
+						d.weeklyTrack.challenges =
+							{ { id = 1, p = 0, done = false }, { id = 1, p = 1, done = false } }
+					end,
+				},
+				{
+					"weeklyTrack.challenges.1",
+					function(d)
+						d.weeklyTrack.challenges = { { id = 13, p = 0, done = false } }
+					end,
+				},
+				{
+					"onboarding.v2",
+					function(d)
+						d.onboarding.welcomeV2Pending = nil
+					end,
+				},
+				{
+					"season.frostDays",
+					function(d)
+						d.season.frostDays = -1
+					end,
+				},
+				{
+					"caps.fameSplorch",
+					function(d)
+						d.caps.fameSplorch = 51
+					end,
+				},
+				{
+					"caps.starRain",
+					function(d)
+						d.caps.starRain = 0 / 0
+					end,
+				},
+			}
+			for _, case in cases do
+				local d = healthyV2()
+				case[2](d)
+				local v = I.profile(d)
+				expect({ case = case[1], found = has(v, case[1]) }).toEqual({ case = case[1], found = true })
+			end
+			local ok = healthyV2()
+			ok.weeklyTrack.challenges = { { id = 3, p = 4, done = false }, { id = 12, p = 30, done = true } }
+			ok.caps.fameSplorch, ok.caps.starRain = 50, 3
+			expect(I.profile(ok)).toEqual({})
+		end)
+
+		it(
+			"Déco perso : emplacement vers un objet possédé, jamais deux fois ; cœurs : 20 receveurs au plus",
+			function()
+				local d = healthyV2()
+				d.decoPerso.owned[1] = 2 + 4 -- objets 2 et 3
+				d.decoPerso.slots[1], d.decoPerso.slots[9] = 2, 3
+				d.hearts.givenTo = { 101, 102, -5 }
+				d.hearts.givenDay, d.hearts.receivedTotal = 20400, 17
+				expect(I.profile(d)).toEqual({})
+				local cases = {
+					{
+						"decoPerso.slots.2",
+						function(x)
+							x.decoPerso.slots[2] = 1
+						end,
+					}, -- objet 1 non possédé
+					{
+						"decoPerso.slots.3",
+						function(x)
+							x.decoPerso.slots[3] = 2
+						end,
+					}, -- objet 2 déjà posé
+					{
+						"decoPerso.slots.4",
+						function(x)
+							x.decoPerso.slots[4] = 41
+						end,
+					},
+					{
+						"decoPerso.slots",
+						function(x)
+							x.decoPerso.slots[13] = 0
+						end,
+					},
+					{
+						"decoPerso.owned",
+						function(x)
+							x.decoPerso.owned = { 0 }
+						end,
+					}, -- 64 bits : 2 mots
+					{
+						"hearts.givenTo",
+						function(x)
+							x.hearts.givenTo = table.create(21, 1)
+						end,
+					},
+					{
+						"hearts.givenTo",
+						function(x)
+							x.hearts.givenTo = { 101, 101 }
+						end,
+					},
+					{
+						"hearts.givenDay",
+						function(x)
+							x.hearts.givenDay = -1
+						end,
+					},
+				}
+				for _, case in cases do
+					local x = Tables.deepCopy(d)
+					case[2](x)
+					local v = I.profile(x)
+					expect({ case = case[1], found = has(v, case[1]) }).toEqual({
+						case = case[1],
+						found = true,
+					})
+				end
+			end
+		)
+
+		it(
+			"bitset : mots entiers de 32 bits, au moins ceil(n / 32), jamais plus que Bitset.MaxBits",
+			function()
+				expect(I.bitset({ 0 }, 11)).toBe(true)
+				expect(I.bitset({ 0, 4294967295 }, 64)).toBe(true)
+				expect(I.bitset({ 0 }, 64)).toBe(false)
+				expect(I.bitset({}, 1)).toBe(false)
+				expect(I.bitset({ 1.5 }, 8)).toBe(false)
+				expect(I.bitset({ 0 / 0 }, 8)).toBe(false)
+				expect(I.bitset({ [2] = 1 }, 8)).toBe(false)
+				expect(I.bitset("x", 8)).toBe(false)
+			end
+		)
+	end)
+
+	describe("Invariants › juste après un prestige (Prestige.apply)", function()
+		local function readyV2(fields)
+			local d = healthyV2(fields)
+			d.growth = { G = 0, g = 1, t = 0 }
+			d.squishies["1"].z = Prestige.target(Prestige.r(d))
+			d.squishies["3"] = rec({ at = "dodo", z = 77 })
+			d.squishies["4"] = rec({ at = "mail", z = 5 })
+			d.nextUid = 5
+			return d
+		end
+
+		it(
+			"Grand Splorch, Petit Splorch, Ascension : profil sain, toutes les tailles à 1, décorations gardées ≤ 12",
+			function()
+				local d = readyV2({ R = 14, bestR = 14, unlocksSeen = 14 })
+				d.tiles.snack, d.tiles.decor, d.tiles.star, d.tiles.gloves, d.tiles.school = 12, 18, 8, 30, 10
+				d.atelier[W.keptDecor] = 2
+				d.atelier[W.startMat] = 3
+				local _, report = Prestige.apply(d, "splorch", 100)
+				expect(report.applied).toBe(true)
+				expect(I.afterPrestige(d)).toEqual({})
+				expect(d.tiles.decor).toBe(12) -- 3 (R8) + 3 (R14) + 2 × 3 (Atelier) = 12 au plus
+				-- une suite de prestiges jusqu'à deux Ascensions : jamais une violation
+				local function step(kind)
+					d.squishies["1"].z = Prestige.target(Prestige.r(d))
+					d.growth = { G = 0, g = 1, t = 0 }
+					local _, r = Prestige.apply(d, kind, 100)
+					expect({ kind = kind, applied = r.applied }).toEqual({ kind = kind, applied = true })
+					d.unlocksSeen = Prestige.bestR(d)
+					expect(I.afterPrestige(d)).toEqual({})
+				end
+				step("splorch") -- 16 (Ascension prête dès 15)
+				expect(Prestige.ascendReady(d)).toBe(true)
+				step("ascend")
+				expect({ Prestige.r(d), Prestige.bestR(d) }).toEqual({ 0, 16 })
+				for _ = 1, 3 do
+					step("splorch") -- Petits Splorch de la remontée (sorte effective « petit »)
+				end
+				expect(Prestige.ascend(d)).toBe(1)
+			end
+		)
+
+		it(
+			"violations nommées : une taille restée grande, des décorations de trop, des Gants gardés",
+			function()
+				local d = readyV2({ R = 9, bestR = 9, unlocksSeen = 9 })
+				d.tiles.decor = 9
+				Prestige.apply(d, "splorch", 100)
+				expect(I.afterPrestige(d)).toEqual({})
+				local a = Tables.deepCopy(d)
+				a.squishies["3"].z = 77
+				expect(has(I.afterPrestige(a), "prestige.squishies.3.size")).toBe(true)
+				local b = Tables.deepCopy(d)
+				b.tiles.decor = 4 -- 3 gardées au Record R 10
+				expect(has(I.afterPrestige(b), "prestige.tiles.decor")).toBe(true)
+				local c = Tables.deepCopy(d)
+				c.tiles.gloves = 1
+				expect(has(I.afterPrestige(c), "prestige.tiles.gloves")).toBe(true)
+				local e = Tables.deepCopy(d)
+				e.growth.G = 5
+				expect(has(I.afterPrestige(e), "prestige.growth.G")).toBe(true)
+				expect(I.afterPrestige(nil)).toEqual({ "profile" })
+			end
+		)
+	end)
+
+	describe("Invariants › zéro trace", function()
 		it("zéro trace", function()
 			expect(#h.errors).toBe(0)
 			expect(#h:warnings()).toBe(0)

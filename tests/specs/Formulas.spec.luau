@@ -380,6 +380,300 @@ return function(T)
 		end)
 	end)
 
+	-- -----------------------------------------------------------------------------------------
+	-- GDD v2.0 (paquet A1, docs/04 §27.13 N2-N6) : chaque terme derrière son interrupteur
+	-- -----------------------------------------------------------------------------------------
+	local Features = h:require("ReplicatedStorage.Shared.Config.Features")
+	local Prestige = h:require("ReplicatedStorage.Shared.Logic.Prestige")
+	local UpgradeMath = h:require("ReplicatedStorage.Shared.Logic.UpgradeMath")
+	local V2_FLAGS =
+		{ "JellyAscend", "StarMat", "UpgradesScreen", "Monuments", "Gloves", "Workshop", "RecordR" }
+
+	-- Ouvre des interrupteurs le temps de fn ; remet TOUJOURS les valeurs de lancement (même sur échec)
+	local function withFlags(names, fn)
+		for _, name in names do
+			assert(Features.set(name, true), name)
+		end
+		local okRun, err = pcall(fn)
+		Features.reset()
+		if not okRun then
+			error(err, 0)
+		end
+	end
+
+	describe("Formulas › v2.0, interrupteurs coupés : exactement la v1.3", function()
+		it("chaque interrupteur v2.0 est coupé au lancement de ces specs", function()
+			for _, name in V2_FLAGS do
+				expect({ flag = name, on = Features.get(name) }).toEqual({ flag = name, on = false })
+			end
+		end)
+
+		it(
+			"les champs v2.0 du contexte ne changent rien (croissance, revenu, pression, hors ligne, prix)",
+			function()
+				local base = { R = 3, snack = 12, jellyFamily = true, boost = true }
+				local v2 =
+					{ R = 3, snack = 12, jellyFamily = true, boost = true, A = 5, bestR = 20, star = 8 }
+				v2.firstRecordLoop = true
+				expect(F.growthRate(v2)).toBe(F.growthRate(base))
+				expect(F.growthRate(v2)).toBe(8 * 13 * 1.1 * 2)
+				local ctx = table.clone(NO_BONUS)
+				ctx.monuments = 10
+				expect(F.income(1000, 1, 0, 1, ctx)).toBe(F.income(1000, 1, 0, 1, NO_BONUS))
+				expect(F.pressReward(10, true, 7, false, 40, 2)).toBe(660) -- série 5 au plus, sans Gants
+				expect(F.streakMax(2)).toBe(5)
+				expect(F.glovesMult(40)).toBe(1)
+				expect(F.monumentMult(10)).toBe(1)
+				expect(F.offlineSeconds(1e6, 1, true, true, 3)).toBe(13 * 3600)
+				expect(F.offlinePot(2, 100, 2)).toBe(50)
+				expect(F.offlinePotShare(2)).toBe(0.25)
+				expect(F.offlineGrowth(100, 1000, 0, 1000, 50)).toBe(12500) -- 90 % seulement
+				-- prix : formule de la v1.3 (le seul cas d'une pièce d'écart avec UpgradeMath, décoration 10 à r = 17)
+				expect(F.tileCost("decor", 9, 17, 3)).toBe(171415807285087)
+				expect(F.tileCost("snack", 0, 0, 1)).toBe(20)
+				-- croissance maximale de la boucle sans Tapis Étoilé ni Ascension : Tapis 12 et ×2
+				expect(F.maxGrowthRate({ R = 10, snack = 0, jellyFamily = false, boost = false })).toBe(
+					1024 * 13 * 2
+				)
+			end
+		)
+	end)
+
+	describe("Formulas › v2.0, interrupteurs ouverts (N2-N6)", function()
+		it(
+			"N2 croissance × 3^A × Souvenir de gelée (×3, ×2, ×1,5, ×1,25 sur la 1re boucle record) [JellyAscend]",
+			function()
+				withFlags({ "JellyAscend" }, function()
+					local function g(R, A, bestR, first)
+						return F.growthRate({
+							R = R,
+							snack = 0,
+							jellyFamily = false,
+							boost = false,
+							A = A,
+							bestR = bestR,
+							firstRecordLoop = first,
+						})
+					end
+					expect(g(15, 0, 15, false)).toBe(32768) -- sans Ascension : la v1.3
+					expect(g(15, 1, 15, false)).toBe(32768 * 3)
+					expect(g(15, 2, 20, false)).toBe(32768 * 9 * 3) -- écart 5 : Souvenir ×3
+					-- après la 1re Ascension (record 15) : ×9 jusqu'à r = 12, puis ×6, ×4,5, ×3,75, ×3
+					expect(g(0, 1, 15, false)).toBe(9)
+					expect(g(0, 1, 15, false) / g(0, 0, 0, false)).toBe(Prestige.regainSpeedup())
+					expect(g(12, 1, 15, false)).toBe(4096 * 9)
+					expect(g(13, 1, 15, false)).toBe(8192 * 6)
+					expect(g(14, 1, 15, false)).toBe(16384 * 4.5)
+					expect(g(15, 1, 15, true)).toBe(32768 * 3.75)
+					expect(g(16, 1, 16, false)).toBe(65536 * 3)
+					-- 1re boucle record sans Ascension : jamais ×1,25 ; Record R absent : aucun Souvenir
+					expect(g(15, 0, 15, true)).toBe(32768)
+					expect(F.growthRate({ R = 5, snack = 0, jellyFamily = false, boost = false, A = 2 })).toBe(
+						32 * 9
+					)
+					-- A illisible ou hors bornes : 0 … 60 ; Record R sous r (abîmé) : aucun Souvenir
+					expect(g(0, 0 / 0, 0, false)).toBe(1)
+					expect(g(0, -3, 0, false)).toBe(1)
+					expect(g(4, 1, 2, false)).toBe(16 * 3)
+					-- A = 60 : 3^60 × 2^r reste fini et borné
+					local huge = g(400, 60, 400, false)
+					expect(huge == huge and huge <= 1e300 and huge > 0).toBe(true)
+				end)
+			end
+		)
+
+		it(
+			"N2 Tapis Étoilé : niveaux 13-20 au-dessus du Tapis 12, plafonnés par r (×14 … ×21) [StarMat]",
+			function()
+				withFlags({ "StarMat" }, function()
+					local function g(R, snack, star)
+						return F.growthRate({
+							R = R,
+							snack = snack,
+							jellyFamily = false,
+							boost = false,
+							star = star,
+						})
+					end
+					expect(g(10, 12, 8)).toBe(1024 * 21) -- croissance ×21 (GDD §4.6.1)
+					expect(g(10, 12, 3)).toBe(1024 * 16)
+					expect(g(6, 12, 3)).toBe(64 * 14) -- plafond de r = 6 : un niveau
+					expect(g(9, 12, 8)).toBe(512 * 17) -- plafond de r = 9 : 4 niveaux
+					expect(g(5, 12, 8)).toBe(32 * 13) -- avant r = 6 : rien
+					expect(g(10, 11, 8)).toBe(1024 * 12) -- seulement après le Tapis 12
+					expect(g(10, 12, 99)).toBe(1024 * 21)
+					expect(g(10, 12, 0 / 0)).toBe(1024 * 13)
+					-- croissance maximale de la boucle : Tapis et Tapis Étoilé au plafond de r, boost ×2
+					local ctx = { R = 10, snack = 0, jellyFamily = true, boost = false }
+					expect(F.maxGrowthRate(ctx)).toBeNear(1024 * 21 * 1.1 * 2, 1e-9)
+					expect(F.maxGrowthRate({ R = 7, snack = 3, jellyFamily = false, boost = false })).toBe(
+						128 * 15 * 2
+					)
+				end)
+			end
+		)
+
+		it(
+			"N3 prix des dalles = UpgradeMath.price (× F(A) = ×0,5 par Ascension, puis ×0,32) [JellyAscend, UpgradesScreen]",
+			function()
+				withFlags({ "UpgradesScreen" }, function()
+					-- le seul cas d'une pièce d'écart sous 1e15 : la dalle montre le prix de l'écran
+					expect(F.tileCost("decor", 9, 17)).toBe(171415807285086)
+					expect(F.tileCost("decor", 9, 17)).toBe(UpgradeMath.price("decor", 9, 17, 0, 17))
+					-- A ignoré tant que la Jelly Ascend est coupée
+					expect(F.tileCost("snack", 11, 0, 3)).toBe(306455660)
+					expect(F.tileCost("pens", 0, 5)).toBe(1200)
+					expect(F.tileCost("cozyBed", 0, 10)).toBe(25e6)
+					expect(F.tileCost("snack", 12, 0)).toBe(math.huge)
+					expect(F.tileCost("RScale", 0, 0)).toBe(math.huge)
+					expect(F.tileCost("gloves", 0, 0)).toBe(math.huge) -- famille sans dalle
+					expect(F.tileCost("snack", -1, 0)).toBe(math.huge) -- niveau qui n'existe pas
+				end)
+				withFlags({ "JellyAscend" }, function()
+					expect(F.tileCost("snack", 0, 0, 1)).toBe(10)
+					expect(F.tileCost("snack", 11, 0, 1)).toBe(153227830)
+					expect(F.tileCost("snack", 0, 4, 4)).toBe(math.floor(20 * 3.5 ^ 4 * 0.5 ^ 4))
+					expect(F.tileCost("snack", 0, 0, 5)).toBe(1) -- au moins 1 pièce (C13)
+					expect(F.tileCost("pens", 3, 9, 7)).toBe(12777) -- l'Enclos ne suit ni r ni A
+					expect(F.tileCost("cozyBed", 0, 9, 7)).toBe(25e6)
+					for _, tile in { "snack", "decor", "pens", "cozyBed" } do
+						for _, rA in { { 0, 0 }, { 3, 1 }, { 17, 0 }, { 25, 6 } } do
+							expect(F.tileCost(tile, 0, rA[1], rA[2])).toBe(
+								UpgradeMath.price(tile, 0, rA[1], rA[2], rA[1])
+							)
+						end
+					end
+				end)
+			end
+		)
+
+		it("N4 revenu × (1 + 0,01 × Monuments), multiplicateur à part de A_bonus [Monuments]", function()
+			withFlags({ "Monuments" }, function()
+				local ctx = table.clone(NO_BONUS)
+				ctx.monuments = 10
+				expect(F.income(1000, 1, 0, 1, ctx)).toBeNear(33, 1e-9) -- 30 × 1,10
+				expect(F.monumentMult(10)).toBeNear(1.1, 1e-12)
+				expect(F.monumentMult(1)).toBeNear(1.01, 1e-12)
+				expect(F.monumentMult(99)).toBeNear(1.1, 1e-12) -- 10 au plus
+				expect(F.monumentMult(0 / 0)).toBe(1)
+				ctx.decor = 18 -- A_bonus 1,9 : × 1,9 × 1,1, jamais 1 + 0,9 + 0,1
+				expect(F.income(1000, 1, 0, 1, ctx)).toBeNear(30 * 1.9 * 1.1, 1e-9)
+				local squishies = { a = rec(1, 0, 1, 10, 0, "pen") }
+				local K = F.ranchIncome(squishies, 0, ctx)
+				local K0 = F.ranchIncome(
+					squishies,
+					0,
+					{ decor = 18, friends = 0, fame = 0, trophyBonus = 0, goldenPages = 0 }
+				)
+				expect(K / K0).toBeNear(1.1, 1e-12)
+				-- sans le champ : aucun Monument
+				expect(F.income(1000, 1, 0, 1, NO_BONUS)).toBeNear(30, 1e-9)
+			end)
+		end)
+
+		it(
+			"N5 pression × Gants (×1,025 … ×2,000, GDD §4.6.1) et série jusqu'à 5 + Super Série [Gloves, Workshop]",
+			function()
+				withFlags({ "Gloves", "Workshop" }, function()
+					-- table des Gants du GDD §4.6.1 (pressions)
+					local GLOVES = {
+						[1] = 1.025,
+						[5] = 1.125,
+						[10] = 1.250,
+						[15] = 1.375,
+						[20] = 1.500,
+						[25] = 1.625,
+						[30] = 1.750,
+						[31] = 1.775,
+						[35] = 1.875,
+						[39] = 1.975,
+						[40] = 2.000,
+					}
+					for lvl, mult in GLOVES do
+						expect({ lvl = lvl, mult = math.floor(F.glovesMult(lvl) * 1000 + 0.5) / 1000 }).toEqual({
+							lvl = lvl,
+							mult = mult,
+						})
+					end
+					expect(F.glovesMult(41)).toBe(F.glovesMult(40))
+					-- floor(max(10, 22 × 10) × 2 × (1 + 0,1 × 7) × 2) = 1 496 (un seul floor, GDD §4.3)
+					expect(F.pressReward(10, true, 7, false, 40, 2)).toBe(1496)
+					expect(F.pressReward(10, true, 9, false, 40, 2)).toBe(1496) -- série 7 au plus
+					expect(F.pressReward(10, true, 9, false, 40, 1)).toBe(1408) -- Super Série 1 : 6 au plus
+					expect(F.pressReward(10, true, 9, false, 0, 0)).toBe(660)
+					expect(F.pressReward(10, false, 0, true, 10)).toBe(math.floor(220 * 1.1 * 1.25))
+					expect(F.pressReward(0.2, false, 0, false, 40)).toBe(20) -- minimum 10 × Gants
+					expect(F.streakMax(2)).toBe(7)
+					expect(F.streakMax(9)).toBe(7)
+					expect(F.streakMax(nil)).toBe(5)
+					expect(F.streakMax(0 / 0)).toBe(5)
+				end)
+				withFlags({ "Gloves" }, function()
+					expect(F.pressReward(10, true, 7, false, 40, 2)).toBe(1320) -- sans l'Atelier : série 5
+				end)
+			end
+		)
+
+		it("N6 hors ligne : Sac de nuit (+1 h, 16 h au plus), Pot 25 / 30 / 35 % [Workshop]", function()
+			withFlags({ "Workshop" }, function()
+				expect(F.offlineSeconds(1e6, 1, false, false, 3)).toBe(11 * 3600)
+				expect(F.offlineSeconds(1e6, 1, true, false, 3)).toBe(15 * 3600)
+				expect(F.offlineSeconds(1e6, 1, true, true, 3)).toBe(16 * 3600) -- maximum du GDD
+				expect(F.offlineSeconds(1e6, 1, true, true, 9)).toBe(16 * 3600)
+				expect(F.offlineSeconds(1e6, 1, true, true, 0)).toBe(13 * 3600)
+				expect(F.offlineSeconds(1e6, 1, true, true)).toBe(13 * 3600)
+				expect(F.offlineSeconds(1000, 400, true, true, 3)).toBe(600)
+				expect(F.offlineSeconds(1000, 0, true, true, 3)).toBe(0)
+				expect(F.offlinePot(2, 100, 0)).toBeNear(50, 1e-9)
+				expect(F.offlinePot(2, 100, 1)).toBeNear(60, 1e-9)
+				expect(F.offlinePot(2, 100, 2)).toBeNear(70, 1e-9)
+				expect(F.offlinePot(2, 100, 7)).toBeNear(70, 1e-9)
+				expect(F.offlinePot(2, 100, 0 / 0)).toBeNear(50, 1e-9)
+				expect(F.offlinePot(2, 100)).toBe(50)
+			end)
+		end)
+
+		it(
+			"N6 arrêt hors ligne à 120 s de croissance maximale de la boucle avant l'objectif [RecordR]",
+			function()
+				withFlags({ "RecordR" }, function()
+					-- r = 0 : objectif 15 000 ; gMax 50/s : réserve 6 000 → arrêt à 9 000 (avant 90 % = 13 500)
+					expect(F.offlineGrowth(100, 1000, 0, 1000, 50)).toBe(8000)
+					expect(F.offlineGrowth(100, 1000, 0, 9000, 50)).toBe(0)
+					expect(F.offlineGrowth(100, 1000, 0, 12000, 50)).toBe(0)
+					-- gMax petit : les 90 % arrêtent d'abord
+					expect(F.offlineGrowth(100, 1000, 0, 1000, 1)).toBe(12500)
+					-- sans gMax : la règle de la v1.3 ; gMax illisible : réserve 0
+					expect(F.offlineGrowth(100, 1000, 0, 1000)).toBe(12500)
+					expect(F.offlineGrowth(100, 1000, 0, 1000, 0 / 0)).toBe(12500)
+					expect(F.offlineGrowth(100, 1000, 0, 1000, math.huge)).toBe(0)
+					-- loin de l'arrêt : la croissance hors ligne entière
+					expect(F.offlineGrowth(4, 100, 0, 1000, 50)).toBe(120)
+				end)
+				-- cas du GDD : après plusieurs Ascensions, une boucle commencée la veille laisse toujours au
+				-- moins 120 s de jeu à la croissance maximale (sans la règle : 13 à 30 s, GDD §4.19)
+				withFlags({ "RecordR", "JellyAscend", "StarMat" }, function()
+					for _, R in { 13, 21, 30, 38 } do
+						for _, A in { 2, 6, 10 } do
+							local ctx =
+								{ R = R, snack = 4, jellyFamily = true, boost = false, A = A, bestR = R + 2 }
+							local g = F.growthRate(ctx)
+							local gMax = F.maxGrowthRate(ctx)
+							local target = F.splorchTarget(R)
+							local grown = F.offlineGrowth(g, 16 * 3600, R, 1, gMax)
+							-- au moins 120 s, ou rien du tout si la boucle entière dure moins (boucle courte)
+							local before = (target - 1) / gMax
+							local left = (target - (1 + grown)) / gMax
+							local okLeft = left >= math.min(120, before) * (1 - 1e-9)
+								and (before > 120 or grown == 0)
+							expect({ R = R, A = A, left = okLeft }).toEqual({ R = R, A = A, left = true })
+						end
+					end
+				end)
+			end
+		)
+	end)
+
 	describe("Formulas › zéro trace", function()
 		it("aucune erreur ni aucun avertissement", function()
 			expect(#h.errors).toBe(0)

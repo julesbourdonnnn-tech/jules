@@ -83,7 +83,7 @@ local BASE_EXCEPTIONS: { [string]: Exception } = {
 -- « ∞ » (±inf, valeur hostile seulement) : absent des deux polices.
 local NNBSP = utf8.char(0x202F)
 local FORMATTER_EXCEPTIONS: { [string]: Exception } = {
-	BigNumber = { chars = NNBSP .. "∞", owner = "A1" },
+	BigNumber = { chars = "", owner = "A1" }, -- U+202F et « ∞ » retirés (lot A1, INT-V2-GLYPHS d)
 	Format = { chars = NBSP .. "∞", owner = "B1" },
 }
 

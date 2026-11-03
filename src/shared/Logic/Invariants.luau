@@ -4,16 +4,27 @@
 -- après chaque mutation en Studio, et dans les specs. Rendent la liste des violations (vide = sain),
 -- chacune nommée comme un chemin du profil (« coins », « squishies.<uid>.z », « capacity.pen »…) ;
 -- ne réparent jamais (c'est le rôle de Server/Data/ProfileRepair).
+-- Profil v2 (lot A1, docs/04 §27.2 ; version ≥ 2, schéma derrière l'interrupteur figé SchemaV2) :
+-- en plus, bornes de chaque champ v2 (R ≤ bestR ≤ MaxR, A ≤ MaxA, Confettis, niveaux, Atelier,
+-- ensembles de bits, piste, Déco perso, cœurs, plafonds v2), chaque niveau ≤ son plafond
+-- (UpgradeMath.cap, tous interrupteurs ouverts : un niveau acheté reste valable si LiveOps coupe sa
+-- famille), Tapis Étoilé ≤ plafond de la boucle. Juste après un prestige : afterPrestige (toutes
+-- les tailles à 1, décorations gardées ≤ 12, dalles de la boucle à zéro). Un profil v1 garde
+-- EXACTEMENT les invariants de la v1.3.
 
 -- Bibliothèques gardées en local : appels rapides, aussi dans l'environnement injecté du harnais
-local type, math, string, table = type, math, string, table
+local type, math, string, table, bit32 = type, math, string, table, bit32
 
 local Balance = require(script.Parent.Parent.Config.Balance)
 local Species = require(script.Parent.Parent.Config.Species)
 local Mutations = require(script.Parent.Parent.Config.Mutations)
 local Quests = require(script.Parent.Parent.Config.Quests)
+local Upgrades = require(script.Parent.Parent.Config.Upgrades)
+local Cosmetics = require(script.Parent.Parent.Config.Cosmetics)
 local Formulas = require(script.Parent.Formulas)
 local QuestRules = require(script.Parent.QuestRules)
+local Prestige = require(script.Parent.Prestige)
+local UpgradeMath = require(script.Parent.UpgradeMath)
 
 local Invariants = {}
 
@@ -21,6 +32,28 @@ local MAX = Balance.Numbers.Max
 local LOCATIONS = { pen = true, pool = true, dodo = true, mail = true }
 local MAX_POOL = Balance.Fusion.PoolSlots + 1 -- famille Axolo comprise
 local MAX_BF = #Balance.Splorch.BestFriendSlotsAt
+
+-- Bornes du schéma v2 (docs/04 §27.2 ; mêmes nombres que Data/Schema.defaultsFor(2))
+local MAX_R = Balance.Prestige.MaxR
+local MAX_A = Balance.Prestige.MaxA
+local CONFETTI_MAX = Balance.Confetti.Max
+local WORD_MAX = 4294967295 -- mot de 32 bits (Logic/Bitset)
+local BITSET_MAX_WORDS = 128 -- Logic/Bitset.MaxBits (4 096) ÷ 32
+local DECOR_BUILDS = Balance.Tiles.decor.Levels -- une case par décoration (18)
+local DECOR_BUILDS_MAX = 10 -- constructions dorées par décoration
+local DECO_OWNED_BITS = 64
+local DECO_SLOTS = 12
+local DECO_ITEMS = #Cosmetics.DecoPerso
+local HEARTS_GIVEN_MAX = Balance.Hearts.PerDay
+local CHALLENGES_MAX = Quests.WeeklyTrack.ChallengesPerWeek
+local TRACK_TIERS = #Quests.WeeklyTrack.Tiers
+local CARNET_TIERS = #Quests.Carnet.Tiers
+-- Plafonds des niveaux : tous les interrupteurs ouverts (structure du profil, pas l'état du jour)
+local ALL_FLAGS = {
+	get = function(_key: string): boolean
+		return true
+	end,
+}
 
 -- Nombre fini dans [min ; max]
 function Invariants.number(x: any, min: number, max: number): boolean
@@ -83,7 +116,10 @@ function Invariants.profile(data: { [string]: any }): { string }
 	if not Invariants.number(d.fame, 0, MAX) then
 		bad("fame")
 	end
-	if not int(d.R, 0, 1e6) then
+	-- r de la boucle : la SEULE lecture du champ (Static_PrestigeOnly) ; v2 : borné à MaxR
+	local v2 = int(d.version, 2, math.huge)
+	local R = d.R
+	if not int(R, 0, if v2 then MAX_R else 1e6) then
 		bad("R")
 	end
 	if type(d.growth) ~= "table" then
@@ -314,6 +350,282 @@ function Invariants.profile(data: { [string]: any }): { string }
 		local list = d.objectives.list
 		if not Invariants.dense(list) or #list > Quests.ObjectiveRules.PerDay then
 			bad("objectives.list")
+		end
+	end
+	if v2 then
+		Invariants.profileV2(d, if int(R, 0, MAX_R) then R else 0, bad)
+	end
+	return out
+end
+
+-- Ensemble de bits sain (Logic/Bitset) : tableau dense de mots entiers de 32 bits, au moins
+-- ceil(n / 32) mots (et au moins 1), jamais plus que Bitset.MaxBits
+function Invariants.bitset(t: any, n: number): boolean
+	if not Invariants.dense(t) or #t < math.max(1, math.ceil(n / 32)) or #t > BITSET_MAX_WORDS then
+		return false
+	end
+	for _, w in t do
+		if not int(w, 0, WORD_MAX) then
+			return false
+		end
+	end
+	return true
+end
+
+-- Bit i (à partir de 1) d'un ensemble déjà vérifié
+local function bitOf(t: { number }, i: number): boolean
+	local w = t[(i - 1) // 32 + 1]
+	return type(w) == "number" and bit32.btest(w, bit32.lshift(1, (i - 1) % 32))
+end
+
+-- Champs du schéma v2 (docs/04 §27.2) ; R = r déjà vérifié (0 si illisible)
+function Invariants.profileV2(d: any, R: number, bad: (string) -> ())
+	-- progression : R ≤ bestR ≤ MaxR, 0 ≤ ascend ≤ MaxA, bonus de retour ≤ A
+	local bestR = d.bestR
+	if not int(bestR, R, MAX_R) then
+		bad("bestR")
+		bestR = R
+	end
+	local A = d.ascend
+	if not int(A, 0, MAX_A) then
+		bad("ascend")
+		A = 0
+	end
+	if not int(d.regainBonusA, 0, A) then
+		bad("regainBonusA")
+	end
+	-- Confettis : entiers de 0 à 1e9, en poche ≤ total gagné
+	local okConf = int(d.confetti, 0, CONFETTI_MAX)
+	local okTotal = int(d.confettiTotal, 0, CONFETTI_MAX)
+	if not okConf then
+		bad("confetti")
+	end
+	if not okTotal then
+		bad("confettiTotal")
+	end
+	if okConf and okTotal and d.confetti > d.confettiTotal then
+		bad("confetti.total")
+	end
+	-- familles nouvelles : bornes, Tapis Étoilé seulement après le Tapis 12 et sous le plafond de r
+	local tiles = d.tiles
+	if type(tiles) == "table" then
+		local bounds = {
+			star = Balance.UpgradePrices.star.Levels,
+			gloves = Balance.UpgradePrices.gloves.Levels,
+			school = Balance.UpgradePrices.school.Levels,
+			monuments = Balance.UpgradePrices.monument.Levels,
+		}
+		for key, max in bounds do
+			if not int(tiles[key], 0, max) then
+				bad("tiles." .. key)
+			end
+		end
+		if int(tiles.star, 1, math.huge) then
+			if tiles.snack ~= Balance.Tiles.snack.Levels then
+				bad("tiles.star.snack")
+			end
+			if tiles.star > Prestige.starCap(R) then
+				bad("tiles.star.loopCap")
+			end
+		end
+	end
+	-- Atelier : une case par ligne de WorkshopRows, chacune ≤ son nombre de niveaux
+	local atelier = d.atelier
+	if not Invariants.dense(atelier) or #atelier ~= #Upgrades.WorkshopRows then
+		bad("atelier")
+	else
+		for i, row in Upgrades.WorkshopRows do
+			if not int(atelier[i], 0, #row.costs) then
+				bad("atelier." .. row.id)
+			end
+		end
+	end
+	-- chaque niveau ≤ son plafond (ouverture par le Record R ou A, plafond de la boucle)
+	if
+		type(tiles) == "table"
+		and Invariants.dense(atelier)
+		and Invariants.bitset(d.atelierCosmetics, Upgrades.CosmeticBits)
+	then
+		for _, id in UpgradeMath.ids() do
+			if UpgradeMath.level(id, d) > UpgradeMath.cap(id, d, ALL_FLAGS) then
+				-- « <id>.cap » (jamais un préfixe de clé de texte : TextFitKeys lit src/shared/Logic)
+				bad(id .. ".cap")
+			end
+		end
+	end
+	-- ensembles de bits
+	if not Invariants.bitset(d.atelierCosmetics, Upgrades.CosmeticBits) then
+		bad("atelierCosmetics")
+	end
+	if not Invariants.bitset(d.carnet, CARNET_TIERS) then
+		bad("carnet")
+	end
+	if not Invariants.bitset(d.mastery, #Species.List) then
+		bad("mastery")
+	end
+	-- décorations dorées : 18 entiers de 0 à 10
+	local builds = d.decorBuilds
+	if not Invariants.dense(builds) or #builds ~= DECOR_BUILDS then
+		bad("decorBuilds")
+	else
+		for i = 1, DECOR_BUILDS do
+			if not int(builds[i], 0, DECOR_BUILDS_MAX) then
+				bad("decorBuilds." .. i)
+			end
+		end
+	end
+	-- statistiques, Carnet, cartes « Nouveau » (≤ Record R)
+	local stats = d.stats
+	if type(stats) ~= "table" then
+		bad("stats")
+	else
+		if not int(stats.upgradesBought, 0, 1e12) then
+			bad("stats.upgradesBought")
+		end
+		if not int(stats.petitSplorches, 0, 1e12) then
+			bad("stats.petitSplorches")
+		end
+	end
+	if not int(d.unlocksSeen, 0, bestR) then
+		bad("unlocksSeen")
+	end
+	-- piste de la semaine : période, points, paliers réclamés (12), 3 Défis au plus, fin de la 1re
+	local track = d.weeklyTrack
+	if type(track) ~= "table" then
+		bad("weeklyTrack")
+	else
+		if not int(track.period, 0, 1e9) then
+			bad("weeklyTrack.period")
+		end
+		if not int(track.points, 0, 1e6) then
+			bad("weeklyTrack.points")
+		end
+		if not Invariants.bitset(track.claimed, TRACK_TIERS) then
+			bad("weeklyTrack.claimed")
+		end
+		if not int(track.firstPeriodEnd, 0, 2 ^ 53) then
+			bad("weeklyTrack.firstPeriodEnd")
+		end
+		local list = track.challenges
+		if not Invariants.dense(list) or #list > CHALLENGES_MAX then
+			bad("weeklyTrack.challenges")
+		else
+			local ids: { [number]: boolean } = {}
+			for i, entry in list do
+				local okEntry = type(entry) == "table"
+					and int(entry.id, 1, #Quests.Challenges)
+					and int(entry.p, 0, 1e9)
+					and type(entry.done) == "boolean"
+					and not ids[entry.id]
+				if not okEntry then
+					bad("weeklyTrack.challenges." .. i)
+				else
+					ids[entry.id] = true
+				end
+			end
+		end
+	end
+	-- accueil, saison, plafonds du jour v2
+	local onboarding = d.onboarding
+	if
+		type(onboarding) ~= "table"
+		or type(onboarding.nextBuyShown) ~= "boolean"
+		or type(onboarding.welcomeV2Pending) ~= "boolean"
+	then
+		bad("onboarding.v2")
+	end
+	if type(d.season) ~= "table" or not int(d.season.frostDays, 0, 1e9) then
+		bad("season.frostDays")
+	end
+	if type(d.caps) == "table" then
+		for key, cap in Balance.CapsV2 do
+			if not int(d.caps[key], 0, cap) then
+				bad("caps." .. key)
+			end
+		end
+	end
+	-- Déco perso : objets possédés (64 bits), 12 emplacements vers un objet possédé, jamais deux fois
+	local deco = d.decoPerso
+	if type(deco) ~= "table" or not Invariants.bitset(deco.owned, DECO_OWNED_BITS) then
+		bad("decoPerso.owned")
+	elseif not Invariants.dense(deco.slots) or #deco.slots ~= DECO_SLOTS then
+		bad("decoPerso.slots")
+	else
+		local placed: { [number]: boolean } = {}
+		for i, item in deco.slots do
+			if not int(item, 0, DECO_ITEMS) then
+				bad("decoPerso.slots." .. i)
+			elseif item > 0 then
+				if not bitOf(deco.owned, item) or placed[item] then
+					bad("decoPerso.slots." .. i)
+				end
+				placed[item] = true
+			end
+		end
+	end
+	-- cœurs : jour UTC, 20 receveurs au plus (UserIds entiers, chacun une fois), total reçu
+	local hearts = d.hearts
+	if type(hearts) ~= "table" then
+		bad("hearts")
+	else
+		if not int(hearts.givenDay, 0, 1e9) then
+			bad("hearts.givenDay")
+		end
+		if not int(hearts.receivedTotal, 0, 1e12) then
+			bad("hearts.receivedTotal")
+		end
+		local given = hearts.givenTo
+		if not Invariants.dense(given) or #given > HEARTS_GIVEN_MAX then
+			bad("hearts.givenTo")
+		else
+			local seen: { [number]: boolean } = {}
+			for _, userId in given do
+				if not int(userId, -1e15, 1e15) or seen[userId] then
+					bad("hearts.givenTo")
+					break
+				end
+				seen[userId] = true
+			end
+		end
+	end
+end
+
+-- Invariants juste après un prestige (Prestige.apply, docs/04 §27.2) : profil v2 sain, TOUTES les
+-- tailles à 1 (enclos, Bassin, Dodo, Lettres, porté), décorations gardées ≤ Prestige.keptDecor
+-- (12 au plus), Tapis Étoilé, Gants et École à zéro, Tapis ≤ les niveaux offerts (6 au plus)
+function Invariants.afterPrestige(data: { [string]: any }): { string }
+	local out = Invariants.profile(data)
+	local function bad(path: string)
+		table.insert(out, path)
+	end
+	if type(data) ~= "table" then
+		return out
+	end
+	local d: any = data
+	local G = if type(d.growth) == "table" then d.growth.G else nil
+	if G ~= 0 then
+		bad("prestige.growth.G")
+	end
+	if type(d.squishies) == "table" then
+		for uid, rec in d.squishies do
+			if type(rec) == "table" and Formulas.sizeAt(rec, 0) ~= 1 then
+				bad("prestige.squishies." .. tostring(uid) .. ".size")
+			end
+		end
+	end
+	local tiles = d.tiles
+	if type(tiles) == "table" then
+		local kept = Prestige.keptDecor(Prestige.bestR(d), d.atelier)
+		if not int(tiles.decor, 0, math.min(kept, Balance.SplorchV2.KeptDecorMax)) then
+			bad("prestige.tiles.decor")
+		end
+		for _, key in { "star", "gloves", "school" } do
+			if tiles[key] ~= 0 then
+				bad("prestige.tiles." .. key)
+			end
+		end
+		if not int(tiles.snack, 0, Balance.SplorchV2.FreeSnackMax) then
+			bad("prestige.tiles.snack")
 		end
 	end
 	return out

@@ -243,7 +243,313 @@ return function(T)
 				expect(QR.familyEarned(d, nil)).toBe(false)
 			end
 		)
+	end)
 
+	-- ---------------------------------------------------------------------------------------------
+	-- GDD v2.0 §7.5 (lot A1, docs/04 §27.7, §27.10) : semaine UTC, piste, Défis, Carnet
+	-- ---------------------------------------------------------------------------------------------
+	local Features = h:require("ReplicatedStorage.Shared.Config.Features")
+	local DAY, WEEK = 86400, 604800
+	-- horodatages UTC (calculés hors du jeu, calendrier grégorien) : (jour de la semaine, unix)
+	local SUN_2026_12_27_235959 = 1798415999
+	local MON_2026_12_28 = 1798416000
+	local SUN_2027_01_03_235959 = 1799020799
+	local MON_2027_01_04 = 1799020800
+	local MON_2028_02_28_NOON = 1835352000
+	local TUE_2028_02_29 = 1835395200 -- année bissextile
+	local WED_2028_03_01 = 1835481600
+	local MON_2028_03_06 = 1835913600
+
+	describe("QuestRules › semaine UTC (weekIndex)", function()
+		it("lundi 5 janvier 1970 00:00 UTC = semaine 0 ; une semaine = 604 800 s", function()
+			expect(QR.weekIndex(345600)).toBe(0)
+			expect(QR.weekIndex(345600 + WEEK - 1)).toBe(0)
+			expect(QR.weekIndex(345600 + WEEK)).toBe(1)
+			expect(QR.weekStart(0)).toBe(345600)
+			expect(QR.weekStart(2973)).toBe(MON_2026_12_28)
+		end)
+
+		it(
+			"bascules du dimanche 23:59:59 au lundi 00:00:00 et fins d'année (2026-12-28, 2027-01-04)",
+			function()
+				expect(QR.weekIndex(SUN_2026_12_27_235959)).toBe(2972)
+				expect(QR.weekIndex(MON_2026_12_28)).toBe(2973)
+				expect(QR.weekIndex(SUN_2027_01_03_235959)).toBe(2973) -- la semaine traverse le 1er janvier
+				expect(QR.weekIndex(MON_2027_01_04)).toBe(2974)
+				-- jamais un numéro de semaine de l'année (2026 a 53 semaines ISO) : les numéros se suivent
+				expect(QR.weekIndex(MON_2027_01_04) - QR.weekIndex(MON_2026_12_28)).toBe(1)
+			end
+		)
+
+		it("année bissextile : le 29 février est dans la semaine du lundi 28 février 2028", function()
+			expect(QR.weekIndex(MON_2028_02_28_NOON)).toBe(3034)
+			expect(QR.weekIndex(TUE_2028_02_29)).toBe(3034)
+			expect(QR.weekIndex(WED_2028_03_01)).toBe(3034)
+			expect(QR.weekIndex(MON_2028_03_06)).toBe(3035)
+			expect(QR.weekStart(3035)).toBe(MON_2028_03_06)
+		end)
+
+		it("entrées illisibles ou antérieures à l'époque : semaine 0, jamais d'erreur", function()
+			for _, x in { 0 / 0, math.huge, -math.huge, -5, 0, nil, "x", {} } do
+				expect(QR.weekIndex(x)).toBe(0)
+			end
+			expect(QR.weekStart(-3)).toBe(345600)
+			expect(QR.weekStart(0 / 0)).toBe(345600)
+		end)
+	end)
+
+	describe("QuestRules › période de la piste (trackPeriod)", function()
+		local function track(fpe)
+			return {
+				weeklyTrack = {
+					period = 0,
+					points = 0,
+					claimed = { 0 },
+					challenges = {},
+					firstPeriodEnd = fpe,
+				},
+			}
+		end
+
+		it("1re période : de la 1re connexion au 2e lundi qui suit (8 à 14 jours de calendrier)", function()
+			-- mercredi 30 décembre 2026 : fin le lundi 11 janvier 2027 (2e lundi), période 2974
+			local wed = MON_2026_12_28 + 2 * DAY + 3600
+			local p = QR.trackPeriod(track(0), wed)
+			expect(p.first).toBe(true)
+			expect(p.firstPeriodEnd).toBe(MON_2027_01_04 + WEEK)
+			expect(p.endsAt).toBe(MON_2027_01_04 + WEEK)
+			expect(p.period).toBe(2974)
+			-- dimanche 23:59:59 : 7 jours et 1 s ; lundi 00:00:00 : 14 jours
+			local late = QR.trackPeriod(track(0), SUN_2026_12_27_235959)
+			expect(late.endsAt - SUN_2026_12_27_235959).toBe(WEEK + 1)
+			local early = QR.trackPeriod(track(0), MON_2026_12_28)
+			expect(early.endsAt - MON_2026_12_28).toBe(2 * WEEK)
+			-- profil v1 (pas de piste) ou champ absent : fixée de la même façon
+			expect(QR.trackPeriod({}, wed).firstPeriodEnd).toBe(p.firstPeriodEnd)
+			expect(QR.trackPeriod({ weeklyTrack = {} }, wed).firstPeriodEnd).toBe(p.firstPeriodEnd)
+		end)
+
+		it(
+			"la 1re période garde son numéro jusqu'à sa fin, puis les semaines normales se suivent",
+			function()
+				local fpe = MON_2027_01_04 + WEEK
+				local ids = {}
+				local t = MON_2026_12_28 + 2 * DAY
+				local last = -1
+				while t < fpe + 3 * WEEK do
+					local p = QR.trackPeriod(track(fpe), t)
+					expect(p.period >= last).toBe(true) -- jamais une période qui recule
+					expect(t >= p.startsAt and t < p.endsAt).toBe(true)
+					expect(p.firstPeriodEnd).toBe(fpe)
+					if p.period ~= last then
+						table.insert(ids, p.period)
+					end
+					last = p.period
+					t += 3600
+				end
+				expect(ids).toEqual({ 2974, 2975, 2976, 2977 })
+				-- à la seconde de la fin : semaine normale
+				local after = QR.trackPeriod(track(fpe), fpe)
+				expect(after.first).toBe(false)
+				expect(after.period).toBe(2975)
+				expect(after.endsAt - after.startsAt).toBe(WEEK)
+				local before = QR.trackPeriod(track(fpe), fpe - 1)
+				expect(before.first).toBe(true)
+				expect(before.period).toBe(2974)
+			end
+		)
+
+		it(
+			"fin abîmée (pas un lundi, plus de 2 semaines plus tard, NaN) : 1re période finie, jamais de recul",
+			function()
+				local now = MON_2026_12_28 + 3 * DAY
+				for _, bad in { MON_2027_01_04 + 5, MON_2027_01_04 + 5 * WEEK, 0 / 0, math.huge, -WEEK, "x" } do
+					local p = QR.trackPeriod(track(bad), now)
+					expect({ bad = tostring(bad), first = p.first, period = p.period }).toEqual({
+						bad = tostring(bad),
+						first = false,
+						period = 2973,
+					})
+					-- la valeur rendue est sûre : relue, elle donne la même période
+					expect(QR.trackPeriod(track(p.firstPeriodEnd), now).period).toBe(2973)
+					expect(QR.trackPeriod(track(p.firstPeriodEnd), now).first).toBe(false)
+				end
+				expect(QR.trackPeriod(nil, now).first).toBe(true) -- profil illisible : comme un compte neuf
+			end
+		)
+
+		it(
+			"chaque période permet d'atteindre 24 points (12 paliers), même au joueur du week-end",
+			function()
+				local weekend = { [5] = true, [6] = true } -- samedi, dimanche
+				local need = #Quests.WeeklyTrack.Tiers * Quests.WeeklyTrack.PointsPerTier
+				expect(need).toBe(24)
+				-- semaines normales autour des fins d'année et d'un 29 février
+				for _, monday in { MON_2026_12_28, MON_2027_01_04, MON_2028_02_28_NOON - 12 * 3600 } do
+					local p = QR.trackPeriod(track(1), monday + 1)
+					expect(QR.trackMaxPoints(p.startsAt, p.endsAt)).toBe(7 * 6 + 15)
+					expect(QR.trackMaxPoints(p.startsAt, p.endsAt, weekend)).toBe(27) -- GDD §7.5 : 12 + 15
+				end
+				-- 1re période, quelle que soit l'heure de la 1re connexion (toutes les heures sur 3 semaines)
+				local t = MON_2026_12_28 - WEEK
+				while t < MON_2027_01_04 + 2 * WEEK do
+					local p = QR.trackPeriod(track(0), t)
+					local points = QR.trackMaxPoints(t, p.endsAt, weekend)
+					expect({ t = t, ok = points >= need, first = p.first }).toEqual({
+						t = t,
+						ok = true,
+						first = true,
+					})
+					t += 3600
+				end
+			end
+		)
+
+		it("paliers de la piste : 1 palier = 2 points, 12 au plus", function()
+			expect(QR.trackTier(0)).toBe(0)
+			expect(QR.trackTier(1)).toBe(0)
+			expect(QR.trackTier(2)).toBe(1)
+			expect(QR.trackTier(23)).toBe(11)
+			expect(QR.trackTier(24)).toBe(12)
+			expect(QR.trackTier(57)).toBe(12)
+			expect(QR.trackTier(0 / 0)).toBe(0)
+			expect(QR.trackTier(-4)).toBe(0)
+		end)
+	end)
+
+	describe("QuestRules › Défis de Splorch (challengeFeasible, drawChallenges)", function()
+		local ALL_ETA = { splorches = 600, recordBeaten = 300, ascends = 900, megas = 1200 }
+
+		it("12 Défis ; ceux de situation exigent une estimation qui tient dans le temps de jeu", function()
+			expect(#Quests.Challenges).toBe(12)
+			-- sans estimation : Grands Splorch, record, Ascension et MEGA ne sont jamais tirés
+			for id, expected in { [1] = false, [3] = true, [4] = false, [5] = false, [6] = true, [9] = false } do
+				expect({ id = id, ok = QR.challengeFeasible(id, {}) }).toEqual({ id = id, ok = expected })
+			end
+			expect(QR.challengeFeasible(1, { eta = { splorches = 1700 } })).toBe(true) -- 30 min par défaut
+			expect(QR.challengeFeasible(1, { eta = { splorches = 1900 } })).toBe(false)
+			expect(QR.challengeFeasible(1, { playMedian = 3600, eta = { splorches = 1900 } })).toBe(true)
+			-- temps de jeu borné à [30 min ; 2 h] (jamais 2 h fixes, jamais moins de 30 min)
+			expect(QR.challengePlaySeconds({ playMedian = 9 * 3600 })).toBe(7200)
+			expect(QR.challengePlaySeconds({ playMedian = 60 })).toBe(1800)
+			expect(QR.challengePlaySeconds(nil)).toBe(1800)
+			expect(QR.challengePlaySeconds({ playMedian = 0 / 0 })).toBe(1800)
+			expect(QR.challengeFeasible(4, { playMedian = 9 * 3600, eta = { recordBeaten = 7201 } })).toBe(
+				false
+			)
+			-- estimation illisible ou négative : non faisable
+			for _, bad in { 0 / 0, math.huge, -1, "x" } do
+				expect(QR.challengeFeasible(4, { eta = { recordBeaten = bad } })).toBe(false)
+			end
+			-- une estimation donnée pour un Défi de jeu normal compte aussi
+			expect(QR.challengeFeasible(12, { eta = { perfects = 4000 } })).toBe(false)
+		end)
+
+		it(
+			"« Gagne 20 Confettis » retiré quand l'Atelier est complet ; « Nourris Plop 3 jours » après 3 jours",
+			function()
+				expect(QR.challengeFeasible(2, {})).toBe(true)
+				expect(QR.challengeFeasible(2, { workshopDone = true })).toBe(false)
+				expect(QR.challengeFeasible(10, {})).toBe(false)
+				expect(QR.challengeFeasible(10, { daysPlayed = 2 })).toBe(false)
+				expect(QR.challengeFeasible(10, { daysPlayed = 3 })).toBe(true)
+			end
+		)
+
+		it(
+			"« Fais une Jelly Ascend » seulement avec l'interrupteur JellyAscend ouvert (coupé et ouvert)",
+			function()
+				expect(Features.get("JellyAscend")).toBe(false)
+				expect(QR.challengeFeasible(5, { eta = ALL_ETA })).toBe(false)
+				assert(Features.set("JellyAscend", true))
+				local okRun, err = pcall(function()
+					expect(QR.challengeFeasible(5, { eta = ALL_ETA })).toBe(true)
+					expect(QR.challengeFeasible(5, { eta = { ascends = 3600 } })).toBe(false)
+				end)
+				Features.reset()
+				assert(okRun, err)
+			end
+		)
+
+		it("identifiants inconnus : jamais faisables", function()
+			for _, id in { 0, 13, -1, 1.5, 0 / 0, "1", nil } do
+				expect(QR.challengeFeasible(id, { eta = ALL_ETA })).toBe(false)
+			end
+		end)
+
+		it(
+			"tirage : 3 Défis faisables, différents, déterministes par (joueur, période), sans dépendre des autres",
+			function()
+				local seen = {}
+				for user = 1, 200 do
+					for period = 2970, 2975 do
+						local ctx = { playMedian = 3600, daysPlayed = user % 5, workshopDone = user % 3 == 0 }
+						if user % 2 == 0 then
+							ctx.eta = ALL_ETA
+						end
+						local list = QR.drawChallenges(user * 7919, period, ctx)
+						expect(#list).toBe(3)
+						expect(list[1] ~= list[2] and list[2] ~= list[3] and list[1] ~= list[3]).toBe(true)
+						for _, id in list do
+							expect({ id = id, ok = QR.challengeFeasible(id, ctx) }).toEqual({
+								id = id,
+								ok = true,
+							})
+							seen[id] = true
+						end
+						expect(QR.drawChallenges(user * 7919, period, ctx)).toEqual(list)
+					end
+				end
+				-- tous les Défis faisables finissent par sortir (sauf l'Ascension, interrupteur coupé)
+				for id = 1, 12 do
+					expect({ id = id, seen = seen[id] == true }).toEqual({ id = id, seen = id ~= 5 })
+				end
+				-- situation où presque rien n'est faisable (estimations toutes trop longues) : complété
+				local tight = {
+					eta = { perfects = 1e9, catches = 1e9, newStamps = 1e9, rareHatches = 1e9, combo3 = 1e9 },
+					workshopDone = true,
+				}
+				local list = QR.drawChallenges(42, 2974, tight)
+				expect(#list).toBe(3)
+				expect(list[1] ~= list[2] and list[2] ~= list[3] and list[1] ~= list[3]).toBe(true)
+				expect(QR.drawChallenges(0 / 0, 0 / 0, nil)[3] ~= nil).toBe(true)
+			end
+		)
+	end)
+
+	describe("QuestRules › Carnet du Ranch (carnetTier)", function()
+		it("paliers 50, 100, 250, 500, 1 000, 2 500, 5 000, 10 000 (GDD §7.5)", function()
+			local cases = {
+				[0] = 0,
+				[49] = 0,
+				[50] = 1,
+				[99] = 1,
+				[100] = 2,
+				[250] = 3,
+				[499] = 3,
+				[500] = 4,
+				[1000] = 5,
+				[2500] = 6,
+				[4999] = 6,
+				[5000] = 7,
+				[9999] = 7,
+				[10000] = 8,
+				[1e9] = 8,
+			}
+			for n, tier in cases do
+				expect({ n = n, tier = QR.carnetTier(n) }).toEqual({ n = n, tier = tier })
+			end
+			expect(QR.carnetTier(0 / 0)).toBe(0)
+			expect(QR.carnetTier(-5)).toBe(0)
+			expect(QR.carnetTier(math.huge)).toBe(0) -- illisible : rien
+			expect(QR.carnetNext(0)).toBe(50)
+			expect(QR.carnetNext(50)).toBe(100)
+			expect(QR.carnetNext(9999)).toBe(10000)
+			expect(QR.carnetNext(10000)).toBeNil()
+		end)
+	end)
+
+	describe("QuestRules › zéro trace", function()
 		it("zéro trace", function()
 			expect(#h.errors).toBe(0)
 			expect(#h:warnings()).toBe(0)
