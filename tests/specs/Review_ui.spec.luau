@@ -11,7 +11,10 @@
 --     écrite « 0,0 % » ;
 --   * bouclier débutant : jamais « 0′ » tant que l'indicateur est affiché ;
 --   * scénarios de l'outil : chaque tenue de l'Aperçu existe (« crown » montrait le Pull douillet),
---     et le profil de milieu de partie respecte la capacité des enclos (« 20 / 4 »).
+--     et le profil de milieu de partie respecte la capacité des enclos (« 20 / 4 ») ;
+--   * cases vives (case choisie du Ranch, paliers de Nourris Plop, étapes de l'Accueil, espèce
+--     complète, boutons dorés) : la couleur des lettres seule se lit sur le fond, le texte n'est
+--     jamais un simple contour (« Taille 437 K » lavande sur vert : 1,08 sans le contour).
 
 local roblox = require("@lune/roblox")
 local Screens = require("../harness/Screens")
@@ -22,6 +25,11 @@ local Enum = roblox.Enum
 
 local function prop(obj, name)
 	return Props.get(obj, name)
+end
+
+-- a → b de la part k (texte ou fond transparent mêlé à ce qui est dessous)
+local function mixColor(a, b, k)
+	return roblox.Color3.new(a.R + (b.R - a.R) * k, a.G + (b.G - a.G) * k, a.B + (b.B - a.B) * k)
 end
 
 local function shown(obj): boolean
@@ -157,6 +165,54 @@ local function cornerIssues(c, rootName)
 end
 Screens.cornerIssues = cornerIssues
 Screens.seeThroughIssues = seeThroughIssues
+
+-- Cases d'une grille d'Objectifs (Nourris Plop, Accueil) : fond vif (vert « atteint », bleu
+-- « prochain ») ; « Jour 1 » or, récompense blanche et ✓ vert s'y lisaient à 1,2, 1,8 et 1,0 sans le
+-- contour (le ✓ vert sur vert n'était qu'un contour). Retourne { err, cells, bright, bad }
+local function vividCellIssues(c, screen, pageName)
+	local out = { err = "", cells = 0, bright = 0, bad = {} }
+	if screen == nil then
+		out.err = "écran introuvable"
+		return out
+	end
+	local shownOk, err = Screens.show(c, screen)
+	if not shownOk then
+		out.err = tostring(err)
+		return out
+	end
+	Screens.layout(c)
+	local win = c.PC.window("Objectives")
+	local page = win and win:FindFirstChild(pageName, true)
+	for _, cell in (page and page:GetDescendants() or {}) do
+		if cell:IsA("GuiButton") and shown(cell) then
+			out.cells += 1
+			local bg = cell.BackgroundColor3
+			if Screens.contrast(roblox.Color3.new(1, 1, 1), bg) < 3 then
+				out.bright += 1
+			end
+			for _, d in cell:GetChildren() do
+				if d:IsA("TextLabel") and d.Text ~= "" and shown(d) then
+					local ratio = Screens.contrast(d.TextColor3, bg)
+					if ratio < 3 then
+						table.insert(
+							out.bad,
+							string.format("%s « %s » : %.2f", Layout.name(d), d.Text, ratio)
+						)
+					end
+					local stroke = d:FindFirstChildOfClass("UIStroke")
+					if
+						stroke
+						and prop(stroke, "Enabled") ~= false
+						and Screens.contrast(d.TextColor3, stroke.Color) < 1.5
+					then
+						table.insert(out.bad, Layout.name(d) .. " : contour de la couleur des lettres")
+					end
+				end
+			end
+		end
+	end
+	return out
+end
 
 return function(T)
 	local describe, it, expect, Harness = T.describe, T.it, T.expect, T.Harness
@@ -695,6 +751,267 @@ return function(T)
 			"chaque écran de milieu de partie (HUD, panneaux, cartes, bannières) : contour d'une autre couleur que le texte",
 			function()
 				expect(#order > 5).toBe(true)
+				expect(table.concat(bad, "\n")).toBe("")
+			end
+		)
+		Harness.disposeAll()
+	end)
+
+	-- case choisie du Ranch (Vendre / Relâcher, Fusionner « Choisir B ») : fond vert vif ; nom
+	-- blanc, « Taille » lavande et « Doré » or s'y lisaient à 1,8, 1,1 et 1,2 de contraste sans le
+	-- contour (« Taille 437K » presque invisible à 3 m). La couleur des lettres elle-même doit se lire
+	describe(
+		"Revue UI › cases vives (case choisie du Ranch, paliers de Nourris Plop) : textes lisibles",
+		function()
+			local ok, c = pcall(Screens.boot, Harness, profile, "fr", "mid")
+			if not ok then
+				it("démarrage du client", function()
+					error(c)
+				end)
+				return
+			end
+			local byId = {}
+			for _, group in Screens.groups() do
+				if group.state == "mid" and group.id ~= "huge" then
+					for _, s in Screens.expand(c, group) do
+						if byId[s.id] == nil then
+							byId[s.id] = s
+						end
+					end
+				end
+			end
+			for _, id in { "panel.Ranch.sell.confirm", "panel.Ranch.fuse.chooseB" } do
+				local shownOk, err = Screens.show(c, byId[id])
+				Screens.layout(c)
+				local picked = 0
+				local bad = {}
+				local win = c.PC.window("Ranch")
+				for _, cell in (win and win:GetDescendants() or {}) do
+					local check = cell:IsA("GuiButton") and cell:FindFirstChild("Check")
+					if check and shown(cell) and shown(check) then
+						picked += 1
+						for _, name in { "Name", "Size", "Line" } do
+							local d = cell:FindFirstChild(name)
+							if d and d:IsA("TextLabel") and d.Text ~= "" and shown(d) then
+								local ratio = Screens.contrast(d.TextColor3, cell.BackgroundColor3)
+								if ratio < 3 then
+									table.insert(
+										bad,
+										string.format("%s « %s » : %.2f", Layout.name(d), d.Text, ratio)
+									)
+								end
+								-- lettres sombres sur le vert : jamais cernées d'un contour de leur couleur
+								local stroke = d:FindFirstChildOfClass("UIStroke")
+								if
+									stroke
+									and prop(stroke, "Enabled") ~= false
+									and Screens.contrast(d.TextColor3, stroke.Color) < 1.5
+								then
+									table.insert(
+										bad,
+										Layout.name(d) .. " : contour de la couleur des lettres"
+									)
+								end
+							end
+						end
+					end
+				end
+				it(id .. " : textes de la case choisie lisibles (contraste du texte seul ≥ 3)", function()
+					expect(if shownOk then "" else tostring(err)).toBe("")
+					expect(picked >= 1).toBe(true)
+					expect(table.concat(bad, "\n")).toBe("")
+				end)
+			end
+
+			-- Objectifs › Nourris Plop (palier atteint vert vif, prochain palier bleu vif)
+			local plop = vividCellIssues(c, byId["panel.Objectives.plop"], "Page_plop")
+			it(
+				"panel.Objectives.plop : textes des cases vives (atteint, prochain) lisibles (contraste du texte seul ≥ 3)",
+				function()
+					expect(plop.err).toBe("")
+					expect(plop.cells >= 6).toBe(true)
+					expect(plop.bright >= 1).toBe(true)
+					expect(table.concat(plop.bad, "\n")).toBe("")
+				end
+			)
+			Harness.disposeAll()
+		end
+	)
+
+	-- Objectifs › Accueil à mi-parcours (nouveau joueur) : étapes faites en vert vif
+	describe("Revue UI › Accueil : textes lisibles sur les étapes faites", function()
+		local ok, c = pcall(Screens.boot, Harness, profile, "fr", "new")
+		if not ok then
+			it("démarrage du client", function()
+				error(c)
+			end)
+			return
+		end
+		local screen = nil
+		for _, group in Screens.groups() do
+			if group.id == "new" then
+				for _, s in group.screens do
+					if s.id == "panel.Objectives.onboarding.partial" then
+						screen = s
+					end
+				end
+			end
+		end
+		local got = vividCellIssues(c, screen, "Page_onboarding")
+		it(
+			"panel.Objectives.onboarding.partial : textes des étapes faites lisibles (contraste du texte seul ≥ 3)",
+			function()
+				expect(got.err).toBe("")
+				expect(got.cells >= 6).toBe(true)
+				expect(got.bright >= 1).toBe(true)
+				expect(table.concat(got.bad, "\n")).toBe("")
+			end
+		)
+		Harness.disposeAll()
+	end)
+
+	-- Tout texte de milieu de partie : la couleur des lettres seule (sans le contour) se distingue de
+	-- son fond plein le plus proche (contraste ≥ 1,5). Plus bas, le texte n'est plus qu'un contour :
+	-- « 9 / 9 » lavande et nom blanc sur la case dorée d'une espèce complète (1,3 et 1,46), « Vendre »
+	-- et « Meilleur Ami 1 » blancs sur l'or (1,46). Le style maison (blanc cerné sur vert, 1,76) passe
+	describe("Revue UI › couleur du texte seule distincte de son fond (≥ 1,5)", function()
+		local ok, c = pcall(Screens.boot, Harness, profile, "fr", "mid")
+		if not ok then
+			it("démarrage du client", function()
+				error(c)
+			end)
+			return
+		end
+		local byId = {}
+		local order = {}
+		for _, group in Screens.groups() do
+			if group.state == "mid" and group.id ~= "huge" then
+				for _, s in Screens.expand(c, group) do
+					if byId[s.id] == nil then
+						byId[s.id] = s
+						table.insert(order, s.id)
+					end
+				end
+			end
+		end
+		local function decorative(d): boolean
+			local cur = d
+			while cur and cur:IsA("GuiObject") do
+				if cur:GetAttribute("Decorative") == true then
+					return true
+				end
+				cur = cur.Parent
+			end
+			return false
+		end
+		local function solidBehind(d)
+			local cur = d
+			while cur and cur:IsA("GuiObject") do
+				if (prop(cur, "BackgroundTransparency") or 1) < 0.5 then
+					return cur
+				end
+				cur = cur.Parent
+			end
+			return nil
+		end
+		local bad = {}
+		local seen = {}
+		local checked = 0
+		for _, id in order do
+			if Screens.show(c, byId[id]) then
+				Screens.layout(c)
+				local playerGui = c.h.localPlayer:FindFirstChildOfClass("PlayerGui")
+				for _, d in playerGui:GetDescendants() do
+					if
+						(d:IsA("TextLabel") or d:IsA("TextButton"))
+						and d.Text ~= ""
+						-- icônes en texte (✓ ★ ♥ ✦…) : formes, pas des mots
+						and string.find(d.Text, "[%w]") ~= nil
+						and shown(d)
+						and (prop(d, "TextTransparency") or 0) < 0.5
+						and not decorative(d)
+					then
+						local back = solidBehind(d)
+						if back then
+							checked += 1
+							-- fond à demi transparent (bouton grisé à 35 %) : mêlé au fond plein dessous
+							local color = prop(back, "BackgroundColor3")
+							local bt = prop(back, "BackgroundTransparency") or 0
+							if bt > 0.01 then
+								local under = solidBehind(back.Parent)
+								color = mixColor(
+									color,
+									if under
+										then prop(under, "BackgroundColor3")
+										else roblox.Color3.new(0, 0, 0),
+									bt
+								)
+							end
+							local ink =
+								mixColor(prop(d, "TextColor3"), color, prop(d, "TextTransparency") or 0)
+							local ratio = Screens.contrast(ink, color)
+							local key = string.gsub(Layout.name(d), "%d+", "#")
+							if ratio < 1.5 and not seen[key] then
+								seen[key] = true
+								table.insert(
+									bad,
+									string.format("%s « %s » : %.2f (%s)", key, d.Text, ratio, id)
+								)
+							end
+						end
+					end
+				end
+			end
+		end
+		table.sort(bad)
+		-- « Vendre » grisé (rien de choisi : bouton à 35 % de transparence, texte à 45 %) : l'or pâli
+		-- par le panneau dessous ; des lettres bleu nuit sans contour n'y lisaient qu'à 2,65 (outil
+		-- d'écrans) : grisé, le bouton garde le blanc cerné
+		local sellGrey = "écran introuvable"
+		if Screens.show(c, byId["panel.Ranch.sell"]) then
+			Screens.layout(c)
+			local win = c.PC.window("Ranch")
+			local sellBtn = win and win:FindFirstChild("Sell", true)
+			local label = sellBtn and sellBtn:FindFirstChild("Label")
+			if label == nil then
+				sellGrey = "bouton Vendre introuvable"
+			else
+				local t = prop(sellBtn, "BackgroundTransparency") or 0
+				local panelBack = solidBehind(sellBtn.Parent)
+				local under = if panelBack
+					then prop(panelBack, "BackgroundColor3")
+					else roblox.Color3.new(0, 0, 0)
+				local gold = prop(sellBtn, "BackgroundColor3")
+				local function mixc(a, b, k)
+					return roblox.Color3.new(
+						a.R + (b.R - a.R) * k,
+						a.G + (b.G - a.G) * k,
+						a.B + (b.B - a.B) * k
+					)
+				end
+				local back = mixc(gold, under, t)
+				local ink = mixc(prop(label, "TextColor3"), back, prop(label, "TextTransparency") or 0)
+				local ratio = Screens.contrast(ink, back)
+				local stroke = label:FindFirstChildOfClass("UIStroke")
+				if stroke and prop(stroke, "Enabled") ~= false then
+					ratio = math.max(ratio, Screens.contrast(ink, prop(stroke, "Color")))
+				end
+				sellGrey = if t > 0.1 and ratio < 3
+					then string.format("« %s » grisé : %.2f", label.Text, ratio)
+					elseif t <= 0.1 then "bouton Vendre non grisé (rien de choisi)"
+					else ""
+			end
+		end
+		it(
+			"Ranch › Vendre grisé (rien de choisi) : « Vendre » lisible (contraste ≥ 3, contour compris)",
+			function()
+				expect(sellGrey).toBe("")
+			end
+		)
+		it(
+			"chaque écran de milieu de partie : couleur des lettres seule ≥ 1,5 sur son fond plein",
+			function()
+				expect(checked > 100).toBe(true)
 				expect(table.concat(bad, "\n")).toBe("")
 			end
 		)

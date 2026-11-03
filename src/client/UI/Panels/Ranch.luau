@@ -303,6 +303,20 @@ local function cellDisabled(item: Item): boolean
 	return false
 end
 
+-- Texte posé sur un fond vif (vert de la case choisie, or d'un bouton) : bleu nuit sans contour.
+-- Le blanc, la lavande et l'or n'y étaient plus qu'un contour (contraste de la couleur seule 1,1 à
+-- 1,8 ; revue des écrans). Sur un fond sombre : couleur `color` et contour d'origine
+local function inkOn(label: TextLabel?, bright: boolean, color: Color3)
+	if label == nil then
+		return
+	end
+	label.TextColor3 = if bright then Widgets.Colors.Stroke else color
+	local stroke = label:FindFirstChildOfClass("UIStroke")
+	if stroke then
+		stroke.Enabled = not bright
+	end
+end
+
 local function bindCell(cell: Cell, item: Item?)
 	cell.button.Visible = item ~= nil
 	if item == nil then
@@ -314,24 +328,30 @@ local function bindCell(cell: Cell, item: Item?)
 	Widgets.paintBlob(cell.blob, rec.s, true)
 	Widgets.setRaw(cell.name, Widgets.speciesName(rec.s))
 	Widgets.setText(cell.size, "common.size", { size = Widgets.num(item.size) })
+	local isSelected = (current == "sell" and selected[item.uid] == true)
+		or (current == "fuse" and fuseA == item.uid)
+	local lineColor = Widgets.Colors.Gold
 	local mdef = mutationDef(rec)
 	if mdef then
 		Widgets.setText(cell.line, "mutation." .. mdef.key)
-		cell.line.TextColor3 = mdef.color
+		lineColor = mdef.color
 	elseif Widgets.n(rec.st) > 0 then
 		Widgets.setText(cell.line, "common.stars", { n = math.floor(Widgets.n(rec.st)) })
-		cell.line.TextColor3 = Widgets.Colors.Gold
 	else
 		Widgets.setRaw(cell.line, "")
 	end
+	-- case choisie (fond vert vif) : nom, taille et ligne en bleu nuit sans contour. Blanc, lavande
+	-- et or s'y lisaient à 1,8, 1,1 et 1,2 de contraste sans le contour (« Taille 437 K » presque
+	-- invisible à 3 m ; revue des écrans). Hors choix : couleurs et contour d'origine
+	inkOn(cell.name, isSelected, Widgets.Colors.Text)
+	inkOn(cell.size, isSelected, Widgets.Colors.TextDim)
+	inkOn(cell.line, isSelected, lineColor)
 	local bf = math.floor(Widgets.n(rec.bf))
 	cell.bf.Visible = bf > 0
 	Widgets.setRaw(cell.bf, "♥" .. tostring(bf))
 	cell.twin.Visible = hasTwin(item.uid, rec)
 	cell.lock.Visible = rec.lk == true
 	cell.mount.Visible = Widgets.state("mount") == item.uid
-	local isSelected = (current == "sell" and selected[item.uid] == true)
-		or (current == "fuse" and fuseA == item.uid)
 	cell.check.Visible = isSelected
 	local base = Widgets.rarityColor(rarityOf(rec)):Lerp(Widgets.Colors.Card, 0.6)
 	cell.button.BackgroundColor3 = if isSelected then Widgets.Colors.Success else base
@@ -528,6 +548,9 @@ local function refreshBars()
 		-- vente : maintien seulement pour un Rare+ ou un squishy muté ; relâche : toujours
 		holds.sell.duration = if hold then HOLD else 0.05
 		Widgets.setDisabled(holds.sell.button, #uids == 0)
+		-- « Vendre » : bleu nuit sur l'or plein ; grisé (rien de choisi), l'or pâli par le panneau
+		-- dessous : blanc cerné (le bleu nuit n'y lisait qu'à 2,65 ; revue des écrans)
+		inkOn(Widgets.buttonLabel(holds.sell.button), #uids > 0, Widgets.Colors.Text)
 		Widgets.setDisabled(holds.release.button, #uids == 0)
 	end
 end
@@ -603,7 +626,10 @@ local function refreshDetail()
 	for n = 1, 3 do
 		local b = detailButtons["bf" .. n]
 		b.Visible = n <= slots
-		b.BackgroundColor3 = if Widgets.n(rec.bf) == n then Widgets.Colors.Gold else Widgets.Colors.CardLight
+		local isSlot = Widgets.n(rec.bf) == n
+		b.BackgroundColor3 = if isSlot then Widgets.Colors.Gold else Widgets.Colors.CardLight
+		-- « Meilleur Ami 1 » blanc sur l'or : 1,46 sans le contour
+		inkOn(Widgets.buttonLabel(b), isSlot, Widgets.Colors.Text)
 	end
 	local saddle =
 		Widgets.safe("Formulas.saddleLevel", 0, Formulas.saddleLevel, Widgets.n(Widgets.state("biggestEver")))
@@ -1338,6 +1364,8 @@ local function buildGridPage(container: Frame, top: number)
 			return #selectedUids() > 0
 		end,
 	})
+	-- « Vendre » blanc sur l'or : 1,46 sans le contour (revue des écrans)
+	inkOn(Widgets.buttonLabel(holds.sell.button), true, Widgets.Colors.Text)
 	holds.release = Widgets.hold({
 		parent = sell,
 		name = "Release",

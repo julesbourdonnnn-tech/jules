@@ -181,6 +181,17 @@ local function bindSpeciesRow(row: SpeciesRow, _frame: Frame, index: number)
 				elseif known then Widgets.rarityColor(Widgets.rarityOf(s))
 					:Lerp(Widgets.Colors.Card, 0.65)
 				else Widgets.Colors.Card
+			-- case dorée (espèce complète) : nom et « 9 / 9 » bleu nuit sans contour. Blanc et lavande
+			-- n'y étaient plus qu'un contour (1,46 et 1,3 sans le contour ; revue des écrans)
+			local function ink(label: TextLabel, color: Color3)
+				label.TextColor3 = if golden then Widgets.Colors.Stroke else color
+				local stroke = label:FindFirstChildOfClass("UIStroke")
+				if stroke then
+					stroke.Enabled = not golden
+				end
+			end
+			ink(cell.name, Widgets.Colors.Text)
+			ink(cell.info, Widgets.Colors.TextDim)
 		end
 	end
 end

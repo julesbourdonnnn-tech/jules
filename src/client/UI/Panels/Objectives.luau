@@ -139,6 +139,28 @@ local function refreshToday()
 	end
 end
 
+-- Case vive (palier atteint : vert ; prochain palier : bleu) : ses textes passent en bleu nuit sans
+-- contour. « Jour 1 » or, récompense blanche et ✓ vert s'y lisaient à 1,2, 1,8 et 1,0 de contraste
+-- sans le contour (le ✓ vert sur vert n'était qu'un contour ; revue des écrans). Case sombre :
+-- couleur d'origine de chaque texte et contour
+local baseColors: { [TextLabel]: Color3 } = setmetatable({}, { __mode = "k" }) :: any
+local function paintVivid(cell: GuiObject, vivid: boolean)
+	for _, child in cell:GetChildren() do
+		if child:IsA("TextLabel") then
+			local base = baseColors[child]
+			if base == nil then
+				base = child.TextColor3
+				baseColors[child] = base
+			end
+			child.TextColor3 = if vivid then Widgets.Colors.Stroke else base
+			local stroke = child:FindFirstChildOfClass("UIStroke")
+			if stroke then
+				stroke.Enabled = not vivid
+			end
+		end
+	end
+end
+
 local function refreshPlop()
 	local days = math.max(0, math.floor(Widgets.n(Widgets.state("plopDays"))))
 	if plopTotal then
@@ -167,6 +189,7 @@ local function refreshPlop()
 			then Widgets.Colors.Success
 			elseif isNext then Widgets.Colors.Accent
 			else Widgets.Colors.Card
+		paintVivid(cell, reached or isNext)
 		Widgets.attention(cell, isNext)
 		local status = cell:FindFirstChild("Status") :: TextLabel
 		Widgets.setRaw(status, if reached then "✓" else "")
@@ -179,6 +202,7 @@ local function refreshOnboarding()
 		local s = Quests.Onboarding.Steps[i]
 		local done = step >= s.step
 		cell.BackgroundColor3 = if done then Widgets.Colors.Success else Widgets.Colors.Card
+		paintVivid(cell, done)
 		local status = cell:FindFirstChild("Status") :: TextLabel
 		Widgets.setRaw(status, if done then "✓" else "")
 	end

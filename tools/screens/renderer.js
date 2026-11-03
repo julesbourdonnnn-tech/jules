@@ -728,6 +728,9 @@
           const tc = mul(t.color || [0, 0, 0]);
           const color = mix(tc, bgc, Math.min(1, textA));
           let ratio = contrast(color, bgc);
+          // couleur des lettres seule, sans le contour (revue de l'outil : « Taille 437 K » lavande
+          // sur la case verte, « Jour 1 » or sur vert, « ✓ » vert sur vert passaient grâce au contour)
+          entry.inkRatio = ratio;
           const s = n.stroke;
           if (s && s.mode !== 'Border' && s.t < 0.5 && s.thick >= 0.75) {
             ratio = Math.max(ratio, contrast(tc, mul(s.color)));
@@ -1065,6 +1068,23 @@
           })`,
           {
           ratio: +e.contrast.toFixed(2),
+          rect: R(visible),
+        });
+      // la couleur des lettres seule se confond avec le fond (< 1,5) : seul le contour dessine le texte
+      // (blanc cerné sur vert, 1,76, reste le style maison et passe). Seulement sur un fond d'interface
+      // plein (le texte ou un parent) : un tampon ou un texte flottant posé sur le monde 3D, dont le
+      // fond change sans cesse, se lit par son contour épais (c'est sa raison d'être)
+      const onFill = (() => {
+        let cur = n;
+        while (cur) {
+          if ((cur.bgt ?? 1) < 0.5) return true;
+          cur = cur.p ? byIndex.get(cur.p) : null;
+        }
+        return false;
+      })();
+      if (!n.deco && !iconOnly && onFill && e.inkRatio !== undefined && e.inkRatio < 1.5)
+        add('inkOnly', n, `couleur du texte seule ${e.inkRatio.toFixed(2)} < 1,5 sur son fond (${JSON.stringify(t.color)} sur ${JSON.stringify(e.backdrop)}) : le texte n'est plus qu'un contour`, {
+          ratio: +e.inkRatio.toFixed(2),
           rect: R(visible),
         });
       // contour (Contextual) de la même couleur que les lettres : elles s'épaississent et se fondent

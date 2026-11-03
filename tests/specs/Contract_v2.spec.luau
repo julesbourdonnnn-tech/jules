@@ -549,6 +549,39 @@ return function(T)
 			end
 		)
 
+		-- Sauvegarde-témoin v2 (docs/04 §16, §27.2) : v1.json migrée, figée dans le dépôt. Chaque
+		-- valeur du témoin doit sortir de la migration telle quelle (une valeur de migration qui
+		-- change fait échouer ce cas) ; un champ v2 ajouté plus tard au schéma ne le casse pas.
+		-- Le témoin sert aussi de sauvegarde v2 réelle : chargé en v2, rien n'est perdu.
+		it(
+			"v2.json (témoin) : v1.json migrée redonne chaque valeur du témoin ; chargé en v2, rien ne change",
+			function()
+				local h = Harness.new()
+				local Schema = schema(h)
+				local Tables = shared(h, "Util.Tables")
+				local witness = serde.decode("json", fs.readFile("tests/fixtures/profiles/v2.json"))
+				expect(witness.version).toBe(2)
+				local expected = leaves(witness, "")
+				local d = migrateFull(h, readV1())
+				local checked = 0
+				for path, value in expected do
+					checked += 1
+					expect({ path = path, value = get(d, path) }).toEqual({ path = path, value = value })
+				end
+				expect(checked > 200).toBe(true)
+				-- chaque clé v2 est dans le témoin
+				for key in Schema.ownersFor(2) do
+					expect({ key = key, present = witness[key] ~= nil }).toEqual({ key = key, present = true })
+				end
+				-- sauvegarde v2 chargée par un serveur v2 : migrate(2 → 2) puis reconcile, rien de perdu
+				local loaded = Schema.migrate(Tables.deepCopy(witness), 2, 2)
+				Tables.reconcile(loaded, Schema.defaultsFor(2))
+				for path, value in expected do
+					expect({ path = path, value = get(loaded, path) }).toEqual({ path = path, value = value })
+				end
+			end
+		)
+
 		it(
 			"idempotente : migrer deux fois = une fois ; un profil déjà v2 n'est jamais retouché",
 			function()
