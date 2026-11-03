@@ -33,6 +33,31 @@
 --     offlinePot ; bonus de famille lus par QuestRules.familyEarned (dex.fam posé à la complétion) ;
 --     bébé du Rush : RushRules.babySize et RushRules.babyMutation.
 --
+-- GDD v2.0 (paquet A1, docs/04 §27.9, GDD §4.24.1) : extension de la simulation du design
+-- (scratchpad/v2/gdd/sim/), jouée avec le VRAI code de la progression. Les interrupteurs
+-- Config/Features décident, comme dans le jeu : coupés (valeurs du jeu de base), le modèle joue
+-- exactement la v1.3 ; ouverts (ECON_FLAGS, posés par la spec), il joue la v2.0 complète :
+--   * prix : Formulas.tileCost (dalles de la v1.3, = UpgradeMath.price dès UpgradesScreen) et
+--     UpgradeMath.price (Tapis Étoilé, Gants, École, Monuments, Atelier, « Pour le plaisir ») ;
+--     ouvertures et plafonds : UpgradeMath.cap (Config/Upgrades, Prestige.starCap) ;
+--   * renaissances : Prestige.apply (Grand Splorch, Petit Splorch hors file, Jelly Ascend), ses
+--     Confettis, sa Fame, ses places offertes, ses décorations gardées, son Tapis de départ et le
+--     cadeau du Splorch (UpgradeMath.giftCoins) ; MaxR et MaxA appliqués par Prestige ;
+--   * croissance : Formulas.growthRate (× Prestige.growthFactor : 3^A, Souvenir de gelée, 1re boucle
+--     record par le champ memoryR proposé au contrat, note INT-A1-MEMORY ; Tapis Étoilé) ; revenu
+--     × Monuments ; pressions × Gants, série jusqu'à Formulas.streakMax ; hors ligne : Sac et Pot de
+--     nuit, arrêt à 120 s de Formulas.maxGrowthRate ;
+--   * Atelier et « Pour le plaisir » : coûts de Config/Upgrades, la ligne la moins chère d'abord
+--     (ordre de UpgradeMath.ids() à égalité) ; politique « Conseillé » : UpgradeAdvisor.next sur
+--     UpgradeMath.snapshot ;
+--   * Plopettes (Balance.Helpers) : une pression d'aide sur le squishy prêt depuis ReadyFor s que le
+--     joueur ne presse pas, HELPER_REACH des pressions trouvent une cible (règle des 12 studs) ;
+--   * piste de la semaine (Config/Quests.WeeklyTrack) : 2 points par objectif réclamé, un Défi par
+--     jour joué (3 au plus par semaine UTC, QuestRules.weekIndex), Confettis des paliers atteints.
+-- Seules les hypothèses de COMPORTEMENT sont des options (opts.v2) : durée des séances, jours joués,
+-- politique d'achat, Ascension faite dès qu'elle est prête (ou refusée N jours, ou jamais), Atelier
+-- ouvert ou jamais, profils de départ forcés (A par Prestige.apply répété, Atelier complet).
+--
 --   local EconomyModel = require("../sim/EconomyModel")
 --   local model = EconomyModel.new(L)  -- L : modules requis par le harnais (voir EconomyPacing.spec)
 --   Sim.run({ players = 50, days = 28, simulate = model.simulateFor({ players = 8 }), … })
@@ -68,7 +93,41 @@ local START_UNIX = 1797638400 -- lundi 14/12/2026 00:00 UTC (après le lancement
 local SHARED_WILD_SHARE = { [4] = 0.75, [8] = 0.38, [16] = 0.19 }
 local GOLDEN_SHARE = { [4] = 0.25, [8] = 0.12, [16] = 0.06 }
 
+-- v2.0 : hypothèses de comportement (GDD §4.24.1), pas des valeurs d'équilibrage
+local HELPER_REACH = 0.75 -- part des pressions d'aide qui trouvent une cible (règle des 12 studs)
+local ASSIDU_MIN = 120 -- min par jour du joueur assidu (une séance)
+
 EconomyModel.SIZES = { 4, 8, 16 }
+
+-- Bandes de jours du temps « sans but » (docs/04 §27.9) et seuil d'un moment « sans but » : plus de
+-- 3 min de jeu depuis le dernier achat, Grand ou Petit Splorch, ou Ascension (GDD §4.24.1)
+EconomyModel.BANDS = {
+	{ key = "Day1", from = 1, to = 1 },
+	{ key = "Day2to7", from = 2, to = 7 },
+	{ key = "Day8to14", from = 8, to = 14 },
+	{ key = "Day15to28", from = 15, to = 28 },
+	{ key = "Day29to56", from = 29, to = 56 },
+	{ key = "Day57to84", from = 57, to = 84 },
+	{ key = "Day85to140", from = 85, to = math.huge },
+}
+EconomyModel.STARVED_AFTER = 180
+
+-- Interrupteurs de l'économie v2.0 : tous coupés (jeu de base, porte v1.3) ou tous ouverts (porte
+-- v2.0) ; un mélange n'est pas un état simulé (le modèle refuse de le jouer)
+EconomyModel.ECON_FLAGS = {
+	"RecordR",
+	"UpgradesScreen",
+	"Confetti",
+	"Workshop",
+	"StarMat",
+	"Gloves",
+	"Monuments",
+	"JellyAscend",
+	"PetitSplorch",
+	"Helpers",
+	"WeeklyTrack",
+	"DecoPerso",
+}
 
 -- Portes de la simulation (docs/04 §16 v1.2, GDD §4.24) : médianes, à chaque taille de serveur. Les
 -- parts (≥ 80 %, ≥ 90 %, ≥ 95 %) sont vérifiées à part par la spec (EconomyModel.SHARES) : une médiane
@@ -149,6 +208,189 @@ function EconomyModel.new(L)
 	local POINTS = GAUGE.Points
 	local SNACK_LEVELS = Balance.Tiles.snack.Levels
 
+	-- v2.0 : vrais modules de la progression (requis par le harnais, comme les autres)
+	local Prestige, UpgradeMath, UpgradeAdvisor = L.Prestige, L.UpgradeMath, L.UpgradeAdvisor
+	local Bitset, Features, Upgrades = L.Bitset, L.Features, L.Upgrades
+	local MAX_R, MAX_A = Balance.Prestige.MaxR, Balance.Prestige.MaxA
+	local HELPERS = Balance.Helpers
+	local WORKSHOP_ROW = Upgrades.WorkshopIndex
+	local ROW_SUPER_STREAK, ROW_PLUME = WORKSHOP_ROW.superStreak, WORKSHOP_ROW.plume
+	local ROW_NIGHT_BAG, ROW_NIGHT_POT = WORKSHOP_ROW.nightBag, WORKSHOP_ROW.nightPot
+	-- Plopettes arrivées par le Record R (Helpers.ByRecordR)
+	local function helpersAt(bestR)
+		local n = 0
+		for _, at in HELPERS.ByRecordR do
+			if bestR >= at then
+				n += 1
+			end
+		end
+		return n
+	end
+	-- lignes de l'Atelier qui ne sont pas des cosmétiques (les 9 lignes, 21 niveaux : workshopAllDay)
+	local WORKSHOP_LINES = {}
+	for _, row in Upgrades.WorkshopRows do
+		if row.effect ~= "cosmetic" then
+			table.insert(WORKSHOP_LINES, row.id)
+		end
+	end
+	-- tout ce qui s'achète en Confettis, dans l'ordre fixe de l'écran (UpgradeMath.ids)
+	local CONFETTI_IDS = {}
+	for _, id in UpgradeMath.ids() do
+		if UpgradeMath.currency(id) == "confetti" then
+			table.insert(CONFETTI_IDS, id)
+		end
+	end
+	-- lignes « bits » de « Pour le plaisir » par identifiant canonique ("fun.<id>")
+	local FUN_BY_ID = {}
+	for _, line in Upgrades.Fun do
+		if line.store == "bits" then
+			FUN_BY_ID["fun." .. line.id] = line
+		end
+	end
+	-- familles de pièces (ordre de la politique « la moins chère d'abord » : v1.3 puis v2.0)
+	local V2_FAMILIES = { "gloves", "school", "star", "monument" }
+	-- Confettis des paliers de la piste de la semaine (nombres de WeeklyTrack.Tiers ; le reste :
+	-- Goutte chanceuse, cosmétique)
+	local TRACK = Quests.WeeklyTrack
+
+	-- état des interrupteurs de l'économie : "off" (tous coupés), "on" (tous ouverts), sinon erreur
+	local function econState()
+		local on, off = 0, 0
+		for _, key in EconomyModel.ECON_FLAGS do
+			if Features.get(key) == true then
+				on += 1
+			else
+				off += 1
+			end
+		end
+		if on > 0 and off > 0 then
+			error("EconomyModel : interrupteurs v2.0 mélangés (tous coupés ou tous ouverts)")
+		end
+		return on > 0
+	end
+
+	-- Résumé v2.0 d'un joueur (docs/04 §27.9, GDD §4.24.1 ; même lecture du journal que la simulation
+	-- du design) : temps « sans but » par bande, boucles (sorte, A, durée, pertes, Tapis 12, achats par
+	-- famille, plus long écart entre deux achats), Ascensions, retours au record, falaise du retour,
+	-- renaissances au même instant. Le journal est ensuite jeté (seul ce résumé est gardé)
+	local function bandOf(d)
+		for i, b in EconomyModel.BANDS do
+			if d >= b.from and d <= b.to then
+				return i
+			end
+		end
+		return nil
+	end
+	local function summarize(log, daily, offPot, startedAscended)
+		local bands = {}
+		for i in EconomyModel.BANDS do
+			bands[i] = { tot = 0, over = 0, maxGap = 0 }
+		end
+		local loops, ascendDays, regain, regainDays, cliff = {}, {}, {}, {}, {}
+		local zeroGap, nonFinite = 0, 0
+		local lastGoal = 0 -- temps de jeu du dernier achat, Grand ou Petit Splorch ou Ascension
+		local lastBuy, maxBuyGap = 0, 0
+		local buys = {}
+		local firstReach = { [0] = 0 }
+		local pending = nil -- retour au record en cours : { t, d, target, from }
+		local afterAscend, waitFirstRecord = startedAscended == true, false
+		local regainLens = {}
+		local lastSplorchT = -1
+		for _, e in log do
+			local k = e.k
+			if k == "buy" or k == "splorch" or k == "ascend" then
+				local gap = e.t - lastGoal
+				local bi = bandOf(e.d)
+				if bi then
+					local b = bands[bi]
+					b.tot += gap
+					b.over += math.max(0, gap - EconomyModel.STARVED_AFTER)
+					if gap > b.maxGap then
+						b.maxGap = gap
+					end
+				end
+				lastGoal = e.t
+			end
+			if k == "buy" then
+				buys[e.tile] = (buys[e.tile] or 0) + 1
+				maxBuyGap = math.max(maxBuyGap, e.t - lastBuy)
+				lastBuy = e.t
+			elseif k == "splorch" then
+				if e.t == lastSplorchT then
+					zeroGap += 1
+				end
+				lastSplorchT = e.t
+				if e.lost ~= e.lost or e.lost == math.huge then
+					nonFinite += 1
+				end
+				local loop = {
+					d = e.d,
+					petit = e.petit,
+					A = e.A,
+					r = e.fromR,
+					lost = e.lost,
+					share12 = e.share12,
+					len = e.len,
+					sinceFuse = e.sinceFuse,
+					maxBuyGap = maxBuyGap,
+					afterAscend = afterAscend,
+					snack = buys.snack or 0,
+					star = buys.star or 0,
+					decor = buys.decor or 0,
+					gloves = buys.gloves or 0,
+					school = buys.school or 0,
+				}
+				table.insert(loops, loop)
+				if e.petit then
+					table.insert(regainLens, e.len)
+				else
+					-- falaise du retour : 1re boucle record ÷ médiane des 3 dernières boucles de remontée
+					if waitFirstRecord and #regainLens >= 3 then
+						local last = {
+							regainLens[#regainLens],
+							regainLens[#regainLens - 1],
+							regainLens[#regainLens - 2],
+						}
+						table.sort(last)
+						table.insert(cliff, e.len / math.max(1, last[2]))
+					end
+					waitFirstRecord = false
+				end
+				if firstReach[e.R] == nil then
+					firstReach[e.R] = e.t
+				end
+				-- retour au record : temps de jeu de la remontée ÷ temps de la 1re fois (du même départ)
+				if pending and e.R >= pending.target then
+					local first = (firstReach[pending.target] or e.t) - (firstReach[pending.from] or 0)
+					table.insert(regain, (e.t - pending.t) / math.max(1, first))
+					table.insert(regainDays, e.d - pending.d)
+					pending = nil
+				end
+				buys = {}
+				lastBuy, maxBuyGap = e.t, 0
+			elseif k == "ascend" then
+				table.insert(ascendDays, e.d)
+				afterAscend, waitFirstRecord = true, true
+				regainLens = {}
+				pending = { t = e.t, d = e.d, target = e.best, from = e.R }
+				buys = {}
+				lastBuy, maxBuyGap = e.t, 0
+			end
+		end
+		return {
+			bands = bands,
+			loops = loops,
+			ascendDays = ascendDays,
+			regain = regain,
+			regainDays = regainDays,
+			cliff = cliff,
+			zeroGap = zeroGap,
+			nonFinite = nonFinite,
+			daily = daily,
+			offPot = offPot,
+		}
+	end
+
 	local function simulateWith(opts, rng, index, days)
 		local N = opts.players or 16
 		local spender = opts.spender == true
@@ -156,6 +398,16 @@ function EconomyModel.new(L)
 		local goldenShare = GOLDEN_SHARE[N] or (1 / N)
 		local giftEvery = GIFT_EVERY_16 * 15 / math.max(1, N - 1)
 		local gaugeTarget = GAUGE.TargetPerPlayer * math.max(GAUGE.MinPlayers, N)
+		-- v2.0 : interrupteurs de l'économie (lus une fois : tous ouverts ou tous coupés) et
+		-- hypothèses de comportement du joueur
+		local v2 = econState()
+		local V = opts.v2 or {}
+		local firstMin = V.firstMin or (if V.assidu then ASSIDU_MIN else 35)
+		local dailyMin = V.dailyMin or (if V.assidu then ASSIDU_MIN else 30)
+		local takesAscend = V.ascend ~= false -- la Jelly Ascend dès qu'elle est prête
+		local usesAtelier = V.atelier ~= false -- l'Atelier ouvert après chaque renaissance
+		local advisorPolicy = V.policy == "advisor"
+		local playDay = V.playDay -- function(jour) → joué ; nil : tous les jours
 
 		-- =================================================================================
 		-- État (même forme que le profil quand une règle du jeu le lit)
@@ -171,7 +423,27 @@ function EconomyModel.new(L)
 			R = 0,
 			fame = 0,
 			growth = { G = 0, g = 1, t = now },
-			tiles = { snack = 0, decor = 0, pens = 0, cozyBed = false },
+			tiles = {
+				snack = 0,
+				decor = 0,
+				pens = 0,
+				cozyBed = false,
+				star = 0,
+				gloves = 0,
+				school = 0,
+				monuments = 0,
+			},
+			-- v2.0 (schéma v2, docs/04 §27.2) : lus et écrits par Prestige, UpgradeMath ; coupés, jamais lus
+			bestR = 0,
+			ascend = 0,
+			regainBonusA = 0,
+			memoryR = 0, -- champ proposé au contrat (INT-A1-MEMORY) : 1re boucle record × 1,25
+			confetti = 0,
+			confettiTotal = 0,
+			atelier = table.create(#Upgrades.WorkshopRows, 0),
+			atelierCosmetics = Bitset.new(Upgrades.CosmeticBits),
+			pot = 0, -- vue de Prestige.apply (le modèle sépare potOn et potOff)
+			weeklyTrack = { firstPeriodEnd = 0 }, -- fin de la 1re période, fixée au 1er calcul
 			pen = {}, -- squishies en enclos (et Bassin) : rapportent et grandissent
 			dodo = {}, -- Boîte à dodo : taille figée
 			nextUid = 1,
@@ -186,7 +458,14 @@ function EconomyModel.new(L)
 			newPulls = Balance.Vat.NewPulls,
 			personalLeft = 0, -- s de boost personnel (en pause pendant un boost de serveur)
 			plopDays = 0,
-			caps = { day = -1, rushBabies = 0, splorchGifts = 0, splorchCoins = 0, fameRush = 0 },
+			caps = {
+				day = -1,
+				rushBabies = 0,
+				splorchGifts = 0,
+				splorchCoins = 0,
+				fameRush = 0,
+				fameSplorch = 0,
+			},
 			streak = 0,
 			goldenWinAt = -math.huge,
 		}
@@ -201,7 +480,21 @@ function EconomyModel.new(L)
 			epicDay7 = 0,
 			penPayable5 = 0,
 			splorchIn10to18 = 0,
+			-- v2.0
+			firstWorkshopBuy = math.huge,
+			applyRefused = 0, -- Prestige.apply refusé alors que le modèle le croyait possible (défaut)
+			maxR = 0,
+			maxBestR = 0,
+			maxA = 0,
+			nonFinite = 0,
+			workshopAllDay = math.huge, -- jour où les 9 lignes de l'Atelier (21 niveaux) sont finies
+			atelierCompleteDay = math.huge, -- jour où l'Atelier et « Pour le plaisir » sont complets
 		}
+		local daily = {} -- v2.0 : état de fin de chaque jour
+		local offPotShares = {} -- v2.0 : Pot de chaque nuit ÷ pièces gagnées en jeu le jour même
+		-- journal des achats, renaissances et achats de l'Atelier (v2.0 seulement : clés de la porte,
+		-- résumé à la fin de la simulation puis jeté)
+		local log = if v2 then {} else nil
 		local fusions, captures = 0, 0
 		local boostTime, sessionTime = 0, 0 -- s de jeu en ×2 / s de jeu (part du temps en ×2)
 		local ctx = {
@@ -235,6 +528,10 @@ function EconomyModel.new(L)
 
 		-- santé de l'économie (boucles des jours 1 à 14)
 		local loopStartPlay = 0
+		local lastFusionPlay = -math.huge
+		local helperBudget = 0 -- pressions d'aide dues (Plopettes), fraction comprise
+		local helpersBestR, helpersNow = -1, 0 -- Plopettes du Record R (recalculées quand il change)
+		local readyRecs, readyIncs = {}, {} -- squishies prêts de la pression en cours (cibles des aides)
 		local snack12Play = nil
 		local loopShares, lostRatios = {}, {}
 		local loginReadyPending = false
@@ -310,6 +607,8 @@ function EconomyModel.new(L)
 			ctx.trophyBonus = Formulas.trophyBonus(P.trophies)
 			ctx.goldenPages = QuestRules.goldenPages(P.dex)
 			ctx.boost = boostOn()
+			-- v2.0 : Monuments (multiplicateur à part de Formulas, interrupteur Monuments)
+			ctx.monuments = if v2 then P.tiles.monuments else nil
 			for _, r in P.pen do
 				r.k = incomeFactor(r.s, r.m, r.st, ctx)
 			end
@@ -320,6 +619,7 @@ function EconomyModel.new(L)
 		end
 		-- règlement : Pot intégré exactement sur [growth.t ; now] (EconomyService.settle) ; (K, S1) de
 		-- Formulas.ranchIncome ne changent qu'avec les lignes de l'enclos ou le contexte
+		local ascendReadyDay = nil -- v2.0 : jour où la 1re Ascension est devenue possible (« refuse N jours »)
 		local cachedK, cachedS1 = 0, 0
 		local function settle()
 			local Gt = Formulas.G(P.growth, now)
@@ -350,14 +650,23 @@ function EconomyModel.new(L)
 				end
 			end
 		end
-		local function setGrowth()
-			settle()
-			P.growth.g = Formulas.growthRate({
+		-- contexte de croissance (Formulas.GrowthCtx) : les champs v2.0 ne comptent qu'interrupteurs
+		-- ouverts (Tapis Étoilé, A, Souvenir de gelée, 1re boucle record) ; coupés, la v1.3 exacte
+		local function growthCtx(boost)
+			return {
 				R = P.R,
 				snack = P.tiles.snack,
 				jellyFamily = families.jelly == true,
-				boost = boostOn(),
-			})
+				boost = boost,
+				star = if v2 then P.tiles.star else nil,
+				A = if v2 then P.ascend else nil,
+				bestR = if v2 then P.bestR else nil,
+				firstRecordLoop = if v2 then Prestige.firstRecordLoop(P) else nil,
+			}
+		end
+		local function setGrowth()
+			settle()
+			P.growth.g = Formulas.growthRate(growthCtx(boostOn()))
 		end
 		local function boostChanged()
 			setGrowth()
@@ -387,7 +696,14 @@ function EconomyModel.new(L)
 		local function resetCaps()
 			local day = math.floor(now / DAY)
 			if P.caps.day ~= day then
-				P.caps = { day = day, rushBabies = 0, splorchGifts = 0, splorchCoins = 0, fameRush = 0 }
+				P.caps = {
+					day = day,
+					rushBabies = 0,
+					splorchGifts = 0,
+					splorchCoins = 0,
+					fameRush = 0,
+					fameSplorch = 0,
+				}
 			end
 		end
 		local function addFameRush(n)
@@ -489,6 +805,38 @@ function EconomyModel.new(L)
 			fillStartAt = nil
 		end
 
+		-- Confettis (EconomyService.addConfetti : seul point d'entrée des gains, bornés à Confetti.Max)
+		local CONFETTI_MAX = Balance.Confetti.Max
+		local function confetti(n)
+			P.confetti = math.min(CONFETTI_MAX, P.confetti + n)
+			P.confettiTotal = math.min(CONFETTI_MAX, P.confettiTotal + n)
+		end
+		-- piste de la semaine (v2.0, GDD §7.5) : points de la période en cours (QuestRules.trackPeriod : la
+		-- 1re période va de la 1re connexion au 2e lundi qui suit, puis une par semaine UTC ; la fin de la
+		-- 1re est gardée comme QuestService la garde), paliers payés dès qu'ils sont atteints (« paliers
+		-- réclamés tout seuls ») ; un palier en nombre = des Confettis (les autres : Goutte chanceuse,
+		-- cosmétique de la semaine)
+		local trackPeriod, trackPoints, trackTiers, trackChallenges = -1, 0, 0, 0
+		local function trackRoll()
+			local tp = QuestRules.trackPeriod(P, math.floor(now))
+			P.weeklyTrack.firstPeriodEnd = tp.firstPeriodEnd
+			if tp.period ~= trackPeriod then
+				trackPeriod, trackPoints, trackTiers, trackChallenges = tp.period, 0, 0, 0
+			end
+		end
+		local function trackAdd(points)
+			trackRoll()
+			trackPoints += points
+			local reach = math.min(#TRACK.Tiers, math.floor(trackPoints / TRACK.PointsPerTier))
+			while trackTiers < reach do
+				trackTiers += 1
+				local reward = TRACK.Tiers[trackTiers]
+				if type(reward) == "number" then
+					confetti(reward)
+				end
+			end
+		end
+
 		-- objectifs du jour : progression (QuestRules.apply), réclamation aussitôt terminés
 		local function objective(stat, amount, perfect)
 			for _, e in objectives do
@@ -504,6 +852,9 @@ function EconomyModel.new(L)
 						currentSource = "objective"
 						incomeSeconds(reward.incomeSeconds)
 						currentSource = was
+						if v2 then
+							trackAdd(TRACK.PointsPerObjective)
+						end
 					end
 				end
 			end
@@ -736,6 +1087,7 @@ function EconomyModel.new(L)
 					map[pair[1]], map[pair[2]] = nil, nil
 					map[kept] = merged
 					fusions += 1
+					lastFusionPlay = playTime
 					local resultSize = if merged.at == "pen" then sizeOf(merged, Gt) else merged.z
 					currentSource = "combo"
 					addCoins(Formulas.comboReward(step, merged.k * resultSize))
@@ -784,53 +1136,132 @@ function EconomyModel.new(L)
 			return true
 		end
 
+		-- prix (GDD v2.0 §4.6) : dalles de la v1.3 par Formulas.tileCost (= UpgradeMath.price dès
+		-- UpgradesScreen, × F(A) avec JellyAscend), familles nouvelles par UpgradeMath.price (le seul
+		-- calcul des prix du jeu) ; niveau actuel lu dans le profil (UpgradeMath.level)
+		local TILE_PRICED = { snack = true, decor = true, pens = true, cozyBed = true }
+		local TILE_KEY = { monument = "monuments" }
+		local function levelOf(id)
+			if id == "cozyBed" then
+				return if P.tiles.cozyBed then 1 else 0
+			end
+			return P.tiles[TILE_KEY[id] or id]
+		end
+		-- (prix gardé par famille tant que niveau, r, A et Record R ne changent pas : le même nombre,
+		-- calculé une fois ; la boucle chaude réévalue les achats après presque chaque pression)
+		local priceCache = {}
+		local function costOf(id, lvl)
+			local c = priceCache[id]
+			if c and c.l == lvl and c.r == P.R and c.a == P.ascend and c.b == P.bestR then
+				return c.p
+			end
+			local price
+			if TILE_PRICED[id] then
+				price = Formulas.tileCost(id, lvl, P.R, P.ascend)
+			else
+				price = UpgradeMath.price(id, lvl, P.R, P.ascend, P.bestR)
+			end
+			priceCache[id] = { l = lvl, r = P.R, a = P.ascend, b = P.bestR, p = price }
+			return price
+		end
+		-- plafond d'une famille (UpgradeMath.cap), gardé tant que r, Record R, A et le Tapis 12 ne
+		-- changent pas (les interrupteurs ne changent pas pendant une simulation)
+		local familyCaps, capStamp = {}, nil
+		local function capOf(id)
+			local stamp = P.R
+				+ 1e3 * P.bestR
+				+ 1e6 * P.ascend
+				+ (if P.tiles.snack >= SNACK_LEVELS then 1e9 else 0)
+			if stamp ~= capStamp then
+				capStamp = stamp
+				table.clear(familyCaps)
+			end
+			local cap = familyCaps[id]
+			if cap == nil then
+				cap = UpgradeMath.cap(id, P, Features)
+				familyCaps[id] = cap
+			end
+			return cap
+		end
+		local function T12now()
+			return costOf("snack", SNACK_LEVELS - 1)
+		end
+		local snapVersion = 0
+
 		-- achat : le moins cher utile d'abord ; un achat par appel (marcher jusqu'à la dalle)
+		local best, bestCost = nil, math.huge -- candidate de l'évaluation en cours (tryBuy)
+		local function consider(id, useful)
+			if useful then
+				local cost = costOf(id, levelOf(id))
+				if cost < bestCost then
+					best, bestCost = id, cost
+				end
+			end
+		end
 		local function tryBuy()
 			if not buyDirty and P.coins < cheapest then
 				return
 			end
-			local best, bestCost = nil, math.huge
-			local function consider(tile, useful)
-				if useful then
-					local lvl = if tile == "cozyBed"
-						then (if P.tiles.cozyBed then 1 else 0)
-						else P.tiles[tile]
-					local cost = Formulas.tileCost(tile, lvl, P.R)
-					if cost < bestCost then
-						best, bestCost = tile, cost
-					end
-				end
-			end
+			best, bestCost = nil, math.huge
 			if onboardingTiles then
 				consider("snack", P.tiles.snack == 0)
+			elseif advisorPolicy then
+				-- politique « Conseillé » (GDD §10.7.4) : les candidates de UpgradeAdvisor (familles de
+				-- pièces ouvertes, pas au maximum ; Monuments après le Tapis 12)
+				for _, def in Upgrades.Families do
+					local id = def.id
+					consider(
+						id,
+						capOf(id) > levelOf(id) and (id ~= "monument" or P.tiles.snack >= SNACK_LEVELS)
+					)
+				end
 			else
 				consider("snack", true)
 				consider("pens", #P.pen >= penCap() and playTime >= ONBOARDING_END)
 				consider("decor", true)
-				consider("cozyBed", P.R >= Balance.Tiles.cozyBed.MinR and not P.tiles.cozyBed)
+				consider("cozyBed", P.bestR >= Balance.Tiles.cozyBed.MinR and not P.tiles.cozyBed)
+				if v2 then
+					for _, id in V2_FAMILIES do
+						consider(id, capOf(id) > levelOf(id))
+					end
+				end
 			end
 			cheapest, buyDirty = bestCost, false
 			if best == nil or bestCost == math.huge or P.coins < bestCost then
 				return
 			end
+			if advisorPolicy and not onboardingTiles then
+				-- la cible de la puce « Prochain achat », sur l'instantané versionné de l'écran
+				snapVersion += 1
+				local target = UpgradeAdvisor.next(UpgradeMath.snapshot(P, Features, snapVersion), {})
+				if target == nil or target.price > P.coins then
+					error("EconomyModel : le Conseillé ne désigne aucun achat payable")
+				end
+				best, bestCost = target.id, target.price
+			end
+			local id, cost = best, bestCost -- (copie : rien ne doit dépendre de l'état partagé après)
 			settle()
-			P.coins -= bestCost
-			if best == "cozyBed" then
+			P.coins -= cost
+			if id == "cozyBed" then
 				P.tiles.cozyBed = true
 			else
-				P.tiles[best] += 1
+				local key = TILE_KEY[id] or id
+				P.tiles[key] += 1
 			end
 			buyDirty = true
+			if log then
+				table.insert(log, { t = playTime, d = dayIndex, k = "buy", tile = id })
+			end
 			if metrics.firstBuy == math.huge then
 				metrics.firstBuy = playTime
 			end
 			objective("tileBuy", 1)
-			if best == "snack" then
+			if id == "snack" or id == "star" then
 				setGrowth()
 				if P.tiles.snack >= SNACK_LEVELS and snack12Play == nil then
 					snack12Play = playTime
 				end
-			elseif best == "decor" then
+			elseif id == "decor" or id == "monument" then
 				refreshK()
 			end
 		end
@@ -853,7 +1284,7 @@ function EconomyModel.new(L)
 
 		-- tirage de la Cuve (graine Odds.seed, nouveauté garantie, protections, Lune)
 		local function vatRoll()
-			local lvl = Formulas.vatLevel(P.R)
+			local lvl = Formulas.vatLevel(P.bestR)
 			local owned = {}
 			for s = 1, SPECIES_COUNT do
 				if bit32.btest(P.dex.mut[s] or 0, 1) then
@@ -865,7 +1296,7 @@ function EconomyModel.new(L)
 				nozzles = lvl.nozzles,
 				moon = moonPhase.active,
 				unix = math.floor(now),
-				families = Odds.unlockedFamilies(P.R),
+				families = Odds.unlockedFamilies(P.bestR),
 				owned = owned,
 				newPull = P.newPulls > 0,
 				pityRare = P.vat.pityRare,
@@ -879,7 +1310,7 @@ function EconomyModel.new(L)
 			give(result.species, result.mutation, 1, "vat")
 		end
 		local function scheduleVat()
-			P.vat.nextAt = now + Formulas.vatInterval(P.R, families.bunny == true)
+			P.vat.nextAt = now + Formulas.vatInterval(P.bestR, families.bunny == true)
 		end
 
 		-- bébé d'un événement (toutes familles ou familles débloquées), taille donnée
@@ -889,7 +1320,7 @@ function EconomyModel.new(L)
 				nozzles = nozzles,
 				moon = moonPhase.active,
 				unix = math.floor(now),
-				families = if unlockedOnly then Odds.unlockedFamilies(P.R) else nil,
+				families = if unlockedOnly then Odds.unlockedFamilies(P.bestR) else nil,
 				mutationMult = mult,
 				forceMutation = force,
 			})
@@ -900,7 +1331,97 @@ function EconomyModel.new(L)
 			return give(result.species, result.mutation, z, "event")
 		end
 
-		-- Grand Splorch d'un bloc (EconomyService.applySplorch + SquishyService.resetSizes)
+		-- niveau acheté d'une ligne payée en Confettis (case de l'Atelier ou bit de « Pour le plaisir »)
+		local function buyConfettiLine(id, level)
+			local row = WORKSHOP_ROW[id]
+			if row then
+				P.atelier[row] += 1
+			else
+				Bitset.set(P.atelierCosmetics, FUN_BY_ID[id].firstBit + level)
+			end
+		end
+		-- l'Atelier, puis « Pour le plaisir » : la ligne la moins chère d'abord (ordre fixe de l'écran à
+		-- égalité), tant que les Confettis suffisent ; ouverture et plafond par UpgradeMath.cap
+		local function atelierBuy()
+			if not usesAtelier then
+				return
+			end
+			while true do
+				local bestId, bestLevel, bestCost = nil, 0, math.huge
+				for _, id in CONFETTI_IDS do
+					local level = UpgradeMath.level(id, P)
+					if level < UpgradeMath.cap(id, P, Features) then
+						local cost = UpgradeMath.price(id, level, P.R, P.ascend, P.bestR)
+						if cost < bestCost then
+							bestId, bestLevel, bestCost = id, level, cost
+						end
+					end
+				end
+				if bestId == nil or P.confetti < bestCost then
+					break
+				end
+				P.confetti -= bestCost
+				buyConfettiLine(bestId, bestLevel)
+				if log then
+					table.insert(
+						log,
+						{ t = playTime, d = dayIndex, k = "atelier", line = bestId, lvl = bestLevel + 1 }
+					)
+				end
+				if metrics.firstWorkshopBuy == math.huge then
+					metrics.firstWorkshopBuy = playTime / 60
+				end
+			end
+		end
+
+		-- v2.0 : un prestige par Prestige.apply (le seul code qui l'applique dans le jeu) sur le profil
+		-- du modèle (vue `squishies` : enclos et Boîte à dodo, par référence ; Pot = potOn + potOff) ;
+		-- les gains RENDUS sont versés comme le fait l'appelant (EconomyService.addConfetti, Fame des
+		-- Grands Splorch sous le plafond du jour, Fame de l'Ascension hors plafond)
+		local function prestige(kind)
+			local view = {}
+			for _, r in P.pen do
+				view[r.uid] = r
+			end
+			for _, r in P.dodo do
+				view[r.uid] = r
+			end
+			P.squishies = view
+			P.pot = P.potOn + P.potOff
+			local _, report = Prestige.apply(P, kind, now)
+			P.squishies = nil
+			if not report.applied then
+				metrics.applyRefused += 1
+				P.pot = 0
+				return report
+			end
+			P.potOn, P.potOff, P.pot = 0, 0, 0
+			confetti(report.confetti)
+			if report.kind == "ascend" then
+				P.fame += report.fame
+			elseif report.fame > 0 then
+				resetCaps()
+				local granted = math.min(report.fame, Balance.CapsV2.fameSplorch - P.caps.fameSplorch)
+				if granted > 0 then
+					P.caps.fameSplorch += granted
+					P.fame += granted
+				end
+			end
+			if P.R > metrics.maxR then
+				metrics.maxR = P.R
+			end
+			if P.bestR > metrics.maxBestR then
+				metrics.maxBestR = P.bestR
+			end
+			if P.ascend > metrics.maxA then
+				metrics.maxA = P.ascend
+			end
+			return report
+		end
+
+		-- Grand Splorch d'un bloc (EconomyService.applySplorch + SquishyService.resetSizes) ; v2.0 :
+		-- Grand ou Petit Splorch (Prestige.apply), puis la Jelly Ascend si elle est prête, l'Atelier et
+		-- le cadeau du Splorch
 		local function applySplorch()
 			settle()
 			local peak = biggest()
@@ -908,14 +1429,19 @@ function EconomyModel.new(L)
 				dayPeak = peak -- le plus gros juste avant de repartir à 1
 			end
 			local lost = P.coins + P.potOn + P.potOff
+			local T12 = T12now()
+			local record = not v2 or Prestige.nextKind(P) == "splorch"
+			local loopLen = playTime - loopStartPlay
+			local share = 1
+			if snack12Play ~= nil and loopLen > 0 then
+				share = math.clamp((snack12Play - loopStartPlay) / loopLen, 0, 1)
+			end
 			if dayIndex <= HEALTH_LAST_DAY then
-				local loopLen = playTime - loopStartPlay
-				local share = 1
-				if snack12Play ~= nil and loopLen > 0 then
-					share = math.clamp((snack12Play - loopStartPlay) / loopLen, 0, 1)
+				-- jalons de santé de la v1.3 : boucles des Grands Splorch (record) des jours 1 à 14
+				if record then
+					table.insert(loopShares, share)
+					table.insert(lostRatios, lost / T12)
 				end
-				table.insert(loopShares, share)
-				table.insert(lostRatios, lost / Formulas.tileCost("snack", SNACK_LEVELS - 1, P.R))
 				if dayIndex >= 2 then
 					splorchDays2to14 += 1
 					if loginReadyPending then
@@ -927,35 +1453,87 @@ function EconomyModel.new(L)
 			if opts.trace then
 				print(
 					string.format(
-						"  splorch R=%d jour %d : jeu %.0f s, boucle %.0f s, Tapis12 à %s, Tapis %d, décos %d, pièces %.3g, Pot jeu %.3g, Pot hors ligne %.3g, Tapis 12 = %.3g (×%.1f)",
+						"  splorch R=%d (Record %d, A %d) jour %d : jeu %.0f s, boucle %.0f s, Tapis12 à %s, Tapis %d, décos %d, pièces %.3g, Pot jeu %.3g, Pot hors ligne %.3g, Tapis 12 = %.3g (×%.1f)",
 						P.R,
+						P.bestR,
+						P.ascend,
 						dayIndex,
 						playTime,
-						playTime - loopStartPlay,
+						loopLen,
 						tostring(snack12Play and (snack12Play - loopStartPlay)),
 						P.tiles.snack,
 						P.tiles.decor,
 						P.coins,
 						P.potOn,
 						P.potOff,
-						Formulas.tileCost("snack", SNACK_LEVELS - 1, P.R),
-						lost / Formulas.tileCost("snack", SNACK_LEVELS - 1, P.R)
+						T12,
+						lost / T12
 					)
 				)
 			end
-			P.coins, P.potOn, P.potOff = 0, 0, 0
-			P.tiles.snack, P.tiles.decor = 0, 0
-			P.R += 1
-			P.fame += Balance.Fame.Splorch
-			for _, r in P.pen do
-				r.z, r.zg = 1, 0
-			end
-			for _, r in P.dodo do
-				r.z, r.zg = 1, 0
+			if v2 then
+				local loop = {
+					t = playTime,
+					d = dayIndex,
+					k = "splorch",
+					fromR = P.R,
+					A = P.ascend,
+					lost = lost / T12,
+					share12 = share,
+					len = loopLen,
+					sinceFuse = playTime - lastFusionPlay,
+					star = P.tiles.star,
+					petit = not record,
+				}
+				local report = prestige("splorch")
+				loop.R = P.R
+				if log then
+					table.insert(log, loop)
+				end
+				-- Jelly Ascend : le joueur la fait dès qu'elle est prête (option : refusée N jours, jamais)
+				if takesAscend and Prestige.ascendReady(P) then
+					local ok = true
+					if V.ascendDelayDays and P.ascend == 0 then
+						ascendReadyDay = ascendReadyDay or dayIndex
+						ok = dayIndex >= ascendReadyDay + V.ascendDelayDays
+					end
+					if ok then
+						local fromR, fromBest = P.R, P.bestR
+						report = prestige("ascend")
+						if log and report.applied then
+							table.insert(log, {
+								t = playTime,
+								d = dayIndex,
+								k = "ascend",
+								A = P.ascend,
+								R = P.R,
+								fromR = fromR,
+								best = fromBest,
+							})
+						end
+					end
+				end
+				atelierBuy()
+				-- cadeau du Splorch : prix des niveaux offerts du Tapis dans la boucle neuve
+				if report.applied then
+					P.coins = Formulas.clampCoins(P.coins + UpgradeMath.giftCoins(P, report.giftLevels))
+				end
+			else
+				P.coins, P.potOn, P.potOff = 0, 0, 0
+				P.tiles.snack, P.tiles.decor = 0, 0
+				P.R += 1
+				P.bestR = math.max(P.bestR, P.R)
+				P.fame += Balance.Fame.Splorch
+				for _, r in P.pen do
+					r.z, r.zg = 1, 0
+				end
+				for _, r in P.dodo do
+					r.z, r.zg = 1, 0
+				end
+				P.growth = { G = 0, g = P.growth.g, t = now }
 			end
 			incomeDirty = true
 			bigDirty = true
-			P.growth = { G = 0, g = P.growth.g, t = now }
 			boostChanged()
 			buyDirty = true
 			addPoints(POINTS.splorch)
@@ -1106,8 +1684,19 @@ function EconomyModel.new(L)
 				if bg >= 1e12 and metrics.first1e12Day == math.huge then
 					metrics.first1e12Day = dayIndex
 				end
-				if splorchAt == math.huge and bg >= Formulas.splorchTarget(P.R) then
-					splorchAt = now + SPLORCH_DELAY
+				-- v2.0 : jamais au-delà de MaxR (Prestige.splorchReady, « Record absolu ! »)
+				if
+					splorchAt == math.huge
+					and bg >= Formulas.splorchTarget(P.R)
+					and (not v2 or P.R < MAX_R)
+				then
+					-- v2.0 : le Petit Splorch (remontée) se fait hors file, son spectacle dure PetitShow
+					splorchAt = now
+						+ (
+							if v2 and P.R < P.bestR
+								then Balance.SplorchV2.PetitShow.Duration
+								else SPLORCH_DELAY
+						)
 				end
 			end
 
@@ -1115,24 +1704,79 @@ function EconomyModel.new(L)
 			local function press()
 				local Gt = Gnow()
 				local best, bestIncome = nil, -1
+				local nReady = 0
 				for _, r in P.pen do
 					if r.readyAt <= now then
 						local inc = r.k * sizeOf(r, Gt)
 						if inc > bestIncome then
 							best, bestIncome = r, inc
 						end
+						if v2 then
+							-- squishies prêts : cibles possibles des Plopettes (même revenu, même instant)
+							nReady += 1
+							readyRecs[nReady], readyIncs[nReady] = r, inc
+						end
 					end
 				end
 				if best then
 					local perfect = rng.chance(PERFECT_SHARE)
-					P.streak = if perfect then math.min(P.streak + 1, Balance.Press.StreakMax) else 0
-					local reward = pressReward(bestIncome, perfect, P.streak, families.kitty == true)
+					-- série jusqu'à 5 + Super Série, × Gants (Formulas, interrupteurs Workshop et Gloves)
+					local superStreak = P.atelier[ROW_SUPER_STREAK]
+					P.streak = if perfect then math.min(P.streak + 1, Formulas.streakMax(superStreak)) else 0
+					local reward = pressReward(
+						bestIncome,
+						perfect,
+						P.streak,
+						families.kitty == true,
+						P.tiles.gloves,
+						superStreak
+					)
 					local c = P.coins + reward
 					P.coins = if c > MAX_COINS then MAX_COINS else c
 					onlineCoins += reward
 					pressCoins += reward
 					sourceCoins.press = (sourceCoins.press or 0) + reward
 					best.readyAt = now + COOLDOWN
+					-- Plopettes (GDD §4.28) : une par Record R de Helpers.ByRecordR, + Plume ; une pression
+					-- toutes les IntervalBase − IntervalStep × École secondes, sur le squishy prêt depuis
+					-- ReadyFor s que le joueur ne presse pas ; pressReward sans PERFECT ni série × Gants
+					if v2 then
+						if helpersBestR ~= P.bestR then
+							helpersBestR, helpersNow = P.bestR, helpersAt(P.bestR)
+						end
+						local nh = helpersNow + P.atelier[ROW_PLUME]
+						if nh > 0 then
+							local interval = HELPERS.IntervalBase - HELPERS.IntervalStep * P.tiles.school
+							helperBudget += PRESS_EVERY * nh / interval * HELPER_REACH
+							local readyBefore = now - HELPERS.ReadyFor
+							while helperBudget >= 1 do
+								helperBudget -= 1
+								local hb, hbInc = nil, -1
+								for i = 1, nReady do
+									local r = readyRecs[i]
+									if r.readyAt <= readyBefore and r ~= best and readyIncs[i] > hbInc then
+										hb, hbInc = r, readyIncs[i]
+									end
+								end
+								if hb == nil then
+									helperBudget = 0
+									break
+								end
+								local hr = pressReward(
+									hbInc,
+									false,
+									0,
+									families.kitty == true,
+									P.tiles.gloves
+								) * HELPERS.RewardShare
+								local c2 = P.coins + hr
+								P.coins = if c2 > MAX_COINS then MAX_COINS else c2
+								onlineCoins += hr
+								sourceCoins.helper = (sourceCoins.helper or 0) + hr
+								hb.readyAt = now + COOLDOWN
+							end
+						end
+					end
 					if metrics.firstPress == math.huge then
 						metrics.firstPress = playTime
 					end
@@ -1318,7 +1962,7 @@ function EconomyModel.new(L)
 						resetCaps()
 						if rng.chance(RUSH_BABY_SHARE) and P.caps.rushBabies < Balance.Caps.rushBabies then
 							P.caps.rushBabies += 1
-							local lvl = Formulas.vatLevel(P.R)
+							local lvl = Formulas.vatLevel(P.bestR)
 							-- original : un squishy d'un autre joueur, de taille voisine ; sa mutation tirée
 							-- comme une naissance de la Cuve, puis RushRules.babyMutation (≤ ×5 copiée)
 							local original = bg * rng.range(0.5, 2)
@@ -1360,7 +2004,7 @@ function EconomyModel.new(L)
 				if now >= nextMega.landsAt then
 					megaEnd = nextMega.burstEndsAt
 					if not onboarding() then
-						local lvl = Formulas.vatLevel(P.R)
+						local lvl = Formulas.vatLevel(P.bestR)
 						local bg = biggest()
 						for _ = 1, MEGA_BABIES do
 							local force = if nextMega.moon and rng.chance(Events.Mega.MoonLunarChance)
@@ -1417,7 +2061,7 @@ function EconomyModel.new(L)
 						end
 						if P.caps.splorchGifts < Balance.Caps.splorchGifts then
 							P.caps.splorchGifts += 1
-							local lvl = Formulas.vatLevel(P.R)
+							local lvl = Formulas.vatLevel(P.bestR)
 							rollBaby(
 								lvl.quality,
 								0,
@@ -1464,7 +2108,7 @@ function EconomyModel.new(L)
 								addPoints(POINTS.catch)
 								give(Quests.Onboarding.FirstRunawaySpecies, 0, z, "runaway")
 							else
-								local lvl = Formulas.vatLevel(P.R)
+								local lvl = Formulas.vatLevel(P.bestR)
 								rollBaby(lvl.quality, lvl.nozzles, nil, nil, z, true, POINTS.catch)
 							end
 							objective("runawayCatch", 1)
@@ -1548,8 +2192,120 @@ function EconomyModel.new(L)
 		setGrowth()
 		refreshK()
 
+		-- v2.0 : profil de départ forcé à A Ascensions (nuit, GDD §4.24.1) : un vétéran (Enclos au
+		-- maximum, Lit douillet) dont r monte jusqu'à la condition de chaque Ascension par Prestige.apply
+		-- répété (le plus gros posé à l'objectif de la boucle), puis l'Ascension ; les Confettis rendus
+		-- sont versés et dépensés à l'Atelier, comme en jeu
+		local function forceAscends(target)
+			P.tiles.pens = Balance.Tiles.pens.Levels
+			P.tiles.cozyBed = true
+			capLevel = -1
+			local plop = P.pen[1]
+			local guard = 0
+			while P.ascend < math.min(target, MAX_A) do
+				while not Prestige.ascendReady(P) do
+					settle()
+					plop.z, plop.zg = Prestige.target(P.R), P.growth.G
+					bigDirty = true
+					if not prestige("splorch").applied then
+						error("EconomyModel : Prestige.apply refuse un Grand Splorch du profil forcé")
+					end
+					guard += 1
+					if guard > 100000 then
+						error("EconomyModel : profil forcé sans fin")
+					end
+				end
+				if not prestige("ascend").applied then
+					error("EconomyModel : Prestige.apply refuse l'Ascension du profil forcé")
+				end
+				atelierBuy()
+			end
+			incomeDirty, bigDirty, buyDirty = true, true, true
+			boostChanged()
+		end
+		-- « Atelier complet dès le début » (nuit) : chaque ligne de l'Atelier et de « Pour le plaisir »
+		-- au maximum avant la première séance
+		local function fullAtelier()
+			for _, id in CONFETTI_IDS do
+				local level = UpgradeMath.level(id, P)
+				for l = level, UpgradeMath.maxLevel(id) - 1 do
+					buyConfettiLine(id, l)
+				end
+			end
+		end
+
+		-- v2.0 : profils de départ forcés (nuit) : A par Prestige.apply répété, Atelier complet
+		if v2 and V.forcedA then
+			forceAscends(V.forcedA)
+			metrics.startA = P.ascend
+		end
+		if v2 and V.fullAtelier then
+			fullAtelier()
+		end
+
+		-- fin de journée (jouée ou non) : jalons et état du jour
+		local function endOfDay(d)
+			if d == 7 then
+				metrics.rDay7 = P.R
+				metrics.recordDay7 = P.bestR
+				metrics.stampsDay7 = QuestRules.stampCount(P.dex)
+				metrics.epicDay7 = if epicEver then 1 else 0
+			end
+			if d == 14 then
+				metrics.rDay14 = P.R
+				metrics.recordDay14 = P.bestR
+			end
+			if d == 28 then
+				metrics.rDay28 = P.R
+				metrics.recordDay28 = P.bestR
+				metrics.stampsDay28 = QuestRules.stampCount(P.dex)
+			end
+			if d == days then
+				metrics.boostShare = 100 * boostTime / math.max(1, sessionTime)
+			end
+			if v2 then
+				local linesDone = true
+				for _, id in WORKSHOP_LINES do
+					if UpgradeMath.level(id, P) < UpgradeMath.maxLevel(id) then
+						linesDone = false
+					end
+				end
+				if linesDone and metrics.workshopAllDay == math.huge then
+					metrics.workshopAllDay = d
+				end
+				local allDone = linesDone
+				for _, id in CONFETTI_IDS do
+					if UpgradeMath.level(id, P) < UpgradeMath.maxLevel(id) then
+						allDone = false
+					end
+				end
+				if allDone and metrics.atelierCompleteDay == math.huge then
+					metrics.atelierCompleteDay = d
+				end
+				local big = (biggest())
+				daily[d] = {
+					R = P.R,
+					best = P.bestR,
+					A = P.ascend,
+					conf = P.confetti,
+					confTotal = P.confettiTotal,
+					mon = P.tiles.monuments,
+					coins = P.coins,
+					big = big,
+				}
+				if P.coins ~= P.coins or P.coins == math.huge or big ~= big or big == math.huge then
+					metrics.nonFinite += 1
+				end
+			end
+		end
+
 		for d = 1, days do
 			dayIndex = d
+			if playDay and not playDay(d) then
+				-- jour sans séance (joueur du week-end) : le hors-ligne a été compté jusqu'au prochain jour joué
+				endOfDay(d)
+				continue
+			end
 			pressCoins, onlineCoins = 0, 0
 			sourceCoins = {}
 			dayPeak = 0
@@ -1564,7 +2320,16 @@ function EconomyModel.new(L)
 					loginReadyPending = true
 				end
 			end
-			playSession(if d == 1 then 35 * 60 else 30 * 60)
+			playSession(if d == 1 then firstMin * 60 else dailyMin * 60)
+			if v2 then
+				-- piste : un Défi fait par séance jouée (3 au plus par période : QuestRules.drawChallenges), puis l'Atelier
+				trackRoll()
+				if trackChallenges < TRACK.ChallengesPerWeek then
+					trackChallenges += 1
+					trackAdd(TRACK.PointsPerChallenge)
+				end
+				atelierBuy()
+			end
 
 			if opts.trace then
 				local parts = {}
@@ -1575,11 +2340,14 @@ function EconomyModel.new(L)
 				local bg = biggest()
 				print(
 					string.format(
-						"  jour %d : R=%d plus gros %.3g revenu %.3g/s ; %s",
+						"  jour %d : R=%d (Record %d, A %d) plus gros %.3g revenu %.3g/s ; Confettis %d ; %s",
 						d,
 						P.R,
+						P.bestR,
+						P.ascend,
 						bg,
 						income(),
+						P.confetti,
 						table.concat(parts, ", ")
 					)
 				)
@@ -1599,24 +2367,17 @@ function EconomyModel.new(L)
 				-- atteinte ce jour-là, juste avant le Grand Splorch s'il y en a eu un (cible ≈ 1e8, au-dessus de
 				-- l'objectif 81 M de R = 9 → 10), sinon le plus gros en fin de séance
 				metrics.biggestDay7 = math.max(dayPeak, (biggest()))
-				metrics.rDay7 = P.R
-				metrics.stampsDay7 = QuestRules.stampCount(P.dex)
-				metrics.epicDay7 = if epicEver then 1 else 0
 				metrics.pressShareDay7 = if onlineCoins > 0 then pressCoins / onlineCoins else 0
+				metrics.helperShareDay7 = if onlineCoins > 0
+					then (sourceCoins.helper or 0) / onlineCoins
+					else 0
 				for key, v in sourceCoins do
 					metrics["day7_" .. key] = if onlineCoins > 0 then v / onlineCoins else 0
 				end
 			end
-			if d == 14 then
-				metrics.rDay14 = P.R
-			end
-			if d == days then
-				metrics.boostShare = 100 * boostTime / math.max(1, sessionTime)
-				metrics.rDay28 = P.R
-				metrics.stampsDay28 = QuestRules.stampCount(P.dex)
-			end
+			endOfDay(d)
 
-			-- départ (lastOnline), retour le lendemain à la même heure : rebase hors ligne pur
+			-- départ (lastOnline), retour au prochain jour joué à la même heure : rebase hors ligne pur
 			if d < days then
 				gauge.state, gauge.untilAt = "fill", math.huge
 				-- le boost personnel restant est gardé (en pause hors ligne, boosts.personalLeft)
@@ -1628,19 +2389,34 @@ function EconomyModel.new(L)
 				local Gt = Formulas.G(P.growth, now)
 				local K, S1 = Formulas.ranchIncome(map, Gt, ctx)
 				local incomeNoBoost = S1 + K * Gt
-				local gNoBoost = Formulas.growthRate({
-					R = P.R,
-					snack = P.tiles.snack,
-					jellyFamily = families.jelly == true,
-					boost = false,
-				})
+				local gctx = growthCtx(false)
+				local gNoBoost = Formulas.growthRate(gctx)
 				local bg = biggest()
 				local lastOnline = math.floor(now)
-				local nextStart = firstStart + DAY * d
-				local seconds =
-					Formulas.offlineSeconds(nextStart, lastOnline, P.tiles.cozyBed, families.spiky == true)
-				P.growth.G = Gt + Formulas.offlineGrowth(gNoBoost, seconds, P.R, bg)
-				P.potOff += Formulas.offlinePot(incomeNoBoost, seconds)
+				local nd = d + 1
+				if playDay then
+					while nd < days and not playDay(nd) do
+						nd += 1
+					end
+				end
+				local nextStart = firstStart + DAY * (nd - 1)
+				-- v2.0 : Sac de nuit, Pot de nuit (Workshop), arrêt à 120 s de croissance maximale (RecordR)
+				local seconds = Formulas.offlineSeconds(
+					nextStart,
+					lastOnline,
+					P.tiles.cozyBed,
+					families.spiky == true,
+					if v2 then P.atelier[ROW_NIGHT_BAG] else nil
+				)
+				local gMax = if v2 then Formulas.maxGrowthRate(gctx) else nil
+				P.growth.G = Gt + Formulas.offlineGrowth(gNoBoost, seconds, P.R, bg, gMax)
+				local offPot =
+					Formulas.offlinePot(incomeNoBoost, seconds, if v2 then P.atelier[ROW_NIGHT_POT] else nil)
+				P.potOff += offPot
+				if v2 then
+					-- offlinePotShare : Pot de la nuit ÷ pièces gagnées en jeu ce jour-là
+					table.insert(offPotShares, offPot / math.max(1, onlineCoins))
+				end
 				now = nextStart
 				P.growth.t = now
 				boostChanged()
@@ -1675,6 +2451,9 @@ function EconomyModel.new(L)
 			then gaugeFillTime / gaugeFills / 60 + GAUGE.PartyDuration / 60
 			else math.huge
 		metrics.pointsPerMin = if ownPointsTime > 0 then 60 * measuredRate else 0
+		if v2 then
+			metrics.v2 = summarize(log, daily, offPotShares, (metrics.startA or 0) >= 1)
+		end
 		return metrics
 	end
 
