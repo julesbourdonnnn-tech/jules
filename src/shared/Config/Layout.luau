@@ -228,8 +228,34 @@ Layout.Upgrades = {
 -- HUD v2.0 (N9, N18) : rail de 8 boutons, puce « Prochain achat » ; remplacent les valeurs v1.3 du
 -- HUD quand UpgradesScreen est ouvert (paquet B2 ; Layout.Hud garde la disposition de la v1.3)
 Layout.HudV2 = {
-	Rail = { buttons = 8, size = 80, gap = 16, icon = 48, y0 = 246, y1 = 998 },
+	Rail = { buttons = 8, size = 80, gap = 16, icon = 48, y0 = 246, y1 = 998, w = 340, text = 36 },
 	NextBuy = { x = 96, y = 342, w = 440, h = 96 } :: Rect,
+	-- Rectangles RÉELS de chaque élément du HUD v2.0 (GDD §10.2, tableau de vérification, critique
+	-- m13), en coordonnées d'écran 1920 × 1080 ; Contract_upgrades vérifie qu'ils sont dans la zone
+	-- sûre, sans recouvrement (sauf les paires de Exclusive, jamais visibles ensemble) et hors du
+	-- milieu de l'écran (Center, laissé au personnage et à ses squishies)
+	Rects = {
+		coins = { x = 96, y = 54, w = 440, h = 112 } :: Rect,
+		fame = { x = 96, y = 178, w = 320, h = 56 } :: Rect, -- 3 s quand la Fame ou les amis changent
+		menuChip = { x = 96, y = 246, w = 260, h = 80 } :: Rect,
+		rail = { x = 96, y = 246, w = 340, h = 752 } :: Rect, -- à la place de la puce Menu
+		nextBuy = { x = 96, y = 342, w = 440, h = 96 } :: Rect, -- cachée quand le rail est ouvert
+		eventPill = { x = 680, y = 54, w = 560, h = 72 } :: Rect,
+		megaBar = { x = 600, y = 138, w = 720, h = 48 } :: Rect,
+		gauge = { x = 740, y = 138, w = 440, h = 48 } :: Rect, -- jauge et icône, hors MEGA
+		message = { x = 460, y = 198, w = 1000, h = 112 } :: Rect, -- bannière (le message est plus petit)
+		tracker = { x = 1384, y = 54, w = 440, h = 104 } :: Rect,
+		status = { x = 1608, y = 170, w = 216, h = 96 } :: Rect, -- 3 indicateurs de 64, écart 12, minutes
+		card = { x = 1304, y = 330, w = 520, h = 220 } :: Rect,
+		special = { x = 700, y = 822, w = 520, h = 96 } :: Rect,
+		target = { x = 620, y = 930, w = 680, h = 96 } :: Rect,
+		dash = { x = 1728, y = 930, w = 96, h = 96 } :: Rect,
+	},
+	-- paires jamais visibles ensemble (le rail remplace la puce Menu et cache la puce « Prochain
+	-- achat » ; la barre du MEGA remplace la jauge du serveur)
+	Exclusive = { { "rail", "menuChip" }, { "rail", "nextBuy" }, { "megaBar", "gauge" } },
+	Center = { x = 560, y = 330, w = 720, h = 492 } :: Rect, -- x 560-1280, y 330-822 : libre
+	CalmMax = 8, -- le HUD calme montre au plus 8 éléments
 }
 
 return Layout

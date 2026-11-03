@@ -94,4 +94,18 @@ Visuals.SkyMaxStars = 20
 -- Halo : 1 à 5 gouttes (le nombre porte l'information, lisible sans les couleurs)
 Visuals.Halo = { "mint", "sky", "lilac", "gold", "rainbow" }
 
+-- Une couleur par famille de suffixes des grands nombres (GDD v2.0 §4.2, critique M11), la même
+-- partout (montants du HUD, de l'écran Améliorations, des aperçus) : de l'exposant `from` à
+-- l'exposant `to` compris (K = 3 … Tg = 93) ; en dessous de 1e3, la couleur de K-M. Lu par le
+-- formateur du client (UI/Format, paquet B1) quand UpgradesScreen est ouvert.
+export type SuffixColor = { from: number, to: number, color: Color3 }
+Visuals.SuffixColors = {
+	{ from = 3, to = 6, color = Color3.fromRGB(255, 255, 255) }, -- K-M : blanc
+	{ from = 9, to = 12, color = Color3.fromRGB(255, 215, 90) }, -- B-T : or
+	{ from = 15, to = 18, color = Color3.fromRGB(255, 150, 200) }, -- Qa-Qi : rose
+	{ from = 21, to = 33, color = Color3.fromRGB(120, 230, 255) }, -- Sx à Dc : cyan
+	{ from = 36, to = 60, color = Color3.fromRGB(140, 235, 150) }, -- Ud à Nvd : vert
+	{ from = 63, to = 93, color = Color3.fromRGB(205, 175, 255) }, -- Vg à Tg : lilas
+} :: { SuffixColor }
+
 return Visuals

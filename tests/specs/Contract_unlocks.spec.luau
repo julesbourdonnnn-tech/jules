@@ -309,4 +309,142 @@ return function(T)
 			end
 		)
 	end)
+
+	describe("Contrat v2 › Personnalités des espèces (Config/Species, GDD §5.6)", function()
+		it("colonne perso : chaque espèce a la sienne, exactement la table du GDD §5.6", function()
+			local h = Harness.new()
+			local Species = shared(h, "Config.Species")
+			expect(Species.Personalities).toEqual({
+				"curious",
+				"sleepy",
+				"bouncy",
+				"cuddly",
+				"prankster",
+				"proud",
+			})
+			local byPerso = {}
+			for _, def in Species.List do
+				byPerso[def.perso] = byPerso[def.perso] or {}
+				table.insert(byPerso[def.perso], def.key)
+			end
+			for _, list in byPerso do
+				table.sort(list)
+			end
+			expect(byPerso).toEqual({
+				curious = { "lotlolly", "moonhop", "moonplop", "plop", "whiskerwob" },
+				sleepy = { "hopscotch", "lilypuff", "purrpudding", "wibble" },
+				bouncy = { "boingtoad", "clover_hop", "nubbin", "ribbit_drop" },
+				cuddly = { "bunbun", "frillo", "mochi_mew", "prickle_puff" },
+				prankster = { "croakaroo", "drago_drop", "gillygum", "jiggleberry" },
+				proud = { "blossompurr", "coralotl", "emberwob", "grand_gloop", "royal_plop" },
+			})
+		end)
+
+		it(
+			"« proud » réservé aux Légendaires, Mythiques et Secrets ; chaque personnalité a 4 espèces au moins",
+			function()
+				local h = Harness.new()
+				local Species = shared(h, "Config.Species")
+				local Rarities = shared(h, "Config.Rarities")
+				local known = {}
+				for _, perso in Species.Personalities do
+					known[perso] = 0
+				end
+				-- la rareté de seuil est bien Légendaire dans Config/Rarities
+				local legendary = nil
+				for _, def in Rarities.List do
+					if def.key == "legendary" then
+						legendary = def.id
+					end
+				end
+				expect(legendary).toBe(Species.ProudMinRarity)
+				for _, def in Species.List do
+					expect({ key = def.key, known = known[def.perso] ~= nil }).toEqual({
+						key = def.key,
+						known = true,
+					})
+					known[def.perso] += 1
+					if def.perso == "proud" then
+						expect({ key = def.key, rare = def.rarity >= Species.ProudMinRarity }).toEqual({
+							key = def.key,
+							rare = true,
+						})
+					end
+				end
+				for perso, n in known do
+					expect({ perso = perso, enough = n >= 4 }).toEqual({ perso = perso, enough = true })
+				end
+			end
+		)
+
+		it("le serveur ne lit jamais la personnalité (affichage du client seulement, GDD §5.6)", function()
+			local fs = require("@lune/fs")
+			local offenders = {}
+			local function scan(dir)
+				for _, entry in fs.readDir(dir) do
+					local full = dir .. "/" .. entry
+					if fs.isDir(full) then
+						scan(full)
+					elseif string.find(entry, "%.luau$") then
+						local source = fs.readFile(full)
+						if
+							string.find(source, "%.perso%f[^%w_]")
+							or string.find(source, "Personalities", 1, true)
+						then
+							table.insert(offenders, full)
+						end
+					end
+				end
+			end
+			scan("src/server")
+			expect(offenders).toEqual({})
+		end)
+	end)
+
+	describe("Contrat v2 › Couleurs des suffixes des grands nombres (Config/Visuals, GDD §4.2)", function()
+		it("6 familles contiguës de K (1e3) à Tg (1e93), par pas de 3, 6 couleurs distinctes", function()
+			local h = Harness.new()
+			local Visuals = shared(h, "Config.Visuals")
+			local list = Visuals.SuffixColors
+			expect(#list).toBe(6)
+			expect(list[1].from).toBe(3)
+			expect(list[#list].to).toBe(93)
+			local seen = {}
+			for i, group in list do
+				expect({
+					i = i,
+					step = group.from % 3 == 0 and group.to % 3 == 0,
+					order = group.from <= group.to,
+				}).toEqual({
+					i = i,
+					step = true,
+					order = true,
+				})
+				if i > 1 then
+					expect({ i = i, contiguous = group.from == list[i - 1].to + 3 }).toEqual({
+						i = i,
+						contiguous = true,
+					})
+				end
+				local c = group.color
+				local id = string.format(
+					"%d,%d,%d",
+					math.round(c.R * 255),
+					math.round(c.G * 255),
+					math.round(c.B * 255)
+				)
+				expect({ i = i, unique = seen[id] == nil }).toEqual({ i = i, unique = true })
+				seen[id] = true
+			end
+			-- bornes du GDD : B-T or, Sx à Dc cyan (Sx et Sp dans la même famille), Ud à Nvd, Vg à Tg
+			expect({ list[2].from, list[2].to, list[4].from, list[4].to, list[5].from, list[5].to }).toEqual({
+				9,
+				12,
+				21,
+				33,
+				36,
+				60,
+			})
+		end)
+	end)
 end

@@ -1416,6 +1416,10 @@ export type RowsProps = {
 	rowHeight: number,
 	gap: number,
 	visibleRows: number?, -- défaut : hauteur / (rangée + écart)
+	-- px : si donné, le défilement pose le haut de la vue à (rangée × pas + snapOffset) depuis le
+	-- haut du contenu, c'est-à-dire dans un écart entre deux rangées ; avec une hauteur de liste de
+	-- k pas + snapOffset, aucun bord de la liste ne tranche une ligne de texte (Réglages)
+	snapOffset: number?,
 	makeRow: (frame: Frame, slot: number) -> any,
 	bindRow: (row: any, frame: Frame, index: number) -> (),
 	selectables: (row: any) -> { GuiObject },
@@ -1562,6 +1566,16 @@ function Widgets.rows(p: RowsProps): Rows
 				target = bottom - visible
 			end
 			target = math.clamp(target, 0, maxScroll())
+			local snap = p.snapOffset
+			if snap ~= nil and target > 1e-6 and target < maxScroll() - 1e-6 then
+				-- haut de la vue dans un écart entre deux rangées (arrondi dans le sens du défilement :
+				-- la rangée de marge reste entière)
+				local rowsFromTop = (target * stride - snap) / stride
+				local m = if target > scroll
+					then math.ceil(rowsFromTop - 1e-6)
+					else math.floor(rowsFromTop + 1e-6)
+				target = math.clamp((m * stride + snap) / stride, 0, maxScroll())
+			end
 			if math.abs(target - scroll) > 1e-6 then
 				scroll = target
 				applyScroll(true)

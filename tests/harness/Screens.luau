@@ -1530,6 +1530,22 @@ function Screens.groups()
 			open(c, "Settings")
 		end,
 	})
+	-- Objectifs › Accueil à mi-parcours (étapes faites ET à faire) : après les 11 étapes jouées plus
+	-- haut, l'onglet n'était montré que tout fait (revue de l'outil). En dernier : l'état de
+	-- l'accueil ainsi reculé ne touche aucun autre écran du groupe
+	table.insert(new, {
+		id = "panel.Objectives.onboarding.partial",
+		run = function(c)
+			closeAll(c)
+			c.h:fireClient(
+				REMOTES .. "DataPatch",
+				{ onboarding = { step = 5, done = false, demoDone = true } },
+				{}
+			)
+			frames(c, 3, 0.1)
+			open(c, "Objectives", "onboarding")
+		end,
+	})
 	table.insert(groups, { id = "new", state = "new", screens = new })
 
 	-- Milieu de partie : HUD dans chaque mode, chaque panneau et onglet, cartes, retour

@@ -39,6 +39,9 @@ local ROW_H = 96
 local ROW_GAP = 16
 local LIST_TOP = 16
 local NOTE_H = 56
+-- px : haut de la vue de la liste 12 px sous la fin d'une rangée (dans l'écart de 16 px), et
+-- hauteur de la liste = rangées entières + 12 (Widgets.rows snapOffset) : rien de tranché
+local SNAP = 12
 
 local nav: Nav? = nil
 local rows: Widgets.Rows? = nil
@@ -269,7 +272,14 @@ end
 -- Construit le contenu une seule fois dans le cadre du panneau
 function Settings.build(container: Frame)
 	local width = container.Size.X.Offset - 96
-	local height = container.Size.Y.Offset - LIST_TOP - NOTE_H - 32
+	-- hauteur = k rangées entières + SNAP : avec la marge de 24 px de Widgets.rows en haut et en bas
+	-- et le défilement calé sur les écarts (snapOffset), chaque bord de la liste tombe dans un écart
+	-- entre deux rangées, au départ, en descendant et en bout de liste. Avant : 660 px,
+	-- la 6e rangée entrouverte avait sa description tranchée à mi-hauteur (et son titre en fin de
+	-- liste) : du texte coupé, le défaut le plus visible pour le joueur (revue de l'outil d'écrans)
+	local available = container.Size.Y.Offset - LIST_TOP - NOTE_H - 32
+	local stride = ROW_H + ROW_GAP
+	local height = math.max(stride, math.floor((available - SNAP) / stride) * stride + SNAP)
 	rows = Widgets.rows({
 		parent = container,
 		name = "List",
@@ -277,6 +287,7 @@ function Settings.build(container: Frame)
 		position = UDim2.fromOffset(48, LIST_TOP),
 		rowHeight = ROW_H,
 		gap = ROW_GAP,
+		snapOffset = SNAP,
 		makeRow = makeRow,
 		bindRow = bindRow,
 		selectables = function(row: Row): { GuiObject }

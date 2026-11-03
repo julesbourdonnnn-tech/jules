@@ -453,4 +453,109 @@ return function(T)
 			end
 		end)
 	end)
+
+	describe("Contrat v2 › Disposition v2.0 (Config/Layout, GDD §10.2, §10.7)", function()
+		local function inside(a, b)
+			return a.x >= b.x and a.y >= b.y and a.x + a.w <= b.x + b.w and a.y + a.h <= b.y + b.h
+		end
+		-- recouvrement strict (deux bords qui se touchent ne se recouvrent pas)
+		local function overlap(a, b)
+			return a.x < b.x + b.w and b.x < a.x + a.w and a.y < b.y + b.h and b.y < a.y + a.h
+		end
+
+		it(
+			"écran Améliorations : zones 12 + 88 + 64 + 560 + 120 + 16 = 860, gabarits dans leur zone",
+			function()
+				local h = Harness.new()
+				local L = shared(h, "Config.Layout")
+				local U = L.Upgrades
+				local panel = L.Panel.rect
+				expect({ w = panel.w, h = panel.h }).toEqual({ w = 1440, h = 860 })
+				expect(U.Header.y).toBe(12)
+				expect(U.Tabs.y).toBe(U.Header.y + U.Header.h)
+				expect(U.Content.y).toBe(U.Tabs.y + U.Tabs.h)
+				expect(U.Detail.y).toBe(U.Content.y + U.Content.h)
+				expect(U.Detail.y + U.Detail.h + U.Bottom).toBe(panel.h)
+				local usable = panel.w - 2 * U.Margin
+				expect(usable).toBe(1376)
+				-- 3 cartes et 2 écarts dans la largeur utile, dans la hauteur du contenu
+				expect(3 * U.Card.w + 2 * U.Card.gap <= usable).toBe(true)
+				expect(U.Card.h <= U.Content.h).toBe(true)
+				-- lignes : pas de 128 pour 112, colonnes dans la ligne, sans recouvrement, de gauche à droite
+				expect(U.Row.w <= usable and U.Row.h <= U.Row.step).toBe(true)
+				local order = { "icon", "text", "level", "effect", "state" }
+				local right = 0
+				for _, name in order do
+					local c = U.Columns[name]
+					expect({ name = name, after = c.x >= right, fits = c.x + c.w <= U.Row.w }).toEqual({
+						name = name,
+						after = true,
+						fits = true,
+					})
+					right = c.x + c.w
+				end
+				-- tuile des aperçus : icône, titre sur 2 lignes et valeur dans 300 de haut avec les marges
+				local T = U.Tile
+				expect(T.margin * 2 + T.icon + T.title * T.titleLines + T.value <= T.h).toBe(true)
+				expect(3 * T.w <= usable).toBe(true)
+				-- en-tête : pastille Souvenir x 320-680, puis le groupe de droite sans la toucher
+				expect(U.Memory.x + U.Memory.w).toBe(680)
+				local group = U.Coins.w + U.Confetti.w + U.Mode.w + 2 * U.HeaderGap
+				expect(U.Memory.x + U.Memory.w + U.HeaderGap <= panel.w - U.Margin - group).toBe(true)
+				expect(U.MaxInstances).toBe(1400)
+				expect(U.Detail.lines).toBe(2)
+				expect(U.Detail.worstFactor).toBe(1.5)
+			end
+		)
+
+		it(
+			"HUD v2.0 : rail 8 × 80 (y 246-998), rectangles réels du GDD §10.2 dans la zone sûre, sans recouvrement",
+			function()
+				local h = Harness.new()
+				local L = shared(h, "Config.Layout")
+				local H = L.HudV2
+				local rail = H.Rail
+				expect(rail.y0 + rail.buttons * rail.size + (rail.buttons - 1) * rail.gap).toBe(rail.y1)
+				expect(H.Rects.rail).toEqual({ x = 96, y = rail.y0, w = rail.w, h = rail.y1 - rail.y0 })
+				expect(H.Rects.nextBuy).toEqual(H.NextBuy)
+				local names = {}
+				for name in H.Rects do
+					table.insert(names, name)
+				end
+				table.sort(names)
+				expect(#names).toBe(15)
+				local exclusive = {}
+				for _, pair in H.Exclusive do
+					expect(H.Rects[pair[1]] ~= nil and H.Rects[pair[2]] ~= nil).toBe(true)
+					exclusive[pair[1] .. "|" .. pair[2]] = true
+					exclusive[pair[2] .. "|" .. pair[1]] = true
+				end
+				local problems = {}
+				for i, a in names do
+					local ra = H.Rects[a]
+					if not inside(ra, L.Safe) then
+						table.insert(problems, a .. " hors de la zone sûre")
+					end
+					if overlap(ra, H.Center) then
+						table.insert(problems, a .. " dans le milieu de l'écran")
+					end
+					for j = i + 1, #names do
+						local b = names[j]
+						if not exclusive[a .. "|" .. b] and overlap(ra, H.Rects[b]) then
+							table.insert(problems, a .. " recouvre " .. b)
+						end
+					end
+				end
+				expect(problems).toEqual({})
+				-- les paires exclusives se recouvrent vraiment (sinon elles n'ont rien à faire dans la liste)
+				for _, pair in H.Exclusive do
+					expect({ pair = pair, overlap = overlap(H.Rects[pair[1]], H.Rects[pair[2]]) }).toEqual({
+						pair = pair,
+						overlap = true,
+					})
+				end
+				expect(H.CalmMax).toBe(8)
+			end
+		)
+	end)
 end

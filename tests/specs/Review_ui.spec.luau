@@ -17,6 +17,8 @@ local roblox = require("@lune/roblox")
 local Screens = require("../harness/Screens")
 local Layout = require("../harness/Layout")
 local Props = require("../harness/EngineProps")
+local Gamepad = require("../harness/Gamepad")
+local Enum = roblox.Enum
 
 local function prop(obj, name)
 	return Props.get(obj, name)
@@ -351,6 +353,60 @@ return function(T)
 		it("bouclier débutant affiché : jamais « 0′ »", function()
 			expect(shieldHolder ~= nil and shieldHolder.Visible).toBe(true)
 			expect(minutes ~= "0′").toBe(true)
+		end)
+		Harness.disposeAll()
+	end)
+
+	-- Réglages : la liste ne coupe jamais une ligne de texte en deux, ni en haut ni en bas, à aucune
+	-- position de défilement (rangée entrouverte « peek » de l'outil : la description de la 6e
+	-- rangée tranchée à mi-hauteur au départ, son titre en fin de liste)
+	describe("Revue UI › Réglages : aucune ligne de texte tranchée", function()
+		local ok, c = pcall(Screens.boot, Harness, profile, "fr", "mid")
+		if not ok then
+			it("démarrage du client", function()
+				error(c)
+			end)
+			return
+		end
+		Screens.open(c, "Settings")
+		local function sliced(step: number): { string }
+			Screens.layout(c)
+			local win = c.PC.window("Settings")
+			local list = win and win:FindFirstChild("List", true)
+			local out = {}
+			local box = list and Layout.rect(list)
+			if box == nil then
+				return { "liste introuvable" }
+			end
+			for _, d in list:GetDescendants() do
+				if d:IsA("TextLabel") and d.Text ~= "" and Layout.visible(d) then
+					local r = Layout.rect(d)
+					if r then
+						local top = math.max(r.y, box.y)
+						local bottom = math.min(r.y + r.h, box.y + box.h)
+						local shownH = bottom - top
+						-- une boîte de texte entamée de plus de 4 px (la ligne d'encre l'est aussi)
+						if shownH > 0 and shownH < r.h - 4 then
+							table.insert(
+								out,
+								string.format("pas %d : %s (%d / %d px)", step, d.Text, shownH, r.h)
+							)
+						end
+					end
+				end
+			end
+			return out
+		end
+		local bad = sliced(0)
+		for step = 1, 12 do
+			Gamepad.tap(c.h, Enum.KeyCode.DPadDown)
+			Screens.frames(c, 4, 0.2)
+			for _, line in sliced(step) do
+				table.insert(bad, line)
+			end
+		end
+		it("au départ, en descendant et en bout de liste", function()
+			expect(table.concat(bad, "\n")).toBe("")
 		end)
 		Harness.disposeAll()
 	end)

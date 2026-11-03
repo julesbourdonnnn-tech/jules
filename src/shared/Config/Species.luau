@@ -23,10 +23,17 @@
 --            "starSpeckles" | "creamBelly" | "lightScales" | "goldBelly" | "goldDrop" | "floatDrops"
 --   patternCount  nombre d'éléments du motif quand il en a (pépins 8, bosses 5, gouttes 2…)
 --   wobble   hz = fréquence du tremblement, amp = amplitude d'écrasement (0,08 = 8 %)
+--   perso    personnalité (GDD v2.0 §5.6) : "curious" | "sleepy" | "bouncy" | "cuddly" |
+--            "prankster" | "proud" ; « proud » est réservé aux raretés Légendaire et plus
+--            (Species.ProudMinRarity) ; lue par le client seulement (World/Personality, paquet B5,
+--            derrière Config/Features.Personalities) : aucune règle du serveur n'en dépend
 -- Champs réservés pour plus tard (GDD §5.1, §17.2) : release (Clock.unix() d'arrivée, 0 = dès le
 -- lancement), duo (janvier), recipe ("" = aucune ; janvier), limitedUntil et encore (février).
 
 export type FamilyKey = "jelly" | "kitty" | "froggy" | "axolo" | "bunny" | "spiky" | "secret"
+
+-- Personnalités (GDD v2.0 §5.6) : identifiants DÉFINITIFS, ordre de Species.Personalities
+export type Personality = "curious" | "sleepy" | "bouncy" | "cuddly" | "prankster" | "proud"
 
 export type SpeciesDef = {
 	id: number,
@@ -41,6 +48,7 @@ export type SpeciesDef = {
 	pattern: string,
 	patternCount: number,
 	wobble: { hz: number, amp: number },
+	perso: Personality,
 	release: number,
 	duo: boolean,
 	recipe: string,
@@ -81,7 +89,8 @@ local function row(
 	pattern: string,
 	patternCount: number,
 	hz: number,
-	amp: number
+	amp: number,
+	perso: Personality
 ): SpeciesDef
 	return {
 		id = id,
@@ -96,6 +105,7 @@ local function row(
 		pattern = pattern,
 		patternCount = patternCount,
 		wobble = { hz = hz, amp = amp },
+		perso = perso,
 		release = 0,
 		duo = false,
 		recipe = "",
@@ -108,38 +118,38 @@ end
 -- stylua: ignore start
 local List: { SpeciesDef } = {
 	-- Jelly
-	row(1, "plop", "Plop", "jelly", 1, { 1.0, 1.0, 1.0 }, "dropAntenna", "bigShiny", rgb(140, 220, 255), rgb(255, 255, 255), "lightBelly", 1, 1.0, 0.08),
-	row(2, "wibble", "Wibble", "jelly", 2, { 0.9, 1.2, 0.9 }, "caramelCap", "sleepy", rgb(255, 214, 140), rgb(170, 100, 50), "cap", 1, 1.4, 0.12),
-	row(3, "jiggleberry", "Jiggleberry", "jelly", 3, { 1.0, 1.05, 1.0 }, "leaf", "dots", rgb(240, 80, 120), rgb(120, 200, 90), "seeds", 8, 1.2, 0.10),
-	row(4, "grand_gloop", "Grand Gloop", "jelly", 5, { 1.3, 0.9, 1.3 }, "tinyCrown", "stars", rgb(120, 160, 255), rgb(255, 220, 120), "layers", 3, 0.7, 0.06),
+	row(1, "plop", "Plop", "jelly", 1, { 1.0, 1.0, 1.0 }, "dropAntenna", "bigShiny", rgb(140, 220, 255), rgb(255, 255, 255), "lightBelly", 1, 1.0, 0.08, "curious"),
+	row(2, "wibble", "Wibble", "jelly", 2, { 0.9, 1.2, 0.9 }, "caramelCap", "sleepy", rgb(255, 214, 140), rgb(170, 100, 50), "cap", 1, 1.4, 0.12, "sleepy"),
+	row(3, "jiggleberry", "Jiggleberry", "jelly", 3, { 1.0, 1.05, 1.0 }, "leaf", "dots", rgb(240, 80, 120), rgb(120, 200, 90), "seeds", 8, 1.2, 0.10, "prankster"),
+	row(4, "grand_gloop", "Grand Gloop", "jelly", 5, { 1.3, 0.9, 1.3 }, "tinyCrown", "stars", rgb(120, 160, 255), rgb(255, 220, 120), "layers", 3, 0.7, 0.06, "proud"),
 	-- Kitty
-	row(5, "mochi_mew", "Mochi Mew", "kitty", 1, { 1.05, 0.95, 1.0 }, "catEars", "dots", rgb(250, 245, 240), rgb(255, 180, 200), "innerEars", 2, 1.1, 0.08),
-	row(6, "purrpudding", "Purrpudding", "kitty", 2, { 1.0, 1.0, 1.0 }, "catEars", "happyClosed", rgb(255, 170, 90), rgb(200, 110, 50), "tigerStripes", 3, 1.2, 0.10),
-	row(7, "whiskerwob", "Whiskerwob", "kitty", 4, { 0.95, 1.1, 0.95 }, "catEarsWhiskers", "stars", rgb(190, 150, 255), rgb(255, 240, 255), "spiralTail", 1, 1.0, 0.09),
-	row(8, "blossompurr", "Blossompurr", "kitty", 6, { 1.0, 1.0, 1.0 }, "catEarsFlowers", "hearts", rgb(255, 170, 210), rgb(255, 255, 255), "petals", 3, 0.9, 0.07),
+	row(5, "mochi_mew", "Mochi Mew", "kitty", 1, { 1.05, 0.95, 1.0 }, "catEars", "dots", rgb(250, 245, 240), rgb(255, 180, 200), "innerEars", 2, 1.1, 0.08, "cuddly"),
+	row(6, "purrpudding", "Purrpudding", "kitty", 2, { 1.0, 1.0, 1.0 }, "catEars", "happyClosed", rgb(255, 170, 90), rgb(200, 110, 50), "tigerStripes", 3, 1.2, 0.10, "sleepy"),
+	row(7, "whiskerwob", "Whiskerwob", "kitty", 4, { 0.95, 1.1, 0.95 }, "catEarsWhiskers", "stars", rgb(190, 150, 255), rgb(255, 240, 255), "spiralTail", 1, 1.0, 0.09, "curious"),
+	row(8, "blossompurr", "Blossompurr", "kitty", 6, { 1.0, 1.0, 1.0 }, "catEarsFlowers", "hearts", rgb(255, 170, 210), rgb(255, 255, 255), "petals", 3, 0.9, 0.07, "proud"),
 	-- Froggy
-	row(9, "ribbit_drop", "Ribbit Drop", "froggy", 1, { 1.1, 0.9, 1.0 }, "bugEyes", "bulgy", rgb(120, 210, 110), rgb(230, 250, 180), "lightBelly", 1, 1.3, 0.10),
-	row(10, "lilypuff", "Lilypuff", "froggy", 2, { 1.1, 0.85, 1.1 }, "bugEyesLily", "bulgy", rgb(90, 200, 190), rgb(140, 230, 120), "pondSpots", 4, 1.1, 0.09),
-	row(11, "croakaroo", "Croakaroo", "froggy", 3, { 0.9, 1.15, 0.9 }, "bugEyes", "bulgyWink", rgb(255, 220, 80), rgb(255, 140, 60), "orangeSpots", 4, 1.5, 0.12),
-	row(12, "boingtoad", "Boingtoad", "froggy", 4, { 1.0, 1.0, 1.0 }, "bugEyesSpring", "stars", rgb(160, 110, 230), rgb(255, 230, 120), "starSpots", 3, 2.0, 0.18),
+	row(9, "ribbit_drop", "Ribbit Drop", "froggy", 1, { 1.1, 0.9, 1.0 }, "bugEyes", "bulgy", rgb(120, 210, 110), rgb(230, 250, 180), "lightBelly", 1, 1.3, 0.10, "bouncy"),
+	row(10, "lilypuff", "Lilypuff", "froggy", 2, { 1.1, 0.85, 1.1 }, "bugEyesLily", "bulgy", rgb(90, 200, 190), rgb(140, 230, 120), "pondSpots", 4, 1.1, 0.09, "sleepy"),
+	row(11, "croakaroo", "Croakaroo", "froggy", 3, { 0.9, 1.15, 0.9 }, "bugEyes", "bulgyWink", rgb(255, 220, 80), rgb(255, 140, 60), "orangeSpots", 4, 1.5, 0.12, "prankster"),
+	row(12, "boingtoad", "Boingtoad", "froggy", 4, { 1.0, 1.0, 1.0 }, "bugEyesSpring", "stars", rgb(160, 110, 230), rgb(255, 230, 120), "starSpots", 3, 2.0, 0.18, "bouncy"),
 	-- Axolo
-	row(13, "frillo", "Frillo", "axolo", 1, { 1.1, 0.9, 1.15 }, "frill", "dots", rgb(255, 175, 200), rgb(255, 110, 150), "none", 0, 1.0, 0.08),
-	row(14, "gillygum", "Gillygum", "axolo", 2, { 1.1, 0.9, 1.15 }, "bubbleFrill", "shiny", rgb(150, 170, 255), rgb(255, 140, 220), "bubbles", 3, 1.1, 0.09),
-	row(15, "lotlolly", "Lotlolly", "axolo", 4, { 1.0, 1.0, 1.1 }, "frill", "wink", rgb(255, 200, 120), rgb(120, 220, 255), "lollipopSpiral", 1, 1.0, 0.09),
-	row(16, "coralotl", "Coralotl", "axolo", 5, { 1.15, 1.0, 1.2 }, "coralCrown", "shiny", rgb(255, 120, 100), rgb(255, 230, 200), "reefBumps", 5, 0.8, 0.07),
+	row(13, "frillo", "Frillo", "axolo", 1, { 1.1, 0.9, 1.15 }, "frill", "dots", rgb(255, 175, 200), rgb(255, 110, 150), "none", 0, 1.0, 0.08, "cuddly"),
+	row(14, "gillygum", "Gillygum", "axolo", 2, { 1.1, 0.9, 1.15 }, "bubbleFrill", "shiny", rgb(150, 170, 255), rgb(255, 140, 220), "bubbles", 3, 1.1, 0.09, "prankster"),
+	row(15, "lotlolly", "Lotlolly", "axolo", 4, { 1.0, 1.0, 1.1 }, "frill", "wink", rgb(255, 200, 120), rgb(120, 220, 255), "lollipopSpiral", 1, 1.0, 0.09, "curious"),
+	row(16, "coralotl", "Coralotl", "axolo", 5, { 1.15, 1.0, 1.2 }, "coralCrown", "shiny", rgb(255, 120, 100), rgb(255, 230, 200), "reefBumps", 5, 0.8, 0.07, "proud"),
 	-- Bunny
-	row(17, "bunbun", "Bunbun", "bunny", 1, { 1.0, 1.0, 1.0 }, "floppyEars", "dots", rgb(255, 240, 210), rgb(255, 190, 200), "pinkNose", 1, 1.2, 0.09),
-	row(18, "hopscotch", "Hopscotch", "bunny", 2, { 0.95, 1.05, 0.95 }, "oddEars", "sleepy", rgb(180, 195, 220), rgb(255, 255, 255), "whiteSocks", 2, 1.4, 0.11),
-	row(19, "clover_hop", "Clover Hop", "bunny", 3, { 1.0, 1.0, 1.0 }, "earsClover", "shiny", rgb(160, 230, 170), rgb(90, 170, 90), "cloverBelly", 1, 1.3, 0.10),
-	row(20, "moonhop", "Moonhop", "bunny", 4, { 1.0, 1.05, 1.0 }, "crescentEars", "stars", rgb(60, 70, 140), rgb(255, 240, 160), "starSpeckles", 6, 1.0, 0.09),
+	row(17, "bunbun", "Bunbun", "bunny", 1, { 1.0, 1.0, 1.0 }, "floppyEars", "dots", rgb(255, 240, 210), rgb(255, 190, 200), "pinkNose", 1, 1.2, 0.09, "cuddly"),
+	row(18, "hopscotch", "Hopscotch", "bunny", 2, { 0.95, 1.05, 0.95 }, "oddEars", "sleepy", rgb(180, 195, 220), rgb(255, 255, 255), "whiteSocks", 2, 1.4, 0.11, "sleepy"),
+	row(19, "clover_hop", "Clover Hop", "bunny", 3, { 1.0, 1.0, 1.0 }, "earsClover", "shiny", rgb(160, 230, 170), rgb(90, 170, 90), "cloverBelly", 1, 1.3, 0.10, "bouncy"),
+	row(20, "moonhop", "Moonhop", "bunny", 4, { 1.0, 1.05, 1.0 }, "crescentEars", "stars", rgb(60, 70, 140), rgb(255, 240, 160), "starSpeckles", 6, 1.0, 0.09, "curious"),
 	-- Spiky
-	row(21, "nubbin", "Nubbin", "spiky", 1, { 1.05, 0.95, 1.05 }, "softBumps", "dots", rgb(255, 200, 160), rgb(255, 150, 120), "none", 3, 1.1, 0.08),
-	row(22, "prickle_puff", "Prickle Puff", "spiky", 2, { 1.0, 1.0, 1.0 }, "softSpikes", "shiny", rgb(200, 150, 110), rgb(255, 230, 200), "creamBelly", 7, 1.2, 0.10),
-	row(23, "drago_drop", "Drago Drop", "spiky", 4, { 1.0, 1.0, 1.05 }, "wingsHorns", "stars", rgb(130, 200, 255), rgb(255, 255, 255), "lightScales", 1, 1.0, 0.09),
-	row(24, "emberwob", "Emberwob", "spiky", 5, { 1.1, 1.05, 1.1 }, "flameCrest", "shiny", rgb(255, 130, 60), rgb(255, 220, 120), "goldBelly", 1, 0.9, 0.07),
+	row(21, "nubbin", "Nubbin", "spiky", 1, { 1.05, 0.95, 1.05 }, "softBumps", "dots", rgb(255, 200, 160), rgb(255, 150, 120), "none", 3, 1.1, 0.08, "bouncy"),
+	row(22, "prickle_puff", "Prickle Puff", "spiky", 2, { 1.0, 1.0, 1.0 }, "softSpikes", "shiny", rgb(200, 150, 110), rgb(255, 230, 200), "creamBelly", 7, 1.2, 0.10, "cuddly"),
+	row(23, "drago_drop", "Drago Drop", "spiky", 4, { 1.0, 1.0, 1.05 }, "wingsHorns", "stars", rgb(130, 200, 255), rgb(255, 255, 255), "lightScales", 1, 1.0, 0.09, "prankster"),
+	row(24, "emberwob", "Emberwob", "spiky", 5, { 1.1, 1.05, 1.1 }, "flameCrest", "shiny", rgb(255, 130, 60), rgb(255, 220, 120), "goldBelly", 1, 0.9, 0.07, "proud"),
 	-- Secrets (sans famille)
-	row(25, "royal_plop", "Royal Plop", "secret", 7, { 1.05, 1.05, 1.05 }, "crownCape", "sparkle", rgb(140, 220, 255), rgb(255, 210, 80), "goldDrop", 1, 1.0, 0.08),
-	row(26, "moonplop", "Moonplop", "secret", 7, { 1.0, 1.0, 1.0 }, "crescentAntenna", "threeEyes", rgb(210, 220, 255), rgb(150, 130, 255), "floatDrops", 2, 0.8, 0.07),
+	row(25, "royal_plop", "Royal Plop", "secret", 7, { 1.05, 1.05, 1.05 }, "crownCape", "sparkle", rgb(140, 220, 255), rgb(255, 210, 80), "goldDrop", 1, 1.0, 0.08, "proud"),
+	row(26, "moonplop", "Moonplop", "secret", 7, { 1.0, 1.0, 1.0 }, "crescentAntenna", "threeEyes", rgb(210, 220, 255), rgb(150, 130, 255), "floatDrops", 2, 0.8, 0.07, "curious"),
 }
 -- stylua: ignore end
 
@@ -227,6 +237,10 @@ local Species = {
 	MOON = 26,
 	PLOP = 1,
 	MOCHI_MEW = 5,
+	-- Contrat v2.0 (GDD §5.6) : les 6 personnalités, dans l'ordre du GDD (identifiants définitifs) ;
+	-- « proud » seulement à partir de cette rareté (Config/Rarities : 5 Légendaire, 6 Mythique, 7 Secret)
+	Personalities = { "curious", "sleepy", "bouncy", "cuddly", "prankster", "proud" } :: { Personality },
+	ProudMinRarity = 5,
 	-- OBSOLÈTE (contrat v1.2, GDD §5.1) : la rotation du MEGA indexe la liste des espèces PUBLIÉES et non
 	-- secrètes à l'instant t, triées par id (EventClock.megaSpecies, MegaRules.species) avec
 	-- (semaine + numéro du MEGA) mod #liste, jamais mod 24 ; lu par MegaRules jusqu'à la note logic

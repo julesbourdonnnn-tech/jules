@@ -1180,6 +1180,22 @@
         }
       }
     }
+    // texte d'un écran tranché par le fond opaque d'un AUTRE écran dessiné au-dessus (pastille des
+    // pièces coupée par le bord haut d'un panneau, puce d'action sous une carte) : ni caché ni
+    // entier, des lettres coupées (revue de l'outil ; `clipped` ne voit que la découpe d'un parent)
+    for (const e of shownTexts) {
+      const vis = inter(e.ink, clipRect(e.n));
+      const a = area(vis);
+      if (a < 16) continue;
+      let hidden = 0;
+      for (const o of opaque) {
+        if (o.draw <= e.draw || o.n.g === e.n.g || o.n.deco) continue;
+        hidden = Math.max(hidden, area(inter(o.r, vis)));
+      }
+      const frac = hidden / a;
+      if (frac > 0.08 && frac < 0.92)
+        add('occluded', e.n, `texte coupé à ${Math.round(frac * 100)} % par un autre écran dessiné au-dessus`, { rect: R(vis) });
+    }
     // fond plein (≤ 50 % transparent) qui porte du texte mais que la Transparency de son UIGradient
     // rend transparent par endroits : le HUD et le rail dessous transparaissent (« GRAND SPLORCH ! »
     // fantôme derrière les cases d'un panneau ; revue de l'outil)
