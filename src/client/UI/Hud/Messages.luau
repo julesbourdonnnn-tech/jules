@@ -18,6 +18,7 @@ local Layout = require(Shared.Config.Layout)
 local Client = script.Parent.Parent.Parent
 local Toast = require(Client.UI.Toast)
 local Util = require(Client.UI.Hud.Util)
+local Format = require(Client.UI.Format)
 
 local Messages = {}
 
@@ -49,7 +50,7 @@ end
 local function display(item: Item)
 	local text = item.text
 	if item.count > 1 then
-		text = text .. " ×" .. tostring(item.count)
+		text = text .. " ×" .. Format.count(item.count)
 	end
 	Toast.TopY = Messages.TopY
 	Util.safe("Toast.show", nil, Toast.show, text, item.kind)

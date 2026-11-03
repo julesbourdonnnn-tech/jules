@@ -61,6 +61,8 @@ local WorldStateController = require(Client.Controllers.WorldStateController)
 local PromptController = require(Client.Controllers.PromptController)
 local ChaseController = require(Client.Controllers.ChaseController)
 local FocusGuard = require(Client.UI.FocusGuard)
+local Text = require(Client.UI.Text)
+local Format = require(Client.UI.Format)
 local Cards = require(Client.UI.Cards)
 local PanelController = require(Client.UI.PanelController)
 local Util = require(Client.UI.Hud.Util)
@@ -133,7 +135,7 @@ local function setText(name: string, label: TextLabel?, text: string)
 	end
 	if texts[name] ~= text then
 		texts[name] = text
-		label.Text = text
+		Text.raw(label, text)
 	end
 end
 
@@ -231,7 +233,7 @@ local function slotFrame(name: string, button: boolean?): GuiObject
 	local obj: GuiObject
 	if button then
 		local b = Instance.new("TextButton")
-		b.Text = ""
+		Text.raw(b, "")
 		b.AutoButtonColor = false
 		b.Selectable = false -- jamais la sélection de la manette (le stick fait marcher)
 		b.BackgroundColor3 = Theme.Colors.Panel
@@ -330,6 +332,9 @@ local function buildMenuChip()
 		text = menuWord(),
 		textSize = C.menuChip.text,
 		align = Enum.TextXAlignment.Left,
+		-- « MENU » à 40 px mesure 97 px pour une boîte de 96 : l'ancien TextScaled le dessinait à 39
+		-- (UI/Text, sorte "fit" : même image ; libellé redessiné par le lot B2, N18)
+		fit = true,
 	})
 	local bang = circle("Bang", b, 36, Theme.Colors.Danger, UDim2.new(0, 174, 0.5, 0), Vector2.new(0, 0.5))
 	bang.Visible = false
@@ -804,7 +809,7 @@ end
 
 local function updateFame()
 	setText("fame", refs.fameText, "★ " .. Util.big(Util.num(State.get("fame"), 0, 0)))
-	setText("friends", refs.friendsText, "♥ " .. tostring(friendsCount()))
+	setText("friends", refs.friendsText, "♥ " .. Format.count(friendsCount()))
 end
 
 local function computeBadges()
@@ -1034,14 +1039,14 @@ local function updateStatus(now: number)
 		refs.statusMin_shield,
 		-- au moins « 1′ » tant que le serveur dit le bouclier actif (le temps de jeu local peut déjà
 		-- dépasser la limite avant que le ranch suivant arrive : jamais « 0′ » sous un indicateur visible)
-		if shield then tostring(math.max(1, math.ceil(shieldLeft / 60))) .. "′" else ""
+		if shield then Format.count(math.max(1, math.ceil(shieldLeft / 60))) .. "′" else ""
 	)
 	local boost, left = boostActive(now)
 	setVisible(holders.boost, boost)
 	setText(
 		"statusMin_boost",
 		refs.statusMin_boost,
-		if boost then tostring(math.ceil(left / 60)) .. "′" else ""
+		if boost then Format.count(math.ceil(left / 60)) .. "′" else ""
 	)
 	local rush = if type(ranch) == "table"
 		then ranch.mode == "rush"

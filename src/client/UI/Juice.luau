@@ -225,8 +225,19 @@ function Juice.shake(gui: GuiObject)
 	end)
 end
 
--- Compteur qui défile de `from` à `to` ; une nouvelle valeur annule la précédente
+-- Compteur qui défile de `from` à `to` ; une nouvelle valeur annule la précédente. Le texte passe
+-- par UI/Text (seul écrivain de .Text) et UI/Format ; requis à la première utilisation (UI/Text
+-- requiert Util/Prefs, qui requiert ce module)
 local counting: { [TextLabel]: number } = setmetatable({}, { __mode = "k" }) :: any
+local TextModule: any = nil
+local FormatModule: any = nil
+local function textModules(): (any, any)
+	if TextModule == nil then
+		TextModule = require(script.Parent.Text) :: any
+		FormatModule = require(script.Parent.Format) :: any
+	end
+	return TextModule, FormatModule
+end
 function Juice.countTo(
 	label: TextLabel,
 	from: number,
@@ -234,14 +245,15 @@ function Juice.countTo(
 	duration: number?,
 	format: ((number) -> string)?
 )
+	local Text, Format = textModules()
 	local fmt = format or function(n: number): string
-		return tostring(math.floor(n))
+		return Format.count(n)
 	end
 	local token = (counting[label] or 0) + 1
 	counting[label] = token
 	local total = duration or 0.4
 	if from == to or Juice.reducedMotion() then
-		label.Text = fmt(to)
+		Text.raw(label, fmt(to))
 		return
 	end
 	task.spawn(function()
@@ -249,7 +261,7 @@ function Juice.countTo(
 		while counting[label] == token do
 			local alpha = math.min(1, (os.clock() - start) / total)
 			local eased = 1 - (1 - alpha) ^ 3
-			label.Text = fmt(from + (to - from) * eased)
+			Text.raw(label, fmt(from + (to - from) * eased))
 			if alpha >= 1 then
 				break
 			end

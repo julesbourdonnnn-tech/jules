@@ -760,7 +760,8 @@ local PANEL_TABS = {
 	{ "SplorchPreview", { "" } },
 	-- identifiants de Config/Cosmetics (« crown » n'existait pas : l'Aperçu restait sur le Pull)
 	{ "OutfitPreview", { "sweater", "jellyCrown", "winterScarf", "plopBib" } },
-	{ "Diagnostics", { "server", "client", "today", "tools" } },
+	-- « probe » : panneau TextProbe (lot B1), photographié sur la PS5
+	{ "Diagnostics", { "server", "client", "today", "tools", "probe" } },
 }
 Screens.PANEL_TABS = PANEL_TABS
 
@@ -2041,6 +2042,11 @@ function Screens.keyBoxes(c)
 	for _, obj in objs do
 		local d = TextFit.layout(obj)
 		local set = if d and d.text ~= "" then Screens.keysOf(c, d.text) else nil
+		-- texte "fit" de UI/Text (lot B1) : le jeu reprend la règle de l'ancien TextScaled pour chaque
+		-- texte posé (plus grande taille entière de [TextFitMin, TextFitMax] qui tient) ; toute clé est
+		-- donc mesurée dans la boîte avec cette règle, pas à la taille relevée pour le texte affiché
+		local fitMin, fitMax = obj:GetAttribute("TextFitMin"), obj:GetAttribute("TextFitMax")
+		local fit = type(fitMin) == "number" and type(fitMax) == "number"
 		for key, vars in set or {} do
 			do
 				local truncate = EngineProps.get(obj, "TextTruncate")
@@ -2053,12 +2059,12 @@ function Screens.keyBoxes(c)
 						h = d.boxH,
 						k = d.k,
 						font = d.font,
-						scaled = d.scaled,
+						scaled = d.scaled or fit,
 						wrapped = d.wrapped,
-						minS = d.minSize,
-						maxS = d.maxSize,
+						minS = if fit then fitMin else d.minSize,
+						maxS = if fit then fitMax else d.maxSize,
 						lh = EngineProps.get(obj, "LineHeight") or 1,
-						size = if d.scaled then nil else d.size,
+						size = if d.scaled or fit then nil else d.size,
 						trunc = if truncate then truncate.Name else "None",
 						deco = d.decorative,
 					},

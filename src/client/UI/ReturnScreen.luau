@@ -22,6 +22,7 @@ local FocusGuard = require(Client.UI.FocusGuard)
 local Prefs = require(Client.Util.Prefs)
 local AudioController = require(Client.Controllers.AudioController)
 local Widgets = require(Client.UI.Panels.Widgets)
+local Format = require(Client.UI.Format)
 
 local ReturnScreen = {}
 
@@ -51,7 +52,7 @@ local function awayText(seconds: number): string
 	local h = s // 3600
 	local m = (s % 3600) // 60
 	if h > 0 then
-		return string.format("%d h %02d", h, m)
+		return Format.hoursMinutes(s, Prefs.language())
 	end
 	return Prefs.t("common.minutes", { n = math.max(1, m) })
 end

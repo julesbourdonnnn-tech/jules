@@ -36,6 +36,7 @@ local State = require(Client.Controllers.StateController)
 local WorldStateController = require(Client.Controllers.WorldStateController)
 local PromptController = require(Client.Controllers.PromptController)
 local WorldText = require(Client.UI.WorldText)
+local Format = require(Client.UI.Format)
 local Util = require(Client.UI.Hud.Util)
 
 local Prompt = {}
@@ -256,7 +257,7 @@ local function linesFor(target: { [string]: any }): { Line }
 end
 
 local function applyLine(gui: BillboardGui, line: Line, size: number, glyphSize: number)
-	local key = line.key .. "|" .. tostring(line.binding.gamepad) .. "|" .. size
+	local key = Format.key(line.key, line.binding.gamepad, size)
 	if lineKeys[gui] ~= key then
 		lineKeys[gui] = key
 		WorldText.setTextSize(gui, size)
@@ -340,7 +341,7 @@ local function step(now: number)
 		secondG.Enabled = false
 	end
 	-- nouvelle cible : petit fondu d'apparition du mot (pas en Mouvement réduit)
-	local targetKey = tostring(target.kind) .. ":" .. tostring(target.slot) .. ":" .. tostring(target.uid)
+	local targetKey = Format.key(target.kind, target.slot, target.uid)
 	if targetKey ~= lastTargetKey then
 		lastTargetKey = targetKey
 		if not Prefs.reducedMotion() then

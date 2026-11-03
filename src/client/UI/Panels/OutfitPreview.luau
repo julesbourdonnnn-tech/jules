@@ -22,6 +22,7 @@ local Clock = require(Shared.Util.Clock)
 
 local Client = script.Parent.Parent.Parent
 local Juice = require(Client.UI.Juice)
+local Format = require(Client.UI.Format)
 local Widgets = require(script.Parent.Widgets)
 
 type Nav = { open: (panel: string, tab: string?) -> (), back: () -> () }
@@ -129,9 +130,9 @@ end
 local function lookKey(uid: string?): string
 	local rec = if uid then squishies()[uid] else nil
 	if type(rec) ~= "table" then
-		return tostring(uid)
+		return Format.key(uid)
 	end
-	return `{uid}:{tostring(rec.s)}:{tostring(rec.m)}:{tostring(rec.st)}`
+	return Format.key(uid, rec.s, rec.m, rec.st)
 end
 
 local function buildModel()

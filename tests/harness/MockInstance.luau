@@ -324,7 +324,6 @@ local function defaultsFor(className: string): { [string]: any }
 		d.Font = Enum.Font.SourceSans
 		d.TextXAlignment = Enum.TextXAlignment.Center
 		d.TextYAlignment = Enum.TextYAlignment.Center
-		d.TextBounds = Vector2.new(50, 14)
 	end
 	if className == "ImageLabel" or className == "ImageButton" then
 		d.Image = ""
@@ -982,6 +981,54 @@ MockInstance.Methods = Methods
 -- Méthodes spécifiques injectées par Services.luau (ex. Players:GetPlayers)
 MockInstance.classMethods = {} :: { [string]: { [string]: any } }
 
+-- Moteur de texte simulé (lot B1, docs/04 §27.13 N10 ; Text_policy.spec) : TextBounds d'un texte
+-- calculé à la lecture depuis TextSize, le facteur de la taille de texte choisie par le joueur
+-- (GuiService.PreferredTextSize : `factor`, 1 à Medium) et la contrainte UITextSizeConstraint :
+--   * constraint = "respected" : comme la documentation de Roblox, un texte contraint n'est jamais
+--     agrandi au-delà de MaxTextSize (ni réduit sous MinTextSize) ;
+--   * constraint = "ignored" : le moteur agrandit quand même (comportement jamais mesuré sur la PS5,
+--     que UI/Text doit compenser).
+-- Un texte TextScaled n'est pas agrandi (documentation de PreferredTextSize). Largeur approchée
+-- (0,5 × taille par caractère, comme TextService:GetTextSize du harnais) ; hauteur exacte : lignes
+-- (« \n ») × taille rendue. Défaut : facteur 1 (Medium).
+MockInstance.textEngine = { factor = 1, constraint = "respected" }
+
+local TEXT_CLASSES = { TextLabel = true, TextButton = true, TextBox = true }
+
+function MockInstance.renderedTextSize(inst): number
+	local st = inst[STATE]
+	local props = st.props
+	local size = props.TextSize or 14
+	if props.TextScaled == true then
+		return size
+	end
+	local engine = MockInstance.textEngine
+	local rendered = size * (engine.factor or 1)
+	if engine.constraint ~= "ignored" then
+		for _, c in st.children do
+			local cst = c[STATE]
+			if cst.ClassName == "UITextSizeConstraint" then
+				local lo = cst.props.MinTextSize or 1
+				local hi = cst.props.MaxTextSize or 100
+				rendered = math.clamp(rendered, lo, math.max(lo, hi))
+				break
+			end
+		end
+	end
+	return rendered
+end
+
+local function textBounds(inst)
+	local st = inst[STATE]
+	local text = st.props.Text or ""
+	local size = MockInstance.renderedTextSize(inst)
+	local lines = 1
+	for _ in string.gmatch(text, "\n") do
+		lines += 1
+	end
+	return Vector2.new((utf8.len(text) or #text) * size * 0.5, if text == "" then 0 else lines * size)
+end
+
 MT.__index = function(self, key)
 	local st = self[STATE]
 	if key == "ClassName" then
@@ -990,6 +1037,8 @@ MT.__index = function(self, key)
 		return st.Name
 	elseif key == "Parent" then
 		return st.Parent
+	elseif key == "TextBounds" and TEXT_CLASSES[st.ClassName] then
+		return textBounds(self)
 	end
 	local cm = MockInstance.classMethods[st.ClassName]
 	if cm and cm[key] ~= nil then

@@ -563,6 +563,16 @@ Strings.en = {
 	["panel.diag.tools.photo"] = "Photo mode",
 	["panel.diag.tools.party"] = "Admin party",
 	["panel.diag.tools.studioOnly"] = "Studio only",
+	-- Panneau TextProbe (lot B1, GDD v2.0 §10.1 (2)) : photographié sur la PS5 par le propriétaire
+	["panel.diag.tab.probe"] = "Text",
+	["panel.diag.probe.state"] = "Text Size: {size}",
+	["panel.diag.probe.factors"] = "free ×{free} · bound ×{bound} · screen ×{scale}",
+	["panel.diag.probe.howto"] = "Take one photo of the whole TV for each of the 4 Roblox Text Size settings (Settings menu). Keep this tab open.",
+	["panel.diag.probe.free"] = "{px} px · free",
+	["panel.diag.probe.bound"] = "{px} px · bound",
+	["panel.diag.probe.bounds"] = "{w} × {h} px",
+	["panel.diag.probe.factor"] = "×{f}",
+	["panel.diag.probe.compensation"] = "Game labels compensated: ×{c}",
 	-- Écran de retour (GDD §7.2)
 	["return.title"] = "Welcome back!",
 	["return.away"] = "While you were away ({time}):",
@@ -1801,6 +1811,16 @@ Strings.fr = {
 	["panel.diag.tools.photo"] = "Mode photo",
 	["panel.diag.tools.party"] = "Fête d'administrateur",
 	["panel.diag.tools.studioOnly"] = "Studio seulement",
+	-- Panneau TextProbe (lot B1, GDD v2.0 §10.1 (2)) : photographié sur la PS5 par le propriétaire
+	["panel.diag.tab.probe"] = "Texte",
+	["panel.diag.probe.state"] = "Taille du texte : {size}",
+	["panel.diag.probe.factors"] = "libre ×{free} · borné ×{bound} · écran ×{scale}",
+	["panel.diag.probe.howto"] = "Prends une photo de toute la télé pour chacun des 4 réglages Taille du texte de Roblox (menu Paramètres). Garde cet onglet ouvert.",
+	["panel.diag.probe.free"] = "{px} px · libre",
+	["panel.diag.probe.bound"] = "{px} px · borné",
+	["panel.diag.probe.bounds"] = "{w} × {h} px",
+	["panel.diag.probe.factor"] = "×{f}",
+	["panel.diag.probe.compensation"] = "Libellés du jeu compensés : ×{c}",
 	-- Écran de retour (GDD §7.2)
 	["return.title"] = "Te revoilà !",
 	["return.away"] = "Pendant ton absence ({time}) :",

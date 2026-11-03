@@ -31,6 +31,7 @@ local Client = script.Parent.Parent
 local Root = require(Client.UI.Root)
 local Theme = require(Client.UI.Theme)
 local Juice = require(Client.UI.Juice)
+local Text = require(Client.UI.Text)
 local Prefs = require(Client.Util.Prefs)
 local AudioController = require(Client.Controllers.AudioController)
 local WorldStateController = require(Client.Controllers.WorldStateController)
@@ -154,6 +155,9 @@ local function build()
 		textSize = CONTENT.bannerTitle,
 		font = Font.fromEnum(Enum.Font.LuckiestGuy),
 		zIndex = 22,
+		-- titre de longueur libre (nom d'un joueur de 20 caractères, espèce, mutation) : plus grande
+		-- taille qui tient sur la ligne, comme l'ancien TextScaled (UI/Text, sorte "fit")
+		fit = true,
 	})
 	lineLabel = Util.label({
 		name = "Line",
@@ -223,8 +227,8 @@ local function showEntry(entry: Entry, now: number)
 	Messages.hold("banner", true)
 	local title = titleLabel :: TextLabel
 	local line = lineLabel :: TextLabel
-	title.Text = entry.title
-	line.Text = if entry.lineUntil > 0 then Util.clock(entry.lineUntil - now) else entry.line
+	Text.raw(title, entry.title)
+	Text.raw(line, if entry.lineUntil > 0 then Util.clock(entry.lineUntil - now) else entry.line)
 	line.Visible = entry.line ~= "" or entry.lineUntil > 0
 	if accentBar then
 		accentBar.BackgroundColor3 = ACCENTS[entry.kind] or Theme.Colors.Gold
@@ -256,7 +260,7 @@ local function step(now: number)
 	local cur = current
 	if cur ~= nil then
 		if cur.lineUntil > 0 and lineLabel then
-			lineLabel.Text = Util.clock(cur.lineUntil - now)
+			Text.raw(lineLabel, Util.clock(cur.lineUntil - now))
 		end
 		if now >= currentUntil or now < currentUntil - CFG.Duration - 1 then
 			hideCurrent()

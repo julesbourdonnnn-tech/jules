@@ -18,6 +18,7 @@ local Root = require(script.Parent.Root)
 local Theme = require(script.Parent.Theme)
 local Create = require(script.Parent.Create)
 local Juice = require(script.Parent.Juice)
+local Text = require(script.Parent.Text)
 
 local MAX_VISIBLE = 3
 
@@ -129,19 +130,20 @@ function Toast.show(text: string, kind: string?)
 	}, {
 		Create("UICorner", { CornerRadius = Theme.Corner }),
 		Create("UIStroke", { Color = accent, Thickness = Theme.StrokeThickness }),
-		Create("TextLabel", {
-			Name = "Label",
-			BackgroundTransparency = 1,
-			Size = UDim2.new(1, -36, 1, 0),
-			Position = UDim2.fromOffset(18, 0),
-			FontFace = Theme.Fonts.Body,
-			Text = text,
-			TextColor3 = Theme.Colors.Text,
-			TextScaled = true,
-		}, {
-			Create("UITextSizeConstraint", { MinTextSize = Console.MinTextSize, MaxTextSize = 32 }),
-		}),
 	})
+	-- message (texte du serveur, longueur libre) : 32 px TV au plus, 28 au moins, retours à la ligne ;
+	-- plus grande taille qui tient, comme l'ancien TextScaled (UI/Text, sorte "fit" : jamais TextScaled)
+	local label = Create("TextLabel", {
+		Name = "Label",
+		BackgroundTransparency = 1,
+		Size = UDim2.new(1, -36, 1, 0),
+		Position = UDim2.fromOffset(18, 0),
+		FontFace = Theme.Fonts.Body,
+		TextColor3 = Theme.Colors.Text,
+	}) :: TextLabel
+	Text.style(label, "fit", 32, { min = Console.MinTextSize })
+	Text.raw(label, if type(text) == "string" then text else "")
+	label.Parent = frame
 	table.insert(visible, frame)
 	Juice.popIn(frame)
 	local lifetime = if type(Toast.Lifetime) == "number" and Toast.Lifetime > 0 then Toast.Lifetime else 3

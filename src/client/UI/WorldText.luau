@@ -34,6 +34,7 @@ local Platform = require(Client.Util.Platform)
 local Root = require(Client.UI.Root)
 local Theme = require(Client.UI.Theme)
 local Glyph = require(Client.UI.Glyph)
+local Text = require(Client.UI.Text)
 local Util = require(Client.UI.Hud.Util)
 
 export type Kind = "text" | "plus" | "glyph"
@@ -143,7 +144,9 @@ local function layoutEntry(e: Entry)
 	end
 	e.label.Position = UDim2.fromOffset(PAD_X + glyphW + gap, 0)
 	e.label.Size = UDim2.new(0, textW + 4, 1, 0)
-	e.label.TextSize = e.textSize
+	-- taille fixe (politique unique de UI/Text : libellé à sa taille dessinée, compensé si le moteur
+	-- l'agrandit malgré la contrainte), une seule ligne
+	Text.style(e.label, "label", e.textSize, { min = 1, wrapped = false })
 	e.label.Visible = e.text ~= ""
 	local s = currentScale()
 	e.scale.Scale = s
@@ -202,10 +205,9 @@ local function build(kind: Kind): Entry
 	label.BackgroundTransparency = 1
 	label.FontFace = Theme.Fonts.Title
 	label.TextColor3 = Theme.Colors.Text
-	label.TextScaled = false
 	label.TextXAlignment = Enum.TextXAlignment.Left
 	label.AutoLocalize = false
-	label.Text = ""
+	Text.raw(label, "")
 	label.ZIndex = 3
 	local textStroke = Instance.new("UIStroke")
 	textStroke.Color = Theme.Colors.Stroke
@@ -289,7 +291,7 @@ function WorldText.create(adornee: Instance, options: Options): BillboardGui
 	gui.AlwaysOnTop = opts.alwaysOnTop == true
 	gui.Enabled = true
 	e.text = ""
-	e.label.Text = ""
+	Text.raw(e.label, "")
 	e.label.TextTransparency = 0
 	e.plate.BackgroundTransparency = Layout.WorldText.Background
 	e.textSize = textSizeOf(kind)
@@ -318,7 +320,7 @@ function WorldText.setText(gui: BillboardGui, text: string)
 		return
 	end
 	e.text = value
-	e.label.Text = value
+	Text.raw(e.label, value)
 	layoutEntry(e)
 end
 

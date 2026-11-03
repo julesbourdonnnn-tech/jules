@@ -41,6 +41,7 @@ local Toast = require(Client.UI.Toast)
 local WorldStateController = require(Client.Controllers.WorldStateController)
 local Prefs = require(Client.Util.Prefs)
 local Widgets = require(script.Parent.Widgets)
+local Format = require(Client.UI.Format)
 
 type Nav = { open: (panel: string, tab: string?) -> (), back: () -> () }
 type Item = { uid: string, rec: { [string]: any }, size: number, income: number }
@@ -348,7 +349,7 @@ local function bindCell(cell: Cell, item: Item?)
 	inkOn(cell.line, isSelected, lineColor)
 	local bf = math.floor(Widgets.n(rec.bf))
 	cell.bf.Visible = bf > 0
-	Widgets.setRaw(cell.bf, "♥" .. tostring(bf))
+	Widgets.setRaw(cell.bf, "♥" .. Format.count(bf))
 	cell.twin.Visible = hasTwin(item.uid, rec)
 	cell.lock.Visible = rec.lk == true
 	cell.mount.Visible = Widgets.state("mount") == item.uid

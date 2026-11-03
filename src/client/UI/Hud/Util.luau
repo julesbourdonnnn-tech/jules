@@ -33,6 +33,8 @@ local Root = require(Client.UI.Root)
 local Theme = require(Client.UI.Theme)
 local Juice = require(Client.UI.Juice)
 local Glyph = require(Client.UI.Glyph)
+local Text = require(Client.UI.Text)
+local Format = require(Client.UI.Format)
 
 local Util = {}
 
@@ -178,16 +180,9 @@ function Util.big(n: number): string
 	return BigNumber.abbreviate(Util.num(n, 0), Prefs.language())
 end
 
--- "m:ss" (ou "h:mm:ss") d'une durée en secondes, jamais négative
+-- "m:ss" (ou "h:mm:ss") d'une durée en secondes, jamais négative (UI/Format, formateur unique)
 function Util.clock(seconds: number): string
-	local s = math.max(0, math.ceil(Util.num(seconds, 0, 0, 359999)))
-	local h = s // 3600
-	local m = (s % 3600) // 60
-	local r = s % 60
-	if h > 0 then
-		return string.format("%d:%02d:%02d", h, m, r)
-	end
-	return string.format("%d:%02d", m, r)
+	return Format.clock(Util.num(seconds, 0, 0, 359999))
 end
 
 -- Nom d'une espèce (EN = FR, GDD §15) ; "" pour une espèce inconnue
@@ -252,11 +247,11 @@ function Util.vars(raw: any): { [string]: any }
 				out.mutation = Util.mutationName(value)
 			elseif type(value) == "number" then
 				local v = Util.num(value, 0)
-				out[key] = if NUMBER_VARS[key] then Util.big(v) else tostring(math.floor(v + 0.5))
+				out[key] = if NUMBER_VARS[key] then Util.big(v) else Format.id(math.floor(v + 0.5))
 			elseif type(value) == "string" then
 				out[key] = Util.str(value, "", 120)
 			elseif type(value) == "boolean" then
-				out[key] = tostring(value)
+				out[key] = if value then "true" else "false"
 			end
 		end
 	end
@@ -307,15 +302,19 @@ export type LabelProps = {
 	position: UDim2?,
 	anchor: Vector2?,
 	text: string?,
-	textSize: number, -- px TV visés (taille maximale du TextScaled)
+	textSize: number, -- px TV : taille dessinée (UI/Text, jamais TextScaled)
 	color: Color3?,
 	font: Font?,
 	align: Enum.TextXAlignment?,
 	wrapped: boolean?,
 	zIndex: number?,
+	-- texte de longueur libre (nom d'un joueur, d'une espèce, d'une mutation) : plus grande taille
+	-- entière de [28, textSize] qui tient dans la boîte (UI/Text, sorte "fit")
+	fit: boolean?,
 }
 
--- Texte lisible à 3 m : TextScaled borné par UITextSizeConstraint (minimum Layout.Text.Min = 28 px TV),
+-- Texte lisible à 3 m : politique unique de UI/Text (TextSize fixe à la taille dessinée, jamais
+-- TextScaled, minimum Layout.Text.Min = 28 px TV ; retours à la ligne comme l'ancien TextScaled),
 -- contour sombre de 3 px (jamais de texte posé sur le décor sans contraste)
 function Util.label(p: LabelProps): TextLabel
 	local label = Instance.new("TextLabel")
@@ -324,18 +323,18 @@ function Util.label(p: LabelProps): TextLabel
 	label.Size = p.size or UDim2.fromScale(1, 1)
 	label.Position = p.position or UDim2.new()
 	label.AnchorPoint = p.anchor or Vector2.zero
-	label.Text = p.text or ""
 	label.TextColor3 = p.color or Theme.Colors.Text
 	label.FontFace = p.font or Theme.Fonts.Title
-	label.TextScaled = true
-	label.TextWrapped = p.wrapped == true
 	label.TextXAlignment = p.align or Enum.TextXAlignment.Center
 	label.AutoLocalize = false
 	label.ZIndex = p.zIndex or 2
-	local constraint = Instance.new("UITextSizeConstraint")
-	constraint.MinTextSize = Layout.Text.Min
-	constraint.MaxTextSize = math.max(Layout.Text.Min, math.floor(p.textSize))
-	constraint.Parent = label
+	Text.style(
+		label,
+		if p.fit == true then "fit" else "label",
+		math.max(Layout.Text.Min, math.floor(p.textSize)),
+		{ min = Layout.Text.Min, wrapped = true }
+	)
+	Text.raw(label, p.text or "")
 	local stroke = Instance.new("UIStroke")
 	stroke.Color = Theme.Colors.Stroke
 	stroke.Thickness = Layout.Stroke
@@ -381,7 +380,7 @@ local buttonGlyphs: { [Instance]: Glyph.Handle } = setmetatable({}, { __mode = "
 function Util.button(p: ButtonProps): TextButton
 	local b = Instance.new("TextButton")
 	b.Name = p.name
-	b.Text = ""
+	Text.raw(b, "")
 	b.AutoButtonColor = false
 	b.Selectable = true
 	b.Size = p.size

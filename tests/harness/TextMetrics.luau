@@ -6,6 +6,15 @@
 -- lineRatio : (ascendante + descendante) / cadratin ; ascent : part de la ligne au-dessus de la
 -- ligne de base ; avg : largeur moyenne des minuscules a-z (repli des caractères inconnus).
 return {
+	-- facteurs de GuiService.PreferredTextSize (pire cas 1,5 en attendant les photos de la PS5 : panneau
+	-- TextProbe de Diagnostics, lot B1) ; constantes PREFERRED_TEXT_SIZE de tools/screens/metrics.mjs
+	preferredTextSize = {
+		Medium = 1,
+		Large = 1.5,
+		Larger = 1.5,
+		Largest = 1.5,
+	},
+	preferredPhotographed = false,
 	size = 100,
 	fonts = {
 		["FredokaOne@400"] = {

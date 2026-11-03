@@ -98,6 +98,17 @@ lines.push('-- Google Fonts (Montserrat remplace Gotham, non libre). Crénage ig
 lines.push('-- lineRatio : (ascendante + descendante) / cadratin ; ascent : part de la ligne au-dessus de la');
 lines.push('-- ligne de base ; avg : largeur moyenne des minuscules a-z (repli des caractères inconnus).');
 lines.push('return {');
+// Facteurs de GuiService.PreferredTextSize (lot B1, GDD v2.0 §10.1 (3)) : pire cas 1,5 tant que les
+// photos du panneau TextProbe sur la PS5 ne sont pas là (photographed = false) ; remplacer ici les
+// valeurs lues sur les photos, puis régénérer.
+const PREFERRED_TEXT_SIZE = { Medium: 1, Large: 1.5, Larger: 1.5, Largest: 1.5 };
+const PREFERRED_PHOTOGRAPHED = false;
+lines.push('\t-- facteurs de GuiService.PreferredTextSize (pire cas 1,5 en attendant les photos de la PS5 : panneau');
+lines.push('\t-- TextProbe de Diagnostics, lot B1) ; constantes PREFERRED_TEXT_SIZE de tools/screens/metrics.mjs');
+lines.push('\tpreferredTextSize = {');
+for (const [k, v] of Object.entries(PREFERRED_TEXT_SIZE)) lines.push(`\t\t${k} = ${v},`);
+lines.push('\t},');
+lines.push(`\tpreferredPhotographed = ${PREFERRED_PHOTOGRAPHED},`);
 lines.push('\tsize = 100,');
 lines.push('\tfonts = {');
 for (const [key, f] of Object.entries(fonts)) {

@@ -1,7 +1,7 @@
 --!strict
 -- Prix Robux lus en direct depuis Roblox (tarification régionale et tests de prix gérés),
 -- avec repli sur le prix de la config tant que la réponse n'est pas arrivée.
---   Prices.observe("pass", def.id, def.price, function(price) label.Text = "R$ " .. price end)
+--   Prices.observe("pass", def.id, def.price, function(price) Text.raw(label, "R$ " .. price) end)
 
 local MarketplaceService = game:GetService("MarketplaceService")
 

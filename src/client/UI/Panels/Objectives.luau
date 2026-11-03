@@ -16,6 +16,7 @@ local Layout = require(Shared.Config.Layout)
 local Clock = require(Shared.Util.Clock)
 
 local Widgets = require(script.Parent.Widgets)
+local Format = require(script.Parent.Parent.Format)
 
 type Nav = { open: (panel: string, tab: string?) -> (), back: () -> () }
 type Card = {
@@ -103,7 +104,7 @@ local function refreshToday()
 			end
 			Widgets.setText(card.tier, "panel.goals." .. def.tier)
 			card.tier.TextColor3 = TIER_COLORS[def.tier] or Widgets.Colors.Text
-			Widgets.setText(card.text, "objective." .. tostring(def.id), { goal = goal })
+			Widgets.setText(card.text, "objective." .. Format.id(def.id), { goal = goal })
 			Widgets.setText(card.progress, "panel.goals.progress", { p = math.floor(p), goal = goal })
 			card.fill.Size = UDim2.fromScale(if goal > 0 then p / goal else 1, 1)
 			local reward = Quests.ObjectiveRules.Rewards[def.tier]
@@ -438,7 +439,7 @@ local function buildOnboarding(page: Frame)
 			name = "Step",
 			size = UDim2.new(1, -16, 0, 40),
 			position = UDim2.fromOffset(8, 8),
-			text = tostring(s.step),
+			text = Format.count(s.step),
 			textSize = 32,
 			color = Widgets.Colors.Gold,
 			zIndex = cell.ZIndex + 1,

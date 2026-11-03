@@ -9,7 +9,12 @@
 --     qualité) et ErrorReporter.entries() ;
 --   * Aujourd'hui : totaux de tous les serveurs depuis 00:00 UTC ;
 --   * Outils : AdminCommand (BOOP RUSH, MEGA, horloge ±10 min et remise à zéro — grisés « Studio
---     seulement » hors Studio —, erreurs de test serveur et client, mode photo, fête).
+--     seulement » hors Studio —, erreurs de test serveur et client, mode photo, fête) ;
+--   * Texte (panneau TextProbe, lot B1, GDD v2.0 §10.1 (2), docs/04 §27.13 N10) : 6 étiquettes témoins
+--     (28, 36 et 48 px TV, libres et bornées par MaxTextSize), chacune dans la boîte dessinée de sa
+--     taille, avec ses TextBounds et son facteur ; en haut, la taille de texte choisie dans Roblox, les
+--     facteurs mesurés par UI/Text et l'échelle de l'écran. Le propriétaire photographie la télé à
+--     chacun des 4 réglages « Taille du texte » de Roblox : les chiffres vont dans TextMetrics.
 -- Texte de 32 px TV, heure et version en haut de chaque onglet : fait pour être photographié.
 -- RequestDiagnostics (1 / 2 s) à l'ouverture d'un onglet et par « Actualiser ». Lecture seule : les
 -- messages sont montrés tels qu'écrits par le moteur (déjà nettoyés par DiagRules). Sélection par
@@ -29,6 +34,8 @@ local Client = script.Parent.Parent.Parent
 local ErrorReporter = require(Client.Controllers.ErrorReporter)
 local Prefs = require(Client.Util.Prefs)
 local Widgets = require(script.Parent.Widgets)
+local Format = require(Client.UI.Format)
+local Text = require(Client.UI.Text)
 
 type Nav = { open: (panel: string, tab: string?) -> (), back: () -> () }
 type Line = { key: string, text: string, count: number, players: number, last: number, kind: number }
@@ -36,7 +43,7 @@ type RowUi = { button: TextButton, text: TextLabel, count: TextLabel, line: Line
 
 local Diagnostics = {}
 
-local TABS = { "server", "client", "today", "tools" }
+local TABS = { "server", "client", "today", "tools", "probe" }
 local TAB_NUMBER = { server = 1, client = 2, today = 3 }
 local CLOCK_STEP = 600 -- s : horloge ±10 min (Studio seulement)
 local TOOLS: { { id: string, command: string, arg: (() -> string)?, studio: boolean? } } = {
@@ -47,7 +54,7 @@ local TOOLS: { { id: string, command: string, arg: (() -> string)?, studio: bool
 		command = "clock",
 		studio = true,
 		arg = function(): string
-			return tostring(math.floor(Clock.getOffset() + CLOCK_STEP))
+			return Format.id(math.floor(Clock.getOffset() + CLOCK_STEP))
 		end,
 	},
 	{
@@ -55,7 +62,7 @@ local TOOLS: { { id: string, command: string, arg: (() -> string)?, studio: bool
 		command = "clock",
 		studio = true,
 		arg = function(): string
-			return tostring(math.floor(Clock.getOffset() - CLOCK_STEP))
+			return Format.id(math.floor(Clock.getOffset() - CLOCK_STEP))
 		end,
 	},
 	{
@@ -101,6 +108,13 @@ local toolButtons: { TextButton } = {}
 local samplesFrame: Frame? = nil
 local sampleLabels: { TextLabel } = {}
 local samplesFor: TextButton? = nil
+-- panneau TextProbe : témoins et leurs lignes de chiffres
+type ProbeUi = { witness: TextLabel, bounds: TextLabel, factor: TextLabel, size: number }
+local probes: { ProbeUi } = {}
+local probeState: TextLabel? = nil
+local probeFactors: TextLabel? = nil
+local probeCompensation: TextLabel? = nil
+local PROBE_SIZES = { 28, 36, 48 }
 
 local function str(v: any, max: number): string
 	return if type(v) == "string" then Widgets.clip(v, max) else ""
@@ -114,8 +128,7 @@ local function isStudio(): boolean
 end
 
 local function hhmm(unix: number): string
-	local s = math.floor(unix) % 86400
-	return string.format("%02d:%02d:%02d", s // 3600, (s % 3600) // 60, s % 60)
+	return Format.timeOfDay(unix)
 end
 
 -- Lignes revalidées d'une liste d'entrées (DiagEntry), triées par nombre
@@ -182,16 +195,48 @@ local function fillList(tab: string, lines: { Line })
 	end
 end
 
+-- TextProbe : facteurs mesurés et TextBounds de chaque témoin, dans la langue du joueur
+local function refreshProbe()
+	local lang = Prefs.language()
+	local m = Text.measurements()
+	if probeState then
+		Widgets.setText(probeState, "panel.diag.probe.state", { size = m.preferred })
+	end
+	if probeFactors then
+		Widgets.setText(probeFactors, "panel.diag.probe.factors", {
+			free = Format.decimal(m.factor, lang, 2),
+			bound = Format.decimal(m.bound, lang, 2),
+			scale = Format.decimal(Widgets.scale(), lang, 2),
+		})
+	end
+	if probeCompensation then
+		Widgets.setText(probeCompensation, "panel.diag.probe.compensation", {
+			c = Format.decimal(m.compensation, lang, 2),
+		})
+	end
+	for _, p in probes do
+		local bounds = p.witness.TextBounds
+		Widgets.setText(p.bounds, "panel.diag.probe.bounds", {
+			w = Format.count(math.floor(bounds.X + 0.5)),
+			h = Format.count(math.floor(bounds.Y + 0.5)),
+		})
+		Widgets.setText(p.factor, "panel.diag.probe.factor", {
+			f = Format.decimal(bounds.Y / p.size, lang, 2),
+		})
+	end
+end
+
 local function refresh()
 	refreshStamp()
+	refreshProbe()
 	local snap = snapshots[1]
 	local server: any = if snap and type(snap.server) == "table" then snap.server else {}
 	setStats("server", {
 		Prefs.t("panel.diag.uptime", { time = Prefs.duration(Widgets.n(server.uptime)) }),
 		Prefs.t("panel.diag.players", { n = math.floor(Widgets.n(server.players)) }),
 		Prefs.t("panel.diag.tick", {
-			avg = string.format("%.1f", Widgets.n(server.tickAvgMs)),
-			max = string.format("%.1f", Widgets.n(server.tickMaxMs)),
+			avg = Format.decimal(Widgets.n(server.tickAvgMs), Prefs.language(), 1),
+			max = Format.decimal(Widgets.n(server.tickMaxMs), Prefs.language(), 1),
 		}),
 		Prefs.t("panel.diag.memory", { mb = math.floor(Widgets.n(server.memoryMb)) }),
 		Prefs.t("panel.diag.timedOut", { n = math.floor(Widgets.n(server.timedOut)) }),
@@ -459,6 +504,125 @@ function Diagnostics.build(container: Frame)
 			end,
 		})
 	end
+	-- Texte : panneau TextProbe (lisible sur une photo de la télé prise au téléphone : chiffres en
+	-- 32-40 px TV, blanc sur bleu nuit, boîtes dorées de la taille dessinée)
+	local probe = buildPage(container, "probe", top)
+	local pw = probe.Size.X.Offset - 96
+	probeState = Widgets.label({
+		parent = probe,
+		name = "State",
+		size = UDim2.fromOffset(pw, 48),
+		position = UDim2.fromOffset(48, 52),
+		textSize = 40,
+		color = Widgets.Colors.Gold,
+		xAlign = Enum.TextXAlignment.Left,
+	})
+	probeFactors = Widgets.label({
+		parent = probe,
+		name = "Factors",
+		size = UDim2.fromOffset(pw, 40),
+		position = UDim2.fromOffset(48, 102),
+		textSize = 32,
+		xAlign = Enum.TextXAlignment.Left,
+	})
+	Widgets.label({
+		parent = probe,
+		name = "HowTo",
+		size = UDim2.fromOffset(pw, 72),
+		position = UDim2.fromOffset(48, 146),
+		key = "panel.diag.probe.howto",
+		textSize = 32,
+		wrapped = true,
+		xAlign = Enum.TextXAlignment.Left,
+		yAlign = Enum.TextYAlignment.Top,
+	})
+	local gridTop = 226
+	local cellGap = 24
+	local cellW = math.floor((pw - cellGap) / 2)
+	local rowGap = 8
+	-- 3 rangées et la ligne de compensation (48 px en bas) : 126 px par case dans la page de 672 ;
+	-- un témoin de 48 px agrandi au pire cas (× 1,5 = 72) tient sous l'en-tête de sa case
+	local cellH = math.floor((probe.Size.Y.Offset - gridTop - 52 - 2 * rowGap) / 3)
+	for row, px in PROBE_SIZES do
+		for col, isBound in { false, true } do
+			local cell = Widgets.frame({
+				parent = probe,
+				name = (if isBound then "Bound" else "Free") .. Format.id(px),
+				size = UDim2.fromOffset(cellW, cellH),
+				position = UDim2.fromOffset(
+					48 + (col - 1) * (cellW + cellGap),
+					gridTop + (row - 1) * (cellH + rowGap)
+				),
+				color = Widgets.Colors.Card,
+			})
+			Widgets.label({
+				parent = cell,
+				name = "Head",
+				size = UDim2.fromOffset(cellW - 32 - 216, 36),
+				position = UDim2.fromOffset(16, 6),
+				key = if isBound then "panel.diag.probe.bound" else "panel.diag.probe.free",
+				vars = { px = px },
+				textSize = 28,
+				color = Widgets.Colors.TextDim,
+				xAlign = Enum.TextXAlignment.Left,
+			})
+			-- boîte dorée de la taille dessinée : à Medium, les lettres la remplissent ; agrandies par le
+			-- moteur, elles la dépassent (visible sur la photo)
+			local box = Instance.new("Frame")
+			box.Name = "DrawnBox"
+			box.BackgroundTransparency = 1
+			box.Size = UDim2.fromOffset(cellW - 32 - 220, px)
+			box.Position = UDim2.fromOffset(16, 46)
+			box.Parent = cell
+			Widgets.stroke(box, Widgets.Colors.Gold, 2)
+			local witness = Text.witness(cell, "Witness", px, isBound)
+			witness.Size = UDim2.fromOffset(cellW - 32 - 220, math.min(cellH - 50, math.ceil(px * 1.5)))
+			witness.Position = UDim2.fromOffset(16, 46)
+			witness.TextColor3 = Widgets.Colors.Text
+			witness.ZIndex = cell.ZIndex + 1
+			local bounds = Widgets.label({
+				parent = cell,
+				name = "Bounds",
+				size = UDim2.fromOffset(200, 36),
+				position = UDim2.new(1, -16, 0, 6),
+				anchor = Vector2.new(1, 0),
+				textSize = 28,
+				color = Widgets.Colors.TextDim,
+				xAlign = Enum.TextXAlignment.Right,
+			})
+			local factor = Widgets.label({
+				parent = cell,
+				name = "Factor",
+				size = UDim2.fromOffset(200, 56),
+				position = UDim2.new(1, -16, 0, 46),
+				anchor = Vector2.new(1, 0),
+				textSize = 48,
+				color = Widgets.Colors.Gold,
+				xAlign = Enum.TextXAlignment.Right,
+			})
+			table.insert(probes, { witness = witness, bounds = bounds, factor = factor, size = px })
+			witness:GetPropertyChangedSignal("TextBounds"):Connect(function()
+				if isOpen then
+					refreshProbe()
+				end
+			end)
+		end
+	end
+	probeCompensation = Widgets.label({
+		parent = probe,
+		name = "Compensation",
+		size = UDim2.fromOffset(pw, 44),
+		position = UDim2.new(0, 48, 1, -48),
+		textSize = 32,
+		color = Widgets.Colors.Success,
+		xAlign = Enum.TextXAlignment.Left,
+	})
+	Text.onMeasured(function()
+		if isOpen then
+			refreshProbe()
+		end
+	end)
+
 	-- exemples d'une ligne (sous-niveau : ○ le ferme)
 	local f = Widgets.frame({
 		parent = container,

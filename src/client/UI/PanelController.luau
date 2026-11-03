@@ -40,6 +40,7 @@ local Juice = require(Client.UI.Juice)
 local FocusGuard = require(Client.UI.FocusGuard)
 local Cards = require(Client.UI.Cards)
 local Toast = require(Client.UI.Toast)
+local Format = require(Client.UI.Format)
 local Prefs = require(Client.Util.Prefs)
 local AudioController = require(Client.Controllers.AudioController)
 local State = require(Client.Controllers.StateController)
@@ -443,7 +444,7 @@ local function railBadge(entry: string): string
 	if entry == "Ranch" then
 		local pairs =
 			safe("FusionRules.twinPairs", 0, FusionRules.twinPairs, Widgets.tbl(State.get("squishies")))
-		return if type(pairs) == "number" and pairs > 0 then "♥" .. tostring(pairs) else ""
+		return if type(pairs) == "number" and pairs > 0 then "♥" .. Format.count(pairs) else ""
 	elseif entry == "Objectives" then
 		local objectives = Widgets.tbl(State.get("objectives"))
 		for _, e in Widgets.tbl(objectives.list) do
@@ -461,7 +462,7 @@ local function railBadge(entry: string): string
 		end
 	elseif entry == PENDING then
 		local list = safe("Cards.pending", {}, Cards.pending)
-		return if type(list) == "table" and #list > 0 then tostring(#list) else ""
+		return if type(list) == "table" and #list > 0 then Format.count(#list) else ""
 	end
 	return ""
 end

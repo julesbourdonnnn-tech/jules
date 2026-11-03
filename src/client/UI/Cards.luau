@@ -44,6 +44,8 @@ local Theme = require(Client.UI.Theme)
 local Juice = require(Client.UI.Juice)
 local Glyph = require(Client.UI.Glyph)
 local FocusGuard = require(Client.UI.FocusGuard)
+local Text = require(Client.UI.Text)
+local Format = require(Client.UI.Format)
 local Prefs = require(Client.Util.Prefs)
 local Haptics = require(Client.Util.Haptics)
 local AudioController = require(Client.Controllers.AudioController)
@@ -363,7 +365,7 @@ local function build()
 	-- carte non bloquante (à droite, cliquable, jamais sélectionnable)
 	local s = Instance.new("TextButton")
 	s.Name = "Side"
-	s.Text = ""
+	Text.raw(s, "")
 	s.AutoButtonColor = false
 	s.Selectable = false
 	s.BackgroundColor3 = Theme.Colors.Panel
@@ -392,6 +394,9 @@ local function build()
 		textSize = SIDE_CONTENT.title,
 		align = Enum.TextXAlignment.Left,
 		zIndex = 6,
+		-- titre de longueur libre (« NOUVEAU ! Prickle Puff · Arc-en-ciel ») : plus grande taille qui
+		-- tient sur la ligne, comme l'ancien TextScaled (UI/Text, sorte "fit")
+		fit = true,
 	})
 	sideLine = Util.label({
 		name = "Line",
@@ -598,7 +603,7 @@ end
 local function setLabel(parent: Instance, name: string, text: string)
 	local label = parent:FindFirstChild(name)
 	if label and label:IsA("TextLabel") then
-		label.Text = text
+		Text.raw(label, text)
 		label.Visible = text ~= ""
 	end
 end
@@ -664,9 +669,9 @@ local function showSide(entry: Entry, now: number)
 	end
 	displayed = entry
 	displayedUntil = now + SHOW_SECONDS
-	local title, line = texts(entry.card);
-	(sideTitle :: TextLabel).Text = title;
-	(sideLine :: TextLabel).Text = line;
+	local title, line = texts(entry.card)
+	Text.raw(sideTitle :: TextLabel, title)
+	Text.raw(sideLine :: TextLabel, line);
 	(sideLine :: TextLabel).Visible = line ~= ""
 	if sideGlyph then
 		sideGlyph:set({ gamepad = Enum.KeyCode.ButtonY, keyboard = Util.menuKey() })
@@ -838,15 +843,15 @@ local function openMode(entry: Entry)
 	setLabel(mf, "Title", title)
 	setLabel(mf, "Safe", line)
 	if modeGifts then
-		modeGifts.Text = Util.t("card.mode.gifts")
+		Text.raw(modeGifts, Util.t("card.mode.gifts"))
 	end
 	local rushLabel = Util.buttonLabel(modeRush :: TextButton)
 	if rushLabel then
-		rushLabel.Text = Util.t("card.mode.rush")
+		Text.raw(rushLabel, Util.t("card.mode.rush"))
 	end
 	local cozyLabel = Util.buttonLabel(modeCozy :: TextButton)
 	if cozyLabel then
-		cozyLabel.Text = Util.t("card.mode.cozy")
+		Text.raw(cozyLabel, Util.t("card.mode.cozy"))
 	end
 	windowEntry = entry
 	windowOpenedAt = Clock.now()
@@ -1154,7 +1159,7 @@ function Cards.push(card: Card): string
 	seq += 1
 	local id = Util.str(card.id, "", 40)
 	if id == "" or Cards._find(id) ~= nil then
-		id = "c" .. tostring(seq)
+		id = "c" .. Format.id(seq)
 	end
 	local data: { [string]: any } = if type(card.data) == "table" then card.data else {}
 	local entry: Entry = {

@@ -631,14 +631,21 @@ return function(T)
 
 		-- Revue client-world (télé, 10 pieds) : le grand tampon tient dans la zone sûre, à 28 px TV au
 		-- moins, même avec un long nom et une longue cote
-		it("tampon : texte long tenu dans la zone sûre (TextScaled, 28 px TV au moins)", function()
+		-- GDD v2.0 §10.1, N10 (lot B1) : jamais TextScaled ; la règle de taille de l'ancien TextScaled est
+		-- calculée par UI/Text (sorte « fit », 28 à 96 px TV, retours à la ligne)
+		it("tampon : texte long tenu dans la zone sûre (UI/Text « fit », 28 px TV au moins)", function()
 			local c = client()
 			c.VFX.stamp("celebrate.secretTag", { species = "Mochi Mew Royal", odds = "1 000 000 000" })
 			c.run(0.1)
 			local screen = c.h.localPlayer.PlayerGui:FindFirstChild("VFXStamp")
 			expect(screen ~= nil).toBe(true)
 			local label = screen:FindFirstChild("Stamp", true)
-			expect(label.TextScaled).toBe(true)
+			expect(label.TextScaled).toBe(false)
+			local Text = c.h:require("StarterPlayer.StarterPlayerScripts.Client.UI.Text")
+			expect(Text.kind(label)).toBe("fit")
+			expect(Text.drawnSize(label)).toBe(96)
+			expect(label.TextWrapped).toBe(true)
+			expect(label.TextSize >= 28 and label.TextSize <= 96).toBe(true)
 			expect(#TvAudit.clipped(c.h, screen)).toBe(0)
 			expect(#TvAudit.outsideSafe(c.h, screen)).toBe(0)
 			c.clean()

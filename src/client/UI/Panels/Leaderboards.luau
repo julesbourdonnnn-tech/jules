@@ -19,6 +19,7 @@ local Net = require(Shared.Net)
 local Client = script.Parent.Parent.Parent
 local Prefs = require(Client.Util.Prefs)
 local Widgets = require(script.Parent.Widgets)
+local Format = require(Client.UI.Format)
 
 type Nav = { open: (panel: string, tab: string?) -> (), back: () -> () }
 
@@ -105,7 +106,7 @@ local function refresh()
 		if r then
 			local isMe = me ~= nil and r.userId == me.UserId
 			frame.BackgroundColor3 = if isMe then Widgets.Colors.CardLight else Widgets.Colors.Card
-			Widgets.setRaw(frame:FindFirstChild("Rank") :: TextLabel, "#" .. tostring(r.rank))
+			Widgets.setRaw(frame:FindFirstChild("Rank") :: TextLabel, "#" .. Format.count(r.rank))
 			local nameLabel = frame:FindFirstChild("Name") :: TextLabel
 			if isMe then
 				Widgets.setText(nameLabel, "panel.lb.you")

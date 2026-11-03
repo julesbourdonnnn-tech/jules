@@ -251,6 +251,9 @@ local function buildCard(page: Frame, item: Item, index: number, count: number):
 		key = item.nameKey,
 		textSize = 40,
 		color = Widgets.Colors.Gold,
+		-- « Selles et Traînées » à 40 px dépasse sa case d'un pixel : l'ancien TextScaled le dessinait
+		-- à 39 (UI/Text, sorte "fit" : même image ; carte redessinée par le lot B3)
+		fit = true,
 	})
 	Widgets.label({
 		parent = f,

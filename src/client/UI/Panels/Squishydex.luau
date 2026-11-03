@@ -34,6 +34,7 @@ local Clock = require(Shared.Util.Clock)
 local Client = script.Parent.Parent.Parent
 local Juice = require(Client.UI.Juice)
 local Prefs = require(Client.Util.Prefs)
+local Format = require(Client.UI.Format)
 local Widgets = require(script.Parent.Widgets)
 
 type Nav = { open: (panel: string, tab: string?) -> (), back: () -> () }
@@ -341,28 +342,22 @@ end
 -- Guide (lecture seule, ↑ / ↓ font défiler de 70 %)
 -- =============================================================================================
 
--- Nombre décimal dans la langue du joueur (virgule en français : « 52,0 », « ×1,5 »)
-local function decimalText(text: string): string
-	if Prefs.language() == "fr" then
-		return (string.gsub(text, "%.", ","))
-	end
-	return text
-end
-
--- Chance en % avec `digits` décimales ; une chance non nulle n'est jamais écrite « 0,0 % » (un
+-- Chance en % avec `digits` décimales (UI/Format : virgule en français, « 52,0 ») ; une chance non nulle n'est jamais écrite « 0,0 % » (un
 -- enfant y lirait « impossible ») : décimales ajoutées jusqu'au premier chiffre utile (4 au plus),
 -- puis « < 0,0001 »
 local function chanceText(p: number, digits: number): string
+	local lang = Prefs.language()
+	local function roundsToZero(d: number): boolean
+		return math.floor(math.abs(p) * 10 ^ d + 0.5) == 0
+	end
 	local d = digits
-	local text = string.format("%." .. d .. "f", p)
-	while p > 0 and tonumber(text) == 0 and d < 4 do
+	while p > 0 and roundsToZero(d) and d < 4 do
 		d += 1
-		text = string.format("%." .. d .. "f", p)
 	end
-	if p > 0 and tonumber(text) == 0 then
-		text = "< 0.0001"
+	if p > 0 and roundsToZero(d) then
+		return "< " .. Format.decimal(0.0001, lang, 4)
 	end
-	return decimalText(text)
+	return Format.decimal(p, lang, d)
 end
 
 local function guideTexts(): { { text: string, title: boolean } }
@@ -404,7 +399,7 @@ local function guideTexts(): { { text: string, title: boolean } }
 		line(
 			Prefs.t("mutation." .. mdef.key)
 				.. " ×"
-				.. decimalText(tostring(mdef.mult))
+				.. Format.decimal(mdef.mult, Prefs.language())
 				.. "  "
 				.. Prefs.t("common.percent", {
 					p = chanceText(c * 100, 2),

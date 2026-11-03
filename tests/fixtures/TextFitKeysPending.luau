@@ -25,6 +25,7 @@ return {
 	["hud.queue.next"] = "[auto] affichée par le client (client/UI/HUD.luau) dans un état que les scénarios ne montrent pas encore",
 	["hud.status.shield"] = "[auto] affichée par le client (client/Controllers/RanchRenderer.luau) dans un état que les scénarios ne montrent pas encore",
 	["hud.unstable"] = "[auto] affichée par le client (client/UI/HUD.luau) dans un état que les scénarios ne montrent pas encore",
+	["mutation.reveal"] = "jamais posée par le client ni le serveur (aucune ligne de src ne la cite) : reliée à la famille mutation.* par le préfixe « mutation. » de Squishydex et Ranch, elle était mesurée dans les boîtes des noms de mutation, en TextScaled jusqu'au lot B1 ; à taille fixe (40 px, N10) « Grand Splorch ! » n'y tient pas, mais aucun écran ne l'affiche (lot B1, docs/04 §27.12 B1-1)",
 	["name.ranch"] = "[auto] affichée par le client (client/Controllers/RanchRenderer.luau) dans un état que les scénarios ne montrent pas encore",
 	["num.name.12"] = "[auto] clé construite par le client (préfixe « num.name. », shared/Logic/BigNumber.luau) dans un état que les scénarios ne montrent pas encore",
 	["num.name.15"] = "[auto] clé construite par le client (préfixe « num.name. », shared/Logic/BigNumber.luau) dans un état que les scénarios ne montrent pas encore",

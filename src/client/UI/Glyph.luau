@@ -21,6 +21,7 @@ local Client = script.Parent.Parent
 local Platform = require(Client.Util.Platform)
 local Theme = require(Client.UI.Theme)
 local Create = require(Client.UI.Create)
+local Text = require(Client.UI.Text)
 
 local Glyph = {}
 Glyph.__index = Glyph
@@ -112,20 +113,18 @@ function Glyph.new(parent: Instance, binding: Binding, props: Props?): Handle
 		Position = UDim2.fromScale(0.5, 0.5),
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		BackgroundTransparency = 1,
-		Text = "",
-		TextScaled = true,
 		TextColor3 = Theme.Colors.Text,
 		FontFace = Theme.Fonts.Title,
 		AutoLocalize = false,
 		ZIndex = frame.ZIndex + 1,
 		Visible = false,
 		Parent = frame,
-	}, {
-		Create(
-			"UITextSizeConstraint",
-			{ MaxTextSize = math.max(Console.MinTextSize, math.floor(size * 0.6)) }
-		),
 	}) :: TextLabel
+	-- nom de touche du clavier (« E », « Shift », « ⌫ ») à 0,6 × la taille de l'icône, 28 px TV au moins
+	-- (UI/Text, libellé à sa taille dessinée) : la pastille s'élargit avec la longueur du nom
+	-- (Glyph.refresh : 0,4 × la taille par caractère au-delà de 2), le texte n'a jamais à rétrécir
+	Text.style(text, "label", math.max(Console.MinTextSize, math.floor(size * 0.6)), { wrapped = false })
+	Text.raw(text, "")
 	local diamond = Create("Frame", {
 		Name = "Diamond",
 		Size = UDim2.fromScale(1, 1),
@@ -204,7 +203,7 @@ function Glyph.refresh(self: Handle)
 		end
 	else
 		mode = "text"
-		self._text.Text = info.text
+		Text.raw(self._text, info.text)
 	end
 	self._image.Visible = mode == "image"
 	self._diamond.Visible = mode == "diamond"

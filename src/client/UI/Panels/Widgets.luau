@@ -2,9 +2,10 @@
 -- Widgets (paquet client-panels, module d'aide de src/client/UI/Panels) : briques communes du menu,
 -- des panneaux et de l'écran de retour, toutes en px TV (référence 1920 × 1080, mises à l'échelle
 -- par l'UIScale de UI/Root) :
---   * textes : TextScaled + UITextSizeConstraint (minimum 28 px TV, Config/Layout.Text.Min),
---     FredokaOne, AutoLocalize coupé (le jeu traduit lui-même par Prefs.t) ; les textes posés par
---     clé (Widgets.setText) sont retraduits tout seuls quand la langue change ;
+--   * textes : politique unique de UI/Text (lot B1, N10 : TextSize fixe à la taille dessinée, jamais
+--     TextScaled ; borne du mot le plus long ; minimum 28 px TV, Config/Layout.Text.Min), FredokaOne,
+--     AutoLocalize coupé (le jeu traduit lui-même par Prefs.t) ; les textes posés par clé
+--     (Widgets.setText → Text.set) sont retraduits tout seuls quand la langue change ;
 --   * boutons : sélectionnables, curseur commun (Root.selectionImage), Juice.press, son Click,
 --     refus (secousse, contour rouge 0,25 s, son Error, vibration refuse : GDD §9.2, §10.5) ;
 --   * interrupteur 120 × 64, barre d'onglets (soulignement qui glisse en 0,15 s), bouton à maintenir
@@ -41,6 +42,7 @@ local Theme = require(Client.UI.Theme)
 local Juice = require(Client.UI.Juice)
 local Glyph = require(Client.UI.Glyph)
 local Prefs = require(Client.Util.Prefs)
+local Text = require(Client.UI.Text)
 local Haptics = require(Client.Util.Haptics)
 local AudioController = require(Client.Controllers.AudioController)
 local State = require(Client.Controllers.StateController)
@@ -74,7 +76,6 @@ Widgets.Colors = {
 	Silhouette = Color3.fromRGB(70, 68, 84),
 }
 
-Widgets.Text = Layout.Text
 Widgets.MIN_TEXT = Layout.Text.Min
 Widgets.CORNER = UDim.new(0, Layout.Corner.Min)
 Widgets.CORNER_LARGE = UDim.new(0, Layout.Corner.Max)
@@ -86,27 +87,8 @@ Widgets.BIND_PRIORITY = Enum.ContextActionPriority.High.Value + 100
 -- Textes et nombres
 -- =============================================================================================
 
--- Textes posés par clé : retraduits quand la langue change (clés faibles : un texte détruit part seul)
-local bound: { [TextLabel | TextButton]: { key: string, vars: { [string]: any }? } } = setmetatable(
-	{},
-	{ __mode = "k" }
-) :: any
-local languageHooked = false
+-- Textes posés par clé : retraduits par UI/Text quand la langue change
 Widgets.LanguageChanged = Prefs.LanguageChanged
-
-local function hookLanguage()
-	if languageHooked then
-		return
-	end
-	languageHooked = true
-	Prefs.LanguageChanged:Connect(function()
-		for label, b in bound do
-			if label.Parent ~= nil then
-				label.Text = Prefs.t(b.key, b.vars)
-			end
-		end
-	end)
-end
 
 function Widgets.t(key: string, vars: { [string]: any }?): string
 	return Prefs.t(key, vars)
@@ -118,22 +100,14 @@ function Widgets.num(n: number?): string
 	return BigNumber.abbreviate(v, Prefs.language())
 end
 
--- Texte traduit posé par clé (retraduit au changement de langue)
+-- Texte traduit posé par clé (retraduit au changement de langue) : UI/Text, seul écrivain de .Text
 function Widgets.setText(label: TextLabel | TextButton, key: string, vars: { [string]: any }?)
-	hookLanguage()
-	bound[label] = { key = key, vars = vars }
-	local text = Prefs.t(key, vars)
-	if label.Text ~= text then
-		label.Text = text
-	end
+	Text.set(label, key, vars)
 end
 
 -- Texte brut (nom propre, nombre déjà formaté) : plus de retraduction automatique
 function Widgets.setRaw(label: TextLabel | TextButton, text: string)
-	bound[label] = nil
-	if label.Text ~= text then
-		label.Text = text
-	end
+	Text.raw(label, text)
 end
 
 -- Texte coupé à maxBytes octets sur une frontière de caractère UTF-8 (jamais un caractère coupé en
@@ -354,6 +328,9 @@ export type LabelProps = {
 	stroke: boolean?,
 	background: Color3?,
 	backgroundTransparency: number?,
+	-- libellé que la police tranche au pixel dans une langue : plus grande taille entière de
+	-- [minSize, textSize] qui tient dans la boîte (UI/Text, sorte "fit", exception fermée)
+	fit: boolean?,
 }
 
 local function corner(parent: Instance, radius: UDim?)
@@ -384,17 +361,24 @@ local function applyLabel(label: TextLabel | TextButton, p: LabelProps)
 	label.AnchorPoint = p.anchor or Vector2.zero
 	label.FontFace = Theme.Fonts.Title
 	label.TextColor3 = p.color or Widgets.Colors.Text
-	label.TextScaled = true
-	label.TextWrapped = p.wrapped == true
 	label.TextXAlignment = p.xAlign or Enum.TextXAlignment.Center
 	label.TextYAlignment = p.yAlign or Enum.TextYAlignment.Center
 	label.AutoLocalize = false
 	label.ZIndex = p.zIndex or 2
 	label.LayoutOrder = p.order or 0
-	local c = Instance.new("UITextSizeConstraint")
-	c.MinTextSize = p.minSize or Widgets.MIN_TEXT
-	c.MaxTextSize = math.max(p.textSize or Layout.Text.Body, c.MinTextSize)
-	c.Parent = label
+	-- politique unique (UI/Text, N10) : taille dessinée fixe, jamais sous le minimum, bornée pour que
+	-- le mot le plus long tienne sur une ligne ; retours à la ligne comme l'ancien TextScaled
+	local minSize = p.minSize or Widgets.MIN_TEXT
+	Text.style(
+		label,
+		if p.fit == true then "fit" else "label",
+		math.max(p.textSize or Layout.Text.Body, minSize),
+		{
+			min = minSize,
+			words = true,
+			wrapped = true,
+		}
+	)
 	-- contour sombre de 2 px (Contextual : autour des lettres) sur TOUS les libellés : un texte blanc,
 	-- doré ou grisé reste lisible (contraste ≥ 3) sur un bouton vert, rose, bleu ou doré et sur une
 	-- case qui change de couleur (outil d'écrans : contrastes de 1,1 à 2,3 avant ce contour)
@@ -405,85 +389,50 @@ local function applyLabel(label: TextLabel | TextButton, p: LabelProps)
 	if p.key then
 		Widgets.setText(label, p.key, p.vars)
 	else
-		label.Text = p.text or ""
+		Text.raw(label, p.text or "")
 	end
-	Widgets.keepWords(label, c)
 end
 
--- TextScaled ne coupe jamais un mot : TextScaled implique les retours à la ligne, et Roblox coupe
--- entre deux lettres un mot plus large que la boîte (« Squishyde / x » dans le rail quand la pastille
--- « ! » resserre le libellé). La taille maximale est donc bornée pour que le mot le plus long tienne
--- sur une ligne : largeur de la boîte (px TV) × 100 / largeur du mot à la taille 100
--- (TextService:GetTextSize, mesure du moteur ; repli : Widgets.textEm), jamais sous MinTextSize (un
--- mot qui ne tient pas même au minimum est un défaut de place, relevé par l'outil d'écrans).
+-- Aucun mot coupé entre deux lettres (le moteur coupe un mot plus large que la boîte : « Squishyde /
+-- x » dans le rail quand la pastille « ! » resserre le libellé) : la taille dessinée est bornée pour
+-- que le mot le plus long tienne sur une ligne (largeur de la boîte × 100 ÷ largeur du mot à la
+-- taille 100, mesurée par TextService), jamais sous le minimum (un mot qui ne tient pas même au
+-- minimum est un défaut de place, relevé par l'outil d'écrans). Calculé par UI/Text (option words),
+-- au texte posé et à chaque changement de taille de la boîte.
 local WORD_REF = 100
-local wordCache: { [string]: number } = {}
-local wordCacheSize = 0
 
-local function wordWidth(word: string): number
-	local cached = wordCache[word]
-	if cached then
-		return cached
-	end
-	local ok, size = pcall(function()
-		return TextService:GetTextSize(word, WORD_REF, Enum.Font.FredokaOne, Vector2.new(1e5, 1e5))
-	end)
-	local w = if ok
-			and typeof(size) == "Vector2"
-			and size.X > 0
-		then size.X
-		else Widgets.textEm(word) * WORD_REF
-	if wordCacheSize > 2000 then
-		table.clear(wordCache)
-		wordCacheSize = 0
-	end
-	wordCache[word] = w
-	wordCacheSize += 1
-	return w
-end
-
+-- Largeur (px TV, taille 100) du mot le plus long d'un texte (mesure du moteur ; repli : textEm)
 function Widgets.longestWord(text: string): number
 	local best = 0
 	-- espaces ordinaires seulement : Roblox ne coupe jamais à l'espace insécable (« 1,2 K »)
 	for word in string.gmatch(text, "[^ \t\n]+") do
-		best = math.max(best, wordWidth(word))
+		local ok, size = pcall(function()
+			return TextService:GetTextSize(word, WORD_REF, Enum.Font.FredokaOne, Vector2.new(1e5, 1e5))
+		end)
+		local w = if ok
+				and typeof(size) == "Vector2"
+				and size.X > 0
+			then size.X
+			else Widgets.textEm(word) * WORD_REF
+		best = math.max(best, w)
 	end
 	return best
 end
 
-local wordLimits: { [Instance]: number } = setmetatable({}, { __mode = "k" }) :: any
-
-function Widgets.keepWords(label: TextLabel | TextButton, c: UITextSizeConstraint)
-	local base = c.MaxTextSize
-	wordLimits[label] = base
-	local function apply()
-		local limit = wordLimits[label] or base
-		local scale = math.max(Widgets.scale(), 1e-3)
-		local width = label.AbsoluteSize.X / scale
-		local text = if label.RichText then string.gsub(label.Text, "<[^<>]->", "") else label.Text
-		local wordW = Widgets.longestWord(text)
-		local maxSize = limit
-		if width > 1 and wordW > 0 then
-			maxSize = math.min(limit, math.floor(width * WORD_REF / wordW))
-		end
-		maxSize = math.max(c.MinTextSize, maxSize)
-		if c.MaxTextSize ~= maxSize then
-			c.MaxTextSize = maxSize
-		end
-	end
-	label:GetPropertyChangedSignal("Text"):Connect(apply)
-	label:GetPropertyChangedSignal("AbsoluteSize"):Connect(apply)
-	apply()
+-- Borne du mot le plus long sur un libellé (déjà posée par Widgets.label) ; `c` gardé pour l'API
+function Widgets.keepWords(label: TextLabel | TextButton, _c: UITextSizeConstraint?)
+	Text.style(
+		label,
+		Text.kind(label) or "label",
+		Text.drawnSize(label) or Layout.Text.Body,
+		{ words = true }
+	)
 end
 
--- Taille maximale habituelle d'un libellé (avant la borne des mots) ; à utiliser au lieu d'écrire
+-- Taille dessinée d'un libellé (avant la borne des mots) ; à utiliser au lieu d'écrire TextSize ou
 -- MaxTextSize directement
 function Widgets.setMaxText(label: TextLabel | TextButton, size: number)
-	wordLimits[label] = size
-	local c = label:FindFirstChildOfClass("UITextSizeConstraint")
-	if c then
-		c.MaxTextSize = math.max(c.MinTextSize, size)
-	end
+	Text.style(label, Text.kind(label) or "label", size)
 end
 
 -- Texte lisible (≥ 28 px TV)
@@ -748,7 +697,7 @@ end
 function Widgets.button(p: ButtonProps): TextButton
 	local b = Instance.new("TextButton")
 	b.Name = p.name or "Button"
-	b.Text = ""
+	Text.raw(b, "")
 	b.AutoButtonColor = false
 	b.AutoLocalize = false
 	b.Size = p.size or UDim2.fromOffset(320, Layout.Button.MinHeight)

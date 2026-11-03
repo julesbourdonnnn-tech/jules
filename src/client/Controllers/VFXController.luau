@@ -56,6 +56,8 @@ local RanchRenderer = require(Client.Controllers.RanchRenderer)
 local Root = require(Client.UI.Root)
 local Juice = require(Client.UI.Juice)
 local WorldText = require(Client.UI.WorldText)
+local Text = require(Client.UI.Text)
+local Format = require(Client.UI.Format)
 local Util = require(Client.World.Util)
 local SplorchPath = require(Client.World.SplorchPath)
 
@@ -74,7 +76,7 @@ local CFG = {
 	CoinFly = 0.4,
 	ParticleLife = 0.6, -- s de vie comptée d'une gerbe
 	StampTime = 1.1,
-	StampText = 96, -- px TV (au plus : TextScaled le réduit pour tenir dans la zone sûre)
+	StampText = 96, -- px TV (au plus : UI/Text le réduit pour tenir dans la zone sûre, sorte "fit")
 	StampHeight = 150, -- px TV
 	StampWidth = 680, -- px TV : zone libre du HUD entre ses colonnes (voir stamp)
 	StampOffsetY = -54, -- px TV : centre à 486 px TV en 1080p (milieu de la zone sûre, remonté)
@@ -228,18 +230,9 @@ local function particlesInUse(): number
 	return n
 end
 
+-- Chiffres romains du titre du spectacle (décor : UI/Format.roman), de I à XCIX
 local function roman(n: number): string
-	local values = { 10, 9, 5, 4, 1 }
-	local symbols = { "X", "IX", "V", "IV", "I" }
-	local out = ""
-	local v = math.clamp(math.floor(n), 1, 99)
-	for i, value in values do
-		while v >= value do
-			out ..= symbols[i]
-			v -= value
-		end
-	end
-	return out
+	return Format.roman(math.clamp(math.floor(if n == n then n else 1), 1, 99))
 end
 
 local function speciesColor(id: any): Color3
@@ -409,18 +402,14 @@ function VFXController.stamp(key: string, vars: { [string]: any }?, color: Color
 		-- (Layout.Hud.message, bas à 310 px TV), entre la colonne de gauche (536) et la carte de droite
 		-- (1 304), au-dessus de la puce d'action (822). Avant : toute la largeur de la zone sûre à 32 %
 		-- de la hauteur, un long tampon passait sur la puce Menu (outil d'écrans, Screens_display.spec).
-		-- TextScaled borné à 96 px (et 28 px TV au moins) : une longue cote
-		-- (« SECRET … · 1 sur 1 000 000 000 ») tient sur deux lignes
+		-- au plus 96 px (et 28 px TV au moins) : une longue cote (« SECRET … · 1 sur 1 000 000 000 »)
+		-- tient sur deux lignes (UI/Text, sorte "fit" : la règle de l'ancien TextScaled, jamais
+		-- TextScaled)
 		created.Position = UDim2.new(0.5, 0, 0.5, CFG.StampOffsetY)
 		created.Size = UDim2.fromOffset(CFG.StampWidth, CFG.StampHeight)
 		created.BackgroundTransparency = 1
 		created.Font = Enum.Font.FredokaOne
-		created.TextSize = CFG.StampText
-		created.TextScaled = true
-		local limit = Instance.new("UITextSizeConstraint")
-		limit.MaxTextSize = CFG.StampText
-		limit.MinTextSize = Layout.Text.Min
-		limit.Parent = created
+		Text.style(created, "fit", CFG.StampText, { min = Layout.Text.Min, wrapped = true })
 		created.TextStrokeTransparency = 0
 		created.TextStrokeColor3 = Color3.fromRGB(60, 30, 60)
 		created.Visible = false
@@ -429,7 +418,7 @@ function VFXController.stamp(key: string, vars: { [string]: any }?, color: Color
 		stampLabel = created
 	end
 	local l = label :: TextLabel
-	l.Text = text
+	Text.raw(l, text)
 	l.TextColor3 = color or GOLD
 	l.Visible = true
 	stampUntil = animT + CFG.StampTime

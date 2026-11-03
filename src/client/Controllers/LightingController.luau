@@ -60,6 +60,7 @@ local Prefs = require(Client.Util.Prefs)
 local Haptics = require(Client.Util.Haptics)
 local AudioController = require(script.Parent.AudioController)
 local Root = require(Client.UI.Root)
+local Text = require(Client.UI.Text)
 
 local LightingController = {}
 
@@ -527,7 +528,8 @@ local function sizeLabel(entry: LabelEntry, scale: number)
 	local chars = utf8.len(text) or #text
 	local width = math.max(4, chars) * px * 0.62 + 2 * px
 	entry.gui.Size = UDim2.fromOffset(width, px * LABEL_HEIGHT_PX)
-	entry.label.TextSize = px
+	-- taille fixe (politique unique de UI/Text, N10), une seule ligne
+	Text.style(entry.label, "label", px, { min = 1, wrapped = false })
 end
 
 local function buildLabels(world: Folder)
@@ -559,8 +561,7 @@ local function buildLabels(world: Folder)
 			label.BackgroundTransparency = Layout.WorldText.Background
 			label.TextColor3 = Color3.fromRGB(255, 255, 255)
 			label.FontFace = Font.fromEnum(Enum.Font.FredokaOne)
-			label.TextScaled = false
-			label.Text = labelText(key)
+			Text.raw(label, labelText(key))
 			local corner = Instance.new("UICorner")
 			corner.CornerRadius = UDim.new(0.3, 0)
 			corner.Parent = label
@@ -576,7 +577,7 @@ local function buildLabels(world: Folder)
 			if entry.timer then
 				-- texte et visibilité posés par refreshTimers (interrupteur du serveur d'abord)
 				gui.Enabled = false
-				label.Text = ""
+				Text.raw(label, "")
 			end
 			sizeLabel(entry, scale)
 			table.insert(state.labels, entry)
@@ -593,7 +594,7 @@ local function refreshLabels(force: boolean)
 	state.labelScale = scale
 	for _, entry in state.labels do
 		if entry.timer == nil then
-			entry.label.Text = labelText(entry.key)
+			Text.raw(entry.label, labelText(entry.key))
 		end
 		sizeLabel(entry, scale)
 	end
@@ -628,7 +629,7 @@ local function refreshTimers(payload: Types.EventStatePayload?, now: number)
 				entry.gui.Enabled = enabled
 			end
 			if entry.label.Text ~= text then
-				entry.label.Text = text
+				Text.raw(entry.label, text)
 				sizeLabel(entry, state.labelScale)
 			end
 		end
