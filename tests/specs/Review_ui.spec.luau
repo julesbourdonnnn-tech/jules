@@ -473,4 +473,231 @@ return function(T)
 			Harness.disposeAll()
 		end)
 	end
+
+	-- texte d'un écran dessiné dessous tranché par le bord d'une fenêtre opaque (type « occluded » de
+	-- l'outil) : la pastille des pièces (« 1,2… M ») et le suivi du Grand Splorch coupés par le haut
+	-- du panneau, les libellés du rail (« Gra », « Ran », « Squ ») par son bord gauche, la puce
+	-- « GRAND SPLORCH ! » par le bas de la carte du choix Rush / Cozy. Caché entier ou entier visible,
+	-- jamais à moitié.
+	local function guiOf(obj)
+		local p = obj
+		while p and not p:IsA("ScreenGui") do
+			p = p.Parent
+		end
+		return p
+	end
+	local function slicedUnder(c, cover): { string }
+		local out = {}
+		local coverRect = Layout.rect(cover)
+		local coverGui = guiOf(cover)
+		if coverRect == nil or coverGui == nil then
+			return { "fenêtre introuvable" }
+		end
+		local order = prop(coverGui, "DisplayOrder") or 0
+		local playerGui = c.h.localPlayer:FindFirstChildOfClass("PlayerGui")
+		for _, d in playerGui:GetDescendants() do
+			if (d:IsA("TextLabel") or d:IsA("TextButton")) and d.Text ~= "" and shown(d) then
+				local g = guiOf(d)
+				if g and g ~= coverGui and (prop(g, "DisplayOrder") or 0) < order then
+					local r = Layout.rect(d)
+					local w = math.min(r.x + r.w, coverRect.x + coverRect.w) - math.max(r.x, coverRect.x)
+					local hh = math.min(r.y + r.h, coverRect.y + coverRect.h) - math.max(r.y, coverRect.y)
+					local frac = if w > 0 and hh > 0 and r.w * r.h > 0 then (w * hh) / (r.w * r.h) else 0
+					if frac > 0.08 and frac < 0.92 then
+						table.insert(
+							out,
+							string.format(
+								"%s « %s » coupé à %d %%",
+								Layout.name(d),
+								d.Text,
+								math.floor(frac * 100)
+							)
+						)
+					end
+				end
+			end
+		end
+		table.sort(out)
+		return out
+	end
+	for _, pid in { "tv1080", "tv720", "tv2160" } do
+		describe("Revue UI › aucun texte tranché par la fenêtre au-dessus › " .. pid, function()
+			local ok, c = pcall(Screens.boot, Harness, Screens.profileById(pid), "fr", "mid")
+			if not ok then
+				it("démarrage du client", function()
+					error(c)
+				end)
+				return
+			end
+			-- écrans de l'outil (groupe « mid ») : chaque panneau à son 1er onglet, Diagnostics compris
+			-- (son instantané du serveur est envoyé par le scénario)
+			local byId = {}
+			for _, group in Screens.groups() do
+				for _, s in group.screens do
+					if byId[s.id] == nil then
+						byId[s.id] = s
+					end
+				end
+			end
+			for _, entry in Screens.PANEL_TABS do
+				local panel, tabs = entry[1], entry[2]
+				local id = "panel." .. panel .. (if tabs[1] ~= "" then "." .. tabs[1] else "")
+				local shownOk, err = Screens.show(c, byId[id])
+				Screens.frames(c, 3, 0.1)
+				Screens.layout(c)
+				local bad = if shownOk then slicedUnder(c, c.PC.window(panel)) else { tostring(err) }
+				it(
+					"panneau " .. panel .. " : HUD et rail dessous cachés entiers ou entiers visibles",
+					function()
+						expect(table.concat(bad, "\n")).toBe("")
+					end
+				)
+			end
+			Screens.closeAll(c)
+			Screens.frames(c, 3, 0.1)
+			Screens.layout(c)
+			-- rail fermé, aucun panneau : le HUD revient entier (pièces, suivi, pastille d'événement)
+			local back = {}
+			for _, name in { "coins", "goalTracker" } do
+				if not c.HUD.visible(name) then
+					table.insert(back, name)
+				end
+			end
+			it("panneau fermé : pièces et suivi du Grand Splorch de retour", function()
+				expect(table.concat(back, ", ")).toBe("")
+			end)
+			-- carte bloquante du choix Rush / Cozy
+			local shownOk, err = Screens.show(c, byId["card.mode"])
+			Screens.layout(c)
+			local bad = if shownOk then slicedUnder(c, c.Cards.frame("mode")) else { tostring(err) }
+			it(
+				"carte du choix Rush / Cozy : puce et HUD dessous cachés entiers ou entiers visibles",
+				function()
+					expect(table.concat(bad, "\n")).toBe("")
+				end
+			)
+			Harness.disposeAll()
+		end)
+	end
+
+	-- voiles des panneaux, de la carte du choix et de l'écran de retour : tout l'écran, bande de la
+	-- barre de Roblox comprise (l'écran commence sous elle, GuiInset 58 px : une bande claire non
+	-- voilée restait en haut de chaque panneau et de chaque carte bloquante)
+	describe("Revue UI › voiles plein écran (bande de la barre de Roblox comprise)", function()
+		local ok, c = pcall(Screens.boot, Harness, profile, "fr", "mid")
+		if not ok then
+			it("démarrage du client", function()
+				error(c)
+			end)
+			return
+		end
+		local byId = {}
+		for _, group in Screens.groups() do
+			for _, s in group.screens do
+				if byId[s.id] == nil then
+					byId[s.id] = s
+				end
+			end
+		end
+		local vh = profile.h
+		local function veilOf(guiName: string): string
+			local playerGui = c.h.localPlayer:FindFirstChildOfClass("PlayerGui")
+			local gui = playerGui:FindFirstChild(guiName)
+			local veil = gui and gui:FindFirstChild("Veil")
+			if veil == nil or not shown(veil) then
+				return guiName .. " : voile absent ou caché"
+			end
+			local r = Layout.rect(veil)
+			-- partie visible du voile (l'écran va de 0 à vh)
+			return string.format(
+				"%s : y %d à %d",
+				guiName,
+				math.floor(math.max(r.y, 0) + 0.5),
+				math.floor(math.min(r.y + r.h, vh) + 0.5)
+			)
+		end
+		local function expected(guiName: string): string
+			return string.format("%s : y 0 à %d", guiName, vh)
+		end
+		local cases = {
+			{ "Panels", "panel.Ranch.pens" },
+			{ "Cards", "card.mode" },
+			{ "Return", "return.plain" },
+		}
+		for _, case in cases do
+			local guiName, id = case[1], case[2]
+			local shownOk, err = Screens.show(c, byId[id])
+			Screens.layout(c)
+			local got = if shownOk then veilOf(guiName) else tostring(err)
+			it(id .. " : le voile couvre tout l'écran", function()
+				expect(got).toBe(expected(guiName))
+			end)
+		end
+		Harness.disposeAll()
+	end)
+
+	-- texte dont le contour (UIStroke Contextual) est de la même couleur que les lettres : les
+	-- lettres se fondent en une tache (« ×2 » du bonus du HUD, bleu nuit sur contour bleu nuit, lu
+	-- comme un nuage noir sur la pastille dorée)
+	describe("Revue UI › aucun texte fondu dans son contour de même couleur", function()
+		local ok, c = pcall(Screens.boot, Harness, profile, "fr", "mid")
+		if not ok then
+			it("démarrage du client", function()
+				error(c)
+			end)
+			return
+		end
+		local byId = {}
+		local order = {}
+		for _, group in Screens.groups() do
+			if group.state == "mid" and group.id ~= "huge" then
+				for _, s in Screens.expand(c, group) do
+					if byId[s.id] == nil then
+						byId[s.id] = s
+						table.insert(order, s.id)
+					end
+				end
+			end
+		end
+		local function close(a, b): boolean
+			return math.abs(a.R - b.R) + math.abs(a.G - b.G) + math.abs(a.B - b.B) < 0.12
+		end
+		local bad = {}
+		local seen = {}
+		for _, id in order do
+			local shownOk = Screens.show(c, byId[id])
+			if shownOk then
+				Screens.layout(c)
+				local playerGui = c.h.localPlayer:FindFirstChildOfClass("PlayerGui")
+				for _, d in playerGui:GetDescendants() do
+					if (d:IsA("TextLabel") or d:IsA("TextButton")) and d.Text ~= "" and shown(d) then
+						local stroke = d:FindFirstChildOfClass("UIStroke")
+						if
+							stroke
+							and prop(stroke, "Enabled") ~= false
+							and prop(stroke, "ApplyStrokeMode") ~= Enum.ApplyStrokeMode.Border
+							and (prop(stroke, "Transparency") or 0) < 0.5
+							and (prop(stroke, "Thickness") or 0) >= 1.5
+							and close(prop(d, "TextColor3"), prop(stroke, "Color"))
+						then
+							local key = Layout.name(d)
+							if not seen[key] then
+								seen[key] = true
+								table.insert(bad, string.format("%s « %s » (%s)", key, d.Text, id))
+							end
+						end
+					end
+				end
+			end
+		end
+		table.sort(bad)
+		it(
+			"chaque écran de milieu de partie (HUD, panneaux, cartes, bannières) : contour d'une autre couleur que le texte",
+			function()
+				expect(#order > 5).toBe(true)
+				expect(table.concat(bad, "\n")).toBe("")
+			end
+		)
+		Harness.disposeAll()
+	end)
 end

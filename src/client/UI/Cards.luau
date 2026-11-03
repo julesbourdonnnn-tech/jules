@@ -351,7 +351,7 @@ local function build()
 	v.BackgroundColor3 = Color3.fromRGB(10, 8, 24)
 	v.BackgroundTransparency = 0.4
 	v.BorderSizePixel = 0
-	v.Size = UDim2.fromScale(1, 1)
+	Root.coverScreen(v)
 	v.Visible = false
 	v.Active = true
 	v.ZIndex = 0

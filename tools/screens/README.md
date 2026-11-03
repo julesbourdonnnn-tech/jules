@@ -121,6 +121,8 @@ L'outil dessine donc une police CSS de `TextSize ÷ (hauteur de ligne de la poli
 | `covered` | un message (toast) se dessine par-dessus le corps du panneau ouvert (la barre de titre lui est réservée) |
 | `seeThrough` | un fond plein qui porte du texte est rendu transparent par la `Transparency` de son `UIGradient` : le HUD et le rail dessous transparaissent (texte fantôme derrière le contenu) |
 | `squareCorner` | le fond carré d'un enfant dépasse du coin arrondi de son parent (`ClipsDescendants` coupe au rectangle, jamais à l'arrondi : seul un `CanvasGroup` arrondi coupe à sa forme) |
+| `occluded` | un texte d'un écran est **tranché** (8 % à 92 % de son encre cachée) par le fond opaque d'un **autre** écran dessiné au-dessus : pastille des pièces coupée par le haut d'un panneau, libellés du rail par son bord gauche, puce d'action sous une carte bloquante. `clipped` ne voit que la découpe par un parent. Un texte caché entier ou visible entier n'est pas signalé |
+| `strokeBlob` | le contour du texte (`UIStroke` Contextual) a la couleur des lettres : elles s'épaississent et se fondent en une tache (« ×2 » bleu nuit cerné de bleu nuit sur la pastille dorée du bonus, « # » et « $ » du rail, « ♥1 » du Meilleur Ami). Le contraste, lui, reste bon : `contrast` ne le voit pas |
 | `empty`, `question`, `rawKey`, `placeholder`, `defaultText` | boîte visible vide, « ? » à la place d'une donnée, clé de traduction, `{variable}`, texte jamais posé |
 | `noChange` | « 60 → 60 » : la flèche annonce un changement qui n'existe pas |
 | `peek` | **information** : rangée entrouverte voulue en bas d'une liste (elle annonce la suite) |

@@ -499,7 +499,9 @@ local function buildStatus()
 	d.ZIndex = 4
 	local boost = statusIcon(f, "boost", Theme.Colors.Gold)
 	boost.LayoutOrder = 2
-	Util.label({
+	-- « ×2 » bleu nuit sur l'or, sans contour : le contour bleu nuit d'Util.label (même couleur que
+	-- les lettres) les fondait en une tache illisible (revue des écrans)
+	local boostText = Util.label({
 		name = "Text",
 		parent = refs.status_boost,
 		text = Util.t("hud.status.boost"),
@@ -507,6 +509,10 @@ local function buildStatus()
 		color = Theme.Colors.Stroke,
 		zIndex = 4,
 	})
+	local boostStroke = boostText:FindFirstChildOfClass("UIStroke")
+	if boostStroke then
+		boostStroke.Enabled = false
+	end
 	local mode = statusIcon(f, "mode", Color3.fromRGB(255, 120, 180))
 	mode.LayoutOrder = 3
 	-- Rush : un nez boopé (point) ; Cozy : un croissant de lune (forme différente)
@@ -869,6 +875,24 @@ local function eventPill(now: number): (string, Color3?)
 	return "", nil
 end
 
+-- Un panneau est ouvert : sa fenêtre (1440 × 860 px TV, y 110-970) tranche le haut du HUD (pièces,
+-- suivi du Grand Splorch, pastille d'événement : « 1,2… M » coupé à mi-hauteur). Ces éléments se
+-- cachent entiers pendant le panneau ; le solde est déjà écrit dans le panneau là où il sert
+-- (Ranch › Dalles) (revue des écrans)
+local function panelCovering(): boolean
+	return Util.safe("PanelController.isOpen", false, PanelController.isOpen) == true
+end
+
+-- Une carte bloquante (choix Rush / Cozy, « booped ») est au centre : la puce d'action dessous
+-- serait tranchée par son bord bas ; elle se cache le temps de la carte (revue des écrans)
+local function modalCovering(): boolean
+	if panelCovering() then
+		return true
+	end
+	local card = Util.safe("Cards.current", nil, Cards.current)
+	return type(card) == "table" and card.blocking == true
+end
+
 local function updateEvents(now: number)
 	local pill = elements.eventPill
 	local text, color = eventPill(now)
@@ -876,7 +900,7 @@ local function updateEvents(now: number)
 	if pill and color then
 		pill.BackgroundColor3 = color
 	end
-	setVisible(pill, text ~= "" and revealed.eventPill ~= false and not photo)
+	setVisible(pill, text ~= "" and revealed.eventPill ~= false and not photo and not panelCovering())
 
 	local f = features()
 	local ev = eventState()
@@ -1137,7 +1161,7 @@ local function updateSpecial(now: number, splorchReady: boolean)
 	local text = refs.specialText :: TextLabel
 	text.Position = UDim2.new(0, left, 0.5, 0)
 	text.Size = UDim2.new(1, -(left + 20), 0, 64)
-	setVisible(chip, mode ~= "" and revealed.specialChip ~= false and not photo)
+	setVisible(chip, mode ~= "" and revealed.specialChip ~= false and not photo and not modalCovering())
 end
 
 local function updateTarget(now: number)
@@ -1210,7 +1234,8 @@ local function updateTarget(now: number)
 			card:SetAttribute("Uid", uid)
 		end
 	end
-	setVisible(card, shown and revealed.targetCard ~= false and not photo)
+	-- bas du panneau (y 970) sur la carte de la cible (y 930-1026) : cachée entière pendant un panneau
+	setVisible(card, shown and revealed.targetCard ~= false and not photo and not panelCovering())
 end
 
 local function updateLeap(now: number)
@@ -1247,8 +1272,9 @@ local function updateMenuChip()
 	setVisible(elements.menuChip, revealed.menuChip ~= false and not menuOpen and not photo)
 	-- le rail peut remonter jusqu'à la pastille Fame en 720p (8 entrées) : elle s'efface pendant le menu
 	setVisible(elements.fame, revealed.fame ~= false and not menuOpen and not photo)
-	setVisible(elements.coins, revealed.coins ~= false and not photo)
-	setVisible(elements.goalTracker, revealed.goalTracker ~= false and not photo)
+	local covered = panelCovering()
+	setVisible(elements.coins, revealed.coins ~= false and not photo and not covered)
+	setVisible(elements.goalTracker, revealed.goalTracker ~= false and not photo and not covered)
 end
 
 -- Bouton qui attire l'attention (GDD §9.2) : pulsation UIScale 1 → 1,08 en sinus de 0,8 s sur la puce

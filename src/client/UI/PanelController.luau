@@ -249,6 +249,8 @@ local function buildRail()
 			corner = UDim.new(0.5, 0),
 			zIndex = b.ZIndex + 1,
 		})
+		-- symbole bleu nuit sans contour : un contour de la même couleur épaississait « # » et « $ »
+		-- en taches (revue des écrans)
 		Widgets.label({
 			parent = dot,
 			name = "Symbol",
@@ -256,6 +258,7 @@ local function buildRail()
 			textSize = 36,
 			zIndex = dot.ZIndex + 1,
 			color = Widgets.Colors.Stroke,
+			stroke = false,
 		})
 		local labelX = 16 + RAIL_CONTENT.icon + 16
 		Widgets.label({
@@ -301,7 +304,7 @@ local function buildPanelsScreen()
 	v.BackgroundColor3 = Color3.fromRGB(10, 8, 24)
 	v.BackgroundTransparency = 1
 	v.BorderSizePixel = 0
-	v.Size = UDim2.fromScale(1, 1)
+	Root.coverScreen(v)
 	v.Active = true
 	v.ZIndex = 0
 	v:SetAttribute("Decorative", true)
@@ -463,6 +466,25 @@ local function railBadge(entry: string): string
 	return ""
 end
 
+-- Panneau ouvert : sa fenêtre (x 240) recouvre le rail (x 96-436) et tranchait ses libellés
+-- (« Gra », « Ran », « Squ ») et ses pastilles. Pendant un panneau, le rail ne montre que ses
+-- pastilles de couleur (icônes entières, x 112-176) ; libellés et pastilles reviennent à la
+-- fermeture (revue des écrans)
+local function coverRail()
+	local covered = panelsScreen ~= nil and (panelsScreen :: ScreenGui).Enabled
+	for _, entry in RAIL do
+		local b = railButtons[entry]
+		local badge = railBadges[entry]
+		if b and badge then
+			local label = b:FindFirstChild("Label")
+			if label and label:IsA("TextLabel") then
+				label.Visible = not covered
+			end
+			badge.Visible = badge.Text ~= "" and not covered
+		end
+	end
+end
+
 local function refreshRail()
 	local frame = railFrame
 	if frame == nil then
@@ -500,7 +522,6 @@ local function refreshRail()
 		local text = railBadge(entry)
 		local badge = railBadges[entry]
 		Widgets.setRaw(badge, text)
-		badge.Visible = text ~= ""
 		-- la pastille a sa place à droite : le libellé se resserre (jamais de chevauchement)
 		local label = b:FindFirstChild("Label")
 		if label and label:IsA("TextLabel") then
@@ -508,6 +529,7 @@ local function refreshRail()
 			label.Size = UDim2.new(1, -(labelX + 16 + room), 1, -16)
 		end
 	end
+	coverRail()
 	Widgets.attention(railButtons.SplorchPreview, railButtons.SplorchPreview.Visible)
 	-- entrée sélectionnée qui vient d'être cachée (carte « ! » rangée, Grand Splorch plus prêt) : la
 	-- sélection passe aussitôt à l'entrée par défaut, sans sauvetage compté
@@ -634,6 +656,7 @@ local function setOverlay(on: boolean)
 			Juice.tween(blur, 0.12, { Size = 0 })
 		end
 	end
+	coverRail()
 	-- un toast déjà affiché monte dans la barre de titre (ou redescend à la fermeture)
 	pcall(Toast.relayout)
 end

@@ -379,6 +379,8 @@ local function makeCell(frame: Frame, c: number): Cell
 	local name = text("Name", 112, 40, 32)
 	local size = text("Size", 154, 34, 28, Widgets.Colors.TextDim)
 	local line = text("Line", 192, 34, 28)
+	-- « ♥1 » bleu nuit sur l'or, sans contour (un contour bleu nuit fondait les lettres en une tache ;
+	-- revue des écrans)
 	local bf = Widgets.label({
 		parent = b,
 		name = "BestFriend",
@@ -387,6 +389,7 @@ local function makeCell(frame: Frame, c: number): Cell
 		text = "",
 		textSize = 28,
 		color = Widgets.Colors.Stroke,
+		stroke = false,
 		background = Widgets.Colors.Gold,
 		backgroundTransparency = 0,
 		zIndex = b.ZIndex + 3,

@@ -76,6 +76,17 @@ local BASE_EXCEPTIONS: { [string]: Exception } = {
 	["celebrate.rainbow"] = { chars = NBSP, owner = "B1" },
 }
 
+-- Les formateurs de nombres et de durées écrivent eux aussi des caractères dans les étiquettes
+-- (variables {x} des clés) : même règle, avec leur propre liste FERMÉE d'exceptions du jeu de base,
+-- qui ne fait que rétrécir (note INT-V2-GLYPHS, d). « formateur » = module qui écrit le caractère.
+-- U+202F (espace fine insécable) : absente des deux polices ; U+00A0 : absente de FredokaOne ;
+-- « ∞ » (±inf, valeur hostile seulement) : absent des deux polices.
+local NNBSP = utf8.char(0x202F)
+local FORMATTER_EXCEPTIONS: { [string]: Exception } = {
+	BigNumber = { chars = NNBSP .. "∞", owner = "A1" },
+	Format = { chars = NBSP .. "∞", owner = "B1" },
+}
+
 local V2_MARKER = "-- Contrat v2.0 (GDD v2.0, Annexe B"
 
 -- Lecture d'une table `cmap` TrueType (formats 4 et 12, sous-tables Unicode : plateforme 0, ou
@@ -390,7 +401,96 @@ return function(T: any)
 		end)
 
 		it(
-			"les icônes de la règle 18 ne sont jamais écrites dans une clé v2.0 (→ ✓ ★ ∞ ↺ □ △ ○ ✕)",
+			"formateurs (Logic/BigNumber, Util/Format), EN et FR, de 0 à 1e300 : caractères des deux polices, exceptions fermées",
+			function()
+				local cmaps = loadFonts()
+				local h = Harness.new()
+				local BigNumber = h:require("ReplicatedStorage.Shared.Logic.BigNumber")
+				local Format = h:require("ReplicatedStorage.Shared.Util.Format")
+				-- valeurs : chaque palier de suffixe (1e0 … 1e300), ses bords (999…, 1,5 ×), négatifs,
+				-- et les valeurs hostiles (±inf, NaN, −0) que les formateurs acceptent sans erreur
+				local nan = math.huge * 0
+				local values =
+					{ 0, -0, 7, 999, 1000, 1234, 9999, 10000, 12345, 999999, nan, math.huge, -math.huge }
+				for e = 3, 300, 3 do
+					table.insert(values, 10 ^ e)
+					table.insert(values, 1.5 * 10 ^ e)
+					table.insert(values, 10 ^ e - 1)
+					table.insert(values, -4.56 * 10 ^ e)
+				end
+				local durations = { 0, 5, 59, 60, 61, 90, 600, 3599, 3600, 3725, 7200, 18720, 57600, 86399 }
+				local outputs: { [string]: { string } } = { BigNumber = {}, Format = {} }
+				for _, lang in { "en", "fr" } do
+					for _, n in values do
+						local short, words = BigNumber.words(n, lang)
+						table.insert(outputs.BigNumber, BigNumber.abbreviate(n, lang))
+						table.insert(outputs.BigNumber, BigNumber.full(n, lang))
+						table.insert(outputs.BigNumber, short)
+						table.insert(outputs.BigNumber, words)
+						table.insert(outputs.Format, Format.abbreviate(n, lang))
+						table.insert(outputs.Format, Format.commas(n, lang))
+					end
+					for _, s in durations do
+						table.insert(outputs.Format, Format.duration(s, lang))
+					end
+				end
+				for _, s in durations do
+					table.insert(outputs.Format, Format.clock(s))
+				end
+				for _, ratio in { 0, 0.05, 0.256, 1, 1.5, 12.345 } do
+					table.insert(outputs.Format, Format.percent(ratio))
+					table.insert(outputs.Format, Format.percent(ratio, 1))
+				end
+				local offenders = {}
+				local used: { [string]: { [number]: boolean } } = { BigNumber = {}, Format = {} }
+				for formatter, texts in outputs do
+					local exception = FORMATTER_EXCEPTIONS[formatter]
+					for _, text in texts do
+						expect({ formatter = formatter, utf8 = utf8.len(text) ~= nil }).toEqual({
+							formatter = formatter,
+							utf8 = true,
+						})
+						for _, code in utf8.codes(text) do
+							used[formatter][code] = true
+							if not string.find(exception.chars, utf8.char(code), 1, true) then
+								for _, name in FONT_ORDER do
+									if not cmaps[name][code] then
+										offenders[formatter .. " : " .. hex(code) .. " absent de " .. name] =
+											true
+									end
+								end
+							end
+						end
+					end
+				end
+				local list = {}
+				for line in offenders do
+					table.insert(list, line)
+				end
+				table.sort(list)
+				expect(list).toEqual({})
+				-- liste fermée : chaque caractère d'exception est vraiment écrit et vraiment hors police
+				for formatter, exception in FORMATTER_EXCEPTIONS do
+					for _, code in utf8.codes(exception.chars) do
+						local outside = not cmaps.FredokaOne[code] or not cmaps.LuckiestGuy[code]
+						expect({
+							formatter = formatter,
+							char = hex(code),
+							used = used[formatter][code] == true,
+							outside = outside,
+						}).toEqual({
+							formatter = formatter,
+							char = hex(code),
+							used = true,
+							outside = true,
+						})
+					end
+				end
+			end
+		)
+
+		it(
+			"les icônes de la règle 18 ne sont jamais écrites dans une clé hors des exceptions du jeu de base (→ ✓ ★ ∞ ↺ □ △ ○ ✕)",
 			function()
 				local S = strings()
 				local banned =

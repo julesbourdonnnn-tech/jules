@@ -69,7 +69,7 @@ local function build()
 	veil.BackgroundColor3 = Color3.fromRGB(10, 8, 24)
 	veil.BackgroundTransparency = 0.35
 	veil.BorderSizePixel = 0
-	veil.Size = UDim2.fromScale(1, 1)
+	Root.coverScreen(veil)
 	veil.Active = true
 	veil.ZIndex = 0
 	veil:SetAttribute("Decorative", true)

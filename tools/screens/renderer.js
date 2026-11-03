@@ -1067,6 +1067,20 @@
           ratio: +e.contrast.toFixed(2),
           rect: R(visible),
         });
+      // contour (Contextual) de la même couleur que les lettres : elles s'épaississent et se fondent
+      // en une tache (« ×2 » bleu nuit cerné de bleu nuit sur la pastille du bonus, « # » et « $ » du
+      // rail ; revue de l'outil : le contraste, lui, restait bon)
+      {
+        const s = n.stroke;
+        const tc = t.color || [0, 0, 0];
+        if (!n.deco && s && s.mode !== 'Border' && s.t < 0.5 && s.thick >= 1.5 && s.color) {
+          const d = Math.abs(tc[0] - s.color[0]) + Math.abs(tc[1] - s.color[1]) + Math.abs(tc[2] - s.color[2]);
+          if (d < 31)
+            add('strokeBlob', n, `contour de la même couleur que le texte (${JSON.stringify(tc)} / ${JSON.stringify(s.color)}) : les lettres se fondent en une tache`, {
+              rect: R(ink),
+            });
+        }
+      }
       if (!n.deco && e.tint && Math.min(...e.tint) < 0.6)
         add('tinted', n, `couleur du texte multipliée par ×${JSON.stringify(e.tint)} (UIGradient d'un CanvasGroup parent : il teinte tout le groupe)`, {
           rect: R(ink),

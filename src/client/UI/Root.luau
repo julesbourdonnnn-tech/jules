@@ -124,6 +124,18 @@ function Root.screen(name: string, displayOrder: number?): ScreenGui
 	return gui
 end
 
+-- px : un voile plein écran remonte d'autant au-dessus de l'écran. Les écrans commencent sous la
+-- barre de Roblox (IgnoreGuiInset = false, GuiInset 58 px) et un ScreenGui ne coupe pas ses
+-- enfants : sans ce débord, une bande claire non voilée restait en haut de chaque panneau et de
+-- chaque carte bloquante (revue des écrans)
+Root.VEIL_OVERSCAN = 160
+
+-- Voile (décoratif) qui couvre tout l'écran, bande de la barre de Roblox comprise
+function Root.coverScreen(frame: GuiObject)
+	frame.Position = UDim2.fromOffset(0, -Root.VEIL_OVERSCAN)
+	frame.Size = UDim2.new(1, 0, 1, Root.VEIL_OVERSCAN)
+end
+
 -- Conteneur sûr d'un écran (là où placer les éléments)
 function Root.safe(name: string, displayOrder: number?): Frame
 	return Root.screen(name, displayOrder):FindFirstChild("Safe") :: Frame
