@@ -51,6 +51,21 @@ local writes = {} -- "Class.prop" → { class, prop, types = {}, where }
 local reads = {} -- "Class.member" → { class, member, where }
 local classes = {} -- className → where
 
+-- Styles plus récents que la base de réflexion de Lune (lot B1 ; GDD v2.0 §10.1, critique m21 ; même
+-- liste que MockInstance.styleFeatures) : classe et propriétés vérifiées ici avec leur type supposé ;
+-- la classe hérite des propriétés de sa classe mère (Name, Parent…). Un nom faux sur l'appareil lève
+-- sous pcall et UI/Theme retombe sur l'aplat.
+local NEWER_CLASSES: { [string]: string } = {
+	UIShadow = "UIComponent",
+}
+local NEWER_PROPS: { [string]: { Datatype: string, Scriptability: string } } = {
+	["UIShadow.Color"] = { Datatype = "Color3", Scriptability = "ReadWrite" },
+	["UIShadow.Transparency"] = { Datatype = "Float32", Scriptability = "ReadWrite" },
+	["UIShadow.Offset"] = { Datatype = "Vector2", Scriptability = "ReadWrite" },
+	["UIShadow.BlurRadius"] = { Datatype = "Float32", Scriptability = "ReadWrite" },
+	["UIGradient.Type"] = { Datatype = "String", Scriptability = "ReadWrite" },
+}
+
 local propCache = {}
 local function findProp(className: string, name: string)
 	local key = className .. "." .. name
@@ -58,7 +73,12 @@ local function findProp(className: string, name: string)
 	if cached ~= nil then
 		return cached or nil
 	end
-	local c = db:GetClass(className)
+	local newer = NEWER_PROPS[key]
+	if newer then
+		propCache[key] = newer
+		return newer
+	end
+	local c = db:GetClass(NEWER_CLASSES[className] or className)
 	local found = false
 	while c do
 		local p = c.Properties[name]
@@ -210,7 +230,11 @@ function ApiAudit.stop(): { string }
 	MockInstance.new = origNew
 	local issues = {}
 	for className, where in classes do
-		if not HARNESS_CLASSES[className] and db:GetClass(className) == nil then
+		if
+			not HARNESS_CLASSES[className]
+			and not NEWER_CLASSES[className]
+			and db:GetClass(className) == nil
+		then
 			table.insert(issues, `classe inconnue de Roblox : {className} ({where})`)
 		end
 	end

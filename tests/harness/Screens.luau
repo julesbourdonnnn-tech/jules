@@ -2041,7 +2041,10 @@ function Screens.keyBoxes(c)
 	end
 	for _, obj in objs do
 		local d = TextFit.layout(obj)
-		local set = if d and d.text ~= "" then Screens.keysOf(c, d.text) else nil
+		-- lot B1 : texte d'origine d'un libellé à repères de UI/Text (« {_} », « {*} »), relié à sa clé
+		local source = obj:GetAttribute("TextSource")
+		local shownText = if type(source) == "string" then source elseif d then d.text else ""
+		local set = if d and d.text ~= "" then Screens.keysOf(c, shownText) else nil
 		-- texte "fit" de UI/Text (lot B1) : le jeu reprend la règle de l'ancien TextScaled pour chaque
 		-- texte posé (plus grande taille entière de [TextFitMin, TextFitMax] qui tient) ; toute clé est
 		-- donc mesurée dans la boîte avec cette règle, pas à la taille relevée pour le texte affiché

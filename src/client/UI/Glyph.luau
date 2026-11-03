@@ -241,4 +241,117 @@ function Glyph.destroy(self: Handle)
 	self.frame:Destroy()
 end
 
+-- =============================================================================================
+-- Étoile DESSINÉE (lot B1, règle 18 du GDD v2.0 §10.8 « aucun symbole hors police », INT-V2-GLYPHS a) :
+-- « ★ » n'est dans aucune des deux polices du jeu (FredokaOne, LuckiestGuy) ; l'étoile est un
+-- pentagramme de 5 traits arrondis et un disque central (aucune image téléversée), dessiné deux fois :
+-- liseré sombre dessous (trait plus épais), couleur dessus. Les étoiles des clés common.stars et
+-- celebrate.star viennent du repère « {*} » (UI/Text.STAR).
+-- =============================================================================================
+
+local STAR_THICKNESS = 0.2 -- épaisseur d'un trait (fraction de la taille)
+local STAR_CORE = 0.4 -- rayon du disque central (fraction du rayon de l'étoile)
+
+-- Une couche du pentagramme (traits de `thick` px) dans `holder` (taille `size` px)
+local function starLayer(
+	holder: Frame,
+	name: string,
+	size: number,
+	thick: number,
+	core: number,
+	color: Color3,
+	z: number
+)
+	local layer = Instance.new("Frame")
+	layer.Name = name
+	layer.BackgroundTransparency = 1
+	layer.Size = UDim2.fromScale(1, 1)
+	layer.ZIndex = z
+	layer.Parent = holder
+	local r = size / 2 - thick / 2
+	local cx, cy = size / 2, size / 2 + size * 0.04 -- le centre visuel d'une étoile est un peu bas
+	local points = {}
+	for k = 0, 4 do
+		local a = math.rad(-90 + 72 * k)
+		points[k] = Vector2.new(cx + r * math.cos(a), cy + r * math.sin(a))
+	end
+	for k = 0, 4 do
+		local a, b = points[k], points[(k + 2) % 5]
+		local d = b - a
+		local seg = Instance.new("Frame")
+		seg.Name = "Ray" .. (k + 1)
+		seg.BorderSizePixel = 0
+		seg.BackgroundColor3 = color
+		seg.AnchorPoint = Vector2.new(0.5, 0.5)
+		seg.Position = UDim2.fromOffset((a.X + b.X) / 2, (a.Y + b.Y) / 2)
+		seg.Size = UDim2.fromOffset(d.Magnitude + thick, thick)
+		seg.Rotation = math.deg(math.atan2(d.Y, d.X))
+		seg.ZIndex = z
+		local round = Instance.new("UICorner")
+		round.CornerRadius = UDim.new(0.5, 0)
+		round.Parent = seg
+		seg.Parent = layer
+	end
+	local disc = Instance.new("Frame")
+	disc.Name = "Core"
+	disc.BorderSizePixel = 0
+	disc.BackgroundColor3 = color
+	disc.AnchorPoint = Vector2.new(0.5, 0.5)
+	disc.Position = UDim2.fromOffset(cx, cy)
+	disc.Size = UDim2.fromOffset(2 * core, 2 * core)
+	disc.ZIndex = z
+	local round = Instance.new("UICorner")
+	round.CornerRadius = UDim.new(0.5, 0)
+	round.Parent = disc
+	disc.Parent = layer
+	return layer
+end
+
+-- Étoile de `size` px (taille dessinée, avant UIScale) : couleur `color`, liseré `edge` de `edgePx` px
+-- (défaut : bleu nuit du contour des textes, 3 px à 28 px et plus). Rend le cadre (Name « Star »).
+function Glyph.star(parent: Instance?, size: number, color: Color3?, edge: Color3?, edgePx: number?): Frame
+	local s = if type(size) == "number" and size == size then math.clamp(size, 8, 512) else 32
+	local e = if type(edgePx) == "number" and edgePx == edgePx
+		then math.clamp(edgePx, 0, s / 4)
+		else math.max(1, s / 12)
+	local holder = Instance.new("Frame")
+	holder.Name = "Star"
+	holder.BackgroundTransparency = 1
+	holder.Size = UDim2.fromOffset(s, s)
+	holder.Active = false
+	holder.Selectable = false
+	holder:SetAttribute("Icon", "star")
+	local thick = s * STAR_THICKNESS
+	local core = (s / 2) * STAR_CORE
+	if e > 0 then
+		starLayer(holder, "Edge", s, thick + 2 * e, core + e, edge or Theme.Colors.Stroke, 1)
+	end
+	starLayer(holder, "Fill", s, thick, core, color or Theme.Colors.Gold, 2)
+	if parent then
+		holder.Parent = parent
+	end
+	return holder
+end
+
+-- Recolore une étoile dessinée (texte qui change de couleur : case choisie du Ranch)
+function Glyph.paintStar(star: Instance, color: Color3?, edge: Color3?, transparency: number?)
+	for _, layerName in { "Fill", "Edge" } do
+		local layer = star:FindFirstChild(layerName)
+		if layer then
+			for _, part in layer:GetChildren() do
+				if part:IsA("Frame") then
+					if layerName == "Fill" and color then
+						part.BackgroundColor3 = color
+					elseif layerName == "Edge" and edge then
+						part.BackgroundColor3 = edge
+					end
+					if transparency then
+						part.BackgroundTransparency = transparency
+					end
+				end
+			end
+		end
+	end
+end
+
 return Glyph

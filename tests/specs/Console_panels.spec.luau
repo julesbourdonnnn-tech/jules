@@ -160,7 +160,9 @@ return function(T)
 				local PC = TvAudit.mod(h, "UI.PanelController")
 				local FG = TvAudit.mod(h, "UI.FocusGuard")
 				PC.toggleMenu()
-				-- clic sur l'entrée Ranch du rail
+				-- clic sur l'entrée Ranch du rail, après la garde d'ouverture (InputGuard, GDD v2.0 §10.6
+				-- règle 6, N14 : un clic 0 s après l'ouverture du menu est ignoré)
+				TvAudit.tick(h, 0.5)
 				PC.entryButton("Ranch").Activated:Fire()
 				h:settle(2)
 				expect(PC.current()).toBe("Ranch")

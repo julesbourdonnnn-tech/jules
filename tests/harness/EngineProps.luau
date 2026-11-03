@@ -87,7 +87,24 @@ function EngineProps.written(obj, key: string): boolean
 	return st ~= nil and st.written ~= nil and st.written[key] == true
 end
 
+-- Styles plus récents que la base de réflexion de Lune (lot B1 ; MockInstance.styleFeatures) : valeurs
+-- par défaut supposées du moteur (une ombre noire à 50 %, 6 px vers le bas ; dégradé linéaire)
+local NEWER_DEFAULTS: { [string]: { [string]: any } } = {
+	UIShadow = {
+		Color = roblox.Color3.new(0, 0, 0),
+		Transparency = 0.5,
+		Offset = roblox.Vector2.new(0, 6),
+		BlurRadius = 8,
+	},
+	UIGradient = { Type = "Linear" },
+}
+EngineProps.NEWER_DEFAULTS = NEWER_DEFAULTS
+
 local function engineDefault(className: string, key: string)
+	local newer = NEWER_DEFAULTS[className]
+	if newer and newer[key] ~= nil then
+		return newer[key]
+	end
 	local byClass = cache[className]
 	if byClass == nil then
 		byClass = {}

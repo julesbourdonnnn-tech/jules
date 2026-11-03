@@ -29,12 +29,12 @@ local Hash = require(Shared.Logic.Hash)
 
 local Client = script.Parent.Parent.Parent
 local Prefs = require(Client.Util.Prefs)
-local Root = require(Client.UI.Root)
 local Theme = require(Client.UI.Theme)
 local Juice = require(Client.UI.Juice)
 local Glyph = require(Client.UI.Glyph)
 local Text = require(Client.UI.Text)
 local Format = require(Client.UI.Format)
+local FocusGuard = require(Client.UI.FocusGuard)
 
 local Util = {}
 
@@ -374,9 +374,25 @@ export type ButtonProps = {
 
 local buttonGlyphs: { [Instance]: Glyph.Handle } = setmetatable({}, { __mode = "k" }) :: any
 
--- Bouton de fenêtre (cartes) : sélectionnable à la manette (cadre de sélection commun de UI/Root),
--- retour d'appui du GDD §9.2 (0,92 à l'appui, 1,05 puis 1 au relâchement, 1,05 sélectionné ; un seul
--- UIScale « JuiceScale » par objet), libellé ≥ 28 px TV, glyphe facultatif
+-- Bouton isolé (N11) : ni rangé par un UI*Layout de son parent (rail, liste), ni dans un ancêtre
+-- qui découpe ; seul un bouton isolé grossit au focus
+function Util.isolated(button: GuiObject): boolean
+	local parent = button.Parent
+	if parent ~= nil then
+		for _, child in parent:GetChildren() do
+			if child:IsA("UIListLayout") or child:IsA("UIGridLayout") or child:IsA("UITableLayout") then
+				return false
+			end
+		end
+	end
+	return #FocusGuard.clippers(button) == 0
+end
+
+-- Bouton de fenêtre (cartes) : sélectionnable à la manette (cadre de focus dessiné à l'intérieur,
+-- FocusGuard.selectionImage, lot B1), retour d'appui du GDD §9.2 (0,92 à l'appui, 1,05 puis 1 au
+-- relâchement ; 1,05 sélectionné pour un bouton isolé seulement, jamais rangé par un UI*Layout ni dans
+-- un cadre qui découpe, N11 ; un seul UIScale « JuiceScale » par objet), libellé ≥ 28 px TV, glyphe
+-- facultatif ; ✕ / clic passent par l'InputGuard de FocusGuard (N14)
 function Util.button(p: ButtonProps): TextButton
 	local b = Instance.new("TextButton")
 	b.Name = p.name
@@ -389,7 +405,7 @@ function Util.button(p: ButtonProps): TextButton
 	b.BackgroundColor3 = p.color or Theme.Colors.PanelLight
 	b.ZIndex = p.zIndex or 3
 	pcall(function()
-		b.SelectionImageObject = Root.selectionImage()
+		b.SelectionImageObject = FocusGuard.selectionImage()
 	end)
 	Util.chrome(b, Layout.Corner.Min)
 	local glyphW = 0
@@ -423,12 +439,18 @@ function Util.button(p: ButtonProps): TextButton
 		Juice.tween(scale, 0.18, { Scale = 1 }, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
 	end)
 	b.SelectionGained:Connect(function()
-		Juice.tween(scale, 0.12, { Scale = grow }, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+		local goal = if Util.isolated(b) then grow else 1
+		Juice.tween(scale, 0.12, { Scale = goal }, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 	end)
 	b.SelectionLost:Connect(function()
 		Juice.tween(scale, 0.12, { Scale = 1 }, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 	end)
 	b.Activated:Connect(function()
+		-- InputGuard : ✕ appuyé juste après l'ouverture de la fenêtre : ignoré jusqu'au relâchement
+		local ok, ready = pcall(FocusGuard.confirmReady)
+		if ok and ready ~= true then
+			return
+		end
 		p.onActivate()
 	end)
 	if p.parent then

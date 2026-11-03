@@ -49,11 +49,10 @@ local FONT_ORDER = { "FredokaOne", "LuckiestGuy" }
 -- « ★ », « ♥ », « ← », « ≈ » : symboles absents des deux polices, à remplacer par une icône dessinée
 -- (règle 18) ; U+00A0 (espace insécable) : absente de FredokaOne, dessinée blanche par le repli du
 -- moteur mais d'une largeur qui n'est pas celle de la police ; remplacée par une espace ordinaire
--- au lot B1 (passage du texte courant à FredokaOne), avec TextFit_all reprouvé.
-local NBSP = utf8.char(0x00A0)
+-- au lot B1 (passage du texte courant à FredokaOne), avec TextFit_all reprouvé : ses 13 clés et les
+-- 2 « ★ » (common.stars, celebrate.star : étoile dessinée, repère « {*} » de UI/Text) sont sorties de
+-- la liste au lot B1 (étape 2).
 local BASE_EXCEPTIONS: { [string]: Exception } = {
-	["common.stars"] = { chars = "★", owner = "B1" },
-	["celebrate.star"] = { chars = "★", owner = "B1" },
 	["panel.dex.starBadge"] = { chars = "★", owner = "B3" },
 	["hud.twins"] = { chars = "♥", owner = "B2" },
 	["panel.ranch.twins"] = { chars = "♥", owner = "B3" },
@@ -61,19 +60,6 @@ local BASE_EXCEPTIONS: { [string]: Exception } = {
 	["hud.queue.next"] = { chars = "≈", owner = "B2" },
 	["hud.queue.place"] = { chars = "≈", owner = "B2" },
 	["panel.shop.coinsAmount"] = { chars = "≈", owner = "B3" },
-	["shop.pass.AutoPot.desc"] = { chars = NBSP, owner = "B1" },
-	["cosmetic.source.plopDay"] = { chars = NBSP, owner = "B1" },
-	["cosmetic.source.rebirth"] = { chars = NBSP, owner = "B1" },
-	["common.oneIn"] = { chars = NBSP, owner = "B1" },
-	["panel.ranch.confirmRare"] = { chars = NBSP, owner = "B1" },
-	["plop.reward.day1"] = { chars = NBSP, owner = "B1" },
-	["card.mode.rush"] = { chars = NBSP, owner = "B1" },
-	["banner.secretHatch"] = { chars = NBSP, owner = "B1" },
-	["banner.rareMutation"] = { chars = NBSP, owner = "B1" },
-	["celebrate.secretTag"] = { chars = NBSP, owner = "B1" },
-	["celebrate.flop"] = { chars = NBSP, owner = "B1" },
-	["celebrate.glitch"] = { chars = NBSP, owner = "B1" },
-	["celebrate.rainbow"] = { chars = NBSP, owner = "B1" },
 }
 
 -- Les formateurs de nombres et de durées écrivent eux aussi des caractères dans les étiquettes
@@ -84,7 +70,7 @@ local BASE_EXCEPTIONS: { [string]: Exception } = {
 local NNBSP = utf8.char(0x202F)
 local FORMATTER_EXCEPTIONS: { [string]: Exception } = {
 	BigNumber = { chars = "", owner = "A1" }, -- U+202F et « ∞ » retirés (lot A1, INT-V2-GLYPHS d)
-	Format = { chars = NBSP .. "∞", owner = "B1" },
+	Format = { chars = "", owner = "B1" }, -- U+00A0 et « ∞ » retirés (lot B1, INT-V2-GLYPHS d)
 }
 
 local V2_MARKER = "-- Contrat v2.0 (GDD v2.0, Annexe B"

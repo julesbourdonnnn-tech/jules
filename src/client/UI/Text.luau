@@ -7,6 +7,8 @@
 --   Text.style(label, "label", 40)                    -- politique de taille (une fois, à la création)
 --   Text.factor()                                     -- facteur RÉEL du moteur (PreferredTextSize)
 --   Text.compensate(label)                            -- réapplique la politique à ce libellé
+--   Text.STAR (« {*} »), Text.GLUE (« {_} »)          -- repères des clés (lot B1, étape 2) : étoile
+--                                                     -- dessinée ; espace qui ne coupe jamais la ligne
 --
 -- Politique (jamais `TextScaled` : un texte en TextScaled n'est pas agrandi par la taille de texte
 -- choisie par le joueur, `GuiService.PreferredTextSize`, et ses bornes dépendent de l'ordre
@@ -568,18 +570,351 @@ function Text.compensate(label: TextObject)
 end
 
 -- =============================================================================================
+-- Icônes dessinées dans le texte (lot B1 ; règle 18 du GDD v2.0 §10.8 « aucun symbole hors police »,
+-- INT-V2-GLYPHS a) : le repère Text.STAR (« {*} ») d'une clé (common.stars, celebrate.star) devient une
+-- étoile DESSINÉE (UI/Glyph.star). Le texte porte à sa place des espaces ordinaires (U+0020, dans la
+-- police) de la largeur de l'étoile ; l'étoile est posée par-dessus, enfant du libellé, à la place
+-- mesurée (TextService, retours à la ligne et alignements compris), à la couleur du texte. Replacée
+-- quand la taille, la boîte, l'alignement ou la couleur changent. Un repère n'est jamais montré tel quel.
+-- =============================================================================================
+
+Text.STAR = "{*}"
+local ICON_EM = 1.1 -- largeur réservée à l'étoile (em) : un peu d'air de chaque côté
+local ICON_SIZE = 0.9 -- taille de l'étoile (em)
+
+type Mark = { prefix: string, count: number }
+type IconState = { marks: { Mark }, stars: { Frame }, hooked: boolean }
+local iconStates: { [Instance]: IconState } = setmetatable({}, { __mode = "k" }) :: any
+local GlyphModule: any = nil
+
+local function glyph(): any
+	if GlyphModule == nil then
+		GlyphModule = require(script.Parent.Glyph) :: any -- requis tard (Glyph requiert Text)
+	end
+	return GlyphModule
+end
+
+-- Taille du texte à l'écran (px TV, avant le facteur du moteur) : taille dessinée du style, sinon
+-- TextSize
+local function shownSize(label: TextObject): number
+	local e = styles[label]
+	if e and e.display > 0 then
+		return e.display
+	end
+	return math.max(1, label.TextSize)
+end
+
+local function spaceWidth(size: number, font: Enum.Font): number
+	-- avance d'une espace : « a a » − « aa » (une espace seule peut mesurer 0)
+	local w = textSize("a a", size, font).X - textSize("aa", size, font).X
+	return if w > 0.5 then w else size * 0.25
+end
+
+-- Remplace chaque repère par des espaces de la largeur de l'étoile ; rend le texte et les repères
+local function expandIcons(label: TextObject, text: string): (string, { Mark }?)
+	if string.find(text, Text.STAR, 1, true) == nil then
+		return text, nil
+	end
+	local size = shownSize(label)
+	local count = math.max(1, math.floor(ICON_EM * size / spaceWidth(size, enumFont(label)) + 0.5))
+	local pad = string.rep(" ", count)
+	local out: { string } = {}
+	local marks: { Mark } = {}
+	local rest = text
+	while true do
+		local i = string.find(rest, Text.STAR, 1, true)
+		if i == nil then
+			table.insert(out, rest)
+			break
+		end
+		table.insert(out, string.sub(rest, 1, i - 1))
+		table.insert(marks, { prefix = table.concat(out), count = count })
+		table.insert(out, pad)
+		rest = string.sub(rest, i + #Text.STAR)
+	end
+	return table.concat(out), marks
+end
+
+-- Lignes d'un texte coupé à `width` (mots entiers, comme le moteur) : rend la liste des lignes
+local function wrapLines(text: string, size: number, font: Enum.Font, width: number): { string }
+	local lines: { string } = {}
+	local line = ""
+	for word, gap in string.gmatch(text, "([^ ]*)( *)") do
+		if word == "" and gap == "" then
+			break
+		end
+		local candidate = line .. word
+		if line ~= "" and word ~= "" and textSize(candidate, size, font).X > width + 0.5 then
+			table.insert(lines, line)
+			line = word .. gap
+		else
+			line = candidate .. gap
+		end
+	end
+	table.insert(lines, line)
+	return lines
+end
+
+-- Lignes affichées d'un texte (retours voulus « \n », puis coupure aux espaces si la boîte est
+-- trop étroite) avec la position de leur premier octet dans le texte
+type Line = { text: string, start: number }
+local function layoutLines(text: string, size: number, font: Enum.Font, width: number?): { Line }
+	local out: { Line } = {}
+	local offset = 0
+	for paragraph in string.gmatch(text .. "\n", "([^\n]*)\n") do
+		local parts = if width then wrapLines(paragraph, size, font, width) else { paragraph }
+		local inner = 0
+		for _, l in parts do
+			table.insert(out, { text = l, start = offset + inner })
+			inner += #l
+		end
+		offset += #paragraph + 1
+	end
+	return out
+end
+
+local function placeIcons(label: TextObject)
+	local st = iconStates[label]
+	if st == nil then
+		return
+	end
+	local box = boxOf(label)
+	local size = shownSize(label)
+	local font = enumFont(label)
+	local text = label.Text
+	local pad = label:FindFirstChildOfClass("UIPadding")
+	local padL = if pad then pad.PaddingLeft.Offset else 0
+	local padT = if pad then pad.PaddingTop.Offset else 0
+	local sw = spaceWidth(size, font)
+	local lh = label.LineHeight
+	local lineH = size * (if type(lh) == "number" and lh > 0 then lh else 1)
+	local lines = layoutLines(text, size, font, if box and label.TextWrapped then box.X else nil)
+	local blockH = #lines * lineH
+	for i, mark in st.marks do
+		local star = st.stars[i]
+		if star == nil then
+			star = glyph().star(nil, size * ICON_SIZE)
+			star.Name = "TextIcon" .. i
+			star.AnchorPoint = Vector2.new(0.5, 0.5)
+			star.Parent = label
+			st.stars[i] = star
+		end
+		-- ligne du repère : la dernière qui commence avant lui
+		local at = #mark.prefix
+		local lineIndex = 1
+		for li, l in lines do
+			if l.start <= at then
+				lineIndex = li
+			end
+		end
+		local line = lines[lineIndex] or { text = text, start = 0 }
+		local inLine = string.sub(text, line.start + 1, at)
+		local boxW = if box then box.X else textSize(text, size, font).X
+		local boxH = if box then box.Y else blockH
+		local lineW = textSize((string.gsub(line.text, " +$", "")), size, font).X
+		local x0 = 0
+		if label.TextXAlignment == Enum.TextXAlignment.Center then
+			x0 = (boxW - lineW) / 2
+		elseif label.TextXAlignment == Enum.TextXAlignment.Right then
+			x0 = boxW - lineW
+		end
+		local y0 = (boxH - blockH) / 2
+		if label.TextYAlignment == Enum.TextYAlignment.Top then
+			y0 = 0
+		elseif label.TextYAlignment == Enum.TextYAlignment.Bottom then
+			y0 = boxH - blockH
+		end
+		local x = padL + x0 + textSize(inLine, size, font).X + mark.count * sw / 2
+		local y = padT + y0 + (lineIndex - 0.5) * lineH
+		star.Size = UDim2.fromOffset(size * ICON_SIZE, size * ICON_SIZE)
+		star.Position = UDim2.fromOffset(x, y)
+		star.ZIndex = label.ZIndex + 1
+		local stroke = label:FindFirstChildOfClass("UIStroke")
+		glyph().paintStar(
+			star,
+			label.TextColor3,
+			if stroke then stroke.Color else nil,
+			label.TextTransparency
+		)
+		star.Visible = box ~= nil
+	end
+	for i = #st.marks + 1, #st.stars do
+		st.stars[i]:Destroy()
+		st.stars[i] = nil
+	end
+end
+
+local function setIcons(label: TextObject, marks: { Mark }?)
+	local st = iconStates[label]
+	if marks == nil then
+		if st then
+			for _, star in st.stars do
+				star:Destroy()
+			end
+			table.clear(st.stars)
+			table.clear(st.marks)
+		end
+		return
+	end
+	if st == nil then
+		st = { marks = marks, stars = {}, hooked = false }
+		iconStates[label] = st
+	else
+		st.marks = marks
+	end
+	local state = st :: IconState
+	if not state.hooked then
+		state.hooked = true
+		for _, prop in
+			{
+				"AbsoluteSize",
+				"TextSize",
+				"TextXAlignment",
+				"TextYAlignment",
+				"TextColor3",
+				"TextTransparency",
+			}
+		do
+			label:GetPropertyChangedSignal(prop):Connect(function()
+				if #state.marks > 0 then
+					pcall(placeIcons, label)
+				end
+			end)
+		end
+	end
+	pcall(placeIcons, label)
+end
+
+-- Étoiles dessinées d'un libellé (specs, outil d'écrans)
+function Text.icons(label: Instance): { Frame }
+	local st = iconStates[label]
+	return if st then table.clone(st.stars) else {}
+end
+
+-- =============================================================================================
 -- Écriture du texte (seul écrivain de .Text côté client)
 -- =============================================================================================
 
 local languageHooked = false
 
-local function write(label: TextObject, text: string)
-	if label.Text ~= text then
+-- =============================================================================================
+-- Mots tenus ensemble (lot B1, INT-V2-GLYPHS a) : l'espace insécable U+00A0 n'est pas dans FredokaOne ;
+-- le repère Text.GLUE (« {_} ») d'une clé (« Jour{_}1 », « BOOP{_}RUSH », « 1{_}sur ») est une espace
+-- ORDINAIRE qui ne coupe jamais la ligne : quand le texte ne tient pas sur une ligne, UI/Text coupe
+-- lui-même aux autres espaces (mesure TextService, comme le moteur) et écrit des retours « \n » ;
+-- chaque ligne tient dans la boîte, le moteur n'a plus rien à couper. Recalculé quand la boîte ou la
+-- taille changent.
+-- =============================================================================================
+
+Text.GLUE = "{_}"
+local glued: { [Instance]: string } = setmetatable({}, { __mode = "k" }) :: any
+local glueHooked: { [Instance]: boolean } = setmetatable({}, { __mode = "k" }) :: any
+
+local function unglue(text: string): string
+	return (string.gsub(text, "{_}", " "))
+end
+
+-- Texte à écrire : repères remplacés par des espaces, retours posés aux espaces ordinaires si besoin
+local function glue(label: TextObject, text: string): string
+	if string.find(text, Text.GLUE, 1, true) == nil then
+		return text
+	end
+	local flat = unglue(text)
+	local box = boxOf(label)
+	if not label.TextWrapped or box == nil then
+		return flat
+	end
+	local size = shownSize(label)
+	local font = enumFont(label)
+	local out: { string } = {}
+	for paragraph in string.gmatch(text .. "\n", "([^\n]*)\n") do
+		if textSize(unglue(paragraph), size, font).X <= box.X + 0.5 then
+			table.insert(out, unglue(paragraph))
+		else
+			local line = ""
+			for word in string.gmatch(paragraph, "[^ ]+") do
+				local candidate = if line == "" then word else line .. " " .. word
+				if line ~= "" and textSize(unglue(candidate), size, font).X > box.X + 0.5 then
+					table.insert(out, unglue(line))
+					line = word
+				else
+					line = candidate
+				end
+			end
+			table.insert(out, unglue(line))
+		end
+	end
+	return table.concat(out, "\n")
+end
+
+local writeRaw: (label: TextObject, raw: string) -> ()
+-- libellés en cours d'écriture : un changement de taille posé par l'écriture elle-même ne relance
+-- jamais l'écriture (aucune boucle, que les signaux du moteur soient immédiats ou différés)
+local writing: { [Instance]: boolean } = setmetatable({}, { __mode = "k" }) :: any
+
+local function hookGlue(label: TextObject)
+	if glueHooked[label] then
+		return
+	end
+	glueHooked[label] = true
+	for _, prop in { "AbsoluteSize", "TextSize", "TextWrapped" } do
+		label:GetPropertyChangedSignal(prop):Connect(function()
+			local raw = glued[label]
+			if raw ~= nil and not writing[label] then
+				pcall(writeRaw, label, raw)
+			end
+		end)
+	end
+end
+
+local function write(label: TextObject, raw: string)
+	if string.find(raw, Text.GLUE, 1, true) ~= nil then
+		glued[label] = raw
+		hookGlue(label)
+	else
+		glued[label] = nil
+	end
+	writeRaw(label, raw)
+end
+
+local writeOnce: (label: TextObject, raw: string) -> ()
+
+writeRaw = function(label: TextObject, raw: string)
+	writing[label] = true
+	local ok, err = pcall(writeOnce, label, raw)
+	writing[label] = nil
+	if not ok then
+		error(err, 0)
+	end
+end
+
+writeOnce = function(label: TextObject, raw: string)
+	local text, marks = expandIcons(label, glue(label, raw))
+	-- texte d'origine (repères compris) lisible par l'outil d'écrans, qui relie un texte affiché à sa
+	-- clé (tests/harness/Screens.keyBoxes) ; aucun attribut sans repère
+	local source = if text ~= raw then raw else nil
+	if label:GetAttribute("TextSource") ~= source then
+		label:SetAttribute("TextSource", source)
+	end
+	-- 2 passes au plus : la taille d'un "fit" posée, les coupures des mots tenus ensemble sont
+	-- refaites à cette taille
+	for _ = 1, 2 do
+		if label.Text == text then
+			break
+		end
 		label.Text = text
 		local e = styles[label]
-		if e and (e.words or e.kind == "fit") then
-			apply(label, e)
+		if e == nil or not (e.words or e.kind == "fit") then
+			break
 		end
+		apply(label, e)
+		if glued[label] == nil then
+			break
+		end
+		text, marks = expandIcons(label, glue(label, raw))
+	end
+	if marks ~= nil or iconStates[label] ~= nil then
+		setIcons(label, marks)
 	end
 end
 

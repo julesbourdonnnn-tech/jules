@@ -789,7 +789,8 @@ return function(T)
 			expect(Prefs.language()).toBe("fr")
 			expect(langs[#langs]).toBe("fr")
 			expect(Prefs.t("common.close")).toBe("Fermer")
-			expect(Prefs.number(1240000)).toBe("1,24\194\160M")
+			-- lot B1 (INT-V2-GLYPHS d) : espace ordinaire, FredokaOne n'a pas U+00A0
+			expect(Prefs.number(1240000)).toBe("1,24 M")
 			expect(Prefs.get("vibration")).toBe(true) -- valeur par défaut conservée
 			expect(Prefs.get("inconnu")).toBeNil() -- clé hors de Config/Settings ignorée
 			-- valeurs de mauvais type ignorées
@@ -798,19 +799,31 @@ return function(T)
 			expect(Prefs.language()).toBe("en")
 		end)
 
-		it("Format : 100K reste 100K ; français avec virgule et espaces insécables", function()
+		-- lot B1 (INT-V2-GLYPHS d, GDD v2.0 §10.8 règle 18) : espaces ORDINAIRES en français (le texte
+		-- courant est en FredokaOne, qui n'a pas U+00A0) ; aucune espace insécable écrite
+		it("Format : 100K reste 100K ; français avec virgule et espaces ordinaires (FredokaOne)", function()
 			local h = Harness.new()
 			local F = shared(h, "Util.Format")
 			expect(F.abbreviate(100000)).toBe("100K")
 			expect(F.abbreviate(120000)).toBe("120K")
 			expect(F.abbreviate(1000000000)).toBe("1B")
-			expect(F.abbreviate(1240000, "fr")).toBe("1,24\194\160M")
-			expect(F.abbreviate(1000000000, "fr")).toBe("1\194\160Md")
-			expect(F.abbreviate(-2500, "fr")).toBe("-2,5\194\160k")
-			expect(F.commas(1234567, "fr")).toBe("1\194\160234\194\160567")
+			expect(F.abbreviate(1240000, "fr")).toBe("1,24 M")
+			expect(F.abbreviate(1000000000, "fr")).toBe("1 Md")
+			expect(F.abbreviate(-2500, "fr")).toBe("-2,5 k")
+			expect(F.commas(1234567, "fr")).toBe("1 234 567")
 			expect(F.commas(123456)).toBe("123,456")
-			expect(F.duration(18720, "fr")).toBe("5\194\160h\194\16012")
-			expect(F.duration(90, "fr")).toBe("1\194\160min\194\16030\194\160s")
+			expect(F.duration(18720, "fr")).toBe("5 h 12")
+			expect(F.duration(90, "fr")).toBe("1 min 30 s")
+			for _, text in
+				{
+					F.abbreviate(1240000, "fr"),
+					F.commas(1234567, "fr"),
+					F.duration(18720, "fr"),
+					F.duration(42, "fr"),
+				}
+			do
+				expect(string.find(text, "\194\160", 1, true)).toBeNil()
+			end
 		end)
 	end)
 end

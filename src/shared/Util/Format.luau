@@ -1,14 +1,20 @@
 --!strict
 -- Formatage des nombres et durées pour l'affichage (anglais et français).
 -- Les nombres géants d'un tycoon restent lisibles : suffixes jusqu'à « Dc » (1e33), puis notation
--- scientifique courte à partir de 1e36 ; ±infini s'écrit « ∞ » et NaN « 0 » (jamais d'erreur).
+-- scientifique courte à partir de 1e36 ; ±infini (valeur hostile) s'écrit comme le plafond affiché
+-- (±1e300, « 1.00e300 », comme Logic/BigNumber) et NaN « 0 » (jamais d'erreur).
+-- Lot B1 (INT-V2-GLYPHS d, règle 18 du GDD v2.0 §10.8) : le texte courant est en FredokaOne, qui n'a ni
+-- U+00A0 ni « ∞ » : le français prend une espace ORDINAIRE (U+0020) dans les montants et les durées.
 
 local Format = {}
 
 local SUFFIXES = { "", "K", "M", "B", "T", "Qa", "Qi", "Sx", "Sp", "Oc", "No", "Dc" }
--- Français : virgule décimale, espace insécable avant le suffixe : « 1,24 M »
+-- Français : virgule décimale, espace (ordinaire, U+0020 : FredokaOne n'a pas U+00A0) avant le
+-- suffixe : « 1,24 M »
 local SUFFIXES_FR = { "", "k", "M", "Md", "T", "Qa", "Qi", "Sx", "Sp", "Oc", "No", "Dc" }
-local NBSP = "\194\160" -- U+00A0 (espace insécable) en UTF-8
+local SPACE = " "
+-- plafond affiché d'un infini (valeur hostile), comme Logic/BigNumber (Balance.Numbers.Max)
+local SHOWN_MAX = 1e300
 
 -- Au-delà de 1000 × le dernier suffixe (1e36), notation scientifique courte : « 1.23e45 »
 local SCIENTIFIC_AT = 1e36
@@ -22,7 +28,7 @@ function Format.abbreviate(n: number, lang: string?): string
 	local negative = n < 0
 	n = math.abs(n)
 	if n == math.huge then
-		return if negative then "-∞" else "∞"
+		n = SHOWN_MAX
 	end
 	if n < 1000 then
 		local s = tostring(math.floor(n))
@@ -56,14 +62,14 @@ function Format.abbreviate(n: number, lang: string?): string
 	end
 	local s
 	if fr then
-		s = string.gsub(text, "%.", ",") .. NBSP .. suffixes[tier + 1]
+		s = string.gsub(text, "%.", ",") .. SPACE .. suffixes[tier + 1]
 	else
 		s = text .. suffixes[tier + 1]
 	end
 	return if negative then "-" .. s else s
 end
 
--- 1234567 → "1,234,567" ; lang "fr" : "1 234 567" (espaces insécables)
+-- 1234567 → "1,234,567" ; lang "fr" : "1 234 567" (espaces ordinaires)
 -- Au-delà de 1e15, tostring passerait en notation scientifique : abréviation à la place
 function Format.commas(n: number, lang: string?): string
 	if n ~= n then
@@ -72,7 +78,7 @@ function Format.commas(n: number, lang: string?): string
 	if math.abs(n) >= 1e15 then
 		return Format.abbreviate(n, lang)
 	end
-	local sep = if lang == "fr" then NBSP else ","
+	local sep = if lang == "fr" then SPACE else ","
 	local s = tostring(math.floor(math.abs(n)))
 	local groups = {}
 	local first = #s % 3
@@ -113,12 +119,12 @@ function Format.duration(seconds: number, lang: string?): string
 	local s = seconds % 60
 	if fr then
 		if seconds < 60 then
-			return `{seconds}{NBSP}s`
+			return `{seconds}{SPACE}s`
 		end
 		if h > 0 then
-			return if m > 0 then string.format("%d%sh%s%02d", h, NBSP, NBSP, m) else `{h}{NBSP}h`
+			return if m > 0 then string.format("%d%sh%s%02d", h, SPACE, SPACE, m) else `{h}{SPACE}h`
 		end
-		return if s > 0 then `{m}{NBSP}min{NBSP}{s}{NBSP}s` else `{m}{NBSP}min`
+		return if s > 0 then `{m}{SPACE}min{SPACE}{s}{SPACE}s` else `{m}{SPACE}min`
 	end
 	if seconds < 60 then
 		return `{seconds}s`

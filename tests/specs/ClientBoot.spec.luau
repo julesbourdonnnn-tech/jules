@@ -148,8 +148,12 @@ return function(T)
 				expect(F.abbreviate(1.234e45)).toBe("1.23e45")
 				expect(F.abbreviate(1.234e45, "fr")).toBe("1,23e45")
 				expect(F.abbreviate(-1e40)).toBe("-1.00e40")
-				expect(F.abbreviate(math.huge)).toBe("∞")
-				expect(F.abbreviate(-math.huge)).toBe("-∞")
+				-- lot B1 (INT-V2-GLYPHS d) : ±inf (valeur hostile) → le plafond affiché, comme Logic/BigNumber
+				-- (« ∞ » est absent des deux polices du jeu)
+				expect(F.abbreviate(math.huge)).toBe("1.00e300")
+				expect(F.abbreviate(-math.huge)).toBe("-1.00e300")
+				expect(F.abbreviate(math.huge, "fr")).toBe("1,00e300")
+				expect(F.commas(math.huge, "fr")).toBe("1,00e300")
 				for _, n in { 1e16, 1e20, 1e30, 1e300 } do
 					local text = F.abbreviate(n)
 					expect({ n = n, ok = string.find(text, "-", 1, true) == nil and #text <= 8 }).toEqual({

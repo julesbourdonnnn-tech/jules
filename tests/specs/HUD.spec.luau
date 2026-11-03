@@ -486,7 +486,13 @@ return function(T)
 			expect(text(h, HUD, "targetCard", "Name")).toBe("Wibble")
 			local details = text(h, HUD, "targetCard", "Details")
 			expect(string.find(details, "Size", 1, true) ~= nil).toBe(true)
-			expect(string.find(details, "2★", 1, true) ~= nil).toBe(true)
+			-- lot B1 (règle 18, INT-V2-GLYPHS a) : « ★ » est hors des polices ; « 2 » puis l'étoile DESSINÉE
+			-- (UI/Text.STAR → UI/Glyph.star), des espaces ordinaires à sa place dans le texte
+			expect(string.find(details, "★", 1, true)).toBeNil()
+			expect(string.find(details, "2 ", 1, true) ~= nil).toBe(true)
+			local detailsLabel = HUD.element("targetCard"):FindFirstChild("Details", true)
+			local Text = h:require("StarterPlayer.StarterPlayerScripts.Client.UI.Text")
+			expect(#Text.icons(detailsLabel)).toBe(1)
 			clean(h)
 		end)
 

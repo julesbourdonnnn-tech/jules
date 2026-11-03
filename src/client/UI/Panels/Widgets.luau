@@ -6,8 +6,12 @@
 --     TextScaled ; borne du mot le plus long ; minimum 28 px TV, Config/Layout.Text.Min), FredokaOne,
 --     AutoLocalize coupé (le jeu traduit lui-même par Prefs.t) ; les textes posés par clé
 --     (Widgets.setText → Text.set) sont retraduits tout seuls quand la langue change ;
---   * boutons : sélectionnables, curseur commun (Root.selectionImage), Juice.press, son Click,
---     refus (secousse, contour rouge 0,25 s, son Error, vibration refuse : GDD §9.2, §10.5) ;
+--   * boutons : sélectionnables, cadre de focus dessiné à l'intérieur (FocusGuard.selectionImage,
+--     lot B1, N11), Juice.press, son Click, refus (secousse, contour rouge 0,25 s, son Error,
+--     vibration refuse : GDD §9.2, §10.5) ; grossissement 1,05 du focus seulement pour un bouton
+--     isolé (jamais dans une liste, une rangée, un rail, ni dans un cadre qui découpe) ; ✕, Entrée et
+--     clic passent par l'InputGuard de FocusGuard (lot B1, N14 : ignorés juste après l'ouverture d'une
+--     fenêtre ou un changement sous le focus, jusqu'au relâchement) ;
 --   * interrupteur 120 × 64, barre d'onglets (soulignement qui glisse en 0,15 s), bouton à maintenir
 --     (✕ à la manette, clic maintenu à la souris, Entrée au clavier ; progression sur l'horloge du jeu,
 --     jamais sur la fin d'une animation ; annulé dès que la sélection part) ;
@@ -27,6 +31,7 @@ local UserInputService = game:GetService("UserInputService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared", 30) :: Folder
 local Layout = require(Shared.Config.Layout)
+local Balance = require(Shared.Config.Balance)
 local Intents = require(Shared.Config.Intents)
 local Species = require(Shared.Config.Species)
 local Rarities = require(Shared.Config.Rarities)
@@ -460,6 +465,9 @@ export type FrameProps = {
 	zIndex: number?,
 	order: number?,
 	clips: boolean?,
+	-- ombre de 6 px vers le bas (panneaux et cartes seulement, GDD v2.0 §10.1) : UIShadow du moteur,
+	-- sinon l'ombre de repli à plat (UI/Theme.shadow)
+	shadow: boolean?,
 }
 
 -- Cadre arrondi (UICorner, contour 3 px, dégradé pastel léger)
@@ -492,6 +500,9 @@ function Widgets.frame(p: FrameProps): Frame
 	end
 	if p.parent then
 		f.Parent = p.parent
+	end
+	if p.shadow then
+		Theme.shadow(f)
 	end
 	return f
 end
@@ -533,6 +544,7 @@ export type ButtonProps = {
 	tab: boolean?, -- bouton d'onglet (parcours du robot TvAudit)
 	onActivate: (() -> ())?,
 	sound: string?, -- son de validation (défaut "Click" ; "" : aucun)
+	grow: boolean?, -- faux : jamais de grossissement au focus (cartes, lignes ; N11)
 }
 
 local disabledState: { [GuiButton]: boolean } = setmetatable({}, { __mode = "k" }) :: any
@@ -609,7 +621,38 @@ local attention: { [GuiObject]: boolean } = setmetatable({}, { __mode = "k" }) :
 
 -- Échelle d'un bouton sélectionné : 1,05, ou moins pour un bouton de plus de 480 px TV de large
 -- (largeur en px TV : taille Offset, sinon taille affichée hors grossissement en cours)
+-- boutons qui ne grossissent jamais au focus (prop grow = false)
+local noGrow: { [GuiButton]: boolean } = setmetatable({}, { __mode = "k" }) :: any
+
+-- Bouton isolé (N11, GDD v2.0 §10.1) : ni rangé par un UI*Layout de son parent (rail, barre
+-- d'onglets, liste), ni dans un ancêtre qui découpe (listes, grilles), ni marqué grow = false
+local function isolated(button: GuiButton): boolean
+	if noGrow[button] then
+		return false
+	end
+	local parent = button.Parent
+	if parent ~= nil then
+		for _, child in parent:GetChildren() do
+			if child:IsA("UIListLayout") or child:IsA("UIGridLayout") or child:IsA("UITableLayout") then
+				return false
+			end
+		end
+	end
+	return #FocusGuard.clippers(button) == 0
+end
+Widgets.isolated = isolated
+
+-- InputGuard (lot B1, N14) : ✕ / Entrée / clic acceptés maintenant ?
+local function confirmed(): boolean
+	local ok, ready = pcall(FocusGuard.confirmReady)
+	return not ok or ready == true
+end
+Widgets.confirmed = confirmed
+
 local function growOf(button: GuiButton): number
+	if not isolated(button) then
+		return 1
+	end
 	local width = button.Size.X.Offset
 	if button.Size.X.Scale > 0 or width <= 0 then
 		local scale = button:FindFirstChild("JuiceScale")
@@ -708,7 +751,10 @@ function Widgets.button(p: ButtonProps): TextButton
 	b.ZIndex = p.zIndex or 3
 	b.LayoutOrder = p.order or 0
 	b.Selectable = p.selectable ~= false
-	b.SelectionImageObject = Root.selectionImage()
+	b.SelectionImageObject = FocusGuard.selectionImage()
+	if p.grow == false then
+		noGrow[b] = true
+	end
 	corner(b)
 	stroke(b)
 	if p.nav then
@@ -734,6 +780,10 @@ function Widgets.button(p: ButtonProps): TextButton
 	end
 	pressFx(b)
 	b.Activated:Connect(function()
+		-- InputGuard : ✕ appuyé juste après l'ouverture (ou un changement sous le focus) : ignoré
+		if not confirmed() then
+			return
+		end
 		if disabledState[b] then
 			Widgets.refuse(b)
 			local onRefuse = refuseHandlers[b]
@@ -898,7 +948,7 @@ function Widgets.toggle(
 		b:SetAttribute("On", value)
 	end
 	b.Activated:Connect(function()
-		if disabledState[b] then
+		if disabledState[b] or not confirmed() then
 			return
 		end
 		value = not value
@@ -1083,12 +1133,25 @@ end
 -- =============================================================================================
 
 export type Hold = {
-	button: TextButton,
-	fill: Frame,
+	button: GuiButton,
+	fill: Frame?,
 	duration: number,
 	holding: () -> boolean,
 	cancel: () -> (),
 	setEnabled: (enabled: boolean) -> (),
+}
+
+-- Maintien générique (lot B1, GDD v2.0 §10.7.8, §10.7.9 ; N14, N19) : sur n'importe quel bouton
+-- (Widgets.hold, et les cartes et lignes de l'écran Améliorations du lot B2). Commencé par un
+-- InputBegan capté de ✕ ou d'Entrée (bouton sélectionné, ou survolé par la souris pour Entrée) ou par
+-- le clic maintenu sur le bouton, JAMAIS par Activated ; jugé par l'InputGuard de FocusGuard ; fini à
+-- `duration` s (Balance.Upgrades.HoldSeconds par défaut) sur Clock.now(), un seul achat par appui.
+export type HoldOptions = {
+	duration: number?,
+	onComplete: () -> (),
+	onProgress: ((alpha: number) -> ())?, -- 0 → 1 pendant le maintien, 0 à l'arrêt
+	onEarly: (() -> ())?, -- relâché avant la fin (son Bump, consigne « Maintiens ✕… »)
+	canStart: (() -> boolean)?, -- faux : refus (son Error, vibration refuse), aucun maintien
 }
 
 type HoldState = {
@@ -1096,20 +1159,36 @@ type HoldState = {
 	startedAt: number?,
 	enabled: boolean,
 	onComplete: () -> (),
+	onProgress: ((alpha: number) -> ())?,
+	onEarly: (() -> ())?,
 	canStart: (() -> boolean)?,
 }
 
-local holds: { [TextButton]: HoldState } = setmetatable({}, { __mode = "k" }) :: any
+local holds: { [GuiButton]: HoldState } = setmetatable({}, { __mode = "k" }) :: any
 local activeHold: HoldState? = nil
+local hoveredHold: HoldState? = nil -- bouton à maintenir sous la souris (Entrée au clavier)
 
-local function stopHold(state: HoldState)
+local function progress(state: HoldState, alpha: number)
+	local fill = state.hold.fill
+	if fill and fill.Parent ~= nil then
+		fill.Size = UDim2.fromScale(alpha, 1)
+	end
+	local fn = state.onProgress
+	if fn then
+		pcall(fn, alpha)
+	end
+end
+
+-- Arrêt d'un maintien ; `early` : relâché (ou parti) avant la fin, sans achat
+local function stopHold(state: HoldState, early: boolean?)
+	local wasRunning = state.startedAt ~= nil
 	state.startedAt = nil
 	if activeHold == state then
 		activeHold = nil
 	end
-	local fill = state.hold.fill
-	if fill.Parent ~= nil then
-		fill.Size = UDim2.fromScale(0, 1)
+	progress(state, 0)
+	if early and wasRunning and state.onEarly then
+		pcall(state.onEarly :: () -> ())
 	end
 end
 
@@ -1152,7 +1231,7 @@ local function stepHolds()
 		return
 	end
 	local alpha = math.clamp(elapsed / duration, 0, 1)
-	state.hold.fill.Size = UDim2.fromScale(alpha, 1)
+	progress(state, alpha)
 	if elapsed >= duration then
 		stopHold(state)
 		Haptics.play("holdDone")
@@ -1203,11 +1282,25 @@ ensureLoops = function()
 		inputHooked = true
 		-- ✕ (ou Entrée) maintenu sur le bouton sélectionné ; relâché : annulé s'il n'est pas fini
 		UserInputService.InputBegan:Connect(function(input: InputObject)
-			if input.KeyCode ~= Enum.KeyCode.ButtonA and input.KeyCode ~= Enum.KeyCode.Return then
+			if
+				input.KeyCode ~= Enum.KeyCode.ButtonA
+				and input.KeyCode ~= Enum.KeyCode.Return
+				and input.KeyCode ~= Enum.KeyCode.KeypadEnter
+			then
+				return
+			end
+			-- InputGuard : un appui commencé pendant la garde ne démarre aucun maintien (« △ puis ✕
+			-- tenu 2 s : rien »), même tenu longtemps ; le suivant est jugé seul
+			local okGuard, clean = pcall(FocusGuard.notePress, input)
+			if okGuard and clean ~= true then
 				return
 			end
 			local selected = GuiService.SelectedObject
-			local state = if selected and selected:IsA("TextButton") then holds[selected] else nil
+			local state = if selected and selected:IsA("GuiButton") then holds[selected :: GuiButton] else nil
+			-- au clavier-souris (aucune sélection) : Entrée maintient le bouton survolé
+			if state == nil and selected == nil and input.KeyCode ~= Enum.KeyCode.ButtonA then
+				state = hoveredHold
+			end
 			if state then
 				beginHold(state)
 			end
@@ -1216,11 +1309,12 @@ ensureLoops = function()
 			if
 				input.KeyCode == Enum.KeyCode.ButtonA
 				or input.KeyCode == Enum.KeyCode.Return
+				or input.KeyCode == Enum.KeyCode.KeypadEnter
 				or input.UserInputType == Enum.UserInputType.MouseButton1
 			then
 				local state = activeHold
 				if state then
-					stopHold(state)
+					stopHold(state, true)
 				end
 			end
 		end)
@@ -1309,12 +1403,29 @@ function Widgets.hold(p: HoldProps): Hold
 		zIndex = b.ZIndex + 2,
 	})
 	Widgets.followGlyph(holdLabel, g.frame, 16, 16, 16)
+	local hold = Widgets.holdOn(b, {
+		duration = p.duration,
+		onComplete = p.onComplete,
+		canStart = p.canStart,
+	}, fill)
+	return hold
+end
+
+-- Maintien générique sur un bouton existant (HoldOptions ; `fill` : cadre élargi de 0 à 1 pendant le
+-- maintien, facultatif). Un seul maintien par bouton ; le précédent est remplacé.
+function Widgets.holdOn(b: GuiButton, opts: HoldOptions, fill: Frame?): Hold
+	ensureLoops()
+	local duration = if type(opts.duration) == "number"
+			and opts.duration == opts.duration
+			and opts.duration > 0
+		then opts.duration
+		else Balance.Upgrades.HoldSeconds
 	local hold: Hold
 	local state: HoldState
 	hold = {
 		button = b,
 		fill = fill,
-		duration = p.duration,
+		duration = duration,
 		holding = function(): boolean
 			return state.startedAt ~= nil
 		end,
@@ -1329,18 +1440,33 @@ function Widgets.hold(p: HoldProps): Hold
 			end
 		end,
 	}
-	state = { hold = hold, enabled = true, onComplete = p.onComplete, canStart = p.canStart }
+	state = {
+		hold = hold,
+		enabled = true,
+		onComplete = opts.onComplete,
+		onProgress = opts.onProgress,
+		onEarly = opts.onEarly,
+		canStart = opts.canStart,
+	}
 	holds[b] = state
-	-- souris : clic maintenu sur le bouton
+	-- souris : clic maintenu sur le bouton (InputGuard : même garde que ✕)
 	b.MouseButton1Down:Connect(function()
-		beginHold(state)
+		if confirmed() then
+			beginHold(state)
+		end
+	end)
+	b.MouseEnter:Connect(function()
+		hoveredHold = state
 	end)
 	b.MouseLeave:Connect(function()
-		stopHold(state)
+		if hoveredHold == state then
+			hoveredHold = nil
+		end
+		stopHold(state, true)
 	end)
 	-- la sélection part (croix, fenêtre fermée) : maintien annulé
 	b.SelectionLost:Connect(function()
-		stopHold(state)
+		stopHold(state, true)
 	end)
 	return hold
 end
@@ -1388,11 +1514,10 @@ export type Rows = {
 	page: (dir: number) -> (),
 }
 
--- Place du curseur de sélection autour des cases (px TV) : le cadre de la liste coupe ce qui dépasse
--- (ClipsDescendants), et le curseur de UI/Root déborde de 4 px + trait de 6 px + liseré de 2 px,
--- plus le grossissement 1,05 de la case sélectionnée (≈ 10 px sur une case de 208, autour de son
--- ancrage en haut à gauche). Le cadre est donc plus large de ROW_ROOM de chaque côté, et la 1re et la
--- dernière rangée gardent ROW_ROOM au-dessus et au-dessous d'elles.
+-- Marge autour des cases (px TV) : le cadre de la liste coupe ce qui dépasse (ClipsDescendants). Le
+-- cadre de focus est dessiné à l'intérieur de la case (FocusGuard.selectionImage, lot B1) et une case
+-- d'une liste ne grossit jamais (N11) : rien ne dépasse ; la marge ROW_ROOM de chaque côté, et
+-- au-dessus et au-dessous de la 1re et de la dernière rangée, reste l'air entre la liste et son cadre.
 local ROW_ROOM = Layout.Spacing.Normal -- 24
 
 function Widgets.rows(p: RowsProps): Rows

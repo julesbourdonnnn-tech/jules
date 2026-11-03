@@ -35,6 +35,17 @@ MockInstance.waitTimeout = 2
 -- ensuite. Posée par Harness.new (1280 × 720, ou 1920 × 1080 pour une console).
 MockInstance.screenSize = Vector2.new(1280, 720)
 
+-- Styles récents du moteur (lot B1 ; GDD v2.0 §10.1, critique m21 ; docs/04 §27.14 « Harnais ») :
+-- `UIShadow` (en ligne depuis le 23/06/2026) et le dégradé radial de `UIGradient` (fin octobre 2026,
+-- docs/08 [92][93]) manquent à la base de réflexion de Lune, et un appareil peut ne pas les avoir.
+-- false (défaut, style des captures de référence : le repli à plat) : Instance.new("UIShadow") lève et
+-- UIGradient.Type refuse toute écriture, comme un moteur qui ne les connaît pas ; true : présents
+-- (propriétés supposées : UIShadow.Color, Transparency, Offset, BlurRadius ; UIGradient.Type « Radial »),
+-- une écriture d'une autre propriété de UIShadow lève (nom faux sur l'appareil → repli, jamais une
+-- erreur visible : UI/Theme).
+MockInstance.styleFeatures = { UIShadow = false, RadialGradient = false }
+local SHADOW_PROPS = { Color = true, Transparency = true, Offset = true, BlurRadius = true }
+
 local function warnOnce(msg: string)
 	table.insert(MockInstance.warnings, msg)
 end
@@ -95,6 +106,7 @@ local SUPER: { [string]: string } = {
 	UICorner = "UIComponent",
 	UIStroke = "UIComponent",
 	UIGradient = "UIComponent",
+	UIShadow = "UIComponent",
 	UIScale = "UIComponent",
 	UIPadding = "UIComponent",
 	UIListLayout = "UIGridStyleLayout",
@@ -333,6 +345,23 @@ local function defaultsFor(className: string): { [string]: any }
 	if isA(className, "GuiButton") then
 		d.AutoButtonColor = true
 	end
+	-- ombre d'interface (styles récents, voir MockInstance.styleFeatures) : valeurs supposées
+	if className == "UIShadow" then
+		d.Color = Color3.new(0, 0, 0)
+		d.Transparency = 0.5
+		d.Offset = Vector2.new(0, 6)
+		d.BlurRadius = 8
+	end
+	-- cadre défilant (lot B1 : FocusGuard ramène l'élément sélectionné dans la découpe) : valeurs par
+	-- défaut du moteur
+	if className == "ScrollingFrame" then
+		d.CanvasPosition = Vector2.zero
+		d.CanvasSize = UDim2.new(0, 0, 2, 0)
+		d.ScrollingEnabled = true
+		d.ScrollBarThickness = 12
+		d.ScrollingDirection = Enum.ScrollingDirection.XY
+		d.AutomaticCanvasSize = Enum.AutomaticSize.None
+	end
 	if isA(className, "LayerCollector") then
 		d.Enabled = true
 		d.ResetOnSpawn = true
@@ -449,7 +478,40 @@ local function propSignal(st, prop: string)
 	return s
 end
 
+-- Compteur d'instances créées depuis le chargement du harnais (lot B1 ; règle 20 du GDD v2.0 §10.8 :
+-- budget d'instances par panneau, « réouverture : 0 instance créée ») : MockInstance.created() avant
+-- et après une action ; MockInstance.descendantCount(racine) pour le total d'un panneau
+local createdCount = 0
+
+function MockInstance.created(): number
+	return createdCount
+end
+
+function MockInstance.descendantCount(root: any): number
+	local st = stateOf(root)
+	if st == nil then
+		return 0
+	end
+	local n = 0
+	local stack = { st }
+	while #stack > 0 do
+		local cur = table.remove(stack) :: any
+		for _, child in cur.children do
+			n += 1
+			local cst = stateOf(child)
+			if cst then
+				table.insert(stack, cst)
+			end
+		end
+	end
+	return n
+end
+
 function MockInstance.new(className: string, parent: any?)
+	if className == "UIShadow" and not MockInstance.styleFeatures.UIShadow then
+		error(`Unable to create an Instance of type "{className}"`, 2)
+	end
+	createdCount += 1
 	local self = setmetatable({}, MT)
 	rawset(self, STATE, {
 		ClassName = className,
@@ -1131,6 +1193,17 @@ MT.__newindex = function(self, key, value)
 	end
 	if EVENTS[key] or Methods[key] then
 		error(`{key} ne peut pas être assigné sur {st.ClassName}`, 2)
+	end
+	-- styles récents (MockInstance.styleFeatures) : propriété inconnue d'un moteur qui ne les a pas
+	if st.ClassName == "UIGradient" and key == "Type" then
+		if not MockInstance.styleFeatures.RadialGradient then
+			error(`Type is not a valid member of UIGradient "{st.Name}"`, 2)
+		end
+		if value ~= "Linear" and value ~= "Radial" then
+			error(`Invalid value for enum UIGradientType`, 2)
+		end
+	elseif st.ClassName == "UIShadow" and not SHADOW_PROPS[key] then
+		error(`{key} is not a valid member of UIShadow "{st.Name}"`, 2)
 	end
 	if isA(st.ClassName, "BasePart") then
 		if key == "CFrame" then
