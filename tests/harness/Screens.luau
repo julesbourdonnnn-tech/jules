@@ -101,6 +101,26 @@ function Screens.profile(kind: string)
 		p.coins = 1234567
 		p.pot = 98765
 		p.fame = 12345
+		-- dalle Enclos à son dernier niveau (14 : 4 + 14 = 18 places) et les squishies en trop dans la
+		-- Boîte à dodo : sans cela l'outil montrait « 20 / 4 », un état que le serveur ne produit
+		-- jamais (revue de l'outil)
+		p.tiles = { snack = 0, decor = 0, pens = 14, cozyBed = false, seen = 0 }
+		local inPens = {}
+		for uid, sq in p.squishies do
+			if sq.at == "pen" then
+				table.insert(inPens, uid)
+			end
+		end
+		table.sort(inPens, function(a, b)
+			return (tonumber(string.sub(a, 2)) or 0) < (tonumber(string.sub(b, 2)) or 0)
+		end)
+		local extra = #inPens - 18
+		for i = #inPens, 1, -1 do
+			if extra > 0 and inPens[i] ~= "u20" then -- u20 : le plus gros (Grand Splorch prêt)
+				p.squishies[inPens[i]].at = "dodo"
+				extra -= 1
+			end
+		end
 		-- Grand Splorch prêt (aperçu, puce d'action du HUD)
 		p.squishies.u20.z = 300000
 		return p
@@ -117,6 +137,14 @@ function Screens.profile(kind: string)
 		sq.st = 5
 	end
 	p.passes = { AutoPot = true, DoubleCoins = true, BigRanch = true, SaddlesTrails = true }
+	-- records de taille : un trophée de chaque palier de l'Étagère (bronze … cristal) dans le Squishydex
+	local trophies = {}
+	for i = 1, 26 do
+		trophies[i] = 10 ^ (3 + 3 * ((i - 1) % 4)) * 1.5
+	end
+	p.trophies = trophies
+	-- toutes les dalles au maximum (« Au maximum » dans Ranch › Dalles)
+	p.tiles = { snack = 999, decor = 999, pens = 999, cozyBed = true, seen = 15 }
 	p.outfits = { owned = { plopBib = 3, sweater = 3, crown = 2, winter = 2 }, worn = {} }
 	return p
 end
@@ -730,7 +758,8 @@ local PANEL_TABS = {
 	{ "Shop", { "passes", "party", "outfits" } },
 	{ "Settings", { "" } },
 	{ "SplorchPreview", { "" } },
-	{ "OutfitPreview", { "sweater", "crown" } },
+	-- identifiants de Config/Cosmetics (« crown » n'existait pas : l'Aperçu restait sur le Pull)
+	{ "OutfitPreview", { "sweater", "jellyCrown", "winterScarf", "plopBib" } },
 	{ "Diagnostics", { "server", "client", "today", "tools" } },
 }
 Screens.PANEL_TABS = PANEL_TABS
@@ -1056,6 +1085,76 @@ local function panelScreens(state)
 		end,
 	})
 
+	-- Ranch › Enclos › Taille : le tri change (rareté, revenu)
+	table.insert(list, {
+		id = "panel.Ranch.pens.sort",
+		run = function(c)
+			open(c, "Ranch", "pens")
+			local win = c.PC.window("Ranch")
+			local sort = win and win:FindFirstChild("Sort", true)
+			if sort then
+				activate(c, sort)
+			end
+		end,
+	})
+	table.insert(list, {
+		id = "panel.Ranch.pens.sort2",
+		run = function(c)
+			open(c, "Ranch", "pens")
+			local win = c.PC.window("Ranch")
+			local sort = win and win:FindFirstChild("Sort", true)
+			if sort then
+				activate(c, sort)
+			end
+		end,
+	})
+	-- Squishydex › Guide défilé jusqu'au bout (règles du BOOP RUSH)
+	table.insert(list, {
+		id = "panel.Squishydex.guide.end",
+		run = function(c)
+			open(c, "Squishydex", "guide")
+			local win = c.PC.window("Squishydex")
+			local guide = win and win:FindFirstChild("Guide", true)
+			if guide then
+				c.h.game.GuiService.SelectedObject = guide
+				c.h:settle(1)
+				for _ = 1, 12 do
+					Gamepad.tap(c.h, Enum.KeyCode.DPadDown)
+					frames(c, 2, 0.2)
+				end
+			end
+		end,
+	})
+	-- Ranch › Enclos › Ranger : l'aperçu de la vente groupée
+	table.insert(list, {
+		id = "panel.Ranch.pens.tidy",
+		run = function(c)
+			open(c, "Ranch", "pens")
+			local win = c.PC.window("Ranch")
+			local tidy = win and win:FindFirstChild("Tidy", true)
+			if tidy then
+				activate(c, tidy)
+			end
+		end,
+	})
+	-- Réglages en mode Rush
+	table.insert(list, {
+		id = "panel.Settings.rush",
+		run = function(c)
+			c.h:fireClient(REMOTES .. "DataPatch", {
+				mode = {
+					rush = true,
+					chosen = true,
+					changedAt = 0,
+					cardShown = true,
+					postBoopCardShown = true,
+				},
+			}, {})
+			frames(c, 2, 0.1)
+			open(c, "Settings")
+		end,
+	})
+
 	-- Aperçu du Grand Splorch : « Détails »
 	table.insert(list, {
 		id = "panel.SplorchPreview.details",
@@ -1148,6 +1247,45 @@ local function cardScreens()
 			local chosen = nil
 			for _, card in c.Cards.pending() do
 				if card.kind == "booped" then
+					chosen = card
+				end
+			end
+			if chosen then
+				c.Cards.open(chosen.id)
+				frames(c, 6, 0.1)
+			end
+		end,
+	})
+	-- carte « Garder ton clip ? » (VFXController, appareil qui filme)
+	table.insert(list, {
+		id = "card.clip",
+		run = function(c)
+			closeAll(c)
+			flushAll(c)
+			c.Cards.push({
+				id = "",
+				kind = "clip",
+				blocking = false,
+				data = { save = function() end, share = function() end },
+			})
+			frames(c, 8, 0.1)
+		end,
+	})
+	-- carte « revient toujours » rouverte depuis le « ! »
+	table.insert(list, {
+		id = "card.reopened.postBoop",
+		run = function(c)
+			closeAll(c)
+			flushAll(c)
+			c.h:fireClient(REMOTES .. "Celebrate", {
+				kind = "ownerReturn",
+				data = { uid = "p11", species = longestSpecies(c), coins = 1.23456789e18, firstBoop = true },
+			})
+			frames(c, 4, 0.1)
+			flushCards(c)
+			local chosen = nil
+			for _, card in c.Cards.pending() do
+				if card.kind == "postBoop" then
 					chosen = card
 				end
 			end
@@ -1366,6 +1504,18 @@ function Screens.groups()
 		id = "panel.Ranch.pens.new",
 		run = function(c)
 			open(c, "Ranch", "pens")
+		end,
+	})
+	table.insert(new, {
+		id = "panel.Ranch.pads.new",
+		run = function(c)
+			open(c, "Ranch", "pads")
+		end,
+	})
+	table.insert(new, {
+		id = "panel.OutfitPreview.new",
+		run = function(c)
+			open(c, "OutfitPreview", "sweater")
 		end,
 	})
 	table.insert(new, {
@@ -1716,6 +1866,11 @@ function Screens.numberIssue(c, obj, text: string): string?
 	end
 	if lang == "fr" and string.find(plain, "%d%.%d+%s?[KMBTQSOND]") then
 		return "point décimal anglais dans un texte français"
+	end
+	-- tout nombre décimal, pas seulement devant un suffixe (« 52.0 % », « ×1.5 » du Guide : revue de
+	-- l'outil)
+	if lang == "fr" and string.find(plain, "%d%.%d") then
+		return "point décimal anglais dans un texte français (« 52.0 % » → « 52,0 % »)"
 	end
 	if string.find(plain, "%d%s?Md%f[%A]") or string.find(plain, "%d%s?k%f[%A]") then
 		return "suffixe hors de la liste du jeu (k, Md : ancien format)"

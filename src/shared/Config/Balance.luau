@@ -410,4 +410,155 @@ Balance.Boosts = {
 	FeedMilestone = 300,
 }
 
+-- =================================================================================================
+-- Contrat v2.0 (GDD v2.0, docs/04 §27.6) : STRUCTURE figée par l'architecte, valeurs de DÉPART du
+-- GDD v2.0 ; seul le paquet A1 (logique de progression) les règle ensuite, pour tenir la porte
+-- EconomyPacing v2.0 (docs/04 §27.9), et écrit chaque réglage au journal (docs/04 §21). Aucune de ces
+-- tables n'est lue tant que son interrupteur Config/Features est coupé : la marque GddValues reste
+-- "1.3" (valeurs des clés de la v1.3) ; GddValuesV2 dit quelle version suivent les tables v2.0.
+-- Les tables v2.0 sont À PART des tables existantes quand une boucle du code de base les parcourt
+-- (Balance.Tiles par EconomyService.applySplorch, Balance.Caps par Invariants et ProfileRepair) :
+-- jamais une clé v2.0 dans Balance.Tiles ni dans Balance.Caps.
+-- =================================================================================================
+Balance.GddValuesV2 = "2.0"
+
+-- Bornes de la progression (GDD §4.6, §4.27) : r ≤ MaxR, Record R ≤ MaxR, A ≤ MaxA
+Balance.Prestige = {
+	MaxR = 400,
+	MaxA = 60,
+}
+
+-- Jelly Ascend (GDD §4.27). Condition : ReqR[A + 1] pour les deux premières, puis + ReqStep ;
+-- croissance × GrowthMult^A ; prix de la boucle × produit de PriceByA[min(k, #PriceByA)] pour k = 1 … A
+-- (le dernier facteur vaut pour toutes les Ascensions suivantes) ; Souvenir de gelée : × RegainMult
+-- tant que r ≤ bestR − 3, puis RegainTaper[1] (bestR − 2), [2] (bestR − 1), [3] (1re boucle record)
+Balance.Ascend = {
+	ReqR = { 15, 20 },
+	ReqStep = 4,
+	GrowthMult = 3,
+	PriceByA = { 0.5, 0.5, 0.5, 0.5, 0.32 },
+	RegainMult = 3,
+	RegainTaper = { 2, 1.5, 1.25 },
+	DeclineCardAfter = 300, -- s sans achat possible : carte Conseillé « Jelly Ascend »
+	StartFloorOffset = 4.7, -- plancher de StartR(A) (GDD §4.27)
+	StartStepPerA = 2,
+	HoldSeconds = 3, -- maintien de ✕ de l'aperçu (client)
+	ConfirmGuard = 0.6, -- s : boutons de « Prêt à monter ? » grisés
+	ConfirmTimeout = 20, -- s : carte fermée sans rien changer
+	BurstAt = 4.0, -- s après le début du spectacle : Prestige.apply(profil, "ascend")
+	Duration = 10,
+	HardCut = 12,
+	Fame = 20, -- hors du plafond CapsV2.fameSplorch (critique m10)
+	StarRainSeconds = 120, -- Pluie d'étoiles : secondes de revenu des autres joueurs
+}
+
+-- Confettis (GDD §4.26) : entiers de 0 à Max ; gagnés en jouant seulement, jamais vendus
+Balance.Confetti = {
+	PerGrandSplorchBase = 3, -- + min(r, CapR) au nouveau Record R
+	CapR = 20,
+	PerPetitSplorch = 1,
+	PerSkipped = 1, -- Grand Splorch sauté grâce au Tremplin seulement (3 au plus par Ascension)
+	PerAscend = 20,
+	RegainBonus = 10, -- retour au record après une Ascension (une fois par Ascension)
+	RecordBonus = 10, -- premier passage de chaque Record R ≥ RecordBonusFrom
+	RecordBonusFrom = 21,
+	FullPenBonus = 25, -- place offerte sur un enclos plein
+	Mastery = 25,
+	Max = 1e9,
+	RawUpTo = 99999, -- affichage en entier brut jusqu'ici, puis BigNumber.abbreviate
+}
+
+-- Prix des familles nouvelles (GDD §4.6.1) : prix du niveau L (L = niveau actuel, 0 = premier achat)
+-- = floor(Base × Growth^L × RScale^r × F(A)), calculé par MULTIPLICATIONS SUCCESSIVES (UpgradeMath).
+-- star : Base = prix du Tapis 12 AVANT floor (BaseFrom = "snack", niveau 11), puis × Growth par
+-- niveau au-delà de 12. monument : 3 × T12 × RScale^(OpenAt[n]) × RScale^(r − bestR), sans F(A).
+Balance.UpgradePrices = {
+	star = { BaseFrom = "snack", Growth = 1.25, Levels = 8 },
+	gloves = { Base = 2000, Growth = 1.55, Levels = 40 },
+	school = { Base = 20000, Growth = 1.75, Levels = 20 },
+	monument = { PriceT12 = 3, Levels = 10 },
+}
+
+-- Monuments (GDD §4.6) : revenu × (1 + IncomeStep × monuments), multiplicateur à part
+Balance.Monuments = {
+	OpenAt = { 6, 8, 10, 12, 14, 16, 18, 20, 22, 24 },
+	IncomeStep = 0.01,
+}
+
+-- Gants Moelleux (GDD §4.7) : récompense de pression × (1 + StepPerLevel × niveau)
+Balance.Gloves = {
+	StepPerLevel = 0.025,
+}
+
+-- Grand Splorch v2.0 (GDD §4.15, §4.26, §4.27) : ajouts à côté de Balance.Splorch
+Balance.SplorchV2 = {
+	GiftLevelsBase = 1, -- le cadeau du Splorch paie 1 niveau du Tapis (+ ligne « gift » de l'Atelier)
+	FreeSnackMax = 6, -- niveaux du Tapis offerts au plus (Tapis de départ + cadeau)
+	OfferedPensAt = { 2, 6, 11, 16 }, -- places d'enclos offertes au premier passage de ces Record R
+	KeptDecorAt = { { recordR = 8, n = 3 }, { recordR = 14, n = 3 } }, -- + 3 par niveau d'Atelier
+	KeptDecorMax = 12,
+	RecordSteps = { 0.25, 0.5, 0.75 }, -- étapes du record (carte et éclat, aucune récompense)
+	BannerGap = 180, -- s : une bannière de Grand Splorch par joueur au plus
+	PetitShow = { Duration = 2.5, HardCut = 4 },
+	Chantier = { Duration = 4, HardCut = 6 },
+}
+
+-- Plafonds journaliers v2.0 (compteurs caps.<clé> créés par le schéma v2 ; vérifiés par les
+-- invariants v2, jamais par la boucle de Balance.Caps)
+Balance.CapsV2 = {
+	fameSplorch = 50, -- Fame des Grands Splorch par jour
+	starRain = 3, -- Pluies d'étoiles reçues par jour
+}
+
+-- Cœurs entre ranchs (GDD §4.25)
+Balance.Hearts = {
+	PerDay = 20,
+	PerRanch = 1,
+}
+
+-- Hors ligne v2.0 (GDD §4.19, §4.26)
+Balance.OfflineV2 = {
+	MinPlaySeconds = 120, -- la croissance hors ligne s'arrête à 120 s de croissance maximale de l'objectif
+	NightBagHours = 1, -- + 1 h par niveau du Sac de nuit
+	MaxHours = 16,
+	NightPotShares = { 0.25, 0.30, 0.35 }, -- part du revenu hors ligne dans le Pot (Pot de nuit 0, 1, 2)
+}
+
+-- Pot à Pièces v2.0 : rayon d'encaissement par niveau d'Aimant (0 à 3)
+Balance.PotV2 = {
+	MagnetRadii = { 5, 8, 11, 14 },
+}
+
+-- Presser v2.0 : série PERFECT maximale 5 + niveau de Super Série (2 au plus)
+Balance.PressV2 = {
+	SuperStreakMax = 2,
+}
+
+-- Plopettes (GDD §4.28) : une Plopette par Record R de ByRecordR (+ Plume de l'Atelier)
+Balance.Helpers = {
+	ByRecordR = { 2, 4, 6, 8, 12 },
+	IntervalBase = 12, -- s entre deux pressions d'une Plopette
+	IntervalStep = 0.3, -- − 0,3 s par niveau de l'École
+	RewardShare = 1, -- × pressReward sans PERFECT ni série
+	ReadyFor = 3, -- s : squishy prêt depuis au moins ReadyFor
+	MinDistance = 12, -- studs à plat de la position validée du joueur
+	MaxTravel = 3, -- s de trajet au plus
+	NapAfter = 300, -- s sans intention acceptée
+	TickHz = 10,
+}
+
+-- Écran Améliorations (GDD §10.7) : durées et bornes de l'interface et de l'intention BuyUpgrade
+Balance.Upgrades = {
+	PendingSeconds = 3, -- état « en cours » d'une ligne
+	HoldSeconds = 0.6, -- tout achat de l'écran, ×1 compris (critique m16)
+	GuardOpen = 0.3, -- InputGuard : relâchement de ✕ vu + 0,3 s à l'ouverture de tout panneau
+	GuardFocus = 0.4,
+	BulkMax = 40, -- niveaux au plus par message (mode Max)
+	NextChipHz = 2, -- puce « Prochain achat » recalculée 2 fois par seconde au plus
+	BuildQueueMax = 10, -- cascade de construction : 10 au plus en file
+	BuildQueueSeconds = 10,
+	RepeatDelay = 0.4,
+	RepeatRate = 8,
+}
+
 return Balance

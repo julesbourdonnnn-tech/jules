@@ -533,4 +533,106 @@ export type CelebrateClapCount = { n: number }
 export type CelebrateFanfare = { threshold: number }
 export type CelebratePhoto = { on: boolean }
 
+-- =================================================================================================
+-- Contrat v2.0 (GDD v2.0, docs/04 §27) : charges utiles figées des paquets du jeu complet. Les deux
+-- voies (serveur, interface) se parlent par ces types ; aucun n'est envoyé tant que son interrupteur
+-- Config/Features est coupé.
+-- =================================================================================================
+
+-- Sortes de prestige (Logic/Prestige.apply) : Grand Splorch (nouveau Record R ou non), Petit Splorch
+-- (r après la renaissance ≤ Record R, hors file), Jelly Ascend
+export type PrestigeKind = "splorch" | "petit" | "ascend"
+export type UpgradeCurrency = "coins" | "confetti"
+
+-- Instantané VERSIONNÉ de l'écran Améliorations (règle 6 du GDD §10.8) : seule source de l'écran et
+-- de la puce « Prochain achat ». version croît à chaque mutation d'une valeur lue (achat, règlement,
+-- prestige, gain de Confettis) ; le client ignore un instantané plus ancien que celui affiché.
+-- levels[id] = niveau de chaque famille (Config/Upgrades.Families.id), de chaque ligne de l'Atelier
+-- (WorkshopRows.id) et de chaque ligne de Fun ("fun.<id>" : objets achetés) ; caps[id] = niveau
+-- maximal achetable MAINTENANT (ouverture, plafond de la boucle, interrupteur ; 0 = fermé)
+export type UpgradeSnapshot = {
+	coins: number,
+	confetti: number,
+	levels: { [string]: number },
+	caps: { [string]: number },
+	r: number,
+	bestR: number,
+	ascend: number,
+	version: number,
+}
+
+-- Réponse à BuyUpgrade (et à BuyTile, même chemin) : TOUJOURS envoyée, sauf refus « périmé » muet.
+-- from / to = niveaux avant / après (to == from sur un refus) ; spent = somme exacte débitée
+-- (UpgradeMath.bulk) ; reason = clé de texte du refus (nil si acheté) ; snapshot = état après
+export type UpgradeResultPayload = {
+	id: string,
+	from: number,
+	to: number,
+	spent: number,
+	currency: UpgradeCurrency,
+	reason: string?,
+	snapshot: UpgradeSnapshot,
+}
+
+-- Pression d'une Plopette (HelperPress, non fiable, regroupée par tick) : le serveur choisit la cible
+-- et l'heure tPress (Clock.now() du serveur) ; il revérifie à tPress, l'issue arrive par DataPatch
+export type HelperPressEntry = { helper: number, uid: Uid, tPress: number }
+export type HelperPressPayload = { ownerId: number, presses: { HelperPressEntry } }
+export type HelperState = "idle" | "moving" | "nap" | "paused"
+
+-- Célébrations v2.0 (Celebrate, sortes à fusionner dans CelebrateKind à l'intégration I)
+export type CelebrateKindV2 =
+	"petitSplorch"
+	| "ascend"
+	| "tier"
+	| "unlock2"
+	| "confetti"
+	| "trackTier"
+	| "carnet"
+	| "mastery"
+	| "regainDone"
+	| "recordStep"
+	| "welcomeV2"
+export type CelebratePetitSplorch = { userId: number, level: number, startedAt: number, endsAt: number }
+export type CelebrateAscend = {
+	userId: number,
+	ascend: number, -- A après l'Ascension
+	startR: number, -- Grand Splorch de départ
+	bestR: number,
+	startedAt: number,
+	burstAt: number, -- Prestige.apply à burstAt (Balance.Ascend.BurstAt)
+	endsAt: number,
+	flyer: { s: SpeciesId, m: MutationId, st: number, z: number }, -- taille copiée au début
+}
+export type CelebrateTier = { family: string, tier: number, key: string }
+export type CelebrateUnlock2 = { recordR: number, keys: { string } } -- déblocages du §4.29
+export type CelebrateConfetti = { n: number, source: string }
+export type CelebrateTrackTier = { tier: number, reward: string }
+export type CelebrateCarnet = { tier: number, reward: string }
+export type CelebrateMastery = { species: SpeciesId }
+export type CelebrateRegainDone = { bestR: number, confetti: number }
+export type CelebrateRecordStep = { share: number } -- 0,25 / 0,5 / 0,75
+export type CelebrateWelcomeV2 = { highlights: { string } } -- 3 plus beaux déblocages déjà gagnés
+
+-- Attributs répliqués du ranch ajoutés par la v2.0 (RanchService, sur le dossier du ranch) :
+-- BestR, Ascend, SplorchReady, AscendReady, PetitSplorchAt, Monuments, DecoPerso, HaloOn,
+-- TapisTier, GloveTier, ApronTier (docs/04 §27.5). L'habillage reste le thème public de la v1.3
+-- (cosmetics.theme : 14 valeurs en v2.0, décision C2)
+export type RanchAttributesV2 = {
+	BestR: number,
+	Ascend: number,
+	SplorchReady: boolean,
+	AscendReady: boolean,
+	PetitSplorchAt: number,
+	Monuments: number,
+	DecoPerso: string, -- 12 identifiants séparés par des virgules (0 = vide)
+	HaloOn: boolean,
+	TapisTier: number,
+	GloveTier: number,
+	ApronTier: number,
+}
+
+-- Défi de la semaine (profil : weeklyTrack.challenges, 3 par période)
+export type ChallengeEntry = { id: number, p: number, done: boolean }
+
 return {}

@@ -178,4 +178,72 @@ Quests.Reminders = {
 -- Boutique Robux cachée pendant les 10 premières minutes de jeu cumulé (GDD §8.1 n° 4)
 Quests.ShopHiddenUntil = 600
 
+-- =============================================================================================
+-- Contrat v2.0 (GDD v2.0 §7.5, §4.17 ; docs/04 §27.6) : piste de la semaine, Défis de Splorch,
+-- Carnet du Ranch, maîtrise. Lus seulement quand WeeklyTrack, Carnet, Mastery sont ouverts.
+-- =============================================================================================
+
+-- Piste de la semaine : 12 paliers (points à gagner pour chacun ; "drop" = Goutte chanceuse,
+-- "cosmetic" = cosmétique de la semaine, Cosmetics.WeeklyRotation ; sinon des Confettis), 2 points
+-- par objectif du jour, 5 par Défi ; période = semaine UTC du lundi (EpochOffset : lundi 5 janvier
+-- 1970 00:00 UTC), la première va de la 1re connexion v2 au 2e lundi suivant
+Quests.WeeklyTrack = {
+	Tiers = { 2, 2, 3, "drop", 3, 4, 4, "drop", 5, 5, 6, "cosmetic" } :: { any },
+	PointsPerObjective = 2,
+	PointsPerChallenge = 5,
+	PointsPerTier = 2,
+	EpochOffset = 345600,
+	Week = 604800,
+	ChallengesPerWeek = 3,
+}
+
+-- Défis de Splorch (Annexe B.7) : id définitif = position ; target = objectif ; stat = compteur lu ;
+-- minDays = jours joués avant de pouvoir le tirer ; dropWhenWorkshopDone = retiré quand l'Atelier
+-- et « Pour le plaisir » sont complets. Un Défi n'est tiré que s'il est faisable dans le temps de jeu
+-- médian des 7 derniers jours (entre 30 min et 2 h, QuestRules.challengeFeasible)
+-- stylua: ignore start
+Quests.Challenges = {
+	{ id = 1, key = "challenge.1", stat = "splorches", target = 2 },
+	{ id = 2, key = "challenge.2", stat = "confettiEarned", target = 20, dropWhenWorkshopDone = true },
+	{ id = 3, key = "challenge.3", stat = "upgradesBought", target = 10 },
+	{ id = 4, key = "challenge.4", stat = "recordBeaten", target = 1 },
+	{ id = 5, key = "challenge.5", stat = "ascends", target = 1 },
+	{ id = 6, key = "challenge.6", stat = "combo3", target = 1 },
+	{ id = 7, key = "challenge.7", stat = "rareHatches", target = 2 },
+	{ id = 8, key = "challenge.8", stat = "newStamps", target = 5 },
+	{ id = 9, key = "challenge.9", stat = "megas", target = 2 },
+	{ id = 10, key = "challenge.10", stat = "feedDays", target = 3, minDays = 3 },
+	{ id = 11, key = "challenge.11", stat = "catches", target = 5 },
+	{ id = 12, key = "challenge.12", stat = "perfects", target = 30 },
+}
+-- stylua: ignore end
+
+-- Carnet du Ranch : paliers de niveaux achetés (stats.upgradesBought) et leur récompense
+-- (Cosmetics.ListV2 ou Cosmetics.DecoPerso, source carnet)
+Quests.Carnet = {
+	Tiers = { 50, 100, 250, 500, 1000, 2500, 5000, 10000 },
+	Rewards = {
+		[50] = "title.builder",
+		[100] = "saddle.brick",
+		[250] = "flag.buildingSite",
+		[500] = "title.architect",
+		[1000] = "trail.littleHammers",
+		[2500] = "emote.hammerTap",
+		[5000] = "title.masterArchitect",
+		[10000] = "outfit.buildersCrown",
+	} :: { [number]: string },
+	DecoAt = { [750] = "workbench", [7500] = "sugarCrane" } :: { [number]: string },
+}
+
+-- Maîtrise d'une espèce (+ Balance.Confetti.Mastery) et jalons de taille géante (tours appris)
+Quests.Mastery = {
+	Tricks = {
+		{ size = 100, key = "trick.peekaboo" },
+		{ size = 1200, key = "trick.spin" },
+		{ size = 1e6, key = "trick.flip" },
+		{ size = 1e9, key = "trick.dance" },
+		{ size = 1e12, key = "trick.fireworks" },
+	},
+}
+
 return Quests

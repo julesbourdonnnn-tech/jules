@@ -1,8 +1,9 @@
 # Raise a Squishy — Architecture technique (contrat d'implémentation)
 
-> **Document 04.** Version 1.2 du 1er novembre 2026 : application du **GDD v1.3** et des remarques A20 à A29 de la revue d'architecture (journal au §25 ; corrections de la v1.1 au §24). Statut : **contrat figé** pour l'implémentation en parallèle par 8 paquets. Les paquets déjà écrits (logic) ou en cours (world) reçoivent leurs changements par des **notes du contrat v1.2** (§25), jamais par une édition de leurs fichiers.
-> Sources : [`02-game-design-document.md`](02-game-design-document.md) (GDD v1.3, cité « GDD §x » ; le §12 est l'architecture de référence), [`03-decision-du-jury.md`](03-decision-du-jury.md) (concept, §8) et la **décision du propriétaire du 1er novembre 2026** : **console d'abord** (PS5 avec DualSense sur une télé, puis Xbox et PC ; aucun téléphone au lancement) et **zéro bug au lancement**. Cette décision passe avant tout le reste.
-> Le code du contrat est **déjà dans le dépôt** : configurations avec les vraies données, types, remotes, catalogue des intentions, schéma v1, bus de signaux, ordres d'initialisation, l'utilitaire `Server/Util/Activity` (implémenté et testé par le contrat) et **66 stubs** aux signatures exactes. Il est vérifié par `tests/specs/Contract.spec.luau` (socle) et `tests/specs/Contract_game.spec.luau` (jeu). En cas de doute, **le code du contrat fait foi**, puis ce document, puis le GDD.
+> **Document 04, version 2.0 du 3 novembre 2026 : le jeu complet** (GDD **v2.0** : 9 familles d'amélioration, écran Améliorations, Confettis et Atelier de Big Plop, Jelly Ascend, Petit Splorch et Souvenir de gelée, Plopettes, Monuments, ranch qui évolue, piste de la semaine, Carnet, Déco perso). Le contrat v2.0 est le **§27** : paquets et propriété des fichiers, schéma v2 et sa migration exacte, interrupteurs, réseau, configuration, API des modules nouveaux, contrat de disposition de l'écran Améliorations et ses 20 règles « zéro bug d'affichage », porte d'économie v2.0, plan de tests, notes d'intégration, définition de « fini » et journal. **Tout système v2.0 est derrière un interrupteur `Config/Features` coupé par défaut** : le jeu de base joue exactement comme la version de test (commit 7382f88) tant qu'un paquet n'est pas implémenté, relu et ouvert. Les §1 à §26 (contrat v1.2 et journal d'intégration) restent valables pour tout ce que la v2.0 ne change pas.
+> Version 1.2 du 1er novembre 2026 : application du **GDD v1.3** et des remarques A20 à A29 de la revue d'architecture (journal au §25 ; corrections de la v1.1 au §24). Les paquets déjà écrits (logic) ou en cours (world) reçoivent leurs changements par des **notes du contrat v1.2** (§25), jamais par une édition de leurs fichiers.
+> Sources : [`02-game-design-document.md`](02-game-design-document.md) (GDD **v2.0**, cité « GDD §x » ; le §12 est l'architecture de référence), [`09-plan-contenu-complet.md`](09-plan-contenu-complet.md), [`03-decision-du-jury.md`](03-decision-du-jury.md) (concept, §8) et la **décision du propriétaire du 1er novembre 2026** : **console d'abord** (PS5 avec DualSense sur une télé, puis Xbox et PC ; aucun téléphone au lancement) et **zéro bug au lancement**. Cette décision passe avant tout le reste.
+> Le code du contrat est **déjà dans le dépôt** : configurations avec les vraies données, types, remotes, catalogue des intentions, schéma v1 (et le schéma v2 décrit, testé, non activé), bus de signaux, ordres d'initialisation, l'utilitaire `Server/Util/Activity` (implémenté et testé par le contrat). Il est vérifié par `tests/specs/Contract.spec.luau` (socle), `tests/specs/Contract_game.spec.luau` (jeu), `Contract_v2.spec.luau`, `Contract_upgrades.spec.luau` et `Contract_unlocks.spec.luau` (v2.0). En cas de doute, **le code du contrat fait foi**, puis ce document, puis le GDD.
 > Modèle de format : le document 04 de Comet Conga (`/home/user/jules/roblox-game/docs/04-architecture.md`).
 
 ## Sommaire
@@ -33,6 +34,7 @@
 24. Journal des corrections de la version 1.1
 25. Journal des corrections de la version 1.2 (GDD v1.3, remarques A20-A29)
 26. Journal d'intégration et de validation (2 novembre 2026)
+27. **Contrat v2.0 : le jeu complet** — 27.0 ce qui est dans le dépôt · 27.1 paquets et propriété · 27.2 schéma v2 et migration · 27.3 interrupteurs · 27.4 signaux · 27.5 réseau · 27.6 configuration · 27.7 API des modules nouveaux · 27.8 écran Améliorations et les 20 règles · 27.9 porte d'économie v2.0 · 27.10 plan de tests · 27.11 notes d'intégration · 27.12 définition de « fini » et journal
 
 ---
 
@@ -64,6 +66,8 @@ Ce document permet à **8 ingénieurs** d'implémenter Raise a Squishy **en para
 ---
 
 ## 2. Paquets et propriété des fichiers
+
+> **v2.0** : les paquets du jeu complet (P0, A1-A4, B1-B5, I), leur propriété des fichiers et leur ordre sont au **§27.1** ; ils remplacent le tableau ci-dessous pour le travail v2.0 (les règles de ce paragraphe restent).
 
 Chaque fichier appartient à **un seul** paquet. Un paquet ne crée et ne modifie que ses fichiers. Il peut **ajouter** des modules privés dans son dossier d'aide et des specs `tests/specs/<Nom>.spec.luau` à son nom. S'il a besoin d'un changement dans le fichier d'un autre paquet, du contrat ou du socle, il ne l'édite pas : il le signale dans ses **notes d'intégration**.
 
@@ -2113,6 +2117,8 @@ Plus : `WorldBuild.spec` (world : tout ancré, `CanTouch = false`, solides = bo�
 
 ## 18. Plan de tests par paquet et specs d'intégration
 
+> **v2.0** : plan de tests des paquets du jeu complet au **§27.10** (et les specs des 20 règles d'affichage au §27.8).
+
 ### 18.1 Conventions
 
 - Commandes : `~/.cargo/bin/stylua <fichiers>`, `~/.cargo/bin/selene src` (0 erreur, 0 avertissement), `~/.cargo/bin/lune run tests/run -- <filtre>`, puis toute la suite `~/.cargo/bin/lune run tests/run` et `./scripts/check.sh`.
@@ -2288,6 +2294,8 @@ Chaque note restante a **un propriétaire et un moment**. « Étape 0 du paquet 
 
 ## 23. Définition de « fini »
 
+> **v2.0** : définition de « fini » d'un paquet du jeu complet et du jeu complet au **§27.12**.
+
 Un paquet est fini quand :
 - plus aucun `error("TODO(<paquet>)…")` dans ses fichiers ;
 - comportement conforme au GDD et à ce document ;
@@ -2436,3 +2444,287 @@ Décisions prises par les intégrateurs serveur et client, puis par le validateu
 - Notes « texte du contrat » des rapports de paquets (chase 1-5 et 16, ranch R6, R7, 15, 16, logic INT-LR2, INT-LR9, INT-LR11, meta 7-11 et 13, world 7, 9, 10, client-hud 3-5 et R-A à R-C, client-panels 6, 7, R6, client-world CWR-1, CWR-2, CW-4 à CW-6, CW-11) : aucune modification de code attendue ; le code livré fait foi.
 - Sons encore sans déclencheur (`LevelUp`, `VatBubble`, `Pickup`, `Splash`, `MountUp`, `RideLand`, `Boing`) et finitions visuelles (arcs Prendre / Lancer, bombement du portail) ; tous les identifiants de sons restent vides avant la publication.
 - Robot de 6 h (`scripts/soak.sh`) et tests manuels M1 à M18 sur vraie PS5, Xbox et PC.
+
+---
+
+## 27. Contrat v2.0 : le jeu complet (GDD v2.0)
+
+> **Version 2.0 du 3 novembre 2026** (architecte). Entrées : GDD v2.0 (`docs/02`, cité « GDD §x »), `scratchpad/v2/gdd/contract-changes.md` (N1-N25, §1-§10) et `packages-proposal.md` du rôle design, `docs/09` (plan de contenu, 20 règles « zéro bug d'affichage »). Base : commit 7382f88 (porte verte, version de test envoyée au propriétaire). Ce chapitre **remplace**, pour le travail v2.0, le tableau des paquets du §2, le plan de tests du §18 et la définition de « fini » du §23 ; les §1-§26 restent valables pour tout ce que la v2.0 ne change pas. **Règle n° 1 de la v2.0 : chaque système nouveau est derrière un interrupteur `Config/Features` COUPÉ par défaut** ; le jeu de base joue donc exactement comme la version de test tant qu'un paquet n'est pas implémenté, relu et ouvert à l'étape d'intégration (§27.3).
+
+### 27.0 Ce qui est déjà dans le dépôt (code du contrat v2.0) et ce qui fait foi
+
+| Fichier | Ajout v2.0 (aucun comportement changé) |
+|---|---|
+| `src/shared/Config/Features.luau` | 22 interrupteurs v2.0 à `false` (§27.3) ; `Features.Static` (interrupteurs figés, refusés par `Features.set`) : `SchemaV2` |
+| `src/shared/Config/Upgrades.luau` (nouveau) | Catalogue : 8 familles en pièces (ordre fixe), 7 lignes en lecture seule, 10 lignes de l'Atelier (9 + `decoShop`), 7 lignes de « Pour le plaisir », liste fermée des effets (§27.6) |
+| `src/shared/Config/IntentsV2.luau` (nouveau) | 5 intentions déclarées, pas encore écoutées : `BuyUpgrade`, `JellyAscend`, `PlaceDeco`, `GiveHeart`, `SetPhotoMode` (§27.5) |
+| `src/shared/Config/Balance.luau` | Tables v2.0 à part : `Prestige`, `Ascend`, `Confetti`, `UpgradePrices`, `Monuments`, `Gloves`, `SplorchV2`, `CapsV2`, `Hearts`, `OfflineV2`, `PotV2`, `PressV2`, `Helpers`, `Upgrades` ; marque `GddValuesV2 = "2.0"` (la marque `GddValues` reste `"1.3"`) |
+| `src/shared/Config/Layout.luau` | `Layout.Upgrades` (zones, 3 gabarits, colonnes, budget) et `Layout.HudV2` (rail 8 × 80, puce « Prochain achat ») |
+| `src/shared/Config/Visuals.luau` (nouveau) | `RecordTable[1..20]` (déblocages nommés de l'aperçu + éléments du ranch, GDD §4.29), `Tiers` (Tapis 6, Gants 9, tablier 5, Enclos 3), `RanchTiersAt`, `Faces`, `Eyes`, `Palettes` (8), ciel, halo |
+| `src/shared/Config/Cosmetics.luau` | `DecoPerso` (40 objets, taille, source), `WeeklyRotation` (8), `ListV2` (85 : selles, traînées, drapeaux, tenues, emotes, 51 titres, 11 habillages en `theme`), à part de `Cosmetics.List` jusqu'à l'étape I |
+| `src/shared/Config/{Quests,Events}.luau` | `Quests.WeeklyTrack`, `Quests.Challenges` (12), `Quests.Carnet` (8 paliers et récompenses), `Quests.Mastery` (5 tours) ; `Events.Weather` (visuelle seulement), `Events.Fete`, `Events.StarRain` |
+| `src/shared/Config/{Sounds,Console}.luau` | 12 sons v2.0 muets (`id = ""`) ; vibrations `tierUp`, `chantier`, `ascend` |
+| `src/shared/Remotes.luau` | 5 intentions + `UpgradeResult` (event) + `HelperPress` (unreliable), créés par `Net.setup`, écoutés par personne |
+| `src/shared/Types.luau` | `PrestigeKind`, `UpgradeCurrency`, `UpgradeSnapshot`, `UpgradeResultPayload`, `HelperPressEntry`, `HelperPressPayload`, `HelperState`, `CelebrateKindV2` et ses charges, `RanchAttributesV2`, `ChallengeEntry` |
+| `src/server/Signals.luau` | `PrestigeApplied`, `UpgradeBought`, `ConfettiChanged`, `RecordReached`, `HelperPressed` |
+| `src/server/Data/Schema.luau` | Schéma v2 décrit et testé, **non activé** : `LATEST = 2`, `VERSION = 1` tant que `SchemaV2` est coupé ; `defaultsV1`, `defaultsFor(v)`, `OWNERS_V1`, `OWNERS_V2`, `ownersFor(v)`, `migrate(data, from, to?)`, `migrateV1toV2`, `confettiCatchUp`, constantes figées `MIGRATION_V2` (§27.2) |
+| `src/shared/Localization/Strings.luau` | 435 clés v2.0 en EN et FR (écran Améliorations, Atelier, renaissances, Plopettes, Monuments, paliers, déblocages, habillages, ciel, halo, Annexe B complète : 40 objets de Déco perso, 8 cosmétiques de la semaine, 36 + 15 titres, 12 Défis, 5 tours) |
+| `tests/harness/TextFitKeys.luau` (outil d'écrans, autre équipe) | Une clé que le client ne référence pas encore (contrat d'un écran à venir) est acceptée par `TextFit_all` sans ligne en attente ; dès qu'un paquet l'affiche, elle doit être prouvée dans les deux langues, à Medium et au pire cas |
+| `tests/fixtures/profiles/v1.json` (nouveau) | Profil v1 réaliste de la version de test (Record R 12, Enclos 12/14, Lit, 4 squishies, Squishydex, objectifs, passes, reçus) |
+| `tests/specs/Contract_v2.spec.luau`, `Contract_upgrades.spec.luau`, `Contract_unlocks.spec.luau` (nouveaux) ; `Contract_game.spec.luau` | Témoins v2.0, migration, interrupteurs, catalogues, contenu nommé, textes ; `Contract_game` connaît les remotes v2.0 |
+
+**Pas de stubs de modules.** Le contrat v1.x posait des stubs `error("TODO(...)")` ; depuis l'intégration du 2 novembre, `Fix_validation.spec` interdit toute marque `TODO(` dans `src/`. Les modules nouveaux ne sont donc **pas** créés par le contrat : leur fichier, leur paquet et leur API exacte sont écrits au §27.7 ; le paquet qui en est propriétaire crée le fichier avec ces signatures (et peut en ajouter, jamais en retirer). Ordre de foi inchangé : le code du contrat, puis ce chapitre, puis le GDD.
+
+### 27.1 Paquets v2.0 et propriété des fichiers
+
+Règles du §2 reprises : **un fichier = un paquet** pendant la v2.0 ; un paquet ne crée et ne modifie que ses fichiers et ses specs `tests/specs/<Nom>.spec.luau` ; un besoin ailleurs = **note d'intégration** (fichier, changement exact, raison) ; registres partagés (`Strings`, `Remotes`, `Types`, `Config/Sounds`) en ajouts ciblés, relus juste avant chaque `Edit`. **Deux voies** (E1 serveur et logique, puis rendu des squishies ; E2 interface et monde) qui ne partagent **aucun fichier** après P0 ; elles se parlent par les types et les charges utiles figés au §27.5. Le fichier JSON des paquets (`scratchpad/arch-packages-v2.json`) reprend ce tableau.
+
+| Paquet | Voie | Possède (fichiers créés ou modifiés) | Dépend de | Durée |
+|---|---|---|---|---|
+| **P0** Contrat v2.0 (fin) | E1 | `docs/04` (v2.0), `default.project.json` (éclairage N12, à l'intégration seulement), `src/shared/Config/{Features,Upgrades,IntentsV2,Intents,Balance(structure),Layout,Quests,Events,Cosmetics,Species,Settings,Console,Sounds,Visuals}.luau`, `Types`, `Remotes`, `Strings`, `src/server/{Signals,Data/Schema}.luau`, `tests/fixtures/profiles/{v1,v2}.json`, `assets/fonts/*` (OFL), `Contract_v2`, `Contract_upgrades`, `Contract_unlocks`, `Contract_glyphs`, `Contract_game` | — | fait (§27.0) sauf 1 j : polices OFL et `Contract_glyphs`, colonne `perso` de `Config/Species`, `Config/Settings.haloOn` (avec A4) |
+| **A1** Logique de progression et porte d'économie | E1 | `src/shared/Logic/{Prestige,UpgradeMath,UpgradeAdvisor,Bitset,TierRules}.luau` (nouveaux), `Logic/{Formulas,QuestRules,Invariants,BigNumber}.luau`, valeurs de `Config/Balance` (tables v2.0), `tests/sim/EconomyModel.luau`, `tests/specs/EconomyPacing.spec.luau` | P0 | 5 j |
+| **A2** Serveur de progression | E1 | `src/server/Services/{EconomyService,SplorchService,RanchService,DataService}.luau`, `src/server/Data/ProfileRepair.luau`, `src/server/Ranch/*`, `src/server/Chase/Splorch*` (aide) | A1 | 6 j |
+| **A3** Plopettes, serveur | E1 | `src/server/Services/HelperService.luau` (nouveau), `src/server/Helpers/*` (nouveau), `src/server/Main.server.luau` (ligne `HelperService` dans `ORDER`, note au contrat appliquée par A3) | A2 | 4 j |
+| **A4** Méta v2.0 | E1 | `src/server/Services/{QuestService,CommunityService,EventService,LeaderboardService}.luau`, `src/server/Meta/*`, `src/server/Util/Analytics.luau` (note INT-ANALYTICS : seul éditeur) | A2 | 8 j |
+| **B5** Vie des squishies | E1 | `src/shared/Render/SquishyBuilder.luau`, `src/client/World/Personality.luau` (nouveau), `src/client/Controllers/{HelperRenderer,VFXController,CameraController}.luau` | A3, A4, B1 | 8 j |
+| **B1** Fondations de l'interface | E2 | `src/client/UI/{Theme,Text,Format,FocusGuard,Glyph,Toast,WorldText}.luau`, `src/client/UI/Hud/Util.luau`, `src/client/UI/Panels/Widgets.luau`, `src/client/Controllers/{InputController,LightingController}.luau` (politique de texte seulement, N10, puis rendus : `LightingController` à B4, `VFXController` à B5), `src/client/UI/Panels/Diagnostics.luau` (panneau TextProbe), `tests/harness/{TextMetrics,MockInstance,EngineProps,ApiAudit}.luau` | P0 | 5 j (peut commencer pendant P0) |
+| **B2** Écran Améliorations | E2 | `src/client/UI/Panels/Upgrades.luau`, `src/client/UI/{UpgradeCard,UpgradeSnapshot}.luau` (nouveaux), `src/client/UI/{HUD,PanelController}.luau`, `src/client/UI/Hud/*` (hors `Hud/Util.luau`, à B1) | B1, A1 (`UpgradeMath`, `UpgradeAdvisor`) | 9 j |
+| **B3** Écrans de renaissance et de méta | E2 | `src/client/UI/Panels/{SplorchPreview,Ranch,Squishydex,Objectives,Settings}.luau`, `src/client/UI/{Cards,Banners,ReturnScreen}.luau` | B2 | 8 j |
+| **B4** Le ranch qui évolue | E2 | `src/client/Controllers/{RanchRenderer,LightingController}.luau`, `src/client/Render/{BuildCascade,VisualBudget,AmbienceDirector}.luau` (nouveaux), `src/shared/Logic/{RanchLook,AmbienceRules,WorldLayout}.luau`, `src/server/Services/WorldService.luau`, `src/server/World/*` | B1, A1 | 9 j |
+| **I** Intégration | les deux | ouverture des interrupteurs, `SchemaV2`, `Contract.spec` (VERSION 2), `Boot.spec`, `Soak.spec`, `Soak_queue.spec`, `ClientReplay.spec`, `Screens`, `TextFit_all` sans clé v2.0 en attente | tous | 4 j |
+
+**Fichiers touchés par deux paquets : aucun en même temps.** Trois passages de main, datés dans le plan : `LightingController` (B1 pour la politique de texte, jours 1-5, puis B4) ; `VFXController` (B1, puis B5 après le jour 26 environ) ; `WorldLayout` (B4 seulement ; A3 lit `WorldLayout.helperHouse`, écrit par B4 au début de son lot, ou demande une note). `Main.server.luau` et `Main.client.luau` sont des fichiers du contrat : A3 (`HelperService`) et B5 (`HelperRenderer`) y ajoutent leur ligne par note d'intégration appliquée par le contrat dans le même lot, et `Contract_game.spec` (`SERVER_ORDER`, `CLIENT_ORDER`) suit. **Ordre** : P0 → A1 (porte d'économie verte avant tout autre code serveur) → A2 → A3 → A4 → B5 sur la voie E1 ; B1 → B2 → B3 → B4 sur la voie E2 ; I à la fin.
+
+**Ordres d'initialisation v2.0** (à poser par les notes ci-dessus) : serveur — `HelperService` juste après `SplorchService` (il lit EconomyService, SquishyService et SplorchService ; ChaseService, dernier, le « stèpe » dans son tick de 10 Hz, règle 7 du §1 : aucune nouvelle connexion `Heartbeat`) ; client — `Controllers.HelperRenderer` juste après `Controllers.ChaseRenderer` ; l'écran Améliorations n'est pas dans l'ordre : `PanelController` le construit avec les autres panneaux.
+
+### 27.2 Données : schéma v2, migration exacte, réparation
+
+**Activation.** `Schema.VERSION = if Features.Defaults.SchemaV2 then 2 else 1` ; `SchemaV2` est **figé** (`Features.Static` : jamais changé en direct). Tant qu'il est coupé, `defaults()` = `defaultsV1()` (la v1 de la version de test, jamais modifiée), `OWNERS` = `OWNERS_V1`, et `migrate(data, from)` sans cible ne dépasse jamais la v1. L'étape d'intégration passe `SchemaV2` à `true` dans **le même lot** que : `Contract.spec` (VERSION 2, `STORE_NAME` inchangé `PlayerData_v1`), `ProfileRepair` v2 (A2), `Invariants` v2 (A1), les interrupteurs v2.0. Avant ce lot, aucune sauvegarde v2 n'est jamais écrite.
+
+**Champs ajoutés** (`Schema.defaultsFor(2)` ; un seul écrivain par clé, `Schema.OWNERS_V2`)
+
+| Clé | Type, défaut, bornes | Écrivain unique | Réplication |
+|---|---|---|---|
+| `bestR` | entier, 0, `R ≤ bestR ≤ 400` | SplorchService (`Prestige.apply`) | attribut public `BestR` |
+| `ascend` (champ réservé de la v1 devenu A) | entier, 0, 0-60 | SplorchService | attribut public `Ascend` |
+| `regainBonusA` | entier 0-60 : dernier A dont le bonus de retour au record (+10) a été donné | SplorchService | profil |
+| `confetti`, `confettiTotal` | entiers, 0, 0-1e9, `confetti ≤ confettiTotal` | EconomyService : `addConfetti` (gains) et `buyUpgrade` (dépenses) **seulement** | profil |
+| `tiles.star`, `tiles.gloves`, `tiles.school`, `tiles.monuments` | entiers 0-8, 0-40, 0-20, 0-10 (Monuments gardés) | EconomyService | profil ; paliers et `Monuments` publics |
+| `atelier` | tableau dense, une case par ligne de `Config/Upgrades.WorkshopRows` (10, ordre définitif), bornée par `#costs` | EconomyService | profil |
+| `atelierCosmetics` | ensemble de bits (11 : `Upgrades.CosmeticBits`) | EconomyService | profil |
+| `decorBuilds` | 18 entiers 0-10 (décorations dorées) | EconomyService (au Grand Splorch) | public (dorées) |
+| `stats.upgradesBought`, `stats.petitSplorches` | entiers ≥ 0 | QuestService (`stats`, propriétaire v1) sur `UpgradeBought` / `PrestigeApplied` | profil |
+| `carnet` | ensemble de bits (8 paliers) | QuestService | profil |
+| `weeklyTrack` | `{ period, points, claimed (bits, 12), challenges = { Types.ChallengeEntry × 3 }, firstPeriodEnd }` | QuestService | profil |
+| `mastery` | ensemble de bits, un par espèce (agrandi par `reconcile`) | QuestService | profil |
+| `unlocksSeen` | entier 0-400 | QuestService | profil |
+| `onboarding.nextBuyShown`, `onboarding.welcomeV2Pending` | booléens, `false` | QuestService | profil |
+| `season.frostDays` | entier, 0 (`season.premium` gardé, jamais effacé) | QuestService | profil |
+| `caps.fameSplorch`, `caps.starRain` | compteurs du jour, bornés par `Balance.CapsV2` | EconomyService (propriétaire de `caps`) | privé |
+| `decoPerso` | `{ owned = bits (64), slots = 12 entiers (0 = vide) }` | CommunityService | public `DecoPerso` |
+| `hearts` | `{ givenDay, givenTo (≤ 20 UserIds), receivedTotal }` | CommunityService | privé |
+
+**Ensembles de bits** : tableau dense de mots de 32 bits (`{number}`, longueur `ceil(n / 32)`, au moins 1), lus et écrits **seulement** par `Logic/Bitset` (jamais un `number` de 64 bits : `bit32` travaille sur 32 bits). **Habillages** (décision C2) : pas de champ `ranchSkin` ; les 14 habillages sont les valeurs de `cosmetics.theme` (3 de la v1.3 + 11), équipés par l'intention existante `EquipCosmetic("theme", id)`, répliqués par le thème public de la v1.3. **Halo** : `settings.haloOn` arrive par `Config/Settings` (`saved = true`, défaut `true`) au lot A4, avec son affichage dans le panneau Réglages derrière `RanchSkins`.
+
+**Migration v1 → v2** (`Schema.migrateV1toV2`, étape pure appelée par `migrate(data, from, to)` si `from < 2 ≤ to`) : (1) `bestR = R`, `ascend = 0` ; (2) Confettis du premier passage : `confettiCatchUp(R) = Σ_{k=1..R} (3 + min(k, 20)) + 10 par k ≥ 21` ; (3) places offertes aux Record R 2, 6, 11, 16 déjà atteints : +1 niveau d'Enclos (14 au plus), **+25 Confettis** chacune si la dalle est pleine ; (4) `unlocksSeen = R` ; (5) `stats.upgradesBought` = Tapis + Décorations + Enclos (avant les places offertes) + Lit ; `decorBuilds[k] = 1` pour chaque décoration construite ; (6) `onboarding.welcomeV2Pending = (R ≥ 1)` (une carte « Bienvenue dans la v2 ! » au lieu de R cartes « Nouveau ») ; (7) `weeklyTrack.firstPeriodEnd = 0` : **QuestService** le fixe au premier chargement v2 (2e lundi après `Clock.unix()`, `QuestRules.trackPeriod`) — la migration reste pure ; (8) `version = 2` ; le reste vient de `reconcile(defaultsFor(2))`. **Constantes figées** `Schema.MIGRATION_V2` (jamais liées à `Config/Balance` : deux joueurs migrés à un mois d'écart reçoivent le même rattrapage). **Garanties testées** (`Contract_v2.spec`) : profil v1 de la version de test → Record R 12, Enclos 14, 114 + 25 Confettis ; **chaque valeur v1 gardée** (seuls `tiles.pens` et `version` changent) ; aller-retour JSON exact ; **idempotente** (un profil déjà v2 n'est jamais retouché : garde sur `data.version`) ; sauvegarde abîmée (R `NaN`, `tiles` illisible, `stats` absent) sans erreur et bornée ; profil v2 plein < 20 Ko. **Anciens serveurs** : pendant un déploiement, un serveur encore en v1 qui lit un profil v2 le **refuse** sans rien écrire (`DataService`, schéma plus récent : renvoi poli « Ce serveur n'est pas à jour », verrou non pris, aucune sauvegarde) — testé avec un vrai profil migré.
+
+**Réparation et invariants v2** (A2 : `ProfileRepair` ; A1 : `Logic/Invariants`) : bornes de chaque champ ci-dessus ; `bestR = max(bestR, R)` ; `atelier` allongé ou raccourci à `#WorkshopRows`, chaque case ≤ `#costs` ; `confetti ≤ confettiTotal ≤ 1e9` ; ensembles de bits allongés à leur taille ; `decoPerso.slots` vers un objet non possédé → 0 ; `hearts.givenTo` tronqué à 20 ; `cosmetics.theme` inconnu ou non gagné → `"color"`. Invariants : `R ≤ bestR ≤ MaxR`, `0 ≤ ascend ≤ MaxA`, chaque niveau ≤ son maximum, `tiles.star ≤ Prestige.starCap(R)`, décorations gardées ≤ 12, **toutes** les tailles (enclos, Bassin, Dodo, Lettres, porté) = 1 juste après un prestige. Chaque réparation est comptée par Diagnostics (`ProfileRepaired`).
+
+### 27.3 Interrupteurs (`Config/Features`) : coupés jusqu'à la relecture du paquet
+
+| Interrupteur | Ouvre | Paquet qui l'implémente | Valeur de lancement |
+|---|---|---|---|
+| `SchemaV2` (figé) | schéma v2 et migration | P0 + A2 | `true` à l'étape I |
+| `RecordR` | `bestR` séparé de r : tout ce qui est débloqué lit le Record R (N1) | A1 + A2 | `true` |
+| `UpgradesScreen` | écran Améliorations, `BuyUpgrade`, puce « Prochain achat », rail v2.0 | A2 + B2 | `true` |
+| `Confetti` | 2e monnaie (gains, en-tête, tuile d'aperçu) | A1 + A2 + B2 | `true` |
+| `Workshop` | Atelier (9 lignes), kiosque de Big Plop | A2 + B2 | `true` |
+| `StarMat`, `Gloves`, `Monuments` | familles nouvelles | A1 + A2 + B2 + B4 | `true` |
+| `JellyAscend`, `PetitSplorch` | 2e couche de renaissance, Petit Splorch hors file | A2 + B3 + B5 | `true` |
+| `Helpers` | Plopettes, École, Plume | A3 + B5 | `true` (décision par défaut n° 3) |
+| `WeeklyTrack`, `Carnet`, `Mastery` | piste de la semaine et Défis, Carnet du Ranch, maîtrise et jalons géants | A4 + B3 | `true` |
+| `RanchTiers`, `Ambience` | ranch qui évolue, directeur d'ambiance et Unified Lighting | B4 | `true` |
+| `RanchSkins`, `DecoPerso`, `Hearts`, `PhotoMode` | 11 habillages de plus, Déco perso, cœurs, mode photo | A4 + B3 + B4 | `true` |
+| `Weather`, `Fete` | météo **purement visuelle** (décision n° 4), place en fête | A4 + B5 | `true` |
+| `Personalities` | personnalités, saynètes, visages, tours | B5 | `true` |
+
+Règles : (1) **coupé = le code v2.0 ne fait rien** : aucune intention envoyée, aucun handler branché, aucun champ lu ni écrit, aucune instance créée, aucun texte affiché ; (2) chaque paquet teste **les deux états** (interrupteur coupé : la spec du jeu de base correspondante reste verte telle quelle ; ouvert : ses specs v2.0) ; (3) l'écran fige la liste de ce qui est ouvert à l'ouverture (règle 19) ; (4) `Features.set` refuse `SchemaV2` ; les autres se changent en direct par LiveOps comme en v1.3 ; (5) les valeurs de lancement (`true`) sont posées à l'étape I, **dans le même lot** que la mise à jour de `Contract_v2.spec` (« coupé par défaut » devient « ouvert au lancement ») et des specs du jeu de base dont l'attente change avec le GDD v2.0 (N1-N25 de `contract-changes.md`, raison au journal §27.12). `Features.Defaults.Season` reste `false` (saison de 28 jours supprimée, GDD v2.0).
+
+### 27.4 Signaux internes v2.0 (`src/server/Signals.luau`)
+
+| Signal | Émetteur | Arguments | Consommateurs |
+|---|---|---|---|
+| `PrestigeApplied` | SplorchService, après `Prestige.apply` | `(player, kind: "splorch" \| "petit" \| "ascend", fromR, toR, A)` | QuestService (piste, cartes), HelperService (reprise), RanchService (attributs), LeaderboardService (Livre des records), analytique |
+| `UpgradeBought` | EconomyService.buyUpgrade (et BuyTile) | `(player, id, fromLevel, toLevel, currency)` | QuestService (Carnet, objectifs), RanchService (paliers, cascade) |
+| `ConfettiChanged` | EconomyService | `(player, delta, source)` ; sources : `"splorch"`, `"petit"`, `"skipped"`, `"ascend"`, `"regain"`, `"record"`, `"fullPen"`, `"track"`, `"mastery"`, `"spend"` | QuestService (Défi n° 2), analytique `ConfettiEarned` |
+| `RecordReached` | SplorchService, premier passage d'un Record R | `(player, bestR)` | QuestService (carte « Nouveau », `unlocksSeen`), CommunityService (cosmétiques gagnés), RanchService |
+| `HelperPressed` | HelperService, pression accordée à `tPress` | `(player, helper, uid, coins)` | EconomyService (crédit, source `Helper`) ; **jamais** la jauge, les objectifs ni les classements |
+
+`TileBought` (v1.3) reste émis pour les 4 dalles (étape 3 de l'accueil, objectifs) ; `UpgradeBought` est émis **en plus** pour tout achat, dalles comprises.
+
+### 27.5 Réseau : intentions, charges utiles, attributs
+
+**Catalogue.** Les intentions v2.0 vivent dans `Config/IntentsV2` (même forme que `Config/Intents`, plus `feature`). **Le paquet qui branche un handler déplace la ligne vers `Config/Intents` dans le même lot** (note au contrat) et met à jour les specs `Remotes_<paquet>` qui comptent les intentions de leur propriétaire (`Remotes_Meta` en attend 15 aujourd'hui) ; une intention n'est jamais dans les deux catalogues (`Contract_v2.spec`). Ordre de chaque handler (règle 3 du §1) : débit → types → existence → état → règles → mutation atomique → réplication ; refus = aucune mutation.
+
+| Intention | Arguments | Propriétaire | Débit | Règles (dans l'ordre) | Réponse |
+|---|---|---|---|---|---|
+| `BuyUpgrade` | `id: str ≤ 24`, `mode: int 0-10` (1, 10 ou 0 = Max ; autre valeur refusée), `expectedLevel: int 0-64` | EconomyService | 10 / s | `id` ∈ `Upgrades.Families` ∪ `WorkshopRows` ∪ lignes « bits » de `Fun` ; interrupteur ouvert ; `expectedLevel` = niveau actuel (sinon refus **périmé** : muet si l'instantané du client montre déjà ce niveau, compteur `UpgradeStale`) ; famille ouverte (`UpgradeMath.cap > niveau`) ; aucun prestige en cours d'application pour ce joueur ; règlement du Pot, puis `n = min(demandé, payable, restant, Balance.Upgrades.BulkMax)` et somme exacte `UpgradeMath.bulk` ; **un seul bloc** (pièces ou Confettis, niveau, `stats`, signaux) ; position non exigée | `UpgradeResult` **toujours** (sauf périmé muet), `DataPatch` avec le même instantané |
+| `BuyTile` (v1.3) | inchangé | EconomyService | 10 / s | même fonction que `BuyUpgrade(tile, 1, niveau actuel)` ; `snack` achète aussi le Tapis Étoilé ouvert (N21) | inchangée + `UpgradeResult` quand `UpgradesScreen` est ouvert |
+| `JellyAscend` | `confirm: bool` (true exigé) | SplorchService | 1 / 5 s | `Prestige.ascendReady` (r ≥ condition, A < 60) ; dans son ranch, rien porté, aucun squishy en fuite ; **un seul prestige par joueur** dans la file (« Ton Grand Splorch passe d'abord ! ») ; vérifié une fois, à l'entrée dans la file | `Celebrate("ascend")` à tous ; `Banner("ascend")` |
+| `GrandSplorch` (v1.3) | inchangé | SplorchService | 1 / 2 s | Petit Splorch si **r après la renaissance ≤ `bestR`** : hors file, appliqué tout de suite ; si Grand Splorch et Ascension sont prêts, le rail propose le Grand Splorch d'abord | `Celebrate("petitSplorch")` au joueur ; attribut `PetitSplorchAt` |
+| `PlaceDeco` | `item: int 0-64` (0 = retirer), `slot: int 1-12` | CommunityService | 4 / s | objet possédé (`Bitset`), emplacement de la bonne taille (8 petits, 4 grands), pas déjà posé ailleurs | attribut `DecoPerso` |
+| `GiveHeart` | `ownerId: userId` | CommunityService | 2 / s | présent, pas soi, pas bloqué, 1 par ranch et par jour, `Balance.Hearts.PerDay` | `Feedback` aux deux |
+| `SetPhotoMode` | `on: bool` | CommunityService | 1 / s | analytique ; personnage figé **et visible** des autres (N22) ; aucun avantage | — |
+| `SetSetting` (v1.3) | + `haloOn` | CommunityService | 4 / s | comme v1.3 | — |
+| `EquipCosmetic` (v1.3) | `theme` accepte les 14 habillages | CommunityService | 2 / s | habillage gagné (Record R, A, Carnet, Squishydex, jours de Plop) | thème public |
+
+Pas de remote pour réclamer un palier de la piste ni du Carnet : QuestService les donne tout seul.
+
+**Serveur → client**
+
+| Remote / attribut | Charge utile (`Shared/Types`) | Destinataires |
+|---|---|---|
+| `UpgradeResult` (event) | `Types.UpgradeResultPayload = { id, from, to, spent, currency, reason?, snapshot }` ; `reason` ∈ `upgrades.refused.{coins, confetti, locked, maxed, loopCap, busy}` | le joueur |
+| `DataPatch` (v1.3) | porte aussi `upgradeSnapshot: Types.UpgradeSnapshot` (même `version`) | le joueur |
+| `HelperPress` (unreliable, regroupé par tick) | `Types.HelperPressPayload = { ownerId, presses = { { helper, uid, tPress } } }` ; l'issue arrive par `DataPatch` | le joueur et les clients qui dessinent ce ranch en détail complet |
+| `Celebrate` (v1.3) | + `Types.CelebrateKindV2` (`petitSplorch`, `ascend`, `tier`, `unlock2`, `confetti`, `trackTier`, `carnet`, `mastery`, `regainDone`, `recordStep`, `welcomeV2`) et leurs charges ; fusionnées dans `CelebrateKind` (et la table du §10.3) à l'étape I | le joueur (tous pour `ascend`) |
+| `Banner` (v1.3) | + `ascend.banner`, `monument.banner` (clés hors de la famille `banner.*` jusqu'à ce que B3 les montre) ; 1 bannière de Grand Splorch par joueur toutes les 180 s (`SplorchV2.BannerGap`) | tous |
+| Attributs du ranch (RanchService) | `Types.RanchAttributesV2` : `BestR`, `Ascend`, `SplorchReady`, `AscendReady`, `PetitSplorchAt`, `Monuments`, `DecoPerso`, `HaloOn`, `TapisTier`, `GloveTier`, `ApronTier` | tous |
+| `EventState` (v1.3) | + `weather = { kind, endsAt }`, `fete = { level }` (visuels seulement) | tous |
+
+**Instantané versionné** (règle 6) : `version` croît de 1 à chaque mutation d'une valeur qu'il porte (achat, règlement qui change `coins`, prestige, Confettis) ; le client ignore tout instantané de `version` ≤ celle affichée ; l'état « payable » ne se calcule que sur lui.
+
+### 27.6 Configuration v2.0
+
+**`Config/Upgrades`** (fait) : `Tabs`, `Modes`, `Families` (ordre fixe : `snack`, `star` sur la même ligne, `decor`, `pens`, `cozyBed`, `gloves`, `monument`, `school`), `ReadOnly` (6 Plopettes + `risesWithRecord`), `WorkshopEffects` (liste fermée), `WorkshopRows` (`gift`, `startMat`, `magnet`, `superStreak`, `keptDecor`, `nightBag`, `nightPot`, `plume`, `springboard`, `decoShop`), `Fun` (palettes, selle, traînée, emote, fanions, titre, Déco perso), `CosmeticBits = 11`, `ById`, `WorkshopIndex`. Chaque famille : `price` = `"tile:<clé>"` (Balance.Tiles) ou `"price:<clé>"` (Balance.UpgradePrices), une seule source ; `open` = `{ recordR?, ascend?, loopCapByR?, recordRByLevel? }`, lu par le serveur seulement.
+
+**`Config/Balance`** (structure faite, valeurs de départ du GDD v2.0, réglées ensuite par A1 seul) : voir §27.0. **Règle des prix** (`UpgradeMath.price`) : `max(1, floor(base × g^L × RScale^r × F(A)))`, calculé par multiplications successives dans cet ordre ; `star` part du prix du Tapis 12 **avant** `floor` ; `monument` = `3 × T12 × RScale^(OpenAt[n]) × RScale^(r − bestR)`, sans F(A). Les tables v2.0 sont **à part** de `Balance.Tiles` et `Balance.Caps` (le code de base les parcourt : `EconomyService.applySplorch`, `Invariants`, `ProfileRepair`).
+
+**`Config/Layout`** (fait) : `Layout.Upgrades` et `Layout.HudV2` (§27.8).
+
+**Contenu nommé (fait)** : `Config/Visuals` (table du §4.29 : `RecordTable[R] = { unlocks = { {key, vars} }, ranch = { identifiants } }` ; `vars.name` est une **clé** de texte, traduite avant d'être posée), `Config/Cosmetics.{DecoPerso, WeeklyRotation, ListV2}` (sources v2.0 : `recordR`, `ascend`, `atelier`, `carnet`, `season`, `track`, `play`, `objectives`, `moon` en plus de celles de la v1.3), `Config/Quests.{WeeklyTrack, Challenges, Carnet, Mastery}`, `Config/Events.{Weather, Fete, StarRain}`, sons et vibrations v2.0 ; `Contract_unlocks.spec` les vérifie (chaque Record R 1-20 : une tuile nommée et un élément du ranch ; chaque objet : une source, une clé EN et FR, une place unique ; les objets de « Pour le plaisir » et du Carnet existent avec la bonne source). Les identifiants de récompense sont écrits `"<sorte>.<id>"` (`"saddle.brick"`, `"title.builder"`) partout. **Reste à ajouter par le contrat** : `Config/Species` colonne `perso` (6 valeurs, GDD §5.6) avant B5 ; `Config/Settings.haloOn` (`saved = true`, défaut `true`) et les clés `settings.haloOn` / `settings.haloOn.desc` avec A4 (le panneau Réglages construit ses clés par le préfixe `settings.` : elles ne peuvent arriver qu'avec la ligne qu'il affiche) ; polices OFL et `Contract_glyphs` (règle 18).
+
+### 27.7 Modules nouveaux et API exactes (le paquet propriétaire crée le fichier)
+
+Tous `--!strict`, purs quand ils sont dans `Shared/Logic`, sans `^`, `math.pow` ni `math.exp` dans `Prestige` et `UpgradeMath` (`Static_NoPow.spec`).
+
+**`Shared/Logic/Prestige` (A1) — seule source de r, Record R et A.** `growthFactor(R: number, A: number, bestR: number, firstRecordLoop: boolean): number` (× 3^A par multiplications × Souvenir : 3 si `bestR − R ≥ 3`, puis 2, 1,5, et 1,25 sur la 1re boucle record) ; `memoryFactor(R, bestR, firstRecordLoop): number` ; `target(R): number` ; `isRecord(R, bestR): boolean` ; `reqR(k: number): number` (k-ième Ascension) ; `ascendReady(profile): boolean` ; `startR(A, springboard): number` ; `priceFactor(A): number` (produit de `PriceByA`) ; `confettiGain(kind: Types.PrestigeKind, R, bestR, skippedBySpringboard: number): number` (r compté jusqu'à `CapR`) ; `regainSpeedup(): number` (= `GrowthMult × RegainMult`, texte de l'aperçu) ; `validateConfig(balance): (boolean, string?)` (invariant de stabilité) ; `unlocksFor(bestR): { string }` ; `keptDecor(bestR, atelier): number` (≤ 12) ; `starCap(R): number` ; `apply(profile, kind, now): { [string]: any }` (un bloc, idempotent, ne touche que les champs « repart de zéro » ; remet à 1 **toutes** les tailles, Lettres et porté compris ; rend la liste des clés changées pour `markDirty`). Test statique `Static_PrestigeOnly.spec` : aucune lecture de `profile.R` hors de `Prestige` et `Schema` (et des modules v1.3 listés dans la spec, jusqu'à leur passage à `Prestige` dans A2).
+
+**`Shared/Logic/UpgradeMath` (A1).** `price(id, level, R, A, bestR): number` ; `bulk(id, from, n, R, A, bestR): (count: number, total: number)` ; `maxAffordable(id, from, money, R, A, bestR): (count, total)` ; `cap(id, profile, features): number` (niveau maximal achetable maintenant : ouverture, plafond de boucle, interrupteur) ; `effect(id, level, ctx): { a: number, b: number, key: string }` (décorations : gain réel `0,05 ÷ A_bonus` ; Atelier : effet concret) ; `tier(id, level): number` ; `snapshot(profile, features, version): Types.UpgradeSnapshot`. Tables par multiplications successives, construites une fois au chargement ; même module sur le client et le serveur.
+
+**`Shared/Logic/UpgradeAdvisor` (A1).** `cards(snapshot, ctx): { string }` (3 identifiants de famille, jamais deux fois la même, jamais une carte vide ; carte `"ascend"` si l'Ascension est prête et rien n'est payable depuis `Ascend.DeclineCardAfter`) ; `next(snapshot, ctx): { id: string, level: number, price: number }?` (recalculé après tout achat **et tout prestige** ; jamais un niveau déjà possédé ni inexistant).
+
+**`Shared/Logic/Bitset` (A1).** `new(n): {number}`, `has(set, i): boolean`, `set(set, i)`, `clear(set, i)`, `count(set): number`, `grow(set, n)` (mots de 32 bits, `bit32`).
+
+**`Shared/Logic/TierRules` (A1), `RanchLook` et `AmbienceRules` (B4).** `TierRules.of(familyId, level): number` ; `RanchLook.elements(bestR, A): { string }` ; `AmbienceRules.preset(stack): string`, `AmbienceRules.weather(unix): { kind: number, endsAt: number }?`.
+
+**Modifiés (A1)** : `Formulas` (N2-N6 : croissance `× Prestige.growthFactor`, prix `× priceFactor`, revenu `× (1 + 0,01 × monuments)`, pression `× (1 + 0,025 × gants)` et série jusqu'à `5 + superSérie`, hors ligne `offlineGrowth(g, s, R, biggest, gMax)` arrêté à 120 s de croissance maximale, Sac et Pot de nuit) ; `QuestRules` (`weekIndex(unix)`, `trackPeriod(profile, unix)`, `challengeFeasible(id, ctx)`, `carnetTier(n)`) ; `BigNumber` (suffixes jusqu'à 1e93, notation e au-delà de 1e96) ; `Invariants.profile` v2.
+
+**Serveur.** `EconomyService` (A2) : `buyUpgrade(player, id, mode, expectedLevel): Types.UpgradeResultPayload?` (handler de `BuyUpgrade` et de `BuyTile`), `addConfetti(player, n, source): number`, `snapshot(player): Types.UpgradeSnapshot`, `applyPrestige(player, kind)` (pièces, Pot, dalles de la boucle ; appelé par SplorchService). `SplorchService` (A2) : `petitSplorch(player)`, `ascend(player)`, `canPrestige(player): boolean` (un seul prestige par joueur). `RanchService` (A2) : `setV2Attributes(player, attrs: Types.RanchAttributesV2)`. `HelperService` (A3, nouveau) : `Init()`, `Start()`, `step(now)` (appelé par le tick de ChaseService), `state(player): Types.HelperState`, `pause(player, reason)`, `resume(player)` ; < 0,5 ms par tick à 16 joueurs × 6 aides. `QuestService`, `CommunityService`, `EventService`, `LeaderboardService` (A4) : ajouts du `contract-changes.md` §5, API publique nommée dans leur spec.
+
+**Client.** `UI/Text` (B1) : `Text.set(label, key, args?)` (seul écrivain de `.Text` côté client, `Static_TextSet.spec`), `Text.factor(): number` (facteur réel mesuré par une étiquette témoin cachée, au démarrage et à chaque changement de `PreferredTextSize`), `Text.compensate(label)` ; `UI/Format` (B1) : `multiplier(x, lang)`, `percent(x, lang)`, `seconds(x, lang)`, `level(a, b)`, `confetti(n, lang)` (entier brut jusqu'à 99 999), `roman(n)` (décor seulement) ; `UI/UpgradeSnapshot` (B2) : `apply(snap): boolean` (refuse une version plus ancienne), `current(): Types.UpgradeSnapshot`, `Changed: Signal` ; `UI/UpgradeCard` (B2) : `new(template: "card" | "row" | "tile", parent): Card`, `Card:set(state, view)`, 7 états (`ready`, `need`, `max`, `locked`, `loopCap`, `busy`, `retry`) ; `UI/Panels/Upgrades` (B2) : `build(root)`, `open(tab?)`, `close()`, `isOpen()` ; `Render/BuildCascade` (B4) : `push(job)`, `step(now)`, file de `BuildQueueMax` ; `Render/VisualBudget` (B4) : `declare(name, n)`, `take(name, n): boolean` ; `Render/AmbienceDirector` (B4) : seul écrivain de `Lighting` ; `Controllers/HelperRenderer` (B5) : `Init()`, `Start()` (saut réglé pour atterrir à `tPress`) ; `World/Personality` (B5) : saynètes en `CFrame` seulement.
+
+### 27.8 L'écran Améliorations : contrat de disposition et les 20 règles
+
+**Disposition** (`Config/Layout.Upgrades`, px TV de référence, GDD §10.7) : panneau `Layout.Panel.rect` 1 440 × 860 ; zones 12 + 88 (en-tête) + 64 (onglets) + 560 (contenu) + 120 (bandeau) + 16 = 860, largeur utile 1 376 ; en-tête : titre 48 px, pastille Souvenir x 320-680 (360 × 48, jamais sélectionnable, place réservée même cachée), groupe de droite pièces 280 + Confettis 200 + bouton de mode 200, écarts 16 ; **3 gabarits** d'un seul composant `UI/UpgradeCard` : carte 432 × 528 (3 par écran, écart 40), ligne 1 328 × 112 au pas de 128 (colonnes icône 16/80, texte 112/540, niveau 668/140, effet 824/240, état 1080/232), tuile 400 × 300 des aperçus (icône 120, titre 2 lignes de 36 px, valeur 40 px, marges 16) ; bandeau 1 376 × 120, phrases en 28 px, **2 lignes au facteur 1,5** ; ligne d'explication des aperçus 1 376 × 120 en 40 px ; boîte des refus 600 × 120 ; boutons de confirmation 360 × 112 ; budget 1 400 instances. HUD v2.0 (`Layout.HudV2`) : rail de 8 boutons de 80, écart 16, y 246-998, icônes 48 ; puce « Prochain achat » (96, 342, 440 × 96). **Entrées** : tout achat par un **maintien de 0,6 s** (×1 compris, `Balance.Upgrades.HoldSeconds`) ; `InputGuard` à l'ouverture de tout panneau (relâchement de ✕ vu + `GuardOpen` 0,3 s ; + `GuardFocus` 0,4 s après un changement de focus) ; achats sur `InputBegan` capté ; L1 / R1 changent d'onglet, ↑ atteint les onglets puis le bouton de mode ; ○ revient à ce qui a ouvert. **Textes** : clés `upgrades.*`, `workshop.*`, `fun.*` ; les libellés d'effet n'ont **pas** de flèche (icône dessinée entre l'avant et l'après, règle 18) ; chiffres arabes pour les états (« Record 6 », « Boucle 7 »).
+
+**Les 20 règles et leurs tests** (bloquants dans `check.sh` ; paquet responsable entre crochets ; noms exacts du GDD §10.8)
+
+| # | Règle | Spec › cas |
+|---|---|---|
+| 1 | Ordre fixe, aucun tri ; familles du Conseillé choisies à l'ouverture et au retour sur l'onglet | `Upgrades_Order.spec` › « 1 000 achats au hasard : ordre inchangé, sélection en place, aucune carte ne change de famille » [B2] |
+| 2 | Aucune ligne créée ni détruite écran ouvert ; construit une fois | `Upgrades_Structure.spec` › « même nombre d'instances avant et après 1 000 achats » ; « une réouverture crée 0 instance » [B2] |
+| 3 | Un compteur ne repart jamais de 0 | `Upgrades_Counters.spec` › « 50 changements d'onglet : aucun nombre ne vaut transitoirement 0 » [B2] |
+| 4 | Valeur finale toujours posée | `Upgrades_Tween.spec` › « interruption à 0 %, 50 % et 100 % : même image finale » [B2] |
+| 5 | Un seul calcul de prix, sans puissance | `UpgradeMath.spec` › cas exacts du §4.6 ; `Props_UpgradeMath.spec` › « bulk(n) = somme de n achats ×1 », « aperçu = débit réel (10 000 cas) », « coûts strictement croissants, Tapis 12 → Étoilé 13 compris », « jamais NaN ni inf à MaxR et MaxA » ; `Static_NoPow.spec` › « aucun ^ dans Logic/UpgradeMath et Logic/Prestige » [A1] ; témoins du contrat : `Contract_upgrades.spec` [P0, fait] |
+| 6 | Un seul instantané versionné | `Upgrades_Snapshot.spec` › « correctif des pièces et UpgradeResult livrés dans les deux ordres : la colonne État ne clignote jamais (Prêt → Il manque → Prêt) » [B2] |
+| 7 | Largeurs réservées | `Format_Widths.spec` › « 10 000 nombres tirés au hasard : largeur mesurée ≤ largeur réservée » [B1] ; `Props_BigNumber.spec` › « 1e300 et math.huge : le plus grand suffixe ou la notation e, jamais inf ni nan » [A1] |
+| 8 | Un seul formateur par sorte de nombre ; tout texte par `Text.set` | `Format.spec` › « deux niveaux voisins donnent deux textes différents » ; « carte, ligne et bandeau montrent le même texte » [B1/B2] ; `Static_TextSet.spec` › « aucune affectation .Text hors de UI/Text ; aucun tostring, .. ni string.format de nombre dans UI/* hors de Text et Format » [B1] |
+| 9 | Texte mesuré, une seule politique (jamais `TextScaled`) | `TextFit_all.spec` › « chaque clé de l'écran, EN et FR, à Medium et au pire cas (phrases × 1,5), dans sa boîte » [B2] ; `Text_policy.spec` › « contrainte respectée ou ignorée par le moteur : libellés à leur taille dessinée, phrases agrandies » [B1] |
+| 10 | Tailles fixes calculées depuis la zone | `Layout_upgrades.spec` › « chaque rectangle enfant dans sa carte ou sa ligne, chaque carte dans la zone de 560, à 720p, 1080p et 4K, EN et FR » ; « aucun parent avec deux UI*Layout » [B2] |
+| 11 | Un seul composant, 3 gabarits | `UpgradeCard.spec` › « chaque gabarit dans chacun des 7 états du §10.7.6 » ; « « ×3 à chaque boucle, pour toujours » (483 px à 36 px) tient en 2 lignes dans la tuile » [B2] |
+| 12 | État « en cours » de 3 s ; refus périmé muet | `Upgrades_Pending.spec` › « serveur muet : retour en 3 s, focus intact » ; « réponse à 3,5 s puis nouvel appui : exactement un retour +n niveaux » [B2] |
+| 13 | Jamais un achat muet | `Upgrades_Feedback.spec` › « 1 réponse = 1 retour » [B2] |
+| 14 | Bouton remis à l'état normal ; focus dessiné à l'intérieur | `Console_upgrades.spec` › « après achat, Max, rafraîchissement : aucun élément appuyé » ; « le rectangle du cadre de focus est dans le rectangle de découpe de chaque ancêtre qui découpe, pour chaque ligne et chaque carte, dans chaque état » [B2] |
+| 15 | Focus jamais perdu ni piégé | `Console_upgrades_nav.spec` › « croix + ✕ + ○ sur les 4 onglets et le bouton de mode, dans chaque état » (lignes en lecture seule sélectionnables, ✕ = `Bump`) [B2] |
+| 16 | Aucun Robux dans cet écran | `Static_NoRobuxInUpgrades.spec` › « aucune clé de produit ni de pass dans UI/Panels/Upgrades » [B2] ; aucun champ de Robux dans `Config/Upgrades` : `Contract_upgrades.spec` [P0, fait] |
+| 17 | Un ✕ n'achète jamais par accident | `Upgrades_InputGuard.spec` › « △ puis ✕ tenu 2 s : 0 BuyUpgrade » ; « maintien de l'Ascension prolongé : jamais confirmé » ; « 10 appuis à 100 ms sur la carte 1 : une seule famille » ; « chaque mode atteint avec le D-pad, ✕ et ○ seulement » [B1 partie générique, B2, B3] |
+| 18 | Aucun symbole hors police | `Contract_glyphs.spec` › « chaque clé EN et FR n'utilise que des caractères de la table cmap de FredokaOne et de LuckiestGuy (fichiers de police rangés dans le dépôt) » [P0] ; aujourd'hui : `Contract_v2.spec` refuse → ✓ ★ ∞ ↺ dans `upgrades.*` [fait] |
+| 19 | Seul le serveur dit ce qui est ouvert ; écran figé à l'ouverture ; fermé au début de son propre prestige | `Upgrades_Freeze.spec` › « changement d'interrupteur ou de plafond écran ouvert : rien ne change avant la prochaine ouverture ; jamais un achat refusé pour une ligne montrée ouverte » ; « Grand Splorch écran ouvert : fermeture, puis réouverture à l'état neuf » [B2] |
+| 20 | Budget d'instances : 1 400 au plus | `Upgrades_Budget.spec` › « après la première ouverture : instances ≤ 1 400 ; réouverture : 0 instance créée » [B2] |
+
+**Captures de référence** (outil Screens, style de repli à plat) : 24 états clés à 1 920 × 1 080, EN et FR, à Medium dans `check.sh` ; la matrice complète la nuit (GDD §10.8). Le vrai style (ombres, dégradés) se vérifie sur l'appareil (tests M6, M11, M14 de `docs/05`).
+
+### 27.9 Porte d'économie v2.0 (ce que `EconomyPacing.spec` doit affirmer)
+
+Le modèle `tests/sim/EconomyModel.luau` reçoit l'extension du dossier de travail du design (`scratchpad/v2/gdd/sim/`), avec `Config/Upgrades` et les tables v2.0 de `Balance` **lues directement** (aucune copie de valeur) et `MaxR`, `MaxA` appliqués. **Dans `check.sh`** (bloquant, ≈ 3,5 min) : 20 joueurs par taille de serveur (4, 8, 16), référence 84 jours, assidu (2 h par jour) 28 jours. **La nuit** (`scripts/economy-nightly.sh`, bloquant aussi) : 50 joueurs, référence et assidu 140 jours, 10 et 20 min par jour, week-end, 6 h par jour, jamais l'Atelier, « refuse 3 jours », politique « Conseillé », gros acheteur (200 joueurs), configurations forcées A = 10, 20, 30 et 60 (par `Prestige.apply` répété) et « Atelier complet dès le début ». **Clés** (GDD §4.24.1, toutes celles de la v1.3 en plus) :
+
+| Groupe | Clés et limites |
+|---|---|
+| Jalons v1.3 (gardés) | premier Grand Splorch 11-16 min ; première balade ≤ 5:00 ; R à 30 min 1-3 ; Record R jour 7 8-11, jour 14 14-16, jour 28 17-22 ; tampons jour 7 80-110 ; plus gros jour 7 4e7-4e8 ; part des pressions ≥ 50 % ; ×2 20-40 % ; `tapis12LoopShare` ≥ 0,5 ; Grands Splorch prêts à la connexion ≤ 50 % |
+| Temps « sans but », référence | `starvedDay1` ≤ 1 % ; `starvedDay2to7` ≤ 5 % ; `starvedDay8to14` ≤ 15 % ; `starvedDay15to28`, `…29to56`, `…57to84`, `…85to140` ≤ 20 % ; profils 10 et 20 min, week-end : mêmes limites |
+| Temps « sans but », assidu | `starvedAssiduDay2to7` ≤ 15 % ; `…8to14`, `…15to28`, `…29to56`, `…57to84`, `…85to140` ≤ 30 % ; `longestGapAssiduP90` ≤ 15 min dans chaque bande (**le but proche du joueur de 2 h par jour**, décision n° 6) ; 6 h par jour : ≤ 30 % par bande ; « refuse 3 jours » : limites de son profil |
+| Boucles | `loopMaxGap` (r 0-13, avant toute Ascension) médiane ≤ 3 min et p90 ≤ 5 min, bloquant pour la référence ; `coinsLostRatioGrand` 0,2-3 T12 ; `shortestLoopSec` (≤ 0,3 % sous 45 s, chacune ≤ 10 s après une fusion, jamais 0 s) ; `zeroGapRenaissances` = 0 |
+| Jelly Ascend | `ascend1Day` 12-16 (référence), 5-9 (assidu) ; `ascendGapDays` 10-16 / 4-8 ; `regainRatio` 0,10-0,40 ; `regainCliff` ≤ 4 (médiane et p90) ; `recordRDay28` ≥ sans Ascension − 1 ; `tapis12RecordLoopByA` : médiane de chaque A de 1 à 30 dans [0,45 ; 0,95], toutes les boucles record dans [0,5 ; 0,9] ; `purchasesPerRecordLoopByA` ≥ 10 pour A = 1 à 30 |
+| Confettis et Atelier | `confettiUnspent` ≤ 300 en poche (médiane) jusqu'au jour 84, référence et assidu ; `workshopAllDay` ≥ jour 35 ; `firstWorkshopBuy` ≤ 35 min ; `atelierEffect` rapporté |
+| Familles | `everyFamilyBought` ≥ 80 % (Tapis, Tapis Étoilé, Décorations, Gants, École) ; `monumentsDay7` 1-3, `monumentsDay28` ≥ 4 ; `helperShareDay7` 5-15 % |
+| Hors ligne, achats, bornes | `offlinePotShare` médiane ≤ 2 ; `spenderLeadTimeShare` ≤ 25 % (A1 à A7) ; `nonFinite` = 0 ; `MaxR`, `MaxA` jamais dépassés ; `Prestige.validateConfig(Balance)` vrai (invariant de stabilité, aussi dans `Props_Prestige`) |
+| File du serveur | `queueWaitNewcomer` ≤ 40 s : spec `Soak_queue` (16 robots dont 8 vétérans en Petits Splorch) [A2] |
+
+Les sorties du design (`scratchpad/v2/gdd/sim/out/v21/`) servent de référence ; **aucune valeur de `Balance` ne change sans cette porte** ; chaque réglage est écrit au §21.
+
+### 27.10 Plan de tests par paquet (v2.0)
+
+Conventions du §18.1 inchangées (ZeroLog, `Clock.freeze`, jamais un test supprimé ni affaibli ; une attente qui change avec le GDD v2.0 est mise à jour avec lui et sa raison écrite au §27.12). Chaque paquet teste **interrupteur coupé et ouvert**.
+
+| Paquet | Specs (au moins) |
+|---|---|
+| P0 | `Contract_v2` (fait), `Contract_upgrades` (fait), `Contract_game` (fait : remotes v2.0), `Contract_unlocks` (chaque déblocage du §4.29, chaque objet de Déco perso et cosmétique de la semaine : source, clé EN/FR, case), `Contract_glyphs` (polices OFL dans `assets/fonts/`, ou « en attente » daté) |
+| A1 | `Prestige`, `Props_Prestige` (+ invariant de stabilité ; squishies jamais perdus, Record R, Confettis, A, Atelier jamais en baisse ; `apply` deux fois = une fois), `UpgradeMath`, `Props_UpgradeMath`, `UpgradeAdvisor` (+ « après `Prestige.apply`, `next` ne désigne jamais un niveau déjà possédé ni inexistant »), `Bitset` (200 espèces et 64 objets passent JSON et `reconcile`), `TierRules`, `Static_NoPow`, `Static_PrestigeOnly`, `Formulas` et `Props_Formulas` (N2-N6), `QuestRules` (bascules de semaine et de fin d'année ; chaque période atteint 24 points), `Props_BigNumber`, `EconomyPacing` v2.0 |
+| A2 | `EconomyService_upgrades` (somme exacte, un bloc, périmé muet, `BuyTile` = même chemin, Tapis Étoilé par la dalle), `SplorchService_ascend` (`JellyAscend` deux fois dans la même image, pendant un Grand Splorch en file, départ à 3,9 et 4,1 s, fermeture avec 16 joueurs en file), `RanchService_v2`, `RedTeam_Upgrade` (`NaN`, id inconnu, mode 1e9, `expectedLevel` faux, famille verrouillée, achat pendant un prestige), `ProfileRepair_v2`, `DataChaos` (migration), `Soak_queue`, mises à jour de `SplorchService*`, `EconomyService*` |
+| A3 | `HelperService` (aucune récompense avant `tPress` ; joueur à moins de 12 studs ; égalité : la pression du joueur gagne ; sieste après 5 min **sans intention acceptée**, un stick calé ne la retarde pas ; pause ; < 0,5 ms par tick), `RedTeam_Helpers` (second compte, immobile 5 min), `Soak` (16 joueurs × 6 aides) |
+| A4 | `QuestService_track` (2 points par objectif, 5 par Défi, paliers tout seuls, première période), `CommunityService_v2` (Déco perso, cœurs, halo, photo visible), `EventService_weather` (visuel seulement : aucun effet de jeu), `Analytics_v2` (≤ 10 requêtes par joueur et par minute) |
+| B1 | `Static_TextSet`, `Format`, `Format_Widths`, `Text_policy`, `FocusGuard` (découpe), `Upgrades_InputGuard` (partie générique), `TextFit_all` au pire cas (phrases × 1,5), harnais `UIShadow` et dégradé radial (absents → repli) |
+| B2 | les 15 specs des règles 1-4, 6, 8, 10-17, 19, 20 ci-dessus ; `HUD`, `Layout_hud`, `Console_hud` mis à jour (N9, N18) ; captures de référence |
+| B3 | `Panels_SplorchPreview` (+ « aucun bouton Dépenser d'abord sans ligne gardée payable »), `Panels_Ranch` (*Mon style*, *Dalles* retiré), `Panels_Squishydex` (*Records*), `Panels_Objectives` (piste, Défis, Carnet), `Panels_Settings` (halo), `Cards`, `Banners`, `Console_panels`, `Layout_panels`, `Ascend_InputGuard` (« maintien de l'Ascension prolongé : jamais confirmé ») |
+| B4 | `RanchRenderer_v2` (idempotence ; robot qui traverse son ranch sans changement de détail), `BuildCascade`, `VisualBudget` (jamais dépassé sur 6 h de robots), `RanchLook`, `AmbienceRules`, `WorldLayout` et `Props_WorldLayout` (16 ranchs : 6 studs des dalles, rien au-dessus de Y = 21 au centre), `WorldBuild`, `LightingController` ; vérification de la place (N12) |
+| B5 | `Personality` (déplacement ≤ 2 studs, cible stable pendant chaque saynète), `HelperRenderer` (atterrissage à `tPress`), `VFXController_v2` (voisin = même état final que le propriétaire ; coupures dures), `CameraController_photo` (1 000 entrées et sorties) |
+| I | `Boot` (16 joueurs, interrupteurs ouverts, Ascensions par voyage dans le temps), `Soak` (6 h, Ascensions, Record R jamais en baisse, aucun squishy perdu, Confettis jamais négatifs), `ClientReplay` (3 résolutions × 2 langues, manette seule, écran Améliorations), `TextFit_all` sans clé v2.0 en attente, `Contract_v2` (interrupteurs « ouverts au lancement »), `Contract` (VERSION 2) |
+
+### 27.11 Notes d'intégration v2.0
+
+- **INT-V2-ORDER** (A3, B5 → contrat) : `HelperService` dans `Main.server.luau` après `SplorchService` ; `Controllers.HelperRenderer` dans `Main.client.luau` après `Controllers.ChaseRenderer` ; `Contract_game.spec` (`SERVER_ORDER`, `CLIENT_ORDER`, compte des modules de la surface d'API) dans le même lot.
+- **INT-V2-INTENTS** (A2, A4 → contrat) : chaque intention de `Config/IntentsV2` passe dans `Config/Intents` avec son handler ; `Remotes_Meta.spec` (15 → 18 intentions du paquet meta : `PlaceDeco`, `GiveHeart`, `SetPhotoMode`), `Remotes_Ranch.spec` (+ `BuyUpgrade`), `Remotes_Chase.spec` (+ `JellyAscend`) mis à jour dans le même lot ; `Fuzz` les attaque alors automatiquement.
+- **INT-V2-SCHEMA** (I) : `SchemaV2 = true` ; `Contract.spec` : `VERSION` 2 (`STORE_NAME` inchangé) ; `ProfileRepair` et `Invariants` v2 déjà verts sur `defaultsFor(2)` ; `Bots.extendSchema` inchangé (il enveloppe `Schema.defaults`).
+- **INT-V2-CELEBRATE** (I) : `CelebrateKindV2` fusionné dans `CelebrateKind`, lignes ajoutées à la table du §10.3 (vérifiée par `Contract_game`).
+- **INT-V2-BALANCE** (A1) : quand une valeur v1.3 change avec le GDD v2.0 (N2-N6 : `Offline.StopAt` remplacé par `OfflineV2.MinPlaySeconds`, `Press` et série), `GddValues` passe à `"2.0"` avec la porte v2.0 verte et les témoins de `Contract_game` mis à jour.
+- **INT-V2-TEXT** (B1-B5) : chaque paquet retire de `TextFitKeysPending` les clés v2.0 que ses scénarios prouvent ; jamais une clé ajoutée pour masquer un texte qui ne tient pas.
+- **INT-V2-LIGHT** (B4) : `default.project.json` (`LightingStyle = Soft`, `PrioritizeLightingQuality = false`) et `scripts/verify-place.luau` dans le lot de B4, derrière `Ambience` côté client.
+
+### 27.12 Définition de « fini » v2.0 et journal
+
+**Un paquet v2.0 est fini quand** : ses fichiers suivent l'API du §27.7 (sans marque `TODO(`) ; ses specs (§27.10) sont vertes **interrupteur coupé et ouvert** ; la spec de chaque règle d'affichage qui le concerne (§27.8) est verte à 720p, 1080p et 4K, EN et FR ; la porte `EconomyPacing` v2.0 est verte (A1, puis à chaque lot qui touche l'économie) ; `selene src` 0 / 0, StyLua ; la suite complète et `./scripts/check.sh` ont été lancés et leur résultat rapporté honnêtement ; ses besoins hors de ses fichiers sont des notes d'intégration ; une relecture indépendante a eu lieu **avant** l'ouverture de son interrupteur. **Le jeu complet est fini** quand tous les interrupteurs sont ouverts, `SchemaV2` aussi, `TextFit_all` n'a plus aucune clé v2.0 en attente, `Boot`, `Soak` (6 h) et `ClientReplay` sont verts, et les tests manuels sur PS5 (dont les photos du panneau TextProbe) sont faits. Aucune date fixée (décision par défaut n° 6) : rien ne sort avant.
+
+**Journal du contrat v2.0 (3 novembre 2026)** — décisions et écarts avec `contract-changes.md`, chacune testée :
+
+- **C1. Interrupteurs coupés par défaut** (consigne du propriétaire « le jeu de base joue exactement comme avant ») au lieu des valeurs `true` du `contract-changes.md` §2.3 : la valeur de lancement est écrite au §27.3 et posée à l'étape I. `Contract_v2` › « chaque système v2.0 a son interrupteur, COUPÉ par défaut ».
+- **C2. Habillages = `cosmetics.theme`** : le champ `ranchSkin` et l'intention `SetRanchSkin` de `contract-changes.md` dupliquaient le thème de la v1.3 (3 des 14 habillages en sont déjà) ; une seule source, l'intention existante `EquipCosmetic("theme", id)`. `Contract_v2` › « … habillages : aucune intention à part ».
+- **C3. Aucun stub de module** (`Fix_validation.spec` interdit `TODO(` dans `src/`) : API exactes au §27.7.
+- **C4. Catalogue `Config/IntentsV2` à part** : mettre les intentions dans `Config/Intents` sans handler aurait cassé `Remotes_Meta` (compte et débit mesuré sur un handler), `Fuzz` et la règle « un remote écouté par son propriétaire ». Passage par INT-V2-INTENTS.
+- **C5. Tables v2.0 de `Balance` à part** : `Balance.Tiles` est parcouru par `EconomyService.applySplorch` et `Balance.Caps` par `Invariants` et `ProfileRepair` ; y mettre `star`, `gloves`, `fameSplorch`… aurait changé le jeu de base. `Contract_upgrades` › « jamais une clé v2.0 dans les tables parcourues par le code de base ».
+- **C6. Schéma v2 derrière l'interrupteur figé `SchemaV2`** et `migrate(data, from, to?)` : écrire des profils v2 avant que les systèmes v2.0 tournent ferait perdre les Confettis des Record R atteints entre la migration et l'ouverture, et rendrait la version de test incapable de lire les profils (refus « pas à jour »).
+- **C7. Constantes de migration figées** (`Schema.MIGRATION_V2`) plutôt que lues dans `Balance` (qu'A1 peut régler).
+- **C8. `weeklyTrack.firstPeriodEnd = 0` à la migration**, fixé par QuestService au premier chargement : la migration reste pure (aucune horloge).
+- **C9. `onboarding.welcomeV2Pending`** (vrai si R ≥ 1 à la migration) porte la carte « Bienvenue dans la v2 ! » ; un nouveau joueur ne la voit jamais.
+- **C10. Clés de texte sous `upgrades.*`** (`upgrades.family.*`, `upgrades.state.*`, `upgrades.effect.*`, `upgrades.detail.*`, `upgrades.tier.*`) au lieu de `family.*`, `state.*`… : `family.*` est déjà le domaine des familles d'espèces. Titres v2.0 sous `title.*`, cosmétiques v2.0 sous `v2cosmetic.*`, bannières sous `ascend.banner` / `monument.banner` : hors des familles de `TextFitKeys` (sinon « prouvées » par leurs sœurs avant d'être montrées). Les libellés d'effet n'ont **ni flèche ni `{glyph}`** (règle 18 : icônes dessinées) ; « − » des montants écrit « - ».
+- **C11. `CelebrateKindV2` à part** jusqu'à l'étape I (la table du §10.3 et l'union `CelebrateKind` sont vérifiées l'une contre l'autre par `Contract_game`).
+- **C12. `HelperPressPayload = { ownerId, presses }`** : le client qui dessine plusieurs ranchs sait à quel ranch appartient chaque paquet.
+- **C13. Prix au moins 1 pièce** (`max(1, floor(…))`) : à r = 0 après plusieurs Ascensions, `floor` donnerait 0 (achat gratuit, coûts non croissants) ; `Contract_upgrades` vérifie la croissance stricte pour chaque A dès son Grand Splorch de départ.
+- **C14. La migration normalise `tiles.pens`** (entier 0-14) : une sauvegarde abîmée ne garde jamais un niveau hors bornes.
+
+- **C15. Clés de texte de l'écran à venir sans ligne en attente** : l'outil d'écrans accepte une clé que le client ne référence pas encore ; `settings.haloOn` (préfixe construit par le panneau Réglages) arrive donc avec A4, pas avant.
+- **C17. `season` passe à QuestService en v2** (champ réservé de la v1 : seul `season.frostDays` est écrit ; `id`, `xp`, `premium`, `claimed` restent neutres, jamais effacés).
+- **C18. Sons v2.0 : 4 s au plus comme tout effet** (`Fix_r5_audio` › garde-fous) : le son de charge de l'Ascension boucle ou se relance pendant le maintien de 3 s, jamais une copie de plus de 4 s.
+- **C16. Contenu v2.0 à part des listes parcourues par le jeu de base** (`Cosmetics.ListV2` à côté de `Cosmetics.List`, `Visuals.RecordTable` à côté de `Balance.Splorch.Unlocks` que lit l'aperçu de la v1.3) : fusion à l'étape I, mêmes identifiants.
+
+**État au 3 novembre 2026** : code du contrat v2.0 en place (§27.0), tous les interrupteurs coupés ; `Contract_v2.spec` (24 cas), `Contract_upgrades.spec` (11 cas) et `Contract_unlocks.spec` (6 cas) verts ; jeu de base inchangé (les specs du jeu de base passent telles quelles, `Contract_game` seulement étendu aux remotes v2.0).

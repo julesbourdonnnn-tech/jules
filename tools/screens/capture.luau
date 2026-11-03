@@ -230,41 +230,8 @@ do
 					reasons[key] = nil
 				end
 			end
-			-- classement des clés jamais affichées d'après les sources (src/client, src/first, src/server)
-			local sources = { client = {}, server = {} }
-			local function walk(dir, side)
-				for _, entry in fs.readDir(dir) do
-					local full = dir .. "/" .. entry
-					if fs.isDir(full) then
-						walk(full, side)
-					elseif string.match(entry, "%.luau$") then
-						sources[side][full] = fs.readFile(full)
-					end
-				end
-			end
-			walk("src/client", "client")
-			walk("src/first", "client")
-			-- code partagé (BigNumber, Formulas…) : exécuté aussi par le client ; le registre des textes
-			-- lui-même ne compte pas
-			walk("src/shared", "client")
-			sources.client["src/shared/Localization/Strings.luau"] = nil
-			walk("src/server", "server")
-			local function find(side, needle)
-				local files = {}
-				for file in sources[side] do
-					table.insert(files, file)
-				end
-				table.sort(files)
-				for _, file in files do
-					if string.find(sources[side][file], needle, 1, true) then
-						return (string.gsub(file, "^src/", ""))
-					end
-				end
-				return nil
-			end
+			-- classement des clés jamais affichées d'après les sources (TextFitKeys.reference)
 			local SPECIAL = {
-				["kick.serverFull"] = "message d'expulsion affiché par Roblox (Player:Kick), hors de l'interface du jeu",
-				["device.touch"] = "aucun appareil tactile au lancement (console d'abord, décision du propriétaire)",
 				["shop.product.CoinsSmall"] = "article caché au lancement (hidden, Config/Monetization)",
 				["shop.product.CoinsSmall.desc"] = "article caché au lancement (hidden, Config/Monetization)",
 				["shop.product.CoinsBig"] = "article caché au lancement (hidden, Config/Monetization)",
@@ -273,37 +240,20 @@ do
 				["shop.pass.SeasonPass.desc"] = "passe caché au lancement (hidden ; jamais de piste décorative payante)",
 			}
 			for key in keysResult.unseen do
-				if reasons[key] == nil then
+				if reasons[key] == nil and TextFitKeys.usedByClient(key) then
 					local reason = SPECIAL[key]
 					if reason == nil then
-						local prefix = string.match(key, "^(.*%.)[^%.]+$")
-						local direct = find("client", '"' .. key .. '"')
-						local built = if prefix then find("client", '"' .. prefix .. '"') else nil
-						local server = find("server", '"' .. key .. '"')
-						local serverBuilt = if prefix then find("server", '"' .. prefix .. '"') else nil
-						if direct then
+						local how, file, prefix = TextFitKeys.reference(key, "client")
+						if how == "direct" then
 							reason = "[auto] affichée par le client ("
-								.. direct
+								.. file
 								.. ") dans un état que les scénarios ne montrent pas encore"
-						elseif built then
-							reason = "[auto] clé construite par le client (préfixe « "
-								.. prefix
-								.. " », "
-								.. built
-								.. ") dans un état que les scénarios ne montrent pas encore"
-						elseif server then
-							reason = "[auto] texte envoyé par le serveur ("
-								.. server
-								.. ") ; son emplacement n'est pas encore montré par les scénarios"
-						elseif serverBuilt then
-							reason = "[auto] clé construite par le serveur (préfixe « "
-								.. prefix
-								.. " », "
-								.. serverBuilt
-								.. ") ; emplacement pas encore montré"
 						else
-							reason =
-								"[auto] aucune référence littérale dans src/ : clé inutilisée ou construite autrement (à vérifier)"
+							reason = "[auto] clé construite par le client (préfixe « "
+								.. tostring(prefix)
+								.. " », "
+								.. tostring(file)
+								.. ") dans un état que les scénarios ne montrent pas encore"
 						end
 					end
 					reasons[key] = reason

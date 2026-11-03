@@ -533,9 +533,12 @@ function Widgets.frame(p: FrameProps): Frame
 		stroke(f)
 	end
 	if p.gradient then
+		-- relief : le bas du fond 12 % plus sombre, par la COULEUR du dégradé (jamais sa transparence :
+		-- un fond transparent à 12 % laissait voir le HUD et le rail dessous, « GRAND SPLORCH ! »
+		-- fantôme derrière les cases d'un panneau ; revue de l'outil d'écrans)
 		local g = Instance.new("UIGradient")
 		g.Rotation = 90
-		g.Transparency = NumberSequence.new(0, 0.12)
+		g.Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.new(0.88, 0.88, 0.88))
 		g.Parent = f
 	end
 	if p.parent then

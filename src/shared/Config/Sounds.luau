@@ -113,6 +113,20 @@ local Sounds: { [string]: SoundDef } = {
 	ObjectiveDone = { id = "", volume = 0.5 },
 	Emote = { id = "", volume = 0.4 },
 	Boing = { id = "", volume = 0.5 }, -- portail refusé
+	-- Contrat v2.0 (GDD v2.0 §9.6, docs/04 §27.6) : muets (id = "") jusqu'à leur écoute ; joués
+	-- seulement quand leur interrupteur Config/Features est ouvert
+	ChantierTap = { id = "", volume = 0.4 }, -- cascade de construction (B4)
+	DecoGold = { id = "", volume = 0.5 }, -- décoration dorée
+	DecoPlace = { id = "", volume = 0.45 }, -- Déco perso posée
+	TrickPop = { id = "", volume = 0.5 }, -- tour appris
+	WeatherStart = { id = "", volume = 0.35 }, -- météo (visuelle)
+	FeteLevel = { id = "", volume = 0.5 }, -- place en fête
+	Cheese = { id = "", volume = 0.45 }, -- mode photo
+	HeartGive = { id = "", volume = 0.45 }, -- cœur donné
+	AscendCharge = { id = "", volume = 0.55 }, -- maintien de 3 s et faisceau (4 s au plus, comme tout effet)
+	AscendBurst = { id = "", volume = 0.65 }, -- éclat à 4,0 s
+	ConfettiGain = { id = "", volume = 0.45 }, -- +n Confettis
+	HelperHop = { id = "", volume = 0.3, concurrent = 6 }, -- saut d'une Plopette
 }
 
 -- Garde-fous par défaut (voir l'en-tête), posés sur chaque clé qui ne les fixe pas

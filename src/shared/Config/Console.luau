@@ -49,6 +49,23 @@ local Console = {
 		-- Socle : vibrations d'interface. Les vibrations de jeu (pression, fusion, éclosion rare,
 		-- sirène du Rush…) s'ajoutent ici, avec modération.
 		Events = {
+			-- Contrat v2.0 (GDD v2.0 §10.5, docs/04 §27.6) : joués seulement quand leur interrupteur
+			-- Config/Features est ouvert (palier d'une famille, cascade de construction, Jelly Ascend)
+			tierUp = {
+				effect = "UINotification",
+				motor = "Large",
+				strength = 0.4,
+				duration = 0.35,
+				priority = 2,
+			},
+			chantier = { effect = "UIClick", motor = "Small", strength = 0.3, duration = 0.05, priority = 1 },
+			ascend = {
+				effect = "GameplayExplosion",
+				motor = "Large",
+				strength = 1.0,
+				duration = 0.5,
+				priority = 5,
+			},
 			refuse = { effect = "UIClick", motor = "Small", strength = 0.25, duration = 0.05, priority = 1 },
 			listEnd = { effect = "UIClick", motor = "Small", strength = 0.2, duration = 0.04, priority = 1 },
 			holdStart = {

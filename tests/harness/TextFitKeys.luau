@@ -259,13 +259,83 @@ function TextFitKeys.check(store, Localization, Strings, varsFor)
 	return result
 end
 
+-- Références d'une clé dans le code (chaîne littérale "clé" ou préfixe "a.b." d'une clé construite) :
+-- côté client (src/client, src/first, src/shared/Logic, src/shared/Util) ou serveur (src/server).
+-- Une clé que le client ne référence pas encore (clé du contrat pour un écran à venir, texte du
+-- serveur seul) n'a pas de boîte à prouver : TextFit_all l'accepte sans ligne en attente.
+local sourcesCache = nil
+local function loadSources()
+	if sourcesCache then
+		return sourcesCache
+	end
+	local fs = require("@lune/fs")
+	local sources = { client = {}, server = {} }
+	local function walk(dir, side)
+		if not fs.isDir(dir) then
+			return
+		end
+		for _, entry in fs.readDir(dir) do
+			local full = dir .. "/" .. entry
+			if fs.isDir(full) then
+				walk(full, side)
+			elseif string.match(entry, "%.luau$") and full ~= "src/shared/Localization/Strings.luau" then
+				table.insert(
+					sources[side],
+					{ file = (string.gsub(full, "^src/", "")), text = fs.readFile(full) }
+				)
+			end
+		end
+	end
+	-- l'interface (src/client, src/first) et la logique partagée qu'elle appelle pour écrire un texte
+	-- (Logic : BigNumber, Formulas ; Util : Format). Pas Config : une clé citée par une configuration
+	-- du contrat n'est pas encore affichée par un écran
+	walk("src/client", "client")
+	walk("src/first", "client")
+	walk("src/shared/Logic", "client")
+	walk("src/shared/Util", "client")
+	walk("src/server", "server")
+	for _, side in sources do
+		table.sort(side, function(a, b)
+			return a.file < b.file
+		end)
+	end
+	sourcesCache = sources
+	return sources
+end
+
+-- (comment, fichier) : "direct" | "prefix" | nil, côté "client" ou "server"
+function TextFitKeys.reference(key: string, side: string): (string?, string?, string?)
+	local sources = loadSources()[side]
+	local prefix = string.match(key, "^(.*%.)[^%.]+$")
+	for _, src in sources do
+		if string.find(src.text, '"' .. key .. '"', 1, true) then
+			return "direct", src.file, nil
+		end
+	end
+	if prefix then
+		for _, src in sources do
+			if string.find(src.text, '"' .. prefix .. '"', 1, true) then
+				return "prefix", src.file, prefix
+			end
+		end
+	end
+	return nil, nil, nil
+end
+
+-- La clé est-elle utilisée par le client (et donc affichée quelque part) ?
+function TextFitKeys.usedByClient(key: string): boolean
+	return TextFitKeys.reference(key, "client") ~= nil
+end
+
 -- Source Luau de la liste des clés en attente (outil : capture -- --keys-pending) ; `reasons`
 -- (facultatif) : raisons déjà écrites à la main, gardées
 function TextFitKeys.renderPending(result, reasons)
 	reasons = reasons or {}
 	local keys = {}
 	for key in result.unseen do
-		table.insert(keys, key)
+		if TextFitKeys.usedByClient(key) then
+			table.insert(keys, key)
+		end
 	end
 	for key in result.failures do
 		table.insert(keys, key)
@@ -274,7 +344,8 @@ function TextFitKeys.renderPending(result, reasons)
 	local lines = {
 		"--!nocheck",
 		"-- Clés EN ATTENTE de tests/specs/TextFit_all.spec.luau (partie « clés ») : clés pas encore",
-		"-- prouvées dans les deux langues, chacune avec sa raison. Générée par",
+		"-- prouvées dans les deux langues, chacune avec sa raison (les clés que le client n'utilise pas",
+		"-- encore — contrat d'un écran à venir, texte du serveur seul — sont acceptées sans ligne). Générée par",
 		"-- « lune run tools/screens/capture -- --out <dossier> --keys-pending » puis relue à la main.",
 		"-- Une clé prouvée encore listée fait échouer la spec : retirer sa ligne. Ne jamais ajouter une",
 		"-- clé pour masquer un texte qui ne tient pas : corriger l'interface ou raccourcir le texte.",

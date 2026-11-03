@@ -240,4 +240,24 @@ Events.Costumes = {
 	{ key = "valentine2027", from = 1802217600, to = 1802822400 }, -- Saint-Valentin (février)
 }
 
+-- =============================================================================================
+-- Contrat v2.0 (GDD v2.0 §2.4, §4.25, §7.5 ; docs/04 §27.6) : lus seulement quand Weather, Fete,
+-- JellyAscend sont ouverts
+-- =============================================================================================
+
+-- Météo de Wobbleton : PUREMENT VISUELLE (décision par défaut n° 4 : aucun bonus de mutation ni de
+-- jeu) ; fenêtres en minutes de l'heure UTC, 4 sortes (weather.sunny, sprinkles, bubbles, rainbow)
+Events.Weather = {
+	Windows = { { 8, 13 }, { 38, 43 } },
+	Kinds = { "sunny", "sprinkles", "bubbles", "rainbow" },
+	visualOnly = true,
+}
+
+-- Place en fête : seuils de points du serveur pour chaque niveau (décor seulement)
+Events.Fete = { Levels = { 5, 15, 30, 50, 80 } }
+
+-- Pluie d'étoiles d'une Jelly Ascend : revenu des autres joueurs (Balance.Ascend.StarRainSeconds),
+-- plafonnée par Balance.CapsV2.starRain par jour
+Events.StarRain = { Duration = 10 }
+
 return Events

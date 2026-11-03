@@ -83,4 +83,20 @@ return {
 	ClapPrompt = "event", -- (Types.ClapPromptPayload) CommunityService : spectateurs du spectacle complet
 	LeaderboardState = "event", -- (Types.LeaderboardPayload) LeaderboardService : le joueur
 	DiagnosticsSnapshot = "event", -- (Types.DiagnosticsSnapshot) DiagnosticsService : l'administrateur demandeur
+
+	-- =========================================================================================
+	-- Contrat v2.0 (GDD v2.0 §12.7, docs/04 §27.5) : déclarés et créés par Net.setup, écoutés
+	-- seulement quand leur paquet est fait (interrupteurs Config/Features coupés jusque-là).
+	-- Intentions : forme, débit et propriétaire dans Config/IntentsV2 (déplacées vers Config/Intents
+	-- par le paquet qui branche le handler).
+	-- =========================================================================================
+	BuyUpgrade = "event", -- (id, mode, expectedLevel) EconomyService
+	JellyAscend = "event", -- (confirm) SplorchService
+	PlaceDeco = "event", -- (item, slot) CommunityService
+	GiveHeart = "event", -- (ownerId) CommunityService
+	SetPhotoMode = "event", -- (on) CommunityService
+	-- Serveur → client
+	UpgradeResult = "event", -- (Types.UpgradeResultPayload) EconomyService : le joueur, à chaque réponse
+	HelperPress = "unreliable", -- (Types.HelperPressPayload) HelperService : groupé par tick, le joueur et
+	-- les clients qui dessinent ce ranch en détail complet (l'issue arrive par DataPatch)
 } :: { [string]: string }

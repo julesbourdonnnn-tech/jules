@@ -51,7 +51,7 @@ Langues : `fr`, `en`. Groupes (`--groups`) :
 | `mid` | HUD dans chaque mode (Cozy, BOOP RUSH, MEGA, Jelly Moon, Golden, fête, sieste de Big Plop, tout ensemble), chaque invite du monde, le menu, **chaque panneau et chaque onglet**, les fiches (✕ sur une case), les sous-listes de Style, les listes déroulées jusqu'au bout, les 18 objectifs, les cartes (booped, retour, objectifs, Squishydex, Plop a sommeil, choix Rush / Cozy, carte rouverte), l'écran de retour |
 | `late` | fin de partie (Grand Splorch XII, tout possédé) : HUD et tous les panneaux |
 | `huge` | très grands nombres : 1,2 M, 1,2 T, 987 Qa, 4,56 Dc, 999 Dc (dernier suffixe), 1,23e36 |
-| `fx` | toutes les bannières, les messages les plus longs, les messages de célébration, l'aperçu du Grand Splorch hors du ranch |
+| `fx` | toutes les bannières, les messages les plus longs, les messages de célébration, les grands tampons et les textes flottants des effets, l'aperçu du Grand Splorch hors du ranch |
 
 Les noms sont les plus longs possibles : joueurs de 20 caractères, nom d'espèce et de mutation les
 plus longs de la langue, titre le plus long, nombres de 1e18 à 999 Dc.
@@ -118,6 +118,7 @@ L'outil dessine donc une police CSS de `TextSize ÷ (hauteur de ligne de la poli
 | `contrast` | contraste du texte sur son fond < 3 (le contour du texte compte) |
 | `tinted` | texte teinté par le dégradé d'un `CanvasGroup` parent |
 | `selection` | curseur de sélection invisible, hors de l'écran ou caché par un parent |
+| `covered` | un message (toast) se dessine par-dessus le panneau ouvert |
 | `empty`, `question`, `rawKey`, `placeholder`, `defaultText` | boîte visible vide, « ? » à la place d'une donnée, clé de traduction, `{variable}`, texte jamais posé |
 | `noChange` | « 60 → 60 » : la flèche annonce un changement qui n'existe pas |
 | `peek` | **information** : rangée entrouverte voulue en bas d'une liste (elle annonce la suite) |
@@ -137,8 +138,10 @@ L'outil dessine donc une police CSS de `TextSize ÷ (hauteur de ligne de la poli
   deux par un parent, aucun texte teinté par un dégradé.
 
 Les problèmes **déjà connus** sont listés : `tests/fixtures/TextFitPending.luau` (écrans, vide
-aujourd'hui) et `tests/fixtures/TextFitKeysPending.luau` (clés jamais affichées par un scénario,
-chacune avec sa raison). La spec **échoue** sur un problème nouveau (corriger l'interface, ne jamais
+aujourd'hui) et `tests/fixtures/TextFitKeysPending.luau` (clés utilisées par l'interface mais
+jamais affichées par un scénario, chacune avec sa raison). Une clé que l'interface n'utilise pas
+encore (clé du contrat pour un écran à venir, texte du serveur seul) est acceptée sans ligne : dès
+qu'un écran l'utilise, la spec demande un scénario qui la montre, ou une raison. La spec **échoue** sur un problème nouveau (corriger l'interface, ne jamais
 l'ajouter à la liste pour le cacher) et sur un problème réparé encore listé (retirer sa ligne). Une
 raison écrite à la main dans la liste des clés est gardée quand on la régénère.
 

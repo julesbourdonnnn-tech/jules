@@ -53,7 +53,7 @@ return function(T)
 			["panel.Settings"] = true,
 			["panel.SplorchPreview"] = true,
 			["panel.SplorchPreview.details"] = true,
-			["panel.OutfitPreview.crown"] = true,
+			["panel.OutfitPreview.jellyCrown"] = true,
 			["panel.Diagnostics.server"] = true,
 			["panel.Diagnostics.tools"] = true,
 			["card.mode"] = true,

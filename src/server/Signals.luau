@@ -149,6 +149,27 @@ local Signals = {
 	-- Balance.CapsPerFriend.petSit (20 par ami et par jour, EconomyService.consumeFriendCap) →
 	-- LeaderboardService (« Plus serviable » : seulement si le 3e argument est vrai), QuestService
 	PetSitRewarded = Signal.new() :: Signal.Signal<Player, Player, boolean>,
+
+	-- =========================================================================================
+	-- Contrat v2.0 (GDD v2.0, docs/04 §27.4) : jamais émis tant que les interrupteurs sont coupés
+	-- =========================================================================================
+	-- Émis par SplorchService après Prestige.apply (sorte "splorch" | "petit" | "ascend", r avant,
+	-- r après, A après) → QuestService (piste, cartes « Nouveau »), HelperService (reprise), RanchService
+	-- (attributs), LeaderboardService (Livre des records), analytique
+	PrestigeApplied = Signal.new() :: Signal.Signal<Player, string, number, number, number>,
+	-- Émis par EconomyService.buyUpgrade (id, niveau avant, niveau après, monnaie) → QuestService
+	-- (Carnet : stats.upgradesBought, objectifs), RanchService (paliers et cascade), analytique
+	UpgradeBought = Signal.new() :: Signal.Signal<Player, string, number, number, string>,
+	-- Émis par EconomyService.addConfetti et buyUpgrade (écart signé, source) → QuestService (Défi
+	-- « Gagne 20 Confettis »), analytique (ConfettiEarned)
+	ConfettiChanged = Signal.new() :: Signal.Signal<Player, number, string>,
+	-- Émis par SplorchService au premier passage d'un Record R (nouveau bestR) → QuestService (carte
+	-- « Nouveau : … », unlocksSeen), CommunityService (habillages et cosmétiques gagnés), RanchService
+	RecordReached = Signal.new() :: Signal.Signal<Player, number>,
+	-- Émis par HelperService : pression d'une Plopette accordée (numéro de la Plopette, uid, pièces) →
+	-- EconomyService (crédit, source « Helper »), analytique (HelperCoinsShare) ; jamais la jauge, les
+	-- objectifs ni les classements
+	HelperPressed = Signal.new() :: Signal.Signal<Player, number, string, number>,
 }
 
 return Signals

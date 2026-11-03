@@ -803,6 +803,9 @@ local SERVER_TO_CLIENT = {
 	ClapPrompt = true,
 	LeaderboardState = true,
 	DiagnosticsSnapshot = true,
+	-- contrat v2.0 (docs/04 §27.5)
+	UpgradeResult = true,
+	HelperPress = true,
 }
 
 local ARG_KINDS = {
@@ -1015,8 +1018,11 @@ return function(T)
 				local h = Harness.new()
 				local R = shared(h, "Remotes")
 				local Intents = shared(h, "Config.Intents")
+				-- contrat v2.0 (docs/04 §27.5) : intentions déclarées, pas encore écoutées
+				local IntentsV2 = shared(h, "Config.IntentsV2")
 				for name, kind in R do
 					local known = Intents[name] ~= nil
+						or IntentsV2[name] ~= nil
 						or SERVER_TO_CLIENT[name] == true
 						or name == "RequestSnapshot"
 					expect({ name = name, known = known }).toEqual({ name = name, known = true })

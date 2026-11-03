@@ -1,0 +1,333 @@
+{
+  "R": 12,
+  "ascend": 0,
+  "biggestEver": 550000000,
+  "boosts": {
+    "personalLeft": 120
+  },
+  "caps": {
+    "claps": 0,
+    "day": 20759,
+    "fameRelease": 0,
+    "fameRush": 0,
+    "partyBuys": 0,
+    "petSit": 0,
+    "petSitBy": {
+      "301": 4
+    },
+    "petSitIn": 0,
+    "rushBabies": 0,
+    "splorchCoins": 0,
+    "splorchGifts": 2
+  },
+  "codes": {},
+  "coins": 4250000000,
+  "cosmetics": {
+    "flag": "",
+    "saddle": "classic",
+    "theme": "color",
+    "title": "splorch_star",
+    "trail": "spark"
+  },
+  "costumes": {},
+  "dex": {
+    "fam": [
+      1,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "mut": [
+      11,
+      0,
+      0,
+      9,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "rewards": 2,
+    "stars": [
+      3,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  "fame": 240,
+  "fameLineage": 0,
+  "firstJoin": 1793001600,
+  "flags": {
+    "lbBanUntil": 0,
+    "lbBanned": false,
+    "strikes": 1
+  },
+  "golden": {
+    "lastWinAt": 1793500000
+  },
+  "growth": {
+    "G": 123456.5,
+    "g": 8192,
+    "t": 1500.25
+  },
+  "lastFeedDay": 20758,
+  "lastOnline": 1793606400,
+  "mode": {
+    "cardShown": true,
+    "changedAt": 1793400000,
+    "chosen": true,
+    "postBoopCardShown": true,
+    "rush": true
+  },
+  "moon": {
+    "lastSession": 412
+  },
+  "mount": "1",
+  "nextUid": 12,
+  "objectives": {
+    "allClaimed": false,
+    "day": 20759,
+    "list": [
+      {
+        "claimed": false,
+        "done": false,
+        "id": 3,
+        "p": 2
+      }
+    ],
+    "rerolls": 1
+  },
+  "onboarding": {
+    "demoDone": true,
+    "done": true,
+    "step": 12
+  },
+  "outfits": {
+    "owned": {
+      "partyHat": 1
+    },
+    "worn": {}
+  },
+  "packs": {
+    "quoteAmount": 0,
+    "quoteAt": 0,
+    "quoteProduct": "",
+    "side": 0
+  },
+  "parcels": {
+    "inbox": {},
+    "sent": 0,
+    "sentDay": 0
+  },
+  "passes": {
+    "BigRanch": true
+  },
+  "plopDays": 9,
+  "pot": 150000000,
+  "receipts": [
+    "achat-1"
+  ],
+  "released": [
+    {
+      "m": 0,
+      "s": 2
+    },
+    {
+      "m": 1,
+      "s": 3
+    }
+  ],
+  "season": {
+    "claimed": {},
+    "id": 0,
+    "premium": false,
+    "xp": 0
+  },
+  "settings": {
+    "clips": true,
+    "emoteLeft": "bravo",
+    "hideName": false,
+    "lang": "auto",
+    "lowGraphics": false,
+    "music": false,
+    "partyShowName": false,
+    "receiveGifts": true,
+    "reducedMotion": false,
+    "sfx": true,
+    "vibration": true
+  },
+  "slowJelly": {
+    "slots": {}
+  },
+  "squishies": {
+    "1": {
+      "at": "pen",
+      "bf": 1,
+      "gd": 0,
+      "lk": true,
+      "m": 0,
+      "o": "",
+      "s": 1,
+      "st": 2,
+      "z": 550000000,
+      "zg": 1000
+    },
+    "2": {
+      "at": "pen",
+      "bf": 0,
+      "gd": 20758,
+      "lk": false,
+      "m": 3,
+      "o": "partyHat",
+      "s": 4,
+      "st": 1,
+      "z": 21000000,
+      "zg": 1000
+    },
+    "a": {
+      "at": "dodo",
+      "bf": 0,
+      "gd": 0,
+      "lk": false,
+      "m": 5,
+      "o": "",
+      "s": 9,
+      "st": 0,
+      "z": 900,
+      "zg": 0
+    },
+    "b": {
+      "at": "mail",
+      "bf": 0,
+      "gd": 0,
+      "lk": false,
+      "m": 0,
+      "o": "",
+      "s": 12,
+      "st": 0,
+      "z": 40,
+      "zg": 0
+    }
+  },
+  "stats": {
+    "bestCombo": 0,
+    "booped": 0,
+    "boops": 0,
+    "catches": 0,
+    "firstBoopReceivedAt": 0,
+    "fusions": 0,
+    "hatches": 0,
+    "heroCatches": 0,
+    "lastFriendDay": 0,
+    "megas": 0,
+    "perfects": 880,
+    "playSeconds": 40000,
+    "presses": 5321,
+    "sessions": 14,
+    "splorches": 12
+  },
+  "tiles": {
+    "cozyBed": true,
+    "decor": 9,
+    "pens": 12,
+    "seen": 15,
+    "snack": 7
+  },
+  "trophies": [
+    550000000,
+    0,
+    0,
+    21000000,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "vat": {
+    "fillAt": 1793606350,
+    "newPulls": 0,
+    "pending": false,
+    "pityEpic": 33,
+    "pityRare": 7,
+    "pulls": 140
+  },
+  "version": 1,
+  "weekly": {
+    "catchScore": 0,
+    "combo": 0,
+    "generous": 0,
+    "helpful": 0,
+    "prev": {
+      "catchScore": 0,
+      "combo": 0,
+      "generous": 0,
+      "helpful": 0,
+      "stamps": 0
+    },
+    "stamps": 40,
+    "week": 2967
+  },
+  "worldFirst": {}
+}

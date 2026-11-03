@@ -94,7 +94,11 @@ const WEIGHT = {
   capRisk: 0,
   peek: 0,
   selection: 4,
+  covered: 3,
   noChange: 1,
+  unitSplit: 3,
+  seeThrough: 3,
+  squareCorner: 2,
 };
 function score(it) {
   let s = WEIGHT[it.kind] ?? 1;
@@ -317,7 +321,7 @@ code{color:var(--accent);word-break:break-all}
 <script>
 const D=${data};
 const $=s=>document.querySelector(s);
-const HELP={overflow:"texte plus grand que sa boîte à la taille qu'utiliserait Roblox",clipped:"texte coupé par un parent (ClipsDescendants, CanvasGroup)",truncated:"« … » : texte tronqué",small:"texte sous le minimum lisible (28 px de référence × échelle de Root)",smallFixed:"taille fixe sous le minimum lisible",splitWord:"mot coupé en deux par le retour à la ligne",orphan:"ponctuation seule sur sa ligne",offscreen:"objet hors de l'écran",unsafe:"hors de la zone sûre TV (5 %)",overlap:"chevauchement de textes ou de boutons",contrast:"contraste < 3",tinted:"texte teinté par l'UIGradient d'un CanvasGroup",empty:"boîte visible sans texte",rawKey:"clé de traduction affichée",placeholder:"variable {x} affichée",question:"« ? » à la place d'une donnée",defaultText:"texte jamais posé (« Label »)",noChange:"« 60 → 60 » : flèche sans changement",capRisk:"information : taille qui dépend de l'ordre bornes TextScaled / UIScale (à vérifier sur console)",selection:"curseur de sélection invisible, hors écran ou caché par un parent",peek:"information : rangée entrouverte voulue d'une liste (annonce la suite)"};
+const HELP={overflow:"texte plus grand que sa boîte à la taille qu'utiliserait Roblox",clipped:"texte coupé par un parent (ClipsDescendants, CanvasGroup)",truncated:"« … » : texte tronqué",small:"texte sous le minimum lisible (28 px de référence × échelle de Root)",smallFixed:"taille fixe sous le minimum lisible",splitWord:"mot coupé en deux par le retour à la ligne",orphan:"ponctuation seule sur sa ligne",offscreen:"objet hors de l'écran",unsafe:"hors de la zone sûre TV (5 %)",overlap:"chevauchement de textes ou de boutons",contrast:"contraste < 3",tinted:"texte teinté par l'UIGradient d'un CanvasGroup",empty:"boîte visible sans texte",rawKey:"clé de traduction affichée",placeholder:"variable {x} affichée",question:"« ? » à la place d'une donnée",defaultText:"texte jamais posé (« Label »)",noChange:"« 60 → 60 » : flèche sans changement",capRisk:"information : taille qui dépend de l'ordre bornes TextScaled / UIScale (à vérifier sur console)",selection:"curseur de sélection invisible, hors écran ou caché par un parent",peek:"information : rangée entrouverte voulue d'une liste (annonce la suite)",covered:"message (toast) par-dessus le panneau ouvert",unitSplit:"nombre séparé de son unité ou de son mot par le retour à la ligne",seeThrough:"fond plein rendu transparent par son dégradé : le HUD dessous transparaît",squareCorner:"fond carré d'un enfant dans le coin arrondi de son parent"};
 $('#totals').innerHTML=Object.entries(D.totals).sort((a,b)=>(a[0]==='capRisk'||a[0]==='peek')-(b[0]==='capRisk'||b[0]==='peek')||b[1]-a[1]).map(([k,v])=>'<span title="'+(HELP[k]||'')+'">'+k+(k==='capRisk'||k==='peek'?' (info)':'')+' : '+v+'</span>').join('');
 for(const f of D.formats){const o=document.createElement('option');o.value=f;o.textContent=f;$('#fmt').appendChild(o);}
 for(const k of Object.keys(D.totals).sort()){const o=document.createElement('option');o.value=k;o.textContent=k;$('#kind').appendChild(o);}

@@ -463,9 +463,26 @@ function TextFit.hidesWord(hidden: string): string?
 	return nil
 end
 
--- Ligne qui commence par une unité (s, min, h, j, %, K, M, B, Qa…, pièces, px) suivie d'une fin de mot
+-- Ligne qui commence par une unité (s, min, h, j, %, K, M, B, Qa…, pièces, px) suivie d'une fin de mot ;
+-- « sur » aussi : « 1 sur 1 000 000 000 » ne se coupe jamais après le premier nombre (revue de
+-- l'outil : grand tampon « SECRET … · 1 » / « sur 1 000 000 000 »)
 local UNITS =
-	{ "s", "min", "h", "j", "%", "K", "M", "B", "T", "Qa", "Qi", "Sx", "Sp", "Oc", "No", "Dc", "px" }
+	{ "s", "min", "h", "j", "%", "K", "M", "B", "T", "Qa", "Qi", "Sx", "Sp", "Oc", "No", "Dc", "px", "sur" }
+
+-- Noms d'événements en capitales, toujours sur une seule ligne (GDD : noms propres de l'univers)
+TextFit.BRAND_NAMES = { { "BOOP", "RUSH" }, { "MEGA", "SQUISH" } }
+
+-- Ligne faite d'un nombre seul (chiffres, séparateurs de milliers, ponctuation finale) : « 1 »,
+-- « 1 000 », « 14 ! »
+function TextFit.onlyNumber(line: string): boolean
+	if not string.find(line, "%d") then
+		return false
+	end
+	local rest = string.gsub(line, "\226\128\175", "") -- espace fine insécable
+	rest = string.gsub(rest, "\194\160", "") -- espace insécable
+	rest = string.gsub(rest, "[%d%s,%.!%?]", "")
+	return rest == ""
+end
 function TextFit.startsWithUnit(line: string): boolean
 	for _, u in UNITS do
 		if string.sub(line, 1, #u) == u then
@@ -532,6 +549,35 @@ function TextFit.fits(obj, opts)
 						.. " » / « "
 						.. string.sub(cur, 1, 6)
 						.. " » : unité séparée de son nombre"
+				)
+				break
+			end
+		end
+		-- nom d'événement en capitales coupé en deux (« Je joue au BOOP » / « RUSH ») : ces noms se
+		-- lisent comme un seul mot (espace insécable dans le texte ; revue de l'outil)
+		for i = 2, #d.lines do
+			local prev = string.gsub(d.lines[i - 1], "%s+$", "")
+			local cur = string.gsub(d.lines[i], "^%s+", "")
+			for _, name in TextFit.BRAND_NAMES do
+				local a, b = name[1], name[2]
+				if
+					string.sub(prev, -#a) == a
+					and (#prev == #a or string.find(string.sub(prev, -#a - 1, -#a - 1), "[%s%p]"))
+					and string.sub(cur, 1, #b) == b
+				then
+					add("splitWord", "nom « " .. a .. " " .. b .. " » coupé par le retour à la ligne")
+				end
+			end
+		end
+		-- nombre seul sur sa ligne, séparé du mot qui le précède (« Autocollant Jour » / « 1 ») :
+		-- l'espace entre le mot et son nombre doit être insécable (revue de l'outil)
+		for i = 2, #d.lines do
+			local prev = string.gsub(d.lines[i - 1], "%s+$", "")
+			local cur = string.gsub(string.gsub(d.lines[i], "^%s+", ""), "%s+$", "")
+			if string.find(prev, "[%a\128-\255]$") and TextFit.onlyNumber(cur) then
+				add(
+					"unitSplit",
+					"« " .. string.sub(prev, -12) .. " » / « " .. cur .. " » : nombre séparé de son mot"
 				)
 				break
 			end

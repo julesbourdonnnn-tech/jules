@@ -14,7 +14,9 @@
 --    texte jamais posé.
 -- 2. Clés : chaque clé de Localization/Strings mesurée dans les deux langues dans chaque boîte où un
 --    scénario l'a affichée (tests/harness/TextFitKeys), ou dans les boîtes de sa famille ; une clé
---    jamais affichée est listée avec sa raison dans tests/fixtures/TextFitKeysPending.luau.
+--    utilisée par le client mais jamais affichée est listée avec sa raison dans
+--    tests/fixtures/TextFitKeysPending.luau ; une clé que le client n'utilise pas encore (contrat d'un
+--    écran à venir) est acceptée et comptée.
 -- Cas EN ATTENTE (problèmes présents aujourd'hui) : tests/fixtures/TextFitPending.luau (écrans) et
 -- TextFitKeysPending.luau (clés). Un cas listé est vérifié EXACTEMENT (mêmes problèmes) : un problème
 -- NOUVEAU fait échouer, un problème listé mais disparu aussi (réparé : retirer sa ligne).
@@ -228,14 +230,29 @@ return function(T)
 					table.insert(keys, key)
 				end
 				table.sort(keys)
+				local notUsed = 0
 				for _, key in keys do
 					if KEYS_PENDING[key] == nil then
-						table.insert(
-							lines,
-							key
-								.. " : jamais affichée par un scénario ; ajouter un scénario (tests/harness/Screens) ou une raison dans tests/fixtures/TextFitKeysPending.luau"
-						)
+						-- une clé que le client n'utilise pas encore (contrat d'un écran à venir, texte du
+						-- serveur seul) n'a pas de boîte à prouver : acceptée, comptée
+						if TextFitKeys.usedByClient(key) then
+							table.insert(
+								lines,
+								key
+									.. " : utilisée par le client mais jamais affichée par un scénario ; ajouter un scénario (tests/harness/Screens) ou une raison dans tests/fixtures/TextFitKeysPending.luau"
+							)
+						else
+							notUsed += 1
+						end
 					end
+				end
+				if notUsed > 0 then
+					print(
+						string.format(
+							"  %d clé(s) pas encore utilisée(s) par le client (contrat d'un écran à venir, texte du serveur) : acceptées",
+							notUsed
+						)
+					)
 				end
 				if #lines > 0 then
 					error(table.concat(lines, "\n"), 0)
@@ -258,7 +275,12 @@ return function(T)
 								.. " boîte(s)) : retirer sa ligne de tests/fixtures/TextFitKeysPending.luau"
 						)
 					elseif lastClient.Strings.en[key] == nil then
-						table.insert(lines, key .. " n'existe plus : retirer sa ligne")
+						-- clé retirée du registre (contrat) : signalée, sans bloquer l'autre équipe
+						print(
+							"  \27[33m○ "
+								.. key
+								.. " n'existe plus : retirer sa ligne de tests/fixtures/TextFitKeysPending.luau\27[0m"
+						)
 					end
 				end
 				if #lines > 0 then

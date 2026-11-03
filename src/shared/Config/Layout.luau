@@ -187,4 +187,49 @@ Layout.Focus.HoldMax = 60 -- s : sélection tenue pendant une fenêtre de Roblox
 Layout.Focus.DoubleCloseGuard = 0.35 -- s : fermeture ignorée juste après l'ouverture
 Layout.ClickTarget = { MinRadius = 32, RadiusFactor = 1.2, Hold = 4 } -- clic souris sur un squishy
 
+-- =================================================================================================
+-- Contrat v2.0 (GDD v2.0 §10.2, §10.7, §10.8 ; docs/04 §27.8) : écran Améliorations et HUD v2.0.
+-- Lu seulement quand Config/Features.UpgradesScreen est ouvert. Toutes les tailles sont FIXES et
+-- calculées depuis le panneau (règle 10) ; coordonnées en px TV de référence (1920 × 1080),
+-- relatives au panneau quand elles sont dans Upgrades.
+-- =================================================================================================
+Layout.Upgrades = {
+	-- zones du panneau Layout.Panel.rect (1 440 × 860) : 12 + 88 + 64 + 560 + 120 + 16 = 860
+	Margin = 32, -- largeur utile 1 376
+	Header = { y = 12, h = 88, title = 48 },
+	Tabs = { y = 100, h = 64, text = 32 },
+	Content = { y = 164, h = 560 },
+	Detail = { y = 724, h = 120, text = 28, lines = 2, worstFactor = 1.5 }, -- 2 lignes au facteur 1,5
+	Bottom = 16,
+	-- en-tête : places fixes (largeurs réservées), de droite à gauche après la pastille Souvenir
+	Coins = { w = 280, icon = 48, text = 40 },
+	Confetti = { w = 200, icon = 48, text = 40 },
+	Mode = { w = 200, glyph = 48, text = 40 },
+	HeaderGap = 16,
+	Memory = { x = 320, w = 360, h = 48, icon = 32, text = 28 }, -- x 320-680 dans le panneau
+	-- 3 gabarits du composant unique UI/UpgradeCard (règle 11)
+	Card = { w = 432, h = 528, gap = 40, icon = 120, title = 36, value = 40 }, -- onglet Conseillé : 3 cartes
+	Row = { w = 1328, h = 112, step = 128 }, -- onglets Ranch, Plopettes, Atelier
+	Tile = { w = 400, h = 300, icon = 120, title = 36, titleLines = 2, value = 40, margin = 16 }, -- aperçus
+	-- colonnes d'une ligne : { x, w } dans la ligne
+	Columns = {
+		icon = { x = 16, w = 80 },
+		text = { x = 112, w = 540 },
+		level = { x = 668, w = 140 },
+		effect = { x = 824, w = 240 },
+		state = { x = 1080, w = 232 },
+	},
+	PreviewLine = { w = 1376, h = 120, text = 40 }, -- ligne d'explication des aperçus de renaissance
+	RefusalBox = { w = 600, h = 120 }, -- boîte des refus de l'aperçu
+	ConfirmButton = { w = 360, h = 112, text = 40 }, -- « Plus tard » / « Oui, Ascension ! »
+	MaxInstances = 1400, -- règle 20 : budget d'instances de l'écran
+}
+
+-- HUD v2.0 (N9, N18) : rail de 8 boutons, puce « Prochain achat » ; remplacent les valeurs v1.3 du
+-- HUD quand UpgradesScreen est ouvert (paquet B2 ; Layout.Hud garde la disposition de la v1.3)
+Layout.HudV2 = {
+	Rail = { buttons = 8, size = 80, gap = 16, icon = 48, y0 = 246, y1 = 998 },
+	NextBuy = { x = 96, y = 342, w = 440, h = 96 } :: Rect,
+}
+
 return Layout

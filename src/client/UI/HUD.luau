@@ -186,6 +186,23 @@ local function frame(name: string, parent: Instance, color: Color3?, transparenc
 	return f
 end
 
+-- Masque arrondi : ClipsDescendants de Roblox coupe au RECTANGLE, jamais à l'arrondi d'un UICorner ;
+-- seul un CanvasGroup arrondi coupe ses enfants à sa forme. Un remplissage (jauge du Grand Splorch,
+-- balayage de Bondir) posé dedans reste donc dans le cercle au lieu de dessiner un carré
+local function roundMask(parent: Instance, zIndex: number): CanvasGroup
+	local mask = Instance.new("CanvasGroup")
+	mask.Name = "Mask"
+	mask.BackgroundTransparency = 1
+	mask.BorderSizePixel = 0
+	mask.Size = UDim2.fromScale(1, 1)
+	mask.ZIndex = zIndex
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0.5, 0)
+	corner.Parent = mask
+	mask.Parent = parent
+	return mask
+end
+
 local function circle(
 	name: string,
 	parent: Instance,
@@ -414,7 +431,7 @@ local function buildGoalTracker()
 	jar.ClipsDescendants = true
 	jar.ZIndex = 3
 	Util.chrome(jar, C.goalTracker.ring // 2, Color3.fromRGB(255, 120, 180))
-	local fill = frame("Fill", jar, Color3.fromRGB(255, 120, 180), 0)
+	local fill = frame("Fill", roundMask(jar, 3), Color3.fromRGB(255, 120, 180), 0)
 	fill.AnchorPoint = Vector2.new(0, 1)
 	fill.Position = UDim2.fromScale(0, 1)
 	fill.Size = UDim2.fromScale(1, 0)
@@ -610,7 +627,7 @@ local function buildLeap()
 	local corner = Instance.new("UICorner")
 	corner.CornerRadius = UDim.new(0.5, 0)
 	corner.Parent = f
-	local sweep = frame("Sweep", f, Theme.Colors.Stroke, 0.35)
+	local sweep = frame("Sweep", roundMask(f, 5), Theme.Colors.Stroke, 0.35)
 	sweep.AnchorPoint = Vector2.new(0, 1)
 	sweep.Position = UDim2.fromScale(0, 1)
 	sweep.Size = UDim2.fromScale(1, 0)
@@ -991,7 +1008,9 @@ local function updateStatus(now: number)
 	setText(
 		"statusMin_shield",
 		refs.statusMin_shield,
-		if shield then tostring(math.ceil(shieldLeft / 60)) .. "′" else ""
+		-- au moins « 1′ » tant que le serveur dit le bouclier actif (le temps de jeu local peut déjà
+		-- dépasser la limite avant que le ranch suivant arrive : jamais « 0′ » sous un indicateur visible)
+		if shield then tostring(math.max(1, math.ceil(shieldLeft / 60))) .. "′" else ""
 	)
 	local boost, left = boostActive(now)
 	setVisible(holders.boost, boost)

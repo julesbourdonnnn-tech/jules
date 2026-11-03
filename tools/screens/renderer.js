@@ -977,6 +977,27 @@
         // signe seul sur sa ligne (« ACCLAMER » / « ! », « … · » / « ★ ») : espace normale avant
         const orphan = L.lines.find((l) => l.b >= l.a && /\S/.test(text(L.parsed, l.a, l.b)) && !/[\p{L}\p{N}]/u.test(text(L.parsed, l.a, l.b)));
         if (orphan) add('orphan', n, `« ${text(L.parsed, orphan.a, orphan.b).trim()} » seul sur une ligne`, { rect: R(ink) });
+        // mêmes règles que tests/harness/TextFit (unitSplit, noms en capitales), mais sur les lignes
+        // du NAVIGATEUR : avec le crénage, une ligne peut se couper ailleurs que dans la mesure Luau
+        // (« Autocollant Jour » / « 1 » ici, « Autocollant » / « Jour 1 » en Luau : revue de l'outil)
+        const UNITS = ['s', 'min', 'h', 'j', '%', 'K', 'M', 'B', 'T', 'Qa', 'Qi', 'Sx', 'Sp', 'Oc', 'No', 'Dc', 'px', 'sur'];
+        const BRANDS = [['BOOP', 'RUSH'], ['MEGA', 'SQUISH']];
+        for (let li = 1; li < L.lines.length; li++) {
+          const prev = text(L.parsed, L.lines[li - 1].a, L.lines[li - 1].b).replace(/\s+$/u, '');
+          const cur = text(L.parsed, L.lines[li].a, L.lines[li].b).replace(/^\s+/u, '').replace(/\s+$/u, '');
+          const unit = UNITS.find((u) => cur.startsWith(u) && (cur.length === u.length || /[\s.,;:!?)/]/u.test(cur[u.length])));
+          const brand = BRANDS.find(([a, b]) => new RegExp(`(^|[\\s\\p{P}])${a}$`, 'u').test(prev) && cur.startsWith(b));
+          if (/\d$/u.test(prev) && unit) {
+            add('unitSplit', n, `« ${prev.slice(-8)} » / « ${cur.slice(0, 8)} » : unité séparée de son nombre`, { rect: R(ink) });
+            break;
+          } else if (/\p{L}$/u.test(prev) && /\d/u.test(cur) && /^[\d\s  ,.!?]+$/u.test(cur)) {
+            add('unitSplit', n, `« ${prev.slice(-12)} » / « ${cur} » : nombre séparé de son mot`, { rect: R(ink) });
+            break;
+          } else if (brand) {
+            add('splitWord', n, `nom « ${brand.join(' ')} » coupé par le retour à la ligne`, { rect: R(ink) });
+            break;
+          }
+        }
       }
       if (L.truncated) {
         const num = /\d/.test(L.hidden);
@@ -1140,6 +1161,61 @@
         if (covered(r, Math.min(da, db), Math.max(da, db))) continue;
         add('overlap', b, `bouton sur le bouton ${a.path}`, { other: a.path, rect: R(r) });
       }
+    }
+    // message (pile des toasts) par-dessus un panneau ouvert : il cache le haut du panneau (onglets)
+    {
+      const windows = nodes.filter((n) => /^Panels\.Safe\.Panel_[A-Za-z]+$/.test(n.path) && n.bgt < 0.5);
+      const toasts = nodes.filter((n) => /^Toasts\.Safe\.Stack\.Toast$/.test(n.path) && n.bgt < 0.5);
+      for (const t of toasts) {
+        for (const w of windows) {
+          const r = inter({ x: t.x, y: t.y, w: t.w, h: t.h }, { x: w.x, y: w.y, w: w.w, h: w.h });
+          if (r.w > 2 && r.h > 2) {
+            add('covered', t, `message par-dessus le panneau ouvert ${w.path} (${Math.round(r.w)} × ${Math.round(r.h)} px cachés)`, {
+              rect: R(r),
+            });
+            break;
+          }
+        }
+      }
+    }
+    // fond plein (≤ 50 % transparent) qui porte du texte mais que la Transparency de son UIGradient
+    // rend transparent par endroits : le HUD et le rail dessous transparaissent (« GRAND SPLORCH ! »
+    // fantôme derrière les cases d'un panneau ; revue de l'outil)
+    {
+      const textOwners = new Set();
+      for (const e of texts) for (const a of ancestors(e.n)) textOwners.add(a);
+      for (const n of nodes) {
+        if (n.deco || n.c === 'CanvasGroup' || !(n.bgt < 0.5) || !n.grad || !textOwners.has(n.i)) continue;
+        const maxT = Math.max(0, ...(n.grad.trans || []).map((kp) => kp[1]));
+        if (maxT > 0.001)
+          add('seeThrough', n, `fond transparent à ${Math.round(maxT * 100)} % par son dégradé : ce qui est dessous transparaît`, {
+            rect: R(n),
+          });
+      }
+    }
+    // fond carré d'un enfant dans le coin arrondi de son parent (ClipsDescendants coupe au rectangle,
+    // jamais à l'arrondi ; seul un CanvasGroup arrondi coupe à sa forme) : jauge pleine ou balayage
+    // de recharge dessinés en carré dans un cercle (revue de l'outil)
+    for (const n of nodes) {
+      const p = byIndex.get(n.p);
+      if (!p || n.deco || p.c === 'CanvasGroup' || !(n.bgt < 0.9) || n.w <= 1 || n.h <= 1) continue;
+      const rp = radiusOf(p, p.w, p.h);
+      if (rp < 6) continue;
+      const rc = radiusOf(n, n.w, n.h);
+      const d = 0.29 * rp;
+      const pts = [
+        [p.x + d, p.y + d],
+        [p.x + p.w - d, p.y + d],
+        [p.x + d, p.y + p.h - d],
+        [p.x + p.w - d, p.y + p.h - d],
+      ];
+      const painted = ([x, y]) => {
+        if (!(x > n.x + 0.5 && x < n.x + n.w - 0.5 && y > n.y + 0.5 && y < n.y + n.h - 0.5)) return false;
+        const cx = Math.min(Math.max(x, n.x + rc), n.x + n.w - rc);
+        const cy = Math.min(Math.max(y, n.y + rc), n.y + n.h - rc);
+        return (x - cx) ** 2 + (y - cy) ** 2 <= rc * rc;
+      };
+      if (pts.some(painted)) add('squareCorner', n, `fond carré dans le coin arrondi de ${p.path}`, { rect: R(n) });
     }
     // curseur de sélection (GuiService.SelectedObject) : visible, entier à l'écran, pas coupé par
     // un parent qui découpe (le moteur dessine SelectionImageObject DANS la découpe des ancêtres)
