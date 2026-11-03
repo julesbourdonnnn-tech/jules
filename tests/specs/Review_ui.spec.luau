@@ -18,8 +18,6 @@ local Screens = require("../harness/Screens")
 local Layout = require("../harness/Layout")
 local Props = require("../harness/EngineProps")
 
-local CLIENT = Screens.CLIENT
-
 local function prop(obj, name)
 	return Props.get(obj, name)
 end
@@ -49,7 +47,10 @@ local function seeThroughIssues(c)
 	for _, obj in playerGui:GetDescendants() do
 		if obj:IsA("GuiObject") and shown(obj) and (prop(obj, "BackgroundTransparency") or 0) < 0.5 then
 			local grad = obj:FindFirstChildOfClass("UIGradient")
-			if grad and prop(grad, "Enabled") ~= false then
+			local off = grad and prop(grad, "Offset")
+			-- reflet qui passe (Offset animé, hors du cadre au repos) : effet voulu
+			local moving = off ~= nil and (math.abs(off.X) > 0.01 or math.abs(off.Y) > 0.01)
+			if grad and not moving and prop(grad, "Enabled") ~= false then
 				local ts = prop(grad, "Transparency")
 				local maxT = 0
 				if ts then
@@ -103,7 +104,18 @@ local function cornerIssues(c, rootName)
 		then
 			local rp = radiusOf(parent)
 			local a, p = Layout.rect(obj), Layout.rect(parent)
-			if rp >= 6 and radiusOf(obj) < 0.5 * rp and a.w > 1 and a.h > 1 then
+			-- même couleur que le fond sous le parent (croissant de lune) : le débord ne se voit pas
+			local gp = parent.Parent
+			local invisible = gp ~= nil
+				and gp:IsA("GuiObject")
+				and (prop(gp, "BackgroundTransparency") or 0) < 0.5
+				and (function()
+					local x, y = prop(obj, "BackgroundColor3"), prop(gp, "BackgroundColor3")
+					return x ~= nil
+						and y ~= nil
+						and math.abs(x.R - y.R) + math.abs(x.G - y.G) + math.abs(x.B - y.B) < 24 / 255
+				end)()
+			if rp >= 6 and not invisible and a.w > 1 and a.h > 1 then
 				local d = 0.29 * rp
 				local corners = {
 					{ p.x + d, p.y + d },
@@ -114,7 +126,9 @@ local function cornerIssues(c, rootName)
 				-- le point est-il peint par l'enfant (rectangle arrondi de rayon rc) ?
 				local rc = radiusOf(obj)
 				local function painted(x, y): boolean
-					if not (x > a.x + 0.5 and x < a.x + a.w - 0.5 and y > a.y + 0.5 and y < a.y + a.h - 0.5) then
+					if
+						not (x > a.x + 0.5 and x < a.x + a.w - 0.5 and y > a.y + 0.5 and y < a.y + a.h - 0.5)
+					then
 						return false
 					end
 					local cx = math.clamp(x, a.x + rc, a.x + a.w - rc)
@@ -126,7 +140,9 @@ local function cornerIssues(c, rootName)
 					if painted(x, y) then
 						table.insert(
 							out,
-							Layout.name(obj) .. " : fond carré dans le coin arrondi de " .. Layout.name(parent)
+							Layout.name(obj)
+								.. " : fond carré dans le coin arrondi de "
+								.. Layout.name(parent)
 						)
 						break
 					end
@@ -231,18 +247,64 @@ return function(T)
 			end
 			expect(table.concat(bad, " | ")).toBe("")
 		end)
-		it("Guide : une chance non nulle n'est jamais écrite « 0,0 % » (Mythique à la qualité 2)", function()
-			local Rarities = c.h:require("ReplicatedStorage.Shared.Config.Rarities")
-			local mythic = c.Localization.get("fr", "rarity." .. Rarities.List[6].key)
-			local found = nil
-			for _, text in lines do
-				if string.sub(text, 1, #mythic) == mythic then
-					found = text
+		it(
+			"Guide : une chance non nulle n'est jamais écrite « 0,0 % » (Mythique à la qualité 2)",
+			function()
+				local Rarities = c.h:require("ReplicatedStorage.Shared.Config.Rarities")
+				local mythic = c.Localization.get("fr", "rarity." .. Rarities.List[6].key)
+				local found = nil
+				for _, text in lines do
+					if string.sub(text, 1, #mythic) == mythic then
+						found = text
+					end
+				end
+				expect(found ~= nil).toBe(true)
+				expect(string.find(found, "0[,.]0 %%") == nil and string.find(found, "0[,.]0%s") == nil).toBe(
+					true
+				)
+			end
+		)
+		Screens.closeAll(c)
+
+		-- états « Équipé » (Ranch › Style) et « Complète ! » (Squishydex › Familles) : la couleur du
+		-- texte elle-même se lit sur la case verte (vert sur vert : 1,9 sans le contour)
+		local function statusContrast(panel, tab, wanted)
+			Screens.open(c, panel, tab)
+			local win = c.PC.window(panel)
+			local out = {}
+			local seen = 0
+			for _, d in (win and win:GetDescendants() or {}) do
+				if d:IsA("TextLabel") and d.Name == "Status" and d.Text == wanted and Layout.visible(d) then
+					seen += 1
+					local card = d.Parent
+					while card and not card:IsA("GuiButton") do
+						card = card.Parent
+					end
+					if card then
+						local ratio = Screens.contrast(d.TextColor3, card.BackgroundColor3)
+						if ratio < 3 then
+							table.insert(out, string.format("%s : %.2f", Layout.name(d), ratio))
+						end
+					end
 				end
 			end
-			expect(found ~= nil).toBe(true)
-			expect(string.find(found, "0[,.]0 %%") == nil and string.find(found, "0[,.]0%s") == nil).toBe(true)
+			return seen, out
+		end
+		local seenEq, badEq =
+			statusContrast("Ranch", "style", c.Localization.get("fr", "panel.ranch.style.equipped"))
+		it("Ranch › Style : « Équipé » lisible sur sa case (contraste du texte seul ≥ 3)", function()
+			expect(seenEq >= 1).toBe(true)
+			expect(table.concat(badEq, " | ")).toBe("")
 		end)
+		local seenFam, badFam =
+			statusContrast("Squishydex", "families", c.Localization.get("fr", "panel.dex.familyComplete"))
+		it(
+			"Squishydex › Familles : « Complète ! » lisible sur sa rangée (contraste du texte seul ≥ 3)",
+			function()
+				expect(seenFam >= 1).toBe(true)
+				expect(table.concat(badFam, " | ")).toBe("")
+			end
+		)
 		Screens.closeAll(c)
 
 		-- carte du retour
@@ -292,4 +354,67 @@ return function(T)
 		end)
 		Harness.disposeAll()
 	end)
+
+	-- message (toast) pendant qu'un panneau est ouvert : jamais sur les onglets ni le contenu du
+	-- panneau (type « covered » de l'outil ; il cachait les onglets pendant 3 s)
+	for _, pid in { "tv1080", "tv720" } do
+		describe("Revue UI › message sur un panneau ouvert › " .. pid, function()
+			local ok, c = pcall(Screens.boot, Harness, Screens.profileById(pid), "fr", "mid")
+			if not ok then
+				it("démarrage du client", function()
+					error(c)
+				end)
+				return
+			end
+			local function overlaps(a, b): boolean
+				return a.x < b.x + b.w - 1
+					and b.x < a.x + a.w - 1
+					and a.y < b.y + b.h - 1
+					and b.y < a.y + a.h - 1
+			end
+			local function check(label: string, before: boolean)
+				local win = c.PC.window("Ranch")
+				local playerGui = c.h.localPlayer:FindFirstChildOfClass("PlayerGui")
+				local stack = playerGui:FindFirstChild("Toasts")
+				stack = stack and stack:FindFirstChild("Stack", true)
+				local bad = {}
+				local count = 0
+				for _, t in (stack and stack:GetChildren() or {}) do
+					if t.Name == "Toast" and shown(t) then
+						count += 1
+						local r = Layout.rect(t)
+						local body = win and win:FindFirstChild("Body")
+						for _, part in (body and body:GetChildren() or {}) do
+							if part:IsA("GuiObject") and shown(part) and overlaps(r, Layout.rect(part)) then
+								table.insert(bad, Layout.name(part))
+							end
+						end
+					end
+				end
+				it(label, function()
+					expect(count >= 1).toBe(true)
+					expect(table.concat(bad, ", ")).toBe("")
+				end)
+				return before
+			end
+			-- toast montré panneau déjà ouvert
+			Screens.open(c, "Ranch", "pens")
+			-- Roblox tient AbsoluteSize à jour à chaque image ; le harnais, seulement à Layout.apply
+			Screens.layout(c)
+			c.Toast.show("Rien à ranger", "info")
+			Screens.frames(c, 2, 0.05)
+			Screens.layout(c)
+			check("toast montré panneau ouvert : hors des onglets et du contenu", false)
+			-- toast montré AVANT l'ouverture du panneau (il était sous les bannières)
+			Screens.closeAll(c)
+			Screens.frames(c, 40, 0.1)
+			c.Toast.show("Enclos pleins", "warning")
+			Screens.frames(c, 1, 0.05)
+			c.PC.open("Ranch", "pens")
+			Screens.frames(c, 3, 0.05)
+			Screens.layout(c)
+			check("toast déjà là à l'ouverture : il monte dans la barre de titre", true)
+			Harness.disposeAll()
+		end)
+	end
 end

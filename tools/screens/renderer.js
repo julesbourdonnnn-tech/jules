@@ -1166,9 +1166,11 @@
     {
       const windows = nodes.filter((n) => /^Panels\.Safe\.Panel_[A-Za-z]+$/.test(n.path) && n.bgt < 0.5);
       const toasts = nodes.filter((n) => /^Toasts\.Safe\.Stack\.Toast$/.test(n.path) && n.bgt < 0.5);
+      // la barre de titre (96 px TV) peut recevoir le message (UI/Toast.anchor) : seul le corps compte
+      const header = 96 * rootScale;
       for (const t of toasts) {
         for (const w of windows) {
-          const r = inter({ x: t.x, y: t.y, w: t.w, h: t.h }, { x: w.x, y: w.y, w: w.w, h: w.h });
+          const r = inter({ x: t.x, y: t.y, w: t.w, h: t.h }, { x: w.x, y: w.y + header, w: w.w, h: w.h - header });
           if (r.w > 2 && r.h > 2) {
             add('covered', t, `message par-dessus le panneau ouvert ${w.path} (${Math.round(r.w)} × ${Math.round(r.h)} px cachés)`, {
               rect: R(r),
@@ -1186,6 +1188,8 @@
       for (const e of texts) for (const a of ancestors(e.n)) textOwners.add(a);
       for (const n of nodes) {
         if (n.deco || n.c === 'CanvasGroup' || !(n.bgt < 0.5) || !n.grad || !textOwners.has(n.i)) continue;
+        // reflet qui passe (Offset animé, hors du cadre au repos) : effet voulu, pas un fond troué
+        if (n.grad.off && (Math.abs(n.grad.off[0]) > 0.01 || Math.abs(n.grad.off[1]) > 0.01)) continue;
         const maxT = Math.max(0, ...(n.grad.trans || []).map((kp) => kp[1]));
         if (maxT > 0.001)
           add('seeThrough', n, `fond transparent à ${Math.round(maxT * 100)} % par son dégradé : ce qui est dessous transparaît`, {
@@ -1201,6 +1205,11 @@
       if (!p || n.deco || p.c === 'CanvasGroup' || !(n.bgt < 0.9) || n.w <= 1 || n.h <= 1) continue;
       const rp = radiusOf(p, p.w, p.h);
       if (rp < 6) continue;
+      // même couleur que le fond sous le parent (croissant de lune : rond « Bite » de la couleur de
+      // l'icône) : le débord ne se voit pas
+      const gp = byIndex.get(p.p);
+      const same = (a, b) => a && b && Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]) + Math.abs(a[2] - b[2]) < 24;
+      if (gp && gp.bgt < 0.5 && same(n.bg, gp.bg)) continue;
       const rc = radiusOf(n, n.w, n.h);
       const d = 0.29 * rp;
       const pts = [

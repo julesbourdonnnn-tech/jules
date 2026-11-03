@@ -30,6 +30,12 @@ Toast.router = nil :: ((text: string, kind: string?) -> ())?
 -- référence 1280 × 720, soit 270 px TV)
 Toast.TopY = 270
 
+-- Panneau ouvert (posé par PanelController) : rend le haut de la pile en px de Root.safe, ou nil.
+-- La pile se pose alors dans la barre de titre du panneau (le titre est caché 3 s) et ne garde
+-- qu'un toast : à sa place habituelle, elle cachait les onglets du panneau (outil d'écrans, type
+-- « covered » : Ranch › Enclos › Ranger quand il n'y a rien à ranger)
+Toast.anchor = nil :: (() -> number?)?
+
 local container: Frame? = nil
 local visible: { Frame } = {}
 local order = 0
@@ -64,6 +70,34 @@ local function getContainer(): Frame
 	return container :: Frame
 end
 
+-- Haut de la pile et nombre de toasts gardés : sous les bannières, ou dans la barre de titre du
+-- panneau ouvert (un seul toast)
+local function placement(): (number, number)
+	local anchor = Toast.anchor
+	if anchor then
+		local ok, y = pcall(anchor)
+		if ok and type(y) == "number" and y == y and y >= 0 then
+			return y, 1
+		end
+	end
+	return Toast.TopY, MAX_VISIBLE
+end
+
+-- Replace la pile (panneau ouvert ou fermé) et retire les toasts en trop, les plus anciens d'abord
+function Toast.relayout()
+	local stack = container
+	if stack == nil or stack.Parent == nil then
+		return
+	end
+	local y, keep = placement()
+	stack.Position = UDim2.new(0.5, 0, 0, y)
+	while #visible > keep do
+		local oldest = visible[1]
+		table.remove(visible, 1)
+		oldest:Destroy()
+	end
+end
+
 local function dismiss(frame: Frame)
 	local i = table.find(visible, frame)
 	if not i then
@@ -77,7 +111,9 @@ end
 
 function Toast.show(text: string, kind: string?)
 	local parent = getContainer()
-	while #visible >= MAX_VISIBLE do
+	local y, keep = placement()
+	parent.Position = UDim2.new(0.5, 0, 0, y)
+	while #visible >= keep do
 		local oldest = visible[1]
 		table.remove(visible, 1)
 		oldest:Destroy()

@@ -313,7 +313,8 @@ local function bindFamilyRow(row: FamilyRow, _frame: Frame, index: number)
 	local unlockR = if type(def) == "table" then def.unlockR else -1
 	if earned then
 		Widgets.setText(row.status, "panel.dex.familyComplete")
-		row.status.TextColor3 = Widgets.Colors.Success
+		-- blanc sur la rangée verte (vert sur vert : contraste 2,94 ; revue de l'outil d'écrans)
+		row.status.TextColor3 = Widgets.Colors.Text
 	elseif unlockR > 0 and R < unlockR then
 		Widgets.setText(row.status, "panel.dex.familyLocked", { n = unlockR })
 		row.status.TextColor3 = Widgets.Colors.TextDim
@@ -369,11 +370,7 @@ local function guideTexts(): { { text: string, title: boolean } }
 	local table_: any = Widgets.safe("Odds.rarityTable", {}, Odds.rarityTable, quality)
 	for i, rdef in Rarities.List do
 		local p = Widgets.n(table_[i])
-		line(
-			Prefs.t("rarity." .. rdef.key)
-				.. "  "
-				.. Prefs.t("common.percent", { p = chanceText(p, 1) })
-		)
+		line(Prefs.t("rarity." .. rdef.key) .. "  " .. Prefs.t("common.percent", { p = chanceText(p, 1) }))
 	end
 	local vat = Widgets.tbl(Widgets.state("vat"))
 	line(

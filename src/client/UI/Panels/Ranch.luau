@@ -998,7 +998,8 @@ local function refreshStyle()
 			cell.button:SetAttribute("Locked", not unlocked)
 			if equipped then
 				Widgets.setText(cell.status, "panel.ranch.style.equipped")
-				cell.status.TextColor3 = Widgets.Colors.Success
+				-- blanc sur la case verte (vert sur vert : contraste 1,98 ; revue de l'outil d'écrans)
+				cell.status.TextColor3 = Widgets.Colors.Text
 			elseif not unlocked and def then
 				Widgets.setRaw(cell.status, sourceText(def))
 				cell.status.TextColor3 = Widgets.Colors.TextDim

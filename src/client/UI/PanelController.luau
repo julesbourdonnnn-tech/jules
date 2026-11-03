@@ -39,6 +39,7 @@ local Root = require(Client.UI.Root)
 local Juice = require(Client.UI.Juice)
 local FocusGuard = require(Client.UI.FocusGuard)
 local Cards = require(Client.UI.Cards)
+local Toast = require(Client.UI.Toast)
 local Prefs = require(Client.Util.Prefs)
 local AudioController = require(Client.Controllers.AudioController)
 local State = require(Client.Controllers.StateController)
@@ -568,12 +569,34 @@ end
 -- Panneaux
 -- =============================================================================================
 
+-- Haut de la pile des toasts quand un panneau est ouvert (px de Root.safe) : centrée dans la barre
+-- de titre du panneau (fenêtre centrée dans la zone utile de Root.safe), jamais sur ses onglets
+local TOAST_H = 88 -- UI/Toast : hauteur d'un toast
+local function toastAnchor(): number?
+	local gui, safeFrame = panelsScreen, panelsSafe
+	if gui == nil or safeFrame == nil or not gui.Enabled then
+		return nil
+	end
+	local s = Root.scale()
+	local h = safeFrame.AbsoluteSize.Y
+	if s <= 0 or h <= 0 then
+		return nil
+	end
+	local inner = h / s - 2 * Root.padding().Y
+	local top = (inner - PANEL_RECT.h) / 2
+	if top < 0 then
+		return nil
+	end
+	return top + math.max(0, (Layout.Panel.header - TOAST_H) / 2)
+end
+
 local function setOverlay(on: boolean)
 	local gui = panelsScreen
 	local v = veil
 	if gui == nil or v == nil then
 		return
 	end
+	Toast.anchor = toastAnchor
 	if on then
 		gui.Enabled = true
 		if Juice.reducedMotion() then
@@ -611,6 +634,8 @@ local function setOverlay(on: boolean)
 			Juice.tween(blur, 0.12, { Size = 0 })
 		end
 	end
+	-- un toast déjà affiché monte dans la barre de titre (ou redescend à la fermeture)
+	pcall(Toast.relayout)
 end
 
 local function unbindPanelKeys()

@@ -107,8 +107,8 @@ L'outil dessine donc une police CSS de `TextSize ÷ (hauteur de ligne de la poli
 | Type | Signification |
 |---|---|
 | `overflow` | le texte ne tient pas dans sa boîte à la taille qu'utiliserait Roblox |
-| `splitWord` | un mot est coupé en deux par le retour à la ligne (« Squishyde / x ») |
-| `unitSplit` | une unité est séparée de son nombre (« toutes les 5 » / « s. ») |
+| `splitWord` | un mot est coupé en deux par le retour à la ligne (« Squishyde / x »), ou un nom d'événement en capitales (« BOOP » / « RUSH ») |
+| `unitSplit` | une unité est séparée de son nombre (« toutes les 5 » / « s. », « · 1 » / « sur 1 000 000 000 »), ou un nombre seul sur sa ligne loin de son mot (« Autocollant Jour » / « 1 ») ; vérifié sur les lignes Luau ET sur les lignes du navigateur (le crénage peut couper ailleurs) |
 | `clipped` | le texte est coupé par un parent |
 | `truncated` | « … » coupe le texte (grave s'il cache un nombre ou un mot entier) |
 | `small`, `smallFixed` | texte sous **28 px de référence × échelle de l'écran** (28 px réels en 1080p, 56 en 4K, 18,7 en 720p) |
@@ -118,7 +118,9 @@ L'outil dessine donc une police CSS de `TextSize ÷ (hauteur de ligne de la poli
 | `contrast` | contraste du texte sur son fond < 3 (le contour du texte compte) |
 | `tinted` | texte teinté par le dégradé d'un `CanvasGroup` parent |
 | `selection` | curseur de sélection invisible, hors de l'écran ou caché par un parent |
-| `covered` | un message (toast) se dessine par-dessus le panneau ouvert |
+| `covered` | un message (toast) se dessine par-dessus le corps du panneau ouvert (la barre de titre lui est réservée) |
+| `seeThrough` | un fond plein qui porte du texte est rendu transparent par la `Transparency` de son `UIGradient` : le HUD et le rail dessous transparaissent (texte fantôme derrière le contenu) |
+| `squareCorner` | le fond carré d'un enfant dépasse du coin arrondi de son parent (`ClipsDescendants` coupe au rectangle, jamais à l'arrondi : seul un `CanvasGroup` arrondi coupe à sa forme) |
 | `empty`, `question`, `rawKey`, `placeholder`, `defaultText` | boîte visible vide, « ? » à la place d'une donnée, clé de traduction, `{variable}`, texte jamais posé |
 | `noChange` | « 60 → 60 » : la flèche annonce un changement qui n'existe pas |
 | `peek` | **information** : rangée entrouverte voulue en bas d'une liste (elle annonce la suite) |
@@ -162,7 +164,12 @@ raison écrite à la main dans la liste des clés est gardée quand on la régé
 
 - Mesure du texte : vraies polices dans Chromium, mais Gotham est remplacée par Montserrat ; les
   tests Lune ignorent le crénage : `summary.json` → `calibration` dit combien de tailles TextScaled
-  Luau et navigateur diffèrent (en général 0, parfois 1 px).
+  Luau et navigateur diffèrent (en général 0, parfois 1 px). **Les retours à la ligne aussi peuvent
+  différer** quand une ligne est juste à la limite (« Autocollant Jour » / « 1 » dans le navigateur,
+  « Autocollant » / « Jour 1 » en Luau) : les règles de coupe (`unitSplit`, noms en capitales) sont
+  donc vérifiées des deux côtés, et le seul remède sûr est l'espace insécable dans le texte. Aucune
+  marge n'est prise pour Gotham : un texte au pixel près avec Montserrat peut se couper autrement
+  sur la console (à comparer sur une photo de l'écran).
 - Pas de monde 3D, pas d'images réelles (cases neutres), pas d'animations : chaque capture est un
   instant figé.
 - Polices de secours des symboles et emoji : Noto ici, celles de Roblox en jeu.
