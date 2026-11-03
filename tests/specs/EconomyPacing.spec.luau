@@ -181,6 +181,52 @@ return function(T)
 				expect(a.stamps30).toBe(b.stamps30)
 				expect(a.boostShare).toBe(b.boostShare)
 			end)
+
+			-- témoin : valeurs rendues par le modèle v1.3 d'avant l'extension v2.0 (commit 533e02e) pour ce
+			-- joueur ; le modèle étendu, interrupteurs coupés, doit les rendre au bit près (une dérive du
+			-- jeu de base dans le modèle fait échouer ce cas avant de déplacer une médiane)
+			it(
+				"interrupteurs coupés : un joueur témoin rend exactement les jalons du modèle v1.3",
+				function()
+					local m = withFlags(false, function()
+						return model.simulateFor({ players = 8 })(Sim.newRng(SEED * 1000003 + 1), 1, DAYS)
+					end)
+					expect(m.v2).toBeNil()
+					expect({
+						firstSplorch = m.firstSplorch,
+						r30 = m.r30,
+						stamps30 = m.stamps30,
+						rDay1 = m.rDay1,
+						rDay7 = m.rDay7,
+						rDay14 = m.rDay14,
+						rDay28 = m.rDay28,
+						stampsDay7 = m.stampsDay7,
+						stampsDay28 = m.stampsDay28,
+						biggestDay7 = m.biggestDay7,
+						boostShare = m.boostShare,
+						snack12Share = m.snack12Share,
+						coinsLostRatio = m.coinsLostRatio,
+						pressShareDay7 = m.pressShareDay7,
+						first1e12Day = m.first1e12Day,
+					}).toEqual({
+						firstSplorch = 11.283333333333333,
+						r30 = 2,
+						stamps30 = 20,
+						rDay1 = 2,
+						rDay7 = 10,
+						rDay14 = 15,
+						rDay28 = 20,
+						stampsDay7 = 103,
+						stampsDay28 = 138,
+						biggestDay7 = 112475034.21464916,
+						boostShare = 35.967672619829045,
+						snack12Share = 0.66967680608365021,
+						coinsLostRatio = 4.0199619294054294,
+						pressShareDay7 = 0.6048687476233966,
+						first1e12Day = 26,
+					})
+				end
+			)
 		end)
 	end
 
@@ -743,6 +789,46 @@ return function(T)
 						expect(a.recordDay7).toBe(b.recordDay7)
 						expect(a.v2.daily[8].confTotal).toBe(b.v2.daily[8].confTotal)
 						expect(a.v2.bands[2].over).toBe(b.v2.bands[2].over)
+					end
+				)
+
+				it(
+					"v2.0 câblé au vrai code : chaque Jelly Ascend part de reqR(A) et repart à startR(A, Tremplin)",
+					function()
+						local m = withFlags(true, function()
+							return model.simulateFor({ players = 16, v2 = { assidu = true } })(
+								Sim.newRng(SEED * 1000003 + 3),
+								3,
+								12
+							)
+						end)
+						local ascends = m.v2.ascends
+						expect(#ascends >= 1).toBe(true)
+						for k, e in ascends do
+							expect({ k = k, A = e.A }).toEqual({ k = k, A = k })
+							expect({ k = k, ready = e.fromR >= Prestige.reqR(k) }).toEqual({
+								k = k,
+								ready = true,
+							})
+							local lo, hi = Prestige.startR(k, 0), Prestige.startR(k, 3)
+							expect({ k = k, start = e.R >= lo and e.R <= hi }).toEqual({ k = k, start = true })
+							expect({ k = k, record = e.best >= e.fromR }).toEqual({ k = k, record = true })
+						end
+						-- après la 1re Ascension : des Petits Splorch (remontée), puis des Grands Splorch
+						local petit, grandAfter = 0, 0
+						for _, l in m.v2.loops do
+							if l.afterAscend then
+								if l.petit then
+									petit += 1
+								else
+									grandAfter += 1
+								end
+							end
+						end
+						expect(petit > 0).toBe(true)
+						expect(grandAfter > 0).toBe(true)
+						expect(m.applyRefused).toBe(0)
+						expect(m.maxA).toBe(#ascends)
 					end
 				)
 

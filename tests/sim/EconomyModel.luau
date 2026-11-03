@@ -287,6 +287,7 @@ function EconomyModel.new(L)
 			bands[i] = { tot = 0, over = 0, maxGap = 0 }
 		end
 		local loops, ascendDays, regain, regainDays, cliff = {}, {}, {}, {}, {}
+		local ascends = {} -- { d, A, fromR, R, best } de chaque Jelly Ascend
 		local zeroGap, nonFinite = 0, 0
 		local lastGoal = 0 -- temps de jeu du dernier achat, Grand ou Petit Splorch ou Ascension
 		local lastBuy, maxBuyGap = 0, 0
@@ -370,6 +371,7 @@ function EconomyModel.new(L)
 				lastBuy, maxBuyGap = e.t, 0
 			elseif k == "ascend" then
 				table.insert(ascendDays, e.d)
+				table.insert(ascends, { d = e.d, A = e.A, fromR = e.fromR, R = e.R, best = e.best })
 				afterAscend, waitFirstRecord = true, true
 				regainLens = {}
 				pending = { t = e.t, d = e.d, target = e.best, from = e.R }
@@ -381,6 +383,7 @@ function EconomyModel.new(L)
 			bands = bands,
 			loops = loops,
 			ascendDays = ascendDays,
+			ascends = ascends,
 			regain = regain,
 			regainDays = regainDays,
 			cliff = cliff,
