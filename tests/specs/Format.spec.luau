@@ -82,7 +82,7 @@ return function(T)
 		end)
 
 		it(
-			"confetti : entier brut groupé jusqu'à « 99 999 », puis « 100 K » … « 999 K »",
+			"confetti : entier brut groupé jusqu'à « 99 999 », puis BigNumber.abbreviate (GDD §4.2)",
 			function()
 				eq(Format.confetti(0, "fr"), "0", "zéro")
 				eq(Format.confetti(139, "fr"), "139", "témoin de migration")
@@ -91,11 +91,15 @@ return function(T)
 				eq(Format.confetti(1000, "fr"), "1 000", "FR : espace ordinaire des milliers")
 				eq(Format.confetti(99999, "fr"), "99 999", "plus grand entier brut (FR)")
 				eq(Format.confetti(99999, "en"), "99,999", "plus grand entier brut (EN)")
-				eq(Format.confetti(100000, "fr"), "100 K", "100 000 → 100 K")
+				-- relecture B1 (B1-18) : au-delà de 99 999, le formateur des montants (suffixe collé en
+				-- français, A1-18) ; plus de plafond « 999 K » faux de 1 000 000 à 1e9 (borne du schéma)
+				eq(Format.confetti(100000, "fr"), "100K", "100 000 → 100K (BigNumber, suffixe collé)")
 				eq(Format.confetti(100000, "en"), "100K", "100 000 → 100K")
 				eq(Format.confetti(123456.7, "en"), "123K", "milliers tronqués")
-				eq(Format.confetti(999999, "fr"), "999 K", "plafond 999 K")
-				eq(Format.confetti(1e12, "en"), "999K", "au-delà : plafond")
+				eq(Format.confetti(999999, "fr"), "999K", "999 999 → 999K (tronqué)")
+				eq(Format.confetti(1500000, "fr"), "1,50M", "1 500 000 → 1,50M (jamais « 999 K »)")
+				eq(Format.confetti(1e9, "en"), "1.00B", "borne du schéma")
+				eq(Format.confetti(1e12, "en"), "1.00B", "au-delà : plafond de la borne du schéma")
 				eq(Format.confetti(12.9, "fr"), "12", "partie entière")
 			end
 		)

@@ -109,7 +109,7 @@ local samplesFrame: Frame? = nil
 local sampleLabels: { TextLabel } = {}
 local samplesFor: TextButton? = nil
 -- panneau TextProbe : témoins et leurs lignes de chiffres
-type ProbeUi = { witness: TextLabel, bounds: TextLabel, factor: TextLabel, size: number }
+type ProbeUi = { witness: TextLabel, bounds: TextLabel, factor: TextLabel, size: number, bound: boolean }
 local probes: { ProbeUi } = {}
 local probeState: TextLabel? = nil
 local probeFactors: TextLabel? = nil
@@ -214,6 +214,20 @@ local function refreshProbe()
 			c = Format.decimal(m.compensation, lang, 2),
 		})
 	end
+	-- échelle des TextBounds (relecture B1, B1-20) : le moteur peut les rendre en pixels de l'écran
+	-- (UIScale de UI/Root compris : ×2 en 4K) ou en px TV, la documentation ne le dit pas. Le témoin
+	-- libre de 48 px de ce panneau, comparé au témoin caché de UI/Text (même texte, même taille, même
+	-- police, sans UIScale), le mesure : le facteur affiché est celui du JOUEUR, jamais l'échelle de
+	-- l'écran (« ×2,00 » à Medium sur la télé 4K aurait faussé la photo). Les TextBounds restent bruts.
+	local boundsScale = 1
+	for _, p in probes do
+		if p.size == Text.WitnessSize and not p.bound and m.freeY > 0 then
+			local r = p.witness.TextBounds.Y / m.freeY
+			if r == r and r > 0 and math.abs(r - 1) >= Text.Tolerance then
+				boundsScale = r
+			end
+		end
+	end
 	for _, p in probes do
 		local bounds = p.witness.TextBounds
 		Widgets.setText(p.bounds, "panel.diag.probe.bounds", {
@@ -221,7 +235,7 @@ local function refreshProbe()
 			h = Format.count(math.floor(bounds.Y + 0.5)),
 		})
 		Widgets.setText(p.factor, "panel.diag.probe.factor", {
-			f = Format.decimal(bounds.Y / p.size, lang, 2),
+			f = Format.decimal(bounds.Y / p.size / boundsScale, lang, 2),
 		})
 	end
 end
@@ -600,7 +614,10 @@ function Diagnostics.build(container: Frame)
 				color = Widgets.Colors.Gold,
 				xAlign = Enum.TextXAlignment.Right,
 			})
-			table.insert(probes, { witness = witness, bounds = bounds, factor = factor, size = px })
+			table.insert(
+				probes,
+				{ witness = witness, bounds = bounds, factor = factor, size = px, bound = isBound }
+			)
 			witness:GetPropertyChangedSignal("TextBounds"):Connect(function()
 				if isOpen then
 					refreshProbe()

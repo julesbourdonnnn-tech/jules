@@ -30,7 +30,10 @@
 -- sans UIScale) : libre (f = TextBounds.Y ÷ 48) et bornée par une contrainte MaxTextSize = 48
 -- (facteur appliqué malgré la contrainte) ; mesuré au premier usage, à chaque changement de
 -- `GuiService.PreferredTextSize` et de `TextBounds` des témoins. Les vrais facteurs de la PS5 sont
--- photographiés avec le panneau TextProbe (Diagnostics, administrateurs).
+-- photographiés avec le panneau TextProbe (Diagnostics, administrateurs). Relecture B1 (B1-15) : le
+-- facteur que TextService:GetTextSize applique LUI-MÊME est mesuré aussi (même texte témoin) ; les
+-- mesures des "fit", de la borne des mots et des lignes ne supposent plus qu'il honore la taille du
+-- joueur. Une phrase est mise en lignes et ses étoiles posées à sa taille À L'ÉCRAN (agrandie).
 
 local GuiService = game:GetService("GuiService")
 local Players = game:GetService("Players")
@@ -56,6 +59,9 @@ export type Measurements = {
 	factor: number, -- facteur du moteur sur un texte libre (1 à Medium)
 	bound: number, -- facteur du moteur sur un texte borné par MaxTextSize (1 si la contrainte borne)
 	compensation: number, -- diviseur appliqué aux "label" et "fit" (= bound)
+	-- facteur que TextService:GetTextSize applique lui-même (relecture B1, B1-15) : 1 s'il ignore la
+	-- taille de texte du joueur, `factor` s'il l'honore ; mesuré sur le même texte témoin, jamais supposé
+	service: number,
 	preferred: string, -- nom de GuiService.PreferredTextSize
 	freeY: number, -- TextBounds.Y du témoin libre (px)
 	boundY: number, -- TextBounds.Y du témoin borné (px)
@@ -89,6 +95,7 @@ local measured: Measurements = {
 	factor = 1,
 	bound = 1,
 	compensation = 1,
+	service = 1,
 	preferred = "Medium",
 	freeY = 0,
 	boundY = 0,
@@ -138,17 +145,57 @@ local function factorOf(label: TextLabel?): (number, number, boolean)
 end
 
 local reapplyAll: () -> () = function() end
+local clearWordCache: () -> () = function() end
 local listeners: { () -> () } = {} -- Text.onMeasured
+
+-- Facteur que TextService:GetTextSize applique lui-même (relecture B1, B1-15). La documentation ne
+-- tranche pas et rien n'a été mesuré sur la PS5 : il est MESURÉ, sur le texte du témoin libre (même
+-- texte, même taille, même police), = f × (hauteur rendue par TextService ÷ hauteur dessinée par le
+-- moteur) : 1 si TextService ignore la taille du joueur, f s'il l'honore ; 1 tant que le témoin
+-- n'est pas dessiné (la mesure reprend au premier dessin)
+local function serviceFactor(f: number, freeY: number): number
+	if freeY <= 0 then
+		return 1
+	end
+	local ok, result = pcall(function()
+		return TextService:GetTextSize(
+			Text.WitnessText,
+			Text.WitnessSize,
+			Enum.Font.FredokaOne,
+			Vector2.new(1e5, 1e5)
+		)
+	end)
+	if not ok or typeof(result) ~= "Vector2" then
+		return 1
+	end
+	local y = (result :: Vector2).Y
+	if y ~= y or y <= 0 then
+		return 1
+	end
+	local s = f * y / freeY
+	if s < 1 + Text.Tolerance then
+		return 1
+	end
+	return math.min(math.floor(s * 100 + 0.5) / 100, 2)
+end
 
 local function measure()
 	local f, freeY, okFree = factorOf(witnessFree)
 	local g, boundY, okBound = factorOf(witnessBound)
 	local compensation = if g > 1 then g else 1
+	local service = serviceFactor(f, freeY)
 	local changed = math.abs(compensation - measured.compensation) > 1e-6
 		or math.abs(f - measured.factor) > 1e-6
+		or math.abs(g - measured.bound) > 1e-6
+		or math.abs(service - measured.service) > 1e-6
+	if math.abs(service - measured.service) > 1e-6 then
+		-- largeurs de mots mises en cache sous l'ancien facteur de TextService : à remesurer
+		clearWordCache()
+	end
 	measured.factor = f
 	measured.bound = g
 	measured.compensation = compensation
+	measured.service = service
 	measured.preferred = preferredName()
 	measured.freeY = freeY
 	measured.boundY = boundY
@@ -293,10 +340,11 @@ local function enumFont(label: TextObject): Enum.Font
 	return Enum.Font.FredokaOne
 end
 
--- Taille d'un texte (px TV à Medium) : TextService honore PreferredTextSize (documentation
--- Roblox) ; ramenée à Medium par le facteur mesuré, boîte de retour à la ligne comprise
+-- Taille d'un texte (px TV à Medium) : ramenée à Medium par le facteur que TextService applique
+-- LUI-MÊME (measured.service, mesuré : 1 s'il ignore PreferredTextSize, le facteur du joueur s'il
+-- l'honore ; relecture B1, B1-15), boîte de retour à la ligne comprise
 local function textSize(text: string, size: number, font: Enum.Font, wrapWidth: number?): Vector2
-	local f = measured.factor
+	local f = measured.service
 	local frame = Vector2.new(if wrapWidth then wrapWidth * f else 1e5, 1e5)
 	local ok, result = pcall(function()
 		return TextService:GetTextSize(text, size, font, frame)
@@ -355,6 +403,10 @@ end
 local WORD_REF = 100
 local wordCache: { [string]: number } = {}
 local wordCacheSize = 0
+clearWordCache = function()
+	table.clear(wordCache)
+	wordCacheSize = 0
+end
 
 -- Largeur (px TV à Medium, taille 100) du mot le plus long ; espaces ordinaires seulement (le moteur
 -- ne coupe jamais à l'espace insécable)
@@ -377,20 +429,8 @@ local function longestWord(text: string, font: Enum.Font): number
 	return best
 end
 
--- Plus grande taille entière de [lo, hi] où le texte tient dans la boîte (règle de l'ancien
--- TextScaled) ; lo s'il ne tient nulle part
-local function fitSize(label: TextObject, box: Vector2, lo: number, hi: number, wrapped: boolean): number
-	local text = plainText(label)
-	if text == "" then
-		return hi
-	end
-	local font = enumFont(label)
-	local function fits(size: number): boolean
-		local s = textSize(text, size, font, if wrapped then box.X else nil)
-		local lines = if wrapped then 1 else select(2, string.gsub(text, "\n", "")) + 1
-		local height = if wrapped then s.Y else size * lines
-		return s.X <= box.X + 0.01 and height <= box.Y + 0.01
-	end
+-- Plus grande taille entière de [lo, hi] où `fits` est vrai ; lo s'il ne l'est nulle part
+local function largest(lo: number, hi: number, fits: (size: number) -> boolean): number
 	local top = math.floor(hi)
 	local bottom = math.max(1, math.ceil(math.min(lo, top)))
 	if not fits(bottom) then
@@ -406,6 +446,30 @@ local function fitSize(label: TextObject, box: Vector2, lo: number, hi: number, 
 		end
 	end
 	return a
+end
+
+-- Plus grande taille entière de [lo, hi] où le texte tient dans la boîte (règle de l'ancien
+-- TextScaled) ; lo s'il ne tient nulle part
+local function fitSize(label: TextObject, box: Vector2, lo: number, hi: number, wrapped: boolean): number
+	local text = plainText(label)
+	if text == "" then
+		return hi
+	end
+	local font = enumFont(label)
+	local function fits(size: number): boolean
+		local s = textSize(text, size, font, if wrapped then box.X else nil)
+		local lines = if wrapped then 1 else select(2, string.gsub(text, "\n", "")) + 1
+		local height = if wrapped then s.Y else size * lines
+		return s.X <= box.X + 0.01 and height <= box.Y + 0.01
+	end
+	return largest(lo, hi, fits)
+end
+
+-- Taille "fit" d'un texte à mots tenus ensemble (défini plus bas, avec les repères) : calculée sur
+-- son texte d'origine coupé à CHAQUE taille essayée, jamais sur les lignes d'une écriture précédente
+-- (relecture B1, B1-23) ; nil si le libellé n'en porte pas
+local gluedFit: (label: TextObject, box: Vector2, lo: number, hi: number) -> number? = function()
+	return nil
 end
 
 -- =============================================================================================
@@ -434,7 +498,8 @@ local function apply(label: TextObject, e: Entry)
 				end
 			end
 			if e.kind == "fit" then
-				base = fitSize(label, box, floorSize, base, e.wrapped)
+				base = gluedFit(label, box, floorSize, base)
+					or fitSize(label, box, floorSize, base, e.wrapped)
 			end
 		end
 	end
@@ -483,10 +548,16 @@ local function apply(label: TextObject, e: Entry)
 	e.display = base
 end
 
+-- Mots tenus ensemble et étoiles dessinées d'un libellé, refaits à sa taille à l'écran (définie plus
+-- bas) : une phrase agrandie par le moteur ne change ni son TextSize ni sa boîte, aucun signal ne
+-- les refait (relecture B1, B1-16)
+local redecorate: (label: TextObject) -> () = function() end
+
 reapplyAll = function()
 	for label, e in styles do
 		if label.Parent ~= nil then
 			apply(label :: TextObject, e)
+			redecorate(label :: TextObject)
 		end
 	end
 end
@@ -594,11 +665,20 @@ local function glyph(): any
 	return GlyphModule
 end
 
--- Taille du texte à l'écran (px TV, avant le facteur du moteur) : taille dessinée du style, sinon
--- TextSize
+-- Taille du texte À L'ÉCRAN (px TV) : taille voulue du style ; une phrase ("sentence") est agrandie
+-- par le moteur du facteur du joueur (borné par sa contrainte, Text.MaxFactor, quand le moteur la
+-- respecte) : ses lignes et ses étoiles se calculent à cette taille-là (relecture B1, B1-16) ; un
+-- "label" ou un "fit" est dessiné à sa taille voulue (compensation). Sans style : TextSize.
 local function shownSize(label: TextObject): number
 	local e = styles[label]
 	if e and e.display > 0 then
+		if e.kind == "sentence" and measured.factor > 1 then
+			local grown = e.display * measured.factor
+			if measured.bound <= 1 then
+				grown = math.min(grown, math.ceil(e.display * Text.MaxFactor))
+			end
+			return grown
+		end
 		return e.display
 	end
 	return math.max(1, label.TextSize)
@@ -814,6 +894,37 @@ local function unglue(text: string): string
 	return (string.gsub(text, "{_}", " "))
 end
 
+-- Lignes d'un paragraphe (repères compris) coupé à `width` px TV à la taille `size`, aux espaces
+-- ordinaires seulement ; vrai si chaque ligne tient (un mot tenu ensemble plus large que la boîte : non)
+local function glueLines(
+	paragraph: string,
+	size: number,
+	font: Enum.Font,
+	width: number
+): ({ string }, boolean)
+	if textSize(unglue(paragraph), size, font).X <= width + 0.5 then
+		return { paragraph }, true
+	end
+	local out: { string } = {}
+	local line = ""
+	for word in string.gmatch(paragraph, "[^ ]+") do
+		local candidate = if line == "" then word else line .. " " .. word
+		if line ~= "" and textSize(unglue(candidate), size, font).X > width + 0.5 then
+			table.insert(out, line)
+			line = word
+		else
+			line = candidate
+		end
+	end
+	table.insert(out, line)
+	for _, l in out do
+		if textSize(unglue(l), size, font).X > width + 0.5 then
+			return out, false
+		end
+	end
+	return out, true
+end
+
 -- Texte à écrire : repères remplacés par des espaces, retours posés aux espaces ordinaires si besoin
 local function glue(label: TextObject, text: string): string
 	if string.find(text, Text.GLUE, 1, true) == nil then
@@ -828,23 +939,37 @@ local function glue(label: TextObject, text: string): string
 	local font = enumFont(label)
 	local out: { string } = {}
 	for paragraph in string.gmatch(text .. "\n", "([^\n]*)\n") do
-		if textSize(unglue(paragraph), size, font).X <= box.X + 0.5 then
-			table.insert(out, unglue(paragraph))
-		else
-			local line = ""
-			for word in string.gmatch(paragraph, "[^ ]+") do
-				local candidate = if line == "" then word else line .. " " .. word
-				if line ~= "" and textSize(unglue(candidate), size, font).X > box.X + 0.5 then
-					table.insert(out, unglue(line))
-					line = word
-				else
-					line = candidate
-				end
-			end
-			table.insert(out, unglue(line))
+		local lines = glueLines(paragraph, size, font, box.X)
+		for _, l in lines do
+			table.insert(out, unglue(l))
 		end
 	end
 	return table.concat(out, "\n")
+end
+
+-- Taille "fit" d'un texte à mots tenus ensemble (relecture B1, B1-23) : plus grande taille entière de
+-- [lo, hi] où le texte d'origine, coupé à cette taille comme glue() le coupera, tient dans la boîte
+-- (chaque ligne en largeur, toutes les lignes en hauteur). L'ancien calcul mesurait les lignes coupées à
+-- la taille précédente (« FLOP ! LE / PLUS RARE · / 1 sur 1,00M » coupé à 96 px) : texte deux fois trop
+-- petit, ou une ligne trop large que le moteur recoupait au repère.
+gluedFit = function(label: TextObject, box: Vector2, lo: number, hi: number): number?
+	local raw = glued[label]
+	if raw == nil or not label.TextWrapped then
+		return nil
+	end
+	local font = enumFont(label)
+	local function fits(size: number): boolean
+		local n = 0
+		for paragraph in string.gmatch(raw .. "\n", "([^\n]*)\n") do
+			local lines, ok = glueLines(paragraph, size, font, box.X)
+			if not ok then
+				return false
+			end
+			n += #lines
+		end
+		return n * size <= box.Y + 0.01
+	end
+	return largest(lo, hi, fits)
 end
 
 local writeRaw: (label: TextObject, raw: string) -> ()
@@ -915,6 +1040,21 @@ writeOnce = function(label: TextObject, raw: string)
 	end
 	if marks ~= nil or iconStates[label] ~= nil then
 		setIcons(label, marks)
+	end
+end
+
+redecorate = function(label: TextObject)
+	local raw = glued[label]
+	if raw ~= nil then
+		-- réécrit les lignes à la taille à l'écran (et replace les étoiles du même texte)
+		if not writing[label] then
+			pcall(writeRaw, label, raw)
+		end
+		return
+	end
+	local st = iconStates[label]
+	if st and #st.marks > 0 then
+		pcall(placeIcons, label)
 	end
 end
 

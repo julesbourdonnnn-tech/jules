@@ -283,8 +283,10 @@ local function starLayer(
 		seg.BorderSizePixel = 0
 		seg.BackgroundColor3 = color
 		seg.AnchorPoint = Vector2.new(0.5, 0.5)
-		seg.Position = UDim2.fromOffset((a.X + b.X) / 2, (a.Y + b.Y) / 2)
-		seg.Size = UDim2.fromOffset(d.Magnitude + thick, thick)
+		-- en fractions du cadre (carré) : l'étoile suit la taille de son cadre (texte agrandi, autre
+		-- taille dessinée) sans être reconstruite, et sans l'arrondi au pixel des Offset (relecture B1)
+		seg.Position = UDim2.fromScale((a.X + b.X) / 2 / size, (a.Y + b.Y) / 2 / size)
+		seg.Size = UDim2.fromScale((d.Magnitude + thick) / size, thick / size)
 		seg.Rotation = math.deg(math.atan2(d.Y, d.X))
 		seg.ZIndex = z
 		local round = Instance.new("UICorner")
@@ -297,8 +299,8 @@ local function starLayer(
 	disc.BorderSizePixel = 0
 	disc.BackgroundColor3 = color
 	disc.AnchorPoint = Vector2.new(0.5, 0.5)
-	disc.Position = UDim2.fromOffset(cx, cy)
-	disc.Size = UDim2.fromOffset(2 * core, 2 * core)
+	disc.Position = UDim2.fromScale(cx / size, cy / size)
+	disc.Size = UDim2.fromScale(2 * core / size, 2 * core / size)
 	disc.ZIndex = z
 	local round = Instance.new("UICorner")
 	round.CornerRadius = UDim.new(0.5, 0)

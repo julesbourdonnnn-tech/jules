@@ -266,85 +266,165 @@ return function(T)
 			return out
 		end
 
-		for _, mode in { "respected", "ignored" } do
-			it(
-				"moteur « "
-					.. mode
-					.. " », Medium puis pire cas : aucun TextScaled, chaque texte suit la politique, libellés inchangés",
-				function()
-					reset()
-					local h = TvAudit.client()
-					engineTextService()
-					local Text = TvAudit.mod(h, "UI.Text")
-					local PC = TvAudit.mod(h, "UI.PanelController")
-					-- tous les panneaux construits (et leurs textes posés)
-					for _, panel in { "Ranch", "Squishydex", "Objectives", "Leaderboards", "Settings" } do
-						PC.open(panel)
-						h:settle(2)
-						PC.closeAll()
-						h:settle(1)
-					end
-					local list = texts(h)
-					expect(#list > 100).toBe(true)
-					local before = {}
-					local bad = {}
-					for _, d in list do
-						if d.TextScaled then
-							table.insert(bad, d:GetFullName() .. " : TextScaled")
+		-- relecture B1 (B1-15) : TextService honore-t-il PreferredTextSize ? Jamais mesuré : les deux
+		for _, honours in { true, false } do
+			for _, mode in { "respected", "ignored" } do
+				it(
+					"moteur « "
+						.. mode
+						.. " », TextService "
+						.. (if honours then "agrandi" else "non agrandi")
+						.. ", Medium puis pire cas : aucun TextScaled, chaque texte suit la politique, libellés inchangés",
+					function()
+						reset()
+						local h = TvAudit.client()
+						if honours then
+							engineTextService()
 						end
-						local kind = Text.kind(d)
-						if kind == nil then
-							table.insert(
-								bad,
-								d:GetFullName() .. " « " .. d.Text .. " » : hors de la politique de UI/Text"
-							)
+						local Text = TvAudit.mod(h, "UI.Text")
+						local PC = TvAudit.mod(h, "UI.PanelController")
+						-- tous les panneaux construits (et leurs textes posés)
+						for _, panel in { "Ranch", "Squishydex", "Objectives", "Leaderboards", "Settings" } do
+							PC.open(panel)
+							h:settle(2)
+							PC.closeAll()
+							h:settle(1)
 						end
-						before[d] = rendered(d)
-					end
-					expect(table.concat(bad, "\n")).toBe("")
-					setPreferred(h, Text, WORST, mode)
-					for _, d in list do
-						local kind = Text.kind(d)
-						local now = rendered(d)
-						if kind == "sentence" then
-							if math.abs(now - before[d] * WORST) > 1 then
+						local list = texts(h)
+						expect(#list > 100).toBe(true)
+						local before = {}
+						local bad = {}
+						for _, d in list do
+							if d.TextScaled then
+								table.insert(bad, d:GetFullName() .. " : TextScaled")
+							end
+							local kind = Text.kind(d)
+							if kind == nil then
+								table.insert(
+									bad,
+									d:GetFullName()
+										.. " « "
+										.. d.Text
+										.. " » : hors de la politique de UI/Text"
+								)
+							end
+							before[d] = rendered(d)
+						end
+						expect(table.concat(bad, "\n")).toBe("")
+						setPreferred(h, Text, WORST, mode)
+						for _, d in list do
+							local kind = Text.kind(d)
+							local now = rendered(d)
+							if kind == "sentence" then
+								if math.abs(now - before[d] * WORST) > 1 then
+									table.insert(
+										bad,
+										string.format(
+											"%s : phrase %.1f → %.1f (×1,5 attendu)",
+											d:GetFullName(),
+											before[d],
+											now
+										)
+									)
+								end
+							elseif math.abs(now - before[d]) > 1 then
 								table.insert(
 									bad,
 									string.format(
-										"%s : phrase %.1f → %.1f (×1,5 attendu)",
+										"%s « %s » : %.1f px à Medium, %.1f au pire cas",
 										d:GetFullName(),
+										d.Text,
 										before[d],
 										now
 									)
 								)
 							end
-						elseif math.abs(now - before[d]) > 1 then
-							table.insert(
-								bad,
-								string.format(
-									"%s « %s » : %.1f px à Medium, %.1f au pire cas",
-									d:GetFullName(),
-									d.Text,
-									before[d],
-									now
+						end
+						expect(table.concat(bad, "\n")).toBe("")
+						setPreferred(h, Text, 1, mode)
+						for _, d in list do
+							if rendered(d) ~= before[d] then
+								table.insert(
+									bad,
+									d:GetFullName() .. " : taille changée après retour à Medium"
 								)
-							)
+							end
 						end
+						expect(table.concat(bad, "\n")).toBe("")
+						reset()
+						clean(h)
 					end
-					expect(table.concat(bad, "\n")).toBe("")
-					setPreferred(h, Text, 1, mode)
-					for _, d in list do
-						if rendered(d) ~= before[d] then
-							table.insert(bad, d:GetFullName() .. " : taille changée après retour à Medium")
-						end
-					end
-					expect(table.concat(bad, "\n")).toBe("")
-					reset()
-					clean(h)
-				end
-			)
+				)
+			end
 		end
 	end)
+	-- relecture B1 (B1-15) : réglage Largest DÈS LE DÉMARRAGE (aucune mesure faite d'abord à Medium,
+	-- aucun cache de largeurs rempli à Medium) : chaque libellé, "fit" compris, a la même taille qu'au
+	-- démarrage à Medium, que TextService honore le réglage ou non
+	describe("Text_policy › démarrage au réglage Largest : mêmes libellés qu'à Medium", function()
+		local function sizes(factor, honours)
+			reset()
+			MockInstance.textEngine.factor = factor
+			local h = TvAudit.client({
+				before = function(hh)
+					hh.game.GuiService.PreferredTextSize = if factor > 1 then LARGEST else MEDIUM
+				end,
+			})
+			if honours then
+				engineTextService()
+			end
+			local Text = TvAudit.mod(h, "UI.Text")
+			Text.remeasure()
+			local PC = TvAudit.mod(h, "UI.PanelController")
+			local out = {}
+			for _, panel in { "Ranch", "Squishydex", "Objectives", "Leaderboards", "Settings", "Shop" } do
+				PC.open(panel)
+				h:settle(2)
+				for _, d in h.localPlayer.PlayerGui:GetDescendants() do
+					if (d:IsA("TextLabel") or d:IsA("TextButton")) and d.Text ~= "" and d.Visible then
+						local kind = Text.kind(d)
+						if kind ~= nil and kind ~= "sentence" then
+							local key = panel .. " " .. d:GetFullName() .. " « " .. d.Text .. " »"
+							out[key] = out[key] or {}
+							table.insert(out[key], rendered(d))
+						end
+					end
+				end
+				PC.closeAll()
+				h:settle(1)
+			end
+			reset()
+			clean(h)
+			return out
+		end
+
+		for _, honours in { true, false } do
+			it("TextService " .. (if honours then "agrandi" else "non agrandi"), function()
+				local medium = sizes(1, honours)
+				local largest = sizes(WORST, honours)
+				local bad, n = {}, 0
+				for key, list in medium do
+					local other = largest[key]
+					if other and #other == #list then
+						table.sort(list)
+						table.sort(other)
+						for i, v in list do
+							n += 1
+							if math.abs(other[i] - v) > 1 and #bad < 8 then
+								table.insert(
+									bad,
+									string.format("%s : %.1f à Medium, %.1f à Largest", key, v, other[i])
+								)
+							end
+						end
+					end
+				end
+				expect(n > 100).toBe(true)
+				expect(table.concat(bad, "\n")).toBe("")
+			end)
+		end
+	end)
+
 	describe("Text_policy › panneau TextProbe (Diagnostics, administrateurs)", function()
 		for _, mode in { "respected", "ignored" } do
 			it(

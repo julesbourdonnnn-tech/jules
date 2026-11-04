@@ -1162,6 +1162,8 @@ type HoldState = {
 	onProgress: ((alpha: number) -> ())?,
 	onEarly: (() -> ())?,
 	canStart: (() -> boolean)?,
+	conns: { RBXScriptConnection }, -- souris et sélection du bouton (coupées si le maintien est remplacé)
+	changes: number, -- FocusGuard.contentChanges() au début du maintien
 }
 
 local holds: { [GuiButton]: HoldState } = setmetatable({}, { __mode = "k" }) :: any
@@ -1196,6 +1198,15 @@ local function beginHold(state: HoldState)
 	if not state.enabled or state.startedAt ~= nil then
 		return
 	end
+	-- maintien remplacé (Widgets.holdOn rappelé sur ce bouton) : l'ancien ne démarre plus jamais
+	if holds[state.hold.button] ~= state then
+		return
+	end
+	-- bouton caché (fenêtre fermée sous la souris : MouseLeave ne vient jamais) : Entrée tenue dans le
+	-- jeu n'achète ni ne vend rien d'invisible (relecture B1, B1-17)
+	if not Widgets.shown(state.hold.button) then
+		return
+	end
 	-- bouton grisé : Activated joue le refus (un seul refus, jamais deux sons Error)
 	if disabledState[state.hold.button] then
 		return
@@ -1208,6 +1219,8 @@ local function beginHold(state: HoldState)
 		stopHold(activeHold)
 	end
 	state.startedAt = Clock.now()
+	local okChanges, changes = pcall(FocusGuard.contentChanges)
+	state.changes = if okChanges and type(changes) == "number" then changes else 0
 	activeHold = state
 	Haptics.play("holdStart")
 end
@@ -1230,10 +1243,20 @@ local function stepHolds()
 		stopHold(state)
 		return
 	end
+	-- contenu changé sous le focus PENDANT le maintien (FocusId, fenêtre ouverte au-dessus, L1 / R1,
+	-- FocusGuard.guard par le code) : l'appui ne vise plus ce qui est affiché, rien n'est acheté ;
+	-- relâché, le suivant est jugé seul (relecture B1, B1-19)
+	local okChanges, changes = pcall(FocusGuard.contentChanges)
+	if okChanges and changes ~= state.changes then
+		stopHold(state, true)
+		return
+	end
 	local alpha = math.clamp(elapsed / duration, 0, 1)
 	progress(state, alpha)
 	if elapsed >= duration then
 		stopHold(state)
+		-- l'appui qui a fini le maintien a agi : son relâchement n'est pas un clic (FocusGuard)
+		pcall(FocusGuard.consumePress)
 		Haptics.play("holdDone")
 		AudioController.play("Click")
 		state.onComplete()
@@ -1412,7 +1435,9 @@ function Widgets.hold(p: HoldProps): Hold
 end
 
 -- Maintien générique sur un bouton existant (HoldOptions ; `fill` : cadre élargi de 0 à 1 pendant le
--- maintien, facultatif). Un seul maintien par bouton ; le précédent est remplacé.
+-- maintien, facultatif). Un seul maintien par bouton ; le précédent est remplacé (arrêté, connexions
+-- coupées). Relecture B1 : jamais sur un bouton caché ; le relâchement d'un maintien fini n'est pas
+-- un clic (FocusGuard.consumePress).
 function Widgets.holdOn(b: GuiButton, opts: HoldOptions, fill: Frame?): Hold
 	ensureLoops()
 	local duration = if type(opts.duration) == "number"
@@ -1447,27 +1472,54 @@ function Widgets.holdOn(b: GuiButton, opts: HoldOptions, fill: Frame?): Hold
 		onProgress = opts.onProgress,
 		onEarly = opts.onEarly,
 		canStart = opts.canStart,
+		conns = {},
+		changes = 0,
 	}
+	-- un seul maintien par bouton : l'ancien est arrêté et ses connexions coupées (sinon le clic
+	-- démarrait encore l'ancien onComplete, et chaque rappel ajoutait 4 connexions)
+	local previous = holds[b]
+	if previous then
+		stopHold(previous)
+		for _, conn in previous.conns do
+			conn:Disconnect()
+		end
+		table.clear(previous.conns)
+		if hoveredHold == previous then
+			hoveredHold = state
+		end
+	end
 	holds[b] = state
 	-- souris : clic maintenu sur le bouton (InputGuard : même garde que ✕)
-	b.MouseButton1Down:Connect(function()
-		if confirmed() then
-			beginHold(state)
-		end
-	end)
-	b.MouseEnter:Connect(function()
-		hoveredHold = state
-	end)
-	b.MouseLeave:Connect(function()
-		if hoveredHold == state then
-			hoveredHold = nil
-		end
-		stopHold(state, true)
-	end)
+	table.insert(
+		state.conns,
+		b.MouseButton1Down:Connect(function()
+			if confirmed() then
+				beginHold(state)
+			end
+		end)
+	)
+	table.insert(
+		state.conns,
+		b.MouseEnter:Connect(function()
+			hoveredHold = state
+		end)
+	)
+	table.insert(
+		state.conns,
+		b.MouseLeave:Connect(function()
+			if hoveredHold == state then
+				hoveredHold = nil
+			end
+			stopHold(state, true)
+		end)
+	)
 	-- la sélection part (croix, fenêtre fermée) : maintien annulé
-	b.SelectionLost:Connect(function()
-		stopHold(state, true)
-	end)
+	table.insert(
+		state.conns,
+		b.SelectionLost:Connect(function()
+			stopHold(state, true)
+		end)
+	)
 	return hold
 end
 

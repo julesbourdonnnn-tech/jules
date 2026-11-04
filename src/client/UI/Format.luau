@@ -8,7 +8,7 @@
 --   Format.percent(5, "fr")            → « +5 % »   (points de pourcentage, entier par défaut)
 --   Format.seconds(9, "fr")            → « 9,0 s »  (1 décimale)
 --   Format.level(12, 20)               → « 12/20 »
---   Format.confetti(99999, "fr")       → « 99 999 », puis « 100 K » … « 999 K » (plafond)
+--   Format.confetti(99999, "fr")       → « 99 999 », puis BigNumber.abbreviate (« 100K », « 1,50M »)
 --   Format.roman(28)                   → « XXVIII » (décor seulement : arche, titre du spectacle)
 --   Format.count(3)                    → « 3 »      (petit compteur : cœurs, rang, ×n, étape)
 --   Format.decimal(1.25, "fr", 1)      → « 1,3 »    (valeur d'une variable {x} d'une clé ; sans
@@ -36,7 +36,9 @@ Format.PercentDigits = 4
 Format.MaxSeconds = 9999.9
 Format.MaxLevel = 99
 Format.MaxConfettiRaw = 99999 -- entier brut jusqu'ici (GDD §10.7.7)
-Format.MaxConfetti = 999999 -- puis « 100 K » … « 999 K »
+-- puis le formateur des montants (GDD §4.2 « puis avec BigNumber.abbreviate ») jusqu'à la borne du
+-- schéma (confetti et confettiTotal de 0 à 1e9, GDD §4.24) ; au-delà : valeur hostile, ce plafond
+Format.MaxConfetti = 1e9
 Format.MaxCount = 9999999
 Format.MaxRoman = 3999
 
@@ -172,15 +174,29 @@ function Format.level(a: number, b: number): string
 	return digits(x) .. "/" .. digits(y)
 end
 
--- Confettis : entier brut groupé jusqu'à 99 999 (« 99 999 »), puis milliers tronqués « 100 K » …
--- « 999 K » (plafond : la place de 200 couvre les deux, GDD §10.7.7)
+-- Confettis : entier brut groupé jusqu'à 99 999 (« 99 999 »), puis la forme courte de
+-- Logic/BigNumber.abbreviate (GDD §4.2), à l'identique : 3 chiffres significatifs TRONQUÉS, virgule en
+-- français, suffixe K / M / B COLLÉ (A1-18 : jamais « 100 » / « K » sur deux lignes) — « 100K »,
+-- « 1,50M », « 1,00B » (Review_B1.spec compare les deux formateurs). Relecture B1 (B1-18) : l'ancien
+-- « 100 K » … « 999 K » mettait une espace sécable et plafonnait à tort de 1 000 000 à 1e9. Module
+-- pur (aucun require) : la forme courte des 3 premiers paliers est refaite ici. La place de 200 couvre
+-- les deux formes (GDD §10.7.7).
+local CONFETTI_SUFFIXES = { "K", "M", "B" }
 function Format.confetti(n: number, lang: string?): string
 	local v = math.floor(sane(n, 0, Format.MaxConfetti))
 	if v <= Format.MaxConfettiRaw then
 		return grouped(v, lang)
 	end
-	local k = math.min(999, v // 1000)
-	return digits(k) .. (if isFr(lang) then SPACE .. "K" else "K")
+	local s = digits(v)
+	local e = #s - 1 -- exposant décimal (5 à 9)
+	local tier = e // 3 -- palier de mille (1 à 3)
+	local intDigits = e - tier * 3 + 1 -- chiffres avant la virgule (1 à 3)
+	local three = string.sub(s, 1, 3)
+	local mark = if isFr(lang) then "," else "."
+	local text = if intDigits >= 3
+		then three
+		else string.sub(three, 1, intDigits) .. mark .. string.sub(three, intDigits + 1)
+	return text .. CONFETTI_SUFFIXES[tier]
 end
 
 -- Chiffres romains (décor seulement : arche du ranch, titre du spectacle, drapeaux ; jamais un

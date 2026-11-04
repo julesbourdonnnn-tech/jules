@@ -106,6 +106,10 @@ local CHANGE_KEYS: { [Enum.KeyCode]: boolean } = {
 }
 type Press = { input: any, down: boolean, clean: boolean, began: number, ended: number }
 local guardUntil = -math.huge
+-- gardes posées parce que le CONTENU sous le focus a changé (fenêtre ouverte ou refermée au-dessus,
+-- L1 / R1 / L2 / R2, FocusId, FocusGuard.guard) : un maintien en cours s'arrête (Widgets ; relecture
+-- B1, B1-19) ; une sélection simplement rendue par le code (sauvetage) n'en est pas une
+local contentChanges = 0
 local presses: { [string]: Press } = {}
 local lastPress: Press? = nil
 local watchedSelection: GuiObject? = nil
@@ -217,8 +221,11 @@ local function guardOpenAt(now: number): boolean
 end
 
 -- Pose (ou prolonge) une garde de `seconds` ; un appui déjà enfoncé ne compte plus : son relâchement
--- doit être vu avant qu'un appui soit accepté
-local function arm(seconds: number)
+-- doit être vu avant qu'un appui soit accepté ; `content` : le contenu sous le focus a changé
+local function arm(seconds: number, content: boolean?)
+	if content then
+		contentChanges += 1
+	end
 	local now = Clock.now()
 	local s = math.clamp(if seconds == seconds then seconds else GUARD_OPEN, 0, GUARD_MAX)
 	if not guardOpenAt(now) then
@@ -307,7 +314,7 @@ local function watchSelection(selected: GuiObject?)
 		end)
 		if ok and signal then
 			focusIdConn = signal:Connect(function()
-				arm(GUARD_FOCUS)
+				arm(GUARD_FOCUS, true)
 			end)
 		end
 	end
@@ -661,7 +668,7 @@ function FocusGuard.Start()
 			return input.KeyCode
 		end)
 		if ok and typeof(key) == "EnumItem" and CHANGE_KEYS[key :: Enum.KeyCode] and #stack > 0 then
-			arm(GUARD_FOCUS)
+			arm(GUARD_FOCUS, true)
 		end
 	end)
 	UserInputService.InputEnded:Connect(function(input: InputObject)
@@ -693,7 +700,7 @@ function FocusGuard.open(window: Window)
 	table.insert(stack, { window = window, openedAt = Clock.now(), lastShown = nil, opener = opener })
 	badSince = nil
 	-- InputGuard : ✕ ignoré tant que son relâchement n'est pas vu et que GuardOpen n'est pas passée
-	arm(GUARD_OPEN)
+	arm(GUARD_OPEN, true)
 	updateBinding()
 	if not isHeld() then
 		local target = defaultOf(window)
@@ -733,7 +740,7 @@ function FocusGuard.closeNow(name: string)
 			setSelection(nil)
 		else
 			-- la sélection revient à la fenêtre de dessous : nouvel élément sous le focus (règle 10)
-			arm(GUARD_FOCUS)
+			arm(GUARD_FOCUS, true)
 			local root = top.window.root
 			if entry.opener and validIn(entry.opener, root) then
 				setSelection(entry.opener)
@@ -870,10 +877,26 @@ function FocusGuard.notePress(input: any): boolean
 	return began(input)
 end
 
+-- InputGuard : l'appui en cours (ou celui qui vient d'être relâché) a déjà agi — maintien fini
+-- (Widgets.holdOn) : son relâchement n'est plus un clic (Activated ignoré : ni double action, ni son
+-- Error d'un bouton que l'achat vient de griser ; relecture B1, B1-19) ; le suivant est jugé seul
+function FocusGuard.consumePress()
+	local press = lastPress
+	if press then
+		press.clean = false
+	end
+end
+
 -- InputGuard : pose une garde (GuardFocus par défaut) ; pour un contenu changé sous le focus
 -- (onglet, liste rechargée, Conseillé recalculé)
 function FocusGuard.guard(seconds: number?)
-	arm(if type(seconds) == "number" then seconds else GUARD_FOCUS)
+	arm(if type(seconds) == "number" then seconds else GUARD_FOCUS, true)
+end
+
+-- InputGuard : nombre de gardes posées pour un contenu changé sous le focus (Widgets : un maintien
+-- commencé avant s'arrête sans rien acheter)
+function FocusGuard.contentChanges(): number
+	return contentChanges
 end
 
 -- InputGuard : état (specs, Diagnostics)
