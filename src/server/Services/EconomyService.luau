@@ -39,7 +39,11 @@
 --   * Prestige.validateConfig au chargement et à chaque changement de configuration en direct ;
 --   * contextes d'A1 : A, bestR, firstRecordLoop, star (croissance), monuments (revenu), Gants et
 --     Super Série (pressBonus, lus par SquishyService), Sac et Pot de nuit, croissance maximale
---     (hors ligne), A (tileCost) — Formulas ne les lit qu'interrupteur ouvert.
+--     (hors ligne), A (tileCost) — Formulas ne les lit qu'interrupteur ouvert ;
+--   * prestiges v2.0 (étape 3) : prestigeV2 (profil v2, RecordR, configuration acceptée) et
+--     applyPrestige (Prestige.apply d'un bloc, cadeau du Splorch dans le Pot), appelés par
+--     SplorchService ; plafonds Balance.CapsV2 (Fame des Grands Splorch, Pluies d'étoiles) remis à
+--     zéro chaque jour avec les autres.
 -- Émet aussi UpgradeBought, ConfettiChanged. Remotes : BuyUpgrade ; UpgradeResult (envoi). Clés v2 :
 -- confetti, confettiTotal, tiles.{star, gloves, school, monuments}, atelier, atelierCosmetics, bestR
 -- (au Grand Splorch d'un profil v2 : Record R jamais sous r).
@@ -1502,7 +1506,7 @@ function EconomyService.applyPrestige(
 	end
 	RanchService.refreshBuild(player)
 	EconomyService.refresh(player)
-	RanchService.setPublic(player, { R = data.R, fame = data.fame })
+	RanchService.setPublic(player, { R = Prestige.r(data), fame = data.fame })
 	return changed, report
 end
 
