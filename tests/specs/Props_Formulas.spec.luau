@@ -619,7 +619,7 @@ return function(T)
 		)
 
 		it(
-			"v2.0 ouvert : hors ligne (Sac 16 h au plus, Pot 25-35 %, arrêt 120 s) = simulation du design",
+			"v2.0 ouvert : hors ligne (Sac 16 h au plus, Pot 25-31 %, arrêt 120 s) = simulation du design",
 			function()
 				withFlags(ALL_V2, function()
 					Props.check(
@@ -638,14 +638,15 @@ return function(T)
 						function(v)
 							local g, seconds, R, big, gMax, bag, pot, cozy, spiky =
 								v[1], v[2], v[3], v[4], v[5], v[6], v[7], v[8], v[9]
-							-- simulation : offlineSeconds v1.3 + 3 600 × Sac (≤ absence) ; Pot × (0,25 + 0,05 × Pot de nuit) / 0,25
+							-- simulation : offlineSeconds v1.3 + 3 600 × Sac (≤ absence) ; Pot × (0,25 + 0,03 × Pot de nuit)
+							-- / 0,25 (+ 3 % par niveau depuis le réglage du lot A1 3/4, docs/04 §21 ; + 5 % au design)
 							local hours = (if cozy then 12 else 8) + (if spiky then 1 else 0)
 							local last = 1e9 - seconds
 							local away = 1e9 - last
 							local simSeconds = if away <= 0
 								then 0
 								else math.min(away, math.min(away, hours * 3600) + 3600 * bag)
-							local simPot = F.offlinePot(g, seconds) * (0.25 + 0.05 * pot) / 0.25
+							local simPot = F.offlinePot(g, seconds) * (0.25 + 0.03 * pot) / 0.25
 							local target = F.splorchTarget(R)
 							local simGrowth = math.min(
 								math.min(g * 0.3 * seconds, math.max(0, 0.9 * target - big)),

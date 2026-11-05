@@ -7,11 +7,17 @@
 --  2. Jeu complet v2.0 (interrupteurs de l'économie OUVERTS dans le modèle seulement ; le jeu les
 --     garde coupés) : chaque clé du §27.9 pour check.sh — 20 joueurs par taille de serveur, joueur de
 --     référence 84 jours, joueur assidu (2 h par jour) 28 jours, et la référence sans Ascension
---     (28 jours, serveur de 16) pour recordRDay28. Toutes les clés de la v1.3 sont gardées.
---  3. La nuit (scripts/economy-nightly.sh) : ECON_NIGHT=<cas> joue un cas du jeu de nuit (50 joueurs,
---     140 jours, profils de la critique, gros acheteur, profils forcés) au lieu des parties 1 et 2.
---     ECON_NIGHT=custom ECON_PROFILE=ref|assidu ECON_SIZE=16 ECON_DAYS=84 ECON_NIGHT_PLAYERS=200 :
---     lancement manuel d'une configuration (mêmes clés que check.sh).
+--     (28 jours, serveur de 16) pour recordRDay28. Toutes les clés de la v1.3 sont gardées. Les 11
+--     clés de QUEUE (bruit à 20 joueurs plus large que leur marge, table TAIL) n'y sont qu'en alarme
+--     rapide (limite élargie de 2 écarts types mesurés) : leur vraie limite est affirmée la nuit.
+--     Les 11 configurations des parties 1 et 2 sont jouées par ECON_WORKERS (4) processus fils à la
+--     fois (tests/sim/economy-worker.luau ; mêmes graines, mêmes joueurs au bit près).
+--  3. La nuit (scripts/economy-nightly.sh) : ECON_NIGHT=<cas> joue un cas du jeu de nuit (80 joueurs
+--     au moins, ECON_NIGHT_PLAYERS ; 400 pour les configurations de check.sh, cas tails*, et les 140
+--     jours, ECON_TAIL_PLAYERS ; profils de la critique, gros acheteur, profils forcés) au lieu des
+--     parties 1 et 2. ECON_NIGHT=custom ECON_PROFILE=ref|assidu ECON_SIZE=16 ECON_DAYS=84
+--     ECON_NIGHT_PLAYERS=200 : lancement manuel d'une configuration (mêmes clés que check.sh) ;
+--     ECON_NIGHT=spread (mêmes variables, ECON_BLOCK=20) : mesure du bruit de chaque clé.
 -- ECON_PLAYERS : joueurs de la porte v1.3 (50) ; ECON_V2_PLAYERS : joueurs de la porte v2.0 (20).
 -- Chaque clé est imprimée (valeur, limites, OK/HORS) ; un test par groupe du §27.9 et par
 -- configuration échoue dès qu'une clé du groupe sort de ses limites, et les nomme toutes.
@@ -497,17 +503,6 @@ return function(T)
 			end
 		end
 	end
-	-- nuit, cas de 140 jours au serveur de 16 : une clé de queue de ses 84 (référence) ou 28 (assidu)
-	-- premiers jours est affirmée sur TAIL_PLAYERS joueurs par tails16 (mêmes graines) ; ici rapportée
-	local function coveredByTails(keys, profile)
-		for _, k in keys do
-			if not k.reported and tailOf(profile, k.label) then
-				k.reported, k.ok = true, true
-				k.label ..= " [affirmée par tails16]"
-			end
-		end
-	end
-
 	-- Liste de clés : { group, label, value, lo, hi, ok, reported }
 	local function newKeys()
 		local keys = {}
@@ -782,9 +777,6 @@ return function(T)
 		if opts.alarm then
 			applyAlarm(keys, profile)
 		end
-		if opts.tailsCovered then
-			coveredByTails(keys, profile)
-		end
 		return keys, st
 	end
 
@@ -1049,8 +1041,11 @@ return function(T)
 		return blocks
 	end
 	-- les configurations de check.sh sur TAIL_PLAYERS joueurs (mêmes graines : les 20 premiers sont ceux
-	-- de check.sh), chaque clé à sa VRAIE limite, aux 3 tailles de serveur ; un processus par profil et
-	-- par taille (le jeu de nuit en joue plusieurs à la fois)
+	-- de check.sh), chaque clé à sa VRAIE limite ; un processus par profil et par taille (le jeu de nuit
+	-- en joue plusieurs à la fois). L'assidu du serveur de 16 est dans assidu140 (mêmes graines, mêmes
+	-- 28 premiers jours : ses clés de queue sont des clés de bandes de jours, identiques) ; la référence
+	-- du serveur de 16 garde son cas (les clés « A7 » de 84 jours ne comptent pas les mêmes boucles que
+	-- celles de 140 jours)
 	for _, size in EconomyModel.SIZES do
 		NIGHT_CASES["tailsRef" .. size] = function(model)
 			local noAscendRes = if size == 16
@@ -1068,16 +1063,25 @@ return function(T)
 			})
 			itKeys(`nuit : référence, serveur de {size}, {TAIL_PLAYERS} joueurs, 84 jours`, keys)
 		end
-		NIGHT_CASES["tailsAssidu" .. size] = function(model)
-			local assidu = runV2(model, size, TAIL_PLAYERS, 28, { assidu = true })
-			spreadReport(assidu, nil, "assidu", size, 28, 20)
-			local keys = v2Keys(assidu, "assidu", { ascend = true, atelier = true, days = 28 })
-			itKeys(`nuit : assidu 2 h par jour, serveur de {size}, {TAIL_PLAYERS} joueurs, 28 jours`, keys)
+		if size ~= 16 then
+			NIGHT_CASES["tailsAssidu" .. size] = function(model)
+				local assidu = runV2(model, size, TAIL_PLAYERS, 28, { assidu = true })
+				spreadReport(assidu, nil, "assidu", size, 28, 20)
+				local keys = v2Keys(assidu, "assidu", { ascend = true, atelier = true, days = 28 })
+				itKeys(
+					`nuit : assidu 2 h par jour, serveur de {size}, {TAIL_PLAYERS} joueurs, 28 jours`,
+					keys
+				)
+			end
 		end
 	end
+	-- 140 jours au serveur de 16 sur TAIL_PLAYERS joueurs : les clés tardives (trou p90 des jours 85-140,
+	-- écarts des Ascensions en jours entiers, boucles record par A) sont des clés de queue elles aussi
+	-- (journal A1-33) ; la référence sans Ascension (recordRDay28, marge de plusieurs R) sur NIGHT_PLAYERS
 	NIGHT_CASES.ref140 = function(model)
 		local noAscend = v2Stats(runV2(model, 16, NIGHT_PLAYERS, 28, { ascend = false }))
-		local res = runV2(model, 16, NIGHT_PLAYERS, 140, {})
+		local res = runV2(model, 16, TAIL_PLAYERS, 140, {})
+		spreadReport(res, nil, "ref", 16, 140, 20)
 		local keys = v2Keys(res, "ref", {
 			v13 = true,
 			ascend = true,
@@ -1085,19 +1089,15 @@ return function(T)
 			loopGap = true,
 			days = 140,
 			noAscend = noAscend,
-			tailsCovered = true,
 		})
-		itKeys(`nuit : référence, {NIGHT_PLAYERS} joueurs, 140 jours`, keys)
+		itKeys(`nuit : référence, {TAIL_PLAYERS} joueurs, 140 jours`, keys)
 	end
 	NIGHT_CASES.assidu140 = function(model)
 		local noAscend = v2Stats(runV2(model, 16, NIGHT_PLAYERS, 28, { assidu = true, ascend = false }))
-		local res = runV2(model, 16, NIGHT_PLAYERS, 140, { assidu = true })
-		local keys = v2Keys(
-			res,
-			"assidu",
-			{ ascend = true, atelier = true, days = 140, noAscend = noAscend, tailsCovered = true }
-		)
-		itKeys(`nuit : assidu 2 h par jour, {NIGHT_PLAYERS} joueurs, 140 jours`, keys)
+		local res = runV2(model, 16, TAIL_PLAYERS, 140, { assidu = true })
+		spreadReport(res, nil, "assidu", 16, 140, 20)
+		local keys = v2Keys(res, "assidu", { ascend = true, atelier = true, days = 140, noAscend = noAscend })
+		itKeys(`nuit : assidu 2 h par jour, {TAIL_PLAYERS} joueurs, 140 jours`, keys)
 	end
 	-- lancement manuel : ECON_NIGHT=custom ECON_PROFILE=ref|assidu ECON_SIZE=4|8|16 ECON_DAYS=84
 	-- ECON_NIGHT_PLAYERS=200 (mêmes clés que check.sh pour ce profil)

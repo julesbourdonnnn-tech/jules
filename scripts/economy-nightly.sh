@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
 # Jeu de nuit de la porte d'économie v2.0 (docs/04 §27.9, GDD §4.24.1) : BLOQUANT, comme la porte de
 # check.sh. Chaque cas est un processus Lune (EconomyPacing.spec avec ECON_NIGHT=<cas>) :
-#   tailsRef4 tailsRef8 tailsRef16 tailsAssidu4 tailsAssidu8 tailsAssidu16
+#   tailsRef4 tailsRef8 tailsRef16 tailsAssidu4 tailsAssidu8
 #                      les configurations de check.sh (référence 84 jours, assidu 28 jours, serveurs de
 #                      4, 8 et 16) sur 400 joueurs : chaque clé à sa VRAIE limite, dont les clés de queue
 #                      que check.sh ne garde qu'en alarme rapide (docs/04 §27.9) ; bruit imprimé (SPREAD)
-#   ref140 assidu140   référence et assidu (2 h par jour), 80 joueurs, 140 jours (+ sans Ascension,
-#                      28 jours : recordRDay28)
+#   ref140 assidu140   référence et assidu (2 h par jour), 400 joueurs, 140 jours, serveur de 16 (+ sans
+#                      Ascension, 80 joueurs, 28 jours : recordRDay28) ; assidu140 tient lieu de
+#                      tailsAssidu16 (mêmes graines, mêmes 28 premiers jours)
 #   min10 min20        10 et 20 min par jour, 84 jours
 #   weekend            90 min le samedi et le dimanche, 140 jours
 #   allday             6 h par jour, serveur de 4, 28 jours (≤ 30 % « sans but » par bande)
@@ -28,7 +29,7 @@ cd "$(dirname "$0")/.."
 export PATH="$HOME/.cargo/bin:$HOME/.rokit/bin:$PATH"
 
 # les plus longs d'abord (le jeu finit plus tôt quand ils commencent en premier)
-ALL_CASES=(assidu140 tailsAssidu4 tailsAssidu8 tailsAssidu16 noatelier advisor tailsRef16 tailsRef4 tailsRef8 refuse3 spender allday ref140 fullAtelier weekend min20 min10 forcedA10 forcedA20 forcedA30 forcedA60)
+ALL_CASES=(assidu140 ref140 noatelier advisor tailsAssidu4 tailsAssidu8 tailsRef16 tailsRef4 tailsRef8 refuse3 spender allday fullAtelier weekend min20 min10 forcedA10 forcedA20 forcedA30 forcedA60)
 if [ "$#" -gt 0 ]; then
 	CASES=("$@")
 else
