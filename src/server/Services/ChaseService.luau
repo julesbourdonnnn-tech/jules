@@ -68,6 +68,7 @@ local CommunityService = require(script.Parent.CommunityService)
 local EventService = require(script.Parent.EventService)
 local RushService = require(script.Parent.RushService)
 local SplorchService = require(script.Parent.SplorchService)
+local HelperService = require(script.Parent.HelperService) -- v2.0 (lot A3) : Plopettes, stépées ici
 local LeaderboardService = require(script.Parent.LeaderboardService)
 
 local ChaseService = {}
@@ -1372,6 +1373,7 @@ function ChaseService.tick(now: number)
 	Guard.try("tick:event", EventService.step, now, acting)
 	Guard.try("tick:rush", RushService.step, now, acting)
 	Guard.try("tick:splorch", SplorchService.step, now)
+	Guard.try("tick:helpers", HelperService.step, now, acting) -- v2.0 [Helpers] : rien interrupteur coupé
 	Guard.try("tick:creatures", stepCreatures, now)
 	Guard.try("tick:leaps", stepLeaps, now)
 	Guard.try("tick:catches", stepCatches, now)

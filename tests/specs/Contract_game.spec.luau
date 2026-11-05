@@ -1,5 +1,6 @@
 --!nocheck
--- Contrat du JEU (docs/04, v1.2) : surface d'API des 66 modules des 8 paquets, ordres d'initialisation,
+-- Contrat du JEU (docs/04, v1.2) : surface d'API des 66 modules des 8 paquets (+ HelperService, lot A3
+-- de la v2.0, INT-V2-ORDER), ordres d'initialisation,
 -- catalogue des intentions (Config/Intents) et registre des remotes, propriétaires des clés du profil,
 -- données réelles des configurations (26 espèces, raretés, mutations, tables de la Cuve, prix des
 -- dalles, objectifs, paliers, bannières, cosmétiques, sons, vibrations) et disposition télé du HUD.
@@ -401,6 +402,12 @@ local API = {
 		fns = { "Init", "Start", "step", "queued", "isWaiting", "openStates" },
 		signals = {},
 	},
+	-- v2.0 (lot A3, INT-V2-ORDER ; docs/04 §27.7) : Plopettes, stépées par le tick de ChaseService
+	["ServerScriptService.Server.Services.HelperService"] = {
+		pkg = "A3",
+		fns = { "Init", "Start", "step", "state", "pause", "resume" },
+		signals = {},
+	},
 	["ServerScriptService.Server.Services.QuestService"] = {
 		pkg = "meta",
 		fns = {
@@ -750,6 +757,7 @@ local SERVER_ORDER = {
 	"EventService",
 	"RushService",
 	"SplorchService",
+	"HelperService", -- v2.0 (lot A3, INT-V2-ORDER) : juste après SplorchService
 	"ProductService",
 	"LeaderboardService",
 	"ChaseService",
@@ -903,7 +911,7 @@ return function(T)
 					})
 				end
 			end
-			expect(count).toBe(66)
+			expect(count).toBe(67) -- 66 modules des 8 paquets + HelperService (lot A3, INT-V2-ORDER)
 			expect(#hs.errors + #hc.errors).toBe(0)
 		end)
 
@@ -920,6 +928,7 @@ return function(T)
 					or spec.pkg == "client-world"
 					or spec.pkg == "client-hud"
 					or spec.pkg == "client-panels"
+					or spec.pkg == "A3" -- v2.0 : HelperService (docs/04 §27.1)
 				expect({ path = path, known = known }).toEqual({ path = path, known = true })
 			end
 		end)

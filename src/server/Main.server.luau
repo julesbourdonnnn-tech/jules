@@ -31,6 +31,7 @@ local ORDER = {
 	"EventService", -- chase : EventClock, MEGA, jauge, Lune, spectacles, fêtes, LiveOps
 	"RushService", -- chase : mode Rush / Cozy, clôtures, boops, protections
 	"SplorchService", -- chase : Grand Splorch, cadeaux, applaudissements
+	"HelperService", -- v2.0 (lot A3, INT-V2-ORDER) : Plopettes, stépées par le tick de ChaseService
 	"ProductService", -- ranch : effets des passes et produits
 	"LeaderboardService", -- meta : classements de la semaine, statue
 	"ChaseService", -- chase : tick de 10 Hz, créatures, bonds, captures, anti-triche

@@ -7,6 +7,9 @@
 --   Activity.noteMove(player, pos, now) -- position VALIDÉE du tick (ChaseService) : actif si le joueur
 --                                       -- s'est éloigné d'au moins MoveStuds de son point d'ancrage
 --   Activity.isActive(player, now)      -- activité dans les Window dernières secondes
+--   Activity.lastIntent(player)         -- v2.0 (N23, lot A3) : instant de la dernière INTENTION
+--                                       -- ACCEPTÉE (note), -math.huge sinon ; noteMove ne la change
+--                                       -- jamais : un stick calé ne retarde pas la sieste des Plopettes
 -- La règle « à 60 studs du centre de la place pendant l'alerte du MEGA » est appliquée par
 -- EventService.isActive (elle dépend de la phase du MEGA). Temps : Clock.now() passé par l'appelant
 -- (les specs voyagent dans le temps). État oublié au départ (PlayerRemoving).
@@ -21,9 +24,19 @@ local Activity = {}
 
 local lastActive: { [Player]: number } = {}
 local anchors: { [Player]: Vector3 } = {}
+-- v2.0 (N23) : dernière intention acceptée, à part de lastActive (que noteMove avance aussi)
+local lastIntents: { [Player]: number } = {}
 
 local function finite(x: any): boolean
 	return type(x) == "number" and x == x and x > -math.huge and x < math.huge
+end
+
+-- Activité (intention ou déplacement) à l'instant `now` : jauge et MEGA du jeu de base
+local function mark(player: Player, now: number)
+	local previous = lastActive[player]
+	if previous == nil or now > previous then
+		lastActive[player] = now
+	end
 end
 
 -- Intention de jeu acceptée à l'instant `now`
@@ -31,9 +44,10 @@ function Activity.note(player: Player, now: number)
 	if player.Parent == nil or not finite(now) then
 		return
 	end
-	local previous = lastActive[player]
+	mark(player, now)
+	local previous = lastIntents[player]
 	if previous == nil or now > previous then
-		lastActive[player] = now
+		lastIntents[player] = now
 	end
 end
 
@@ -54,7 +68,7 @@ function Activity.noteMove(player: Player, pos: Vector3, now: number)
 	end
 	if (pos - anchor).Magnitude >= Events.Activity.MoveStuds then
 		anchors[player] = pos
-		Activity.note(player, now)
+		mark(player, now) -- activité, jamais une intention (N23)
 	end
 end
 
@@ -72,16 +86,24 @@ function Activity.lastActive(player: Player): number
 	return lastActive[player] or -math.huge
 end
 
+-- v2.0 (N23, lot A3) : instant de la dernière intention ACCEPTÉE (-math.huge si aucune) ; lu par
+-- HelperService (sieste des Plopettes après Balance.Helpers.NapAfter s)
+function Activity.lastIntent(player: Player): number
+	return lastIntents[player] or -math.huge
+end
+
 -- Oublie le joueur (départ)
 function Activity.clear(player: Player)
 	lastActive[player] = nil
 	anchors[player] = nil
+	lastIntents[player] = nil
 end
 
 -- Remise à zéro complète (specs)
 function Activity.reset()
 	table.clear(lastActive)
 	table.clear(anchors)
+	table.clear(lastIntents)
 end
 
 Players.PlayerRemoving:Connect(Activity.clear)
