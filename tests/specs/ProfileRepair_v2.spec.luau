@@ -667,6 +667,15 @@ return function(T)
 				end,
 			},
 			{
+				"hearts.givenTo",
+				function(d)
+					d.hearts.givenTo = { [1] = 7, [3] = 9, x = 4 } -- à trous (vieux bug) : entrées gardées
+				end,
+				function(d)
+					return Tables.deepEqual(d.hearts.givenTo, { 7, 9 })
+				end,
+			},
+			{
 				"hearts.receivedTotal",
 				function(d)
 					d.hearts.receivedTotal = -1

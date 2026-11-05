@@ -784,6 +784,29 @@ end
 -- Schéma v2 (docs/04 §27.2) : profils de version ≥ 2 seulement
 -- ---------------------------------------------------------------------------------------------
 
+-- Entrées d'une liste dans l'ordre de ses index entiers valides (une liste à trous ou mixte, écrite
+-- par un vieux bug, garde ses entrées lisibles ; les clés étrangères sont laissées de côté)
+local function listEntries(list: any): { any }
+	if type(list) ~= "table" then
+		return {}
+	end
+	if isDense(list) then
+		return list
+	end
+	local idx = {}
+	for k in list do
+		if type(k) == "number" and k >= 1 and k % 1 == 0 and k <= MAX_DENSE then
+			table.insert(idx, k)
+		end
+	end
+	table.sort(idx)
+	local out = {}
+	for _, k in idx do
+		table.insert(out, list[k])
+	end
+	return out
+end
+
 -- Mot d'un ensemble de bits : entier de [0 ; 2^32[, sinon 0 (même règle que Logic/Bitset : un mot
 -- abîmé ne donne jamais un bit)
 local function cleanWord(x: any): (boolean, number)
@@ -862,8 +885,7 @@ local function repairProgressionV2(ctx: Ctx, d: { [string]: any }, raw: RawV2)
 	end
 	intField(ctx, d, "ascend", 0, MAX_A, "ascend")
 	local A = Prestige.ascend(d)
-	-- bonus de retour au record déjà donné pour A : ≤ A ; illisible (ou absent) → A (jamais donné
-	-- deux fois)
+	-- bonus de retour au record déjà donné pour A : ≤ A ; illisible → A (jamais donné deux fois)
 	local okRegain, regain = intIn(if finite(raw.regainBonusA) then d.regainBonusA else nil, 0, A, A)
 	if not okRegain then
 		d.regainBonusA = regain
@@ -922,8 +944,8 @@ local function repairOthersV2(ctx: Ctx, d: { [string]: any }, raw: RawV2)
 	local best = Prestige.bestR(d)
 	intField(ctx, d.stats, "upgradesBought", 0, 1e12, "stats.upgradesBought")
 	intField(ctx, d.stats, "petitSplorches", 0, 1e12, "stats.petitSplorches")
-	-- cartes « Nouveau » déjà vues : ≤ Record R ; illisible, absent ou négatif → Record R (jamais une
-	-- pluie de cartes déjà montrées)
+	-- cartes « Nouveau » déjà vues : ≤ Record R ; illisible ou négatif → Record R (jamais une pluie
+	-- de cartes déjà montrées)
 	local seen = if finite(raw.unlocksSeen) then d.unlocksSeen else nil
 	if not finite(seen) or seen < 0 then
 		d.unlocksSeen = best
@@ -943,22 +965,8 @@ local function repairOthersV2(ctx: Ctx, d: { [string]: any }, raw: RawV2)
 	-- Défis : liste dense d'au plus 3 entrées { id, p, done }, chaque Défi une fois ; une entrée
 	-- illisible (id inconnu, doublon) est retirée, p et done réparés en place
 	local list = track.challenges
-	local entries: { any } = {}
+	local entries = listEntries(list)
 	local changed = not isDense(list)
-	if isDense(list) then
-		entries = list
-	else
-		local idx = {}
-		for k in list do
-			if type(k) == "number" and k >= 1 and k % 1 == 0 and k <= MAX_DENSE then
-				table.insert(idx, k)
-			end
-		end
-		table.sort(idx)
-		for _, k in idx do
-			table.insert(entries, list[k])
-		end
-	end
 	local keep: { any } = {}
 	local ids: { [number]: boolean } = {}
 	for _, entry in entries do
@@ -1022,24 +1030,22 @@ local function repairOthersV2(ctx: Ctx, d: { [string]: any }, raw: RawV2)
 	intField(ctx, hearts, "givenDay", 0, 1e9, "hearts.givenDay")
 	intField(ctx, hearts, "receivedTotal", 0, 1e12, "hearts.receivedTotal")
 	local given = hearts.givenTo
-	local okGiven = isDense(given) and #given <= HEARTS_GIVEN_MAX
+	local okGiven = isDense(given)
 	local cleanGiven: { number } = {}
 	local seenIds: { [number]: boolean } = {}
-	if isDense(given) then
-		for _, userId in given do
-			if
-				#cleanGiven < HEARTS_GIVEN_MAX
-				and finite(userId)
-				and userId % 1 == 0
-				and userId >= -1e15
-				and userId <= 1e15
-				and not seenIds[userId]
-			then
-				seenIds[userId] = true
-				table.insert(cleanGiven, userId)
-			else
-				okGiven = false
-			end
+	for _, userId in listEntries(given) do
+		if
+			#cleanGiven < HEARTS_GIVEN_MAX
+			and finite(userId)
+			and userId % 1 == 0
+			and userId >= -1e15
+			and userId <= 1e15
+			and not seenIds[userId]
+		then
+			seenIds[userId] = true
+			table.insert(cleanGiven, userId)
+		else
+			okGiven = false
 		end
 	end
 	if not okGiven then
