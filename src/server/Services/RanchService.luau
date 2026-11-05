@@ -20,8 +20,9 @@
 -- v2.0 (lot A2, docs/04 §27.5, §27.7, §27.14) : attributs Types.RanchAttributesV2 posés sur le modèle
 -- du ranch (Ranches/<k>, répliqué à tous) par setV2Attributes, chacun derrière son interrupteur
 -- (coupés : aucun attribut posé) ; RanchService calcule lui-même BestR [RecordR], Monuments
--- [Monuments], TapisTier, GloveTier, ApronTier [RanchTiers] au chargement et sur UpgradeBought,
--- Splorched, PrestigeApplied, RecordReached ; SplorchReady vient d'EconomyService (croissance) ; les
+-- [Monuments], TapisTier, GloveTier, ApronTier [RanchTiers] au chargement, sur UpgradeBought,
+-- Splorched, PrestigeApplied, RecordReached, et au tick quand un de leurs interrupteurs change en
+-- direct (relecture du lot A2) ; SplorchReady vient d'EconomyService (croissance) ; les
 -- autres (Ascend, AscendReady, PetitSplorchAt, DecoPerso, HaloOn) des services qui les possèdent.
 -- Place d'enclos offerte (N7) : offeredPlace (ranch reconstruit ; enclos déjà plein : Feedback
 -- « +25 Confettis »), appelée après Prestige.apply. Dalle du Tapis au-delà du Tapis 12 (N21) : même

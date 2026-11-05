@@ -46,7 +46,8 @@
 --     zéro chaque jour avec les autres.
 -- Émet aussi UpgradeBought, ConfettiChanged. Remotes : BuyUpgrade ; UpgradeResult (envoi). Clés v2 :
 -- confetti, confettiTotal, tiles.{star, gloves, school, monuments}, atelier, atelierCosmetics, bestR
--- (au Grand Splorch d'un profil v2 : Record R jamais sous r).
+-- (au Grand Splorch d'un profil v2 : Record R jamais sous r), decorBuilds (décorations dorées : une
+-- boucle de plus par décoration construite à chaque prestige v2.0, relecture du lot A2).
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -130,7 +131,7 @@ local REFUSED = {
 	busy = "upgrades.refused.busy",
 }
 local READY_CHECK_EVERY = 1 -- s : attribut SplorchReady du ranch [RecordR]
--- décorations dorées (champ decorBuilds, docs/04 §27.2 ; GDD §11.6 « construite dans 10 boucles ») :
+-- décorations dorées (champ decorBuilds, docs/04 §27.2 ; GDD §11.5 « construite dans 10 boucles ») :
 -- une case par décoration (18), bornée à 10 (mêmes nombres que Logic/Invariants et ProfileRepair)
 local DECOR_BUILDS = Balance.Tiles.decor.Levels
 local DECOR_BUILDS_MAX = 10

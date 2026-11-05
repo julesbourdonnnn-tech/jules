@@ -39,6 +39,8 @@
 --     de la taille du Meilleur Ami n° 1) ; Prestige.apply à BurstAt (4,0 s) d'un seul bloc, puis
 --     sauvegarde ; Pluie d'étoiles pour les autres (StarRainSeconds de revenu, CapsV2.starRain par jour,
 --     un bébé dans les 10 cadeaux du jour) ; Banner « ascend » ; Fame + 20 hors plafond ;
+--   * Record absolu (r = MaxR) : Grand Splorch refusé pour tout profil v2, progression v2.0 coupée
+--     comprise (relecture du lot A2 : r jamais au-delà de MaxR) ;
 --   * idempotence : un prestige par joueur à la fois (canPrestige) ; Prestige.apply ne fait rien deux
 --     fois ; rien n'est appliqué si le joueur est parti, si la session se termine (départ, BindToClose :
 --     DataService.isClosing) ou si la configuration est refusée ; aucun yield entre Prestige.apply et le
