@@ -33,12 +33,8 @@ export type IntentSpecV2 = {
 
 -- stylua: ignore start
 local IntentsV2: { [string]: IntentSpecV2 } = {
-	-- (BuyUpgrade : passée dans Config/Intents avec son handler, lot A2, note INT-V2-INTENTS.)
-	-- Jelly Ascend (SplorchService) : maintien de 3 s et carte « Prêt à monter ? » côté client ;
-	-- confirm = true exigé ; Prestige.ascendReady vérifié une seule fois, à l'entrée dans la file
-	JellyAscend = { owner = "SplorchService", rate = { 1, 5 }, activity = true, feature = "JellyAscend", args = {
-		{ name = "confirm", kind = "bool" },
-	} },
+	-- (BuyUpgrade et JellyAscend : passées dans Config/Intents avec leur handler, lot A2, note
+	-- INT-V2-INTENTS.)
 	-- (Habillages de ranch : PAS d'intention nouvelle. Les 14 habillages sont les valeurs de
 	-- cosmetics.theme de la v1.3, équipées par EquipCosmetic("theme", id) : docs/04 §27.2, décision C2.)
 	-- Déco perso : objet possédé (1-64, 0 = retirer) dans un emplacement 1-12 de la bonne taille

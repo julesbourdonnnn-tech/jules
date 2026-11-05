@@ -789,16 +789,22 @@ return function(T)
 						end
 					end
 				end
-				-- 4 : BuyUpgrade est passée dans Config/Intents avec son handler (lot A2, note INT-V2-INTENTS,
-				-- journal A2-8) ; elle n'est jamais dans les deux catalogues
-				expect(n).toBe(4)
+				-- 3 : BuyUpgrade (journal A2-8) puis JellyAscend (journal A2-23) sont passées dans
+				-- Config/Intents avec leur handler (lot A2, note INT-V2-INTENTS) ; jamais dans les deux
+				-- catalogues
+				expect(n).toBe(3)
 				expect(IV2.BuyUpgrade).toBeNil()
 				expect(Intents.BuyUpgrade.owner).toBe("EconomyService")
 				expect(Intents.BuyUpgrade.activity).toBe(true)
 				expect(R.BuyUpgrade).toBe("event")
+				expect(IV2.JellyAscend).toBeNil()
+				expect(Intents.JellyAscend.owner).toBe("SplorchService")
+				expect(Intents.JellyAscend.activity).toBe(true)
+				expect(Intents.JellyAscend.args).toEqual({ { name = "confirm", kind = "bool" } })
+				expect(R.JellyAscend).toBe("event")
 				-- débits du GDD v2.0 §12.7
 				expect(Intents.BuyUpgrade.rate).toEqual({ 10, 1 })
-				expect(IV2.JellyAscend.rate).toEqual({ 1, 5 })
+				expect(Intents.JellyAscend.rate).toEqual({ 1, 5 })
 				expect(IV2.GiveHeart.rate).toEqual({ 2, 1 })
 				-- mode : 1, 10 ou 0 (= Max) ; expectedLevel entier borné ; id ≤ 24 caractères
 				expect(Intents.BuyUpgrade.args[1]).toEqual({ name = "id", kind = "str", max = 24 })

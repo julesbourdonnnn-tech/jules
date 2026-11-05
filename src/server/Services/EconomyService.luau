@@ -136,6 +136,7 @@ local CONFIG_FLAGS = {
 	"Monuments",
 	"RecordR",
 	"PetitSplorch",
+	"JellyAscend",
 }
 local snapVersion: { [Player]: number } = weak()
 local snapLast: { [Player]: Types.UpgradeSnapshot } = weak()
@@ -289,13 +290,19 @@ local function publishGrowth(player: Player, data: { [string]: any })
 	RanchService.setPublic(player, { growth = { G = growth.G, g = growth.g, t = growth.t } })
 end
 
--- Remise à zéro des plafonds au changement de jour UTC (petSitBy compris)
+-- Remise à zéro des plafonds au changement de jour UTC (petSitBy compris ; v2.0 : compteurs de
+-- Balance.CapsV2 d'un profil v2, « remis à zéro au changement de jour avec les autres », Data/Schema)
 local function capsToday(player: Player, data: { [string]: any }): { [string]: any }
 	local caps = data.caps
 	local today = Clock.day()
 	if caps.day ~= today then
 		for key in Balance.Caps do
 			caps[key] = 0
+		end
+		if PadRules.v2Profile(data) then
+			for key in Balance.CapsV2 do
+				caps[key] = 0
+			end
 		end
 		caps.petSitBy = {}
 		caps.day = today
@@ -1275,10 +1282,14 @@ function EconomyService.addFame(
 	return granted
 end
 
--- Plafond journalier (Balance.Caps) : rend la part accordée (0 = plafond atteint)
+-- Plafond journalier (Balance.Caps ; v2.0 : Balance.CapsV2 dans un profil v2 seulement, Fame des
+-- Grands Splorch et Pluies d'étoiles) : rend la part accordée (0 = plafond atteint)
 function EconomyService.consumeCap(player: Player, capKey: string, wanted: number): number
 	local data = DataService.get(player)
 	local cap = (Balance.Caps :: any)[capKey]
+	if cap == nil and data ~= nil and PadRules.v2Profile(data) then
+		cap = (Balance.CapsV2 :: any)[capKey]
+	end
 	if data == nil or type(cap) ~= "number" or not finite(wanted) or wanted <= 0 then
 		return 0
 	end
@@ -1422,10 +1433,10 @@ function EconomyService.applySplorch(player: Player): number
 	for _, key in { "coins", "pot", "tiles", "R", "fame", "growth" } do
 		DataService.markDirty(player, key)
 	end
-	-- profil v2 (en attendant Prestige.apply au Grand Splorch, lot A2 étape 3) : le Record R n'est
-	-- jamais sous r (invariant v2, docs/04 §27.2), même interrupteur RecordR coupé (note du lot A2,
-	-- étape 1) ; les familles nouvelles de la boucle (Tapis Étoilé, Gants, École : kept = false)
-	-- repartent de zéro comme le Tapis, dans le même bloc
+	-- profil v2 dont la progression v2.0 est coupée (RecordR coupé ou configuration refusée :
+	-- applyPrestige ne s'applique pas, journal A2-24) : le Record R n'est jamais sous r (invariant v2,
+	-- docs/04 §27.2 ; note du lot A2, étape 1) ; les familles nouvelles de la boucle (Tapis Étoilé,
+	-- Gants, École : kept = false) repartent de zéro comme le Tapis, dans le même bloc
 	if PadRules.v2Profile(data) then
 		if data.bestR ~= Prestige.bestR(data) then
 			data.bestR = Prestige.bestR(data)
@@ -1447,6 +1458,52 @@ function EconomyService.applySplorch(player: Player): number
 	EconomyService.refresh(player)
 	RanchService.setPublic(player, { R = data.R, fame = data.fame })
 	return lost
+end
+
+-- Progression v2.0 en vigueur pour ce joueur (lot A2, journal A2-24) : profil v2, interrupteur RecordR
+-- ouvert et configuration en vigueur acceptée (Prestige.validateConfig) ; sinon le Grand Splorch reste
+-- celui de la v1.3 (applySplorch) et ni Petit Splorch ni Jelly Ascend n'existent
+function EconomyService.prestigeV2(player: Player): boolean
+	local data = DataService.get(player)
+	return data ~= nil and PadRules.v2Profile(data) and Features.get("RecordR") == true and configOk
+end
+
+-- Prestige v2.0 d'un bloc, sans yield (docs/04 §27.7, appelé par SplorchService) : règlement, puis
+-- Prestige.apply (SEUL écrivain des champs gardés et remis à zéro : pièces, Pot, dalles de la boucle,
+-- tailles, croissance, r, Record R, A, regainBonusA, memoryR, place offerte), cadeau du Splorch dans le
+-- Pot (prix des niveaux offerts du Tapis dans la boucle neuve, UpgradeMath.giftCoins), clés marquées,
+-- ranch reconstruit, contexte rafraîchi. Rend (clés changées, rapport) ; rapport nil si la progression
+-- v2.0 n'est pas en vigueur (prestigeV2). Les gains du rapport (Confettis, Fame) sont versés par
+-- l'appelant (addConfetti, addFame) ; la réplication des tailles par SquishyService.resetSizes (la clé
+-- squishies n'est pas renvoyée entière)
+function EconomyService.applyPrestige(
+	player: Player,
+	kind: Types.PrestigeKind
+): ({ [string]: any }, Prestige.ApplyReport?)
+	local data = DataService.get(player)
+	if data == nil or not EconomyService.prestigeV2(player) then
+		return {}, nil
+	end
+	-- règlement AVANT : l'intervalle passé garde l'ancien contexte (Pot, trophées et records à jour)
+	EconomyService.settle(player)
+	local changed, report = Prestige.apply(data, kind, Clock.now())
+	if not report.applied then
+		return changed, report
+	end
+	local gift = UpgradeMath.giftCoins(data, report.giftLevels)
+	if finite(gift) and gift > 0 then
+		data.pot = Formulas.clampCoins(gift)
+		changed.pot = true
+	end
+	for key in changed do
+		if key ~= "squishies" then
+			DataService.markDirty(player, key)
+		end
+	end
+	RanchService.refreshBuild(player)
+	EconomyService.refresh(player)
+	RanchService.setPublic(player, { R = data.R, fame = data.fame })
+	return changed, report
 end
 
 -- Crochet appelé après chaque settle avec G (SquishyService : trophées, record)

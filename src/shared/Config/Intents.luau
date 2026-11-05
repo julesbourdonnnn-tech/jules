@@ -90,6 +90,13 @@ local Intents: { [string]: IntentSpec } = {
 	AdminCommand = { owner = "EventService", rate = { 2, 1 }, args = { { name = "command", kind = "str", max = 32 }, { name = "arg", kind = "str", max = 64 } } },
 	-- Grand Splorch (SplorchService)
 	GrandSplorch = { owner = "SplorchService", rate = { 1, 2 }, activity = true, args = { { name = "film", kind = "bool" }, { name = "flyer", kind = "uid" } } },
+	-- v2.0 (lot A2, note INT-V2-INTENTS : venue de Config/IntentsV2 avec son handler) : Jelly Ascend
+	-- [JellyAscend] (SplorchService.ascend) : maintien de 3 s et carte « Prêt à monter ? » côté client ;
+	-- confirm = true exigé ; Prestige.ascendReady et les conditions d'entrée vérifiés une seule fois, à
+	-- l'entrée dans la file du Grand Splorch (un seul prestige par joueur dans la file)
+	JellyAscend = { owner = "SplorchService", rate = { 1, 5 }, activity = true, args = {
+		{ name = "confirm", kind = "bool" },
+	} },
 	-- Accueil, objectifs, Nourrir Plop, Squishydex (QuestService)
 	FeedPlop = { owner = "QuestService", rate = { 2, 1 }, activity = true, args = { { name = "holding", kind = "bool" } } },
 	ClaimObjective = { owner = "QuestService", rate = { 4, 1 }, activity = true, args = { { name = "slot", kind = "int", min = 1, max = 3 } } },

@@ -1789,6 +1789,7 @@ return function(T)
 			"BoopHold",
 			"MegaPress",
 			"GrandSplorch",
+			"JellyAscend", -- lot A2 (note INT-V2-INTENTS, journal A2-23) : prestige, intention de jeu
 			"FeedPlop",
 			"ClaimObjective",
 			"RerollObjective",
