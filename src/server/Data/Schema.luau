@@ -112,6 +112,7 @@ Schema.OWNERS_V2 = {
 	ascend = "SplorchService",
 	bestR = "SplorchService",
 	regainBonusA = "SplorchService",
+	memoryR = "SplorchService", -- décision INT-A1-MEMORY (lot A2, journal A2-1) : écrit par Prestige.apply
 	confetti = "EconomyService",
 	confettiTotal = "EconomyService",
 	atelier = "EconomyService",
@@ -167,6 +168,9 @@ local function addV2Defaults(d: { [string]: any })
 	d.bestR = 0
 	d.ascend = 0
 	d.regainBonusA = 0 -- dernier A pour lequel le bonus de retour au record a été donné
+	-- Record R au moment du dernier retour au record (entier 0-400, ≤ bestR) : la 1re boucle record
+	-- qui suit le retour (× 1,25, Prestige.firstRecordLoop) est celle où r = bestR = memoryR
+	d.memoryR = 0
 	-- Confettis : entiers de 0 à 1e9, confettiTotal ≥ confetti (jamais remis à zéro)
 	d.confetti = 0
 	d.confettiTotal = 0
@@ -420,7 +424,10 @@ end
 --     qui a construit ; decorBuilds[k] = 1 pour chaque décoration construite
 --  6. weeklyTrack.firstPeriodEnd reste 0 : QuestService le fixe au premier chargement v2 (2e lundi
 --     après Clock.unix()) — la migration reste pure, sans horloge
---  7. le reste : valeurs par défaut v2 (reconcile après la migration)
+--  7. le reste : valeurs par défaut v2, ÉCRITES par la migration (lot A2, journal A2-3) : un champ
+--     que la v2 ajoute (clé de premier niveau, ou sous-clé d'une table de la v1 : tiles.star,
+--     caps.starRain, season.frostDays…) n'a aucun sens dans un profil v1 ; une valeur qui s'y
+--     trouverait (essai, vieux bug) ne passe jamais en v2. Les clés inconnues de la v2 sont gardées.
 function Schema.migrateV1toV2(data: { [string]: any }): { [string]: any }
 	if type(data.version) == "number" and data.version >= 2 then
 		return data
@@ -435,6 +442,22 @@ function Schema.migrateV1toV2(data: { [string]: any }): { [string]: any }
 	local decor = intIn(tiles.decor, 0, m.DecorLevels)
 	local pensBefore = intIn(tiles.pens, 0, m.PensMax)
 	local cozy = if tiles.cozyBed == true then 1 else 0
+
+	-- champs ajoutés par la v2 : valeurs par défaut (tables neuves), puis les valeurs calculées
+	local v1 = Schema.defaultsV1()
+	for key, value in Schema.defaultsFor(2) do
+		local old = v1[key]
+		if old == nil then
+			data[key] = value
+		elseif type(old) == "table" and type(value) == "table" and type(data[key]) == "table" then
+			local target = data[key]
+			for sub, subValue in value do
+				if old[sub] == nil then
+					target[sub] = subValue
+				end
+			end
+		end
+	end
 
 	data.bestR = R
 	if type(data.ascend) ~= "number" or data.ascend ~= 0 then

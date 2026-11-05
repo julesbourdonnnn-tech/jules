@@ -6,6 +6,12 @@
 -- départ » présentes dans la sauvegarde de départ (§1 règle 15), rebase hors ligne avant tout
 -- règlement. Après CHAQUE écriture : valeur sérialisable par Roblox (aucun tableau à trous, aucune
 -- table mixte) et Invariants.dense sur les tableaux du profil.
+-- Schéma v2 (lot A2, docs/04 §27.2, §27.10) : les mêmes pannes sur des serveurs v2 (interrupteur figé
+-- SchemaV2 ouvert DANS LE TEST, avant le premier require du schéma) : migration v1 → v2 au chargement
+-- malgré les pannes, une seule fois même si la sauvegarde qui suit est perdue, quotas dépassés à
+-- l'arrivée de 16 joueurs, reconnexion pendant la sauvegarde de départ, fermeture, profil v2 abîmé
+-- réparé, déploiement progressif (un serveur v1 refuse le profil v2 sans rien écrire). Interrupteur
+-- coupé (jeu de base) : un profil v1 est réécrit en v1, sans aucun champ v2.
 local fs = require("@lune/fs")
 local task = require("@lune/task")
 local Bots = require("../harness/Bots")
@@ -34,8 +40,11 @@ return function(T)
 		shared.onWrite = function(key, value)
 			local data = value and value.data
 			if type(data) == "table" then
-				-- (un vieil enregistrement réécrit tel quel avec le verrou peut ne pas avoir encore la clé)
-				for _, path in { "trophies" } do
+				-- (un vieil enregistrement réécrit tel quel avec le verrou peut ne pas avoir encore la clé ;
+				-- tableaux v2 seulement dans un profil v2)
+				for _, path in
+					{ "trophies", "atelier", "atelierCosmetics", "decorBuilds", "carnet", "mastery" }
+				do
 					if data[path] ~= nil and not Invariants.dense(data[path]) then
 						table.insert(shared.problems, key .. "." .. path)
 					end
@@ -52,9 +61,19 @@ return function(T)
 		return shared
 	end
 
-	local function server(shared, jobId, before)
+	-- Harnais d'un serveur v2 : Config/Features.Defaults.SchemaV2 ouvert dans CE harnais, avant que
+	-- Data/Schema soit chargé (interrupteur figé : lu une fois, à la création du module)
+	local HarnessV2 = setmetatable({
+		new = function(options)
+			local hh = Harness.new(options)
+			hh:require("ReplicatedStorage.Shared.Config.Features").Defaults.SchemaV2 = true
+			return hh
+		end,
+	}, { __index = Harness })
+
+	local function bootWith(H, shared, jobId, before)
 		local caught = {}
-		local w = Chaos.boot(Harness, Bots, shared, jobId, {
+		local w = Chaos.boot(H, Bots, shared, jobId, {
 			t0 = T0,
 			before = function(w)
 				local DS = w.DS.Settings
@@ -81,6 +100,17 @@ return function(T)
 		w.Squishy = w.h:require(S .. "SquishyService")
 		w.Invariants = w.h:require("ReplicatedStorage.Shared.Logic.Invariants")
 		table.insert(live, w.h)
+		return w
+	end
+
+	local function server(shared, jobId, before)
+		return bootWith(Harness, shared, jobId, before)
+	end
+
+	-- Serveur v2 (Schema.VERSION = 2)
+	local function serverV2(shared, jobId, before)
+		local w = bootWith(HarnessV2, shared, jobId, before)
+		assert(w.Schema.VERSION == 2, "serveur v2 attendu")
 		return w
 	end
 
@@ -378,5 +408,451 @@ return function(T)
 			expect((Chaos.check({ a = 0 / 0 }))).toBe(false)
 			expect((Chaos.check({ [1.5] = 1 }))).toBe(false)
 		end)
+	end)
+
+	-- ---------------------------------------------------------------------------------------------
+	-- Schéma v2 (lot A2) : SchemaV2 ouvert dans le test (serverV2) ; interrupteur coupé ailleurs
+	-- ---------------------------------------------------------------------------------------------
+	local function readV1(h)
+		return h.game.HttpService:JSONDecode(fs.readFile("tests/fixtures/profiles/v1.json"))
+	end
+	-- Profil v1 migré comme le fera un serveur v2 (étape pure + reconcile), pour les attentes
+	local function migrated(h, v1)
+		local Schema = h:require("ServerScriptService.Server.Data.Schema")
+		local Tables = h:require("ReplicatedStorage.Shared.Util.Tables")
+		local d = Schema.migrate(Tables.deepCopy(v1), 1, 2)
+		Tables.reconcile(d, Schema.defaultsFor(2))
+		return d
+	end
+	local function hasWarning(w, pattern)
+		for _, line in w.h:warnings() do
+			if string.find(line, pattern, 1, true) then
+				return true
+			end
+		end
+		return false
+	end
+
+	describe("DataChaos › schéma v2 (SchemaV2 ouvert dans le test)", function()
+		it(
+			"interrupteur coupé (jeu de base) : un profil v1 est relu et réécrit en v1, sans aucun champ v2",
+			function()
+				disposeAll()
+				local probe = Harness.new()
+				local shared = newStore(probe)
+				Chaos.seed(shared, 20, readV1(probe))
+				local w = server(shared, "A")
+				expect(w.Schema.VERSION).toBe(1)
+				local p = Bots.join(20)
+				local data = w.DS.get(p)
+				expect(data.version).toBe(1)
+				Bots.leave(p)
+				expect(waitUntil(function()
+					local d = Chaos.record(shared, 20)
+					return d ~= nil and d.lastOnline == T0
+				end)).toBe(true)
+				local saved = Chaos.record(shared, 20)
+				expect(saved.version).toBe(1)
+				for key in w.Schema.OWNERS_V2 do
+					if w.Schema.OWNERS_V1[key] == nil then
+						expect({ key = key, saved = saved[key] }).toEqual({ key = key, saved = nil })
+					end
+				end
+				expect(saved.tiles.star).toBeNil()
+				expect(saved.tiles.pens).toBe(12) -- aucune place offerte
+				expect(saved.ascend).toBe(0)
+				clean(w, shared, FAIL_WARN)
+				disposeAll()
+			end
+		)
+
+		it(
+			"profil v1 sur un serveur v2 : migré au chargement malgré deux pannes, sauvegardé v2 ; repris ailleurs : jamais migré deux fois",
+			function()
+				disposeAll()
+				local probe = Harness.new()
+				local shared = newStore(probe)
+				local v1 = readV1(probe)
+				local expected = migrated(probe, v1)
+				Chaos.seed(shared, 21, v1)
+				local a = serverV2(shared, "A")
+				shared.fail.UpdateAsync = 2
+				local p = Bots.join(21)
+				expect(a.DS.isLoaded(p)).toBe(true)
+				local data = a.DS.get(p)
+				expect({
+					data.version,
+					data.R,
+					data.bestR,
+					data.ascend,
+					data.memoryR,
+					data.confetti,
+					data.confettiTotal,
+					data.tiles.pens,
+					data.unlocksSeen,
+				}).toEqual({ 2, 12, 12, 0, 0, 139, 139, 14, 12 })
+				expect(data.stats.upgradesBought).toBe(expected.stats.upgradesBought)
+				expect(a.Invariants.profile(data)).toEqual({})
+				Bots.leave(p)
+				expect(waitUntil(function()
+					local d = Chaos.record(shared, 21)
+					return d ~= nil and d.version == 2
+				end)).toBe(true)
+				local saved = Chaos.record(shared, 21)
+				expect({ saved.confetti, saved.confettiTotal, saved.memoryR }).toEqual({ 139, 139, 0 })
+				expect(a.Invariants.profile(saved)).toEqual({})
+				-- un autre serveur v2 relit la v2 telle quelle : aucun rattrapage de plus
+				local b = serverV2(shared, "B")
+				local pb = Bots.join(21)
+				expect(waitUntil(function()
+					return b.DS.isLoaded(pb)
+				end)).toBe(true)
+				local db = b.DS.get(pb)
+				expect({ db.version, db.confetti, db.confettiTotal, db.tiles.pens, db.bestR }).toEqual({
+					2,
+					139,
+					139,
+					14,
+					12,
+				})
+				Bots.leave(pb)
+				expect(waitUntil(function()
+					local d = Chaos.record(shared, 21)
+					return d ~= nil and d.lastOnline == T0 and Chaos.record(shared, 21).confetti == 139
+				end)).toBe(true)
+				clean(a, shared, FAIL_WARN)
+				clean(b, shared, FAIL_WARN)
+				disposeAll()
+			end
+		)
+
+		it(
+			"sauvegarde perdue juste après la migration (panne jusqu'à l'abandon) : la v1 reste, le serveur suivant la migre à l'identique",
+			function()
+				-- traces voulues : départ en panne, abandon des nouveaux essais, verrou de A observé par B
+				T.expectWarning("nouveaux essais en arrière-plan")
+				T.expectWarning("abandonnée après")
+				T.expectWarning("verrouillées par un autre serveur")
+				disposeAll()
+				local probe = Harness.new()
+				local shared = newStore(probe)
+				Chaos.seed(shared, 22, readV1(probe))
+				local a = serverV2(shared, "A", function(w)
+					w.DS.Settings.RELEASE_RETRY_WINDOW = 0.05
+				end)
+				local p = Bots.join(22)
+				expect(a.DS.get(p).confetti).toBe(139)
+				shared.down = true
+				Bots.leave(p)
+				expect(waitUntil(function()
+					return hasWarning(a, "abandonnée")
+				end, 8)).toBe(true)
+				-- rien d'écrit : la sauvegarde du magasin est toujours la v1 (verrou de A posé)
+				expect(Chaos.record(shared, 22).version).toBe(1)
+				shared.down = false
+				local b = serverV2(shared, "B")
+				local pb = Bots.join(22, { timeout = 5 })
+				expect(waitUntil(function()
+					return b.DS.isLoaded(pb)
+				end)).toBe(true)
+				local db = b.DS.get(pb)
+				expect({ db.version, db.confetti, db.confettiTotal, db.tiles.pens, db.bestR }).toEqual({
+					2,
+					139,
+					139,
+					14,
+					12,
+				})
+				Bots.leave(pb)
+				expect(waitUntil(function()
+					local d = Chaos.record(shared, 22)
+					return d ~= nil and d.version == 2
+				end)).toBe(true)
+				expect(Chaos.record(shared, 22).confetti).toBe(139)
+				clean(a, shared, { "panne simulée", "nouveaux essais", "PERTE" })
+				clean(b, shared, { "verrouillées par un autre serveur" })
+				disposeAll()
+			end
+		)
+
+		it(
+			"reconnexion sur le même serveur pendant la sauvegarde de départ (magasin lent, deux pannes) : la v2 relue",
+			function()
+				disposeAll()
+				local probe = Harness.new()
+				local shared = newStore(probe)
+				Chaos.seed(shared, 23, readV1(probe))
+				local a = serverV2(shared, "A")
+				local p = Bots.join(23)
+				local uid = a.Squishy.give(p, { s = 1, m = 0, st = 0, z = 1 }, "starter")
+				local nextUid = a.DS.get(p).nextUid
+				shared.latency = 0.003
+				shared.fail.UpdateAsync = 2
+				Bots.leave(p)
+				local p2 = Bots.join(23, { timeout = 5 })
+				expect(waitUntil(function()
+					return a.DS.isLoaded(p2)
+				end, 8)).toBe(true)
+				local d2 = a.DS.get(p2)
+				expect({ d2.version, d2.confetti, d2.nextUid, d2.squishies[uid] ~= nil }).toEqual({
+					2,
+					139,
+					nextUid,
+					true,
+				})
+				expect(a.Invariants.profile(d2)).toEqual({})
+				Bots.leave(p2)
+				expect(waitUntil(function()
+					local d = Chaos.record(shared, 23)
+					return d ~= nil and d.nextUid == nextUid and d.lastOnline == T0
+				end, 8)).toBe(true)
+				clean(a, shared, FAIL_WARN)
+				disposeAll()
+			end
+		)
+
+		it(
+			"quotas dépassés (429) au chargement puis à la sauvegarde de départ : nouveaux essais, migré une fois, écrit en v2",
+			function()
+				disposeAll()
+				local probe = Harness.new()
+				local shared = newStore(probe)
+				Chaos.seed(shared, 24, readV1(probe))
+				local a = serverV2(shared, "A", function(w)
+					w.DS.Settings.RETRY_BASE_DELAY = 0.01 -- essais à 20, 40, 80 ms : la fenêtre glisse
+				end)
+				-- serveur très occupé : un appel au plus par fenêtre de 50 ms, une rafale vient de passer
+				shared.quota = 1
+				shared.quotaWindow = 0.05
+				local function busy()
+					table.insert(shared.calls, { server = "A", op = "UpdateAsync", at = os.clock() })
+				end
+				busy()
+				local p = Bots.join(24, { timeout = 5 })
+				expect(waitUntil(function()
+					return a.DS.isLoaded(p)
+				end, 5)).toBe(true)
+				expect(hasWarning(a, "quota simulé")).toBe(true)
+				expect(a.DS.get(p).confetti).toBe(139)
+				task.wait(0.06)
+				busy()
+				Bots.leave(p)
+				expect(waitUntil(function()
+					local d = Chaos.record(shared, 24)
+					return d ~= nil and d.version == 2
+				end, 5)).toBe(true)
+				local saved = Chaos.record(shared, 24)
+				expect({ saved.confetti, saved.tiles.pens }).toEqual({ 139, 14 })
+				expect(a.Invariants.profile(saved)).toEqual({})
+				shared.quota = nil
+				clean(a, shared, { "quota simulé" })
+				disposeAll()
+			end
+		)
+
+		it(
+			"fermeture (BindToClose) à 16 joueurs v1 sur un magasin lent : 16 profils v2 écrits, rattrapage exact",
+			function()
+				disposeAll()
+				local probe = Harness.new()
+				local shared = newStore(probe)
+				local want = {}
+				for i = 1, 16 do
+					local v1 = readV1(probe)
+					v1.R = i + 2 -- Record R 3 à 18 : places offertes et Confettis différents
+					Chaos.seed(shared, 300 + i, v1)
+					want[i] = migrated(probe, v1)
+				end
+				local w = serverV2(shared, "A")
+				local players = {}
+				for i = 1, 16 do
+					players[i] = Bots.join(300 + i)
+				end
+				w.h:settle(3)
+				for i = 1, 16 do
+					local d = w.DS.get(players[i])
+					expect({ i = i, c = d.confetti, pens = d.tiles.pens, bestR = d.bestR }).toEqual({
+						i = i,
+						c = want[i].confetti,
+						pens = want[i].tiles.pens,
+						bestR = i + 2,
+					})
+				end
+				shared.latency = 0.003
+				w.Clock.advance(30)
+				w.h:close()
+				expect(waitUntil(function()
+					for i = 1, 16 do
+						local d = Chaos.record(shared, 300 + i)
+						if d == nil or d.lastOnline ~= T0 + 30 or d.version ~= 2 then
+							return false
+						end
+					end
+					return true
+				end, 10)).toBe(true)
+				for i = 1, 16 do
+					local d = Chaos.record(shared, 300 + i)
+					expect({ i = i, c = d.confetti, total = d.confettiTotal }).toEqual({
+						i = i,
+						c = want[i].confetti,
+						total = want[i].confettiTotal,
+					})
+					expect(w.Invariants.profile(d)).toEqual({})
+				end
+				clean(w, shared, FAIL_WARN)
+				disposeAll()
+			end
+		)
+
+		it(
+			"profil v2 abîmé (champs v2 hors bornes) : réparé au chargement, joué, réécrit sain",
+			function()
+				disposeAll()
+				local probe = Harness.new()
+				local shared = newStore(probe)
+				local d = migrated(probe, readV1(probe))
+				d.bestR = 5 -- sous r = 12
+				d.confetti, d.confettiTotal = 500, 100
+				d.memoryR = 99
+				d.atelier = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 } -- 12 cases pour 10 lignes ; Tremplin sans Ascension
+				d.tiles.star = 3 -- Tapis 7 : Tapis Étoilé impossible
+				d.hearts.givenTo = { 5, 5, 6 }
+				d.cosmetics.theme = "celestial" -- 5 Ascensions
+				d.decoPerso.slots[1] = 3 -- objet non possédé
+				d.weeklyTrack.challenges = { { id = 1, p = 1, done = true }, { id = 1, p = 2, done = false } }
+				d.unlocksSeen = 50
+				Chaos.seed(shared, 25, d)
+				local repaired = nil
+				local w = serverV2(shared, "A", function(world)
+					world.Signals.ProfileRepaired:Connect(function(_, fixes)
+						repaired = fixes
+					end)
+				end)
+				local p = Bots.join(25)
+				w.h:settle(2)
+				local data = w.DS.get(p)
+				expect(repaired ~= nil).toBe(true)
+				for _, path in
+					{
+						"bestR",
+						"confettiTotal",
+						"memoryR",
+						"atelier",
+						"springboard.cap",
+						"star.cap",
+						"hearts.givenTo",
+						"cosmetics.theme",
+						"decoPerso.slots.1",
+						"weeklyTrack.challenges",
+						"unlocksSeen",
+					}
+				do
+					expect({ path = path, fixed = table.find(repaired, path) ~= nil }).toEqual({
+						path = path,
+						fixed = true,
+					})
+				end
+				expect({
+					data.bestR,
+					data.confetti,
+					data.confettiTotal,
+					data.memoryR,
+					#data.atelier,
+					data.tiles.star,
+					#data.hearts.givenTo,
+					data.cosmetics.theme,
+					data.decoPerso.slots[1],
+					#data.weeklyTrack.challenges,
+					data.unlocksSeen,
+				}).toEqual({ 12, 500, 500, 0, 10, 0, 2, "color", 0, 1, 12 })
+				expect(w.Invariants.profile(data)).toEqual({})
+				w.Squishy.give(p, { s = 1, m = 0, st = 0, z = 1 }, "test")
+				local nextUid = data.nextUid
+				Bots.leave(p)
+				expect(waitUntil(function()
+					local saved = Chaos.record(shared, 25)
+					return saved ~= nil and saved.nextUid == nextUid
+				end)).toBe(true)
+				local saved = Chaos.record(shared, 25)
+				expect(w.Invariants.profile(saved)).toEqual({})
+				expect(saved.confetti).toBe(500) -- jamais un Confetti de poche perdu
+				clean(w, shared, FAIL_WARN)
+				disposeAll()
+			end
+		)
+
+		-- Lot A2 (journal A2-6) : la préparation (migration, reconcile) n'était pas protégée ; une
+		-- erreur laissait le joueur sur l'écran de chargement, notre verrou posé dans l'enregistrement
+		it(
+			"préparation en échec (migration qui lève, sauvegarde illisible) : renvoi poli, verrou rendu, données intactes",
+			function()
+				T.expectWarning("préparation du profil")
+				disposeAll()
+				local probe = Harness.new()
+				local shared = newStore(probe)
+				Chaos.seed(shared, 27, readV1(probe))
+				shared.data["player_28"] = { data = "illisible", meta = { created = 1, saves = 3 } }
+				local before27 = Chaos.record(shared, 27)
+				local w = serverV2(shared, "A", function(world)
+					world.Schema.migrate = function()
+						error("migration cassée (test)", 0)
+					end
+				end)
+				local p27 = Bots.join(27, { wait = false })
+				local p28 = Bots.join(28, { wait = false })
+				expect(waitUntil(function()
+					return #w.h.log.kicks == 2
+				end)).toBe(true)
+				expect(w.DS.get(p27)).toBeNil()
+				expect(w.DS.get(p28)).toBeNil()
+				w.h:settle(3)
+				-- données intactes, verrou rendu (un autre serveur charge aussitôt)
+				local Tables = probe:require("ReplicatedStorage.Shared.Util.Tables")
+				expect(Tables.deepEqual(Chaos.record(shared, 27), before27)).toBe(true)
+				expect(shared.data["player_27"].lock).toBeNil()
+				expect(shared.data["player_28"].data).toBe("illisible")
+				expect(shared.data["player_28"].lock).toBeNil()
+				expect(table.concat(w.h.errors, "\n")).toBe("")
+				disposeAll()
+			end
+		)
+
+		it(
+			"déploiement progressif : un serveur v1 refuse le profil v2 sans rien écrire ; un serveur v2 le relit",
+			function()
+				T.expectWarning("écrit par un schéma plus récent que v1")
+				disposeAll()
+				local probe = Harness.new()
+				local shared = newStore(probe)
+				Chaos.seed(shared, 26, readV1(probe))
+				local a = serverV2(shared, "A")
+				local p = Bots.join(26)
+				Bots.leave(p)
+				expect(waitUntil(function()
+					local d = Chaos.record(shared, 26)
+					return d ~= nil and d.version == 2
+				end)).toBe(true)
+				local writes = #shared.writes
+				local before = shared.data["player_26"]
+				local old = server(shared, "OLD")
+				local po = Bots.join(26, { wait = false })
+				expect(waitUntil(function()
+					return #old.h.log.kicks == 1
+				end)).toBe(true)
+				expect(old.DS.get(po)).toBeNil()
+				expect(#shared.writes).toBe(writes) -- rien écrit, pas même le verrou
+				expect(shared.data["player_26"]).toBe(before)
+				local c = serverV2(shared, "C")
+				local pc = Bots.join(26)
+				expect(waitUntil(function()
+					return c.DS.isLoaded(pc)
+				end)).toBe(true)
+				expect(c.DS.get(pc).confetti).toBe(139)
+				clean(a, shared, FAIL_WARN)
+				clean(old, shared, { "schéma plus récent" })
+				clean(c, shared, FAIL_WARN)
+				disposeAll()
+			end
+		)
 	end)
 end

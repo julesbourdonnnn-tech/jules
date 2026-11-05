@@ -375,7 +375,9 @@ return function(T)
 					end
 					if l.len < 45 then
 						after.under45 += 1
-						if l.sinceFuse > 10 then
+						-- fusion → cible atteinte (décision du chef, A2-7 : ni le geste du Petit
+						-- Splorch, ni la file, ni l'attente de la pression qui la voit)
+						if l.reachSinceFuse > 10 then
 							after.unfused += 1
 						end
 					end
@@ -643,7 +645,7 @@ return function(T)
 		local after = st.after
 		if after.n > 0 then
 			add("Boucles", "shortestLoopSec : part sous 45 s", after.under45 / after.n, nil, 0.003)
-			add("Boucles", "shortestLoopSec : sous 45 s à plus de 10 s d'une fusion", after.unfused, 0, 0)
+			add("Boucles", "shortestLoopSec : sous 45 s, cible > 10 s après une fusion", after.unfused, 0, 0)
 			add("Boucles", "shortestLoopSec : boucles de 0 s", after.zero, 0, 0)
 			add("Boucles", "shortestLoopSec : plus courte (s)", after.shortest, nil, nil, true)
 		end
@@ -1397,6 +1399,7 @@ return function(T)
 						share12 = 0.5,
 						len = 300,
 						sinceFuse = 300,
+						reachSinceFuse = 300,
 						maxBuyGap = 30,
 						afterAscend = afterAscend,
 						snack = 3,

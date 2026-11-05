@@ -55,6 +55,7 @@ local V2_TYPES = {
 local V2_KEYS = {
 	"bestR",
 	"regainBonusA",
+	"memoryR", -- décision INT-A1-MEMORY (lot A2, docs/04 §27.12 A2-1)
 	"confetti",
 	"confettiTotal",
 	"atelier",
@@ -342,6 +343,8 @@ return function(T)
 				expect(owners.confetti).toBe("EconomyService")
 				expect(owners.confettiTotal).toBe("EconomyService")
 				expect(owners.bestR).toBe("SplorchService")
+				expect(owners.memoryR).toBe("SplorchService") -- écrit par Prestige.apply (retour au record)
+				expect(d.memoryR).toBe(0)
 				expect(owners.season).toBe("QuestService")
 				expect(Schema.OWNERS_V1.season).toBe("(réservé : saison)")
 				for _, key in V2_KEYS do
@@ -513,7 +516,53 @@ return function(T)
 			expect(d.weeklyTrack.firstPeriodEnd).toBe(0) -- fixé par QuestService au premier chargement
 			expect(d.tiles.star).toBe(0)
 			expect(d.regainBonusA).toBe(0)
+			expect(d.memoryR).toBe(0) -- aucun retour au record avant la v2.0 (INT-A1-MEMORY)
 		end)
+
+		-- Lot A2 (docs/04 §27.12 A2-3) : la migration ÉCRIT chaque champ que la v2 ajoute ; une valeur
+		-- trouvée dans un profil v1 (essai, vieux bug) ne passe jamais en v2, rien de la v1 n'est perdu
+		it(
+			"profil v1 portant des champs v2 périmés : chacun repart de sa valeur v2 calculée ou par défaut",
+			function()
+				local h = Harness.new()
+				local Schema = schema(h)
+				local Tables = shared(h, "Util.Tables")
+				local stale = readV1()
+				stale.bestR = 99
+				stale.regainBonusA = 7
+				stale.memoryR = 12
+				stale.confetti = 5000
+				stale.confettiTotal = 9000
+				stale.atelier = { 3, 3, 3 }
+				stale.atelierCosmetics = { 2047 }
+				stale.decorBuilds = { 9, 9 }
+				stale.carnet = { 255 }
+				stale.weeklyTrack =
+					{ period = 4, points = 99, claimed = { 4095 }, challenges = {}, firstPeriodEnd = 7 }
+				stale.mastery = { 1 }
+				stale.unlocksSeen = 300
+				stale.decoPerso = { owned = { 1, 1 }, slots = { 1 } }
+				stale.hearts = { givenDay = 9, givenTo = { 5 }, receivedTotal = 50 }
+				stale.tiles.star, stale.tiles.gloves, stale.tiles.school, stale.tiles.monuments =
+					8, 40, 20, 10
+				stale.stats.upgradesBought, stale.stats.petitSplorches = 999, 77
+				stale.onboarding.nextBuyShown = true
+				stale.season.frostDays = 30
+				stale.caps.fameSplorch, stale.caps.starRain = 50, 3
+				stale.futureKey = { kept = true } -- clé inconnue de ce serveur : gardée
+				local d = migrateFull(h, stale)
+				local clean = migrateFull(h, readV1())
+				local fromStale = Tables.deepCopy(d)
+				fromStale.futureKey = nil
+				expect(Tables.deepEqual(fromStale, clean)).toBe(true)
+				expect(d.futureKey).toEqual({ kept = true })
+				expect(d.bestR).toBe(12)
+				expect(d.memoryR).toBe(0)
+				expect(d.confetti).toBe(139)
+				-- chaque valeur v1 est gardée (season.premium compris)
+				expect(d.season.premium).toBe(clean.season.premium)
+			end
+		)
 
 		it("aucune donnée v1 perdue : chaque valeur v1 est gardée (sauf tiles.pens et version)", function()
 			local h = Harness.new()

@@ -18,6 +18,15 @@
 -- #Species.FamilyOrder) ; outfits.worn vidé (la tenue portée vit dans rec.o ; porteurs au-delà de
 -- owned retirés) ; caps.petSitIn et caps.splorchCoins (nombres) ; caps.petSitBy (clés chaînes d'UserId
 -- → entiers bornés) ; moon.lastSession.
+-- Schéma v2 (lot A2, docs/04 §27.2) : un profil de version ≥ 2 (et lui seul) est réparé sur
+-- Schema.defaultsFor(2) avec les bornes de chaque champ v2 (R ≤ bestR ≤ MaxR, A, regainBonusA ≤ A,
+-- memoryR ≤ bestR, Confettis, familles nouvelles, Atelier, ensembles de bits, décorations dorées,
+-- piste, Déco perso, cœurs, plafonds v2, habillage gagné), chaque niveau ramené à son plafond
+-- (UpgradeMath.cap, tous interrupteurs ouverts : même règle que Logic/Invariants). Un profil v1 est
+-- réparé EXACTEMENT comme dans la version de test (aucun champ v2 lu ni écrit) : tant que
+-- l'interrupteur figé SchemaV2 est coupé, DataService ne lui passe jamais de profil v2 (refusé,
+-- « schéma plus récent »). Règle d'une valeur illisible : la valeur sûre ne donne jamais rien
+-- deux fois (bonus de retour déjà donné, × 1,25 refusé, bit non possédé, carte déjà vue).
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -28,8 +37,12 @@ local Mutations = require(Shared.Config.Mutations)
 local Cosmetics = require(Shared.Config.Cosmetics)
 local Quests = require(Shared.Config.Quests)
 local SettingsConfig = require(Shared.Config.Settings)
+local Upgrades = require(Shared.Config.Upgrades)
 local Formulas = require(Shared.Logic.Formulas)
 local QuestRules = require(Shared.Logic.QuestRules)
+local Prestige = require(Shared.Logic.Prestige)
+local UpgradeMath = require(Shared.Logic.UpgradeMath)
+local Bitset = require(Shared.Logic.Bitset)
 local Schema = require(script.Parent.Schema)
 
 local ProfileRepair = {}
@@ -48,6 +61,68 @@ local OUTFITS: { [string]: boolean } = {}
 for _, def in Cosmetics.List do
 	if def.kind == "outfit" then
 		OUTFITS[def.id] = true
+	end
+end
+
+-- Bornes du schéma v2 (docs/04 §27.2 ; mêmes nombres que Logic/Invariants)
+local MAX_R = Balance.Prestige.MaxR
+local MAX_A = Balance.Prestige.MaxA
+local CONFETTI_MAX = Balance.Confetti.Max
+local WORD_MAX = 4294967295 -- mot de 32 bits (Logic/Bitset)
+local BITSET_MAX_WORDS = Bitset.MaxBits // Bitset.WordBits
+local DECOR_BUILDS = Balance.Tiles.decor.Levels -- une case par décoration (18)
+local DECOR_BUILDS_MAX = 10
+local DECO_OWNED_BITS = 64
+local DECO_SLOTS = 12
+local DECO_ITEMS = #Cosmetics.DecoPerso
+local HEARTS_GIVEN_MAX = Balance.Hearts.PerDay
+local CHALLENGES_MAX = Quests.WeeklyTrack.ChallengesPerWeek
+local TRACK_TIERS = #Quests.WeeklyTrack.Tiers
+local CARNET_TIERS = #Quests.Carnet.Tiers
+-- familles nouvelles : champ de tiles et nombre de niveaux (ordre fixe : réparations déterministes)
+local NEW_TILES = {
+	{ "star", Balance.UpgradePrices.star.Levels },
+	{ "gloves", Balance.UpgradePrices.gloves.Levels },
+	{ "school", Balance.UpgradePrices.school.Levels },
+	{ "monuments", Balance.UpgradePrices.monument.Levels },
+}
+-- plafonds du jour v2 (ordre fixe)
+local CAPS_V2: { string } = {}
+for key in Balance.CapsV2 do
+	table.insert(CAPS_V2, key)
+end
+table.sort(CAPS_V2)
+-- plafonds des niveaux : tous les interrupteurs ouverts (structure du profil, pas l'état du jour)
+local ALL_FLAGS = {
+	get = function(_key: string): boolean
+		return true
+	end,
+}
+-- où vit le niveau de chaque ligne achetable (UpgradeMath.ids) : champ de tiles, case de l'Atelier
+-- ou bits de « Pour le plaisir »
+type LevelSlot = { tile: string?, row: number?, firstBit: number?, bits: number? }
+local LEVEL_SLOTS: { [string]: LevelSlot } = {}
+for _, def in Upgrades.Families do
+	local tile = string.match(def.profileKey, "^tiles%.(%w+)$")
+	if tile then
+		LEVEL_SLOTS[def.id] = { tile = tile }
+	end
+end
+for i, row in Upgrades.WorkshopRows do
+	LEVEL_SLOTS[row.id] = { row = i }
+end
+for _, line in Upgrades.Fun do
+	if line.store == "bits" then
+		LEVEL_SLOTS["fun." .. line.id] = { firstBit = line.firstBit or 1, bits = #line.costs }
+	end
+end
+-- habillages connus (cosmetics.theme : 3 de la v1.3 et 11 de la v2.0) → condition pour l'avoir
+local THEMES: { [string]: any } = {}
+for _, list in { Cosmetics.List, Cosmetics.ListV2 } do
+	for _, def in list :: { any } do
+		if def.kind == "theme" then
+			THEMES[def.id] = def.source
+		end
 	end
 end
 
@@ -274,7 +349,7 @@ end
 -- Économie
 -- ---------------------------------------------------------------------------------------------
 
-local function repairEconomy(ctx: Ctx, d: { [string]: any })
+local function repairEconomy(ctx: Ctx, d: { [string]: any }, v2: boolean)
 	-- pièces : finies, ≥ 0, ≤ Max, entières sous ExactBelow
 	local coins = d.coins
 	local safeCoins = Formulas.clampCoins(coins)
@@ -284,7 +359,8 @@ local function repairEconomy(ctx: Ctx, d: { [string]: any })
 	end
 	realField(ctx, d, "pot", 0, MAX, "pot")
 	realField(ctx, d, "fame", 0, MAX, "fame")
-	intField(ctx, d, "R", 0, 1e6, "R")
+	-- r de la boucle (v2 : borné à MaxR, comme Logic/Invariants)
+	intField(ctx, d, "R", 0, if v2 then MAX_R else 1e6, "R")
 	intField(ctx, d, "lastOnline", 0, MAX_INT, "lastOnline")
 	intField(ctx, d, "firstJoin", 0, MAX_INT, "firstJoin")
 	realField(ctx, d, "biggestEver", 0, MAX, "biggestEver")
@@ -704,6 +780,297 @@ local function repairOthers(ctx: Ctx, d: { [string]: any })
 	end
 end
 
+-- ---------------------------------------------------------------------------------------------
+-- Schéma v2 (docs/04 §27.2) : profils de version ≥ 2 seulement
+-- ---------------------------------------------------------------------------------------------
+
+-- Mot d'un ensemble de bits : entier de [0 ; 2^32[, sinon 0 (même règle que Logic/Bitset : un mot
+-- abîmé ne donne jamais un bit)
+local function cleanWord(x: any): (boolean, number)
+	if type(x) == "number" and x == x and x >= 0 and x <= WORD_MAX and x % 1 == 0 then
+		return true, x
+	end
+	return false, 0
+end
+
+-- Ensemble de bits de n éléments : dense, allongé à ceil(n / 32) mots (au moins 1), jamais tronqué
+-- en deçà de Bitset.MaxBits (un bit au-delà de n peut être celui d'une espèce ou d'une ligne future)
+local function bitsetField(ctx: Ctx, value: any, n: number, path: string): { number }
+	local out = denseNumbers(ctx, value, math.max(1, math.ceil(n / 32)), 0, cleanWord, path)
+	if #out > BITSET_MAX_WORDS then
+		for i = #out, BITSET_MAX_WORDS + 1, -1 do
+			out[i] = nil
+		end
+		fix(ctx, path)
+	end
+	return out
+end
+
+-- Tableau dense de EXACTEMENT n entiers de [0 ; hi] (Atelier : une case par ligne ; décorations
+-- dorées : une par décoration ; emplacements de Déco perso : 12)
+local function fixedInts(ctx: Ctx, value: any, n: number, hi: number, path: string): { number }
+	local out = denseNumbers(ctx, value, n, 0, function(x: any): (boolean, number)
+		return intIn(x, 0, hi, 0)
+	end, path)
+	if #out > n then
+		for i = #out, n + 1, -1 do
+			out[i] = nil
+		end
+		fix(ctx, path)
+	end
+	return out
+end
+
+-- Pose le niveau d'une ligne achetable (plafond dépassé) ; « Pour le plaisir » : bits au-delà retirés
+local function setLevel(d: { [string]: any }, id: string, level: number)
+	local slot = LEVEL_SLOTS[id]
+	if slot == nil then
+		return
+	end
+	if slot.tile then
+		local tiles = d.tiles
+		tiles[slot.tile] = if type(tiles[slot.tile]) == "boolean" then level >= 1 else level
+	elseif slot.row then
+		d.atelier[slot.row] = level
+	elseif slot.firstBit and slot.bits then
+		local kept = 0
+		for i = slot.firstBit, slot.firstBit + slot.bits - 1 do
+			if Bitset.has(d.atelierCosmetics, i) then
+				kept += 1
+				if kept > level then
+					Bitset.clear(d.atelierCosmetics, i)
+				end
+			end
+		end
+	end
+end
+
+-- Valeurs lues AVANT la forme (qui remplace une valeur illisible par sa valeur par défaut, 0) : pour
+-- ces champs, la valeur sûre d'une valeur illisible n'est pas 0
+type RawV2 = { regainBonusA: any, unlocksSeen: any }
+
+-- Progression, Confettis, familles nouvelles, Atelier : avant les règles de la v1 qui en dépendent
+local function repairProgressionV2(ctx: Ctx, d: { [string]: any }, raw: RawV2)
+	-- version : entier ≥ 2 (2,5 n'est ni v2 ni v3 : Logic/Invariants le lirait comme une v1)
+	intField(ctx, d, "version", 2, MAX_INT, "version")
+	local R = Prestige.r(d) -- déjà réparé : entier de [0 ; MaxR]
+	-- Record R : entier de [r ; MaxR] (bestR = max(bestR, r)) ; illisible → r
+	local okBest, best = intIn(d.bestR, R, MAX_R, R)
+	if not okBest then
+		d.bestR = best
+		fix(ctx, "bestR")
+	end
+	intField(ctx, d, "ascend", 0, MAX_A, "ascend")
+	local A = Prestige.ascend(d)
+	-- bonus de retour au record déjà donné pour A : ≤ A ; illisible (ou absent) → A (jamais donné
+	-- deux fois)
+	local okRegain, regain = intIn(if finite(raw.regainBonusA) then d.regainBonusA else nil, 0, A, A)
+	if not okRegain then
+		d.regainBonusA = regain
+		fix(ctx, "regainBonusA")
+	end
+	-- Record R du dernier retour (décision INT-A1-MEMORY) : entier de [0 ; bestR] ; illisible,
+	-- négatif ou au-delà du Record R → 0 (une valeur ramenée à bestR donnerait un × 1,25 de trop)
+	local memoryR = d.memoryR
+	if not finite(memoryR) or memoryR < 0 or memoryR > best then
+		d.memoryR = 0
+		fix(ctx, "memoryR")
+	elseif memoryR % 1 ~= 0 then
+		d.memoryR = math.floor(memoryR)
+		fix(ctx, "memoryR")
+	end
+	-- Confettis : entiers de 0 à 1e9 ; en poche ≤ total gagné (le total, compteur qui ne baisse
+	-- jamais, est relevé : jamais un Confetti de poche perdu)
+	intField(ctx, d, "confetti", 0, CONFETTI_MAX, "confetti")
+	intField(ctx, d, "confettiTotal", 0, CONFETTI_MAX, "confettiTotal")
+	if d.confettiTotal < d.confetti then
+		d.confettiTotal = d.confetti
+		fix(ctx, "confettiTotal")
+	end
+	-- familles nouvelles
+	local tiles = d.tiles
+	for _, pair in NEW_TILES do
+		intField(ctx, tiles, pair[1], 0, pair[2], "tiles." .. pair[1])
+	end
+	-- Atelier : une case par ligne (ordre définitif), allongé ou raccourci, chaque case ≤ #costs
+	local rows = Upgrades.WorkshopRows
+	local atelier = fixedInts(ctx, d.atelier, #rows, 1e9, "atelier")
+	for i, row in rows do
+		local ok, v = intIn(atelier[i], 0, #row.costs, 0)
+		if not ok then
+			atelier[i] = v
+			fix(ctx, "atelier." .. row.id)
+		end
+	end
+	d.atelier = atelier
+	d.atelierCosmetics = bitsetField(ctx, d.atelierCosmetics, Upgrades.CosmeticBits, "atelierCosmetics")
+	-- chaque niveau ≤ son plafond (ouverture par le Record R ou A, plafond de la boucle) : un niveau
+	-- au-delà n'a jamais pu être acheté (Record R et A ne baissent jamais)
+	for _, id in UpgradeMath.ids() do
+		local cap = UpgradeMath.cap(id, d, ALL_FLAGS)
+		if UpgradeMath.level(id, d) > cap then
+			setLevel(d, id, cap)
+			fix(ctx, id .. ".cap")
+		end
+	end
+	-- décorations dorées : 18 entiers de 0 à 10
+	d.decorBuilds = fixedInts(ctx, d.decorBuilds, DECOR_BUILDS, DECOR_BUILDS_MAX, "decorBuilds")
+end
+
+-- Piste, Carnet, maîtrise, Déco perso, cœurs, plafonds v2, habillage
+local function repairOthersV2(ctx: Ctx, d: { [string]: any }, raw: RawV2)
+	local best = Prestige.bestR(d)
+	intField(ctx, d.stats, "upgradesBought", 0, 1e12, "stats.upgradesBought")
+	intField(ctx, d.stats, "petitSplorches", 0, 1e12, "stats.petitSplorches")
+	-- cartes « Nouveau » déjà vues : ≤ Record R ; illisible, absent ou négatif → Record R (jamais une
+	-- pluie de cartes déjà montrées)
+	local seen = if finite(raw.unlocksSeen) then d.unlocksSeen else nil
+	if not finite(seen) or seen < 0 then
+		d.unlocksSeen = best
+		fix(ctx, "unlocksSeen")
+	else
+		intField(ctx, d, "unlocksSeen", 0, best, "unlocksSeen")
+	end
+	d.carnet = bitsetField(ctx, d.carnet, CARNET_TIERS, "carnet")
+	d.mastery = bitsetField(ctx, d.mastery, #Species.List, "mastery")
+
+	-- piste de la semaine
+	local track = d.weeklyTrack
+	intField(ctx, track, "period", 0, 1e9, "weeklyTrack.period")
+	intField(ctx, track, "points", 0, 1e6, "weeklyTrack.points")
+	intField(ctx, track, "firstPeriodEnd", 0, MAX_INT, "weeklyTrack.firstPeriodEnd")
+	track.claimed = bitsetField(ctx, track.claimed, TRACK_TIERS, "weeklyTrack.claimed")
+	-- Défis : liste dense d'au plus 3 entrées { id, p, done }, chaque Défi une fois ; une entrée
+	-- illisible (id inconnu, doublon) est retirée, p et done réparés en place
+	local list = track.challenges
+	local entries: { any } = {}
+	local changed = not isDense(list)
+	if isDense(list) then
+		entries = list
+	else
+		local idx = {}
+		for k in list do
+			if type(k) == "number" and k >= 1 and k % 1 == 0 and k <= MAX_DENSE then
+				table.insert(idx, k)
+			end
+		end
+		table.sort(idx)
+		for _, k in idx do
+			table.insert(entries, list[k])
+		end
+	end
+	local keep: { any } = {}
+	local ids: { [number]: boolean } = {}
+	for _, entry in entries do
+		local id = if type(entry) == "table" then entry.id else nil
+		if
+			#keep >= CHALLENGES_MAX
+			or not finite(id)
+			or id < 1
+			or id > #Quests.Challenges
+			or id % 1 ~= 0
+			or ids[id]
+		then
+			changed = true
+			continue
+		end
+		ids[id] = true
+		local okP, p = intIn(entry.p, 0, 1e9, 0)
+		if not okP then
+			entry.p = p
+			changed = true
+		end
+		if type(entry.done) ~= "boolean" then
+			entry.done = false
+			changed = true
+		end
+		table.insert(keep, entry)
+	end
+	if changed then
+		track.challenges = keep
+		fix(ctx, "weeklyTrack.challenges")
+	end
+
+	-- accueil, saison, plafonds du jour v2
+	boolField(ctx, d.onboarding, "nextBuyShown", false, "onboarding.nextBuyShown")
+	boolField(ctx, d.onboarding, "welcomeV2Pending", false, "onboarding.welcomeV2Pending")
+	intField(ctx, d.season, "frostDays", 0, 1e9, "season.frostDays")
+	for _, key in CAPS_V2 do
+		intField(ctx, d.caps, key, 0, (Balance.CapsV2 :: any)[key], "caps." .. key)
+	end
+
+	-- Déco perso : objets possédés (64 bits) ; 12 emplacements vers un objet possédé, chacun une fois
+	local deco = d.decoPerso
+	deco.owned = bitsetField(ctx, deco.owned, DECO_OWNED_BITS, "decoPerso.owned")
+	local slots = fixedInts(ctx, deco.slots, DECO_SLOTS, 1e9, "decoPerso.slots")
+	local placed: { [number]: boolean } = {}
+	for i = 1, DECO_SLOTS do
+		local item = slots[i]
+		if item > 0 then
+			if item > DECO_ITEMS or not Bitset.has(deco.owned, item) or placed[item] then
+				slots[i] = 0
+				fix(ctx, "decoPerso.slots." .. i)
+			else
+				placed[item] = true
+			end
+		end
+	end
+	deco.slots = slots
+
+	-- cœurs : jour UTC, total reçu ; receveurs du jour : UserIds entiers, chacun une fois, 20 au plus
+	local hearts = d.hearts
+	intField(ctx, hearts, "givenDay", 0, 1e9, "hearts.givenDay")
+	intField(ctx, hearts, "receivedTotal", 0, 1e12, "hearts.receivedTotal")
+	local given = hearts.givenTo
+	local okGiven = isDense(given) and #given <= HEARTS_GIVEN_MAX
+	local cleanGiven: { number } = {}
+	local seenIds: { [number]: boolean } = {}
+	if isDense(given) then
+		for _, userId in given do
+			if
+				#cleanGiven < HEARTS_GIVEN_MAX
+				and finite(userId)
+				and userId % 1 == 0
+				and userId >= -1e15
+				and userId <= 1e15
+				and not seenIds[userId]
+			then
+				seenIds[userId] = true
+				table.insert(cleanGiven, userId)
+			else
+				okGiven = false
+			end
+		end
+	end
+	if not okGiven then
+		hearts.givenTo = cleanGiven
+		fix(ctx, "hearts.givenTo")
+	end
+
+	-- habillage du ranch (cosmetics.theme) : connu et gagné, sinon « color » (le seul gratuit).
+	-- Conditions lisibles dans le profil seulement (Record R, A, Squishydex, jours de Plop) ; une
+	-- autre source n'est jamais retirée ici (MonetizationService et CommunityService revérifient)
+	local cosmetics = d.cosmetics
+	local source = THEMES[cosmetics.theme]
+	local earned = source ~= nil
+	if source ~= nil and type(source) == "table" then
+		local value = if finite(source.value) then source.value else math.huge
+		if source.kind == "recordR" then
+			earned = best >= value
+		elseif source.kind == "ascend" then
+			earned = Prestige.ascend(d) >= value
+		elseif source.kind == "dex" then
+			earned = finite(d.dex.rewards) and d.dex.rewards >= value
+		elseif source.kind == "plopDay" then
+			earned = finite(d.plopDays) and d.plopDays >= value
+		end
+	end
+	if not earned then
+		cosmetics.theme = "color"
+		fix(ctx, "cosmetics.theme")
+	end
+end
+
 -- Répare en place ; rend la liste des champs réparés (vide = sain)
 function ProfileRepair.repair(data: { [string]: any }): { string }
 	local ctx: Ctx = { fixes = {}, seen = {} }
@@ -711,12 +1078,25 @@ function ProfileRepair.repair(data: { [string]: any }): { string }
 		return { "profile" }
 	end
 	local d: { [string]: any } = data
+	-- version du profil (pas celle du serveur) : v2 seulement pour un profil v2 ; un profil v1 garde
+	-- le modèle d'aujourd'hui (Schema.defaults, que Bots.extendSchema peut envelopper)
+	local v2 = type(d.version) == "number" and d.version >= 2
+	local template = if v2 == (Schema.VERSION >= 2)
+		then Schema.defaults()
+		else Schema.defaultsFor(if v2 then 2 else 1)
+	local raw: RawV2 = { regainBonusA = d.regainBonusA, unlocksSeen = d.unlocksSeen }
 	-- forme : types de chaque clé du schéma (clés héritées inconnues ignorées)
-	shape(ctx, d, Schema.defaults(), "")
-	repairEconomy(ctx, d)
+	shape(ctx, d, template, "")
+	repairEconomy(ctx, d, v2)
+	if v2 then
+		repairProgressionV2(ctx, d, raw)
+	end
 	repairQuest(ctx, d)
 	repairSquishies(ctx, d)
 	repairOthers(ctx, d)
+	if v2 then
+		repairOthersV2(ctx, d, raw)
+	end
 	return ctx.fixes
 end
 

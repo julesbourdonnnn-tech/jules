@@ -886,7 +886,17 @@ local function onPlayerAdded(player: Player)
 		player:Kick(LOAD_FAILED_MESSAGE)
 		return
 	end
-	local data = prepare(raw)
+	-- préparation protégée (lot A2) : une erreur de migration ou de reconcile (bug d'une étape,
+	-- enregistrement illisible) ne laisse jamais le joueur sur l'écran de chargement avec notre verrou
+	-- posé ; rien n'est écrit (la sauvegarde reste telle quelle), le verrou est rendu, renvoi poli
+	local prepOk, prepared = pcall(prepare, raw)
+	if not prepOk then
+		warn(`[DataService] préparation du profil de {player.Name} en échec :`, prepared)
+		releaseLoadLock(player, session)
+		player:Kick(LOAD_FAILED_MESSAGE)
+		return
+	end
+	local data: { [string]: any } = prepared
 	-- réparation du profil (note INT-REPAIR, docs/04 §8.5, §22.2) : après migrate + reconcile, AVANT
 	-- les crochets onPrepare ; une réparation en échec est signalée (warn) et le chargement continue
 	local repairOk, fixes = pcall(ProfileRepair.repair, data)

@@ -333,6 +333,7 @@ function EconomyModel.new(L)
 					share12 = e.share12,
 					len = e.len,
 					sinceFuse = e.sinceFuse,
+					reachSinceFuse = e.reachSinceFuse,
 					maxBuyGap = maxBuyGap,
 					afterAscend = afterAscend,
 					snack = buys.snack or 0,
@@ -532,6 +533,12 @@ function EconomyModel.new(L)
 		-- santé de l'économie (boucles des jours 1 à 14)
 		local loopStartPlay = 0
 		local lastFusionPlay = -math.huge
+		-- shortestLoopSec (décision du chef, lot A2, docs/04 §27.12 A2-7) : écart entre la dernière
+		-- fusion et l'instant où la cible de la boucle est ATTEINTE (pas celui de la renaissance : ni le
+		-- geste du Petit Splorch, ni la file du Grand Splorch, ni l'attente de la pression qui la voit,
+		-- temps du joueur et non du jeu) ; dernière vérification sous la cible (borne basse)
+		local lastBelowPlay = -math.huge
+		local reachSinceFuse = math.huge
 		local helperBudget = 0 -- pressions d'aide dues (Plopettes), fraction comprise
 		local helpersBestR, helpersNow = -1, 0 -- Plopettes du Record R (recalculées quand il change)
 		local readyRecs, readyIncs = {}, {} -- squishies prêts de la pression en cours (cibles des aides)
@@ -583,6 +590,7 @@ function EconomyModel.new(L)
 		end
 		local incomeDirty = true
 		local bigDirty = true
+		local bigChangedAt = -math.huge -- horloge du dernier changement du plus gros d'enclos
 		local bigOffset, bigRec = -math.huge, nil -- plus gros d'enclos : argmax(z − zg)
 		local function refreshBig()
 			bigOffset, bigRec = -math.huge, nil
@@ -984,7 +992,7 @@ function EconomyModel.new(L)
 			if at == "pen" then
 				settle() -- le Pot est réglé avec l'ancien enclos avant d'ajouter la ligne
 				incomeDirty = true
-				bigDirty = true
+				bigDirty, bigChangedAt = true, now
 			end
 			table.insert(if at == "pen" then P.pen else P.dodo, rec)
 			fuseDirty, buyDirty = true, true
@@ -1086,7 +1094,7 @@ function EconomyModel.new(L)
 					removeUid(pair[2])
 					table.insert(if merged.at == "pen" then P.pen else P.dodo, merged)
 					incomeDirty = true
-					bigDirty = true
+					bigDirty, bigChangedAt = true, now
 					map[pair[1]], map[pair[2]] = nil, nil
 					map[kept] = merged
 					fusions += 1
@@ -1134,7 +1142,7 @@ function EconomyModel.new(L)
 			r.at = "dodo"
 			table.insert(P.dodo, r)
 			incomeDirty = true
-			bigDirty = true
+			bigDirty, bigChangedAt = true, now
 			fuseDirty, buyDirty = true, true
 			return true
 		end
@@ -1494,6 +1502,7 @@ function EconomyModel.new(L)
 					share12 = share,
 					len = loopLen,
 					sinceFuse = playTime - lastFusionPlay,
+					reachSinceFuse = reachSinceFuse,
 					star = P.tiles.star,
 					petit = not record,
 				}
@@ -1545,7 +1554,7 @@ function EconomyModel.new(L)
 				P.growth = { G = 0, g = P.growth.g, t = now }
 			end
 			incomeDirty = true
-			bigDirty = true
+			bigDirty, bigChangedAt = true, now
 			boostChanged()
 			buyDirty = true
 			addPoints(POINTS.splorch)
@@ -1697,11 +1706,22 @@ function EconomyModel.new(L)
 					metrics.first1e12Day = dayIndex
 				end
 				-- v2.0 : jamais au-delà de MaxR (Prestige.splorchReady, « Record absolu ! »)
-				if
-					splorchAt == math.huge
-					and bg >= Formulas.splorchTarget(P.R)
-					and (not v2 or P.R < MAX_R)
-				then
+				local target = Formulas.splorchTarget(P.R)
+				if bg < target then
+					lastBelowPlay = playTime
+				end
+				if splorchAt == math.huge and bg >= target and (not v2 or P.R < MAX_R) then
+					-- instant où la cible est atteinte : exact sur le segment en cours (taux g constant
+					-- depuis growth.t, plus gros inchangé depuis bigChangedAt : taille linéaire), sinon la
+					-- fin du segment précédent (borne haute, mesure prudente) ; jamais avant la dernière
+					-- vérification sous la cible, jamais après maintenant
+					local segStart = math.max(P.growth.t, bigChangedAt)
+					local crossAt = now
+					if P.growth.g > 0 then
+						crossAt = math.max(segStart, now - (bg - target) / P.growth.g)
+					end
+					local reach = math.min(playTime, math.max(lastBelowPlay, playTime - (now - crossAt)))
+					reachSinceFuse = reach - lastFusionPlay
 					-- v2.0 : le Petit Splorch (remontée) se fait hors file, son spectacle dure PetitShow
 					splorchAt = now
 						+ (
@@ -2218,7 +2238,7 @@ function EconomyModel.new(L)
 				while not Prestige.ascendReady(P) do
 					settle()
 					plop.z, plop.zg = Prestige.target(P.R), P.growth.G
-					bigDirty = true
+					bigDirty, bigChangedAt = true, now
 					if not prestige("splorch").applied then
 						error("EconomyModel : Prestige.apply refuse un Grand Splorch du profil forcé")
 					end
