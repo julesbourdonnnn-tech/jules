@@ -18,37 +18,13 @@
 return function(T)
 	local describe, it, expect, Harness = T.describe, T.it, T.expect, T.Harness
 	local process = require("@lune/process")
+	local task = require("@lune/task")
 	local Sim = require("../sim/Sim")
 	local EconomyModel = require("../sim/EconomyModel")
+	local EconomyIO = require("../sim/EconomyIO")
 
 	local h = Harness.new()
-	local function logic(name)
-		return h:require("ReplicatedStorage.Shared.Logic." .. name)
-	end
-	local function config(name)
-		return h:require("ReplicatedStorage.Shared.Config." .. name)
-	end
-	local L = {
-		Formulas = logic("Formulas"),
-		Odds = logic("Odds"),
-		FusionRules = logic("FusionRules"),
-		QuestRules = logic("QuestRules"),
-		RushRules = logic("RushRules"),
-		EventClock = logic("EventClock"),
-		Hash = logic("Hash"),
-		Prestige = logic("Prestige"),
-		UpgradeMath = logic("UpgradeMath"),
-		UpgradeAdvisor = logic("UpgradeAdvisor"),
-		Bitset = logic("Bitset"),
-		Balance = config("Balance"),
-		Species = config("Species"),
-		Rarities = config("Rarities"),
-		Mutations = config("Mutations"),
-		Quests = config("Quests"),
-		Events = config("Events"),
-		Features = config("Features"),
-		Upgrades = config("Upgrades"),
-	}
+	local L = EconomyIO.load(h)
 	local Features, Balance, Prestige = L.Features, L.Balance, L.Prestige
 
 	local PLAYERS = math.max(1, math.floor(tonumber(process.env.ECON_PLAYERS) or 50))
@@ -56,6 +32,46 @@ return function(T)
 	local NIGHT = process.env.ECON_NIGHT
 	local SPENDERS = math.min(PLAYERS, 20)
 	local DAYS, SEED = 28, 20261212
+	-- check.sh : configurations jouées dans ECON_WORKERS processus fils à la fois (tests/sim/
+	-- economy-worker, un par cœur) ; ECON_WORKERS=1 : toutes dans ce processus (mêmes joueurs)
+	local WORKERS = math.max(1, math.floor(tonumber(process.env.ECON_WORKERS) or 4))
+
+	-- Joue des configurations { { name, job } } (job : EconomyIO.run) ; rend { [name] = joueurs } et la
+	-- liste des fils en échec (raison et fin de leur sortie d'erreur)
+	local function runJobs(jobs)
+		local out, failed = {}, {}
+		if WORKERS <= 1 then
+			for _, j in jobs do
+				out[j.name] = EconomyIO.run(L, j.job)
+			end
+			return out, failed
+		end
+		local lune = process.env.ECON_LUNE or "lune"
+		local nextJob, running = 1, 0
+		local function launch(j)
+			running += 1
+			task.spawn(function()
+				local ok, r =
+					pcall(process.exec, lune, { "run", "tests/sim/economy-worker", EconomyIO.encode(j.job) })
+				local at = if ok and r.ok then string.find(r.stdout, EconomyIO.MARK, 1, true) else nil
+				if at then
+					out[j.name] = EconomyIO.decode(string.sub(r.stdout, at + #EconomyIO.MARK))
+				else
+					local why = if ok then string.sub(r.stderr or "", -2000) else tostring(r)
+					table.insert(failed, `{j.name} : {why}`)
+				end
+				running -= 1
+			end)
+		end
+		while nextJob <= #jobs or running > 0 do
+			while running < WORKERS and nextJob <= #jobs do
+				launch(jobs[nextJob])
+				nextJob += 1
+			end
+			task.wait(0.05)
+		end
+		return out, failed
+	end
 
 	-- =============================================================================================
 	-- Interrupteurs : coupés (jeu de base) ou tous ceux de l'économie ouverts (v2.0, dans le modèle)
@@ -78,20 +94,14 @@ return function(T)
 	-- =============================================================================================
 	-- Partie 1 : porte v1.3 (jeu de base, interrupteurs coupés)
 	-- =============================================================================================
-	local function baseGate()
+	local function baseGate(runs)
 		describe("EconomyPacing v1.3 (jeu de base, interrupteurs v2.0 coupés, GDD §4.24)", function()
 			local model = EconomyModel.new(L)
 			local results = {}
-			withFlags(false, function()
+			do
 				for _, size in EconomyModel.SIZES do
-					local result = Sim.run({
-						players = PLAYERS,
-						days = DAYS,
-						seed = SEED,
-						simulate = model.simulateFor({ players = size }),
-						gates = EconomyModel.GATES,
-						reported = EconomyModel.REPORTED,
-					})
+					local result =
+						Sim.aggregate(runs["v13." .. size], EconomyModel.GATES, EconomyModel.REPORTED)
 					results[size] = result
 					print(
 						string.format(
@@ -103,7 +113,7 @@ return function(T)
 					)
 					print(Sim.report(result))
 				end
-			end)
+			end
 
 			for _, size in EconomyModel.SIZES do
 				it(`serveur de {size} : chaque médiane (rythme et santé) est dans sa tolérance`, function()
@@ -138,19 +148,10 @@ return function(T)
 			it(
 				"gros acheteur (×2 Pièces, Grand Ranch, Squish Party la moitié du temps) : ≤ 2 R d'avance au jour 28",
 				function()
-					local spender = withFlags(false, function()
-						return Sim.run({
-							players = SPENDERS,
-							days = DAYS,
-							seed = SEED,
-							simulate = model.simulateFor({ players = 16, spender = true }),
-							gates = {},
-							reported = {
-								{ key = "rDay28", label = "R en fin de jour 28" },
-								{ key = "firstSplorch", label = "x" },
-							},
-						})
-					end)
+					local spender = Sim.aggregate(runs["v13.spender"], {}, {
+						{ key = "rDay28", label = "R en fin de jour 28" },
+						{ key = "firstSplorch", label = "x" },
+					})
 					local reference = {}
 					for i = 1, SPENDERS do
 						table.insert(reference, results[16].players[i].rDay28)
@@ -184,13 +185,14 @@ return function(T)
 
 			-- témoin : valeurs rendues par le modèle v1.3 d'avant l'extension v2.0 (commit 533e02e) pour ce
 			-- joueur ; le modèle étendu, interrupteurs coupés, doit les rendre au bit près (une dérive du
-			-- jeu de base dans le modèle fait échouer ce cas avant de déplacer une médiane)
+			-- jeu de base dans le modèle fait échouer ce cas avant de déplacer une médiane). Le joueur 1 du
+			-- serveur de 8 de la porte ci-dessus (graine SEED × 1000003 + 1, 28 jours) : pris dans ses
+			-- résultats, jamais rejoué
 			it(
 				"interrupteurs coupés : un joueur témoin rend exactement les jalons du modèle v1.3",
 				function()
-					local m = withFlags(false, function()
-						return model.simulateFor({ players = 8 })(Sim.newRng(SEED * 1000003 + 1), 1, DAYS)
-					end)
+					local m = results[8].players[1]
+					expect(DAYS).toBe(28)
 					expect(m.v2).toBeNil()
 					expect({
 						firstSplorch = m.firstSplorch,
@@ -249,6 +251,13 @@ return function(T)
 		ref = { 0.01, 0.05, 0.15, 0.20, 0.20, 0.20, 0.20 },
 		assidu = { 0.01, 0.15, 0.30, 0.30, 0.30, 0.30, 0.30 },
 		allday = { 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30 },
+	}
+	-- « refuse la 1re Ascension pendant 3 jours » : limites du tableau des profils du GDD §4.24.1
+	-- (référence ≤ 20 %, assidu ≤ 30 % dans chaque bande ; le GDD est la source du design, journal
+	-- A1-30) ; le trou p90 de l'assidu, dont le GDD ne dit rien pour ce profil, garde la limite du §27.9
+	STARVED.refuse3 = {
+		ref = { 0.20, 0.20, 0.20, 0.20, 0.20, 0.20, 0.20 },
+		assidu = { 0.30, 0.30, 0.30, 0.30, 0.30, 0.30, 0.30 },
 	}
 	local GAP_P90_MAX = 15 -- min : plus long trou d'un joueur de 2 h par jour, p90, dans chaque bande
 	local ASCEND = {
@@ -433,6 +442,72 @@ return function(T)
 		return st
 	end
 
+	-- Clés de QUEUE (docs/04 §27.9, journal A1-28) : à 20 joueurs, leur bruit d'échantillon est plus
+	-- large que leur marge (marge < 2 écarts types). sigma = écart type à 20 joueurs MESURÉ
+	-- (ECON_NIGHT=spread, 20 blocs disjoints de 20 joueurs sur 400, le pire des 3 tailles de serveur).
+	-- Leur vraie limite est affirmée la nuit sur TAIL_PLAYERS joueurs (cas tails4, tails8, tails16) ;
+	-- check.sh les garde en « alarme rapide » : même clé, limite élargie de 2 sigma (un tirage de 20
+	-- joueurs n'en sort pas par le bruit seul quand la vraie valeur tient). Toute autre clé bloque
+	-- check.sh à sa vraie limite.
+	-- (mesure du 5 novembre 2026, Balance du lot A1 3/4 ; σ = le pire des serveurs de 4, 8 et 16, arrondi
+	-- vers le haut ; marge / σ entre parenthèses, au pire serveur, valeur sur 400 joueurs)
+	local TAIL = {
+		ref = {
+			{ label = "Premier Grand Splorch (min)", sigma = 0.69 }, -- 12,16 min (1,69 σ)
+			{ label = "Plus gros, fin du jour 7", sigma = 1.2e7 }, -- bimodal : un bloc à 3,97e7 < 4e7
+			{ label = "loopMaxGap r12 médiane", sigma = 0.28 }, -- 2,53 min (1,68 σ)
+			{ label = "loopMaxGap r13 médiane", sigma = 0.47 }, -- 2,80 min (0,43 σ)
+			{ label = "loopMaxGap r13 p90", sigma = 0.41 }, -- 4,93 min (0,17 σ)
+			{ label = "ascendGapDays A6→A7", sigma = 0.5 }, -- 10 jours, à la limite (blocs : 10 à 11)
+			{ label = "tapis12RecordLoopByA A7", sigma = 0.075 }, -- 0,83 (1,97 σ)
+			{ label = "purchasesPerRecordLoopByA A7", sigma = 0.77 }, -- 11,5 (1,98 σ)
+		},
+		assidu = {
+			{ label = "longestGapAssiduP90 Day8to14", sigma = 1.35 }, -- 14,07 min (0,71 σ)
+			{ label = "longestGapAssiduP90 Day15to28", sigma = 1.13 }, -- 13,90 min (0,97 σ)
+			{ label = "coinsLostRatioGrand Day8to14", sigma = 0.38 }, -- 2,66 T12 (0,92 σ)
+		},
+	}
+	local function tailOf(profile, label)
+		for _, t in TAIL[profile] or {} do
+			if string.sub(label, 1, #t.label) == t.label then
+				return t
+			end
+		end
+		return nil
+	end
+	local function within(k)
+		return type(k.value) == "number"
+			and k.value == k.value
+			and (k.lo == nil or k.value >= k.lo)
+			and (k.hi == nil or k.value <= k.hi)
+	end
+	-- check.sh : clés de queue en alarme rapide (limite ± 2 sigma, libellé marqué)
+	local function applyAlarm(keys, profile)
+		for _, k in keys do
+			local t = if k.reported then nil else tailOf(profile, k.label)
+			if t then
+				k.lo = if k.lo ~= nil then k.lo - 2 * t.sigma else nil
+				k.hi = if k.hi ~= nil then k.hi + 2 * t.sigma else nil
+				k.label ..= string.format(
+					" [alarme rapide ± 2σ, σ = %s ; vraie limite : nuit]",
+					tostring(t.sigma)
+				)
+				k.ok = within(k)
+			end
+		end
+	end
+	-- nuit, cas de 140 jours au serveur de 16 : une clé de queue de ses 84 (référence) ou 28 (assidu)
+	-- premiers jours est affirmée sur TAIL_PLAYERS joueurs par tails16 (mêmes graines) ; ici rapportée
+	local function coveredByTails(keys, profile)
+		for _, k in keys do
+			if not k.reported and tailOf(profile, k.label) then
+				k.reported, k.ok = true, true
+				k.label ..= " [affirmée par tails16]"
+			end
+		end
+	end
+
 	-- Liste de clés : { group, label, value, lo, hi, ok, reported }
 	local function newKeys()
 		local keys = {}
@@ -505,7 +580,7 @@ return function(T)
 	local function v2Keys(result, profile, opts)
 		local st = v2Stats(result)
 		local keys, add = newKeys()
-		local starvedLimits = STARVED[profile] or STARVED.ref
+		local starvedLimits = opts.starved or STARVED[profile] or STARVED.ref
 		-- jalons de la v1.3
 		if opts.v13 then
 			for _, g in V13_KEYS do
@@ -704,6 +779,12 @@ return function(T)
 			true
 		)
 		add("Rapporté", "temps en ×2 (%)", st.metric("boostShare"), nil, nil, true)
+		if opts.alarm then
+			applyAlarm(keys, profile)
+		end
+		if opts.tailsCovered then
+			coveredByTails(keys, profile)
+		end
 		return keys, st
 	end
 
@@ -740,15 +821,14 @@ return function(T)
 		end
 	end
 
-	local function v2Gate()
+	local function v2Gate(runs)
 		describe(
 			"EconomyPacing v2.0 (interrupteurs de l'économie ouverts dans le modèle, docs/04 §27.9)",
 			function()
 				local model = EconomyModel.new(L)
-				local t0 = os.clock()
-				local noAscend = v2Stats(runV2(model, 16, V2_PLAYERS, 28, { ascend = false }))
+				local noAscend = v2Stats({ players = runs["v2.noAscend"] })
 				for _, size in EconomyModel.SIZES do
-					local ref = runV2(model, size, V2_PLAYERS, 84, {})
+					local ref = { players = runs["v2.ref." .. size] }
 					local keys = v2Keys(ref, "ref", {
 						v13 = true,
 						ascend = true,
@@ -756,15 +836,16 @@ return function(T)
 						loopGap = true,
 						days = 84,
 						noAscend = if size == 16 then noAscend else nil,
+						alarm = true,
 					})
 					itKeys(`référence, serveur de {size} ({V2_PLAYERS} joueurs, 84 jours)`, keys)
 				end
 				for _, size in EconomyModel.SIZES do
-					local assidu = runV2(model, size, V2_PLAYERS, 28, { assidu = true })
-					local keys = v2Keys(assidu, "assidu", { ascend = true, atelier = true, days = 28 })
+					local assidu = { players = runs["v2.assidu." .. size] }
+					local keys =
+						v2Keys(assidu, "assidu", { ascend = true, atelier = true, days = 28, alarm = true })
 					itKeys(`assidu 2 h par jour, serveur de {size} ({V2_PLAYERS} joueurs, 28 jours)`, keys)
 				end
-				print(string.format("\n  Porte v2.0 : %.0f s de calcul", os.clock() - t0))
 
 				it(
 					"invariant de stabilité : Prestige.validateConfig(Balance) (GDD §4.27, critique M13)",
@@ -852,11 +933,148 @@ return function(T)
 	-- =============================================================================================
 	-- Partie 3 : la nuit (scripts/economy-nightly.sh), un cas par processus
 	-- =============================================================================================
-	local NIGHT_PLAYERS = math.max(1, math.floor(tonumber(process.env.ECON_NIGHT_PLAYERS) or 50))
+	-- joueurs par configuration de la nuit (80 au moins : docs/04 §27.9) ; TAIL_PLAYERS : configurations
+	-- de check.sh rejouées pour leurs clés de queue (cas tailsRef* et tailsAssidu*)
+	local NIGHT_PLAYERS = math.max(1, math.floor(tonumber(process.env.ECON_NIGHT_PLAYERS) or 80))
+	local TAIL_PLAYERS = math.max(1, math.floor(tonumber(process.env.ECON_TAIL_PLAYERS) or 400))
 	local function weekend(d)
 		return ((d - 1) % 7) < 2
 	end
 	local NIGHT_CASES = {}
+	-- Bruit d'échantillon d'une configuration (docs/04 §27.9) : les mêmes clés que check.sh sur tous les
+	-- joueurs, puis sur chaque bloc disjoint de `block` joueurs (le 1er bloc = les graines de check.sh) ;
+	-- imprime pour chaque clé la valeur sur tous, la moyenne, l'écart type et l'étendue des blocs, la
+	-- marge à la limite en écarts types, et les valeurs des 20 et des 80 premiers joueurs. Rend le
+	-- nombre de blocs. Lancement manuel : ECON_NIGHT=spread ECON_PROFILE=ref|assidu ECON_SIZE=16
+	-- ECON_DAYS=84 ECON_NIGHT_PLAYERS=400 ECON_BLOCK=20 ; les cas tails* l'impriment aussi (rapporté)
+	local function spreadReport(res, noAscendRes, profile, size, days, block)
+		local total = #res.players
+		local function keysOf(from, to)
+			local sub = { players = table.move(res.players, from, to, 1, {}) }
+			local noAscend = if noAscendRes
+				then v2Stats({ players = table.move(noAscendRes.players, from, to, 1, {}) })
+				else nil
+			return v2Keys(sub, profile, {
+				v13 = profile == "ref",
+				ascend = true,
+				atelier = true,
+				loopGap = profile == "ref",
+				days = days,
+				noAscend = noAscend,
+			})
+		end
+		local function name(k)
+			return (string.gsub(k.label, " %(sans Ascension : [^)]*%)", ""))
+		end
+		local all = keysOf(1, total)
+		-- valeurs sur les 20 premiers joueurs (check.sh) et les 80 premiers (taille de la nuit)
+		local firstOf = {}
+		for _, n in { 20, 80 } do
+			firstOf[n] = {}
+			if total >= n then
+				for _, k in keysOf(1, n) do
+					firstOf[n][name(k)] = k.value
+				end
+			end
+		end
+		local values = {}
+		local blocks = math.floor(total / block)
+		for b = 1, blocks do
+			for _, k in keysOf((b - 1) * block + 1, b * block) do
+				local key = name(k)
+				values[key] = values[key] or {}
+				if type(k.value) == "number" and k.value == k.value and math.abs(k.value) < math.huge then
+					table.insert(values[key], k.value)
+				end
+			end
+		end
+		print(
+			string.format(
+				"\n  — bruit : %s, serveur de %d, %d jours, %d joueurs, %d blocs de %d —",
+				profile,
+				size,
+				days,
+				total,
+				blocks,
+				block
+			)
+		)
+		for _, k in all do
+			local list = values[name(k)] or {}
+			local n, sum, sq, lo, hi = #list, 0, 0, math.huge, -math.huge
+			for _, v in list do
+				sum += v
+				lo, hi = math.min(lo, v), math.max(hi, v)
+			end
+			local mean = if n > 0 then sum / n else 0 / 0
+			for _, v in list do
+				sq += (v - mean) * (v - mean)
+			end
+			local sd = if n > 1 then math.sqrt(sq / (n - 1)) else 0 / 0
+			local margin = math.huge
+			if type(k.value) == "number" then
+				if k.hi ~= nil then
+					margin = math.min(margin, k.hi - k.value)
+				end
+				if k.lo ~= nil then
+					margin = math.min(margin, k.value - k.lo)
+				end
+			end
+			-- ligne lisible par un script :
+			-- SPREAD|groupe|clé|tous|moyenne|écart type|min|max|lo|hi|blocs|marge/σ|20 premiers|80 premiers
+			print(
+				string.format(
+					"SPREAD|%s|%s|%s|%s|%s|%s|%s|%s|%s|%d|%s|%s|%s",
+					k.group,
+					name(k),
+					fmt(k.value),
+					fmt(mean),
+					fmt(sd),
+					fmt(lo),
+					fmt(hi),
+					if k.lo == nil then "—" else fmt(k.lo),
+					if k.hi == nil then "—" else fmt(k.hi),
+					n,
+					if k.reported
+							or margin == math.huge
+							or sd ~= sd
+							or sd == 0
+						then "—"
+						else fmt(margin / sd),
+					fmt(firstOf[20][name(k)]),
+					fmt(firstOf[80][name(k)])
+				)
+			)
+		end
+		return blocks
+	end
+	-- les configurations de check.sh sur TAIL_PLAYERS joueurs (mêmes graines : les 20 premiers sont ceux
+	-- de check.sh), chaque clé à sa VRAIE limite, aux 3 tailles de serveur ; un processus par profil et
+	-- par taille (le jeu de nuit en joue plusieurs à la fois)
+	for _, size in EconomyModel.SIZES do
+		NIGHT_CASES["tailsRef" .. size] = function(model)
+			local noAscendRes = if size == 16
+				then runV2(model, 16, TAIL_PLAYERS, 28, { ascend = false })
+				else nil
+			local ref = runV2(model, size, TAIL_PLAYERS, 84, {})
+			spreadReport(ref, noAscendRes, "ref", size, 84, 20)
+			local keys = v2Keys(ref, "ref", {
+				v13 = true,
+				ascend = true,
+				atelier = true,
+				loopGap = true,
+				days = 84,
+				noAscend = if noAscendRes then v2Stats(noAscendRes) else nil,
+			})
+			itKeys(`nuit : référence, serveur de {size}, {TAIL_PLAYERS} joueurs, 84 jours`, keys)
+		end
+		NIGHT_CASES["tailsAssidu" .. size] = function(model)
+			local assidu = runV2(model, size, TAIL_PLAYERS, 28, { assidu = true })
+			spreadReport(assidu, nil, "assidu", size, 28, 20)
+			local keys = v2Keys(assidu, "assidu", { ascend = true, atelier = true, days = 28 })
+			itKeys(`nuit : assidu 2 h par jour, serveur de {size}, {TAIL_PLAYERS} joueurs, 28 jours`, keys)
+		end
+	end
 	NIGHT_CASES.ref140 = function(model)
 		local noAscend = v2Stats(runV2(model, 16, NIGHT_PLAYERS, 28, { ascend = false }))
 		local res = runV2(model, 16, NIGHT_PLAYERS, 140, {})
@@ -867,13 +1085,18 @@ return function(T)
 			loopGap = true,
 			days = 140,
 			noAscend = noAscend,
+			tailsCovered = true,
 		})
 		itKeys(`nuit : référence, {NIGHT_PLAYERS} joueurs, 140 jours`, keys)
 	end
 	NIGHT_CASES.assidu140 = function(model)
 		local noAscend = v2Stats(runV2(model, 16, NIGHT_PLAYERS, 28, { assidu = true, ascend = false }))
 		local res = runV2(model, 16, NIGHT_PLAYERS, 140, { assidu = true })
-		local keys = v2Keys(res, "assidu", { ascend = true, atelier = true, days = 140, noAscend = noAscend })
+		local keys = v2Keys(
+			res,
+			"assidu",
+			{ ascend = true, atelier = true, days = 140, noAscend = noAscend, tailsCovered = true }
+		)
 		itKeys(`nuit : assidu 2 h par jour, {NIGHT_PLAYERS} joueurs, 140 jours`, keys)
 	end
 	-- lancement manuel : ECON_NIGHT=custom ECON_PROFILE=ref|assidu ECON_SIZE=4|8|16 ECON_DAYS=84
@@ -891,6 +1114,20 @@ return function(T)
 			days = days,
 		})
 		itKeys(`manuel : {profile}, serveur de {size}, {NIGHT_PLAYERS} joueurs, {days} jours`, keys)
+	end
+	NIGHT_CASES.spread = function(model)
+		local profile = if process.env.ECON_PROFILE == "assidu" then "assidu" else "ref"
+		local size = math.floor(tonumber(process.env.ECON_SIZE) or 16)
+		local days = math.floor(tonumber(process.env.ECON_DAYS) or (if profile == "assidu" then 28 else 84))
+		local block = math.max(2, math.floor(tonumber(process.env.ECON_BLOCK) or 20))
+		local res = runV2(model, size, NIGHT_PLAYERS, days, { assidu = profile == "assidu" })
+		local noAscendRes = if profile == "ref" and size == 16
+			then runV2(model, 16, NIGHT_PLAYERS, 28, { ascend = false })
+			else nil
+		local blocks = spreadReport(res, noAscendRes, profile, size, days, block)
+		it("mesure du bruit : au moins 2 blocs", function()
+			expect(blocks >= 2).toBe(true)
+		end)
 	end
 	NIGHT_CASES.min10 = function(model)
 		local res = runV2(model, 16, NIGHT_PLAYERS, 84, { firstMin = 15, dailyMin = 10 })
@@ -961,10 +1198,10 @@ return function(T)
 			84
 		)(model)
 		atelierEffect(
-			"nuit : assidu sans Atelier, 20 joueurs, 84 jours",
+			`nuit : assidu sans Atelier, {NIGHT_PLAYERS} joueurs, 84 jours`,
 			"assidu",
 			{ assidu = true, atelier = false },
-			math.min(NIGHT_PLAYERS, 20),
+			NIGHT_PLAYERS,
 			84
 		)(model)
 	end
@@ -972,13 +1209,12 @@ return function(T)
 		local ref = runV2(model, 16, NIGHT_PLAYERS, 84, { ascendDelayDays = 3 })
 		itKeys(
 			`nuit : référence qui refuse 3 jours, {NIGHT_PLAYERS} joueurs, 84 jours`,
-			v2Keys(ref, "ref", { days = 84 })
+			v2Keys(ref, "ref", { days = 84, starved = STARVED.refuse3.ref })
 		)
-		local assidu =
-			runV2(model, 16, math.min(NIGHT_PLAYERS, 20), 84, { assidu = true, ascendDelayDays = 3 })
+		local assidu = runV2(model, 16, NIGHT_PLAYERS, 84, { assidu = true, ascendDelayDays = 3 })
 		itKeys(
-			"nuit : assidu qui refuse 3 jours, 20 joueurs, 84 jours",
-			v2Keys(assidu, "assidu", { days = 84 })
+			`nuit : assidu qui refuse 3 jours, {NIGHT_PLAYERS} joueurs, 84 jours`,
+			v2Keys(assidu, "assidu", { days = 84, starved = STARVED.refuse3.assidu })
 		)
 	end
 	NIGHT_CASES.advisor = function(model)
@@ -987,10 +1223,9 @@ return function(T)
 			`nuit : politique « Conseillé », référence, {NIGHT_PLAYERS} joueurs, 84 jours`,
 			v2Keys(ref, "ref", { ascend = true, atelier = true, days = 84 })
 		)
-		local assidu =
-			runV2(model, 16, math.min(NIGHT_PLAYERS, 20), 84, { assidu = true, policy = "advisor" })
+		local assidu = runV2(model, 16, NIGHT_PLAYERS, 84, { assidu = true, policy = "advisor" })
 		itKeys(
-			"nuit : politique « Conseillé », assidu, 20 joueurs, 84 jours",
+			`nuit : politique « Conseillé », assidu, {NIGHT_PLAYERS} joueurs, 84 jours`,
 			v2Keys(assidu, "assidu", { ascend = true, atelier = true, days = 84 })
 		)
 	end
@@ -1052,10 +1287,9 @@ return function(T)
 			`nuit : Atelier complet dès le début, référence, {NIGHT_PLAYERS} joueurs, 84 jours`,
 			v2Keys(ref, "ref", { days = 84 })
 		)
-		local assidu =
-			runV2(model, 16, math.min(NIGHT_PLAYERS, 20), 28, { assidu = true, fullAtelier = true })
+		local assidu = runV2(model, 16, NIGHT_PLAYERS, 28, { assidu = true, fullAtelier = true })
 		itKeys(
-			"nuit : Atelier complet dès le début, assidu, 20 joueurs, 28 jours",
+			`nuit : Atelier complet dès le début, assidu, {NIGHT_PLAYERS} joueurs, 28 jours`,
 			v2Keys(assidu, "assidu", { days = 28 })
 		)
 	end
@@ -1080,8 +1314,93 @@ return function(T)
 			print(string.format("\n  Cas %s : %.0f s de calcul", NIGHT, os.clock() - t0))
 		end)
 	else
-		baseGate()
-		v2Gate()
+		-- check.sh : les 11 configurations des deux portes, jouées à la fois (les plus longues d'abord)
+		local jobs = {}
+		local function job(name, j)
+			j.seed = SEED
+			table.insert(jobs, { name = name, job = j })
+		end
+		for _, size in { 4, 8, 16 } do
+			job(
+				"v2.assidu." .. size,
+				{ flags = true, size = size, players = V2_PLAYERS, days = 28, v2 = { assidu = true } }
+			)
+			job("v2.ref." .. size, { flags = true, size = size, players = V2_PLAYERS, days = 84, v2 = {} })
+		end
+		for _, size in EconomyModel.SIZES do
+			job("v13." .. size, { flags = false, size = size, players = PLAYERS, days = DAYS })
+		end
+		job("v13.spender", { flags = false, size = 16, players = SPENDERS, days = DAYS, spender = true })
+		job(
+			"v2.noAscend",
+			{ flags = true, size = 16, players = V2_PLAYERS, days = 28, v2 = { ascend = false } }
+		)
+		local started = os.time()
+		local runs, failed = runJobs(jobs)
+		print(
+			string.format(
+				"\n  Portes v1.3 et v2.0 : %d configurations, %d à la fois, %d s",
+				#jobs,
+				WORKERS,
+				os.time() - started
+			)
+		)
+		describe("EconomyPacing : configurations jouées", function()
+			it("chaque configuration a rendu ses joueurs (fils sans erreur ni trace)", function()
+				expect(table.concat(failed, "\n")).toBe("")
+				for _, j in jobs do
+					expect({ name = j.name, players = runs[j.name] and #runs[j.name] or 0 }).toEqual({
+						name = j.name,
+						players = j.job.players,
+					})
+				end
+			end)
+			-- un fils rend les mêmes joueurs, au bit près, que le calcul en place (même graine, même code)
+			it("un fils rend les mêmes joueurs que le calcul en place", function()
+				local small = {
+					{
+						name = "v2",
+						job = {
+							flags = true,
+							size = 8,
+							players = 2,
+							days = 3,
+							seed = SEED,
+							v2 = { assidu = true },
+						},
+					},
+					{ name = "v13", job = { flags = false, size = 4, players = 2, days = 2, seed = SEED } },
+				}
+				local child = runJobs(small)
+				-- égalité profonde au bit près (NaN égal à NaN), chemin de la première différence
+				local function diff(a, b, path)
+					if type(a) == "number" and type(b) == "number" then
+						return if a == b or (a ~= a and b ~= b) then nil else path
+					elseif type(a) ~= "table" or type(b) ~= "table" then
+						return if a == b then nil else path
+					end
+					for k, v in a do
+						local d = diff(v, b[k], path .. "." .. tostring(k))
+						if d then
+							return d
+						end
+					end
+					for k in b do
+						if a[k] == nil then
+							return path .. "." .. tostring(k)
+						end
+					end
+					return nil
+				end
+				for _, j in small do
+					expect(diff(child[j.name], EconomyIO.run(L, j.job), j.name)).toBeNil()
+				end
+			end)
+		end)
+		if #failed == 0 then
+			baseGate(runs)
+			v2Gate(runs)
+		end
 	end
 
 	describe("EconomyPacing : zéro trace", function()

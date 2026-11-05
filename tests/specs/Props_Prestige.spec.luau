@@ -347,11 +347,14 @@ return function(T)
 		)
 
 		it(
-			"valeurs livrées : la dernière boucle record avant chaque Ascension garde sa difficulté (jamais plus dure, au plus 10 % plus facile)",
+			"valeurs livrées : la dernière boucle record avant chaque Ascension garde sa difficulté (au plus 10 % plus facile d'une Ascension à l'autre, au plus un Grand Splorch plus dure, jamais à plus de 30 % de celle de la 1re)",
 			function()
 				-- difficulté de la boucle record après A Ascensions (r = condition de la suivante − 1) :
-				-- objectif(r) ÷ (2^r × 3^A) ; l'invariant donne × 0,952 par Ascension, les arrondis des
-				-- objectifs à 2 chiffres significatifs le font bouger entre 0,93 et 1,00
+				-- objectif(r) ÷ (2^r × 3^A) ; + 4 par Ascension donne × 0,952 (arrondis des objectifs à 2
+				-- chiffres significatifs : 0,92 à 0,99), le Grand Splorch de plus toutes les 8 Ascensions
+				-- (Balance.Ascend.ReqR, docs/04 §21) × 1,3 : la difficulté reste entre 0,73 et 1 fois celle
+				-- de la 1re Ascension jusqu'à MaxA (avec + 4 seul, elle tombait à 0,13 : boucles record de plus
+				-- en plus courtes, une Ascension tous les 3 jours pour le joueur de 2 h par jour)
 				local function difficulty(A)
 					local r = Prestige.reqR(A + 1) - 1
 					local g = 1
@@ -360,9 +363,15 @@ return function(T)
 					end
 					return Prestige.target(r) / (g * Prestige.growthFactor(r, A, r, false))
 				end
+				local first = difficulty(1)
 				for A = 1, MAX_A - 1 do
 					local q = difficulty(A + 1) / difficulty(A)
-					expect({ A = A, ok = q >= 0.9 and q <= 1 }).toEqual({ A = A, ok = true })
+					local rel = difficulty(A + 1) / first
+					expect({ A = A, step = q >= 0.9 and q <= 1.35, drift = rel >= 0.7 and rel <= 1.05 }).toEqual({
+						A = A,
+						step = true,
+						drift = true,
+					})
 				end
 			end
 		)

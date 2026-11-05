@@ -428,15 +428,40 @@ Balance.Prestige = {
 	MaxA = 60,
 }
 
--- Jelly Ascend (GDD §4.27). Condition : ReqR[A + 1] pour les deux premières, puis + ReqStep ;
+-- Jelly Ascend (GDD §4.27). Condition de la k-ième : ReqR[k] tant que k ≤ #ReqR, puis + ReqStep ;
 -- croissance × GrowthMult^A ; prix de la boucle × produit de PriceByA[min(k, #PriceByA)] pour k = 1 … A
 -- (le dernier facteur vaut pour toutes les Ascensions suivantes) ; Souvenir de gelée : × RegainMult
 -- tant que r ≤ bestR − 3, puis RegainTaper[1] (bestR − 2), [2] (bestR − 1), [3] (1re boucle record)
+-- Réglage de la porte d'économie (docs/04 §21, lot A1 3/4) : 15, 20, puis + 4, et un Grand Splorch de
+-- plus toutes les 8 Ascensions à partir de la 11e (57, 90, 123, …) : avec + 4 seul, (2,6 / 2)^4 = 2,86
+-- < × 3 et la boucle record raccourcissait à chaque Ascension (une Ascension tous les 3 jours pour le
+-- joueur de 2 h par jour après A22, tous les 9 jours pour la référence après A11 ; GDD : 4-8 et 10-16).
+-- Prix : 0,5 aux 4 premières, 0,32 jusqu'à A10, puis 0,31 (0,29 aux Ascensions qui demandent un Grand
+-- Splorch de plus) : sans eux, le Tapis Étoilé n'était presque plus acheté dans les boucles record
+-- tardives (10,4 achats de la ligne Tapis par boucle record, limite 10).
 Balance.Ascend = {
-	ReqR = { 15, 20 },
+	-- stylua: ignore start
+	ReqR = {
+		15, 20, 24, 28, 32, 36, 40, 44, 48, 52,
+		57, 61, 65, 69, 73, 77, 81, 85, 90, 94,
+		98, 102, 106, 110, 114, 118, 123, 127, 131, 135,
+		139, 143, 147, 151, 156, 160, 164, 168, 172, 176,
+		180, 184, 189, 193, 197, 201, 205, 209, 213, 217,
+		222, 226, 230, 234, 238, 242, 246, 250, 255, 259,
+	} :: { number },
+	-- stylua: ignore end
 	ReqStep = 4,
 	GrowthMult = 3,
-	PriceByA = { 0.5, 0.5, 0.5, 0.5, 0.32 },
+	-- stylua: ignore start
+	PriceByA = {
+		0.5, 0.5, 0.5, 0.5, 0.32, 0.32, 0.32, 0.32, 0.32, 0.32,
+		0.29, 0.31, 0.31, 0.31, 0.31, 0.31, 0.31, 0.31, 0.29, 0.31,
+		0.31, 0.31, 0.31, 0.31, 0.31, 0.31, 0.29, 0.31, 0.31, 0.31,
+		0.31, 0.31, 0.31, 0.31, 0.29, 0.31, 0.31, 0.31, 0.31, 0.31,
+		0.31, 0.31, 0.29, 0.31, 0.31, 0.31, 0.31, 0.31, 0.31, 0.31,
+		0.29, 0.31, 0.31, 0.31, 0.31, 0.31, 0.31, 0.31, 0.29, 0.31,
+	} :: { number },
+	-- stylua: ignore end
 	RegainMult = 3,
 	RegainTaper = { 2, 1.5, 1.25 },
 	DeclineCardAfter = 300, -- s sans achat possible : carte Conseillé « Jelly Ascend »
@@ -521,7 +546,9 @@ Balance.OfflineV2 = {
 	MinPlaySeconds = 120, -- la croissance hors ligne s'arrête à 120 s de croissance maximale de l'objectif
 	NightBagHours = 1, -- + 1 h par niveau du Sac de nuit
 	MaxHours = 16,
-	NightPotShares = { 0.25, 0.30, 0.35 }, -- part du revenu hors ligne dans le Pot (Pot de nuit 0, 1, 2)
+	-- part du revenu hors ligne dans le Pot (Pot de nuit 0, 1, 2) ; 0,30 / 0,35 au GDD v2.0, réglé par la
+	-- porte d'économie (docs/04 §21 : offlinePotShare du joueur de 10 min par jour ≤ 2)
+	NightPotShares = { 0.25, 0.28, 0.31 },
 }
 
 -- Pot à Pièces v2.0 : rayon d'encaissement par niveau d'Aimant (0 à 3)

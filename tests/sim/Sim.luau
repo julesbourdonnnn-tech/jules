@@ -80,6 +80,13 @@ function Sim.run(opts)
 		local rng = Sim.newRng(seed * 1000003 + i)
 		results[i] = opts.simulate(rng, i, days)
 	end
+	return Sim.aggregate(results, opts.gates, opts.reported)
+end
+
+-- Résultat d'une liste de joueurs déjà simulés (même forme que Sim.run : médianes, p10, p90 des clés
+-- des portes et des clés rapportées) ; sert aussi aux joueurs simulés dans un autre processus
+function Sim.aggregate(results, gates, reported)
+	local opts = { gates = gates, reported = reported }
 	local keys = {}
 	for _, g in opts.gates or {} do
 		table.insert(keys, g.key)

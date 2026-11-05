@@ -461,8 +461,8 @@ return function(T)
 			expect(fx("keptDecor", 1, { bestR = 14 })).toEqual({ 9, 12 }) -- Déco gardées : 9 → 12
 			expect(fx("nightBag", 0, { cozyBed = true })).toEqual({ 12, 13 }) -- Nuit : 12 h → 13 h
 			expect(fx("nightBag", 3, { cozyBed = true, spikyFamily = true })).toEqual({ 16, 16 }) -- 16 h au plus
-			local p = fx("nightPot", 0) -- Pot la nuit : 25 % → 30 %
-			expect(math.abs(p[1] - 0.25) < 1e-12 and math.abs(p[2] - 0.30) < 1e-12).toBe(true)
+			local p = fx("nightPot", 0) -- Pot la nuit : 25 % → 28 % (Balance.OfflineV2.NightPotShares, §21)
+			expect(math.abs(p[1] - 0.25) < 1e-12 and math.abs(p[2] - 0.28) < 1e-12).toBe(true)
 			expect(fx("plume", 0, { bestR = 12 })).toEqual({ 5, 6 }) -- Plopettes : 5 → 6
 			expect(fx("springboard", 0)).toEqual({ 0, 1 }) -- Tremplin : 0 → 1
 			expect(fx("fun.palettes", 2)).toEqual({ 2, 3 })

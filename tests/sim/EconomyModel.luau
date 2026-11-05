@@ -1253,7 +1253,16 @@ function EconomyModel.new(L)
 			end
 			buyDirty = true
 			if log then
-				table.insert(log, { t = playTime, d = dayIndex, k = "buy", tile = id })
+				table.insert(log, {
+					t = playTime,
+					d = dayIndex,
+					k = "buy",
+					tile = id,
+					-- sondes (opts.keepLog) : prix payé, r et pièces avant l'achat
+					cost = if opts.keepLog then cost else nil,
+					r = if opts.keepLog then P.R else nil,
+					coins = if opts.keepLog then P.coins + cost else nil,
+				})
 			end
 			if metrics.firstBuy == math.huge then
 				metrics.firstBuy = playTime
@@ -2456,6 +2465,9 @@ function EconomyModel.new(L)
 		metrics.pointsPerMin = if ownPointsTime > 0 then 60 * measuredRate else 0
 		if v2 then
 			metrics.v2 = summarize(log, daily, offPotShares, (metrics.startA or 0) >= 1)
+			if opts.keepLog then
+				metrics.v2.log = log -- sondes seulement : journal brut (sinon jeté)
+			end
 		end
 		return metrics
 	end

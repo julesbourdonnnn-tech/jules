@@ -1,7 +1,11 @@
 #!/usr/bin/env bash
 # Jeu de nuit de la porte d'économie v2.0 (docs/04 §27.9, GDD §4.24.1) : BLOQUANT, comme la porte de
 # check.sh. Chaque cas est un processus Lune (EconomyPacing.spec avec ECON_NIGHT=<cas>) :
-#   ref140 assidu140   référence et assidu (2 h par jour), 50 joueurs, 140 jours (+ sans Ascension,
+#   tailsRef4 tailsRef8 tailsRef16 tailsAssidu4 tailsAssidu8 tailsAssidu16
+#                      les configurations de check.sh (référence 84 jours, assidu 28 jours, serveurs de
+#                      4, 8 et 16) sur 400 joueurs : chaque clé à sa VRAIE limite, dont les clés de queue
+#                      que check.sh ne garde qu'en alarme rapide (docs/04 §27.9) ; bruit imprimé (SPREAD)
+#   ref140 assidu140   référence et assidu (2 h par jour), 80 joueurs, 140 jours (+ sans Ascension,
 #                      28 jours : recordRDay28)
 #   min10 min20        10 et 20 min par jour, 84 jours
 #   weekend            90 min le samedi et le dimanche, 140 jours
@@ -13,8 +17,9 @@
 #   forcedA10 … 60     profils de départ à A = 10, 20, 30, 60 (Prestige.apply répété)
 #   fullAtelier        Atelier et « Pour le plaisir » complets dès le début
 # Usage : ./scripts/economy-nightly.sh [cas …]   (sans argument : tous)
-#   ECON_JOBS=2            cas joués en même temps (2 par défaut ; la machine a 4 cœurs)
-#   ECON_NIGHT_PLAYERS=50  joueurs par configuration ; ECON_SPENDERS=200 gros acheteurs
+#   ECON_JOBS=4            cas joués en même temps (4 par défaut : un par cœur)
+#   ECON_NIGHT_PLAYERS=80  joueurs par configuration (80 au moins) ; ECON_TAIL_PLAYERS=400 joueurs des
+#                          cas tails* ; ECON_SPENDERS=200 gros acheteurs
 #   ECON_NIGHT_OUT=<dossier> journaux (par défaut un dossier temporaire, gardé et affiché)
 # Code de sortie : 0 si tous les cas sont verts, 1 sinon. Résumé à la fin : durée, tests réussis et
 # échoués de chaque cas, clés hors limites.
@@ -22,13 +27,14 @@ set -uo pipefail
 cd "$(dirname "$0")/.."
 export PATH="$HOME/.cargo/bin:$HOME/.rokit/bin:$PATH"
 
-ALL_CASES=(assidu140 spender ref140 allday noatelier advisor refuse3 weekend min20 min10 fullAtelier forcedA10 forcedA20 forcedA30 forcedA60)
+# les plus longs d'abord (le jeu finit plus tôt quand ils commencent en premier)
+ALL_CASES=(assidu140 tailsAssidu4 tailsAssidu8 tailsAssidu16 noatelier advisor tailsRef16 tailsRef4 tailsRef8 refuse3 spender allday ref140 fullAtelier weekend min20 min10 forcedA10 forcedA20 forcedA30 forcedA60)
 if [ "$#" -gt 0 ]; then
 	CASES=("$@")
 else
 	CASES=("${ALL_CASES[@]}")
 fi
-JOBS="${ECON_JOBS:-2}"
+JOBS="${ECON_JOBS:-4}"
 OUT="${ECON_NIGHT_OUT:-$(mktemp -d "${TMPDIR:-/tmp}/economy-nightly.XXXXXX")}"
 mkdir -p "$OUT"
 START=$(date +%s)

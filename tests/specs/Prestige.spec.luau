@@ -154,7 +154,15 @@ return function(T)
 					table.insert(got, Prestige.reqR(k))
 				end
 				expect(got).toEqual({ 15, 20, 24, 28, 32, 36 })
-				expect(Prestige.reqR(61)).toBe(256)
+				-- 60 conditions dans Balance.Ascend.ReqR (un Grand Splorch de plus toutes les 8 Ascensions dès
+				-- la 11e, docs/04 §21), + ReqStep au-delà de la liste
+				expect({ Prestige.reqR(10), Prestige.reqR(11), Prestige.reqR(19), Prestige.reqR(60) }).toEqual({
+					52,
+					57,
+					90,
+					259,
+				})
+				expect(Prestige.reqR(61)).toBe(263)
 				expect(Prestige.reqR(0)).toBe(15)
 				expect(Prestige.reqR(0 / 0)).toBe(15)
 				expect(Prestige.ascendReady(profile({ R = 14, bestR = 14 }))).toBe(false)
@@ -202,7 +210,7 @@ return function(T)
 					local x = A * q - Balance.Ascend.StartFloorOffset
 					expect(math.abs(x - math.floor(x + 0.5)) > 1e-6).toBe(true)
 				end
-				expect(Prestige.startR(MAX_A, 0)).toBe(246)
+				expect(Prestige.startR(MAX_A, 0)).toBe(247) -- plancher ceil(60 × 4,19 − 4,7), sous 263 − 10
 			end
 		)
 
@@ -751,7 +759,7 @@ return function(T)
 		)
 
 		it(
-			"MaxA : la 60e Ascension se fait (départ 246, Tremplin sans effet au plafond), la 61e jamais",
+			"MaxA : la 60e Ascension se fait (départ 250 = plancher 247 + Tremplin 3), la 61e jamais",
 			function()
 				local d = profile({
 					R = Prestige.reqR(MAX_A),
@@ -760,7 +768,8 @@ return function(T)
 					atelierLevels = { springboard = 3 },
 				})
 				local _, report = Prestige.apply(d, "ascend", 40)
-				expect({ d.ascend, d.R, report.skipped, report.confetti }).toEqual({ MAX_A, 246, 0, 20 })
+				-- condition suivante 263 − 10 = 253 : le Tremplin compte encore (3 Grands Splorch sautés, 3 Confettis)
+				expect({ d.ascend, d.R, report.skipped, report.confetti }).toEqual({ MAX_A, 250, 3, 23 })
 				d.R = MAX_R
 				d.bestR = MAX_R
 				expect(next((Prestige.apply(d, "ascend", 41)))).toBeNil()
