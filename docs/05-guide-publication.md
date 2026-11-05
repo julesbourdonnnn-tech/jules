@@ -12,6 +12,7 @@ résultat attendu, où regarder dans le panneau Diagnostics), avec une section *
 | Porte | Commande | Vert si |
 |---|---|---|
 | Formatage, lint, specs, build, place | `./scripts/check.sh` | « Tout est vert. » : StyLua, Selene (0 erreur, 0 avertissement), toutes les specs Lune (dont `EconomyPacing`, `ZeroLog` actif sur chaque spec du jeu), build Rojo, `verify-place` |
+| Économie v2.0 (nuit) | `./scripts/economy-nightly.sh` (≈ 48 min sur 4 cœurs ; aucun déclencheur automatique) | 20 cas verts (docs/04 §27.9 : clés de queue à leur vraie limite sur 400 joueurs, 140 jours, profils forcés) ; **à lancer à chaque lot qui touche l'économie et avant toute ouverture d'un interrupteur de l'économie v2.0** ; tant que la décision du design sur `shortestLoopSec` (politique « Conseillé ») n'est pas prise, le cas `advisor` reste rouge (GDD Journal v2.0, « Ce qui reste ouvert ») |
 | Robot de longue durée (nuit) | `SOAK_HOURS=6 ./scripts/soak.sh` | `Soak.spec` : 16 robots, invariants du §17.2 à chaque tick, ≤ 10 ms par tick en moyenne, zéro erreur |
 | Vrai moteur (couche i) | `lune run tools/opencloud/run-server-tests` | code 0 ; code 2 = pas de clé (alors les tests manuels ci-dessous la remplacent, et le manque est écrit dans le rapport qualité) |
 | Prépublication | `lune run scripts/prepublish` | chaque article visible de la Boutique a son identifiant ; refus si `Balance.GddValues ~= "1.3"` (note INT-PREPUBLISH) |

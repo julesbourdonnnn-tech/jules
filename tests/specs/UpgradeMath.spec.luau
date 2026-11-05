@@ -468,7 +468,9 @@ return function(T)
 			expect(fx("fun.palettes", 2)).toEqual({ 2, 3 })
 			expect(UpgradeMath.effect("snack", 3, {}).key).toBe("upgrades.effect.growth")
 			expect(UpgradeMath.effect("decor", 3, {}).key).toBe("upgrades.effect.incomeTotal")
-			expect(UpgradeMath.effect("fun.title", 0, {}).key).toBe("fun.title")
+			-- nom de la ligne du titre « Confetti Star », pas le titre de la section « Pour le plaisir »
+			-- (« fun.title ») : INT-B1-FUNTITLE, journal docs/04 §27.12 REL-1
+			expect(UpgradeMath.effect("fun.title", 0, {}).key).toBe("fun.title.confettiStar")
 			expect(UpgradeMath.effect("nope", 0, {})).toEqual({ a = 0, b = 0, key = "" })
 		end)
 

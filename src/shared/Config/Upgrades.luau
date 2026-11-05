@@ -192,7 +192,7 @@ Upgrades.Fun = {
 	{ id = "trail", costs = { 50 }, store = "bits", firstBit = 8, grants = { "trail.streamers" }, nameKey = "fun.trail", icon = "trail" },
 	{ id = "emote", costs = { 60 }, store = "bits", firstBit = 9, grants = { "emote.bigPlopDance" }, nameKey = "fun.emote", icon = "emote" },
 	{ id = "pennants", costs = { 60 }, store = "bits", firstBit = 10, grants = { "decor.goldPennants" }, nameKey = "fun.pennants", icon = "pennant" },
-	{ id = "title", costs = { 100 }, store = "bits", firstBit = 11, grants = { "title.confettiStar" }, nameKey = "fun.title", icon = "title" },
+	{ id = "title", costs = { 100 }, store = "bits", firstBit = 11, grants = { "title.confettiStar" }, nameKey = "fun.title.confettiStar", icon = "title" },
 	{ id = "decoShop", costs = {}, store = "atelier", grants = {}, nameKey = "fun.decoShop", icon = "deco" },
 } :: { FunLineDef }
 -- stylua: ignore end
