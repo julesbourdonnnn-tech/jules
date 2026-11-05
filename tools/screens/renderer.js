@@ -983,7 +983,8 @@
         // mêmes règles que tests/harness/TextFit (unitSplit, noms en capitales), mais sur les lignes
         // du NAVIGATEUR : avec le crénage, une ligne peut se couper ailleurs que dans la mesure Luau
         // (« Autocollant Jour » / « 1 » ici, « Autocollant » / « Jour 1 » en Luau : revue de l'outil)
-        const UNITS = ['s', 'min', 'h', 'j', '%', 'K', 'M', 'B', 'T', 'Qa', 'Qi', 'Sx', 'Sp', 'Oc', 'No', 'Dc', 'px', 'sur'];
+        // « sur » / « in » : « 1 sur N », « 1 in N » des cotes ; même liste que tests/harness/TextFit (UNITS)
+        const UNITS = ['s', 'min', 'h', 'j', '%', 'K', 'M', 'B', 'T', 'Qa', 'Qi', 'Sx', 'Sp', 'Oc', 'No', 'Dc', 'px', 'sur', 'in'];
         const BRANDS = [['BOOP', 'RUSH'], ['MEGA', 'SQUISH']];
         for (let li = 1; li < L.lines.length; li++) {
           const prev = text(L.parsed, L.lines[li - 1].a, L.lines[li - 1].b).replace(/\s+$/u, '');

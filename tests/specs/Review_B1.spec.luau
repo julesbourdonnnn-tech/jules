@@ -23,6 +23,12 @@
 --   6. « 1{_}sur {odds} » collé en français, « 1 in {odds} » pas en anglais (« · 1 » / « in … ») ;
 --   7. un « fit » à mots tenus ensemble prenait la taille des lignes coupées à la taille précédente
 --      (texte deux fois trop petit, ou ligne plus large que la boîte que le moteur recoupait).
+-- Fin de la relecture (5 novembre, B1-24 et B1-25 ; rouges sur 321b332) :
+--   3 (suite). le bouton n'était vérifié qu'au DÉBUT d'un maintien : caché par le code (fenêtre
+--      fermée sous la souris, sélection ailleurs) ou grisé pendant le maintien, il achetait quand même ;
+--   8. outil d'écrans : « in » absent des unités de unitSplit (Luau et navigateur), nombre groupé
+--      « 1 000 000 » invisible pour la règle des 6 chiffres, cote des tampons écrite en dur au lieu
+--      de la cote du jeu (« 1 sur 2,00B »).
 -- Zéro trace : aucune erreur ni avertissement.
 local roblox = require("@lune/roblox")
 local MockInstance = require("../harness/MockInstance")
@@ -552,6 +558,103 @@ return function(T)
 					clean(c.h)
 				end
 			)
+
+			-- fin de la relecture (rouge sur 321b332) : le bouton n'était vérifié qu'au DÉBUT du maintien ;
+			-- une fenêtre fermée par le code pendant un maintien à la souris (événement plein écran,
+			-- PanelController qui ferme tout : dernière fenêtre, aucune garde, ni MouseLeave ni
+			-- SelectionLost) achetait 0,6 s plus tard, invisible ; un bouton grisé par le code pendant le
+			-- maintien (Widgets.setDisabled : pièces dépensées ailleurs, prix changé) achetait quand même
+			for _, how in
+				{ "Visible = false", "ScreenGui coupé", "bouton grisé (souris)", "bouton grisé (✕)" }
+			do
+				it(
+					"bouton " .. how .. " PENDANT le maintien : rien n'est acheté, l'anneau se vide",
+					function()
+						local c = setup()
+						local w, root, button, safe = window(c, "H6")
+						local bought, early = 0, 0
+						local hold = c.Widgets.holdOn(button, {
+							onComplete = function()
+								bought += 1
+							end,
+							onEarly = function()
+								early += 1
+							end,
+						})
+						c.FG.open(w)
+						run(c, 0.5)
+						local uis = c.h.game.UserInputService
+						local mouse = Enum.UserInputType.MouseButton1
+						local Gamepad = require("../harness/Gamepad")
+						local pad = how == "bouton grisé (✕)"
+						if pad then
+							c.h.game.GuiService.SelectedObject = button
+							c.h:settle(1)
+							Gamepad.press(c.h, Enum.KeyCode.ButtonA)
+						else
+							-- la sélection de la fenêtre est sur un AUTRE bouton (défaut, sauvetage) : la
+							-- fermeture ne coupe que la sienne, aucun SelectionLost pour le bouton tenu
+							local other = c.Widgets.button({
+								parent = root,
+								name = "Other",
+								size = UDim2.fromOffset(360, 112),
+								position = UDim2.fromOffset(440, 40),
+								key = "common.ok",
+							})
+							c.h.game.GuiService.SelectedObject = other
+							c.h:settle(1)
+							button.MouseEnter:Fire(0, 0)
+							uis.InputBegan:Fire(input(nil, Enum.UserInputState.Begin, mouse), false)
+							button.MouseButton1Down:Fire(0, 0)
+						end
+						run(c, 0.3)
+						expect(hold.holding()).toBe(true)
+						if how == "Visible = false" then
+							c.FG.closeNow(w.name)
+							root.Visible = false
+						elseif how == "ScreenGui coupé" then
+							c.FG.closeNow(w.name)
+							safe:FindFirstAncestorOfClass("ScreenGui").Enabled = false
+						else
+							c.Widgets.setDisabled(button, true)
+						end
+						run(c, 1)
+						expect(bought).toBe(0)
+						expect(hold.holding()).toBe(false)
+						expect(early).toBe(1)
+						if pad then
+							Gamepad.release(c.h, Enum.KeyCode.ButtonA)
+						else
+							uis.InputEnded:Fire(input(nil, Enum.UserInputState.End, mouse), false)
+							button.MouseButton1Up:Fire(0, 0)
+						end
+						run(c, 0.1)
+						expect(bought).toBe(0)
+						if string.find(how, "grisé", 1, true) then
+							-- de nouveau actif : un maintien complet achète (aucun état resté coincé)
+							c.Widgets.setDisabled(button, false)
+							run(c, 0.5)
+							if pad then
+								Gamepad.press(c.h, Enum.KeyCode.ButtonA)
+							else
+								uis.InputBegan:Fire(input(nil, Enum.UserInputState.Begin, mouse), false)
+								button.MouseButton1Down:Fire(0, 0)
+							end
+							run(c, 0.7)
+							if pad then
+								Gamepad.release(c.h, Enum.KeyCode.ButtonA)
+							else
+								uis.InputEnded:Fire(input(nil, Enum.UserInputState.End, mouse), false)
+								button.MouseButton1Up:Fire(0, 0)
+							end
+							run(c, 0.1)
+							expect(bought).toBe(1)
+							c.FG.closeNow(w.name)
+						end
+						clean(c.h)
+					end
+				)
+			end
 		end
 	)
 
@@ -760,4 +863,144 @@ return function(T)
 			end)
 		end
 	)
+
+	-- fin de la relecture (rouges sur 321b332) : trous de l'outil d'écrans notés au § 3 de la revue
+	describe("Review_B1 › 8. outil d'écrans : ce qu'il laissait passer", function()
+		local fs = require("@lune/fs")
+		local TextFit = require("../harness/TextFit")
+		local Screens = require("../harness/Screens")
+
+		it(
+			"unitSplit : « in » (« 1 in N » anglais) tient à son nombre comme « sur », Luau et navigateur",
+			function()
+				expect(TextFit.startsWithUnit("in 2.00B")).toBe(true)
+				expect(TextFit.startsWithUnit("in 1,000,000!")).toBe(true)
+				expect(TextFit.startsWithUnit("sur 2,00B")).toBe(true)
+				expect(TextFit.startsWithUnit("inside")).toBe(false)
+				-- règle du navigateur (tools/screens/renderer.js) : la même liste, dans le même ordre
+				local js = fs.readFile("tools/screens/renderer.js")
+				local list = string.match(js, "const UNITS = %[(.-)%];")
+				expect(list ~= nil).toBe(true)
+				local units = {}
+				for u in string.gmatch(list, "'([^']*)'") do
+					table.insert(units, u)
+				end
+				expect(table.concat(units, " ")).toBe(table.concat(TextFit.UNITS or {}, " "))
+			end
+		)
+
+		it(
+			"format des nombres : un nombre groupé de 6 chiffres ou plus n'est jamais écrit par le jeu",
+			function()
+				-- « 1 000 000 » (espaces ordinaires) échappait à la règle des 6 chiffres collés : le
+				-- scénario des tampons l'écrivait en dur, le jeu écrit « 2,00B » (BigNumber)
+				local obj = {}
+				for _, case in
+					{
+						{ "fr", "SECRET Prickle Puff · 1 sur 1 000 000 000" },
+						{ "fr", "1 sur 1 000 000" },
+						{ "fr", "123 456 pièces" },
+						{ "fr", "1\194\160000\194\160000" },
+						{ "fr", "1\226\128\175000\226\128\175000" },
+						{ "en", "1 in 1,000,000" },
+						{ "en", "123,456 coins" },
+						{ "en", "1 000 000" },
+					}
+				do
+					expect(Screens.numberIssue({ lang = case[1] }, obj, case[2]) ~= nil).toBe(true)
+				end
+				-- formats du jeu : jamais signalés
+				for _, case in
+					{
+						{ "fr", "99 999" },
+						{ "en", "99,999" },
+						{ "fr", "FLOP ! LE PLUS RARE · 1 sur 2,00B" },
+						{ "en", "SECRET Prickle Puff · 1 in 2.00B" },
+						{ "fr", "3430 pièces" },
+						{ "fr", "12,3 / 123,4 ms" },
+						{ "en", "Squishy Fan #889912" },
+						{ "en", "Pick 1, 2, 3" },
+						{ "fr", "12 h 30" },
+					}
+				do
+					expect(Screens.numberIssue({ lang = case[1] }, obj, case[2])).toBe(nil)
+				end
+			end
+		)
+
+		-- cote la plus rare que le jeu peut écrire pour chaque tampon (Odds.oneIn aux vrais réglages ;
+		-- VFXController : flop, glitch, rainbow, puis Mythique et Secret sans ces trois mutations)
+		local function rarest(h, kind)
+			local Odds = h:require("ReplicatedStorage.Shared.Logic.Odds")
+			local Mutations = h:require("ReplicatedStorage.Shared.Config.Mutations")
+			local Balance = h:require("ReplicatedStorage.Shared.Config.Balance")
+			local special = { flop = true, glitch = true, rainbow = true }
+			local mutations, rarities = {}, {}
+			for id, def in Mutations.ById do
+				if def.key == kind or (kind == "secretTag" and not special[def.key]) then
+					table.insert(mutations, id)
+				end
+			end
+			if kind == "secretTag" then
+				table.insert(mutations, Mutations.NONE)
+				rarities = { 6, 7 }
+			else
+				rarities = { 1, 2, 3, 4, 5, 6, 7 }
+			end
+			local best = 0
+			for _, r in rarities do
+				for _, m in mutations do
+					for q = 1, #Balance.Vat.Quality do
+						for n = 0, 8 do
+							for _, moon in { false, true } do
+								best = math.max(best, Odds.oneIn(r, m, q, n, moon))
+							end
+						end
+					end
+				end
+			end
+			return best
+		end
+
+		it(
+			"tampons des scénarios : la cote est celle que le jeu écrit (BigNumber de la vraie cote)",
+			function()
+				local Harness = require("../harness/Harness")
+				for _, lang in { "fr", "en" } do
+					local c = Screens.boot(Harness, Screens.profileById("tv1080"), lang, "mid")
+					local BigNumber = c.h:require("ReplicatedStorage.Shared.Logic.BigNumber")
+					local word = if lang == "fr" then "sur" else "in"
+					local fx
+					for _, group in Screens.groups() do
+						if group.id == "fx" then
+							fx = group
+						end
+					end
+					local seen = 0
+					for _, screen in Screens.expand(c, fx) do
+						local kind = string.match(screen.id, "^stamp%.(%a+)$")
+						if kind == "flop" or kind == "glitch" or kind == "rainbow" or kind == "secretTag" then
+							seen += 1
+							local ok, err = Screens.show(c, screen)
+							expect(err).toBe(nil)
+							expect(ok).toBe(true)
+							local gui = c.h.localPlayer.PlayerGui:FindFirstChild("VFXStamp", true)
+							local label = gui and gui:FindFirstChild("Stamp", true)
+							expect(label ~= nil).toBe(true)
+							local shown = string.gsub(label.Text, "\n", " ")
+							local odds = BigNumber.abbreviate(rarest(c.h, kind), lang)
+							expect(#odds <= 6).toBe(true)
+							local tail = "1 " .. word .. " " .. odds
+							expect(string.sub(shown, -#tail)).toBe(tail)
+							expect(Screens.numberIssue(c, label, shown)).toBe(nil)
+						end
+					end
+					expect(seen).toBe(4)
+					Harness.disposeAll()
+				end
+				-- suivi des propriétés de Screens.boot retiré (les specs suivantes retrouvent MockInstance)
+				Screens.finish()
+			end
+		)
+	end)
 end

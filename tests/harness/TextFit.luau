@@ -466,8 +466,30 @@ end
 -- Ligne qui commence par une unité (s, min, h, j, %, K, M, B, Qa…, pièces, px) suivie d'une fin de mot ;
 -- « sur » aussi : « 1 sur 1 000 000 000 » ne se coupe jamais après le premier nombre (revue de
 -- l'outil : grand tampon « SECRET … · 1 » / « sur 1 000 000 000 »)
-local UNITS =
-	{ "s", "min", "h", "j", "%", "K", "M", "B", "T", "Qa", "Qi", "Sx", "Sp", "Oc", "No", "Dc", "px", "sur" }
+-- « sur » / « in » : « 1 sur N » et « 1 in N » des cotes (relecture B1 : « in » manquait, le tampon
+-- anglais « … · 1 » / « in 1.00B » passait ; même liste que tools/screens/renderer.js, Review_B1 › 8)
+local UNITS = {
+	"s",
+	"min",
+	"h",
+	"j",
+	"%",
+	"K",
+	"M",
+	"B",
+	"T",
+	"Qa",
+	"Qi",
+	"Sx",
+	"Sp",
+	"Oc",
+	"No",
+	"Dc",
+	"px",
+	"sur",
+	"in",
+}
+TextFit.UNITS = UNITS
 
 -- Noms d'événements en capitales, toujours sur une seule ligne (GDD : noms propres de l'univers)
 TextFit.BRAND_NAMES = { { "BOOP", "RUSH" }, { "MEGA", "SQUISH" } }

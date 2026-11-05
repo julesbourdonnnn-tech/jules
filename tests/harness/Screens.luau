@@ -1358,6 +1358,41 @@ function Screens.bannerScreens(c)
 	return out
 end
 
+-- Cote d'un tampon des effets telle que le jeu l'écrit (VFXController : Util.number de d.oneIn) :
+-- la plus rare que Logic/Odds peut donner aux vrais réglages (toutes qualités de cuve, buses, lune) —
+-- flop, glitch, rainbow : cette mutation, toute rareté ; secretTag : Mythique ou Secret sans ces trois
+-- mutations. Relecture B1 : le scénario écrivait « 1 000 000 000 » en dur (espaces ordinaires), un
+-- texte que le jeu n'écrit jamais (« 2,00B »), et l'outil y voyait une coupure « 1 000 / 000 »
+local function stampOdds(c, kind: string): string
+	local Odds = c.h:require("ReplicatedStorage.Shared.Logic.Odds")
+	local Balance = c.h:require("ReplicatedStorage.Shared.Config.Balance")
+	local special = { flop = true, glitch = true, rainbow = true }
+	local mutations = {}
+	for id, def in c.Mutations.ById do
+		if def.key == kind or (kind == "secretTag" and not special[def.key]) then
+			table.insert(mutations, id)
+		end
+	end
+	local rarities = { 1, 2, 3, 4, 5, 6, 7 }
+	if kind == "secretTag" then
+		table.insert(mutations, c.Mutations.NONE)
+		rarities = { 6, 7 }
+	end
+	local best = 0
+	for _, r in rarities do
+		for _, m in mutations do
+			for q = 1, #Balance.Vat.Quality do
+				for n = 0, 8 do
+					for _, moon in { false, true } do
+						best = math.max(best, Odds.oneIn(r, m, q, n, moon))
+					end
+				end
+			end
+		end
+	end
+	return c.h:require(CLIENT .. "World.Util").number(best)
+end
+
 -- Valeurs d'essai des variables de textes (les plus longues plausibles)
 local NUMBER_VARS = {
 	amount = 1.23456789e18,
@@ -1659,10 +1694,11 @@ function Screens.groups()
 	local STAMPS = {
 		{ "celebrate.streakMax", { n = 5 } },
 		{ "celebrate.perfect" },
-		{ "celebrate.flop", { odds = "1 000 000" } },
-		{ "celebrate.glitch", { odds = "1 000 000" } },
-		{ "celebrate.rainbow", { odds = "1 000 000" } },
-		{ "celebrate.secretTag", { odds = "1 000 000 000" }, true },
+		-- cote : la plus rare que le jeu peut écrire, comme il l'écrit (stampOdds)
+		{ "celebrate.flop", { odds = true } },
+		{ "celebrate.glitch", { odds = true } },
+		{ "celebrate.rainbow", { odds = true } },
+		{ "celebrate.secretTag", { odds = true }, true },
 		{ "celebrate.combo", { n = 5 } },
 		{ "celebrate.hero" },
 		{ "celebrate.achoo" },
@@ -1681,6 +1717,9 @@ function Screens.groups()
 				local vars = if entry[2] then table.clone(entry[2]) else nil
 				if entry[3] then
 					vars.species = c.Prefs.t("species." .. c.Species.ById[longestSpecies(c)].key)
+				end
+				if vars and vars.odds == true then
+					vars.odds = stampOdds(c, string.sub(entry[1], 11))
 				end
 				VFX.stamp(entry[1], vars)
 				frames(c, 3, 0.05)
@@ -1865,6 +1904,45 @@ local function isKey(c, text)
 	return c.Strings.en[text] ~= nil
 end
 
+-- Plus long nombre GROUPÉ d'un texte, en chiffres (« 1 000 000 » : 7, « 99 999 » : 5, « 1,23M » : 0) :
+-- des chiffres puis au moins un groupe « séparateur + 3 chiffres » (espace, virgule, insécables)
+local GROUP_SEPS = { " ", ",", "\194\160", "\226\128\175" }
+local function groupedDigits(text: string): number
+	local best = 0
+	local i = 1
+	while i <= #text do
+		local a, b = string.find(text, "^%d+", i)
+		if a == nil or b == nil then
+			i += 1
+		else
+			local digits = b - a + 1
+			local j = b + 1
+			local grouped = false
+			local matched = true
+			while matched do
+				matched = false
+				for _, sep in GROUP_SEPS do
+					if string.sub(text, j, j + #sep - 1) == sep then
+						local c, d = string.find(text, "^%d%d%d", j + #sep)
+						if c and d and not string.find(string.sub(text, d + 1, d + 1), "%d") then
+							digits += 3
+							j = d + 1
+							grouped = true
+							matched = true
+							break
+						end
+					end
+				end
+			end
+			if grouped then
+				best = math.max(best, digits)
+			end
+			i = j
+		end
+	end
+	return best
+end
+
 -- Nombres écrits comme le jeu les écrit (Logic/BigNumber) : abrégés à partir de 100 000 avec les
 -- suffixes internationaux K M B T Qa Qi Sx Sp Oc No Dc (GDD v1.3 §4.2), virgule décimale et espace
 -- fine insécable en français (« 1,23 M »), point en anglais (« 1.23M »). Le panneau Diagnostics
@@ -1876,6 +1954,12 @@ function Screens.numberIssue(c, obj, text: string): string?
 	local plain = string.gsub(text, "#%d+", "") -- alias « Squishy Fan #8899 »
 	if string.find(plain, "%d%d%d%d%d%d") then
 		return "nombre de 6 chiffres ou plus sans abréviation"
+	end
+	-- même règle pour un nombre GROUPÉ (« 1 000 000 », « 123,456 », espaces insécables comprises) :
+	-- le jeu abrège dès 10 000 (BigNumber) et les Confettis dès 100 000 ; la règle des chiffres collés
+	-- ne le voyait pas (relecture B1 : le scénario des tampons écrivait « 1 000 000 000 » en dur)
+	if groupedDigits(plain) >= 6 then
+		return "nombre groupé de 6 chiffres ou plus (« 1 000 000 ») : le jeu l'abrège (BigNumber)"
 	end
 	local lang = c.lang
 	if lang == "en" and string.find(plain, "%d,%d+%s?[KMBTQSOND]") then

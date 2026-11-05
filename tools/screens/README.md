@@ -108,11 +108,12 @@ L'outil dessine donc une police CSS de `TextSize ÷ (hauteur de ligne de la poli
 |---|---|
 | `overflow` | le texte ne tient pas dans sa boîte à la taille qu'utiliserait Roblox |
 | `splitWord` | un mot est coupé en deux par le retour à la ligne (« Squishyde / x »), ou un nom d'événement en capitales (« BOOP » / « RUSH ») |
-| `unitSplit` | une unité est séparée de son nombre (« toutes les 5 » / « s. », « · 1 » / « sur 1 000 000 000 »), ou un nombre seul sur sa ligne loin de son mot (« Autocollant Jour » / « 1 ») ; vérifié sur les lignes Luau ET sur les lignes du navigateur (le crénage peut couper ailleurs) |
+| `unitSplit` | une unité est séparée de son nombre (« toutes les 5 » / « s. », « · 1 » / « sur 2,00B », « · 1 » / « in 2.00B » : « sur » et « in » comptent comme unités, relecture B1), ou un nombre seul sur sa ligne loin de son mot (« Autocollant Jour » / « 1 ») ; vérifié sur les lignes Luau ET sur les lignes du navigateur (le crénage peut couper ailleurs) |
 | `clipped` | le texte est coupé par un parent |
 | `truncated` | « … » coupe le texte (grave s'il cache un nombre ou un mot entier) |
 | `small`, `smallFixed` | texte sous **28 px de référence × échelle de l'écran** (28 px réels en 1080p, 56 en 4K, 18,7 en 720p) |
 | `orphan` | un « ! » ou un « ? » seul sur sa ligne |
+| `numberFormat` | (Luau, `Screens.numberIssue`) un nombre que le jeu n'écrit jamais ainsi : 6 chiffres ou plus sans abréviation, collés (« 1000000 ») ou groupés (« 1 000 000 », « 123,456 », espaces insécables comprises : relecture B1), virgule ou point de la mauvaise langue, ancien suffixe (« k », « Md ») ; le panneau Diagnostics n'est pas concerné |
 | `offscreen`, `unsafe` | un objet sort de l'écran, ou de la zone sûre |
 | `overlap` | deux textes ou deux boutons se chevauchent |
 | `contrast` | contraste du texte sur son fond < 3 (le contour du texte compte) |

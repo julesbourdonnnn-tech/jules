@@ -12,7 +12,8 @@
 --     est choisi reste dans sa fenêtre) ;
 --   * curseur : l'objet sélectionné est visible, son halo est entier à l'écran et pas caché par un
 --     parent qui découpe ;
---   * grand tampon des effets (« SECRET … · 1 sur 1 000 000 000 ») : jamais sur un élément du HUD ;
+--   * grand tampon des effets (« FLOP ! LE PLUS RARE · 1 sur 2,00B », cote la plus rare du jeu) :
+--     jamais sur un élément du HUD ;
 --   * écran de chargement : aucun texte ni bouton teinté par le dégradé d'un CanvasGroup (Roblox
 --     applique l'UIGradient d'un CanvasGroup à TOUT son contenu).
 
@@ -59,7 +60,7 @@ return function(T)
 			["card.mode"] = true,
 			["return.ready"] = true,
 		},
-		-- grands tampons des effets (le plus long : SECRET … · 1 sur 1 000 000 000) : jamais sur le HUD
+		-- grands tampons des effets (cote la plus rare que le jeu écrit, « 1 sur 2,00B ») : jamais sur le HUD
 		fx = {
 			["stamp.secretTag"] = true,
 			["stamp.splorchTitle"] = true,

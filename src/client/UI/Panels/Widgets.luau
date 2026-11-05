@@ -1251,6 +1251,14 @@ local function stepHolds()
 		stopHold(state, true)
 		return
 	end
+	-- bouton caché (fenêtre fermée par le code sous la souris : ni MouseLeave ni SelectionLost quand
+	-- la sélection était ailleurs) ou grisé par le code (Widgets.setDisabled : pièces dépensées
+	-- ailleurs, prix changé) PENDANT le maintien : rien d'invisible ni de refusé n'est acheté
+	-- (relecture B1, fin : B1-24)
+	if disabledState[button] or not Widgets.shown(button) then
+		stopHold(state, true)
+		return
+	end
 	local alpha = math.clamp(elapsed / duration, 0, 1)
 	progress(state, alpha)
 	if elapsed >= duration then
