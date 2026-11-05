@@ -17,6 +17,15 @@
 -- ferme les échéances).
 -- Attribut Player « RanchSlot ». Émet PlayerReady, ServerMoved, WorldRequested. Remotes : RequestWorld
 -- (handler) ; RanchSnapshot, RanchPatch, Fence, HoldState (« tile ») (envoi). Clés : aucune.
+-- v2.0 (lot A2, docs/04 §27.5, §27.7, §27.14) : attributs Types.RanchAttributesV2 posés sur le modèle
+-- du ranch (Ranches/<k>, répliqué à tous) par setV2Attributes, chacun derrière son interrupteur
+-- (coupés : aucun attribut posé) ; RanchService calcule lui-même BestR [RecordR], Monuments
+-- [Monuments], TapisTier, GloveTier, ApronTier [RanchTiers] au chargement et sur UpgradeBought,
+-- Splorched, PrestigeApplied, RecordReached ; SplorchReady vient d'EconomyService (croissance) ; les
+-- autres (Ascend, AscendReady, PetitSplorchAt, DecoPerso, HaloOn) des services qui les possèdent.
+-- Place d'enclos offerte (N7) : offeredPlace (ranch reconstruit ; enclos déjà plein : Feedback
+-- « +25 Confettis »), appelée après Prestige.apply. Dalle du Tapis au-delà du Tapis 12 (N21) : même
+-- règle que PadRules (Tapis Étoilé [StarMat]).
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -30,7 +39,11 @@ local Balance = require(Shared.Config.Balance)
 local Pads = require(Shared.Config.Pads)
 local Cosmetics = require(Shared.Config.Cosmetics)
 local Localization = require(Shared.Localization)
+local Features = require(Shared.Config.Features)
 local Formulas = require(Shared.Logic.Formulas)
+local Prestige = require(Shared.Logic.Prestige)
+local UpgradeMath = require(Shared.Logic.UpgradeMath)
+local TierRules = require(Shared.Logic.TierRules)
 local WorldLayout = require(Shared.Logic.WorldLayout)
 local ZoneRules = require(Shared.Logic.ZoneRules)
 local StateTimeouts = require(Shared.Logic.StateTimeouts)
@@ -124,6 +137,32 @@ local padInside: { [Player]: { [number]: boolean } } = {}
 local potInside: { [Player]: boolean } = {}
 local dwells: { [Player]: Dwell } = {}
 local padBought: { [Player]: { tile: string, at: number } } = {} -- dernier achat voulu (□, panneau)
+
+-- Attributs v2.0 du ranch (Types.RanchAttributesV2) : sorte de chaque attribut permis
+local V2_ATTRIBUTES: { [string]: string } = {
+	BestR = "number",
+	Ascend = "number",
+	SplorchReady = "boolean",
+	AscendReady = "boolean",
+	PetitSplorchAt = "number",
+	Monuments = "number",
+	DecoPerso = "string",
+	HaloOn = "boolean",
+	TapisTier = "number",
+	GloveTier = "number",
+	ApronTier = "number",
+}
+local DECO_PERSO_MAX = 64 -- caractères de l'attribut DecoPerso (12 identifiants séparés par des virgules)
+-- attributs calculés ici (le reste est posé par son service) et leur interrupteur
+local OWN_ATTRIBUTES: { [string]: string } = {
+	BestR = "RecordR",
+	Monuments = "Monuments",
+	TapisTier = "RanchTiers",
+	GloveTier = "RanchTiers",
+	ApronTier = "RanchTiers",
+}
+local v2Values: { [Player]: { [string]: any } } = {} -- valeurs voulues (gardées jusqu'au ranch attribué)
+local modelAttrs: { [number]: { [string]: boolean } } = {} -- attributs posés sur chaque modèle
 
 local zoneHandlers: { [string]: (Player, string) -> () } = {}
 local publishHooks: { (Player) -> () } = {}
@@ -418,6 +457,41 @@ local function publishProfile(player: Player)
 	end
 end
 
+-- Pose sur le modèle du ranch les attributs v2.0 voulus (nil : effacé)
+local function applyV2(slot: number, values: { [string]: any }?)
+	if values == nil then
+		return
+	end
+	local model = WorldService.ranchModel(slot)
+	if model == nil then
+		return
+	end
+	local set = modelAttrs[slot] or {}
+	modelAttrs[slot] = set
+	for name in V2_ATTRIBUTES do
+		local value = values[name]
+		if value ~= nil and model:GetAttribute(name) ~= value then
+			model:SetAttribute(name, value)
+		end
+		if value ~= nil then
+			set[name] = true
+		end
+	end
+end
+
+-- Ranch libéré : aucun attribut v2.0 du propriétaire précédent ne reste
+local function clearV2(slot: number)
+	local set = modelAttrs[slot]
+	modelAttrs[slot] = nil
+	local model = if set then WorldService.ranchModel(slot) else nil
+	if set == nil or model == nil then
+		return
+	end
+	for name in set do
+		model:SetAttribute(name, nil)
+	end
+end
+
 local function assign(player: Player, slot: number)
 	slotOf[player] = slot
 	ownerAt[slot] = player
@@ -443,6 +517,7 @@ local function assign(player: Player, slot: number)
 	if loaded[player] then
 		publishProfile(player)
 	end
+	applyV2(slot, v2Values[player])
 	local character = player.Character
 	if character ~= nil then
 		onCharacter(player, character)
@@ -506,6 +581,7 @@ local function onLoaded(player: Player)
 	if slotOf[player] ~= nil then
 		publishProfile(player)
 	end
+	RanchService.refreshV2(player)
 	checkReady(player)
 end
 
@@ -521,6 +597,7 @@ local function releaseSlot(slot: number)
 		end
 	end
 	RanchService.setFence(slot, {}, "")
+	Guard.try("ranch:clearV2", clearV2, slot)
 	Guard.try("ranch:setRanchOwner", WorldService.setRanchOwner, slot, 0, nil)
 	Guard.try("ranch:setRanchBuild", WorldService.setRanchBuild, slot, emptyTiles(), false, false)
 end
@@ -560,6 +637,7 @@ local function onPlayerRemoving(player: Player)
 	potInside[player] = nil
 	dwells[player] = nil
 	padBought[player] = nil
+	v2Values[player] = nil
 	if slot ~= nil and ownerAt[slot] == player then
 		releaseSlot(slot)
 		-- un joueur en attente de renvoi (serveur plein) reçoit le ranch libéré, plus ancien d'abord
@@ -624,9 +702,9 @@ end
 -- Appelle le crochet « pad » ; rend true si la dalle a vraiment monté de niveau
 local function firePad(player: Player, tile: string): boolean
 	local data = DataService.get(player)
-	local before = if data then PadRules.level(data, tile) else 0
+	local before = if data then PadRules.progress(data, tile) else 0
 	callZone("pad", player, tile)
-	local after = if data then PadRules.level(data, tile) else 0
+	local after = if data then PadRules.progress(data, tile) else 0
 	return after > before
 end
 
@@ -641,7 +719,11 @@ local function coinsEnough(player: Player, tile: string): boolean
 	if data == nil then
 		return false
 	end
-	local price = Formulas.tileCost(tile, PadRules.level(data, tile), data.R)
+	-- prix de la ligne achetée par la dalle (Tapis Étoilé au-delà du Tapis 12, N21) ; A [JellyAscend]
+	local id, level = PadRules.target(data, tile)
+	local price = if id == tile
+		then Formulas.tileCost(tile, PadRules.level(data, tile), data.R, Prestige.ascend(data))
+		else UpgradeMath.price(id, level, Prestige.r(data), Prestige.ascend(data), Prestige.bestR(data))
 	return type(data.coins) == "number" and price < math.huge and data.coins >= price
 end
 
@@ -794,6 +876,15 @@ function RanchService.Start()
 	DataService.Loaded:Connect(function(player: Player)
 		onLoaded(player)
 	end)
+	-- v2.0 : attributs du ranch recalculés après tout achat et tout prestige (interrupteurs coupés :
+	-- rien n'est posé)
+	local function v2Changed(player: Player)
+		Guard.try("ranch:refreshV2", RanchService.refreshV2, player)
+	end
+	Signals.UpgradeBought:Connect(v2Changed)
+	Signals.Splorched:Connect(v2Changed)
+	Signals.PrestigeApplied:Connect(v2Changed)
+	Signals.RecordReached:Connect(v2Changed)
 	for _, player in Players:GetPlayers() do
 		task.spawn(function()
 			onPlayerAdded(player)
@@ -1168,6 +1259,109 @@ function RanchService.openStates(): { Types.OpenState }
 		end
 	end
 	return out
+end
+
+-- =============================================================================================
+-- v2.0 (lot A2) : attributs du ranch, place offerte
+-- =============================================================================================
+
+-- Attributs v2.0 du ranch du joueur (docs/04 §27.7 : Types.RanchAttributesV2, partiel permis) : seuls
+-- les noms connus, de la bonne sorte (nombre fini, booléen, chaîne courte) ; `clear` : noms à effacer.
+-- Valeurs gardées si le ranch n'est pas encore attribué ; seul ce qui change est posé
+function RanchService.setV2Attributes(player: Player, attrs: { [string]: any }, clear: { string }?)
+	if typeof(player) ~= "Instance" or type(attrs) ~= "table" then
+		return
+	end
+	local values = v2Values[player]
+	if values == nil then
+		values = {}
+		v2Values[player] = values
+	end
+	local changed: { [string]: any } = {}
+	local cleared: { string } = {}
+	for name, value in attrs do
+		local kind = if type(name) == "string" then V2_ATTRIBUTES[name] else nil
+		local ok = kind ~= nil
+			and typeof(value) == kind
+			and (kind ~= "number" or (value == value and value ~= math.huge and value ~= -math.huge))
+			and (kind ~= "string" or #value <= DECO_PERSO_MAX)
+		if ok and values[name] ~= value then
+			values[name] = value
+			changed[name] = value
+		end
+	end
+	for _, name in if type(clear) == "table" then clear else {} do
+		if type(name) == "string" and V2_ATTRIBUTES[name] ~= nil and values[name] ~= nil then
+			values[name] = nil
+			table.insert(cleared, name)
+		end
+	end
+	local slot = slotOf[player]
+	if slot == nil or ownerAt[slot] ~= player then
+		return
+	end
+	applyV2(slot, changed)
+	local model = if #cleared > 0 then WorldService.ranchModel(slot) else nil
+	if model ~= nil then
+		for _, name in cleared do
+			model:SetAttribute(name, nil)
+			local set = modelAttrs[slot]
+			if set then
+				set[name] = nil
+			end
+		end
+	end
+end
+
+-- Attributs v2.0 calculés par RanchService depuis le profil : Record R [RecordR], Monuments
+-- [Monuments], paliers du Tapis, des Gants et des tabliers de l'École [RanchTiers] ; un interrupteur
+-- coupé efface ce qu'il avait posé (rien de posé tant que tout est coupé)
+function RanchService.refreshV2(player: Player)
+	local data = DataService.get(player)
+	if data == nil then
+		return
+	end
+	local values = v2Values[player]
+	local attrs: { [string]: any } = {}
+	local clear: { string } = {}
+	local on: { [string]: boolean } = {}
+	for name, flag in OWN_ATTRIBUTES do
+		on[name] = Features.get(flag) == true
+		if not on[name] and values ~= nil and values[name] ~= nil then
+			table.insert(clear, name)
+		end
+	end
+	if on.BestR then
+		attrs.BestR = Prestige.bestR(data)
+	end
+	if on.Monuments then
+		attrs.Monuments = UpgradeMath.level("monument", data)
+	end
+	if on.TapisTier then
+		local star = UpgradeMath.level("star", data)
+		attrs.TapisTier = if star > 0
+			then TierRules.of("star", star)
+			else TierRules.of("snack", UpgradeMath.level("snack", data))
+		attrs.GloveTier = TierRules.of("gloves", UpgradeMath.level("gloves", data))
+		attrs.ApronTier = TierRules.of("school", UpgradeMath.level("school", data))
+	end
+	if next(attrs) == nil and #clear == 0 then
+		return
+	end
+	RanchService.setV2Attributes(player, attrs, clear)
+end
+
+-- Place d'enclos offerte (N7, GDD §4.6 : Record R 2, 6, 11, 16), appelée après Prestige.apply : le
+-- ranch construit montre la place de plus ; enclos déjà plein (14 niveaux) : Feedback
+-- « Enclos déjà plein : +n Confettis » (n versés par EconomyService.addConfetti, source "fullPen")
+function RanchService.offeredPlace(player: Player, fullPen: boolean, confetti: number)
+	if DataService.get(player) == nil then
+		return
+	end
+	RanchService.refreshBuild(player)
+	if fullPen == true and type(confetti) == "number" and confetti == confetti and confetti >= 1 then
+		Notify.feedback(player, "confetti.fullPen", { n = math.floor(confetti) }, "success")
+	end
 end
 
 return RanchService

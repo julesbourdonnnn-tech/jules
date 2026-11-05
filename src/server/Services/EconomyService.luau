@@ -20,23 +20,52 @@
 -- existe ; aucune source Product_.
 -- Émet TileBought, PotCollected. Remote : BuyTile. Clés : lastOnline, coins, pot, R, growth, tiles,
 -- fame, boosts, caps.
+--
+-- v2.0 (lot A2, docs/04 §27.4, §27.5, §27.7, §27.14 ; GDD v2.0 §4.6, §4.26, §10.7, §10.8 règles 6,
+-- 12, 13). Chaque chemin nouveau est derrière son interrupteur Config/Features, lu à chaque appel ;
+-- tous coupés, le jeu de base joue EXACTEMENT comme la version de test (mêmes données, mêmes envois) :
+--   * buyUpgrade (intention BuyUpgrade [UpgradesScreen]) : même chemin que BuyTile ; ordre débit →
+--     types (mode ∈ { 0, 1, 10 } AVANT UpgradeMath.plan) → existence → état (profil chargé, session
+--     pas en fin, niveau attendu = niveau actuel, sinon refus « périmé » muet compté UpgradeStale) →
+--     règles (UpgradeMath.cap, aucun prestige en cours, configuration valide) → règlement du Pot →
+--     somme exacte UpgradeMath.plan (jamais un prix recalculé) → UN bloc (monnaie, niveaux, signaux)
+--     → UpgradeResult TOUJOURS (le refus périmé y est muet : from = to, spent = 0, reason = nil) ;
+--   * BuyTile [UpgradesScreen ou StarMat] : la même fonction (mode 1, niveau actuel) ; « snack »
+--     achète le Tapis Étoilé au-delà du Tapis 12 (N21) ; UpgradeResult en plus [UpgradesScreen] ;
+--   * addConfetti : SEUL écrivain des gains de Confettis [Confetti] (buyUpgrade : seul puits) ;
+--   * instantané versionné (snapshot) : version + 1 à chaque contenu changé, envoyé dans UpgradeResult
+--     et dans DataPatch (DataService.setPatchExtra « upgradeSnapshot ») [UpgradesScreen] ;
+--   * Prestige.validateConfig au chargement et à chaque changement de configuration en direct ;
+--   * contextes d'A1 : A, bestR, firstRecordLoop, star (croissance), monuments (revenu), Gants et
+--     Super Série (pressBonus, lus par SquishyService), Sac et Pot de nuit, croissance maximale
+--     (hors ligne), A (tileCost) — Formulas ne les lit qu'interrupteur ouvert.
+-- Émet aussi UpgradeBought, ConfettiChanged. Remotes : BuyUpgrade ; UpgradeResult (envoi). Clés v2 :
+-- confetti, confettiTotal, tiles.{star, gloves, school, monuments}, atelier, atelierCosmetics, bestR
+-- (au Grand Splorch d'un profil v2 : Record R jamais sous r).
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Types = require(Shared.Types)
+local Net = require(Shared.Net)
 local Clock = require(Shared.Util.Clock)
 local Balance = require(Shared.Config.Balance)
 local Pads = require(Shared.Config.Pads)
+local Features = require(Shared.Config.Features)
+local Upgrades = require(Shared.Config.Upgrades)
 local Formulas = require(Shared.Logic.Formulas)
 local QuestRules = require(Shared.Logic.QuestRules)
+local Prestige = require(Shared.Logic.Prestige)
+local UpgradeMath = require(Shared.Logic.UpgradeMath)
+local Bitset = require(Shared.Logic.Bitset)
 local Signals = require(script.Parent.Parent.Signals)
 local Notify = require(script.Parent.Parent.Util.Notify)
 local Analytics = require(script.Parent.Parent.Util.Analytics)
 local Guard = require(script.Parent.Parent.Ranch.Guard)
 local PadRules = require(script.Parent.Parent.Ranch.PadRules)
 local DataService = require(script.Parent.DataService)
+local DiagnosticsService = require(script.Parent.DiagnosticsService)
 local MonetizationService = require(script.Parent.MonetizationService)
 local RanchService = require(script.Parent.RanchService)
 
@@ -59,6 +88,62 @@ local runningSince: { [Player]: number } = weak() -- boost personnel en cours (C
 local offlineInfo: { [Player]: OfflineInfo } = weak()
 local settleHooks: { (Player, number) -> () } = {}
 local serverBoost = { kind = "", untilT = 0 }
+
+-- v2.0 (lot A2)
+local MODES: { [number]: boolean } = { [0] = true, [1] = true, [10] = true } -- 0 = Max (§27.5)
+local V1_TILES: { [string]: boolean } = { snack = true, decor = true, pens = true, cozyBed = true }
+local CONFETTI_MAX = Balance.Confetti.Max
+-- sources des gains (Signals.ConfettiChanged, docs/04 §27.4) ; « spend » est le puits de buyUpgrade
+local CONFETTI_SOURCES: { [string]: boolean } = {
+	splorch = true,
+	petit = true,
+	skipped = true,
+	ascend = true,
+	regain = true,
+	record = true,
+	fullPen = true,
+	track = true,
+	mastery = true,
+}
+-- clés du profil lues par l'instantané de l'écran Améliorations (un patch qui en touche une le porte)
+local SNAPSHOT_KEYS: { [string]: boolean } = {
+	coins = true,
+	confetti = true,
+	tiles = true,
+	atelier = true,
+	atelierCosmetics = true,
+	R = true,
+	bestR = true,
+	ascend = true,
+}
+local REFUSED = {
+	coins = "upgrades.refused.coins",
+	confetti = "upgrades.refused.confetti",
+	locked = "upgrades.refused.locked",
+	maxed = "upgrades.refused.maxed",
+	loopCap = "upgrades.refused.loopCap",
+	busy = "upgrades.refused.busy",
+}
+local READY_CHECK_EVERY = 1 -- s : attribut SplorchReady du ranch [RecordR]
+-- interrupteurs dont un changement en direct relance Prestige.validateConfig
+local CONFIG_FLAGS = {
+	"UpgradesScreen",
+	"Confetti",
+	"Workshop",
+	"StarMat",
+	"Gloves",
+	"Monuments",
+	"RecordR",
+	"PetitSplorch",
+}
+local snapVersion: { [Player]: number } = weak()
+local snapLast: { [Player]: Types.UpgradeSnapshot } = weak()
+local nextReadyCheck: { [Player]: number } = weak()
+local busyProbe: ((Player) -> boolean)? = nil
+local counters: { [string]: number } = {}
+local configOk = true
+local configWhy: string? = nil
+local flagPrint = ""
 
 -- =============================================================================================
 -- Outils
@@ -110,13 +195,22 @@ local function boostOn(player: Player, data: { [string]: any }, now: number): bo
 end
 
 -- Contexte des multiplicateurs calculé depuis le profil (A, P, B)
+-- Monuments construits [Monuments] : multiplicateur à part du revenu (N4). Interrupteur coupé :
+-- le champ n'est pas dans le contexte (contexte identique à la v1.3)
+local function withMonuments(ctx: Formulas.IncomeCtx, data: { [string]: any }): Formulas.IncomeCtx
+	if Features.get("Monuments") == true then
+		ctx.monuments = UpgradeMath.level("monument", data)
+	end
+	return ctx
+end
+
 local function computeCtx(player: Player, data: { [string]: any }, boost: boolean): Formulas.IncomeCtx
 	local doubleCoins = false
 	local ok, owns = pcall(MonetizationService.ownsPass, player, "DoubleCoins")
 	if ok and owns == true then
 		doubleCoins = true
 	end
-	return {
+	return withMonuments({
 		decor = clampReal(data.tiles.decor, 0, Balance.Tiles.decor.Levels),
 		friends = friendsPresent[player] or 0,
 		fame = clampReal(data.fame, 0, MAX),
@@ -124,15 +218,21 @@ local function computeCtx(player: Player, data: { [string]: any }, boost: boolea
 		goldenPages = QuestRules.goldenPages(data.dex),
 		doubleCoins = doubleCoins,
 		boost = boost,
-	}
+	}, data)
 end
 
+-- Contexte de croissance. v2.0 (A1, N2) : Tapis Étoilé, A, Record R et 1re boucle record, lus par
+-- Formulas seulement quand StarMat / la Jelly Ascend sont ouverts (coupés : g de la v1.3, au bit près)
 local function growthCtx(data: { [string]: any }, boost: boolean): Formulas.GrowthCtx
 	return {
 		R = clampReal(data.R, 0, 1e6),
 		snack = clampReal(data.tiles.snack, 0, Balance.Tiles.snack.Levels),
 		jellyFamily = familyEarned(data, "jelly"),
 		boost = boost,
+		star = UpgradeMath.level("star", data),
+		A = Prestige.ascend(data),
+		bestR = Prestige.bestR(data),
+		firstRecordLoop = Prestige.firstRecordLoop(data),
 	}
 end
 
@@ -220,6 +320,337 @@ local function biggestAt(data: { [string]: any }, G: number): (string?, number)
 end
 
 -- =============================================================================================
+-- v2.0 (lot A2) : outils des achats, des Confettis et de l'instantané
+-- =============================================================================================
+
+-- Compte un événement de Diagnostics (docs/04 §27.14 : UpgradeStale, ConfigRefused…) : compteur du
+-- service (EconomyService.counters), transmis à DiagnosticsService.count quand le lot A4 l'ajoute
+-- (note INT-A2-DIAG) ; jamais une trace
+local function diag(key: string, player: Player?)
+	counters[key] = (counters[key] or 0) + 1
+	local count = (DiagnosticsService :: any).count
+	if type(count) == "function" then
+		Guard.try("economy:diag", count, key, player)
+	end
+end
+
+-- Niveau entier de [0 ; hi] (illisible → 0)
+local function int(x: any, hi: number): number
+	if not finite(x) then
+		return 0
+	end
+	return math.clamp(math.floor(x), 0, hi)
+end
+
+-- Confettis en poche (entier 0 … Max)
+local function confettiOf(data: { [string]: any }): number
+	return int(data.confetti, CONFETTI_MAX)
+end
+
+-- La ligne peut-elle être notée dans CE profil ? Les 4 dalles de la v1.3 toujours ; les champs v2.0
+-- (Tapis Étoilé, Gants, École, Monuments, Atelier, « Pour le plaisir ») dans un profil v2 seulement
+-- (SchemaV2 coupé : jamais un champ v2 écrit dans une sauvegarde v1)
+local function storable(data: { [string]: any }, id: string): boolean
+	return V1_TILES[id] == true or PadRules.v2Profile(data)
+end
+
+-- Niveau maximal achetable maintenant (0 = fermé) : UpgradeMath.cap (ouverture, plafond de la boucle,
+-- interrupteurs), et 0 pour une ligne que ce profil ne peut pas noter
+local function capOf(data: { [string]: any }, id: string): number
+	if not storable(data, id) then
+		return 0
+	end
+	return UpgradeMath.cap(id, data, Features)
+end
+
+-- Raison d'un refus « pas ouvert » (niveau ≥ plafond)
+local function capReason(data: { [string]: any }, id: string, level: number): string
+	if level >= UpgradeMath.maxLevel(id) then
+		return REFUSED.maxed
+	end
+	local def = Upgrades.ById[id]
+	if
+		def ~= nil
+		and def.open.loopCapByR ~= nil
+		and storable(data, id)
+		and Features.get(def.feature) == true
+		and UpgradeMath.level("snack", data) >= UpgradeMath.maxLevel("snack")
+	then
+		return REFUSED.loopCap -- Tapis Étoilé : niveau suivant dans une boucle plus haute
+	end
+	return REFUSED.locked
+end
+
+-- Deux instantanés montrent-ils la même chose (hors version) ?
+local function sameSnapshot(a: Types.UpgradeSnapshot, b: Types.UpgradeSnapshot): boolean
+	if a.coins ~= b.coins or a.confetti ~= b.confetti or a.r ~= b.r or a.bestR ~= b.bestR then
+		return false
+	end
+	if a.ascend ~= b.ascend then
+		return false
+	end
+	for id, level in a.levels do
+		if b.levels[id] ~= level or b.caps[id] ~= a.caps[id] then
+			return false
+		end
+	end
+	for id in b.levels do
+		if a.levels[id] == nil then
+			return false
+		end
+	end
+	return true
+end
+
+-- Instantané versionné de l'écran (règle 6 du GDD §10.8) : la version croît de 1 dès que le contenu
+-- change (achat, règlement qui change les pièces, prestige, Confettis, plafond qui s'ouvre), jamais
+-- sinon : UpgradeResult et le DataPatch de la même image portent la MÊME version
+local function snapshotOf(player: Player, data: { [string]: any }): Types.UpgradeSnapshot
+	local snap = UpgradeMath.snapshot(data, Features, 0)
+	for id in snap.caps do
+		if not storable(data, id) then
+			snap.caps[id] = 0
+		end
+	end
+	local last = snapLast[player]
+	local version = snapVersion[player] or 0
+	if last == nil or not sameSnapshot(last, snap) then
+		version += 1
+		snapVersion[player] = version
+		snapLast[player] = snap
+	else
+		snap = last
+	end
+	snap.version = version
+	return snap
+end
+
+-- Un prestige est-il en cours d'application pour ce joueur (sonde posée par SplorchService) ? Une
+-- sonde en erreur compte comme « oui » (refus sûr, jamais un achat pendant un spectacle)
+local function prestigeBusy(player: Player): boolean
+	local probe = busyProbe
+	if probe == nil then
+		return false
+	end
+	local ok, busy = Guard.try("economy:busyProbe", probe, player)
+	return not ok or busy == true
+end
+
+-- Réponse UpgradeResult (le joueur seulement) [UpgradesScreen]
+local function sendResult(player: Player, payload: Types.UpgradeResultPayload)
+	if Features.get("UpgradesScreen") ~= true or player.Parent == nil then
+		return
+	end
+	Net.event("UpgradeResult"):FireClient(player, payload)
+end
+
+-- Écrit le niveau `to` d'une ligne dans le profil (marque la clé) ; rend false si le champ est illisible
+local function writeLevel(
+	player: Player,
+	data: { [string]: any },
+	id: string,
+	from: number,
+	to: number
+): boolean
+	local def = Upgrades.ById[id]
+	if def ~= nil then
+		local tiles = data.tiles
+		local field = string.match(def.profileKey, "^tiles%.(%w+)$")
+		if type(tiles) ~= "table" or field == nil then
+			return false
+		end
+		if id == "cozyBed" then
+			tiles.cozyBed = to >= 1
+		else
+			tiles[field] = to
+		end
+		local pad = (Pads.Defs :: any)[id]
+		if type(pad) == "table" then
+			-- dalle de la v1.3 achetée (écran ou sol) : découverte, comme BuyTile
+			tiles.seen = bit32.bor(math.floor(clampReal(tiles.seen, 0, 4294967295)), pad.seenBit)
+		end
+		DataService.markDirty(player, "tiles")
+		return true
+	end
+	local index = Upgrades.WorkshopIndex[id]
+	if index ~= nil then
+		local atelier = data.atelier
+		if type(atelier) ~= "table" then
+			return false
+		end
+		-- tableau dense (jamais un trou : JSON du DataStore)
+		for i = #atelier + 1, index - 1 do
+			atelier[i] = 0
+		end
+		atelier[index] = to
+		DataService.markDirty(player, "atelier")
+		return true
+	end
+	-- « Pour le plaisir » : les objets suivants de la ligne, dans l'ordre (premiers bits libres)
+	local canonical = UpgradeMath.canonical(id)
+	local line = nil
+	for _, l in Upgrades.Fun do
+		if canonical == "fun." .. l.id and l.store == "bits" then
+			line = l
+		end
+	end
+	local bits = data.atelierCosmetics
+	if line == nil or type(bits) ~= "table" then
+		return false
+	end
+	local first = line.firstBit or 1
+	local left = to - from
+	for i = first, first + #line.costs - 1 do
+		if left <= 0 then
+			break
+		end
+		if not Bitset.has(bits, i) then
+			Bitset.set(bits, i)
+			left -= 1
+		end
+	end
+	DataService.markDirty(player, "atelierCosmetics")
+	return left == 0
+end
+
+-- Le champ de la ligne est-il écrivable (vérifié AVANT toute écriture : un bloc ou rien) ?
+local function writable(data: { [string]: any }, id: string): boolean
+	if Upgrades.ById[id] ~= nil then
+		return type(data.tiles) == "table"
+	elseif Upgrades.WorkshopIndex[id] ~= nil then
+		return type(data.atelier) == "table"
+	end
+	return type(data.atelierCosmetics) == "table"
+end
+
+-- Achat appliqué D'UN SEUL BLOC, sans yield : monnaie, niveaux, ranch, contexte du revenu, signaux.
+-- Rend false sans rien écrire si la somme n'est plus payable ou le champ illisible
+local function applyPurchase(
+	player: Player,
+	data: { [string]: any },
+	id: string,
+	from: number,
+	n: number,
+	total: number,
+	currency: Types.UpgradeCurrency
+): boolean
+	local to = from + n
+	if not writable(data, id) then
+		return false
+	end
+	if currency == "coins" then
+		local coins = Formulas.clampCoins(data.coins)
+		if total > coins then
+			return false
+		end
+		DataService.set(player, "coins", Formulas.clampCoins(math.max(0, coins - total)))
+	else
+		local confetti = confettiOf(data)
+		if total > confetti or total % 1 ~= 0 then
+			return false
+		end
+		DataService.set(player, "confetti", confetti - total)
+	end
+	writeLevel(player, data, id, from, to)
+	if Upgrades.ById[id] ~= nil then
+		-- famille en pièces : ranch construit, croissance (Tapis), revenu (décorations, Monuments)
+		RanchService.refreshBuild(player)
+		EconomyService.refresh(player)
+	end
+	-- TileBought (v1.3) : un par niveau des 4 dalles (étape 3 de l'accueil, objectifs) ; UpgradeBought
+	-- en plus pour tout achat (docs/04 §27.4)
+	if V1_TILES[id] then
+		for lv = from + 1, to do
+			Signals.TileBought:Fire(player, id, lv)
+		end
+	end
+	Signals.UpgradeBought:Fire(player, id, from, to, currency)
+	if currency == "confetti" then
+		Signals.ConfettiChanged:Fire(player, -total, "spend")
+	else
+		analytics("spend", player, if V1_TILES[id] then "Tile_" .. id else "Upgrade_" .. id, total, "Shop")
+	end
+	return true
+end
+
+-- Cœur de BuyUpgrade et de BuyTile (même chemin, docs/04 §27.5) ; rend (réponse, niveaux achetés).
+-- Réponse nil : rien à envoyer (profil absent, joueur parti, ligne inconnue). Ordre : état (session,
+-- niveau attendu) → règles (plafond, prestige, configuration) → règlement du Pot → somme exacte → bloc
+local function purchase(
+	player: Player,
+	id: string,
+	mode: number,
+	expectedLevel: number
+): (Types.UpgradeResultPayload?, number)
+	local data = DataService.get(player)
+	local canonical = UpgradeMath.canonical(id)
+	if data == nil or player.Parent == nil or canonical == nil then
+		return nil, 0
+	end
+	local currency: Types.UpgradeCurrency = UpgradeMath.currency(canonical) or "coins"
+	local level = UpgradeMath.level(canonical, data)
+	local function answer(to: number, spent: number, reason: string?): Types.UpgradeResultPayload
+		return {
+			id = canonical,
+			from = level,
+			to = to,
+			spent = spent,
+			currency = currency,
+			reason = reason,
+			snapshot = snapshotOf(player, data),
+		}
+	end
+	-- sauvegarde de départ commencée : l'achat serait perdu
+	if DataService.isClosing(player) then
+		return answer(level, 0, REFUSED.busy), 0
+	end
+	-- périmé (le niveau a changé depuis l'instantané du client) : muet, compté
+	if expectedLevel ~= level then
+		diag("UpgradeStale", player)
+		return answer(level, 0, nil), 0
+	end
+	local cap = capOf(data, canonical)
+	if level >= cap then
+		return answer(level, 0, capReason(data, canonical, level)), 0
+	end
+	if not configOk or prestigeBusy(player) then
+		return answer(level, 0, REFUSED.busy), 0
+	end
+	EconomyService.settle(player)
+	local cash = if currency == "coins" then Formulas.clampCoins(data.coins) else confettiOf(data)
+	local n, total = UpgradeMath.plan(
+		canonical,
+		level,
+		mode,
+		cash,
+		cap,
+		Prestige.r(data),
+		Prestige.ascend(data),
+		Prestige.bestR(data)
+	)
+	if
+		n < 1
+		or not finite(total)
+		or total > cash
+		or not applyPurchase(player, data, canonical, level, n, total, currency)
+	then
+		return answer(level, 0, if currency == "coins" then REFUSED.coins else REFUSED.confetti), 0
+	end
+	return answer(level + n, total, nil), n
+end
+
+-- Empreinte des interrupteurs de la progression (changement en direct : configuration revérifiée)
+local function flagFingerprint(): number
+	local print = 0
+	for i, key in CONFIG_FLAGS do
+		if Features.get(key) == true then
+			print = bit32.bor(print, bit32.lshift(1, i - 1))
+		end
+	end
+	return print
+end
+
+-- =============================================================================================
 -- Hors ligne (DataService.onPrepare) et écran de retour (Loaded)
 -- =============================================================================================
 
@@ -231,7 +662,8 @@ local function offlineRebase(player: Player, data: { [string]: any })
 		nowUnix,
 		data.lastOnline,
 		data.tiles.cozyBed == true,
-		familyEarned(data, "spiky")
+		familyEarned(data, "spiky"),
+		UpgradeMath.level("nightBag", data) -- Sac de nuit [Workshop] (N6)
 	)
 	local G0 = clampReal(growth.G, 0, MAX)
 	local R = clampReal(data.R, 0, 1e6)
@@ -241,9 +673,16 @@ local function offlineRebase(player: Player, data: { [string]: any })
 	local grew = 0
 	local potAdd = 0
 	if seconds > 0 then
-		grew = Formulas.offlineGrowth(gNoBoost, seconds, R, biggest)
+		-- arrêt à 120 s de croissance maximale de la boucle avant l'objectif [RecordR] (N6)
+		grew = Formulas.offlineGrowth(
+			gNoBoost,
+			seconds,
+			R,
+			biggest,
+			Formulas.maxGrowthRate(growthCtx(data, false))
+		)
 		-- revenu de départ sans boost (P compris : un pass est permanent ; amis absents)
-		local ctx: Formulas.IncomeCtx = {
+		local ctx: Formulas.IncomeCtx = withMonuments({
 			decor = clampReal(data.tiles.decor, 0, Balance.Tiles.decor.Levels),
 			friends = 0,
 			fame = clampReal(data.fame, 0, MAX),
@@ -251,9 +690,11 @@ local function offlineRebase(player: Player, data: { [string]: any })
 			goldenPages = QuestRules.goldenPages(data.dex),
 			doubleCoins = type(data.passes) == "table" and data.passes.DoubleCoins == true,
 			boost = false,
-		}
+		}, data)
 		local K, S1 = Formulas.ranchIncome(data.squishies, G0, ctx)
-		potAdd = Formulas.offlinePot(clampReal(S1 + K * G0, 0, MAX), seconds)
+		-- Pot de nuit [Workshop] (N6)
+		potAdd =
+			Formulas.offlinePot(clampReal(S1 + K * G0, 0, MAX), seconds, UpgradeMath.level("nightPot", data))
 		data.pot = clampReal(clampReal(data.pot, 0, MAX) + potAdd, 0, MAX)
 	end
 	growth.G = clampReal(G0 + grew, 0, MAX)
@@ -341,6 +782,7 @@ local function cleanup(player: Player)
 	nextRefresh[player] = nil
 	nextAutoPot[player] = nil
 	offlineInfo[player] = nil
+	nextReadyCheck[player] = nil
 	-- revue : le contexte du revenu (amis présents, A, P, B) et runningSince sont gardés tant que la
 	-- sauvegarde de départ n'a pas réglé le dernier intervalle (elle peut attendre une sauvegarde
 	-- automatique en cours et passer APRÈS ce nettoyage) ; tables à clés faibles : rien ne survit au
@@ -367,13 +809,48 @@ function EconomyService.Init()
 			return false
 		end
 		local source: "pad" | "panel" = if RanchService.onPad(player) == tile then "pad" else "panel"
-		local bought = EconomyService.buyTile(player, tile, source)
+		local bought = EconomyService.buyTile(player, tile, source, true)
 		if bought then
 			-- achat voulu : il compte pour l'entrée sur cette dalle (aucun 2e niveau à la fin de l'anneau)
 			RanchService.notePadPurchase(player, tile)
 		end
 		return bought
 	end)
+	-- v2.0 : BuyUpgrade (écran Améliorations) ; interrupteur UpgradesScreen coupé : aucune réponse,
+	-- aucune mutation (comme sans handler ; l'interrupteur peut s'ouvrir en direct)
+	Guard.connect(
+		"BuyUpgrade",
+		function(player: Player, id: string, mode: number, expectedLevel: number): boolean
+			local payload = EconomyService.buyUpgrade(player, id, mode, expectedLevel)
+			return payload ~= nil and payload.to > payload.from
+		end
+	)
+	-- instantané versionné porté par l'instantané d'arrivée et par chaque patch qui touche ce qu'il
+	-- montre [UpgradesScreen] (coupé : rien n'est ajouté, aucun patch de plus)
+	DataService.setPatchExtra(
+		"upgradeSnapshot",
+		function(player: Player, data: { [string]: any }, keys: { [string]: boolean }?): any
+			if Features.get("UpgradesScreen") ~= true then
+				return nil
+			end
+			if keys ~= nil then
+				local touched = false
+				for key in keys do
+					if SNAPSHOT_KEYS[key] then
+						touched = true
+						break
+					end
+				end
+				if not touched then
+					return nil
+				end
+			end
+			return snapshotOf(player, data)
+		end
+	)
+	-- invariant de stabilité de la configuration (refus compté par Diagnostics)
+	EconomyService.validateConfig(Balance)
+	flagPrint = flagFingerprint()
 end
 
 -- Connexions et boucles
@@ -411,6 +888,13 @@ function EconomyService.step(now: number)
 	if serverBoost.kind ~= "" and now >= serverBoost.untilT then
 		serverBoost = { kind = "", untilT = 0 }
 	end
+	-- configuration changée en direct (interrupteurs LiveOps) : invariant de stabilité revérifié
+	local print = flagFingerprint()
+	if print ~= flagPrint then
+		flagPrint = print
+		EconomyService.validateConfig(Balance)
+	end
+	local recordOn = Features.get("RecordR") == true
 	local serverOn = serverBoostActive(now)
 	for _, player in Players:GetPlayers() do
 		local data = DataService.get(player)
@@ -443,6 +927,16 @@ function EconomyService.step(now: number)
 					if ok and owns == true then
 						EconomyService.collectPot(player, true)
 					end
+				end
+				-- attribut SplorchReady du ranch [RecordR] (toutes les secondes ; coupé : effacé)
+				if recordOn and now >= (nextReadyCheck[player] or 0) then
+					nextReadyCheck[player] = now + READY_CHECK_EVERY
+					local _, biggest = biggestAt(data, Formulas.G(data.growth, now))
+					local target = Formulas.splorchTarget(EconomyService.R(player))
+					RanchService.setV2Attributes(player, { SplorchReady = biggest >= target })
+				elseif not recordOn and nextReadyCheck[player] ~= nil then
+					nextReadyCheck[player] = nil
+					RanchService.setV2Attributes(player, {}, { "SplorchReady" })
 				end
 			end)
 		end
@@ -601,9 +1095,76 @@ function EconomyService.G(player: Player, t: number?): number
 	return Formulas.G(data.growth, if finite(t) then t :: number else Clock.now())
 end
 
+-- BuyTile v2.0 [UpgradesScreen ou StarMat] : même fonction que BuyUpgrade(dalle, ×1, niveau actuel) ;
+-- « snack » achète le Tapis Étoilé au-delà du Tapis 12 (N21) ; Feedback de la v1.3 gardés (panneau) ;
+-- UpgradeResult [UpgradesScreen] à chaque intention (reply) et à chaque achat sur la dalle
+local function buyTileV2(
+	player: Player,
+	data: { [string]: any },
+	tile: string,
+	def: { [string]: any },
+	source: "pad" | "panel",
+	reply: boolean
+): boolean
+	local id, level = PadRules.target(data, tile)
+	local function refuse(reason: string): boolean
+		if reply then
+			sendResult(player, {
+				id = id,
+				from = level,
+				to = level,
+				spent = 0,
+				currency = "coins",
+				reason = reason,
+				snapshot = snapshotOf(player, data),
+			})
+		end
+		return false
+	end
+	if level >= UpgradeMath.maxLevel(id) then
+		if source == "panel" then
+			Notify.feedback(player, "feedback.maxLevel", {}, "info")
+		end
+		return refuse(REFUSED.maxed)
+	end
+	if not PadRules.visible(data, tile) then
+		-- dalle éteinte ; Tapis 12 sans Tapis Étoilé ouvert dans cette boucle : « niveau maximal » (v1.3)
+		if source == "panel" and PadRules.level(data, tile) >= def.Levels then
+			Notify.feedback(player, "feedback.maxLevel", {}, "info")
+		end
+		return refuse(capReason(data, id, level))
+	end
+	local payload, n = purchase(player, id, 1, level)
+	if payload == nil then
+		return false
+	end
+	if n < 1 then
+		if source == "panel" and payload.reason == REFUSED.coins then
+			local price =
+				UpgradeMath.price(id, level, Prestige.r(data), Prestige.ascend(data), Prestige.bestR(data))
+			local missing = math.max(1, price - EconomyService.coins(player))
+			Notify.feedback(player, "feedback.notEnoughCoins", { missing = missing }, "warning")
+		end
+		if reply then
+			sendResult(player, payload)
+		end
+		return false
+	end
+	-- célébration de la dalle (v1.3) ; le Tapis Étoilé continue la numérotation du Tapis (13 … 20)
+	Notify.celebrate(player, "tile", { tile = tile, level = PadRules.progress(data, tile) })
+	sendResult(player, payload)
+	return true
+end
+
 -- Achète le niveau suivant (condition R, prix × Tiles.RScale^R si la dalle suit R) ; refus doux sur une
--- dalle (anneau, aucun Feedback) ; depuis le panneau : Feedback notEnoughCoins { missing }
-function EconomyService.buyTile(player: Player, tile: string, source: "pad" | "panel"): boolean
+-- dalle (anneau, aucun Feedback) ; depuis le panneau : Feedback notEnoughCoins { missing }. reply :
+-- intention BuyTile (v2.0 : UpgradeResult même sur un refus)
+function EconomyService.buyTile(
+	player: Player,
+	tile: string,
+	source: "pad" | "panel",
+	reply: boolean?
+): boolean
 	local data = DataService.get(player)
 	if data == nil or type(tile) ~= "string" then
 		return false
@@ -612,6 +1173,9 @@ function EconomyService.buyTile(player: Player, tile: string, source: "pad" | "p
 	local pad = (Pads.Defs :: any)[tile]
 	if type(def) ~= "table" or type(pad) ~= "table" then
 		return false
+	end
+	if Features.get("UpgradesScreen") == true or Features.get("StarMat") == true then
+		return buyTileV2(player, data, tile, def, source, reply == true)
 	end
 	local level = PadRules.level(data, tile)
 	if level >= def.Levels then
@@ -623,7 +1187,7 @@ function EconomyService.buyTile(player: Player, tile: string, source: "pad" | "p
 	if not PadRules.visible(data, tile) then
 		return false -- dalle éteinte (R minimal, découverte, accueil)
 	end
-	local price = Formulas.tileCost(tile, level, data.R)
+	local price = Formulas.tileCost(tile, level, data.R, Prestige.ascend(data))
 	if price >= math.huge then
 		return false
 	end
@@ -854,6 +1418,27 @@ function EconomyService.applySplorch(player: Player): number
 	for _, key in { "coins", "pot", "tiles", "R", "fame", "growth" } do
 		DataService.markDirty(player, key)
 	end
+	-- profil v2 (en attendant Prestige.apply au Grand Splorch, lot A2 étape 3) : le Record R n'est
+	-- jamais sous r (invariant v2, docs/04 §27.2), même interrupteur RecordR coupé (note du lot A2,
+	-- étape 1) ; les familles nouvelles de la boucle (Tapis Étoilé, Gants, École : kept = false)
+	-- repartent de zéro comme le Tapis, dans le même bloc
+	if PadRules.v2Profile(data) then
+		if data.bestR ~= Prestige.bestR(data) then
+			data.bestR = Prestige.bestR(data)
+			DataService.markDirty(player, "bestR")
+		end
+		for _, def in Upgrades.Families do
+			local field = string.match(def.profileKey, "^tiles%.(%w+)$")
+			if
+				not def.kept
+				and not V1_TILES[def.id]
+				and field ~= nil
+				and type(data.tiles[field]) == "number"
+			then
+				data.tiles[field] = 0
+			end
+		end
+	end
 	RanchService.refreshBuild(player)
 	EconomyService.refresh(player)
 	RanchService.setPublic(player, { R = data.R, fame = data.fame })
@@ -882,6 +1467,143 @@ function EconomyService.incomeCtx(player: Player): Formulas.IncomeCtx
 		}
 	end
 	return table.clone(ctxOf(player, data))
+end
+
+-- =============================================================================================
+-- v2.0 (lot A2) : achats de l'écran Améliorations, Confettis, instantané, configuration
+-- =============================================================================================
+
+-- Achat de l'écran Améliorations (handler de BuyUpgrade ; BuyTile passe par le même cœur). Types
+-- revérifiés (appel du serveur) : mode ∈ { 0, 1, 10 } AVANT UpgradeMath.plan (qui accepte 0-40),
+-- niveau attendu entier ≥ 0, id ≤ 24 caractères ; refus de type ou id inconnu : nil, rien d'envoyé.
+-- Sinon UpgradeResult envoyé (et rendu) : achat, refus avec sa raison, ou périmé muet (reason nil,
+-- from = to, spent = 0). Interrupteur UpgradesScreen coupé : nil, rien d'envoyé, rien de changé.
+function EconomyService.buyUpgrade(
+	player: Player,
+	id: string,
+	mode: number,
+	expectedLevel: number
+): Types.UpgradeResultPayload?
+	if Features.get("UpgradesScreen") ~= true then
+		return nil
+	end
+	if typeof(player) ~= "Instance" or type(id) ~= "string" or #id > 24 then
+		return nil
+	end
+	if not finite(mode) or not MODES[mode] then
+		return nil
+	end
+	if not finite(expectedLevel) or expectedLevel % 1 ~= 0 or expectedLevel < 0 then
+		return nil
+	end
+	local payload = purchase(player, id, mode, expectedLevel)
+	if payload ~= nil then
+		sendResult(player, payload)
+	end
+	return payload
+end
+
+-- Gain de Confettis : SEUL point d'entrée des gains (GDD v2.0 §4.26, critique m2 ; buyUpgrade est le
+-- seul puits). n entier ≥ 1 (réel : partie entière), source connue (Signals.ConfettiChanged) ; borné
+-- pour que confetti ≤ confettiTotal ≤ Balance.Confetti.Max. Rend le nombre crédité (0 : interrupteur
+-- Confetti coupé, profil absent ou v1, source inconnue, montant illisible, plafond atteint ; refus
+-- comptés : ConfettiRefused, ConfettiCapped)
+function EconomyService.addConfetti(player: Player, n: number, source: string): number
+	if Features.get("Confetti") ~= true then
+		return 0
+	end
+	local data = DataService.get(player)
+	if data == nil or not PadRules.v2Profile(data) then
+		return 0
+	end
+	if type(source) ~= "string" or CONFETTI_SOURCES[source] ~= true or not finite(n) or n < 1 then
+		diag("ConfettiRefused", player)
+		return 0
+	end
+	local pocket = confettiOf(data)
+	local total = math.max(pocket, int(data.confettiTotal, CONFETTI_MAX))
+	local credit = math.min(math.floor(n), CONFETTI_MAX - total)
+	if credit <= 0 then
+		diag("ConfettiCapped", player)
+		return 0
+	end
+	DataService.set(player, "confetti", pocket + credit)
+	DataService.set(player, "confettiTotal", total + credit)
+	Signals.ConfettiChanged:Fire(player, credit, source)
+	return credit
+end
+
+-- Confettis en poche (lecture)
+function EconomyService.confetti(player: Player): number
+	local data = DataService.get(player)
+	return if data then confettiOf(data) else 0
+end
+
+-- Instantané versionné de l'écran Améliorations (Types.UpgradeSnapshot ; version + 1 à chaque
+-- contenu changé)
+function EconomyService.snapshot(player: Player): Types.UpgradeSnapshot
+	local data = DataService.get(player)
+	if data == nil then
+		return UpgradeMath.snapshot({}, Features, snapVersion[player] or 0)
+	end
+	return snapshotOf(player, data)
+end
+
+-- Sonde « un prestige est en cours d'application pour ce joueur » (SplorchService) : achats refusés
+-- (upgrades.refused.busy) tant qu'elle répond vrai
+function EconomyService.setBusyProbe(fn: (Player) -> boolean)
+	if type(fn) == "function" then
+		busyProbe = fn
+	end
+end
+
+-- Invariant de stabilité d'une configuration (Prestige.validateConfig) : au chargement, et pour toute
+-- configuration en direct ; un refus est compté (ConfigRefused, Diagnostics). La configuration en
+-- vigueur (Config/Balance) refusée : achats v2.0 refusés (« busy ») tant qu'elle l'est (un prix lu
+-- dans une table illisible n'est jamais débité)
+function EconomyService.validateConfig(balance: any): (boolean, string?)
+	local ok, why = Prestige.validateConfig(balance)
+	if not ok then
+		diag("ConfigRefused")
+		Guard.try(
+			"economy:configRefused",
+			DiagnosticsService.report,
+			"server",
+			2,
+			"ConfigRefused:" .. tostring(why),
+			"",
+			"",
+			nil
+		)
+	end
+	if rawequal(balance, Balance) then
+		configOk, configWhy = ok, why
+	end
+	return ok, why
+end
+
+-- Configuration en vigueur acceptée (et la raison du refus sinon)
+function EconomyService.configOk(): (boolean, string?)
+	return configOk, configWhy
+end
+
+-- Compteurs du service (Diagnostics : UpgradeStale, ConfigRefused, ConfettiRefused, ConfettiCapped)
+function EconomyService.counters(): { [string]: number }
+	return table.clone(counters)
+end
+
+-- Bonus de pression v2.0 (N5, lus par SquishyService) : niveau des Gants [Gloves] et de la Super
+-- Série de l'Atelier [Workshop] ; nil si l'interrupteur est coupé ou le profil v1 (pression v1.3)
+function EconomyService.pressBonus(player: Player): (number?, number?)
+	local data = DataService.get(player)
+	if data == nil or not PadRules.v2Profile(data) then
+		return nil, nil
+	end
+	local gloves = if Features.get("Gloves") == true then UpgradeMath.level("gloves", data) else nil
+	local superStreak = if Features.get("Workshop") == true
+		then UpgradeMath.level("superStreak", data)
+		else nil
+	return gloves, superStreak
 end
 
 return EconomyService

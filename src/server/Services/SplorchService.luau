@@ -27,6 +27,7 @@ local Balance = require(Shared.Config.Balance)
 local Events = require(Shared.Config.Events)
 local Hash = require(Shared.Logic.Hash)
 local Formulas = require(Shared.Logic.Formulas)
+local Prestige = require(Shared.Logic.Prestige)
 local WorldLayout = require(Shared.Logic.WorldLayout)
 local StateTimeouts = require(Shared.Logic.StateTimeouts)
 
@@ -320,7 +321,8 @@ local function burst(show: Show, now: number)
 		readyAtLogin = if readyAtLogin[hero] then 1 else 0,
 	})
 	readyAtLogin[hero] = false
-	local price = Formulas.tileCost("snack", SNACK_LOOP_LEVEL, R0)
+	-- prix du Tapis 12 de la boucle quittée (A : prix × F(A) quand la Jelly Ascend est ouverte, N3)
+	local price = Formulas.tileCost("snack", SNACK_LOOP_LEVEL, R0, Prestige.ascend(data))
 	Guard.analytics(hero, "SplorchCoinsLost", if price > 0 then (lost or 0) / price else 0)
 	Guard.analytics(hero, "TileLevelAtSplorch", snackBefore, { decor = decorBefore })
 end
@@ -349,6 +351,11 @@ end
 -- Création des remotes et des états ; aucun yield long
 function SplorchService.Init()
 	Guard.connect("GrandSplorch", onGrandSplorch)
+	-- v2.0 (lot A2) : aucun achat de l'écran Améliorations pendant le spectacle du héros (du départ à
+	-- la fin, éclatement compris : upgrades.refused.busy « Attends la fin du spectacle »)
+	EconomyService.setBusyProbe(function(player: Player): boolean
+		return shows[player] ~= nil
+	end)
 end
 
 -- Connexions et boucles

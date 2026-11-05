@@ -1774,6 +1774,7 @@ return function(T)
 			"FuseMenu",
 			"FuseAll",
 			"BuyTile",
+			"BuyUpgrade", -- lot A2 (note INT-V2-INTENTS, journal A2-8) : achat, intention de jeu
 			"MoveSquishy",
 			"ClaimMail",
 			"Sell",

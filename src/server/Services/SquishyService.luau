@@ -1909,18 +1909,22 @@ function SquishyService.press(owner: Player, uid: string, tClient: number, visit
 	local perfect = PressTiming.isPerfect(t, PressTiming.offset(owner.UserId, uid))
 	local kitty = QuestRules.familyEarned(data.dex, "kitty")
 	local income = EconomyService.squishyIncome(owner, uid)
+	-- v2.0 (N5, lot A2) : Gants [Gloves] et Super Série de l'Atelier [Workshop] du propriétaire ; nil
+	-- (interrupteur coupé, profil v1) : pression et série de la v1.3
+	local gloves, superStreak = EconomyService.pressBonus(owner)
 	local streak = 0
 	local reward: number
 	if visitor == nil then
 		local s = streakOf[owner]
 		local n = if s ~= nil and now - s.last <= Balance.Press.StreakTimeout then s.n else 0
-		n = if perfect then math.min(n + 1, Balance.Press.StreakMax) else 0
+		n = if perfect then math.min(n + 1, Formulas.streakMax(superStreak)) else 0
 		streakOf[owner] = { n = n, last = now }
 		streak = n
-		reward = Formulas.pressReward(income, perfect, streak, kitty)
+		reward = Formulas.pressReward(income, perfect, streak, kitty, gloves, superStreak)
 	else
-		-- le propriétaire reçoit la pression normale, SANS PERFECT (pet-sitting, GDD §6.4)
-		reward = Formulas.pressReward(income, false, 0, kitty)
+		-- le propriétaire reçoit la pression normale, SANS PERFECT (pet-sitting, GDD §6.4) ; ses Gants
+		-- comptent (c'est sa pression), pas la série
+		reward = Formulas.pressReward(income, false, 0, kitty, gloves, nil)
 	end
 	ready[uid] = now + Balance.Press.Cooldown
 	local coins = EconomyService.addCoins(owner, reward, "Press", "Gameplay")

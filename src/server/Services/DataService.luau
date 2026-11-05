@@ -60,6 +60,13 @@
 --   DataService.setStreamOrder(key, fn)          -- fn(data) -> sous-clés de data[key] par priorité
 --                                                   d'envoi (instantané puis flux) ; sans crochet :
 --                                                   ordre quelconque
+--   DataService.setPatchExtra(name, fn)          -- (lot A2, v2.0) valeur DÉRIVÉE ajoutée sous `name`
+--                                                   à l'instantané et aux patchs : fn(player, data,
+--                                                   clés du patch ou nil pour l'instantané) -> valeur
+--                                                   ou nil (rien n'est ajouté, aucun patch de plus)
+--   DataService.isClosing(player) -> boolean     -- (lot A2) sauvegarde de libération commencée ou
+--                                                   faite (départ, BindToClose) : toute mutation
+--                                                   serait perdue, un achat est refusé
 --   DataService.Settings                         -- délais (modifiables par les tests avant Start)
 --   DataService.usingMemoryStore                 -- vrai seulement dans Studio sans accès API
 
@@ -189,6 +196,13 @@ local rejoinWaits: { [number]: number } = {}
 -- dernière fois tout de suite (attendus par la boucle de fermeture, dans CLOSE_TIMEOUT)
 local closing = false
 local beforeSave: { (Player, { [string]: any }, boolean?) -> () } = {}
+-- valeurs dérivées ajoutées à l'instantané et aux patchs (DataService.setPatchExtra), dans l'ordre
+-- d'enregistrement ; aucune tant qu'aucun service ne s'enregistre (jeu de base : rien de changé)
+type PatchExtra = {
+	name: string,
+	fn: (Player, { [string]: any }, { [string]: boolean }?) -> any,
+}
+local patchExtras: { PatchExtra } = {}
 -- crochets de préparation d'un profil chargé (DataService.onPrepare), avant l'instantané et Loaded
 local prepareHooks: { (Player, { [string]: any }) -> () } = {}
 
@@ -380,6 +394,22 @@ local function ensureStreamLoop()
 	end
 end
 
+-- Valeur dérivée `extra` pour ce joueur (nil : rien à ajouter) ; une erreur du crochet est signalée
+-- (warn : un défaut du service qui s'est enregistré) et rien n'est ajouté
+local function extraValue(
+	extra: PatchExtra,
+	player: Player,
+	data: { [string]: any },
+	keys: { [string]: boolean }?
+): any
+	local ok, value = pcall(extra.fn, player, data, keys)
+	if not ok then
+		warn(`[DataService] valeur dérivée « {extra.name} » en échec :`, value)
+		return nil
+	end
+	return value
+end
+
 -- Instantané (arrivée, RequestSnapshot) : les grandes tables n'y portent que leurs SNAPSHOT_INLINE
 -- premières entrées, le reste part ensuite en flux (DataPatch, entrées) ; un nouvel instantané
 -- remplace le flux en cours
@@ -401,6 +431,12 @@ local function sendSnapshot(player: Player, data: { [string]: any })
 				view[key] = inline
 				table.insert(parts, { key = key, order = order, index = inlineCount + 1 })
 			end
+		end
+	end
+	for _, extra in patchExtras do
+		local value = extraValue(extra, player, data, nil)
+		if value ~= nil then
+			view[extra.name] = value
 		end
 	end
 	snapshotRemote:FireClient(player, view)
@@ -457,6 +493,21 @@ local function flushPatches()
 						if container == nil then
 							table.insert(removed, key)
 						end
+						any = true
+					end
+				end
+			end
+			-- valeurs dérivées (setPatchExtra) : seulement si le patch part déjà, ou si le crochet le
+			-- demande pour les clés touchées ; jamais de patch vide
+			if #patchExtras > 0 and (any or anyEntries) then
+				local touched: { [string]: boolean } = table.clone(queued.keys)
+				for key in queued.entries do
+					touched[key] = true
+				end
+				for _, extra in patchExtras do
+					local value = extraValue(extra, player, data, touched)
+					if value ~= nil then
+						patch[extra.name] = value
 						any = true
 					end
 				end
@@ -1118,6 +1169,33 @@ end
 
 function DataService.saveNow(player: Player): boolean
 	return save(player, false)
+end
+
+-- Sauvegarde de libération commencée ou faite (départ, BindToClose) : l'instantané écrit est déjà
+-- copié ou va l'être, une mutation de plus serait perdue (lot A2 : un achat est refusé). Une
+-- autosave en cours ne compte pas : son instantané est copié d'un bloc AVANT l'écriture, la mutation
+-- part à la suivante.
+function DataService.isClosing(player: Player): boolean
+	return releasing[player] == true or releasedOk[player] ~= nil or closing
+end
+
+-- Valeur dérivée ajoutée sous `name` à l'instantané et à chaque patch du joueur (lot A2 : instantané
+-- versionné de l'écran Améliorations, docs/04 §27.5) ; fn(player, data, clés) rend nil pour ne rien
+-- ajouter. Un nom de clé du profil est refusé (jamais une donnée sauvegardée écrasée côté client).
+function DataService.setPatchExtra(
+	name: string,
+	fn: (Player, { [string]: any }, { [string]: boolean }?) -> any
+)
+	assert(type(name) == "string" and name ~= "", "DataService.setPatchExtra : nom invalide")
+	assert(type(fn) == "function", "DataService.setPatchExtra : crochet invalide")
+	assert(Schema.defaults()[name] == nil, `DataService.setPatchExtra : « {name} » est une clé du profil`)
+	for _, extra in patchExtras do
+		if extra.name == name then
+			extra.fn = fn
+			return
+		end
+	end
+	table.insert(patchExtras, { name = name, fn = fn })
 end
 
 -- Enregistre un crochet appelé (sans yield) juste avant chaque sauvegarde du joueur :

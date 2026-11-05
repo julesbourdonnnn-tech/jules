@@ -57,6 +57,16 @@ local Intents: { [string]: IntentSpec } = {
 	FuseMenu = { owner = "SquishyService", rate = { 2, 1 }, activity = true, args = { { name = "uidA", kind = "uid" }, { name = "uidB", kind = "uid" } } },
 	FuseAll = { owner = "SquishyService", rate = { 1, 2 }, activity = true, args = {} },
 	BuyTile = { owner = "EconomyService", rate = { 10, 1 }, activity = true, args = { { name = "tile", kind = "key", set = TILES } } },
+	-- v2.0 (lot A2, note INT-V2-INTENTS : venue de Config/IntentsV2 avec son handler) : écran
+	-- Améliorations [UpgradesScreen] (EconomyService.buyUpgrade, même chemin que BuyTile) : id ∈
+	-- Config/Upgrades (Families, WorkshopRows, lignes « bits » de Fun) ; mode 1, 10 ou 0 (= Max), toute
+	-- autre valeur refusée par le handler AVANT UpgradeMath.plan ; expectedLevel = niveau que l'écran
+	-- montre (sinon refus « périmé » : UpgradeResult sans retour visible, compteur UpgradeStale)
+	BuyUpgrade = { owner = "EconomyService", rate = { 10, 1 }, activity = true, args = {
+		{ name = "id", kind = "str", max = 24 },
+		{ name = "mode", kind = "int", min = 0, max = 10 },
+		{ name = "expectedLevel", kind = "int", min = 0, max = 64 },
+	} },
 	MoveSquishy = { owner = "SquishyService", rate = { 4, 1 }, activity = true, args = { { name = "uid", kind = "uid" }, { name = "to", kind = "key", set = MOVE_TO } } },
 	ClaimMail = { owner = "SquishyService", rate = { 4, 1 }, activity = true, args = { { name = "uid", kind = "uid" } } },
 	Sell = { owner = "SquishyService", rate = { 2, 1 }, activity = true, args = { { name = "uids", kind = "uids", max = 84 }, { name = "confirmed", kind = "bool" } } },

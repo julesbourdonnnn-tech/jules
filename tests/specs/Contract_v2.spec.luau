@@ -789,15 +789,26 @@ return function(T)
 						end
 					end
 				end
-				expect(n).toBe(5)
+				-- 4 : BuyUpgrade est passée dans Config/Intents avec son handler (lot A2, note INT-V2-INTENTS,
+				-- journal A2-8) ; elle n'est jamais dans les deux catalogues
+				expect(n).toBe(4)
+				expect(IV2.BuyUpgrade).toBeNil()
+				expect(Intents.BuyUpgrade.owner).toBe("EconomyService")
+				expect(Intents.BuyUpgrade.activity).toBe(true)
+				expect(R.BuyUpgrade).toBe("event")
 				-- débits du GDD v2.0 §12.7
-				expect(IV2.BuyUpgrade.rate).toEqual({ 10, 1 })
+				expect(Intents.BuyUpgrade.rate).toEqual({ 10, 1 })
 				expect(IV2.JellyAscend.rate).toEqual({ 1, 5 })
 				expect(IV2.GiveHeart.rate).toEqual({ 2, 1 })
 				-- mode : 1, 10 ou 0 (= Max) ; expectedLevel entier borné ; id ≤ 24 caractères
-				expect(IV2.BuyUpgrade.args[1]).toEqual({ name = "id", kind = "str", max = 24 })
-				expect(IV2.BuyUpgrade.args[2].min).toBe(0)
-				expect(IV2.BuyUpgrade.args[3].kind).toBe("int")
+				expect(Intents.BuyUpgrade.args[1]).toEqual({ name = "id", kind = "str", max = 24 })
+				expect(Intents.BuyUpgrade.args[2]).toEqual({ name = "mode", kind = "int", min = 0, max = 10 })
+				expect(Intents.BuyUpgrade.args[3]).toEqual({
+					name = "expectedLevel",
+					kind = "int",
+					min = 0,
+					max = 64,
+				})
 				-- remotes serveur → client
 				expect(R.UpgradeResult).toBe("event")
 				expect(R.HelperPress).toBe("unreliable")

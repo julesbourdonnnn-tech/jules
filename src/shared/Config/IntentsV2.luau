@@ -33,15 +33,7 @@ export type IntentSpecV2 = {
 
 -- stylua: ignore start
 local IntentsV2: { [string]: IntentSpecV2 } = {
-	-- Écran Améliorations (EconomyService.buyUpgrade, même chemin que BuyTile) : id ∈ Config/Upgrades
-	-- (Families, WorkshopRows, lignes « bits » de Fun) ; mode 1, 10 ou 0 (= Max) ; expectedLevel =
-	-- niveau que l'écran montre (sinon refus « périmé » : UpgradeResult sans retour visible si
-	-- l'instantané montre déjà ce niveau, compteur UpgradeStale)
-	BuyUpgrade = { owner = "EconomyService", rate = { 10, 1 }, activity = true, feature = "UpgradesScreen", args = {
-		{ name = "id", kind = "str", max = 24 },
-		{ name = "mode", kind = "int", min = 0, max = 10 },
-		{ name = "expectedLevel", kind = "int", min = 0, max = 64 },
-	} },
+	-- (BuyUpgrade : passée dans Config/Intents avec son handler, lot A2, note INT-V2-INTENTS.)
 	-- Jelly Ascend (SplorchService) : maintien de 3 s et carte « Prêt à monter ? » côté client ;
 	-- confirm = true exigé ; Prestige.ascendReady vérifié une seule fois, à l'entrée dans la file
 	JellyAscend = { owner = "SplorchService", rate = { 1, 5 }, activity = true, feature = "JellyAscend", args = {

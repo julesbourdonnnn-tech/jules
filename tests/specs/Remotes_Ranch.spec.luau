@@ -1,7 +1,8 @@
 --!nocheck
 -- Remotes_Ranch (paquet ranch, docs/04 §17.1 couche b, §18.2) : chaque intention du paquet attaquée
 -- (Config/Intents : Press, PickUp, PutDown, Throw, FuseMenu, FuseAll, BuyTile, MoveSquishy, ClaimMail,
--- Sell, Release, SetLock, SetBestFriend, SetMount, Ride, EquipOutfit, RequestWorld) : mauvais types,
+-- Sell, Release, SetLock, SetBestFriend, SetMount, Ride, EquipOutfit, RequestWorld ; BuyUpgrade depuis
+-- le lot A2, note INT-V2-INTENTS, attaquée interrupteur coupé et ouvert) : mauvais types,
 -- nil, NaN, ±inf, nombres énormes, chaînes de 100 000 caractères, UTF-8 invalide, tables profondes,
 -- mixtes ou à trous, Vector3, uid d'un autre joueur → AUCUNE mutation du profil, aucune erreur, aucun
 -- avertissement, au plus un Feedback neutre par message ; rafales de 1 000 messages : seau à jetons au
@@ -34,6 +35,7 @@ return function(T)
 		"Ride",
 		"EquipOutfit",
 		"RequestWorld",
+		"BuyUpgrade",
 	}
 
 	local function deepCopy(v)
@@ -105,12 +107,16 @@ return function(T)
 	-- Squishies d'un autre joueur (uid absents du profil de l'attaquant)
 	local OTHER_UIDS = { "5", "6", "7", "8" }
 
-	local function boot()
+	local function boot(flags)
 		local caught = {}
 		local w = Bots.boot(Harness, {
 			t0 = T0,
 			before = function(w)
 				w.DS.Settings.AUTOSAVE_INTERVAL = 1e6
+				local Features = w.h:require("ReplicatedStorage.Shared.Config.Features")
+				for _, key in flags or {} do
+					assert(Features.set(key, true), key)
+				end
 				local Diag = w.h:require(S .. "DiagnosticsService")
 				Diag.reportCaught = function(where, err)
 					table.insert(caught, where .. " : " .. tostring(err))
@@ -275,6 +281,58 @@ return function(T)
 				end
 			)
 		end
+	end)
+
+	describe("Remotes_Ranch › BuyUpgrade, écran Améliorations ouvert (lot A2)", function()
+		it(
+			"BuyUpgrade [UpgradesScreen] : charges hostiles → aucune mutation, aucune erreur, aucun Feedback",
+			function()
+				local w = boot({ "UpgradesScreen", "Gloves", "Workshop", "Confetti" })
+				local p = Bots.join(1)
+				w.h:settle(2)
+				local data = w.DS.get(p)
+				local Economy = w.h:require(S .. "EconomyService")
+				Economy.settle(p)
+				local before = deepCopy(data)
+				local fbBefore = #w.h:sentTo(p, "Feedback")
+				local spec = w.Intents.BuyUpgrade
+				for _, args in payloads(spec) do
+					w.RateLimit.clear(p)
+					w.h
+						:find(R .. "BuyUpgrade").OnServerEvent
+						:Fire(p, table.unpack(args, 1, math.max(#spec.args, #args)))
+				end
+				w.h:settle(3)
+				expect(deepEqual(data, before)).toBe(true)
+				expect(#w.h:sentTo(p, "Feedback")).toBe(fbBefore)
+				clean(w)
+			end
+		)
+
+		it(
+			"rafale de 1 000 BuyUpgrade [UpgradesScreen] : au plus 10 traités (10 / 1 s), aucune pièce créée",
+			function()
+				local w = boot({ "UpgradesScreen" })
+				local p = Bots.join(1)
+				local data = w.DS.get(p)
+				local Economy = w.h:require(S .. "EconomyService")
+				local calls = 0
+				local original = Economy.buyUpgrade
+				Economy.buyUpgrade = function(...)
+					calls += 1
+					return original(...)
+				end
+				local remote = w.h:find(R .. "BuyUpgrade")
+				for _ = 1, 1000 do
+					remote.OnServerEvent:Fire(p, "pens", 1, 0)
+				end
+				w.h:settle(2)
+				expect(calls <= w.Intents.BuyUpgrade.rate[1]).toBe(true)
+				expect(calls >= 1).toBe(true)
+				expect(data.coins).toBe(5)
+				clean(w)
+			end
+		)
 	end)
 
 	describe("Remotes_Ranch › débit (seau à jetons de Config/Intents)", function()
