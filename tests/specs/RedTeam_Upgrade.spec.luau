@@ -8,6 +8,7 @@
 local Bots = require("../harness/Bots")
 local Fuzz = require("../harness/Fuzz")
 local Chaos = require("../harness/Chaos")
+local Brains = require("../harness/Brains")
 local task = require("@lune/task")
 
 return function(T)
@@ -355,6 +356,157 @@ return function(T)
 					end
 				end
 				sane(w, data)
+				clean(w)
+			end
+		)
+	end)
+
+	describe("RedTeam_Upgrade › robots", function()
+		it(
+			"16 joueurs, 4 000 actions au hasard (graine fixe) : achats justes ou périmés, gains, Grands Splorch, dalles, interrupteurs en direct ; débit exact, une réponse par achat, profils sains",
+			function()
+				local caught = {}
+				local w = Bots.boot(HarnessV2, {
+					t0 = T0,
+					before = function(w)
+						setup(w, caught)
+						w.F.set("RanchTiers", true)
+						for id = 1, 16 do
+							local best = 8 + id
+							Bots.saveProfile(
+								w,
+								id,
+								profileOf(w, {
+									R = id % 9,
+									bestR = best,
+									unlocksSeen = best,
+									coins = 10 ^ (5 + id % 8),
+								})
+							)
+						end
+					end,
+				})
+				w.caught = caught
+				local Economy = w.h:require(S .. "EconomyService")
+				local UM = w.h:require(L .. "Logic.UpgradeMath")
+				local Prestige = w.h:require(L .. "Logic.Prestige")
+				local Invariants = w.h:require(L .. "Logic.Invariants")
+				local players = Bots.spawn(16)
+				local rng = Brains.rng(20261105)
+				local ids = UM.ids()
+				local toggles = {
+					"UpgradesScreen",
+					"Confetti",
+					"Workshop",
+					"StarMat",
+					"Gloves",
+					"Monuments",
+					"RecordR",
+					"RanchTiers",
+				}
+				local sources = {
+					"splorch",
+					"petit",
+					"record",
+					"fullPen",
+					"track",
+					"mastery",
+					"regain",
+					"ascend",
+					"skipped",
+				}
+				local tiles = { "snack", "decor", "pens", "cozyBed" }
+				local expectedAnswers, bought, stale = 0, 0, 0
+				local problems = {}
+				for step = 1, 4000 do
+					local p = players[rng:NextInteger(1, 16)]
+					local data = w.DS.get(p)
+					local roll = rng:NextInteger(1, 100)
+					if roll <= 55 then
+						local id = ids[rng:NextInteger(1, #ids)]
+						local mode = ({ 0, 1, 10 })[rng:NextInteger(1, 3)]
+						local level = UM.level(id, data)
+						local expected = if rng:NextNumber() < 0.85
+							then level
+							else math.max(0, level + rng:NextInteger(-2, 2))
+						local key = if UM.currency(id) == "coins" then "coins" else "confetti"
+						local cash = data[key]
+						local r, a, best = Prestige.r(data), Prestige.ascend(data), Prestige.bestR(data)
+						local res = Economy.buyUpgrade(p, id, mode, expected)
+						if res ~= nil then
+							expectedAnswers += 1
+							if res.to > res.from then
+								bought += 1
+								local _, total = UM.bulk(res.id, res.from, res.to - res.from, r, a, best)
+								if res.spent ~= total or cash - data[key] ~= total then
+									table.insert(
+										problems,
+										string.format(
+											"%d %s : débit %s / %s",
+											step,
+											id,
+											tostring(cash - data[key]),
+											tostring(total)
+										)
+									)
+								end
+							elseif res.reason == nil then
+								stale += 1
+								if cash ~= data[key] then
+									table.insert(problems, step .. " périmé avec débit")
+								end
+							end
+						end
+					elseif roll <= 68 then
+						Economy.addConfetti(p, rng:NextInteger(-3, 60), sources[rng:NextInteger(1, #sources)])
+					elseif roll <= 72 then
+						Economy.applySplorch(p)
+					elseif roll <= 78 then
+						local key = toggles[rng:NextInteger(1, #toggles)]
+						w.F.set(key, not (w.F.get(key) == true))
+					elseif roll <= 86 then
+						Economy.addCoins(p, 10 ^ rng:NextInteger(2, 12), "Test")
+					elseif roll <= 94 then
+						w.Clock.advance(0.5)
+						Economy.step(w.Clock.now())
+					else
+						local screen = w.F.get("UpgradesScreen") == true
+						if Economy.buyTile(p, tiles[rng:NextInteger(1, #tiles)], "pad") and screen then
+							expectedAnswers += 1
+						end
+					end
+					if step % 250 == 0 then
+						for _, q in players do
+							local d = w.DS.get(q)
+							local bad = Invariants.profile(d)
+							if #bad > 0 then
+								table.insert(
+									problems,
+									step .. " " .. q.Name .. " : " .. table.concat(bad, ", ")
+								)
+							end
+							if
+								not (
+									d.coins >= 0
+									and d.coins == d.coins
+									and d.confetti >= 0
+									and d.confetti <= d.confettiTotal
+								)
+							then
+								table.insert(problems, step .. " " .. q.Name .. " : monnaies")
+							end
+						end
+					end
+				end
+				w.h:settle(3)
+				expect(table.concat(problems, "\n")).toBe("")
+				local results = 0
+				for _, q in players do
+					results += #w.h:sentTo(q, "UpgradeResult")
+				end
+				expect(results).toBe(expectedAnswers)
+				expect(bought > 100).toBe(true)
+				expect(stale > 10).toBe(true)
 				clean(w)
 			end
 		)

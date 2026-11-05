@@ -25,7 +25,7 @@
 -- autres (Ascend, AscendReady, PetitSplorchAt, DecoPerso, HaloOn) des services qui les possèdent.
 -- Place d'enclos offerte (N7) : offeredPlace (ranch reconstruit ; enclos déjà plein : Feedback
 -- « +25 Confettis »), appelée après Prestige.apply. Dalle du Tapis au-delà du Tapis 12 (N21) : même
--- règle que PadRules (Tapis Étoilé [StarMat]).
+-- règle que PadRules (Tapis Étoilé [StarMat]). Pot encaissé dans le rayon de l'Aimant [Workshop].
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -804,6 +804,19 @@ local function stepPads(player: Player, slot: number, actor: Types.TickActor, no
 	end
 end
 
+-- Rayon d'encaissement du Pot : Balance.Pot.Radius (v1.3) ; v2.0 [Workshop] : Aimant de l'Atelier
+-- (Balance.PotV2.MagnetRadii, 5 / 8 / 11 / 14 studs) dans un profil v2
+local function potRadius(player: Player): number
+	if Features.get("Workshop") ~= true then
+		return Balance.Pot.Radius
+	end
+	local data = DataService.get(player)
+	if data == nil or not PadRules.v2Profile(data) then
+		return Balance.Pot.Radius
+	end
+	return Balance.PotV2.MagnetRadii[UpgradeMath.level("magnet", data) + 1] or Balance.Pot.Radius
+end
+
 local function stepActor(player: Player, actor: Types.TickActor, now: number)
 	local slot = slotOf[player]
 	if slot == nil then
@@ -830,9 +843,9 @@ local function stepActor(player: Player, actor: Types.TickActor, now: number)
 		cancelDwell(player)
 		return
 	end
-	-- Pot : à l'entrée seulement (à plat ≤ rayon, pieds)
+	-- Pot : à l'entrée seulement (à plat ≤ rayon, pieds) ; rayon de l'Aimant de l'Atelier [Workshop]
 	local pot = WorldLayout.anchor(slot, "pot")
-	local onPot = ZoneRules.withinReach(pos, actor.rootOffset, pot, Balance.Pot.Radius)
+	local onPot = ZoneRules.withinReach(pos, actor.rootOffset, pot, potRadius(player))
 	if onPot and not potInside[player] then
 		potInside[player] = true
 		callZone("pot", player, "")

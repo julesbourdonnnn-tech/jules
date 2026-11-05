@@ -855,6 +855,28 @@ return function(T)
 		)
 
 		it(
+			"Tapis Étoilé ouvert, écran coupé : les 4 dalles gardent le chemin et le prix de la v1.3 (Formulas.tileCost), aucune réponse UpgradeResult",
+			function()
+				local w = boot({ flags = { "StarMat" } })
+				local p = Bots.join(1)
+				local data = w.DS.get(p)
+				local cost = w.Formulas.tileCost("decor", 0, data.R)
+				expect(w.Economy.buyTile(p, "decor", "panel", true)).toBe(true)
+				expect(data.coins).toBe(1e14 - cost)
+				expect(#results(w, p)).toBe(0)
+				-- Tapis 12 : la dalle achète le Tapis Étoilé (UpgradeMath), toujours sans réponse
+				data.tiles.snack = 12
+				local star = price(w, data, "star", 0)
+				local coins = data.coins
+				expect(w.Economy.buyTile(p, "snack", "pad")).toBe(true)
+				expect(data.tiles.star).toBe(1)
+				expect(data.coins).toBe(coins - star)
+				expect(#results(w, p)).toBe(0)
+				clean(w)
+			end
+		)
+
+		it(
 			"instantané versionné : version + 1 à chaque contenu changé, jamais sinon ; UpgradeResult et DataPatch de la même image portent la même version",
 			function()
 				local w = boot()
@@ -996,6 +1018,48 @@ return function(T)
 				expect(w.Economy.incomeCtx(p).monuments).toBeNil()
 				expect(w.Economy.gNoBoost(p)).toBe(g12)
 				clean(w)
+			end
+		)
+
+		it(
+			"vraie pression (SquishyService) : Gants × (1 + 0,025 × niveau) [Gloves] ; coupé : récompense de la v1.3",
+			function()
+				for _, case in
+					{ { flags = ALL, gloves = 10 }, { flags = { "UpgradesScreen" }, gloves = nil } }
+				do
+					local w = boot({
+						flags = case.flags,
+						profile = function(d)
+							d.tiles.gloves = 10
+						end,
+					})
+					local p = Bots.join(1)
+					local data = w.DS.get(p)
+					local MoveCheck = w.h:require("ServerScriptService.Server.Util.MoveCheck")
+					local QuestRules = w.h:require(L .. "Logic.QuestRules")
+					local c = w.Squishy.placeOf(p, "1")
+					MoveCheck.reset(p, w.h.globals.Vector3.new(c.X, 3, c.Z), w.Clock.now())
+					local income = w.Economy.squishyIncome(p, "1")
+					local kitty = QuestRules.familyEarned(data.dex, "kitty")
+					local coins = data.coins
+					w.h:fireServer("ReplicatedStorage.Remotes.Press", p, "1", w.Clock.now())
+					w.h:settle(2)
+					local presses = Bots.celebrations(p, "press")
+					expect(#presses).toBe(1)
+					local d = presses[1]
+					local expected =
+						w.Formulas.pressReward(income, d.perfect, d.streak, kitty, case.gloves, nil)
+					expect(d.coins).toBe(expected)
+					expect(data.coins).toBe(coins + expected)
+					local v13 = w.Formulas.pressReward(income, d.perfect, d.streak, kitty)
+					if case.gloves == nil then
+						-- au bit près, la formule de la v1.3 (4 arguments)
+						expect(d.coins).toBe(v13)
+					else
+						expect(math.abs(d.coins - v13 * 1.25) <= 1).toBe(true)
+					end
+					clean(w)
+				end
 			end
 		)
 

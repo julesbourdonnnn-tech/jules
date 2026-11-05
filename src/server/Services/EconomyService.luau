@@ -30,8 +30,9 @@
 --     règles (UpgradeMath.cap, aucun prestige en cours, configuration valide) → règlement du Pot →
 --     somme exacte UpgradeMath.plan (jamais un prix recalculé) → UN bloc (monnaie, niveaux, signaux)
 --     → UpgradeResult TOUJOURS (le refus périmé y est muet : from = to, spent = 0, reason = nil) ;
---   * BuyTile [UpgradesScreen ou StarMat] : la même fonction (mode 1, niveau actuel) ; « snack »
---     achète le Tapis Étoilé au-delà du Tapis 12 (N21) ; UpgradeResult en plus [UpgradesScreen] ;
+--   * BuyTile [UpgradesScreen] : la même fonction (mode 1, niveau actuel) ; « snack » achète le Tapis
+--     Étoilé au-delà du Tapis 12 (N21) [StarMat], même écran coupé ; UpgradeResult en plus
+--     [UpgradesScreen] ; les 4 dalles écran coupé : chemin de la v1.3 (prix Formulas.tileCost) ;
 --   * addConfetti : SEUL écrivain des gains de Confettis [Confetti] (buyUpgrade : seul puits) ;
 --   * instantané versionné (snapshot) : version + 1 à chaque contenu changé, envoyé dans UpgradeResult
 --     et dans DataPatch (DataService.setPatchExtra « upgradeSnapshot ») [UpgradesScreen] ;
@@ -1095,7 +1096,8 @@ function EconomyService.G(player: Player, t: number?): number
 	return Formulas.G(data.growth, if finite(t) then t :: number else Clock.now())
 end
 
--- BuyTile v2.0 [UpgradesScreen ou StarMat] : même fonction que BuyUpgrade(dalle, ×1, niveau actuel) ;
+-- BuyTile v2.0 [UpgradesScreen, ou Tapis Étoilé par la dalle] : même fonction que BuyUpgrade(dalle, ×1,
+-- niveau actuel) ;
 -- « snack » achète le Tapis Étoilé au-delà du Tapis 12 (N21) ; Feedback de la v1.3 gardés (panneau) ;
 -- UpgradeResult [UpgradesScreen] à chaque intention (reply) et à chaque achat sur la dalle
 local function buyTileV2(
@@ -1174,7 +1176,9 @@ function EconomyService.buyTile(
 	if type(def) ~= "table" or type(pad) ~= "table" then
 		return false
 	end
-	if Features.get("UpgradesScreen") == true or Features.get("StarMat") == true then
+	-- écran ouvert : le même chemin que BuyUpgrade ; Tapis Étoilé par la dalle (N21) même écran coupé.
+	-- Sinon la v1.3 au bit près (prix Formulas.tileCost, le nombre que montre l'étiquette de la dalle)
+	if Features.get("UpgradesScreen") == true or PadRules.target(data, tile) ~= tile then
 		return buyTileV2(player, data, tile, def, source, reply == true)
 	end
 	local level = PadRules.level(data, tile)

@@ -242,6 +242,122 @@ return function(T)
 		)
 	end)
 
+	describe("RanchService_v2 › Aimant de l'Atelier", function()
+		it(
+			"Pot encaissé dans le rayon de l'Aimant [Workshop] (5 / 8 / 11 / 14 studs) ; coupé : 5 studs (v1.3)",
+			function()
+				local w = boot({ "UpgradesScreen", "Confetti", "Workshop" })
+				local p = Bots.join(1)
+				local data = w.DS.get(p)
+				local Balance = w.h:require(L .. "Config.Balance")
+				local WL = w.h:require(L .. "Logic.WorldLayout")
+				local calls = 0
+				w.Ranch.setZoneHandler("pot", function()
+					calls += 1
+				end)
+				local slot = w.Ranch.slotOf(p)
+				local pot = WL.anchor(slot, "pot")
+				local function standAt(dx)
+					local actor = {
+						player = p,
+						slot = slot,
+						pos = w.h.globals.Vector3.new(pot.X + dx, 3, pot.Z),
+						canAct = true,
+						riding = false,
+						rootOffset = 0,
+					}
+					w.Ranch.step(w.Clock.now(), { [p] = actor })
+					w.Ranch.flush()
+				end
+				local far = w.h.globals.Vector3.new(pot.X, 3, pot.Z + 40)
+				local function leave()
+					w.Ranch.step(w.Clock.now(), {
+						[p] = {
+							player = p,
+							slot = slot,
+							pos = far,
+							canAct = true,
+							riding = false,
+							rootOffset = 0,
+						},
+					})
+				end
+				expect(Balance.PotV2.MagnetRadii).toEqual({ 5, 8, 11, 14 })
+				-- Aimant 0 : 5 studs
+				standAt(7)
+				expect(calls).toBe(0)
+				leave()
+				standAt(4)
+				expect(calls).toBe(1)
+				leave()
+				-- Aimant 2 : 11 studs
+				data.atelier[3] = 2
+				standAt(10)
+				expect(calls).toBe(2)
+				leave()
+				standAt(12)
+				expect(calls).toBe(2)
+				leave()
+				-- interrupteur coupé : rayon de la v1.3
+				w.F.set("Workshop", false)
+				standAt(10)
+				expect(calls).toBe(2)
+				clean(w)
+			end
+		)
+	end)
+
+	describe("RanchService_v2 › dalle du Tapis au-delà du Tapis 12 (N21)", function()
+		it(
+			"debout 0,6 s sur la dalle du Tapis 12 [StarMat], pièces d'abord insuffisantes : Tapis Étoilé acheté au premier tick où elles suffisent, une fois par entrée",
+			function()
+				local w = boot({ "UpgradesScreen", "StarMat" }, function(d)
+					d.tiles.star = 0
+					d.R = 10 -- 8 niveaux du Tapis Étoilé ouverts
+				end)
+				local p = Bots.join(1)
+				local data = w.DS.get(p)
+				local Pads = w.h:require(L .. "Config.Pads")
+				local WL = w.h:require(L .. "Logic.WorldLayout")
+				local UM = w.h:require(L .. "Logic.UpgradeMath")
+				local slot = w.Ranch.slotOf(p)
+				local c = WL.padSocket(slot, Pads.Defs.snack.socket)
+				local function stand(pos)
+					w.Ranch.step(w.Clock.now(), {
+						[p] = {
+							player = p,
+							slot = slot,
+							pos = pos,
+							canAct = true,
+							riding = false,
+							rootOffset = 0,
+						},
+					})
+					w.Ranch.flush()
+				end
+				local mat = w.h.globals.Vector3.new(c.X, 3, c.Z)
+				local price = UM.price("star", 0, 10, 0, 12)
+				data.coins = price - 1
+				stand(mat)
+				w.Clock.advance(0.7)
+				stand(mat)
+				expect(data.tiles.star).toBe(0)
+				-- les pièces arrivent : achat au tick suivant, une seule fois
+				data.coins = price * 100
+				w.Clock.advance(0.1)
+				stand(mat)
+				expect(data.tiles.star).toBe(1)
+				expect(data.coins).toBe(price * 100 - price)
+				for _ = 1, 20 do
+					w.Clock.advance(0.1)
+					stand(mat)
+				end
+				expect({ data.tiles.snack, data.tiles.star }).toEqual({ 12, 1 })
+				clean(w)
+			end
+		)
+	end)
+
 	describe("RanchService_v2 › place d'enclos offerte", function()
 		it(
 			"offeredPlace : ranch reconstruit ; enclos déjà plein → Feedback « Enclos déjà plein : +n Confettis »",
