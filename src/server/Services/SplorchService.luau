@@ -69,6 +69,7 @@ local Notify = require(Server.Util.Notify)
 local MoveCheck = require(Server.Util.MoveCheck)
 local Guard = require(Server.Chase.Guard)
 local Babies = require(Server.Chase.Babies)
+local PadRules = require(Server.Ranch.PadRules)
 
 local DataService = require(script.Parent.DataService)
 local RanchService = require(script.Parent.RanchService)
@@ -431,7 +432,9 @@ local function onGrandSplorch(player: Player, film: boolean, flyer: string): boo
 		return false
 	end
 	local progression = v2(player)
-	if progression and Prestige.r(data) >= MAX_R then
+	-- Record absolu (r = MaxR) : refusé pour tout profil v2, progression v2.0 coupée comprise (le
+	-- Grand Splorch de la v1.3 passerait r à MaxR + 1 : invariant v2 cassé, relecture du lot A2)
+	if (progression or PadRules.v2Profile(data)) and Prestige.r(data) >= MAX_R then
 		Notify.feedback(player, "splorch.recordAbsolute", {}, "info")
 		return false
 	end

@@ -161,6 +161,11 @@ local OWN_ATTRIBUTES: { [string]: string } = {
 	GloveTier = "RanchTiers",
 	ApronTier = "RanchTiers",
 }
+-- interrupteurs de ces attributs (ordre fixe) : un changement en direct (LiveOps) les fait revoir au
+-- tick suivant pour chaque joueur (relecture du lot A2 : sans lui, posés ou effacés seulement au
+-- prochain achat ou prestige)
+local OWN_FLAGS = { "RecordR", "Monuments", "RanchTiers" }
+local ownPrint = 0 -- empreinte des OWN_FLAGS au dernier tick
 local v2Values: { [Player]: { [string]: any } } = {} -- valeurs voulues (gardées jusqu'au ranch attribué)
 local modelAttrs: { [number]: { [string]: boolean } } = {} -- attributs posés sur chaque modèle
 
@@ -953,8 +958,28 @@ function RanchService.place(player: Player)
 	checkReady(player)
 end
 
+-- Empreinte des interrupteurs des attributs calculés ici (un bit par interrupteur ouvert)
+local function ownFingerprint(): number
+	local print = 0
+	for i, key in OWN_FLAGS do
+		if Features.get(key) == true then
+			print = bit32.bor(print, bit32.lshift(1, i - 1))
+		end
+	end
+	return print
+end
+
 -- Tick : intrus repoussés, Pot, entrées sur les dalles et attente de DwellSeconds (positions validées, canAct)
 function RanchService.step(now: number, actors: { [Player]: Types.TickActor })
+	-- v2.0 : interrupteur des attributs du ranch changé en direct → attributs revus pour chacun
+	-- (coupés de bout en bout : jamais vrai, rien de fait)
+	local print = ownFingerprint()
+	if print ~= ownPrint then
+		ownPrint = print
+		for player in loaded do
+			Guard.try("ranch:refreshV2", RanchService.refreshV2, player)
+		end
+	end
 	-- états minutés de tous les joueurs (même sans acteur) : renvoi, arrivée, placement
 	for player, since in fullSince do
 		if player.Parent == nil then

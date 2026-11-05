@@ -130,6 +130,10 @@ local REFUSED = {
 	busy = "upgrades.refused.busy",
 }
 local READY_CHECK_EVERY = 1 -- s : attribut SplorchReady du ranch [RecordR]
+-- décorations dorées (champ decorBuilds, docs/04 §27.2 ; GDD §11.6 « construite dans 10 boucles ») :
+-- une case par décoration (18), bornée à 10 (mêmes nombres que Logic/Invariants et ProfileRepair)
+local DECOR_BUILDS = Balance.Tiles.decor.Levels
+local DECOR_BUILDS_MAX = 10
 -- interrupteurs dont un changement en direct relance Prestige.validateConfig
 local CONFIG_FLAGS = {
 	"UpgradesScreen",
@@ -945,7 +949,12 @@ function EconomyService.step(now: number)
 					nextReadyCheck[player] = now + READY_CHECK_EVERY
 					local _, biggest = biggestAt(data, Formulas.G(data.growth, now))
 					local target = Formulas.splorchTarget(EconomyService.R(player))
-					RanchService.setV2Attributes(player, { SplorchReady = biggest >= target })
+					-- Record absolu (r = MaxR, profil v2) : jamais « prêt », le Grand Splorch y est refusé
+					local absolute = PadRules.v2Profile(data) and Prestige.r(data) >= Balance.Prestige.MaxR
+					RanchService.setV2Attributes(
+						player,
+						{ SplorchReady = biggest >= target and not absolute }
+					)
 				elseif not recordOn and nextReadyCheck[player] ~= nil then
 					nextReadyCheck[player] = nil
 					RanchService.setV2Attributes(player, {}, { "SplorchReady" })
@@ -1225,6 +1234,10 @@ function EconomyService.buyTile(
 	RanchService.refreshBuild(player)
 	EconomyService.refresh(player)
 	Signals.TileBought:Fire(player, tile, newLevel)
+	-- v2.0 (docs/04 §27.4, relecture du lot A2) : UpgradeBought « en plus pour tout achat, dalles
+	-- comprises », aussi sur ce chemin (écran coupé) : paliers du ranch [RanchTiers], Carnet. Signal
+	-- interne seulement : interrupteurs coupés, aucun abonné n'envoie ni n'écrit rien
+	Signals.UpgradeBought:Fire(player, tile, level, newLevel, "coins")
 	Notify.celebrate(player, "tile", { tile = tile, level = newLevel })
 	return true
 end
@@ -1498,6 +1511,24 @@ function EconomyService.applyPrestige(
 	if finite(gift) and gift > 0 then
 		data.pot = Formulas.clampCoins(gift)
 		changed.pot = true
+	end
+	-- décorations dorées (docs/04 §27.2, §27.14 : EconomyService, au Grand Splorch ; relecture du lot
+	-- A2) : chaque prestige appliqué (Grand, Petit, Ascension) finit une boucle ; chaque décoration
+	-- construite à sa fin (n° k ≤ niveau d'avant la remise à zéro) y compte une fois, jusqu'à 10
+	local builds = data.decorBuilds
+	if type(builds) == "table" then
+		local built = math.min(int(report.decorBefore, DECOR_BUILDS), DECOR_BUILDS)
+		for k = 1, built do
+			-- tableau dense (jamais un trou : JSON du DataStore)
+			for i = #builds + 1, k - 1 do
+				builds[i] = 0
+			end
+			local n = int(builds[k], DECOR_BUILDS_MAX)
+			if n < DECOR_BUILDS_MAX then
+				builds[k] = n + 1
+				changed.decorBuilds = true
+			end
+		end
 	end
 	for key in changed do
 		if key ~= "squishies" then
