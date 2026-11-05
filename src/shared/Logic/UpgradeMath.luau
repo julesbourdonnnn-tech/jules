@@ -22,6 +22,7 @@ local type, math, string, table = type, math, string, table
 local Types = require(script.Parent.Parent.Types)
 local Balance = require(script.Parent.Parent.Config.Balance)
 local Upgrades = require(script.Parent.Parent.Config.Upgrades)
+local Species = require(script.Parent.Parent.Config.Species)
 local Prestige = require(script.Parent.Prestige)
 local TierRules = require(script.Parent.TierRules)
 local Bitset = require(script.Parent.Bitset)
@@ -34,6 +35,7 @@ export type EffectCtx = {
 	bigRanch: boolean?, -- pass Grand Ranch (places)
 	cozyBed: boolean?, -- Lit douillet (limite hors ligne)
 	spikyFamily: boolean?, -- famille Spiky complète (+1 h hors ligne)
+	nightBag: number?, -- niveau du Sac de nuit de l'Atelier (0-3) : heures de la ligne du Lit douillet
 	bestR: number?, -- Record R (décorations gardées, Plopettes)
 	monuments: number?, -- Monuments construits (lecture)
 }
@@ -459,13 +461,14 @@ local function bonusOf(ctx: any, key: string): any
 	return if type(ctx) == "table" then ctx[key] else nil
 end
 
--- Limite hors ligne en heures (8 h, 12 h avec le Lit, + 1 h Spiky, + Sac de nuit ; 16 h au plus)
-local function nightHours(ctx: any, bag: number): number
-	local h = if bonusOf(ctx, "cozyBed") == true
-		then Balance.Offline.CozyBedHours
-		else Balance.Offline.CapHours
+-- Limite hors ligne en heures (8 h, 12 h avec le Lit, + 1 h Spiky, + Sac de nuit ; 16 h au plus) :
+-- mêmes termes et même ordre que Formulas.offlineSeconds (qui requiert ce module : pas d'appel)
+local NIGHT_BAG_MAX = #Upgrades.WorkshopRows[Upgrades.WorkshopIndex.nightBag].costs
+local function nightHours(cozyBed: boolean, ctx: any, bag: number): number
+	local h = if cozyBed then Balance.Offline.CozyBedHours else Balance.Offline.CapHours
 	if bonusOf(ctx, "spikyFamily") == true then
-		h += 1
+		local bonus = Species.Families.spiky.bonus
+		h += if bonus then bonus.value else 0
 	end
 	return math.min(Balance.OfflineV2.MaxHours, h + Balance.OfflineV2.NightBagHours * bag)
 end
@@ -518,8 +521,10 @@ function UpgradeMath.effect(id: string, level: number, ctx: EffectCtx): Effect
 				key = key,
 			}
 		elseif id0 == "cozyBed" then
-			local now = if L >= 1 then Balance.Offline.CozyBedHours else Balance.Offline.CapHours
-			return { a = now, b = Balance.Offline.CozyBedHours, key = key }
+			-- les vraies heures du joueur, famille Spiky et Sac de nuit compris (relecture A1, A1-38 :
+			-- « Nuit : 8 h → 12 h » était écrit à tous, quand la ligne du Sac de nuit les comptait)
+			local bag = int(bonusOf(c, "nightBag"), 0, NIGHT_BAG_MAX)
+			return { a = nightHours(L >= 1, c, bag), b = nightHours(true, c, bag), key = key }
 		elseif id0 == "gloves" then
 			local step = Balance.Gloves.StepPerLevel
 			return { a = 1 + step * L, b = 1 + step * nextL, key = key }
@@ -551,7 +556,8 @@ function UpgradeMath.effect(id: string, level: number, ctx: EffectCtx): Effect
 		elseif fx == "keptDecor" then
 			return { a = Prestige.keptDecor(best, L), b = Prestige.keptDecor(best, nextL), key = key }
 		elseif fx == "nightBagHours" then
-			return { a = nightHours(c, L), b = nightHours(c, nextL), key = key }
+			local bed = bonusOf(c, "cozyBed") == true
+			return { a = nightHours(bed, c, L), b = nightHours(bed, c, nextL), key = key }
 		elseif fx == "nightPotShare" then
 			local shares = Balance.OfflineV2.NightPotShares
 			return {

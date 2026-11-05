@@ -429,13 +429,30 @@ function Prestige.validateConfig(balance: any): (boolean, string?)
 			return false, "Splorch.Targets"
 		end
 	end
-	-- (1) (BeyondMult / 2)^ReqStep ≥ 0,95 × GrowthMult, par multiplications successives
-	local q = 1
-	for _ = 1, a.ReqStep do
-		q *= mult / 2
+	-- (1) (BeyondMult / 2)^pas ≥ 0,95 × GrowthMult, par multiplications successives, pour CHAQUE pas
+	-- d'une Ascension à la suivante : ceux de la liste ReqR (les 60 conditions jouées, réglage A1-32)
+	-- et ReqStep (au-delà de la liste). Relecture A1 (A1-37) : seul ReqStep était vérifié, et la
+	-- liste acceptait un pas de 3 (boucle record de plus en plus courte)
+	local need = STABILITY_SHARE * a.GrowthMult
+	local ratio = mult / 2
+	local function stable(step: number): boolean
+		local q = 1
+		for _ = 1, step do
+			q *= ratio
+			-- arrêt dès que l'issue est connue (un pas hostile de 1e12 ne bloque jamais le serveur)
+			if (ratio >= 1 and q >= need) or (ratio <= 1 and q < need) then
+				break
+			end
+		end
+		return q >= need
 	end
-	if q < STABILITY_SHARE * a.GrowthMult then
+	if not stable(a.ReqStep) then
 		return false, "stabilité : (BeyondMult / 2)^ReqStep < 0,95 × GrowthMult"
+	end
+	for i = 2, #a.ReqR do
+		if not stable(a.ReqR[i] - a.ReqR[i - 1]) then
+			return false, "stabilité : (BeyondMult / 2)^(ReqR[k] − ReqR[k − 1]) < 0,95 × GrowthMult"
+		end
 	end
 	-- (2) objectifs × 2,5 au moins dès r = 16, jusqu'à MaxR
 	local max = if type(balance.Numbers) == "table" and isPositive(balance.Numbers.Max)

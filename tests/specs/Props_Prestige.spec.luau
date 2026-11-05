@@ -294,7 +294,7 @@ return function(T)
 
 	describe("Props › invariant de stabilité", function()
 		it(
-			"validateConfig = (BeyondMult / 2)^ReqStep ≥ 0,95 × GrowthMult et objectifs × 2,5 dès r = 16, sur 3 000 réglages",
+			"validateConfig = (BeyondMult / 2)^pas ≥ 0,95 × GrowthMult pour ReqStep ET chaque pas de la liste ReqR, et objectifs × 2,5 dès r = 16, sur 3 000 réglages",
 			function()
 				expect((Prestige.validateConfig(Balance))).toBe(true)
 				Props.check(
@@ -315,8 +315,18 @@ return function(T)
 						for i = 18, 20 do
 							b.Splorch.Targets[i] = b.Splorch.Targets[i - 1] * c.tail
 						end
-						-- référence indépendante (puissance permise dans le test) : objectifs refaits ici
+						-- référence indépendante (puissance permise dans le test) : objectifs refaits ici.
+						-- Relecture A1 (A1-37) : l'invariant vaut pour ReqStep ET pour chaque pas de la liste
+						-- des 60 conditions (Balance.Ascend.ReqR, pas de 4 et de 5), que la boucle joue
 						local stable = (c.beyond / 2) ^ c.step >= 0.95 * c.growth
+						for i = 2, #b.Ascend.ReqR do
+							if
+								(c.beyond / 2) ^ (b.Ascend.ReqR[i] - b.Ascend.ReqR[i - 1])
+								< 0.95 * c.growth
+							then
+								stable = false
+							end
+						end
 						local t = {}
 						for r = 0, Balance.Prestige.MaxR do
 							if r < #b.Splorch.Targets then

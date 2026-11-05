@@ -381,12 +381,15 @@ return function(T)
 					end
 				end
 				-- familles ouvertes dans la boucle (r de la boucle ; Tapis Étoilé : Tapis 12 atteint avant la fin)
+				-- Gants et École s'ouvrent au RECORD R 1 et 2 (Config/Upgrades) : avant toute Ascension
+				-- le Record R vaut r au début de la boucle ; après une Ascension il vaut 15 au moins
+				-- (relecture A1, A1-40 : les boucles r = 0 et 1 d'après une Ascension étaient oubliées)
 				local open = {
 					snack = true,
 					star = l.r >= 6 and l.share12 < 0.999,
 					decor = true,
-					gloves = l.r >= 1,
-					school = l.r >= 2,
+					gloves = l.r >= 1 or l.afterAscend,
+					school = l.r >= 2 or l.afterAscend,
 				}
 				for _, f in FAMILIES do
 					if open[f] then
@@ -457,21 +460,24 @@ return function(T)
 	-- check.sh à sa vraie limite.
 	-- (mesure du 5 novembre 2026, Balance du lot A1 3/4 ; σ = le pire des serveurs de 4, 8 et 16, arrondi
 	-- vers le haut ; marge / σ entre parenthèses, au pire serveur, valeur sur 400 joueurs)
+	-- side : le côté de queue (« lo » : limite basse, « hi » : limite haute), le SEUL élargi ; l'autre
+	-- limite d'une clé à deux bornes garde sa vraie valeur dans check.sh (marge ≥ 5 σ mesurée ; relecture
+	-- A1, A1-39 : les deux côtés étaient élargis, la borne basse des pertes de l'assidu valait −0,56)
 	local TAIL = {
 		ref = {
-			{ label = "Premier Grand Splorch (min)", sigma = 0.69 }, -- 12,16 min (1,69 σ)
-			{ label = "Plus gros, fin du jour 7", sigma = 1.2e7 }, -- bimodal : un bloc à 3,97e7 < 4e7
-			{ label = "loopMaxGap r12 médiane", sigma = 0.28 }, -- 2,53 min (1,68 σ)
-			{ label = "loopMaxGap r13 médiane", sigma = 0.47 }, -- 2,80 min (0,43 σ)
-			{ label = "loopMaxGap r13 p90", sigma = 0.41 }, -- 4,93 min (0,17 σ)
-			{ label = "ascendGapDays A6→A7", sigma = 0.5 }, -- 10 jours, à la limite (blocs : 10 à 11)
-			{ label = "tapis12RecordLoopByA A7", sigma = 0.075 }, -- 0,83 (1,97 σ)
-			{ label = "purchasesPerRecordLoopByA A7", sigma = 0.77 }, -- 11,5 (1,98 σ)
+			{ label = "Premier Grand Splorch (min)", sigma = 0.69, side = "lo" }, -- 12,16 min (1,69 σ)
+			{ label = "Plus gros, fin du jour 7", sigma = 1.2e7, side = "lo" }, -- bimodal : un bloc à 3,97e7 < 4e7
+			{ label = "loopMaxGap r12 médiane", sigma = 0.28, side = "hi" }, -- 2,53 min (1,68 σ)
+			{ label = "loopMaxGap r13 médiane", sigma = 0.47, side = "hi" }, -- 2,80 min (0,43 σ)
+			{ label = "loopMaxGap r13 p90", sigma = 0.41, side = "hi" }, -- 4,93 min (0,17 σ)
+			{ label = "ascendGapDays A6→A7", sigma = 0.5, side = "lo" }, -- 10 jours, à la limite (blocs : 10 à 11)
+			{ label = "tapis12RecordLoopByA A7", sigma = 0.075, side = "hi" }, -- 0,83 (1,97 σ)
+			{ label = "purchasesPerRecordLoopByA A7", sigma = 0.77, side = "lo" }, -- 11,5 (1,98 σ)
 		},
 		assidu = {
-			{ label = "longestGapAssiduP90 Day8to14", sigma = 1.35 }, -- 14,07 min (0,71 σ)
-			{ label = "longestGapAssiduP90 Day15to28", sigma = 1.13 }, -- 13,90 min (0,97 σ)
-			{ label = "coinsLostRatioGrand Day8to14", sigma = 0.38 }, -- 2,66 T12 (0,92 σ)
+			{ label = "longestGapAssiduP90 Day8to14", sigma = 1.35, side = "hi" }, -- 14,07 min (0,71 σ)
+			{ label = "longestGapAssiduP90 Day15to28", sigma = 1.13, side = "hi" }, -- 13,90 min (0,97 σ)
+			{ label = "coinsLostRatioGrand Day8to14", sigma = 0.38, side = "hi" }, -- 2,66 T12 (0,92 σ)
 		},
 	}
 	local function tailOf(profile, label)
@@ -488,15 +494,20 @@ return function(T)
 			and (k.lo == nil or k.value >= k.lo)
 			and (k.hi == nil or k.value <= k.hi)
 	end
-	-- check.sh : clés de queue en alarme rapide (limite ± 2 sigma, libellé marqué)
+	-- check.sh : clés de queue en alarme rapide (limite du côté de queue élargie de 2 sigma, libellé
+	-- marqué) ; l'autre limite reste la vraie
 	local function applyAlarm(keys, profile)
 		for _, k in keys do
 			local t = if k.reported then nil else tailOf(profile, k.label)
 			if t then
-				k.lo = if k.lo ~= nil then k.lo - 2 * t.sigma else nil
-				k.hi = if k.hi ~= nil then k.hi + 2 * t.sigma else nil
+				if t.side == "lo" and k.lo ~= nil then
+					k.lo -= 2 * t.sigma
+				elseif t.side == "hi" and k.hi ~= nil then
+					k.hi += 2 * t.sigma
+				end
 				k.label ..= string.format(
-					" [alarme rapide ± 2σ, σ = %s ; vraie limite : nuit]",
+					" [alarme rapide %s2σ, σ = %s ; vraie limite : nuit]",
+					if t.side == "lo" then "−" else "+",
 					tostring(t.sigma)
 				)
 				k.ok = within(k)
@@ -1293,6 +1304,130 @@ return function(T)
 			v2Keys(assidu, "assidu", { days = 28 })
 		)
 	end
+
+	-- =============================================================================================
+	-- Règles de la porte elle-même (relecture A1, docs/04 §27.12 A1-39, A1-40) : jouées sans
+	-- simulation, dans check.sh comme la nuit
+	-- =============================================================================================
+	describe("EconomyPacing : règles de la porte (relecture A1)", function()
+		it(
+			"alarme rapide : seul le côté de queue est élargi de 2σ ; l'autre limite reste la vraie (§27.9)",
+			function()
+				-- { profil, libellé, valeur, lo, hi, côté de queue attendu }
+				local cases = {
+					{ "ref", "Premier Grand Splorch (min)", 12, 11, 16, "lo" },
+					{ "ref", "Plus gros, fin du jour 7", 8e7, 4e7, 4e8, "lo" },
+					{ "ref", "loopMaxGap r12 médiane (min)", 2.5, nil, 3, "hi" },
+					{ "ref", "loopMaxGap r13 médiane (min)", 2.5, nil, 3, "hi" },
+					{ "ref", "loopMaxGap r13 p90 (min)", 4.5, nil, 5, "hi" },
+					{ "ref", "ascendGapDays A6→A7", 11, 10, 16, "lo" },
+					{ "ref", "tapis12RecordLoopByA A7 (médiane)", 0.8, 0.45, 0.95, "hi" },
+					{ "ref", "purchasesPerRecordLoopByA A7", 11, 10, nil, "lo" },
+					{ "assidu", "longestGapAssiduP90 Day8to14 (min)", 14, nil, 15, "hi" },
+					{ "assidu", "longestGapAssiduP90 Day15to28 (min)", 14, nil, 15, "hi" },
+					{ "assidu", "coinsLostRatioGrand Day8to14 (T12)", 2.5, 0.2, 3, "hi" },
+				}
+				for _, c in cases do
+					local profile, label, value, lo, hi, side = table.unpack(c, 1, 6)
+					local t = tailOf(profile, label)
+					expect({ label = label, tail = t ~= nil }).toEqual({ label = label, tail = true })
+					local keys, add = newKeys()
+					add("g", label, value, lo, hi)
+					applyAlarm(keys, profile)
+					local k = keys[1]
+					expect({
+						label = label,
+						lo = k.lo,
+						hi = k.hi,
+					}).toEqual({
+						label = label,
+						lo = if lo ~= nil and side == "lo" then lo - 2 * t.sigma else lo,
+						hi = if hi ~= nil and side == "hi" then hi + 2 * t.sigma else hi,
+					})
+					-- une valeur hors de la vraie limite du côté qui n'est PAS de queue échoue dans check.sh
+					if side == "hi" and lo ~= nil then
+						local bad, addBad = newKeys()
+						addBad("g", label, lo - 0.01, lo, hi)
+						applyAlarm(bad, profile)
+						expect({ label = label, ok = bad[1].ok }).toEqual({ label = label, ok = false })
+					elseif side == "lo" and hi ~= nil then
+						local bad, addBad = newKeys()
+						addBad("g", label, hi + 0.01, lo, hi)
+						applyAlarm(bad, profile)
+						expect({ label = label, ok = bad[1].ok }).toEqual({ label = label, ok = false })
+					end
+				end
+			end
+		)
+
+		it(
+			"everyFamilyBought : Gants et École ouverts par le Record R (aussi aux boucles r = 0 et 1 d'après une Ascension)",
+			function()
+				local function player(loops)
+					local bands = {}
+					for bi in EconomyModel.BANDS do
+						bands[bi] = { tot = 0, over = 0, maxGap = 0 }
+					end
+					return {
+						v2 = {
+							bands = bands,
+							daily = {},
+							zeroGap = 0,
+							nonFinite = 0,
+							regain = {},
+							cliff = {},
+							offPot = {},
+							loops = loops,
+							ascendDays = {},
+						},
+						nonFinite = 0,
+						applyRefused = 0,
+						maxR = 0,
+						maxBestR = 0,
+						maxA = 0,
+					}
+				end
+				local function loop(r, afterAscend, gloves, school)
+					return {
+						d = 20,
+						petit = afterAscend,
+						A = if afterAscend then 1 else 0,
+						r = r,
+						lost = 1,
+						share12 = 0.5,
+						len = 300,
+						sinceFuse = 300,
+						maxBuyGap = 30,
+						afterAscend = afterAscend,
+						snack = 3,
+						star = 0,
+						decor = 2,
+						gloves = gloves,
+						school = school,
+					}
+				end
+				local st = v2Stats({
+					players = {
+						player({
+							loop(0, false, 0, 0), -- 1re boucle du jeu : Record R 0, ni Gants ni École
+							loop(1, false, 1, 0), -- Record R 1 : Gants seulement
+							loop(0, true, 0, 0), -- après la 1re Ascension (Record R 15) : tout est ouvert
+							loop(1, true, 1, 1),
+							loop(4, true, 1, 1),
+						}),
+					},
+				})
+				expect({ open = st.fam.gloves.open, bought = st.fam.gloves.bought }).toEqual({
+					open = 4,
+					bought = 3,
+				})
+				expect({ open = st.fam.school.open, bought = st.fam.school.bought }).toEqual({
+					open = 3,
+					bought = 2,
+				})
+			end
+		)
+	end)
 
 	-- =============================================================================================
 	if NIGHT then
