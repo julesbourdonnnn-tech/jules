@@ -42,8 +42,13 @@ local UpgradeView = require(UI.Hud.UpgradeView)
 export type Template = "card" | "row" | "tile"
 export type Options = {
 	icons: { string }?, -- dessins de famille que cette carte montrera (toutes les lignes par défaut)
-	badges: { string }?, -- coins de l'icône : "loop", "infinity", "star" (tous par défaut)
+	badges: { string }?, -- coins de l'icône : "loop", "infinity", "star" (tous par défaut ; {} : aucun)
 	currencies: { string }?, -- "coin", "confetti" (les deux par défaut)
+	-- ligne en lecture seule (Plopettes, « Monte avec ton record ») : ni niveau, ni prix, ni barres, ni
+	-- valeurs avant → après (lot B2, étape 2 : budget de l'écran, règle 20)
+	readOnly: boolean?,
+	effect: boolean?, -- faux : aucune seconde ligne avant → après (lignes de « Pour le plaisir »)
+	states: { string }?, -- dessins d'état de la ligne (tous par défaut)
 }
 
 type Parts = {
@@ -101,6 +106,7 @@ local ROW_LABEL_FULL = COL.text.w -- libellé seul (« Revenu total +1,2 % »)
 local ROW_LABEL_SHORT = COL.text.w - 2 * ROW_VALUE_W - ROW_ARROW_SLOT - 2 * 8 -- 244 : libellé et 2 valeurs
 local ROW_LABEL_CARRY = ROW_LABEL_SHORT + 8 + ROW_VALUE_W -- 372 : libellé qui porte la valeur d'avant
 local ROW_NAME_Y, ROW_NAME_H = 10, 44 -- nom (centré en hauteur quand la seconde ligne est vide)
+local CARD_NOTE_H = 216 -- carte neutre : phrase du nom de y 104 à 320 (4 lignes de 36 px au plus)
 
 -- Couleurs (charte des panneaux, GDD §10.1)
 local COLORS = {
@@ -405,15 +411,10 @@ local function buildCard(root: GuiObject, o: Options): Parts
 			5
 		),
 	}
-	p.badge = canvas(
-		root,
-		"Badge",
-		(CARD_W + U.Card.icon) / 2 - 24,
-		8,
-		32,
-		kindsOf(o.badges, BADGE_KIND, { "loop", "infinity", "star" }),
-		7
-	)
+	local badgeKinds = kindsOf(o.badges, BADGE_KIND, { "loop", "infinity", "star" })
+	if #badgeKinds > 0 then
+		p.badge = canvas(root, "Badge", (CARD_W + U.Card.icon) / 2 - 24, 8, 32, badgeKinds, 7)
+	end
 	local bar = frame(root, "PriceBar", x0, 424, CARD_IN, 8, COLORS.barBack, 4)
 	p.priceBar = bar
 	p.priceFill = frame(bar, "Fill", 0, 0, 0, 8, COLORS.barNeed, 5)
@@ -442,6 +443,7 @@ local function buildRow(root: GuiObject, o: Options): Parts
 	local arrowX = beforeX + valueW + (arrowSlot - 32) / 2
 	local afterX = beforeX + valueW + arrowSlot
 	local levelW = (level.w - 36) / 2 -- « 12 », flèche (36), « 22 »
+	local readOnly = o.readOnly == true
 	local p: Parts = {
 		icon = canvas(root, "Icon", COL.icon.x, 16, COL.icon.w, kindsOf(o.icons, nil, LINE_ICONS), 5),
 		name = label(
@@ -456,33 +458,22 @@ local function buildRow(root: GuiObject, o: Options): Parts
 			COLORS.text,
 			5
 		),
-		effectLabel = label(
-			root,
-			"EffectLabel",
-			text.x,
-			58,
-			labelW,
-			44,
-			32,
-			Enum.TextXAlignment.Left,
-			COLORS.dim,
-			5
-		),
-		before = label(
-			root,
-			"Before",
-			beforeX,
-			58,
-			valueW,
-			44,
-			32,
-			Enum.TextXAlignment.Right,
-			COLORS.text,
-			5
-		),
-		effectArrow = canvas(root, "EffectArrow", arrowX, 64, 32, { "arrowRight" }, 5),
-		after = label(root, "After", afterX, 58, valueW, 44, 32, Enum.TextXAlignment.Left, COLORS.text, 5),
-		levelA = label(
+	}
+	-- seconde ligne : libellé court (toujours, sauf « Pour le plaisir »), puis avant → après (lignes à
+	-- acheter seulement : une ligne en lecture seule n'a qu'un libellé, « Une pression toutes les 9,0 s »)
+	if o.effect ~= false then
+		p.effectLabel =
+			label(root, "EffectLabel", text.x, 58, labelW, 44, 32, Enum.TextXAlignment.Left, COLORS.dim, 5)
+		if not readOnly then
+			p.before =
+				label(root, "Before", beforeX, 58, valueW, 44, 32, Enum.TextXAlignment.Right, COLORS.text, 5)
+			p.effectArrow = canvas(root, "EffectArrow", arrowX, 64, 32, { "arrowRight" }, 5)
+			p.after =
+				label(root, "After", afterX, 58, valueW, 44, 32, Enum.TextXAlignment.Left, COLORS.text, 5)
+		end
+	end
+	if not readOnly then
+		p.levelA = label(
 			root,
 			"LevelA",
 			level.x,
@@ -493,9 +484,9 @@ local function buildRow(root: GuiObject, o: Options): Parts
 			Enum.TextXAlignment.Center,
 			COLORS.text,
 			5
-		),
-		levelArrow = canvas(root, "LevelArrow", level.x + levelW + 4, 24, 28, { "arrowRight" }, 5),
-		levelB = label(
+		)
+		p.levelArrow = canvas(root, "LevelArrow", level.x + levelW + 4, 24, 28, { "arrowRight" }, 5)
+		p.levelB = label(
 			root,
 			"LevelB",
 			level.x + levelW + 36,
@@ -506,8 +497,8 @@ local function buildRow(root: GuiObject, o: Options): Parts
 			Enum.TextXAlignment.Left,
 			COLORS.text,
 			5
-		),
-		currency = canvas(
+		)
+		p.currency = canvas(
 			root,
 			"Currency",
 			price.x,
@@ -515,8 +506,8 @@ local function buildRow(root: GuiObject, o: Options): Parts
 			40,
 			kindsOf(o.currencies, CURRENCY_KIND, { "coin", "confetti" }),
 			5
-		),
-		price = label(
+		)
+		p.price = label(
 			root,
 			"Price",
 			price.x + 48,
@@ -527,9 +518,12 @@ local function buildRow(root: GuiObject, o: Options): Parts
 			Enum.TextXAlignment.Left,
 			COLORS.text,
 			5
-		),
-		stateIcon = canvas(root, "StateIcon", state.x, (ROW_H - 48) / 2, 48, STATE_KINDS, 5),
-		word = label(
+		)
+	end
+	local stateKinds = kindsOf(o.states, nil, STATE_KINDS)
+	if #stateKinds > 0 then
+		p.stateIcon = canvas(root, "StateIcon", state.x, (ROW_H - 48) / 2, 48, stateKinds, 5)
+		p.word = label(
 			root,
 			"Word",
 			state.x + 56,
@@ -540,24 +534,21 @@ local function buildRow(root: GuiObject, o: Options): Parts
 			Enum.TextXAlignment.Left,
 			COLORS.text,
 			5
-		),
-	}
-	p.badge = canvas(
-		root,
-		"Badge",
-		COL.icon.x + COL.icon.w - 24,
-		8,
-		32,
-		kindsOf(o.badges, BADGE_KIND, { "loop", "infinity", "star" }),
-		7
-	)
-	local lbar = frame(root, "LevelBar", level.x, 72, level.w, 12, COLORS.barBack, 4)
-	p.levelBar = lbar
-	p.levelFill = frame(lbar, "Fill", 0, 0, 0, 12, COLORS.barFill, 5)
-	p.levelGrey = frame(lbar, "Grey", level.w, 0, 0, 12, COLORS.barGrey, 6)
-	local pbar = frame(root, "PriceBar", price.x, 76, price.w, 8, COLORS.barBack, 4)
-	p.priceBar = pbar
-	p.priceFill = frame(pbar, "Fill", 0, 0, 0, 8, COLORS.barFill, 5)
+		)
+	end
+	local badgeKinds = kindsOf(o.badges, BADGE_KIND, { "loop", "infinity", "star" })
+	if #badgeKinds > 0 then
+		p.badge = canvas(root, "Badge", COL.icon.x + COL.icon.w - 24, 8, 32, badgeKinds, 7)
+	end
+	if not readOnly then
+		local lbar = frame(root, "LevelBar", level.x, 72, level.w, 12, COLORS.barBack, 4)
+		p.levelBar = lbar
+		p.levelFill = frame(lbar, "Fill", 0, 0, 0, 12, COLORS.barFill, 5)
+		p.levelGrey = frame(lbar, "Grey", level.w, 0, 0, 12, COLORS.barGrey, 6)
+		local pbar = frame(root, "PriceBar", price.x, 76, price.w, 8, COLORS.barBack, 4)
+		p.priceBar = pbar
+		p.priceFill = frame(pbar, "Fill", 0, 0, 0, 8, COLORS.barFill, 5)
+	end
 	return p
 end
 
@@ -712,7 +703,15 @@ function UpgradeCard.set(self: Card, state: string, view: UpgradeView.View)
 		Icons.draw(p.badge, badge)
 	end
 
-	-- nom, palier, raison
+	-- nom, palier, raison ; carte neutre « Tout est au maximum ! … » (une phrase sans raison) : le nom
+	-- prend la hauteur du palier, du niveau et de l'avant → après (jamais une phrase coupée)
+	if self.template == "card" then
+		local long = view.kind == "note" and view.reason == nil
+		local h = if long then CARD_NOTE_H else 48
+		if p.name.Size.Y.Offset ~= h then
+			p.name.Size = UDim2.fromOffset(CARD_IN, h)
+		end
+	end
 	setText(p.name, view.name)
 	if p.tier then
 		setText(p.tier, if self.template == "card" then view.tier else nil)
@@ -767,7 +766,9 @@ function UpgradeCard.set(self: Card, state: string, view: UpgradeView.View)
 	-- niveau : « 12/20 » (ligne), « Niv. 7 » → « 8 » (carte) ; ×10 / Max : « 12 » → « 22 »
 	if self.template == "row" then
 		local bulk = buyable and view.fromText ~= nil and view.toText ~= nil and view.sendMode ~= 1
-		if view.readOnly then
+		local la, fill, grey = p.levelA, p.levelFill, p.levelGrey
+		if view.readOnly or la == nil or fill == nil or grey == nil then
+			-- ligne en lecture seule (ou ligne maigre sans colonne Niveau) : rien à montrer
 			show(p.levelA, false)
 			show(p.levelB, false)
 			if p.levelArrow then
@@ -775,28 +776,32 @@ function UpgradeCard.set(self: Card, state: string, view: UpgradeView.View)
 			end
 			show(p.levelBar, false)
 		else
-			local la = p.levelA :: TextLabel
 			if bulk then
-				la.Size = UDim2.fromOffset((COL.level.w - 36) / 2, la.Size.Y.Offset)
-				la.TextXAlignment = Enum.TextXAlignment.Right
+				fit(la, COL.level.x, (COL.level.w - 36) / 2, Enum.TextXAlignment.Right)
 				setRaw(la, view.fromText)
 				setRaw(p.levelB, view.toText)
-				Icons.draw(p.levelArrow :: Frame, "arrowRight")
+				if p.levelArrow then
+					Icons.draw(p.levelArrow, "arrowRight")
+				end
 			else
-				la.Size = UDim2.fromOffset(COL.level.w, la.Size.Y.Offset)
-				la.TextXAlignment = Enum.TextXAlignment.Center
+				fit(la, COL.level.x, COL.level.w, Enum.TextXAlignment.Center)
 				setRaw(la, view.levelText)
 				show(p.levelB, false)
-				Icons.draw(p.levelArrow :: Frame, nil)
+				if p.levelArrow then
+					Icons.draw(p.levelArrow, nil)
+				end
 			end
 			show(p.levelBar, true)
-			local fill = p.levelFill :: Frame
-			local grey = p.levelGrey :: Frame
 			local w = COL.level.w
-			fill.Size = UDim2.fromOffset(math.floor(w * math.clamp(view.barFill, 0, 1) + 0.5), 12)
+			local fillW = math.floor(w * math.clamp(view.barFill, 0, 1) + 0.5)
+			if fill.Size.X.Offset ~= fillW then
+				fill.Size = UDim2.fromOffset(fillW, 12)
+			end
 			local capX = math.floor(w * math.clamp(view.barCap, 0, 1) + 0.5)
-			grey.Position = UDim2.fromOffset(capX, 0)
-			grey.Size = UDim2.fromOffset(w - capX, 12)
+			if grey.Position.X.Offset ~= capX then
+				grey.Position = UDim2.fromOffset(capX, 0)
+				grey.Size = UDim2.fromOffset(w - capX, 12)
+			end
 			show(grey, capX < w)
 		end
 	elseif self.template == "card" then
@@ -853,7 +858,9 @@ function UpgradeCard.set(self: Card, state: string, view: UpgradeView.View)
 		-- ligne en lecture seule : rien à acheter (seul le cadenas d'une Plopette pas encore là)
 		word, iconKind = nil, nil
 	end
-	local buyDrawing = self.template == "card" and st == "ready" and fb == nil
+	-- carte prête, ou carte qui ouvre un autre écran (« Jelly Ascend » : ✕ Voir) : dessin du bouton
+	local action = if self.template == "card" and fb == nil then view.action else nil
+	local buyDrawing = self.template == "card" and fb == nil and (st == "ready" or action ~= nil)
 	if self.template == "tile" then
 		-- tuile : la valeur (lot B3) ou le mot de l'état, avec son dessin
 		local value = view.value
@@ -875,7 +882,7 @@ function UpgradeCard.set(self: Card, state: string, view: UpgradeView.View)
 		show(p.pill, buyDrawing)
 		if buyDrawing then
 			Icons.draw(p.stateIcon :: Frame, nil)
-			setText(p.word, { key = "common.buy" })
+			setText(p.word, action or { key = "common.buy" })
 			color(p.word, COLORS.text)
 		elseif fb ~= nil and self.template == "card" then
 			-- carte : le retour chiffré occupe la zone du bas (mot élargi à toute la carte)

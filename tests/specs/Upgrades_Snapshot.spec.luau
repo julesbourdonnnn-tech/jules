@@ -70,18 +70,26 @@ return function(T)
 		if snapAtBoot ~= nil then
 			profile.upgradeSnapshot = snapAtBoot
 		end
-		local h = TvAudit.client({ profile = profile })
-		local US = TvAudit.mod(h, "UI.UpgradeSnapshot")
-		local c = { h = h, US = US, changed = {}, results = {}, avail = {} }
-		US.Changed:Connect(function(s)
-			table.insert(c.changed, s.version)
-		end)
-		US.Result:Connect(function(p)
-			table.insert(c.results, p)
-		end)
-		US.AvailableChanged:Connect(function(on)
-			table.insert(c.avail, on)
-		end)
+		local c = { changed = {}, results = {}, avail = {} }
+		-- signaux écoutés AVANT le démarrage : depuis l'étape 2 du lot B2, PanelController.Start appelle
+		-- UpgradeSnapshot.start() (D2), l'instantané d'arrivée est donc appliqué pendant le démarrage
+		local h = TvAudit.client({
+			profile = profile,
+			before = function(hh)
+				local US = TvAudit.mod(hh, "UI.UpgradeSnapshot")
+				c.US = US
+				US.Changed:Connect(function(s)
+					table.insert(c.changed, s.version)
+				end)
+				US.Result:Connect(function(p)
+					table.insert(c.results, p)
+				end)
+				US.AvailableChanged:Connect(function(on)
+					table.insert(c.avail, on)
+				end)
+			end,
+		})
+		c.h = h
 		return c
 	end
 

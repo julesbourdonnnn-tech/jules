@@ -465,10 +465,12 @@ function Icons.color(kind: string): Color3
 	return if def then def.color else Theme.Colors.Text
 end
 
--- Pièces et anneaux nécessaires pour dessiner chacune de ces sortes sur une même toile, et si une
--- pièce doit pouvoir être arrondie (sinon : pièces sans UICorner)
-local function poolOf(kinds: { string }): (number, number, boolean)
-	local parts, rings, rounded = 0, 0, false
+-- Pièces et anneaux nécessaires pour dessiner chacune de ces sortes sur une même toile, et les pièces
+-- qui doivent pouvoir être arrondies : la pièce n° j a un UICorner seulement si la j-ième pièce d'une
+-- de ces sortes est arrondie (lot B2, étape 2 : budget de l'écran Améliorations, règle 20)
+local function poolOf(kinds: { string }): (number, number, { [number]: boolean })
+	local parts, rings = 0, 0
+	local roundedAt: { [number]: boolean } = {}
 	for _, kind in kinds do
 		local def = KINDS[kind]
 		if def then
@@ -479,7 +481,7 @@ local function poolOf(kinds: { string }): (number, number, boolean)
 				else
 					p += 1
 					if (prim.r or 0) > 0 then
-						rounded = true
+						roundedAt[p] = true
 					end
 				end
 			end
@@ -487,13 +489,17 @@ local function poolOf(kinds: { string }): (number, number, boolean)
 			rings = math.max(rings, r)
 		end
 	end
-	return parts, rings, rounded
+	return parts, rings, roundedAt
 end
 
 -- Instances d'une toile qui sait dessiner ces sortes (cadre + pièces + anneaux)
 function Icons.cost(kinds: { string }): number
-	local parts, rings, rounded = poolOf(kinds)
-	return 1 + (if rounded then 2 else 1) * parts + 3 * rings
+	local parts, rings, roundedAt = poolOf(kinds)
+	local n = 1 + 3 * rings
+	for j = 1, parts do
+		n += if roundedAt[j] then 2 else 1
+	end
+	return n
 end
 
 -- =============================================================================================
@@ -504,7 +510,7 @@ type CanvasState = {
 	size: number,
 	parts: { Frame },
 	rings: { Frame },
-	rounded: boolean, -- pièces arrondissables (UICorner)
+	roundedAt: { [number]: boolean }, -- pièces arrondissables (UICorner), par numéro de pièce
 	kind: string?,
 	color: Color3?,
 }
@@ -561,10 +567,10 @@ function Icons.canvas(parent: Instance?, size: number, kinds: { string }, name: 
 	holder.Active = false
 	holder.Selectable = false
 	holder:SetAttribute("Icon", "")
-	local nParts, nRings, rounded = poolOf(kinds)
-	local state: CanvasState = { size = s, parts = {}, rings = {}, rounded = rounded }
+	local nParts, nRings, roundedAt = poolOf(kinds)
+	local state: CanvasState = { size = s, parts = {}, rings = {}, roundedAt = roundedAt }
 	for i = 1, nParts do
-		table.insert(state.parts, newPart(holder, "P" .. i, false, rounded))
+		table.insert(state.parts, newPart(holder, "P" .. i, false, roundedAt[i] == true))
 	end
 	for i = 1, nRings do
 		table.insert(state.rings, newPart(holder, "R" .. i, true, true))
@@ -586,9 +592,16 @@ function Icons.draw(canvas: Frame, kind: string?, color: Color3?)
 	local def = if kind then KINDS[kind] else nil
 	local usedParts, usedRings = 0, 0
 	if def then
-		local nParts, nRings, rounded = poolOf({ kind :: string })
-		if nParts > #state.parts or nRings > #state.rings or (rounded and not state.rounded) then
+		local nParts, nRings, roundedAt = poolOf({ kind :: string })
+		if nParts > #state.parts or nRings > #state.rings then
 			def = nil
+		else
+			for j in roundedAt do
+				if not state.roundedAt[j] then
+					def = nil
+					break
+				end
+			end
 		end
 	end
 	if def then

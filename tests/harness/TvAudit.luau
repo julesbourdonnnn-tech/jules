@@ -42,7 +42,9 @@ TvAudit.CLIENT = "StarterPlayer.StarterPlayerScripts.Client."
 local CLIENT = TvAudit.CLIENT
 
 -- Actions de fenêtre permises derrière une fenêtre (les touches du jeu, elles, doivent être déliées)
-TvAudit.UI_ACTIONS = { FocusGuardBack = true, PanelTabs = true, PanelCycle = true, PanelScroll = true }
+-- (UpgradesMode : □ / E de l'écran Améliorations, lié seulement écran ouvert ; lot B2)
+TvAudit.UI_ACTIONS =
+	{ FocusGuardBack = true, PanelTabs = true, PanelCycle = true, PanelScroll = true, UpgradesMode = true }
 local MENU_KEYS = { ButtonY = true, DPadDown = true, M = true, Semicolon = true }
 local GAME_KEYS = {
 	ButtonX = true,

@@ -41,12 +41,14 @@ local Prestige = require(Shared.Logic.Prestige)
 local TierRules = require(Shared.Logic.TierRules)
 local Formulas = require(Shared.Logic.Formulas)
 local BigNumber = require(Shared.Logic.BigNumber)
+local Localization = require(Shared.Localization)
+local Cosmetics = require(Shared.Config.Cosmetics)
 
 local Format = require(script.Parent.Parent.Format)
 
 export type State = "ready" | "need" | "max" | "locked" | "loopCap" | "busy" | "retry"
 export type Pending = "busy" | "retry"
-export type Kind = "family" | "workshop" | "fun" | "helper" | "rises"
+export type Kind = "family" | "workshop" | "fun" | "helper" | "rises" | "note"
 export type Badge = "loop" | "kept" | "advised"
 export type Vars = { [string]: string }
 export type Text = { key: string, vars: Vars? }
@@ -75,6 +77,7 @@ export type View = {
 	state: State,
 	hidden: boolean, -- coupée par un interrupteur du serveur (D8)
 	readOnly: boolean, -- rien à acheter (Plopettes, « Monte avec ton record »)
+	kept: boolean, -- gardée au Grand Splorch (« Dépenser d'abord » : Enclos, Lit douillet, Monuments)
 	icon: string, -- dessin (Config/Upgrades.icon)
 	badge: Badge?, -- coin de l'icône : boucle (repart de zéro), infini (gardé), étoile (Conseillé)
 	name: Text,
@@ -108,6 +111,7 @@ export type View = {
 	expectedLevel: number?, -- niveau montré de sendId (niveau de la famille, Étoilé : 0 … 8)
 	nap: boolean, -- Plopette qui fait la sieste
 	value: Text?, -- tuile d'un aperçu (lot B3) : valeur 40 px à la place du mot de l'état
+	action: Text?, -- carte qui ouvre un autre écran (« Jelly Ascend » : ✕ « Voir »)
 }
 
 export type Memory = { factor: number, active: boolean, f: string }
@@ -179,6 +183,13 @@ for i, id in HELPERS do
 	HELPER_RANK[id] = i
 end
 local PLUME_ROW = Upgrades.WorkshopRows[Upgrades.WorkshopIndex.plume]
+-- Déco perso de l'Atelier : objet n de la ligne decoShop (Cosmetics.DecoPerso, source « atelier n »)
+local DECO_SHOP: { [number]: string } = {}
+for _, item in Cosmetics.DecoPerso do
+	if item.source.kind == "atelier" then
+		DECO_SHOP[item.source.value] = item.key
+	end
+end
 
 -- =============================================================================================
 -- Lignes de chaque onglet (ordre FIXE de Config/Upgrades, règle 1 : aucun tri)
@@ -572,6 +583,7 @@ local function emptyView(lineId: string, mode: number): View
 		state = "max",
 		hidden = true,
 		readOnly = true,
+		kept = false,
 		icon = "",
 		name = text("upgrades.title"),
 		level = 0,
@@ -780,6 +792,10 @@ local function buyView(
 				price = money(p.total, currency, lang),
 			})
 		end
+		-- Déco perso de l'Atelier : le bandeau nomme l'objet que le prochain achat donne (Annexe B.1)
+		if state == "ready" and banner == nil and id == "decoShop" and DECO_SHOP[L + 1] ~= nil then
+			banner = text(DECO_SHOP[L + 1])
+		end
 	elseif state == "locked" or state == "loopCap" then
 		-- prix du prochain niveau, en gris
 		local p = UpgradeMath.price(buyId, buyL, snap.r, snap.ascend, snap.bestR)
@@ -824,6 +840,7 @@ local function buyView(
 		state = state,
 		hidden = hidden,
 		readOnly = false,
+		kept = line.kept,
 		icon = icon,
 		badge = badge,
 		name = text(buyLine.nameKey),
@@ -913,6 +930,7 @@ local function helperView(
 		state = state,
 		hidden = helpersOff,
 		readOnly = true,
+		kept = true,
 		icon = def.icon,
 		name = text(def.nameKey),
 		effect = effect,
@@ -933,24 +951,62 @@ local function helperView(
 	}
 end
 
--- Vue de « Monte avec ton record » (lecture seule, D22 : valeurs par UpgradeView.rises)
+-- Texte d'une tuile de déblocage (Prestige.unlockTiles : variables qui sont des clés ou des nombres)
+local function unlockText(tile: Prestige.UnlockTile, lang: string): string
+	local vars: { [string]: any } = {}
+	for k, v in tile.vars or {} do
+		if type(v) == "number" then
+			vars[k] = Format.count(v)
+		elseif type(v) == "string" then
+			vars[k] = Localization.get(lang :: any, v)
+		end
+	end
+	return Localization.get(lang :: any, tile.key, vars)
+end
+
+-- Vue de « Monte avec ton record » (lecture seule, D22 : valeurs par UpgradeView.rises) : seconde
+-- ligne « Cuve 3/8 · palier 4/6 » ; bandeau : prochain déblocage de la table du §4.29 (Record R ≤ 20)
+-- et les 3 axes de la Cuve, sinon la phrase de repli workshop.desc.risesWithRecord
 local function risesView(
 	lineId: string,
 	def: Upgrades.ReadOnlyDef,
 	snap: Types.UpgradeSnapshot,
-	mode: number
+	mode: number,
+	ctx: Ctx?
 ): View
+	local lang = langOf(ctx)
 	-- Atelier coupé : première ligne de l'Atelier fermée alors que le Record R 1 est atteint
 	local first = Upgrades.WorkshopRows[1]
 	local off = snap.bestR >= (first.open.recordR or 0) and count(snap.caps[first.id]) == 0
+	local rises = UpgradeView.rises(snap)
+	local banner = text("workshop.desc.risesWithRecord")
+	local nextTile = rises.next[1]
+	if rises.nextR ~= nil and nextTile ~= nil then
+		banner = text("workshop.risesDetail", {
+			r = Format.count(rises.nextR),
+			unlock = unlockText(nextTile, lang),
+			quality = rises.v,
+			speed = Format.count(rises.speed),
+			nozzles = Format.count(rises.nozzles),
+		})
+	end
 	return {
 		id = lineId,
 		kind = "rises",
 		state = "max",
 		hidden = off,
 		readOnly = true,
+		kept = true,
 		icon = def.icon,
 		name = text(def.nameKey),
+		effect = {
+			label = text("workshop.risesLine", {
+				vat = rises.v,
+				vatMax = Format.count(rises.vatMax),
+				tier = rises.t,
+				tierMax = Format.count(rises.tierMax),
+			}),
+		},
 		level = 0,
 		maxLevel = 0,
 		capLevel = 0,
@@ -960,9 +1016,41 @@ local function risesView(
 		cardLevel = {},
 		have = 0,
 		fill = 0,
-		banner = text("workshop.desc.risesWithRecord"),
+		banner = banner,
 		sendMode = mode,
 		nap = false,
+	}
+end
+
+-- Cartes du Conseillé qui ne sont pas une famille (UpgradeAdvisor.NEUTRAL, UpgradeAdvisor.ASCEND) :
+-- « Tout est au maximum ! Prochain but : Grand Splorch » (jamais un trou) et « Jelly Ascend » (✕ ouvre
+-- son aperçu, N24)
+function UpgradeView.note(id: string, mode: any): View
+	local m = UpgradeView.mode(mode)
+	local ascend = id == UpgradeAdvisor.ASCEND
+	return {
+		id = if ascend then UpgradeAdvisor.ASCEND else UpgradeAdvisor.NEUTRAL,
+		kind = "note",
+		state = "max",
+		hidden = false,
+		readOnly = true,
+		kept = true,
+		icon = "star",
+		name = text(if ascend then "ascend.title" else "upgrades.allMaxCard"),
+		reason = if ascend then text("upgrades.advisor.ascend") else nil,
+		level = 0,
+		maxLevel = 0,
+		capLevel = 0,
+		levelText = Format.level(0, 0),
+		barFill = 0,
+		barCap = 1,
+		cardLevel = {},
+		have = 0,
+		fill = 0,
+		banner = text(if ascend then "ascend.show" else "upgrades.advisor.neutral"),
+		sendMode = m,
+		nap = false,
+		action = if ascend then text("common.see") else nil,
 	}
 end
 
@@ -983,7 +1071,7 @@ function UpgradeView.view(
 		if HELPER_RANK[lineId] ~= nil then
 			return helperView(lineId, ro, snap, m, ctx)
 		end
-		return risesView(lineId, ro, snap, m)
+		return risesView(lineId, ro, snap, m, ctx)
 	end
 	local line = lineOf(if lineId == "star" then "snack" else lineId)
 	if line == nil then

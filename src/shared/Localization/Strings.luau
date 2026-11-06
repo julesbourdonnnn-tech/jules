@@ -955,6 +955,9 @@ Strings.en = {
 	["workshop.desc.plume"] = "One more Plopette: Plume",
 	["workshop.desc.springboard"] = "After a Jelly Ascend, start {n} Grand Splorch higher",
 	["workshop.desc.risesWithRecord"] = "Jelly Vat, ranch tier and next unlock: they come with your record",
+	-- lot B2 (D22) : seconde ligne et bandeau de « Monte avec ton record »
+	["workshop.risesLine"] = "Vat {vat}/{vatMax} · tier {tier}/{tierMax}",
+	["workshop.risesDetail"] = "At record {r}: {unlock} · Vat: quality {quality}, speed {speed}, nozzles {nozzles}",
 	["workshop.kiosk"] = "Workshop",
 	["workshop.opens"] = "The Workshop opens at your first Grand Splorch",
 	["fun.title"] = "Just for fun",
@@ -2208,6 +2211,9 @@ Strings.fr = {
 	["workshop.desc.plume"] = "Une Plopette de plus : Plume",
 	["workshop.desc.springboard"] = "Après une Jelly Ascend, repars {n} Grand Splorch plus haut",
 	["workshop.desc.risesWithRecord"] = "Cuve, palier du ranch et prochain déblocage : ils viennent avec ton record",
+	-- lot B2 (D22) : seconde ligne et bandeau de « Monte avec ton record »
+	["workshop.risesLine"] = "Cuve {vat}/{vatMax} · palier {tier}/{tierMax}",
+	["workshop.risesDetail"] = "Au record {r} : {unlock} · Cuve : qualité {quality}, vitesse {speed}, buses {nozzles}",
 	["workshop.kiosk"] = "Atelier",
 	["workshop.opens"] = "L'Atelier s'ouvre à ton premier Grand Splorch",
 	["fun.title"] = "Pour le plaisir",

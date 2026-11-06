@@ -47,6 +47,7 @@ local State = require(Client.Controllers.StateController)
 local WorldStateController = require(Client.Controllers.WorldStateController)
 local QualityController = require(Client.Controllers.QualityController)
 local Widgets = require(Client.UI.Panels.Widgets)
+local UpgradeSnapshot = require(Client.UI.UpgradeSnapshot)
 
 local Panels = {
 	Ranch = require(Client.UI.Panels.Ranch),
@@ -58,6 +59,8 @@ local Panels = {
 	SplorchPreview = require(Client.UI.Panels.SplorchPreview),
 	OutfitPreview = require(Client.UI.Panels.OutfitPreview),
 	Diagnostics = require(Client.UI.Panels.Diagnostics),
+	-- v2.0 (lot B2) : écran Améliorations, construit au premier instantané valide seulement (D2)
+	Upgrades = require(Client.UI.Panels.Upgrades),
 } :: { [string]: any }
 
 local PanelController = {}
@@ -71,10 +74,18 @@ local PENDING = "Pending"
 -- Ordre du rail (GDD §10.2) ; « ! » juste sous le Grand Splorch
 local RAIL =
 	{ "SplorchPreview", PENDING, "Ranch", "Squishydex", "Objectives", "Leaderboards", "Shop", "Settings" }
--- L2 / R2 (seulement quand un de ces panneaux est actif)
-local CYCLE = { "Ranch", "Squishydex", "Objectives", "Leaderboards", "Shop", "Settings" }
+-- L2 / R2 (seulement quand un de ces panneaux est actif ; un panneau invisible est sauté :
+-- Améliorations n'existe que si le serveur envoie l'instantané, lot B2)
+local CYCLE = { "Ranch", "Upgrades", "Squishydex", "Objectives", "Leaderboards", "Shop", "Settings" }
 -- Panneaux ouverts PAR-DESSUS un autre (○ revient au panneau d'origine : nav.back)
 local STACKED = { OutfitPreview = true, Diagnostics = true }
+-- Panneaux à fenêtre NUE (lot B2, D5) : ni titre, ni Fermer, ni L2 / R2 de l'en-tête standard ; le
+-- corps est tout le panneau (l'écran dessine son en-tête du §27.8) ; ombre sur le panneau
+local BARE = { Upgrades = true }
+-- Améliorations ouvert par « Dépenser d'abord » au-dessus de l'aperçu du Grand Splorch (○ y revient)
+local UPGRADES = "Upgrades"
+local SPEND_FIRST = "spendFirst"
+local stackedNow: { [string]: boolean } = {}
 local ENTRY_KEYS = {
 	SplorchPreview = "menu.splorch",
 	Pending = "menu.pending",
@@ -95,6 +106,7 @@ local TITLE_KEYS = {
 	SplorchPreview = "panel.splorch.title",
 	OutfitPreview = "panel.shop.preview",
 	Diagnostics = "panel.diag.title",
+	Upgrades = "upgrades.title",
 }
 -- Icônes du rail : pastille de couleur et symbole (formes seulement, aucune image téléversée)
 local ENTRY_ICONS: { [string]: { color: Color3, symbol: string } } = {
@@ -329,8 +341,14 @@ local function buildWindow(name: string): (Frame, Frame)
 		corner = Widgets.CORNER_LARGE,
 		gradient = true,
 		zIndex = if STACKED[name] then 10 else 5,
+		shadow = BARE[name] == true,
 	})
 	win.Visible = false
+	if BARE[name] then
+		local bare = Widgets.group(win, "Body", UDim2.fromOffset(PANEL_RECT.w, PANEL_RECT.h), UDim2.new())
+		bare.ZIndex = win.ZIndex + 1
+		return win, bare
+	end
 	local header = Widgets.group(win, "Header", UDim2.new(1, 0, 0, Layout.Panel.header), UDim2.new())
 	Widgets.label({
 		parent = header,
@@ -850,7 +868,7 @@ local function showPanel(name: string, tab: string?)
 	end
 	local opener: GuiObject? = nil
 	local railButton = railButtons[name]
-	if railButton and railButton.Visible and not STACKED[name] then
+	if railButton and railButton.Visible and not STACKED[name] and not stackedNow[name] then
 		opener = railButton
 	end
 	FocusGuard.open({
@@ -945,6 +963,18 @@ function PanelController.Start()
 			safe(name .. ".start", nil, mod.start)
 		end
 	end
+	-- v2.0 (lot B2, D1, D2) : l'écran Améliorations se construit au PREMIER instantané valide du
+	-- serveur (pendant le chargement quand l'interrupteur est ouvert), jamais sans lui : aucune
+	-- instance v2.0 dans le jeu de base
+	UpgradeSnapshot.AvailableChanged:Connect(function(on: boolean)
+		if on and not built[UPGRADES] then
+			ensureBuilt(UPGRADES)
+		end
+	end)
+	UpgradeSnapshot.start()
+	if UpgradeSnapshot.available() and not built[UPGRADES] then
+		ensureBuilt(UPGRADES)
+	end
 	FocusGuard.WindowClosed:Connect(onWindowClosed)
 	Cards.Requested:Connect(function(kind: string, action: string)
 		PanelController._onCardRequest(kind, action)
@@ -1031,6 +1061,11 @@ function PanelController.open(panel: string, tab: string?)
 	if not initialized or type(panel) ~= "string" or Panels[panel] == nil then
 		return
 	end
+	-- Améliorations sans instantané du serveur (interrupteur UpgradesScreen coupé) : rien du tout
+	-- (ni son, ni vibration, ni fenêtre ; jeu de base identique, lot B2)
+	if panel == UPGRADES and not UpgradeSnapshot.available() then
+		return
+	end
 	if blockedByWindow() then
 		return
 	end
@@ -1048,11 +1083,18 @@ function PanelController.open(panel: string, tab: string?)
 	if not ensureBuilt(panel) then
 		return
 	end
+	-- « Dépenser d'abord » (aperçu du Grand Splorch, lot B3) : Améliorations s'ouvre PAR-DESSUS
+	-- l'aperçu, onglet Ranch ; ○ y revient (GDD §10.7.1)
+	local stackOver = panel == UPGRADES and tab == SPEND_FIRST and topPanel() == "SplorchPreview"
+	stackedNow[panel] = if stackOver then true else nil
+	if panel == UPGRADES and windows[panel] then
+		windows[panel].ZIndex = if stackOver then 10 else 5
+	end
 	if not FocusGuard.isOpen(MENU) then
 		preferredEntry = if railButtons[panel] then panel else nil
 		openMenuWindow()
 	end
-	if not STACKED[panel] then
+	if not STACKED[panel] and not stackOver then
 		-- le panneau remplacé se ferme sans retirer le voile ni signaler « aucun panneau »
 		switching = #openOrder > 0
 		for i = #openOrder, 1, -1 do
@@ -1076,6 +1118,18 @@ function PanelController.closeAll()
 	if FocusGuard.isOpen(MENU) then
 		FocusGuard.closeNow(MENU)
 	end
+end
+
+-- Un panneau peut-il s'ouvrir pour ce joueur ? (entrée visible ; Améliorations : instantané du
+-- serveur reçu, D1 ; raccourci clavier U du lot I, D24)
+function PanelController.available(panel: string): boolean
+	if type(panel) ~= "string" or Panels[panel] == nil then
+		return false
+	end
+	if panel == UPGRADES then
+		return UpgradeSnapshot.available()
+	end
+	return entryVisible(panel)
 end
 
 -- Un panneau (ou celui-ci) est ouvert

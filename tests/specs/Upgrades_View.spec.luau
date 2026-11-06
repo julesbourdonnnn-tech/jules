@@ -716,10 +716,35 @@ return function(T)
 					end))
 					expect(top.nextR).toBe(nil)
 					expect(top.tier).toBe(6)
+					-- lot B2, étape 2 (D22) : seconde ligne « Cuve 8/8 · palier 4/6 » et bandeau « Au record 13 :
+					-- … · Cuve : qualité, vitesse, buses » ; au-delà de la table du §4.29 (Record R 20), la
+					-- phrase de repli workshop.desc.risesWithRecord
 					local view = V.view("risesWithRecord", snapOf(), 1, {})
 					expect(view.readOnly).toBe(true)
 					expect(view.sendId).toBe(nil)
-					expect(txt(view.banner)).toBe("workshop.desc.risesWithRecord")
+					expect(view.effect.label.key).toBe("workshop.risesLine")
+					expect(view.effect.label.vars).toEqual({
+						vat = "8",
+						vatMax = "8",
+						tier = "4",
+						tierMax = "6",
+					})
+					expect(view.banner.key).toBe("workshop.risesDetail")
+					expect(view.banner.vars.r).toBe("13")
+					expect(type(view.banner.vars.unlock) == "string" and #view.banner.vars.unlock > 0).toBe(
+						true
+					)
+					expect(view.banner.vars.quality).toBe("8")
+					local beyond = V.view(
+						"risesWithRecord",
+						snapOf(function(p)
+							p.R = 20
+							p.bestR = 20
+						end),
+						1,
+						{}
+					)
+					expect(txt(beyond.banner)).toBe("workshop.desc.risesWithRecord")
 				end
 			)
 
