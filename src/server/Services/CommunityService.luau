@@ -19,6 +19,24 @@
 -- Remplit Notify.BANNER_PRIORITY depuis Config/Events à Init. Émet Emoted, SettingChanged,
 -- FriendsChanged, PetSitRewarded. Remotes : PetPress, SetSetting, EquipCosmetic, Emote, Clap,
 -- ReportBlocked ; EmoteShow, ClapPrompt, Banner. Clés : settings, cosmetics.
+-- v2.0 (lot A4, étape 5 ; décisions D17-D24 ; docs/04 §27.5, §27.7), profils v2 seulement, chaque
+-- système derrière son interrupteur (tout coupé : réponses, données et envois de la v1.3) :
+--   * possession : hasCosmetic garde les branches pass / product / weekly (classements) et lit le reste
+--     par Logic/Owned (sources de la v1.3 inchangées ; Record R par Prestige.bestR) ; EquipCosmetic
+--     accepte les habillages et cosmétiques v2.0, la palette du spectacle et les coussins
+--     (cosmetics.palette / cosmetics.cushions, attributs Palette / Cushions, "" = ceux du ranch) ;
+--     emote de la croix ← des v2.0 (SetSetting emoteLeft, possession par Owned).
+--   * Déco perso [DecoPerso] : seul écrivain de decoPerso ; bits possédés revus depuis Owned à
+--     l'arrivée, aux signaux qui changent une source (UpgradeBought, Stamped, Fed, Goutte de Lune,
+--     compteurs à vie de QuestService) et toutes les 30 s (fanion des 5 min) ; objet gagné (1-16) →
+--     Celebrate("unlock", { kind = "deco", id }) ; PlaceDeco (objet possédé, taille de l'emplacement,
+--     jamais posé deux fois, 0 = retirer) ; attribut DecoPerso (12 numéros séparés par des virgules).
+--   * cœurs [Hearts] : GiveHeart (présent, pas soi, pas bloqué, 1 par ranch et 20 par jour UTC) ;
+--     Feedback hearts.given / hearts.received (privé) / hearts.limit ; aucun compteur public.
+--   * halo [RanchSkins] : attribut HaloOn = settings.haloOn ; mode photo [PhotoMode] : état en mémoire
+--     et analytique (PhotoMode), le personnage n'est jamais touché ; effacé au départ.
+--   * attributs v2 (DecoPerso, HaloOn, Palette, Cushions) posés à l'arrivée et à chaque changement,
+--     revus quand un interrupteur change en direct, absents sinon (RanchService les efface au départ).
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -34,12 +52,15 @@ local Cosmetics = require(Shared.Config.Cosmetics)
 local Features = require(Shared.Config.Features)
 local ZoneRules = require(Shared.Logic.ZoneRules)
 local StateTimeouts = require(Shared.Logic.StateTimeouts)
+local Bitset = require(Shared.Logic.Bitset)
+local Owned = require(Shared.Logic.Owned)
 
 local Server = script.Parent.Parent
 local Signals = require(Server.Signals)
 local Notify = require(Server.Util.Notify)
 local Analytics = require(Server.Util.Analytics)
 local Guard = require(Server.Meta.Guard)
+local PadRules = require(Server.Ranch.PadRules)
 local DataService = require(Server.Services.DataService)
 local MonetizationService = require(Server.Services.MonetizationService)
 local RanchService = require(Server.Services.RanchService)
@@ -54,7 +75,14 @@ local PETSIT_RADIUS = Balance.Press.Range -- ami côté rue à ≤ 10 studs de l
 local PETSIT_MAX = 3
 local PETSIT_EVERY = 0.5 -- s : clôtures de pet-sitting réévaluées deux fois par seconde
 local CLAP_SECONDS = StateTimeouts.seconds("clapWindow")
-local ANALYTICS_EVERY = 300 -- s : PetSitPress cumulé (une requête par 5 min au plus)
+local ANALYTICS_EVERY = 300 -- s : PetSitPress et PhotoMode cumulés (une requête par 5 min au plus)
+-- v2.0 (lot A4)
+local V2_FLAGS_EVERY = 1 -- s : interrupteurs des attributs v2 relus (changement en direct)
+local DECO_EVERY = 30 -- s : Déco perso revue (fanion offert à 5:00 de jeu, aucun signal)
+local DECO_SLOTS = #Cosmetics.DecoSlots
+local DECO_ITEMS = #Cosmetics.DecoPerso
+-- interrupteurs des attributs v2 posés ici (ordre fixe : bit i − 1 du masque)
+local ATTR_FLAGS = { "DecoPerso", "RanchSkins", "Workshop", "RecordR", "WeeklyTrack" }
 
 type ClapWindow = {
 	hero: Player,
@@ -85,6 +113,15 @@ local lastPerfect: { [Player]: boolean } = {}
 local petSitPresses: { [Player]: { n: number, since: number } } = {}
 local allowRush = false
 local started = false
+-- v2.0 (lot A4)
+local readyPlayers: { [Player]: boolean } = {} -- PlayerReady vu (Déco perso, attributs v2)
+local attrsOn: { [Player]: { [string]: any } } = {} -- attributs v2 posés par ce service (valeurs)
+local photo: { [Player]: boolean } = {} -- mode photo ouvert (mémoire seulement)
+local photoEntries: { [Player]: { n: number, since: number } } = {} -- entrées en mode photo (analytique)
+local flagsNow: Owned.Flags = {} -- interrupteurs lus par Owned (table réutilisée, aucune allocation)
+local attrMaskSeen = 0
+local v2FlagsAt = -math.huge
+local decoAt = -math.huge
 
 local function finite(x: any): boolean
 	return type(x) == "number" and x == x and x ~= math.huge and x ~= -math.huge
@@ -188,8 +225,139 @@ end
 
 local PUBLIC_FIELD =
 	{ saddle = "saddleColor", trail = "trail", title = "title", theme = "theme", flag = "flag" }
+-- v2.0 (lot A4, D20) : sortes gardées dans le profil v2 seulement et montrées par un attribut du ranch
+local V2_KINDS = { palette = "Palette", cushions = "Cushions" }
 -- cosmétiques qu'on peut retirer (id "") : leur valeur par défaut est vide
-local CLEARABLE = { trail = true, title = true, flag = true }
+local CLEARABLE = { trail = true, title = true, flag = true, palette = true, cushions = true }
+
+-- Interrupteurs lus par Owned, recopiés à chaque usage dans une table gardée (aucune allocation)
+local function currentFlags(): Owned.Flags
+	return Owned.flags(Features.get, flagsNow)
+end
+
+local function v2Profile(data: { [string]: any }): boolean
+	return PadRules.v2Profile(data)
+end
+
+-- Attribut DecoPerso : les 12 emplacements, numéro de l'objet (0 = vide), séparés par des virgules
+local function decoString(data: { [string]: any }): string
+	local deco = data.decoPerso
+	local slots = if type(deco) == "table" and type(deco.slots) == "table" then deco.slots else nil
+	local parts = table.create(DECO_SLOTS, "0")
+	for i = 1, DECO_SLOTS do
+		local item = if slots ~= nil then slots[i] else nil
+		if finite(item) and item % 1 == 0 and item >= 1 and item <= DECO_ITEMS then
+			parts[i] = tostring(item)
+		end
+	end
+	return table.concat(parts, ",")
+end
+
+-- Attributs v2 de ce service voulus pour ce profil (profil v1 ou interrupteurs coupés : aucun)
+local function wantedAttrs(data: { [string]: any }, flags: Owned.Flags): { [string]: any }
+	local out: { [string]: any } = {}
+	if not v2Profile(data) then
+		return out
+	end
+	if flags.DecoPerso then
+		out.DecoPerso = decoString(data)
+	end
+	if flags.RanchSkins then
+		out.HaloOn = settingsOf(data).haloOn ~= false
+	end
+	local cosmetics = cosmeticsOf(data)
+	if cosmetics ~= nil then
+		for kind, name in V2_KINDS do
+			local value = cosmetics[kind]
+			if type(value) == "string" and Owned.kindOpen(kind, flags) then
+				out[name] = value
+			end
+		end
+	end
+	return out
+end
+
+-- Pose les attributs v2 qui ont changé et efface ceux qui ne sont plus voulus (RanchService garde les
+-- valeurs tant que le ranch n'est pas attribué)
+local function refreshAttrs(player: Player)
+	local data = profile(player)
+	if data == nil then
+		return
+	end
+	local had = attrsOn[player]
+	local want = wantedAttrs(data, currentFlags())
+	if had == nil and next(want) == nil then
+		return
+	end
+	local changed: { [string]: any } = {}
+	local clear: { string } = {}
+	for name, value in want do
+		if had == nil or had[name] ~= value then
+			changed[name] = value
+		end
+	end
+	if had ~= nil then
+		for name in had do
+			if want[name] == nil then
+				table.insert(clear, name)
+			end
+		end
+	end
+	if next(changed) ~= nil or #clear > 0 then
+		Guard.try("community:attrs", RanchService.setV2Attributes, player, changed, clear)
+	end
+	attrsOn[player] = if next(want) ~= nil then want else nil
+end
+
+-- Déco perso [DecoPerso] (D19) : bits de decoPerso.owned revus depuis Owned (jamais retirés : une
+-- source ne recule pas). Objet gagné (sources hors Atelier, 1-16) → carte « unlock », sauf `silent`
+-- (premier chargement v2 d'un ancien joueur : objets déjà gagnés posés sans carte, comme le Carnet).
+-- `prepared` : appelé avant l'instantané (rien à répliquer). Rend vrai si un bit a été posé.
+local function syncDeco(player: Player, data: { [string]: any }, silent: boolean, prepared: boolean?): boolean
+	if Features.get("DecoPerso") ~= true or not v2Profile(data) then
+		return false
+	end
+	local deco = data.decoPerso
+	if type(deco) ~= "table" or type(deco.owned) ~= "table" then
+		return false
+	end
+	local flags = currentFlags()
+	local gained: { number }? = nil
+	for n = 1, DECO_ITEMS do
+		if not Bitset.has(deco.owned, n) and Owned.deco(data, n, flags) then
+			Bitset.set(deco.owned, n)
+			local list = gained or {}
+			gained = list
+			table.insert(list, n)
+		end
+	end
+	if gained == nil then
+		return false
+	end
+	if prepared ~= true then
+		DataService.markDirty(player, "decoPerso")
+	end
+	if not silent then
+		for _, n in gained do
+			local item = Cosmetics.DecoPerso[n]
+			if item.source.kind ~= "atelier" then
+				Notify.celebrate(player, "unlock", { kind = "deco", id = item.id })
+			end
+		end
+	end
+	return true
+end
+
+-- Déco perso revue pour un joueur prêt (signal d'une source, compteur à vie, tick des 30 s)
+local function syncDecoOf(player: Player)
+	if Features.get("DecoPerso") ~= true or not readyPlayers[player] then
+		return
+	end
+	local data = profile(player)
+	if data ~= nil then
+		syncDeco(player, data, false)
+	end
+end
 
 -- =============================================================================================
 -- Bannières
@@ -537,13 +705,20 @@ local function onSetSetting(player: Player, key: string, value: any): boolean
 			player,
 			{ name = CommunityService.displayName(player), hidden = value == true }
 		)
+	elseif key == "haloOn" then
+		refreshAttrs(player) -- attribut HaloOn [RanchSkins] (D24)
 	end
 	return true
 end
 
 local function onEquipCosmetic(player: Player, kind: string, id: string): boolean
 	local data = profile(player)
-	if data == nil or PUBLIC_FIELD[kind] == nil then
+	if data == nil or (PUBLIC_FIELD[kind] == nil and V2_KINDS[kind] == nil) then
+		return false
+	end
+	-- palette et coussins (v2.0, D20) : profil v2 et au moins une de leurs sources ouverte, même pour
+	-- les retirer (le jeu de base n'écrit jamais ces clés)
+	if V2_KINDS[kind] ~= nil and (not v2Profile(data) or not Owned.kindOpen(kind, currentFlags())) then
 		return false
 	end
 	if not (id == "" and CLEARABLE[kind]) and not CommunityService.hasCosmetic(player, kind, id) then
@@ -553,9 +728,149 @@ local function onEquipCosmetic(player: Player, kind: string, id: string): boolea
 	if cosmetics == nil or cosmetics[kind] == id then
 		return false
 	end
+	if V2_KINDS[kind] ~= nil and type(cosmetics[kind]) ~= "string" then
+		return false -- clé absente d'un profil abîmé : jamais créée ici (ProfileRepair la remet)
+	end
 	cosmetics[kind] = id
 	DataService.markDirty(player, "cosmetics")
-	Guard.try("community:cosmetic", RanchService.setPublic, player, { [PUBLIC_FIELD[kind]] = id })
+	if V2_KINDS[kind] ~= nil then
+		refreshAttrs(player) -- attribut Palette ou Cushions
+	else
+		Guard.try("community:cosmetic", RanchService.setPublic, player, { [PUBLIC_FIELD[kind]] = id })
+	end
+	return true
+end
+
+-- =============================================================================================
+-- v2.0 (lot A4) : Déco perso, cœurs, mode photo
+-- =============================================================================================
+
+-- PlaceDeco(item 0-64, slot 1-12) [DecoPerso] (D18, D19) : objet possédé (bit, ou source gagnée depuis
+-- la dernière revue), de la taille de l'emplacement (Cosmetics.DecoSlots), jamais posé dans un autre
+-- emplacement ; 0 vide l'emplacement. Accepté : bits revus (cartes), emplacement écrit, attribut DecoPerso
+local function onPlaceDeco(player: Player, item: number, slot: number): boolean
+	if Features.get("DecoPerso") ~= true then
+		return false
+	end
+	local data = profile(player)
+	if data == nil or not v2Profile(data) then
+		return false
+	end
+	local deco = data.decoPerso
+	if type(deco) ~= "table" or type(deco.slots) ~= "table" or type(deco.owned) ~= "table" then
+		return false
+	end
+	local size = Cosmetics.DecoSlots[slot]
+	if size == nil then
+		return false
+	end
+	local slots = deco.slots
+	local current = num(slots[slot], 0)
+	if item == 0 then
+		if current == 0 then
+			return false -- déjà vide
+		end
+		slots[slot] = 0
+	else
+		local def = Cosmetics.DecoPerso[item]
+		if def == nil or def.n ~= item or def.size ~= size or current == item then
+			return false
+		end
+		if not Bitset.has(deco.owned, item) and not Owned.deco(data, item, currentFlags()) then
+			return false
+		end
+		for i = 1, DECO_SLOTS do
+			if i ~= slot and slots[i] == item then
+				return false -- déjà posé ailleurs (contrat : jamais deux fois)
+			end
+		end
+		-- accepté : possession revue (le bit de l'objet posé compris : ProfileRepair vide un emplacement
+		-- dont le bit manque), puis l'emplacement
+		syncDeco(player, data, false)
+		if not Bitset.has(deco.owned, item) then
+			return false -- garde : jamais un objet posé sans son bit
+		end
+		slots[slot] = item
+	end
+	DataService.markDirty(player, "decoPerso")
+	refreshAttrs(player)
+	return true
+end
+
+-- GiveHeart(ownerId) [Hearts] (D22) : propriétaire présent sur ce serveur, pas soi, pas bloqué (dans un
+-- sens ou l'autre : refus muet), deux profils v2, 1 cœur par ranch et Balance.Hearts.PerDay par jour UTC
+-- (hearts.limit au plafond) ; donneur : givenDay / givenTo, receveur : receivedTotal + 1 ; Feedback
+-- privé aux deux, aucun compteur public
+local function onGiveHeart(giver: Player, ownerId: number): boolean
+	if Features.get("Hearts") ~= true then
+		return false
+	end
+	local owner = Players:GetPlayerByUserId(ownerId)
+	if owner == nil or owner == giver or not present(owner) or not present(giver) then
+		return false
+	end
+	if CommunityService.isBlocked(giver, owner) then
+		return false
+	end
+	local gData, oData = profile(giver), profile(owner)
+	if gData == nil or oData == nil or not v2Profile(gData) or not v2Profile(oData) then
+		return false
+	end
+	local given, received = gData.hearts, oData.hearts
+	if type(given) ~= "table" or type(received) ~= "table" or type(given.givenTo) ~= "table" then
+		return false
+	end
+	local today = Clock.day()
+	local list: { number } = if given.givenDay == today then given.givenTo else {}
+	if table.find(list, owner.UserId) ~= nil then
+		return false -- déjà donné à ce ranch aujourd'hui
+	end
+	if #list >= Balance.Hearts.PerDay then
+		Notify.feedback(giver, "hearts.limit", {}, "info")
+		return false
+	end
+	if given.givenDay ~= today then
+		given.givenDay = today
+		given.givenTo = list
+	end
+	table.insert(list, owner.UserId)
+	received.receivedTotal = math.min(1e12, math.max(0, math.floor(num(received.receivedTotal, 0))) + 1)
+	DataService.markDirty(giver, "hearts")
+	DataService.markDirty(owner, "hearts")
+	Notify.feedback(giver, "hearts.given", {}, "reward")
+	Notify.feedback(owner, "hearts.received", { name = CommunityService.displayName(giver) }, "reward")
+	return true
+end
+
+local function flushPhoto(player: Player)
+	local entry = photoEntries[player]
+	if entry ~= nil and entry.n > 0 then
+		Analytics.custom(player, "PhotoMode", entry.n)
+		entry.n = 0
+	end
+end
+
+-- SetPhotoMode(on) [PhotoMode] (D23, N22) : état en mémoire et analytique seulement ; le personnage
+-- n'est jamais ancré, caché, déplacé dans l'arbre ni rendu transparent (toujours visible des autres :
+-- le client fige ses propres commandes) ; aucun avantage
+local function onSetPhotoMode(player: Player, on: boolean): boolean
+	if Features.get("PhotoMode") ~= true or profile(player) == nil then
+		return false
+	end
+	if (photo[player] == true) == on then
+		return false
+	end
+	if on then
+		photo[player] = true
+		local entry = photoEntries[player]
+		if entry == nil then
+			entry = { n = 0, since = Clock.now() }
+			photoEntries[player] = entry
+		end
+		entry.n += 1
+	else
+		photo[player] = nil
+	end
 	return true
 end
 
@@ -642,6 +957,56 @@ local function onReady(player: Player)
 	recount(player)
 end
 
+-- v2.0 (lot A4) : Déco perso revue (cartes des objets gagnés depuis la dernière session) et attributs
+-- v2 du ranch posés ; profil v1 : rien
+local function onReadyV2(player: Player)
+	readyPlayers[player] = true
+	local data = profile(player)
+	if data == nil or not v2Profile(data) then
+		return
+	end
+	syncDeco(player, data, false)
+	refreshAttrs(player)
+end
+
+-- Tick v2 (une fois par seconde) : un interrupteur des attributs v2 changé en direct → attributs revus
+-- pour chaque joueur prêt (posés ou effacés) ; Déco perso revue toutes les 30 s (fanion offert à 5:00
+-- de jeu, aucun signal). Tout coupé : 6 lectures d'interrupteur, rien d'autre
+local function stepV2(now: number)
+	local mask = 0
+	for i, key in ATTR_FLAGS do
+		if Features.get(key) == true then
+			mask = bit32.bor(mask, bit32.lshift(1, i - 1))
+		end
+	end
+	local flagsChanged = mask ~= attrMaskSeen
+	attrMaskSeen = mask
+	local decoDue = Features.get("DecoPerso") == true and now - decoAt >= DECO_EVERY
+	if decoDue then
+		decoAt = now
+	end
+	if not flagsChanged and not decoDue then
+		return
+	end
+	for player in readyPlayers do
+		if present(player) then
+			Guard.try("community:decoTick", syncDecoOf, player)
+			if flagsChanged then
+				Guard.try("community:attrsTick", refreshAttrs, player)
+			end
+		end
+	end
+end
+
+-- Avant l'instantané (DataService.onPrepare) : premier chargement v2 d'un ancien joueur (carte
+-- « Bienvenue dans la v2 ! » en attente) → objets de Déco perso déjà gagnés posés sans carte
+local function prepareV2(player: Player, data: { [string]: any })
+	local onboarding = data.onboarding
+	if type(onboarding) == "table" and onboarding.welcomeV2Pending == true then
+		syncDeco(player, data, true, true)
+	end
+end
+
 local function onRemoving(player: Player)
 	flushPetSit(player)
 	-- cache d'amitié oublié pour ce joueur : une amitié retirée pendant son absence se voit à son retour,
@@ -660,6 +1025,13 @@ local function onRemoving(player: Player)
 	lastPending[player] = nil
 	lastPerfect[player] = nil
 	petSitPresses[player] = nil
+	-- v2.0 (lot A4) : mode photo effacé (analytique envoyée), attributs oubliés (RanchService les efface
+	-- du ranch libéré)
+	flushPhoto(player)
+	photo[player] = nil
+	photoEntries[player] = nil
+	readyPlayers[player] = nil
+	attrsOn[player] = nil
 	for _, window in clapWindows do
 		if window.viewers ~= nil then
 			window.viewers[player] = nil
@@ -692,6 +1064,19 @@ function CommunityService.Init()
 	Guard.connect("Emote", onEmote)
 	Guard.connect("Clap", onClap)
 	Guard.connect("ReportBlocked", onReportBlocked)
+	-- v2.0 (lot A4, note INT-V2-INTENTS : intentions venues de Config/IntentsV2 avec leur handler)
+	Guard.connect("PlaceDeco", onPlaceDeco)
+	Guard.connect("GiveHeart", onGiveHeart)
+	Guard.connect("SetPhotoMode", onSetPhotoMode)
+	-- Déco perso : objectifs réclamés, pistes finies, niveaux achetés (compteurs à vie de QuestService)
+	Guard.try("community:lifetimeHook", QuestService.onLifetime, function(player: Player)
+		syncDecoOf(player)
+	end)
+	if type((DataService :: any).onPrepare) == "function" then
+		DataService.onPrepare(function(player, data)
+			Guard.try("community:prepare", prepareV2, player, data)
+		end)
+	end
 end
 
 -- Connexions et boucles
@@ -726,6 +1111,24 @@ function CommunityService.Start()
 	end)
 	Signals.PlayerReady:Connect(function(player: Player)
 		Guard.try("community:ready", onReady, player)
+		Guard.try("community:readyV2", onReadyV2, player)
+	end)
+	-- v2.0 (lot A4) : signaux qui changent une source de Déco perso (rien à faire interrupteur coupé :
+	-- syncDecoOf lit DecoPerso d'abord) : ligne decoShop de l'Atelier et Carnet, tampons, jours de
+	-- Plop, Goutte de Lune (moon.sessions compté juste avant par EventService)
+	Signals.UpgradeBought:Connect(function(player: Player)
+		Guard.try("community:decoUpgrade", syncDecoOf, player)
+	end)
+	Signals.Stamped:Connect(function(player: Player)
+		Guard.try("community:decoStamp", syncDecoOf, player)
+	end)
+	Signals.Fed:Connect(function(player: Player)
+		Guard.try("community:decoFed", syncDecoOf, player)
+	end)
+	Signals.SquishyObtained:Connect(function(player: Player, _uid: string, source: string)
+		if source == "lunar" then
+			Guard.try("community:decoMoon", syncDecoOf, player)
+		end
 	end)
 	Players.PlayerAdded:Connect(function(player: Player)
 		task.spawn(function()
@@ -755,6 +1158,17 @@ function CommunityService.step(now: number, actors: { [Player]: Types.TickActor 
 	for player, entry in petSitPresses do
 		if entry.n > 0 and t - entry.since >= ANALYTICS_EVERY then
 			flushPetSit(player)
+			entry.since = t
+		end
+	end
+	-- v2.0 (lot A4) : interrupteurs coupés, une comparaison par tick et 5 lectures par seconde
+	if t - v2FlagsAt >= V2_FLAGS_EVERY then
+		v2FlagsAt = t
+		Guard.try("community:v2", stepV2, t)
+	end
+	for player, entry in photoEntries do
+		if entry.n > 0 and t - entry.since >= ANALYTICS_EVERY then
+			flushPhoto(player)
 			entry.since = t
 		end
 	end
@@ -866,43 +1280,43 @@ function CommunityService.openClapWindow(hero: Player, endsAt: number, viewers: 
 	end
 end
 
--- Cosmétique débloqué (source de Config/Cosmetics)
+-- Cosmétique débloqué. Branches hors du profil gardées ici : pass « Pour toujours », produit Robux
+-- (tenue achetée), titre du top 10 de la semaine (session) ; tout le reste (gratuit, jours de Plop,
+-- Squishydex, Record R, sources de la v2.0 derrière leurs interrupteurs) : Logic/Owned (lot A4, D17)
 function CommunityService.hasCosmetic(player: Player, kind: string, id: string): boolean
 	if type(kind) ~= "string" or type(id) ~= "string" then
 		return false
 	end
 	local def = Cosmetics.ByKindId[kind .. ":" .. id]
-	if def == nil then
-		return false
-	end
-	local source = def.source
-	if source.kind == "free" then
+	if def ~= nil and def.source.kind == "free" then
 		return true
 	end
 	local data = profile(player)
 	if data == nil then
 		return false
 	end
-	if source.kind == "plopDay" then
-		return num(data.plopDays, 0) >= num(source.value, math.huge)
-	elseif source.kind == "dex" then
-		return type(data.dex) == "table" and num(data.dex.rewards, 0) >= num(source.value, math.huge)
-	elseif source.kind == "rebirth" then
-		return num(data.R, 0) >= num(source.value, math.huge)
-	elseif source.kind == "pass" then
-		local ok, owns = pcall(MonetizationService.ownsPass, player, source.key or "")
-		return ok and owns == true
-	elseif source.kind == "product" then
-		local owned = type(data.outfits) == "table"
-				and type(data.outfits.owned) == "table"
-				and data.outfits.owned
-			or {}
-		return num((owned :: any)[id], 0) > 0
-	elseif source.kind == "weekly" then
-		local list = unlocks[player]
-		return list ~= nil and list[kind .. ":" .. id] == true
+	if def ~= nil then
+		local source = def.source
+		if source.kind == "pass" then
+			local ok, owns = pcall(MonetizationService.ownsPass, player, source.key or "")
+			return ok and owns == true
+		elseif source.kind == "product" then
+			local owned = type(data.outfits) == "table"
+					and type(data.outfits.owned) == "table"
+					and data.outfits.owned
+				or {}
+			return num((owned :: any)[id], 0) > 0
+		elseif source.kind == "weekly" then
+			local list = unlocks[player]
+			return list ~= nil and list[kind .. ":" .. id] == true
+		end
 	end
-	return false
+	return Owned.cosmetic(data, kind, id, currentFlags())
+end
+
+-- Mode photo ouvert pour ce joueur [PhotoMode] (mémoire seulement, effacé au départ)
+function CommunityService.inPhotoMode(player: Player): boolean
+	return photo[player] == true and Features.get("PhotoMode") == true
 end
 
 -- États minutés ouverts (débogage, robot de longue durée : docs/04 §17.2 invariant 6) : « clapWindow » (fenêtres d'applaudissement) ;

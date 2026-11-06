@@ -1807,6 +1807,7 @@ return function(T)
 			"EquipCosmetic",
 			"Emote",
 			"Clap",
+			"GiveHeart", -- lot A4 (note INT-V2-INTENTS, journal A4-37) : cœur donné, intention de jeu
 		}
 
 		it(

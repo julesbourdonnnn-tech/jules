@@ -33,9 +33,16 @@
 --     [Carnet] ; cartes « Bienvenue dans la v2 ! » et « Nouveau » et tenues du Record R [RecordR] ; étapes
 --     du record à 25 / 50 / 75 % [RecordR] ; jours de givre (season.frostDays) ; puce « Prochain achat »
 --     vue (UiSeen("nextBuy") [UpgradesScreen]). N1 : ce qui est débloqué suit le Record R (Prestige.bestR).
+--   * v2.0 (lot A4, étape 5 ; GDD v2.0 §4.17 ; D13, D16) [Mastery], profil v2, vue toutes les 10 s et à
+--     l'arrivée : maîtrise d'espèce (★5, page dorée, Trophée Cristal : Logic/Owned.mastery) donnée toute
+--     seule, +25 Confettis par EconomyService.addConfetti(…, "mastery") ; bit de `mastery` posé seulement
+--     si les Confettis sont crédités (sinon nouvel essai), carte Celebrate("mastery", { species }) ;
+--     jalons géants : attribut GiantTier du ranch (Owned.giantTier), carte « unlock » quand un
+--     cosmétique de taille devient possédé pendant la session. QuestService.onLifetime : crochet des
+--     compteurs à vie (CommunityService y revoit la Déco perso).
 -- Remotes : FeedPlop, ClaimObjective, RerollObjective, ClaimDexReward, UiSeen, MenuActivity ; HoldState.
 -- Clés : firstJoin, codes, dex, plopDays, lastFeedDay, onboarding, objectives, stats ; v2 : carnet,
--- weeklyTrack, unlocksSeen, season (frostDays).
+-- weeklyTrack, unlocksSeen, season (frostDays), mastery.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -55,6 +62,7 @@ local Cosmetics = require(Shared.Config.Cosmetics)
 local QuestRules = require(Shared.Logic.QuestRules)
 local Prestige = require(Shared.Logic.Prestige)
 local Bitset = require(Shared.Logic.Bitset)
+local Owned = require(Shared.Logic.Owned)
 local Odds = require(Shared.Logic.Odds)
 local Hash = require(Shared.Logic.Hash)
 local Formulas = require(Shared.Logic.Formulas)
@@ -127,6 +135,10 @@ type Session = {
 	stepAcc: number, -- s depuis la dernière vue des étapes du record
 	stepKey: number?, -- boucle vue (r × 128 + A) ; nil = pas encore vue dans la session ; −1 = prestige
 	stepShown: number, -- étapes du record déjà passées dans cette boucle (bits 1, 2, 4 : 25, 50, 75 %)
+	-- v2.0 (lot A4, étape 5) [Mastery]
+	masteryAcc: number, -- s depuis la dernière vue de la maîtrise et des jalons géants
+	giantTier: number?, -- attribut GiantTier posé (nil = absent)
+	giantBig: number?, -- biggestEver à la dernière vue (nil = pas encore vue : rien de nouveau à montrer)
 }
 
 local sessions: { [Player]: Session } = {}
@@ -405,13 +417,21 @@ local TRACK_DROP_SALT = 0x7A4C -- sel figé des Gouttes chanceuses de la piste (
 local RECORD_STEPS = { 0.25, 0.5, 0.75 } -- étapes du record : part de l'objectif de la boucle (D14)
 local RECORD_STEP_EVERY = 2 -- s entre deux vues des étapes du record
 local FROST_COSTUME = "winter2026" -- costume d'hiver : jours de givre (selle « Sucre glace », D33)
+local MASTERY_EVERY = 10 -- s entre deux vues de la maîtrise et des jalons géants (D13, D16)
 -- tenues gagnées au Record R (Cosmetics.ListV2 : chapeau de fête au R7, lunettes étoiles au R16)
 local RECORD_OUTFITS: { { id: string, at: number } } = {}
+-- cosmétiques des jalons géants (Cosmetics.ListV2, source « size » : selle 1e15, traînée 1e18, titre 1e24)
+local SIZE_COSMETICS: { { kind: string, id: string, at: number } } = {}
 for _, def in Cosmetics.ListV2 :: { any } do
 	if def.kind == "outfit" and type(def.source) == "table" and def.source.kind == "recordR" then
 		table.insert(RECORD_OUTFITS, { id = def.id, at = def.source.value })
 	end
+	if type(def.source) == "table" and def.source.kind == "size" then
+		table.insert(SIZE_COSMETICS, { kind = def.kind, id = def.id, at = def.source.value })
+	end
 end
+-- crochets des compteurs à vie (QuestService.onLifetime)
+local lifetimeHooks: { (Player, string) -> () } = {}
 
 local function isV2(data: { [string]: any }): boolean
 	return PadRules.v2Profile(data)
@@ -430,6 +450,9 @@ end
 local function addLifetime(player: Player, data: { [string]: any }, key: string, n: number)
 	if bumpStat(data, key, n) then
 		DataService.markDirty(player, "stats")
+		for _, hook in lifetimeHooks do
+			Guard.try("quest:lifetimeHook", hook, player, key)
+		end
 	end
 end
 
@@ -838,8 +861,81 @@ local function nextBuySeen(player: Player)
 	end
 end
 
+-- Jalons géants [Mastery] (D16) : attribut GiantTier du ranch (0-4, Owned.giantTier) posé quand il
+-- change ; cosmétique de taille devenu possédé PENDANT la session → Celebrate("unlock", { kind, id }) (la
+-- première vue de la session ne montre rien : ce qui était déjà gagné l'a été avant)
+local function giantCheck(player: Player, data: { [string]: any }, s: Session)
+	local tier = Owned.giantTier(data)
+	if s.giantTier ~= tier then
+		s.giantTier = tier
+		Guard.try("quest:giantTier", RanchService.setV2Attributes, player, { GiantTier = tier })
+	end
+	local big = num(data.biggestEver, 0)
+	local before = s.giantBig
+	s.giantBig = big
+	if before == nil or big <= before then
+		return
+	end
+	for _, def in SIZE_COSMETICS do
+		if before < def.at and big >= def.at then
+			Notify.celebrate(player, "unlock", { kind = def.kind, id = def.id })
+		end
+	end
+end
+
+-- Maîtrise d'espèce [Mastery] (D13) : ★5, page dorée et Trophée Cristal faits (Owned.mastery) sans bit
+-- de `mastery` → + Balance.Confetti.Mastery par EconomyService.addConfetti(…, "mastery") ; bit, patch et
+-- carte SEULEMENT si les Confettis sont crédités (Confettis coupés : rien d'écrit, nouvel essai à la vue
+-- suivante) ; `silent` : première vue d'un ancien joueur à sa migration (Confettis donnés sans carte,
+-- comme les paliers du Carnet)
+local function masteryCheck(player: Player, data: { [string]: any }, silent: boolean)
+	local bits = data.mastery
+	if type(bits) ~= "table" then
+		return
+	end
+	for species = 1, #Species.List do
+		if not Bitset.has(bits, species) then
+			local star, golden, crystal = Owned.mastery(data, species)
+			if star and golden and crystal then
+				local credited = Guard.call(
+					"quest:mastery",
+					EconomyService.addConfetti,
+					0,
+					player,
+					Balance.Confetti.Mastery,
+					"mastery"
+				)
+				if not (finite(credited) and credited > 0) then
+					return
+				end
+				Bitset.set(bits, species)
+				DataService.markDirty(player, "mastery")
+				if not silent then
+					Notify.celebrate(player, "mastery" :: any, { species = species })
+				end
+			end
+		end
+	end
+end
+
+-- Vue de la maîtrise et des jalons géants d'un profil v2 [Mastery] ; interrupteur coupé : attribut
+-- GiantTier effacé s'il avait été posé, rien d'autre (aucune lecture du profil)
+local function masteryStep(player: Player, data: { [string]: any }, s: Session, silent: boolean)
+	if Features.get("Mastery") ~= true then
+		if s.giantTier ~= nil then
+			s.giantTier = nil
+			s.giantBig = nil
+			Guard.try("quest:giantClear", RanchService.setV2Attributes, player, {}, { "GiantTier" })
+		end
+		return
+	end
+	giantCheck(player, data, s)
+	masteryCheck(player, data, silent)
+end
+
 -- Tick v2 d'un profil v2 : jeu des 7 jours et palier en attente [WeeklyTrack], étapes du record
--- [RecordR] toutes les 2 s ; interrupteurs coupés : une lecture chacun, rien d'alloué
+-- [RecordR] toutes les 2 s, maîtrise et jalons géants [Mastery] toutes les 10 s ; interrupteurs coupés :
+-- une lecture chacun, rien d'alloué
 local function stepV2(player: Player, data: { [string]: any }, s: Session, dt: number)
 	if Features.get("WeeklyTrack") == true then
 		addPlay(player, data, s, dt)
@@ -860,6 +956,11 @@ local function stepV2(player: Player, data: { [string]: any }, s: Session, dt: n
 		if Features.get("RecordR") == true then
 			recordSteps(player, data, s)
 		end
+	end
+	s.masteryAcc += dt
+	if s.masteryAcc >= MASTERY_EVERY then
+		s.masteryAcc = 0
+		masteryStep(player, data, s, false)
 	end
 end
 
@@ -1313,6 +1414,9 @@ local function onReady(player: Player)
 		stepAcc = 0,
 		stepKey = nil,
 		stepShown = 0,
+		masteryAcc = 0,
+		giantTier = nil,
+		giantBig = nil,
 	}
 	sessions[player] = s
 	Analytics.setSegment(player, "sessionBand", sessionBand(math.max(0, num(statsOf(data).sessions, 0))))
@@ -1339,10 +1443,14 @@ local function onReady(player: Player)
 	end
 	if s.v2 then
 		-- Carnet (paliers déjà atteints posés sans carte tant que la carte « Bienvenue » attend), cartes du
-		-- Record R, puis la période de la piste (D10 : vérifiée au début de la session seulement)
-		carnetCheck(player, data, onboardingOf(data).welcomeV2Pending == true)
+		-- Record R, puis la période de la piste (D10 : vérifiée au début de la session seulement) ; maîtrise
+		-- et jalons géants (GiantTier posé à l'arrivée ; maîtrises déjà faites d'un ancien joueur à sa
+		-- migration : Confettis sans carte)
+		local welcome = onboardingOf(data).welcomeV2Pending == true
+		carnetCheck(player, data, welcome)
 		recordCards(player, data, true)
 		ensureTrack(player, data, s)
+		masteryStep(player, data, s, welcome)
 	end
 end
 
@@ -1769,6 +1877,15 @@ function QuestService.step(now: number)
 	local t = if finite(now) then now else Clock.now()
 	for player, s in sessions do
 		Guard.try("quest:step", stepPlayer, player, s, t)
+	end
+end
+
+-- v2.0 (lot A4, étape 5) : crochet appelé après chaque compteur à vie écrit d'un profil v2
+-- (stats.upgradesBought, petitSplorches, objectivesClaimed, tracksDone) : fn(player, clé). CommunityService
+-- y revoit la Déco perso (objets « 25 / 100 objectifs », « 1 / 4 pistes », Carnet 750 / 7 500)
+function QuestService.onLifetime(fn: (Player, string) -> ())
+	if type(fn) == "function" then
+		table.insert(lifetimeHooks, fn)
 	end
 end
 

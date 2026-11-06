@@ -34,22 +34,10 @@ export type IntentSpecV2 = {
 -- stylua: ignore start
 local IntentsV2: { [string]: IntentSpecV2 } = {
 	-- (BuyUpgrade et JellyAscend : passées dans Config/Intents avec leur handler, lot A2, note
-	-- INT-V2-INTENTS.)
+	-- INT-V2-INTENTS ; PlaceDeco, GiveHeart et SetPhotoMode : passées dans Config/Intents avec leur
+	-- handler, lot A4, journal A4-37. Catalogue vide : toute intention v2.0 est écoutée.)
 	-- (Habillages de ranch : PAS d'intention nouvelle. Les 14 habillages sont les valeurs de
 	-- cosmetics.theme de la v1.3, équipées par EquipCosmetic("theme", id) : docs/04 §27.2, décision C2.)
-	-- Déco perso : objet possédé (1-64, 0 = retirer) dans un emplacement 1-12 de la bonne taille
-	PlaceDeco = { owner = "CommunityService", rate = { 4, 1 }, feature = "DecoPerso", args = {
-		{ name = "item", kind = "int", min = 0, max = 64 },
-		{ name = "slot", kind = "int", min = 1, max = 12 },
-	} },
-	-- Cœur donné au ranch d'un autre joueur présent (pas soi, pas bloqué, 1 par ranch et par jour)
-	GiveHeart = { owner = "CommunityService", rate = { 2, 1 }, activity = true, feature = "Hearts", args = {
-		{ name = "ownerId", kind = "userId" },
-	} },
-	-- Mode photo : analytique et personnage figé MAIS VISIBLE des autres ; aucun avantage
-	SetPhotoMode = { owner = "CommunityService", rate = { 1, 1 }, feature = "PhotoMode", args = {
-		{ name = "on", kind = "bool" },
-	} },
 }
 -- stylua: ignore end
 

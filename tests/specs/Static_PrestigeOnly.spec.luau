@@ -23,7 +23,6 @@ return function(T)
 	local LEGACY = {
 		["src/client/Controllers/RanchRenderer.luau"] = 3, -- ranch.R public (B4 : BestR avec RecordR)
 		["src/server/Ranch/PadRules.luau"] = 1, -- A2
-		["src/server/Services/CommunityService.luau"] = 1, -- A4 (cosmétiques « recordR »)
 		["src/server/Services/EconomyService.luau"] = 9, -- A2
 		["src/server/Services/RanchService.luau"] = 2, -- A2
 		["src/shared/Logic/Formulas.luau"] = 2, -- A1 (contexte de croissance, aperçu du Grand Splorch)

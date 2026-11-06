@@ -45,7 +45,9 @@ export type IntentSpec = {
 
 local TILES = { "snack", "decor", "pens", "cozyBed" }
 local MOVE_TO = { "pen", "dodo" }
-local COSMETIC_KINDS = { "saddle", "trail", "title", "theme", "flag" }
+-- v2.0 (lot A4, D20) : palette du spectacle du Grand Splorch et coussins des enclos (profil v2,
+-- cosmetics.palette / cosmetics.cushions, attributs Palette / Cushions du ranch)
+local COSMETIC_KINDS = { "saddle", "trail", "title", "theme", "flag", "palette", "cushions" }
 
 -- stylua: ignore start
 local Intents: { [string]: IntentSpec } = {
@@ -120,6 +122,23 @@ local Intents: { [string]: IntentSpec } = {
 	Emote = { owner = "CommunityService", rate = { 1, 1.2 }, activity = true, clientRate = { 1, 1.5 }, args = { { name = "kind", kind = "int", min = 1, max = 3 } } },
 	Clap = { owner = "CommunityService", rate = { 2, 1 }, activity = true, args = { { name = "heroId", kind = "userId" } } },
 	ReportBlocked = { owner = "CommunityService", rate = { 1, 10 }, args = { { name = "userIds", kind = "userIds", max = 200 } } },
+	-- v2.0 (lot A4, note INT-V2-INTENTS : venues de Config/IntentsV2 avec leur handler, mêmes débits et
+	-- arguments). Déco perso [DecoPerso] : objet possédé (1-64, 0 = retirer) dans un emplacement 1-12 de
+	-- la bonne taille (Cosmetics.DecoSlots), jamais posé deux fois
+	PlaceDeco = { owner = "CommunityService", rate = { 4, 1 }, args = {
+		{ name = "item", kind = "int", min = 0, max = 64 },
+		{ name = "slot", kind = "int", min = 1, max = 12 },
+	} },
+	-- Cœur [Hearts] donné au ranch d'un autre joueur présent (pas soi, pas bloqué, 1 par ranch et 20 par
+	-- jour UTC) : intention de jeu
+	GiveHeart = { owner = "CommunityService", rate = { 2, 1 }, activity = true, args = {
+		{ name = "ownerId", kind = "userId" },
+	} },
+	-- Mode photo [PhotoMode] : analytique et état en mémoire ; personnage figé par le client MAIS VISIBLE
+	-- des autres (N22) ; aucun avantage
+	SetPhotoMode = { owner = "CommunityService", rate = { 1, 1 }, args = {
+		{ name = "on", kind = "bool" },
+	} },
 	-- Monde (RanchService) : redemande de l'état des ranchs, des événements et des créatures
 	RequestWorld = { owner = "RanchService", rate = { 1, 2 }, args = {} },
 	-- Diagnostics (DiagnosticsService, GDD §12.11)

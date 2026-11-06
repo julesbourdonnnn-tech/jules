@@ -49,11 +49,23 @@ local Settings = {
 	receiveGifts = { kind = "boolean", default = true, saved = true, order = 8 },
 	-- captures vidéo automatiques des grands moments (GDD §9.5)
 	clips = { kind = "boolean", default = true, saved = true, order = 9 },
-	-- emote de la croix ← (à la place de Bravo), débloquée (Config/Cosmetics, kind "emote")
+	-- emote de la croix ← (à la place de Bravo), débloquée (Config/Cosmetics, kind "emote") ; v2.0
+	-- (lot A4, D21) : emotes du Record R, de l'Atelier, du Carnet et de la semaine (possession revue par
+	-- Logic/Owned : jamais choisies tant que leur interrupteur est coupé)
 	emoteLeft = {
 		kind = "string",
 		default = "bravo",
-		values = { bravo = true, bellyFlop = true, crown = true },
+		values = {
+			bravo = true,
+			bellyFlop = true,
+			crown = true,
+			splorch = true,
+			wave = true,
+			confettiCrown = true,
+			bigPlopDance = true,
+			hammerTap = true,
+			hugEmote = true,
+		},
 		saved = true,
 		order = 10,
 	},

@@ -44,8 +44,9 @@ return function(T)
 			function()
 				local w, p, q = world()
 				local names = intents(w)
-				-- 16 : + MenuActivity (lot A4, N23, journal A4-12)
-				expect(#names).toBe(16)
+				-- 16 : + MenuActivity (lot A4, N23, journal A4-12) ; 19 : + PlaceDeco, GiveHeart, SetPhotoMode
+				-- (lot A4, étape 5, note INT-V2-INTENTS, journal A4-37)
+				expect(#names).toBe(19)
 				local attacked = 0
 				for _, name in names do
 					local function attack()
