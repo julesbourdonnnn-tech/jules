@@ -890,8 +890,16 @@ return function(T)
 		it(
 			"lot A4 : chaque palette et chaque coussin connus gardés ; « » gardé ; objet à sa taille gardé",
 			function()
-				local palettes =
-					{ "candy", "mint", "lavender", "rainbow", "softNight", "icing", "fireworks", "peachPalette" }
+				local palettes = {
+					"candy",
+					"mint",
+					"lavender",
+					"rainbow",
+					"softNight",
+					"icing",
+					"fireworks",
+					"peachPalette",
+				}
 				for _, id in palettes do
 					local d = played()
 					d.cosmetics.palette = id

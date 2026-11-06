@@ -276,6 +276,72 @@ return function(T)
 			end
 		)
 
+		-- Lot A4 (D29, note INT-A2-DIAG) : compteurs nommés des services v2.0
+		it(
+			"count : compté par clé, montré aux administrateurs (« Count:<clé> »), jamais un avertissement ni un ServerError ; 64 clés puis « others »",
+			function()
+				local w = world({ admins = { 1 } })
+				local admin = join(w, 1)
+				local before = w.D.counts()
+				for _ = 1, 3 do
+					w.D.count("UpgradeStale", admin)
+				end
+				w.D.count("ConfigRefused")
+				expect(w.D.counters()).toEqual({ UpgradeStale = 3, ConfigRefused = 1 })
+				-- panneau des administrateurs : lignes « Count:<clé> » (comme StateTimedOut)
+				w.h:fireServer(R .. "RequestDiagnostics", admin, 1)
+				local got = w.h:sentTo(admin, "DiagnosticsSnapshot")
+				local rows = {}
+				for _, e in got[#got][1].entries do
+					rows[e.text] = { e.count, e.kind, e.players }
+				end
+				expect(rows["Count:UpgradeStale"]).toEqual({ 3, 2, 1 })
+				expect(rows["Count:ConfigRefused"]).toEqual({ 1, 2, 0 })
+				-- jamais un avertissement ni une erreur du moteur ; jamais d'analytique ServerError, même
+				-- à l'envoi groupé des 5 minutes ; totaux du jour écrits comme les autres lignes
+				local after = w.D.counts()
+				expect({ after.errors, after.warnings }).toEqual({ before.errors, before.warnings })
+				w.h:settle(2)
+				expect(#analytics(w, "ServerError")).toBe(0)
+				w.Clock.advance(301)
+				w.D.count("UpgradeStale")
+				w.D.step(w.Clock.now())
+				w.h:settle(2)
+				expect(#analytics(w, "ServerError")).toBe(0)
+				w.osClock.advance(3) -- débit de RequestDiagnostics
+				w.h:fireServer(R .. "RequestDiagnostics", admin, 3)
+				got = w.h:sentTo(admin, "DiagnosticsSnapshot")
+				expect(got[#got][1].tab).toBe(3)
+				local today = {}
+				for _, e in got[#got][1].today do
+					today[e.text] = e.count
+				end
+				expect(today["Count:UpgradeStale"]).toBe(4)
+				-- arguments illisibles : rien compté, aucune erreur ; joueur illisible : compté sans joueur
+				w.D.count(nil)
+				w.D.count("")
+				w.D.count(5)
+				w.D.count("Bad", "pas un joueur")
+				expect(w.D.counters().Bad).toBe(1)
+				-- 64 clés au plus (3 déjà vues), puis « others »
+				for i = 1, 70 do
+					w.D.count("k" .. i)
+				end
+				local c = w.D.counters()
+				local keys = 0
+				for key in c do
+					if key ~= "others" then
+						keys += 1
+					end
+				end
+				expect(keys).toBe(w.D.CounterKeys)
+				expect(c.others).toBe(70 - (w.D.CounterKeys - 3))
+				expect(c.k61).toBe(1)
+				expect(c.k62).toBeNil()
+				expect(w.D.debugState().internal).toBe(0)
+			end
+		)
+
 		it(
 			"ClientEvent : analytique seulement (QualityReduced avec l'appareil, ShopOpened), 20 par session, profil inchangé",
 			function()

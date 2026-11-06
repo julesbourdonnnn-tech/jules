@@ -341,6 +341,11 @@ return function(T)
 				expect(gloves).toBe(10)
 				-- jamais une pression du joueur (jauge, objectifs, classements)
 				expect(w.playerPresses).toBe(0)
+				-- compteurs transmis à Diagnostics (lot A4, D29) : « Count:Helper<nom> », sans trace
+				local diag = w.h:require(S .. "DiagnosticsService").counters()
+				local own = w.Helper.counters()
+				expect({ diag.HelperPressed, diag.HelperChosen }).toEqual({ own.Pressed, own.Chosen })
+				expect(own.Pressed).toBe(6)
 				clean(w)
 			end
 		)

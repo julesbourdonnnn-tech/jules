@@ -641,7 +641,19 @@ return function(T)
 			ok.moon.sessions, ok.stats.objectivesClaimed, ok.stats.tracksDone = 4, 100, 4
 			ok.settings.haloOn = false
 			ok.cosmetics.cushions = "pinkCushions"
-			for _, id in { "", "candy", "mint", "lavender", "rainbow", "softNight", "icing", "fireworks", "peachPalette" } do
+			for _, id in
+				{
+					"",
+					"candy",
+					"mint",
+					"lavender",
+					"rainbow",
+					"softNight",
+					"icing",
+					"fireworks",
+					"peachPalette",
+				}
+			do
 				ok.cosmetics.palette = id
 				expect({ id = id, bad = I.profile(ok) }).toEqual({ id = id, bad = {} })
 			end
