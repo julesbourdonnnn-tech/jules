@@ -6,6 +6,8 @@
 -- caractères, UTF-8 invalide, tables), valeurs limites, objets et palette d'un autre joueur, cœur à
 -- soi-même, rafales de 1 000 messages → aucune mutation d'un profil, aucun Feedback, au plus le débit de
 -- Config/Intents, aucune trace (ZeroLog, Diagnostics sans erreur).
+-- Étape 6 (D29) : ClientMetric (faits mesurés par le client) attaqué de même ; 1 000 messages valides
+-- seau vidé : 20 comptés par session au plus, compteurs nommés jamais saturés par un client.
 local Bots = require("../harness/Bots")
 local Brains = require("../harness/Brains")
 local Fuzz = require("../harness/Fuzz")
@@ -17,7 +19,15 @@ return function(T)
 	local S = "ServerScriptService.Server.Services."
 	local L = "ReplicatedStorage.Shared."
 	local R = "ReplicatedStorage.Remotes."
-	local NAMES = { "PlaceDeco", "GiveHeart", "SetPhotoMode", "EquipCosmetic", "SetSetting", "MenuActivity" }
+	local NAMES = {
+		"PlaceDeco",
+		"GiveHeart",
+		"SetPhotoMode",
+		"EquipCosmetic",
+		"SetSetting",
+		"MenuActivity",
+		"ClientMetric",
+	}
 	local FLAGS = {
 		"DecoPerso",
 		"Hearts",
@@ -257,6 +267,93 @@ return function(T)
 						seen[item] = true
 					end
 				end
+				clean(w)
+			end
+		)
+
+		-- étape 6 (D29, journal A4-44)
+		it(
+			"ClientMetric : valeurs limites et sortes coupées refusées ; 1 000 messages valides seau vidé : 20 comptés au plus ; compteurs nommés jamais saturés ; aucun profil changé ni envoi",
+			function()
+				local w, p, q = world()
+				local nan = 0 / 0
+				-- UpgradesScreen et JellyAscend coupés : sortes liées refusées
+				for i, c in
+					{
+						{ "upgradeTimeout", 1 },
+						{ "upgradeMode", 10 },
+						{ "ascendPreview", 0 },
+						{ "ascendDeclined", 4 },
+						{ "textScale", -1 },
+						{ "textScale", 1001 },
+						{ "textScale", 1.5 },
+						{ "textScale", nan },
+						{ "textScale", math.huge },
+						{ "textScale", "100" },
+						{ "textScale" },
+						{ "styleFallback", {} },
+						{ "visualBudget", true },
+						{ "VisualBudget", 1 },
+						{ "", 1 },
+						{ nil, 1 },
+						{ string.rep("v", 100000), 1 },
+					}
+				do
+					untouched(w, p, q, i .. ":ClientMetric", function()
+						w.RateLimit.clear(p)
+						w.h:fireServer(R .. "ClientMetric", p, c[1], c[2])
+					end)
+				end
+				expect(w.Diag.counters()).toEqual({})
+				assert(w.Features.set("UpgradesScreen", true))
+				assert(w.Features.set("JellyAscend", true))
+				-- mode d'achat et étape de l'aperçu hors liste : refusés
+				for _, c in { { "upgradeMode", 2 }, { "upgradeMode", 100 }, { "ascendPreview", 3 } } do
+					w.RateLimit.clear(p)
+					w.h:fireServer(R .. "ClientMetric", p, c[1], c[2])
+				end
+				expect(w.Diag.counters()).toEqual({})
+				-- 1 000 messages valides, seau vidé à chaque fois, valeurs toutes différentes : 20 comptés
+				untouched(w, p, q, "ClientMetric x1000", function()
+					for i = 1, 1000 do
+						w.RateLimit.clear(p)
+						w.h:fireServer(
+							R .. "ClientMetric",
+							p,
+							if i % 2 == 0 then "textScale" else "styleFallback",
+							i
+						)
+					end
+				end)
+				local c = w.Diag.counters()
+				local total, keys = 0, 0
+				for key, n in c do
+					total += n
+					keys += 1
+					expect({
+						key = key,
+						ok = string.find(key, "TextScaleMeasured:", 1, true) == 1
+							or string.find(key, "StyleFallback:", 1, true) == 1,
+					}).toEqual({ key = key, ok = true })
+				end
+				expect(total).toBe(w.Diag.ClientMetricsPerSession)
+				expect(keys <= 2 * (w.Diag.ClientMetricValues + 1)).toBe(true)
+				-- un autre joueur : sa propre session de 20 ; les valeurs au-delà de 8 par compteur → other
+				for i = 1, 30 do
+					w.RateLimit.clear(q)
+					w.h:fireServer(R .. "ClientMetric", q, "textScale", 500 + i)
+				end
+				c = w.Diag.counters()
+				local named = 0
+				for key in c do
+					if
+						string.find(key, "TextScaleMeasured:", 1, true) == 1
+						and key ~= "TextScaleMeasured:other"
+					then
+						named += 1
+					end
+				end
+				expect(named).toBe(w.Diag.ClientMetricValues)
 				clean(w)
 			end
 		)

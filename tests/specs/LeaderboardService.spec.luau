@@ -5,6 +5,9 @@
 -- record seulement), bannis jamais écrits, top 10 (120 s) et noms (caché d'un autre serveur → "", panne
 -- de UserService → "", aucun avertissement), changement de semaine (prev, titres), statue et fanfare,
 -- LeaderboardState, zéro trace.
+-- v2.0 (lot A4, étape 6, D28) : aucun nouveau classement ; un Petit Splorch ajoute 0 à « Plus
+-- généreux » ; le Livre des records (confettiTotal, bestR, ascend, hearts.receivedTotal,
+-- stats.upgradesBought) arrive au seul propriétaire par DataSnapshot / DataPatch, jamais aux autres.
 local Bots = require("../harness/Bots")
 local Brains = require("../harness/Brains")
 local MockInstance = require("../harness/MockInstance")
@@ -360,6 +363,166 @@ return function(T)
 				expect(old ~= nil and old["2"] ~= nil).toBe(true)
 				expect(w.L.decode(old["2"])).toBe(5)
 				expect(new == nil or new["2"] == nil).toBe(true)
+			end
+		)
+	end)
+
+	-- =========================================================================================
+	-- v2.0 (lot A4, étape 6, D28 ; journal A4-46)
+	-- =========================================================================================
+	describe("LeaderboardService › v2.0 : Livre des records et « Plus généreux » (D28)", function()
+		local HarnessV2 = setmetatable({
+			new = function(options)
+				local hh = Harness.new(options)
+				hh:require("ReplicatedStorage.Shared.Config.Features").Defaults.SchemaV2 = true
+				return hh
+			end,
+		}, { __index = Harness })
+		local FLAGS =
+			{ "RecordR", "Confetti", "JellyAscend", "PetitSplorch", "Hearts", "Carnet", "UpgradesScreen" }
+		-- valeurs repères du Livre des records de p (introuvables ailleurs)
+		local CONFETTI_TOTAL, HEARTS, BOUGHT = 777001, 77701, 77801
+
+		-- une valeur repère dans une charge utile (tables imbriquées comprises)
+		local function carries(value, marks, depth)
+			depth = depth or 0
+			if type(value) == "number" then
+				return marks[value] == true
+			end
+			if type(value) ~= "table" or depth > 12 then
+				return false
+			end
+			for k, v in value do
+				if carries(k, marks, depth + 1) or carries(v, marks, depth + 1) then
+					return true
+				end
+			end
+			return false
+		end
+
+		-- valeur d'une clé dans une charge utile, la moins profonde d'abord (parcours en largeur)
+		local function keyOf(value, key)
+			local queue = { value }
+			local i = 1
+			while i <= #queue and i < 5000 do
+				local t = queue[i]
+				i += 1
+				if type(t) == "table" then
+					if t[key] ~= nil then
+						return t[key]
+					end
+					for _, v in t do
+						if type(v) == "table" then
+							table.insert(queue, v)
+						end
+					end
+				end
+			end
+			return nil
+		end
+
+		it(
+			"Petit Splorch : « Plus généreux » + 0 ; Livre des records au seul propriétaire (DataSnapshot puis DataPatch), jamais à un autre joueur",
+			function()
+				local w = Brains.boot(HarnessV2, { t0 = 1800000000 + 60, stubMeta = false })
+				w.L = w.h:require(S .. "LeaderboardService")
+				for _, key in FLAGS do
+					assert(w.Features.set(key, true), key)
+				end
+				-- p : après une Ascension (A = 1, Record R 15), remonte à r = 3 : prochain prestige = Petit Splorch
+				local p = Brains.join(w, 1, {
+					profile = Brains.profile(w, {
+						coins = 1e12,
+						R = 3,
+						squishies = { { s = 1, z = 100, bf = 1 }, { s = 2, z = 300000 }, { s = 3, z = 300 } },
+						tiles = { snack = 6, decor = 4 },
+						edit = function(d)
+							d.bestR = 15
+							d.ascend = 1
+							d.confettiTotal = CONFETTI_TOTAL
+							d.hearts.receivedTotal = HEARTS
+							d.stats.upgradesBought = BOUGHT
+						end,
+					}),
+				})
+				local q = Brains.join(w, 2, {
+					profile = Brains.profile(w, { squishies = { { s = 2, z = 500 }, { s = 5, z = 400 } } }),
+				})
+				Bots.place(p, Brains.atRanch(w, p, 0, 30))
+				Brains.frames(w, 2)
+				-- 1) l'instantané du propriétaire porte les 5 champs du Livre des records
+				local snaps = w.h:sentTo(p, "DataSnapshot")
+				expect(#snaps >= 1).toBe(true)
+				local snap = snaps[#snaps][1]
+				expect(keyOf(snap, "confettiTotal")).toBe(CONFETTI_TOTAL)
+				expect(keyOf(snap, "bestR")).toBe(15)
+				expect(keyOf(snap, "ascend")).toBe(1)
+				expect(keyOf(snap, "receivedTotal")).toBe(HEARTS)
+				expect(keyOf(snap, "upgradesBought")).toBe(BOUGHT)
+				-- 2) niveau acheté et cœur reçu, puis Petit Splorch (hors file) : « Plus généreux » inchangé,
+				-- aucun Splorched
+				local patches0 = #w.h:sentTo(p, "DataPatch")
+				local level = w.DS.get(p).tiles.snack
+				local bought = w.Economy.buyUpgrade(p, "snack", 1, level)
+				expect({ to = bought and bought.to, reason = bought and bought.reason }).toEqual({
+					to = level + 1,
+					reason = nil,
+				})
+				w.h:fireServer("ReplicatedStorage.Remotes.GiveHeart", q, p.UserId)
+				Brains.frames(w, 3)
+				expect(w.DS.get(p).hearts.receivedTotal).toBe(HEARTS + 1)
+				expect(w.DS.get(p).stats.upgradesBought).toBe(BOUGHT + 1)
+				local splorched = 0
+				w.Signals.Splorched:Connect(function()
+					splorched += 1
+				end)
+				local generous0 = w.DS.get(p).weekly.generous
+				w.h:fireServer("ReplicatedStorage.Remotes.GrandSplorch", p, false, "2")
+				Brains.frames(w, 5)
+				expect(w.DS.get(p).R).toBe(4)
+				expect(splorched).toBe(0)
+				expect(w.DS.get(p).weekly.generous).toBe(generous0)
+				expect(w.DS.get(q).weekly.generous).toBe(0)
+				-- 3) Confettis du Petit Splorch, cœur reçu, niveau acheté : DataPatch au propriétaire
+				local total1 = w.DS.get(p).confettiTotal
+				expect(total1 > CONFETTI_TOTAL).toBe(true)
+				local after = {}
+				for i, args in w.h:sentTo(p, "DataPatch") do
+					if i > patches0 then
+						table.insert(after, args)
+					end
+				end
+				local newMarks = { [total1] = true, [HEARTS + 1] = true, [BOUGHT + 1] = true }
+				for mark in newMarks do
+					expect({ mark = mark, sent = carries(after, { [mark] = true }) }).toEqual({
+						mark = mark,
+						sent = true,
+					})
+				end
+				-- 4) jamais à un autre joueur : aucun message à q (ni à tous) ne porte une valeur repère de p
+				local marks = {
+					[CONFETTI_TOTAL] = true,
+					[HEARTS] = true,
+					[BOUGHT] = true,
+					[total1] = true,
+					[HEARTS + 1] = true,
+					[BOUGHT + 1] = true,
+				}
+				for _, e in w.h.log.clientEvents do
+					if e.player ~= p then
+						expect({ remote = e.remote, leak = carries(e.args, marks) }).toEqual({
+							remote = e.remote,
+							leak = false,
+						})
+					end
+				end
+				for _, e in w.h.log.allClientEvents do
+					expect({ remote = e.remote, leak = carries(e.args, marks) }).toEqual({
+						remote = e.remote,
+						leak = false,
+					})
+				end
+				expect(table.concat(Brains.problems(w), "\n")).toBe("")
 			end
 		)
 	end)

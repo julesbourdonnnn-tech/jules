@@ -5,8 +5,12 @@
 -- des totaux du jour (deltas seulement), ClientEvent analytique seulement (20 par session), attach
 -- (ScriptContext.Error et MessageOut sans double compte), interrupteur Diagnostics, reportCaught,
 -- stateTimedOut, analytique ServerError une fois par clé et par 5 min, zéro trace.
+-- v2.0 (lot A4, étape 6, D29) : ClientMetric (compteurs UpgradeTimeout, TextScaleMeasured:<v>,
+-- StyleFallback:<v>, VisualBudgetExceeded et analytique ; 20 par session ; chaque sorte derrière son
+-- interrupteur et un profil v2 ; jamais un changement du jeu).
 local Bots = require("../harness/Bots")
 local Brains = require("../harness/Brains")
+local Fuzz = require("../harness/Fuzz")
 
 return function(T)
 	local describe, it, expect, Harness = T.describe, T.it, T.expect, T.Harness
@@ -367,6 +371,171 @@ return function(T)
 				expect(w.D.device(p).kind).toBe(3)
 				expect(w.D.device(p).tenFoot).toBe(true)
 				expect(w.h.globals.game:GetService("HttpService"):JSONEncode(DS.get(p).coins)).toBe(before)
+			end
+		)
+	end)
+
+	-- =========================================================================================
+	-- v2.0 (lot A4, étape 6, D29) : ClientMetric
+	-- =========================================================================================
+	local HarnessV2 = setmetatable({
+		new = function(options)
+			local hh = Harness.new(options)
+			hh:require("ReplicatedStorage.Shared.Config.Features").Defaults.SchemaV2 = true
+			return hh
+		end,
+	}, { __index = Harness })
+
+	-- serveur v2 (schéma v2 figé), interrupteurs `flags` ouverts
+	local function worldV2(flags)
+		local w = Brains.boot(HarnessV2, { t0 = T0, stubMeta = false })
+		w.D = w.h:require(S .. "DiagnosticsService")
+		w.A = w.h:require("ServerScriptService.Server.Util.Analytics")
+		w.RateLimit = w.h:require("ServerScriptService.Server.Util.RateLimit")
+		for _, key in flags or {} do
+			assert(w.Features.set(key, true), key)
+		end
+		return w
+	end
+
+	local function metric(w, p, kind, value)
+		w.RateLimit.clear(p)
+		w.h:fireServer(R .. "ClientMetric", p, kind, value)
+	end
+
+	-- événements personnalisés envoyés, par nom : { valeur, champs }
+	local function customs(w, name)
+		local out = {}
+		for _, c in w.h.log.analytics do
+			if c.method == "LogCustomEvent" and c.args[2] == name then
+				table.insert(out, { c.args[3], c.args[4] })
+			end
+		end
+		return out
+	end
+
+	local function fieldOf(w, entry, i)
+		local Keys = w.h.globals.Enum.AnalyticsCustomFieldKeys
+		local f = entry[2]
+		return f and f[Keys["CustomField0" .. i]]
+	end
+
+	describe("Diagnostics › ClientMetric (v2.0, D29)", function()
+		it(
+			"interrupteurs ouverts, profil v2 : chaque sorte comptée (Diagnostics) et envoyée (analytique) ; profil jamais changé",
+			function()
+				local w = worldV2({ "UpgradesScreen", "JellyAscend" })
+				local p = join(w, 1)
+				local same, diffAt = Fuzz.profileUnchanged(w.h, p, function()
+					metric(w, p, "upgradeTimeout", 0)
+					metric(w, p, "upgradeTimeout", 7)
+					metric(w, p, "upgradeMode", 10)
+					metric(w, p, "upgradeMode", 0)
+					metric(w, p, "upgradeMode", 10)
+					metric(w, p, "ascendPreview", 0)
+					metric(w, p, "ascendPreview", 2)
+					metric(w, p, "ascendDeclined", 3)
+					metric(w, p, "textScale", 125)
+					metric(w, p, "styleFallback", 1)
+					metric(w, p, "visualBudget", 0)
+					w.h:settle(2)
+				end)
+				expect({ same = same, at = diffAt }).toEqual({ same = true, at = nil })
+				local c = w.D.counters()
+				expect(c.UpgradeTimeout).toBe(2)
+				expect(c["TextScaleMeasured:125"]).toBe(1)
+				expect(c["StyleFallback:1"]).toBe(1)
+				expect(c.VisualBudgetExceeded).toBe(1)
+				expect(c.UpgradeMode).toBeNil() -- analytique seulement
+				-- immédiats : AscendDeclined (jours), TextScaleMeasured (facteur × 100)
+				expect(customs(w, "AscendDeclined")[1][1]).toBe(3)
+				expect(customs(w, "TextScaleMeasured")[1][1]).toBe(125)
+				-- cumulés par tranche de 5 min : rien avant la fermeture de la tranche
+				expect(#customs(w, "UpgradeTimeout")).toBe(0)
+				w.Clock.advance(301)
+				w.D.step(w.Clock.now())
+				w.h:settle(2)
+				expect(customs(w, "UpgradeTimeout")[1][1]).toBe(2)
+				local modes = {}
+				for _, e in customs(w, "UpgradeMode") do
+					modes[fieldOf(w, e, 1)] = e[1]
+				end
+				expect(modes).toEqual({ ["mode:x10"] = 2, ["mode:max"] = 1 })
+				local steps = {}
+				for _, e in customs(w, "AscendPreview") do
+					steps[fieldOf(w, e, 1)] = e[1]
+				end
+				expect(steps).toEqual({ ["step:opened"] = 1, ["step:confirmed"] = 1 })
+				-- jamais une trace, jamais un avertissement de Diagnostics
+				expect(w.D.counts().errors).toBe(0)
+				expect(w.D.counts().warnings).toBe(0)
+				expect(table.concat(Brains.problems(w), "\n")).toBe("")
+			end
+		)
+
+		it(
+			"20 par session au plus ; valeurs hors liste refusées ; « <clé>:<valeur> » : 8 valeurs par serveur puis « other »",
+			function()
+				local w = worldV2({ "UpgradesScreen" })
+				local p = join(w, 1)
+				local q = join(w, 2)
+				-- mode et étape hors liste : refusés, rien compté (la place de la session reste)
+				metric(w, p, "upgradeMode", 5)
+				metric(w, p, "upgradeMode", 1000)
+				metric(w, p, "ascendPreview", 1) -- JellyAscend coupé
+				expect(w.D.counters().UpgradeTimeout).toBeNil()
+				for _ = 1, 30 do
+					metric(w, p, "upgradeTimeout", 1)
+				end
+				expect(w.D.counters().UpgradeTimeout).toBe(w.D.ClientMetricsPerSession)
+				expect(w.D.ClientMetricsPerSession).toBe(20)
+				-- 12 valeurs distinctes de textScale (deux joueurs) : 8 clés puis « other »
+				for i = 1, 6 do
+					metric(w, q, "textScale", 100 + i)
+				end
+				for i = 7, 12 do
+					metric(w, q, "textScale", 100 + i)
+				end
+				local c = w.D.counters()
+				local named = 0
+				for key in c do
+					if string.find(key, "TextScaleMeasured:1", 1, true) == 1 then
+						named += 1
+					end
+				end
+				expect(named).toBe(8)
+				expect(c["TextScaleMeasured:other"]).toBe(4)
+				expect(w.D.debugState().internal).toBe(0)
+			end
+		)
+
+		it(
+			"interrupteurs coupés ou profil v1 : sortes liées refusées (rien compté ni envoyé) ; diagnostics de base toujours acceptés",
+			function()
+				-- serveur v1 (lancement) : profil v1, interrupteurs coupés
+				local w = world()
+				w.RateLimit = w.h:require("ServerScriptService.Server.Util.RateLimit")
+				local p = join(w, 1)
+				local before = #w.h.log.analytics
+				metric(w, p, "upgradeTimeout", 1)
+				metric(w, p, "upgradeMode", 1)
+				metric(w, p, "ascendPreview", 0)
+				metric(w, p, "ascendDeclined", 2)
+				w.h:settle(2)
+				expect(w.D.counters()).toEqual({})
+				w.Clock.advance(301)
+				w.D.step(w.Clock.now())
+				w.h:settle(2)
+				expect(#w.h.log.analytics).toBe(before)
+				-- UpgradesScreen ouvert mais profil v1 (schéma v2 coupé) : toujours refusé
+				assert(w.Features.set("UpgradesScreen", true))
+				metric(w, p, "upgradeTimeout", 1)
+				expect(w.D.counters().UpgradeTimeout).toBeNil()
+				-- diagnostics de base (B1, B4) : acceptés pour tous
+				metric(w, p, "visualBudget", 3)
+				metric(w, p, "styleFallback", 2)
+				expect(w.D.counters().VisualBudgetExceeded).toBe(1)
+				expect(w.D.counters()["StyleFallback:2"]).toBe(1)
 			end
 		)
 	end)
