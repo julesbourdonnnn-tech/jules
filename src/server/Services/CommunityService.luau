@@ -852,7 +852,14 @@ local function onGiveHeart(giver: Player, ownerId: number): boolean
 	DataService.markDirty(giver, "hearts")
 	DataService.markDirty(owner, "hearts")
 	Notify.feedback(giver, "hearts.given", {}, "reward")
-	Notify.feedback(owner, "hearts.received", { name = CommunityService.displayName(giver) }, "reward")
+	-- userId du donneur : son nom caché (« Cacher mon nom », name = "") devient l'alias « Squishy Fan
+	-- #NNNN » chez le client (Hud/Util.vars), comme les autres textes qui portent un nom (relecture A4, A4-51)
+	Notify.feedback(
+		owner,
+		"hearts.received",
+		{ name = CommunityService.displayName(giver), userId = giver.UserId },
+		"reward"
+	)
 	return true
 end
 
