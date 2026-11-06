@@ -24,6 +24,7 @@ local FontCmap = require("../harness/FontCmap")
 
 local UDim2 = roblox.UDim2
 local Vector2 = roblox.Vector2
+local Enum = roblox.Enum
 
 local WITNESS = serde.decode("json", fs.readFile("tests/fixtures/profiles/v2.json"))
 local CMAPS = FontCmap.load()
@@ -486,6 +487,135 @@ return function(T)
 				expect(d.size).toBe(36)
 				expect(tile.parts.word.Text).toBe("+99999 Confettis")
 				expect(c.Icons.kindOf(tile.parts.stateIcon)).toBe(nil)
+				clean(c.h)
+			end
+		)
+	end)
+
+	-- Défauts vus sur les captures de l'étape 1 (outil d'écrans, tv1080 / tv720 / tv2160, FR et EN) :
+	-- chacun montré rouge avant la correction de UI/UpgradeCard
+	describe("UpgradeCard › relecture des captures (lot B2, étape 1)", function()
+		local function centerX(r)
+			return r.x + r.w / 2
+		end
+
+		it(
+			"Monuments : « Revenu +3 % », flèche dessinée et « +4 % » (le libellé porte la valeur d'avant), ligne et carte",
+			function()
+				local c = setup("fr")
+				local v = c.V.view(
+					"monument",
+					snapOf(c, function(p)
+						p.tiles.monuments = 3
+						p.bestR = 12
+						p.tiles.snack = 12
+						p.coins = 1e300
+					end),
+					1,
+					{ lang = "fr" }
+				)
+				expect(v.state).toBe("ready")
+				for _, template in { "row", "card" } do
+					local card = c.Card.new(template, nil)
+					place(c, card)
+					card:set(v.state, v)
+					Layout.apply(c.h)
+					local p = card.parts
+					expect(p.effectLabel.Visible).toBe(true)
+					expect(p.effectLabel.Text).toBe("Revenu +3 %")
+					expect(p.before.Visible).toBe(false)
+					expect(c.Icons.kindOf(p.effectArrow)).toBe("arrowRight")
+					expect(p.after.Visible).toBe(true)
+					expect(p.after.Text).toBe("+4 %")
+					local label, arrow, after =
+						Layout.rect(p.effectLabel), Layout.rect(p.effectArrow), Layout.rect(p.after)
+					expect(arrow.x + arrow.w <= after.x + 0.5).toBe(true)
+					if template == "row" then
+						-- ligne : « Revenu +3 % » finit contre la flèche (même colonne que « ×1,000 » des Gants)
+						expect(label.x + label.w <= arrow.x + 0.5).toBe(true)
+						expect(p.effectLabel.TextXAlignment).toBe(Enum.TextXAlignment.Right)
+						local ok = TextFit.fits(p.effectLabel)
+						expect(ok).toBe(true)
+					end
+					expect(table.concat(audit(c, card, template .. "/monument"), "\n")).toBe("")
+					-- au maximum : le libellé seul, sans flèche ni valeur après
+					local max = c.V.view(
+						"monument",
+						snapOf(c, function(p2)
+							p2.tiles.monuments = 10
+							p2.bestR = 24
+							p2.tiles.snack = 12
+						end),
+						1,
+						{ lang = "fr" }
+					)
+					expect(max.state).toBe("max")
+					card:set(max.state, max)
+					expect(p.effectLabel.Text).toBe("Revenu +10 %")
+					expect(p.after.Visible).toBe(false)
+					expect(c.Icons.kindOf(p.effectArrow)).toBe(nil)
+					card.root:Destroy()
+				end
+				clean(c.h)
+			end
+		)
+
+		it(
+			"carte au MAX : le niveau seul et la valeur seule sont centrés sur la carte (aucune moitié vide)",
+			function()
+				local c = setup("fr")
+				local card = c.Card.new("card", nil)
+				place(c, card)
+				local box
+				local p = card.parts
+				-- MAX : « Niv. 14 » et « 18 » centrés
+				card:set("max", stateView(c, "max", 1))
+				Layout.apply(c.h)
+				box = Layout.rect(card.root)
+				expect(p.levelA.Text).toBe("Niv. 14")
+				expect(p.levelB.Visible).toBe(false)
+				expect(p.levelA.TextXAlignment).toBe(Enum.TextXAlignment.Center)
+				expect(math.abs(centerX(Layout.rect(p.levelA)) - centerX(box)) <= 1).toBe(true)
+				expect(p.before.Visible).toBe(true)
+				expect(p.after.Visible).toBe(false)
+				expect(p.before.TextXAlignment).toBe(Enum.TextXAlignment.Center)
+				expect(math.abs(centerX(Layout.rect(p.before)) - centerX(box)) <= 1).toBe(true)
+				-- puis prête : de nouveau « avant » à droite de sa moitié, flèche, « après »
+				card:set("ready", stateView(c, "ready", 1))
+				Layout.apply(c.h)
+				expect(p.levelA.TextXAlignment).toBe(Enum.TextXAlignment.Right)
+				expect(p.before.TextXAlignment).toBe(Enum.TextXAlignment.Right)
+				local la, arrow = Layout.rect(p.levelA), Layout.rect(p.levelArrow)
+				expect(la.x + la.w <= arrow.x + 0.5).toBe(true)
+				local b, ea = Layout.rect(p.before), Layout.rect(p.effectArrow)
+				expect(b.x + b.w <= ea.x + 0.5).toBe(true)
+				clean(c.h)
+			end
+		)
+
+		it(
+			"ligne sans seconde ligne (« Pour le plaisir ») : le nom est centré en hauteur, puis revient en haut",
+			function()
+				local c = setup("fr")
+				local row = c.Card.new("row", nil)
+				place(c, row)
+				local rich = snapOf(c, function(p)
+					p.coins = 1e300
+					p.confetti = 1e6
+				end)
+				local fun = c.V.view("fun.title", rich, 1, { lang = "fr" })
+				expect(fun.effect).toBe(nil)
+				row:set(fun.state, fun)
+				Layout.apply(c.h)
+				local box = Layout.rect(row.root)
+				local name = Layout.rect(row.parts.name)
+				expect(row.parts.effectLabel.Visible).toBe(false)
+				expect(math.abs((name.y + name.h / 2) - (box.y + box.h / 2)) <= 1).toBe(true)
+				-- une ligne avec un avant → après : le nom revient sur la première ligne
+				row:set("ready", stateView(c, "ready", 1))
+				Layout.apply(c.h)
+				name = Layout.rect(row.parts.name)
+				expect(name.y + name.h <= Layout.rect(row.parts.effectLabel).y + 0.5).toBe(true)
 				clean(c.h)
 			end
 		)

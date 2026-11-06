@@ -93,6 +93,14 @@ local ROW_W, ROW_H = U.Row.w, U.Row.h
 local TILE_W, TILE_H = U.Tile.w, U.Tile.h
 local MARGIN = U.Tile.margin -- 16 : marge intérieure des 3 gabarits
 local CARD_IN = CARD_W - 2 * MARGIN -- 400 : largeur utile d'une carte
+local CARD_HALF = (CARD_IN - 64) / 2 -- 168 : valeur avant / après de part et d'autre de la flèche (64)
+-- Colonne Texte d'une ligne (Layout.Upgrades.Columns.text, 540) : libellé, avant, flèche, après
+local ROW_VALUE_W = 120 -- place réservée d'une valeur (UI/Format.Reserved : ×, %, s)
+local ROW_ARROW_SLOT = 40
+local ROW_LABEL_FULL = COL.text.w -- libellé seul (« Revenu total +1,2 % »)
+local ROW_LABEL_SHORT = COL.text.w - 2 * ROW_VALUE_W - ROW_ARROW_SLOT - 2 * 8 -- 244 : libellé et 2 valeurs
+local ROW_LABEL_CARRY = ROW_LABEL_SHORT + 8 + ROW_VALUE_W -- 372 : libellé qui porte la valeur d'avant
+local ROW_NAME_Y, ROW_NAME_H = 10, 44 -- nom (centré en hauteur quand la seconde ligne est vide)
 
 -- Couleurs (charte des panneaux, GDD §10.1)
 local COLORS = {
@@ -309,7 +317,7 @@ end
 
 local function buildCard(root: GuiObject, o: Options): Parts
 	local x0 = MARGIN
-	local half = (CARD_IN - 64) / 2 -- 168 : valeur avant / après de part et d'autre de la flèche (64)
+	local half = CARD_HALF
 	local arrowX = x0 + half + (64 - 32) / 2
 	local p: Parts = {
 		icon = canvas(
@@ -427,9 +435,9 @@ end
 
 local function buildRow(root: GuiObject, o: Options): Parts
 	local text, level, price, state = COL.text, COL.level, COL.effect, COL.state
-	local valueW = 120 -- place réservée d'une valeur (UI/Format.Reserved : ×, %, s)
-	local arrowSlot = 40
-	local labelW = text.w - 2 * valueW - arrowSlot - 2 * 8
+	local valueW = ROW_VALUE_W
+	local arrowSlot = ROW_ARROW_SLOT
+	local labelW = ROW_LABEL_SHORT
 	local beforeX = text.x + labelW + 8
 	local arrowX = beforeX + valueW + (arrowSlot - 32) / 2
 	local afterX = beforeX + valueW + arrowSlot
@@ -440,9 +448,9 @@ local function buildRow(root: GuiObject, o: Options): Parts
 			root,
 			"Name",
 			text.x,
-			10,
+			ROW_NAME_Y,
 			text.w,
-			44,
+			ROW_NAME_H,
 			U.Card.title,
 			Enum.TextXAlignment.Left,
 			COLORS.text,
@@ -667,6 +675,22 @@ local function color(l: GuiObject?, c: Color3)
 	end
 end
 
+-- Largeur, abscisse et alignement d'un texte (écrit seulement ce qui change ; aucune instance créée)
+local function fit(l: TextLabel?, x: number, w: number, align: Enum.TextXAlignment)
+	if l == nil then
+		return
+	end
+	if l.Position.X.Offset ~= x then
+		l.Position = UDim2.fromOffset(x, l.Position.Y.Offset)
+	end
+	if l.Size.X.Offset ~= w then
+		l.Size = UDim2.fromOffset(w, l.Size.Y.Offset)
+	end
+	if l.TextXAlignment ~= align then
+		l.TextXAlignment = align
+	end
+end
+
 -- Pose l'état et la vue (même vue pour la carte, la ligne et le bandeau : règle 8)
 function UpgradeCard.set(self: Card, state: string, view: UpgradeView.View)
 	local p = self.parts
@@ -697,29 +721,46 @@ function UpgradeCard.set(self: Card, state: string, view: UpgradeView.View)
 		setText(p.reason, view.reason)
 	end
 
-	-- avant → après (flèche dessinée seulement entre deux valeurs)
+	-- avant → après : flèche dessinée devant chaque valeur après ; le libellé peut porter la valeur
+	-- d'avant (Monuments : « Revenu +3 % », flèche, « +4 % », GDD §10.7.7)
 	local effect = view.effect
 	local fb = self.fb
 	if self.template ~= "tile" then
-		local hasValues = effect ~= nil and effect.before ~= nil and fb == nil
-		local hasAfter = effect ~= nil and effect.after ~= nil and effect.before ~= nil
+		local shown = if fb == nil then effect else nil
+		local before = if shown then shown.before else nil
+		local after = if shown then shown.after else nil
 		-- ligne : le retour chiffré prend la place de l'avant → après (« dans la ligne même »)
 		local rowFb = fb ~= nil and self.template == "row"
-		setText(p.effectLabel, if rowFb then fb elseif effect and not fb then effect.label else nil)
-		color(p.effectLabel, if rowFb then COLORS.text else COLORS.dim)
-		setText(p.before, if effect and not fb then effect.before else nil)
-		setText(p.after, if hasAfter and not fb then (effect :: UpgradeView.Effect).after else nil)
-		if p.effectArrow then
-			Icons.draw(p.effectArrow, if hasAfter and not fb then "arrowRight" else nil)
-		end
-		-- ligne : le libellé seul prend toute la colonne Texte (« Revenu total +1,2 % »)
-		if self.template == "row" and p.effectLabel then
-			local full = COL.text.w
-			local short = full - 2 * 120 - 40 - 16
-			local w = if hasValues then short else full
-			if p.effectLabel.Size.X.Offset ~= w then
-				p.effectLabel.Size = UDim2.fromOffset(w, p.effectLabel.Size.Y.Offset)
+		local labelText = if rowFb then fb elseif shown then shown.label else nil
+		if self.template == "row" then
+			-- libellé seul : toute la colonne Texte (« Revenu total +1,2 % ») ; avec deux valeurs : sa part à
+			-- gauche ; s'il porte la valeur d'avant : jusqu'à la flèche, calé contre elle (comme « ×1,000 »)
+			if before ~= nil then
+				fit(p.effectLabel, COL.text.x, ROW_LABEL_SHORT, Enum.TextXAlignment.Left)
+			elseif after ~= nil then
+				fit(p.effectLabel, COL.text.x, ROW_LABEL_CARRY, Enum.TextXAlignment.Right)
+			else
+				fit(p.effectLabel, COL.text.x, ROW_LABEL_FULL, Enum.TextXAlignment.Left)
 			end
+			-- nom centré en hauteur quand la seconde ligne est vide (lignes de « Pour le plaisir »)
+			local nameY = if labelText ~= nil then ROW_NAME_Y else (ROW_H - ROW_NAME_H) / 2
+			if p.name.Position.Y.Offset ~= nameY then
+				p.name.Position = UDim2.fromOffset(p.name.Position.X.Offset, nameY)
+			end
+		else
+			-- carte : une valeur seule (au maximum) est centrée sur la carte, jamais dans une moitié vide
+			if after == nil then
+				fit(p.before, MARGIN, CARD_IN, Enum.TextXAlignment.Center)
+			else
+				fit(p.before, MARGIN, CARD_HALF, Enum.TextXAlignment.Right)
+			end
+		end
+		setText(p.effectLabel, labelText)
+		color(p.effectLabel, if rowFb then COLORS.text else COLORS.dim)
+		setText(p.before, before)
+		setText(p.after, after)
+		if p.effectArrow then
+			Icons.draw(p.effectArrow, if after ~= nil then "arrowRight" else nil)
 		end
 	end
 
@@ -760,6 +801,12 @@ function UpgradeCard.set(self: Card, state: string, view: UpgradeView.View)
 		end
 	elseif self.template == "card" then
 		local cl = view.cardLevel
+		-- « Niv. 14 » seul (au maximum) : centré sur la carte ; sinon « Niv. 7 », flèche, « 8 »
+		if cl.after == nil then
+			fit(p.levelA, MARGIN, CARD_IN, Enum.TextXAlignment.Center)
+		else
+			fit(p.levelA, MARGIN, CARD_HALF, Enum.TextXAlignment.Right)
+		end
 		setText(p.levelA, cl.before)
 		setText(p.levelB, cl.after)
 		Icons.draw(p.levelArrow :: Frame, if cl.before and cl.after then "arrowRight" else nil)
