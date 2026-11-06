@@ -682,6 +682,10 @@ function CommunityService.Init()
 	for kind, priority in BANNERS.Priority do
 		Notify.BANNER_PRIORITY[kind] = priority
 	end
+	-- v2.0 (lot A4, D5) : bannières v2.0 (« ascend »), jamais envoyées tant que leur interrupteur est coupé
+	for kind, priority in BANNERS.PriorityV2 do
+		Notify.BANNER_PRIORITY[kind] = priority
+	end
 	Guard.connect("PetPress", onPetPress)
 	Guard.connect("SetSetting", onSetSetting)
 	Guard.connect("EquipCosmetic", onEquipCosmetic)

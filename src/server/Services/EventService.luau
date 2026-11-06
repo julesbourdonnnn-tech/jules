@@ -11,9 +11,11 @@
 --     des spectacles) → WOBBLE PARTY 5 min (jauge figée) → 0 → sieste de Big Plop (RestSeconds) : les
 --     points continuent, aucune fête avant la fin de la sieste.
 --   * Joueurs actifs : Activity, ou ≤ 60 studs du centre de la place pendant l'alerte du MEGA.
---   * File des grands spectacles (Grand Splorch, danse) : ≥ 20 s entre deux départs, jamais pendant un
---     Rush ou un MEGA (± 20 s), place et attente prévue par entrée, coupure dure à 480 s ; héros parti
---     avant l'éclatement : spectacle effacé aussitôt (A26).
+--   * File des grands spectacles (Grand Splorch, danse ; v2.0 : Jelly Ascend, sorte « ascend » de
+--     Events.Spectacles, 10 s, coupure 12 s) : ≥ 20 s entre deux départs, jamais pendant un Rush ou un
+--     MEGA (± 20 s), place et attente prévue par entrée (durée de SA sorte), coupure dure à 480 s ; héros
+--     parti avant l'éclatement de SA sorte (Grand Splorch 3,2 s, Jelly Ascend 4,0 s) : spectacle effacé
+--     aussitôt (A26). Un seul prestige par joueur dans la file : règle de SplorchService.
 --   * Boosts de serveur : payé > administrateur > Wobble Party, jamais cumulés (le moins prioritaire est
 --     en pause) ; Squish Party : un reçu pendant une fête la PROLONGE de 600 s, segments par acheteur
 --     (partyUnplayed).
@@ -21,6 +23,14 @@
 --   * LiveOps (MessagingService, administrateurs) et AdminCommand ("clock" en Studio seulement).
 --   * EventState : à chaque changement (jauge : au plus toutes les GAUGE_SEND s), à PlayerReady, à
 --     RequestWorld et après chaque Features.set appliqué.
+--   * v2.0 (lot A4, étape 3 ; GDD v2.0 §4.23, §5.6, §7.5 ; docs/04 §27.5) : jauge du Petit Splorch
+--     (PrestigeApplied « petit » : Events.Gauge.Points.petitSplorch ; Splorched = Grand Splorch seulement ;
+--     Jelly Ascend : 0) ; place en fête [Fete] (points en mémoire : Grand Splorch, Jelly Ascend, MEGA
+--     réussi, Wobble Party ; EventState.fete = { level }) ; météo [Weather] (Meta/Weather, purement
+--     visuelle : EventState.weather, renvoyé au début et à la fin de chaque fenêtre) ; moon.sessions d'un
+--     profil v2 à chaque Goutte de Lune ; bébés du MEGA et de la Lune de la qualité du Record R
+--     (EconomyService.recordR, = R pour un profil v1). Interrupteurs coupés : clés absentes d'EventState,
+--     rien écrit, deux lectures d'interrupteur par tick et aucune allocation.
 -- Émet EventPhase, SpectacleStarted, MegaJoined. Remotes : MegaPress, AdminCommand ; EventState,
 -- MegaBeat. Clé : moon.
 
@@ -51,6 +61,8 @@ local MoveCheck = require(Server.Util.MoveCheck)
 local Admins = require(Server.Data.Admins)
 local Guard = require(Server.Chase.Guard)
 local Babies = require(Server.Chase.Babies)
+local PadRules = require(Server.Ranch.PadRules)
+local Weather = require(Server.Meta.Weather)
 
 local DiagnosticsService = require(script.Parent.DiagnosticsService)
 local DataService = require(script.Parent.DataService)
@@ -71,6 +83,7 @@ local MEGA = Events.Mega
 local GAUGE = Events.Gauge
 local GAP = Events.SpectacleGap
 local SPECTACLES = Events.Spectacles
+local FETE = Events.Fete
 local PARTY = Events.Party
 local MAX_DT = 0.3 -- s : durée maximale d'un pas (accroc du serveur)
 local GAUGE_SEND = 1 -- s : EventState pour un simple changement de points, au plus une fois par seconde
@@ -85,8 +98,9 @@ local LIVEOPS_RETRY = 30 -- s entre deux essais d'abonnement
 
 type Forced = { index: number, startsAt: number, endsAt: number }
 type ForcedMega = { index: number, warnAt: number, landsAt: number, endsAt: number, burstEndsAt: number }
+type SpectacleKind = "splorch" | "dance" | "ascend"
 type QueueEntry = {
-	kind: "splorch" | "dance",
+	kind: SpectacleKind,
 	userId: number,
 	slot: number,
 	enqueuedAt: number,
@@ -157,6 +171,14 @@ local lastStartAt = -math.huge
 
 local moonPresence: { [Player]: number } = {}
 local moonSession: { id: number, endsAt: number }? = nil
+
+-- v2.0 (lot A4) : place en fête (points du serveur, en mémoire, repart de 0 avec le serveur) et météo
+-- (prochaine borne de fenêtre, Clock.now()) ; interrupteurs vus au tick précédent (changement en direct :
+-- EventState renvoyé)
+local fete = { points = 0, level = 0 }
+local feteOn = false
+local weatherOn = false
+local weatherNextAt = -math.huge
 
 local dirty = true
 local gaugeDirty = false
@@ -291,6 +313,31 @@ local function addPoints(points: number)
 	end
 end
 
+-- Niveau de la place en fête : nombre de seuils de Events.Fete.Levels atteints (0 à #Levels)
+local function feteLevel(points: number): number
+	local level = 0
+	for i, threshold in FETE.Levels do
+		if points >= threshold then
+			level = i
+		end
+	end
+	return level
+end
+
+-- Points de la place en fête [Fete] (v2.0, lot A4, D26) : comptés seulement interrupteur ouvert ;
+-- EventState renvoyé quand le niveau change. Jamais lus par une récompense, une chance ou un prix
+local function addFete(points: number)
+	if not finite(points) or points <= 0 or Features.get("Fete") ~= true then
+		return
+	end
+	fete.points += points
+	local level = feteLevel(fete.points)
+	if level ~= fete.level then
+		fete.level = level
+		dirty = true
+	end
+end
+
 local function startWobbleParty()
 	local running = wobbleRemaining > 0
 	wobbleRemaining = GAUGE.PartyDuration
@@ -298,6 +345,7 @@ local function startWobbleParty()
 		partyCount += 1
 		partyIndex.wobble = partyCount
 		fire("party", "start", partyCount)
+		addFete(FETE.Points.party)
 	end
 	Notify.banner("wobbleParty", { userId = 0, name = "" }, nil)
 	dirty = true
@@ -306,6 +354,22 @@ end
 -- =============================================================================================
 -- File des grands spectacles
 -- =============================================================================================
+
+-- Sortes de grand spectacle d'un héros : Grand Splorch et Jelly Ascend (v2.0) ; la danse n'en a pas
+local function heroKind(kind: string): boolean
+	return kind == "splorch" or kind == "ascend"
+end
+
+-- Application au profil après le départ : Grand Splorch Balance.Splorch.BurstAt (3,2 s), Jelly Ascend
+-- Balance.Ascend.BurstAt (4,0 s) ; danse : aucune (0)
+local function burstDelay(kind: string): number
+	if kind == "splorch" then
+		return Balance.Splorch.BurstAt
+	elseif kind == "ascend" then
+		return Balance.Ascend.BurstAt
+	end
+	return 0
+end
 
 local function duration(kind: string): number
 	local def = (SPECTACLES :: any)[kind]
@@ -394,7 +458,7 @@ local function startSpectacle(entry: QueueEntry, now: number)
 		kind = entry.kind,
 		userId = entry.userId,
 		startedAt = now,
-		burstAt = if entry.kind == "splorch" then now + Balance.Splorch.BurstAt else now,
+		burstAt = now + burstDelay(entry.kind),
 		endsAt = now + math.min(length, hardCut(entry.kind)),
 		flyer = nil,
 		level = 0,
@@ -565,6 +629,9 @@ local function megaEnd()
 	mega.result = if success then "success" else "fail"
 	mega.phase = "burst"
 	mega.failStreak = if success then 0 else mega.failStreak + 1
+	if success then
+		addFete(FETE.Points.mega) -- une fois par MEGA réussi (v2.0, lot A4)
+	end
 	local participants = 0
 	for _, points in mega.perPlayer do
 		if points >= MEGA.MinPoints then
@@ -589,8 +656,14 @@ local function megaEnd()
 						local rng = Hash.stream(Hash.u32(EventClock.seed("mega", mega.index), player.UserId))
 						local _, biggest = SquishyService.biggest(player)
 						for _ = 1, count do
-							local baby =
-								Babies.mega(rng, EconomyService.R(player), biggest, mega.moon, Clock.unix())
+							-- qualité du Record R (N1, lot A4 : = R pour un profil v1)
+							local baby = Babies.mega(
+								rng,
+								EconomyService.recordR(player),
+								biggest,
+								mega.moon,
+								Clock.unix()
+							)
 							SquishyService.give(player, Babies.spec(baby), "mega")
 							babies += 1
 						end
@@ -762,9 +835,15 @@ local function stepMoon(now: number, dt: number, actors: { [Player]: Types.TickA
 				return
 			end
 			data.moon.lastSession = session.id
+			-- v2.0 (lot A4, D8) : séances de Lune réussies d'un profil v2 (Déco perso « 1re / 4 Jelly Moon »)
+			if PadRules.v2Profile(data) then
+				local sessions = if finite(data.moon.sessions) then data.moon.sessions else 0
+				data.moon.sessions = math.clamp(math.floor(sessions) + 1, 0, 1e9)
+			end
 			DataService.markDirty(player, "moon")
 			local rng = Hash.stream(Hash.u32(session.id, player.UserId, 0x4C))
-			local baby = Babies.lunar(rng, EconomyService.R(player), Clock.unix())
+			-- qualité du Record R (N1, lot A4 : = R pour un profil v1)
+			local baby = Babies.lunar(rng, EconomyService.recordR(player), Clock.unix())
 			local uid = SquishyService.give(player, Babies.spec(baby), "lunar")
 			Notify.celebrate(player, "lunarDrop", { uid = uid or "", species = baby.s, mutation = baby.m })
 		end)
@@ -877,7 +956,35 @@ local function buildState(now: number): Types.EventStatePayload
 		spectacle = { current = if c then table.clone(c) else nil, queue = queuePayload(now) },
 		features = features(),
 		offset = Clock.getOffset(),
+		-- v2.0 (lot A4) : visuels seulement, clés ABSENTES interrupteur coupé (charge de la v1.3 inchangée) ;
+		-- météo suspendue pendant une séance de Jelly Moon, absente hors de ses fenêtres
+		weather = if Features.get("Weather") == true
+			then Weather.at(now, moon.active and Features.get("JellyMoon") == true)
+			else nil,
+		fete = if Features.get("Fete") == true then { level = fete.level } else nil,
 	}
+end
+
+-- v2.0 (lot A4) : place en fête et météo vues au tick ; un interrupteur changé en direct renvoie
+-- EventState, la météo aussi au début et à la fin de chaque fenêtre. Interrupteurs coupés : deux
+-- lectures, rien d'autre (aucune allocation)
+local function stepVisuals(now: number)
+	local feteNow = Features.get("Fete") == true
+	if feteNow ~= feteOn then
+		feteOn = feteNow
+		dirty = true
+	end
+	local weatherNow = Features.get("Weather") == true
+	if weatherNow ~= weatherOn then
+		weatherOn = weatherNow
+		weatherNextAt = -math.huge
+		dirty = true
+	end
+	if weatherNow and now >= weatherNextAt then
+		-- prochaine borne de fenêtre (pure, sans allocation) ; en erreur : nouvel essai dans 60 s
+		weatherNextAt = Guard.call("event:weather", Weather.nextChange, now + 60, now)
+		dirty = true
+	end
 end
 
 -- `only` : envoi à ce seul joueur (arrivée, RequestWorld) ; l'envoi en attente pour les autres reste
@@ -1073,8 +1180,19 @@ local function connectGauge()
 	Signals.Fed:Connect(function()
 		addPoints(P.feed)
 	end)
+	-- Splorched = Grand Splorch seulement (v1.3 et v2.0 ; jamais pour un Petit Splorch, lot A4 D3)
 	Signals.Splorched:Connect(function()
 		addPoints(P.splorch)
+		addFete(FETE.Points.splorch)
+	end)
+	-- v2.0 (lot A4, D3, D26 ; GDD m9) : Petit Splorch 5 points de jauge, 0 à la fête ; Jelly Ascend 0 point
+	-- de jauge (sa Pluie d'étoiles est son cadeau), + 1 à la fête ; Grand Splorch v2.0 : par Splorched
+	Signals.PrestigeApplied:Connect(function(_player: Player, kind: string)
+		if kind == "petit" then
+			addPoints(P.petitSplorch)
+		elseif kind == "ascend" then
+			addFete(FETE.Points.ascend)
+		end
 	end)
 end
 
@@ -1137,6 +1255,7 @@ function EventService.step(now: number, actors: { [Player]: Types.TickActor })
 	Guard.try("event:gauge", stepGauge, now)
 	Guard.try("event:spectacles", stepSpectacles, now)
 	Guard.try("event:moon", stepMoon, now, dt, actors or {})
+	stepVisuals(now)
 	if dirty or (gaugeDirty and now >= nextGaugeSendAt) then
 		Guard.try("event:state", sendState, now, nil)
 	end
@@ -1153,20 +1272,22 @@ function EventService.megaActive(): boolean
 	return mega.phase ~= "idle"
 end
 
--- Fonction ajoutée : départ prévu d'un Grand Splorch en file (nil = pas en file) — SplorchService.queued
+-- Fonction ajoutée : départ prévu du prestige de ce joueur en file (Grand Splorch ou Jelly Ascend ; nil =
+-- pas en file) — SplorchService.queued et son filet
 function EventService.queuedStartAt(userId: number): number?
 	for _, entry in queue do
-		if entry.kind == "splorch" and entry.userId == userId then
+		if heroKind(entry.kind) and entry.userId == userId then
 			return entry.startAt
 		end
 	end
 	return nil
 end
 
--- Fonction ajoutée : héros du grand spectacle en cours (0 = aucun ou danse) — ChaseService
+-- Fonction ajoutée : héros du grand spectacle en cours (Grand Splorch ou Jelly Ascend ; 0 = aucun ou
+-- danse) — ChaseService
 function EventService.spectacleUserId(): number
 	local c = current
-	return if c and c.kind == "splorch" then c.userId else 0
+	return if c and heroKind(c.kind) then c.userId else 0
 end
 
 -- Rush en cours
@@ -1194,10 +1315,11 @@ function EventService.addGauge(points: number)
 	addPoints(points)
 end
 
--- Place dans la file ; rend le Clock.now() de départ prévu (même entrée rendue si déjà en file)
-function EventService.enqueueSpectacle(kind: "splorch" | "dance", userId: number): number
+-- Place dans la file ; rend le Clock.now() de départ prévu (même entrée rendue si déjà en file). Sortes :
+-- "splorch", "dance" et (v2.0) "ascend" ; un seul prestige par joueur : règle de SplorchService
+function EventService.enqueueSpectacle(kind: SpectacleKind, userId: number): number
 	local now = Clock.now()
-	if kind ~= "splorch" and kind ~= "dance" then
+	if kind ~= "splorch" and kind ~= "dance" and kind ~= "ascend" then
 		return now
 	end
 	for _, entry in queue do
@@ -1206,7 +1328,7 @@ function EventService.enqueueSpectacle(kind: "splorch" | "dance", userId: number
 		end
 	end
 	local slot = 0
-	if kind == "splorch" then
+	if heroKind(kind) then
 		local player = Players:GetPlayerByUserId(userId)
 		slot = if player then RanchService.slotOf(player) else 0
 	end
@@ -1217,18 +1339,19 @@ function EventService.enqueueSpectacle(kind: "splorch" | "dance", userId: number
 	return entry.startAt
 end
 
--- Retire de la file (départ du joueur avant son tour) ; héros parti pendant son spectacle avant
--- l'éclatement : spectacle effacé aussitôt et EventState renvoyé (remarque A26)
+-- Retire de la file (départ du joueur avant son tour) ses entrées de Grand Splorch et de Jelly Ascend ;
+-- héros parti pendant son spectacle avant l'éclatement de SA sorte (burstAt : 3,2 s ou 4,0 s) : spectacle
+-- effacé aussitôt et EventState renvoyé (remarque A26) ; après l'éclatement, le spectacle continue
 function EventService.cancelSpectacle(userId: number)
 	local now = Clock.now()
 	for i = #queue, 1, -1 do
-		if queue[i].userId == userId and queue[i].kind == "splorch" then
+		if queue[i].userId == userId and heroKind(queue[i].kind) then
 			table.remove(queue, i)
 			dirty = true
 		end
 	end
 	local c = current
-	if c and c.kind == "splorch" and c.userId == userId and now < c.burstAt then
+	if c and heroKind(c.kind) and c.userId == userId and now < c.burstAt then
 		current = nil
 		Guard.try("event:state", sendState, now, nil)
 	end
@@ -1325,7 +1448,7 @@ function EventService.openStates(): { Types.OpenState }
 		table.insert(out, { name = "spectacle", startedAt = c.startedAt, player = nil })
 	end
 	for _, entry in queue do
-		if entry.kind == "splorch" then
+		if heroKind(entry.kind) then
 			table.insert(out, {
 				name = "splorchQueue",
 				startedAt = entry.enqueuedAt,

@@ -124,6 +124,9 @@ Events.SplorchQueueHardCut = 480
 Events.Spectacles = {
 	splorch = { duration = 7.5, hardCut = 10 },
 	dance = { duration = 8, hardCut = 10 }, -- danse de Big Plop (jauge pleine)
+	-- v2.0 (lot A4, D4) : Jelly Ascend dans la MÊME file que le Grand Splorch, jamais tant que
+	-- JellyAscend est coupé ; égal à Balance.Ascend.Duration / HardCut (Contract_v2 le vérifie)
+	ascend = { duration = 10, hardCut = 12 },
 }
 
 -- Remises à zéro (GDD §2.4)
@@ -160,6 +163,9 @@ Events.Gauge = {
 		mega = 5, -- réussite du MEGA, à chaque participant (≥ Events.Mega.MinPoints)
 		feed = 10, -- Fed
 		splorch = 25, -- Splorched (une fois par Grand Splorch)
+		-- v2.0 (lot A4, D3, GDD m9) : Petit Splorch (PrestigeApplied « petit », jamais Splorched) ; une
+		-- Jelly Ascend ne donne aucun point (sa Pluie d'étoiles est son cadeau)
+		petitSplorch = 5,
 	},
 }
 
@@ -227,6 +233,12 @@ Events.Banners = {
 		wobbleParty = 7,
 		adminParty = 7,
 	} :: { [string]: number },
+	-- v2.0 (lot A4, D5) : priorités des bannières v2.0, recopiées aussi dans Notify.BANNER_PRIORITY par
+	-- CommunityService.Init ; leur texte n'est pas encore de la famille « banner.<sorte> » (« ascend.banner »,
+	-- décision C10) : fusionnées dans Priority à l'étape I avec le renommage que B3 prouve
+	PriorityV2 = {
+		ascend = 1,
+	} :: { [string]: number },
 	RecordThresholds = { 1e6, 1e9, 1e12, 1e15 },
 }
 
@@ -253,8 +265,14 @@ Events.Weather = {
 	visualOnly = true,
 }
 
--- Place en fête : seuils de points du serveur pour chaque niveau (décor seulement)
-Events.Fete = { Levels = { 5, 15, 30, 50, 80 } }
+-- Place en fête : seuils de points du serveur pour chaque niveau (décor seulement) ; points en mémoire
+-- (EventService, lot A4, D26), remis à zéro avec le serveur : Grand Splorch (Splorched), Jelly Ascend
+-- (PrestigeApplied « ascend »), réussite du MEGA (une fois par MEGA), début d'une Wobble Party ; un
+-- Petit Splorch ne compte pas
+Events.Fete = {
+	Levels = { 5, 15, 30, 50, 80 },
+	Points = { splorch = 1, ascend = 1, mega = 3, party = 2 },
+}
 
 -- Pluie d'étoiles d'une Jelly Ascend : revenu des autres joueurs (Balance.Ascend.StarRainSeconds),
 -- plafonnée par Balance.CapsV2.starRain par jour

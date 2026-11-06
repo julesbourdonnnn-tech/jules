@@ -958,6 +958,33 @@ return function(T)
 				expect(string.find(snap, "\t" .. field .. ":", 1, true) ~= nil).toBe(true)
 			end
 		end)
+
+		-- lot A4, étape 3 (D3, D4, D5, D26 ; journal A4-17)
+		it(
+			"Config/Events v2.0 : spectacle « ascend » = Balance.Ascend (10 s, coupure 12 s), Petit Splorch 5 points, points de la fête, priorité de la bannière « ascend »",
+			function()
+				local h = Harness.new()
+				local E = h:require("ReplicatedStorage.Shared.Config.Events")
+				local B = h:require("ReplicatedStorage.Shared.Config.Balance")
+				expect(E.Spectacles.ascend.duration).toBe(B.Ascend.Duration)
+				expect(E.Spectacles.ascend.hardCut).toBe(B.Ascend.HardCut)
+				expect(E.Spectacles.ascend.duration).toBe(10)
+				expect(E.Spectacles.ascend.hardCut).toBe(12)
+				expect(B.Ascend.BurstAt < E.Spectacles.ascend.duration).toBe(true)
+				-- GDD §4.23 (m9) : Petit Splorch 5, Grand Splorch 25 inchangé, Jelly Ascend 0 (aucune clé)
+				expect(E.Gauge.Points.petitSplorch).toBe(5)
+				expect(E.Gauge.Points.splorch).toBe(25)
+				expect(E.Gauge.Points.ascend).toBeNil()
+				expect(E.Fete.Points).toEqual({ splorch = 1, ascend = 1, mega = 3, party = 2 })
+				expect(#E.Fete.Levels).toBe(5)
+				for i = 2, #E.Fete.Levels do
+					expect(E.Fete.Levels[i] > E.Fete.Levels[i - 1]).toBe(true)
+				end
+				-- priorité v2.0 à part de Priority (règle « banner.<sorte> » de Contract_game inchangée)
+				expect(E.Banners.PriorityV2.ascend).toBe(1)
+				expect(E.Banners.Priority.ascend).toBeNil()
+			end
+		)
 	end)
 
 	-- ---------------------------------------------------------------------------------------------

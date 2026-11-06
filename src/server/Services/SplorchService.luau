@@ -16,7 +16,8 @@
 --     analytique SplorchReached (readyAtLogin), SplorchCoinsLost (multiples du Tapis 12), TileLevelAtSplorch.
 --   * Départ du héros avant son tour ou avant l'éclatement : place rendue, rien remis à zéro, aucune pluie
 --     de cadeaux (EventService efface le spectacle en cours, remarque A26).
--- Émet Splorched ; jamais EventService.addGauge (la jauge vient de Splorched). Remote : GrandSplorch.
+-- Émet Splorched (Grand Splorch seulement : jamais pour un Petit Splorch, lot A4 D3) ; jamais
+-- EventService.addGauge (la jauge vient de Splorched et de PrestigeApplied). Remote : GrandSplorch.
 --
 -- v2.0 (lot A2, étape 3 ; docs/04 §27.4, §27.5, §27.7, §27.14 ; GDD v2.0 §4.15, §4.26, §4.27).
 -- Progression v2.0 en vigueur = EconomyService.prestigeV2 (profil v2, RecordR ouvert, configuration
@@ -31,10 +32,12 @@
 --   * Petit Splorch [PetitSplorch] (r après la renaissance ≤ Record R) : mêmes conditions d'entrée,
 --     HORS de la file, appliqué tout de suite d'un seul bloc ; Celebrate « petitSplorch » au joueur,
 --     attribut PetitSplorchAt ; ni bannière, ni cadeaux aux autres, ni Fame ; retour au record : + 10
---     Confettis et Celebrate « regainDone » ;
+--     Confettis et Celebrate « regainDone » ; PrestigeApplied(« petit ») seulement, jamais Splorched
+--     (GDD m9 : ni stats.splorches, ni objectif du jour ; jauge 5 par EventService, fête 0 ; lot A4 D3) ;
 --   * Jelly Ascend [JellyAscend] (intention JellyAscend(confirm)) : Prestige.ascendReady et les
 --     conditions d'entrée vérifiés une seule fois, à l'entrée dans la MÊME file que le Grand Splorch
---     (EventService, sorte « splorch ») ; un seul prestige par joueur dans la file (« Ton Grand Splorch
+--     (EventService, sorte « ascend » depuis le lot A4 : 10 s, coupure 12 s, place effacée avant 4,0 s) ;
+--     un seul prestige par joueur dans la file (« Ton Grand Splorch
 --     passe d'abord ! ») ; spectacle de Balance.Ascend.Duration s (Celebrate « ascend » à tous, copie
 --     de la taille du Meilleur Ami n° 1) ; Prestige.apply à BurstAt (4,0 s) d'un seul bloc, puis
 --     sauvegarde ; Pluie d'étoiles pour les autres (StarRainSeconds de revenu, CapsV2.starRain par jour,
@@ -410,9 +413,9 @@ local function applyPetit(player: Player): boolean
 		} :: Types.CelebratePetitSplorch
 	)
 	after(player, report, fromR, regain, fullPen)
-	-- sauvegarde APRÈS le dernier versement : l'instantané écrit tout le prestige (Confettis compris)
+	-- sauvegarde APRÈS le dernier versement : l'instantané écrit tout le prestige (Confettis compris).
+	-- Aucun Splorched (= Grand Splorch seulement, lot A4 D3, GDD m9) : PrestigeApplied(« petit ») dans after
 	saveSoon(player)
-	Signals.Splorched:Fire(player, report.toR, 0)
 	Guard.analytics(player, "PetitSplorch", report.toR, { bestR = report.bestR, ascend = report.ascend })
 	lastSplorchAt[player] = now
 	readyAtLogin[player] = false
@@ -516,7 +519,7 @@ local function onJellyAscend(player: Player, confirm: boolean): boolean
 	-- effet : interrupteur, configuration, condition, fin de session)
 	SquishyService.setWaiting(player, flyer)
 	queued[player] = { flyer = flyer, at = now, film = false, kind = "ascend" }
-	EventService.enqueueSpectacle("splorch", player.UserId)
+	EventService.enqueueSpectacle("ascend", player.UserId)
 	return true
 end
 
@@ -585,8 +588,11 @@ local function startAscend(hero: Player, entry: Queued, t: number)
 	end
 end
 
+-- Départ d'un grand spectacle d'EventService : sorte « splorch » (Grand Splorch) ou « ascend » (Jelly
+-- Ascend, lot A4) ; la sorte du spectacle et celle de l'entrée du joueur vont ensemble (filet sinon :
+-- place rendue, rien n'est appliqué, le joueur peut recommencer)
 local function onSpectacleStarted(kind: string, userId: number, t: number)
-	if kind ~= "splorch" then
+	if kind ~= "splorch" and kind ~= "ascend" then
 		return
 	end
 	local hero = Players:GetPlayerByUserId(userId)
@@ -595,8 +601,12 @@ local function onSpectacleStarted(kind: string, userId: number, t: number)
 	end
 	local entry = queued[hero]
 	queued[hero] = nil
-	if entry ~= nil and entry.kind == "ascend" then
-		startAscend(hero, entry, t)
+	if kind == "ascend" or (entry ~= nil and entry.kind == "ascend") then
+		if kind == "ascend" and entry ~= nil and entry.kind == "ascend" then
+			startAscend(hero, entry, t)
+		else
+			giveBack(hero, "AscendCancelled")
+		end
 		return
 	end
 	local flyerUid = (entry and entry.flyer) or SquishyService.waiting(hero)

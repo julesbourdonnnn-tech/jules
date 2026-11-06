@@ -342,7 +342,9 @@ local function spawnRunaway(player: Player, now: number, scripted: boolean)
 	end
 	local seed = Hash.u32(player.UserId, math.floor(now * 10), 0x52)
 	local rng = Hash.stream(seed)
-	local baby = Babies.runaway(rng, EconomyService.R(player), biggestOf(player), moonActive(), Clock.unix())
+	-- qualité du Record R (N1, lot A4 : EconomyService.recordR = R pour un profil v1)
+	local baby =
+		Babies.runaway(rng, EconomyService.recordR(player), biggestOf(player), moonActive(), Clock.unix())
 	if scripted then
 		-- première fuite de l'accueil (GDD §3) : Mochi Mew
 		baby.s = Species.MOCHI_MEW
@@ -612,7 +614,7 @@ local function onCaught(catcher: Player, c: Creature, now: number, byLeap: boole
 				{ s = c.spawn.species, m = c.spawn.mutation },
 				c.spawn.size,
 				biggestOf(catcher),
-				EconomyService.R(catcher),
+				EconomyService.recordR(catcher), -- Record R (N1, lot A4)
 				moonActive()
 			)
 			baby = b
@@ -669,7 +671,7 @@ local function onCaught(catcher: Player, c: Creature, now: number, byLeap: boole
 	elseif kind == "golden" then
 		baby = Babies.golden(
 			rngFor(c, catcher, 0x47),
-			EconomyService.R(catcher),
+			EconomyService.recordR(catcher), -- Record R (N1, lot A4)
 			biggestOf(catcher),
 			moonActive(),
 			Clock.unix()

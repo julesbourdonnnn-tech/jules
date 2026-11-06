@@ -111,14 +111,16 @@ local Signals = {
 	-- "rush" (siren, start, end), "mega" (warn, land, end), "golden" (spawn, end), "moon" (start,
 	-- end), "party" (start, end), "wild" (wave) → RushService, ChaseService, SplorchService, QuestService
 	EventPhase = Signal.new() :: Signal.Signal<string, string, number>,
-	-- Émis par EventService : un grand spectacle commence (sorte "splorch" | "dance", userId,
-	-- Clock.now() de départ) → SplorchService (Grand Splorch de ce héros)
+	-- Émis par EventService : un grand spectacle commence (sorte "splorch" | "dance" | "ascend" (v2.0,
+	-- lot A4), userId, Clock.now() de départ) → SplorchService (Grand Splorch ou Jelly Ascend de ce héros)
 	SpectacleStarted = Signal.new() :: Signal.Signal<string, number, number>,
 	-- Émis par EventService : fin du MEGA, participation (joueur, points, réussite) → QuestService
 	MegaJoined = Signal.new() :: Signal.Signal<Player, number, boolean>,
 	-- Émis par SplorchService : Grand Splorch appliqué au profil (héros, nouveau R, bébés-cadeaux
 	-- donnés aux autres joueurs) → QuestService (étape 11, objectif), LeaderboardService (« Plus
-	-- généreux » + cadeaux), RushService (fin de l'attente), EventService (jauge : splorch)
+	-- généreux » + cadeaux), RushService (fin de l'attente), EventService (jauge : splorch ; place en
+	-- fête). Grand Splorch SEULEMENT : jamais pour un Petit Splorch ni une Jelly Ascend (v2.0, lot A4 D3 :
+	-- PrestigeApplied)
 	Splorched = Signal.new() :: Signal.Signal<Player, number, number>,
 
 	-- =========================================================================================
@@ -155,7 +157,8 @@ local Signals = {
 	-- =========================================================================================
 	-- Émis par SplorchService après Prestige.apply (sorte "splorch" | "petit" | "ascend", r avant,
 	-- r après, A après) → QuestService (piste, cartes « Nouveau »), HelperService (reprise), RanchService
-	-- (attributs), LeaderboardService (Livre des records), analytique
+	-- (attributs), EventService (jauge du Petit Splorch, place en fête de la Jelly Ascend ; lot A4),
+	-- LeaderboardService (Livre des records), analytique
 	PrestigeApplied = Signal.new() :: Signal.Signal<Player, string, number, number, number>,
 	-- Émis par EconomyService.buyUpgrade (id, niveau avant, niveau après, monnaie) → QuestService
 	-- (Carnet : stats.upgradesBought, objectifs), RanchService (paliers et cascade), analytique

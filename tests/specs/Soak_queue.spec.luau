@@ -132,8 +132,10 @@ return function(T)
 				for _ = 1, NEWCOMERS do
 					addNewcomer()
 				end
+				-- lot A4 (D4 ; journal A4-18) : la Jelly Ascend part sous sa propre sorte « ascend » (avant :
+				-- « splorch »), dans la même file
 				w.Signals.SpectacleStarted:Connect(function(kind, userId, t)
-					if kind ~= "splorch" then
+					if kind ~= "splorch" and kind ~= "ascend" then
 						return
 					end
 					for _, e in entries do
