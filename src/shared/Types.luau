@@ -26,7 +26,7 @@ export type ProfileSettings = {
 	hideName: boolean,
 	receiveGifts: boolean,
 	clips: boolean,
-	emoteLeft: string, -- "bravo" | "bellyFlop" | "crown"
+	emoteLeft: string, -- "bravo" | "bellyFlop" | "crown" ; v2.0 (lot A4) : + emotes de Config/Settings.emoteLeft.values
 	partyShowName: boolean,
 }
 

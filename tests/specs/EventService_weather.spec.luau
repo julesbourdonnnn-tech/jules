@@ -289,15 +289,15 @@ return function(T)
 
 	-- =========================================================================================
 	describe("EventService_weather › aucun effet sur le jeu", function()
-		-- 1 h de jeu complet à 3 joueurs (cerveaux à graine fixe) ; rend naissances, mutations et pièces
-		local function hour(flagsOn)
+		-- 1 h de jeu complet à `n` joueurs (cerveaux à graine fixe) ; rend naissances, mutations et pièces
+		local function hour(flagsOn, n)
 			local w = boot({ t0 = H0 + 30 })
 			if flagsOn then
 				w.Features.set("Weather", true)
 				w.Features.set("Fete", true)
 			end
 			local players = {}
-			for i = 1, 3 do
+			for i = 1, n do
 				local p = Brains.join(w, i, {
 					profile = Brains.profile(w, {
 						coins = 2000,
@@ -354,17 +354,30 @@ return function(T)
 		it(
 			"même graine : mêmes naissances, mutations et pièces sur 1 h, météo et fête ouvertes ou coupées",
 			function()
-				local off = hour(false)
-				local on = hour(true)
+				-- 1 joueur : la partie est déterministe. À 3 joueurs, deux serveurs témoins coupés TOUS DEUX
+				-- divergent déjà (ordre de parcours des tables indexées par joueur : qui est servi le premier
+				-- quand deux joueurs visent la même chose dans le même tick ; lot A4, étape 5, A4-42) : la
+				-- comparaison à l'identique se fait à 1 joueur, la partie à 3 joueurs reste jouée plus bas
+				local off = hour(false, 1)
+				local on = hour(true, 1)
 				-- la météo a bien tourné d'un côté seulement (2 fenêtres par heure)
 				expect(off.weatherSends).toBe(0)
-				expect(on.weatherSends >= 2 * 3).toBe(true)
+				expect(on.weatherSends >= 2).toBe(true)
 				expect(off.fete).toBe(0)
 				-- des naissances ont eu lieu (le test n'est pas vide) ; tout est identique
 				expect(#off.hatches > 0).toBe(true)
 				expect(table.concat(on.hatches, "\n")).toBe(table.concat(off.hatches, "\n"))
 				expect(on.coins).toEqual(off.coins)
 				expect(on.squishies).toEqual(off.squishies)
+			end
+		)
+
+		it(
+			"à 3 joueurs, météo et fête ouvertes : 1 h de jeu complet sans trace, la météo envoyée à chacun",
+			function()
+				local three = hour(true, 3)
+				expect(three.weatherSends >= 2 * 3).toBe(true)
+				expect(#three.hatches > 0).toBe(true)
 			end
 		)
 

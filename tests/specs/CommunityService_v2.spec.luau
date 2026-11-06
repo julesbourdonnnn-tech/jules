@@ -784,6 +784,10 @@ return function(T)
 				expect(ser(d.decoPerso)).toBe(before)
 				expect(attr(w, p, "DecoPerso")).toBeNil()
 				expect(#decoCards(p)).toBe(0)
+				-- Owned : rien n'est gagné tant que DecoPerso est coupé (le client « Mon style » lit la même règle)
+				expect(w.Owned.deco(d, 7, flagsOf(w))).toBe(false)
+				expect(w.Owned.deco(d, 7, { DecoPerso = true })).toBe(true)
+				expect(w.Owned.deco(d, 7, nil)).toBe(false)
 				-- ouvert en direct : bits revus, attribut posé
 				assert(w.Features.set("DecoPerso", true))
 				tick(w)
@@ -804,6 +808,14 @@ return function(T)
 				expect(data(w1, q).decoPerso).toBeNil()
 				expect(attr(w1, q, "DecoPerso")).toBeNil()
 				expect(#decoCards(q)).toBe(0)
+				-- interrupteurs des attributs ouverts en direct : un profil v1 n'en reçoit aucun
+				for _, key in { "RanchSkins", "Workshop", "WeeklyTrack", "RecordR" } do
+					assert(w1.Features.set(key, true), key)
+				end
+				tick(w1)
+				for _, name in { "DecoPerso", "HaloOn", "Palette", "Cushions" } do
+					expect({ name = name, value = attr(w1, q, name) }).toEqual({ name = name, value = nil })
+				end
 				clean(w)
 				clean(w1)
 			end
@@ -1031,11 +1043,16 @@ return function(T)
 				w.h:settle(2)
 				expect(w.C.inPhotoMode(p)).toBe(false)
 				Analytics.custom = original
-				-- interrupteur coupé : refusé
+				-- interrupteur coupé : refusé (rien de gardé : l'ouvrir ensuite ne met pas le joueur en mode photo)
 				local w2 = boot()
 				local q = join(w2, 1)
 				fire(w2, "SetPhotoMode", q, true)
 				expect(w2.C.inPhotoMode(q)).toBe(false)
+				assert(w2.Features.set("PhotoMode", true))
+				expect(w2.C.inPhotoMode(q)).toBe(false)
+				fire(w2, "SetPhotoMode", q, false) -- déjà sorti : refusé
+				fire(w2, "SetPhotoMode", q, true)
+				expect(w2.C.inPhotoMode(q)).toBe(true)
 				clean(w)
 				clean(w2)
 			end
