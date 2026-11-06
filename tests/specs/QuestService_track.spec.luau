@@ -529,6 +529,37 @@ return function(T)
 		)
 
 		it(
+			"palier livré une seule fois même si sa récompense en fait gagner d'autres (Goutte chanceuse → tampon → Défi fini → points)",
+			function()
+				local w = boot({ flags = { "WeeklyTrack", "Confetti" } })
+				local claimed = w.Bitset.new(12)
+				for i = 1, 3 do
+					w.Bitset.set(claimed, i)
+				end
+				local p = join(w, 1, function(d)
+					d.objectives = objectives(w, { entry(1), entry(3), entry(7) })
+					-- « Remplis 5 nouveaux tampons » à 4 / 5 : la Goutte du palier 4 le finit
+					d.weeklyTrack = trackAt(
+						w,
+						{ points = 6, claimed = claimed, challenges = { { id = 8, p = 4, done = false } } }
+					)
+				end)
+				local d = data(w, p)
+				press(w, p, 30) -- objectif terminé : 8 points, palier 4 (Goutte chanceuse)
+				expect(d.weeklyTrack.challenges[1].done).toBe(true)
+				expect(d.weeklyTrack.points).toBe(13)
+				expect(#cards(p, "luckyDrop")).toBe(1)
+				expect(cards(p, "trackTier")).toEqual({
+					{ tier = 4, reward = "drop" },
+					{ tier = 5, reward = "confetti" },
+					{ tier = 6, reward = "confetti" },
+				})
+				expect(d.confetti).toBe(3 + 4)
+				clean(w)
+			end
+		)
+
+		it(
 			"un palier attend tant que les Confettis sont coupés, puis il est livré (dans l'ordre)",
 			function()
 				local w = boot({ flags = { "WeeklyTrack" } })

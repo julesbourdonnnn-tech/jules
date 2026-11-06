@@ -119,6 +119,8 @@ type Session = {
 	v2: boolean, -- profil v2 (fixé à l'arrivée : la migration n'a lieu qu'au chargement)
 	trackReady: boolean, -- période de la piste vérifiée dans cette session (D10)
 	trackPending: boolean, -- un palier attend sa récompense (Confettis refusés, D35)
+	delivering: boolean, -- livraison des paliers en cours (jamais réentrante)
+	deliverAgain: boolean, -- points gagnés pendant une livraison : la liste est reprise après
 	trackRetryAcc: number, -- s depuis le dernier essai d'un palier en attente
 	trackDirtyAcc: number, -- s depuis la dernière réplication de weeklyTrack.play
 	playAcc: number, -- fraction de seconde de jeu pas encore écrite dans weeklyTrack.play
@@ -499,7 +501,7 @@ end
 
 -- Paliers atteints livrés tout seuls, dans l'ordre, chacun réclamé APRÈS sa récompense (D35) ; un palier
 -- refusé arrête la livraison (le suivant attend aussi) et sera repris
-local function deliverTiers(player: Player, data: { [string]: any }, s: Session, track: { [string]: any })
+local function deliverOnce(player: Player, data: { [string]: any }, s: Session, track: { [string]: any })
 	local reached = QuestRules.trackTier(track.points)
 	if type(track.claimed) ~= "table" then
 		track.claimed = Bitset.new(TRACK_TIERS)
@@ -520,6 +522,27 @@ local function deliverTiers(player: Player, data: { [string]: any }, s: Session,
 				addLifetime(player, data, "tracksDone", 1)
 			end
 		end
+	end
+end
+
+-- Une récompense peut en faire gagner d'autres PENDANT sa livraison (Goutte chanceuse → nouveau tampon →
+-- Défi fini → points) : la livraison n'est jamais réentrante (un palier serait livré deux fois) ; l'appel
+-- du dedans est noté et la livraison en cours reprend la liste quand elle a fini
+local function deliverTiers(player: Player, data: { [string]: any }, s: Session, track: { [string]: any })
+	if s.delivering then
+		s.deliverAgain = true
+		return
+	end
+	s.delivering = true
+	local ok, err = pcall(function()
+		repeat
+			s.deliverAgain = false
+			deliverOnce(player, data, s, track)
+		until not s.deliverAgain or s.trackPending
+	end)
+	s.delivering = false
+	if not ok then
+		error(err, 0)
 	end
 end
 
@@ -1282,6 +1305,8 @@ local function onReady(player: Player)
 		v2 = isV2(data),
 		trackReady = false,
 		trackPending = false,
+		delivering = false,
+		deliverAgain = false,
 		trackRetryAcc = 0,
 		trackDirtyAcc = 0,
 		playAcc = 0,
