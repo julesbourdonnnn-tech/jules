@@ -119,7 +119,9 @@ local attrsOn: { [Player]: { [string]: any } } = {} -- attributs v2 posés par c
 local photo: { [Player]: boolean } = {} -- mode photo ouvert (mémoire seulement)
 local photoEntries: { [Player]: { n: number, since: number } } = {} -- entrées en mode photo (analytique)
 local flagsNow: Owned.Flags = {} -- interrupteurs lus par Owned (table réutilisée, aucune allocation)
-local attrMaskSeen = 0
+-- interrupteurs des attributs v2 (masque de ATTR_FLAGS) avec lesquels les attributs du joueur ont été
+-- calculés : revus dès que le masque en vigueur diffère (jamais un attribut gardé d'un interrupteur coupé)
+local attrsMask: { [Player]: number } = {}
 local v2FlagsAt = -math.huge
 local decoAt = -math.huge
 
@@ -277,6 +279,17 @@ local function wantedAttrs(data: { [string]: any }, flags: Owned.Flags): { [stri
 	return out
 end
 
+-- Masque des interrupteurs des attributs v2 en vigueur (bit i − 1 : ATTR_FLAGS[i] ouvert)
+local function attrMask(): number
+	local mask = 0
+	for i, key in ATTR_FLAGS do
+		if Features.get(key) == true then
+			mask = bit32.bor(mask, bit32.lshift(1, i - 1))
+		end
+	end
+	return mask
+end
+
 -- Pose les attributs v2 qui ont changé et efface ceux qui ne sont plus voulus (RanchService garde les
 -- valeurs tant que le ranch n'est pas attribué)
 local function refreshAttrs(player: Player)
@@ -284,6 +297,7 @@ local function refreshAttrs(player: Player)
 	if data == nil then
 		return
 	end
+	attrsMask[player] = attrMask()
 	local had = attrsOn[player]
 	local want = wantedAttrs(data, currentFlags())
 	if had == nil and next(want) == nil then
@@ -963,35 +977,31 @@ local function onReadyV2(player: Player)
 	readyPlayers[player] = true
 	local data = profile(player)
 	if data == nil or not v2Profile(data) then
+		attrsMask[player] = attrMask() -- profil v1 : jamais d'attribut v2, rien à revoir
 		return
 	end
 	syncDeco(player, data, false)
 	refreshAttrs(player)
 end
 
--- Tick v2 (une fois par seconde) : un interrupteur des attributs v2 changé en direct → attributs revus
--- pour chaque joueur prêt (posés ou effacés) ; Déco perso revue toutes les 30 s (fanion offert à 5:00
--- de jeu, aucun signal). Tout coupé : 6 lectures d'interrupteur, rien d'autre
+-- Tick v2 (une fois par seconde) : attributs v2 d'un joueur calculés avec d'autres interrupteurs que
+-- ceux en vigueur (changement en direct) → revus (posés ou effacés) ; Déco perso revue toutes les 30 s
+-- (fanion offert à 5:00 de jeu, aucun signal). Tout coupé : 6 lectures d'interrupteur et une comparaison
+-- par joueur, rien d'alloué
 local function stepV2(now: number)
-	local mask = 0
-	for i, key in ATTR_FLAGS do
-		if Features.get(key) == true then
-			mask = bit32.bor(mask, bit32.lshift(1, i - 1))
-		end
-	end
-	local flagsChanged = mask ~= attrMaskSeen
-	attrMaskSeen = mask
-	local decoDue = Features.get("DecoPerso") == true and now - decoAt >= DECO_EVERY
+	local mask = attrMask()
+	local deco = Features.get("DecoPerso") == true
+	local decoDue = deco and now - decoAt >= DECO_EVERY
 	if decoDue then
 		decoAt = now
 	end
-	if not flagsChanged and not decoDue then
-		return
-	end
 	for player in readyPlayers do
 		if present(player) then
-			Guard.try("community:decoTick", syncDecoOf, player)
-			if flagsChanged then
+			local stale = (attrsMask[player] or 0) ~= mask
+			if decoDue or (stale and deco) then
+				Guard.try("community:decoTick", syncDecoOf, player)
+			end
+			if stale then
 				Guard.try("community:attrsTick", refreshAttrs, player)
 			end
 		end
@@ -1032,6 +1042,7 @@ local function onRemoving(player: Player)
 	photoEntries[player] = nil
 	readyPlayers[player] = nil
 	attrsOn[player] = nil
+	attrsMask[player] = nil
 	for _, window in clapWindows do
 		if window.viewers ~= nil then
 			window.viewers[player] = nil
