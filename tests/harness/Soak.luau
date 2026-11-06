@@ -18,6 +18,9 @@
 -- avec tous les joueurs présents.
 --   local report = Soak.run(Harness, { players = 16, hours = Soak.hours() })
 --   report.problems (liste vide = sain), report.msPerTick, report.ticks
+-- Options v2.0 (lot A3, Soak des Plopettes ; rien de changé sans elles) : opts.flags (interrupteurs
+-- ouverts après le démarrage), opts.edit(d, i) (profil de départ du robot i), opts.check(w, now)
+-- (contrôles de plus à chaque tick : liste de problèmes).
 local Bots = require("./Bots")
 local Brains = require("./Brains")
 
@@ -69,6 +72,11 @@ local function profileFor(w, i, rng)
 		coins = math.floor(rng:NextNumber(0, 50000)),
 		R = i % 4,
 		squishies = squishies,
+		edit = if w.soakEdit
+			then function(d)
+				w.soakEdit(d, i)
+			end
+			else nil,
 	})
 end
 
@@ -154,6 +162,10 @@ function Soak.run(Harness, opts)
 	})
 	local Invariants = w.h:require("ReplicatedStorage.Shared.Logic.Invariants")
 	local Balance = w.Balance
+	for _, key in opts.flags or {} do
+		assert(w.Features.set(key, true), key)
+	end
+	w.soakEdit = opts.edit
 	local rng = Brains.rng(seed)
 	local report = { problems = {}, ticks = 0, msPerTick = 0, counts = {} }
 	local function problem(line)
@@ -233,6 +245,11 @@ function Soak.run(Harness, opts)
 		local now = w.Clock.now()
 		for _, line in checkTick(w, Invariants, Balance, now) do
 			problem(line)
+		end
+		if opts.check then
+			for _, line in opts.check(w, now) do
+				problem(line)
+			end
 		end
 		if #report.problems >= 50 then
 			break

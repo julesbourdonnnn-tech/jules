@@ -10,7 +10,7 @@
 --     MinDistance studs à plat de la position validée du propriétaire (le plus gros revenu d'abord, comme
 --     le modèle d'économie) ; tPress = maintenant + trajet (fonction pure des deux positions, 3 s au
 --     plus). Rien n'est donné avant tPress : au premier tick ≥ tPress, TOUT est revérifié (propriétaire
---     présent et chargé, Plopettes éveillées et sans pause, squishy encore là et libre, prêt depuis
+--     présent et chargé, Plopettes éveillées et sans pause, squishy encore à sa place et libre, prêt depuis
 --     ReadyFor s, règle des 12 studs avec la position validée de cet instant) ; sinon abandon et nouvelle
 --     cible. Égalité avec la pression du joueur : sa pression (traitée avant le tick, recharge posée)
 --     rend le squishy « pas prêt » : le joueur gagne.
@@ -83,6 +83,8 @@ type Helper = {
 	nextAt: number, -- plus tôt pour choisir une cible
 	x: number,
 	z: number,
+	tx: number, -- place de la cible au choix (le saut y atterrit)
+	tz: number,
 }
 
 type Owner = {
@@ -173,6 +175,8 @@ local function newHelper(index: number, x: number, z: number, nextAt: number): H
 		nextAt = nextAt,
 		x = x,
 		z = z,
+		tx = x,
+		tz = z,
 	}
 end
 
@@ -320,11 +324,14 @@ local function free(player: Player, o: Owner, data: { [string]: any }, uid: stri
 	return Rules.readyFor(readyAt(player, o, uid), now)
 end
 
--- Revérification complète à tPress ; rend la place (x, z) si tout est encore vrai
+-- Revérification complète à tPress ; rend la place (x, z) si tout est encore vrai (le squishy est
+-- encore à la place où le saut atterrit : à PLACE_MOVED studs près)
+local PLACE_MOVED = 0.5
 local function stillValid(
 	player: Player,
 	o: Owner,
 	data: { [string]: any },
+	h: Helper,
 	uid: string,
 	pos: Vector3,
 	now: number
@@ -342,6 +349,10 @@ local function stillValid(
 	local center = Places.center(o.slot, data.squishies, uid)
 	if center == nil then
 		return false, 0, 0
+	end
+	local mx, mz = center.X - h.tx, center.Z - h.tz
+	if mx * mx + mz * mz > PLACE_MOVED * PLACE_MOVED then
+		return false, 0, 0 -- rangé ailleurs (Bassin ↔ enclos, places décalées) : le saut tombe à côté
 	end
 	if not Rules.farEnough(pos.X, pos.Z, center.X, center.Z) then
 		return false, 0, 0
@@ -374,7 +385,7 @@ local function resolve(player: Player, o: Owner, data: { [string]: any }, pos: V
 			h.uid = nil
 			local ok, x, z = false, 0, 0
 			if pos ~= nil then
-				ok, x, z = stillValid(player, o, data, uid, pos, now)
+				ok, x, z = stillValid(player, o, data, h, uid, pos, now)
 			end
 			if ok then
 				h.x, h.z = x, z
@@ -469,6 +480,7 @@ local function choose(player: Player, o: Owner, data: { [string]: any }, pos: Ve
 			local x, z = candX[uid], candZ[uid]
 			h.moving = true
 			h.uid = uid
+			h.tx, h.tz = x, z
 			h.chosenAt = now
 			h.tPress = now + Rules.travel(h.x, h.z, x, z)
 			count("Chosen")

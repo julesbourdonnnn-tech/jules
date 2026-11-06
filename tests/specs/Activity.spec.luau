@@ -81,5 +81,37 @@ return function(T)
 			expect(Activity.lastActive(p)).toBe(-math.huge)
 			expect(#h.errors).toBe(0)
 		end)
+
+		-- v2.0 (lot A3, N23, docs/04 §27.7) : instant de la dernière intention ACCEPTÉE (sieste des
+		-- Plopettes) ; un déplacement (stick calé) ne la change jamais ; jauge et MEGA inchangés
+		it("lastIntent : seule une intention acceptée l'avance ; noteMove jamais (N23)", function()
+			local h, Activity, Events = setup()
+			local p = h:addPlayer({ userId = 15, spawn = false })
+			expect(Activity.lastIntent(p)).toBe(-math.huge)
+			Activity.note(p, 100)
+			expect(Activity.lastIntent(p)).toBe(100)
+			Activity.note(p, 90) -- jamais en arrière
+			expect(Activity.lastIntent(p)).toBe(100)
+			-- stick calé : 60 s de marche, MoveStuds après MoveStuds
+			local step = Events.Activity.MoveStuds
+			Activity.noteMove(p, Vector3.new(0, 3, 0), 101)
+			for i = 1, 60 do
+				Activity.noteMove(p, Vector3.new(step * i, 3, 0), 101 + i)
+			end
+			expect(Activity.lastActive(p)).toBe(161) -- activité de la v1.3 : inchangée
+			expect(Activity.isActive(p, 161)).toBe(true)
+			expect(Activity.lastIntent(p)).toBe(100)
+			-- entrées bizarres : rien
+			Activity.note(p, 0 / 0)
+			Activity.note(p, math.huge)
+			expect(Activity.lastIntent(p)).toBe(100)
+			-- départ : oublié
+			h:removePlayer(p)
+			h:settle(1)
+			expect(Activity.lastIntent(p)).toBe(-math.huge)
+			Activity.note(p, 200)
+			expect(Activity.lastIntent(p)).toBe(-math.huge)
+			expect(#h.errors).toBe(0)
+		end)
 	end)
 end

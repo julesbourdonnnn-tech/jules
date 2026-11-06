@@ -502,6 +502,39 @@ return function(T)
 			clean(w)
 		end)
 
+		it(
+			"la cible change de place pendant le saut (place libérée devant elle) : abandon, puis nouvelle cible",
+			function()
+				local w, p = world({ n = 8 })
+				until_(w, 50, function()
+					return #messages(w, p) > 0
+				end)
+				local first = messages(w, p)[1]
+				local inFirst = {}
+				for _, e in first.presses do
+					inFirst[e.uid] = true
+				end
+				expect(inFirst["1"]).toBeNil() -- le plus petit revenu n'est pas visé
+				-- vendre « 1 » décale d'une place tous les squishies créés après lui
+				w.h:fireServer(R .. "Sell", p, { "1" }, true)
+				expect(w.Squishy.get(p, "1")).toBeNil()
+				Brains.frames(w, 40)
+				-- aucun saut du premier envoi n'est payé (chaque cible a changé de place) ; d'autres l'ont été
+				local firstPaid = 0
+				for _, e in w.pressed do
+					if e.t < first.presses[1].tPress + 0.2 then
+						firstPaid += 1
+					end
+				end
+				expect(firstPaid).toBe(0)
+				expect(w.Helper.counters().Abandoned).toBe(#first.presses)
+				expect(#messages(w, p) >= 2).toBe(true)
+				Brains.frames(w, 40)
+				expect(#w.pressed > 0).toBe(true)
+				clean(w)
+			end
+		)
+
 		it("squishy vendu ou mis à la clôture pendant le saut : jamais pressé", function()
 			local w, p = world({ n = 8 })
 			until_(w, 50, function()
@@ -626,6 +659,27 @@ return function(T)
 			until_(w, 600, function()
 				return w.Splorch.canPrestige(p) and w.Splorch.queuedKind(p) == nil
 			end)
+			wake(w, p)
+			Brains.frames(w, 3)
+			expect(w.Helper.state(p) ~= "paused").toBe(true)
+			clean(w)
+		end)
+
+		it("Jelly Ascend en file puis en spectacle : pause (queuedKind « ascend »)", function()
+			local w, p =
+				world({ R = 15, bestR = 15, n = 8, flags = { "RecordR", "Confetti", "JellyAscend" } })
+			Bots.place(p, at(w, p, 0, 50))
+			Brains.frames(w, 2)
+			w.h:fireServer(R .. "JellyAscend", p, true)
+			Brains.frames(w, 1)
+			expect(w.Splorch.queuedKind(p)).toBe("ascend")
+			expect(w.Helper.state(p)).toBe("paused")
+			expect(w.Helper.pauseReason(p)).toBe("prestige")
+			local n = #w.pressed
+			until_(w, 400, function()
+				return w.Splorch.queuedKind(p) == nil and w.Splorch.canPrestige(p)
+			end)
+			expect(#w.pressed).toBe(n)
 			wake(w, p)
 			Brains.frames(w, 3)
 			expect(w.Helper.state(p) ~= "paused").toBe(true)
