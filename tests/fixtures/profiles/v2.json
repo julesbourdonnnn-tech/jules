@@ -46,7 +46,9 @@
   "confetti": 139,
   "confettiTotal": 139,
   "cosmetics": {
+    "cushions": "",
     "flag": "",
+    "palette": "",
     "saddle": "classic",
     "theme": "color",
     "title": "splorch_star",
@@ -196,7 +198,8 @@
     "rush": true
   },
   "moon": {
-    "lastSession": 412
+    "lastSession": 412,
+    "sessions": 0
   },
   "mount": "1",
   "nextUid": 12,
@@ -266,6 +269,7 @@
   "settings": {
     "clips": true,
     "emoteLeft": "bravo",
+    "haloOn": true,
     "hideName": false,
     "lang": "auto",
     "lowGraphics": false,
@@ -340,12 +344,14 @@
     "heroCatches": 0,
     "lastFriendDay": 0,
     "megas": 0,
+    "objectivesClaimed": 0,
     "perfects": 880,
     "petitSplorches": 0,
     "playSeconds": 40000,
     "presses": 5321,
     "sessions": 14,
     "splorches": 12,
+    "tracksDone": 0,
     "upgradesBought": 29
   },
   "tiles": {
@@ -419,7 +425,20 @@
     ],
     "firstPeriodEnd": 0,
     "period": 0,
-    "points": 0
+    "play": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "playDay": 0,
+    "points": 0,
+    "won": [
+      0
+    ]
   },
   "worldFirst": {}
 }

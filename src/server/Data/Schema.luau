@@ -29,6 +29,7 @@ local SettingsConfig = require(Shared.Config.Settings)
 local Species = require(Shared.Config.Species)
 local Features = require(Shared.Config.Features)
 local Upgrades = require(Shared.Config.Upgrades)
+local Cosmetics = require(Shared.Config.Cosmetics)
 
 local Schema = {}
 
@@ -141,10 +142,12 @@ end
 -- Propriétaires de la version écrite par ce serveur (v1 tant que SchemaV2 est coupé)
 Schema.OWNERS = Schema.ownersFor(Schema.VERSION)
 
-local function defaultSettings(): { [string]: any }
+-- Réglages sauvegardés d'une version du schéma : un réglage `since = N` (Config/Settings) n'existe
+-- qu'à partir de la version N (lot A4 : defaultsV1().settings reste celui de la version de test)
+local function defaultSettings(version: number): { [string]: any }
 	local out = {}
 	for key, def in SettingsConfig do
-		if def.saved then
+		if def.saved and (def.since or 1) <= version then
 			out[key] = def.default
 		end
 	end
@@ -188,6 +191,8 @@ local function addV2Defaults(d: { [string]: any })
 	-- méta
 	d.stats.upgradesBought = 0 -- Carnet du Ranch
 	d.stats.petitSplorches = 0 -- jamais compté dans stats.splorches
+	d.stats.objectivesClaimed = 0 -- objectifs du jour réclamés au total (Déco perso 25 / 100, lot A4)
+	d.stats.tracksDone = 0 -- pistes de la semaine finies (12 paliers, Déco perso 1 / 4, lot A4)
 	d.carnet = bitset(8) -- paliers du Carnet réclamés
 	d.weeklyTrack = {
 		period = 0, -- numéro de période de QuestRules.weekIndex (jamais une semaine de l'année)
@@ -195,18 +200,35 @@ local function addV2Defaults(d: { [string]: any })
 		claimed = bitset(12), -- paliers réclamés (12)
 		challenges = {}, -- { Types.ChallengeEntry × 3 }
 		firstPeriodEnd = 0, -- Clock.unix() de fin de la 1re période (0 = à fixer par QuestService)
+		-- cosmétiques de la semaine gagnés (palier 12) : bit i = Cosmetics.WeeklyRotation[i] (lot A4)
+		won = bitset(#Cosmetics.WeeklyRotation),
+		-- secondes de jeu par jour UTC des 7 derniers jours (case Clock.day() % 7 + 1, de 0 à 86 400 ;
+		-- médiane et jours joués des Défis), playDay = Clock.day() de la dernière case écrite (lot A4)
+		play = table.create(7, 0),
+		playDay = 0,
 	}
 	d.mastery = bitset(#Species.List) -- un bit par espèce, agrandi par reconcile
 	d.unlocksSeen = 0 -- plus haut Record R dont la carte « Nouveau : … » a été montrée
 	d.onboarding.nextBuyShown = false -- puce « Prochain achat » déjà apparue
 	d.onboarding.welcomeV2Pending = false -- carte « Bienvenue dans la v2 ! » à montrer une fois
 	d.season.frostDays = 0 -- costume d'hiver (la saison de 28 jours est supprimée)
+	-- Jelly Moon jouées : +1 à chaque Goutte de Lune donnée (EventService, Déco perso 1 / 4, lot A4)
+	d.moon.sessions = 0
 	-- plafonds v2 (Balance.CapsV2), remis à zéro au changement de jour avec les autres
 	d.caps.fameSplorch = 0
 	d.caps.starRain = 0
 	-- social
 	d.decoPerso = { owned = bitset(64), slots = table.create(12, 0) } -- slots : 0 = vide
 	d.hearts = { givenDay = 0, givenTo = {}, receivedTotal = 0 } -- givenTo : 20 UserIds au plus
+	-- palette du spectacle du Grand Splorch et coussins des enclos choisis ("" = ceux du ranch, lot A4)
+	d.cosmetics.palette = ""
+	d.cosmetics.cushions = ""
+	-- réglages ajoutés par la v2 (Config/Settings, since = 2 : « Montrer mon halo », lot A4)
+	for key, value in defaultSettings(2) do
+		if d.settings[key] == nil then
+			d.settings[key] = value
+		end
+	end
 end
 
 -- Valeurs par défaut d'une version du schéma (1 ou 2)
@@ -225,8 +247,8 @@ function Schema.defaultsV1(): { [string]: any }
 		-- horodatages (Clock.unix()) : première arrivée, dernière présence (gains hors ligne)
 		firstJoin = 0,
 		lastOnline = 0,
-		-- réglages du joueur (Config/Settings, clés saved = true)
-		settings = defaultSettings(),
+		-- réglages du joueur (Config/Settings, clés saved = true de la v1)
+		settings = defaultSettings(1),
 		-- achats
 		passes = {}, -- [passKey] = true (MonetizationService)
 		receipts = {}, -- PurchaseId déjà crédités, au plus 100 (MonetizationService)

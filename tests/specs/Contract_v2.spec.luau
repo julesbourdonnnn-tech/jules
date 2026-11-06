@@ -372,6 +372,64 @@ return function(T)
 			end
 		)
 
+		-- Lot A4 (docs/04 §27.2, journal A4-1, A4-2) : champs de la méta v2 et réglage « Montrer mon
+		-- halo » (Config/Settings since = 2) : un profil v1 n'en porte jamais aucun
+		it(
+			"champs du lot A4 : dans defaultsFor(2), jamais dans defaultsV1() ni defaults() ; réglages « since »",
+			function()
+				local h = Harness.new()
+				local Schema = schema(h)
+				local S = shared(h, "Config.Settings")
+				local C = shared(h, "Config.Cosmetics")
+				local d = Schema.defaultsFor(2)
+				expect(d.stats.objectivesClaimed).toBe(0)
+				expect(d.stats.tracksDone).toBe(0)
+				expect(d.moon.sessions).toBe(0)
+				expect(#C.WeeklyRotation).toBe(8)
+				expect(d.weeklyTrack.won).toEqual({ 0 }) -- un bit par cosmétique de la semaine
+				expect(d.weeklyTrack.play).toEqual({ 0, 0, 0, 0, 0, 0, 0 })
+				expect(d.weeklyTrack.playDay).toBe(0)
+				expect(d.cosmetics.palette).toBe("")
+				expect(d.cosmetics.cushions).toBe("")
+				expect(d.settings.haloOn).toBe(true)
+				for _, v1 in { Schema.defaultsV1(), Schema.defaults() } do
+					expect(v1.version).toBe(1)
+					expect(v1.stats.objectivesClaimed).toBeNil()
+					expect(v1.stats.tracksDone).toBeNil()
+					expect(v1.moon.sessions).toBeNil()
+					expect(v1.weeklyTrack).toBeNil()
+					expect(v1.cosmetics.palette).toBeNil()
+					expect(v1.cosmetics.cushions).toBeNil()
+					expect(v1.settings.haloOn).toBeNil()
+				end
+				-- règle « since » : un réglage sauvegardé est dans les valeurs par défaut de la version N
+				-- exactement quand since ≤ N (absent = 1) ; un réglage de serveur jamais
+				expect(S.haloOn.saved).toBe(true)
+				expect(S.haloOn.since).toBe(2)
+				for version = 1, 2 do
+					local settings = Schema.defaultsFor(version).settings
+					for key, def in S do
+						local want = if def.saved and (def.since or 1) <= version then def.default else nil
+						expect({ version = version, key = key, value = settings[key] }).toEqual({
+							version = version,
+							key = key,
+							value = want,
+						})
+					end
+					for key in settings do
+						expect({ key = key, declared = S[key] ~= nil }).toEqual({ key = key, declared = true })
+					end
+				end
+				-- la migration v1 → v2 les écrit (règle A2-3) : témoin v1.json migré
+				local m = migrateFull(h, readV1())
+				expect(m.settings.haloOn).toBe(true)
+				expect(m.moon.sessions).toBe(0)
+				expect(m.stats.objectivesClaimed + m.stats.tracksDone).toBe(0)
+				expect(m.weeklyTrack.won).toEqual({ 0 })
+				expect(m.cosmetics.palette .. m.cosmetics.cushions).toBe("")
+			end
+		)
+
 		it("ensembles de bits : tableaux denses de mots de 32 bits ; tailles du GDD", function()
 			local h = Harness.new()
 			local Schema = schema(h)
@@ -388,6 +446,7 @@ return function(T)
 					carnet = { d.carnet, 1 },
 					decoOwned = { d.decoPerso.owned, 2 },
 					trackClaimed = { d.weeklyTrack.claimed, 1 },
+					trackWon = { d.weeklyTrack.won, 1 }, -- lot A4 : 8 cosmétiques de la semaine
 				}
 			do
 				local list, n = pair[1], pair[2]
@@ -546,6 +605,14 @@ return function(T)
 				stale.tiles.star, stale.tiles.gloves, stale.tiles.school, stale.tiles.monuments =
 					8, 40, 20, 10
 				stale.stats.upgradesBought, stale.stats.petitSplorches = 999, 77
+				-- champs du lot A4 (journal A4-1) : aussi écrits à leur valeur v2 par la migration
+				stale.weeklyTrack.won = { 255 }
+				stale.weeklyTrack.play = { 86400, 1, 2 }
+				stale.weeklyTrack.playDay = 20000
+				stale.stats.objectivesClaimed, stale.stats.tracksDone = 100, 4
+				stale.moon.sessions = 12
+				stale.cosmetics.palette, stale.cosmetics.cushions = "candy", "pinkCushions"
+				stale.settings.haloOn = false
 				stale.onboarding.nextBuyShown = true
 				stale.season.frostDays = 30
 				stale.caps.fameSplorch, stale.caps.starRain = 50, 3
@@ -559,6 +626,10 @@ return function(T)
 				expect(d.bestR).toBe(12)
 				expect(d.memoryR).toBe(0)
 				expect(d.confetti).toBe(139)
+				expect(d.moon.sessions).toBe(0)
+				expect(d.settings.haloOn).toBe(true)
+				expect(d.cosmetics.palette).toBe("")
+				expect(d.weeklyTrack.play).toEqual({ 0, 0, 0, 0, 0, 0, 0 })
 				-- chaque valeur v1 est gardée (season.premium compris)
 				expect(d.season.premium).toBe(clean.season.premium)
 			end

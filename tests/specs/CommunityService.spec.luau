@@ -15,12 +15,21 @@ return function(T)
 	local S = "ServerScriptService.Server.Services."
 	local R = "ReplicatedStorage.Remotes."
 
-	local function world(before)
-		local w = Brains.boot(Harness, { t0 = T0, stubMeta = false, before = before })
+	local function world(before, harness)
+		local w = Brains.boot(harness or Harness, { t0 = T0, stubMeta = false, before = before })
 		w.C = w.h:require(S .. "CommunityService")
 		w.WL = w.h:require("ReplicatedStorage.Shared.Logic.WorldLayout")
 		return w
 	end
+
+	-- Profils v2 (recette de DataChaos : SchemaV2 posé avant le premier require du schéma)
+	local HarnessV2 = setmetatable({
+		new = function(options)
+			local hh = Harness.new(options)
+			hh:require("ReplicatedStorage.Shared.Config.Features").Defaults.SchemaV2 = true
+			return hh
+		end,
+	}, { __index = Harness })
 
 	local function owned(w, id, n)
 		local list = {}
@@ -303,6 +312,58 @@ return function(T)
 				expect(#changed).toBe(1)
 				expect(w.DS.get(p).settings.lang).toBe("auto")
 				expect(w.C.setting(p, "allowRush")).toBe(false)
+			end
+		)
+
+		-- Lot A4 (D24, docs/04 §27.12 A4-2) : « Montrer mon halo » (Config/Settings since = 2) n'est
+		-- jamais écrit dans un profil v1 ni quand RanchSkins est coupé (le jeu de base ne l'écrit jamais)
+		it(
+			"SetSetting « haloOn » : refusé sur un profil v1 et RanchSkins coupé (rien d'écrit ni d'envoyé) ; accepté sur un profil v2 avec RanchSkins",
+			function()
+				local function patches(w, p)
+					w.h:settle(2)
+					return #w.h:sentTo(p, "DataPatch")
+				end
+				-- profil v1 : refusé, interrupteur coupé puis ouvert
+				local w = world()
+				local p = owned(w, 1, 1)
+				local changed = 0
+				w.Signals.SettingChanged:Connect(function()
+					changed += 1
+				end)
+				local F = w.h:require("ReplicatedStorage.Shared.Config.Features")
+				local before = patches(w, p)
+				w.h:fireServer(R .. "SetSetting", p, "haloOn", false)
+				w.osClock.advance(1)
+				expect(F.set("RanchSkins", true)).toBe(true)
+				w.h:fireServer(R .. "SetSetting", p, "haloOn", false)
+				w.osClock.advance(1)
+				expect(w.DS.get(p).version).toBe(1)
+				expect(w.DS.get(p).settings.haloOn).toBeNil()
+				expect(patches(w, p)).toBe(before)
+				expect(changed).toBe(0)
+				-- profil v2 : RanchSkins coupé → refusé, rien d'envoyé ; ouvert → écrit et envoyé
+				local w2 = world(nil, HarnessV2)
+				local q = owned(w2, 1, 1)
+				local F2 = w2.h:require("ReplicatedStorage.Shared.Config.Features")
+				local seen = {}
+				w2.Signals.SettingChanged:Connect(function(_, key, value)
+					table.insert(seen, { key, value })
+				end)
+				expect(w2.DS.get(q).version).toBe(2)
+				expect(w2.DS.get(q).settings.haloOn).toBe(true)
+				local before2 = patches(w2, q)
+				w2.h:fireServer(R .. "SetSetting", q, "haloOn", false)
+				w2.osClock.advance(1)
+				expect(w2.DS.get(q).settings.haloOn).toBe(true)
+				expect(patches(w2, q)).toBe(before2)
+				expect(F2.set("RanchSkins", true)).toBe(true)
+				w2.h:fireServer(R .. "SetSetting", q, "haloOn", "non") -- mauvais type
+				w2.osClock.advance(1)
+				w2.h:fireServer(R .. "SetSetting", q, "haloOn", false)
+				expect(w2.DS.get(q).settings.haloOn).toBe(false)
+				expect(seen).toEqual({ { "haloOn", false } })
+				expect(patches(w2, q) > before2).toBe(true)
 			end
 		)
 

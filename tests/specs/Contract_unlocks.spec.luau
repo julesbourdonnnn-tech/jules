@@ -16,6 +16,8 @@ local SOURCE_KINDS = {
 	plopDay = true,
 	objectives = true,
 	moon = true,
+	-- jalon géant (biggestEver ≥ value, GDD §4.17, §5.4) : lot A4, journal A4-3
+	size = true,
 }
 
 local V2_SOUNDS = {
@@ -165,6 +167,8 @@ return function(T)
 				expect(big).toBe(16)
 				-- 64 bits réservés pour decoPerso.owned (2 mots de 32 bits)
 				expect(#C.DecoPerso <= 64).toBe(true)
+				-- 12 emplacements (lot A4, D18) : 1 à 8 petits, 9 à 12 grands (GDD §11.5 : 8 P + 4 G)
+				expect(C.DecoSlots).toEqual({ "P", "P", "P", "P", "P", "P", "P", "P", "G", "G", "G", "G" })
 			end
 		)
 
@@ -189,7 +193,8 @@ return function(T)
 					source = true,
 				})
 			end
-			-- 11 habillages de plus (14 avec les 3 thèmes de la v1.3) ; 51 titres v2.0
+			-- 11 habillages de plus (14 avec les 3 thèmes de la v1.3) ; 52 titres v2.0 (51 jusqu'au lot
+			-- A4 : + « Sun Keeper », jalon géant 1e24 du GDD §4.17, §5.4, oublié par l'Annexe B ; A4-3)
 			local themes, titles = 0, 0
 			for _, def in C.ListV2 do
 				if def.kind == "theme" then
@@ -199,7 +204,30 @@ return function(T)
 				end
 			end
 			expect(themes).toBe(11)
-			expect(titles).toBe(51)
+			expect(titles).toBe(52)
+			-- jalons géants (lot A4, D16) : selle 1e15, traînée 1e18, titre 1e24, textes simples EN / FR
+			local giants = {
+				{ k = "saddle.cosmic", size = 1e15, en = "Cosmic", fr = "Cosmique" },
+				{ k = "trail.shootingStars", size = 1e18, en = "Shooting Stars", fr = "Étoiles filantes" },
+				{ k = "title.sunKeeper", size = 1e24, en = "Sun Keeper", fr = "Gardien du Soleil" },
+			}
+			local sized = 0
+			for _, def in C.ListV2 do
+				if def.source.kind == "size" then
+					sized += 1
+				end
+			end
+			expect(sized).toBe(#giants)
+			for _, g in giants do
+				local def = byKindId[g.k]
+				expect({ k = g.k, found = def ~= nil }).toEqual({ k = g.k, found = true })
+				expect(def.source).toEqual({ kind = "size", value = g.size })
+				expect({ k = g.k, en = S.en[def.key], fr = S.fr[def.key] }).toEqual({
+					k = g.k,
+					en = g.en,
+					fr = g.fr,
+				})
+			end
 			-- « Pour le plaisir » : chaque objet donné existe, avec la source atelier = son bit
 			for _, line in U.Fun do
 				if line.store == "bits" then

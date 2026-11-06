@@ -797,7 +797,7 @@ Maximum au lancement : 26 × 8 % = +208 %. Le bonus se compte **par espèce** : 
 | Spiky | Limite hors ligne +1 h |
 
 - **Jalons** (tampons d'espèces + de mutations) : 10 → titre « Little Collector » ; 25 → couleur de selle Menthe ; 50 → traînée Bulles ; 75 → titre « Squishologist » ; 100 → drapeau de ranch Squishydex ; 130 → couleur de selle Lavande ; 160 → thème de ranch « Moonlit » ; 200 → titre « Dex Master » ; 260 → Squishydex doré et emote couronne. Tous gratuits, tous cosmétiques.
-- *(v2.0)* **Maîtrise d'espèce** : une fiche à 3 cases par espèce : ★5, Page dorée (8 mutations hors Lunaire), Trophée Cristal (taille record ≥ 1e12) ; quand les 3 sont faites, la fiche brille jusqu'à « Réclamer » (+25 Confettis, §4.26) ; compteur « Maîtrises 3 / 26 » ; **un seuil ne bouge jamais** quand une espèce arrive (champ `mastery`, ensemble de bits). **Jalons de taille géante** (record de taille de n'importe quelle espèce) : 1e15 selle « Cosmique », 1e18 traînée « Étoiles filantes », 1e21 **Squishy-Soleil** (couronne de rayons sur la silhouette du ranch), 1e24 titre « Sun Keeper ».
+- *(v2.0)* **Maîtrise d'espèce** : une fiche à 3 cases par espèce : ★5, Page dorée (8 mutations hors Lunaire), Trophée Cristal (taille record ≥ 1e12) ; quand les 3 sont faites, la fiche brille jusqu'à « Réclamer » (+25 Confettis, §4.26) ; compteur « Maîtrises 3 / 26 » ; **un seuil ne bouge jamais** quand une espèce arrive (champ `mastery`, ensemble de bits). **Jalons de taille géante** (record de taille de n'importe quelle espèce) : 1e15 selle « Cosmique », 1e18 traînée « Étoiles filantes », 1e21 **Squishy-Soleil** (couronne de rayons sur la silhouette du ranch), 1e24 titre « Gardien du Soleil » (« Sun Keeper »).
 - Onglet **Guide** : toutes les probabilités (Cuve par niveau, mutations, Golden, MEGA, Wild Wobblers, cadeaux), les compteurs de la protection contre la malchance, les règles du BOOP RUSH.
 
 ### 4.18 Fame *(v2.0 : modifié)*
@@ -1405,7 +1405,7 @@ Construits **côté client** à partir de la ligne de données et de 4 nombres (
 | *(v2.0)* Tenues | Chapeau de fête / Lunettes étoiles | Record R 7 / 16 |
 | *(v2.0)* Titres | Splorch Myth, Jelly Monarch, Wobble Legend, Cosmic Splorcher ; puis tous les 10 jusqu'à 400 | Record R 25 / 30 / 35 / 40 ; 50 à 400 |
 | | Ascended, Sky Keeper, Sky Wobbler, Star Jelly, Jelly Galaxy, Cosmic Jelly, Jelly Forever | A 1 / 3 / 5 / 10 / 20 / 40 / 60 |
-| | Confetti Star ; Bâtisseur, Architecte, Grand Architecte ; Sun Keeper | Atelier (100) ; Carnet 50 / 500 / 5 000 ; taille 1e24 |
+| | Confetti Star ; Bâtisseur, Architecte, Grand Architecte ; Gardien du Soleil (Sun Keeper) | Atelier (100) ; Carnet 50 / 500 / 5 000 ; taille 1e24 |
 | *(v2.0)* Drapeaux | « IX » / « Splorch Royal » ; « Chantier » | Record R 9 / 19 ; Carnet 250 |
 | *(v2.0)* Palettes du spectacle du Grand Splorch | Feu d'artifice ; Bonbon, Menthe, Lavande, Arc-en-ciel, Nuit douce, Sucre glace | Record R 9 ; Atelier (20 chacune) |
 | *(v2.0)* Habillages de ranch (14) | Les 3 de la v1.3 + Guimauve, Caramel, Menthe glacée, Phare, Glacier sucré, Néon, Cosmos sucré, Royal, Nuage, Aurore, Céleste ; Atelier | Record R 1 à 20, A 1 / 3 / 5 (§11.5) ; Carnet 2 500 |
@@ -3413,12 +3413,12 @@ Gouttes du halo (§4.27) : menthe / mint, ciel / sky, lilas / lilac, or / gold, 
 
 | Sorte | FR / EN (source) |
 |---|---|
-| Selles (8) | Confetti / Confetti (Record 2) · Gelée d'or / Golden Jelly (Record 11) · Cosmos / Cosmos (Record 17) · Titan / Titan (Record 20) · Cotillon / Party Popper (Atelier) · Brique / Brick (Carnet 100) · Sucre glace / Icing Sugar (saison Frost & Sprinkles) · Biscuit / Cookie (piste de la semaine) |
-| Traînées (5) | Confettis / Confetti (Record 6) · Arc de gelée / Jelly Arc (Record 13) · Serpentins / Streamers (Atelier) · Petits marteaux / Little Hammers (Carnet 1 000) · Traînée colorée / Colour Trail (Records 25, 30, 35, 40 : une couleur chacun) |
+| Selles (9) | Confetti / Confetti (Record 2) · Gelée d'or / Golden Jelly (Record 11) · Cosmos / Cosmos (Record 17) · Titan / Titan (Record 20) · Cotillon / Party Popper (Atelier) · Brique / Brick (Carnet 100) · Sucre glace / Icing Sugar (saison Frost & Sprinkles) · Biscuit / Cookie (piste de la semaine) · Cosmique / Cosmic (taille 1e15, §4.17) |
+| Traînées (6) | Confettis / Confetti (Record 6) · Arc de gelée / Jelly Arc (Record 13) · Serpentins / Streamers (Atelier) · Petits marteaux / Little Hammers (Carnet 1 000) · Traînée colorée / Colour Trail (Records 25, 30, 35, 40 : une couleur chacun) · Étoiles filantes / Shooting Stars (taille 1e18, §4.17) |
 | Drapeaux (3) | « IX » (Record 9 ; chiffre romain, décor) · Splorch Royal / Splorch Royal (Record 19) · Chantier / Building Site (Carnet 250) |
 | Tenues (3) | Chapeau de fête / Party Hat (Record 7) · Lunettes étoiles / Star Glasses (Record 16) · Couronne de chantier / Builder's Crown (Carnet 10 000, pour le Meilleur Ami) |
 | Emotes (5) | Splorch ! / Splorch! (Record 4) · Ola / Wave (Record 13) · Couronne de confettis / Confetti Crown (Record 19) · Danse de Big Plop / Big Plop Dance (Atelier) · Coup de maillet / Hammer Tap (Carnet 2 500 ; *remplace l'habillage « Atelier », qui aurait fait un 15e habillage*) |
-| Titres (15 + 36) | Splorch Myth (R25) · Jelly Monarch (R30) · Wobble Legend (R35) · Cosmic Splorcher (R40) · Ascended (A1) · Sky Keeper (A3) · Sky Wobbler (A5) · Star Jelly (A10) · Jelly Galaxy (A20) · Cosmic Jelly (A40) · Jelly Forever (A60) · Confetti Star (Atelier) · Bâtisseur / Builder (Carnet 50) · Architecte / Architect (Carnet 500) · Grand Architecte / Master Architect (Carnet 5 000) ; les 4 titres de Record 5, 10, 15, 20 sont ceux de la v1.3 ; et les 36 titres de B.6 |
+| Titres (16 + 36) | Splorch Myth (R25) · Jelly Monarch (R30) · Wobble Legend (R35) · Cosmic Splorcher (R40) · Ascended (A1) · Sky Keeper (A3) · Sky Wobbler (A5) · Star Jelly (A10) · Jelly Galaxy (A20) · Cosmic Jelly (A40) · Jelly Forever (A60) · Confetti Star (Atelier) · Bâtisseur / Builder (Carnet 50) · Architecte / Architect (Carnet 500) · Grand Architecte / Master Architect (Carnet 5 000) · Gardien du Soleil / Sun Keeper (taille 1e24, §4.17) ; les 4 titres de Record 5, 10, 15, 20 sont ceux de la v1.3 ; et les 36 titres de B.6 |
 
 ### B.6 Les 36 titres de Record R 50 à 400 (§4.29) — case (d)
 

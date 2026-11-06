@@ -2,7 +2,8 @@
 -- DiagnosticsService (paquet meta, docs/04 §11.2) — Diagnostics en ligne (GDD §12.11) : erreurs et
 -- avertissements du serveur (ScriptContext.Error, LogService.MessageOut), erreurs attrapées par les
 -- pcall du tick et des handlers (reportCaught), états fermés par leur délai (stateTimedOut),
--- réparations de profil (Signals.ProfileRepaired), et rapports des clients (ReportError : validés,
+-- compteurs nommés des services v2.0 (count, lot A4 : « Count:<clé> », jamais une trace ni un
+-- ServerError), réparations de profil (Signals.ProfileRepaired), et rapports des clients (ReportError : validés,
 -- plafonnés, noms nettoyés une 2e fois). Par clé : nombre, joueurs touchés (en mémoire, jamais envoyés),
 -- première et dernière fois, 3 exemples ; 200 clés au plus, puis un compteur « autres ». Totaux du jour
 -- dans un DataStore à part toutes les 5 min (UpdateAsync, DiagRules.mergeDaily, task.spawn) ;
@@ -58,6 +59,7 @@ type Entry = {
 	analyticsCount: number, -- occurrences depuis ce dernier envoi
 	flushed: number, -- occurrences déjà écrites dans les totaux du jour
 	flushedPlayers: number,
+	quiet: boolean, -- compteur nommé (count) : jamais d'analytique ServerError
 }
 
 type PlayerState = {
@@ -84,6 +86,14 @@ local todayCache: { Types.DiagEntry } = {}
 local todayDay = 0
 local tickStats = { sum = 0, n = 0, max = 0 }
 local internalErrors = 0
+-- Compteurs nommés (count, lot A4, D29 ; note INT-A2-DIAG) : clé → nombre, en mémoire ; 64 clés au
+-- plus, puis la clé « others ». Clé et texte de Diagnostics calculés une fois par clé (count est
+-- appelé par des chemins chauds : pressions des Plopettes)
+DiagnosticsService.CounterKeys = 64
+local counterValues: { [string]: number } = {}
+local counterKeys = 0
+local counterText: { [string]: string } = {}
+local counterDiagKey: { [string]: string } = {}
 
 local function finite(x: any): boolean
 	return type(x) == "number" and x == x and x ~= math.huge and x ~= -math.huge
@@ -158,7 +168,8 @@ local function record(
 	trace: string,
 	ctx: string,
 	source: "server" | "client",
-	player: Player?
+	player: Player?,
+	quiet: boolean?
 )
 	if kind == 1 then
 		totals.errors += 1
@@ -188,6 +199,7 @@ local function record(
 			analyticsCount = 0,
 			flushed = 0,
 			flushedPlayers = 0,
+			quiet = quiet == true,
 		}
 		entries[key] = entry
 		table.insert(order, key)
@@ -195,7 +207,6 @@ local function record(
 	end
 	entry.count += 1
 	entry.last = unix
-	entry.analyticsCount += 1
 	if player ~= nil and not entry.players[player.UserId] then
 		entry.players[player.UserId] = true
 		entry.playerCount += 1
@@ -203,6 +214,10 @@ local function record(
 	if #entry.samples < LIMITS.Samples then
 		table.insert(entry.samples, { key = key, text = text, trace = trace, ctx = ctx, at = unix })
 	end
+	if entry.quiet then
+		return -- compteur nommé : jamais d'analytique ServerError
+	end
+	entry.analyticsCount += 1
 	if now - entry.analyticsAt >= DiagnosticsService.AnalyticsEvery then
 		sendAnalytics(entry, player)
 	end
@@ -449,7 +464,11 @@ function DiagnosticsService.step(now: number)
 			})
 			table.insert(marks, { entry = e, count = e.count, players = e.playerCount })
 		end
-		if e.analyticsCount > 0 and t - e.analyticsAt >= DiagnosticsService.AnalyticsEvery then
+		if
+			not e.quiet
+			and e.analyticsCount > 0
+			and t - e.analyticsAt >= DiagnosticsService.AnalyticsEvery
+		then
 			sendAnalytics(e, nil)
 		end
 	end
@@ -536,6 +555,52 @@ function DiagnosticsService.stateTimedOut(name: string, player: Player?)
 			Analytics.custom(target, "StateTimedOut", 1, { state = state })
 		end
 	end)
+end
+
+-- Compteur nommé (corps de count, sous la garde de réentrance)
+local function countKey(key: string, player: Player?)
+	local name = DiagRules.truncate(key, 40)
+	local n = counterValues[name]
+	if n == nil and name ~= "others" then
+		if counterKeys >= DiagnosticsService.CounterKeys then
+			name = "others"
+			n = counterValues.others
+		else
+			counterKeys += 1
+		end
+	end
+	counterValues[name] = (n or 0) + 1
+	local text = counterText[name]
+	if text == nil then
+		text = "Count:" .. name
+		counterText[name] = text
+		counterDiagKey[name] = DiagRules.key(text, "count")
+	end
+	-- compté et montré aux administrateurs comme stateTimedOut, jamais un « avertissement du moteur »
+	local before = totals.warnings
+	record(counterDiagKey[name], 2, text, "", "", "server", player, true)
+	totals.warnings = before
+end
+
+-- Compteur nommé d'un service v2.0 (docs/04 §27.14 : UpgradeStale, UpgradeTimeout, ConfigRefused,
+-- PrestigeRefused, compteurs des Plopettes… ; note INT-A2-DIAG) : nombre par clé en mémoire
+-- (counters), ligne « Count:<clé> » du panneau des administrateurs et des totaux du jour ; jamais un
+-- warn, jamais d'analytique ServerError ; 64 clés au plus, puis « others »
+function DiagnosticsService.count(key: string, player: Player?)
+	if busy or type(key) ~= "string" or key == "" then
+		return
+	end
+	busy = true
+	local ok = pcall(countKey, key, if typeof(player) == "Instance" then player else nil)
+	busy = false
+	if not ok then
+		internalErrors += 1 -- jamais un warn (il se rapporterait lui-même)
+	end
+end
+
+-- Compteurs nommés de la session (copie : clé → nombre ; « others » au-delà de CounterKeys clés)
+function DiagnosticsService.counters(): { [string]: number }
+	return table.clone(counterValues)
 end
 
 -- Temps d'un tick (ms), noté par ChaseService s'il le mesure (panneau : moyenne et maximum)

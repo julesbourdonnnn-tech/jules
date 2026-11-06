@@ -166,9 +166,10 @@ local Signals = {
 	-- Émis par SplorchService au premier passage d'un Record R (nouveau bestR) → QuestService (carte
 	-- « Nouveau : … », unlocksSeen), CommunityService (habillages et cosmétiques gagnés), RanchService
 	RecordReached = Signal.new() :: Signal.Signal<Player, number>,
-	-- Émis par HelperService : pression d'une Plopette accordée (numéro de la Plopette, uid, pièces) →
-	-- EconomyService (crédit, source « Helper »), analytique (HelperCoinsShare) ; jamais la jauge, les
-	-- objectifs ni les classements
+	-- Émis par HelperService : pression d'une Plopette accordée (numéro de la Plopette, uid, pièces),
+	-- émis APRÈS le crédit fait par HelperService (EconomyService.addCoins, source « Helper » ; coins =
+	-- pièces créditées) ; personne ne crédite dessus (lot A3, A3-31). Écouté par l'analytique
+	-- (HelperCoinsShare) et Diagnostics ; jamais la jauge, les objectifs ni les classements
 	HelperPressed = Signal.new() :: Signal.Signal<Player, number, string, number>,
 }
 

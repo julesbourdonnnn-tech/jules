@@ -152,6 +152,15 @@ local V2_ATTRIBUTES: { [string]: string } = {
 	TapisTier = "number",
 	GloveTier = "number",
 	ApronTier = "number",
+	-- lot A4 : Plopettes (HelperService), jalons géants (QuestService), décorations dorées et
+	-- fanions dorés (calculés ici), palette et coussins (CommunityService)
+	HelperMode = "string",
+	Helpers = "number",
+	GiantTier = "number",
+	DecorGold = "number",
+	GoldPennants = "boolean",
+	Palette = "string",
+	Cushions = "string",
 }
 local DECO_PERSO_MAX = 64 -- caractères de l'attribut DecoPerso (12 identifiants séparés par des virgules)
 -- attributs calculés ici (le reste est posé par son service) et leur interrupteur
@@ -161,11 +170,19 @@ local OWN_ATTRIBUTES: { [string]: string } = {
 	TapisTier = "RanchTiers",
 	GloveTier = "RanchTiers",
 	ApronTier = "RanchTiers",
+	DecorGold = "RanchTiers", -- lot A4 (D31) : décorations dorées
+	GoldPennants = "Workshop", -- lot A4 (D31) : « Fanions dorés » de « Pour le plaisir »
 }
+-- attributs lus dans un champ v2 (decorBuilds, atelierCosmetics) : absents pour un profil v1
+local V2_PROFILE_ONLY: { [string]: boolean } = { DecorGold = true, GoldPennants = true }
 -- interrupteurs de ces attributs (ordre fixe) : un changement en direct (LiveOps) les fait revoir au
 -- tick suivant pour chaque joueur (relecture du lot A2 : sans lui, posés ou effacés seulement au
 -- prochain achat ou prestige)
-local OWN_FLAGS = { "RecordR", "Monuments", "RanchTiers" }
+local OWN_FLAGS = { "RecordR", "Monuments", "RanchTiers", "Workshop" }
+-- décorations dorées (GDD §11.5 « construite dans 10 boucles », docs/04 §27.2) : une case de
+-- decorBuilds par décoration (18), dorée à 10 (mêmes nombres qu'EconomyService et Logic/Invariants)
+local DECOR_COUNT = Balance.Tiles.decor.Levels
+local DECOR_GOLD_AT = 10
 local ownPrint = 0 -- empreinte des OWN_FLAGS au dernier tick
 local v2Values: { [Player]: { [string]: any } } = {} -- valeurs voulues (gardées jusqu'au ranch attribué)
 local modelAttrs: { [number]: { [string]: boolean } } = {} -- attributs posés sur chaque modèle
@@ -1353,8 +1370,10 @@ function RanchService.setV2Attributes(player: Player, attrs: { [string]: any }, 
 end
 
 -- Attributs v2.0 calculés par RanchService depuis le profil : Record R [RecordR], Monuments
--- [Monuments], paliers du Tapis, des Gants et des tabliers de l'École [RanchTiers] ; un interrupteur
--- coupé efface ce qu'il avait posé (rien de posé tant que tout est coupé)
+-- [Monuments], paliers du Tapis, des Gants et des tabliers de l'École [RanchTiers] ; lot A4 (D31) :
+-- décorations dorées DecorGold [RanchTiers] (bit k − 1 : decorBuilds[k] ≥ 10) et GoldPennants
+-- [Workshop] (ligne « Fanions dorés » achetée), profil v2 seulement. Un interrupteur coupé efface ce
+-- qu'il avait posé (rien de posé tant que tout est coupé)
 function RanchService.refreshV2(player: Player)
 	local data = DataService.get(player)
 	if data == nil then
@@ -1364,8 +1383,9 @@ function RanchService.refreshV2(player: Player)
 	local attrs: { [string]: any } = {}
 	local clear: { string } = {}
 	local on: { [string]: boolean } = {}
+	local v2 = PadRules.v2Profile(data)
 	for name, flag in OWN_ATTRIBUTES do
-		on[name] = Features.get(flag) == true
+		on[name] = Features.get(flag) == true and (v2 or V2_PROFILE_ONLY[name] ~= true)
 		if not on[name] and values ~= nil and values[name] ~= nil then
 			table.insert(clear, name)
 		end
@@ -1383,6 +1403,22 @@ function RanchService.refreshV2(player: Player)
 			else TierRules.of("snack", UpgradeMath.level("snack", data))
 		attrs.GloveTier = TierRules.of("gloves", UpgradeMath.level("gloves", data))
 		attrs.ApronTier = TierRules.of("school", UpgradeMath.level("school", data))
+	end
+	if on.DecorGold then
+		local builds = data.decorBuilds
+		local mask = 0
+		if type(builds) == "table" then
+			for k = 1, DECOR_COUNT do
+				local n = builds[k]
+				if type(n) == "number" and n >= DECOR_GOLD_AT then
+					mask = bit32.bor(mask, bit32.lshift(1, k - 1))
+				end
+			end
+		end
+		attrs.DecorGold = mask
+	end
+	if on.GoldPennants then
+		attrs.GoldPennants = UpgradeMath.level("pennants", data) >= 1
 	end
 	if next(attrs) == nil and #clear == 0 then
 		return

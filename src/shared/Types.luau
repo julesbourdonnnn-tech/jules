@@ -279,8 +279,10 @@ export type GoldenPhase = { active: boolean, index: number, spawnAt: number, end
 export type MoonPhase = { active: boolean, session: number, startsAt: number, endsAt: number }
 export type NextEvent = { kind: "rush" | "mega" | "golden" | "moon", at: number }
 
+-- kind "ascend" (v2.0, lot A4) : Jelly Ascend dans la file comme un Grand Splorch (Events.Spectacles
+-- .ascend : 10 s, coupure 12 s) ; jamais dans la file tant que l'interrupteur JellyAscend est coupé
 export type SpectacleEntry = {
-	kind: "splorch" | "dance",
+	kind: "splorch" | "dance" | "ascend",
 	userId: number, -- héros (0 pour la danse)
 	startAt: number, -- Clock.now() prévu
 	slot: number, -- ranch du héros (0 pour la danse)
@@ -291,10 +293,12 @@ export type SpectacleEntry = {
 }
 
 export type SpectacleCurrent = {
-	kind: "splorch" | "dance",
+	kind: "splorch" | "dance" | "ascend",
 	userId: number,
 	startedAt: number,
-	burstAt: number, -- Grand Splorch : application au profil (startedAt + Balance.Splorch.BurstAt)
+	-- application au profil : Grand Splorch startedAt + Balance.Splorch.BurstAt ; Ascension (v2.0)
+	-- startedAt + Balance.Ascend.BurstAt
+	burstAt: number,
 	endsAt: number,
 	flyer: { s: SpeciesId, m: MutationId, st: number, z: number }?,
 	level: number, -- R atteint (titre « GRAND SPLORCH III »)
@@ -337,6 +341,11 @@ export type EventStatePayload = {
 	spectacle: { current: SpectacleCurrent?, queue: { SpectacleEntry } },
 	features: EventFeatures,
 	offset: number, -- Clock.setOffset du serveur (commandes de développement) : le client l'applique
+	-- v2.0 (lot A4), visuels seulement, ABSENTS tant que leur interrupteur est coupé (charge utile de la
+	-- v1.3 inchangée) : météo de la place (Weather : kind = index de Events.Weather.Kinds, endsAt =
+	-- Clock.unix() de fin de la fenêtre) ; place en fête (Fete : level 0 à 5)
+	weather: { kind: number, endsAt: number }?,
+	fete: { level: number }?,
 }
 
 export type MegaBeatPayload = { points: number, target: number, presses: number, t: number }
@@ -561,9 +570,11 @@ export type UpgradeSnapshot = {
 	version: number,
 }
 
--- Réponse à BuyUpgrade (et à BuyTile, même chemin) : TOUJOURS envoyée, sauf refus « périmé » muet.
+-- Réponse à BuyUpgrade (et à BuyTile, même chemin) : TOUJOURS envoyée, refus « périmé » compris
+-- (lot A2, docs/04 §27.12 A2-10) : le refus périmé est muet DEDANS (reason = nil, from = to = niveau du
+-- serveur, spent = 0, instantané à jour ; le client le reconnaît à from == to sans raison).
 -- from / to = niveaux avant / après (to == from sur un refus) ; spent = somme exacte débitée
--- (UpgradeMath.bulk) ; reason = clé de texte du refus (nil si acheté) ; snapshot = état après
+-- (UpgradeMath.bulk) ; reason = clé de texte du refus (nil si acheté ou périmé) ; snapshot = état après
 export type UpgradeResultPayload = {
 	id: string,
 	from: number,
@@ -616,8 +627,11 @@ export type CelebrateWelcomeV2 = { highlights: { string } } -- 3 plus beaux déb
 
 -- Attributs répliqués du ranch ajoutés par la v2.0 (RanchService, sur le dossier du ranch) :
 -- BestR, Ascend, SplorchReady, AscendReady, PetitSplorchAt, Monuments, DecoPerso, HaloOn,
--- TapisTier, GloveTier, ApronTier (docs/04 §27.5). L'habillage reste le thème public de la v1.3
--- (cosmetics.theme : 14 valeurs en v2.0, décision C2)
+-- TapisTier, GloveTier, ApronTier (docs/04 §27.5) ; lot A4 : HelperMode et Helpers (Plopettes,
+-- HelperService), GiantTier (jalons géants, QuestService), DecorGold et GoldPennants (RanchService),
+-- Palette et Cushions (CommunityService). Chacun ABSENT tant que son interrupteur est coupé ou que
+-- le profil est v1. L'habillage reste le thème public de la v1.3 (cosmetics.theme : 14 valeurs en
+-- v2.0, décision C2)
 export type RanchAttributesV2 = {
 	BestR: number,
 	Ascend: number,
@@ -630,6 +644,15 @@ export type RanchAttributesV2 = {
 	TapisTier: number,
 	GloveTier: number,
 	ApronTier: number,
+	-- Plopettes [Helpers] : "active" | "nap" | "paused" (sieste, pause pendant un prestige), posé au
+	-- changement seulement ; nombre de Plopettes du ranch (0 à 6)
+	HelperMode: string,
+	Helpers: number,
+	GiantTier: number, -- [Mastery] jalons géants atteints (0 à 4 : 1e15, 1e18, 1e21, 1e24 ; Squishy-Soleil ≥ 3)
+	DecorGold: number, -- [RanchTiers] décorations dorées : bit k − 1 quand decorBuilds[k] ≥ 10 (18 bits)
+	GoldPennants: boolean, -- [Workshop] « Fanions dorés » de « Pour le plaisir » achetés
+	Palette: string, -- palette choisie du spectacle du Grand Splorch ("" = celle du ranch ; CommunityService)
+	Cushions: string, -- coussins choisis des enclos ("" = ceux du ranch ; CommunityService)
 }
 
 -- Défi de la semaine (profil : weeklyTrack.challenges, 3 par période)

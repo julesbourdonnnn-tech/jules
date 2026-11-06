@@ -358,15 +358,19 @@ return function(T)
 			local d2 = Schema.defaults()
 			d2.settings.music = false
 			expect(Schema.defaults().settings.music).toBe(true)
-			-- réglages : seulement les clés sauvegardées de Config/Settings, à leur valeur par défaut
+			-- réglages : seulement les clés sauvegardées de Config/Settings de cette version du schéma
+			-- (since ≤ Schema.VERSION, absent = 1), à leur valeur par défaut. Attente changée au lot A4
+			-- (docs/04 §27.12 A4-2) : « Montrer mon halo » (since = 2) n'existe que dans un profil v2
 			local S = shared(h, "Config.Settings")
 			for key, def in S do
-				if def.saved then
+				if def.saved and (def.since or 1) <= Schema.VERSION then
 					expect({ key = key, value = d.settings[key] }).toEqual({ key = key, value = def.default })
 				else
 					expect(d.settings[key]).toBeNil()
 				end
 			end
+			expect(d.settings.haloOn).toBeNil()
+			expect(Schema.defaultsFor(2).settings.haloOn).toBe(true)
 		end)
 
 		it("migre la sauvegarde-témoin v0 (tests/fixtures/profiles/v0.json) sans rien perdre", function()

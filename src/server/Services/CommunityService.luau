@@ -31,6 +31,7 @@ local Balance = require(Shared.Config.Balance)
 local Events = require(Shared.Config.Events)
 local Settings = require(Shared.Config.Settings)
 local Cosmetics = require(Shared.Config.Cosmetics)
+local Features = require(Shared.Config.Features)
 local ZoneRules = require(Shared.Logic.ZoneRules)
 local StateTimeouts = require(Shared.Logic.StateTimeouts)
 
@@ -491,6 +492,17 @@ local function onSetSetting(player: Player, key: string, value: any): boolean
 		end
 	else
 		return false
+	end
+	-- v2.0 (lot A4, D24) : « Montrer mon halo » seulement quand RanchSkins est ouvert (le jeu de base
+	-- ne l'écrit jamais) ; un réglage `since = N` n'est jamais écrit dans un profil de version < N
+	if key == "haloOn" and Features.get("RanchSkins") ~= true then
+		return false
+	end
+	if def.since ~= nil then
+		local data = profile(player)
+		if data == nil or type(data.version) ~= "number" or data.version < def.since then
+			return false
+		end
 	end
 	if key == "emoteLeft" and not CommunityService.hasCosmetic(player, "emote", value) then
 		return false

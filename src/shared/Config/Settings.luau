@@ -9,6 +9,10 @@
 --   order    : ordre d'affichage
 --   ownerOnly: serveur privé, propriétaire seulement
 --   cooldown : s minimales entre deux changements (validées par le serveur)
+--   since    : version du schéma qui l'ajoute (absent = 1). Un réglage `since = 2` n'existe que dans
+--              un profil v2 : Data/Schema ne le met pas dans les valeurs par défaut d'une version
+--              plus ancienne (defaultsV1 inchangé) et CommunityService refuse de l'écrire dans un
+--              profil v1 (lot A4, docs/04 §27.2, §27.6).
 -- Chaque réglage a son texte « settings.<clé> » en anglais et en français (Contract.spec).
 
 export type SettingDef = {
@@ -19,6 +23,7 @@ export type SettingDef = {
 	order: number,
 	ownerOnly: boolean?,
 	cooldown: number?,
+	since: number?,
 }
 
 local Settings = {
@@ -56,6 +61,9 @@ local Settings = {
 	partyShowName = { kind = "boolean", default = false, saved = true, order = 11 },
 	-- serveur privé : « BOOP RUSH autorisé » (propriétaire seulement, réglage de serveur en mémoire)
 	allowRush = { kind = "boolean", default = false, saved = false, order = 12, ownerOnly = true },
+	-- v2.0 : « Montrer mon halo » (gouttes de gelée de l'Ascension autour de la tête, GDD §4.27),
+	-- affiché par le panneau Réglages derrière l'interrupteur RanchSkins (lot B3) ; profils v2 seulement
+	haloOn = { kind = "boolean", default = true, saved = true, order = 13, since = 2 },
 } :: { [string]: SettingDef }
 
 return Settings

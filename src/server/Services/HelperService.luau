@@ -63,6 +63,7 @@ local Places = require(Server.Ranch.Places)
 local PadRules = require(Server.Ranch.PadRules)
 local Rules = require(Server.Helpers.Rules)
 
+local DiagnosticsService = require(script.Parent.DiagnosticsService)
 local DataService = require(script.Parent.DataService)
 local RanchService = require(script.Parent.RanchService)
 local EconomyService = require(script.Parent.EconomyService)
@@ -141,8 +142,10 @@ local function finite(x: any): boolean
 	return type(x) == "number" and x == x and x ~= math.huge and x ~= -math.huge
 end
 
-local function count(name: string)
+-- Compteur du service (HelperService.counters) et ligne « Count:Helper<nom> » de Diagnostics (lot A4)
+local function count(name: string, player: Player?)
 	counters[name] = (counters[name] or 0) + 1
+	Guard.try("helpers:diag", DiagnosticsService.count, "Helper" .. name, player)
 end
 
 local function enabled(): boolean
@@ -405,7 +408,7 @@ local function grant(player: Player, o: Owner, data: { [string]: any }, h: Helpe
 		Guard.try("helpers:cooldown", hook, player, uid, now)
 	end
 	local coins = EconomyService.addCoins(player, reward, "Helper", "Gameplay")
-	count("Pressed")
+	count("Pressed", player)
 	Signals.HelperPressed:Fire(player, h.index, uid, coins)
 end
 
@@ -427,7 +430,7 @@ local function resolve(player: Player, o: Owner, data: { [string]: any }, pos: V
 			else
 				-- abandon : le client a dessiné le saut jusqu'à la cible (aucun message pour un abandon) :
 				-- la Plopette y est, le saut suivant part de là ; nouvelle cible tout de suite
-				count("Abandoned")
+				count("Abandoned", player)
 				h.x, h.z = h.tx, h.tz
 				h.nextAt = now
 			end
@@ -570,7 +573,7 @@ local function choose(player: Player, o: Owner, data: { [string]: any }, pos: Ve
 	for k, h in due do
 		local uid = candUids[k]
 		if uid == nil then
-			count("NoTarget")
+			count("NoTarget", player)
 			h.nextAt = now + Rules.RETRY
 		else
 			local x, z = candX[uid], candZ[uid]
@@ -579,7 +582,7 @@ local function choose(player: Player, o: Owner, data: { [string]: any }, pos: Ve
 			h.tx, h.tz = x, z
 			h.chosenAt = now
 			h.tPress = now + Rules.travel(h.x, h.z, x, z)
-			count("Chosen")
+			count("Chosen", player)
 			if entries == nil then
 				entries = {}
 				outbox[player] = entries

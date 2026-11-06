@@ -134,7 +134,8 @@ Cosmetics.ByKindId = ById -- clé « <kind>:<id> »
 -- atelier i (ligne « Pour le plaisir » : bit i de atelierCosmetics, ou objet i de la ligne decoShop),
 -- carnet n (Carnet du Ranch : n niveaux achetés), season n (costume de saison), track (palier 12 de
 -- la piste), play s (secondes de jeu), dex n, plopDay n, objectives n (objectifs du jour réclamés),
--- moon n (Jelly Moon jouées), track n (pistes de la semaine finies). Contract_unlocks.spec.
+-- moon n (Jelly Moon jouées), track n (pistes de la semaine finies), size n (jalon géant : plus
+-- grande taille jamais atteinte biggestEver ≥ n, GDD §4.17, §5.4 ; lot A4). Contract_unlocks.spec.
 -- =================================================================================================
 
 -- Les 40 objets de Déco perso (Annexe B.1) : n = numéro définitif (bit n de decoPerso.owned) ;
@@ -184,6 +185,10 @@ Cosmetics.DecoPerso = {
 	{ n = 40, id = "jellyDragon", key = "deco.jellyDragon", size = "G", source = { kind = "atelier", value = 24 } },
 }
 
+-- Taille de chaque emplacement de decoPerso.slots (lot A4, D18) : 1 à 8 petits « P », 9 à 12 grands
+-- « G » ; un objet ne se pose que sur un emplacement de SA taille (PlaceDeco, ProfileRepair, Invariants)
+Cosmetics.DecoSlots = { "P", "P", "P", "P", "P", "P", "P", "P", "G", "G", "G", "G" }
+
 -- Les 8 cosmétiques de la semaine (Annexe B.2, palier 12 de la piste), dans l'ordre de rotation
 Cosmetics.WeeklyRotation = {
 	{ id = "cookieSaddle", key = "weekly.cookieSaddle", kind = "saddle" },
@@ -206,11 +211,13 @@ Cosmetics.ListV2 = {
 	{ id = "partyPopper", kind = "saddle", key = "v2cosmetic.saddle.partyPopper", source = { kind = "atelier", value = 7 } },
 	{ id = "brick", kind = "saddle", key = "v2cosmetic.saddle.brick", source = { kind = "carnet", value = 100 } },
 	{ id = "icingSugar", kind = "saddle", key = "v2cosmetic.saddle.icingSugar", source = { kind = "season", value = 1 } },
+	{ id = "cosmic", kind = "saddle", key = "v2cosmetic.saddle.cosmic", source = { kind = "size", value = 1e15 } },
 	{ id = "confetti", kind = "trail", key = "v2cosmetic.trail.confetti", source = { kind = "recordR", value = 6 } },
 	{ id = "jellyArc", kind = "trail", key = "v2cosmetic.trail.jellyArc", source = { kind = "recordR", value = 13 } },
 	{ id = "streamers", kind = "trail", key = "v2cosmetic.trail.streamers", source = { kind = "atelier", value = 8 } },
 	{ id = "littleHammers", kind = "trail", key = "v2cosmetic.trail.littleHammers", source = { kind = "carnet", value = 1000 } },
 	{ id = "colour", kind = "trail", key = "v2cosmetic.trail.colour", source = { kind = "recordR", value = 25 } },
+	{ id = "shootingStars", kind = "trail", key = "v2cosmetic.trail.shootingStars", source = { kind = "size", value = 1e18 } },
 	{ id = "nine", kind = "flag", key = "v2cosmetic.flag.nine", source = { kind = "recordR", value = 9 } },
 	{ id = "splorchRoyal", kind = "flag", key = "v2cosmetic.flag.splorchRoyal", source = { kind = "recordR", value = 19 } },
 	{ id = "buildingSite", kind = "flag", key = "v2cosmetic.flag.buildingSite", source = { kind = "carnet", value = 250 } },
@@ -237,6 +244,7 @@ Cosmetics.ListV2 = {
 	{ id = "builder", kind = "title", key = "title.builder", source = { kind = "carnet", value = 50 } },
 	{ id = "architect", kind = "title", key = "title.architect", source = { kind = "carnet", value = 500 } },
 	{ id = "masterArchitect", kind = "title", key = "title.masterArchitect", source = { kind = "carnet", value = 5000 } },
+	{ id = "sunKeeper", kind = "title", key = "title.sunKeeper", source = { kind = "size", value = 1e24 } },
 	{ id = "r50", kind = "title", key = "title.r50", source = { kind = "recordR", value = 50 } },
 	{ id = "r60", kind = "title", key = "title.r60", source = { kind = "recordR", value = 60 } },
 	{ id = "r70", kind = "title", key = "title.r70", source = { kind = "recordR", value = 70 } },
