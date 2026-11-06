@@ -69,6 +69,16 @@ for _, def in Cosmetics.List do
 		OUTFITS[def.id] = true
 	end
 end
+-- lot A4 (D21) : tenues v2.0 (Cosmetics.ListV2, rotation de la semaine), connues d'un profil v2 seulement
+-- (mêmes listes que SquishyService : portées, jamais retirées au chargement)
+local OUTFITS_V2: { [string]: boolean } = {}
+for _, list in { Cosmetics.ListV2 :: { any }, Cosmetics.WeeklyRotation :: { any } } do
+	for _, def in list do
+		if def.kind == "outfit" then
+			OUTFITS_V2[def.id] = true
+		end
+	end
+end
 
 -- Bornes du schéma v2 (docs/04 §27.2 ; mêmes nombres que Logic/Invariants)
 local MAX_R = Balance.Prestige.MaxR
@@ -462,7 +472,7 @@ end
 -- Collection
 -- ---------------------------------------------------------------------------------------------
 
-local function repairSquishies(ctx: Ctx, d: { [string]: any })
+local function repairSquishies(ctx: Ctx, d: { [string]: any }, v2: boolean)
 	local squishies = d.squishies
 	-- lignes illisibles retirées (uid abîmé, ligne qui n'est pas une table, espèce illisible)
 	for _, uid in sortedUids(squishies :: any) do
@@ -508,7 +518,9 @@ local function repairSquishies(ctx: Ctx, d: { [string]: any })
 			rec.lk = false
 			fix(ctx, path .. ".lk")
 		end
-		if type(rec.o) ~= "string" or (rec.o ~= "" and not OUTFITS[rec.o]) then
+		if
+			type(rec.o) ~= "string" or (rec.o ~= "" and not OUTFITS[rec.o] and not (v2 and OUTFITS_V2[rec.o]))
+		then
 			rec.o = ""
 			fix(ctx, path .. ".o")
 		end
@@ -1166,7 +1178,7 @@ function ProfileRepair.repair(data: { [string]: any }): { string }
 		repairProgressionV2(ctx, d, raw)
 	end
 	repairQuest(ctx, d)
-	repairSquishies(ctx, d)
+	repairSquishies(ctx, d, v2)
 	repairOthers(ctx, d, if v2 then d.version else 1)
 	if v2 then
 		repairOthersV2(ctx, d, raw)

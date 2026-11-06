@@ -1486,6 +1486,20 @@ function EconomyService.prestigeV2(player: Player): boolean
 	return data ~= nil and PadRules.v2Profile(data) and Features.get("RecordR") == true and configOk
 end
 
+-- Lot A4 (D6) : un prestige du joueur est-il en cours d'application (spectacle, animation du Petit
+-- Splorch : sonde de SplorchService ; sonde en erreur = oui) ? Avec prestigeV2, SquishyService refuse
+-- alors vente, relâche et fusions de ce joueur (héros protégé pendant son spectacle)
+function EconomyService.prestigeBusy(player: Player): boolean
+	return prestigeBusy(player)
+end
+
+-- Lot A4 (D7, N1) : Record R du profil (Prestige.bestR ; 0 sans profil) : ce qui est « débloqué »
+-- suit le Record R ; profil v1 : R, comme EconomyService.R
+function EconomyService.recordR(player: Player): number
+	local data = DataService.get(player)
+	return if data then Prestige.bestR(data) else 0
+end
+
 -- Prestige v2.0 d'un bloc, sans yield (docs/04 §27.7, appelé par SplorchService) : règlement, puis
 -- Prestige.apply (SEUL écrivain des champs gardés et remis à zéro : pièces, Pot, dalles de la boucle,
 -- tailles, croissance, r, Record R, A, regainBonusA, memoryR, place offerte), cadeau du Splorch dans le

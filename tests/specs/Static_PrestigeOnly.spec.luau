@@ -27,7 +27,6 @@ return function(T)
 		["src/server/Services/EconomyService.luau"] = 9, -- A2
 		["src/server/Services/QuestService.luau"] = 3, -- A4
 		["src/server/Services/RanchService.luau"] = 2, -- A2
-		["src/server/Services/SquishyService.luau"] = 4, -- A2 (Cuve, familles, Meilleurs Amis)
 		["src/shared/Logic/Formulas.luau"] = 2, -- A1 (contexte de croissance, aperçu du Grand Splorch)
 		["src/shared/Logic/Invariants.luau"] = 1, -- A1 (invariants v2)
 		["src/shared/Logic/QuestRules.luau"] = 2, -- A1 (contexte des objectifs)

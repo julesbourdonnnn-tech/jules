@@ -138,10 +138,14 @@ return function(T)
 			"témoin v2.json et v1.json migré : seulement les réparations v1 de v1.json, aucun champ v2 touché",
 			function()
 				-- v1.json (version de test) porte deux valeurs que la réparation v1 corrige déjà
-				-- (onboarding.step, tenue portée) : la v2 n'en ajoute aucune
+				-- (onboarding.step, tenue portée) : la v2 n'en ajoute aucune. Lot A4 (D21, attente
+				-- changée, journal A4-14) : la tenue portée de v1.json est « partyHat », tenue de la v2.0 :
+				-- inconnue d'un profil v1 (retirée, comme avant), gardée sur un profil v2 (possédée : 1)
 				local v1 = readJson("v1.json")
 				local v1Fixes = Repair.repair(v1)
-				expect(#v1Fixes > 0).toBe(true)
+				expect(v1Fixes).toEqual({ "onboarding.step", "squishies.2.o" })
+				expect(v1.squishies["2"].o).toBe("")
+				v1Fixes = { "onboarding.step" }
 				local witness = readJson("v2.json")
 				Tables.reconcile(witness, Schema.defaultsFor(2))
 				local migrated = Schema.migrate(readJson("v1.json"), 1, 2)
@@ -149,6 +153,7 @@ return function(T)
 				for name, d in { witness = witness, migrated = migrated } do
 					local before = Tables.deepCopy(d)
 					expect({ name = name, fixes = Repair.repair(d) }).toEqual({ name = name, fixes = v1Fixes })
+					expect({ name = name, o = d.squishies["2"].o }).toEqual({ name = name, o = "partyHat" })
 					expect({ name = name, bad = Invariants.profile(d) }).toEqual({ name = name, bad = {} })
 					for key in Schema.OWNERS_V2 do
 						expect({ name = name, key = key, same = Tables.deepEqual(d[key], before[key]) }).toEqual({
@@ -953,6 +958,32 @@ return function(T)
 				expect(d.cosmetics.theme).toBe(pair[1])
 			end
 		end)
+
+		-- lot A4 (D21, journal A4-14) : SquishyService connaît les tenues v2.0 d'un profil v2 ; la
+		-- réparation les retirait de chaque squishy à chaque chargement (tenue perdue, ProfileRepaired)
+		it(
+			"tenues v2.0 portées (partyHat, starGlasses, buildersCrown, polkaBow) gardées sur un profil v2 ; profil v1 : retirées comme avant",
+			function()
+				for _, id in { "partyHat", "starGlasses", "buildersCrown", "polkaBow" } do
+					local d = played()
+					d.outfits.owned[id] = 1
+					d.squishies["1"].o = id
+					expect({ id = id, fixes = Repair.repair(d) }).toEqual({ id = id, fixes = {} })
+					expect(d.squishies["1"].o).toBe(id)
+					settled(d)
+					-- profil v1 : tenue inconnue de la v1.3, retirée (réparation d'aujourd'hui)
+					local v1 = Schema.defaults()
+					v1.squishies = { ["1"] = rec({ o = id }) }
+					v1.nextUid = 2
+					v1.outfits.owned[id] = 1
+					expect({ id = id, fixes = Repair.repair(v1) }).toEqual({
+						id = id,
+						fixes = { "squishies.1.o" },
+					})
+					expect(v1.squishies["1"].o).toBe("")
+				end
+			end
+		)
 
 		it(
 			"ensembles de bits : un mot au-delà de la taille n'est jamais tronqué (espèce future)",

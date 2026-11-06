@@ -17,6 +17,10 @@
 -- Émet Pressed, SquishyObtained, Hatched, Fused, SquishyRemoved. Remotes : Press, PickUp, PutDown,
 -- Throw, FuseMenu, FuseAll, MoveSquishy, ClaimMail, Sell, Release, SetLock, SetBestFriend, SetMount,
 -- Ride, EquipOutfit. Clés : squishies, nextUid, mount, vat, released, trophies, outfits, biggestEver.
+-- v2.0 (lot A4) : recharge posée par une Plopette (helperPressed), squishy occupé (busy : en fusion ou
+-- en fuite), héros protégé pendant son spectacle v2.0 (vente, relâche et fusions refusées, D6), ce
+-- qui est « débloqué » (Cuve, familles, places de Meilleur Ami) suit le Record R (N1 : Prestige.bestR,
+-- = R pour un profil v1), tenues v2.0 connues pour un profil v2 seulement (D21).
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -35,6 +39,7 @@ local Quests = require(Shared.Config.Quests)
 local Features = require(Shared.Config.Features)
 local Formulas = require(Shared.Logic.Formulas)
 local FusionRules = require(Shared.Logic.FusionRules)
+local Prestige = require(Shared.Logic.Prestige)
 local Odds = require(Shared.Logic.Odds)
 local Hash = require(Shared.Logic.Hash)
 local PressTiming = require(Shared.Logic.PressTiming)
@@ -50,6 +55,7 @@ local MoveCheck = require(script.Parent.Parent.Util.MoveCheck)
 local Analytics = require(script.Parent.Parent.Util.Analytics)
 local Guard = require(script.Parent.Parent.Ranch.Guard)
 local Places = require(script.Parent.Parent.Ranch.Places)
+local PadRules = require(script.Parent.Parent.Ranch.PadRules)
 
 -- Analytique du GDD §16.3 (HatchRarity, MutationGot, ComboLength, RideStart) : budgétée par
 -- Util/Analytics, jamais une erreur (pcall)
@@ -93,6 +99,17 @@ local OUTFITS: { [string]: boolean } = {}
 for _, def in Cosmetics.List do
 	if def.kind == "outfit" then
 		OUTFITS[def.id] = true
+	end
+end
+-- v2.0 (lot A4, D21) : tenues de Cosmetics.ListV2 (partyHat, starGlasses, buildersCrown) et de la
+-- rotation de la semaine (polkaBow), connues pour un profil v2 SEULEMENT (profil v1 : refus muet
+-- d'aujourd'hui) ; toujours bornées par outfits.owned
+local OUTFITS_V2: { [string]: boolean } = {}
+for _, list in { Cosmetics.ListV2 :: { any }, Cosmetics.WeeklyRotation :: { any } } do
+	for _, def in list do
+		if def.kind == "outfit" and not OUTFITS[def.id] then
+			OUTFITS_V2[def.id] = true
+		end
 	end
 end
 
@@ -206,6 +223,21 @@ end
 
 local function G(player: Player): number
 	return EconomyService.G(player)
+end
+
+-- Tenue connue pour ce profil : celles de la v1.3, plus celles de la v2.0 pour un profil v2 (D21)
+local function outfitKnown(data: { [string]: any }, outfit: any): boolean
+	if type(outfit) ~= "string" then
+		return false
+	end
+	return OUTFITS[outfit] == true or (OUTFITS_V2[outfit] == true and PadRules.v2Profile(data))
+end
+
+-- Lot A4 (D6) : héros protégé pendant son spectacle v2.0 : progression v2.0 en vigueur ET prestige en
+-- cours d'application (spectacle, animation du Petit Splorch) ; vente, relâche et toute fusion du
+-- joueur refusées (Feedback waitingSplorch) ; progression de la v1.3 : jamais (chemin d'aujourd'hui)
+local function heroBusy(player: Player): boolean
+	return EconomyService.prestigeV2(player) and EconomyService.prestigeBusy(player)
 end
 
 local function publicOf(player: Player, uid: string, rec: Types.SquishyRecord): Types.PublicSquishy
@@ -534,13 +566,15 @@ local function scheduleHatch(player: Player, kind: "vat" | "twin" | "firstPull")
 	table.insert(list, { at = now + Balance.Vat.HatchTime, startedAt = now, kind = kind })
 end
 
+-- N1 (lot A4, D7) : Cuve, familles et places de Meilleur Ami « débloquées » suivent le Record R
+-- (Prestige.bestR ; profil v1 : R, comme avant)
 local function vatInterval(data: { [string]: any }): number
-	return Formulas.vatInterval(data.R, QuestRules.familyEarned(data.dex, "bunny"))
+	return Formulas.vatInterval(Prestige.bestR(data), QuestRules.familyEarned(data.dex, "bunny"))
 end
 
 local function rollPull(player: Player, data: { [string]: any }): Odds.RollResult
 	local vat = data.vat
-	local level = Formulas.vatLevel(data.R)
+	local level = Formulas.vatLevel(Prestige.bestR(data))
 	local now = Clock.now()
 	local owned: { [number]: boolean } = {}
 	for s = 1, #Species.List do
@@ -554,7 +588,7 @@ local function rollPull(player: Player, data: { [string]: any }): Odds.RollResul
 		nozzles = level.nozzles,
 		moon = moon,
 		unix = Clock.unix(),
-		families = Odds.unlockedFamilies(data.R),
+		families = Odds.unlockedFamilies(Prestige.bestR(data)),
 		owned = owned,
 		newPull = (vat.newPulls or 0) > 0,
 		pityRare = vat.pityRare,
@@ -842,7 +876,8 @@ local function executeFuse(player: Player, job: FuseJob): string?
 	end
 	-- combo en chaîne : un jumeau du résultat attend dans le Bassin
 	local chained = false
-	if not job.auto and result.at == "pool" then
+	-- héros protégé pendant son spectacle v2.0 (D6) : aucune étape de combo de plus
+	if not job.auto and result.at == "pool" and not heroBusy(player) then
 		local nextUid = FusionRules.nextInChain(poolRecords(data), keep)
 		if nextUid ~= nil and busySquishy(player, nextUid) == nil then
 			scheduleFuse(player, keep, nextUid, job.step + 1, Balance.Fusion.ComboDelay, false)
@@ -864,6 +899,9 @@ local function stepMerge(player: Player)
 	local jobs = fuseJobs[player]
 	if jobs ~= nil and #jobs > 0 then
 		return -- une paire est déjà programmée
+	end
+	if heroBusy(player) then
+		return -- héros protégé pendant son spectacle v2.0 (D6) : la paire suivante attend sa fin
 	end
 	local pair = plan.pairs[plan.index]
 	if pair == nil then
@@ -991,6 +1029,11 @@ local function onThrow(player: Player): boolean
 		feedback(player, "feedback.poolFull")
 		return false -- le squishy reste porté
 	end
+	if twin ~= nil and heroBusy(player) then
+		-- héros protégé pendant son spectacle v2.0 (D6) : aucune fusion ; le squishy reste porté
+		feedback(player, "feedback.waitingSplorch")
+		return false
+	end
 	carried[player] = nil
 	RanchService.setPublic(player, { carry = "" })
 	-- le Bassin ne dépasse jamais ses places (invariant n° 3), même pendant les 0,4 s d'une fusion :
@@ -1030,6 +1073,10 @@ local function onFuseMenu(player: Player, uidA: string, uidB: string): boolean
 			return false
 		end
 	end
+	if heroBusy(player) then
+		feedback(player, "feedback.waitingSplorch") -- héros protégé pendant son spectacle v2.0 (D6)
+		return false
+	end
 	-- les deux sautent dans le Bassin : leur lieu reste celui d'avant jusqu'à la fusion (capacités
 	-- jamais dépassées, même pendant 0,4 s) ; le résultat va au Bassin s'il y a une place
 	leaveFence(player, uidA)
@@ -1048,6 +1095,10 @@ local function onFuseAll(player: Player): boolean
 	end
 	local jobs = fuseJobs[player]
 	if jobs ~= nil and #jobs > 0 then
+		return false
+	end
+	if heroBusy(player) then
+		feedback(player, "feedback.waitingSplorch") -- héros protégé pendant son spectacle v2.0 (D6)
 		return false
 	end
 	local records = {}
@@ -1263,6 +1314,10 @@ local function onSell(player: Player, uids: { string }, confirmed: boolean): boo
 	if data == nil then
 		return false
 	end
+	if heroBusy(player) then
+		feedback(player, "feedback.waitingSplorch") -- héros protégé pendant son spectacle v2.0 (D6)
+		return false
+	end
 	local refusal = checkBatch(player, data, uids, confirmed)
 	if refusal ~= nil then
 		if refusal ~= "" then
@@ -1293,6 +1348,10 @@ end
 local function onRelease(player: Player, uids: { string }, confirmed: boolean): boolean
 	local data = profile(player)
 	if data == nil then
+		return false
+	end
+	if heroBusy(player) then
+		feedback(player, "feedback.waitingSplorch") -- héros protégé pendant son spectacle v2.0 (D6)
 		return false
 	end
 	local refusal = checkBatch(player, data, uids, confirmed)
@@ -1336,8 +1395,8 @@ local function onSetBestFriend(player: Player, uid: string, slot: number): boole
 	if rec == nil or data == nil or slot < 1 or slot > MAX_BF then
 		return false
 	end
-	if (data.R or 0) < Balance.Splorch.BestFriendSlotsAt[slot] then
-		return false -- emplacement pas encore débloqué
+	if Prestige.bestR(data) < Balance.Splorch.BestFriendSlotsAt[slot] then
+		return false -- emplacement pas encore débloqué (Record R, N1)
 	end
 	if rec.bf == slot then
 		return true
@@ -1422,7 +1481,7 @@ end
 
 local function onEquipOutfit(player: Player, outfit: string, uid: string?): boolean
 	local data = profile(player)
-	if data == nil or not OUTFITS[outfit] then
+	if data == nil or not outfitKnown(data, outfit) then
 		return false
 	end
 	local owned = data.outfits.owned[outfit]
@@ -2157,6 +2216,39 @@ function SquishyService.readyAt(player: Player, uid: string): number
 	return if ready and ready[uid] then ready[uid] else 0
 end
 
+-- Lot A4 (note d'A3 du 6 novembre, 0 h 40) : une Plopette vient de presser `uid` à `now` (appelé par
+-- HelperService juste avant son crédit) : même recharge que la pression du joueur (Balance.Press.Cooldown ;
+-- le joueur ne represse pas dans les 8 s) et même mise à jour publique (le client dessine « pas prêt »).
+-- Squishy hors de l'enclos et du Bassin (jamais visé par une Plopette) : recharge seule, rien de publié
+function SquishyService.helperPressed(owner: Player, uid: string, now: number)
+	if typeof(owner) ~= "Instance" or owner.Parent == nil or not finite(now) then
+		return
+	end
+	local rec = recordOf(owner, uid)
+	if rec == nil then
+		return
+	end
+	local ready = readyAt[owner]
+	if ready == nil then
+		ready = {}
+		readyAt[owner] = ready
+	end
+	ready[uid] = now + Balance.Press.Cooldown
+	if visibleAt(rec.at) then
+		RanchService.squishyOp(owner, "update", uid, publicOf(owner, uid, rec))
+	end
+end
+
+-- Lot A4 (note d'A3 du 6 novembre, 1 h 10) : squishy occupé par un état bref du serveur : réservé par
+-- une fusion (FuseMenu, lancer, Tout fusionner, combo) ou en fuite (Rush) ; jamais visé ni pressé par
+-- une Plopette (HelperService : au choix et à tPress)
+function SquishyService.busy(player: Player, uid: string): boolean
+	if type(uid) ~= "string" then
+		return false
+	end
+	return isFusing(player, uid) or isEscaping(player, uid)
+end
+
 -- Selle gagnée 0 … 3
 function SquishyService.saddle(player: Player): number
 	local data = profile(player)
@@ -2168,7 +2260,7 @@ end
 -- nombre possédé
 function SquishyService.grantOutfit(player: Player, outfit: string, count: number?): number
 	local data = profile(player)
-	if data == nil or not OUTFITS[outfit] then
+	if data == nil or not outfitKnown(data, outfit) then
 		return 0
 	end
 	local n = if finite(count) then math.max(0, math.floor(count :: number)) else 1
