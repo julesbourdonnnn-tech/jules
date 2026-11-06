@@ -42,6 +42,10 @@ TextFitKeys.FAMILIES = {
 	{ id = "cosmetic.flag", pattern = "^cosmetic%.flag%.[%w_]+$" },
 	{ id = "hud.now", pattern = "^hud%.now%.[%w_]+$" },
 	{ id = "hud.next", pattern = "^hud%.next%.[%w_]+$" },
+	-- écran Améliorations (lot B2, étape 2) : palier et raison courte d'une carte du Conseillé (une
+	-- boîte chacun, 3 cartes à l'écran : chaque palier et chaque raison y passent tour à tour)
+	{ id = "upgrades.tier", pattern = "^upgrades%.tier%.[%w_]+%.%d+$" },
+	{ id = "upgrades.reason", pattern = "^upgrades%.reason%.[%w_]+$" },
 	-- pas de famille « prompt » : la plaque d'une invite est taillée sur SON mot (WorldText), chaque
 	-- verbe a son scénario
 }

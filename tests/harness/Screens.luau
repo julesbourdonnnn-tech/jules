@@ -26,6 +26,8 @@
 -- jeu l'affiche.
 
 local roblox = require("@lune/roblox")
+local fs = require("@lune/fs")
+local serde = require("@lune/serde")
 local Layout = require("./Layout")
 local TextFit = require("./TextFit")
 local EngineProps = require("./EngineProps")
@@ -1419,6 +1421,76 @@ local NUMBER_VARS = {
 	target = 99999,
 }
 
+-- Écran Améliorations (lot B2) : pires valeurs PLAUSIBLES de ses variables (GDD §10.7.7 : « Record
+-- 400 », « Boucle 10 », « 40/40 », « 99,9 Nvvg », « Max (×40) », « ×2,000 », « 14 studs ») ; une
+-- fonction (Format du client, langue) ou un nombre (BigNumber)
+local UPGRADE_PREFIXES = { "upgrades.", "workshop.", "helper.", "hud.memory" }
+local UPGRADE_VARS = {
+	r = 400,
+	a = 40,
+	b = 40,
+	m = 40,
+	price = 9.99e94,
+	amount = 9.99e94,
+	s = function(F, lang)
+		return F.decimal(12, lang, 1) -- « 12,0 » (intervalle d'une Plopette, École 0)
+	end,
+	f = function(F, lang)
+		return F.decimal(1.25, lang) -- Souvenir « ×1,25 »
+	end,
+	vat = 8,
+	vatMax = 8,
+	tier = 6,
+	tierMax = 6,
+	quality = 8,
+	speed = 10,
+	nozzles = 6,
+}
+-- {n} des unités : la plus large valeur de chaque unité (Balance : Aimant 14 studs, Pot 31 %…)
+local UPGRADE_UNIT_N = {
+	["upgrades.unit.mult"] = function(F, lang)
+		return F.decimal(1.975, lang, 3)
+	end,
+	["upgrades.unit.hours"] = function(F, lang)
+		return F.decimal(13, lang)
+	end,
+	["upgrades.unit.seconds"] = function(F, lang)
+		return F.decimal(12, lang, 1)
+	end,
+	["upgrades.unit.studs"] = function(F, lang)
+		return F.decimal(14, lang)
+	end,
+	["upgrades.unit.levels"] = function(F)
+		return F.count(25)
+	end,
+	["upgrades.unit.percent"] = function(F, lang)
+		return F.decimal(31, lang)
+	end,
+	["upgrades.unit.count"] = function(F, lang)
+		return F.percent(10, lang)
+	end,
+}
+
+-- Texte le plus long des déblocages de la table du §4.29 (variable {unlock} de workshop.risesDetail)
+local function longestUnlock(c, lang)
+	local L = c.Localization or c.h:require("ReplicatedStorage.Shared.Localization")
+	local Visuals = c.h:require("ReplicatedStorage.Shared.Config.Visuals")
+	local best = ""
+	for _, row in Visuals.RecordTable do
+		for _, tile in row.unlocks do
+			local vars = {}
+			for k, v in tile.vars or {} do
+				vars[k] = if type(v) == "string" then L.get(lang, v) else tostring(v)
+			end
+			local text = L.get(lang, tile.key, vars)
+			if utf8.len(text) and utf8.len(text) > (utf8.len(best) or 0) then
+				best = text
+			end
+		end
+	end
+	return best
+end
+
 function Screens.varsFor(c, key, lang)
 	lang = lang or c.lang
 	local vars = {}
@@ -1426,8 +1498,26 @@ function Screens.varsFor(c, key, lang)
 	local template = strings[key] or c.Strings.en[key] or ""
 	local BN = c.BigNumber or c.h:require("ReplicatedStorage.Shared.Logic.BigNumber")
 	c.BigNumber = BN
+	local upgrade = false
+	for _, prefix in UPGRADE_PREFIXES do
+		if string.sub(key, 1, #prefix) == prefix then
+			upgrade = true
+		end
+	end
 	for name in string.gmatch(template, "{(%w+)}") do
-		if NUMBER_VARS[name] then
+		local worst = if upgrade then UPGRADE_VARS[name] else nil
+		if upgrade and name == "n" and UPGRADE_UNIT_N[key] then
+			worst = UPGRADE_UNIT_N[key]
+		elseif upgrade and name == "n" then
+			worst = 40
+		end
+		if upgrade and name == "unlock" then
+			vars[name] = longestUnlock(c, lang)
+		elseif type(worst) == "function" then
+			vars[name] = worst(c.h:require(CLIENT .. "UI.Format"), lang)
+		elseif type(worst) == "number" then
+			vars[name] = BN.abbreviate(worst, lang)
+		elseif NUMBER_VARS[name] then
 			vars[name] = BN.abbreviate(NUMBER_VARS[name], lang)
 		elseif name == "name" or name == "catcher" or name == "booper" then
 			vars[name] = Screens.LONG_NAME_2
@@ -1507,6 +1597,363 @@ local function onboardingScreens()
 			end,
 		})
 	end
+	return list
+end
+
+-- ---------------------------------------------------------------------------------------------
+-- Écran Améliorations (lot B2, étape 2) : instantanés v2.0 fabriqués depuis le profil témoin
+-- tests/fixtures/profiles/v2.json (interrupteurs v2.0 ouverts DANS le scénario, jamais dans le jeu
+-- livré) ; chaque écran pose son instantané (version croissante) et les attributs du ranch du joueur,
+-- ouvre l'écran sur son onglet et son mode, et sélectionne la ligne dont le bandeau est à montrer
+-- ---------------------------------------------------------------------------------------------
+
+local V2_WITNESS = nil
+local function v2Witness()
+	if V2_WITNESS == nil then
+		V2_WITNESS = serde.decode("json", fs.readFile("tests/fixtures/profiles/v2.json"))
+	end
+	return deepCopy(V2_WITNESS)
+end
+
+-- Instantané v2.0 du profil témoin modifié par `edit` (version suivante de ce client)
+function Screens.upgradeSnapshot(c, edit)
+	local UM = c.h:require("ReplicatedStorage.Shared.Logic.UpgradeMath")
+	local Features = c.h:require("ReplicatedStorage.Shared.Config.Features")
+	local flags = {}
+	for k, v in Features.Defaults do
+		flags[k] = if type(v) == "boolean" then true else v
+	end
+	local p = v2Witness()
+	if edit then
+		edit(p, UM)
+	end
+	c.upgradeVersion = (c.upgradeVersion or 0) + 1
+	return UM.snapshot(p, flags, c.upgradeVersion)
+end
+
+-- Modèle Wobbleton/Ranches/1 (ranch du joueur, Screens.ranchStub) et ses attributs v2.0 du serveur
+function Screens.myRanchModel(c, attrs)
+	local function child(parent, name, class)
+		local f = parent:FindFirstChild(name)
+		if f == nil then
+			f = MockInstance.new(class)
+			f.Name = name
+			f.Parent = parent
+		end
+		return f
+	end
+	local world = child(c.h.workspace, "Wobbleton", "Folder")
+	local model = child(child(world, "Ranches", "Folder"), "1", "Model")
+	for k, v in attrs do
+		model:SetAttribute(k, v)
+	end
+	return model
+end
+
+-- Amène l'écran Améliorations dans un état : opts.edit (profil témoin), opts.ranch (attributs),
+-- opts.wait (secondes de jeu avant l'ouverture), opts.tab, opts.mode (appuis sur □), opts.select
+-- (ligne sélectionnée : son bandeau)
+local function upgradesState(c, opts)
+	closeAll(c)
+	flushAll(c)
+	Screens.myRanchModel(c, opts.ranch or { HelperMode = "active", AscendReady = false })
+	c.h:fireClient(REMOTES .. "DataPatch", { upgradeSnapshot = Screens.upgradeSnapshot(c, opts.edit) }, {})
+	frames(c, 2, 0.1)
+	if opts.wait then
+		c.Clock.advance(opts.wait)
+		frames(c, 2, 0.1)
+	end
+	open(c, "Upgrades", opts.tab)
+	local Up = c.h:require(CLIENT .. "UI.Panels.Upgrades")
+	for _ = 1, opts.mode or 0 do
+		Up.cycleMode()
+	end
+	if opts.select then
+		local obj = nil
+		if type(opts.select) == "number" then
+			obj = Up._card(opts.select)
+		elseif string.sub(opts.select, 1, 5) == "card:" then
+			-- carte du Conseillé par sa famille (« card:ascend » : la carte Jelly Ascend)
+			local i = table.find(Up._cards(), string.sub(opts.select, 6))
+			obj = if i then Up._card(i) else nil
+		else
+			obj = Up._row(opts.select)
+		end
+		if obj then
+			c.h.game.GuiService.SelectedObject = obj
+		end
+	end
+	frames(c, 6, 0.1)
+end
+Screens.upgradesState = upgradesState
+
+-- Profils de l'écran (champs du profil témoin v2 : R = boucle r, bestR = Record R, ascend = A)
+local function tiles(p, t)
+	for k, v in t do
+		p.tiles[k] = v
+	end
+end
+
+local function upgradeScreens()
+	local list = {}
+	local function add(id, opts)
+		table.insert(list, {
+			id = "upgrades." .. id,
+			run = function(c)
+				upgradesState(c, opts)
+			end,
+		})
+	end
+	-- Conseillé : 3 familles (Tapis payable, puis les moins chères), Souvenir actif (r < Record R)
+	add("suggested", {
+		tab = "suggested",
+		select = 1,
+		edit = function(p)
+			p.R = 5
+			p.bestR = 12
+			p.coins = 2500000
+		end,
+	})
+	-- Conseillé : tout est au maximum (cartes neutres) ; Confettis 99 999 (le plus large entier brut)
+	add("suggested.allMax", {
+		tab = "suggested",
+		select = 2,
+		edit = function(p)
+			tiles(
+				p,
+				{
+					snack = 12,
+					star = 8,
+					decor = 18,
+					pens = 14,
+					cozyBed = true,
+					gloves = 40,
+					school = 20,
+					monuments = 10,
+				}
+			)
+			p.R = 20
+			p.bestR = 24
+			p.confetti = 99999
+		end,
+	})
+	-- Conseillé : Jelly Ascend prête et rien de payable depuis 5 min (carte « Jelly Ascend », N24)
+	add("suggested.ascend", {
+		tab = "suggested",
+		select = "card:ascend",
+		ranch = { HelperMode = "active", AscendReady = true },
+		wait = 301,
+		edit = function(p)
+			tiles(
+				p,
+				{ snack = 12, star = 8, decor = 18, pens = 14, cozyBed = true, gloves = 40, school = 20 }
+			)
+			p.coins = 0
+			p.R = 20
+			p.bestR = 20
+		end,
+	})
+	-- Ranch ×1 : Prêt (Tapis), Il manque (Gants), MAX (Enclos, Lit douillet), cadenas « Record 14 »
+	-- (Monuments 4 : le 5e s'ouvre au Record R 14) ; bandeau : « Gardé pour toujours »
+	add("ranch", {
+		tab = "ranch",
+		select = "pens",
+		edit = function(p)
+			tiles(p, { snack = 7, decor = 9, pens = 14, cozyBed = true, gloves = 30, monuments = 4 })
+			p.coins = 4250000000
+		end,
+	})
+	add("ranch.need", {
+		tab = "ranch",
+		select = "gloves",
+		edit = function(p)
+			tiles(p, { snack = 7, decor = 9, gloves = 30, monuments = 4 })
+			p.coins = 1000
+		end,
+	})
+	add("ranch.resets", {
+		tab = "ranch",
+		select = "snack",
+		edit = function(p)
+			tiles(p, { snack = 3 })
+		end,
+	})
+	add("ranch.max", {
+		tab = "ranch",
+		select = "cozyBed",
+	})
+	add("ranch.locked", {
+		tab = "ranch",
+		select = "monument",
+		edit = function(p)
+			tiles(p, { snack = 12, monuments = 4 })
+		end,
+	})
+	-- Ranch : boucle r = 3 après une Ascension, Tapis 12 + Étoilé au plafond de la boucle (« Boucle 6 »)
+	add("ranch.loop", {
+		tab = "ranch",
+		select = "snack",
+		edit = function(p)
+			tiles(p, { snack = 12, star = 0 })
+			p.R = 3
+			p.bestR = 15
+			p.ascend = 1
+		end,
+	})
+	-- Ranch, premier jour : Gants « Record 1 », Lit « Record 3 », Monuments « Record 6 »
+	add("ranch.early", {
+		tab = "ranch",
+		select = "gloves",
+		edit = function(p)
+			tiles(p, { snack = 2, decor = 0, pens = 0, cozyBed = false, gloves = 0, monuments = 0 })
+			p.R = 0
+			p.bestR = 0
+			p.coins = 120
+		end,
+	})
+	-- ×10 (10 niveaux payables), ×10 partiel (« 4 possibles »), Max (×n)
+	add("ranch.x10", {
+		tab = "ranch",
+		select = "gloves",
+		mode = 1,
+		edit = function(p)
+			tiles(p, { gloves = 5 })
+			p.coins = 9.99e30
+		end,
+	})
+	add("ranch.x10partial", {
+		tab = "ranch",
+		select = "decor",
+		mode = 1,
+		edit = function(p, UM)
+			tiles(p, { decor = 2 })
+			-- de quoi payer 4 niveaux sur 10 : « ×10 : 4 possibles · niveau 2 à 6 · … »
+			local _, four = UM.bulk("decor", 2, 4, p.R, p.ascend, p.bestR)
+			p.coins = four
+		end,
+	})
+	add("ranch.max.preview", {
+		tab = "ranch",
+		select = "decor",
+		mode = 2,
+		edit = function(p)
+			tiles(p, { decor = 2 })
+			p.coins = 9.99e30
+		end,
+	})
+	-- pires nombres : pièces 1e300 (prix au plafond), Gants 40/40, Record 400
+	add("ranch.huge", {
+		tab = "ranch",
+		select = "gloves",
+		edit = function(p)
+			tiles(p, { snack = 11, decor = 17, gloves = 39 })
+			p.R = 400
+			p.bestR = 400
+			p.coins = 1e300
+			p.confetti = 100000
+		end,
+	})
+	-- Plopettes : École, Pip … Puff présentes, Plume absente (« Atelier »), une sieste
+	add("helpers", {
+		tab = "helpers",
+		select = "helper.pip",
+		ranch = { HelperMode = "nap", AscendReady = false },
+		edit = function(p)
+			tiles(p, { school = 5 })
+			p.bestR = 12
+		end,
+	})
+	add("helpers.plume", {
+		tab = "helpers",
+		select = "helper.plume",
+		edit = function(p)
+			p.bestR = 12
+		end,
+	})
+	add("helpers.active", {
+		tab = "helpers",
+		select = "school",
+		edit = function(p)
+			tiles(p, { school = 19 })
+			p.bestR = 12
+			p.coins = 1
+		end,
+	})
+	-- Plopettes avant Pip (Record R 2) : cadenas sur l'onglet, « Record 2 »
+	add("helpers.locked", {
+		tab = "helpers",
+		select = "helper.pop",
+		edit = function(p)
+			p.R = 1
+			p.bestR = 1
+		end,
+	})
+	-- Atelier : lignes prêtes, au maximum, cadenas « Ascension 1 » (Tremplin), Conseillé (étoiles)
+	add("workshop", {
+		tab = "workshop",
+		select = "gift",
+		edit = function(p)
+			p.atelier = { 2, 1, 0, 0, 0, 0, 0, 0, 0, 0 }
+			p.confetti = 139
+		end,
+	})
+	add("workshop.ascend", {
+		tab = "workshop",
+		select = "springboard",
+	})
+	add("workshop.need", {
+		tab = "workshop",
+		select = "magnet",
+		edit = function(p)
+			p.confetti = 1
+		end,
+	})
+	-- « Monte avec ton record » : prochain déblocage (Record R ≤ 20), puis la phrase de repli
+	add("workshop.rises", {
+		tab = "workshop",
+		select = "risesWithRecord",
+	})
+	add("workshop.rises.top", {
+		tab = "workshop",
+		select = "risesWithRecord",
+		edit = function(p)
+			p.R = 20
+			p.bestR = 24
+		end,
+	})
+	-- « Pour le plaisir » : titre de section, 7 lignes, Déco perso (objet suivant dans le bandeau)
+	add("workshop.fun", {
+		tab = "workshop",
+		select = "fun.palettes",
+		edit = function(p)
+			p.atelierCosmetics = { 5 }
+			p.confetti = 5000
+		end,
+	})
+	add("workshop.title", {
+		tab = "workshop",
+		select = "fun.title",
+		edit = function(p)
+			p.confetti = 5000
+		end,
+	})
+	add("workshop.deco", {
+		tab = "workshop",
+		select = "decoShop",
+		edit = function(p)
+			p.atelier = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 3 }
+			p.confetti = 5000
+		end,
+	})
+	-- Atelier vide (avant le Record R 1) : tout au cadenas « Record 1 »
+	add("workshop.empty", {
+		tab = "workshop",
+		select = "startMat",
+		edit = function(p)
+			p.R = 0
+			p.bestR = 0
+		end,
+	})
 	return list
 end
 
@@ -1780,6 +2227,9 @@ function Screens.groups()
 	table.insert(fx, { id = "banner.all", banners = true })
 	table.insert(fx, { id = "feedback.all", feedback = true })
 	table.insert(groups, { id = "fx", state = "mid", screens = fx })
+
+	-- v2.0 (lot B2) : écran Améliorations, chaque onglet et chaque état atteignable sans achat
+	table.insert(groups, { id = "upgrades", state = "mid", screens = upgradeScreens() })
 
 	return groups
 end

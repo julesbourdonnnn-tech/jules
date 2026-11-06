@@ -377,6 +377,26 @@ return function(T)
 	end)
 
 	describe("Upgrades_View › effets avant → après (contexte du joueur, D30)", function()
+		-- relecture des captures de l'étape 2 (Atelier, tv1080 FR) : « Cadeau 3 » au maximum, sans son
+		-- unité ; la valeur seule garde l'unité de la valeur d'après (« 3 niv. », « 14 studs »)
+		it("au maximum, la valeur seule garde son unité (Cadeau « 3 niv. », Aimant en studs)", function()
+			local s = snapOf(function(p)
+				p.atelier[Upgrades.WorkshopIndex.gift] = 2
+				p.atelier[Upgrades.WorkshopIndex.magnet] = 3
+			end)
+			local gift = V.view("gift", s, 1, { lang = "fr" })
+			expect(gift.state).toBe("max")
+			expect(gift.effect.after).toBe(nil)
+			expect(gift.effect.before.key).toBe("upgrades.unit.levels")
+			local magnet = V.view("magnet", s, 1, { lang = "fr" })
+			expect(magnet.state).toBe("max")
+			expect(magnet.effect.before.key).toBe("upgrades.unit.studs")
+			-- avant le maximum : rien ne change (« 5 → 8 studs », l'unité après la flèche)
+			local open = V.view("magnet", snapOf(), 1, { lang = "fr" })
+			expect(open.effect.before.key).toBe("upgrades.unit.count")
+			expect(open.effect.after.key).toBe("upgrades.unit.studs")
+		end)
+
 		it("Lit douillet : « 9 h → 13 h » avec le Sac de nuit 1 (8 h → 12 h sans)", function()
 			local s = snapOf(function(p)
 				p.tiles.cozyBed = false

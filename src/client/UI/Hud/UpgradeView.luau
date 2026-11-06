@@ -628,7 +628,10 @@ local function effectOf(
 	elseif fmt.labelA == "monument" then
 		label = text(key, { a = Format.decimal(now.a * 100, lang) })
 	end
-	local before = if fmt.before then unit(fmt.before, now.a, lang) else nil
+	-- au maximum, la valeur seule garde l'unité de la valeur d'après (« 3 niv. », « 14 studs » ; relecture
+	-- des captures de l'étape 2 : « Cadeau 3 » était montré sans unité)
+	local beforeKind = if done and fmt.after and fmt.before then fmt.after else fmt.before
+	local before = if beforeKind then unit(beforeKind, now.a, lang) else nil
 	local after: Text? = nil
 	if not done and fmt.after then
 		-- valeur au niveau atteint par l'aperçu (×1 : le niveau suivant)
