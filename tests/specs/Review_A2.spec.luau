@@ -354,8 +354,12 @@ return function(T)
 			return nil
 		end
 
+		-- Lot A4 (D6, attente changée, journal A4-13) : la vente du plus gros PENDANT son propre spectacle
+		-- v2.0 est maintenant REFUSÉE (héros protégé : feedback.waitingSplorch, rien ne bouge) et le
+		-- Grand Splorch s'applique ; le filet PrestigeRefused reste couvert : le plus gros disparaît par un
+		-- chemin qui n'est pas une intention (profil changé directement pendant le spectacle suivant)
 		it(
-			"plus gros vendu PENDANT son spectacle (avant l'éclatement) : rien appliqué ni donné, attente levée, aucun état coincé ; le Grand Splorch suivant passe",
+			"plus gros vendu PENDANT son spectacle : vente refusée (héros protégé), prestige appliqué ; plus gros disparu par un autre chemin : rien appliqué ni donné, attente levée, aucun état coincé ; le Grand Splorch suivant passe",
 			function()
 				local w = Brains.boot(HarnessV2, { t0 = T0 })
 				w.World = w.h:require(S .. "WorldService")
@@ -368,7 +372,12 @@ return function(T)
 					profile = Brains.profile(w, {
 						coins = 5000,
 						R = 1,
-						squishies = { { s = 1, z = 100, bf = 1 }, { s = 2, z = 40000 }, { s = 3, z = 300 } },
+						squishies = {
+							{ s = 1, z = 100, bf = 1 },
+							{ s = 2, z = 40000 },
+							{ s = 3, z = 300 },
+							{ s = 4, z = 50 },
+						},
 						edit = function(d)
 							d.bestR = 1
 							d.unlocksSeen = 1
@@ -383,27 +392,64 @@ return function(T)
 				w.h:fireServer(R .. "GrandSplorch", hero, false, "3")
 				local show = untilKind(w, hero, "splorch")
 				expect(show ~= nil).toBe(true)
+				local refusedBefore = #Bots.feedbackKeys(hero)
 				w.h:fireServer(R .. "Sell", hero, { "2" }, true)
 				w.h:settle(1)
-				expect(w.Squishy.get(hero, "2")).toBeNil()
+				-- héros protégé : vente refusée, un seul Feedback neutre, rien ne bouge
+				expect(w.Squishy.get(hero, "2") ~= nil).toBe(true)
+				local keys = Bots.feedbackKeys(hero)
+				expect(#keys).toBe(refusedBefore + 1)
+				expect(keys[#keys]).toBe("feedback.waitingSplorch")
 				Brains.frames(w, 120)
 				local data = w.DS.get(hero)
-				expect(data.R).toBe(1)
-				expect(data.bestR).toBe(1)
+				expect(data.R).toBe(2)
+				expect(data.bestR).toBe(2)
 				expect(w.Squishy.waiting(hero)).toBeNil()
 				expect(w.Splorch.queuedKind(hero)).toBeNil()
 				expect(w.Splorch.canPrestige(hero)).toBe(true)
-				expect(#Bots.celebrations(other, "giftRain")).toBe(0)
+				expect(w.Splorch.counters().PrestigeRefused or 0).toBe(0)
+				expect(w.Invariants.profile(data)).toEqual({})
+				-- spectacle fini : la vente est acceptée de nouveau
+				RateLimit.clear(hero)
+				w.h:fireServer(R .. "Sell", hero, { "4" }, true)
+				w.h:settle(1)
+				expect(w.Squishy.get(hero, "4")).toBeNil()
+				-- filet de sûreté : le plus gros disparaît PENDANT le spectacle suivant par un chemin qui
+				-- n'est pas une intention : rien appliqué ni donné, attente levée, aucun état coincé
+				w.Economy.settle(hero)
+				data.squishies["2"].z = 1e6
+				w.Economy.refresh(hero)
+				RateLimit.clear(hero)
+				local gifts = #Bots.celebrations(other, "giftRain")
+				w.h:fireServer(R .. "GrandSplorch", hero, false, "3")
+				local shows = #Bots.celebrations(hero, "splorch")
+				for _ = 1, 400 do
+					if #Bots.celebrations(hero, "splorch") > shows then
+						break
+					end
+					Brains.frames(w, 1)
+				end
+				expect(#Bots.celebrations(hero, "splorch")).toBe(shows + 1)
+				w.Economy.settle(hero)
+				data.squishies["2"] = nil
+				w.Economy.refresh(hero)
+				Brains.frames(w, 120)
+				expect(data.R).toBe(2)
+				expect(data.bestR).toBe(2)
+				expect(w.Squishy.waiting(hero)).toBeNil()
+				expect(w.Splorch.queuedKind(hero)).toBeNil()
+				expect(w.Splorch.canPrestige(hero)).toBe(true)
+				expect(#Bots.celebrations(other, "giftRain")).toBe(gifts)
 				expect(w.Splorch.counters().PrestigeRefused).toBe(1)
 				expect(w.Invariants.profile(data)).toEqual({})
 				-- la boucle continue : prêt de nouveau, le Grand Splorch suivant s'applique
 				w.Economy.settle(hero)
-				data.squishies["3"].z = 1e6
+				data.squishies["3"].z = 1e7
 				w.Economy.refresh(hero)
 				RateLimit.clear(hero)
 				w.h:fireServer(R .. "GrandSplorch", hero, false, "3")
 				Brains.frames(w, 200)
-				expect(w.DS.get(hero).R).toBe(2)
+				expect(w.DS.get(hero).R).toBe(3)
 				expect(w.Squishy.waiting(hero)).toBeNil()
 				brainsClean(w)
 			end
