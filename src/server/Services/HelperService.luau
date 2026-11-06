@@ -29,6 +29,9 @@
 --     ce ranch en détail complet ; l'issue arrive par DataPatch (pièces).
 --   * Départ, ranch changé, interrupteur coupé en direct : état oublié d'un coup (aucune récompense
 --     après) ; rallumé : Plopettes reparties de la maisonnette.
+--   * Coût : Rules.CHOOSE_PER_TICK passes de choix au plus par tick, premier ranch servi à tour de
+--     rôle (aucun ranch affamé) ; un saut abandonné à tPress laisse la Plopette sur la cible (le
+--     client y a dessiné le saut), le suivant part de là.
 -- Maisonnette : WorldLayout.helperHouse (lot B4) si elle existe, sinon Z = 60, X = −28 (docs/04 §27.14).
 -- Recharge de pression posée par une Plopette : SquishyService.helperPressed(owner, uid, now) quand ce
 -- crochet existe (note d'intégration) ; d'ici là, recharge tenue ici (une Plopette ne represse jamais
@@ -666,6 +669,11 @@ function HelperService.step(now: number, acting: { [Player]: Types.TickActor }?)
 			drop(player)
 		end
 	end
+	for player in manual do
+		if player.Parent == nil then
+			manual[player] = nil
+		end
+	end
 	Guard.try("helpers:flush", flush, acting, list)
 end
 
@@ -691,7 +699,8 @@ end
 
 -- Pause demandée par un autre service (raison courte) jusqu'à resume(player)
 function HelperService.pause(player: Player, reason: string)
-	if typeof(player) ~= "Instance" then
+	-- joueur déjà parti (PlayerRemoving passé) : rien de gardé
+	if typeof(player) ~= "Instance" or not player:IsA("Player") or player.Parent == nil then
 		return
 	end
 	manual[player] = if type(reason) == "string" and reason ~= "" then reason else "manual"
@@ -723,7 +732,8 @@ function HelperService.pauseReason(player: Player): string?
 	return if o ~= nil and o.mode == "paused" then o.reason else nil
 end
 
--- Compteurs (Pressed, Abandoned, NoTarget, Chosen) ; propriétaires suivis (fuites : specs)
+-- Compteurs (Pressed, Abandoned, NoTarget, Chosen) ; propriétaires suivis et pauses demandées (fuites :
+-- specs)
 function HelperService.counters(): { [string]: number }
 	local out = table.clone(counters)
 	local n = 0
@@ -731,6 +741,11 @@ function HelperService.counters(): { [string]: number }
 		n += 1
 	end
 	out.Owners = n
+	local m = 0
+	for _ in manual do
+		m += 1
+	end
+	out.Manual = m
 	return out
 end
 

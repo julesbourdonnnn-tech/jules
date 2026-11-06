@@ -886,6 +886,24 @@ return function(T)
 			end
 		)
 
+		-- A3-23 (rouge d'abord) : pause(player) demandée par un autre service pour un joueur déjà parti
+		-- (PlayerRemoving déjà passé) : rien n'est gardé (aucune référence au Player)
+		it("pause() d'un joueur parti ou en partance : aucune pause gardée après son départ", function()
+			local w, p = world({ n = 8 })
+			local q = Brains.join(w, 2, { profile = owner(w, { n = 2 }) })
+			w.Helper.pause(q, "photo")
+			expect(w.Helper.counters().Manual).toBe(1)
+			Bots.leave(q)
+			Bots.leave(p)
+			w.h:settle(2)
+			-- appel tardif (après PlayerRemoving) : ignoré
+			w.Helper.pause(p, "photo")
+			Brains.frames(w, 2)
+			expect(w.Helper.counters().Manual).toBe(0)
+			expect(w.Helper.counters().Owners).toBe(0)
+			clean(w)
+		end)
+
 		it(
 			"interrupteur coupé en direct pendant les sauts : rien après ; rouvert : départ de la maisonnette",
 			function()
