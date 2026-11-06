@@ -68,6 +68,8 @@ return {
 	ReportError = "event", -- (kind, key, message, trace, ctx) DiagnosticsService
 	RequestDiagnostics = "event", -- (tab) DiagnosticsService (administrateurs seulement)
 	ClientEvent = "event", -- (kind) DiagnosticsService : analytique seulement (qualityReduced, shopOpened)
+	-- (kind, value) DiagnosticsService (v2.0, lot A4, D29) : compteurs de Diagnostics et analytique seulement
+	ClientMetric = "event",
 
 	-- =========================================================================================
 	-- Serveur → client

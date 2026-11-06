@@ -156,6 +156,17 @@ local Intents: { [string]: IntentSpec } = {
 	-- ouverture). Analytique SEULEMENT (QualityReduced, ShopOpened), 20 par session au plus ; ne change
 	-- jamais rien au jeu. « Objectifs vus » (étape 10 de l'accueil) passe par UiSeen("objectives").
 	ClientEvent = { owner = "DiagnosticsService", rate = { 1, 5 }, args = { { name = "kind", kind = "key", set = { "qualityReduced", "shopOpened" } } } },
+	-- v2.0 (lot A4, D29) : faits que seul le client v2.0 mesure, 20 par session au plus. Compteurs de
+	-- Diagnostics et analytique SEULEMENT (jamais un changement du jeu ; ClientEvent reste celui de la
+	-- v1.3) ; chaque sorte derrière son interrupteur : upgradeTimeout (1 par réponse d'achat manquée en
+	-- 3 s), upgradeMode (1 ×1, 10 ×10, 0 Max) [UpgradesScreen] ; ascendPreview (0 ouvert, 1 annulé,
+	-- 2 confirmé), ascendDeclined (jours depuis que l'Ascension est prête) [JellyAscend] ; textScale
+	-- (facteur mesuré × 100), styleFallback (1 UIShadow absent, 2 dégradé radial absent), visualBudget
+	-- (budget visuel dépassé) : toujours
+	ClientMetric = { owner = "DiagnosticsService", rate = { 1, 5 }, args = {
+		{ name = "kind", kind = "key", set = { "upgradeTimeout", "upgradeMode", "ascendPreview", "ascendDeclined", "textScale", "styleFallback", "visualBudget" } },
+		{ name = "value", kind = "int", min = 0, max = 1000 },
+	} },
 }
 -- stylua: ignore end
 

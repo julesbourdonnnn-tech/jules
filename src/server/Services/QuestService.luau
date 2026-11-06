@@ -78,6 +78,7 @@ local MoveCheck = require(Server.Util.MoveCheck)
 local Activity = require(Server.Util.Activity)
 local Guard = require(Server.Meta.Guard)
 local ChallengeCtx = require(Server.Meta.ChallengeCtx)
+local MetaAnalytics = require(Server.Meta.MetaAnalytics)
 local PadRules = require(Server.Ranch.PadRules)
 local DiagnosticsService = require(Server.Services.DiagnosticsService)
 local DataService = require(Server.Services.DataService)
@@ -658,6 +659,7 @@ local function challengeProgress(player: Player, stat: string, amount: number)
 	end
 	if done > 0 then
 		addPoints(player, data, s, done * TRACK.PointsPerChallenge)
+		MetaAnalytics.goal(player) -- but atteint (NextGoalGap, lot A4 étape 6)
 	end
 end
 
@@ -1083,6 +1085,10 @@ local function progress(player: Player, stat: string, amount: number, perfect: b
 	-- piste de la semaine [WeeklyTrack] : 2 points par objectif terminé (D12 ; 6 par jour d'objectifs)
 	if newlyDone > 0 and s.v2 then
 		addPoints(player, data, s, newlyDone * TRACK.PointsPerObjective)
+	end
+	-- but atteint (NextGoalGap [UpgradesScreen], lot A4 étape 6 : rien interrupteur coupé)
+	if newlyDone > 0 then
+		MetaAnalytics.goal(player)
 	end
 end
 

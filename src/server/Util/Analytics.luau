@@ -28,6 +28,22 @@
 -- * Champs personnalisés (Roblox : 3 au plus) : ceux de l'appelant s'il en donne (« clé:valeur », par
 --   ordre de clé), sinon les 3 champs de segmentation du GDD §16 (device, serverBand, sessionBand).
 -- Les appels qui échouent font un avertissement « [Analytics] » (socle), jamais une erreur.
+--
+-- v2.0 (lot A4, étape 6, D30 ; GDD v2.0 §16.2-§16.3, docs/04 §27.14 ; seul éditeur de ce fichier) :
+--   Analytics.add(player, name, value, fields?)                        -- événement CUMULÉ par tranche
+--   Analytics.earnConfetti(player, sku, n, balance, txType?)          -- source de Confettis cumulée
+--   Analytics.spendConfetti(player, sku, n, balance)                  -- puits de Confettis cumulé
+-- * add : une requête par nom (et par série d'étiquettes) et par tranche de 5 min, envoyée quand la
+--   tranche se ferme (ou au départ) avec la somme des valeurs (arrondie à l'entier ; 0 : rien envoyé).
+--   Champs : un champ TEXTE est une étiquette de la série (ConfettiEarned { source = "WeeklyTrack" } :
+--   une série par source) ; un champ NOMBRE garde la plus grande valeur vue dans la tranche
+--   (WorkshopBuy_<ligne> { level = niveau atteint }).
+-- * Économie des Confettis (monnaie "Confetti") : cumulée comme celle des pièces, mais en UNITÉS BRUTES
+--   (les Confettis ne suivent pas le revenu), solde = profile.confetti au dernier mouvement.
+-- * HelperCoinsShare : à la fermeture d'une tranche où les Plopettes ont rapporté (sku "Helper" > 0),
+--   part de leurs pièces dans toutes les sources « Gameplay » de la tranche, en % (une décimale).
+-- * Catalogue v2.0 + familles de noms Upgrade_<famille> et WorkshopBuy_<ligne> (isKnown).
+-- Interrupteurs coupés, aucun appelant v2.0 : flux identique à la v1.3, requête pour requête.
 
 local AnalyticsService = game:GetService("AnalyticsService")
 local Players = game:GetService("Players")
@@ -57,8 +73,16 @@ Analytics.Events = {
 	"FriendsOnServer", "ShopOpened", "PolicyPaidRandomRestricted", "MoveViolation", "ServerFullKick",
 	"SleepyCardShown", "SessionLength", "ServerError", "ClientError", "FocusRescued", "StateTimedOut",
 	"QualityReduced", "TouchDeviceJoined",
+	-- v2.0 (lot A4, D30 ; GDD v2.0 §16.3) ; Upgrade_<famille> et WorkshopBuy_<ligne> : Analytics.Prefixes
+	"UpgradeMode", "ConfettiEarned", "UpgradeTimeout", "UpgradeStale", "NextGoalGap", "HelperCoinsShare",
+	"RanchTierReached", "AscendPreview", "AscendDone", "AscendDeclined", "TextScaleMeasured", "PetitSplorch",
+	"WeeklyTrackTier", "PhotoMode",
 }
 -- stylua: ignore end
+
+-- Familles de noms du catalogue (v2.0) : un nom par famille de l'écran Améliorations (Upgrade_<famille>)
+-- et par ligne de l'Atelier (WorkshopBuy_<ligne>)
+Analytics.Prefixes = { "Upgrade_", "WorkshopBuy_" }
 
 -- Événements gardés en priorité quand la file déborde (indicateurs de sécurité, fin de session)
 local IMPORTANT: { [string]: boolean } = {
@@ -76,14 +100,41 @@ for _, name in Analytics.Events do
 	KNOWN[name] = true
 end
 
+-- Nom du catalogue : nom connu, ou famille connue suivie d'un identifiant non vide
+local function known(name: string): boolean
+	if KNOWN[name] then
+		return true
+	end
+	for _, prefix in Analytics.Prefixes do
+		if #name > #prefix and string.sub(name, 1, #prefix) == prefix then
+			return true
+		end
+	end
+	return false
+end
+
 type Request = { important: boolean, run: () -> () }
-type Entry = { flow: string, sku: string, txType: string, seconds: number }
+-- Entrée cumulée de la tranche : économie (kind "eco" : monnaie "Coins" en secondes de revenu,
+-- "Confetti" en unités brutes) ou événement personnalisé cumulé (kind "add" : nom, champs, somme)
+type Entry = {
+	kind: string,
+	flow: string,
+	sku: string,
+	txType: string,
+	currency: string,
+	seconds: number, -- montant cumulé (secondes de revenu, Confettis ou valeur de l'événement)
+	name: string,
+	fields: { [string]: any }?,
+}
 type State = {
 	bucket: number,
 	entries: { [string]: Entry },
 	order: { string },
 	ips: number, -- dernier revenu connu (pièces par seconde)
 	balance: number, -- dernier solde connu (pièces)
+	confetti: number, -- dernier solde connu (Confettis, v2.0)
+	helperCoins: number, -- pièces des Plopettes (sku "Helper") de la tranche (v2.0)
+	gameplayCoins: number, -- pièces de toutes les sources « Gameplay » de la tranche (v2.0)
 	sent: { number }, -- instants des requêtes des 60 dernières secondes
 	queue: { Request },
 	segments: { [string]: string },
@@ -115,6 +166,9 @@ local function newState(): State
 		order = {},
 		ips = 0,
 		balance = 0,
+		confetti = 0,
+		helperCoins = 0,
+		gameplayCoins = 0,
 		sent = {},
 		queue = {},
 		segments = {},
@@ -346,26 +400,76 @@ end
 -- INT-ANALYTICS : cumul de l'économie, événements personnalisés, segmentation
 -- =============================================================================================
 
--- Envoie les entrées cumulées de la tranche en cours (un événement par itemSku), en secondes de revenu
+-- Envoie les entrées cumulées de la tranche en cours (un événement par itemSku), en secondes de revenu ;
+-- v2.0 : puis les Confettis (unités brutes), les événements cumulés (add) et HelperCoinsShare
 local function closeBucket(player: Player, s: State)
 	if #s.order == 0 then
 		return
 	end
 	local ips = if s.ips > 0 then s.ips else 1
 	local balanceSeconds = math.floor(math.clamp(math.max(0, s.balance) / ips, 0, Analytics.MaxSeconds))
+	local confettiBalance = math.floor(math.clamp(s.confetti, 0, Analytics.MaxSeconds))
 	local entries, order = s.entries, s.order
+	local helper, gameplay = s.helperCoins, s.gameplayCoins
 	s.entries, s.order = {}, {}
+	s.helperCoins, s.gameplayCoins = 0, 0
 	for _, key in order do
 		local e = entries[key]
-		local seconds = math.clamp(math.floor(e.seconds + 0.5), 1, Analytics.MaxSeconds)
-		local flow = if e.flow == "Sink"
-			then Enum.AnalyticsEconomyFlowType.Sink
-			else Enum.AnalyticsEconomyFlowType.Source
-		local sku, txType = e.sku, e.txType
+		if e.kind == "add" then
+			local value = math.floor(math.min(e.seconds, Analytics.MaxSeconds) + 0.5)
+			if value >= 1 then
+				local name = e.name
+				local cf = customFields(player, e.fields)
+				request(player, false, function()
+					if cf ~= nil then
+						AnalyticsService:LogCustomEvent(player, name, value, cf)
+					else
+						AnalyticsService:LogCustomEvent(player, name, value)
+					end
+				end)
+			end
+		else
+			local amount = math.clamp(math.floor(e.seconds + 0.5), 1, Analytics.MaxSeconds)
+			local flow = if e.flow == "Sink"
+				then Enum.AnalyticsEconomyFlowType.Sink
+				else Enum.AnalyticsEconomyFlowType.Source
+			local sku, txType, currency = e.sku, e.txType, e.currency
+			local balance = if currency == "Confetti" then confettiBalance else balanceSeconds
+			request(player, false, function()
+				AnalyticsService:LogEconomyEvent(player, flow, currency, amount, balance, txType, sku)
+			end)
+		end
+	end
+	-- v2.0 : part des Plopettes dans les pièces gagnées en jeu (cible 5-15 %, GDD §4.28)
+	if helper > 0 and gameplay > 0 then
+		local share = math.clamp(math.floor(1000 * helper / gameplay + 0.5) / 10, 0, 100)
+		local cf = customFields(player, nil)
 		request(player, false, function()
-			AnalyticsService:LogEconomyEvent(player, flow, "Coins", seconds, balanceSeconds, txType, sku)
+			if cf ~= nil then
+				AnalyticsService:LogCustomEvent(player, "HelperCoinsShare", share, cf)
+			else
+				AnalyticsService:LogCustomEvent(player, "HelperCoinsShare", share)
+			end
 		end)
 	end
+end
+
+-- Tranche du joueur à l'instant now (la précédente part si elle est échue)
+local function slice(player: Player, now: number): State
+	local s = stateOf(player)
+	local b = bucketOf(now)
+	if b ~= s.bucket then
+		closeBucket(player, s)
+		s.bucket = b
+	end
+	return s
+end
+
+-- Nouvelle entrée de la tranche, gardée dans l'ordre d'arrivée
+local function newEntry(s: State, key: string, e: Entry): Entry
+	s.entries[key] = e
+	table.insert(s.order, key)
+	return e
 end
 
 local function accumulate(
@@ -380,13 +484,7 @@ local function accumulate(
 	if not finite(coins) or coins <= 0 or type(sku) ~= "string" or sku == "" then
 		return
 	end
-	local now = Clock.now()
-	local s = stateOf(player)
-	local b = bucketOf(now)
-	if b ~= s.bucket then
-		closeBucket(player, s)
-		s.bucket = b
-	end
+	local s = slice(player, Clock.now())
 	local ips = if finite(incomePerSecond) and incomePerSecond > 0 then incomePerSecond else 0
 	if ips > 0 then
 		s.ips = ips
@@ -395,17 +493,31 @@ local function accumulate(
 		s.balance = math.max(0, balance :: number)
 	end
 	local tx = if type(txType) == "string" and txType ~= "" then txType else "Gameplay"
-	local key = flow .. "|" .. string.sub(sku, 1, 50) .. "|" .. tx
+	local short = string.sub(sku, 1, 50)
+	local key = flow .. "|" .. short .. "|" .. tx
 	local e = s.entries[key]
 	if e == nil then
-		e = { flow = flow, sku = string.sub(sku, 1, 50), txType = tx, seconds = 0 }
-		s.entries[key] = e
-		table.insert(s.order, key)
+		e = newEntry(s, key, {
+			kind = "eco",
+			flow = flow,
+			sku = short,
+			txType = tx,
+			currency = "Coins",
+			seconds = 0,
+			name = "",
+		})
 	end
 	-- montant converti au revenu de son instant (un revenu nul compte 1 pièce = 1 s)
 	local add = coins / (if ips > 0 then ips else 1)
 	e.seconds =
 		math.min(e.seconds + (if finite(add) then add else Analytics.MaxSeconds), Analytics.MaxSeconds)
+	-- v2.0 : HelperCoinsShare (pièces brutes, bornées : jamais infinies)
+	if flow == "Source" and tx == "Gameplay" then
+		s.gameplayCoins = math.min(s.gameplayCoins + coins, 1e300)
+		if short == "Helper" then
+			s.helperCoins = math.min(s.helperCoins + coins, 1e300)
+		end
+	end
 end
 
 -- Source de pièces cumulée (balance : solde en pièces après la source, facultatif)
@@ -432,12 +544,135 @@ function Analytics.spendIncome(
 	accumulate(player, "Sink", sku, coins, incomePerSecond, txType, balance)
 end
 
+-- =============================================================================================
+-- v2.0 (lot A4, D30) : Confettis cumulés, événements cumulés
+-- =============================================================================================
+
+-- Mouvement de Confettis cumulé (unités brutes ; solde = profile.confetti après le mouvement)
+local function accumulateConfetti(
+	player: Player,
+	flow: string,
+	sku: string,
+	n: number,
+	txType: string?,
+	balance: number?
+)
+	if not finite(n) or n <= 0 or type(sku) ~= "string" or sku == "" then
+		return
+	end
+	local s = slice(player, Clock.now())
+	if finite(balance) then
+		s.confetti = math.max(0, balance :: number)
+	end
+	local tx = if type(txType) == "string" and txType ~= "" then txType else "Gameplay"
+	local short = string.sub(sku, 1, 50)
+	local key = "Confetti|" .. flow .. "|" .. short .. "|" .. tx
+	local e = s.entries[key]
+	if e == nil then
+		e = newEntry(s, key, {
+			kind = "eco",
+			flow = flow,
+			sku = short,
+			txType = tx,
+			currency = "Confetti",
+			seconds = 0,
+			name = "",
+		})
+	end
+	e.seconds = math.min(e.seconds + n, Analytics.MaxSeconds)
+end
+
+-- Source de Confettis cumulée (sku : GrandSplorch, PetitSplorch, Skipped, Ascend, RecordBonus,
+-- FullPen, WeeklyTrack, Mastery, Regain ; txType : Gameplay par défaut, TimedReward)
+function Analytics.earnConfetti(player: Player, sku: string, n: number, balance: number, txType: string?)
+	accumulateConfetti(player, "Source", sku, n, txType, balance)
+end
+
+-- Puits de Confettis cumulé (sku : Workshop_<ligne>, Fun_<ligne>), type de transaction Shop
+function Analytics.spendConfetti(player: Player, sku: string, n: number, balance: number)
+	accumulateConfetti(player, "Sink", sku, n, "Shop", balance)
+end
+
+-- Clé de série d'un événement cumulé : le nom, puis ses étiquettes (champs texte) triées. Clés des
+-- événements sans étiquette gardées (appel à chaque seconde pour NextGoalGap : aucune allocation)
+local plainKeys: { [string]: string } = {}
+local plainCount = 0
+local function seriesKey(name: string, fields: { [string]: any }?): string
+	local labels: { string }? = nil
+	if fields ~= nil then
+		for k, v in fields do
+			if type(k) == "string" and type(v) == "string" then
+				labels = labels or {}
+				table.insert(labels :: { string }, k .. "=" .. string.sub(v, 1, 40))
+			end
+		end
+	end
+	if labels == nil then
+		local key = plainKeys[name]
+		if key == nil then
+			key = "Add|" .. name
+			if plainCount < 256 then
+				plainCount += 1
+				plainKeys[name] = key
+			end
+		end
+		return key
+	end
+	table.sort(labels)
+	return "Add|" .. name .. "|" .. table.concat(labels, "|")
+end
+
+-- Événement personnalisé CUMULÉ par tranche de 5 min (valeur > 0 ajoutée à la somme de la tranche ;
+-- étiquettes texte = série, nombres = plus grande valeur vue) ; envoyé quand la tranche se ferme
+function Analytics.add(player: Player, name: string, value: number, fields: { [string]: any }?)
+	if type(name) ~= "string" or name == "" or not finite(value) or value <= 0 then
+		return
+	end
+	if not known(name) then
+		totals.unknown += 1
+	end
+	local short = string.sub(name, 1, 50)
+	local f = if type(fields) == "table" then fields else nil
+	local s = slice(player, Clock.now())
+	local key = seriesKey(short, f)
+	local e = s.entries[key]
+	if e == nil then
+		local kept: { [string]: any }? = nil
+		if f ~= nil then
+			for k, v in f do
+				if type(k) == "string" and (type(v) == "string" or finite(v)) then
+					kept = kept or {}
+					(kept :: any)[k] = if type(v) == "string" then string.sub(v, 1, 40) else v
+				end
+			end
+		end
+		e = newEntry(s, key, {
+			kind = "add",
+			flow = "",
+			sku = "",
+			txType = "",
+			currency = "",
+			seconds = 0,
+			name = short,
+			fields = kept,
+		})
+	elseif f ~= nil and e.fields ~= nil then
+		local kept = e.fields :: { [string]: any }
+		for k, v in f do
+			if type(k) == "string" and finite(v) and type(kept[k]) == "number" and v > kept[k] then
+				kept[k] = v
+			end
+		end
+	end
+	e.seconds = math.min(e.seconds + value, Analytics.MaxSeconds)
+end
+
 -- Événement personnalisé (valeur finie ; champs facultatifs, 3 au plus)
 function Analytics.custom(player: Player, name: string, value: number?, fields: { [string]: any }?)
 	if type(name) ~= "string" or name == "" then
 		return
 	end
-	if not KNOWN[name] then
+	if not known(name) then
 		totals.unknown += 1
 	end
 	local v = if finite(value) then value :: number else 1
@@ -513,9 +748,9 @@ function Analytics.stats(player: Player?): {
 	}
 end
 
--- Le nom est-il au catalogue du jeu ?
+-- Le nom est-il au catalogue du jeu ? (v2.0 : familles Upgrade_<famille> et WorkshopBuy_<ligne>)
 function Analytics.isKnown(name: string): boolean
-	return KNOWN[name] == true
+	return type(name) == "string" and known(name)
 end
 
 -- Départ : flush branché par l'utilitaire lui-même (comme RateLimit et Activity). Les services qui

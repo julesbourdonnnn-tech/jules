@@ -11,10 +11,15 @@
 -- analytique ServerError / ClientError une fois par clé et par 5 min. Panneau des administrateurs
 -- seulement (Data/Admins, vérifié à chaque demande ; silence pour les autres ; « bonjour » tab 0 aux
 -- administrateurs à PlayerReady). ClientEvent (qualityReduced, shopOpened) : analytique seulement.
+-- v2.0 (lot A4, étape 6, D29, D30) : ClientMetric (faits que seul le client mesure : compteurs
+-- UpgradeTimeout, TextScaleMeasured:<v>, StyleFallback:<v>, VisualBudgetExceeded et analytique,
+-- 20 par session, chaque sorte derrière son interrupteur ; jamais un changement du jeu) ; démarre
+-- Meta/MetaAnalytics (start dans Start, step dans step) et lui transmet UpgradeStale (count).
 -- Premier service : attach() est appelé par Main.server juste après son require, AVANT Net.setup() :
 -- aucun remote n'est touché avant Init. Garde de réentrance : une erreur de Diagnostics ne se rapporte
 -- jamais elle-même et Diagnostics n'écrit jamais de warn.
--- Remotes : ReportError, RequestDiagnostics, SetInputType, ClientEvent ; DiagnosticsSnapshot. Clés : aucune.
+-- Remotes : ReportError, RequestDiagnostics, SetInputType, ClientEvent, ClientMetric ; DiagnosticsSnapshot.
+-- Clés : aucune.
 
 local DataStoreService = game:GetService("DataStoreService")
 local HttpService = game:GetService("HttpService")
@@ -42,6 +47,8 @@ local LIMITS = DiagRules.Limits
 DiagnosticsService.StoreName = "Diagnostics_v1"
 DiagnosticsService.AnalyticsEvery = 300 -- s : ServerError / ClientError une fois par clé et par 5 min
 DiagnosticsService.ClientEventsPerSession = 20
+DiagnosticsService.ClientMetricsPerSession = 20 -- v2.0 (D29)
+DiagnosticsService.ClientMetricValues = 8 -- valeurs distinctes gardées par compteur « <clé>:<valeur> »
 local DEDUP_WINDOW = 1 -- s (os.clock) : même erreur vue par ScriptContext.Error ET MessageOut
 local RECENT_MAX = 20
 
@@ -68,7 +75,32 @@ type PlayerState = {
 	lastByKey: { [string]: number }, -- Clock.now() du dernier rapport accepté par clé
 	events: number, -- ClientEvent acceptés
 	touchLogged: boolean,
+	metrics: number, -- ClientMetric acceptés (v2.0)
 }
+
+-- v2.0 (lot A4, D29) : interrupteur de chaque sorte de ClientMetric ("" : toujours, diagnostics de
+-- base de B1 / B4 envoyés par le client v2.0 seulement) ; une sorte liée à un interrupteur demande
+-- aussi un profil v2
+local METRIC_FLAG: { [string]: string } = {
+	upgradeTimeout = "UpgradesScreen",
+	upgradeMode = "UpgradesScreen",
+	ascendPreview = "JellyAscend",
+	ascendDeclined = "JellyAscend",
+	textScale = "",
+	styleFallback = "",
+	visualBudget = "",
+}
+-- valeurs permises (sinon refusé) : mode d'achat (1 ×1, 10 ×10, 0 Max) ; étape de l'aperçu de
+-- l'Ascension (0 ouvert, 1 annulé, 2 confirmé)
+local UPGRADE_MODES: { [number]: string } = { [0] = "max", [1] = "x1", [10] = "x10" }
+local PREVIEW_STEPS: { [number]: string } = { [0] = "opened", [1] = "cancelled", [2] = "confirmed" }
+-- compteurs dont la clé porte la valeur envoyée : ClientMetricValues valeurs distinctes par serveur,
+-- puis « <clé>:other » (un client ne remplit jamais les 64 compteurs nommés)
+local metricValues: { [string]: { [number]: boolean } } = {}
+local metricValueCount: { [string]: number } = {}
+-- compteurs transmis à l'analytique (MetaAnalytics.counted)
+local FORWARD: { [string]: boolean } = { UpgradeStale = true }
+local meta: any = nil -- Meta/MetaAnalytics (chargé par Start : tous les services sont là)
 
 local entries: { [string]: Entry } = {}
 local order: { string } = {}
@@ -321,6 +353,25 @@ function DiagnosticsService.attach()
 	end
 end
 
+-- Clé d'un compteur qui porte une valeur du client : « <préfixe>:<valeur> » pour les
+-- ClientMetricValues premières valeurs vues sur le serveur, puis « <préfixe>:other »
+local function metricKey(prefix: string, value: number): string
+	local seen = metricValues[prefix]
+	if seen == nil then
+		seen = {}
+		metricValues[prefix] = seen
+	end
+	if not seen[value] then
+		local n = metricValueCount[prefix] or 0
+		if n >= DiagnosticsService.ClientMetricValues then
+			return prefix .. ":other"
+		end
+		seen[value] = true
+		metricValueCount[prefix] = n + 1
+	end
+	return prefix .. ":" .. tostring(value)
+end
+
 -- Création des remotes et des états ; aucun yield long
 function DiagnosticsService.Init()
 	startedAt = Clock.now()
@@ -333,7 +384,7 @@ function DiagnosticsService.Init()
 		end
 		local state = perPlayer[player]
 		if state == nil then
-			state = { reports = 0, lastByKey = {}, events = 0, touchLogged = false }
+			state = { reports = 0, lastByKey = {}, events = 0, touchLogged = false, metrics = 0 }
 			perPlayer[player] = state
 		end
 		if state.reports >= LIMITS.PerSession then
@@ -373,7 +424,7 @@ function DiagnosticsService.Init()
 		if kind == 1 then
 			local state = perPlayer[player]
 			if state == nil then
-				state = { reports = 0, lastByKey = {}, events = 0, touchLogged = false }
+				state = { reports = 0, lastByKey = {}, events = 0, touchLogged = false, metrics = 0 }
 				perPlayer[player] = state
 			end
 			if not state.touchLogged then
@@ -387,7 +438,7 @@ function DiagnosticsService.Init()
 	Guard.connect("ClientEvent", function(player, kind)
 		local state = perPlayer[player]
 		if state == nil then
-			state = { reports = 0, lastByKey = {}, events = 0, touchLogged = false }
+			state = { reports = 0, lastByKey = {}, events = 0, touchLogged = false, metrics = 0 }
 			perPlayer[player] = state
 		end
 		if state.events >= DiagnosticsService.ClientEventsPerSession then
@@ -398,6 +449,50 @@ function DiagnosticsService.Init()
 			Analytics.custom(player, "QualityReduced", 1, { device = deviceName(devices[player]) })
 		elseif kind == "shopOpened" then
 			Analytics.custom(player, "ShopOpened", 1)
+		end
+		return true
+	end)
+
+	-- v2.0 (lot A4, D29) : faits mesurés par le client ; compteurs et analytique SEULEMENT
+	Guard.connect("ClientMetric", function(player, kind, value)
+		local flag = METRIC_FLAG[kind]
+		if flag == nil then
+			return false
+		end
+		if flag ~= "" and (Features.get(flag) ~= true or meta == nil or not meta.isV2(player)) then
+			return false
+		end
+		if
+			(kind == "upgradeMode" and UPGRADE_MODES[value] == nil)
+			or (kind == "ascendPreview" and PREVIEW_STEPS[value] == nil)
+		then
+			return false
+		end
+		local state = perPlayer[player]
+		if state == nil then
+			state = { reports = 0, lastByKey = {}, events = 0, touchLogged = false, metrics = 0 }
+			perPlayer[player] = state
+		end
+		if state.metrics >= DiagnosticsService.ClientMetricsPerSession then
+			return false
+		end
+		state.metrics += 1
+		if kind == "upgradeTimeout" then
+			DiagnosticsService.count("UpgradeTimeout", player)
+			Analytics.add(player, "UpgradeTimeout", 1)
+		elseif kind == "upgradeMode" then
+			Analytics.add(player, "UpgradeMode", 1, { mode = UPGRADE_MODES[value] })
+		elseif kind == "ascendPreview" then
+			Analytics.add(player, "AscendPreview", 1, { step = PREVIEW_STEPS[value] })
+		elseif kind == "ascendDeclined" then
+			Analytics.custom(player, "AscendDeclined", value) -- jours depuis que l'Ascension est prête
+		elseif kind == "textScale" then
+			DiagnosticsService.count(metricKey("TextScaleMeasured", value), player)
+			Analytics.custom(player, "TextScaleMeasured", value) -- facteur mesuré × 100
+		elseif kind == "styleFallback" then
+			DiagnosticsService.count(metricKey("StyleFallback", value), player)
+		elseif kind == "visualBudget" then
+			DiagnosticsService.count("VisualBudgetExceeded", player)
 		end
 		return true
 	end)
@@ -437,11 +532,18 @@ function DiagnosticsService.Start()
 		perPlayer[player] = nil
 		devices[player] = nil
 	end)
+	-- v2.0 (lot A4, D30) : analytique des signaux v2.0, chargée ici (tous les services sont là) ; une
+	-- panne de chargement remonte à Main.server (avertissement visible, jamais avalée)
+	meta = require(script.Parent.Parent.Meta.MetaAnalytics) :: any
+	meta.start()
 end
 
 -- Tick : analytique en attente, écriture groupée des totaux du jour (task.spawn, jamais de yield)
 function DiagnosticsService.step(now: number)
 	local t = if finite(now) then now else Clock.now()
+	if meta ~= nil then
+		Guard.try("diagnostics:meta", meta.step, t)
+	end
 	Guard.try("diagnostics:analytics", Analytics.step, t)
 	if t - lastFlush < LIMITS.FlushInterval or flushing then
 		return
@@ -597,6 +699,13 @@ function DiagnosticsService.count(key: string, player: Player?)
 	busy = false
 	if not ok then
 		internalErrors += 1 -- jamais un warn (il se rapporterait lui-même)
+	end
+	-- v2.0 (lot A4, D30) : UpgradeStale part aussi en analytique (profil v2, interrupteur ouvert)
+	if FORWARD[key] and who ~= nil and meta ~= nil then
+		local okMeta = pcall(meta.counted, key, who)
+		if not okMeta then
+			internalErrors += 1
+		end
 	end
 end
 
