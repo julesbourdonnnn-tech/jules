@@ -46,6 +46,9 @@ TextFitKeys.FAMILIES = {
 	-- boîte chacun, 3 cartes à l'écran : chaque palier et chaque raison y passent tour à tour)
 	{ id = "upgrades.tier", pattern = "^upgrades%.tier%.[%w_]+%.%d+$" },
 	{ id = "upgrades.reason", pattern = "^upgrades%.reason%.[%w_]+$" },
+	-- (étape 3) raison d'un refus du serveur : la même boîte (retour de la ligne ou de la carte) les
+	-- montre tour à tour ; chacune a aussi son scénario dans une ligne (groupe Screens « upgrades »)
+	{ id = "upgrades.refused", pattern = "^upgrades%.refused%.[%w_]+$" },
 	-- pas de famille « prompt » : la plaque d'une invite est taillée sur SON mot (WorldText), chaque
 	-- verbe a son scénario
 }

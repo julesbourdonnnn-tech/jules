@@ -1652,8 +1652,16 @@ end
 
 -- Amène l'écran Améliorations dans un état : opts.edit (profil témoin), opts.ranch (attributs),
 -- opts.wait (secondes de jeu avant l'ouverture), opts.tab, opts.mode (appuis sur □), opts.select
--- (ligne sélectionnée : son bandeau)
+-- (ligne sélectionnée : son bandeau) ; achats (étape 3) : opts.hold (secondes de ✕ tenu sur la
+-- sélection ; moins de 0,6 : relâché trop tôt), opts.after (secondes de jeu après le maintien :
+-- 3,2 = « Réessaie »), opts.answer(c, args, UM) → réponse UpgradeResult au dernier BuyUpgrade envoyé
 local function upgradesState(c, opts)
+	-- ✕ resté enfoncé par l'écran précédent (anneau à mi-maintien) : relâché d'abord
+	if c.padHeld then
+		c.padHeld = nil
+		Gamepad.release(c.h, Enum.KeyCode.ButtonA)
+		frames(c, 2, 0.1)
+	end
 	closeAll(c)
 	flushAll(c)
 	Screens.myRanchModel(c, opts.ranch or { HelperMode = "active", AscendReady = false })
@@ -1683,9 +1691,55 @@ local function upgradesState(c, opts)
 			c.h.game.GuiService.SelectedObject = obj
 		end
 	end
+	if opts.holding then
+		-- anneau à mi-maintien : ✕ tenu `holding` s, PAS relâché (l'écran suivant le relâche)
+		frames(c, 5, 0.1)
+		Gamepad.press(c.h, Enum.KeyCode.ButtonA)
+		c.padHeld = true
+		frames(c, math.max(1, math.floor(opts.holding * 30 + 0.5)), 1 / 30)
+		return
+	end
+	if opts.hold then
+		-- garde d'un focus changé (0,4 s) passée, puis ✕ tenu et relâché
+		frames(c, 5, 0.1)
+		Gamepad.press(c.h, Enum.KeyCode.ButtonA)
+		frames(c, math.max(1, math.floor(opts.hold * 30 + 0.5)), 1 / 30)
+		Gamepad.release(c.h, Enum.KeyCode.ButtonA)
+		frames(c, 3, 1 / 30)
+		if opts.after then
+			frames(c, math.max(1, math.floor(opts.after * 10 + 0.5)), 0.1)
+		end
+		if opts.answer then
+			local sent = TvAudit.sent(c.h, "BuyUpgrade")
+			local args = sent[#sent]
+			if args then
+				local UM = c.h:require("ReplicatedStorage.Shared.Logic.UpgradeMath")
+				c.h:fireClient(REMOTES .. "UpgradeResult", opts.answer(c, args, UM))
+				c.h:settle(1)
+			end
+		end
+	end
 	frames(c, 6, 0.1)
 end
 Screens.upgradesState = upgradesState
+
+-- Réponse du serveur fabriquée (étape 3) : `to` niveaux après (nil : refus), `reason`, `spent`, et le
+-- profil témoin de l'instantané joint (`edit`)
+local function upgradeAnswer(opts)
+	return function(c, args, UM)
+		local id, from = args[1], args[3]
+		local to = if opts.levels then from + opts.levels else from
+		return {
+			id = id,
+			from = from,
+			to = to,
+			spent = if to > from then opts.spent or 9.99e94 else 0,
+			currency = UM.currency(id),
+			reason = opts.reason,
+			snapshot = Screens.upgradeSnapshot(c, opts.edit),
+		}
+	end
+end
 
 -- Profils de l'écran (champs du profil témoin v2 : R = boucle r, bestR = Record R, ascend = A)
 local function tiles(p, t)
@@ -1941,6 +1995,100 @@ local function upgradeScreens()
 			p.atelier = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 3 }
 			p.confetti = 5000
 		end,
+	})
+	-- Achats (étape 3) : ligne « En cours », « Réessaie » (consigne du maintien, glyphe), retours dans la
+	-- ligne (+1 niveau, +n niveaux, ×10 en partie « 4 sur 10 »), chaque raison de refus du serveur dans
+	-- la ligne, relâché trop tôt ; carte du Conseillé : retour et refus ; Atelier : retour en Confettis
+	local function rich(p)
+		tiles(p, { decor = 2, gloves = 5 })
+		p.coins = 9.99e94
+	end
+	local function boughtDecor(levels)
+		return function(p)
+			rich(p)
+			tiles(p, { decor = 2 + levels })
+		end
+	end
+	add("buy.ring", { tab = "ranch", select = "decor", edit = rich, holding = 0.35 })
+	add("buy.ring.card", { tab = "suggested", select = 1, edit = rich, holding = 0.35 })
+	add("buy.busy", { tab = "ranch", select = "decor", edit = rich, hold = 0.7 })
+	add("buy.retry", { tab = "ranch", select = "decor", edit = rich, hold = 0.7, after = 3.2 })
+	add("buy.hint", { tab = "ranch", select = "decor", edit = rich, hold = 0.3 })
+	add("buy.one", {
+		tab = "ranch",
+		select = "decor",
+		edit = rich,
+		hold = 0.7,
+		answer = upgradeAnswer({ levels = 1, edit = boughtDecor(1) }),
+	})
+	add("buy.many", {
+		tab = "ranch",
+		select = "gloves",
+		edit = rich,
+		mode = 1,
+		hold = 0.7,
+		answer = upgradeAnswer({
+			levels = 10,
+			edit = function(p)
+				rich(p)
+				tiles(p, { gloves = 15 })
+			end,
+		}),
+	})
+	add("buy.partial", {
+		tab = "ranch",
+		select = "decor",
+		edit = rich,
+		mode = 1,
+		hold = 0.7,
+		answer = upgradeAnswer({ levels = 4, edit = boughtDecor(4) }),
+	})
+	for _, reason in { "coins", "confetti", "locked", "maxed", "loopCap", "busy" } do
+		add("buy.refused." .. reason, {
+			tab = "ranch",
+			select = "decor",
+			edit = rich,
+			hold = 0.7,
+			answer = upgradeAnswer({ reason = "upgrades.refused." .. reason, edit = rich }),
+		})
+	end
+	add("buy.card", {
+		tab = "suggested",
+		select = 1,
+		edit = function(p)
+			rich(p)
+			p.R = 5
+			p.bestR = 12
+		end,
+		hold = 0.7,
+		answer = upgradeAnswer({ levels = 1, edit = rich }),
+	})
+	add("buy.card.refused", {
+		tab = "suggested",
+		select = 2,
+		edit = function(p)
+			rich(p)
+			p.R = 5
+			p.bestR = 12
+		end,
+		hold = 0.7,
+		answer = upgradeAnswer({ reason = "upgrades.refused.busy", edit = rich }),
+	})
+	add("buy.workshop", {
+		tab = "workshop",
+		select = "gift",
+		edit = function(p)
+			p.confetti = 99999
+		end,
+		hold = 0.7,
+		answer = upgradeAnswer({
+			levels = 1,
+			spent = 99999,
+			edit = function(p)
+				p.atelier[1] = 1
+				p.confetti = 0
+			end,
+		}),
 	})
 	-- Atelier vide (avant le Record R 1) : tout au cadenas « Record 1 »
 	add("workshop.empty", {

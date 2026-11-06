@@ -620,4 +620,46 @@ return function(T)
 			end
 		)
 	end)
+
+	describe("UpgradeCard › relecture des captures (lot B2, étape 3 : retours des achats)", function()
+		it(
+			"carte : le retour prend la zone du bas, l'avant → après reste ; ligne : il prend l'avant → après",
+			function()
+				local c = setup("fr")
+				local v = stateView(c, "ready", 1)
+				expect(v.effect ~= nil and v.effect.after ~= nil).toBe(true)
+				local fb = { key = "upgrades.boughtOne", vars = { price = "1,2 M" } }
+				local note = { key = "upgrades.partial", vars = { n = "4", m = "10" } }
+				-- carte : avant → après toujours montrés ; le retour dans la zone du bas, la note à la place
+				-- de la raison
+				local card = c.Card.new("card", nil)
+				place(c, card)
+				card:set(v.state, v)
+				card:feedback(fb, note)
+				local p = card.parts
+				expect(p.before.Visible).toBe(true)
+				expect(p.after.Visible).toBe(true)
+				expect(c.Icons.kindOf(p.effectArrow)).toBe("arrowRight")
+				expect(p.word.Text).toBe("+1 niveau · -1,2 M")
+				expect(p.reason.Text).toBe("4 sur 10")
+				card:feedback(nil)
+				expect(p.word.Text ~= "+1 niveau · -1,2 M").toBe(true)
+				expect(p.reason.Text ~= "4 sur 10").toBe(true)
+				-- ligne : le retour à la place de l'avant → après, la note à la place du mot de l'état
+				local row = c.Card.new("row", nil)
+				place(c, row)
+				row:set(v.state, v)
+				row:feedback(fb, note)
+				local r = row.parts
+				expect(r.effectLabel.Text).toBe("+1 niveau · -1,2 M")
+				expect(r.before.Visible).toBe(false)
+				expect(r.after.Visible).toBe(false)
+				expect(r.word.Text).toBe("4 sur 10")
+				row:feedback(nil)
+				expect(r.before.Visible).toBe(true)
+				expect(r.word.Text).toBe("Prêt")
+				clean(c.h)
+			end
+		)
+	end)
 end

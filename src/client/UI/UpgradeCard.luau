@@ -742,7 +742,9 @@ function UpgradeCard.set(self: Card, state: string, view: UpgradeView.View)
 	local effect = view.effect
 	local fb = self.fb
 	if self.template ~= "tile" then
-		local shown = if fb == nil then effect else nil
+		-- ligne : le retour prend la place de l'avant → après ; carte : il prend la zone du bas, l'avant
+		-- → après reste (relecture des captures du lot B2, étape 3)
+		local shown = if fb == nil or self.template == "card" then effect else nil
 		local before = if shown then shown.before else nil
 		local after = if shown then shown.after else nil
 		-- ligne : le retour chiffré prend la place de l'avant → après (« dans la ligne même »)
@@ -839,7 +841,8 @@ function UpgradeCard.set(self: Card, state: string, view: UpgradeView.View)
 		local priced = not view.readOnly and view.currency ~= nil
 		if priced and st ~= "max" and view.priceText ~= nil then
 			setRaw(p.price, view.priceText)
-			color(p.price, if st == "ready" then COLORS.text else COLORS.grey)
+			-- « Réessaie » s'achète d'un maintien : prix en blanc, comme « Prêt » ; ailleurs en gris
+			color(p.price, if st == "ready" or st == "retry" then COLORS.text else COLORS.grey)
 		elseif priced then
 			setRaw(p.price, DASH)
 			color(p.price, COLORS.grey)

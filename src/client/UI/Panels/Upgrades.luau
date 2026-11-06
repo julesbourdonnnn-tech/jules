@@ -116,11 +116,13 @@ local COUNT_TIME = 0.4 -- s : compteur de l'en-tête (pièces, Confettis)
 local MODE_ACTION = "UpgradesMode"
 local FEEDBACK_SECONDS = 1.5 -- retour dans la ligne même (GDD §10.7.8)
 local HINT_SECONDS = 2 -- consigne « Maintiens pour acheter » après un relâchement trop tôt
--- anneau du maintien : 12 points de 8 px sur un cercle de 28 px de rayon (autour d'un dessin de 48)
+-- anneau du maintien : 12 points sur un cercle de 26 px de rayon autour d'un dessin de 48 ; un point
+-- atteint grossit de 6 à 10 px et devient opaque (rien ne déborde sur le mot de l'état, à 8 px du dessin)
 local RING_DOTS = 12
-local RING_RADIUS = 28
-local RING_DOT = 8
-local RING_DIM = 0.65 -- transparence d'un point pas encore atteint
+local RING_RADIUS = 26
+local RING_DOT = 6
+local RING_LIT = 10
+local RING_DIM = 0.5 -- transparence d'un point pas encore atteint
 local HOLD_GLYPH = 40 -- glyphe de l'appareil devant la consigne du bandeau
 local SPIN_PERIOD = 1.2 -- s : un tour du sablier « En cours »
 
@@ -791,7 +793,7 @@ end
 -- Anneau du maintien de 0,6 s (un seul pour l'écran : un seul maintien à la fois) : 12 points posés
 -- dans la carte ou la ligne maintenue, allumés au fil du maintien ; aucune instance créée ensuite
 local function buildRing(body: Frame)
-	local size = 2 * (RING_RADIUS + RING_DOT / 2)
+	local size = 2 * (RING_RADIUS + RING_LIT / 2)
 	local f = Instance.new("Frame")
 	f.Name = "HoldRing"
 	f.BackgroundTransparency = 1
@@ -1241,9 +1243,12 @@ local function showRing(root: GuiObject, alpha: number)
 	end
 	local lit = math.clamp(math.ceil(alpha * RING_DOTS - 1e-6), 0, RING_DOTS)
 	for i, d in ringDots do
-		local t = if i <= lit then 0 else RING_DIM
+		local on = i <= lit
+		local t = if on then 0 else RING_DIM
 		if d.BackgroundTransparency ~= t then
 			d.BackgroundTransparency = t
+			local px = if on then RING_LIT else RING_DOT
+			d.Size = UDim2.fromOffset(px, px)
 		end
 	end
 	if not r.Visible then

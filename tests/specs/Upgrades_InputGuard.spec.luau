@@ -459,4 +459,161 @@ return function(T)
 			end)
 		end)
 	end
+
+	-- =========================================================================================
+	-- Lot B2 (étape 3) : l'écran Améliorations lui-même, sur le vrai client console, instantanés
+	-- fabriqués (interrupteur UpgradesScreen du serveur : la clé upgradeSnapshot), vrais appuis.
+	--   * « △ puis ✕ tenu 2 s : 0 BuyUpgrade » (et après la garde, un vrai maintien achète une fois) ;
+	--   * ✕ ignoré 0,4 s quand l'élément sous le focus change d'identité (L1 / R1) ;
+	--   * « 10 appuis à 100 ms sur la carte 1 : une seule famille » : aucun achat, la carte garde sa
+	--     famille ;
+	--   * « chaque mode atteint avec le D-pad, ✕ et ○ seulement » : ×1, ×10 et Max atteints et utilisés
+	--     (un achat par mode, intention exacte), ○ ferme ;
+	--   * interrupteur coupé : aucun écran, ✕ tenu ne produit aucun BuyUpgrade.
+	-- =========================================================================================
+	local UpgradeScreen = require("../harness/UpgradeScreen")
+	local S = UpgradeScreen.new(T.Harness)
+
+	local function rich(p)
+		p.tiles.decor = 2
+		p.tiles.gloves = 5
+		p.coins = 1e30
+	end
+
+	local function buys(c)
+		local out = {}
+		for _, a in S.sent(c, "BuyUpgrade") do
+			table.insert(out, { a[1], a[2], a[3] })
+		end
+		return out
+	end
+
+	describe("Upgrades_InputGuard (écran Améliorations, lot B2)", function()
+		it("interrupteur coupé : aucun écran ; ✕ tenu 2 s : aucun BuyUpgrade", function()
+			local c = S.client({})
+			c.PC.open("Upgrades", "ranch")
+			S.run(c, 0.1)
+			expect(c.PC.isOpen("Upgrades")).toBe(false)
+			S.hold(c, nil, 2)
+			S.noV2Intent(c, expect)
+			S.clean(c, expect)
+		end)
+
+		it(
+			"△ puis ✕ tenu 2 s : 0 BuyUpgrade ; relâché, garde passée : un maintien achète une fois",
+			function()
+				local c = S.client({ snap = S.snap(1, rich) })
+				c.PC.closeAll()
+				S.run(c, 0.5)
+				-- △ (ou L2 / R2, raccourci) ouvre l'écran : la sélection d'office est une carte prête
+				c.PC.open("Upgrades", "suggested")
+				c.h:settle(1)
+				expect(c.PC.isOpen("Upgrades")).toBe(true)
+				local selected = S.selected(c)
+				expect(selected ~= nil and selected:GetAttribute("State") == "ready").toBe(true)
+				S.run(c, 0.1)
+				Gamepad.press(c.h, Enum.KeyCode.ButtonA)
+				S.run(c, 2)
+				expect(c.Up._ring().Visible).toBe(false)
+				Gamepad.release(c.h, Enum.KeyCode.ButtonA)
+				S.run(c, 0.2)
+				expect(#buys(c)).toBe(0)
+				-- appui suivant, garde passée : un achat, exactement
+				S.hold(c, nil, 0.7)
+				expect(#buys(c)).toBe(1)
+				S.clean(c, expect)
+			end
+		)
+
+		it(
+			"L1 / R1 : ✕ appuyé dans les 0,4 s du changement d'identité est ignoré jusqu'à son relâchement",
+			function()
+				local c = S.client({ snap = S.snap(1, rich) })
+				S.open(c, "suggested")
+				S.run(c, 0.5)
+				Gamepad.tap(c.h, Enum.KeyCode.ButtonR1) -- onglet Ranch : la sélection devient la première ligne
+				S.run(c, 0.1)
+				expect(c.Up.currentTab()).toBe("ranch")
+				Gamepad.press(c.h, Enum.KeyCode.ButtonA)
+				S.run(c, 1.5)
+				Gamepad.release(c.h, Enum.KeyCode.ButtonA)
+				S.run(c, 0.2)
+				expect(#buys(c)).toBe(0)
+				S.hold(c, nil, 0.7)
+				expect(#buys(c)).toBe(1)
+				S.clean(c, expect)
+			end
+		)
+
+		it("10 appuis à 100 ms sur la carte 1 : aucun achat, la carte garde sa famille", function()
+			local c = S.client({ snap = S.snap(1, rich) })
+			S.open(c, "suggested")
+			local card = c.Up._card(1)
+			S.select(c, card)
+			local family = card:GetAttribute("FocusId")
+			local families = c.Up._cards()
+			for _ = 1, 10 do
+				Gamepad.press(c.h, Enum.KeyCode.ButtonA)
+				S.run(c, 0.1)
+				Gamepad.release(c.h, Enum.KeyCode.ButtonA)
+				S.run(c, 0.1)
+			end
+			expect(#buys(c)).toBe(0)
+			expect(card:GetAttribute("FocusId")).toBe(family)
+			expect(c.Up._cards()).toEqual(families)
+			expect(S.selected(c)).toBe(card)
+			-- relâché trop tôt : la consigne du maintien, glyphe de l'appareil dessiné
+			expect(c.Up._holdGlyph().Visible).toBe(true)
+			S.clean(c, expect)
+		end)
+
+		it(
+			"chaque mode atteint avec le D-pad, ✕ et ○ seulement (un achat par mode, intention exacte)",
+			function()
+				local c = S.client({ snap = S.snap(1, rich) })
+				S.open(c, "ranch")
+				local mb = c.Up._modeButton()
+				local row = c.Up._row("decor")
+				local level = 2
+				for _, want in { 10, 0, 1 } do
+					-- ↑ depuis la première ligne : l'onglet ; ↑ encore : le bouton de mode
+					S.select(c, c.Up._row("snack"))
+					Gamepad.tap(c.h, Enum.KeyCode.DPadUp)
+					S.run(c, 0.5)
+					Gamepad.tap(c.h, Enum.KeyCode.DPadUp)
+					S.run(c, 0.5)
+					expect(S.selected(c)).toBe(mb)
+					Gamepad.tap(c.h, Enum.KeyCode.ButtonA)
+					S.run(c, 0.5)
+					expect(c.Up.mode()).toBe(want)
+					-- ↓ : l'onglet actif ; ↓ : la première ligne ; ↓ : Décorations
+					Gamepad.tap(c.h, Enum.KeyCode.DPadDown)
+					S.run(c, 0.2)
+					Gamepad.tap(c.h, Enum.KeyCode.DPadDown)
+					S.run(c, 0.2)
+					Gamepad.tap(c.h, Enum.KeyCode.DPadDown)
+					S.run(c, 0.5)
+					expect(S.selected(c)).toBe(row)
+					S.hold(c, nil, 0.7)
+					local sent = buys(c)
+					expect(sent[#sent]).toEqual({ "decor", want, level })
+					S.answer(c, S.sent(c, "BuyUpgrade")[#sent], {
+						to = level + 1,
+						spent = 1,
+						snap = S.snap(#sent + 1, function(p)
+							rich(p)
+							p.tiles.decor = level + 1
+						end),
+					})
+					level += 1
+					S.run(c, 1.6)
+				end
+				-- ○ ferme l'écran (retour au rail, puis au jeu)
+				Gamepad.tap(c.h, Enum.KeyCode.ButtonB)
+				S.run(c, 0.5)
+				expect(c.PC.isOpen("Upgrades")).toBe(false)
+				S.clean(c, expect)
+			end
+		)
+	end)
 end
