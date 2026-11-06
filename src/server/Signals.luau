@@ -134,7 +134,8 @@ local Signals = {
 	-- LeaderboardService (« Plus de tampons » de la semaine)
 	Stamped = Signal.new() :: Signal.Signal<Player, number>,
 	-- Émis par QuestService (intention UiSeen, une fois par écran et par session) : écran vu par le
-	-- joueur ("objectives", "modeCard", "postBoop", "booped", "shop", "dex", "leaderboards") →
+	-- joueur ("objectives", "modeCard", "postBoop", "booped", "shop", "dex", "leaderboards" ; v2.0 :
+	-- "nextBuy", puce « Prochain achat », lot A4) →
 	-- RushService ("modeCard" : délai de 20 s de la carte du choix, RushModeChosen = −1 sans réponse)
 	UiSeen = Signal.new() :: Signal.Signal<Player, string>,
 	-- Émis par CommunityService : signal de la croix joué (sorte 1-3) → QuestService (objectif)

@@ -105,7 +105,9 @@ local Intents: { [string]: IntentSpec } = {
 	-- Écran vu par le joueur (fait que seul le client connaît) : étape 10 de l'accueil (objectifs vus),
 	-- départ du délai de la carte du choix (RushModeChosen = −1 sans réponse), analytique. Une fois par
 	-- écran et par session ; ne donne jamais rien (aucune récompense, aucune mutation économique).
-	UiSeen = { owner = "QuestService", rate = { 2, 1 }, args = { { name = "screen", kind = "key", set = { "objectives", "modeCard", "postBoop", "booped", "shop", "dex", "leaderboards" } } } },
+	-- v2.0 (lot A4, D32) : "nextBuy" = puce « Prochain achat » apparue (onboarding.nextBuyShown d'un
+	-- profil v2, interrupteur UpgradesScreen ; envoyée par le HUD de B2)
+	UiSeen = { owner = "QuestService", rate = { 2, 1 }, args = { { name = "screen", kind = "key", set = { "objectives", "modeCard", "postBoop", "booped", "shop", "dex", "leaderboards", "nextBuy" } } } },
 	-- v2.0 (lot A4, N23, décision du propriétaire du 6 novembre) : la navigation dans un menu ouvert
 	-- compte pour la sieste des Plopettes (le client l'envoie à l'ouverture d'un panneau et pendant la
 	-- navigation, une au plus toutes les 20 s). Réveille seulement les Plopettes (Activity.noteMenu) :
