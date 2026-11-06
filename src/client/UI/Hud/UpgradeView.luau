@@ -107,6 +107,7 @@ export type View = {
 	sendMode: number, -- 1 | 10 | 0
 	expectedLevel: number?, -- niveau montré de sendId (niveau de la famille, Étoilé : 0 … 8)
 	nap: boolean, -- Plopette qui fait la sieste
+	value: Text?, -- tuile d'un aperçu (lot B3) : valeur 40 px à la place du mot de l'état
 }
 
 export type Memory = { factor: number, active: boolean, f: string }

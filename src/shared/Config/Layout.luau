@@ -208,7 +208,8 @@ Layout.Upgrades = {
 	HeaderGap = 16,
 	Memory = { x = 320, w = 360, h = 48, icon = 32, text = 28 }, -- x 320-680 dans le panneau
 	-- 3 gabarits du composant unique UI/UpgradeCard (règle 11)
-	Card = { w = 432, h = 528, gap = 40, icon = 120, title = 36, value = 40 }, -- onglet Conseillé : 3 cartes
+	-- onglet Conseillé : 3 cartes ; icône de 80 = pile du GDD §10.7.4 (16 → 96 ; lot B2, B2-2), écart 40
+	Card = { w = 432, h = 528, gap = 40, icon = 80, title = 36, value = 40 },
 	Row = { w = 1328, h = 112, step = 128 }, -- onglets Ranch, Plopettes, Atelier
 	Tile = { w = 400, h = 300, icon = 120, title = 36, titleLines = 2, value = 40, margin = 16 }, -- aperçus
 	-- colonnes d'une ligne : { x, w } dans la ligne

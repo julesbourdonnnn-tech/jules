@@ -116,7 +116,10 @@ local function star(x0: number, y0: number, s: number, shade: Shade): { Prim }
 		local a, b = pts[k], pts[(k + 2) % 5]
 		table.insert(out, seg(a[1], a[2], b[1], b[2], thick, shade, true))
 	end
-	table.insert(out, disc(cx, cy, 2 * (s / 2) * STAR_CORE, shade))
+	-- disque central : un anneau plein (fond et trait de la même couleur) — une pièce de moins dans les
+	-- toiles qui savent aussi dessiner un cadenas ou une boucle (même dessin que le disque de Glyph.star)
+	local core = 2 * (s / 2) * STAR_CORE
+	table.insert(out, ring(cx, cy, core, core, 0.01, shade, shade))
 	return out
 end
 
