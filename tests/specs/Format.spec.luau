@@ -456,4 +456,56 @@ return function(T)
 			end
 		)
 	end)
+	-- Règle 8 sur l'écran (lot B2, D27) : une même ligne montre le même texte dans sa carte du
+	-- Conseillé, sa ligne d'onglet et le bandeau (une seule vue, UI/Format et BigNumber, aucun texte
+	-- de nombre refait par l'écran)
+	describe("Format › règle 8 sur l'écran Améliorations (lot B2)", function()
+		it("carte, ligne et bandeau montrent le même texte", function()
+			local TvAudit = require("../harness/TvAudit")
+			local UpgradeScreen = require("../harness/UpgradeScreen")
+			local S = UpgradeScreen.new(T.Harness)
+			for _, lang in { "fr", "en" } do
+				local c = S.client({
+					lang = lang,
+					snap = S.snap(1, function(p)
+						p.coins = 12345
+					end),
+				})
+				S.open(c, "suggested")
+				local ids = c.Up._cards()
+				local checked = 0
+				for i, id in ids do
+					local row = c.Up._row(id)
+					if row ~= nil then
+						local card = c.Up._card(i)
+						local cv, rv = c.Up._view(card), c.Up._view(row)
+						-- même vue : mêmes textes de prix, d'effet et de bandeau
+						expect(card.Price.Text).toBe(row.Price.Text)
+						expect(cv.priceText).toBe(rv.priceText)
+						if cv.effect and cv.effect.after then
+							expect(card.After.Text).toBe(row.After.Text)
+						end
+						expect(TvAudit ~= nil).toBe(true)
+						-- bandeau : la phrase de la carte sélectionnée = celle de la ligne sélectionnée
+						c.h.game.GuiService.SelectedObject = card
+						c.h:settle(1)
+						local fromCard = c.Up._banner().Text
+						c.Up.setTab(
+							if c.Up._shown("ranch")[1] and table.find(c.Up._shown("ranch"), id)
+								then "ranch"
+								else "helpers"
+						)
+						c.h.game.GuiService.SelectedObject = row
+						c.h:settle(1)
+						expect(c.Up._banner().Text).toBe(fromCard)
+						c.Up.setTab("suggested")
+						c.h:settle(1)
+						checked += 1
+					end
+				end
+				expect(checked > 0).toBe(true)
+				S.clean(c, expect)
+			end
+		end)
+	end)
 end

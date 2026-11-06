@@ -106,7 +106,9 @@ local ROW_LABEL_FULL = COL.text.w -- libellé seul (« Revenu total +1,2 % »)
 local ROW_LABEL_SHORT = COL.text.w - 2 * ROW_VALUE_W - ROW_ARROW_SLOT - 2 * 8 -- 244 : libellé et 2 valeurs
 local ROW_LABEL_CARRY = ROW_LABEL_SHORT + 8 + ROW_VALUE_W -- 372 : libellé qui porte la valeur d'avant
 local ROW_NAME_Y, ROW_NAME_H = 10, 44 -- nom (centré en hauteur quand la seconde ligne est vide)
-local CARD_NOTE_H = 216 -- carte neutre : phrase du nom de y 104 à 320 (4 lignes de 36 px au plus)
+-- carte neutre : la phrase occupe le corps de la carte (y 104 → 512, centrée en hauteur ; relecture
+-- des captures de l'étape 2 : la moitié basse restait vide)
+local CARD_NOTE_H = 408
 
 -- Couleurs (charte des panneaux, GDD §10.1)
 local COLORS = {

@@ -168,7 +168,7 @@ local function myRanch(): Instance?
 	end
 	local world = workspace:FindFirstChild("Wobbleton")
 	local list = world and world:FindFirstChild("Ranches")
-	return list and list:FindFirstChild(tostring(slot))
+	return list and list:FindFirstChild(Format.id(slot))
 end
 
 local function ranchAttribute(name: string): any
