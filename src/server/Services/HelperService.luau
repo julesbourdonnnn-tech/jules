@@ -5,8 +5,10 @@
 --     acting = acteurs du tick (positions VALIDÉES) ; sans lui (specs), MoveCheck.lastValid.
 --   * Nombre : une Plopette par Record R de Balance.Helpers.ByRecordR (Pip 2, Pop 4, Pim 6, Pom 8,
 --     Puff 12) + la Plume (ligne de l'Atelier, atelier[8]) ; profil v2 seulement (Helpers/Rules).
---   * Cible et heure : le SERVEUR choisit un squishy de l'enclos ou du Bassin prêt depuis ReadyFor s, ni
---     porté, ni en attente de Grand Splorch, ni à la clôture, ni visé par une autre Plopette, à PLUS de
+--   * Cible et heure : le SERVEUR choisit un squishy de l'enclos ou du Bassin prêt depuis ReadyFor s (fin
+--     de sa recharge ET arrivée à sa place : éclos, fusionné, lancé, posé, descendu de monture, revenu de
+--     la clôture ; relecture A3), ni porté, ni monté (dessiné sous le joueur), ni en attente de Grand
+--     Splorch, ni à la clôture, ni visé par une autre Plopette, à PLUS de
 --     MinDistance studs à plat de la position validée du propriétaire (le plus gros revenu d'abord, comme
 --     le modèle d'économie) ; tPress = maintenant + trajet (fonction pure des deux positions, 3 s au
 --     plus). Rien n'est donné avant tPress : au premier tick ≥ tPress, TOUT est revérifié (propriétaire
@@ -23,7 +25,8 @@
 --     première intention acceptée. Pause : prestige du joueur (SplorchService.queuedKind ≠ nil : file
 --     et spectacle ; canPrestige faux : file, spectacle, attente, Petit Splorch), BOOP RUSH à sa
 --     clôture (Rush en cours et ranch en mode Rush, ou fuite de ses squishies), pause(player, reason).
---     Sieste et pause abandonnent les sauts en cours (aucune récompense).
+--     Sieste et pause abandonnent les sauts en cours (aucune récompense) ; à la reprise, une Plopette
+--     payée juste avant attend la fin de son intervalle (relecture A3 : pas de pression de plus).
 --   * Réseau : HelperPress (non fiable) regroupé par tick : UN message par ranch et par destinataire
 --     ({ ownerId, presses = { { helper, uid, tPress } } }), au propriétaire et aux joueurs qui dessinent
 --     ce ranch en détail complet ; l'issue arrive par DataPatch (pièces).
@@ -104,6 +107,10 @@ type Owner = {
 	centerX: number,
 	centerZ: number,
 	done: { [string]: number }, -- uid → fin de la recharge posée par une Plopette
+	-- relecture A3 (R-2) : arrivée de chaque squishy à son état actuel (enclos, Bassin, porté, monté,
+	-- clôture, attente, ailleurs) : « prêt depuis ReadyFor s » compte aussi depuis cette arrivée
+	seenKind: { [string]: string },
+	since: { [string]: number },
 }
 
 local owners: { [Player]: Owner } = {}
@@ -124,6 +131,9 @@ local candIncome: { [string]: number } = {}
 local candX: { [string]: number } = {}
 local candZ: { [string]: number } = {}
 local fenceSet: { [string]: boolean } = {}
+-- relecture A3 (R-1) : squishy monté par le propriétaire (dessiné sous lui, RanchPublic.ride), chargé
+-- avec la clôture (loadFence)
+local rideUid = ""
 local targeted: { [string]: boolean } = {}
 local due: { Helper } = {}
 
@@ -243,6 +253,8 @@ local function newOwner(slot: number, data: { [string]: any }, now: number): Own
 		centerX = cx,
 		centerZ = cz,
 		done = {},
+		seenKind = {},
+		since = {},
 	}
 	refresh(o, data, now)
 	return o
@@ -267,24 +279,28 @@ local function pauseReason(player: Player, rush: boolean): string?
 end
 
 -- Change le mode d'un propriétaire : sieste et pause abandonnent les sauts ; la sieste ramène les
--- Plopettes à la maisonnette ; au réveil elles ressortent WAKE_DELAY s après
+-- Plopettes à la maisonnette ; au réveil elles ressortent WAKE_DELAY s après, et jamais avant la fin
+-- de leur intervalle (relecture A3, R-3 : une pause plus courte que l'intervalle ne rend aucune
+-- pression de plus ; un saut abandonné, jamais payé, garde son heure d'avant le choix)
 local function setMode(o: Owner, mode: "active" | "nap" | "paused", reason: string?, now: number)
 	o.reason = reason
 	if o.mode == mode then
 		return
 	end
-	local was = o.mode
 	o.mode = mode
 	if mode == "active" then
 		for k, h in o.helpers do
-			if was ~= "none" or h.nextAt < now then
-				h.nextAt = now + Rules.WAKE_DELAY + (k - 1) * Rules.WAKE_STAGGER
-			end
+			h.nextAt = math.max(h.nextAt, now + Rules.WAKE_DELAY + (k - 1) * Rules.WAKE_STAGGER)
 		end
 		return
 	end
 	for _, h in o.helpers do
-		abandon(h, math.huge)
+		if h.moving then
+			-- le client finit le saut coupé jusqu'à sa cible (aucun message pour un abandon) : la Plopette
+			-- y est, le saut suivant part de là (relecture A3, R-4 ; même règle que A3-21)
+			h.x, h.z = h.tx, h.tz
+		end
+		abandon(h, h.nextAt) -- sans choix pendant la pause (stepOwner) : l'heure reste celle d'avant
 		if mode == "nap" then
 			h.x, h.z = o.homeX, o.homeZ
 		end
@@ -301,21 +317,32 @@ local function readyAt(player: Player, o: Owner, uid: string): number
 	local a = SquishyService.readyAt(player, uid)
 	local b = o.done[uid]
 	if b ~= nil and b > a then
-		return b
+		a = b
+	end
+	-- relecture A3 (R-2) : arrivé à sa place (éclos, fusionné, lancé au Bassin, posé, descendu de
+	-- monture, revenu de la clôture ou du Dodo) à `since` : « prêt » au plus tôt depuis cette arrivée
+	local c = o.since[uid]
+	if c ~= nil and c > a then
+		a = c
 	end
 	return a
 end
 
+-- Clôture (fenceSet) et monture (rideUid) du ranch, lues une fois par passe
 local function loadFence(slot: number)
 	table.clear(fenceSet)
 	local uids = RanchService.fenceOf(slot)
 	for _, uid in uids do
 		fenceSet[uid] = true
 	end
+	local pub = RanchService.publicOf(slot)
+	local ride = if pub ~= nil then (pub :: any).ride else nil
+	rideUid = if type(ride) == "string" then ride else ""
 end
 
--- Squishy libre pour une Plopette (hors règle des 12 studs) : enclos ou Bassin, ni porté, ni en
--- attente, ni à la clôture (fenceSet chargé), prêt depuis ReadyFor s
+-- Squishy libre pour une Plopette (hors règle des 12 studs) : enclos ou Bassin, ni porté, ni monté
+-- (relecture A3, R-1 : dessiné sous le joueur, sa place est vide), ni en attente, ni à la clôture
+-- (fenceSet et rideUid chargés), prêt depuis ReadyFor s
 local function free(player: Player, o: Owner, data: { [string]: any }, uid: string, now: number): boolean
 	local rec = data.squishies[uid]
 	if type(rec) ~= "table" or (rec.at ~= "pen" and rec.at ~= "pool") then
@@ -324,7 +351,7 @@ local function free(player: Player, o: Owner, data: { [string]: any }, uid: stri
 	if SquishyService.carried(player) == uid or SquishyService.waiting(player) == uid then
 		return false
 	end
-	if fenceSet[uid] then
+	if fenceSet[uid] or (rideUid ~= "" and rideUid == uid) then
 		return false
 	end
 	return Rules.readyFor(readyAt(player, o, uid), now)
@@ -425,6 +452,80 @@ local function placeAll(slot: number, uids: { string }, pool: boolean)
 	end
 end
 
+-- Clôture, monture et places de tous les squishies d'enclos et du Bassin (candX, candZ)
+local function scan(o: Owner, data: { [string]: any })
+	loadFence(o.slot)
+	table.clear(penUids)
+	table.clear(poolUids)
+	for uid, rec in data.squishies do
+		if type(rec) == "table" then
+			if rec.at == "pen" then
+				table.insert(penUids, uid)
+			elseif rec.at == "pool" then
+				table.insert(poolUids, uid)
+			end
+		end
+	end
+	table.clear(candX)
+	table.clear(candZ)
+	placeAll(o.slot, penUids, false)
+	placeAll(o.slot, poolUids, true)
+end
+
+-- Relecture A3 (R-2) : note l'arrivée de chaque squishy à son état actuel (après scan) : enclos,
+-- Bassin, porté, monté, à la clôture, en attente ou ailleurs (Dodo, Lettres) ; un changement d'état =
+-- arrivée maintenant (« prêt depuis ReadyFor s » repart de là). Une place décalée dans le même lieu
+-- (vente d'un squishy plus ancien) n'en est pas une : le squishy était prêt, il le reste. Première
+-- observation du propriétaire (first) : tout est déjà là. Squishies disparus : oubliés.
+local function observe(player: Player, o: Owner, data: { [string]: any }, now: number, first: boolean)
+	local carried = SquishyService.carried(player)
+	local waiting = SquishyService.waiting(player)
+	for uid, rec in data.squishies do
+		if type(rec) == "table" then
+			local kind: string = if type(rec.at) == "string" then rec.at else "?"
+			if carried == uid then
+				kind = "carry"
+			elseif rideUid ~= "" and rideUid == uid then
+				kind = "ride"
+			elseif waiting == uid then
+				kind = "wait"
+			elseif fenceSet[uid] then
+				kind = "fence"
+			end
+			if o.seenKind[uid] ~= kind then
+				o.seenKind[uid] = kind
+				o.since[uid] = if first then -math.huge else now
+			end
+		end
+	end
+	for uid in o.seenKind do
+		if type(data.squishies[uid]) ~= "table" then
+			o.seenKind[uid] = nil
+			o.since[uid] = nil
+		end
+	end
+end
+
+-- Relecture A3 (R-2) : à chaque tick, quel que soit le mode (sieste, pause, toutes en vol : aucun
+-- choix), les états brefs du propriétaire (porté, monté, en attente) sont notés sur le squishy déjà
+-- observé : posé ou descendu entre deux choix, son retour compte comme une arrivée. Trois lectures,
+-- aucune allocation.
+local function markBusy(player: Player, o: Owner)
+	local carried = SquishyService.carried(player)
+	if carried ~= nil and o.seenKind[carried] ~= nil then
+		o.seenKind[carried] = "carry"
+	end
+	local pub = RanchService.publicOf(o.slot)
+	local ride = if pub ~= nil then (pub :: any).ride else nil
+	if type(ride) == "string" and ride ~= "" and o.seenKind[ride] ~= nil then
+		o.seenKind[ride] = "ride"
+	end
+	local waiting = SquishyService.waiting(player)
+	if waiting ~= nil and o.seenKind[waiting] ~= nil then
+		o.seenKind[waiting] = "wait"
+	end
+end
+
 -- Cibles des Plopettes dues (une passe par propriétaire et par tick)
 local function choose(player: Player, o: Owner, data: { [string]: any }, pos: Vector3, now: number)
 	table.clear(due)
@@ -449,22 +550,8 @@ local function choose(player: Player, o: Owner, data: { [string]: any }, pos: Ve
 			o.done[uid] = nil
 		end
 	end
-	loadFence(o.slot)
-	table.clear(penUids)
-	table.clear(poolUids)
-	for uid, rec in data.squishies do
-		if type(rec) == "table" then
-			if rec.at == "pen" then
-				table.insert(penUids, uid)
-			elseif rec.at == "pool" then
-				table.insert(poolUids, uid)
-			end
-		end
-	end
-	table.clear(candX)
-	table.clear(candZ)
-	placeAll(o.slot, penUids, false)
-	placeAll(o.slot, poolUids, true)
+	scan(o, data)
+	observe(player, o, data, now, false)
 	table.clear(candUids)
 	table.clear(candIncome)
 	local px, pz = pos.X, pos.Z
@@ -532,6 +619,9 @@ local function stepOwner(player: Player, now: number, pos: Vector3?, rush: boole
 	if o == nil or o.slot ~= slot then
 		o = newOwner(slot, data, now)
 		owners[player] = o
+		-- relecture A3 (R-2) : état de départ des squishies (déjà là, prêts selon leur recharge)
+		scan(o :: Owner, data)
+		observe(player, o :: Owner, data, now, true)
 	end
 	local owner = o :: Owner
 	if now >= owner.refreshAt then
@@ -540,6 +630,7 @@ local function stepOwner(player: Player, now: number, pos: Vector3?, rush: boole
 	if owner.count == 0 then
 		return
 	end
+	markBusy(player, owner)
 	if Rules.napping(Activity.lastIntent(player), now) then
 		setMode(owner, "nap", nil, now)
 		return
