@@ -25,7 +25,6 @@ return function(T)
 		["src/server/Ranch/PadRules.luau"] = 1, -- A2
 		["src/server/Services/CommunityService.luau"] = 1, -- A4 (cosmétiques « recordR »)
 		["src/server/Services/EconomyService.luau"] = 9, -- A2
-		["src/server/Services/QuestService.luau"] = 3, -- A4
 		["src/server/Services/RanchService.luau"] = 2, -- A2
 		["src/shared/Logic/Formulas.luau"] = 2, -- A1 (contexte de croissance, aperçu du Grand Splorch)
 		["src/shared/Logic/Invariants.luau"] = 1, -- A1 (invariants v2)

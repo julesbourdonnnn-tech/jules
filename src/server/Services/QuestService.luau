@@ -23,8 +23,19 @@
 --     BoostShare (part de la session en ×2), ObjectivesAllDone, SleepyCardShown, FirstBoopReceived.
 --   * v2.0 (lot A4, N23) : MenuActivity (navigation dans un menu) réveille les Plopettes
 --     (Activity.noteMenu), interrupteur Helpers ouvert et profil v2 seulement ; ne donne jamais rien.
+--   * v2.0 (lot A4, étape 4 ; GDD v2.0 §7.5, §4.27, §4.29 ; docs/04 §27.2, §27.7) — profil v2 seulement,
+--     chaque système derrière son interrupteur (coupé : aucun champ lu ni écrit, aucune carte, aucun envoi) :
+--     statistiques à vie (stats.upgradesBought sur UpgradeBought, stats.petitSplorches sur
+--     PrestigeApplied("petit"), stats.objectivesClaimed à chaque objectif réclamé) ; piste de la semaine
+--     [WeeklyTrack] (jeu des 7 derniers jours, période vérifiée au début de la session seulement, 3 Défis
+--     tirés par QuestRules.drawChallenges et Meta/ChallengeCtx, 2 points par objectif terminé, 5 par Défi,
+--     paliers livrés tout seuls dans l'ordre, chacun réclamé après sa récompense) ; Carnet du Ranch
+--     [Carnet] ; cartes « Bienvenue dans la v2 ! » et « Nouveau » et tenues du Record R [RecordR] ; étapes
+--     du record à 25 / 50 / 75 % [RecordR] ; jours de givre (season.frostDays) ; puce « Prochain achat »
+--     vue (UiSeen("nextBuy") [UpgradesScreen]). N1 : ce qui est débloqué suit le Record R (Prestige.bestR).
 -- Remotes : FeedPlop, ClaimObjective, RerollObjective, ClaimDexReward, UiSeen, MenuActivity ; HoldState.
--- Clés : firstJoin, codes, dex, plopDays, lastFeedDay, onboarding, objectives, stats.
+-- Clés : firstJoin, codes, dex, plopDays, lastFeedDay, onboarding, objectives, stats ; v2 : carnet,
+-- weeklyTrack, unlocksSeen, season (frostDays).
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -40,7 +51,10 @@ local Rarities = require(Shared.Config.Rarities)
 local Balance = require(Shared.Config.Balance)
 local Events = require(Shared.Config.Events)
 local Features = require(Shared.Config.Features)
+local Cosmetics = require(Shared.Config.Cosmetics)
 local QuestRules = require(Shared.Logic.QuestRules)
+local Prestige = require(Shared.Logic.Prestige)
+local Bitset = require(Shared.Logic.Bitset)
 local Odds = require(Shared.Logic.Odds)
 local Hash = require(Shared.Logic.Hash)
 local Formulas = require(Shared.Logic.Formulas)
@@ -55,6 +69,7 @@ local Analytics = require(Server.Util.Analytics)
 local MoveCheck = require(Server.Util.MoveCheck)
 local Activity = require(Server.Util.Activity)
 local Guard = require(Server.Meta.Guard)
+local ChallengeCtx = require(Server.Meta.ChallengeCtx)
 local PadRules = require(Server.Ranch.PadRules)
 local DiagnosticsService = require(Server.Services.DiagnosticsService)
 local DataService = require(Server.Services.DataService)
@@ -100,6 +115,16 @@ type Session = {
 	cardSent: boolean,
 	starterDue: boolean, -- Plop de départ posé au premier tick (Big Plop arrive, GDD §3 0:00-0:10)
 	released: boolean, -- compteurs de session écrits (sauvegarde de départ ou fermeture)
+	-- v2.0 (lot A4, étape 4)
+	v2: boolean, -- profil v2 (fixé à l'arrivée : la migration n'a lieu qu'au chargement)
+	trackReady: boolean, -- période de la piste vérifiée dans cette session (D10)
+	trackPending: boolean, -- un palier attend sa récompense (Confettis refusés, D35)
+	trackRetryAcc: number, -- s depuis le dernier essai d'un palier en attente
+	trackDirtyAcc: number, -- s depuis la dernière réplication de weeklyTrack.play
+	playAcc: number, -- fraction de seconde de jeu pas encore écrite dans weeklyTrack.play
+	stepAcc: number, -- s depuis la dernière vue des étapes du record
+	stepKey: number?, -- boucle vue (r × 128 + A) ; nil = pas encore vue dans la session ; −1 = prestige
+	stepShown: number, -- étapes du record déjà passées dans cette boucle (bits 1, 2, 4 : 25, 50, 75 %)
 }
 
 local sessions: { [Player]: Session } = {}
@@ -255,7 +280,8 @@ local function tilesLeft(data: { [string]: any }): number
 			left += math.max(0, def.Levels - num(tiles[key], 0))
 		end
 	end
-	if tiles.cozyBed ~= true and num(data.R, 0) >= Balance.Tiles.cozyBed.MinR then
+	-- N1 (lot A4, D7) : le Lit douillet s'ouvre au Record R (profil v1 : R)
+	if tiles.cozyBed ~= true and Prestige.bestR(data) >= Balance.Tiles.cozyBed.MinR then
 		left += 1
 	end
 	return left
@@ -269,20 +295,26 @@ local function ctxOf(player: Player, data: { [string]: any }): QuestRules.QuestC
 	if okMega and type(nextMega) == "table" and finite(nextMega.at) then
 		megaIn = math.max(0, nextMega.at - now)
 	end
-	local R = num(data.R, 0)
+	-- N1 (lot A4, D7) : conditions « Record R ≥ 1 / 3 » (combo ×2, Rare) au Record R ; l'objectif de
+	-- taille est celui de la boucle en cours (r). Une boucle qui finit par un Petit Splorch (remontée
+	-- après une Ascension) ne propose jamais « Fais un Grand Splorch » (GDD §7.5 m9 : il ne compte pas).
+	-- Profil v1 : bestR = r = R, prochain prestige toujours un Grand Splorch (comme avant)
+	local recordR = Prestige.bestR(data)
 	local eta = math.huge
-	local okBig, _, biggest = pcall(SquishyService.biggest, player)
-	local target = Formulas.splorchTarget(R)
-	local g = num(type(data.growth) == "table" and data.growth.g, 0)
-	if okBig and finite(biggest) then
-		if biggest >= target then
-			eta = 0
-		elseif g > 0 then
-			eta = (target - biggest) / g
+	if Prestige.nextKind(data) == "splorch" then
+		local okBig, _, biggest = pcall(SquishyService.biggest, player)
+		local target = Formulas.splorchTarget(Prestige.r(data))
+		local g = num(type(data.growth) == "table" and data.growth.g, 0)
+		if okBig and finite(biggest) then
+			if biggest >= target then
+				eta = 0
+			elseif g > 0 then
+				eta = (target - biggest) / g
+			end
 		end
 	end
 	return {
-		R = R,
+		R = recordR,
 		tilesLeft = tilesLeft(data),
 		megaIn = megaIn,
 		friendOnServer = s ~= nil and s.friends > 0,
@@ -322,10 +354,13 @@ local function claimReward(player: Player, entry: Types.ObjectiveEntry)
 	end
 end
 
-local function luckyDrop(player: Player, data: { [string]: any }, day: number)
-	local R = num(data.R, 0)
+-- Goutte chanceuse (les 3 objectifs du jour réclamés ; paliers 4 et 8 de la piste) : naissance de
+-- qualité + 1, mutations × 2 ; seed : graine du tirage (déterministe). N1 (lot A4, D7) : Cuve et familles
+-- au Record R (profil v1 : R)
+local function luckyDrop(player: Player, data: { [string]: any }, seed: number)
+	local R = Prestige.bestR(data)
 	local vat = Formulas.vatLevel(R)
-	local rng = Hash.stream(Hash.u32(player.UserId, day, 0x1C4E))
+	local rng = Hash.stream(seed)
 	local roll = Odds.roll(rng, {
 		quality = math.min(Balance.Vat.QualityMax, vat.quality + Balance.Babies.LuckyQualityBonus),
 		nozzles = vat.nozzles,
@@ -348,6 +383,463 @@ local function luckyDrop(player: Player, data: { [string]: any }, day: number)
 	})
 end
 
+-- =============================================================================================
+-- v2.0 (lot A4, étape 4) : statistiques à vie, piste de la semaine, Défis de Splorch, Carnet du Ranch,
+-- cartes du Record R, étapes du record, jours de givre. Profil v2 seulement ; chaque système derrière
+-- son interrupteur (coupé : aucun champ lu ni écrit, aucune carte, aucun envoi)
+-- =============================================================================================
+
+local TRACK = Quests.WeeklyTrack
+local CARNET = Quests.Carnet
+local TRACK_TIERS = #TRACK.Tiers
+local WEEKLY = Cosmetics.WeeklyRotation
+local STAT_MAX = 1e12 -- borne des compteurs à vie (ProfileRepair v2)
+local POINTS_MAX = 1e6 -- borne de weeklyTrack.points (ProfileRepair v2)
+local DAY_SECONDS = 86400
+local PLAY_DAYS = 7 -- cases de weeklyTrack.play (jour UTC % 7 + 1)
+local TRACK_DIRTY_EVERY = 60 -- s de jeu : weeklyTrack.play répliqué au plus toutes les 60 s
+local TRACK_RETRY_EVERY = 10 -- s : nouvel essai d'un palier dont la récompense a été refusée
+local TRACK_DROP_SALT = 0x7A4C -- sel figé des Gouttes chanceuses de la piste (paliers 4 et 8)
+local RECORD_STEPS = { 0.25, 0.5, 0.75 } -- étapes du record : part de l'objectif de la boucle (D14)
+local RECORD_STEP_EVERY = 2 -- s entre deux vues des étapes du record
+local FROST_COSTUME = "winter2026" -- costume d'hiver : jours de givre (selle « Sucre glace », D33)
+-- tenues gagnées au Record R (Cosmetics.ListV2 : chapeau de fête au R7, lunettes étoiles au R16)
+local RECORD_OUTFITS: { { id: string, at: number } } = {}
+for _, def in Cosmetics.ListV2 :: { any } do
+	if def.kind == "outfit" and type(def.source) == "table" and def.source.kind == "recordR" then
+		table.insert(RECORD_OUTFITS, { id = def.id, at = def.source.value })
+	end
+end
+
+local function isV2(data: { [string]: any }): boolean
+	return PadRules.v2Profile(data)
+end
+
+-- Compteur à vie d'un profil v2 (D34) : stats[key] += n (entier, borné) ; rend vrai si écrit
+local function bumpStat(data: { [string]: any }, key: string, n: number): boolean
+	if not isV2(data) or not finite(n) or n < 1 then
+		return false
+	end
+	local stats = statsOf(data)
+	stats[key] = math.min(STAT_MAX, math.max(0, math.floor(num(stats[key], 0))) + math.floor(n))
+	return true
+end
+
+local function addLifetime(player: Player, data: { [string]: any }, key: string, n: number)
+	if bumpStat(data, key, n) then
+		DataService.markDirty(player, "stats")
+	end
+end
+
+local function trackOf(data: { [string]: any }): { [string]: any }?
+	local track = data.weeklyTrack
+	return if type(track) == "table" then track else nil
+end
+
+-- 3 Défis de la période (QuestRules.drawChallenges, situation par Meta/ChallengeCtx, D11)
+local function drawChallenges(
+	player: Player,
+	data: { [string]: any },
+	period: number
+): { Types.ChallengeEntry }
+	local okBig, _, biggest = pcall(SquishyService.biggest, player)
+	local ctx = ChallengeCtx.build(data, {
+		now = Clock.now(),
+		biggest = if okBig and finite(biggest) then biggest else 0,
+		recordR = Features.get("RecordR") == true,
+		mega = Features.get("MegaSquish") == true,
+		confetti = Features.get("Confetti") == true,
+	})
+	local list: { Types.ChallengeEntry } = {}
+	for _, id in QuestRules.drawChallenges(player.UserId, period, ctx) do
+		table.insert(list, { id = id, p = 0, done = false })
+	end
+	return list
+end
+
+-- Récompense d'un palier de la piste : (livrée, texte de la carte). Confettis (source "track") refusés
+-- (interrupteur Confetti coupé, plafond) : non livrée, le palier attend (D35). Goutte chanceuse : graine
+-- (joueur, période, palier). Cosmétique de la semaine : Cosmetics.WeeklyRotation[période % 8 + 1], bit
+-- de weeklyTrack.won ; déjà gagné : rien de plus (D9) ; tenue (nœud à pois) aussi dans outfits.owned
+local function deliverTier(
+	player: Player,
+	data: { [string]: any },
+	track: { [string]: any },
+	tier: number
+): (boolean, string)
+	local reward = TRACK.Tiers[tier]
+	local period = math.max(0, math.floor(num(track.period, 0)))
+	if type(reward) == "number" then
+		local ok, credited =
+			Guard.try("quest:trackConfetti", EconomyService.addConfetti, player, reward, "track")
+		if ok and finite(credited) and credited > 0 then
+			return true, "confetti"
+		end
+		return false, ""
+	elseif reward == "drop" then
+		luckyDrop(player, data, Hash.u32(player.UserId, period, tier, TRACK_DROP_SALT))
+		return true, "drop"
+	elseif reward == "cosmetic" then
+		local index = period % #WEEKLY + 1
+		local def = WEEKLY[index]
+		if type(track.won) ~= "table" then
+			track.won = Bitset.new(#WEEKLY)
+		end
+		if def == nil or Bitset.has(track.won, index) then
+			return true, ""
+		end
+		Bitset.set(track.won, index)
+		if def.kind == "outfit" then
+			Guard.try("quest:trackOutfit", SquishyService.grantOutfit, player, def.id, 1)
+		end
+		return true, def.kind .. "." .. def.id
+	end
+	return true, ""
+end
+
+-- Paliers atteints livrés tout seuls, dans l'ordre, chacun réclamé APRÈS sa récompense (D35) ; un palier
+-- refusé arrête la livraison (le suivant attend aussi) et sera repris
+local function deliverTiers(player: Player, data: { [string]: any }, s: Session, track: { [string]: any })
+	local reached = QuestRules.trackTier(track.points)
+	if type(track.claimed) ~= "table" then
+		track.claimed = Bitset.new(TRACK_TIERS)
+	end
+	s.trackPending = false
+	for tier = 1, reached do
+		if not Bitset.has(track.claimed, tier) then
+			local delivered, reward = deliverTier(player, data, track, tier)
+			if not delivered then
+				s.trackPending = true
+				return
+			end
+			Bitset.set(track.claimed, tier)
+			DataService.markDirty(player, "weeklyTrack")
+			Notify.celebrate(player, "trackTier" :: any, { tier = tier, reward = reward })
+			Analytics.custom(player, "WeeklyTrackTier", tier)
+			if tier == TRACK_TIERS then
+				addLifetime(player, data, "tracksDone", 1)
+			end
+		end
+	end
+end
+
+-- Piste du joueur [WeeklyTrack], période vérifiée UNE fois par session (D10 : au début de la session, ou
+-- au premier usage si l'interrupteur s'ouvre en session ; une session qui passe le lundi 00:00 garde sa
+-- période, ses Défis et ses points) : 1re période fixée (QuestRules.trackPeriod), nouvelle période =
+-- points à 0, paliers vides, 3 Défis tirés ; un palier en attente est repris. nil si coupée
+local function ensureTrack(player: Player, data: { [string]: any }, s: Session): { [string]: any }?
+	if not s.ready or Features.get("WeeklyTrack") ~= true or not isV2(data) then
+		return nil
+	end
+	local track = trackOf(data)
+	if track == nil then
+		return nil
+	end
+	if s.trackReady then
+		return track
+	end
+	s.trackReady = true
+	local period = QuestRules.trackPeriod(data, Clock.unix())
+	local changed = false
+	if num(track.firstPeriodEnd, -1) ~= period.firstPeriodEnd then
+		track.firstPeriodEnd = period.firstPeriodEnd
+		changed = true
+	end
+	if num(track.period, -1) ~= period.period then
+		track.period = period.period
+		track.points = 0
+		track.claimed = Bitset.new(TRACK_TIERS)
+		track.challenges = drawChallenges(player, data, period.period)
+		changed = true
+	end
+	if changed then
+		DataService.markDirty(player, "weeklyTrack")
+	end
+	deliverTiers(player, data, s, track)
+	return track
+end
+
+-- Points de la piste (2 par objectif du jour terminé, 5 par Défi : D12) puis paliers
+local function addPoints(player: Player, data: { [string]: any }, s: Session, n: number)
+	if n < 1 then
+		return
+	end
+	local track = ensureTrack(player, data, s)
+	if track == nil then
+		return
+	end
+	track.points = math.min(POINTS_MAX, math.max(0, math.floor(num(track.points, 0))) + math.floor(n))
+	DataService.markDirty(player, "weeklyTrack")
+	deliverTiers(player, data, s, track)
+end
+
+-- Progression des Défis de la période (statistique de Quests.Challenges) ; Défi fini : + 5 points
+local function challengeProgress(player: Player, stat: string, amount: number)
+	if not finite(amount) or amount < 1 then
+		return
+	end
+	local data = profile(player)
+	local s = sessionOf(player)
+	if data == nil or s == nil then
+		return
+	end
+	local track = ensureTrack(player, data, s)
+	if track == nil or type(track.challenges) ~= "table" then
+		return
+	end
+	local n = math.floor(amount)
+	local changed = false
+	local done = 0
+	for _, entry in track.challenges do
+		if type(entry) == "table" and entry.done ~= true then
+			local def = (Quests.Challenges :: { any })[entry.id]
+			if type(def) == "table" and def.id == entry.id and def.stat == stat then
+				local p = math.min(def.target, math.max(0, math.floor(num(entry.p, 0))) + n)
+				if p ~= entry.p then
+					entry.p = p
+					changed = true
+				end
+				if p >= def.target then
+					entry.done = true
+					changed = true
+					done += 1
+				end
+			end
+		end
+	end
+	if changed then
+		DataService.markDirty(player, "weeklyTrack")
+	end
+	if done > 0 then
+		addPoints(player, data, s, done * TRACK.PointsPerChallenge)
+	end
+end
+
+-- Jeu des 7 derniers jours [WeeklyTrack] (médiane et jours joués des Défis) : secondes entières dans la
+-- case Clock.day() % 7 + 1 ; les cases des jours sautés depuis weeklyTrack.playDay sont vidées
+local function addPlay(player: Player, data: { [string]: any }, s: Session, dt: number)
+	local track = trackOf(data)
+	if track == nil or type(track.play) ~= "table" then
+		return
+	end
+	local play = track.play
+	local today = Clock.day()
+	local last = num(track.playDay, 0)
+	if last ~= today then
+		if last <= 0 or last > today or today - last >= PLAY_DAYS then
+			for i = 1, PLAY_DAYS do
+				play[i] = 0
+			end
+		else
+			for d = last + 1, today do
+				play[d % PLAY_DAYS + 1] = 0
+			end
+		end
+		track.playDay = today
+	end
+	s.playAcc += dt
+	local whole = math.floor(s.playAcc)
+	if whole >= 1 then
+		s.playAcc -= whole
+		local slot = today % PLAY_DAYS + 1
+		play[slot] = math.min(DAY_SECONDS, math.max(0, math.floor(num(play[slot], 0))) + whole)
+	end
+	s.trackDirtyAcc += dt
+	if s.trackDirtyAcc >= TRACK_DIRTY_EVERY then
+		s.trackDirtyAcc = 0
+		DataService.markDirty(player, "weeklyTrack")
+	end
+end
+
+-- Carnet du Ranch [Carnet] : paliers atteints (QuestRules.carnetTier de stats.upgradesBought) sans leur
+-- bit → bit posé, carte « carnet » (silent : migration, carte « Bienvenue » en attente) ; la couronne de
+-- chantier (10 000) va aussi dans outfits.owned, une fois (au moment où son bit est posé)
+local function carnetCheck(player: Player, data: { [string]: any }, silent: boolean)
+	if Features.get("Carnet") ~= true or not isV2(data) then
+		return
+	end
+	local tier = QuestRules.carnetTier(statsOf(data).upgradesBought)
+	if tier < 1 then
+		return
+	end
+	if type(data.carnet) ~= "table" then
+		data.carnet = Bitset.new(#CARNET.Tiers)
+	end
+	local changed = false
+	for i = 1, tier do
+		if not Bitset.has(data.carnet, i) then
+			Bitset.set(data.carnet, i)
+			changed = true
+			local reward = CARNET.Rewards[CARNET.Tiers[i]] or ""
+			if string.sub(reward, 1, 7) == "outfit." then
+				Guard.try("quest:carnetOutfit", SquishyService.grantOutfit, player, string.sub(reward, 8), 1)
+			end
+			if not silent then
+				Notify.celebrate(player, "carnet" :: any, { tier = i, reward = reward })
+			end
+		end
+	end
+	if changed then
+		DataService.markDirty(player, "carnet")
+	end
+end
+
+local function setSeen(player: Player, data: { [string]: any }, best: number)
+	if num(data.unlocksSeen, -1) ~= best then
+		DataService.set(player, "unlocksSeen", best)
+	end
+end
+
+-- 3 déblocages les plus hauts déjà gagnés (clés de Prestige.unlocksFor, du Record R vers 1, sans doublon)
+local function highlights(best: number): { string }
+	local out: { string } = {}
+	for r = best, 1, -1 do
+		for _, key in Prestige.unlocksFor(r) do
+			if table.find(out, key) == nil then
+				table.insert(out, key)
+				if #out >= 3 then
+					return out
+				end
+			end
+		end
+	end
+	return out
+end
+
+-- Tenues du Record R (chapeau de fête R7, lunettes étoiles R16) : données une fois (rattrapage si aucune)
+local function recordOutfits(player: Player, data: { [string]: any }, best: number)
+	local outfits = data.outfits
+	local owned = if type(outfits) == "table" and type(outfits.owned) == "table" then outfits.owned else nil
+	if owned == nil then
+		return
+	end
+	for _, def in RECORD_OUTFITS do
+		local n = owned[def.id]
+		if best >= def.at and not (type(n) == "number" and n >= 1) then
+			Guard.try("quest:recordOutfit", SquishyService.grantOutfit, player, def.id, 1)
+		end
+	end
+end
+
+-- Cartes du Record R [RecordR] (D15) : à la connexion, « Bienvenue dans la v2 ! » une fois (migration
+-- d'un joueur qui avait R ≥ 1 ; jamais pour un nouveau), sinon UNE carte « Nouveau » pour le Record R
+-- s'il n'a pas été montré ; à chaque RecordReached, la carte « Nouveau » du nouveau Record R ; unlocksSeen
+-- = Record R ; tenues du Record R
+local function recordCards(player: Player, data: { [string]: any }, atLogin: boolean)
+	if Features.get("RecordR") ~= true or not isV2(data) then
+		return
+	end
+	local best = Prestige.bestR(data)
+	local onboarding = onboardingOf(data)
+	if atLogin and onboarding.welcomeV2Pending == true then
+		onboarding.welcomeV2Pending = false
+		DataService.markDirty(player, "onboarding")
+		Notify.celebrate(player, "welcomeV2" :: any, { highlights = highlights(best) })
+		setSeen(player, data, best)
+	elseif num(data.unlocksSeen, 0) < best then
+		Notify.celebrate(player, "unlock2" :: any, { recordR = best, keys = Prestige.unlocksFor(best) })
+		setSeen(player, data, best)
+	end
+	recordOutfits(player, data, best)
+end
+
+-- Étapes du record [RecordR] (D14) : boucle record (r = Record R ≥ 1 : jamais la boucle de l'accueil ni
+-- une remontée), plus gros squishy d'enclos ou du Bassin à 25, 50, 75 % de Prestige.target(r), une fois
+-- chacune par boucle (mémoire de session ; la première vue d'une session pose sans carte les étapes déjà
+-- passées), jamais pendant la file ou le spectacle du joueur ; plusieurs étapes passées d'un coup : une
+-- seule carte (la plus haute)
+local function recordSteps(player: Player, data: { [string]: any }, s: Session)
+	local r = Prestige.r(data)
+	local best = Prestige.bestR(data)
+	local key = r * 128 + Prestige.ascend(data)
+	local first = s.stepKey == nil
+	if key ~= s.stepKey then
+		s.stepKey = key
+		s.stepShown = 0
+	end
+	if r ~= best or best < 1 then
+		return
+	end
+	if SquishyService.waiting(player) ~= nil or EconomyService.prestigeBusy(player) then
+		return
+	end
+	local okBig, _, biggest = pcall(SquishyService.biggest, player)
+	if not okBig or not finite(biggest) then
+		return
+	end
+	local share = biggest / Prestige.target(r)
+	local top = 0
+	for i, at in RECORD_STEPS do
+		local bit = bit32.lshift(1, i - 1)
+		if share >= at and bit32.band(s.stepShown, bit) == 0 then
+			s.stepShown = bit32.bor(s.stepShown, bit)
+			top = i
+		end
+	end
+	if top > 0 and not first then
+		Notify.celebrate(player, "recordStep" :: any, { share = RECORD_STEPS[top] })
+	end
+end
+
+-- Jour de givre (D33) : + 1 season.frostDays par jour où Plop est nourri pendant le costume d'hiver
+-- (interrupteur Costumes ET ses dates, Events.Costumes), profil v2
+local function frostDay(player: Player, data: { [string]: any })
+	if
+		not isV2(data)
+		or Features.get("Costumes") ~= FROST_COSTUME
+		or EventClock.costume(Clock.unix()) ~= FROST_COSTUME
+	then
+		return
+	end
+	local season = data.season
+	if type(season) ~= "table" then
+		return
+	end
+	season.frostDays = math.min(1e9, math.max(0, math.floor(num(season.frostDays, 0))) + 1)
+	DataService.markDirty(player, "season")
+end
+
+-- Puce « Prochain achat » vue (D32, UiSeen("nextBuy")) [UpgradesScreen] : onboarding.nextBuyShown, une fois
+local function nextBuySeen(player: Player)
+	if Features.get("UpgradesScreen") ~= true then
+		return
+	end
+	local data = profile(player)
+	if data == nil or not isV2(data) then
+		return
+	end
+	local onboarding = onboardingOf(data)
+	if onboarding.nextBuyShown ~= true then
+		onboarding.nextBuyShown = true
+		DataService.markDirty(player, "onboarding")
+	end
+end
+
+-- Tick v2 d'un profil v2 : jeu des 7 jours et palier en attente [WeeklyTrack], étapes du record
+-- [RecordR] toutes les 2 s ; interrupteurs coupés : une lecture chacun, rien d'alloué
+local function stepV2(player: Player, data: { [string]: any }, s: Session, dt: number)
+	if Features.get("WeeklyTrack") == true then
+		addPlay(player, data, s, dt)
+		if s.trackPending then
+			s.trackRetryAcc += dt
+			if s.trackRetryAcc >= TRACK_RETRY_EVERY then
+				s.trackRetryAcc = 0
+				local track = ensureTrack(player, data, s)
+				if track ~= nil and s.trackPending then
+					deliverTiers(player, data, s, track)
+				end
+			end
+		end
+	end
+	s.stepAcc += dt
+	if s.stepAcc >= RECORD_STEP_EVERY then
+		s.stepAcc = 0
+		if Features.get("RecordR") == true then
+			recordSteps(player, data, s)
+		end
+	end
+end
+
 local function allClaimed(o: { [string]: any }): boolean
 	if #o.list < RULES.PerDay then
 		return false
@@ -364,10 +856,11 @@ end
 local function claimEntry(player: Player, data: { [string]: any }, entry: Types.ObjectiveEntry)
 	entry.claimed = true
 	claimReward(player, entry)
+	addLifetime(player, data, "objectivesClaimed", 1)
 	local o = objectivesOf(data)
 	if not o.allClaimed and allClaimed(o) then
 		o.allClaimed = true
-		luckyDrop(player, data, num(o.day, Clock.day()))
+		luckyDrop(player, data, Hash.u32(player.UserId, num(o.day, Clock.day()), 0x1C4E))
 	end
 	DataService.markDirty(player, "objectives")
 end
@@ -421,6 +914,7 @@ local function midnight(player: Player, data: { [string]: any }, s: Session)
 	for _, id in claim do
 		claimReward(player, { id = id, p = 0, done = true, claimed = true })
 	end
+	addLifetime(player, data, "objectivesClaimed", #claim)
 	o.list = kept
 	s.kept = true
 	DataService.markDirty(player, "objectives")
@@ -435,6 +929,7 @@ local function progress(player: Player, stat: string, amount: number, perfect: b
 	end
 	local o = objectivesOf(data)
 	local changed = false
+	local newlyDone = 0
 	local allDone = #o.list >= RULES.PerDay
 	for slot, entry in o.list do
 		if type(entry) == "table" and entry.claimed ~= true then
@@ -445,6 +940,7 @@ local function progress(player: Player, stat: string, amount: number, perfect: b
 				entry.done = nextEntry.done
 				changed = true
 				if entry.done and not wasDone then
+					newlyDone += 1
 					Notify.celebrate(player, "objectiveDone", { slot = slot, id = entry.id })
 				end
 			end
@@ -459,6 +955,10 @@ local function progress(player: Player, stat: string, amount: number, perfect: b
 			s.allDoneLogged = true
 			Analytics.custom(player, "ObjectivesAllDone", math.floor(s.play / 60))
 		end
+	end
+	-- piste de la semaine [WeeklyTrack] : 2 points par objectif terminé (D12 ; 6 par jour d'objectifs)
+	if newlyDone > 0 and s.v2 then
+		addPoints(player, data, s, newlyDone * TRACK.PointsPerObjective)
 	end
 end
 
@@ -553,6 +1053,7 @@ local function completeFeed(player: Player, data: { [string]: any }, s: Session)
 	Guard.try("quest:feedBoost", EconomyService.grantPersonalBoost, player, boost)
 	Guard.try("quest:feedDay", RanchService.setPublic, player, { day = days })
 	sendHold(player, feed.endsAt, false)
+	frostDay(player, data)
 	Signals.Fed:Fire(player, days)
 	Notify.celebrate(player, "plopDay", { day = days, reward = if reward then reward.key else "" })
 end
@@ -682,6 +1183,8 @@ local function onUiSeen(player: Player, screen: string): boolean
 	Signals.UiSeen:Fire(player, screen)
 	if screen == "objectives" then
 		reach(player, 10)
+	elseif screen == "nextBuy" then
+		nextBuySeen(player)
 	end
 	return false -- un écran vu ne donne jamais rien (et ne compte pas comme une activité de jeu)
 end
@@ -743,6 +1246,8 @@ local function prepare(player: Player, data: { [string]: any })
 		fresh = true
 	end
 	local claims, card = objectivesAtLogin(player, data)
+	-- objectifs terminés d'un jour passé, réclamés à la connexion : comptés (profil v2, dans l'instantané)
+	bumpStat(data, "objectivesClaimed", #claims)
 	prepared[player] = { fresh = fresh, claims = claims, card = card }
 end
 
@@ -774,6 +1279,15 @@ local function onReady(player: Player)
 		cardSent = false,
 		starterDue = num(data.nextUid, 1) == 1 and next(data.squishies or {}) == nil,
 		released = false,
+		v2 = isV2(data),
+		trackReady = false,
+		trackPending = false,
+		trackRetryAcc = 0,
+		trackDirtyAcc = 0,
+		playAcc = 0,
+		stepAcc = 0,
+		stepKey = nil,
+		stepShown = 0,
 	}
 	sessions[player] = s
 	Analytics.setSegment(player, "sessionBand", sessionBand(math.max(0, num(statsOf(data).sessions, 0))))
@@ -797,6 +1311,13 @@ local function onReady(player: Player)
 	end
 	if prep.card then
 		Notify.celebrate(player, "newObjectives", { day = num(objectivesOf(data).day, Clock.day()) })
+	end
+	if s.v2 then
+		-- Carnet (paliers déjà atteints posés sans carte tant que la carte « Bienvenue » attend), cartes du
+		-- Record R, puis la période de la piste (D10 : vérifiée au début de la session seulement)
+		carnetCheck(player, data, onboardingOf(data).welcomeV2Pending == true)
+		recordCards(player, data, true)
+		ensureTrack(player, data, s)
 	end
 end
 
@@ -881,6 +1402,7 @@ function QuestService.Start()
 		if perfect then
 			addStat(owner, data, "perfects", 1)
 			progress(owner, "perfect", 1, true)
+			challengeProgress(owner, "perfects", 1)
 		end
 		progress(owner, "press", 1, perfect)
 		reach(owner, 2)
@@ -910,14 +1432,20 @@ function QuestService.Start()
 		if finite(k) and k >= 2 then
 			progress(player, "combo2", 1)
 		end
+		if finite(k) and k >= 3 then
+			challengeProgress(player, "combo3", 1)
+		end
 		reach(player, 5)
 	end)
-	on(Signals.Hatched, "quest:hatched", function(player: Player)
+	on(Signals.Hatched, "quest:hatched", function(player: Player, _uid: string, rarity: number)
 		local data = profile(player)
 		if data ~= nil then
 			addStat(player, data, "hatches", 1)
 		end
 		progress(player, "vatHatch", 1)
+		if finite(rarity) and rarity >= Rarities.RARE then
+			challengeProgress(player, "rareHatches", 1)
+		end
 	end)
 	on(Signals.SquishyObtained, "quest:obtained", function(player: Player, uid: string, source: string)
 		local ok, rec = pcall(SquishyService.get, player, uid)
@@ -946,6 +1474,7 @@ function QuestService.Start()
 		local kind = info.kind
 		if kind == "runaway" or kind == "escape" then
 			progress(player, "runawayCatch", 1)
+			challengeProgress(player, "catches", 1)
 		end
 		if kind == "wild" or kind == "wildPersonal" then
 			progress(player, "wildCatch", 1)
@@ -993,6 +1522,7 @@ function QuestService.Start()
 				addStat(player, data, "megas", 1)
 			end
 			progress(player, "megaJoin", 1)
+			challengeProgress(player, "megas", 1)
 		end
 	end)
 	on(Signals.Splorched, "quest:splorched", function(player: Player)
@@ -1001,6 +1531,9 @@ function QuestService.Start()
 			addStat(player, data, "splorches", 1)
 		end
 		progress(player, "splorch", 1)
+		-- Défi « Fais 2 Grands Splorch » : Splorched = Grand Splorch seulement (lot A4, D3), donc un Grand
+		-- Splorch qui bat le Record R (chemin de la v1.3 comme de la v2.0)
+		challengeProgress(player, "splorches", 1)
 		reach(player, 11)
 	end)
 	on(Signals.FriendsChanged, "quest:friends", function(player: Player, n: number)
@@ -1021,6 +1554,60 @@ function QuestService.Start()
 	end)
 	on(Signals.PetSitRewarded, "quest:petSit", function(visitor: Player)
 		progress(visitor, "petSitPress", 1)
+	end)
+	-- v2.0 (lot A4, étape 4) : signaux du contrat v2 (jamais émis tant que leurs interrupteurs sont coupés,
+	-- sauf UpgradeBought, aussi émis par BuyTile : profil v1 jamais écrit)
+	on(Signals.Stamped, "quest:stamped", function(player: Player, gained: number)
+		challengeProgress(player, "newStamps", gained)
+	end)
+	on(Signals.Fed, "quest:fed", function(player: Player)
+		challengeProgress(player, "feedDays", 1)
+	end)
+	on(Signals.UpgradeBought, "quest:upgrade", function(player: Player, _id: string, from: number, to: number)
+		local data = profile(player)
+		if data == nil or not isV2(data) or not finite(from) or not finite(to) then
+			return
+		end
+		local n = math.floor(to) - math.floor(from)
+		if n < 1 then
+			return
+		end
+		-- Carnet du Ranch (D34) : niveaux achetés à vie, × 10 et Max compris
+		addLifetime(player, data, "upgradesBought", n)
+		carnetCheck(player, data, false)
+		challengeProgress(player, "upgradesBought", n)
+	end)
+	on(Signals.PrestigeApplied, "quest:prestige", function(player: Player, kind: string)
+		local data = profile(player)
+		if data == nil then
+			return
+		end
+		if kind == "petit" then
+			-- un Petit Splorch ne compte nulle part ailleurs (GDD §7.5 m9)
+			addLifetime(player, data, "petitSplorches", 1)
+		elseif kind == "ascend" then
+			challengeProgress(player, "ascends", 1)
+		end
+		local s = sessionOf(player)
+		if s ~= nil then
+			-- nouvelle boucle : étapes du record remises à zéro (D14)
+			s.stepKey = -1
+			s.stepShown = 0
+		end
+	end)
+	on(Signals.RecordReached, "quest:record", function(player: Player)
+		local data = profile(player)
+		if data == nil then
+			return
+		end
+		challengeProgress(player, "recordBeaten", 1)
+		recordCards(player, data, false)
+	end)
+	on(Signals.ConfettiChanged, "quest:confetti", function(player: Player, delta: number, source: string)
+		-- Défi « Gagne 20 Confettis » : gains seulement, jamais ceux de la piste (aucune boucle sur soi)
+		if finite(delta) and delta > 0 and source ~= "track" then
+			challengeProgress(player, "confettiEarned", delta)
+		end
 	end)
 	Players.PlayerRemoving:Connect(function(player: Player)
 		Guard.try("quest:removing", onRemoving, player)
@@ -1065,6 +1652,10 @@ local function stepPlayer(player: Player, s: Session, now: number)
 			s.boostSeconds += s.boostAcc
 		end
 		s.boostAcc = 0
+	end
+	-- v2.0 (lot A4) : profil v1 = une lecture, rien d'autre
+	if s.v2 then
+		stepV2(player, data, s, dt)
 	end
 
 	-- Plop de départ (premier squishy du compte, jamais redonné)
