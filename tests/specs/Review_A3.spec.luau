@@ -9,7 +9,8 @@
 --     pression du squishy tout neuf, qui est justement le plus gros revenu (visé d'abord) ; une place
 --     décalée dans le même lieu (vente d'un plus ancien) n'est pas une arrivée ;
 --   * rythme : une pause plus courte que l'intervalle ne rend pas une pression de plus (une pression
---     toutes les 12 − 0,3 × École s par Plopette) ;
+--     toutes les 12 − 0,3 × École s par Plopette) ; un saut coupé par une pause repart de sa cible
+--     (le client l'a dessiné jusque-là, comme A3-21) ;
 --   * image longue (gel du serveur de 5 s) et horloge qui saute en avant : au plus une récompense par
 --     Plopette, toutes revérifiées.
 -- Interrupteur Helpers ouvert DANS le test (Features.set) ; SchemaV2 ouvert dans le harnais avant le
