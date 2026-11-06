@@ -55,6 +55,8 @@ return {
 	RerollObjective = "event", -- (slot) QuestService
 	ClaimDexReward = "event", -- () QuestService
 	UiSeen = "event", -- (screen) QuestService → Signals.UiSeen (RushService : carte du choix affichée)
+	-- () QuestService (v2.0, lot A4, N23) : navigation dans un menu ; réveille les Plopettes seulement
+	MenuActivity = "event",
 	PetPress = "event", -- (ownerId, uid, tClient) CommunityService
 	SetSetting = "event", -- (key, value) CommunityService
 	EquipCosmetic = "event", -- (kind, id) CommunityService

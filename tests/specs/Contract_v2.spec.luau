@@ -873,6 +873,15 @@ return function(T)
 				expect(Intents.JellyAscend.activity).toBe(true)
 				expect(Intents.JellyAscend.args).toEqual({ { name = "confirm", kind = "bool" } })
 				expect(R.JellyAscend).toBe("event")
+				-- lot A4 (N23, décision du propriétaire du 6 novembre, journal A4-12) : MenuActivity,
+				-- navigation dans un menu ; intention d'interface (jamais une activité de jeu), sans
+				-- argument, QuestService, une toutes les 10 s au plus (le client : une toutes les 20 s)
+				expect(IV2.MenuActivity).toBeNil()
+				expect(Intents.MenuActivity.owner).toBe("QuestService")
+				expect(Intents.MenuActivity.activity).toBeNil()
+				expect(Intents.MenuActivity.args).toEqual({})
+				expect(Intents.MenuActivity.rate).toEqual({ 1, 10 })
+				expect(R.MenuActivity).toBe("event")
 				-- débits du GDD v2.0 §12.7
 				expect(Intents.BuyUpgrade.rate).toEqual({ 10, 1 })
 				expect(Intents.JellyAscend.rate).toEqual({ 1, 5 })
@@ -907,6 +916,7 @@ return function(T)
 					"PlaceDeco",
 					"GiveHeart",
 					"SetPhotoMode",
+					"MenuActivity", -- lot A4 (N23, journal A4-12)
 					"UpgradeResult",
 					"HelperPress",
 				}

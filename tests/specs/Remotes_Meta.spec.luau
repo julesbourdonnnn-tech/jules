@@ -44,7 +44,8 @@ return function(T)
 			function()
 				local w, p, q = world()
 				local names = intents(w)
-				expect(#names).toBe(15)
+				-- 16 : + MenuActivity (lot A4, N23, journal A4-12)
+				expect(#names).toBe(16)
 				local attacked = 0
 				for _, name in names do
 					local function attack()
@@ -69,7 +70,7 @@ return function(T)
 						error(name .. " : profil de l'attaquant changé à " .. tostring(diffP))
 					end
 				end
-				expect(attacked > 15 * 25).toBe(true)
+				expect(attacked > 16 * 25).toBe(true)
 				local D = w.h:require("ServerScriptService.Server.Services.DiagnosticsService")
 				expect(D.counts().errors).toBe(0)
 			end

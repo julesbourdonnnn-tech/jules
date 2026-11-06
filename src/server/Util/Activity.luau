@@ -10,6 +10,9 @@
 --   Activity.lastIntent(player)         -- v2.0 (N23, lot A3) : instant de la dernière INTENTION
 --                                       -- ACCEPTÉE (note), -math.huge sinon ; noteMove ne la change
 --                                       -- jamais : un stick calé ne retarde pas la sieste des Plopettes
+--   Activity.noteMenu(player, now)      -- v2.0 (N23, lot A4, décision du propriétaire du 6 novembre) :
+--                                       -- navigation dans un menu (intention MenuActivity) : avance
+--                                       -- lastIntent SEULEMENT (jamais lastActive : ni MEGA ni jauge)
 -- La règle « à 60 studs du centre de la place pendant l'alerte du MEGA » est appliquée par
 -- EventService.isActive (elle dépend de la phase du MEGA). Temps : Clock.now() passé par l'appelant
 -- (les specs voyagent dans le temps). État oublié au départ (PlayerRemoving).
@@ -45,6 +48,19 @@ function Activity.note(player: Player, now: number)
 		return
 	end
 	mark(player, now)
+	local previous = lastIntents[player]
+	if previous == nil or now > previous then
+		lastIntents[player] = now
+	end
+end
+
+-- v2.0 (N23, lot A4) : navigation dans un menu acceptée à l'instant `now` (intention MenuActivity) :
+-- réveille les Plopettes (lastIntent) ; n'est jamais une activité de jeu (lastActive inchangé : joueurs
+-- actifs du MEGA et de la jauge du jeu de base)
+function Activity.noteMenu(player: Player, now: number)
+	if player.Parent == nil or not finite(now) then
+		return
+	end
 	local previous = lastIntents[player]
 	if previous == nil or now > previous then
 		lastIntents[player] = now

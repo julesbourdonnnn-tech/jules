@@ -106,6 +106,11 @@ local Intents: { [string]: IntentSpec } = {
 	-- départ du délai de la carte du choix (RushModeChosen = −1 sans réponse), analytique. Une fois par
 	-- écran et par session ; ne donne jamais rien (aucune récompense, aucune mutation économique).
 	UiSeen = { owner = "QuestService", rate = { 2, 1 }, args = { { name = "screen", kind = "key", set = { "objectives", "modeCard", "postBoop", "booped", "shop", "dex", "leaderboards" } } } },
+	-- v2.0 (lot A4, N23, décision du propriétaire du 6 novembre) : la navigation dans un menu ouvert
+	-- compte pour la sieste des Plopettes (le client l'envoie à l'ouverture d'un panneau et pendant la
+	-- navigation, une au plus toutes les 20 s). Réveille seulement les Plopettes (Activity.noteMenu) :
+	-- jamais une activité de jeu (ni MEGA ni jauge), jamais une récompense ni une progression
+	MenuActivity = { owner = "QuestService", rate = { 1, 10 }, args = {} },
 	-- Social (CommunityService)
 	PetPress = { owner = "CommunityService", rate = { 12, 1 }, activity = true, args = { { name = "ownerId", kind = "userId" }, { name = "uid", kind = "uid" }, { name = "tClient", kind = "time" } } },
 	SetSetting = { owner = "CommunityService", rate = { 4, 1 }, args = { { name = "key", kind = "str", max = 32 }, { name = "value", kind = "setting" } } },

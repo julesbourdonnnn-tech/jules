@@ -36,9 +36,15 @@
 --     rôle (aucun ranch affamé) ; un saut abandonné à tPress laisse la Plopette sur la cible (le
 --     client y a dessiné le saut), le suivant part de là.
 -- Maisonnette : WorldLayout.helperHouse (lot B4) si elle existe, sinon Z = 60, X = −28 (docs/04 §27.14).
--- Recharge de pression posée par une Plopette : SquishyService.helperPressed(owner, uid, now) quand ce
--- crochet existe (note d'intégration) ; d'ici là, recharge tenue ici (une Plopette ne represse jamais
--- un squishy dans sa recharge).
+-- Recharge de pression posée par une Plopette : SquishyService.helperPressed(owner, uid, now) (lot A4 :
+-- le joueur ne represse pas le squishy dans les 8 s, son client le dessine « pas prêt ») ; recharge
+-- aussi tenue ici (o.done : une Plopette ne represse jamais un squishy dans sa recharge).
+-- Lot A4 : squishy occupé (SquishyService.busy : réservé par une fusion, en fuite) jamais visé, revu à
+-- tPress ; attributs publics du ranch (D2, Ranches/<k>) HelperMode ("active" | "nap" | "paused") et
+-- Helpers (nombre de Plopettes), posés par RanchService.setV2Attributes seulement quand ils changent
+-- (jamais à chaque tick), absents interrupteur coupé ou profil v1, effacés quand l'état est oublié
+-- (ranch changé, profil illisible, interrupteur coupé en direct ; au départ, RanchService libère le
+-- ranch et tous ses attributs).
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -108,6 +114,9 @@ type Owner = {
 	centerX: number,
 	centerZ: number,
 	done: { [string]: number }, -- uid → fin de la recharge posée par une Plopette
+	-- lot A4 (D2) : valeurs publiées des attributs HelperMode et Helpers (nil : rien de posé)
+	pubMode: string?,
+	pubCount: number?,
 	-- relecture A3 (R-2) : arrivée de chaque squishy à son état actuel (enclos, Bassin, porté, monté,
 	-- clôture, attente, ailleurs) : « prêt depuis ReadyFor s » compte aussi depuis cette arrivée
 	seenKind: { [string]: string },
@@ -256,11 +265,51 @@ local function newOwner(slot: number, data: { [string]: any }, now: number): Own
 		centerX = cx,
 		centerZ = cz,
 		done = {},
+		pubMode = nil,
+		pubCount = nil,
 		seenKind = {},
 		since = {},
 	}
 	refresh(o, data, now)
 	return o
+end
+
+-- Lot A4 (D2) : attributs publics des Plopettes sur Ranches/<k> (B5 : bulle « z » de la sieste, B2 :
+-- « Fait la sieste », MenuActivity seulement avec Helpers > 0) ; posés quand ils changent, jamais à
+-- chaque tick ; sans Plopette, HelperMode est absent
+local CLEAR = { "HelperMode", "Helpers" }
+local function publish(player: Player, o: Owner)
+	local mode: string? = if o.count > 0 and o.mode ~= "none" then o.mode else nil
+	if o.pubMode == mode and o.pubCount == o.count then
+		return
+	end
+	local attrs: { [string]: any } = {}
+	local clear: { string } = {}
+	if o.pubCount ~= o.count then
+		attrs.Helpers = o.count
+	end
+	if o.pubMode ~= mode then
+		if mode ~= nil then
+			attrs.HelperMode = mode
+		else
+			table.insert(clear, "HelperMode")
+		end
+	end
+	o.pubMode, o.pubCount = mode, o.count
+	Guard.try("helpers:attributes", RanchService.setV2Attributes, player, attrs, clear)
+end
+
+-- État oublié : attributs posés effacés ; joueur parti (departed) : rien à écrire, RanchService libère
+-- le ranch et tous ses attributs (aucune table recréée pour un joueur parti)
+local function unpublish(player: Player, o: Owner, departed: boolean)
+	if o.pubMode == nil and o.pubCount == nil then
+		return
+	end
+	o.pubMode, o.pubCount = nil, nil
+	if departed or player.Parent == nil then
+		return
+	end
+	Guard.try("helpers:attributes", RanchService.setV2Attributes, player, {}, CLEAR)
 end
 
 -- Raison de la pause du propriétaire (nil = aucune) ; rush = Rush en cours (calculé une fois par tick)
@@ -357,6 +406,11 @@ local function free(player: Player, o: Owner, data: { [string]: any }, uid: stri
 	if fenceSet[uid] or (rideUid ~= "" and rideUid == uid) then
 		return false
 	end
+	-- lot A4 (note d'A3 du 6 novembre, 1 h 10) : réservé par une fusion (le jumeau disparaît 0,4 s
+	-- plus tard) ou en fuite : jamais visé, et abandonné à tPress (rien payé)
+	if SquishyService.busy(player, uid) then
+		return false
+	end
 	return Rules.readyFor(readyAt(player, o, uid), now)
 end
 
@@ -403,10 +457,8 @@ local function grant(player: Player, o: Owner, data: { [string]: any }, h: Helpe
 	local gloves = EconomyService.pressBonus(player)
 	local reward = Formulas.pressReward(income, false, 0, kitty, gloves, nil) * H.RewardShare
 	o.done[uid] = now + COOLDOWN
-	local hook = (SquishyService :: any).helperPressed
-	if type(hook) == "function" then
-		Guard.try("helpers:cooldown", hook, player, uid, now)
-	end
+	-- recharge du squishy (le joueur ne represse pas dans les 8 s) et état public « pas prêt » (lot A4)
+	Guard.try("helpers:cooldown", SquishyService.helperPressed, player, uid, now)
 	local coins = EconomyService.addCoins(player, reward, "Helper", "Gameplay")
 	count("Pressed", player)
 	Signals.HelperPressed:Fire(player, h.index, uid, coins)
@@ -595,17 +647,24 @@ local function choose(player: Player, o: Owner, data: { [string]: any }, pos: Ve
 	end
 end
 
--- Oublie un propriétaire (départ, ranch changé, profil illisible)
-local function drop(player: Player)
+-- Oublie un propriétaire (départ, ranch changé, profil illisible) ; attributs effacés sauf au départ
+local function drop(player: Player, departed: boolean?)
+	local o = owners[player]
 	owners[player] = nil
 	outbox[player] = nil
+	if o ~= nil then
+		unpublish(player, o, departed == true)
+	end
 end
 
 local function stepOwner(player: Player, now: number, pos: Vector3?, rush: boolean)
+	if player.Parent == nil then
+		drop(player, true)
+		return
+	end
 	local data = DataService.get(player)
 	if
-		player.Parent == nil
-		or data == nil
+		data == nil
 		or not PadRules.v2Profile(data)
 		or type(data.squishies) ~= "table"
 		or not RanchService.isReady(player)
@@ -619,7 +678,11 @@ local function stepOwner(player: Player, now: number, pos: Vector3?, rush: boole
 		return
 	end
 	local o = owners[player]
-	if o == nil or o.slot ~= slot then
+	if o ~= nil and o.slot ~= slot then
+		drop(player) -- ranch changé : attributs de l'ancien état effacés, puis reposés ci-dessous
+		o = nil
+	end
+	if o == nil then
 		o = newOwner(slot, data, now)
 		owners[player] = o
 		-- relecture A3 (R-2) : état de départ des squishies (déjà là, prêts selon leur recharge)
@@ -631,19 +694,23 @@ local function stepOwner(player: Player, now: number, pos: Vector3?, rush: boole
 		refresh(owner, data, now)
 	end
 	if owner.count == 0 then
+		publish(player, owner)
 		return
 	end
 	markBusy(player, owner)
 	if Rules.napping(Activity.lastIntent(player), now) then
 		setMode(owner, "nap", nil, now)
+		publish(player, owner)
 		return
 	end
 	local reason = pauseReason(player, rush)
 	if reason ~= nil then
 		setMode(owner, "paused", reason, now)
+		publish(player, owner)
 		return
 	end
 	setMode(owner, "active", nil, now)
+	publish(player, owner)
 	resolve(player, owner, data, pos, now)
 	if pos ~= nil then
 		choose(player, owner, data, pos, now)
@@ -705,7 +772,7 @@ function HelperService.Start()
 	end
 	started = true
 	Players.PlayerRemoving:Connect(function(player: Player)
-		drop(player)
+		drop(player, true)
 		manual[player] = nil
 	end)
 	Signals.SquishyRemoved:Connect(function(player: Player, uid: string)
@@ -723,6 +790,12 @@ function HelperService.Start()
 	end
 	Signals.PrestigeApplied:Connect(reread)
 	Signals.RecordReached:Connect(reread)
+	-- lot A4 (D2) : Plume (une Plopette de plus) ou École (intervalle) achetées : relu au tick suivant
+	Signals.UpgradeBought:Connect(function(player: Player, id: string)
+		if id == "plume" or id == "school" then
+			reread(player)
+		end
+	end)
 end
 
 -- Tick de 10 Hz (ChaseService) : rien du tout tant que l'interrupteur Helpers est coupé ; coupé en
@@ -730,6 +803,10 @@ end
 function HelperService.step(now: number, acting: { [Player]: Types.TickActor }?)
 	if not enabled() then
 		if next(owners) ~= nil or next(outbox) ~= nil then
+			-- attributs HelperMode et Helpers effacés (lot A4, D2), une fois
+			for player, o in owners do
+				unpublish(player, o, false)
+			end
 			table.clear(owners)
 			table.clear(outbox)
 		end
@@ -760,7 +837,7 @@ function HelperService.step(now: number, acting: { [Player]: Types.TickActor }?)
 	end
 	for player in owners do
 		if player.Parent == nil then
-			drop(player)
+			drop(player, true)
 		end
 	end
 	for player in manual do

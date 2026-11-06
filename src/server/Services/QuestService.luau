@@ -21,7 +21,9 @@
 --     réclamés par ClaimDexReward.
 --   * Carte « Plop a sommeil » à 60 et 120 min de jeu dans la session ; analytique SessionLength,
 --     BoostShare (part de la session en ×2), ObjectivesAllDone, SleepyCardShown, FirstBoopReceived.
--- Remotes : FeedPlop, ClaimObjective, RerollObjective, ClaimDexReward, UiSeen ; HoldState.
+--   * v2.0 (lot A4, N23) : MenuActivity (navigation dans un menu) réveille les Plopettes
+--     (Activity.noteMenu), interrupteur Helpers ouvert et profil v2 seulement ; ne donne jamais rien.
+-- Remotes : FeedPlop, ClaimObjective, RerollObjective, ClaimDexReward, UiSeen, MenuActivity ; HoldState.
 -- Clés : firstJoin, codes, dex, plopDays, lastFeedDay, onboarding, objectives, stats.
 
 local Players = game:GetService("Players")
@@ -37,6 +39,7 @@ local Mutations = require(Shared.Config.Mutations)
 local Rarities = require(Shared.Config.Rarities)
 local Balance = require(Shared.Config.Balance)
 local Events = require(Shared.Config.Events)
+local Features = require(Shared.Config.Features)
 local QuestRules = require(Shared.Logic.QuestRules)
 local Odds = require(Shared.Logic.Odds)
 local Hash = require(Shared.Logic.Hash)
@@ -50,7 +53,9 @@ local Signals = require(Server.Signals)
 local Notify = require(Server.Util.Notify)
 local Analytics = require(Server.Util.Analytics)
 local MoveCheck = require(Server.Util.MoveCheck)
+local Activity = require(Server.Util.Activity)
 local Guard = require(Server.Meta.Guard)
+local PadRules = require(Server.Ranch.PadRules)
 local DiagnosticsService = require(Server.Services.DiagnosticsService)
 local DataService = require(Server.Services.DataService)
 local RanchService = require(Server.Services.RanchService)
@@ -681,6 +686,27 @@ local function onUiSeen(player: Player, screen: string): boolean
 	return false -- un écran vu ne donne jamais rien (et ne compte pas comme une activité de jeu)
 end
 
+-- v2.0 (lot A4, N23, décision du propriétaire du 6 novembre) : navigation dans un menu (MenuActivity,
+-- au plus une toutes les 20 s côté client, débit du serveur dans Config/Intents) : acceptée seulement
+-- interrupteur Helpers ouvert, profil v2, joueur prêt, présent et vivant ; Activity.noteMenu (sieste des
+-- Plopettes) et RIEN d'autre : aucune récompense, statistique, objectif ni DataPatch (refus muet)
+local function onMenuActivity(player: Player): boolean
+	if Features.get("Helpers") ~= true or player.Parent == nil then
+		return false
+	end
+	local data = DataService.get(player)
+	if data == nil or not PadRules.v2Profile(data) or not RanchService.isReady(player) then
+		return false
+	end
+	local character = player.Character
+	local humanoid = if character ~= nil then character:FindFirstChildOfClass("Humanoid") else nil
+	if humanoid == nil or humanoid.Health <= 0 then
+		return false
+	end
+	Activity.noteMenu(player, Clock.now())
+	return true
+end
+
 -- =============================================================================================
 -- Cycle de vie
 -- =============================================================================================
@@ -819,6 +845,7 @@ function QuestService.Init()
 	Guard.connect("RerollObjective", onRerollObjective)
 	Guard.connect("ClaimDexReward", onClaimDexReward)
 	Guard.connect("UiSeen", onUiSeen)
+	Guard.connect("MenuActivity", onMenuActivity)
 	DataService.onBeforeSave(function(player, data, release)
 		Guard.try("quest:beforeSave", beforeSave, player, data, release)
 	end)

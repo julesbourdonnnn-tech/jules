@@ -113,5 +113,35 @@ return function(T)
 			expect(Activity.lastIntent(p)).toBe(-math.huge)
 			expect(#h.errors).toBe(0)
 		end)
+
+		-- v2.0 (lot A4, N23, décision du propriétaire du 6 novembre) : la navigation dans un menu
+		-- (intention MenuActivity) réveille les Plopettes sans être une activité de jeu
+		it(
+			"noteMenu : avance lastIntent seulement, jamais lastActive (MEGA, jauge) ; jamais en arrière ; entrées bizarres et départ sans effet",
+			function()
+				local h, Activity = setup()
+				local p = h:addPlayer({ userId = 16, spawn = false })
+				Activity.noteMenu(p, 300)
+				expect(Activity.lastIntent(p)).toBe(300)
+				expect(Activity.lastActive(p)).toBe(-math.huge)
+				expect(Activity.isActive(p, 300)).toBe(false)
+				Activity.noteMenu(p, 250) -- jamais en arrière
+				expect(Activity.lastIntent(p)).toBe(300)
+				-- une intention de jeu plus ancienne ne recule pas lastIntent, mais compte pour lastActive
+				Activity.note(p, 290)
+				expect(Activity.lastIntent(p)).toBe(300)
+				expect(Activity.lastActive(p)).toBe(290)
+				Activity.noteMenu(p, 0 / 0)
+				Activity.noteMenu(p, math.huge)
+				Activity.noteMenu(p, -math.huge)
+				expect(Activity.lastIntent(p)).toBe(300)
+				expect(Activity.lastActive(p)).toBe(290)
+				h:removePlayer(p)
+				h:settle(1)
+				Activity.noteMenu(p, 400) -- joueur parti : rien n'est retenu
+				expect(Activity.lastIntent(p)).toBe(-math.huge)
+				expect(#h.errors).toBe(0)
+			end
+		)
 	end)
 end
