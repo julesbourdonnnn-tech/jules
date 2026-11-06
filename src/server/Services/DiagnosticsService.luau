@@ -3,9 +3,10 @@
 -- avertissements du serveur (ScriptContext.Error, LogService.MessageOut), erreurs attrapées par les
 -- pcall du tick et des handlers (reportCaught), états fermés par leur délai (stateTimedOut),
 -- compteurs nommés des services v2.0 (count, lot A4 : « Count:<clé> », jamais une trace ni un
--- ServerError), réparations de profil (Signals.ProfileRepaired), et rapports des clients (ReportError : validés,
--- plafonnés, noms nettoyés une 2e fois). Par clé : nombre, joueurs touchés (en mémoire, jamais envoyés),
--- première et dernière fois, 3 exemples ; 200 clés au plus, puis un compteur « autres ». Totaux du jour
+-- ServerError), réparations de profil (Signals.ProfileRepaired), et rapports des clients
+-- (ReportError : validés, plafonnés, noms nettoyés une 2e fois). Par clé : nombre, joueurs touchés
+-- (en mémoire, jamais envoyés), première et dernière fois, 3 exemples ; 200 clés au plus, puis un
+-- compteur « autres ». Totaux du jour
 -- dans un DataStore à part toutes les 5 min (UpdateAsync, DiagRules.mergeDaily, task.spawn) ;
 -- analytique ServerError / ClientError une fois par clé et par 5 min. Panneau des administrateurs
 -- seulement (Data/Admins, vérifié à chaque demande ; silence pour les autres ; « bonjour » tab 0 aux
@@ -591,7 +592,8 @@ function DiagnosticsService.count(key: string, player: Player?)
 		return
 	end
 	busy = true
-	local ok = pcall(countKey, key, if typeof(player) == "Instance" then player else nil)
+	local who = if typeof(player) == "Instance" and player:IsA("Player") then player else nil
+	local ok = pcall(countKey, key, who)
 	busy = false
 	if not ok then
 		internalErrors += 1 -- jamais un warn (il se rapporterait lui-même)
