@@ -132,7 +132,9 @@ type State = {
 	order: { string },
 	ips: number, -- dernier revenu connu (pièces par seconde)
 	balance: number, -- dernier solde connu (pièces)
-	confetti: number, -- dernier solde connu (Confettis, v2.0)
+	-- dernier solde connu (Confettis, v2.0) ; jamais nommé « confetti » : seul EconomyService écrit les
+	-- Confettis du profil (EconomyService_upgrades le vérifie sur tout src/server, relecture A4, A4-52)
+	confettiBalance: number,
 	helperCoins: number, -- pièces des Plopettes (sku "Helper") de la tranche (v2.0)
 	gameplayCoins: number, -- pièces de toutes les sources « Gameplay » de la tranche (v2.0)
 	sent: { number }, -- instants des requêtes des 60 dernières secondes
@@ -166,7 +168,7 @@ local function newState(): State
 		order = {},
 		ips = 0,
 		balance = 0,
-		confetti = 0,
+		confettiBalance = 0,
 		helperCoins = 0,
 		gameplayCoins = 0,
 		sent = {},
@@ -408,7 +410,7 @@ local function closeBucket(player: Player, s: State)
 	end
 	local ips = if s.ips > 0 then s.ips else 1
 	local balanceSeconds = math.floor(math.clamp(math.max(0, s.balance) / ips, 0, Analytics.MaxSeconds))
-	local confettiBalance = math.floor(math.clamp(s.confetti, 0, Analytics.MaxSeconds))
+	local confettiBalance = math.floor(math.clamp(s.confettiBalance, 0, Analytics.MaxSeconds))
 	local entries, order = s.entries, s.order
 	local helper, gameplay = s.helperCoins, s.gameplayCoins
 	s.entries, s.order = {}, {}
@@ -562,7 +564,7 @@ local function accumulateConfetti(
 	end
 	local s = slice(player, Clock.now())
 	if finite(balance) then
-		s.confetti = math.max(0, balance :: number)
+		s.confettiBalance = math.max(0, balance :: number)
 	end
 	local tx = if type(txType) == "string" and txType ~= "" then txType else "Gameplay"
 	local short = string.sub(sku, 1, 50)

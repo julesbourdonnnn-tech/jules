@@ -140,11 +140,89 @@ return function(T)
 			`{Soak.hours() / 5} h, 16 robots : invariants v2 à chaque tick, zéro trace, systèmes du lot actifs`,
 			function()
 				local hours = Soak.hours() / 5
+				-- intentions v2.0 envoyées au hasard (graine fixe) par les robots pendant la partie : arguments
+				-- valides ET hostiles, achats au bon niveau attendu, cœurs, Déco perso, habillages, réglages,
+				-- mode photo, navigation dans un menu, mesures du client ; invariants revus à chaque tick
+				local chaos = { sent = 0, bought = 0 }
+				local crng = Brains.rng(1234)
+				local UpgradeMath, upgradeIds = nil, nil
+				local ids = {
+					palette = { "", "candy", "mint", "fireworks", "peachPalette", "nope" },
+					cushions = { "", "pinkCushions", "nope" },
+					theme = { "color", "marshmallow", "caramel", "cloud", "royal", "nope" },
+					saddle = { "classic", "partyPopper", "cosmic", "cookieSaddle", "icingSugar" },
+					trail = { "", "confetti", "streamers", "shootingStars", "bubbleTrail" },
+					title = { "", "builder", "sunKeeper", "loyalBuddy", "confettiStar" },
+					flag = { "", "nine", "strawberryFlag", "buildingSite" },
+				}
+				local kinds = { "palette", "cushions", "theme", "saddle", "trail", "title", "flag" }
+				local emotes = { "bravo", "splorch", "wave", "hugEmote", "bigPlopDance", "hammerTap", "nope" }
+				local metrics =
+					{ "upgradeTimeout", "upgradeMode", "ascendPreview", "textScale", "visualBudget", "bogus" }
+				local function pick(list)
+					return list[crng:NextInteger(1, #list)]
+				end
+				local function inject(w)
+					local present = {}
+					for _, p in w.players do
+						if p.Parent ~= nil and w.DS.isLoaded(p) then
+							table.insert(present, p)
+						end
+					end
+					if #present < 2 then
+						return
+					end
+					if UpgradeMath == nil then
+						UpgradeMath = w.h:require(L .. "Logic.UpgradeMath")
+						upgradeIds = UpgradeMath.ids()
+					end
+					local p = pick(present)
+					local roll = crng:NextInteger(1, 12)
+					local name, args
+					if roll == 1 then
+						name, args = "PlaceDeco", { crng:NextInteger(0, 45), crng:NextInteger(0, 13) }
+					elseif roll == 2 then
+						local other = pick(present)
+						name, args = "GiveHeart", { if crng:NextNumber() < 0.8 then other.UserId else -7 }
+					elseif roll == 3 then
+						name, args = "SetPhotoMode", { crng:NextNumber() < 0.5 }
+					elseif roll == 4 then
+						name, args = "MenuActivity", {}
+					elseif roll == 5 then
+						name, args = "ClientMetric", { pick(metrics), crng:NextInteger(-5, 1005) }
+					elseif roll == 6 then
+						local kind = pick(kinds)
+						name, args = "EquipCosmetic", { kind, pick(ids[kind]) }
+					elseif roll == 7 then
+						name, args = "SetSetting", { "haloOn", crng:NextNumber() < 0.5 }
+					elseif roll == 8 then
+						name, args = "SetSetting", { "emoteLeft", pick(emotes) }
+					elseif roll == 9 then
+						name, args = "UiSeen", { "nextBuy" }
+					elseif roll == 10 then
+						name, args = "JellyAscend", { crng:NextNumber() < 0.9 }
+					else
+						-- achat au niveau attendu exact (accepté s'il est payable) : Carnet, Défis, Déco perso
+						local id = pick(upgradeIds)
+						local level = UpgradeMath.level(id, w.DS.get(p))
+						name, args = "BuyUpgrade", { id, pick({ 1, 1, 10, 0 }), level }
+						chaos.bought += 1
+					end
+					w.h:fireServer(R .. name, p, table.unpack(args))
+					chaos.sent += 1
+				end
 				local report = Soak.run(HarnessV2, {
 					players = 16,
 					hours = hours,
 					seed = 11,
 					flags = ALL_V2,
+					check = function(w, _now)
+						w.chaosTick = (w.chaosTick or 0) + 1
+						if w.chaosTick % 3 == 0 then
+							inject(w)
+						end
+						return {}
+					end,
 					edit = function(d, i)
 						d.confetti = 200 + 10 * i
 						d.confettiTotal = d.confetti
@@ -170,11 +248,20 @@ return function(T)
 					warnings = 0,
 				})
 				expect(#D.caught()).toBe(0)
-				-- les systèmes du lot ont tourné : piste de la période, 3 Défis, jeu du jour compté
+				-- les systèmes du lot ont tourné : piste de la période, 3 Défis, jeu du jour compté ; chaque
+				-- profil passe par JSON (DataStore) puis ProfileRepair sans une seule réparation (aucune valeur
+				-- écrite par le lot que la réparation du chargement suivant changerait)
+				local Http = w.h.game.HttpService
+				local Repair = w.h:require("ServerScriptService.Server.Data.ProfileRepair")
 				local tracked = 0
 				for _, p in w.players do
 					if p.Parent ~= nil and w.DS.isLoaded(p) then
 						local d = w.DS.get(p)
+						local copy = Http:JSONDecode(Http:JSONEncode(d))
+						expect({ id = p.UserId, fixes = Repair.repair(copy) }).toEqual({
+							id = p.UserId,
+							fixes = {},
+						})
 						expect(d.version).toBe(2)
 						expect(#d.weeklyTrack.challenges).toBe(3)
 						expect(d.weeklyTrack.period > 0).toBe(true)
@@ -188,14 +275,17 @@ return function(T)
 					end
 				end
 				expect(tracked > 0).toBe(true)
+				expect(chaos.sent > 100).toBe(true)
 				print(
 					string.format(
-						"  Soak v2 (tous les interrupteurs) : %.2f h, %.2f ms par tick du serveur, %d joueurs à la fin, instances %d → %d",
+						"  Soak v2 (tous les interrupteurs) : %.2f h, %.2f ms par tick du serveur, %d joueurs à la fin, instances %d → %d, %d intentions v2.0 au hasard (%d achats)",
 						hours,
 						report.msPerTick,
 						report.players,
 						report.counts.start.instances,
-						report.counts.finish.instances
+						report.counts.finish.instances,
+						chaos.sent,
+						chaos.bought
 					)
 				)
 			end

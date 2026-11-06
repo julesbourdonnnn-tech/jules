@@ -152,7 +152,10 @@ return function(T)
 				w.Economy.step(w.Clock.now())
 				w.h:settle(3)
 				local TierRules = w.h:require(L .. "Logic.TierRules")
-				-- DecorGold [RanchTiers] : attente ajoutée au lot A4 (D31, journal A4-5), aucune dorée
+				-- DecorGold [RanchTiers] : attente ajoutée au lot A4 (D31, journal A4-5), aucune dorée ;
+				-- Palette = "" (palette du ranch) : posée par CommunityService dès qu'une source de palette
+				-- est ouverte (RecordR : palette du Record R 9 ; lot A4, A4-36), attente ajoutée à la relecture
+				-- du lot A4 (A4-53 : la spec n'avait pas été relancée aux étapes 5 et 6)
 				expect(attrs(w, slot)).toEqual({
 					BestR = 12,
 					SplorchReady = false,
@@ -161,6 +164,7 @@ return function(T)
 					GloveTier = TierRules.of("gloves", 10),
 					ApronTier = 0,
 					DecorGold = 0,
+					Palette = "",
 				})
 				-- achat d'un Monument : attribut recalculé (UpgradeBought)
 				w.Economy.buyUpgrade(p, "monument", 1, 2)
@@ -290,9 +294,13 @@ return function(T)
 				w.Ranch.step(w.Clock.now(), {})
 				a = attrs(w, slot)
 				expect({ a.GoldPennants, a.DecorGold }).toEqual({ nil, 1 + 4 + 2 ^ 17 })
-				-- RanchTiers coupé : DecorGold effacé (et les paliers) ; rouvert : reposé
+				-- RanchTiers coupé : DecorGold effacé (et les paliers) ; rouvert : reposé. Palette = "" de
+				-- CommunityService (sorte ouverte par Workshop, lot A4, A4-36) : effacée à son tick suivant
+				-- (≤ 1 s) une fois Workshop coupé, AVANT la vue exacte (relecture du lot A4, A4-53)
 				w.F.set("RanchTiers", false)
 				w.Ranch.step(w.Clock.now(), {})
+				w.Clock.advance(1.1)
+				w.h:require(S .. "CommunityService").step(w.Clock.now(), {})
 				expect(attrs(w, slot)).toEqual({})
 				w.F.set("RanchTiers", true)
 				w.Ranch.step(w.Clock.now(), {})
