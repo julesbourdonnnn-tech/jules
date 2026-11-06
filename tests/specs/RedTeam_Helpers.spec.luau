@@ -175,6 +175,86 @@ return function(T)
 		)
 	end)
 
+	-- Lot A4 (N23, décision du propriétaire du 6 novembre, A4-12) : MenuActivity réveille les Plopettes ;
+	-- un client modifié ne peut ni la faire passer plus d'une fois toutes les 10 s, ni s'en servir pour
+	-- changer quoi que ce soit d'autre (profil, pièces, jauge, MEGA)
+	describe("RedTeam_Helpers › MenuActivity (lot A4)", function()
+		it(
+			"rafale de 1 000 MenuActivity : une seule passe le débit (1 / 10 s) ; profil inchangé, aucune pièce, zéro trace",
+			function()
+				local w = boot()
+				local p = join(w, 1)
+				Brains.frames(w, 2)
+				local Fuzz = require("../harness/Fuzz")
+				local active = w.Activity.lastActive(p)
+				local sent = {}
+				for _, name in { "DataPatch", "Feedback", "Celebrate" } do
+					sent[name] = #w.h:sentTo(p, name)
+				end
+				local ok, diff = Fuzz.profileUnchanged(w.h, p, function()
+					local passed = Fuzz.rate(w.h, p, "MenuActivity", 1000, {})
+					expect(passed).toBe(1)
+				end)
+				expect({ ok = ok, diff = diff }).toEqual({ ok = true, diff = nil })
+				for _, name in { "DataPatch", "Feedback", "Celebrate" } do
+					expect({ remote = name, n = #w.h:sentTo(p, name) }).toEqual({
+						remote = name,
+						n = sent[name],
+					})
+				end
+				expect(w.Activity.lastIntent(p)).toBe(w.Clock.now())
+				expect(w.Activity.lastActive(p)).toBe(active)
+				clean(w)
+			end
+		)
+
+		it(
+			"arguments hostiles (types faux, NaN, ±inf, chaînes énormes, tables profondes, arguments en trop) : sans effet de plus, aucune trace ; compte garé qui envoie MenuActivity sans menu : rien d'autre qu'un réveil",
+			function()
+				local w = boot()
+				local p = join(w, 1)
+				local q = join(w, 2, 0, 60)
+				Brains.frames(w, 2)
+				local RateLimit = w.h:require("ServerScriptService.Server.Util.RateLimit")
+				local deep = {}
+				local cur = deep
+				for _ = 1, 40 do
+					cur.x = {}
+					cur = cur.x
+				end
+				local Fuzz = require("../harness/Fuzz")
+				local activeP = w.Activity.lastActive(p)
+				local okQ, diffQ
+				local ok, diff = Fuzz.profileUnchanged(w.h, p, function()
+					okQ, diffQ = Fuzz.profileUnchanged(w.h, q, function()
+						for _, args in
+							{
+								{ 0 / 0 },
+								{ math.huge, -math.huge },
+								{ string.rep("A", 100000) },
+								{ deep },
+								{ { [1] = 1, [3] = 3, x = "y" } },
+								{ q.UserId, "1", true, nil, 5 },
+								{ "\255\254" },
+							}
+						do
+							RateLimit.clear(p)
+							w.h:fireServer(R .. "MenuActivity", p, table.unpack(args, 1, 5))
+						end
+					end)
+				end)
+				expect({ ok = ok, diff = diff }).toEqual({ ok = true, diff = nil })
+				expect({ ok = okQ, diff = diffQ }).toEqual({ ok = true, diff = nil })
+				-- l'autre joueur : jamais réveillé par MenuActivity de p ; p : au plus un réveil
+				expect(w.Activity.lastIntent(q)).toBe(-math.huge)
+				expect(w.Activity.lastActive(p)).toBe(activeP)
+				Brains.frames(w, 2)
+				expect(w.Helper.state(q)).toBe("nap")
+				clean(w)
+			end
+		)
+	end)
+
 	describe("RedTeam_Helpers › position falsifiée près de la limite des 12 studs", function()
 		it(
 			"vraiment près (5 studs) mais téléportation annoncée loin : rewind, le squishy n'est jamais visé",

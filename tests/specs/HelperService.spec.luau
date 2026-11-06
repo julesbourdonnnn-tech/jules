@@ -944,6 +944,348 @@ return function(T)
 		)
 	end)
 
+	-- =========================================================================================
+	-- Lot A4 (étape 2) : restes du serveur (notes d'A3 du 6 novembre, 0 h 40 et 1 h 10 ; D1, D2 du plan)
+	-- =========================================================================================
+	describe("HelperService › lot A4 : recharge du joueur, jumeau en fusion", function()
+		it("pression du joueur juste après celle d'une Plopette : refusée (recharge)", function()
+			local w, p = world({ n = 8 })
+			until_(w, 100, function()
+				return #w.pressed > 0
+			end)
+			local e = w.pressed[1]
+			-- recharge posée par SquishyService.helperPressed : celle d'une pression du joueur
+			expect(w.Squishy.readyAt(p, e.uid)).toBe(e.t + w.Balance.Press.Cooldown)
+			-- le joueur arrive tout de suite sur le squishy et presse : refusé (recharge), rien de payé
+			Bots.place(p, nearPlace(w, p, e.uid, 3))
+			Brains.frames(w, 2)
+			expect(w.Clock.now() < e.t + w.Balance.Press.Cooldown).toBe(true)
+			w.h:fireServer(R .. "Press", p, e.uid, w.Clock.now())
+			expect(w.playerPresses).toBe(0)
+			-- la recharge finie, la même pression passe
+			while w.Clock.now() < e.t + w.Balance.Press.Cooldown do
+				Brains.frames(w, 1)
+			end
+			w.RateLimit = w.RateLimit or w.h:require("ServerScriptService.Server.Util.RateLimit")
+			w.RateLimit.clear(p)
+			w.h:fireServer(R .. "Press", p, e.uid, w.Clock.now())
+			expect(w.playerPresses).toBe(1)
+			clean(w)
+		end)
+
+		it(
+			"jumeau en fusion jamais visé ; visé puis mis en fusion pendant le saut : abandonné, rien payé",
+			function()
+				-- 6 jumeaux (espèce 2) et 2 seuls : « Tout fusionner » réserve les 6 pendant tout le plan
+				local squishies = pen(6)
+				table.insert(squishies, { s = 3, z = 900 })
+				table.insert(squishies, { s = 4, z = 950 })
+				local w, p = world({ squishies = squishies })
+				-- une pression d'aide payée : jamais pour un squishy réservé à cet instant (revu à tPress)
+				local busyPaid = 0
+				w.Signals.HelperPressed:Connect(function(owner, _, uid)
+					if w.Squishy.busy(owner, uid) then
+						busyPaid += 1
+					end
+				end)
+				w.h:fireServer(R .. "FuseAll", p)
+				expect(w.Squishy.busy(p, "1")).toBe(true)
+				-- chaque cible choisie pendant le plan : jamais un squishy réservé à cet instant
+				local chosen, duringPlan = 0, 0
+				for _ = 1, 80 do
+					local before = #messages(w, p)
+					local planOn = w.Squishy.busy(p, "1") or w.Squishy.busy(p, "2")
+					Brains.frames(w, 1)
+					local msgs = messages(w, p)
+					for i = before + 1, #msgs do
+						for _, entry in msgs[i].presses do
+							chosen += 1
+							if planOn then
+								duringPlan += 1
+							end
+							expect({ uid = entry.uid, busy = w.Squishy.busy(p, entry.uid) }).toEqual({
+								uid = entry.uid,
+								busy = false,
+							})
+						end
+					end
+				end
+				expect(chosen > 0).toBe(true)
+				expect(duringPlan > 0).toBe(true) -- les deux seuls (7, 8) visés pendant le plan
+				expect(busyPaid).toBe(0)
+				clean(w)
+
+				-- visé, puis mis en fusion 0,2 s avant tPress (le jumeau disparaît 0,4 s plus tard) : abandon
+				local w2, p2 = world({ n = 8 })
+				until_(w2, 50, function()
+					return #messages(w2, p2) > 0
+				end)
+				local first = messages(w2, p2)[1].presses
+				table.sort(first, function(a, b)
+					return a.tPress < b.tPress
+				end)
+				local target = first[1]
+				local partner = nil
+				local aimed = {}
+				for _, entry in first do
+					aimed[entry.uid] = true
+				end
+				for k = 1, 8 do
+					if not aimed[tostring(k)] then
+						partner = tostring(k)
+						break
+					end
+				end
+				expect(partner ~= nil).toBe(true)
+				while w2.Clock.now() + 0.1 < target.tPress - 0.2 - 1e-6 do
+					Brains.frames(w2, 1)
+				end
+				w2.h:fireServer(R .. "FuseMenu", p2, target.uid, partner)
+				expect(w2.Squishy.busy(p2, target.uid)).toBe(true)
+				local abandoned = w2.Helper.counters().Abandoned
+				Brains.frames(w2, 5)
+				for _, e in w2.pressed do
+					expect(e.uid ~= target.uid and e.uid ~= partner).toBe(true)
+				end
+				expect(w2.Helper.counters().Abandoned > abandoned).toBe(true)
+				clean(w2)
+			end
+		)
+	end)
+
+	describe("HelperService › lot A4 : attributs du ranch HelperMode et Helpers (D2)", function()
+		-- appels de RanchService.setV2Attributes qui touchent HelperMode ou Helpers
+		-- appels de RanchService.setV2Attributes qui ne portent que HelperMode et Helpers (appels VIDES
+		-- compris : un appel à chaque tick sans rien de changé est aussi compté ; les autres services
+		-- posent d'autres noms et RanchService.refreshV2 n'appelle jamais sans rien)
+		local function watchAttrs(w)
+			local calls = {}
+			local original = w.Ranch.setV2Attributes
+			local mine = { HelperMode = true, Helpers = true }
+			w.Ranch.setV2Attributes = function(player, attrs, clear)
+				local only = true
+				for name in if type(attrs) == "table" then attrs else {} do
+					only = only and mine[name] == true
+				end
+				for _, name in if type(clear) == "table" then clear else {} do
+					only = only and mine[name] == true
+				end
+				if only then
+					table.insert(calls, { player = player, attrs = attrs, clear = clear })
+				end
+				return original(player, attrs, clear)
+			end
+			return calls
+		end
+
+		local function attr(w, p, name)
+			local World = w.h:require(S .. "WorldService")
+			local model = World.ranchModel(w.Ranch.slotOf(p))
+			return model and model:GetAttribute(name)
+		end
+
+		it(
+			"HelperMode posé une fois par changement (active, nap, paused), jamais à chaque tick ; Helpers = nombre de Plopettes",
+			function()
+				local w = boot()
+				local calls = watchAttrs(w)
+				local p = Brains.join(w, 1, { profile = owner(w, { plume = false }) })
+				Bots.place(p, at(w, p, 0, 60))
+				Brains.frames(w, 2)
+				-- aucune intention depuis l'arrivée : sieste, 5 Plopettes (Record R 12, sans Plume)
+				expect(attr(w, p, "HelperMode")).toBe("nap")
+				expect(attr(w, p, "Helpers")).toBe(5)
+				expect(#calls).toBe(1)
+				Brains.frames(w, 100)
+				expect(#calls).toBe(1) -- rien à chaque tick
+				wake(w, p)
+				Brains.frames(w, 2)
+				expect(attr(w, p, "HelperMode")).toBe("active")
+				expect(#calls).toBe(2)
+				Brains.frames(w, 300)
+				expect(#calls).toBe(2)
+				w.Helper.pause(p, "photo")
+				Brains.frames(w, 2)
+				expect(attr(w, p, "HelperMode")).toBe("paused")
+				expect(w.Helper.pauseReason(p)).toBe("photo")
+				w.Helper.resume(p)
+				Brains.frames(w, 2)
+				expect(attr(w, p, "HelperMode")).toBe("active")
+				expect(#calls).toBe(4)
+				-- Plume achetée : une Plopette de plus, Helpers republié au tick suivant (UpgradeBought)
+				local data = w.DS.get(p)
+				data.atelier[w.Upgrades.WorkshopIndex.plume] = 1
+				w.Signals.UpgradeBought:Fire(p, "plume", 0, 1, "confetti")
+				Brains.frames(w, 1)
+				expect(attr(w, p, "Helpers")).toBe(6)
+				expect(#calls).toBe(5)
+				-- nouveau Record R (Pip … Puff déjà là) : rien ne change, rien n'est republié
+				w.Signals.RecordReached:Fire(p, 13)
+				Brains.frames(w, 20)
+				expect(attr(w, p, "Helpers")).toBe(6)
+				expect(#calls).toBe(5)
+				-- sieste 5 min plus tard (aucune intention) : une fois
+				Brains.frames(w, 3010)
+				expect(attr(w, p, "HelperMode")).toBe("nap")
+				expect(#calls).toBe(6)
+				clean(w)
+			end
+		)
+
+		it(
+			"Record R 0 (aucune Plopette) : Helpers = 0, HelperMode absent ; Record R 2 atteint : Helpers = 1 et HelperMode",
+			function()
+				local w = boot()
+				local p = Brains.join(w, 1, { profile = owner(w, { bestR = 0, R = 0, plume = false }) })
+				Bots.place(p, at(w, p, 0, 60))
+				Brains.frames(w, 2)
+				expect(attr(w, p, "Helpers")).toBe(0)
+				expect(attr(w, p, "HelperMode")).toBeNil()
+				local data = w.DS.get(p)
+				data.R = 2
+				data.bestR = 2
+				w.Signals.RecordReached:Fire(p, 2)
+				Brains.frames(w, 2)
+				expect(attr(w, p, "Helpers")).toBe(1)
+				expect(attr(w, p, "HelperMode")).toBe("nap")
+				clean(w)
+			end
+		)
+
+		it(
+			"absents interrupteur coupé et pour un profil v1 ; effacés quand l'interrupteur est coupé en direct et au départ",
+			function()
+				local w, p = world({ off = true })
+				Brains.frames(w, 20)
+				expect(attr(w, p, "HelperMode")).toBeNil()
+				expect(attr(w, p, "Helpers")).toBeNil()
+				-- ouvert en direct : posés ; coupé en direct : effacés au tick suivant
+				assert(w.Features.set("Helpers", true))
+				wake(w, p)
+				Brains.frames(w, 2)
+				expect(attr(w, p, "HelperMode")).toBe("active")
+				expect(attr(w, p, "Helpers")).toBe(6)
+				assert(w.Features.set("Helpers", false))
+				Brains.frames(w, 1)
+				expect(attr(w, p, "HelperMode")).toBeNil()
+				expect(attr(w, p, "Helpers")).toBeNil()
+				-- rouvert : reposés ; départ : effacés avec le ranch, rien de gardé
+				assert(w.Features.set("Helpers", true))
+				Brains.frames(w, 2)
+				expect(attr(w, p, "Helpers")).toBe(6)
+				local World = w.h:require(S .. "WorldService")
+				local model = World.ranchModel(w.Ranch.slotOf(p))
+				Bots.leave(p)
+				w.h:settle(2)
+				Brains.frames(w, 2)
+				expect(model:GetAttribute("HelperMode")).toBeNil()
+				expect(model:GetAttribute("Helpers")).toBeNil()
+				expect(w.Helper.counters().Owners).toBe(0)
+				clean(w)
+				-- profil v1 (serveur v1), interrupteur ouvert : jamais posés
+				local w1 = boot({ v1 = true })
+				local q = Brains.join(w1, 1, { profile = Brains.profile(w1, { R = 12, squishies = pen() }) })
+				Bots.place(q, at(w1, q, 0, 60))
+				wake(w1, q)
+				Brains.frames(w1, 30)
+				expect(attr(w1, q, "HelperMode")).toBeNil()
+				expect(attr(w1, q, "Helpers")).toBeNil()
+				clean(w1)
+			end
+		)
+	end)
+
+	describe(
+		"HelperService › lot A4 : MenuActivity (N23, décision du propriétaire du 6 novembre)",
+		function()
+			it(
+				"MenuActivity réveille la sieste sans marquer lastActive ; jamais une récompense (profil, Feedback, DataPatch inchangés)",
+				function()
+					local w, p = world({ awake = false })
+					Brains.frames(w, 2)
+					expect(w.Helper.state(p)).toBe("nap")
+					local active = w.Activity.lastActive(p)
+					local data = w.DS.get(p)
+					local Tables = w.h:require(L .. "Util.Tables")
+					local copy = Tables.deepCopy(data)
+					local sent = { "DataPatch", "Feedback", "Celebrate", "Banner" }
+					local counts = {}
+					for _, name in sent do
+						counts[name] = #w.h:sentTo(p, name)
+					end
+					w.h:fireServer(R .. "MenuActivity", p)
+					w.h:settle(1)
+					expect(w.Activity.lastIntent(p)).toBe(w.Clock.now())
+					expect(w.Activity.lastActive(p)).toBe(active)
+					expect(Tables.deepEqual(data, copy)).toBe(true)
+					for _, name in sent do
+						expect({ remote = name, n = #w.h:sentTo(p, name) }).toEqual({
+							remote = name,
+							n = counts[name],
+						})
+					end
+					-- réveil : les Plopettes repartent
+					Brains.frames(w, 60)
+					expect(w.Helper.state(p) ~= "nap").toBe(true)
+					expect(#pressesOf(w, p) > 0).toBe(true)
+					clean(w)
+				end
+			)
+
+			it(
+				"MenuActivity refusée : interrupteur coupé, profil v1, joueur pas prêt, sans vie, parti",
+				function()
+					-- interrupteur coupé
+					local w, p = world({ off = true, awake = false })
+					w.h:fireServer(R .. "MenuActivity", p)
+					w.h:settle(1)
+					expect(w.Activity.lastIntent(p)).toBe(-math.huge)
+					clean(w)
+					-- profil v1 (serveur v1)
+					local w1 = boot({ v1 = true })
+					local q =
+						Brains.join(w1, 1, { profile = Brains.profile(w1, { R = 12, squishies = pen() }) })
+					Brains.frames(w1, 2)
+					w1.h:fireServer(R .. "MenuActivity", q)
+					w1.h:settle(1)
+					expect(w1.Activity.lastIntent(q)).toBe(-math.huge)
+					clean(w1)
+					-- joueur pas prêt (PlayerReady pas encore émis), puis sans vie, puis parti
+					local w2, r = world({ awake = false })
+					local RateLimit = w2.h:require("ServerScriptService.Server.Util.RateLimit")
+					local isReady = w2.Ranch.isReady
+					w2.Ranch.isReady = function()
+						return false
+					end
+					w2.h:fireServer(R .. "MenuActivity", r)
+					w2.h:settle(1)
+					w2.Ranch.isReady = isReady
+					expect(w2.Activity.lastIntent(r)).toBe(-math.huge)
+					local humanoid = r.Character:FindFirstChildOfClass("Humanoid")
+					local health = humanoid.Health
+					humanoid.Health = 0
+					RateLimit.clear(r)
+					w2.h:fireServer(R .. "MenuActivity", r)
+					w2.h:settle(1)
+					expect(w2.Activity.lastIntent(r)).toBe(-math.huge)
+					humanoid.Health = health
+					RateLimit.clear(r)
+					w2.h:fireServer(R .. "MenuActivity", r)
+					w2.h:settle(1)
+					local t = w2.Activity.lastIntent(r)
+					expect(t).toBe(w2.Clock.now())
+					Bots.leave(r)
+					w2.h:settle(2)
+					RateLimit.clear(r)
+					w2.h:fireServer(R .. "MenuActivity", r)
+					w2.h:settle(1)
+					expect(w2.Activity.lastIntent(r)).toBe(-math.huge)
+					clean(w2)
+				end
+			)
+		end
+	)
+
 	describe("HelperService › coût du tick", function()
 		-- A3-22 (rouge d'abord) : le budget de passes de choix du tick (Rules.CHOOSE_PER_TICK) ne sert
 		-- pas toujours les mêmes ranchs en premier (ordre de Players:GetPlayers) : tour de rôle
