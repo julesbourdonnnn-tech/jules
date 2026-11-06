@@ -542,7 +542,11 @@ end
 function DiagnosticsService.step(now: number)
 	local t = if finite(now) then now else Clock.now()
 	if meta ~= nil then
-		Guard.try("diagnostics:meta", meta.step, t)
+		-- pcall direct (Guard.try alloue une table par appel) : rien d'alloué par tick, interrupteurs coupés
+		local ok, err = pcall(meta.step, t)
+		if not ok then
+			Guard.caught("diagnostics:meta", err)
+		end
 	end
 	Guard.try("diagnostics:analytics", Analytics.step, t)
 	if t - lastFlush < LIMITS.FlushInterval or flushing then

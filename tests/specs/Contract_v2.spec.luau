@@ -908,6 +908,31 @@ return function(T)
 				expect(Intents.SetPhotoMode.rate).toEqual({ 1, 1 })
 				expect(Intents.SetPhotoMode.activity).toBeNil()
 				expect(Intents.SetPhotoMode.args).toEqual({ { name = "on", kind = "bool" } })
+				-- lot A4 (étape 6, D29, journal A4-44) : ClientMetric, faits mesurés par le client v2.0 ;
+				-- DiagnosticsService, jamais une intention de jeu, une toutes les 5 s, valeur entière 0-1000
+				expect(IV2.ClientMetric).toBeNil()
+				expect(Intents.ClientMetric.owner).toBe("DiagnosticsService")
+				expect(Intents.ClientMetric.activity).toBeNil()
+				expect(Intents.ClientMetric.rate).toEqual({ 1, 5 })
+				expect(Intents.ClientMetric.args).toEqual({
+					{
+						name = "kind",
+						kind = "key",
+						set = {
+							"upgradeTimeout",
+							"upgradeMode",
+							"ascendPreview",
+							"ascendDeclined",
+							"textScale",
+							"styleFallback",
+							"visualBudget",
+						},
+					},
+					{ name = "value", kind = "int", min = 0, max = 1000 },
+				})
+				expect(R.ClientMetric).toBe("event")
+				-- ClientEvent reste celui de la v1.3 (deux sortes, analytique seulement)
+				expect(Intents.ClientEvent.args[1].set).toEqual({ "qualityReduced", "shopOpened" })
 				-- débits du GDD v2.0 §12.7
 				expect(Intents.BuyUpgrade.rate).toEqual({ 10, 1 })
 				expect(Intents.JellyAscend.rate).toEqual({ 1, 5 })
@@ -943,6 +968,7 @@ return function(T)
 					"GiveHeart",
 					"SetPhotoMode",
 					"MenuActivity", -- lot A4 (N23, journal A4-12)
+					"ClientMetric", -- lot A4 (étape 6, D29, journal A4-44)
 					"UpgradeResult",
 					"HelperPress",
 				}

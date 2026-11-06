@@ -2750,11 +2750,14 @@ Déclarés dans `Shared/Remotes.luau`, créés par `Net.setup()`. Chaque handler
 | `BuyTile` (v1.3) | Inchangé pour les dalles au sol | Même fonction serveur et même `UpgradeMath` que `BuyUpgrade` (`expectedLevel` pris au niveau actuel) | 10 / s |
 | `GrandSplorch` (v1.3) | Inchangé | Sert aussi au Petit Splorch (r après la renaissance ≤ Record R ; depuis l'aperçu ou le maintien de 1,5 s sur la puce d'action spéciale, critique M16) : mêmes conditions d'entrée, appliqué tout de suite, hors file | 1 / 2 s |
 | `JellyAscend` | `confirm: boolean` | `Prestige.ascendReady` (r ≥ condition, A < 60) ; dans son ranch, rien porté, aucun squishy en fuite ; **un seul prestige par joueur dans la file** ; vérifié une seule fois, à l'entrée dans la file | 1 / 5 s |
-| `SetRanchSkin` | `id: string` | Habillage gagné (Record R, A, Carnet, Squishydex, jours de Plop) | 2 / s |
+| `EquipCosmetic` (v1.3) | `kind` + `"palette"`, `"cushions"` ; `theme` accepte les 14 habillages | Cosmétique possédé (`Logic/Owned` : Record R, A, Atelier, Carnet, piste, saison, jalons géants ; chaque source derrière son interrupteur). **Pas de remote `SetRanchSkin`** (décision C2 du contrat) : l'habillage du ranch passe par `EquipCosmetic("theme", id)` | 2 / s |
 | `PlaceDeco` | `item: number, slot: number` | Objet possédé (`Bitset`), emplacement 1 à 12 de la bonne taille ; 0 = retirer | 4 / s |
 | `GiveHeart` | `ownerId: number` | Propriétaire présent, pas soi-même, pas bloqué (liste souple), 1 par ranch et par jour, 20 par jour | 2 / s |
 | `MenuActivity` | — | Envoyée par le client à l'ouverture d'un panneau et pendant la navigation dans un menu (une au plus toutes les 20 s, décision du propriétaire du 6 novembre) ; acceptée seulement Plopettes ouvertes, profil v2, joueur prêt et vivant ; réveille seulement les Plopettes (sieste, §4.28) : jamais une récompense, une progression, ni une activité de la jauge ou du MEGA | 1 / 10 s |
-| `SetSetting` (v1.3) | + `haloOn: boolean` | Comme v1.3 | 4 / s |
+| `SetPhotoMode` | `on: boolean` | Interrupteur du mode photo, joueur chargé ; état en mémoire et analytique seulement : le personnage reste **visible** des autres (N22), aucun avantage | 1 / s |
+| `UiSeen` (v1.3) | + `"nextBuy"` | Puce « Prochain achat » apparue : `onboarding.nextBuyShown` une fois (profil v2) ; ne donne jamais rien | 2 / s |
+| `ClientMetric` | `kind: string, value: number` | Faits que seul le client mesure : `upgradeTimeout`, `upgradeMode` (1, 10 ou 0 = Max) [écran Améliorations] ; `ascendPreview` (0 ouvert, 1 annulé, 2 confirmé), `ascendDeclined` (jours) [Jelly Ascend] ; `textScale` (facteur × 100), `styleFallback`, `visualBudget` [toujours] ; entier de 0 à 1 000 ; 20 par session ; compteurs de Diagnostics et analytique **seulement** (§16), jamais un changement du jeu | 1 / 5 s |
+| `SetSetting` (v1.3) | + `haloOn: boolean` ; `emoteLeft` + les 6 emotes v2.0 possédées | Comme v1.3 | 4 / s |
 
 | Remote (serveur → client) | Charge utile | Destinataires |
 |---|---|---|
@@ -3040,10 +3043,10 @@ Tout passe par `Server/Util/Analytics` (repris, appels protégés par `pcall`). 
 | Puits | Coins | `Tile_<dalle>` (snack, decor, pens), `CozyBed` | Shop |
 | Source *(v2.0)* | Coins | `Helper`, `SplorchGiftOwn` (cadeau du Splorch), `StarRain` | Gameplay |
 | Puits *(v2.0)* | Coins | `Upgrade_<famille>` (star, gloves, school, monument) | Shop |
-| Source *(v2.0)* | Confetti | `GrandSplorch`, `PetitSplorch`, `Skipped`, `Ascend`, `RecordBonus`, `FullPen`, `WeeklyTrack`, `Mastery` | Gameplay, TimedReward |
-| Puits *(v2.0)* | Confetti | `Workshop_<ligne>`, `Fun_<cosmétique>` | Shop |
+| Source *(v2.0)* | Confetti | `GrandSplorch`, `PetitSplorch`, `Skipped`, `Ascend`, `Regain`, `RecordBonus`, `FullPen`, `Mastery` (Gameplay) ; `WeeklyTrack` (TimedReward) | Gameplay, TimedReward |
+| Puits *(v2.0)* | Confetti | `Workshop_<ligne>` (lignes de l'Atelier), `Fun_<ligne>` (« Pour le plaisir » : `palettes`, `saddle`, `trail`, `emote`, `pennants`, `title`, `decoShop`) | Shop |
 
-**Toutes les sources et tous les puits sont cumulés par joueur et par tranche de 5 min** : un événement par `itemSku` et par tranche (une pression par seconde aurait fait 180 événements par minute et par joueur). Les montants et le solde sont exprimés en **secondes de revenu** du joueur au moment de l'envoi (lisibles à tous les niveaux, alors que les pièces dépassent 1e19), et le niveau des dalles n'est pas dans l'`itemSku` (au-delà de 100 `itemSku`, Roblox range le reste dans « Other ») : il est mesuré par `TileLevelAtSplorch` (§16.3). Aucun achat Robux ne donne de pièces au lancement (§8.3).
+**Toutes les sources et tous les puits sont cumulés par joueur et par tranche de 5 min** : un événement par `itemSku` et par tranche (une pression par seconde aurait fait 180 événements par minute et par joueur). Les montants et le solde sont exprimés en **secondes de revenu** du joueur au moment de l'envoi (lisibles à tous les niveaux, alors que les pièces dépassent 1e19) ; *(v2.0)* les Confettis restent en **unités brutes** (solde = Confettis en poche), et le niveau des dalles n'est pas dans l'`itemSku` (au-delà de 100 `itemSku`, Roblox range le reste dans « Other ») : il est mesuré par `TileLevelAtSplorch` (§16.3). Aucun achat Robux ne donne de pièces au lancement (§8.3).
 
 ### 16.3 Événements personnalisés (`LogCustomEvent`) *(v2.0 : modifié)*
 
@@ -3081,17 +3084,19 @@ Tout passe par `Server/Util/Analytics` (repris, appels protégés par `pcall`). 
 | `QualityReduced` | 1 quand la qualité adaptative descend, avec l'appareil | La console la plus faible tient-elle le budget ? |
 | `TouchDeviceJoined` | 1 | Un appareil tactile arrive-t-il malgré les réglages ? |
 | `Upgrade_<famille>` *(v2.0)* | Niveaux achetés (cumulés par tranche de 5 min) | Chaque famille est-elle achetée ? |
-| `UpgradeMode` *(v2.0)* | 1 ×1 / 10 ×10 / 0 Max | Le mode Max est-il compris (test M14) ? |
-| `WorkshopBuy_<ligne>` *(v2.0)* | Niveau acheté | Quelles lignes de l'Atelier d'abord ? |
-| `ConfettiEarned` *(v2.0)* | Source et nombre | Les Confettis arrivent-ils au rythme du §4.26 ? |
-| `UpgradeTimeout`, `UpgradeStale` *(v2.0)* | 1 par réponse manquée en 3 s / par refus périmé | Le réseau fait-il échouer des achats ? |
-| `NextGoalGap` *(v2.0)* | Histogramme serveur du temps de jeu depuis le dernier achat ou but | Le joueur a-t-il toujours un but proche (§4.24, temps « sans but ») ? |
-| `HelperCoinsShare` *(v2.0)* | Part des Plopettes dans les pièces gagnées en jeu | Cible 5-15 % (§4.28) |
-| `RanchTierReached` *(v2.0)* | Palier | Rythme des paliers de ranch |
-| `AscendPreview` *(v2.0)* | opened / cancelled / confirmed | L'Ascension fait-elle peur ? |
+| `UpgradeMode` *(v2.0)* | 1 par choix de mode, champ `mode` : x1 / x10 / max (envoyé par le client, cumulé par tranche) | Le mode Max est-il compris (test M14) ? |
+| `WorkshopBuy_<ligne>` *(v2.0)* | Niveaux achetés, champ `level` = niveau atteint (cumulés par tranche) | Quelles lignes de l'Atelier d'abord ? |
+| `ConfettiEarned` *(v2.0)* | Nombre, champ `source` (itemSku du §16.2), cumulé par tranche et par source | Les Confettis arrivent-ils au rythme du §4.26 ? |
+| `UpgradeTimeout`, `UpgradeStale` *(v2.0)* | 1 par réponse manquée en 3 s (client) / par refus périmé (serveur), cumulés par tranche | Le réseau fait-il échouer des achats ? |
+| `NextGoalGap` *(v2.0)* | Secondes de jeu passées plus de 3 min de jeu après le dernier achat ou but (cumulées par tranche ; une seconde compte si le joueur a fait une intention acceptée, menus compris, dans les 5 dernières minutes) | Le joueur a-t-il toujours un but proche (§4.24, temps « sans but ») ? |
+| `HelperCoinsShare` *(v2.0)* | Part des Plopettes dans les pièces gagnées en jeu, en % (une décimale), une par tranche de 5 min où elles ont rapporté | Cible 5-15 % (§4.28) |
+| `RanchTierReached` *(v2.0)* | Palier (1 à 6), champ `bestR` | Rythme des paliers de ranch |
+| `AscendPreview` *(v2.0)* | 1 par étape de l'aperçu, champ `step` : opened / cancelled / confirmed (envoyé par le client, cumulé par tranche) | L'Ascension fait-elle peur ? |
 | `AscendDone` *(v2.0)* | A, r, jours depuis la précédente | Rythme réel contre §4.24 |
 | `PetitSplorch` *(v2.0)* | 1, avec la durée de la boucle | Les remontées vont-elles vite ? |
 | `WeeklyTrackTier` *(v2.0)* | Palier | La piste est-elle atteignable ? |
+| `TextScaleMeasured` *(v2.0)* | Facteur de taille du texte mesuré par le client × 100 | Les textes tiennent-ils sur la vraie console (§12.9) ? |
+| `PhotoMode` *(v2.0)* | Entrées en mode photo (cumulées) | Le mode photo sert-il ? |
 
 ### 16.4 Seuils d'alerte et actions (par la configuration, sans nouvelle version) *(v2.0 : modifié)*
 

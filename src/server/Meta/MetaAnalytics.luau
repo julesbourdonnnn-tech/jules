@@ -191,7 +191,14 @@ end
 
 -- Temps de jeu sans but (DiagnosticsService.step, 10 Hz ; compté une fois par seconde)
 function MetaAnalytics.step(now: number)
-	if not finite(now) or now - lastStep < MetaAnalytics.StepEvery then
+	if not finite(now) then
+		return
+	end
+	if now < lastStep then
+		lastStep = now -- horloge revenue en arrière : on repart d'ici, rien n'est compté
+		return
+	end
+	if now - lastStep < MetaAnalytics.StepEvery then
 		return
 	end
 	local dt = math.clamp(now - lastStep, 0, 2 * MetaAnalytics.StepEvery)
