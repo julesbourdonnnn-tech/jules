@@ -1315,6 +1315,12 @@ function EventService.addGauge(points: number)
 	addPoints(points)
 end
 
+-- Fonction ajoutée (v2.0, lot A4) : points de la place en fête du serveur (lecture : specs, Diagnostics) ;
+-- le niveau diffusé est EventState.fete.level
+function EventService.fetePoints(): number
+	return fete.points
+end
+
 -- Place dans la file ; rend le Clock.now() de départ prévu (même entrée rendue si déjà en file). Sortes :
 -- "splorch", "dance" et (v2.0) "ascend" ; un seul prestige par joueur : règle de SplorchService
 function EventService.enqueueSpectacle(kind: SpectacleKind, userId: number): number
