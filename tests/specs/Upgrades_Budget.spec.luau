@@ -58,8 +58,9 @@ return function(T)
 				)
 				expect(gui <= S.Layout.Upgrades.MaxInstances).toBe(true)
 				expect(whole <= 3000).toBe(true)
-				-- relevé du lot B2, étape 2 (garde contre une régression ; journal B2-n)
-				expect(all <= 2075).toBe(true)
+				-- relevé du lot B2 (garde contre une régression ; journal B2-n) : 2 062 instances à l'étape 2,
+				-- 2 106 à l'étape 3 (anneau du maintien : 25 ; glyphe de l'appareil du bandeau : 19)
+				expect(all <= 2120).toBe(true)
 				local base = #c.h.localPlayer.PlayerGui:GetDescendants()
 				for _, tab in { "ranch", "helpers", "workshop", "suggested" } do
 					c.Up.setTab(tab)

@@ -26,10 +26,34 @@
 --  * console d'abord : croix, ✕ et ○ suffisent ; L1 / R1 changent d'onglet (PanelController) ; □ (E au
 --    clavier) change le mode ×1 → ×10 → Max → ×1 ; ↑ depuis les onglets atteint le bouton de mode ;
 --    lignes en lecture seule sélectionnables, ✕ y joue Bump sans vibration ; le mode revient à ×1 à
---    chaque ouverture. Les achats (maintien de 0,6 s) arrivent à l'étape 3.
+--    chaque ouverture.
+-- Achats (lot B2, étape 3 ; décisions D9, D10, D11, D28 ; GDD §10.7.6, §10.7.8, §10.7.9 ; règles 12 à
+-- 15 et 17 du §10.8) :
+--  * tout achat, ×1 compris, par un maintien de Balance.Upgrades.HoldSeconds (0,6 s) de Widgets.holdOn
+--    sur la carte ou la ligne (InputBegan capté, jamais Activated ; jamais sur un bouton caché, grisé
+--    ou remplacé ; garde d'entrée de FocusGuard) ; anneau de 12 points autour du glyphe (carte) ou du
+--    dessin de l'état (ligne) ; relâché trop tôt : l'anneau se vide, son Bump, le bandeau dit
+--    « Maintiens pour acheter » avec le glyphe de l'appareil ;
+--  * maintien permis seulement sur une ligne Prête ou « Réessaie » (le même geste renvoie, D9) ;
+--    « Il manque » : refus doux (Bump, vibration refuse, aucune secousse) ; lecture seule, cadenas,
+--    MAX, plafond de la boucle : Bump ; « En cours » : appuis ignorés ;
+--  * BuyUpgrade(identifiant canonique, mode 1 | 10 | 0, niveau attendu = niveau montré) par
+--    Hud/UpgradeBuys (jamais une intention invalide) ; « en cours » 3 s puis « Réessaie » ; réponse
+--    tardive appliquée avec un seul retour ; refus périmé muet ; réponse d'un BuyTile ou de l'achat au
+--    sol : son instantané seulement ;
+--  * un retour par réponse, dans la ligne ou la carte même, 1,5 s : « +n niveaux · -prix » (niveaux et
+--    montant du serveur), « n sur m » d'un ×10 en partie, ou la raison du refus du serveur ; son
+--    TileBuild et vibration tileBuy (refus : Bump et refuse) ; aucun toast ; la carte garde sa famille,
+--    le focus reste sur la ligne achetée (même à MAX), rien ne reste appuyé ;
+--  * mode changé par le joueur : ClientMetric("upgradeMode") ; délai dépassé : ClientMetric
+--    ("upgradeTimeout", 0) (limiteur unique de Hud/UpgradeBuys, D10) ; mode et achat comptent comme
+--    navigation pour MenuActivity (navigateur, D11) ;
+--  * début de SON Grand Splorch ou de SA Jelly Ascend (Celebrate, ou EventState.spectacle.current) :
+--    l'écran se ferme (PanelController.closeAll) ; la réouverture est neuve (D28).
 
 local ContextActionService = game:GetService("ContextActionService")
 local GuiService = game:GetService("GuiService")
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
@@ -43,9 +67,11 @@ local Formulas = require(Shared.Logic.Formulas)
 local QuestRules = require(Shared.Logic.QuestRules)
 local BigNumber = require(Shared.Logic.BigNumber)
 local Localization = require(Shared.Localization)
+local Net = require(Shared.Net)
 
 local Client = script.Parent.Parent.Parent
 local Prefs = require(Client.Util.Prefs)
+local Haptics = require(Client.Util.Haptics)
 local AudioController = require(Client.Controllers.AudioController)
 local WorldStateController = require(Client.Controllers.WorldStateController)
 local Widgets = require(script.Parent.Widgets)
@@ -58,8 +84,14 @@ local UpgradeSnapshot = require(Client.UI.UpgradeSnapshot)
 local UpgradeCard = require(Client.UI.UpgradeCard)
 local Icons = require(Client.UI.Hud.Icons)
 local UpgradeView = require(Client.UI.Hud.UpgradeView)
+local UpgradeBuys = require(Client.UI.Hud.UpgradeBuys)
 
-type Nav = { open: (panel: string, tab: string?) -> (), back: () -> (), closeAll: (() -> ())? }
+type Nav = {
+	open: (panel: string, tab: string?) -> (),
+	back: () -> (),
+	closeAll: (() -> ())?,
+	activity: (() -> ())?, -- navigation dans le panneau (MenuActivity de PanelController, D11)
+}
 type Card = UpgradeCard.Card
 type View = UpgradeView.View
 type Snapshot = Types.UpgradeSnapshot
@@ -82,6 +114,15 @@ local TAB_WORD = Layout.Text.Min
 local CLOSE = 56 -- bouton Fermer (souris ; ○ à la manette)
 local COUNT_TIME = 0.4 -- s : compteur de l'en-tête (pièces, Confettis)
 local MODE_ACTION = "UpgradesMode"
+local FEEDBACK_SECONDS = 1.5 -- retour dans la ligne même (GDD §10.7.8)
+local HINT_SECONDS = 2 -- consigne « Maintiens pour acheter » après un relâchement trop tôt
+-- anneau du maintien : 12 points de 8 px sur un cercle de 28 px de rayon (autour d'un dessin de 48)
+local RING_DOTS = 12
+local RING_RADIUS = 28
+local RING_DOT = 8
+local RING_DIM = 0.65 -- transparence d'un point pas encore atteint
+local HOLD_GLYPH = 40 -- glyphe de l'appareil devant la consigne du bandeau
+local SPIN_PERIOD = 1.2 -- s : un tour du sablier « En cours »
 
 Upgrades.TABS = table.freeze({ "suggested", "ranch", "helpers", "workshop" })
 Upgrades.LIST_TABS = table.freeze({ "ranch", "helpers", "workshop" })
@@ -160,6 +201,24 @@ local counterConn: RBXScriptConnection? = nil
 local actionBound = false
 local lastPayableAt: number? = nil -- D29 : dernier instantané où une famille de pièces était payable
 local firstSeenAt: number? = nil
+
+-- achats (étape 3)
+local buys: UpgradeBuys.Buys? = nil
+local cardOf: { [Instance]: Card } = {} -- racine → composant (cartes et lignes)
+local holdOf: { [Instance]: Widgets.Hold } = {} -- maintien de 0,6 s de chaque carte et ligne à acheter
+local holdable: { [Instance]: boolean } = {}
+local origins: { [string]: Instance } = {} -- identifiant canonique → élément dont le maintien a acheté
+local feedbackUntil: { [Instance]: number } = {}
+local feedbackLog: { { id: string, key: string } } = {} -- retours montrés (specs ; 64 derniers)
+local hintObj: Instance? = nil -- consigne du maintien (relâché trop tôt) sur cet élément…
+local hintUntil = 0 -- … jusqu'à cette heure
+local ring: Frame? = nil
+local ringDots: { Frame } = {}
+local ringOwner: Instance? = nil
+local bannerGlyph: Frame? = nil
+local loopConn: RBXScriptConnection? = nil
+local showKind: string? = nil -- D28 : dernier spectacle de prestige du joueur déjà vu (sorte, début)
+local showStart: number? = nil
 
 -- =============================================================================================
 -- Outils
@@ -458,7 +517,7 @@ local function buildHeader(body: Frame)
 		color = Widgets.Colors.CardLight,
 		zIndex = 4,
 		onActivate = function()
-			Upgrades.cycleMode()
+			Upgrades._playerMode()
 		end,
 	})
 	Widgets.glyph(
@@ -617,6 +676,7 @@ local function buildCards(body: Frame)
 			Upgrades._activate(card.root)
 		end)
 		cards[i] = card
+		cardOf[card.root] = card
 		cardIds[i] = UpgradeAdvisor.NEUTRAL
 	end
 	suggestedFrame = frame
@@ -662,8 +722,10 @@ local function buildList(body: Frame, tab: string, snap: Snapshot)
 		row.root.Activated:Connect(function()
 			Upgrades._activate(row.root)
 		end)
+		row.root:SetAttribute("ReadOnly", view.readOnly)
 		rows[id] = row
 		rowTab[id] = tab
+		cardOf[row.root] = row
 	end
 	if tab == "workshop" then
 		-- coin « Conseillé » de l'Atelier : 3 étoiles dessinées posées à l'ouverture de l'onglet sur les
@@ -705,6 +767,65 @@ local function buildBanner(body: Frame)
 	Text.raw(l, "—")
 	l.Parent = frame
 	bannerLabel = l
+	-- glyphe de l'appareil devant la consigne « Maintiens pour acheter » (GDD §10.7.8) : caché sinon
+	local g = Instance.new("Frame")
+	g.Name = "HoldGlyph"
+	g.BackgroundTransparency = 1
+	g.BorderSizePixel = 0
+	g.Size = UDim2.fromOffset(HOLD_GLYPH, HOLD_GLYPH)
+	g.Position = UDim2.fromOffset(24, (D.h - HOLD_GLYPH) / 2)
+	g.ZIndex = 4
+	g.Visible = false
+	g.Parent = frame
+	Widgets.glyph(
+		g,
+		Enum.KeyCode.ButtonA,
+		Enum.KeyCode.Return,
+		HOLD_GLYPH,
+		UDim2.fromScale(0.5, 0.5),
+		Vector2.new(0.5, 0.5)
+	)
+	bannerGlyph = g
+end
+
+-- Anneau du maintien de 0,6 s (un seul pour l'écran : un seul maintien à la fois) : 12 points posés
+-- dans la carte ou la ligne maintenue, allumés au fil du maintien ; aucune instance créée ensuite
+local function buildRing(body: Frame)
+	local size = 2 * (RING_RADIUS + RING_DOT / 2)
+	local f = Instance.new("Frame")
+	f.Name = "HoldRing"
+	f.BackgroundTransparency = 1
+	f.BorderSizePixel = 0
+	f.AnchorPoint = Vector2.new(0.5, 0.5)
+	f.Size = UDim2.fromOffset(size, size)
+	f.ZIndex = 9
+	f.Active = false
+	f.Selectable = false
+	f.Visible = false
+	for i = 1, RING_DOTS do
+		local a = (i - 1) * 2 * math.pi / RING_DOTS
+		local d = Instance.new("Frame")
+		d.Name = "Dot" .. i
+		d.BorderSizePixel = 0
+		d.BackgroundColor3 = COLORS.text
+		d.BackgroundTransparency = RING_DIM
+		d.AnchorPoint = Vector2.new(0.5, 0.5)
+		d.Size = UDim2.fromOffset(RING_DOT, RING_DOT)
+		d.Position = UDim2.new(
+			0.5,
+			math.floor(math.sin(a) * RING_RADIUS + 0.5),
+			0.5,
+			-math.floor(math.cos(a) * RING_RADIUS + 0.5)
+		)
+		d.ZIndex = 9
+		d.Active = false
+		d.Selectable = false
+		Widgets.corner(d, UDim.new(0.5, 0))
+		d.Parent = f
+		ringDots[i] = d
+	end
+	f.Parent = body
+	ring = f
 end
 
 -- =============================================================================================
@@ -716,6 +837,15 @@ local function setBanner(t: UpgradeView.Text?)
 	if l == nil then
 		return
 	end
+	-- consigne du maintien : glyphe de l'appareil devant la phrase (la phrase se pousse à droite)
+	local glyph = t ~= nil and t.key == UpgradeView.HOLD.key
+	local g = bannerGlyph
+	if g ~= nil and g.Visible ~= glyph then
+		g.Visible = glyph
+		local x = if glyph then 24 + HOLD_GLYPH + 12 else 24
+		l.Position = UDim2.fromOffset(x, 12)
+		l.Size = UDim2.fromOffset(INNER - x - 24, U.Detail.h - 24)
+	end
 	if t == nil then
 		Text.raw(l, "—")
 	else
@@ -723,9 +853,14 @@ local function setBanner(t: UpgradeView.Text?)
 	end
 end
 
--- Phrase du bandeau pour l'objet sélectionné : celle de son état et du mode, sinon ce que devient la
--- ligne au Grand Splorch ; « — » pour un onglet ou le bouton de mode
+-- Phrase du bandeau pour l'objet sélectionné : la consigne du maintien juste après un relâchement trop
+-- tôt, sinon celle de son état et du mode, sinon ce que devient la ligne au Grand Splorch ; « — » pour
+-- un onglet ou le bouton de mode
 local function bannerFor(obj: Instance?)
+	if hintObj ~= nil and (obj == hintObj or obj == nil) and Clock.now() < hintUntil then
+		setBanner(UpgradeView.HOLD)
+		return
+	end
 	local view = if obj then views[obj] else nil
 	if view == nil then
 		setBanner(nil)
@@ -751,24 +886,55 @@ local function renderHeader(snap: Snapshot, animate: boolean)
 	end
 end
 
+-- Vue d'une ligne ou d'une carte de famille avec son achat en cours (« En cours » / « Réessaie » de
+-- l'identifiant canonique qu'elle enverrait)
+local function viewOf(id: string, snap: Snapshot, ctx: UpgradeView.Ctx): View
+	local view = UpgradeView.view(id, snap, mode, ctx)
+	local b = buys
+	local sendId = view.sendId
+	if b ~= nil and sendId ~= nil then
+		local pending = b:state(sendId)
+		if pending ~= nil then
+			view = UpgradeView.view(id, snap, mode, ctx, pending)
+		end
+	end
+	return view
+end
+
+-- Maintien permis seulement sur une ligne Prête ou « Réessaie » ; ailleurs l'appui suit _activate
+-- (refus doux, Bump, ou rien). Widgets : setEnabled(false) grise aussi le bouton ; une ligne « Il
+-- manque », MAX ou « En cours » garde son aspect, seul le maintien est coupé
+local function setHoldable(root: Instance, on: boolean)
+	local hold = holdOf[root]
+	if hold == nil or holdable[root] == on then
+		return
+	end
+	holdable[root] = on
+	hold.setEnabled(on)
+	if not on then
+		Widgets.setDisabled(root :: any, false)
+	end
+end
+
 local function renderRow(id: string, snap: Snapshot, ctx: UpgradeView.Ctx)
 	local row = rows[id]
 	if row == nil then
 		return
 	end
-	local view = UpgradeView.view(id, snap, mode, ctx)
+	local view = viewOf(id, snap, ctx)
 	views[row.root] = view
 	row:set(view.state, view)
+	setHoldable(row.root, not view.readOnly and (view.state == "ready" or view.state == "retry"))
 end
 
 local function renderCards(snap: Snapshot, ctx: UpgradeView.Ctx)
 	for i, card in cards do
 		local id = cardIds[i]
-		local view = if id == UpgradeAdvisor.NEUTRAL or id == UpgradeAdvisor.ASCEND
-			then UpgradeView.note(id, mode)
-			else UpgradeView.view(id, snap, mode, ctx)
+		local note = id == UpgradeAdvisor.NEUTRAL or id == UpgradeAdvisor.ASCEND
+		local view = if note then UpgradeView.note(id, mode) else viewOf(id, snap, ctx)
 		views[card.root] = view
 		card:set(view.state, view)
+		setHoldable(card.root, not note and (view.state == "ready" or view.state == "retry"))
 	end
 end
 
@@ -1041,6 +1207,282 @@ local function onSnapshot(snap: Snapshot)
 end
 
 -- =============================================================================================
+-- Achats (étape 3) : maintien de 0,6 s, « En cours » / « Réessaie », retours, prestige
+-- =============================================================================================
+
+-- Navigation dans le panneau (mode, achat) : MenuActivity de PanelController (D11)
+local function activity()
+	local n = nav
+	local fn = if n then n.activity else nil
+	if fn then
+		fn()
+	end
+end
+
+-- Anneau : `alpha` de 0 à 1 sur l'élément maintenu ; 0 : caché (relâché, fini, annulé)
+local function showRing(root: GuiObject, alpha: number)
+	local r = ring
+	if r == nil then
+		return
+	end
+	if alpha <= 0 then
+		if ringOwner == root or ringOwner == nil then
+			r.Visible = false
+			ringOwner = nil
+		end
+		return
+	end
+	if ringOwner ~= root then
+		local card = cardOf[root]
+		local center = UpgradeCard.RING_CENTER[if card and card.template == "row" then "row" else "card"]
+		r.Parent = root
+		r.Position = UDim2.fromOffset(center.X, center.Y)
+		ringOwner = root
+	end
+	local lit = math.clamp(math.ceil(alpha * RING_DOTS - 1e-6), 0, RING_DOTS)
+	for i, d in ringDots do
+		local t = if i <= lit then 0 else RING_DIM
+		if d.BackgroundTransparency ~= t then
+			d.BackgroundTransparency = t
+		end
+	end
+	if not r.Visible then
+		r.Visible = true
+	end
+end
+
+local function hideRing()
+	local r = ring
+	if r ~= nil then
+		r.Visible = false
+	end
+	ringOwner = nil
+end
+
+-- Élément d'un identifiant canonique (ligne qui l'envoie ; Tapis Étoilé : la ligne Tapis)
+local function rootFor(id: string): Instance?
+	local root = origins[id]
+	if root ~= nil then
+		return root
+	end
+	local row = rows[id] or (if id == "star" then rows.snack else nil)
+	return if row then row.root else nil
+end
+
+local step: () -> ()
+
+local function ensureLoop()
+	if loopConn == nil then
+		loopConn = RunService.Heartbeat:Connect(function()
+			step()
+		end)
+	end
+end
+
+-- Un tour de la boucle des achats (seulement tant qu'il y a un achat, un retour, une consigne ou une
+-- métrique à suivre : aucune connexion par image sinon)
+step = function()
+	local now = Clock.now()
+	local b = buys
+	if b ~= nil then
+		local changed = b:step()
+		local snap = display
+		if #changed > 0 and opened and snap ~= nil then
+			renderTab(current, snap)
+			bannerFor(GuiService.SelectedObject)
+		end
+	end
+	-- retours de 1,5 s (horloge recalée en arrière : fini aussi)
+	for root, untilT in feedbackUntil do
+		if now >= untilT or untilT - now > FEEDBACK_SECONDS + 1 then
+			feedbackUntil[root] = nil
+			local card = cardOf[root]
+			if card ~= nil then
+				card:feedback(nil)
+			end
+		end
+	end
+	-- consigne du maintien
+	if hintObj ~= nil and (now >= hintUntil or hintUntil - now > HINT_SECONDS + 1) then
+		hintObj = nil
+		if opened then
+			bannerFor(GuiService.SelectedObject)
+		end
+	end
+	-- sablier « En cours » qui tourne (Mouvement réduit : immobile)
+	local spinning = false
+	if opened then
+		local angle = if Juice.reducedMotion() then 0 else (now % SPIN_PERIOD) / SPIN_PERIOD * 360
+		for _, card in cardOf do
+			if card.state == "busy" and card.root.Visible then
+				card:spin(angle)
+				spinning = true
+			end
+		end
+	end
+	local more = (b ~= nil and b:busy()) or next(feedbackUntil) ~= nil or hintObj ~= nil or spinning
+	if not more and loopConn ~= nil then
+		loopConn:Disconnect()
+		loopConn = nil
+	end
+end
+
+-- Maintien fini (0,6 s) sur une carte ou une ligne : BuyUpgrade exact de sa vue, ligne « En cours »
+local function onHoldDone(root: GuiObject)
+	local b = buys
+	local view = views[root]
+	local snap = display
+	if not opened or b == nil or view == nil or snap == nil then
+		return
+	end
+	local sendId = view.sendId
+	local expected = view.expectedLevel
+	if (view.state ~= "ready" and view.state ~= "retry") or sendId == nil or expected == nil then
+		AudioController.play("Bump")
+		return
+	end
+	if not b:buy(sendId, view.sendMode, expected) then
+		AudioController.play("Bump")
+		return
+	end
+	origins[sendId] = root
+	hintObj = nil
+	activity()
+	renderTab(current, snap)
+	bannerFor(GuiService.SelectedObject)
+	ensureLoop()
+end
+
+-- Relâché avant la fin (l'anneau s'est vidé) : son Bump et la consigne du bandeau, sauf si la croix a
+-- déjà emmené la sélection ailleurs
+local function onHoldEarly(root: GuiObject)
+	if not opened then
+		return
+	end
+	local selected = GuiService.SelectedObject
+	if selected ~= nil and selected ~= root then
+		return
+	end
+	AudioController.play("Bump")
+	hintObj = root
+	hintUntil = Clock.now() + HINT_SECONDS
+	bannerFor(selected)
+	ensureLoop()
+end
+
+-- Maintien de 0,6 s posé sur une carte ou une ligne à acheter (une fois, à la construction)
+local function attachHold(card: Card)
+	local root = card.root
+	holdOf[root] = Widgets.holdOn(root :: any, {
+		duration = Balance.Upgrades.HoldSeconds,
+		onComplete = function()
+			onHoldDone(root)
+		end,
+		onProgress = function(alpha: number)
+			showRing(root, alpha)
+		end,
+		onEarly = function()
+			onHoldEarly(root)
+		end,
+	})
+	holdable[root] = true
+	setHoldable(root, false)
+end
+
+-- Un retour dans la carte ou la ligne même (1,5 s), son et vibration ; aucun toast
+local function showFeedback(root: Instance?, fb: UpgradeBuys.Feedback)
+	local main, note = UpgradeView.feedback(fb, lang())
+	if main == nil then
+		return
+	end
+	local card = if root then cardOf[root] else nil
+	if card ~= nil then
+		card:feedback(main, note)
+		feedbackUntil[card.root] = Clock.now() + FEEDBACK_SECONDS
+	end
+	table.insert(feedbackLog, { id = fb.id, key = main.key })
+	if #feedbackLog > 64 then
+		table.remove(feedbackLog, 1)
+	end
+	if fb.kind == "bought" then
+		AudioController.play("TileBuild")
+		Haptics.play("tileBuy")
+	else
+		AudioController.play("Bump")
+		Haptics.play("refuse")
+	end
+	ensureLoop()
+end
+
+-- Réponse du serveur (UI/UpgradeSnapshot.Result : son instantané est déjà appliqué) : un retour pour
+-- une ligne en attente, rien pour un refus périmé ou une réponse sans ligne en attente
+local function onResult(payload: Types.UpgradeResultPayload)
+	local b = buys
+	if b == nil then
+		return
+	end
+	local fb = b:result(payload)
+	if not opened then
+		return
+	end
+	local root = rootFor(payload.id)
+	if b:state(payload.id) == nil then
+		origins[payload.id] = nil
+	end
+	if fb.kind ~= "none" then
+		showFeedback(root, fb)
+	end
+	local snap = display
+	if snap ~= nil then
+		renderTab(current, snap)
+	end
+	bannerFor(GuiService.SelectedObject)
+end
+
+-- D28 : début de SON Grand Splorch ou de SA Jelly Ascend → l'écran se ferme (une fois par spectacle)
+local function closeForShow(kind: string, startedAt: number)
+	if showKind == kind and showStart == startedAt then
+		return
+	end
+	showKind, showStart = kind, startedAt
+	local n = nav
+	if opened and n ~= nil and n.closeAll ~= nil then
+		n.closeAll()
+	end
+end
+
+local function myUserId(): number?
+	local p = Players.LocalPlayer
+	return if p then p.UserId else nil
+end
+
+local function isMyShow(kind: any, userId: any, startedAt: any): boolean
+	return (kind == "splorch" or kind == "ascend")
+		and type(userId) == "number"
+		and userId == myUserId()
+		and type(startedAt) == "number"
+		and startedAt == startedAt
+end
+
+local function onCelebrate(payload: any)
+	if type(payload) ~= "table" or type(payload.data) ~= "table" then
+		return
+	end
+	local d = payload.data
+	if isMyShow(payload.kind, d.userId, d.startedAt) then
+		closeForShow(payload.kind, d.startedAt)
+	end
+end
+
+local function onEventState(ev: any)
+	local spectacle = if type(ev) == "table" then ev.spectacle else nil
+	local cur = if type(spectacle) == "table" then spectacle.current else nil
+	if type(cur) == "table" and isMyShow(cur.kind, cur.userId, cur.startedAt) then
+		closeForShow(cur.kind, cur.startedAt)
+	end
+end
+
+-- =============================================================================================
 -- Mode ×1 / ×10 / Max (□ ; E au clavier)
 -- =============================================================================================
 
@@ -1055,7 +1497,7 @@ local function bindMode()
 				local top = FocusGuard.top()
 				if opened and top ~= nil and top.name == "panel:Upgrades" then
 					AudioController.play("Click")
-					Upgrades.cycleMode()
+					Upgrades._playerMode()
 				end
 			end
 			return Enum.ContextActionResult.Sink
@@ -1082,8 +1524,28 @@ function Upgrades.cycleMode()
 	renderAll(false)
 end
 
+-- Mode changé PAR LE JOUEUR (□, E, bouton de mode à ✕ ou au clic) : ClientMetric("upgradeMode") par
+-- le limiteur (D10) et navigation (MenuActivity, D11) ; le retour à ×1 de l'ouverture n'en est pas un
+local function playerCycleMode()
+	if not opened then
+		return
+	end
+	Upgrades.cycleMode()
+	local b = buys
+	if b ~= nil then
+		b:metric("upgradeMode", mode)
+		ensureLoop()
+	end
+	activity()
+end
+
 function Upgrades.mode(): number
 	return mode
+end
+
+-- Changement de mode du joueur (bouton de mode, □, E)
+function Upgrades._playerMode()
+	playerCycleMode()
 end
 
 -- =============================================================================================
@@ -1113,12 +1575,30 @@ function Upgrades.build(body: Frame)
 		buildList(body, tab, snap)
 	end
 	buildBanner(body)
+	buildRing(body)
+	buys = UpgradeBuys.new({
+		now = Clock.now,
+		send = function(name: string, ...: any): boolean
+			return Widgets.send(name, ...)
+		end,
+	})
+	for _, card in cards do
+		attachHold(card)
+	end
+	for _, row in rows do
+		if row.root:GetAttribute("ReadOnly") ~= true then
+			attachHold(row)
+		end
+	end
 	frozen = snap
 	display = snap
 	for _, tab in Upgrades.LIST_TABS do
 		layoutList(tab, snap, viewCtx())
 	end
 	UpgradeSnapshot.Changed:Connect(onSnapshot)
+	UpgradeSnapshot.Result:Connect(onResult)
+	Net.event("Celebrate").OnClientEvent:Connect(onCelebrate)
+	WorldStateController.EventChanged:Connect(onEventState)
 	GuiService:GetPropertyChangedSignal("SelectedObject"):Connect(function()
 		if not opened then
 			return
@@ -1182,12 +1662,28 @@ function Upgrades.open(tab: string?)
 	bannerFor(GuiService.SelectedObject)
 end
 
--- Ferme l'écran : compteurs à leur valeur finale, raccourci □ délié
+-- Ferme l'écran : compteurs à leur valeur finale, raccourci □ délié ; achats en cours oubliés (une
+-- réponse qui arrive écran fermé n'applique que son instantané : la réouverture est neuve), retours,
+-- consigne et anneau effacés (rien ne reste appuyé)
 function Upgrades.close()
 	opened = false
 	unbindMode()
 	settleCounters()
 	spendTarget = nil
+	local b = buys
+	if b ~= nil then
+		b:clear()
+	end
+	table.clear(origins)
+	for root in feedbackUntil do
+		local card = cardOf[root]
+		if card ~= nil then
+			card:feedback(nil)
+		end
+	end
+	table.clear(feedbackUntil)
+	hintObj = nil
+	hideRing()
 end
 
 function Upgrades.isOpen(): boolean
@@ -1295,8 +1791,10 @@ function Upgrades.scroll(dir: number)
 	end
 end
 
--- ✕ sur une carte ou une ligne (achats : étape 3) : lecture seule → Bump sans vibration ; carte
--- « Jelly Ascend » → son aperçu (N24)
+-- ✕ relâché (Activated) sur une carte ou une ligne : jamais un achat (le maintien de 0,6 s seul
+-- achète). Lecture seule, cadenas, MAX, plafond de la boucle → Bump sans vibration ; « Il manque » →
+-- refus doux (Bump, vibration refuse, aucune secousse) ; « En cours » → rien ; Prête / « Réessaie » →
+-- rien (relâché trop tôt : la consigne vient du maintien) ; carte « Jelly Ascend » → son aperçu (N24)
 function Upgrades._activate(obj: GuiObject)
 	if not opened or not Widgets.confirmed() then
 		return
@@ -1315,6 +1813,14 @@ function Upgrades._activate(obj: GuiObject)
 		return
 	end
 	if view.readOnly then
+		AudioController.play("Bump")
+		return
+	end
+	local st = view.state
+	if st == "need" then
+		AudioController.play("Bump")
+		Haptics.play("refuse")
+	elseif st == "max" or st == "locked" or st == "loopCap" then
 		AudioController.play("Bump")
 	end
 end
@@ -1372,6 +1878,28 @@ end
 
 function Upgrades._view(obj: Instance): View?
 	return views[obj]
+end
+
+-- Achats en attente (identifiants canoniques), retours montrés, anneau (specs)
+function Upgrades._pending(): { string }
+	local b = buys
+	return if b then b:pendingIds() else {}
+end
+
+function Upgrades._feedbacks(): { { id: string, key: string } }
+	return table.clone(feedbackLog)
+end
+
+function Upgrades._ring(): Frame?
+	return ring
+end
+
+function Upgrades._hold(obj: Instance): Widgets.Hold?
+	return holdOf[obj]
+end
+
+function Upgrades._holdGlyph(): Frame?
+	return bannerGlyph
 end
 
 -- Valeur montrée d'un compteur de l'en-tête (« coins », « confetti ») et sa cible

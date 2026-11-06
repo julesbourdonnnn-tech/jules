@@ -84,6 +84,7 @@ type CardData = {
 	state: string,
 	view: UpgradeView.View?, -- dernière vue posée (retour chiffré : même vue)
 	fb: UpgradeView.Text?, -- retour chiffré en cours (nil : aucun)
+	fbNote: UpgradeView.Text?, -- note du retour (« 4 sur 10 » : mot de l'état d'une ligne, raison d'une carte)
 }
 
 local UpgradeCard = {}
@@ -183,6 +184,14 @@ for _, def in Upgrades.Families do
 	end
 end
 UpgradeCard.COIN_ICONS = table.freeze(COIN_ICONS)
+
+-- Centre de l'anneau du maintien de 0,6 s (lot B2, étape 3 ; GDD §10.7.8 « anneau autour du glyphe »),
+-- en px dans le gabarit : carte, glyphe de l'appareil du dessin du bouton (et dessin de l'état au même
+-- endroit) ; ligne, dessin de l'état de la colonne État (une ligne n'a pas de glyphe)
+UpgradeCard.RING_CENTER = table.freeze({
+	card = Vector2.new(104 + 24, 432 + 16 + 24),
+	row = Vector2.new(COL.state.x + 24, ROW_H / 2),
+})
 
 -- =============================================================================================
 -- Construction (new() seulement)
@@ -618,7 +627,7 @@ function UpgradeCard.new(template: Template, parent: Instance?, opts: Options?):
 		Theme.shadow(root)
 	end
 	local self = setmetatable(
-		{ template = t, root = root, parts = parts, state = "", view = nil, fb = nil },
+		{ template = t, root = root, parts = parts, state = "", view = nil, fb = nil, fbNote = nil },
 		UpgradeCard
 	)
 	return self
@@ -695,6 +704,10 @@ function UpgradeCard.set(self: Card, state: string, view: UpgradeView.View)
 		root:SetAttribute("FocusId", view.id)
 	end
 	root:SetAttribute("State", st)
+	-- sablier « En cours » : seul l'état busy tourne (UpgradeCard.spin) ; sinon droit
+	if st ~= "busy" and p.stateIcon ~= nil and p.stateIcon.Rotation ~= 0 then
+		p.stateIcon.Rotation = 0
+	end
 	local stColor = STATE_COLORS[st] or COLORS.text
 	local buyable = st == "ready" or st == "need" or st == "busy" or st == "retry"
 
@@ -719,7 +732,9 @@ function UpgradeCard.set(self: Card, state: string, view: UpgradeView.View)
 		setText(p.tier, if self.template == "card" then view.tier else nil)
 	end
 	if p.reason then
-		setText(p.reason, view.reason)
+		-- carte : la note d'un retour (« 4 sur 10 ») prend la ligne de la raison le temps du retour
+		local note = if self.fb ~= nil and self.template == "card" then self.fbNote else nil
+		setText(p.reason, note or view.reason)
 	end
 
 	-- avant → après : flèche dessinée devant chaque valeur après ; le libellé peut porter la valeur
@@ -860,6 +875,10 @@ function UpgradeCard.set(self: Card, state: string, view: UpgradeView.View)
 		-- ligne en lecture seule : rien à acheter (seul le cadenas d'une Plopette pas encore là)
 		word, iconKind = nil, nil
 	end
+	-- ligne : la note d'un retour (« 4 sur 10 ») prend le mot de l'état le temps du retour
+	if self.template == "row" and fb ~= nil and self.fbNote ~= nil then
+		word = self.fbNote
+	end
 	-- carte prête, ou carte qui ouvre un autre écran (« Jelly Ascend » : ✕ Voir) : dessin du bouton
 	local action = if self.template == "card" and fb == nil then view.action else nil
 	local buyDrawing = self.template == "card" and fb == nil and (st == "ready" or action ~= nil)
@@ -909,14 +928,28 @@ function UpgradeCard.set(self: Card, state: string, view: UpgradeView.View)
 	end
 end
 
+-- Sablier animé de l'état « En cours » (GDD §10.7.6) : angle du dessin de l'état, en degrés (aucune
+-- instance créée ; un autre état le remet droit)
+function UpgradeCard.spin(self: Card, angle: number)
+	local icon = self.parts.stateIcon
+	if icon == nil or self.state ~= "busy" or type(angle) ~= "number" or angle ~= angle then
+		return
+	end
+	if math.abs(icon.Rotation - angle) > 0.5 then
+		icon.Rotation = angle
+	end
+end
+
 -- Retour chiffré dans la ligne même (« +7 niveaux · -1,2 M », clé et variables de l'écran ; GDD
--- §10.7.8) : ligne, à la place de l'avant → après ; carte, dans la zone du bas ; nil : fini. Même vue,
--- aucune instance créée.
-function UpgradeCard.feedback(self: Card, t: UpgradeView.Text?)
+-- §10.7.8) : ligne, à la place de l'avant → après ; carte, dans la zone du bas ; nil : fini. `note`
+-- (« 4 sur 10 », lot B2, étape 3) : mot de l'état d'une ligne, ligne de la raison d'une carte. Même
+-- vue, aucune instance créée.
+function UpgradeCard.feedback(self: Card, t: UpgradeView.Text?, note: UpgradeView.Text?)
 	if self.template == "tile" then
 		return
 	end
 	self.fb = t
+	self.fbNote = if t ~= nil then note else nil
 	local view = self.view
 	if view ~= nil then
 		UpgradeCard.set(self, self.state, view)

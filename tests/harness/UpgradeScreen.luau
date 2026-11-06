@@ -12,8 +12,12 @@
 --   S.open(c, "ranch") ; S.patch(c, S.snap(2)) ; S.result(c, payload)
 local fs = require("@lune/fs")
 local serde = require("@lune/serde")
+local roblox = require("@lune/roblox")
 local TvAudit = require("./TvAudit")
+local Gamepad = require("./Gamepad")
 local MockInstance = require("./MockInstance")
+
+local Enum = roblox.Enum
 
 local UpgradeScreen = {}
 
@@ -178,6 +182,60 @@ function UpgradeScreen.new(Harness)
 	function S.clean(c, expect)
 		expect(table.concat(c.h.errors, "\n")).toBe("")
 		expect(table.concat(c.h:warnings(), "\n")).toBe("")
+	end
+
+	-- ---------------------------------------------------------------------------------------
+	-- Achats (lot B2, étape 3) : vrais maintiens à la manette, réponses fabriquées
+	-- ---------------------------------------------------------------------------------------
+
+	-- Avance l'horloge du jeu de `dt` par pas de 1/30 s (boucles Heartbeat des maintiens et des achats)
+	function S.run(c, dt)
+		local steps = math.max(1, math.floor(dt * 30 + 0.5))
+		for _ = 1, steps do
+			c.Clock.advance(dt / steps)
+			c.h:step(dt / steps, 1)
+		end
+		c.h:settle(1)
+	end
+
+	-- Sélectionne un élément et laisse passer la garde d'un changement de focus (0,4 s)
+	function S.select(c, obj)
+		c.h.game.GuiService.SelectedObject = obj
+		c.h:settle(1)
+		S.run(c, 0.5)
+	end
+
+	-- Maintien de ✕ sur l'élément sélectionné pendant `secs` (relâché ensuite) ; obj : le sélectionner
+	-- d'abord
+	function S.hold(c, obj, secs)
+		if obj ~= nil and S.selected(c) ~= obj then
+			S.select(c, obj)
+		end
+		Gamepad.press(c.h, Enum.KeyCode.ButtonA)
+		S.run(c, secs)
+		Gamepad.release(c.h, Enum.KeyCode.ButtonA)
+		S.run(c, 0.1)
+	end
+
+	function S.sent(c, remote)
+		return TvAudit.sent(c.h, remote)
+	end
+
+	-- Réponse du serveur à une intention BuyUpgrade envoyée (`args` = { id, mode, expectedLevel }) :
+	-- opts.to (niveau après ; défaut : refus, from), opts.spent, opts.reason, opts.snap (instantané)
+	function S.answer(c, args, opts)
+		local id = args[1]
+		local from = args[3]
+		local to = if opts.to ~= nil then opts.to else from
+		S.result(c, {
+			id = id,
+			from = opts.from or from,
+			to = to,
+			spent = opts.spent or 0,
+			currency = S.UpgradeMath.currency(id),
+			reason = opts.reason,
+			snapshot = opts.snap,
+		})
 	end
 
 	return S

@@ -1083,4 +1083,38 @@ function UpgradeView.view(
 	return buyView(lineId, line, snap, m, ctx, pending)
 end
 
+-- Retour d'une réponse du serveur (Hud/UpgradeBuys.Feedback, lot B2, étape 3 ; GDD §10.7.8) : texte
+-- de la ligne même (« +7 niveaux · -1,2 M », « +1 niveau · -20 », ou la raison du refus envoyée par le
+-- serveur) et note (« 4 sur 10 » d'un ×10 acheté en partie) ; niveaux et montant DU SERVEUR, formatés
+-- par BigNumber (pièces) ou Format.confetti (Confettis) ; rien pour un refus périmé ou une réponse
+-- sans ligne en attente
+export type FeedbackIn = {
+	kind: string, -- "bought" | "refused" | "none"
+	levels: number,
+	spent: number,
+	currency: Types.UpgradeCurrency?,
+	reason: string?,
+	requested: number?,
+	partial: boolean,
+}
+
+function UpgradeView.feedback(fb: FeedbackIn, lang: string?): (Text?, Text?)
+	if fb.kind == "refused" and type(fb.reason) == "string" then
+		return text(fb.reason), nil
+	end
+	if fb.kind ~= "bought" or fb.levels < 1 then
+		return nil, nil
+	end
+	local l = if lang == "fr" then "fr" else "en"
+	local price = money(fb.spent, fb.currency, l)
+	local main = if fb.levels == 1
+		then text("upgrades.boughtOne", { price = price })
+		else text("upgrades.bought", { n = Format.count(fb.levels), price = price })
+	local note: Text? = nil
+	if fb.partial and type(fb.requested) == "number" then
+		note = text("upgrades.partial", { n = Format.count(fb.levels), m = Format.count(fb.requested) })
+	end
+	return main, note
+end
+
 return UpgradeView

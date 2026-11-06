@@ -12,7 +12,9 @@
 --   * lignes en lecture seule (Plopettes, « Monte avec ton record ») : sélectionnables, ✕ joue Bump,
 --     sans vibration ; carte « Jelly Ascend » : ✕ ouvre son aperçu ;
 --   * ○ ferme l'écran (retour à ce qui l'a ouvert), dans chaque état ;
---   * aucune intention v2.0 envoyée (les achats arrivent à l'étape 3).
+--   * aucune intention v2.0 envoyée, sauf (étape 3, D10) ClientMetric("upgradeMode") pour un mode
+--     changé par le joueur : le premier tout de suite, les suivants fondus en un seul (le dernier) au
+--     plus toutes les 5 s, rien pour le retour à ×1 de l'ouverture.
 -- Zéro trace.
 local roblox = require("@lune/roblox")
 local TvAudit = require("../harness/TvAudit")
@@ -174,7 +176,20 @@ return function(T)
 				TvAudit.tick(c.h, 1)
 				tap(c, Enum.KeyCode.ButtonX)
 				expect(c.Up.mode()).toBe(1)
-				S.noV2Intent(c, expect)
+				-- étape 3 (D10) : modes choisis par le joueur → ClientMetric("upgradeMode") ; ×10 tout de
+				-- suite, puis Max, ×1, ×10 fondus en un seul envoi (le dernier, ×10) 5 s après ; rien pour
+				-- le retour à ×1 de la réouverture ni pour □ écran fermé ; aucune autre intention v2.0
+				local metrics = {}
+				for _, a in TvAudit.sent(c.h, "ClientMetric") do
+					table.insert(metrics, { a[1], a[2] })
+				end
+				expect(metrics).toEqual({ { "upgradeMode", 10 }, { "upgradeMode", 10 } })
+				for _, name in { "BuyUpgrade", "MenuActivity" } do
+					expect(#TvAudit.sent(c.h, name)).toBe(0)
+				end
+				for _, args in TvAudit.sent(c.h, "UiSeen") do
+					expect(args[1] == "nextBuy").toBe(false)
+				end
 				S.clean(c, expect)
 			end
 		)

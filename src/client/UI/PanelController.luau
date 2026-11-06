@@ -155,6 +155,10 @@ local frameNo = 0
 -- un panneau en remplace un autre (L2 / R2, raccourci, carte) : le voile, le flou et l'écran des
 -- panneaux restent affichés et Changed ne passe pas par nil entre les deux
 local switching = false
+-- v2.0 (lot B2, D11 ; décision N23 du propriétaire) : MenuActivity, une au plus toutes les 20 s,
+-- seulement quand MON ranch porte l'attribut Helpers > 0 (interrupteur Helpers du serveur)
+local MENU_ACTIVITY_EVERY = 20
+local lastMenuActivity: number? = nil
 
 -- =============================================================================================
 -- Outils
@@ -410,6 +414,52 @@ local function buildWindow(name: string): (Frame, Frame)
 	return win, body
 end
 
+-- =============================================================================================
+-- MenuActivity (v2.0, lot B2, D11 ; N23)
+-- =============================================================================================
+
+-- Plopettes de MON ranch (attribut Helpers de Ranches/<k>, posé par le serveur interrupteur Helpers
+-- ouvert) ; 0 sans monde, sans ranch ou sans l'attribut
+local function myHelpers(): number
+	local ok, slot = pcall(WorldStateController.mySlot)
+	if not ok or type(slot) ~= "number" or slot <= 0 then
+		return 0
+	end
+	local world = workspace:FindFirstChild("Wobbleton")
+	local list = world and world:FindFirstChild("Ranches")
+	local model = list and list:FindFirstChild(Format.id(slot))
+	if model == nil then
+		return 0
+	end
+	local okAttr, value = pcall(function()
+		return model:GetAttribute("Helpers")
+	end)
+	if okAttr and type(value) == "number" and value == value and value > 0 then
+		return value
+	end
+	return 0
+end
+
+-- Rail ou panneau ouvert, navigation dedans (ouverture, sélection, onglet, défilement, mode, achat) :
+-- la sieste des Plopettes compte le menu comme du jeu (N23). Une au plus toutes les 20 s, seulement
+-- avec des Plopettes ; jamais sinon (interrupteur Helpers coupé : aucun envoi, jeu de base identique)
+local function noteMenuActivity()
+	if not FocusGuard.isOpen(MENU) and #openOrder == 0 then
+		return
+	end
+	local now = Clock.now()
+	local last = lastMenuActivity
+	if last ~= nil and now >= last and now - last < MENU_ACTIVITY_EVERY then
+		return
+	end
+	if myHelpers() <= 0 then
+		return
+	end
+	if Widgets.send("MenuActivity") then
+		lastMenuActivity = now
+	end
+end
+
 local function navigatorFor(_name: string)
 	return {
 		open = function(panel: string, tab: string?)
@@ -424,6 +474,10 @@ local function navigatorFor(_name: string)
 		-- ferme tout et rend la main au jeu (Aperçu du Grand Splorch : entré dans la file)
 		closeAll = function()
 			PanelController.closeAll()
+		end,
+		-- navigation dans le panneau sans changement de sélection (mode, achat : MenuActivity, D11)
+		activity = function()
+			noteMenuActivity()
 		end,
 	}
 end
@@ -604,6 +658,7 @@ local function openMenuWindow()
 		end,
 		opener = nil,
 	})
+	noteMenuActivity()
 end
 
 -- =============================================================================================
@@ -716,6 +771,7 @@ local function cycleTab(dir: number)
 	safe(name .. ".setTab", nil, mod.setTab, nextTab)
 	-- la sélection restée sur la page cachée revient tout de suite (onglet changé : pas un sauvetage)
 	FocusGuard.refocus()
+	noteMenuActivity()
 end
 
 local function cyclePanel(dir: number)
@@ -770,6 +826,7 @@ local function bindPanelKeys()
 					local mod = if top and panelOnTop(top) then Panels[top] else nil
 					if mod and type(mod.scroll) == "function" then
 						safe((top :: string) .. ".scroll", nil, mod.scroll, if y > 0 then -1 else 1)
+						noteMenuActivity()
 					end
 				end
 			end
@@ -889,6 +946,7 @@ local function showPanel(name: string, tab: string?)
 	if table.find(RAIL, name) then
 		lastEntry = name
 	end
+	noteMenuActivity()
 	PanelController.Changed:Fire(name)
 end
 
@@ -1007,6 +1065,10 @@ function PanelController.Start()
 	GuiService:GetPropertyChangedSignal("SelectedObject"):Connect(function()
 		selectionChanges += 1
 		selectionFrame = frameNo
+		-- navigation dans le rail ou un panneau (MenuActivity, D11)
+		if GuiService.SelectedObject ~= nil and ourWindowOnTop() then
+			noteMenuActivity()
+		end
 	end)
 	RunService.Heartbeat:Connect(function()
 		frameNo += 1
