@@ -46,6 +46,7 @@ function UpgradeScreen.new(Harness)
 	S.Upgrades = shared:require("ReplicatedStorage.Shared.Config.Upgrades")
 	S.Balance = shared:require("ReplicatedStorage.Shared.Config.Balance")
 	S.Layout = shared:require("ReplicatedStorage.Shared.Config.Layout")
+	S.Localization = shared:require("ReplicatedStorage.Shared.Localization")
 
 	-- interrupteurs v2.0 tous ouverts (copie figée)
 	local ON = {}

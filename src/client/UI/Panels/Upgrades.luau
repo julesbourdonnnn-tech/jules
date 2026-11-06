@@ -42,6 +42,7 @@ local UpgradeAdvisor = require(Shared.Logic.UpgradeAdvisor)
 local Formulas = require(Shared.Logic.Formulas)
 local QuestRules = require(Shared.Logic.QuestRules)
 local BigNumber = require(Shared.Logic.BigNumber)
+local Localization = require(Shared.Localization)
 
 local Client = script.Parent.Parent.Parent
 local Prefs = require(Client.Util.Prefs)
@@ -74,6 +75,10 @@ local ROW_X = (INNER - U.Row.w) / 2 -- 24 : marges des lignes dans le cadre de d
 local ROW_GAP = U.Row.step - U.Row.h -- 16
 local SECTION_H = U.Row.h -- un titre de section compte comme un élément de 112 non sélectionnable
 local TAB_H = 56 -- boutons d'onglet dans la zone de 64
+-- onglet Plopettes avant Pip (GDD §10.7.5 : « un cadenas « Record 2 » ») : cadenas dessiné de 28 et
+-- son mot à 28 px (taille minimale d'un texte à lire), après le libellé
+local TAB_LOCK = 28
+local TAB_WORD = Layout.Text.Min
 local CLOSE = 56 -- bouton Fermer (souris ; ○ à la manette)
 local COUNT_TIME = 0.4 -- s : compteur de l'en-tête (pièces, Confettis)
 local MODE_ACTION = "UpgradesMode"
@@ -139,6 +144,12 @@ local suggestedFrame: Frame? = nil
 local sectionLabel: TextLabel? = nil
 local tabButtons: { [string]: TextButton } = {}
 local tabLock: Frame? = nil
+local tabLockWord: TextLabel? = nil
+local tabWidths: { [string]: number } = {} -- largeur de chaque onglet sans cadenas
+local tabLockRoom = 0 -- place du cadenas et de son mot dans l'onglet Plopettes
+local tabsLocked: boolean? = nil -- disposition courante de la rangée (cadenas montré ou non)
+local lockOnAccent: boolean? = nil -- cadenas recoloré pour le fond de l'onglet actif
+local r1Glyph: any = nil
 local modeButton: TextButton? = nil
 local modeLabel: TextLabel? = nil
 local memoryPill: Frame? = nil
@@ -478,10 +489,20 @@ local function buildTabs(body: Frame)
 	local glyph = Layout.Glyph.Min
 	local gy = T.y + (T.h - glyph) / 2
 	Widgets.glyph(body, Enum.KeyCode.ButtonL1, nil, glyph, UDim2.fromOffset(MARGIN, gy), Vector2.zero)
+	-- mot du cadenas : sa plus longue forme (anglais, français), avec 10 % de marge sur l'estimation
+	local recordR = Balance.Helpers.ByRecordR[1] or 0
+	local wordEm = 0
+	for _, l in { "en", "fr" } do
+		local word = Localization.get(l :: any, "upgrades.state.locked", { r = Format.count(recordR) })
+		wordEm = math.max(wordEm, Widgets.textEm(word))
+	end
+	local wordW = math.ceil(wordEm * TAB_WORD * 1.1) + 4
+	-- libellé, 8, cadenas, 8, mot, 16 (le libellé garde ses 12 px de marge à droite)
+	tabLockRoom = 8 + TAB_LOCK + 8 + wordW + 4
 	local x = MARGIN + glyph + 16
 	for i, id in Upgrades.TABS do
-		local lockRoom = if id == "helpers" then 40 else 0
-		local width = math.max(160, math.floor(Widgets.keyEm(TAB_KEYS[id]) * T.text + 48 + lockRoom))
+		local width = math.max(160, math.floor(Widgets.keyEm(TAB_KEYS[id]) * T.text + 48))
+		tabWidths[id] = width
 		local b = Widgets.button({
 			parent = body,
 			name = "Tab_" .. id,
@@ -499,13 +520,26 @@ local function buildTabs(body: Frame)
 				FocusGuard.refocus()
 			end,
 		})
-		local text = Widgets.buttonLabel(b)
-		if text and lockRoom > 0 then
-			text.Size = UDim2.new(1, -(24 + lockRoom), 1, -12)
-			text.Position = UDim2.new(0.5, -lockRoom / 2, 0.5, 0)
-			local lock = Icons.canvas(b, 28, { "lock" }, "Lock")
+		if id == "helpers" then
+			-- cadenas dessiné ET mot « Record 2 » (un état = un dessin et un mot, §10.7.6), montrés
+			-- avant Pip seulement ; la rangée s'élargit alors (layoutTabs, décidé à l'ouverture)
+			local word = Widgets.label({
+				parent = b,
+				name = "LockWord",
+				key = "upgrades.state.locked",
+				vars = { r = recordR },
+				textSize = TAB_WORD,
+				xAlign = Enum.TextXAlignment.Left,
+				size = UDim2.fromOffset(wordW, 40),
+				position = UDim2.new(1, -16, 0.5, 0),
+				anchor = Vector2.new(1, 0.5),
+				zIndex = b.ZIndex + 2,
+			})
+			word.Visible = false
+			tabLockWord = word
+			local lock = Icons.canvas(b, TAB_LOCK, { "lock" }, "Lock")
 			lock.AnchorPoint = Vector2.new(1, 0.5)
-			lock.Position = UDim2.new(1, -16, 0.5, 0)
+			lock.Position = UDim2.new(1, -(16 + wordW + 8), 0.5, 0)
 			lock.ZIndex = b.ZIndex + 2
 			Icons.draw(lock, "lock")
 			lock.Visible = false
@@ -524,7 +558,7 @@ local function buildTabs(body: Frame)
 		tabButtons[id] = b
 		x += width + Layout.Spacing.Min
 	end
-	Widgets.glyph(body, Enum.KeyCode.ButtonR1, nil, glyph, UDim2.fromOffset(x, gy), Vector2.zero)
+	r1Glyph = Widgets.glyph(body, Enum.KeyCode.ButtonR1, nil, glyph, UDim2.fromOffset(x, gy), Vector2.zero)
 	-- au bout de la rangée (D5) : L2 / R2 (panneaux en boucle) et le bouton Fermer de la souris (○)
 	local closeX = W - MARGIN - CLOSE
 	local close = Widgets.button({
@@ -880,6 +914,44 @@ local function renderTab(tab: string, snap: Snapshot)
 	end
 end
 
+-- Rangée des onglets : largeurs et positions (aucune instance créée). L'onglet Plopettes s'élargit
+-- de la place de son cadenas et de son mot tant que Pip n'est pas là ; L1 reste à gauche, R1 suit
+-- le dernier onglet, L2 / R2 et Fermer restent au bout droit (D5)
+local function layoutTabs(locked: boolean)
+	if tabsLocked == locked then
+		return
+	end
+	tabsLocked = locked
+	local T = U.Tabs
+	local glyph = Layout.Glyph.Min
+	local x = MARGIN + glyph + 16
+	for _, id in Upgrades.TABS do
+		local b = tabButtons[id]
+		if b == nil then
+			continue
+		end
+		local room = if id == "helpers" and locked then tabLockRoom else 0
+		local width = (tabWidths[id] or 160) + room
+		b.Size = UDim2.fromOffset(width, TAB_H)
+		b.Position = UDim2.fromOffset(x, T.y + (T.h - TAB_H) / 2)
+		local text = Widgets.buttonLabel(b)
+		if text then
+			text.Size = UDim2.new(1, -(24 + room), 1, -12)
+			text.Position = UDim2.new(0.5, -room / 2, 0.5, 0)
+		end
+		x += width + Layout.Spacing.Min
+	end
+	if r1Glyph and r1Glyph.frame then
+		r1Glyph.frame.Position = UDim2.fromOffset(x, T.y + (T.h - glyph) / 2)
+	end
+	if tabLock then
+		tabLock.Visible = locked
+	end
+	if tabLockWord then
+		tabLockWord.Visible = locked
+	end
+end
+
 local function showTab(tab: string)
 	if suggestedFrame then
 		suggestedFrame.Visible = tab == "suggested"
@@ -899,8 +971,15 @@ local function showTab(tab: string)
 	local lock = tabLock
 	local snap = display
 	if lock and snap then
-		-- Plopettes avant Pip (Record R 2) : cadenas sur l'onglet (les lignes disent « Record n »)
-		lock.Visible = snap.bestR < (Balance.Helpers.ByRecordR[1] or 0)
+		-- Plopettes avant Pip (Record R 2) : cadenas ET mot « Record 2 » sur l'onglet (GDD §10.7.5),
+		-- Record R figé à l'ouverture (D7) : la rangée ne change de disposition qu'à l'ouverture
+		layoutTabs(snap.bestR < (Balance.Helpers.ByRecordR[1] or 0))
+		-- sur le fond clair de l'onglet actif, le cadenas lavande disparaît (contraste 1,2) : bleu nuit
+		local onAccent = tab == "helpers"
+		if lockOnAccent ~= onAccent then
+			lockOnAccent = onAccent
+			Icons.draw(lock, "lock", if onAccent then Widgets.Colors.Stroke else nil)
+		end
 	end
 end
 

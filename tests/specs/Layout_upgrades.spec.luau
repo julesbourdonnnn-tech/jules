@@ -8,7 +8,9 @@
 --     chaque carte dans la zone de 560 ; les lignes à 24 px des bords du cadre de défilement ;
 --   * hauteur de défilement = fonction pure Σ hauteurs + (n − 1) × 16 (un titre de section = 112) ;
 --   * aucun parent avec deux UI*Layout ; rien dans l'en-tête ne se chevauche ; la rangée des onglets
---     laisse la place à L2 / R2 et au bouton Fermer (D5).
+--     laisse la place à L2 / R2 et au bouton Fermer (D5) ;
+--   * onglet Plopettes avant Pip (§10.7.5) : cadenas dessiné ET mot « Record 2 » dans l'onglet, sans
+--     chevauchement, lisibles (contraste ≥ 3) sur l'onglet actif comme inactif ; après Pip : rien.
 -- Zéro trace.
 local roblox = require("@lune/roblox")
 local TvAudit = require("../harness/TvAudit")
@@ -52,6 +54,21 @@ return function(T)
 			end
 		end
 		return out
+	end
+
+	-- Rapport de contraste WCAG entre deux Color3 (objet non textuel ou grand texte : ≥ 3)
+	local function luminance(c3)
+		local function channel(v)
+			return if v <= 0.03928 then v / 12.92 else ((v + 0.055) / 1.055) ^ 2.4
+		end
+		return 0.2126 * channel(c3.R) + 0.7152 * channel(c3.G) + 0.0722 * channel(c3.B)
+	end
+	local function contrast(a, b)
+		local la, lb = luminance(a), luminance(b)
+		if la < lb then
+			la, lb = lb, la
+		end
+		return (la + 0.05) / (lb + 0.05)
 	end
 
 	local function rectOf(panel, k, y, h)
@@ -220,6 +237,146 @@ return function(T)
 				end
 				-- 4 lignes entières et 48 px de la 5e : 4 × 128 + 48 = 560
 				expect(4 * U.Row.step + 48).toBe(U.Content.h)
+				S.clean(c, expect)
+			end
+		)
+
+		-- GDD v2.0 §10.7.5 : « Avant Pip (Record R 2), l'onglet est visible avec un cadenas « Record 2 » »
+		-- (§10.7.6 : un état = un dessin ET un mot, jamais la couleur seule)
+		it(
+			"onglet Plopettes avant Pip : cadenas dessiné ET mot « Record 2 », lisibles, actif ou non ; après Pip : rien",
+			function()
+				local c = S.client({
+					snap = S.snap(1, function(p)
+						p.R = 1
+						p.bestR = 1
+					end),
+				})
+				local r = S.Balance.Helpers.ByRecordR[1]
+				local issues = {}
+				local function note(msg)
+					table.insert(issues, msg)
+				end
+				local lockedW = nil
+				for _, res in { Vector2.new(1280, 720), Vector2.new(1920, 1080), Vector2.new(3840, 2160) } do
+					for _, lang in { "en", "fr" } do
+						local tag = string.format("%dx%d %s", res.X, res.Y, lang)
+						TvAudit.setResolution(c.h, res)
+						TvAudit.setLanguage(c.h, lang)
+						-- onglet Plopettes inactif (Ranch ouvert), puis actif
+						for _, tab in { "ranch", "helpers" } do
+							S.open(c, tab)
+							Layout.apply(c.h)
+							local b = c.Up._tab("helpers")
+							lockedW = b.Size.X.Offset
+							local box = Layout.rect(b)
+							local lock = b:FindFirstChild("Lock")
+							local word = b:FindFirstChild("LockWord")
+							local label = b:FindFirstChild("Label")
+							if
+								lock == nil
+								or word == nil
+								or not Layout.visible(lock)
+								or not Layout.visible(word)
+							then
+								note(tag .. " " .. tab .. " : cadenas ou mot absent de l'onglet Plopettes")
+								continue
+							end
+							local want = S.Localization.get(lang, "upgrades.state.locked", { r = r })
+							if word.Text ~= want then
+								note(
+									string.format(
+										"%s : mot « %s » au lieu de « %s »",
+										tag,
+										word.Text,
+										want
+									)
+								)
+							end
+							for _, part in { lock, word, label } do
+								local pr = Layout.rect(part)
+								if pr == nil or not inside(pr, box) then
+									note(tag .. " " .. tab .. " : " .. part.Name .. " hors de l'onglet")
+								end
+							end
+							-- de gauche à droite : libellé, cadenas, mot, sans chevauchement
+							local lr, kr, wr = Layout.rect(label), Layout.rect(lock), Layout.rect(word)
+							if lr.x + lr.w > kr.x + EPS or kr.x + kr.w > wr.x + EPS then
+								note(tag .. " " .. tab .. " : libellé, cadenas et mot se chevauchent")
+							end
+							-- cadenas lisible sur le fond de l'onglet (anse et corps ; le trou de la serrure
+							-- est un détail du corps)
+							local bg = b.BackgroundColor3
+							local body, bodyArea = nil, 0
+							for _, d in lock:GetDescendants() do
+								if d:IsA("Frame") and d.Visible then
+									local stroke = d:FindFirstChildOfClass("UIStroke")
+									if stroke and d.BackgroundTransparency >= 0.99 then
+										if contrast(stroke.Color, bg) < 3 then
+											note(
+												string.format(
+													"%s %s : anse du cadenas peu lisible (%.2f)",
+													tag,
+													tab,
+													contrast(stroke.Color, bg)
+												)
+											)
+										end
+									elseif d.BackgroundTransparency < 0.5 then
+										local area = d.Size.X.Scale * d.Size.Y.Scale
+										if area > bodyArea then
+											body, bodyArea = d, area
+										end
+									end
+								end
+							end
+							if body == nil or contrast(body.BackgroundColor3, bg) < 3 then
+								note(
+									string.format(
+										"%s %s : corps du cadenas peu lisible (%.2f)",
+										tag,
+										tab,
+										if body then contrast(body.BackgroundColor3, bg) else 0
+									)
+								)
+							end
+							-- le mot : contraste avec le fond ou avec son contour sombre (≥ 3 ; contour actif
+							-- sauf Enabled = false, comme Screens.contrastIssues)
+							local ratio = contrast(word.TextColor3, bg)
+							local ts = word:FindFirstChild("TextStroke")
+							if ts and ts:IsA("UIStroke") and ts.Enabled ~= false then
+								ratio = math.max(ratio, contrast(word.TextColor3, ts.Color))
+							end
+							if ratio < 3 then
+								note(string.format("%s %s : mot peu lisible (%.2f)", tag, tab, ratio))
+							end
+							-- la rangée garde la place de L2 / R2 et Fermer à son bout (D5)
+							local win = c.PC.window("Upgrades")
+							local k = Layout.rect(win).w / 1440
+							local close = Layout.rect(win:FindFirstChild("Body"):FindFirstChild("Close"))
+							local last = Layout.rect(c.Up._tab("workshop"))
+							if last.x + last.w > close.x - 2 * 56 * k then
+								note(tag .. " : Fermer, L2 et R2 sans place au bout des onglets")
+							end
+						end
+					end
+				end
+				-- après Pip (nouvel instantané, réouverture) : ni cadenas ni mot, l'onglet reprend sa largeur
+				S.patch(
+					c,
+					S.snap(2, function(p)
+						p.R = r
+						p.bestR = r
+					end)
+				)
+				c.PC.closeAll()
+				TvAudit.tick(c.h, 1)
+				S.open(c, "helpers")
+				local b = c.Up._tab("helpers")
+				expect(b:FindFirstChild("Lock").Visible).toBe(false)
+				expect(b:FindFirstChild("LockWord").Visible).toBe(false)
+				expect(b.Size.X.Offset < lockedW).toBe(true)
+				expect(table.concat(issues, "\n")).toBe("")
 				S.clean(c, expect)
 			end
 		)

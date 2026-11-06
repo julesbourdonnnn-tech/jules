@@ -7,8 +7,15 @@
 --     (1 400, l'unité du GDD §10.7.10 et du budget de toute l'interface, §12.9 : 3 000 GuiObject) ;
 --     instances (UICorner, UIStroke, UITextSizeConstraint comprises) relevées et bornées ;
 --   * réouverture, changements d'onglet et de mode : 0 instance créée ;
---   * l'interface entière (HUD, panneaux, écran) reste ≤ 3 000 objets d'interface.
+--   * interface au chargement (HUD et écran, aucun autre panneau encore ouvert) ≤ 3 000 objets
+--     d'interface ;
+--   * interface entière, TOUS les panneaux construits (visite de tous les écrans) : relevé. Le budget
+--     de 3 000 du §12.9 n'y est PAS tenu (journal B2-13, note croisée du lot B2) : les panneaux de la
+--     v1.3 en prennent déjà ≈ 2 460 (Ranch ≈ 950, Squishydex ≈ 460, Diagnostics ≈ 250…) et l'écran
+--     ≈ 1 200 (le GDD lui en donne 1 400). Garde contre une régression en attendant la décision :
+--     l'écran n'ajoute que ses propres objets, et le total reste ≤ 3 700.
 -- Zéro trace.
+local roblox = require("@lune/roblox")
 local TvAudit = require("../harness/TvAudit")
 local UpgradeScreen = require("../harness/UpgradeScreen")
 
@@ -40,10 +47,17 @@ return function(T)
 				S.open(c, nil)
 				local gui = S.guiObjects(c)
 				local all = S.count(c)
+				local whole = TvAudit.guiObjects(c.h)
 				print(
-					string.format("    écran Améliorations : %d objets d'interface, %d instances", gui, all)
+					string.format(
+						"    écran Améliorations : %d objets d'interface, %d instances ; interface au chargement : %d objets d'interface",
+						gui,
+						all,
+						whole
+					)
 				)
 				expect(gui <= S.Layout.Upgrades.MaxInstances).toBe(true)
+				expect(whole <= 3000).toBe(true)
 				-- relevé du lot B2, étape 2 (garde contre une régression ; journal B2-n)
 				expect(all <= 2075).toBe(true)
 				local base = #c.h.localPlayer.PlayerGui:GetDescendants()
@@ -63,6 +77,56 @@ return function(T)
 				expect(#c.h.localPlayer.PlayerGui:GetDescendants()).toBe(base)
 				expect(TvAudit.guiObjects(c.h) <= 3000).toBe(true)
 				S.noV2Intent(c, expect)
+				S.clean(c, expect)
+			end
+		)
+	end)
+
+	describe("Upgrades_Budget › interface entière, tous les panneaux construits", function()
+		it(
+			"relevé : l'écran n'ajoute que ses objets ; total ≤ 3 700 (3 000 du §12.9 non tenu, B2-13)",
+			function()
+				local profile = TvAudit.richProfile()
+				profile.squishies.u20.z = 300000 -- Grand Splorch prêt (aperçu construit)
+				local c = S.client({ snap = S.snap(1), profile = profile, before = TvAudit.enableShop })
+				c.h:fireClient("ReplicatedStorage.Remotes.DiagnosticsSnapshot", { tab = 0 })
+				c.h:settle(1)
+				-- tous les écrans visités (chaque panneau construit une fois), puis l'écran ouvert
+				TvAudit.run(c.h, { resolutions = { roblox.Vector2.new(1920, 1080) }, langs = { "en" } })
+				S.open(c, "workshop")
+				local screen = S.guiObjects(c)
+				local whole = TvAudit.guiObjects(c.h)
+				local parts = {}
+				local safe = c.h.localPlayer.PlayerGui:FindFirstChild("Panels")
+				safe = safe and safe:FindFirstChild("Safe")
+				for _, w in if safe then safe:GetChildren() else {} do
+					if
+						string.sub(w.Name, 1, 6) == "Panel_" and not string.find(w.Name, "_Shadow", 1, true)
+					then
+						local n = 1
+						for _, d in w:GetDescendants() do
+							if d:IsA("GuiObject") then
+								n += 1
+							end
+						end
+						table.insert(parts, string.sub(w.Name, 7) .. " " .. n)
+					end
+				end
+				table.sort(parts)
+				print(
+					string.format(
+						"    interface entière : %d objets d'interface (écran %d, reste %d) ; panneaux : %s",
+						whole,
+						screen,
+						whole - screen,
+						table.concat(parts, ", ")
+					)
+				)
+				-- chaque panneau de la v1.3 construit, l'écran compris
+				expect(#parts >= 9).toBe(true)
+				expect(screen <= S.Layout.Upgrades.MaxInstances).toBe(true)
+				-- garde contre une régression en attendant la décision sur le budget de 3 000 (§12.9)
+				expect(whole <= 3700).toBe(true)
 				S.clean(c, expect)
 			end
 		)
