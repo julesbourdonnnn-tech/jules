@@ -1104,8 +1104,11 @@ local function onRewind(player: Player, character: Model, root: BasePart, back: 
 	if data and type(data.flags) == "table" then
 		data.flags.strikes = (if finite(data.flags.strikes) then data.flags.strikes else 0) + 1
 		if MoveCheck.recentRewinds(player, now) >= Tuning.MoveCheck.StrikesForBan then
-			-- exclusion des classements jusqu'à la fin de la semaine suivante (jamais à vie)
-			local untilT = Clock.unix() + Clock.untilNextWeek() + WEEK_SECONDS
+			-- exclusion des classements jusqu'à la fin de la semaine suivante (jamais à vie), à la seconde
+			-- entière (champ entier du profil : untilNextWeek part de unix, jamais de Clock.now() et de sa
+			-- fraction, que ProfileRepair arrondirait au chargement suivant ; relecture du lot A4, A4-56)
+			local unix = Clock.unix()
+			local untilT = unix + Clock.untilNextWeek(unix) + WEEK_SECONDS
 			if not finite(data.flags.lbBanUntil) or data.flags.lbBanUntil < untilT then
 				data.flags.lbBanUntil = untilT
 			end

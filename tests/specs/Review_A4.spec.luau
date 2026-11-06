@@ -131,6 +131,43 @@ return function(T)
 	end)
 
 	-- ---------------------------------------------------------------------------------------------
+	-- R4-4 (A4-56), trouvé par le Soak ci-dessous (profil passé par JSON puis ProfileRepair) : l'exclusion
+	-- des classements (10 retours en 10 min, ChaseService) écrivait flags.lbBanUntil = Clock.unix() +
+	-- Clock.untilNextWeek() + 1 semaine, où untilNextWeek part de Clock.now() (fraction de seconde) : un
+	-- nombre à virgule dans un champ entier, « réparé » (arrondi) au chargement suivant avec un
+	-- ProfileRepaired de plus pour chaque tricheur exclu. Jeu de base, interrupteurs coupés.
+	describe("Review_A4 › exclusion des classements (jeu de base)", function()
+		it(
+			"flags.lbBanUntil est un entier (fin de la semaine suivante) : aucune réparation au chargement suivant",
+			function()
+				local w = Brains.boot(Harness, { t0 = T0 })
+				local a = Brains.join(w, 1)
+				Brains.frames(w, 40) -- exemption de l'apparition terminée
+				local home = a.Character.HumanoidRootPart.Position
+				for _ = 1, 10 do
+					for _ = 1, 3 do
+						w.h:moveTo(a, home + w.V3.new(80, 0, 0))
+						Brains.frames(w, 1)
+					end
+					Brains.frames(w, 32)
+				end
+				local d = w.DS.get(a)
+				expect(d.flags.strikes).toBe(10)
+				local untilT = d.flags.lbBanUntil
+				expect(untilT > w.Clock.unix()).toBe(true)
+				expect(untilT % 1).toBe(0)
+				-- fin de la semaine suivante, à la seconde : la frontière de semaine de Clock + 7 jours
+				local unix = w.Clock.unix()
+				expect(untilT).toBe(unix + w.Clock.untilNextWeek(unix) + 7 * 86400)
+				local Http = w.h.game.HttpService
+				local Repair = w.h:require("ServerScriptService.Server.Data.ProfileRepair")
+				expect(Repair.repair(Http:JSONDecode(Http:JSONEncode(d)))).toEqual({})
+				expect(table.concat(Brains.problems(w), "\n")).toBe("")
+			end
+		)
+	end)
+
+	-- ---------------------------------------------------------------------------------------------
 	-- Robot de longue durée avec TOUS les interrupteurs v2.0 ouverts (relecture du lot A4) : 16 robots
 	-- sur un serveur v2, profils variés (boucle record, remontée après une Ascension, Confettis, Atelier,
 	-- Record R haut), invariants de chaque profil À CHAQUE TICK (Soak : Invariants.profile, donc
@@ -275,7 +312,8 @@ return function(T)
 					end
 				end
 				expect(tracked > 0).toBe(true)
-				expect(chaos.sent > 100).toBe(true)
+				-- une intention toutes les 3 images dès que 2 joueurs sont là (départs et retours compris)
+				expect(chaos.sent >= math.floor(report.ticks / 6)).toBe(true)
 				print(
 					string.format(
 						"  Soak v2 (tous les interrupteurs) : %.2f h, %.2f ms par tick du serveur, %d joueurs à la fin, instances %d → %d, %d intentions v2.0 au hasard (%d achats)",
