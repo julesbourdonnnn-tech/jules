@@ -444,7 +444,14 @@ return function(T)
 			"5 points par Défi terminé (une fois), aux points de la période où il a été tiré",
 			function()
 				local w = boot({ flags = { "WeeklyTrack", "Confetti" } })
-				local p = join(w, 1)
+				local p = join(w, 1, function(e)
+					-- objectifs du jour déjà réclamés : seuls les Défis donnent des points ici
+					local list = {}
+					for _, id in { 1, 3, 7 } do
+						table.insert(list, { id = id, p = 0, done = true, claimed = true })
+					end
+					e.objectives = objectives(w, list)
+				end)
 				local d = data(w, p)
 				local first = d.weeklyTrack.challenges[1]
 				doChallenge(w, p, first.id)
@@ -1116,6 +1123,9 @@ return function(T)
 			Brains.frames(w, 60)
 		end
 
+		-- clés du profil écrites par QuestService (v1.3) et cartes envoyées
+		local QUEST_KEYS =
+			{ "stats", "onboarding", "objectives", "dex", "season", "plopDays", "lastFeedDay", "codes" }
 		local function run(flags)
 			local w = boot({ v1 = true, flags = flags })
 			local p = join(w, 1, function(d)
@@ -1124,62 +1134,78 @@ return function(T)
 				d.objectives = objectives(w, { entry(1), entry(9), entry(14) })
 			end)
 			play(w, p)
-			local sent = {}
+			local sent, celebrate = {}, {}
 			for _, e in w.h.log.clientEvents do
 				if e.player == p then
 					table.insert(sent, e.remote .. ser(e.args))
+					if e.remote == "Celebrate" then
+						table.insert(celebrate, ser(e.args))
+					end
 				end
 			end
-			local out = { profile = ser(data(w, p)), sent = sent, v2 = v2Cards(p), d = data(w, p) }
+			local d = data(w, p)
+			local quest = {}
+			for _, key in QUEST_KEYS do
+				quest[key] = d[key]
+			end
+			local out = {
+				profile = ser(d),
+				quest = ser(quest),
+				sent = sent,
+				celebrate = celebrate,
+				v2 = v2Cards(p),
+				d = d,
+			}
 			clean(w)
 			return out, w
 		end
 
+		local function same(a, b)
+			expect(#b).toBe(#a)
+			for i, line in a do
+				expect({ i = i, line = b[i] }).toEqual({ i = i, line = line })
+			end
+		end
+
 		it(
-			"profil v1 (SchemaV2 coupé) : aucun champ v2 écrit, aucune carte v2, mêmes données et mêmes envois que sans les interrupteurs de QuestService",
+			"profil v1 (SchemaV2 coupé) : aucun champ v2 écrit, aucune carte v2 ; piste et Carnet ouverts : mêmes données et mêmes envois",
 			function()
 				local off, w = run({})
-				local on = run({ "WeeklyTrack", "Carnet", "RecordR", "UpgradesScreen", "Confetti" })
+				-- interrupteurs lus par QuestService seul : rien ne change, à l'octet près
+				local mine = run({ "WeeklyTrack", "Carnet" })
 				expect(off.v2).toBe(0)
-				expect(on.v2).toBe(0)
-				expect(on.profile).toBe(off.profile)
-				for i = 1, math.max(#on.sent, #off.sent) do
-					if on.sent[i] ~= off.sent[i] then
-						local a, b = off.sent[i] or "-", on.sent[i] or "-"
-						local k = 1
-						while k <= #a and string.sub(a, k, k) == string.sub(b, k, k) do
-							k += 1
-						end
-						print("DIFF", i, k, string.sub(a, math.max(1, k - 150), k + 150))
-						print("DIFF", i, k, string.sub(b, math.max(1, k - 150), k + 150))
-						break
-					end
-				end
-				expect(#on.sent).toBe(#off.sent)
-				for i, line in off.sent do
-					expect({ i = i, line = on.sent[i] }).toEqual({ i = i, line = line })
-				end
+				expect(mine.v2).toBe(0)
+				expect(mine.profile).toBe(off.profile)
+				same(off.sent, mine.sent)
+				-- tous les interrupteurs que lit QuestService (Record R, écran Améliorations et Confettis sont aussi
+				-- lus par d'autres services) : mêmes clés de QuestService, mêmes cartes, aucune carte v2
+				local all = run({ "WeeklyTrack", "Carnet", "RecordR", "UpgradesScreen", "Confetti" })
+				expect(all.v2).toBe(0)
+				expect(all.quest).toBe(off.quest)
+				same(off.celebrate, all.celebrate)
 				-- aucune clé de la v2 dans le profil (premier niveau et sous-clés des tables de la v1)
 				local v1 = w.Schema.defaultsV1()
-				for key, value in off.d do
-					expect({ key = key, known = v1[key] ~= nil }).toEqual({ key = key, known = true })
-					if type(value) == "table" and type(v1[key]) == "table" then
-						for _, sub in
-							{
-								"upgradesBought",
-								"petitSplorches",
-								"objectivesClaimed",
-								"tracksDone",
-								"frostDays",
-								"nextBuyShown",
-								"welcomeV2Pending",
-							}
-						do
-							expect({ key = key, sub = sub, value = value[sub] }).toEqual({
-								key = key,
-								sub = sub,
-								value = nil,
-							})
+				for _, out in { off, mine, all } do
+					for key, value in out.d do
+						expect({ key = key, known = v1[key] ~= nil }).toEqual({ key = key, known = true })
+						if type(value) == "table" then
+							for _, sub in
+								{
+									"upgradesBought",
+									"petitSplorches",
+									"objectivesClaimed",
+									"tracksDone",
+									"frostDays",
+									"nextBuyShown",
+									"welcomeV2Pending",
+								}
+							do
+								expect({ key = key, sub = sub, value = value[sub] }).toEqual({
+									key = key,
+									sub = sub,
+									value = nil,
+								})
+							end
 						end
 					end
 				end
