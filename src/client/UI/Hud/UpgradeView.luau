@@ -85,7 +85,10 @@ export type View = {
 	maxLevel: number, -- maximum montré (Tapis : 20)
 	capLevel: number, -- plafond de la boucle (au-delà : barre grisée) ; = maxLevel sinon
 	levelText: string, -- « 12/20 »
-	tierFill: number, -- barre vers le prochain palier (0 … 1)
+	-- barre de la colonne Niveau : vers le prochain palier (GDD §10.7.5) ; ligne Tapis : toute la famille
+	-- (0 … 20), grisée au-delà du plafond de la boucle (barCap < 1)
+	barFill: number,
+	barCap: number,
 	cardLevel: Effect, -- carte : « Niv. 7 », flèche, « 8 »
 	preview: Preview?,
 	fromText: string?, -- colonne Niveau en ×10 / Max : « 12 », flèche, « 22 »
@@ -574,7 +577,8 @@ local function emptyView(lineId: string, mode: number): View
 		maxLevel = 0,
 		capLevel = 0,
 		levelText = Format.level(0, 0),
-		tierFill = 0,
+		barFill = 0,
+		barCap = 1,
 		cardLevel = {},
 		have = 0,
 		fill = 0,
@@ -829,7 +833,10 @@ local function buyView(
 		maxLevel = shownMax,
 		capLevel = capLevel,
 		levelText = Format.level(shownLevel, shownMax),
-		tierFill = tierFill(buyLine.family, buyL, buyMax),
+		barFill = if tapis
+			then math.clamp(shownLevel / math.max(1, shownMax), 0, 1)
+			else tierFill(buyLine.family, buyL, buyMax),
+		barCap = if tapis then math.clamp(capLevel / math.max(1, shownMax), 0, 1) else 1,
 		cardLevel = { before = cardBefore, after = cardAfter },
 		preview = if purchasable then preview else nil,
 		fromText = if purchasable and preview then Format.count(preview.from) else nil,
@@ -912,7 +919,8 @@ local function helperView(
 		maxLevel = 0,
 		capLevel = 0,
 		levelText = Format.level(0, 0),
-		tierFill = 0,
+		barFill = 0,
+		barCap = 1,
 		cardLevel = {},
 		have = 0,
 		fill = 0,
@@ -946,7 +954,8 @@ local function risesView(
 		maxLevel = 0,
 		capLevel = 0,
 		levelText = Format.level(0, 0),
-		tierFill = 0,
+		barFill = 0,
+		barCap = 1,
 		cardLevel = {},
 		have = 0,
 		fill = 0,

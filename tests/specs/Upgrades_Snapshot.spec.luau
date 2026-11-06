@@ -185,15 +185,12 @@ return function(T)
 				p.coins -= 1234
 			end)
 			result(c.h, bought(s5, 9, 10))
-			patch(
-				c.h,
-				{
-					upgradeSnapshot = snapOf(c.h, 5, function(p)
-						p.tiles.decor = 10
-						p.coins -= 1234
-					end),
-				}
-			)
+			patch(c.h, {
+				upgradeSnapshot = snapOf(c.h, 5, function(p)
+					p.tiles.decor = 10
+					p.coins -= 1234
+				end),
+			})
 			expect(c.changed).toEqual({ 4, 5 })
 			expect(#c.results).toBe(1)
 			expect(c.results[1].id).toBe("decor")
