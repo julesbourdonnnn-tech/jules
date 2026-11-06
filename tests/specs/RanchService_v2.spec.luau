@@ -8,7 +8,11 @@
 --     Splorch, effacés quand leur interrupteur se coupe, et quand le ranch est libéré ;
 --   * setV2Attributes : noms et sortes du contrat seulement (NaN, inf, mauvais type, nom inconnu :
 --     refusés), valeurs gardées jusqu'à l'attribution du ranch ;
---   * offeredPlace : ranch reconstruit, enclos déjà plein → Feedback « +n Confettis ».
+--   * offeredPlace : ranch reconstruit, enclos déjà plein → Feedback « +n Confettis » ;
+--   * lot A4 (D31) : DecorGold [RanchTiers] (bit k − 1 : decorBuilds[k] ≥ 10) et GoldPennants
+--     [Workshop] (« Fanions dorés » achetés) sur un profil v2 seulement ; les 7 attributs du lot A4
+--     (HelperMode, Helpers, GiantTier, DecorGold, GoldPennants, Palette, Cushions) absents tant que
+--     tout est coupé.
 local Bots = require("../harness/Bots")
 
 return function(T)
@@ -38,6 +42,14 @@ return function(T)
 		"TapisTier",
 		"GloveTier",
 		"ApronTier",
+		-- lot A4
+		"HelperMode",
+		"Helpers",
+		"GiantTier",
+		"DecorGold",
+		"GoldPennants",
+		"Palette",
+		"Cushions",
 	}
 
 	local function rec(extra)
@@ -49,9 +61,10 @@ return function(T)
 		return r
 	end
 
-	local function boot(flags, profile)
+	-- harness : HarnessV2 (profils v2) par défaut ; Harness pour un profil v1
+	local function boot(flags, profile, harness)
 		local caught = {}
-		local w = Bots.boot(HarnessV2, {
+		local w = Bots.boot(harness or HarnessV2, {
 			t0 = T0,
 			before = function(w)
 				w.DS.Settings.AUTOSAVE_INTERVAL = 1e6
@@ -73,12 +86,14 @@ return function(T)
 				d.trophies[1] = 1e5
 				d.coins = 1e14
 				d.R = 6
-				d.bestR = 12
-				d.unlocksSeen = 12
 				d.tiles.snack = 12
-				d.tiles.star = 1
-				d.tiles.gloves = 10
-				d.tiles.monuments = 2
+				if d.version >= 2 then
+					d.bestR = 12
+					d.unlocksSeen = 12
+					d.tiles.star = 1
+					d.tiles.gloves = 10
+					d.tiles.monuments = 2
+				end
 				if profile then
 					profile(d)
 				end
@@ -137,6 +152,7 @@ return function(T)
 				w.Economy.step(w.Clock.now())
 				w.h:settle(3)
 				local TierRules = w.h:require(L .. "Logic.TierRules")
+				-- DecorGold [RanchTiers] : attente ajoutée au lot A4 (D31, journal A4-5), aucune dorée
 				expect(attrs(w, slot)).toEqual({
 					BestR = 12,
 					SplorchReady = false,
@@ -144,6 +160,7 @@ return function(T)
 					TapisTier = TierRules.of("star", 1),
 					GloveTier = TierRules.of("gloves", 10),
 					ApronTier = 0,
+					DecorGold = 0,
 				})
 				-- achat d'un Monument : attribut recalculé (UpgradeBought)
 				w.Economy.buyUpgrade(p, "monument", 1, 2)
@@ -240,6 +257,65 @@ return function(T)
 				clean(w)
 			end
 		)
+	end)
+
+	describe("RanchService_v2 › décorations et fanions dorés (lot A4, D31)", function()
+		it(
+			"DecorGold [RanchTiers] et GoldPennants [Workshop] : posés sur un profil v2, recalculés à l'achat et au prestige, effacés en direct, rien au départ",
+			function()
+				local w = boot({ "UpgradesScreen", "Confetti", "Workshop", "RanchTiers" }, function(d)
+					d.decorBuilds[1] = 10
+					d.decorBuilds[3] = 9
+					d.decorBuilds[18] = 10
+					d.confetti, d.confettiTotal = 100, 100
+				end)
+				local p = Bots.join(1)
+				local slot = w.Ranch.slotOf(p)
+				local data = w.DS.get(p)
+				w.h:settle(3)
+				local a = attrs(w, slot)
+				expect({ a.DecorGold, a.GoldPennants }).toEqual({ 1 + 2 ^ 17, false })
+				-- « Fanions dorés » de « Pour le plaisir » achetés : posé à l'achat (UpgradeBought)
+				local result = w.Economy.buyUpgrade(p, "pennants", 1, 0)
+				expect(result.to).toBe(1)
+				w.h:settle(3)
+				expect(attrs(w, slot).GoldPennants).toBe(true)
+				-- 10e boucle de la décoration 3 : dorée au prestige suivant (PrestigeApplied)
+				data.decorBuilds[3] = 10
+				w.Signals.PrestigeApplied:Fire(p, "splorch", 6, 7, 0)
+				w.h:settle(3)
+				expect(attrs(w, slot).DecorGold).toBe(1 + 4 + 2 ^ 17)
+				-- Workshop coupé en direct : GoldPennants effacé au tick suivant, DecorGold gardé
+				w.F.set("Workshop", false)
+				w.Ranch.step(w.Clock.now(), {})
+				a = attrs(w, slot)
+				expect({ a.GoldPennants, a.DecorGold }).toEqual({ nil, 1 + 4 + 2 ^ 17 })
+				-- RanchTiers coupé : DecorGold effacé (et les paliers) ; rouvert : reposé
+				w.F.set("RanchTiers", false)
+				w.Ranch.step(w.Clock.now(), {})
+				expect(attrs(w, slot)).toEqual({})
+				w.F.set("RanchTiers", true)
+				w.Ranch.step(w.Clock.now(), {})
+				expect(attrs(w, slot).DecorGold).toBe(1 + 4 + 2 ^ 17)
+				Bots.leave(p)
+				w.h:settle(5)
+				expect(attrs(w, slot)).toEqual({})
+				clean(w)
+			end
+		)
+
+		it("profil v1 : DecorGold et GoldPennants jamais posés, même interrupteurs ouverts", function()
+			local w = boot({ "UpgradesScreen", "Confetti", "Workshop", "RanchTiers" }, nil, Harness)
+			local p = Bots.join(1)
+			local slot = w.Ranch.slotOf(p)
+			expect(w.DS.get(p).version).toBe(1)
+			w.h:settle(3)
+			w.Ranch.refreshV2(p)
+			local a = attrs(w, slot)
+			expect({ a.DecorGold, a.GoldPennants }).toEqual({ nil, nil })
+			expect(a.TapisTier ~= nil).toBe(true) -- paliers du lot A2 : inchangés
+			clean(w)
+		end)
 	end)
 
 	describe("RanchService_v2 › Aimant de l'Atelier", function()

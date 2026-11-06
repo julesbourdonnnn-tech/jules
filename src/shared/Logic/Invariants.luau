@@ -11,6 +11,9 @@
 -- famille), Tapis Étoilé ≤ plafond de la boucle. Juste après un prestige : afterPrestige (toutes
 -- les tailles à 1, décorations gardées ≤ 12, dalles de la boucle à zéro). Un profil v1 garde
 -- EXACTEMENT les invariants de la v1.3.
+-- Lot A4 (docs/04 §27.2) : compteurs de la méta, cosmétiques de la semaine gagnés, jeu des 7 derniers
+-- jours, palette et coussins connus, réglage « Montrer mon halo » booléen, objet de Déco perso posé
+-- sur un emplacement de sa taille (Cosmetics.DecoSlots) ; mêmes bornes que Data/ProfileRepair.
 
 -- Bibliothèques gardées en local : appels rapides, aussi dans l'environnement injecté du harnais
 local type, math, string, table, bit32 = type, math, string, table, bit32
@@ -21,6 +24,7 @@ local Mutations = require(script.Parent.Parent.Config.Mutations)
 local Quests = require(script.Parent.Parent.Config.Quests)
 local Upgrades = require(script.Parent.Parent.Config.Upgrades)
 local Cosmetics = require(script.Parent.Parent.Config.Cosmetics)
+local Visuals = require(script.Parent.Parent.Config.Visuals)
 local Formulas = require(script.Parent.Formulas)
 local QuestRules = require(script.Parent.QuestRules)
 local Prestige = require(script.Parent.Prestige)
@@ -48,6 +52,39 @@ local HEARTS_GIVEN_MAX = Balance.Hearts.PerDay
 local CHALLENGES_MAX = Quests.WeeklyTrack.ChallengesPerWeek
 local TRACK_TIERS = #Quests.WeeklyTrack.Tiers
 local CARNET_TIERS = #Quests.Carnet.Tiers
+-- lot A4 : cosmétiques de la semaine (un bit chacun), jeu des 7 derniers jours (secondes par jour UTC)
+local WEEKLY_COSMETICS = #Cosmetics.WeeklyRotation
+local PLAY_DAYS = 7
+local DAY_SECONDS = 86400
+-- palettes du spectacle connues (ligne « palettes » de « Pour le plaisir », objets « palette.* » de
+-- la table des Record R, palette de la semaine) et coussins (de la semaine) : mêmes listes que
+-- Data/ProfileRepair
+local PALETTES: { [string]: boolean } = {}
+local CUSHIONS: { [string]: boolean } = {}
+for _, line in Upgrades.Fun do
+	for _, grant in line.grants do
+		local id = string.match(grant, "^palette%.(.+)$")
+		if id then
+			PALETTES[id] = true
+		end
+	end
+end
+for _, row in Visuals.RecordTable do
+	for _, tile in row.unlocks do
+		local name = if tile.vars then tile.vars.name else nil
+		local id = if type(name) == "string" then string.match(name, "^palette%.(.+)$") else nil
+		if id then
+			PALETTES[id] = true
+		end
+	end
+end
+for _, item in Cosmetics.WeeklyRotation do
+	if item.kind == "palette" then
+		PALETTES[item.id] = true
+	elseif item.kind == "cushions" then
+		CUSHIONS[item.id] = true
+	end
+end
 -- Plafonds des niveaux : tous les interrupteurs ouverts (structure du profil, pas l'état du jour)
 local ALL_FLAGS = {
 	get = function(_key: string): boolean
@@ -485,6 +522,17 @@ function Invariants.profileV2(d: any, R: number, bad: (string) -> ())
 		if not int(stats.petitSplorches, 0, 1e12) then
 			bad("stats.petitSplorches")
 		end
+		-- lot A4 : objectifs du jour réclamés, pistes de la semaine finies
+		if not int(stats.objectivesClaimed, 0, 1e12) then
+			bad("stats.objectivesClaimed")
+		end
+		if not int(stats.tracksDone, 0, 1e12) then
+			bad("stats.tracksDone")
+		end
+	end
+	-- lot A4 : Jelly Moon jouées (Goutte de Lune donnée)
+	if type(d.moon) ~= "table" or not int(d.moon.sessions, 0, 1e9) then
+		bad("moon.sessions")
 	end
 	if not int(d.unlocksSeen, 0, bestR) then
 		bad("unlocksSeen")
@@ -505,6 +553,25 @@ function Invariants.profileV2(d: any, R: number, bad: (string) -> ())
 		end
 		if not int(track.firstPeriodEnd, 0, 2 ^ 53) then
 			bad("weeklyTrack.firstPeriodEnd")
+		end
+		-- lot A4 : cosmétiques de la semaine gagnés (8 bits), 7 jours de jeu (0 à 86 400 s), jour
+		if not Invariants.bitset(track.won, WEEKLY_COSMETICS) then
+			bad("weeklyTrack.won")
+		end
+		local play = track.play
+		local okPlay = Invariants.dense(play) and #play == PLAY_DAYS
+		if okPlay then
+			for i = 1, PLAY_DAYS do
+				if not int(play[i], 0, DAY_SECONDS) then
+					okPlay = false
+				end
+			end
+		end
+		if not okPlay then
+			bad("weeklyTrack.play")
+		end
+		if not int(track.playDay, 0, 1e9) then
+			bad("weeklyTrack.playDay")
 		end
 		local list = track.challenges
 		if not Invariants.dense(list) or #list > CHALLENGES_MAX then
@@ -556,12 +623,30 @@ function Invariants.profileV2(d: any, R: number, bad: (string) -> ())
 			if not int(item, 0, DECO_ITEMS) then
 				bad("decoPerso.slots." .. i)
 			elseif item > 0 then
-				if not bitOf(deco.owned, item) or placed[item] then
+				-- possédé, posé une fois, sur un emplacement de sa taille (lot A4)
+				if
+					not bitOf(deco.owned, item)
+					or placed[item]
+					or Cosmetics.DecoPerso[item].size ~= Cosmetics.DecoSlots[i]
+				then
 					bad("decoPerso.slots." .. i)
 				end
 				placed[item] = true
 			end
 		end
+	end
+	-- lot A4 : palette et coussins choisis (identifiant connu ou ""), réglage « Montrer mon halo »
+	local cosmetics = d.cosmetics
+	local palette = if type(cosmetics) == "table" then cosmetics.palette else nil
+	local cushions = if type(cosmetics) == "table" then cosmetics.cushions else nil
+	if type(palette) ~= "string" or (palette ~= "" and not PALETTES[palette]) then
+		bad("cosmetics.palette")
+	end
+	if type(cushions) ~= "string" or (cushions ~= "" and not CUSHIONS[cushions]) then
+		bad("cosmetics.cushions")
+	end
+	if type(d.settings) ~= "table" or type(d.settings.haloOn) ~= "boolean" then
+		bad("settings.haloOn")
 	end
 	-- cœurs : jour UTC, 20 receveurs au plus (UserIds entiers, chacun une fois), total reçu
 	local hearts = d.hearts

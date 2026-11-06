@@ -81,6 +81,10 @@ return function(T)
 			claimed = { 4095 },
 			challenges = { { id = 12, p = 30, done = true }, { id = 3, p = 2, done = false } },
 			firstPeriodEnd = 1800604800,
+			-- lot A4 : 2 cosmétiques de la semaine gagnés, 7 jours de jeu, dernier jour écrit
+			won = { 3 },
+			play = { 1800, 0, 600, 86400, 0, 3600, 120 },
+			playDay = 20759,
 		}
 		Bitset.set(d.decoPerso.owned, 1)
 		Bitset.set(d.decoPerso.owned, 40)
@@ -90,6 +94,10 @@ return function(T)
 		d.caps.fameSplorch, d.caps.starRain = 50, 3
 		d.stats.upgradesBought, d.stats.petitSplorches = 345, 12
 		d.season.frostDays = 4
+		-- lot A4 : compteurs de la méta, palette et coussins choisis, halo caché
+		d.stats.objectivesClaimed, d.stats.tracksDone, d.moon.sessions = 40, 2, 3
+		d.cosmetics.palette, d.cosmetics.cushions = "candy", "pinkCushions"
+		d.settings.haloOn = false
 		return d
 	end
 	local function readJson(name)
@@ -162,12 +170,18 @@ return function(T)
 			d.bestR = -7 -- clé inconnue de la v1 : ni lue ni effacée
 			d.weeklyTrack = "x"
 			d.cosmetics.theme = "neon" -- habillage v2 : pas vérifié en v1
+			-- champs du lot A4 : inconnus de la v1, ni lus ni écrits
+			d.settings.haloOn = 5
+			d.moon.sessions = -1
+			d.cosmetics.palette = 7
 			local fixes = Repair.repair(d)
 			expect(fixes).toEqual({})
 			expect(d.R).toBe(500)
 			expect(d.bestR).toBe(-7)
 			expect(d.weeklyTrack).toBe("x")
 			expect(d.cosmetics.theme).toBe("neon")
+			expect({ d.settings.haloOn, d.moon.sessions, d.cosmetics.palette }).toEqual({ 5, -1, 7 })
+			expect(d.cosmetics.cushions).toBeNil()
 			expect(d.memoryR).toBeNil()
 			expect(d.confetti).toBeNil()
 			expect(d.tiles.star).toBeNil()
@@ -684,6 +698,142 @@ return function(T)
 					return d.hearts.receivedTotal == 0
 				end,
 			},
+			-- lot A4 (docs/04 §27.12 A4-4) : compteurs, piste, palette, coussins, halo, taille des emplacements
+			{
+				"stats.objectivesClaimed",
+				function(d)
+					d.stats.objectivesClaimed = 2.5
+				end,
+				function(d)
+					return d.stats.objectivesClaimed == 2
+				end,
+			},
+			{
+				"stats.tracksDone",
+				function(d)
+					d.stats.tracksDone = -3
+				end,
+				function(d)
+					return d.stats.tracksDone == 0
+				end,
+			},
+			{
+				"moon.sessions",
+				function(d)
+					d.moon.sessions = 1e10
+				end,
+				function(d)
+					return d.moon.sessions == 1e9 and d.moon.lastSession == 0
+				end,
+			},
+			{
+				"moon.sessions",
+				function(d)
+					d.moon.sessions = 0 / 0
+				end,
+				function(d)
+					return d.moon.sessions == 0
+				end,
+			},
+			{
+				"weeklyTrack.won",
+				function(d)
+					d.weeklyTrack.won = { "x", 2 ^ 32 }
+				end,
+				function(d)
+					return Tables.deepEqual(d.weeklyTrack.won, { 0, 0 })
+				end,
+			},
+			{
+				"weeklyTrack.won",
+				function(d)
+					d.weeklyTrack.won = 5
+				end,
+				function(d)
+					return Tables.deepEqual(d.weeklyTrack.won, { 0 })
+				end,
+			},
+			{
+				"weeklyTrack.play",
+				function(d)
+					d.weeklyTrack.play = { 90000, -1, 2.5, 0, 0, 0, 0, 7, 8 }
+				end,
+				function(d)
+					return Tables.deepEqual(d.weeklyTrack.play, { 86400, 0, 2, 0, 0, 0, 0 })
+				end,
+			},
+			{
+				"weeklyTrack.play",
+				function(d)
+					d.weeklyTrack.play = { [2] = 60 } -- à trous (vieux bug) : allongé à 7 cases
+				end,
+				function(d)
+					return Tables.deepEqual(d.weeklyTrack.play, { 0, 60, 0, 0, 0, 0, 0 })
+				end,
+			},
+			{
+				"weeklyTrack.playDay",
+				function(d)
+					d.weeklyTrack.playDay = -5
+				end,
+				function(d)
+					return d.weeklyTrack.playDay == 0
+				end,
+			},
+			{
+				"cosmetics.palette",
+				function(d)
+					d.cosmetics.palette = "inconnue"
+				end,
+				function(d)
+					return d.cosmetics.palette == "" and d.cosmetics.cushions == "pinkCushions"
+				end,
+			},
+			{
+				"cosmetics.palette",
+				function(d)
+					d.cosmetics.palette = 3
+				end,
+				function(d)
+					return d.cosmetics.palette == ""
+				end,
+			},
+			{
+				"cosmetics.cushions",
+				function(d)
+					d.cosmetics.cushions = "peachPalette" -- une palette, pas des coussins
+				end,
+				function(d)
+					return d.cosmetics.cushions == "" and d.cosmetics.palette == "candy"
+				end,
+			},
+			{
+				"settings.haloOn",
+				function(d)
+					d.settings.haloOn = "oui"
+				end,
+				function(d)
+					return d.settings.haloOn == true
+				end,
+			},
+			{
+				"decoPerso.slots.9",
+				function(d)
+					d.decoPerso.slots[1], d.decoPerso.slots[9] = 0, 1 -- petit objet sur un grand emplacement
+				end,
+				function(d)
+					return d.decoPerso.slots[9] == 0 and d.decoPerso.slots[12] == 40
+				end,
+			},
+			{
+				"decoPerso.slots.2",
+				function(d)
+					d.decoPerso.slots[12], d.decoPerso.slots[2] = 0, 40 -- grand objet sur un petit emplacement
+				end,
+				function(d)
+					return d.decoPerso.slots[2] == 0 and d.decoPerso.slots[1] == 1
+				end,
+			},
 			{
 				"cosmetics.theme",
 				function(d)
@@ -736,6 +886,44 @@ return function(T)
 				expect({ case = i, again = Repair.repair(d) }).toEqual({ case = i, again = {} })
 			end
 		end)
+
+		it(
+			"lot A4 : chaque palette et chaque coussin connus gardés ; « » gardé ; objet à sa taille gardé",
+			function()
+				local palettes =
+					{ "candy", "mint", "lavender", "rainbow", "softNight", "icing", "fireworks", "peachPalette" }
+				for _, id in palettes do
+					local d = played()
+					d.cosmetics.palette = id
+					expect({ id = id, fixes = Repair.repair(d) }).toEqual({ id = id, fixes = {} })
+				end
+				local d = played()
+				d.cosmetics.palette, d.cosmetics.cushions = "", ""
+				expect(Repair.repair(d)).toEqual({})
+				-- chaque objet possédé posé sur chaque emplacement de sa taille : gardé
+				local C = h:require("ReplicatedStorage.Shared.Config.Cosmetics")
+				for n, item in C.DecoPerso do
+					for slot, size in C.DecoSlots do
+						local x = played()
+						x.decoPerso.owned = { 4294967295, 255 }
+						x.decoPerso.slots = table.create(12, 0)
+						x.decoPerso.slots[slot] = n
+						local fixes = Repair.repair(x)
+						local kept = x.decoPerso.slots[slot] == n
+						expect({ n = n, slot = slot, kept = kept }).toEqual({
+							n = n,
+							slot = slot,
+							kept = item.size == size,
+						})
+						expect({ n = n, slot = slot, fixes = #fixes }).toEqual({
+							n = n,
+							slot = slot,
+							fixes = if item.size == size then 0 else 1,
+						})
+					end
+				end
+			end
+		)
 
 		it("habillages gagnés gardés (Record R, A, Squishydex, jours de Plop)", function()
 			for _, pair in

@@ -556,6 +556,73 @@ return function(T)
 						d.caps.starRain = 0 / 0
 					end,
 				},
+				-- lot A4 (docs/04 §27.12 A4-4) : mêmes bornes que ProfileRepair
+				{
+					"weeklyTrack.won",
+					function(d)
+						d.weeklyTrack.won = { 1.5 }
+					end,
+				},
+				{
+					"weeklyTrack.won",
+					function(d)
+						d.weeklyTrack.won = nil
+					end,
+				},
+				{
+					"weeklyTrack.play",
+					function(d)
+						d.weeklyTrack.play = { 0, 0, 0, 0, 0, 0 } -- 6 cases
+					end,
+				},
+				{
+					"weeklyTrack.play",
+					function(d)
+						d.weeklyTrack.play[4] = 86401
+					end,
+				},
+				{
+					"weeklyTrack.playDay",
+					function(d)
+						d.weeklyTrack.playDay = 2.5
+					end,
+				},
+				{
+					"moon.sessions",
+					function(d)
+						d.moon.sessions = -1
+					end,
+				},
+				{
+					"stats.objectivesClaimed",
+					function(d)
+						d.stats.objectivesClaimed = 0 / 0
+					end,
+				},
+				{
+					"stats.tracksDone",
+					function(d)
+						d.stats.tracksDone = nil
+					end,
+				},
+				{
+					"cosmetics.palette",
+					function(d)
+						d.cosmetics.palette = "inconnue"
+					end,
+				},
+				{
+					"cosmetics.cushions",
+					function(d)
+						d.cosmetics.cushions = "candy" -- une palette, pas des coussins
+					end,
+				},
+				{
+					"settings.haloOn",
+					function(d)
+						d.settings.haloOn = nil
+					end,
+				},
 			}
 			for _, case in cases do
 				local d = healthyV2()
@@ -567,14 +634,27 @@ return function(T)
 			ok.weeklyTrack.challenges = { { id = 3, p = 4, done = false }, { id = 12, p = 30, done = true } }
 			ok.caps.fameSplorch, ok.caps.starRain = 50, 3
 			expect(I.profile(ok)).toEqual({})
+			-- lot A4 : valeurs permises (chaque palette et chaque coussin connus, « » compris)
+			ok.weeklyTrack.won = { 255 }
+			ok.weeklyTrack.play = { 86400, 0, 1, 2, 3, 4, 5 }
+			ok.weeklyTrack.playDay = 20759
+			ok.moon.sessions, ok.stats.objectivesClaimed, ok.stats.tracksDone = 4, 100, 4
+			ok.settings.haloOn = false
+			ok.cosmetics.cushions = "pinkCushions"
+			for _, id in { "", "candy", "mint", "lavender", "rainbow", "softNight", "icing", "fireworks", "peachPalette" } do
+				ok.cosmetics.palette = id
+				expect({ id = id, bad = I.profile(ok) }).toEqual({ id = id, bad = {} })
+			end
 		end)
 
 		it(
 			"Déco perso : emplacement vers un objet possédé, jamais deux fois ; cœurs : 20 receveurs au plus",
 			function()
 				local d = healthyV2()
-				d.decoPerso.owned[1] = 2 + 4 -- objets 2 et 3
-				d.decoPerso.slots[1], d.decoPerso.slots[9] = 2, 3
+				-- objets 2 et 3 (petits), 6 et 8 (grands) ; attente changée au lot A4 (D18, journal A4-4) :
+				-- l'objet 3 (petit) était posé sur l'emplacement 9 (grand), désormais refusé
+				d.decoPerso.owned[1] = 2 + 4 + 32 + 128
+				d.decoPerso.slots[1], d.decoPerso.slots[9] = 2, 6
 				d.hearts.givenTo = { 101, 102, -5 }
 				d.hearts.givenDay, d.hearts.receivedTotal = 20400, 17
 				expect(I.profile(d)).toEqual({})
@@ -597,6 +677,18 @@ return function(T)
 							x.decoPerso.slots[4] = 41
 						end,
 					},
+					{
+						"decoPerso.slots.10",
+						function(x)
+							x.decoPerso.slots[10] = 3
+						end,
+					}, -- petit objet sur un grand emplacement (lot A4)
+					{
+						"decoPerso.slots.5",
+						function(x)
+							x.decoPerso.slots[5] = 8
+						end,
+					}, -- grand objet sur un petit emplacement (lot A4)
 					{
 						"decoPerso.slots",
 						function(x)

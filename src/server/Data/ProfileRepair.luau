@@ -27,6 +27,11 @@
 -- l'interrupteur figé SchemaV2 est coupé, DataService ne lui passe jamais de profil v2 (refusé,
 -- « schéma plus récent »). Règle d'une valeur illisible : la valeur sûre ne donne jamais rien
 -- deux fois (bonus de retour déjà donné, × 1,25 refusé, bit non possédé, carte déjà vue).
+-- Lot A4 (docs/04 §27.2) : compteurs de la méta (stats.objectivesClaimed, stats.tracksDone,
+-- moon.sessions), cosmétiques de la semaine gagnés et jeu des 7 derniers jours (weeklyTrack.won,
+-- play, playDay), palette et coussins choisis (identifiant inconnu → ""), réglage « Montrer mon halo »
+-- (booléen, sinon vrai ; profil v2 seulement), objet de Déco perso posé sur un emplacement d'une autre
+-- taille (Cosmetics.DecoSlots) → emplacement vidé.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -38,6 +43,7 @@ local Cosmetics = require(Shared.Config.Cosmetics)
 local Quests = require(Shared.Config.Quests)
 local SettingsConfig = require(Shared.Config.Settings)
 local Upgrades = require(Shared.Config.Upgrades)
+local Visuals = require(Shared.Config.Visuals)
 local Formulas = require(Shared.Logic.Formulas)
 local QuestRules = require(Shared.Logic.QuestRules)
 local Prestige = require(Shared.Logic.Prestige)
@@ -79,6 +85,10 @@ local HEARTS_GIVEN_MAX = Balance.Hearts.PerDay
 local CHALLENGES_MAX = Quests.WeeklyTrack.ChallengesPerWeek
 local TRACK_TIERS = #Quests.WeeklyTrack.Tiers
 local CARNET_TIERS = #Quests.Carnet.Tiers
+-- lot A4 : cosmétiques de la semaine (un bit chacun), jeu des 7 derniers jours (secondes par jour UTC)
+local WEEKLY_COSMETICS = #Cosmetics.WeeklyRotation
+local PLAY_DAYS = 7
+local DAY_SECONDS = 86400
 -- familles nouvelles : champ de tiles et nombre de niveaux (ordre fixe : réparations déterministes)
 local NEW_TILES = {
 	{ "star", Balance.UpgradePrices.star.Levels },
@@ -123,6 +133,35 @@ for _, list in { Cosmetics.List, Cosmetics.ListV2 } do
 		if def.kind == "theme" then
 			THEMES[def.id] = def.source
 		end
+	end
+end
+-- lot A4 : palettes du spectacle connues (cosmetics.palette : ligne « palettes » de « Pour le
+-- plaisir », objets « palette.* » de la table des Record R, palette de la semaine) et coussins
+-- (cosmetics.cushions : coussins de la semaine) ; mêmes listes que Logic/Invariants
+local PALETTES: { [string]: boolean } = {}
+local CUSHIONS: { [string]: boolean } = {}
+for _, line in Upgrades.Fun do
+	for _, grant in line.grants do
+		local id = string.match(grant, "^palette%.(.+)$")
+		if id then
+			PALETTES[id] = true
+		end
+	end
+end
+for _, row in Visuals.RecordTable do
+	for _, tile in row.unlocks do
+		local name = if tile.vars then tile.vars.name else nil
+		local id = if type(name) == "string" then string.match(name, "^palette%.(.+)$") else nil
+		if id then
+			PALETTES[id] = true
+		end
+	end
+end
+for _, item in Cosmetics.WeeklyRotation do
+	if item.kind == "palette" then
+		PALETTES[item.id] = true
+	elseif item.kind == "cushions" then
+		CUSHIONS[item.id] = true
 	end
 end
 
@@ -737,7 +776,7 @@ local function repairQuest(ctx: Ctx, d: { [string]: any })
 	end
 end
 
-local function repairOthers(ctx: Ctx, d: { [string]: any })
+local function repairOthers(ctx: Ctx, d: { [string]: any }, version: number)
 	-- séance de Jelly Moon de la dernière Goutte de Lune (contrat v1.2)
 	intField(ctx, d.moon, "lastSession", 0, MAX_INT, "moon.lastSession")
 	intField(ctx, d.golden, "lastWinAt", 0, MAX_INT, "golden.lastWinAt")
@@ -748,9 +787,10 @@ local function repairOthers(ctx: Ctx, d: { [string]: any })
 		d.flags.lbBanned = false -- champ du socle, jamais vrai
 		fix(ctx, "flags.lbBanned")
 	end
-	-- réglages : valeur d'une chaîne dans sa liste
+	-- réglages : valeur d'une chaîne dans sa liste (réglage de cette version du profil seulement :
+	-- `since` ≤ version, lot A4 ; jamais un réglage v2 écrit dans un profil v1)
 	for key, def in SettingsConfig do
-		if def.saved and def.kind == "string" and def.values then
+		if def.saved and def.kind == "string" and def.values and (def.since or 1) <= version then
 			local v = d.settings[key]
 			if type(v) ~= "string" or not def.values[v] then
 				d.settings[key] = def.default
@@ -944,6 +984,10 @@ local function repairOthersV2(ctx: Ctx, d: { [string]: any }, raw: RawV2)
 	local best = Prestige.bestR(d)
 	intField(ctx, d.stats, "upgradesBought", 0, 1e12, "stats.upgradesBought")
 	intField(ctx, d.stats, "petitSplorches", 0, 1e12, "stats.petitSplorches")
+	-- lot A4 : objectifs du jour réclamés, pistes de la semaine finies, Jelly Moon jouées
+	intField(ctx, d.stats, "objectivesClaimed", 0, 1e12, "stats.objectivesClaimed")
+	intField(ctx, d.stats, "tracksDone", 0, 1e12, "stats.tracksDone")
+	intField(ctx, d.moon, "sessions", 0, 1e9, "moon.sessions")
 	-- cartes « Nouveau » déjà vues : ≤ Record R ; illisible ou négatif → Record R (jamais une pluie
 	-- de cartes déjà montrées)
 	local seen = if finite(raw.unlocksSeen) then d.unlocksSeen else nil
@@ -962,6 +1006,11 @@ local function repairOthersV2(ctx: Ctx, d: { [string]: any }, raw: RawV2)
 	intField(ctx, track, "points", 0, 1e6, "weeklyTrack.points")
 	intField(ctx, track, "firstPeriodEnd", 0, MAX_INT, "weeklyTrack.firstPeriodEnd")
 	track.claimed = bitsetField(ctx, track.claimed, TRACK_TIERS, "weeklyTrack.claimed")
+	-- lot A4 : cosmétiques de la semaine gagnés (bit i = Cosmetics.WeeklyRotation[i]) ; secondes de jeu
+	-- des 7 derniers jours UTC (exactement 7 cases de 0 à 86 400) et jour de la dernière case écrite
+	track.won = bitsetField(ctx, track.won, WEEKLY_COSMETICS, "weeklyTrack.won")
+	track.play = fixedInts(ctx, track.play, PLAY_DAYS, DAY_SECONDS, "weeklyTrack.play")
+	intField(ctx, track, "playDay", 0, 1e9, "weeklyTrack.playDay")
 	-- Défis : liste dense d'au plus 3 entrées { id, p, done }, chaque Défi une fois ; une entrée
 	-- illisible (id inconnu, doublon) est retirée, p et done réparés en place
 	local list = track.challenges
@@ -1015,7 +1064,13 @@ local function repairOthersV2(ctx: Ctx, d: { [string]: any }, raw: RawV2)
 	for i = 1, DECO_SLOTS do
 		local item = slots[i]
 		if item > 0 then
-			if item > DECO_ITEMS or not Bitset.has(deco.owned, item) or placed[item] then
+			-- objet inconnu, non possédé, déjà posé ou d'une autre taille que l'emplacement (lot A4)
+			if
+				item > DECO_ITEMS
+				or not Bitset.has(deco.owned, item)
+				or placed[item]
+				or Cosmetics.DecoPerso[item].size ~= Cosmetics.DecoSlots[i]
+			then
 				slots[i] = 0
 				fix(ctx, "decoPerso.slots." .. i)
 			else
@@ -1075,6 +1130,19 @@ local function repairOthersV2(ctx: Ctx, d: { [string]: any }, raw: RawV2)
 		cosmetics.theme = "color"
 		fix(ctx, "cosmetics.theme")
 	end
+	-- lot A4 : palette et coussins choisis : identifiant connu ou "" (ceux du ranch) ; la possession
+	-- est revérifiée par CommunityService à l'équipement
+	if cosmetics.palette ~= "" and not PALETTES[cosmetics.palette] then
+		cosmetics.palette = ""
+		fix(ctx, "cosmetics.palette")
+	end
+	if cosmetics.cushions ~= "" and not CUSHIONS[cosmetics.cushions] then
+		cosmetics.cushions = ""
+		fix(ctx, "cosmetics.cushions")
+	end
+	-- réglage « Montrer mon halo » (Config/Settings since = 2) : booléen, sinon vrai (la forme du
+	-- modèle v2 l'a déjà remis ; règle redite pour un modèle enveloppé par les specs)
+	boolField(ctx, d.settings, "haloOn", true, "settings.haloOn")
 end
 
 -- Répare en place ; rend la liste des champs réparés (vide = sain)
@@ -1099,7 +1167,7 @@ function ProfileRepair.repair(data: { [string]: any }): { string }
 	end
 	repairQuest(ctx, d)
 	repairSquishies(ctx, d)
-	repairOthers(ctx, d)
+	repairOthers(ctx, d, if v2 then d.version else 1)
 	if v2 then
 		repairOthersV2(ctx, d, raw)
 	end
