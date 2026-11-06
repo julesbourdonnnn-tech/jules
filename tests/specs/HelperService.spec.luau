@@ -426,10 +426,22 @@ return function(T)
 				end
 				expect(allowed[target]).toBeNil()
 				Brains.frames(w, 40)
+				-- sauts du premier envoi : seuls ceux encore à plus de 12 studs sont payés ; une Plopette
+				-- qui abandonne repart tout de suite DE LA CIBLE (A3-21) et peut presser une autre cible
+				-- dans la fenêtre : jamais un squishy du premier envoi (en vol ou en recharge), toujours à
+				-- plus de 12 studs du joueur (immobile à pos)
+				local inFirst = {}
+				for _, e in msg.presses do
+					inFirst[e.uid] = true
+				end
 				local got = 0
 				for _, e in pressesOf(w, p) do
-					expect(allowed[e.uid]).toBe(true)
-					got += 1
+					local c = placeOf(w, p, e.uid)
+					expect(w.Rules.farEnough(pos.X, pos.Z, c.X, c.Z)).toBe(true)
+					if inFirst[e.uid] then
+						expect(allowed[e.uid]).toBe(true)
+						got += 1
+					end
 				end
 				expect(got).toBe(nAllowed)
 				expect(w.Helper.counters().Abandoned).toBe(#msg.presses - nAllowed)
@@ -565,6 +577,52 @@ return function(T)
 			w.Ranch.setFence(w.Ranch.slotOf(p), {}, "")
 			clean(w)
 		end)
+
+		-- A3-21 (rouge d'abord) : le client a dessiné le saut jusqu'à la cible (aucun message pour un
+		-- abandon) ; le trajet suivant part donc de la cible, pas de l'ancienne place de la Plopette
+		it(
+			"saut abandonné à tPress : la Plopette reste où elle a atterri, le saut suivant part de la cible",
+			function()
+				-- Pip seule : un saut à la fois
+				local w, p = world({ n = 8, bestR = 2, R = 2, plume = false })
+				local sends = {}
+				for _ = 1, 50 do
+					framesNoting(w, p, 1, sends)
+					if #sends > 0 then
+						break
+					end
+				end
+				expect(#sends).toBe(1)
+				local first = sends[1].msg.presses[1]
+				-- la cible part à la clôture pendant le saut : abandon à tPress (le joueur reste loin : les
+				-- autres squishies, voisins de la cible, restent visables)
+				local slot = w.Ranch.slotOf(p)
+				w.Ranch.setFence(slot, { first.uid }, "petsit")
+				for _ = 1, 40 do
+					framesNoting(w, p, 1, sends)
+					if #sends > 1 then
+						break
+					end
+				end
+				expect(#sends).toBe(2)
+				expect(#w.pressed).toBe(0)
+				expect(w.Helper.counters().Abandoned).toBe(1)
+				local second = sends[2].msg.presses[1]
+				expect(second.uid ~= first.uid).toBe(true)
+				-- places d'enclos (la cible reste « pen » à la clôture : sa place compte encore)
+				local records = w.DS.get(p).squishies
+				local a = w.Places.center(slot, records, first.uid)
+				local b = w.Places.center(slot, records, second.uid)
+				local hx, hz = w.Rules.houseLocal()
+				local home = w.WL.toWorld(slot, w.V3.new(hx, 0, hz))
+				local fromTarget = w.Rules.travel(a.X, a.Z, b.X, b.Z)
+				local fromHome = w.Rules.travel(home.X, home.Z, b.X, b.Z)
+				expect(math.abs(fromTarget - fromHome) > 0.3).toBe(true) -- le cas distingue les deux départs
+				expect(math.abs((second.tPress - sends[2].t) - fromTarget) < 1e-6).toBe(true)
+				w.Ranch.setFence(slot, {}, "")
+				clean(w)
+			end
+		)
 	end)
 
 	describe("HelperService › sieste (N23 : 5 min sans intention ACCEPTÉE)", function()
@@ -864,6 +922,31 @@ return function(T)
 	end)
 
 	describe("HelperService › coût du tick", function()
+		-- A3-22 (rouge d'abord) : le budget de passes de choix du tick (Rules.CHOOSE_PER_TICK) ne sert
+		-- pas toujours les mêmes ranchs en premier (ordre de Players:GetPlayers) : tour de rôle
+		it(
+			"budget de choix épuisé à chaque tick par un ranch sans cible : les autres ranchs choisissent quand même",
+			function()
+				local w = boot()
+				-- 1 passe de choix par tick ; sans cible, nouvel essai au tick suivant : le 1er arrivé
+				-- (aucun squishy) redemande une passe à chaque tick
+				w.Rules.CHOOSE_PER_TICK = 1
+				w.Rules.RETRY = 0.05
+				local hog = Brains.join(w, 1, { profile = owner(w, { squishies = {} }) })
+				local p = Brains.join(w, 2, { profile = owner(w, { n = 8 }) })
+				Bots.place(hog, at(w, hog, 0, 60))
+				Bots.place(p, at(w, p, 0, 60))
+				Brains.frames(w, 2)
+				wake(w, hog)
+				wake(w, p)
+				Brains.frames(w, 100) -- 10 s
+				expect(#pressesOf(w, hog)).toBe(0)
+				expect(w.Helper.counters().NoTarget > 50).toBe(true) -- le ranch vide a bien redemandé
+				expect(#pressesOf(w, p) >= 6).toBe(true) -- les 6 Plopettes de l'autre ranch ont pressé
+				clean(w)
+			end
+		)
+
 		it("16 joueurs × 6 Plopettes : < 0,5 ms par tick en moyenne (os.clock réel)", function()
 			local w = boot()
 			local players = {}

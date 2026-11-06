@@ -109,6 +109,9 @@ local outbox: { [Player]: { Types.HelperPressEntry } } = {}
 local counters: { [string]: number } = { Pressed = 0, Abandoned = 0, NoTarget = 0, Chosen = 0 }
 local started = false
 local chooseBudget = 0 -- passes de choix restantes dans ce tick (Rules.CHOOSE_PER_TICK)
+-- tour de rôle : le joueur servi le premier change à chaque tick (le budget de choix n'affame jamais
+-- les derniers de Players:GetPlayers)
+local rotation = 0
 
 -- tampons réutilisés (aucune allocation par tick pour la sélection)
 local penUids: { string } = {}
@@ -392,8 +395,11 @@ local function resolve(player: Player, o: Owner, data: { [string]: any }, pos: V
 				h.nextAt = math.max(now, h.chosenAt + o.interval)
 				grant(player, o, data, h, uid, now)
 			else
+				-- abandon : le client a dessiné le saut jusqu'à la cible (aucun message pour un abandon) :
+				-- la Plopette y est, le saut suivant part de là ; nouvelle cible tout de suite
 				count("Abandoned")
-				h.nextAt = now -- abandon : nouvelle cible tout de suite
+				h.x, h.z = h.tx, h.tz
+				h.nextAt = now
 			end
 		end
 	end
@@ -555,7 +561,7 @@ local function stepOwner(player: Player, now: number, pos: Vector3?, rush: boole
 end
 
 -- HelperPress : un message par ranch et par destinataire, au propriétaire et aux joueurs proches
-local function flush(acting: { [Player]: Types.TickActor }?)
+local function flush(acting: { [Player]: Types.TickActor }?, list: { Player })
 	if next(outbox) == nil then
 		return
 	end
@@ -566,7 +572,7 @@ local function flush(acting: { [Player]: Types.TickActor }?)
 		if o ~= nil and owner.Parent ~= nil and #entries > 0 then
 			local payload: Types.HelperPressPayload = { ownerId = owner.UserId, presses = entries }
 			remote:FireClient(owner, payload)
-			for _, other in Players:GetPlayers() do
+			for _, other in list do
 				if other ~= owner then
 					local pos: Vector3? = nil
 					if acting ~= nil then
@@ -637,7 +643,11 @@ function HelperService.step(now: number, acting: { [Player]: Types.TickActor }?)
 	end
 	local rush = Guard.call("helpers:rush", EventService.rushActive, false) == true
 	chooseBudget = Rules.CHOOSE_PER_TICK
-	for _, player in Players:GetPlayers() do
+	local list = Players:GetPlayers()
+	local n = #list
+	rotation = if n > 0 then rotation % n + 1 else 0
+	for k = 0, n - 1 do
+		local player = list[(rotation + k - 1) % n + 1]
 		local pos: Vector3? = nil
 		if acting ~= nil then
 			local a = acting[player]
@@ -656,7 +666,7 @@ function HelperService.step(now: number, acting: { [Player]: Types.TickActor }?)
 			drop(player)
 		end
 	end
-	Guard.try("helpers:flush", flush, acting)
+	Guard.try("helpers:flush", flush, acting, list)
 end
 
 -- État des Plopettes du joueur : "nap" (sieste), "paused" (prestige, Rush, pause), "moving" (au moins
