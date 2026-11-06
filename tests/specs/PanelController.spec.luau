@@ -361,4 +361,130 @@ return function(T)
 			clean(c)
 		end)
 	end)
+	-- v2.0 (lot B2, étape 2) : écran Améliorations (fenêtre nue, construit au premier instantané)
+	describe("PanelController › écran Améliorations (lot B2)", function()
+		local UpgradeScreen = require("../harness/UpgradeScreen")
+		local S = UpgradeScreen.new(T.Harness)
+
+		it(
+			"interrupteur coupé : aucune instance, open ne fait rien (ni son), aucune intention v2.0",
+			function()
+				local c = S.client({})
+				local Audio = TvAudit.mod(c.h, "Controllers.AudioController")
+				local sounds = {}
+				local play = Audio.play
+				Audio.play = function(name, ...)
+					table.insert(sounds, name)
+					return play(name, ...)
+				end
+				expect(c.PC.available("Upgrades")).toBe(false)
+				c.PC.open("Upgrades", "ranch")
+				c.PC.open("Upgrades", "spendFirst")
+				TvAudit.tick(c.h, 0.5)
+				expect(c.PC.isOpen("Upgrades")).toBe(false)
+				expect(c.PC.menuOpen()).toBe(false)
+				expect(#sounds).toBe(0)
+				expect(c.PC.window("Upgrades")).toBeNil()
+				for _, d in c.h.localPlayer.PlayerGui:GetDescendants() do
+					expect(d.Name == "Panel_Upgrades").toBe(false)
+				end
+				-- les autres panneaux répondent comme avant
+				expect(c.PC.available("Ranch")).toBe(true)
+				expect(c.PC.available("Nope")).toBe(false)
+				S.noV2Intent(c, expect)
+				S.clean(c, expect)
+			end
+		)
+
+		it("instantané reçu : construit pendant le chargement, ouvert sur demande, fenêtre nue", function()
+			local c = S.client({ snap = S.snap(1) })
+			expect(c.PC.available("Upgrades")).toBe(true)
+			local win = c.PC.window("Upgrades")
+			expect(win ~= nil).toBe(true)
+			expect(win.Visible).toBe(false)
+			-- fenêtre nue (D5) : ni en-tête standard ni titre centré, le corps est tout le panneau
+			expect(win:FindFirstChild("Header")).toBeNil()
+			expect(win.Body.Size.Y.Offset).toBe(860)
+			c.PC.open("Upgrades", "workshop")
+			TvAudit.tick(c.h, 0.5)
+			expect(c.PC.current()).toBe("Upgrades")
+			expect(c.Up.currentTab()).toBe("workshop")
+			expect(win.Visible).toBe(true)
+			-- même panneau, autre onglet : l'onglet change, rien n'est refermé
+			c.PC.open("Upgrades", "ranch")
+			TvAudit.tick(c.h, 0.5)
+			expect(c.Up.currentTab()).toBe("ranch")
+			S.noV2Intent(c, expect)
+			S.clean(c, expect)
+		end)
+
+		it("L2 / R2 : Ranch → Améliorations → Squishydex, et retour", function()
+			local c = S.client({ snap = S.snap(1) })
+			c.PC.open("Ranch")
+			TvAudit.tick(c.h, 0.5)
+			Gamepad.tap(c.h, Enum.KeyCode.ButtonR2)
+			expect(c.PC.current()).toBe("Upgrades")
+			TvAudit.tick(c.h, 0.5)
+			Gamepad.tap(c.h, Enum.KeyCode.ButtonR2)
+			expect(c.PC.current()).toBe("Squishydex")
+			TvAudit.tick(c.h, 0.5)
+			Gamepad.tap(c.h, Enum.KeyCode.ButtonL2)
+			expect(c.PC.current()).toBe("Upgrades")
+			TvAudit.tick(c.h, 0.5)
+			Gamepad.tap(c.h, Enum.KeyCode.ButtonL2)
+			expect(c.PC.current()).toBe("Ranch")
+			S.noV2Intent(c, expect)
+			S.clean(c, expect)
+		end)
+
+		it(
+			"« Dépenser d'abord » : onglet Ranch PAR-DESSUS l'aperçu, première ligne gardée payable, ○ y revient",
+			function()
+				local profile = {
+					squishies = { a = TvAudit.squishy(1, { z = 20000 }), b = TvAudit.squishy(2, { z = 50 }) },
+					growth = { G = 0, g = 1, t = 1800000000 },
+				}
+				-- Enclos au maximum (gardé, pas payable), Lit douillet payable (gardé), Monuments fermés (Tapis
+				-- < 12) : la sélection va au Lit douillet, pas à la première ligne gardée
+				local function prof(p)
+					p.tiles.pens = 14
+					p.tiles.cozyBed = false
+					p.coins = 1e12
+				end
+				local c = S.client({ snap = S.snap(1, prof), profile = profile })
+				c.PC.open("SplorchPreview")
+				TvAudit.tick(c.h, 0.5)
+				expect(c.PC.current()).toBe("SplorchPreview")
+				c.PC.open("Upgrades", "spendFirst")
+				TvAudit.tick(c.h, 0.5)
+				expect(c.PC.current()).toBe("Upgrades")
+				expect(c.PC.isOpen("SplorchPreview")).toBe(true)
+				expect(c.Up.currentTab()).toBe("ranch")
+				expect(sel(c)).toBe(c.Up._row("cozyBed"))
+				expect(c.Up._row("cozyBed"):GetAttribute("State")).toBe("ready")
+				-- ordre des lignes inchangé (jamais retrié pour « Dépenser d'abord »)
+				expect(c.Up._shown("ranch")[1]).toBe("snack")
+				-- ○ : retour à l'aperçu (toujours ouvert dessous)
+				TvAudit.tick(c.h, 0.5)
+				Gamepad.tap(c.h, Enum.KeyCode.ButtonB)
+				TvAudit.tick(c.h, 0.5)
+				expect(c.PC.isOpen("Upgrades")).toBe(false)
+				expect(c.PC.current()).toBe("SplorchPreview")
+				-- rien de gardé payable : la première ligne gardée (Enclos, au maximum)
+				S.patch(
+					c,
+					S.snap(2, function(p)
+						prof(p)
+						p.coins = 0
+					end)
+				)
+				c.PC.open("Upgrades", "spendFirst")
+				TvAudit.tick(c.h, 0.5)
+				expect(sel(c)).toBe(c.Up._row("pens"))
+				expect(c.Up._row("pens"):GetAttribute("State")).toBe("max")
+				S.noV2Intent(c, expect)
+				S.clean(c, expect)
+			end
+		)
+	end)
 end

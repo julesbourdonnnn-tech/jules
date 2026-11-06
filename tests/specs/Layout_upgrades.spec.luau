@@ -62,7 +62,8 @@ return function(T)
 		for k, v in { snack = 11, decor = 17, gloves = 39, monuments = 4 } do
 			p.tiles[k] = v
 		end
-		p.R = 400
+		-- boucle 399 sous le Record R 400 : la pastille Souvenir est montrée (sa place est mesurée)
+		p.R = 399
 		p.bestR = 400
 		p.coins = 1e300
 		p.confetti = 99999
@@ -95,7 +96,15 @@ return function(T)
 							local detail = rectOf(panel, k, U.Detail.y, U.Detail.h)
 							local body = win:FindFirstChild("Body")
 							for _, n in
-								{ "Title", "Memory", "CoinsIcon", "Coins", "ConfettiIcon", "Confetti", "Mode" }
+								{
+									"Title",
+									"Memory",
+									"CoinsIcon",
+									"Coins",
+									"ConfettiIcon",
+									"Confetti",
+									"Mode",
+								}
 							do
 								local obj = body:FindFirstChild(n)
 								local r = obj and Layout.rect(obj)
@@ -116,7 +125,7 @@ return function(T)
 							for i = 1, #order - 1 do
 								local a = Layout.rect(body:FindFirstChild(order[i]))
 								local b = Layout.rect(body:FindFirstChild(order[i + 1]))
-								if a.x + a.w > b.x + EPS then
+								if a == nil or b == nil or a.x + a.w > b.x + EPS then
 									note(tag .. " : " .. order[i] .. " chevauche " .. order[i + 1])
 								end
 							end

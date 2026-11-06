@@ -37,7 +37,7 @@ return function(T)
 		"[Rr]obux",
 	}
 	-- Interdits des chaînes (clés citées : « common.robux », « R$ »)
-	local STRINGS = { "[Rr]obux", "R%$", "[Mm]onetization" }
+	local STRINGS = { "[Rr]obux", "R%$", "[Mm]onetization", "MarketplaceService", "[Pp]romptPurchase" }
 
 	local function forbidden(src)
 		local found = {}

@@ -1719,19 +1719,16 @@ local function upgradeScreens()
 		tab = "suggested",
 		select = 2,
 		edit = function(p)
-			tiles(
-				p,
-				{
-					snack = 12,
-					star = 8,
-					decor = 18,
-					pens = 14,
-					cozyBed = true,
-					gloves = 40,
-					school = 20,
-					monuments = 10,
-				}
-			)
+			tiles(p, {
+				snack = 12,
+				star = 8,
+				decor = 18,
+				pens = 14,
+				cozyBed = true,
+				gloves = 40,
+				school = 20,
+				monuments = 10,
+			})
 			p.R = 20
 			p.bestR = 24
 			p.confetti = 99999

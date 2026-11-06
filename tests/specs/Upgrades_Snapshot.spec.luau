@@ -1,6 +1,9 @@
 --!nocheck
 -- Upgrades_Snapshot (lot B2 ; docs/04 §27.7, §27.8 règle 6 « un seul instantané versionné », §27.10 ;
--- GDD v2.0 §10.8) — partie MODULE (étape 1 : UI/UpgradeSnapshot, sans écran) :
+-- GDD v2.0 §10.8) — partie ÉCRAN (étape 2, en fin de fichier) : un patch des pièces et une réponse
+-- UpgradeResult livrés dans les deux ordres ne font jamais clignoter la colonne État (jamais « Prêt →
+-- Il manque → Prêt ») ; la clé `coins` seule (sans instantané) ne change rien à l'écran.
+-- Partie MODULE (étape 1 : UI/UpgradeSnapshot, sans écran) :
 --   * sans la clé `upgradeSnapshot` (interrupteur UpgradesScreen du serveur coupé, la configuration
 --     livrée) : available() faux, current() nil, aucun signal, aucune intention ;
 --   * instantané d'arrivée et DataPatch : accepté, Changed une fois par version acceptée ;
@@ -552,6 +555,83 @@ return function(T)
 					clean(c.h)
 				end
 			)
+		end
+	)
+	describe(
+		"Upgrades_Snapshot › écran (étape 2) : jamais de clignotement de la colonne État",
+		function()
+			local UpgradeScreen = require("../harness/UpgradeScreen")
+			local S = UpgradeScreen.new(Harness)
+
+			-- États successifs de la ligne Décorations, relevés à chaque événement et chaque image
+			local function watch(c)
+				local seen = {}
+				local row = c.Up._row("decor")
+				local function note()
+					local st = row:GetAttribute("State")
+					if seen[#seen] ~= st then
+						table.insert(seen, st)
+					end
+				end
+				note()
+				row:GetAttributeChangedSignal("State"):Connect(note)
+				return seen, note
+			end
+
+			for _, order in { "réponse puis patch", "patch puis réponse" } do
+				it("achat des Décorations, " .. order .. " (même version) : Prêt reste Prêt", function()
+					local function prof(level, coins)
+						return function(p)
+							p.tiles.decor = level
+							p.coins = coins
+						end
+					end
+					local c = S.client({ snap = S.snap(1, prof(5, 1e15)) })
+					S.open(c, "ranch")
+					local seen, note = watch(c)
+					expect(seen).toEqual({ "ready" })
+					local s2 = S.snap(2, prof(6, 1e15 - 1e6))
+					local payload = {
+						id = "decor",
+						from = 5,
+						to = 6,
+						spent = 1e6,
+						currency = "coins",
+						snapshot = s2,
+					}
+					local function patch()
+						c.h:fireClient(
+							"ReplicatedStorage.Remotes.DataPatch",
+							{ upgradeSnapshot = s2, coins = 1e15 - 1e6 },
+							{}
+						)
+					end
+					local function respond()
+						c.h:fireClient("ReplicatedStorage.Remotes.UpgradeResult", payload)
+					end
+					if order == "réponse puis patch" then
+						respond()
+						note()
+						patch()
+					else
+						patch()
+						note()
+						respond()
+					end
+					note()
+					for _ = 1, 10 do
+						TvAudit.tick(c.h, 0.1)
+						note()
+					end
+					-- la clé `coins` seule (sans instantané) ne touche pas l'écran
+					c.h:fireClient("ReplicatedStorage.Remotes.DataPatch", { coins = 0 }, {})
+					TvAudit.tick(c.h, 0.2)
+					note()
+					expect(seen).toEqual({ "ready" })
+					expect(c.US.current().version).toBe(2)
+					S.clean(c, expect)
+				end)
+			end
 		end
 	)
 end

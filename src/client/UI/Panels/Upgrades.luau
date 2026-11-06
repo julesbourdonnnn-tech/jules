@@ -1295,4 +1295,13 @@ function Upgrades._view(obj: Instance): View?
 	return views[obj]
 end
 
+-- Valeur montrée d'un compteur de l'en-tête (« coins », « confetti ») et sa cible
+function Upgrades._counter(name: string): (number?, number?)
+	local c = counters[name]
+	if c == nil then
+		return nil, nil
+	end
+	return c.shown, c.to
+end
+
 return Upgrades
