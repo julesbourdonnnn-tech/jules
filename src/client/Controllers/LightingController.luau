@@ -13,6 +13,11 @@
 --     (actif jusqu'à son heure de fin) et Logic/EventClock entre deux messages ;
 --   * un seul tween par instance (le nouveau annule l'ancien) ; Mouvement réduit : fondu court ;
 --     Graphismes légers / qualité réduite : pas de flocons (particules × budget) ;
+--   * lot B4 (N12) : toute écriture de Lighting passe par Render/AmbienceDirector (seul écrivain) :
+--     interrupteur Ambience coupé (EventState.features.ambience absent), resolve puis
+--     AmbienceDirector.apply, exactement comme en v1.3 ; ouvert, la pile à priorités (Lune > Rush >
+--     alerte et MEGA > fêtes > météo > costume > jour) va à AmbienceDirector.setStack et l'éclairage
+--     unifié est posé (setStyle) ; coupé en direct, la pile est quittée et la v1.3 réappliquée ;
 --   * lumières (budget de la console la plus faible, GDD §12.9) : les 4 lumières de MON ranch
 --     allumées (tag « RanchLight », éteintes sur le serveur), lampadaires (tag « LampLight ») coupés
 --     au-delà de QualityController.budgets().lightRange ; jamais plus que les quotas lightQuota
@@ -37,11 +42,9 @@
 -- par pcall avec un repli (jamais d'erreur ni d'avertissement). Positions : Render/WorldDecor.
 
 local CollectionService = game:GetService("CollectionService")
-local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
-local TweenService = game:GetService("TweenService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared", 30) :: Folder
 local Types = require(Shared.Types)
@@ -61,6 +64,9 @@ local Haptics = require(Client.Util.Haptics)
 local AudioController = require(script.Parent.AudioController)
 local Root = require(Client.UI.Root)
 local Text = require(Client.UI.Text)
+local AmbienceDirector = require(Client.Render.AmbienceDirector)
+local AmbienceRules = require(Shared.Logic.AmbienceRules)
+local Events = require(Shared.Config.Events)
 
 local LightingController = {}
 
@@ -112,7 +118,8 @@ local state = {
 	quiet = false,
 	payload = nil :: Types.EventStatePayload?,
 	resolved = nil :: Resolved?,
-	tweens = {} :: { [Instance]: Tween },
+	v2 = false, -- la pile du directeur d'ambiance est affichée (EventState.features.ambience)
+	stack = {} :: AmbienceRules.Stack, -- pile réutilisée (aucune allocation toutes les 0,5 s)
 	sirenIndex = -1,
 	musicTrack = "", -- dernière piste demandée à AudioController (INT-AUDIO)
 	musicDb = 0,
@@ -130,12 +137,6 @@ local state = {
 	winter = nil :: Folder?,
 	snowPart = nil :: BasePart?,
 	snowEmitter = nil :: ParticleEmitter?,
-	effects = nil :: {
-		atmosphere: Atmosphere,
-		bloom: BloomEffect,
-		color: ColorCorrectionEffect,
-		sky: Sky,
-	}?,
 	connections = {} :: { RBXScriptConnection },
 }
 
@@ -294,83 +295,8 @@ function LightingController.resolve(
 end
 
 -- =============================================================================================
--- Effets d'éclairage
+-- Effets d'éclairage : Render/AmbienceDirector (seul écrivain de Lighting, lot B4)
 -- =============================================================================================
-
-local function findOrCreate(className: string, name: string): Instance
-	local existing = Lighting:FindFirstChild(name)
-	if existing and existing.ClassName == className then
-		return existing
-	end
-	local inst = Instance.new(className)
-	inst.Name = name
-	inst.Parent = Lighting
-	return inst
-end
-
-local function ensureEffects()
-	if state.effects then
-		return state.effects
-	end
-	local fx = Palette.Effects
-	local atmosphere = findOrCreate("Atmosphere", "SquishyAtmosphere") :: Atmosphere
-	atmosphere.Density = fx.atmosphereDensity
-	atmosphere.Haze = fx.atmosphereHaze
-	atmosphere.Decay = fx.atmosphereDecay
-	local bloom = findOrCreate("BloomEffect", "SquishyBloom") :: BloomEffect
-	bloom.Size = fx.bloomSize
-	bloom.Threshold = fx.bloomThreshold
-	local color = findOrCreate("ColorCorrectionEffect", "SquishyColor") :: ColorCorrectionEffect
-	color.Saturation = fx.saturation
-	color.Contrast = fx.contrast
-	local sky = findOrCreate("Sky", "SquishySky") :: Sky
-	local effects = { atmosphere = atmosphere, bloom = bloom, color = color, sky = sky }
-	state.effects = effects
-	return effects
-end
-
-local function tweenTo(inst: Instance, duration: number, goals: { [string]: any })
-	local previous = state.tweens[inst]
-	if previous then
-		previous:Cancel()
-	end
-	if duration <= 0 then
-		for key, value in goals do
-			(inst :: any)[key] = value
-		end
-		state.tweens[inst] = nil
-		return
-	end
-	local tween = TweenService:Create(
-		inst,
-		TweenInfo.new(duration, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
-		goals
-	)
-	state.tweens[inst] = tween
-	tween:Play()
-end
-
--- Applique un préréglage (duration 0 : immédiat)
-local function apply(preset: Palette.Preset, duration: number)
-	local fx = ensureEffects()
-	-- ClockTime avance toujours (coucher puis lever du soleil), jamais à reculons
-	local current = finite(Lighting.ClockTime, preset.clockTime) % 24
-	local target = preset.clockTime
-	if duration > 0 and target < current - 1e-6 then
-		target += 24
-	end
-	tweenTo(Lighting, duration, {
-		ClockTime = target,
-		Ambient = preset.ambient,
-		OutdoorAmbient = preset.outdoorAmbient,
-		Brightness = preset.brightness,
-	})
-	tweenTo(fx.atmosphere, duration, { Color = preset.atmosphereColor })
-	tweenTo(fx.color, duration, { TintColor = preset.tint })
-	tweenTo(fx.bloom, duration, { Intensity = preset.bloom })
-	fx.sky.StarCount = preset.starCount
-	fx.sky.MoonAngularSize = preset.moonSize
-end
 
 local function transitionTime(fromName: string, toName: string): number
 	if Prefs.reducedMotion() then
@@ -795,6 +721,46 @@ local function refreshLights(b: Budgets)
 end
 
 -- =============================================================================================
+-- Pile du directeur d'ambiance (v2.0, interrupteur Ambience, lot B4)
+-- =============================================================================================
+
+local MEGA_AFTER = Events.Mega.BurstTime -- s d'éclat après la fin des pressions du MEGA
+
+-- Ambience ouvert par le serveur : EventState.features.ambience, présent seulement interrupteur ouvert
+-- (INT-B4-AMBIENCE ; jamais Config/Features côté client)
+local function ambienceOn(payload: Types.EventStatePayload?): boolean
+	return field(field(payload, "features"), "ambience") == true
+end
+
+-- Pile à l'instant `now` (Clock.now()) et `unix` (Clock.unix()) : Lune, Rush (discret pour un nouveau
+-- avant l'étape 9), fêtes et costume d'hiver selon les règles de la v1.3 (resolve) ; alerte et MEGA tant
+-- qu'EventState.mega est en alerte, en pressions ou en éclat (interrupteur megaSquish ; jamais au-delà de
+-- la fin de l'éclat, même si un message manque) ; météo seulement depuis EventState.weather valide et pas
+-- finie (AmbienceRules.fromEvent). Remplit `stack` sans l'allouer.
+local function fillStack(
+	stack: AmbienceRules.Stack,
+	payload: Types.EventStatePayload?,
+	resolved: Resolved,
+	quiet: boolean,
+	now: number,
+	unix: number
+)
+	local features: any = field(payload, "features")
+	local megaPayload: any = field(payload, "mega")
+	local megaPhase = field(megaPayload, "phase")
+	stack.moon = resolved.moon
+	stack.rush = resolved.rush
+	stack.quietRush = resolved.rush and quiet
+	stack.mega = isTable(features)
+		and features.megaSquish == true
+		and (megaPhase == "warn" or megaPhase == "press" or megaPhase == "burst")
+		and finite(now, 0) < finite(field(megaPayload, "endsAt"), 0) + MEGA_AFTER
+	stack.party = resolved.party
+	stack.weather = AmbienceRules.fromEvent(field(payload, "weather"), unix)
+	stack.costume = if resolved.winter then features.costume else nil
+end
+
+-- =============================================================================================
 -- Boucle
 -- =============================================================================================
 
@@ -802,22 +768,41 @@ end
 -- OnboardingController, démarré dans la même image, pose d'abord la version discrète d'un nouveau)
 local function evaluate(force: boolean, siren: boolean)
 	local now = Clock.now()
+	local unix = Clock.unix()
 	local payload = readEvent()
 	local status = onboardingStatus()
 	local quiet = state.quiet or status == "newcomer"
-	local resolved = LightingController.resolve(payload, now, quiet, Clock.unix())
+	local resolved = LightingController.resolve(payload, now, quiet, unix)
 	local previous = state.resolved
-	local changed = previous == nil
-		or previous.name ~= resolved.name
-		or previous.rush ~= resolved.rush
-		or previous.party ~= resolved.party
-		or previous.winter ~= resolved.winter
-		or previous.preset.tint ~= resolved.preset.tint
-	if changed or force then
-		local duration = if previous == nil then 0 else transitionTime(state.current, resolved.name)
-		apply(resolved.preset, duration)
-		state.current = resolved.name
+	if ambienceOn(payload) then
+		-- v2.0 (Ambience ouvert) : pile à priorités du directeur d'ambiance et éclairage unifié ; la
+		-- première évaluation est immédiate, comme en v1.3 ; même pile : aucune écriture
+		fillStack(state.stack, payload, resolved, quiet, now, unix)
+		AmbienceDirector.setStyle(true)
+		state.current = AmbienceDirector.setStack(state.stack, now, previous == nil)
 		state.resolved = resolved
+		state.v2 = true
+	else
+		local changed = previous == nil
+			or previous.name ~= resolved.name
+			or previous.rush ~= resolved.rush
+			or previous.party ~= resolved.party
+			or previous.winter ~= resolved.winter
+			or previous.preset.tint ~= resolved.preset.tint
+		if state.v2 then
+			-- Ambience coupé en direct : pile quittée, éclairage de la place rendu, préréglage de la v1.3
+			-- réappliqué (valeurs exactes de la v1.3)
+			state.v2 = false
+			AmbienceDirector.setStack(nil, now)
+			AmbienceDirector.setStyle(false)
+			changed = true
+		end
+		if changed or force then
+			local duration = if previous == nil then 0 else transitionTime(state.current, resolved.name)
+			AmbienceDirector.apply(resolved.preset, duration, resolved.name)
+			state.current = resolved.name
+			state.resolved = resolved
+		end
 	end
 	if resolved.winter then
 		buildWinter()
@@ -886,8 +871,8 @@ end
 -- =============================================================================================
 
 function LightingController.Init()
-	ensureEffects()
-	apply(Palette.preset("day"), 0)
+	AmbienceDirector.effects()
+	AmbienceDirector.apply(Palette.preset("day"), 0, "day")
 	state.resolved = nil
 	state.current = "day"
 end

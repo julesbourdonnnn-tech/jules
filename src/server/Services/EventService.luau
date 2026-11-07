@@ -905,6 +905,9 @@ local function features(): Types.EventFeatures
 		clips = Features.get("Clips") == true,
 		costume = tostring(Features.get("Costumes") or ""),
 		diagnostics = Features.get("Diagnostics") == true,
+		-- v2.0 (lot B4, INT-B4-AMBIENCE) : clé présente seulement interrupteur Ambience ouvert (le client ne
+		-- lit jamais Config/Features) ; absente sinon : charge de la v1.3 inchangée
+		ambience = if Features.get("Ambience") == true then true else nil,
 	}
 end
 

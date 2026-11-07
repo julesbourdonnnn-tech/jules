@@ -317,6 +317,9 @@ export type EventFeatures = {
 	clips: boolean,
 	costume: string, -- Features.Costumes ("" = aucun)
 	diagnostics: boolean, -- false : ErrorReporter n'envoie plus rien
+	-- v2.0 (lot B4, INT-B4-AMBIENCE) : présent (true) seulement quand l'interrupteur Ambience est ouvert
+	-- (directeur d'ambiance et éclairage unifié côté client) ; absent sinon : charge de la v1.3 inchangée
+	ambience: boolean?,
 }
 
 export type EventStatePayload = {
