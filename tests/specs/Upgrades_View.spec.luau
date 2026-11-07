@@ -509,6 +509,43 @@ return function(T)
 			end
 		)
 
+		-- relecture des captures de l'étape 5 (upgrades.ranch.max.preview, tv1080 FR) : en Max (×16 : niveau
+		-- 2 à 18), la ligne Décorations annonçait « Revenu total +1,2 % », le gain d'UN seul niveau ; l'aperçu
+		-- dit ce que l'achat montré rapporte (GDD §10.7.8 « aperçu exact » ; §10.7.7 « Revenu total +12,5 % »,
+		-- le ×10 d'un niveau de 1,25 %) : n niveaux = n × DecorBonus ÷ A (A additif)
+		it(
+			"×10 / Max : Décorations annonce le gain réel des niveaux de l'aperçu (n × DecorBonus ÷ A) ; ×1 et Il manque : un niveau",
+			function()
+				local function at(mode, coins)
+					return V.view(
+						"decor",
+						snapOf(function(p)
+							p.tiles.decor = 2
+							p.coins = coins or 1e300
+						end),
+						mode,
+						{ lang = "fr", aBonus = 2 }
+					)
+				end
+				-- un niveau : 0,05 ÷ 2 = 2,5 %
+				expect(txt(at(1).effect.label)).toBe("upgrades.effect.incomeTotal a=2,5")
+				expect(at(10).preview.count).toBe(10)
+				expect(txt(at(10).effect.label)).toBe("upgrades.effect.incomeTotal a=25,0")
+				-- Max : les 16 niveaux qui restent (2 → 18)
+				expect(at(0).preview.count).toBe(16)
+				expect(txt(at(0).effect.label)).toBe("upgrades.effect.incomeTotal a=40,0")
+				-- ×10 en partie : 4 niveaux payables → 10,0 %
+				local _, four = UpgradeMath.bulk("decor", 2, 4, WITNESS.R, WITNESS.ascend, WITNESS.bestR)
+				local partial = at(10, four)
+				expect(partial.preview.count).toBe(4)
+				expect(txt(partial.effect.label)).toBe("upgrades.effect.incomeTotal a=10,0")
+				-- rien de payable : le premier niveau (« Il manque »), un seul niveau annoncé
+				local need = at(10, 1)
+				expect(need.state).toBe("need")
+				expect(txt(need.effect.label)).toBe("upgrades.effect.incomeTotal a=2,5")
+			end
+		)
+
 		it(
 			"« Pour le plaisir » : la ligne du titre s'appelle fun.title.confettiStar (fun.title = titre de la section)",
 			function()

@@ -1095,7 +1095,7 @@ return function(T)
 		)
 
 		it(
-			"Souvenir de gelée à la place du bouclier débutant (jamais les deux) ; suivi « Back to record » + « r / Record R » puis « Ready! »",
+			"Souvenir de gelée à la place du bouclier débutant (jamais les deux) ; suivi « Back to record » + « r / Record R », gardé quand le Petit Splorch est prêt (puce PETIT SPLORCH !)",
 			function()
 				local c, HUD = v2setup({
 					snap = S.snap(1, regain(3)),
@@ -1114,7 +1114,14 @@ return function(T)
 				expect(HUD.element("goalTracker"):GetAttribute("Regain")).toBe(true)
 				h:fireClient("ReplicatedStorage.Remotes.DataPatch", { squishies = BIG }, {})
 				S.run(c, 0.5)
-				expect(text(h, HUD, "goalTracker", "Value")).toBe("Ready!")
+				-- Petit Splorch prêt : la puce « PETIT SPLORCH ! » le dit ; le suivi garde « Retour au record »
+				-- et « 3 / 15 » (GDD §10.2 et §10.8, état clé 24 : « PETIT SPLORCH ! », Souvenir ×3, « Retour
+				-- au record 4 / 15 » ensemble ; relecture des captures de l'étape 5 : « Prêt ! » le cachait)
+				expect(HUD.element("specialChip"):GetAttribute("Mode")).toBe("petit")
+				expect(HUD.element("goalTracker"):GetAttribute("Ready")).toBe(true)
+				expect(text(h, HUD, "goalTracker", "Title")).toBe("Back to record")
+				expect(text(h, HUD, "goalTracker", "Value")).toBe("3 / 15")
+				expect(status.memory.Visible).toBe(true)
 				-- fin de la remontée (r = Record R) : bouclier de nouveau, titre du Grand Splorch
 				S.patch(
 					c,

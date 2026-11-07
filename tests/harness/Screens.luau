@@ -1471,6 +1471,16 @@ local UPGRADE_UNIT_N = {
 	end,
 }
 
+-- Pire valeur d'une variable pour UNE clé (avant UPGRADE_VARS) : gain des Décorations annoncé par
+-- l'aperçu Max (18 niveaux d'un coup, A = 1 : 18 × 5 % = « 90,0 » ; lot B2, étape 5)
+local UPGRADE_KEY_VARS = {
+	["upgrades.effect.incomeTotal"] = {
+		a = function(F, lang)
+			return F.decimal(90, lang, 1)
+		end,
+	},
+}
+
 -- Texte le plus long des déblocages de la table du §4.29 (variable {unlock} de workshop.risesDetail)
 local function longestUnlock(c, lang)
 	local L = c.Localization or c.h:require("ReplicatedStorage.Shared.Localization")
@@ -1504,9 +1514,12 @@ function Screens.varsFor(c, key, lang)
 			upgrade = true
 		end
 	end
+	local keyVars = if upgrade then UPGRADE_KEY_VARS[key] else nil
 	for name in string.gmatch(template, "{(%w+)}") do
 		local worst = if upgrade then UPGRADE_VARS[name] else nil
-		if upgrade and name == "n" and UPGRADE_UNIT_N[key] then
+		if keyVars and keyVars[name] ~= nil then
+			worst = keyVars[name]
+		elseif upgrade and name == "n" and UPGRADE_UNIT_N[key] then
 			worst = UPGRADE_UNIT_N[key]
 		elseif upgrade and name == "n" then
 			worst = 40
@@ -1654,7 +1667,8 @@ end
 -- opts.wait (secondes de jeu avant l'ouverture), opts.tab, opts.mode (appuis sur □), opts.select
 -- (ligne sélectionnée : son bandeau) ; achats (étape 3) : opts.hold (secondes de ✕ tenu sur la
 -- sélection ; moins de 0,6 : relâché trop tôt), opts.after (secondes de jeu après le maintien :
--- 3,2 = « Réessaie »), opts.answer(c, args, UM) → réponse UpgradeResult au dernier BuyUpgrade envoyé
+-- 3,2 = « Réessaie »), opts.answer(c, args, UM) → réponse UpgradeResult au dernier BuyUpgrade envoyé,
+-- opts.settle (secondes de jeu après la réponse : 2 = retour chiffré passé, l'état revient)
 local function upgradesState(c, opts)
 	-- ✕ resté enfoncé par l'écran précédent (anneau à mi-maintien) : relâché d'abord
 	if c.padHeld then
@@ -1718,6 +1732,10 @@ local function upgradesState(c, opts)
 				c.h:settle(1)
 			end
 		end
+		if opts.settle then
+			-- retour chiffré passé (1,5 s) : l'état de la ligne ou de la carte revient
+			frames(c, math.max(1, math.floor(opts.settle * 10 + 0.5)), 0.1)
+		end
 	end
 	frames(c, 6, 0.1)
 end
@@ -1765,8 +1783,12 @@ local function hudV2Screens()
 	local function v2State(c, opts)
 		Screens.myRanchModel(c, opts.ranch or { HelperMode = "active", AscendReady = false })
 		local big = if opts.ready then 1e15 else 10
+		-- pièces du HUD = celles de l'instantané (le serveur envoie les deux ensemble ; « Prêt ! » de la
+		-- puce « Prochain achat » à côté d'un compteur cohérent)
+		local snap = Screens.upgradeSnapshot(c, opts.edit)
 		c.h:fireClient(REMOTES .. "DataPatch", {
 			onboarding = DONE,
+			coins = snap.coins,
 			R = opts.r or 3,
 			growth = frozen(c),
 			squishies = {
@@ -1785,11 +1807,7 @@ local function hudV2Screens()
 				},
 			},
 		}, {})
-		c.h:fireClient(
-			REMOTES .. "DataPatch",
-			{ upgradeSnapshot = Screens.upgradeSnapshot(c, opts.edit) },
-			{}
-		)
+		c.h:fireClient(REMOTES .. "DataPatch", { upgradeSnapshot = snap }, {})
 		frames(c, 3, 0.1)
 		ranchStub(c, "cozy", opts.ranchPublic)
 		-- EventState « reçu » maintenant : l'attente de la file part de son eta (pire cas 59:59)
@@ -2289,8 +2307,247 @@ local function upgradeScreens()
 			p.bestR = 0
 		end,
 	})
+
+	-- -----------------------------------------------------------------------------------------
+	-- Étape 5 : les états clés du GDD §10.8 qui manquaient ci-dessus (captures de référence,
+	-- Screens.REFERENCE, Upgrades_Reference.spec) et les pires cas : libellés français les plus longs
+	-- du §10.7.7, « 40/40 », chaque état d'une carte du Conseillé
+	-- -----------------------------------------------------------------------------------------
+	local ZERO =
+		{ snack = 0, star = 0, decor = 0, pens = 0, cozyBed = false, gloves = 0, school = 0, monuments = 0 }
+	local ALL_MAX = {
+		snack = 12,
+		star = 8,
+		decor = 18,
+		pens = 14,
+		cozyBed = true,
+		gloves = 40,
+		school = 20,
+		monuments = 10,
+	}
+	-- r = 0 tout neuf : Conseillé d'un joueur qui arrive (rien acheté, 40 pièces, aucun Confetti)
+	add("ref.new", {
+		tab = "suggested",
+		select = 1,
+		edit = function(p)
+			tiles(p, ZERO)
+			p.R = 0
+			p.bestR = 0
+			p.coins = 40
+			p.confetti = 0
+		end,
+	})
+	-- r = 5 (aucune Ascension) : Conseillé, puis l'onglet Ranch
+	local function r5(p)
+		tiles(
+			p,
+			{ snack = 6, star = 0, decor = 5, pens = 7, cozyBed = true, gloves = 4, school = 0, monuments = 0 }
+		)
+		p.R = 5
+		p.bestR = 5
+		p.coins = 1500000
+		p.confetti = 32
+	end
+	add("ref.r5", { tab = "suggested", select = 1, edit = r5 })
+	add("ref.r5.ranch", { tab = "ranch", select = "snack", edit = r5 })
+	-- r = 20 tout au maximum (après une Ascension, Record R 24 : Monuments 10/10, Gants 40/40)
+	add("ref.r20.max", {
+		tab = "ranch",
+		select = "gloves",
+		edit = function(p)
+			tiles(p, ALL_MAX)
+			p.ascend = 1
+			p.R = 20
+			p.bestR = 24
+			p.coins = 9.87e30
+		end,
+	})
+	-- r = 10 : Tapis 20/20 (12 + 8 du Tapis Étoilé, plafond de la boucle 10)
+	add("ref.r10.mat", {
+		tab = "ranch",
+		select = "snack",
+		edit = function(p)
+			tiles(
+				p,
+				{
+					snack = 12,
+					star = 8,
+					decor = 14,
+					pens = 14,
+					cozyBed = true,
+					gloves = 22,
+					school = 9,
+					monuments = 2,
+				}
+			)
+			p.R = 10
+			p.bestR = 10
+			p.coins = 8.5e12
+		end,
+	})
+	-- Confettis à 99 999 (le plus large entier brut) et à 100 000 (« 100 K ») dans l'en-tête
+	add("ref.confetti.99999", {
+		tab = "workshop",
+		select = "gift",
+		edit = function(p)
+			p.confetti = 99999
+		end,
+	})
+	add("ref.confetti.100000", {
+		tab = "workshop",
+		select = "gift",
+		edit = function(p)
+			p.confetti = 100000
+		end,
+	})
+	-- mode ×1 sur une ligne payable (les modes ×10 et Max : ranch.x10, ranch.max.preview)
+	add("ref.mode.x1", {
+		tab = "ranch",
+		select = "gloves",
+		edit = function(p)
+			tiles(p, { gloves = 5 })
+			p.coins = 9.99e30
+		end,
+	})
+	-- Atelier vide, à moitié, complet (toutes les lignes ouvertes : Record R 12, une Ascension) ;
+	-- complet : sélection dans « Pour le plaisir », titre de section visible
+	local function atelier(levels)
+		return function(p)
+			p.ascend = 1
+			p.R = 12
+			p.bestR = 12
+			p.atelier = levels
+			p.confetti = 139
+		end
+	end
+	add(
+		"ref.atelier.empty",
+		{ tab = "workshop", select = "gift", edit = atelier({ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }) }
+	)
+	add("ref.atelier.half", {
+		tab = "workshop",
+		select = "keptDecor",
+		edit = atelier({ 1, 2, 1, 1, 1, 2, 1, 0, 1, 0 }),
+	})
+	add("ref.atelier.full", {
+		tab = "workshop",
+		select = "fun.palettes",
+		edit = atelier({ 2, 3, 3, 2, 2, 3, 2, 1, 3, 0 }),
+	})
+	-- Souvenir de gelée actif : remontée à r = 4 après une Ascension (Record R 15 : « Souvenir ×3 »)
+	add("ref.souvenir", {
+		tab = "ranch",
+		select = "snack",
+		edit = function(p)
+			tiles(
+				p,
+				{
+					snack = 4,
+					star = 0,
+					decor = 6,
+					pens = 14,
+					cozyBed = true,
+					gloves = 12,
+					school = 6,
+					monuments = 2,
+				}
+			)
+			p.ascend = 1
+			p.R = 4
+			p.bestR = 15
+			p.coins = 3200000
+		end,
+	})
+	-- Pires libellés du §10.7.7 en français : bandeau du Tapis Étoilé au plafond de la boucle 7
+	-- (« … à partir du Grand Splorch 8 dans cette boucle ») et de la boucle 9 (« … 10 … », deux chiffres)
+	local function starCapped(r, star)
+		return function(p)
+			tiles(p, { snack = 12, star = star })
+			p.ascend = 1
+			p.R = r
+			p.bestR = 15
+			p.coins = 9.99e30
+		end
+	end
+	add("worst.starBanner", { tab = "ranch", select = "snack", edit = starCapped(7, 2) })
+	add("worst.starBanner10", { tab = "ranch", select = "snack", edit = starCapped(9, 4) })
+	-- Cartes du Conseillé dans chaque état atteignable à l'écran (les 7 états de chaque gabarit :
+	-- UpgradeCard.spec) : Il manque (rien de payable), En cours, Réessaie, MAX après le dernier niveau
+	-- (Lit douillet), plafond de la boucle après le Tapis 12 à r = 5 (« Boucle 6 »)
+	local function lastLevels(coins)
+		return function(p)
+			tiles(
+				p,
+				{ snack = 11, star = 0, decor = 18, pens = 14, cozyBed = false, gloves = 39, school = 20 }
+			)
+			p.R = 5
+			p.bestR = 5
+			p.coins = coins
+		end
+	end
+	add("card.need", { tab = "suggested", select = 1, edit = lastLevels(10) })
+	add("card.busy", { tab = "suggested", select = 1, edit = lastLevels(9.99e30), hold = 0.7 })
+	add("card.retry", { tab = "suggested", select = 1, edit = lastLevels(9.99e30), hold = 0.7, after = 3.2 })
+	add("card.max", {
+		tab = "suggested",
+		select = "card:cozyBed",
+		edit = lastLevels(9.99e30),
+		hold = 0.7,
+		settle = 2,
+		answer = upgradeAnswer({
+			levels = 1,
+			edit = function(p)
+				lastLevels(9.99e30)(p)
+				tiles(p, { cozyBed = true })
+			end,
+		}),
+	})
+	add("card.loopCap", {
+		tab = "suggested",
+		select = "card:snack",
+		edit = lastLevels(9.99e30),
+		hold = 0.7,
+		settle = 2,
+		answer = upgradeAnswer({
+			levels = 1,
+			edit = function(p)
+				lastLevels(9.99e30)(p)
+				tiles(p, { snack = 12 })
+			end,
+		}),
+	})
 	return list
 end
+
+-- Les 24 états clés du GDD §10.8 (captures de référence, D23) : numéro, nom du fichier de référence
+-- (tests/fixtures/upgrades-reference/<nom>.<langue>.txt), écran du groupe et partie de l'interface
+-- relevée (hud = toute l'interface visible : HUD et rail ; sinon la fenêtre de l'écran Améliorations)
+Screens.REFERENCE = {
+	{ n = 1, name = "01-r0-neuf", group = "upgrades", id = "upgrades.ref.new" },
+	{ n = 2, name = "02-r5-conseille", group = "upgrades", id = "upgrades.ref.r5" },
+	{ n = 3, name = "03-r5-ranch", group = "upgrades", id = "upgrades.ref.r5.ranch" },
+	{ n = 4, name = "04-r20-tout-max", group = "upgrades", id = "upgrades.ref.r20.max" },
+	{ n = 5, name = "05-r3-boucle6", group = "upgrades", id = "upgrades.ranch.loop" },
+	{ n = 6, name = "06-r10-tapis-20", group = "upgrades", id = "upgrades.ref.r10.mat" },
+	{ n = 7, name = "07-pieces-1e300", group = "upgrades", id = "upgrades.ranch.huge" },
+	{ n = 8, name = "08-confettis-99999", group = "upgrades", id = "upgrades.ref.confetti.99999" },
+	{ n = 9, name = "09-confettis-100000", group = "upgrades", id = "upgrades.ref.confetti.100000" },
+	{ n = 10, name = "10-tout-verrouille", group = "upgrades", id = "upgrades.workshop.empty" },
+	{ n = 11, name = "11-en-cours", group = "upgrades", id = "upgrades.buy.busy" },
+	{ n = 12, name = "12-reessaie", group = "upgrades", id = "upgrades.buy.retry" },
+	{ n = 13, name = "13-mode-x1", group = "upgrades", id = "upgrades.ref.mode.x1" },
+	{ n = 14, name = "14-mode-x10", group = "upgrades", id = "upgrades.ranch.x10" },
+	{ n = 15, name = "15-mode-max", group = "upgrades", id = "upgrades.ranch.max.preview" },
+	{ n = 16, name = "16-atelier-vide", group = "upgrades", id = "upgrades.ref.atelier.empty" },
+	{ n = 17, name = "17-atelier-moitie", group = "upgrades", id = "upgrades.ref.atelier.half" },
+	{ n = 18, name = "18-atelier-complet", group = "upgrades", id = "upgrades.ref.atelier.full" },
+	{ n = 19, name = "19-souvenir", group = "upgrades", id = "upgrades.ref.souvenir" },
+	{ n = 20, name = "20-carte-jelly-ascend", group = "upgrades", id = "upgrades.suggested.ascend" },
+	{ n = 21, name = "21-plopettes-sieste", group = "upgrades", id = "upgrades.helpers" },
+	{ n = 22, name = "22-hud-calme-pret", group = "hudv2", id = "hudv2.ready", hud = true },
+	{ n = 23, name = "23-rail-jelly-ascend", group = "hudv2", id = "hudv2.railAscend", hud = true },
+	{ n = 24, name = "24-hud-remontee", group = "hudv2", id = "hudv2.petitChip", hud = true },
+}
 
 -- Groupes d'écrans : un client démarré par groupe (état de données), écrans joués dans l'ordre
 function Screens.groups()

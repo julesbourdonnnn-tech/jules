@@ -1293,8 +1293,8 @@ local function queueEntry(): { [string]: any }?
 end
 
 -- Suivi d'objectif ; rend (Grand Splorch prêt et pas encore dans la file, prestige du joueur dans la
--- file). v2.0 : pendant une remontée, « Retour au record » + « r / Record R », « Prêt ! » quand le
--- Petit Splorch l'est (D1, D32)
+-- file). v2.0 : pendant une remontée, « Retour au record » + « r / Record R », même quand le Petit
+-- Splorch est prêt (la puce « PETIT SPLORCH ! » le dit ; D1, D32)
 local function updateGoal(now: number): (boolean, boolean)
 	local preview = Util.safe(
 		"Formulas.splorchPreview",
@@ -1332,7 +1332,9 @@ local function updateGoal(now: number): (boolean, boolean)
 		elseif regain then "hud.regainTrack"
 		else "hud.goal.splorch"
 	setText("goalTitle", refs.goalTitle, Util.t(titleKey))
-	if regain and entry == nil and not ready then
+	-- « r / Record R » gardé quand le Petit Splorch est prêt : la puce « PETIT SPLORCH ! » le dit déjà
+	-- (GDD §10.2 ; §10.8, état clé 24 : la puce, le Souvenir et « Retour au record 4 / 15 » ensemble)
+	if regain and entry == nil then
 		local snap = UpgradeSnapshot.current()
 		if snap then
 			value =

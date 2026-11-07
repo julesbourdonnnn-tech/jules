@@ -620,11 +620,14 @@ local function effectOf(
 	local done = L >= max
 	local label = text(key)
 	if fmt.labelA == "decor" then
-		-- effet réel du PROCHAIN niveau sur le revenu total ; rien à montrer au maximum
+		-- effet réel sur le revenu total des niveaux que l'aperçu achète (×1 et « Il manque » : le
+		-- prochain ; ×10 / Max : n niveaux, n × DecorBonus ÷ A, A additif ; relecture des captures du lot
+		-- B2, étape 5 : le Max de 16 niveaux annonçait le gain d'un seul) ; rien à montrer au maximum
 		if done then
 			return nil
 		end
-		return { label = text(key, { a = Format.decimal(now.a * 100, lang, 1) }) }
+		local n = math.max(1, toL - L)
+		return { label = text(key, { a = Format.decimal(now.a * n * 100, lang, 1) }) }
 	elseif fmt.labelA == "monument" then
 		label = text(key, { a = Format.decimal(now.a * 100, lang) })
 	end
