@@ -438,9 +438,9 @@ function BuildCascade.configure(options: Sources?)
 		return
 	end
 	for key, value in options :: any do
-		if key == "panelController" or key == "upgradesPanel" then
-			(sources :: any)[key] = value -- false : module introuvable (écran compté fermé)
-		elseif type(value) == "function" then
+		-- modules de l'écran : false = introuvable (écran compté fermé) ; sources : des fonctions
+		local module = key == "panelController" or key == "upgradesPanel"
+		if module or type(value) == "function" then
 			(sources :: any)[key] = value
 		elseif value == false then
 			(sources :: any)[key] = nil -- false : retour à la source par défaut

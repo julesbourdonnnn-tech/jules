@@ -428,6 +428,104 @@ function RanchLook.skin(id: any): SkinLook?
 	return SKIN_ROWS[id]
 end
 
+-- Habillage de la v2.0 (les 11 nouveaux ; les 3 de la v1.3 suivent le rendu d'aujourd'hui)
+local V13_SKINS = { color = true, moonlit = true, candyNight = true }
+function RanchLook.isV2Skin(id: any): boolean
+	return type(id) == "string" and SKIN_ROWS[id] ~= nil and not V13_SKINS[id]
+end
+
+-- =============================================================================================
+-- Aspect du Tapis, des coussins, du Pot et des décorations dorées (lot B4, étape 3 ; D14, D18,
+-- D18b) : lignes de données pures, lues par le rendu du client (Render/RanchV2)
+-- =============================================================================================
+
+export type TapisLook = {
+	mat: Color3, -- couleur du grand tapis (éclaircie de 8 % par niveau dans le palier)
+	material: string, -- matériau du tapis (Enum.Material.<nom>)
+	accents: { Color3 }, -- couleurs des pièces du palier (pastilles, trous, bandes, points)
+}
+
+-- Les 6 paliers du Tapis (GDD §11.5) : Nappe pique-nique, Biscuit sablé, Bonbon arc-en-ciel, Gelée
+-- dorée, Étoilé, Galaxie
+local TAPIS_LOOKS: { TapisLook } = {
+	table.freeze({ mat = rgb(255, 196, 214), material = "SmoothPlastic", accents = { rgb(232, 72, 88) } }),
+	table.freeze({
+		mat = rgb(236, 196, 130),
+		material = "SmoothPlastic",
+		accents = { rgb(176, 126, 72), rgb(222, 174, 104) }, -- trous, bord dentelé
+	}),
+	table.freeze({
+		mat = rgb(250, 244, 255),
+		material = "SmoothPlastic",
+		accents = { -- 7 bandes pastel
+			rgb(255, 150, 162),
+			rgb(255, 190, 130),
+			rgb(255, 232, 140),
+			rgb(160, 228, 160),
+			rgb(140, 200, 255),
+			rgb(170, 160, 255),
+			rgb(222, 160, 255),
+		},
+	}),
+	table.freeze({ mat = rgb(255, 205, 90), material = "Foil", accents = { rgb(255, 236, 160) } }), -- étincelles
+	table.freeze({
+		mat = rgb(44, 52, 110),
+		material = "SmoothPlastic",
+		accents = { rgb(255, 250, 220), rgb(170, 200, 255) }, -- points, scintillement
+	}),
+	table.freeze({
+		mat = rgb(36, 30, 84),
+		material = "SmoothPlastic",
+		accents = { rgb(235, 220, 255), rgb(255, 255, 255) }, -- points, étoiles filantes
+	}),
+}
+
+-- Aspect d'un palier du Tapis (1 … 6) ; 0 ou illisible → nil (aspect de la v1.3)
+function RanchLook.tapisLook(tier: any): TapisLook?
+	if type(tier) ~= "number" or tier ~= tier or tier % 1 ~= 0 then
+		return nil
+	end
+	return TAPIS_LOOKS[tier]
+end
+
+-- Styles des coussins d'enclos (attribut Cushions : cosmétique de la semaine, Annexe B.2)
+local CUSHION_STYLES: { [string]: Color3 } = {
+	pinkCushions = rgb(255, 182, 213), -- « Nuage rose »
+}
+
+-- Couleur des coussins pour l'identifiant `id` ; "" ou inconnu → nil (couleur du ranch)
+function RanchLook.cushionStyle(id: any): Color3?
+	if type(id) ~= "string" then
+		return nil
+	end
+	return CUSHION_STYLES[id]
+end
+
+-- Coussins étoilés (Record R 11, « pen.starCushions ») : même coussin, teinté d'or et en Foil
+RanchLook.STAR_CUSHION = table.freeze({ gold = rgb(255, 214, 110), mix = 0.45, material = "Foil" })
+
+-- Le ranch montre des coussins étoilés à ce Record R
+function RanchLook.starCushions(bestR: any): boolean
+	return int(bestR, 0, MAX_R) >= firstR("pen.starCushions")
+end
+
+-- Matériaux du Pot (potMaterial) : couleur et matériau ; « gold » = l'aspect de la v1.3 (rien à poser)
+local POT_LOOKS: { [string]: { color: Color3, material: string } } = {
+	copper = table.freeze({ color = rgb(196, 118, 70), material = "Foil" }),
+	silver = table.freeze({ color = rgb(206, 212, 224), material = "Foil" }),
+	crystal = table.freeze({ color = rgb(186, 228, 255), material = "Ice" }), -- Ice sans transparence
+}
+
+function RanchLook.potLook(name: any): { color: Color3, material: string }?
+	if type(name) ~= "string" then
+		return nil
+	end
+	return POT_LOOKS[name]
+end
+
+-- Décoration dorée (DecorGold) : couleur posée sur ses pièces (Foil, Neon gardé en Neon)
+RanchLook.GOLD = rgb(255, 204, 84)
+
 -- =============================================================================================
 -- Déco perso (attribut DecoPerso : 12 numéros séparés par des virgules, 0 = vide)
 -- =============================================================================================

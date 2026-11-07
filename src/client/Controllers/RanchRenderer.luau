@@ -55,6 +55,9 @@ local WorldStateController = require(Client.Controllers.WorldStateController)
 local QualityController = require(Client.Controllers.QualityController)
 local WorldText = require(Client.UI.WorldText)
 local Util = require(Client.World.Util)
+-- v2.0 (lot B4, étape 3, D26) : état et décors v2.0 des ranchs (Render/RanchV2), tous derrière les
+-- attributs de leurs interrupteurs ; interrupteurs coupés, aucun travail ni aucune instance de plus
+local RanchV2 = require(Client.Render.RanchV2)
 
 local RanchRenderer = {}
 
@@ -313,10 +316,36 @@ local function release(d: Drawn)
 	end
 end
 
+-- v2.0 (lot B4, D19b) : couleurs des selles, traînées et drapeaux de la v2.0 (Cosmetics.ListV2 et
+-- cosmétiques de la semaine) ; un identifiant de la v1.3 garde son rendu, un inconnu le repli d'aujourd'hui
+local SADDLE_V2: { [string]: Color3 } = {
+	confetti = Color3.fromRGB(255, 150, 200),
+	goldenJelly = Color3.fromRGB(255, 205, 80),
+	cosmos = Color3.fromRGB(70, 60, 150),
+	titan = Color3.fromRGB(150, 160, 185),
+	partyPopper = Color3.fromRGB(255, 125, 95),
+	brick = Color3.fromRGB(205, 95, 65),
+	icingSugar = Color3.fromRGB(235, 245, 255),
+	cosmic = Color3.fromRGB(115, 75, 205),
+	cookieSaddle = Color3.fromRGB(205, 150, 95),
+}
+local TRAIL_V2: { [string]: Color3 } = {
+	confetti = Color3.fromRGB(255, 170, 220),
+	jellyArc = Color3.fromRGB(140, 220, 255),
+	streamers = Color3.fromRGB(255, 210, 120),
+	littleHammers = Color3.fromRGB(205, 185, 150),
+	colour = Color3.fromRGB(180, 255, 200),
+	shootingStars = Color3.fromRGB(255, 245, 190),
+	bubbleTrail = Color3.fromRGB(190, 230, 255),
+}
+
 local function saddleColorOf(slot: number, key: string): Color3
 	local def = Cosmetics.ByKindId["saddle:" .. key]
 	if def and def.color then
 		return def.color
+	end
+	if def == nil and SADDLE_V2[key] then
+		return SADDLE_V2[key]
 	end
 	return Cosmetics.RanchColors[slot] or Cosmetics.FreeRanchColor
 end
@@ -593,8 +622,11 @@ local function dressMount(d: Drawn, ranch: Types.RanchPublic)
 		trail.Attachment0 = a0
 		trail.Attachment1 = a1
 		trail.Lifetime = 0.5
-		trail.Color =
-			ColorSequence.new(if def and def.color then def.color else Color3.fromRGB(255, 220, 240))
+		local color = if def and def.color
+			then def.color
+			elseif def == nil and TRAIL_V2[ranch.trail] then TRAIL_V2[ranch.trail]
+			else Color3.fromRGB(255, 220, 240)
+		trail.Color = ColorSequence.new(color)
 		trail.Parent = body
 		d.trail = trail
 	end
@@ -1023,13 +1055,22 @@ local THEME_COLORS: { [string]: Color3 } = {
 local FLAG_COLORS: { [string]: Color3 } = {
 	squishydex = Color3.fromRGB(255, 210, 80),
 	day14 = Color3.fromRGB(255, 150, 190),
+	-- v2.0 (lot B4, D19b)
+	nine = Color3.fromRGB(120, 200, 255),
+	splorchRoyal = Color3.fromRGB(200, 60, 125),
+	buildingSite = Color3.fromRGB(255, 190, 60),
+	strawberryFlag = Color3.fromRGB(240, 90, 110),
 }
 
--- Thème du ranch : teinte des poteaux et des lisses de la clôture (couleur d'origine gardée)
+-- Thème du ranch : teinte des poteaux et des lisses de la clôture (couleur d'origine gardée).
+-- v2.0 (lot B4, D14) [RanchSkins] : un des 11 habillages v2.0, seulement si le ranch porte HaloOn,
+-- habille clôture, sol des enclos et portail (Render/RanchV2) ; les 3 de la v1.3 rendent comme avant
 local function stepTheme(slot: number)
 	local ranch = WorldStateController.ranch(slot)
 	local theme = if ranch and ranch.userId ~= 0 then ranch.theme else ""
-	if themed[slot] == theme then
+	local skin = if RanchLook.isV2Skin(theme) then RanchV2.skinFor(slot, theme) else nil
+	local key = if skin then "v2:" .. theme else theme
+	if themed[slot] == key then
 		return
 	end
 	local model = ranchModel(slot)
@@ -1037,8 +1078,11 @@ local function stepTheme(slot: number)
 	if fence == nil then
 		return
 	end
-	themed[slot] = theme
-	local color = THEME_COLORS[theme]
+	themed[slot] = key
+	if skin == nil then
+		RanchV2.clearSkin(slot)
+	end
+	local color = if skin then nil else THEME_COLORS[theme]
 	for _, part in fence:GetDescendants() do
 		if part:IsA("BasePart") then
 			if color then
@@ -1051,6 +1095,9 @@ local function stepTheme(slot: number)
 				originalColors[part] = nil
 			end
 		end
+	end
+	if skin then
+		RanchV2.applySkin(slot, model :: Instance, skin)
 	end
 end
 
@@ -1404,6 +1451,9 @@ function RanchRenderer._step(dt: number)
 	slowAcc += Util.num(dt, 0, 0, 1)
 	if slowAcc >= LOD.SlowRefresh then
 		slowAcc = 0
+		if not RanchV2.watchedAll then
+			Util.guard("RanchRenderer.v2watch", RanchV2.watch)
+		end
 		for slot = 1, WorldLayout.Const.Ranches do
 			Util.guard("RanchRenderer.silhouette", stepSilhouette, slot)
 			Util.guard("RanchRenderer.sign", stepSign, slot)
@@ -1420,6 +1470,10 @@ function RanchRenderer._step(dt: number)
 	end
 	stepHearts()
 	stepDodo()
+	-- v2.0 (lot B4, D19) : décors v2.0 seulement tant qu'un ranch en porte (un test sinon)
+	if RanchV2.on then
+		Util.guard("RanchRenderer.v2", RanchV2.step, dt, now)
+	end
 	if #bulkParts > 0 then
 		local ok, err = pcall(function()
 			workspace:BulkMoveTo(bulkParts, bulkCFrames, Enum.BulkMoveMode.FireCFrameChanged)
@@ -1473,6 +1527,11 @@ function RanchRenderer.Start()
 		return
 	end
 	started = true
+	RanchV2.start({
+		skinChanged = function(slot: number)
+			themed[slot] = nil
+		end,
+	})
 	table.insert(
 		connections,
 		WorldStateController.SquishyChanged:Connect(function(slot: number)
@@ -1487,11 +1546,13 @@ function RanchRenderer.Start()
 				gateState[slot] = nil
 				themed[slot] = nil
 			end
+			RanchV2.onRanchChanged(slot, fields)
 		end)
 	)
 	table.insert(
 		connections,
 		QualityController.Changed:Connect(function()
+			RanchV2.onQualityChanged()
 			for _, ranch in drawn do
 				for _, d in ranch do
 					if d.handle then
@@ -1634,6 +1695,7 @@ function RanchRenderer._stop()
 		c:Disconnect()
 	end
 	table.clear(connections)
+	RanchV2.stop()
 	started = false
 end
 
