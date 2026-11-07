@@ -5,10 +5,35 @@ local fs = require("@lune/fs")
 local process = require("@lune/process")
 local roblox = require("@lune/roblox")
 
-local path = process.args[1] or "build/Game.rbxl"
-local game = roblox.deserializePlace(fs.readFile(path))
+-- Cible d'éclairage de la place (N12, INT-V2-LIGHT ; lot B4, décision D2) : « v1.3 » vérifie
+-- Technology = ShadowMap (place d'aujourd'hui) ; « v2.0 » vérifie l'éclairage unifié réglé explicitement
+-- (LightingStyle = Soft, PrioritizeLightingQuality = false) et ne regarde plus Technology. La place
+-- reste en v1.3 tant que l'interrupteur Ambience est coupé : l'étape d'intégration I passe cette valeur
+-- à « v2.0 » dans le même commit que default.project.json et Ambience = true. En ligne de commande :
+--   lune run scripts/verify-place build/Game.rbxl --lighting v2.0
+local LIGHTING = "v1.3"
 
 local problems = {}
+
+local path = nil
+local i = 1
+while i <= #process.args do
+	local arg = process.args[i]
+	if arg == "--lighting" then
+		local value = process.args[i + 1]
+		if value == "v1.3" or value == "v2.0" then
+			LIGHTING = value
+		else
+			table.insert(problems, `--lighting {tostring(value)} inconnu (attendu v1.3 ou v2.0)`)
+		end
+		i += 2
+	else
+		path = path or arg
+		i += 1
+	end
+end
+path = path or "build/Game.rbxl"
+local game = roblox.deserializePlace(fs.readFile(path))
 local counts = { Script = 0, LocalScript = 0, ModuleScript = 0 }
 for _, inst in game:GetDescendants() do
 	if inst:IsA("LuaSourceContainer") then
@@ -83,15 +108,21 @@ local function setting(serviceName: string, prop: string, expected: any, label: 
 end
 setting("Workspace", "StreamingEnabled", false, "false")
 setting("StarterGui", "VirtualCursorMode", roblox.Enum.VirtualCursorMode.Disabled, "Disabled")
-setting("Lighting", "Technology", roblox.Enum.Technology.ShadowMap, "ShadowMap")
+if LIGHTING == "v2.0" then
+	setting("Lighting", "LightingStyle", roblox.Enum.LightingStyle.Soft, "Soft")
+	setting("Lighting", "PrioritizeLightingQuality", false, "false")
+else
+	setting("Lighting", "Technology", roblox.Enum.Technology.ShadowMap, "ShadowMap")
+end
 
 print(
 	string.format(
-		"Place %s : %d Script, %d LocalScript, %d ModuleScript",
+		"Place %s : %d Script, %d LocalScript, %d ModuleScript (éclairage %s)",
 		path,
 		counts.Script,
 		counts.LocalScript,
-		counts.ModuleScript
+		counts.ModuleScript,
+		LIGHTING
 	)
 )
 if #problems > 0 then

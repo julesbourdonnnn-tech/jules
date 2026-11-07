@@ -173,5 +173,60 @@ return M
 			expect(string.find(goodOut, "VirtualCursorMode =", 1, true)).toBe(nil)
 			expect(string.find(goodOut, "Technology =", 1, true)).toBe(nil)
 		end)
+
+		-- Lot B4 (décision D2, N12, INT-V2-LIGHT) : cible d'éclairage « v2.0 » (--lighting v2.0) : éclairage
+		-- unifié réglé explicitement ; Technology n'est plus vérifié. La cible par défaut reste « v1.3 »
+		-- (cas ci-dessus) jusqu'à l'étape d'intégration I.
+		it(
+			"--lighting v2.0 : LightingStyle Soft et PrioritizeLightingQuality false acceptés ; Realistic ou true refusés",
+			function()
+				local roblox = require("@lune/roblox")
+				local E = roblox.Enum
+				local function placeWith(style, prioritize, tech, extra)
+					local game = roblox.Instance.new("DataModel")
+					game:GetService("Workspace").StreamingEnabled = false
+					game:GetService("StarterGui").VirtualCursorMode = E.VirtualCursorMode.Disabled
+					local lighting = game:GetService("Lighting")
+					lighting.LightingStyle = style
+					lighting.PrioritizeLightingQuality = prioritize
+					lighting.Technology = tech
+					local path = "build/verify-place-test-" .. tostring(math.random(1, 1e9)) .. ".rbxl"
+					fs.writeFile(path, roblox.serializePlace(game))
+					local args = { "run", "scripts/verify-place", path }
+					for _, a in extra or { "--lighting", "v2.0" } do
+						table.insert(args, a)
+					end
+					local r = lune(args)
+					fs.removeFile(path)
+					return r.stdout .. r.stderr
+				end
+				-- réglages justes (Technology quelconque : plus vérifié en v2.0)
+				local good = placeWith(E.LightingStyle.Soft, false, E.Technology.Future)
+				expect(string.find(good, "LightingStyle =", 1, true)).toBe(nil)
+				expect(string.find(good, "PrioritizeLightingQuality =", 1, true)).toBe(nil)
+				expect(string.find(good, "Technology =", 1, true)).toBe(nil)
+				expect(string.find(good, "éclairage v2.0", 1, true) ~= nil).toBe(true)
+				-- Realistic : refusé ; qualité prioritaire : refusée
+				local realistic = placeWith(E.LightingStyle.Realistic, false, E.Technology.ShadowMap)
+				expect(
+					string.find(
+						realistic,
+						"LightingStyle = Enum.LightingStyle.Realistic (attendu Soft)",
+						1,
+						true
+					) ~= nil
+				).toBe(true)
+				local quality = placeWith(E.LightingStyle.Soft, true, E.Technology.ShadowMap)
+				expect(
+					string.find(quality, "PrioritizeLightingQuality = true (attendu false)", 1, true) ~= nil
+				).toBe(true)
+				-- l'option peut précéder le chemin ; une cible inconnue est refusée et nommée
+				local before = placeWith(E.LightingStyle.Realistic, false, E.Technology.ShadowMap, {})
+				expect(string.find(before, "LightingStyle =", 1, true)).toBe(nil) -- sans option : la cible v1.3
+				local unknown =
+					placeWith(E.LightingStyle.Soft, false, E.Technology.ShadowMap, { "--lighting", "v9" })
+				expect(string.find(unknown, "--lighting v9 inconnu", 1, true) ~= nil).toBe(true)
+			end
+		)
 	end)
 end
