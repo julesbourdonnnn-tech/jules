@@ -13,7 +13,8 @@
 --     de 3 000 du §12.9 n'y est PAS tenu (journal B2-13, note croisée du lot B2) : les panneaux de la
 --     v1.3 en prennent déjà ≈ 2 460 (Ranch ≈ 950, Squishydex ≈ 460, Diagnostics ≈ 250…) et l'écran
 --     ≈ 1 200 (le GDD lui en donne 1 400). Garde contre une régression en attendant la décision :
---     l'écran n'ajoute que ses propres objets, et le total reste ≤ 3 700.
+--     l'écran n'ajoute que ses propres objets, et le total reste ≤ 3 800 (3 700 jusqu'à l'étape 3 ; le
+--     HUD v2.0 et les glyphes dessinés de l'étape 4 en ajoutent 85, journal B2-49).
 -- Zéro trace.
 local roblox = require("@lune/roblox")
 local TvAudit = require("../harness/TvAudit")
@@ -58,7 +59,7 @@ return function(T)
 				)
 				expect(gui <= S.Layout.Upgrades.MaxInstances).toBe(true)
 				expect(whole <= 3000).toBe(true)
-				-- relevé du lot B2 (garde contre une régression ; journal B2-n) : 2 062 instances à l'étape 2,
+				-- relevé du lot B2 (garde contre une régression ; journal B2-19, B2-28) : 2 062 instances à l'étape 2,
 				-- 2 106 à l'étape 3 (anneau du maintien : 25 ; glyphe de l'appareil du bandeau : 19)
 				expect(all <= 2120).toBe(true)
 				local base = #c.h.localPlayer.PlayerGui:GetDescendants()
@@ -85,7 +86,7 @@ return function(T)
 
 	describe("Upgrades_Budget › interface entière, tous les panneaux construits", function()
 		it(
-			"relevé : l'écran n'ajoute que ses objets ; total ≤ 3 700 (3 000 du §12.9 non tenu, B2-13)",
+			"relevé : l'écran n'ajoute que ses objets ; total ≤ 3 800 (3 000 du §12.9 non tenu, B2-13, B2-49)",
 			function()
 				local profile = TvAudit.richProfile()
 				profile.squishies.u20.z = 300000 -- Grand Splorch prêt (aperçu construit)
@@ -126,8 +127,9 @@ return function(T)
 				-- chaque panneau de la v1.3 construit, l'écran compris
 				expect(#parts >= 9).toBe(true)
 				expect(screen <= S.Layout.Upgrades.MaxInstances).toBe(true)
-				-- garde contre une régression en attendant la décision sur le budget de 3 000 (§12.9)
-				expect(whole <= 3700).toBe(true)
+				-- garde contre une régression en attendant la décision sur le budget de 3 000 (§12.9) :
+				-- 3 681 à l'étape 3, 3 766 à l'étape 4 (HUD v2.0 et glyphes dessinés : + 85, journal B2-49)
+				expect(whole <= 3800).toBe(true)
 				S.clean(c, expect)
 			end
 		)

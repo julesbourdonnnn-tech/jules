@@ -52,7 +52,8 @@ local FONT_ORDER = { "FredokaOne", "LuckiestGuy" }
 -- au lot B1 (passage du texte courant à FredokaOne), avec TextFit_all reprouvé : ses 13 clés et les
 -- 2 « ★ » (common.stars, celebrate.star : étoile dessinée, repère « {*} » de UI/Text) sont sorties de
 -- la liste au lot B1 (étape 2) ; « ♥ » de hud.twins (cœur dessiné devant le nombre) et « ≈ » de
--- hud.queue.next / hud.queue.place (le mot « about » / « environ ») au lot B2 (étape 4, D18, D19).
+-- hud.queue.next / hud.queue.place (le mot « about » / « environ ») au lot B2 (étape 4, D18, D19,
+-- journal B2-48).
 local BASE_EXCEPTIONS: { [string]: Exception } = {
 	["panel.dex.starBadge"] = { chars = "★", owner = "B3" },
 	["panel.ranch.twins"] = { chars = "♥", owner = "B3" },

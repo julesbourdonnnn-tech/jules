@@ -165,7 +165,7 @@ local TWINS_HEART = 20
 local TWINS_PAD = 28 -- 6 + cœur 20 + 2
 local TWINS_DIGIT = 16
 -- v2.0 (lot B2, N9, D14) : rail de Layout.HudV2 ; haut jamais au-dessus de la pastille Fame (y 178,
--- 12 px sous les pièces) ; écart 12 si 9 entrées ne tiennent pas, puis (barre de Roblox, B2-n)
+-- 12 px sous les pièces) ; écart 12 si 9 entrées ne tiennent pas, puis (barre de Roblox, journal B2-32)
 -- l'écart qui tient, jamais sous 4 ; boutons de 80 et zone sûre toujours tenus
 local RAIL_V2 = Layout.HudV2.Rail
 local RAIL_V2_GAP_TIGHT = 12
@@ -383,6 +383,8 @@ local function buildEntry(frame: Frame, entry: string)
 		local pad = Instance.new("UIPadding")
 		pad.PaddingLeft = UDim.new(0, TWINS_PAD)
 		pad.PaddingRight = UDim.new(0, 6)
+		pad.PaddingTop = UDim.new(0, 0)
+		pad.PaddingBottom = UDim.new(0, 0)
 		pad.Parent = badge
 	end
 	railButtons[entry] = b

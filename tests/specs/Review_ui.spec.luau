@@ -396,7 +396,7 @@ return function(T)
 		end)
 
 		-- bouclier débutant affiché : au moins « 1 » et sa marque des minutes DESSINÉE (« ′ » hors police,
-		-- règle 18 ; lot B2, D20, journal B2-31 : le texte n'est plus que le nombre)
+		-- règle 18 ; lot B2, D20, journal B2-47 : le texte n'est plus que le nombre)
 		Screens.ranchStub(c, "rush", { shield = true })
 		pcall(c.HUD._refresh)
 		Screens.frames(c, 4, 0.1)
