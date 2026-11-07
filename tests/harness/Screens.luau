@@ -2277,27 +2277,38 @@ local function upgradeScreens()
 			answer = upgradeAnswer({ reason = "upgrades.refused." .. reason, edit = rich }),
 		})
 	end
+	-- carte du Conseillé : la réponse garde la boucle de l'ouverture (r = 5, Record R 12) ; un instantané
+	-- d'une autre boucle ferme l'écran (B2-66) et la capture ne montrait plus que le HUD (relecture des
+	-- écrans du lot B2, B2-71)
+	local function cardLoop(p)
+		rich(p)
+		p.R = 5
+		p.bestR = 12
+	end
 	add("buy.card", {
 		tab = "suggested",
 		select = 1,
-		edit = function(p)
-			rich(p)
-			p.R = 5
-			p.bestR = 12
-		end,
+		edit = cardLoop,
 		hold = 0.7,
-		answer = upgradeAnswer({ levels = 1, edit = rich }),
+		answer = function(c, args, UM)
+			local id, from = args[1], args[3]
+			return upgradeAnswer({
+				levels = 1,
+				edit = function(p)
+					cardLoop(p)
+					if type(p.tiles[id]) == "number" then
+						p.tiles[id] = from + 1
+					end
+				end,
+			})(c, args, UM)
+		end,
 	})
 	add("buy.card.refused", {
 		tab = "suggested",
 		select = 2,
-		edit = function(p)
-			rich(p)
-			p.R = 5
-			p.bestR = 12
-		end,
+		edit = cardLoop,
 		hold = 0.7,
-		answer = upgradeAnswer({ reason = "upgrades.refused.busy", edit = rich }),
+		answer = upgradeAnswer({ reason = "upgrades.refused.busy", edit = cardLoop }),
 	})
 	add("buy.workshop", {
 		tab = "workshop",
