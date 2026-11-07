@@ -2464,7 +2464,7 @@ return function(T)
 				checkParts(partsOf(kiosk))
 				local center = Vector3.new(0, 0, 0)
 				for _, p in partsOf(kiosk) do
-					local d = Vector3.new(p.Position.X, 0, p.Position.Z) - Vector3.new(-30, 0, 24)
+					local d = Vector3.new(p.Position.X, 0, p.Position.Z) - c.WL.plaza("kiosk")
 					expect(d.Magnitude < 5).toBe(true)
 				end
 				local labels = labelOf(c, "world.kiosk")
@@ -3424,6 +3424,160 @@ return function(T)
 						onMs
 					)
 				)
+			end
+		)
+	end)
+
+	-- =========================================================================================
+	-- Relecture indépendante du lot B4 (7 novembre 2026) : défauts trouvés, spec rouge d'abord
+	-- =========================================================================================
+
+	describe("RanchRenderer_v2 › relecture B4", function()
+		-- Points extrêmes de chaque pièce (repère monde) selon sa forme : coins d'un bloc, bord d'une boule,
+		-- cercles des deux bouts d'un cylindre (axe = X de la pièce, 32 points) ; plus grand écart à plat
+		-- avec `center`
+		local function reach(list, center)
+			local worst = 0
+			local function note(w)
+				worst = math.max(worst, math.sqrt((w.X - center.X) ^ 2 + (w.Z - center.Z) ^ 2))
+			end
+			for _, p in list do
+				local cf, s = p.CFrame, p.Size
+				if p.Shape == Enum.PartType.Ball then
+					local c0 = cf.Position
+					worst =
+						math.max(worst, math.sqrt((c0.X - center.X) ^ 2 + (c0.Z - center.Z) ^ 2) + s.X / 2)
+				elseif p.Shape == Enum.PartType.Cylinder then
+					local r = math.min(s.Y, s.Z) / 2
+					for _, side in { -1, 1 } do
+						for k = 0, 31 do
+							local a = 2 * math.pi * k / 32
+							note(
+								cf:PointToWorldSpace(
+									Vector3.new(side * s.X / 2, r * math.cos(a), r * math.sin(a))
+								)
+							)
+						end
+					end
+				else
+					for _, dx in { -1, 1 } do
+						for _, dy in { -1, 1 } do
+							for _, dz in { -1, 1 } do
+								note(
+									cf:PointToWorldSpace(
+										Vector3.new(dx * s.X / 2, dy * s.Y / 2, dz * s.Z / 2)
+									)
+								)
+							end
+						end
+					end
+				end
+			end
+			return worst
+		end
+
+		-- Défaut R-B4-2 : les emprises déclarées du kiosque (KioskRadius 2,75) et de l'Observatoire
+		-- (ObservatoryFootprint 6) étaient plus petites que leurs dessins (auvent et comptoir à 4,2 studs
+		-- du centre, marches de l'Observatoire à 8,25) : WorldLayout.spec « jamais sous le kiosque »
+		-- prouvait une emprise fausse, et le comptoir mordait sur le point d'apparition neutre de la place
+		-- (6 × 6 en (−24, 0, 24), où chaque personnage apparaît avant d'être placé dans son ranch)
+		it(
+			"kiosque, Observatoire et Prairie v2 : chaque pièce dans son emprise déclarée ; rien du kiosque sur le point d'apparition neutre",
+			function()
+				local c = clientV2({ lighting = true, event = eventState() })
+				c.snapshot(all16())
+				c.run(1)
+				local WV = c.h:require(CLIENT .. "Render.WorldV2")
+				c.attrs(3, { TapisTier = 1, Monuments = 1 }) -- Observatoire et Prairie v2 (MON ranch)
+				c.profile({ coins = 0, upgradeSnapshot = upgradeSnap(c.h) }) -- instantané complet : kiosque
+				c.LC.refresh()
+				expect(WV.kioskOpen()).toBe(true)
+				expect(WV.stats().observatory).toBe(24)
+				expect(WV.stats().meadow > 0).toBe(true)
+				local C = c.WL.Const
+				local world = worldV2(c)
+				local kiosk = partsOf(world.Kiosk)
+				local obs = partsOf(world.Observatory)
+				local meadow = partsOf(world.Meadow)
+				-- Vector3 de Roblox en flottants 32 bits : tolérance de 1e-3 stud
+				expect({ kiosk = reach(kiosk, c.WL.plaza("kiosk")) <= C.KioskRadius + 1e-3 }).toEqual({
+					kiosk = true,
+				})
+				expect({ obs = reach(obs, c.WL.observatory().Position) <= C.ObservatoryFootprint + 1e-3 }).toEqual({
+					obs = true,
+				})
+				expect({ meadow = reach(meadow, c.WL.meadowCenter(true)) <= C.MeadowV2Radius + 1e-3 }).toEqual({
+					meadow = true,
+				})
+				-- point d'apparition neutre (Town.spawn : 6 × 6 en (−24, 0, 24)) : aucun coin du kiosque dessus
+				local inside = {}
+				for _, p in kiosk do
+					local cf, s = p.CFrame, p.Size
+					for _, dx in { -1, 1 } do
+						for _, dz in { -1, 1 } do
+							for _, dy in { -1, 1 } do
+								local w = cf:PointToWorldSpace(
+									Vector3.new(dx * s.X / 2, dy * s.Y / 2, dz * s.Z / 2)
+								)
+								if w.X > -27 and w.X < -21 and w.Z > 21 and w.Z < 27 then
+									inside[p.Name] = true
+								end
+							end
+						end
+					end
+				end
+				expect(next(inside)).toBe(nil)
+				c.clean()
+			end
+		)
+
+		-- Défaut R-B4-1 : une 2e naissance mutée pendant les étincelles des buses (0,8 s) demandait 5
+		-- particules de plus au quota « record » (5) : refus compté comme un dépassement du budget visuel
+		-- et ClientMetric("visualBudget") envoyé, alors qu'aucun système ne dépasse son budget (l'effet
+		-- passager est déjà à l'écran). Attendu : la naissance suivante n'a pas d'étincelles neuves, sans
+		-- dépassement compté ni métrique ; après les étincelles, une naissance mutée en a de nouveau
+		it(
+			"étincelles des buses : une naissance mutée pendant les étincelles ne compte aucun dépassement ni ClientMetric",
+			function()
+				local c = clientV2()
+				c.snapshot(all16b())
+				c.at(3, Vector3.new(0, 0, 30))
+				c.attrs(3, { TapisTier = 1, BestR = 5 }) -- 5 buses au Record R 5
+				c.run(1)
+				local function hatch(m)
+					c.h:fireClient("ReplicatedStorage.Remotes.Celebrate", {
+						kind = "hatch",
+						data = {
+							uid = "u",
+							species = 1,
+							rarity = 1,
+							mutation = m,
+							oneIn = 1,
+							isNew = false,
+							scripted = false,
+							at = "pen",
+						},
+					})
+					c.h:settle(1)
+				end
+				local before = c.VB.exceeded()
+				hatch(3)
+				expect(emitters(c.h)).toBe(5)
+				hatch(4)
+				hatch(5)
+				expect(emitters(c.h)).toBe(5)
+				expect(c.VB.used("record", "particles")).toBe(5)
+				expect(c.VB.exceeded()).toBe(before)
+				expect(c.VB.stats().record.refused).toBe(0)
+				expect(#metrics(c.h)).toBe(0)
+				c.run(1)
+				expect(emitters(c.h)).toBe(0)
+				hatch(3)
+				expect(emitters(c.h)).toBe(5)
+				c.run(1)
+				expect(c.VB.used("record", "particles")).toBe(0)
+				expect(c.VB.exceeded()).toBe(before)
+				c.clean()
 			end
 		)
 	end)

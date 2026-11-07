@@ -735,10 +735,12 @@ return function(T)
 		)
 
 		it(
-			"kiosque de Big Plop (−30, 0, 24) : dans la place, loin de l'autel, de la boutique, de la jarre, de la scène et du MEGA pad",
+			"kiosque de Big Plop (−32, 0, 24) : dans la place, loin de l'autel, de la boutique, de la jarre, de la scène et du MEGA pad",
 			function()
 				local k = W.plaza("kiosk")
-				expect(k).toEqual(Vector3.new(-30, 0, 24))
+				-- (−32, 0, 24) depuis la relecture du lot B4 (R-B4-2 : emprise réelle du kiosque 4,25 ; à (−30, 0, 24)
+				-- son comptoir mordait sur le point d'apparition neutre)
+				expect(k).toEqual(Vector3.new(-32, 0, 24))
 				expect(radius(k) + C.KioskRadius < C.PlazaRadius).toBe(true)
 				local function clear(name, pos, r, margin)
 					local d = flat(k, pos) - C.KioskRadius - r

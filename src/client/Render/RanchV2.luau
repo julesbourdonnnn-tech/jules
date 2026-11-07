@@ -1683,6 +1683,14 @@ function RanchV2.onHatch(data: any)
 	if obj == nil or obj.level ~= "full" or particleFactor() <= 0 then
 		return
 	end
+	-- étincelles d'une naissance précédente encore en vol (moins de SPARK_LIFE) : l'effet passager est
+	-- déjà à l'écran, rien de plus ; jamais un refus du quota compté comme dépassement du budget visuel
+	-- ni de ClientMetric pour lui (relecture du lot B4, R-B4-1)
+	for _, sp in sparks do
+		if sp.slot == slot then
+			return
+		end
+	end
 	local nozzles: { BasePart } = {}
 	for i = 1, 5 do
 		local part = obj.parts["vatNozzle" .. i]

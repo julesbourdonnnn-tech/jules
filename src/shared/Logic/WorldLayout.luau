@@ -65,11 +65,15 @@ local CONST = {
 	MonumentTop = 18, -- hauteur maximale d'un Monument
 	DecoSmallRadius = 1.25, -- emplacement « P » de Déco perso (objet ≤ 2,5 studs)
 	DecoLargeRadius = 2.25, -- emplacement « G » (objet ≤ 4,5 studs)
-	KioskRadius = 2.75, -- kiosque de Big Plop (échoppe ≈ 15 pièces)
+	-- kiosque de Big Plop (échoppe de 15 pièces) : emprise RÉELLE du dessin (auvent et comptoir ≤ 4,21 studs
+	-- du centre, RanchRenderer_v2 › relecture B4 ; 2,75 avant la relecture, R-B4-2)
+	KioskRadius = 4.25,
 	MeadowV2Radius = 12, -- Prairie v2 : disque fleuri Ø 24
 	MeadowV2Spread = 9, -- places de la Prairie v2 autour de son centre
 	ObservatoryRadius = 340, -- Observatoire, colline nord, au-delà du mur du bord (inaccessible)
-	ObservatoryFootprint = 6, -- tour ronde + coupole (≈ 25 pièces)
+	-- Observatoire (tour ronde + coupole, 24 pièces) : emprise réelle du dessin (marches ≤ 8,25 studs du centre ;
+	-- 6 avant la relecture du lot B4, R-B4-2)
+	ObservatoryFootprint = 8.5,
 }
 
 export type Anchor =
@@ -221,8 +225,10 @@ local PLAZA: { [string]: Vector3 } = {
 	stage = Vector3.new(27, 0, 27),
 	goldenFountain = Vector3.new(20, 0, -20),
 	boards = Vector3.new(0, 0, -46),
-	-- v2.0 (lot B4) : kiosque de Big Plop, ouest-sud-ouest de la place (GDD §11.1)
-	kiosk = Vector3.new(-30, 0, 24),
+	-- v2.0 (lot B4) : kiosque de Big Plop, ouest-sud-ouest de la place (GDD §11.1) ; (−32, 0, 24) depuis la
+	-- relecture du lot B4 (R-B4-2) : avec son emprise réelle (4,25), jamais sur le point d'apparition neutre
+	-- (6 × 6 en (−24, 0, 24)) où chaque personnage apparaît avant d'être placé dans son ranch
+	kiosk = Vector3.new(-32, 0, 24),
 }
 
 -- Centre de la Prairie des copains : au nord (−Z), entre le fond des ranchs (r ≤ 252) et le bord
