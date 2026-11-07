@@ -55,6 +55,21 @@ local CONST = {
 	AltarRadius = 12, -- présence à l'Autel de la Lune
 	PoolSlotRadius = 3.5, -- places flottantes du Bassin autour de son centre
 	MeadowSpread = 12, -- places de la Prairie autour de son centre
+	-- v2.0 (lot B4, GDD v2.0 §11.1, §11.2, §11.5 ; docs/04 §27.14) : ajouts seulement, aucune
+	-- position de la v1.3 ne change
+	SilhouetteRadius = 19, -- = Balance.SizeScale.BaseDiameter × SilhouetteCap / 2 (WorldLayout.spec)
+	CenterColumnMargin = 2, -- colonne du centre : rayon de la silhouette + 2
+	V2Elevated = 8, -- un décor v2 dont le bas est à ≥ 8 studs est « en hauteur » (règle de la colonne seule)
+	PadClearance = 8, -- centre d'une dalle → bord d'une emprise v2 au sol (6 studs du bord de la dalle)
+	MonumentRadius = 6, -- emprise d'un Monument (≤ 20 pièces, 12 × 12 studs)
+	MonumentTop = 18, -- hauteur maximale d'un Monument
+	DecoSmallRadius = 1.25, -- emplacement « P » de Déco perso (objet ≤ 2,5 studs)
+	DecoLargeRadius = 2.25, -- emplacement « G » (objet ≤ 4,5 studs)
+	KioskRadius = 2.75, -- kiosque de Big Plop (échoppe ≈ 15 pièces)
+	MeadowV2Radius = 12, -- Prairie v2 : disque fleuri Ø 24
+	MeadowV2Spread = 9, -- places de la Prairie v2 autour de son centre
+	ObservatoryRadius = 340, -- Observatoire, colline nord, au-delà du mur du bord (inaccessible)
+	ObservatoryFootprint = 6, -- tour ronde + coupole (≈ 25 pièces)
 }
 
 export type Anchor =
@@ -78,6 +93,46 @@ export type PlazaName =
 	| "stage"
 	| "goldenFountain"
 	| "boards"
+	| "kiosk"
+-- Décors v2.0 du ranch (lot B4) : paliers, geyser, cadre doré, 8 lampions, ciel
+export type V2Anchor =
+	"arch"
+	| "tower"
+	| "balcony"
+	| "lighthouse"
+	| "dome"
+	| "crown"
+	| "geyser"
+	| "frame"
+	| "lantern1"
+	| "lantern2"
+	| "lantern3"
+	| "lantern4"
+	| "lantern5"
+	| "lantern6"
+	| "lantern7"
+	| "lantern8"
+	| "sky"
+-- Emprise d'un décor v2 dans le repère local d'un ranch (disque x, z, r ou boîte x0 … x1, z0 … z1),
+-- de bottom à top (studs) : la règle de placement de WorldLayout.spec la vérifie pour les 16 ranchs
+export type Footprint = {
+	name: string,
+	kind: "disc" | "box",
+	x: number,
+	z: number,
+	r: number,
+	x0: number,
+	x1: number,
+	z0: number,
+	z1: number,
+	bottom: number,
+	top: number,
+	accessory: boolean, -- accessoire de la silhouette : seul décor v2 permis dans la colonne au-dessus de Y = 21
+	fence: boolean, -- posé sur la clôture (lampions sur les poteaux)
+	outside: boolean, -- derrière le fond, hors clôture (tour, balcon, phare, ciel, Monuments)
+}
+export type DecoSlotDef = { position: Vector3, size: "P" | "G" }
+export type Column = { center: Vector3, radius: number, floor: number }
 export type Graph = { nodes: { Vector3 }, neighbors: { { number } } }
 export type Box = { cframe: CFrame, size: Vector3 }
 
@@ -166,10 +221,16 @@ local PLAZA: { [string]: Vector3 } = {
 	stage = Vector3.new(27, 0, 27),
 	goldenFountain = Vector3.new(20, 0, -20),
 	boards = Vector3.new(0, 0, -46),
+	-- v2.0 (lot B4) : kiosque de Big Plop, ouest-sud-ouest de la place (GDD §11.1)
+	kiosk = Vector3.new(-30, 0, 24),
 }
 
 -- Centre de la Prairie des copains : au nord (−Z), entre le fond des ranchs (r ≤ 252) et le bord
 local MEADOW_CENTER = Vector3.new(0, 0, -(CONST.MeadowRadius + 4))
+-- v2.0 (lot B4, D9) : la Prairie déménage dans un jardin du quartier nord (r ≈ 145, 291°) ; r = 280 est
+-- la bande des Monuments. Point le plus dégagé du quart nord pour un disque de rayon MeadowV2Radius
+-- (recherche du plan, marge ≥ 1 stud prouvée par WorldLayout.spec)
+local MEADOW_V2_CENTER = Vector3.new(52, 0, -135.5)
 
 -- =============================================================================================
 -- Repères des ranchs (cache pur)
@@ -729,12 +790,284 @@ function WorldLayout.supportY(pos: Vector3): number
 	return y
 end
 
--- Place n° index (1 … 12) dans la Prairie des copains
-function WorldLayout.meadowPoint(index: number): Vector3
+-- =============================================================================================
+-- Monde v2.0 (lot B4, GDD v2.0 §11.1, §11.2, §11.5 ; docs/04 §27.14 ; décisions D8, D9 du plan B4).
+-- Ajouts seulement : aucune position de la v1.3 ne change. Rien ici n'est construit par le serveur ;
+-- le client dessine ces décors derrière leurs interrupteurs (RanchTiers, Monuments, DecoPerso,
+-- Workshop). Règle de placement (WorldLayout.spec, Props_WorldLayout.spec, pour les 16 ranchs) :
+-- une emprise v2 au sol (bas < V2Elevated) est à ≥ 8 studs du centre de chaque dalle, hors des
+-- enclos (X −27 … 27, Z 12 … 44) et du chemin du portail (|X| ≤ 5, Z −6 … 12), sans chevaucher les 18
+-- décorations, les objets de la v1.3 ni une autre emprise v2 ; rien de la v2 au-dessus de Y = 21 dans
+-- la colonne du centre (silhouette du meilleur squishy), sauf ses accessoires (cadre doré).
+-- =============================================================================================
+
+-- Place n° index (1 … 12) dans la Prairie des copains ; v2 = true : la Prairie v2 (jardin du quartier
+-- nord, D9) ; sans second argument, la Prairie de la v1.3, inchangée
+function WorldLayout.meadowPoint(index: number, v2: boolean?): Vector3
 	local i = math.clamp(math.floor(finite(index, 1)), 1, 12)
 	local a = math.rad(30 * (i - 1))
+	if v2 == true then
+		local spread = CONST.MeadowV2Spread * (if i % 2 == 0 then 1 else 0.55)
+		return MEADOW_V2_CENTER + Vector3.new(spread * math.cos(a), 0, spread * math.sin(a))
+	end
 	local spread = CONST.MeadowSpread * (if i % 2 == 0 then 1 else 0.55)
 	return MEADOW_CENTER + Vector3.new(spread * math.cos(a), 0, spread * math.sin(a))
+end
+
+-- Centre de la Prairie des copains : v1.3 (0, 0, −284) sans argument ; v2 = true : le jardin du
+-- quartier nord (r ≈ 145, 291°), libre de toute maison, rue, sucette, buisson, lampadaire et plaque
+-- de sucre glace (WorldLayout.spec)
+function WorldLayout.meadowCenter(v2: boolean?): Vector3
+	return if v2 == true then MEADOW_V2_CENTER else MEADOW_CENTER
+end
+
+-- Monuments : 10 emplacements fixes derrière le fond, hors clôture (GDD §11.5) : n° 1 … 5 à Z = 88,
+-- n° 6 … 10 à Z = 116, X = −36, −18, 0, +18, +36 ; tournés comme le ranch (LookVector vers la place)
+local MONUMENT_X = { -36, -18, 0, 18, 36 }
+local MONUMENT_Z = { 88, 116 }
+
+local function monumentLocal(n: number): Vector3
+	local i = math.clamp(math.floor(finite(n, 1)), 1, 2 * #MONUMENT_X)
+	local row = (i - 1) // #MONUMENT_X + 1
+	local col = (i - 1) % #MONUMENT_X + 1
+	return Vector3.new(MONUMENT_X[col], 0, MONUMENT_Z[row])
+end
+
+-- Repère monde de l'emplacement du Monument n° n (1 … 10)
+function WorldLayout.monumentSlot(slot: number, n: number): CFrame
+	local p = monumentLocal(n)
+	if not validSlot(slot) then
+		return CFrame.new(p)
+	end
+	return FRAMES[slot].cframe * CFrame.new(p.X, p.Y, p.Z)
+end
+
+-- 12 emplacements de Déco perso (repère local) : 1 … 8 petits « P », 9 … 12 grands « G »
+-- (Cosmetics.DecoSlots), le long du chemin du portail, autour des enclos et devant la rangée des
+-- dalles ; chacun respecte la règle de placement (marges calculées par WorldLayout.spec)
+local DECO_PERSO: { DecoSlotDef } = {
+	{ position = Vector3.new(-7, 0, 9.5), size = "P" },
+	{ position = Vector3.new(7, 0, 9.5), size = "P" },
+	{ position = Vector3.new(0, 0, 58.75), size = "P" },
+	{ position = Vector3.new(17.25, 0, 55.75), size = "P" },
+	{ position = Vector3.new(27, 0, 61.25), size = "P" },
+	{ position = Vector3.new(-23.25, 0, 57.75), size = "P" },
+	{ position = Vector3.new(-23.75, 0, 46.75), size = "P" },
+	{ position = Vector3.new(21.25, 0, 46.75), size = "P" },
+	{ position = Vector3.new(19.5, 0, 5), size = "G" },
+	{ position = Vector3.new(23.5, 0, 52), size = "G" },
+	{ position = Vector3.new(-4, 0, 55), size = "G" },
+	{ position = Vector3.new(-14, 0, 47.5), size = "G" },
+}
+
+-- Emplacements de Déco perso en repère local, avec leur taille (plan vu du dessus de Mon style) : copie
+function WorldLayout.decoPersoSlots(): { DecoSlotDef }
+	local out: { DecoSlotDef } = {}
+	for i, def in DECO_PERSO do
+		out[i] = { position = def.position, size = def.size }
+	end
+	return out
+end
+
+-- Repère monde de l'emplacement de Déco perso n° i (1 … 12), tourné vers le milieu des enclos
+function WorldLayout.decoPersoSlot(slot: number, index: number): CFrame
+	local def = DECO_PERSO[math.clamp(math.floor(finite(index, 1)), 1, #DECO_PERSO)]
+	local p = def.position
+	if not validSlot(slot) then
+		return CFrame.new(p)
+	end
+	local f = FRAMES[slot]
+	local pos = localToWorld(f, p.X, p.Y, p.Z)
+	local face = localToWorld(f, DECOR_FACE.X, p.Y, DECOR_FACE.Z)
+	return CFrame.lookAt(pos, face)
+end
+
+-- Points des décors v2 du ranch (repère local ; GDD §11.5) : base de chaque palier, du geyser, des
+-- lampions (dessus des poteaux de la clôture), centre du cadre doré (silhouette) et bas du ciel
+local V2_ANCHORS: { [string]: Vector3 } = {
+	arch = Vector3.new(0, 9, 0.5), -- Arche à pompons, Y 9 à 13, posée sur les poteaux du portail
+	tower = Vector3.new(-30, 0, 76), -- Tour à bonbons, coin arrière gauche, hors clôture
+	balcony = Vector3.new(0, 0, 76), -- Balcon de gelée (plancher à Y 10 à 14), derrière l'étagère
+	lighthouse = Vector3.new(30, 0, 76), -- Phare de gelée, coin arrière droit, hors clôture
+	dome = Vector3.new(0, 16, 70), -- Dôme néon au-dessus de l'étagère
+	crown = Vector3.new(0, 18, 0), -- Couronne flottante au-dessus du panneau du portail
+	geyser = Vector3.new(-24, 0, 9.5), -- Geyser de gelée (Record R 17), Z 4 à 10, X −24
+	frame = Vector3.new(0, 40, 36), -- cadre doré (Record R 18) autour de la silhouette
+	lantern1 = Vector3.new(-24.75, 4.4, 0.5), -- 8 lampions (Record R 12) sur les poteaux
+	lantern2 = Vector3.new(-18, 4.4, 0.5),
+	lantern3 = Vector3.new(18, 4.4, 0.5),
+	lantern4 = Vector3.new(24.75, 4.4, 0.5),
+	lantern5 = Vector3.new(-31.5, 4.4, 71 / 9 + 0.5),
+	lantern6 = Vector3.new(31.5, 4.4, 71 / 9 + 0.5),
+	lantern7 = Vector3.new(-31.5, 4.4, 71 * 8 / 9 + 0.5),
+	lantern8 = Vector3.new(31.5, 4.4, 71 * 8 / 9 + 0.5),
+	sky = Vector3.new(0, 34, 84), -- élément de ciel (Ascensions) au-dessus du fond, au-dessus des Monuments
+}
+
+-- Le nom désigne un décor v2 du ranch
+function WorldLayout.hasV2Anchor(name: string): boolean
+	return type(name) == "string" and V2_ANCHORS[name] ~= nil
+end
+
+-- Repère monde d'un décor v2 du ranch (tourné comme le ranch : LookVector vers la place) ; nom
+-- inconnu : le portail
+function WorldLayout.v2Anchor(slot: number, name: V2Anchor): CFrame
+	local p = if type(name) == "string" then V2_ANCHORS[name] else nil
+	local q = p or Vector3.zero
+	if not validSlot(slot) then
+		return CFrame.new(q)
+	end
+	return FRAMES[slot].cframe * CFrame.new(q.X, q.Y, q.Z)
+end
+
+-- Maisonnette des Plopettes (Record R 2) : son point devant la porte, en monde (GDD §11.2 : Z = 60,
+-- X = −28), exactement le repli de HelperService (A3) ; la cabane (6 pièces) se tient juste derrière
+function WorldLayout.helperHouse(slot: number): Vector3
+	return WorldLayout.toWorld(slot, Vector3.new(-28, 0, 60))
+end
+
+-- Observatoire (colline nord, r ≈ 340, au-delà du mur du bord : inaccessible) : repère au sol de la
+-- colline, tourné vers la place
+function WorldLayout.observatory(): CFrame
+	local r = CONST.ObservatoryRadius
+	local y = WorldLayout.groundY(0, -r)
+	return CFrame.lookAt(Vector3.new(0, y, -r), Vector3.new(0, y, 0))
+end
+
+-- Colonne du centre d'un ranch (repère local) : la silhouette du meilleur squishy (centre (0, 40, 36),
+-- rayon d'affichage ≤ SilhouetteRadius) ne traverse rien ; aucun décor v2 au-dessus de `floor` dans
+-- le cylindre de rayon `radius` autour de `center`, sauf les accessoires de la silhouette
+local COLUMN: Column = table.freeze({
+	center = Vector3.new(ANCHORS.silhouette.X, 0, ANCHORS.silhouette.Z),
+	radius = CONST.SilhouetteRadius + CONST.CenterColumnMargin,
+	floor = ANCHORS.silhouette.Y - CONST.SilhouetteRadius,
+})
+
+function WorldLayout.centerColumn(): Column
+	return COLUMN
+end
+
+-- Emprises v2 du ranch (repère local), construites une fois
+local FOOTPRINTS: { Footprint } = {}
+
+local function addFootprint(f: { [string]: any })
+	table.insert(
+		FOOTPRINTS,
+		table.freeze({
+			name = f.name,
+			kind = f.kind,
+			x = f.x or 0,
+			z = f.z or 0,
+			r = f.r or 0,
+			x0 = f.x0 or 0,
+			x1 = f.x1 or 0,
+			z0 = f.z0 or 0,
+			z1 = f.z1 or 0,
+			bottom = f.bottom or 0,
+			top = f.top or 0,
+			accessory = f.accessory == true,
+			fence = f.fence == true,
+			outside = f.outside == true,
+		}) :: any
+	)
+end
+
+local function discAt(
+	name: string,
+	p: Vector3,
+	r: number,
+	bottom: number,
+	top: number,
+	extra: { [string]: any }?
+)
+	local f: { [string]: any } =
+		{ name = name, kind = "disc", x = p.X, z = p.Z, r = r, bottom = bottom, top = top }
+	if extra then
+		for k, v in extra do
+			f[k] = v
+		end
+	end
+	addFootprint(f)
+end
+
+do
+	local A = V2_ANCHORS
+	addFootprint({
+		name = "arch",
+		kind = "box",
+		x0 = -5.5,
+		x1 = 5.5,
+		z0 = -0.5,
+		z1 = 1.5,
+		bottom = 9,
+		top = 13,
+	})
+	discAt("tower", A.tower, 2.5, 0, 19, { outside = true })
+	addFootprint({
+		name = "balcony",
+		kind = "box",
+		x0 = -10,
+		x1 = 10,
+		z0 = 74,
+		z1 = 78,
+		bottom = 0,
+		top = 14,
+		outside = true,
+	})
+	discAt("lighthouse", A.lighthouse, 2.5, 0, 24, { outside = true })
+	discAt("dome", A.dome, 6, 16, 22)
+	discAt("crown", A.crown, 2.5, 17, 22)
+	discAt("geyser", A.geyser, 1, 0, 8)
+	discAt(
+		"frame",
+		A.frame,
+		CONST.SilhouetteRadius + 2,
+		A.frame.Y - CONST.SilhouetteRadius - 2,
+		A.frame.Y + 21,
+		{
+			accessory = true,
+		}
+	)
+	for i = 1, 8 do
+		local p = A["lantern" .. i]
+		discAt("lantern" .. i, p, 0.7, p.Y, p.Y + 1.4, { fence = true })
+	end
+	discAt("sky", A.sky, 12, A.sky.Y, A.sky.Y + 14, { outside = true })
+	addFootprint({
+		name = "house",
+		kind = "box",
+		x0 = -29.75,
+		x1 = -26.25,
+		z0 = 61,
+		z1 = 64,
+		bottom = 0,
+		top = 5,
+	})
+	for n = 1, 2 * #MONUMENT_X do
+		discAt(
+			"monument" .. n,
+			monumentLocal(n),
+			CONST.MonumentRadius,
+			0,
+			CONST.MonumentTop,
+			{ outside = true }
+		)
+	end
+	for i, def in DECO_PERSO do
+		local large = def.size == "G"
+		discAt(
+			"deco" .. i,
+			def.position,
+			if large then CONST.DecoLargeRadius else CONST.DecoSmallRadius,
+			0,
+			if large then 4.5 else 2.5
+		)
+	end
+end
+
+-- Emprises de tous les décors v2 d'un ranch (repère local, lecture seule)
+function WorldLayout.v2Footprints(): { Footprint }
+	return table.clone(FOOTPRINTS)
 end
 
 return WorldLayout
