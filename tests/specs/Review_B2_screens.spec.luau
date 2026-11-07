@@ -165,6 +165,223 @@ return function(T)
 		)
 	end)
 
+	-- Partie à la manette seule (PS5 sur un canapé), sur le vrai client, aux 3 résolutions et dans les
+	-- 2 langues : △ ↓ ✕ jusqu'à l'écran ; cartes ← → ; ↑ onglets puis bouton de mode ; ✕ et □ font
+	-- tourner le mode ; R1 / L1 en boucle ; chaque ligne de chaque onglet atteinte à la croix, ENTIÈRE
+	-- dans la liste (jamais sous les onglets ni sous le bandeau), rebond aux deux bouts ; stick droit :
+	-- une page ; maintien de ✕ 0,7 s sur une carte Prête : un seul BuyUpgrade valide ; ○ ramène au rail
+	-- sur « Améliorations » puis au jeu. Zéro trace
+	describe("Review_B2_screens › partie à la manette seule (3 résolutions, FR et EN)", function()
+		local roblox = require("@lune/roblox")
+		local Enum, Vector2 = roblox.Enum, roblox.Vector2
+		local UpgradeScreen = require("../harness/UpgradeScreen")
+		local TvAudit = require("../harness/TvAudit")
+		local Gamepad = require("../harness/Gamepad")
+		local Layout = require("../harness/Layout")
+		local S = UpgradeScreen.new(Harness)
+		local DONE = { step = 11, done = true, demoDone = true }
+
+		local function play(c, label)
+			local h, PC, Up = c.h, c.PC, c.Up
+			local issues = {}
+			local function fail(msg)
+				table.insert(issues, label .. msg)
+			end
+			local function sel()
+				return h.game.GuiService.SelectedObject
+			end
+			local function tap(key, dt)
+				Gamepad.tap(h, key)
+				TvAudit.tick(h, dt or 0.2)
+			end
+			-- rangée entière dans la partie visible de sa liste (px d'écran)
+			local function inside(obj, list)
+				Layout.apply(h)
+				local r, l = Layout.rect(obj), Layout.rect(list)
+				if r == nil or l == nil then
+					return false
+				end
+				return r.y >= l.y - 0.5 and r.y + r.h <= l.y + l.h + 0.5
+			end
+			if not TvAudit.toGame(h) then
+				fail("○ ne rend pas la main au jeu au départ")
+			end
+			tap(Enum.KeyCode.ButtonY, 0.5)
+			if not PC.menuOpen() then
+				fail("△ n'ouvre pas le menu")
+				return issues
+			end
+			for _ = 1, 9 do
+				if sel() == PC.entryButton("Upgrades") then
+					break
+				end
+				tap(Enum.KeyCode.DPadDown)
+			end
+			if sel() ~= PC.entryButton("Upgrades") then
+				fail("l'entrée Améliorations n'est pas atteinte à la croix")
+				return issues
+			end
+			TvAudit.tick(h, 0.5)
+			tap(Enum.KeyCode.ButtonA, 0.6)
+			if PC.current() ~= "Upgrades" or Up.currentTab() ~= "suggested" or sel() ~= Up._card(1) then
+				fail("✕ sur Améliorations n'ouvre pas le Conseillé, sélection sur la carte 1")
+				return issues
+			end
+			-- cartes ← → (rebond aux bouts)
+			local n = #Up._cards()
+			for i = 2, n do
+				tap(Enum.KeyCode.DPadRight)
+				if sel() ~= Up._card(i) then
+					fail("→ ne va pas à la carte " .. i)
+				end
+			end
+			tap(Enum.KeyCode.DPadRight)
+			if sel() ~= Up._card(n) then
+				fail("→ au bout ne rebondit pas")
+			end
+			for i = n - 1, 1, -1 do
+				tap(Enum.KeyCode.DPadLeft)
+				if sel() ~= Up._card(i) then
+					fail("← ne va pas à la carte " .. i)
+				end
+			end
+			-- ↑ onglet, ↑ bouton de mode ; ✕ puis □ font tourner le mode ×1 → ×10 → Max → ×1
+			tap(Enum.KeyCode.DPadUp)
+			if sel() ~= Up._tab("suggested") then
+				fail("↑ depuis une carte ne va pas à l'onglet")
+			end
+			tap(Enum.KeyCode.DPadUp, 0.5)
+			if sel() ~= Up._modeButton() then
+				fail("↑ depuis l'onglet ne va pas au bouton de mode")
+			end
+			tap(Enum.KeyCode.ButtonA, 0.3)
+			if Up.mode() ~= 10 then
+				fail("✕ sur le bouton de mode ne passe pas à ×10")
+			end
+			tap(Enum.KeyCode.ButtonX, 0.3)
+			if Up.mode() ~= 0 then
+				fail("□ ne passe pas à Max")
+			end
+			tap(Enum.KeyCode.ButtonX, 0.3)
+			if Up.mode() ~= 1 then
+				fail("□ ne revient pas à ×1")
+			end
+			tap(Enum.KeyCode.DPadDown)
+			tap(Enum.KeyCode.DPadDown)
+			if sel() ~= Up._card(1) then
+				fail("↓ ↓ depuis le bouton de mode ne revient pas à la carte 1")
+			end
+			-- R1 : Ranch, Plopettes, Atelier ; chaque ligne à la croix, entière dans la liste
+			for _, tab in { "ranch", "helpers", "workshop" } do
+				tap(Enum.KeyCode.ButtonR1, 0.5)
+				if Up.currentTab() ~= tab then
+					fail("R1 ne va pas à l'onglet " .. tab)
+				end
+				local list, shown = Up._list(tab), Up._shown(tab)
+				if sel() ~= Up._row(shown[1]) then
+					fail(tab .. " : sélection hors de la première ligne")
+				end
+				for i = 2, #shown do
+					tap(Enum.KeyCode.DPadDown)
+					if sel() ~= Up._row(shown[i]) then
+						fail(tab .. " : ↓ ne va pas à la ligne " .. shown[i])
+					elseif not inside(sel(), list) then
+						fail(tab .. " : ligne " .. shown[i] .. " choisie mais coupée par la liste")
+					end
+				end
+				tap(Enum.KeyCode.DPadDown)
+				if sel() ~= Up._row(shown[#shown]) then
+					fail(tab .. " : ↓ au bout ne rebondit pas")
+				end
+				for i = #shown - 1, 1, -1 do
+					tap(Enum.KeyCode.DPadUp)
+					if sel() ~= Up._row(shown[i]) then
+						fail(tab .. " : ↑ ne va pas à la ligne " .. shown[i])
+					elseif not inside(sel(), list) then
+						fail(tab .. " : ligne " .. shown[i] .. " choisie mais coupée par la liste (↑)")
+					end
+				end
+				-- stick droit : une page (4 lignes) plus bas, entière dans la liste
+				if #shown > 5 then
+					Gamepad.stick(h, Enum.KeyCode.Thumbstick2, Vector2.new(0, -1))
+					Gamepad.stick(h, Enum.KeyCode.Thumbstick2, Vector2.new(0, 0))
+					TvAudit.tick(h, 0.4)
+					if sel() ~= Up._row(shown[5]) then
+						fail(tab .. " : le stick droit ne descend pas d'une page")
+					elseif not inside(sel(), list) then
+						fail(tab .. " : page suivante choisie mais coupée par la liste")
+					end
+				end
+			end
+			-- R1 en boucle : Conseillé ; L1 : Atelier ; R1 : Conseillé
+			tap(Enum.KeyCode.ButtonR1, 0.5)
+			if Up.currentTab() ~= "suggested" then
+				fail("R1 depuis l'Atelier ne revient pas au Conseillé")
+			end
+			tap(Enum.KeyCode.ButtonL1, 0.5)
+			if Up.currentTab() ~= "workshop" then
+				fail("L1 depuis le Conseillé ne va pas à l'Atelier")
+			end
+			tap(Enum.KeyCode.ButtonR1, 0.5)
+			-- maintien de ✕ 0,7 s sur la carte 1 (Prête) : un seul BuyUpgrade, id canonique et niveau attendu
+			local before = #TvAudit.sent(h, "BuyUpgrade")
+			if sel() == Up._card(1) then
+				TvAudit.tick(h, 0.5)
+				Gamepad.press(h, Enum.KeyCode.ButtonA)
+				S.run(c, 0.7)
+				Gamepad.release(h, Enum.KeyCode.ButtonA)
+				S.run(c, 0.2)
+				local sent = TvAudit.sent(h, "BuyUpgrade")
+				if #sent ~= before + 1 then
+					fail(`maintien de ✕ 0,7 s : {#sent - before} BuyUpgrade au lieu de 1`)
+				else
+					local args = sent[#sent]
+					local view = Up._view(Up._card(1))
+					if args[1] ~= view.sendId or args[2] ~= 1 or type(args[3]) ~= "number" then
+						fail("BuyUpgrade invalide : " .. tostring(args[1]) .. " " .. tostring(args[2]))
+					end
+				end
+			else
+				fail("R1 depuis l'Atelier : sélection hors de la carte 1")
+			end
+			-- ○ : rail sur « Améliorations », puis le jeu
+			tap(Enum.KeyCode.ButtonB, 0.5)
+			if PC.current() ~= nil or not PC.menuOpen() or sel() ~= PC.entryButton("Upgrades") then
+				fail("○ ne revient pas au rail sur « Améliorations »")
+			end
+			if not TvAudit.toGame(h) then
+				fail("○ répété ne rend pas la main au jeu")
+			end
+			return issues
+		end
+
+		it(
+			"△ ↓ ✕, cartes, mode, onglets, lignes, stick, maintien, ○ : sans faute ni trace",
+			function()
+				local c = S.client({
+					snap = S.snap(1, function(p)
+						p.coins = 9.99e30
+						p.confetti = 5000
+					end),
+					profile = { onboarding = DONE },
+					ranch = { HelperMode = "active", Helpers = 0 },
+				})
+				local all = {}
+				for _, res in { Vector2.new(1920, 1080), Vector2.new(1280, 720), Vector2.new(3840, 2160) } do
+					for _, lang in { "fr", "en" } do
+						TvAudit.setResolution(c.h, res)
+						TvAudit.setLanguage(c.h, lang)
+						for _, issue in play(c, `[{res.X}x{res.Y} {lang}] `) do
+							table.insert(all, issue)
+						end
+					end
+				end
+				expect(table.concat(all, "\n")).toBe("")
+				S.clean(c, expect)
+			end
+		)
+	end)
+
 	describe("fin des écrans", function()
 		Screens.finish()
 	end)

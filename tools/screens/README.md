@@ -173,6 +173,12 @@ raison écrite à la main dans la liste des clés est gardée quand on la régé
 - **PreferredTextSize** (taille de texte choisie dans les réglages de Roblox) : le jeu ne la lit pas
   aujourd'hui ; l'outil ne la simule donc pas.
 - Barre Roblox du haut : 58 px réservés partout (comme le harnais).
+- **Dessins tournés dans une liste qui défile** (traits des icônes dessinées : étoile MAX, coche, sablier,
+  flèches, cadenas) : l'outil les découpe par le rectangle de leurs parents en espace écran, comme Roblox
+  quand `StarterGui.ClipsDescendantsSupportsRotation` est `Enabled`. Ce réglage n'est pas posé dans
+  `default.project.json` (« Default » : le choix du moteur) ; sans lui, Roblox ne découpe PAS les objets
+  tournés et ces traits déborderaient sur les onglets et le bandeau de l'écran Améliorations (rangée
+  entrouverte, liste défilée). Note pour le lot I (relecture des écrans du lot B2, B2-73).
 
 ## Différences connues avec le vrai Roblox
 

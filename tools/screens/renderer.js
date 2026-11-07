@@ -809,7 +809,8 @@
     }
 
     function withClip(ctx, n, fn) {
-      const c = clipRect(n);
+      // objet tourné : sa découpe est déjà posée en espace écran (drawNode, avant la rotation)
+      const c = n.rot ? null : clipRect(n);
       ctx.save();
       if (c) {
         ctx.beginPath();
@@ -836,6 +837,16 @@
       const myIndex = drawIndex;
       ctx.save();
       if (n.rot) {
+        // Roblox (StarterGui.ClipsDescendantsSupportsRotation = Enabled) découpe un objet tourné par le
+        // rectangle de ses parents EN ESPACE ÉCRAN : la découpe est posée avant la rotation (relecture des
+        // écrans du lot B2 : posée après, elle tournait avec l'objet et laissait dépasser des traits des
+        // icônes dessinées au-dessus des onglets et du bandeau, B2-73)
+        const c = clipRect(n);
+        if (c) {
+          ctx.beginPath();
+          ctx.rect(c.x, c.y, c.w, c.h);
+          ctx.clip();
+        }
         const cx = n.x + n.w / 2;
         const cy = n.y + n.h / 2;
         ctx.translate(cx, cy);
