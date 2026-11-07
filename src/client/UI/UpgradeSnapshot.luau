@@ -9,6 +9,8 @@
 --   UpgradeSnapshot.Changed:Connect(fn)     -- une fois par instantané accepté : fn(snap)
 --   UpgradeSnapshot.Result:Connect(fn)      -- chaque UpgradeResult valide, APRÈS son instantané : fn(payload)
 --   UpgradeSnapshot.AvailableChanged        -- fn(available) quand available() change
+--   UpgradeSnapshot.ranchAttribute(name)    -- attribut v2.0 de MON ranch (AscendReady, Helpers…) ou nil
+--   UpgradeSnapshot.rebirth(loopReady)      -- renaissance prête : "splorch" | "petit" | "ascend" | nil
 --
 -- Règles (décisions D1 et D2 du lot B2, notes du lot A2 du 5 novembre) :
 --  * le serveur n'ajoute `upgradeSnapshot` à DataSnapshot / DataPatch que si SON interrupteur
@@ -35,9 +37,12 @@ local Net = require(Shared.Net)
 local Signal = require(Shared.Util.Signal)
 local Balance = require(Shared.Config.Balance)
 local UpgradeMath = require(Shared.Logic.UpgradeMath)
+local Prestige = require(Shared.Logic.Prestige)
 
 local Client = script.Parent.Parent
 local State = require(Client.Controllers.StateController)
+local WorldStateController = require(Client.Controllers.WorldStateController)
+local Format = require(Client.UI.Format)
 
 local UpgradeSnapshot = {}
 
@@ -249,6 +254,61 @@ local function onResult(raw: any)
 	end
 	UpgradeSnapshot.apply(payload.snapshot)
 	UpgradeSnapshot.Result:Fire(payload)
+end
+
+-- Attribut v2.0 de MON ranch (modèle Wobbleton/Ranches/<k> répliqué, posé par le serveur quand son
+-- interrupteur est ouvert : AscendReady, Helpers, HelperMode, PetitSplorchAt…) ; nil sans monde, sans
+-- ranch ou sans l'attribut. Jamais d'erreur (monde pas encore construit, attribut hostile : nil)
+function UpgradeSnapshot.ranchAttribute(name: string): any
+	if type(name) ~= "string" then
+		return nil
+	end
+	local ok, slot = pcall(WorldStateController.mySlot)
+	if not ok or type(slot) ~= "number" or slot <= 0 then
+		return nil
+	end
+	local world = workspace:FindFirstChild("Wobbleton")
+	local list = world and world:FindFirstChild("Ranches")
+	local model = list and list:FindFirstChild(Format.id(slot))
+	if model == nil then
+		return nil
+	end
+	local okAttr, value = pcall(function()
+		return model:GetAttribute(name)
+	end)
+	return if okAttr then value else nil
+end
+
+export type Rebirth = "splorch" | "petit" | "ascend"
+
+-- Renaissance prête (lot B2, D16, D16b, D17, D32) : `loopReady` = le plus gros squishy atteint
+-- l'objectif de la boucle (aperçu du Grand Splorch). Pendant une remontée (instantané : A ≥ 1 et
+-- r < Record R), le prestige de boucle est un Petit Splorch ; `first` = premier de la remontée
+-- (r == Prestige.startR(A, Tremplin) : il passe par l'aperçu). Sinon, la Jelly Ascend quand le ranch
+-- porte AscendReady (et qu'aucun prestige de boucle n'est prêt : le Grand Splorch d'abord, GDD
+-- §10.7.2). Sans instantané : la v1.3 (Grand Splorch prêt ou rien)
+function UpgradeSnapshot.rebirth(loopReady: boolean): (Rebirth?, boolean)
+	local snap = shown
+	if not present or snap == nil then
+		return if loopReady == true then "splorch" else nil, false
+	end
+	if loopReady == true then
+		if snap.ascend >= 1 and snap.r < snap.bestR then
+			local springboard = snap.levels.springboard or 0
+			return "petit", snap.r == Prestige.startR(snap.ascend, springboard)
+		end
+		return "splorch", false
+	end
+	if UpgradeSnapshot.ranchAttribute("AscendReady") == true then
+		return "ascend", false
+	end
+	return nil, false
+end
+
+-- Remontée vers le record (instantané : A ≥ 1 et r < Record R ; D1, D32) ; faux sans instantané
+function UpgradeSnapshot.regain(): boolean
+	local snap = shown
+	return present and snap ~= nil and snap.ascend >= 1 and snap.r < snap.bestR
 end
 
 -- Écoute l'état du client et UpgradeResult (une seule fois, quel que soit le nombre d'appels)

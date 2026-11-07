@@ -5,8 +5,16 @@
 --     Splorch (seulement quand il est prêt), « ! » (une carte attend : ✕ la rouvre par Cards.open),
 --     Ranch, Squishydex, Objectifs, Classements, Boutique (après 10 min de jeu et si un article est
 --     vendu), Réglages. Sélection par défaut : Grand Splorch s'il est prêt, sinon « ! », sinon la
---     dernière entrée, sinon Ranch. Pastilles : ♥ N (jumeaux) sur Ranch, « ! » sur un panneau qui
---     a quelque chose à réclamer.
+--     dernière entrée, sinon Ranch. Pastilles : cœur dessiné + N (jumeaux) sur Ranch, « ! » sur un
+--     panneau qui a quelque chose à réclamer. Icônes DESSINÉES (Hud/Icons : étoile, cœur, coche,
+--     roue ; règle 18, lot B2 D18) ou caractères de la police (« ! », « # », « $ »).
+--   * v2.0 (lot B2, N9, D14-D17 ; instantané du serveur reçu, interrupteur UpgradesScreen) : boutons
+--     de 340 × 80, écart 16, icône 48 (Layout.HudV2.Rail) ; entrée Améliorations sous Ranch (créée
+--     au premier instantané, aucune pastille) ; l'entrée de renaissance porte le nom de la renaissance
+--     prête (Grand Splorch, Petit Splorch, Jelly Ascend : aperçu sur l'onglet « ascend ») ; Petit
+--     Splorch après le premier de la remontée : ✕ maintenu 1,5 s sur l'entrée (Widgets.holdOn) envoie
+--     GrandSplorch une fois, un appui court ouvre l'aperçu. Avec 9 entrées le rail monte, jamais
+--     au-dessus de y 178 (sous la pastille des pièces) ; sinon l'écart se resserre.
 --   * toggleMenu (△, croix ↓, M : liés par InputController seul, jamais Tab) ouvre le rail ou ferme
 --     tout ; open(panneau, onglet?) ouvre un panneau (raccourcis G C J L B P d'InputController,
 --     cartes par Cards.Requested, navigateur des panneaux) ; un seul panneau à la fois, 1440 × 860 px
@@ -31,8 +39,10 @@ local Shared = ReplicatedStorage:WaitForChild("Shared", 30) :: Folder
 local Signal = require(Shared.Util.Signal)
 local Clock = require(Shared.Util.Clock)
 local Layout = require(Shared.Config.Layout)
+local Balance = require(Shared.Config.Balance)
 local FusionRules = require(Shared.Logic.FusionRules)
 local QuestRules = require(Shared.Logic.QuestRules)
+local Formulas = require(Shared.Logic.Formulas)
 
 local Client = script.Parent.Parent
 local Root = require(Client.UI.Root)
@@ -48,6 +58,7 @@ local WorldStateController = require(Client.Controllers.WorldStateController)
 local QualityController = require(Client.Controllers.QualityController)
 local Widgets = require(Client.UI.Panels.Widgets)
 local UpgradeSnapshot = require(Client.UI.UpgradeSnapshot)
+local Icons = require(Client.UI.Hud.Icons)
 
 local Panels = {
 	Ranch = require(Client.UI.Panels.Ranch),
@@ -71,9 +82,19 @@ PanelController.Changed = Signal.new() :: Signal.Signal<string?>
 local MENU = "menu"
 local PANEL_PREFIX = "panel:"
 local PENDING = "Pending"
--- Ordre du rail (GDD §10.2) ; « ! » juste sous le Grand Splorch
-local RAIL =
-	{ "SplorchPreview", PENDING, "Ranch", "Squishydex", "Objectives", "Leaderboards", "Shop", "Settings" }
+-- Ordre du rail (GDD §10.2) ; « ! » juste sous le Grand Splorch ; Améliorations sous Ranch (v2.0,
+-- bouton créé au premier instantané du serveur seulement : sans lui, le rail de la v1.3)
+local RAIL = {
+	"SplorchPreview",
+	PENDING,
+	"Ranch",
+	"Upgrades",
+	"Squishydex",
+	"Objectives",
+	"Leaderboards",
+	"Shop",
+	"Settings",
+}
 -- L2 / R2 (seulement quand un de ces panneaux est actif ; un panneau invisible est sauté :
 -- Améliorations n'existe que si le serveur envoie l'instantané, lot B2)
 local CYCLE = { "Ranch", "Upgrades", "Squishydex", "Objectives", "Leaderboards", "Shop", "Settings" }
@@ -90,6 +111,7 @@ local ENTRY_KEYS = {
 	SplorchPreview = "menu.splorch",
 	Pending = "menu.pending",
 	Ranch = "menu.ranch",
+	Upgrades = "upgrades.title", -- D15 : même texte que le titre de l'écran (aucune clé de plus)
 	Squishydex = "menu.dex",
 	Objectives = "menu.goals",
 	Leaderboards = "menu.leaderboards",
@@ -108,17 +130,27 @@ local TITLE_KEYS = {
 	Diagnostics = "panel.diag.title",
 	Upgrades = "upgrades.title",
 }
--- Icônes du rail : pastille de couleur et symbole (formes seulement, aucune image téléversée)
-local ENTRY_ICONS: { [string]: { color: Color3, symbol: string } } = {
-	SplorchPreview = { color = Color3.fromRGB(255, 120, 180), symbol = "✦" },
+-- Nom de l'entrée de renaissance (D16b, D17) : la renaissance prête (UpgradeSnapshot.rebirth)
+local REBIRTH_KEYS = {
+	splorch = "menu.splorch",
+	petit = "menu.petitSplorch",
+	ascend = "ascend.title",
+}
+-- Icônes du rail : pastille de couleur et symbole DESSINÉ (Hud/Icons, formes seulement, aucune image
+-- téléversée ; « ✦ ♥ ★ ✓ ⚙ » sont absents de FredokaOne et de LuckiestGuy : règle 18, lot B2, D18,
+-- INT-B1-RAIL) ou caractère de la police (« ! », « # », « $ »)
+local ENTRY_ICONS: { [string]: { color: Color3, icon: string?, symbol: string? } } = {
+	SplorchPreview = { color = Color3.fromRGB(255, 120, 180), icon = "star" },
 	Pending = { color = Color3.fromRGB(255, 200, 80), symbol = "!" },
-	Ranch = { color = Color3.fromRGB(120, 220, 160), symbol = "♥" },
-	Squishydex = { color = Color3.fromRGB(130, 180, 255), symbol = "★" },
-	Objectives = { color = Color3.fromRGB(255, 170, 110), symbol = "✓" },
+	Ranch = { color = Color3.fromRGB(120, 220, 160), icon = "heart" },
+	Upgrades = { color = Color3.fromRGB(170, 230, 90), icon = "arrowUp" },
+	Squishydex = { color = Color3.fromRGB(130, 180, 255), icon = "star" },
+	Objectives = { color = Color3.fromRGB(255, 170, 110), icon = "check" },
 	Leaderboards = { color = Color3.fromRGB(255, 215, 90), symbol = "#" },
 	Shop = { color = Color3.fromRGB(200, 140, 255), symbol = "$" },
-	Settings = { color = Color3.fromRGB(180, 190, 210), symbol = "⚙" },
+	Settings = { color = Color3.fromRGB(180, 190, 210), icon = "gear" },
 }
+local ICON_IN_DOT = 0.6 -- symbole dessiné : 60 % de la pastille de couleur
 
 local DISPLAY_MENU = 30
 local DISPLAY_PANELS = 35
@@ -128,13 +160,32 @@ local RAIL_RECT = Layout.Hud.menuRail.rect
 local RAIL_CONTENT = Layout.HudContent.menuRail
 local BLUR_SIZE = 8
 local BADGE_W = 60
+-- pastille des jumeaux (entrée Ranch) : cœur dessiné de 20 + chiffres (16 px chacun à 28 px)
+local TWINS_HEART = 20
+local TWINS_PAD = 28 -- 6 + cœur 20 + 2
+local TWINS_DIGIT = 16
+-- v2.0 (lot B2, N9, D14) : rail de Layout.HudV2 ; haut jamais au-dessus de la pastille Fame (y 178,
+-- 12 px sous les pièces) ; écart 12 si 9 entrées ne tiennent pas, puis (barre de Roblox, B2-n)
+-- l'écart qui tient, jamais sous 4 ; boutons de 80 et zone sûre toujours tenus
+local RAIL_V2 = Layout.HudV2.Rail
+local RAIL_V2_GAP_TIGHT = 12
+local RAIL_V2_GAP_MIN = 4
+local RAIL_TOP_MIN = Layout.HudV2.Rects.fame.y - SAFE.y
+local PETIT_HOLD = Balance.Splorch.HoldConfirm -- 1,5 s
+local PREVIEW_KEYS = { "R", "growth", "squishies", "coins", "pot" }
 
 local initialized = false
 local started = false
 
 local railFrame: Frame? = nil
+local railList: UIListLayout? = nil
 local railButtons: { [string]: TextButton } = {}
 local railBadges: { [string]: TextLabel } = {}
+local railKeys: { [string]: string } = {} -- clé posée sur le libellé de chaque entrée
+-- v2.0 (lot B2) : maintien du Petit Splorch sur l'entrée de renaissance (créé au premier instantané)
+local petitHold: Widgets.Hold? = nil
+local petitGlyph: any = nil
+local petitOn = false
 local panelsScreen: ScreenGui? = nil
 local panelsSafe: Frame? = nil
 local veil: Frame? = nil
@@ -188,10 +239,29 @@ local function blockedByWindow(): boolean
 	return top.blocking == true
 end
 
+-- Grand Splorch prêt (plus gros squishy ≥ objectif de la boucle : aperçu du Grand Splorch)
+local function loopReady(): boolean
+	return safe("SplorchPreview.visible", false, Panels.SplorchPreview.visible) == true
+end
+
+-- Renaissance prête (v2.0 : Grand Splorch, Petit Splorch, Jelly Ascend ; v1.3 : Grand Splorch) et
+-- premier Petit Splorch de la remontée (D16)
+local function rebirth(): (string?, boolean)
+	local ok, kind, first = pcall(UpgradeSnapshot.rebirth, loopReady())
+	if not ok then
+		return nil, false
+	end
+	return kind, first == true
+end
+
 local function entryVisible(entry: string): boolean
 	if entry == PENDING then
 		local list = safe("Cards.pending", {}, Cards.pending)
 		return type(list) == "table" and #list > 0
+	end
+	-- v2.0 : l'entrée de renaissance existe aussi pour la Jelly Ascend seule (D17)
+	if entry == "SplorchPreview" then
+		return rebirth() ~= nil
 	end
 	local mod = Panels[entry]
 	if mod == nil then
@@ -225,6 +295,96 @@ end
 -- Construction
 -- =============================================================================================
 
+-- Bouton d'une entrée du rail (ordre = place dans RAIL) : pastille de couleur et son symbole
+-- (dessiné, ou caractère de la police), libellé, pastille à droite (cœur dessiné des jumeaux sur Ranch)
+local function buildEntry(frame: Frame, entry: string)
+	local icon = ENTRY_ICONS[entry]
+	local b = Widgets.button({
+		parent = frame,
+		name = "Entry_" .. entry,
+		size = UDim2.fromOffset(RAIL_CONTENT.button.w, RAIL_CONTENT.button.h),
+		color = Widgets.Colors.Panel,
+		order = table.find(RAIL, entry) or 99,
+		nav = true,
+		sound = "",
+		onActivate = function()
+			PanelController._activateEntry(entry)
+		end,
+	})
+	local dot = Widgets.frame({
+		parent = b,
+		name = "Icon",
+		size = UDim2.fromOffset(RAIL_CONTENT.icon, RAIL_CONTENT.icon),
+		position = UDim2.new(0, 16, 0.5, 0),
+		anchor = Vector2.new(0, 0.5),
+		color = icon.color,
+		corner = UDim.new(0.5, 0),
+		zIndex = b.ZIndex + 1,
+	})
+	if icon.icon then
+		local kind = icon.icon :: string
+		local symbol = Icons.canvas(dot, math.floor(RAIL_CONTENT.icon * ICON_IN_DOT), { kind }, "Symbol")
+		symbol.AnchorPoint = Vector2.new(0.5, 0.5)
+		symbol.Position = UDim2.fromScale(0.5, 0.5)
+		symbol.ZIndex = dot.ZIndex + 1
+		Icons.draw(symbol, kind, Widgets.Colors.Stroke)
+	else
+		-- symbole bleu nuit sans contour : un contour de la même couleur épaississait « # » et « $ »
+		-- en taches (revue des écrans)
+		Widgets.label({
+			parent = dot,
+			name = "Symbol",
+			text = icon.symbol,
+			textSize = 36,
+			zIndex = dot.ZIndex + 1,
+			color = Widgets.Colors.Stroke,
+			stroke = false,
+		})
+	end
+	local labelX = 16 + RAIL_CONTENT.icon + 16
+	local key = ENTRY_KEYS[entry]
+	Widgets.label({
+		parent = b,
+		name = "Label",
+		size = UDim2.new(1, -(labelX + 16), 1, -16),
+		position = UDim2.new(0, labelX, 0.5, 0),
+		anchor = Vector2.new(0, 0.5),
+		key = key,
+		textSize = RAIL_CONTENT.text,
+		xAlign = Enum.TextXAlignment.Left,
+		zIndex = b.ZIndex + 1,
+	})
+	railKeys[entry] = key
+	local badge = Widgets.label({
+		parent = b,
+		name = "Badge",
+		size = UDim2.fromOffset(BADGE_W, 40),
+		position = UDim2.new(1, -8, 0.5, 0),
+		anchor = Vector2.new(1, 0.5),
+		text = "",
+		textSize = 28,
+		background = Widgets.Colors.Pink,
+		backgroundTransparency = 0,
+		zIndex = b.ZIndex + 3,
+	})
+	Widgets.corner(badge, UDim.new(0.5, 0))
+	badge.Visible = false
+	if entry == "Ranch" then
+		-- jumeaux : cœur DESSINÉ devant le nombre (« ♥ » hors police, règle 18 ; lot B2, D18)
+		local heart = Icons.canvas(badge, TWINS_HEART, { "heart" }, "Heart")
+		heart.AnchorPoint = Vector2.new(0, 0.5)
+		heart.Position = UDim2.new(0, 6, 0.5, 0)
+		heart.ZIndex = badge.ZIndex + 1
+		Icons.draw(heart, "heart", Widgets.Colors.Text)
+		local pad = Instance.new("UIPadding")
+		pad.PaddingLeft = UDim.new(0, TWINS_PAD)
+		pad.PaddingRight = UDim.new(0, 6)
+		pad.Parent = badge
+	end
+	railButtons[entry] = b
+	railBadges[entry] = badge
+end
+
 local function buildRail()
 	local safeFrame = Root.safe("Menu", DISPLAY_MENU)
 	local frame = Widgets.group(
@@ -242,69 +402,12 @@ local function buildRail()
 	list.Padding = UDim.new(0, RAIL_CONTENT.gap)
 	list.SortOrder = Enum.SortOrder.LayoutOrder
 	list.Parent = frame
-	for i, entry in RAIL do
-		local icon = ENTRY_ICONS[entry]
-		local b = Widgets.button({
-			parent = frame,
-			name = "Entry_" .. entry,
-			size = UDim2.fromOffset(RAIL_CONTENT.button.w, RAIL_CONTENT.button.h),
-			color = Widgets.Colors.Panel,
-			order = i,
-			nav = true,
-			sound = "",
-			onActivate = function()
-				PanelController._activateEntry(entry)
-			end,
-		})
-		local dot = Widgets.frame({
-			parent = b,
-			name = "Icon",
-			size = UDim2.fromOffset(RAIL_CONTENT.icon, RAIL_CONTENT.icon),
-			position = UDim2.new(0, 16, 0.5, 0),
-			anchor = Vector2.new(0, 0.5),
-			color = icon.color,
-			corner = UDim.new(0.5, 0),
-			zIndex = b.ZIndex + 1,
-		})
-		-- symbole bleu nuit sans contour : un contour de la même couleur épaississait « # » et « $ »
-		-- en taches (revue des écrans)
-		Widgets.label({
-			parent = dot,
-			name = "Symbol",
-			text = icon.symbol,
-			textSize = 36,
-			zIndex = dot.ZIndex + 1,
-			color = Widgets.Colors.Stroke,
-			stroke = false,
-		})
-		local labelX = 16 + RAIL_CONTENT.icon + 16
-		Widgets.label({
-			parent = b,
-			name = "Label",
-			size = UDim2.new(1, -(labelX + 16), 1, -16),
-			position = UDim2.new(0, labelX, 0.5, 0),
-			anchor = Vector2.new(0, 0.5),
-			key = ENTRY_KEYS[entry],
-			textSize = RAIL_CONTENT.text,
-			xAlign = Enum.TextXAlignment.Left,
-			zIndex = b.ZIndex + 1,
-		})
-		local badge = Widgets.label({
-			parent = b,
-			name = "Badge",
-			size = UDim2.fromOffset(BADGE_W, 40),
-			position = UDim2.new(1, -8, 0.5, 0),
-			anchor = Vector2.new(1, 0.5),
-			text = "",
-			textSize = 28,
-			background = Widgets.Colors.Pink,
-			backgroundTransparency = 0,
-			zIndex = b.ZIndex + 3,
-		})
-		Widgets.corner(badge, UDim.new(0.5, 0))
-		badge.Visible = false
-		railButtons[entry] = b
-		railBadges[entry] = badge
+	railList = list
+	for _, entry in RAIL do
+		-- Améliorations : seulement au premier instantané du serveur (ensureV2Rail ; D2)
+		if entry ~= UPGRADES then
+			buildEntry(frame, entry)
+		end
 	end
 	railFrame = frame
 end
@@ -421,20 +524,8 @@ end
 -- Plopettes de MON ranch (attribut Helpers de Ranches/<k>, posé par le serveur interrupteur Helpers
 -- ouvert) ; 0 sans monde, sans ranch ou sans l'attribut
 local function myHelpers(): number
-	local ok, slot = pcall(WorldStateController.mySlot)
-	if not ok or type(slot) ~= "number" or slot <= 0 then
-		return 0
-	end
-	local world = workspace:FindFirstChild("Wobbleton")
-	local list = world and world:FindFirstChild("Ranches")
-	local model = list and list:FindFirstChild(Format.id(slot))
-	if model == nil then
-		return 0
-	end
-	local okAttr, value = pcall(function()
-		return model:GetAttribute("Helpers")
-	end)
-	if okAttr and type(value) == "number" and value == value and value > 0 then
+	local value = UpgradeSnapshot.ranchAttribute("Helpers")
+	if type(value) == "number" and value == value and value > 0 then
 		return value
 	end
 	return 0
@@ -516,7 +607,8 @@ local function railBadge(entry: string): string
 	if entry == "Ranch" then
 		local pairs =
 			safe("FusionRules.twinPairs", 0, FusionRules.twinPairs, Widgets.tbl(State.get("squishies")))
-		return if type(pairs) == "number" and pairs > 0 then "♥" .. Format.count(pairs) else ""
+		-- le cœur est dessiné dans la pastille (règle 18) : le texte n'est que le nombre
+		return if type(pairs) == "number" and pairs > 0 then Format.count(pairs) else ""
 	elseif entry == "Objectives" then
 		local objectives = Widgets.tbl(State.get("objectives"))
 		for _, e in Widgets.tbl(objectives.list) do
@@ -556,6 +648,90 @@ local function coverRail()
 			badge.Visible = badge.Text ~= "" and not covered
 		end
 	end
+	local g = petitGlyph
+	if g then
+		g.frame.Visible = petitOn and not covered
+	end
+end
+
+-- v2.0 (D16) : Petit Splorch direct (✕ maintenu 1,5 s sur l'entrée de renaissance, hors premier de la
+-- remontée) : GrandSplorch(false, envol par défaut de l'aperçu) une fois ; rien sans squishy à envoyer
+-- (le serveur refuse tout le reste avec son message : hors du ranch, fuite, prestige en cours)
+local function onPetitHold(): boolean
+	local b = railButtons.SplorchPreview
+	local kind, first = rebirth()
+	if kind ~= "petit" or first then
+		Widgets.refuse(b)
+		return false
+	end
+	local preview =
+		safe("Formulas.splorchPreview", nil, Formulas.splorchPreview, Widgets.profile(PREVIEW_KEYS), {
+			now = Clock.now(),
+			unix = Clock.unix(),
+		})
+	local flyer = if type(preview) == "table" then preview.defaultFlyer else nil
+	if type(flyer) ~= "string" or flyer == "" then
+		Widgets.refuse(b)
+		return false
+	end
+	if Widgets.send("GrandSplorch", false, flyer) then
+		PanelController.closeAll()
+		return true
+	end
+	return false
+end
+
+-- Maintien du Petit Splorch actif seulement sur un Petit Splorch qui n'est pas le premier de la
+-- remontée ; coupé, l'entrée garde son aspect (aucun gris) et ✕ l'active comme avant
+local function setPetitHold(on: boolean)
+	local hold = petitHold
+	if hold == nil or petitOn == on then
+		return
+	end
+	petitOn = on
+	hold.setEnabled(on)
+	Widgets.setDisabled(hold.button, false)
+end
+
+-- v2.0 (lot B2, D2) : au premier instantané du serveur, l'entrée Améliorations (sous Ranch) et le
+-- maintien du Petit Splorch (remplissage, glyphe ✕ de l'appareil) ; jamais sans lui
+local function ensureV2Rail()
+	local frame = railFrame
+	if frame == nil or not UpgradeSnapshot.available() then
+		return
+	end
+	if railButtons[UPGRADES] == nil then
+		buildEntry(frame, UPGRADES)
+	end
+	if petitHold == nil then
+		local b = railButtons.SplorchPreview
+		local fill = Instance.new("Frame")
+		fill.Name = "HoldFill"
+		fill.BackgroundColor3 = Color3.new(1, 1, 1)
+		fill.BackgroundTransparency = 0.6
+		fill.BorderSizePixel = 0
+		fill.Size = UDim2.fromScale(0, 1)
+		fill.ZIndex = b.ZIndex + 1
+		Widgets.corner(fill)
+		fill.Parent = b
+		petitGlyph = Widgets.glyph(
+			b,
+			Enum.KeyCode.ButtonA,
+			Enum.KeyCode.Return,
+			Layout.Glyph.Min,
+			UDim2.new(1, -16, 0.5, 0),
+			Vector2.new(1, 0.5)
+		)
+		petitGlyph.frame.Visible = false
+		petitHold = Widgets.holdOn(b, {
+			duration = PETIT_HOLD,
+			onComplete = function()
+				onPetitHold()
+			end,
+		}, fill)
+		petitOn = true
+		setPetitHold(false)
+	end
 end
 
 local function refreshRail()
@@ -563,51 +739,117 @@ local function refreshRail()
 	if frame == nil then
 		return
 	end
+	local v2 = UpgradeSnapshot.available()
+	if v2 then
+		ensureV2Rail()
+	end
 	local visibleList: { string } = {}
 	for _, entry in RAIL do
-		local v = entryVisible(entry)
-		railButtons[entry].Visible = v
-		if v then
-			table.insert(visibleList, entry)
+		local b = railButtons[entry]
+		if b then
+			local v = entryVisible(entry)
+			b.Visible = v
+			if v then
+				table.insert(visibleList, entry)
+			end
 		end
 	end
-	-- 7 boutons de 96 au plus sous la puce Menu (y 246) ; boutons réduits (jamais sous 80) quand la
-	-- hauteur utile manque (carte en attente en plus, 1280 × 720 avec la barre de Roblox), puis le rail
-	-- remonte : il ne sort jamais de la zone sûre
 	local n = math.max(1, #visibleList)
-	local gap = RAIL_CONTENT.gap
+	local safeH = Widgets.safeHeight()
 	local top = RAIL_RECT.y - SAFE.y
-	local available = math.min(RAIL_RECT.h, Widgets.safeHeight() - top)
-	local h = math.floor((available - (n - 1) * gap) / n)
-	h = math.clamp(h, Layout.Button.MinHeight, RAIL_CONTENT.button.h)
-	local needed = n * h + (n - 1) * gap
-	if needed > available then
-		top = math.max(0, Widgets.safeHeight() - needed)
+	local h: number = RAIL_V2.size
+	local gap: number = RAIL_V2.gap
+	local icon: number = RAIL_V2.icon
+	local needed: number = n * h + (n - 1) * gap
+	if v2 then
+		-- v2.0 (D14) : boutons de 80, écart 16 ; le rail monte s'il le faut, jamais au-dessus de la
+		-- pastille Fame (y 178) ; sinon l'écart se resserre (12, puis ce qui tient, jamais sous 4)
+		if top + needed > safeH then
+			top = safeH - needed
+			if top < RAIL_TOP_MIN then
+				if n > 1 then
+					local fit = math.floor((safeH - RAIL_TOP_MIN - n * h) / (n - 1))
+					gap = math.clamp(fit, RAIL_V2_GAP_MIN, RAIL_V2_GAP_TIGHT)
+				end
+				needed = n * h + (n - 1) * gap
+				top = math.max(0, math.min(RAIL_RECT.y - SAFE.y, safeH - needed))
+			end
+		end
+	else
+		-- 7 boutons de 96 au plus sous la puce Menu (y 246) ; boutons réduits (jamais sous 80) quand la
+		-- hauteur utile manque (carte en attente en plus, 1280 × 720 avec la barre de Roblox), puis le
+		-- rail remonte : il ne sort jamais de la zone sûre
+		gap, icon = RAIL_CONTENT.gap, RAIL_CONTENT.icon
+		local available = math.min(RAIL_RECT.h, safeH - top)
+		h = math.floor((available - (n - 1) * gap) / n)
+		h = math.clamp(h, Layout.Button.MinHeight, RAIL_CONTENT.button.h)
+		needed = n * h + (n - 1) * gap
+		if needed > available then
+			top = math.max(0, safeH - needed)
+		end
 	end
 	railTop = top
 	frame.Position = UDim2.fromOffset(RAIL_RECT.x - SAFE.x, top)
 	frame:SetAttribute("RestPosition", frame.Position)
 	frame.Size = UDim2.fromOffset(RAIL_RECT.w, needed)
-	local labelX = 16 + RAIL_CONTENT.icon + 16
+	frame:SetAttribute("Gap", gap)
+	local list = railList
+	if list and list.Padding.Offset ~= gap then
+		list.Padding = UDim.new(0, gap)
+	end
+	-- entrée de renaissance : nom de la renaissance prête (D16b, D17) ; maintien du Petit Splorch
+	local kind, first = rebirth()
+	local petit = v2 and kind == "petit" and not first
+	setPetitHold(petit)
+	local labelX = 16 + icon + 16
 	for _, entry in RAIL do
 		local b = railButtons[entry]
-		b.Size = UDim2.fromOffset(RAIL_CONTENT.button.w, h)
-		local text = railBadge(entry)
-		local badge = railBadges[entry]
-		Widgets.setRaw(badge, text)
-		-- la pastille a sa place à droite : le libellé se resserre (jamais de chevauchement)
-		local label = b:FindFirstChild("Label")
-		if label and label:IsA("TextLabel") then
-			local room = if text ~= "" then BADGE_W + 16 else 0
-			label.Size = UDim2.new(1, -(labelX + 16 + room), 1, -16)
+		if b then
+			b.Size = UDim2.fromOffset(RAIL_CONTENT.button.w, h)
+			local dot = b:FindFirstChild("Icon")
+			if dot and dot:IsA("Frame") then
+				dot.Size = UDim2.fromOffset(icon, icon)
+				local symbol = dot:FindFirstChild("Symbol")
+				if symbol and symbol:IsA("Frame") then
+					local s = math.floor(icon * ICON_IN_DOT)
+					symbol.Size = UDim2.fromOffset(s, s)
+				end
+			end
+			local text = railBadge(entry)
+			local badge = railBadges[entry]
+			Widgets.setRaw(badge, text)
+			local badgeW = BADGE_W
+			if entry == "Ranch" and text ~= "" then
+				badgeW = math.max(BADGE_W, TWINS_PAD + 6 + TWINS_DIGIT * #text)
+			end
+			badge.Size = UDim2.fromOffset(badgeW, 40)
+			local label = b:FindFirstChild("Label")
+			if label and label:IsA("TextLabel") then
+				-- la pastille (ou le glyphe ✕ du maintien) a sa place à droite : le libellé se resserre
+				-- (jamais de chevauchement)
+				local room = if text ~= "" then badgeW + 16 else 0
+				if entry == "SplorchPreview" and petit then
+					room = Layout.Glyph.Min + 16
+				end
+				label.Position = UDim2.new(0, labelX, 0.5, 0)
+				label.Size = UDim2.new(1, -(labelX + 16 + room), 1, -16)
+				local key = ENTRY_KEYS[entry]
+				if entry == "SplorchPreview" then
+					key = REBIRTH_KEYS[kind or "splorch"] or key
+				end
+				if railKeys[entry] ~= key then
+					railKeys[entry] = key
+					Widgets.setText(label, key)
+				end
+			end
 		end
 	end
 	coverRail()
 	Widgets.attention(railButtons.SplorchPreview, railButtons.SplorchPreview.Visible)
 	-- entrée sélectionnée qui vient d'être cachée (carte « ! » rangée, Grand Splorch plus prêt) : la
 	-- sélection passe aussitôt à l'entrée par défaut, sans sauvetage compté
-	local top = FocusGuard.top()
-	if top and top.name == MENU then
+	local topWindow = FocusGuard.top()
+	if topWindow and topWindow.name == MENU then
 		FocusGuard.refocus()
 	end
 end
@@ -1030,11 +1272,27 @@ function PanelController.Start()
 		if on and not built[UPGRADES] then
 			ensureBuilt(UPGRADES)
 		end
+		-- rail v2.0 (entrée Améliorations, maintien du Petit Splorch) : créé au premier instantané
+		if on then
+			ensureV2Rail()
+		end
+		if FocusGuard.isOpen(MENU) then
+			refreshRail()
+		end
 	end)
 	UpgradeSnapshot.start()
 	if UpgradeSnapshot.available() and not built[UPGRADES] then
 		ensureBuilt(UPGRADES)
 	end
+	if UpgradeSnapshot.available() then
+		ensureV2Rail()
+	end
+	-- renaissance prête qui change rail ouvert (Petit Splorch, Jelly Ascend) : nom et maintien suivent
+	UpgradeSnapshot.Changed:Connect(function()
+		if FocusGuard.isOpen(MENU) then
+			refreshRail()
+		end
+	end)
 	FocusGuard.WindowClosed:Connect(onWindowClosed)
 	Cards.Requested:Connect(function(kind: string, action: string)
 		PanelController._onCardRequest(kind, action)
@@ -1218,7 +1476,7 @@ end
 function PanelController.entries(): { string }
 	local out = {}
 	for _, entry in RAIL do
-		if entryVisible(entry) then
+		if railButtons[entry] ~= nil and entryVisible(entry) then
 			table.insert(out, entry)
 		end
 	end
@@ -1256,7 +1514,24 @@ function PanelController._activateEntry(entry: string)
 	end
 	AudioController.play("Click")
 	lastEntry = entry
+	-- v2.0 (D17) : la Jelly Ascend prête (et aucun prestige de boucle) ouvre l'aperçu sur l'Ascension
+	if entry == "SplorchPreview" and rebirth() == "ascend" then
+		PanelController.open(entry, "ascend")
+		return
+	end
 	PanelController.open(entry)
+end
+
+-- Renaissance nommée par l'entrée du rail : "splorch" | "petit" | "ascend" | nil ; premier Petit
+-- Splorch de la remontée (specs, HUD)
+function PanelController.rebirth(): (string?, boolean)
+	return rebirth()
+end
+
+-- Petit Splorch direct (hors premier de la remontée ; D16) : fin du maintien de l'entrée du rail ou du
+-- clic maintenu sur la puce « PETIT SPLORCH ! » du HUD ; vrai si GrandSplorch est parti (une fois)
+function PanelController.petitSplorch(): boolean
+	return onPetitHold()
 end
 
 -- Carte qui demande un panneau (Cards.Requested : sorte de carte, action)

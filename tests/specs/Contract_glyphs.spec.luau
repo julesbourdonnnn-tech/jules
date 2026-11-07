@@ -51,14 +51,12 @@ local FONT_ORDER = { "FredokaOne", "LuckiestGuy" }
 -- moteur mais d'une largeur qui n'est pas celle de la police ; remplacée par une espace ordinaire
 -- au lot B1 (passage du texte courant à FredokaOne), avec TextFit_all reprouvé : ses 13 clés et les
 -- 2 « ★ » (common.stars, celebrate.star : étoile dessinée, repère « {*} » de UI/Text) sont sorties de
--- la liste au lot B1 (étape 2).
+-- la liste au lot B1 (étape 2) ; « ♥ » de hud.twins (cœur dessiné devant le nombre) et « ≈ » de
+-- hud.queue.next / hud.queue.place (le mot « about » / « environ ») au lot B2 (étape 4, D18, D19).
 local BASE_EXCEPTIONS: { [string]: Exception } = {
 	["panel.dex.starBadge"] = { chars = "★", owner = "B3" },
-	["hud.twins"] = { chars = "♥", owner = "B2" },
 	["panel.ranch.twins"] = { chars = "♥", owner = "B3" },
 	["settings.emoteLeft"] = { chars = "←", owner = "B3" },
-	["hud.queue.next"] = { chars = "≈", owner = "B2" },
-	["hud.queue.place"] = { chars = "≈", owner = "B2" },
 	["panel.shop.coinsAmount"] = { chars = "≈", owner = "B3" },
 }
 

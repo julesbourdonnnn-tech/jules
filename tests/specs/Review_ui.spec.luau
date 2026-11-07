@@ -395,21 +395,29 @@ return function(T)
 			expect(table.concat(hudCorners, "\n")).toBe("")
 		end)
 
-		-- bouclier débutant affiché : au moins « 1′ »
+		-- bouclier débutant affiché : au moins « 1 » et sa marque des minutes DESSINÉE (« ′ » hors police,
+		-- règle 18 ; lot B2, D20, journal B2-31 : le texte n'est plus que le nombre)
 		Screens.ranchStub(c, "rush", { shield = true })
 		pcall(c.HUD._refresh)
 		Screens.frames(c, 4, 0.1)
 		local minutes = nil
+		local prime = nil
 		local hudGui = c.h.localPlayer:FindFirstChildOfClass("PlayerGui"):FindFirstChild("HUD")
 		local shieldHolder = hudGui and hudGui:FindFirstChild("shield", true)
 		if shieldHolder then
 			local m = shieldHolder:FindFirstChild("Minutes")
 			minutes = m and m.Text
+			prime = shieldHolder:FindFirstChild("Prime")
 		end
-		it("bouclier débutant affiché : jamais « 0′ »", function()
-			expect(shieldHolder ~= nil and shieldHolder.Visible).toBe(true)
-			expect(minutes ~= "0′").toBe(true)
-		end)
+		it(
+			"bouclier débutant affiché : jamais « 0 » (au moins 1 minute), marque des minutes dessinée",
+			function()
+				expect(shieldHolder ~= nil and shieldHolder.Visible).toBe(true)
+				expect(type(minutes) == "string" and string.match(minutes, "^%d+$") ~= nil).toBe(true)
+				expect(tonumber(minutes) >= 1).toBe(true)
+				expect(prime ~= nil and prime.Visible and prime:GetAttribute("Icon") == "prime").toBe(true)
+			end
+		)
 		Harness.disposeAll()
 	end)
 

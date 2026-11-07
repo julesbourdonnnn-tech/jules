@@ -2,10 +2,12 @@
 -- HUD (paquet client-hud, docs/04 §13.5, §14.1) : HUD télé (GDD §10.2) aux rectangles de
 -- Config/Layout.Hud, dans Root.safe (px TV, zone sûre de 5 %, colonnes accrochées aux bords) :
 --   * pièces (pièce dessinée de 80, montant 56 px qui défile, revenu « +1,2K/s » 32 px, pop 1,15 et son
---     Coin au plus 8 fois par seconde quand elles montent) ; Fame et amis présents (32 px) ;
+--     Coin au plus 8 fois par seconde quand elles montent) ; Fame et amis présents (32 px, étoile et
+--     cœur DESSINÉS : règle 18, lot B2 D18) ;
 --   * puce Menu (glyphe △ 48, ou la touche « M » du clavier selon sa disposition, + « Menu » 40 px ;
---     un clic l'ouvre) avec les pastilles « ! » (carte en attente, objectif à réclamer) et « ♥ N »
---     (paires de jumeaux) ; cachée tant que le rail du menu est ouvert (il prend sa place) ;
+--     un clic l'ouvre) avec les pastilles « ! » (carte en attente, objectif à réclamer) et cœur
+--     dessiné + N (paires de jumeaux), l'une sur l'autre à droite quand les deux sont là ; cachée tant
+--     que le rail du menu est ouvert (il prend sa place) ;
 --   * pastille d'événement (prochain événement « BOOP RUSH 3:12 », événement en cours en couleur :
 --     Rush rose, MEGA jaune, Lune violet, fêtes orange ; seulement les événements dont l'interrupteur
 --     du serveur est vrai, WorldStateController.event().features) ;
@@ -13,7 +15,8 @@
 --     « Big Plop se repose mm:ss » (hud.gauge.rest) tant que gauge.restUntil > maintenant ;
 --   * suivi d'objectif : Grand Splorch « 12K / 15K », « Prêt ! », ou place et attente dans la file
 --     (spectacle.queue : hud.queue.next / hud.queue.place, attente qui décompte) ;
---   * indicateurs d'état (bouclier débutant, ×2, mon mode Rush / Cozy ; minutes dessous) ;
+--   * indicateurs d'état (bouclier débutant, ×2, mon mode Rush / Cozy ; minutes dessous : le nombre
+--     et une marque des minutes dessinée, « ′ » étant hors police) ;
 --   * puce d'action spéciale : « GRAND SPLORCH ! » avec △ quand l'objectif est atteint ; « APPLAUDIR »
 --     avec croix → et anneau de 8 s pendant une fenêtre ClapPrompt, cachée pendant une poursuite
 --     (créature attrapable à ≤ 30 studs), un maintien (boop, bol, dalle) ou une fenêtre ouverte ;
@@ -23,6 +26,19 @@
 --     recharge, pendant la leçon, et en ville pendant un Rush ou un Golden).
 -- Les flèches de bord d'écran (2 au plus, Golden puis la créature attrapable la plus proche par
 -- priorité, ≤ 120 studs) sont dessinées par UI/ScreenFX à partir des mêmes règles (Hud/Chase).
+-- v2.0 (lot B2, N9, N18 ; docs/04 §27.14) quand le serveur envoie l'instantané versionné
+-- (UpgradeSnapshot.available, interrupteur UpgradesScreen : D1) ; éléments créés au premier instantané
+-- (D2), jamais sans lui (le jeu de base garde le HUD de la v1.3, sans instance ni coût de plus) :
+--   * rectangles de Layout.HudV2.Rects ; puce « Prochain achat » (Hud/NextBuy : D12, D13, D21) ;
+--   * pastille Fame et amis seulement 3 s quand la Fame ou le nombre d'amis change (HUD calme ≤ 8) ;
+--   * « MENU » à ses vrais 40 px ; « ! » de la puce Menu aussi quand le ranch porte AscendReady ;
+--   * puce spéciale « JELLY ASCEND ! » (Ascension prête, aucun Grand Splorch prêt) et « PETIT
+--     SPLORCH ! » (remontée) avec △ ; à la souris, clic maintenu 1,5 s sur « PETIT SPLORCH ! » : le
+--     Petit Splorch direct (hors premier de la remontée, D16) ;
+--   * Souvenir de gelée (goutte dessinée + facteur) à la place du bouclier débutant, jamais les deux
+--     (D31) ; suivi « Retour au record » + « 4 / 15 » pendant une remontée ;
+--   * une Jelly Ascend dans la file des grands spectacles compte comme un Grand Splorch (place,
+--     attente : celles du serveur, qui compte ses 10 s et son éclatement à 4,0 s).
 -- Messages : Feedback et célébrations à message passent par la file unique de l'emplacement de message
 -- (Hud/Messages, UI/Toast) ; une bannière passe d'abord. Vibration squishyBack au retour de mon
 -- squishy boopé (Celebrate ownerReturn / returnedBigger) ; aucune quand il s'enfuit.
@@ -68,6 +84,11 @@ local PanelController = require(Client.UI.PanelController)
 local Util = require(Client.UI.Hud.Util)
 local Messages = require(Client.UI.Hud.Messages)
 local Chase = require(Client.UI.Hud.Chase)
+local Icons = require(Client.UI.Hud.Icons)
+local NextBuy = require(Client.UI.Hud.NextBuy)
+local UpgradeView = require(Client.UI.Hud.UpgradeView)
+local UpgradeSnapshot = require(Client.UI.UpgradeSnapshot)
+local Widgets = require(Client.UI.Panels.Widgets)
 
 local HUD = {}
 
@@ -86,6 +107,20 @@ local EVENT_COLORS: { [string]: Color3 } = {
 	next = Color3.fromRGB(44, 38, 74),
 }
 local GREY = Color3.fromRGB(120, 120, 135)
+local FRIENDS_COLOR = Color3.fromRGB(255, 150, 190)
+local TWINS_COLOR = Color3.fromRGB(255, 120, 170)
+local FAME_ICON = 30 -- étoile et cœur dessinés de la pastille Fame (texte de 32)
+local BADGE_H = 36 -- pastilles « ! » et jumeaux de la puce Menu
+local TWINS_HEART = 20
+local TWINS_DIGIT = 16 -- largeur réservée d'un chiffre à 28 px
+local PRIME = 14 -- marque des minutes dessinée
+local PRIME_GAP = 2
+-- v2.0 (lot B2)
+local V2 = Layout.HudV2
+local FAME_SHOW = 3 -- s : la pastille Fame et amis après un changement (HUD v2.0, critique M7)
+local MENU_LABEL_V2 = 100 -- « MENU » à 40 px : 97,6 px mesurés (plus de rétrécissement « fit »)
+local PETIT_HOLD = Balance.Splorch.HoldConfirm -- 1,5 s (clic maintenu sur « PETIT SPLORCH ! »)
+local MEMORY_COLOR = Color3.fromRGB(150, 200, 255)
 
 -- Liaisons des glyphes des consignes de l'accueil (Config/Quests.Onboarding.Steps[].glyph)
 local HINT_BINDINGS: { [string]: Glyph.Binding } = {
@@ -123,7 +158,23 @@ local leapWasCooling = false
 local unstableShown = false
 local touchShown = false
 local texts: { [string]: string } = {} -- dernier texte posé par label (aucune écriture inutile)
-local specialMode = "" -- "" | "splorch" | "clap" | "hint"
+local specialMode = "" -- "" | "splorch" | "petit" | "ascend" | "clap" | "hint"
+-- v2.0 (lot B2) : HUD v2.0 posé (instantané du serveur reçu) ; Fame et amis vus ; pastille 3 s
+local v2Built = false
+local v2Laid = false
+local lastFame: number? = nil
+local lastFriends: number? = nil
+local fameUntil = -math.huge
+local ascendBang = false
+local petitHold: Widgets.Hold? = nil
+local petitHoldOn = false
+-- Souvenir de gelée (D31) : recalculé seulement quand l'instantané, la langue ou les champs du profil
+-- qu'il lit changent (aucune allocation par image)
+local memoryVersion = -1
+local memoryLang = ""
+local memoryRegain: any = nil
+local memoryR: any = nil
+local memoryView: UpgradeView.Memory? = nil
 
 -- =============================================================================================
 -- Outils
@@ -224,6 +275,31 @@ local function circle(
 	return f
 end
 
+-- Icône DESSINÉE (Hud/Icons : règle 18, aucun symbole hors police ; lot B2, D18) : toile de `size`
+-- px TV qui sait dessiner `kind`, posée et dessinée tout de suite
+local function hudIcon(
+	parent: Instance,
+	name: string,
+	kind: string,
+	size: number,
+	color: Color3?,
+	pos: UDim2,
+	anchor: Vector2?,
+	z: number?
+): Frame
+	local icon = Icons.canvas(parent, size, { kind }, name)
+	icon.Position = pos
+	icon.AnchorPoint = anchor or Vector2.zero
+	icon.ZIndex = z or 3
+	Icons.draw(icon, kind, color)
+	return icon
+end
+
+-- HUD v2.0 ? (instantané du serveur reçu : interrupteur UpgradesScreen ; D1)
+local function v2(): boolean
+	return UpgradeSnapshot.available()
+end
+
 -- =============================================================================================
 -- Construction
 -- =============================================================================================
@@ -285,24 +361,44 @@ end
 local function buildFame()
 	local f = slotFrame("fame")
 	Util.chrome(f)
+	-- étoile et cœur DESSINÉS devant leurs nombres (« ★ » et « ♥ » sont absents de FredokaOne et de
+	-- LuckiestGuy : règle 18 ; lot B2, D18, dans les deux états)
+	refs.fameIcon = hudIcon(
+		f,
+		"FameIcon",
+		"star",
+		FAME_ICON,
+		Theme.Colors.Gold,
+		UDim2.new(0, 14, 0.5, 0),
+		Vector2.new(0, 0.5)
+	)
 	refs.fameText = Util.label({
 		name = "Fame",
 		parent = f,
-		size = UDim2.fromOffset(178, 44),
-		position = UDim2.fromOffset(14, 6),
-		text = "★ 0",
+		size = UDim2.fromOffset(138, 44),
+		position = UDim2.fromOffset(14 + FAME_ICON + 8, 6),
+		text = "0",
 		textSize = C.fame.text,
 		color = Theme.Colors.Gold,
 		align = Enum.TextXAlignment.Left,
 	})
+	refs.friendsIcon = hudIcon(
+		f,
+		"FriendsIcon",
+		"heart",
+		FAME_ICON,
+		FRIENDS_COLOR,
+		UDim2.new(0, 198, 0.5, 0),
+		Vector2.new(0, 0.5)
+	)
 	refs.friendsText = Util.label({
 		name = "Friends",
 		parent = f,
-		size = UDim2.fromOffset(110, 44),
-		position = UDim2.fromOffset(198, 6),
-		text = "♥ 0",
+		size = UDim2.fromOffset(76, 44),
+		position = UDim2.fromOffset(198 + FAME_ICON + 8, 6),
+		text = "0",
 		textSize = C.fame.text,
-		color = Color3.fromRGB(255, 150, 190),
+		color = FRIENDS_COLOR,
 		align = Enum.TextXAlignment.Left,
 	})
 end
@@ -336,21 +432,41 @@ local function buildMenuChip()
 		-- (UI/Text, sorte "fit" : même image ; libellé redessiné par le lot B2, N18)
 		fit = true,
 	})
-	local bang = circle("Bang", b, 36, Theme.Colors.Danger, UDim2.new(0, 174, 0.5, 0), Vector2.new(0, 0.5))
+	-- pastilles à droite, rangées par layoutBadges (l'une sur l'autre quand les deux sont là : jamais
+	-- sur « MENU ») ; jumeaux : cœur DESSINÉ devant le nombre (règle 18 ; lot B2, D18)
+	local bang =
+		circle("Bang", b, BADGE_H, Theme.Colors.Danger, UDim2.new(1, -6, 0.5, 0), Vector2.new(1, 0.5))
 	bang.Visible = false
 	Util.label({ name = "Text", parent = bang, text = "!", textSize = Layout.Text.Min, zIndex = 4 })
 	refs.bang = bang
-	local twins = frame("Twins", b, Color3.fromRGB(255, 120, 170), 0)
-	twins.Size = UDim2.fromOffset(46, 40)
-	twins.AnchorPoint = Vector2.new(0, 0.5)
-	twins.Position = UDim2.new(0, 210, 0.5, 0)
+	local twins = frame("Twins", b, TWINS_COLOR, 0)
+	twins.Size = UDim2.fromOffset(46, BADGE_H)
+	twins.AnchorPoint = Vector2.new(1, 0.5)
+	twins.Position = UDim2.new(1, -6, 0.5, 0)
 	twins.ZIndex = 3
 	twins.Visible = false
 	local tc = Instance.new("UICorner")
 	tc.CornerRadius = UDim.new(0, 12)
 	tc.Parent = twins
-	refs.twinsText =
-		Util.label({ name = "Text", parent = twins, text = "", textSize = Layout.Text.Min, zIndex = 4 })
+	refs.twinsHeart = hudIcon(
+		twins,
+		"Heart",
+		"heart",
+		TWINS_HEART,
+		Theme.Colors.Text,
+		UDim2.new(0, 4, 0.5, 0),
+		Vector2.new(0, 0.5),
+		4
+	)
+	refs.twinsText = Util.label({
+		name = "Text",
+		parent = twins,
+		size = UDim2.new(1, -(4 + TWINS_HEART + 2 + 4), 1, 0),
+		position = UDim2.fromOffset(4 + TWINS_HEART + 2, 0),
+		text = "",
+		textSize = Layout.Text.Min,
+		zIndex = 4,
+	})
 	refs.twins = twins
 	b.Activated:Connect(function()
 		AudioController.play("Click")
@@ -480,8 +596,53 @@ local function statusIcon(parent: Instance, name: string, color: Color3): Frame
 		position = UDim2.fromOffset(0, C.status.icon),
 		textSize = C.status.minutes,
 	})
+	-- marque des minutes DESSINÉE après le nombre (« ′ » hors police, règle 18 ; lot B2, D20)
+	local prime = hudIcon(
+		holder,
+		"Prime",
+		"prime",
+		PRIME,
+		Theme.Colors.Text,
+		UDim2.fromOffset(C.status.icon, C.status.icon + 4),
+		nil,
+		4
+	)
+	prime.Visible = false
+	refs["statusPrime_" .. name] = prime
 	holder.Parent = parent
 	return holder
+end
+
+-- Minutes sous un indicateur : le nombre (Format.count) et sa marque dessinée, centrés ensemble sous
+-- l'icône de 64 (largeur du nombre mesurée par TextService, comme les libellés des panneaux) ; ""
+-- cache les deux
+local function setMinutes(name: string, minutes: number?)
+	local label = refs["statusMin_" .. name] :: TextLabel?
+	local prime = refs["statusPrime_" .. name] :: Frame?
+	if label == nil then
+		return
+	end
+	local text = if minutes then Format.count(minutes) else ""
+	if texts["statusMin_" .. name] == text then
+		return
+	end
+	setText("statusMin_" .. name, label, text)
+	local icon = C.status.icon
+	if text == "" then
+		label.Position = UDim2.fromOffset(0, icon)
+		label.Size = UDim2.fromOffset(icon, 32)
+		setVisible(prime, false)
+		return
+	end
+	local w = math.ceil(Widgets.longestWord(text) * C.status.minutes / 100)
+	local group = w + PRIME_GAP + PRIME
+	local left = math.floor((icon - group) / 2)
+	label.Position = UDim2.fromOffset(left - 2, icon)
+	label.Size = UDim2.fromOffset(w + 4, 32)
+	if prime then
+		prime.Position = UDim2.fromOffset(left + w + PRIME_GAP, icon + 4)
+		prime.Visible = true
+	end
 end
 
 local function buildStatus()
@@ -495,6 +656,7 @@ local function buildStatus()
 	list.Parent = f
 	local shield = statusIcon(f, "shield", Color3.fromRGB(110, 170, 255))
 	shield.LayoutOrder = 1
+	refs.statusList = list
 	-- bouclier : losange (forme, pas seulement la couleur)
 	local d = frame("Diamond", refs.status_shield, Color3.new(1, 1, 1), 0)
 	d.Size = UDim2.fromOffset(28, 28)
@@ -591,7 +753,12 @@ local function buildSpecialChip()
 	b.Activated:Connect(function()
 		if specialMode == "clap" then
 			HUD._clap()
-		elseif specialMode == "splorch" then
+		elseif specialMode == "splorch" or specialMode == "petit" or specialMode == "ascend" then
+			-- le relâchement d'un clic maintenu qui a fait le Petit Splorch n'ouvre pas le menu
+			-- (InputGuard : appui déjà consommé)
+			if not Widgets.confirmed() then
+				return
+			end
 			AudioController.play("Click")
 			Util.safe("PanelController.openMenu", nil, PanelController.openMenu, "SplorchPreview")
 		end
@@ -678,6 +845,125 @@ local function build()
 	buildSpecialChip()
 	buildTargetCard()
 	buildLeap()
+end
+
+-- v2.0 (D16) : clic maintenu 1,5 s sur « PETIT SPLORCH ! » (souris) = Petit Splorch direct, seulement
+-- hors premier de la remontée ; coupé, la puce garde son aspect et un clic ouvre le menu comme avant
+local function setPetitHold(on: boolean)
+	local hold = petitHold
+	if hold == nil or petitHoldOn == on then
+		return
+	end
+	petitHoldOn = on
+	hold.setEnabled(on)
+	Widgets.setDisabled(hold.button, false)
+	hold.button.BackgroundTransparency = 0.12 -- aspect des puces du HUD (setDisabled pose 0)
+end
+
+-- Rectangle du HUD v2.0 (Layout.HudV2.Rects) avec l'ancrage de l'élément de la v1.3
+local function placeV2(obj: GuiObject?, slot: string, rect: string)
+	local base = SLOTS[slot]
+	local r = V2.Rects[rect]
+	if obj == nil or base == nil or r == nil then
+		return
+	end
+	Util.place(obj, { rect = r, anchor = base.anchor, column = base.column })
+end
+
+-- Disposition du HUD v2.0 (vrai) ou de la v1.3 (faux) : rectangles de la jauge et des indicateurs ;
+-- « MENU » à ses vrais 40 px dans une boîte de 100 (la v1.3 garde sa boîte de 96 et le « fit »)
+local function applyLayout(on: boolean)
+	if v2Laid == on then
+		return
+	end
+	v2Laid = on
+	if on then
+		placeV2(elements.gauge, "gauge", "gauge")
+		placeV2(elements.status, "status", "status")
+	else
+		Util.place(elements.gauge, SLOTS.gauge)
+		Util.place(elements.status, SLOTS.status)
+	end
+	local icon = refs.gaugeIcon :: Frame?
+	if icon then
+		icon.AnchorPoint = Vector2.new(0, 0.5)
+		icon.Position = UDim2.fromScale(0, 0.5)
+	end
+	local label = refs.menuLabel :: TextLabel?
+	if label then
+		label.Size = UDim2.fromOffset(if on then MENU_LABEL_V2 else 96, 64)
+		Text.style(
+			label,
+			if on then "label" else "fit",
+			C.menuChip.text,
+			{ min = Layout.Text.Min, wrapped = true }
+		)
+	end
+end
+
+-- v2.0 (lot B2, D2) : éléments du HUD v2.0, créés au PREMIER instantané du serveur, jamais sans lui
+local function buildV2()
+	if v2Built or safeFrame == nil then
+		return
+	end
+	v2Built = true
+	-- puce « Prochain achat » (D12, D13, D21)
+	NextBuy.build(safeFrame :: Frame, function(obj: GuiObject)
+		Util.place(obj, { rect = V2.Rects.nextBuy, anchor = "topLeft", column = "left" })
+	end, function()
+		-- clic de souris : l'écran Améliorations sur Conseillé (D13 ; InputGuard)
+		if not Widgets.confirmed() then
+			return
+		end
+		AudioController.play("Click")
+		Util.safe("PanelController.open", nil, PanelController.open, "Upgrades", "suggested")
+	end, function()
+		-- première vraie apparition : UiSeen("nextBuy"), une fois par session (D12)
+		Widgets.seen("nextBuy")
+	end)
+	local chip = NextBuy.frame()
+	if chip then
+		elements.nextBuy = chip
+	end
+	-- Souvenir de gelée (D31) : goutte dessinée + facteur, à la place du bouclier débutant
+	local status = elements.status
+	if status then
+		local memory = statusIcon(status, "memory", MEMORY_COLOR)
+		memory.LayoutOrder = 1
+		hudIcon(
+			refs.status_memory,
+			"Drop",
+			"drop",
+			36,
+			Theme.Colors.Text,
+			UDim2.fromScale(0.5, 0.5),
+			Vector2.new(0.5, 0.5),
+			4
+		)
+		refs.statusHolders.memory = memory
+	end
+	-- clic maintenu 1,5 s sur « PETIT SPLORCH ! » (souris ; D16) : barre de progression en bas de la puce
+	local special = elements.specialChip :: TextButton?
+	if special then
+		local bar = frame("HoldRing", special, Theme.Colors.Gold, 0)
+		bar.AnchorPoint = Vector2.new(0, 1)
+		bar.Position = UDim2.new(0, 16, 1, -6)
+		bar.Size = UDim2.new(0, 0, 0, 6)
+		bar.ZIndex = 4
+		bar.Visible = false
+		petitHold = Widgets.holdOn(special, {
+			duration = PETIT_HOLD,
+			onComplete = function()
+				Util.safe("PanelController.petitSplorch", false, PanelController.petitSplorch)
+			end,
+			onProgress = function(alpha: number)
+				bar.Visible = alpha > 0
+				bar.Size = UDim2.new(alpha, -32 * alpha, 0, 6)
+			end,
+		})
+		petitHoldOn = true
+		setPetitHold(false)
+	end
 end
 
 -- =============================================================================================
@@ -808,8 +1094,16 @@ local function updateCoins(value: any, old: any)
 end
 
 local function updateFame()
-	setText("fame", refs.fameText, "★ " .. Util.big(Util.num(State.get("fame"), 0, 0)))
-	setText("friends", refs.friendsText, "♥ " .. Format.count(friendsCount()))
+	local fame = Util.num(State.get("fame"), 0, 0)
+	local friends = friendsCount()
+	-- v2.0 : la pastille se montre 3 s quand la Fame ou le nombre d'amis CHANGE (la première valeur
+	-- reçue n'est pas un changement)
+	if (lastFame ~= nil and fame ~= lastFame) or (lastFriends ~= nil and friends ~= lastFriends) then
+		fameUntil = Clock.now() + FAME_SHOW
+	end
+	lastFame, lastFriends = fame, friends
+	setText("fame", refs.fameText, Util.big(fame))
+	setText("friends", refs.friendsText, Format.count(friends))
 end
 
 local function computeBadges()
@@ -975,14 +1269,23 @@ local function queueEntry(): { [string]: any }?
 	local spectacle = Util.tbl(ev.spectacle)
 	local me = localUserId()
 	for _, entry in Util.tbl(spectacle.queue) do
-		if type(entry) == "table" and entry.kind == "splorch" and entry.userId == me then
+		-- une Jelly Ascend (sorte "ascend", v2.0) compte comme un Grand Splorch : place et attente du
+		-- serveur, qui compte sa durée de 10 s et son éclatement à 4,0 s (lot A4)
+		if
+			type(entry) == "table"
+			and (entry.kind == "splorch" or entry.kind == "ascend")
+			and entry.userId == me
+		then
 			return entry
 		end
 	end
 	return nil
 end
 
-local function updateGoal(now: number): boolean
+-- Suivi d'objectif ; rend (Grand Splorch prêt et pas encore dans la file, prestige du joueur dans la
+-- file). v2.0 : pendant une remontée, « Retour au record » + « r / Record R », « Prêt ! » quand le
+-- Petit Splorch l'est (D1, D32)
+local function updateGoal(now: number): (boolean, boolean)
 	local preview = Util.safe(
 		"Formulas.splorchPreview",
 		nil,
@@ -1011,6 +1314,16 @@ local function updateGoal(now: number): boolean
 			then Util.t("hud.goal.ready")
 			else Util.t("common.ratio", { have = Util.big(biggest), need = Util.big(target) })
 	end
+	-- v2.0 : remontée vers le record (instantané : A ≥ 1 et r < Record R)
+	local regain = v2() and UpgradeSnapshot.regain()
+	setText("goalTitle", refs.goalTitle, Util.t(if regain then "hud.regainTrack" else "hud.goal.splorch"))
+	if regain and entry == nil and not ready then
+		local snap = UpgradeSnapshot.current()
+		if snap then
+			value =
+				Util.t("hud.regainProgress", { r = Format.count(snap.r), best = Format.count(snap.bestR) })
+		end
+	end
 	setText("goal", refs.goalValue, value)
 	local fill = refs.goalFill :: Frame?
 	if fill and math.abs(fill.Size.Y.Scale - k) > 0.002 then
@@ -1020,8 +1333,30 @@ local function updateGoal(now: number): boolean
 	if tracker then
 		tracker:SetAttribute("Ready", ready)
 		tracker:SetAttribute("Queued", entry ~= nil)
+		tracker:SetAttribute("Regain", regain)
 	end
-	return ready and entry == nil
+	return ready and entry == nil, entry ~= nil
+end
+
+-- Souvenir de gelée du moment (v2.0, D31) : nil sans instantané
+local function memoryNow(): UpgradeView.Memory?
+	local snap = UpgradeSnapshot.current()
+	if not v2() or snap == nil then
+		return nil
+	end
+	local lang = Prefs.language()
+	local regainA = State.get("regainBonusA")
+	local mr = State.get("memoryR")
+	if snap.version ~= memoryVersion or lang ~= memoryLang or regainA ~= memoryRegain or mr ~= memoryR then
+		memoryVersion, memoryLang, memoryRegain, memoryR = snap.version, lang, regainA, mr
+		local ok, m = pcall(UpgradeView.memory, snap, {
+			lang = lang,
+			regainBonusA = if type(regainA) == "number" then regainA else nil,
+			memoryR = if type(mr) == "number" then mr else nil,
+		})
+		memoryView = if ok then m else nil
+	end
+	return memoryView
 end
 
 local function updateStatus(now: number)
@@ -1033,21 +1368,24 @@ local function updateStatus(now: number)
 	local stats = Util.tbl(State.get("stats"))
 	local shield = type(ranch) == "table" and ranch.shield == true
 	local shieldLeft = math.max(0, Events.Rush.ShieldPlaySeconds - Util.num(stats.playSeconds, 0, 0))
+	-- v2.0 (D31) : le Souvenir de gelée prend la place du bouclier débutant, jamais les deux
+	local memory = memoryNow()
+	local memoryOn = memory ~= nil and memory.active
+	if holders.memory then
+		setVisible(holders.memory, memoryOn)
+		if memoryOn and memory then
+			setText("statusMin_memory", refs.statusMin_memory, Util.t("upgrades.unit.mult", { n = memory.f }))
+		end
+		elements.status:SetAttribute("Memory", memoryOn)
+	end
+	shield = shield and not memoryOn
 	setVisible(holders.shield, shield)
-	setText(
-		"statusMin_shield",
-		refs.statusMin_shield,
-		-- au moins « 1′ » tant que le serveur dit le bouclier actif (le temps de jeu local peut déjà
-		-- dépasser la limite avant que le ranch suivant arrive : jamais « 0′ » sous un indicateur visible)
-		if shield then Format.count(math.max(1, math.ceil(shieldLeft / 60))) .. "′" else ""
-	)
+	-- au moins « 1 » tant que le serveur dit le bouclier actif (le temps de jeu local peut déjà dépasser
+	-- la limite avant que le ranch suivant arrive : jamais « 0 » sous un indicateur visible)
+	setMinutes("shield", if shield then math.max(1, math.ceil(shieldLeft / 60)) else nil)
 	local boost, left = boostActive(now)
 	setVisible(holders.boost, boost)
-	setText(
-		"statusMin_boost",
-		refs.statusMin_boost,
-		if boost then Format.count(math.ceil(left / 60)) .. "′" else ""
-	)
+	setMinutes("boost", if boost then math.ceil(left / 60) else nil)
 	local rush = if type(ranch) == "table"
 		then ranch.mode == "rush"
 		else Util.tbl(State.get("mode")).rush == true
@@ -1056,7 +1394,7 @@ local function updateStatus(now: number)
 	(refs.status_mode :: Frame).BackgroundColor3 = if rush
 		then Color3.fromRGB(255, 120, 180)
 		else Color3.fromRGB(120, 200, 160)
-	setText("statusMin_mode", refs.statusMin_mode, "")
+	setMinutes("mode", nil)
 	setVisible(holders.mode, true)
 	elements.status:SetAttribute("Mode", if rush then "rush" else "cozy")
 	setVisible(elements.status, revealed.status ~= false and not photo)
@@ -1097,7 +1435,7 @@ local function clapHidden(now: number): boolean
 	return Chase.inChase(now)
 end
 
-local function updateSpecial(now: number, splorchReady: boolean)
+local function updateSpecial(now: number, splorchReady: boolean, queued: boolean)
 	local chip = elements.specialChip :: TextButton?
 	if chip == nil then
 		return
@@ -1107,6 +1445,15 @@ local function updateSpecial(now: number, splorchReady: boolean)
 		clap = nil
 		c = nil
 	end
+	-- v2.0 : renaissance prête (Petit Splorch pendant une remontée ; Jelly Ascend quand aucun prestige
+	-- de boucle n'est prêt et qu'elle n'est pas déjà dans la file)
+	local kind, first = nil, false
+	if v2() then
+		local ok, k, f = pcall(UpgradeSnapshot.rebirth, splorchReady)
+		if ok then
+			kind, first = k, f == true
+		end
+	end
 	local mode = ""
 	if c and not clapHidden(now) then
 		mode = "clap"
@@ -1114,8 +1461,11 @@ local function updateSpecial(now: number, splorchReady: boolean)
 		-- la leçon du menu est portée par la puce Menu elle-même (attention), pas par cette puce
 		mode = "hint"
 	elseif splorchReady and revealed.menuChip ~= false then
-		mode = "splorch"
+		mode = if kind == "petit" then "petit" else "splorch"
+	elseif kind == "ascend" and not queued and revealed.menuChip ~= false then
+		mode = "ascend"
 	end
+	setPetitHold(mode == "petit" and not first)
 	if mode ~= specialMode then
 		specialMode = mode
 		local g = refs.specialGlyph :: Glyph.Handle
@@ -1126,9 +1476,13 @@ local function updateSpecial(now: number, splorchReady: boolean)
 		if mode == "clap" then
 			g:set(HINT_BINDINGS.clap)
 			setText("special", refs.specialText, Util.t("hud.special.clap"))
-		elseif mode == "splorch" then
+		elseif mode == "splorch" or mode == "petit" or mode == "ascend" then
 			g:set({ gamepad = Enum.KeyCode.ButtonY, keyboard = Util.menuKey() })
-			setText("special", refs.specialText, Util.t("hud.special.splorch"))
+			local key = if mode == "petit"
+				then "petit.chip"
+				elseif mode == "ascend" then "ascend.chip"
+				else "hud.special.splorch"
+			setText("special", refs.specialText, Util.t(key))
 		elseif mode == "hint" and hint then
 			local binding = HINT_BINDINGS[hint.action or ""] or HINT_BINDINGS.action
 			if hint.action == "menu" then
@@ -1272,14 +1626,60 @@ local function updateLeap(now: number)
 	setVisible(f, visible and revealed.leap ~= false and not photo)
 end
 
-local function updateMenuChip()
+-- Pastilles « ! » et jumeaux à droite de la puce Menu : seule, une pastille est centrée ; les deux,
+-- l'une sur l'autre (« ! » en haut) : jamais sur « MENU » ni l'une sur l'autre
+local function layoutBadges()
+	local bang = refs.bang :: Frame?
+	local twins = refs.twins :: Frame?
+	if bang == nil or twins == nil then
+		return
+	end
+	local both = bang.Visible and twins.Visible
+	local off = if both then (BADGE_H / 2 + 2) else 0
+	bang.Position = UDim2.new(1, -6, 0.5, -off)
+	twins.Position = UDim2.new(1, -6, 0.5, off)
+end
+
+local function updateMenuChip(now: number)
 	local menuOpen = Util.safe("PanelController.menuOpen", false, PanelController.menuOpen) == true
 	setVisible(elements.menuChip, revealed.menuChip ~= false and not menuOpen and not photo)
-	-- le rail peut remonter jusqu'à la pastille Fame en 720p (8 entrées) : elle s'efface pendant le menu
-	setVisible(elements.fame, revealed.fame ~= false and not menuOpen and not photo)
+	-- le rail peut remonter jusqu'à la pastille Fame en 720p (8 entrées) : elle s'efface pendant le menu ;
+	-- v2.0 : hors du HUD calme, seulement 3 s quand la Fame ou le nombre d'amis change (critique M7)
+	local fameShown = revealed.fame ~= false and not menuOpen and not photo
+	if v2() then
+		fameShown = fameShown and now < fameUntil
+	end
+	setVisible(elements.fame, fameShown)
 	local covered = panelCovering()
 	setVisible(elements.coins, revealed.coins ~= false and not photo and not covered)
 	setVisible(elements.goalTracker, revealed.goalTracker ~= false and not photo and not covered)
+	-- v2.0 (D17, GDD §4.27 étape 1) : « ! » aussi quand le ranch porte AscendReady
+	local ascend = v2() and UpgradeSnapshot.ranchAttribute("AscendReady") == true
+	if ascend ~= ascendBang then
+		ascendBang = ascend
+		local chip = elements.menuChip
+		if chip then
+			chip:SetAttribute("AscendReady", ascend)
+		end
+	end
+	setVisible(refs.bang, badgeBang or ascendBang)
+	layoutBadges()
+end
+
+-- v2.0 : puce « Prochain achat » (Hud/NextBuy) ; cachée pendant l'accueil jusqu'à la leçon du menu,
+-- rail ou panneau ouvert, suivi du Grand Splorch « Prêt », mode photo (GDD §10.2)
+local function updateNextBuy(now: number, trackerReady: boolean)
+	if not v2Built then
+		return
+	end
+	local snap = if v2() then UpgradeSnapshot.current() else nil
+	local menuOpen = Util.safe("PanelController.menuOpen", false, PanelController.menuOpen) == true
+	local show = revealed.menuChip ~= false
+		and not menuOpen
+		and not panelCovering()
+		and not photo
+		and not trackerReady
+	NextBuy.step(now, snap, show)
 end
 
 -- Bouton qui attire l'attention (GDD §9.2) : pulsation UIScale 1 → 1,08 en sinus de 0,8 s sur la puce
@@ -1292,7 +1692,16 @@ local function stepAttention(now: number)
 	local reduced = Prefs.reducedMotion()
 	local wanted: { [GuiObject]: boolean } = {}
 	local chip = elements.specialChip
-	if chip and chip.Visible and (specialMode == "splorch" or specialMode == "hint") then
+	if
+		chip
+		and chip.Visible
+		and (
+			specialMode == "splorch"
+			or specialMode == "petit"
+			or specialMode == "ascend"
+			or specialMode == "hint"
+		)
+	then
 		wanted[chip] = true
 	end
 	local menu = elements.menuChip
@@ -1323,16 +1732,21 @@ local function refreshTexts()
 	updateFame()
 	coinRoll = nil
 	setText("coins", refs.coinAmount, Util.big(coinsShown))
+	setText("twins", refs.twinsText, Util.t("hud.twins", { n = math.min(badgeTwins, 999) }))
+	NextBuy.refreshTexts()
+	memoryVersion = -1
+	refreshAcc = math.huge
 end
 
 local function refresh(now: number)
 	stepCoins(now)
-	updateMenuChip()
 	updateFame()
+	updateMenuChip(now)
 	updateEvents(now)
-	local ready = updateGoal(now)
+	local ready, queued = updateGoal(now)
 	updateStatus(now)
-	updateSpecial(now, ready)
+	updateSpecial(now, ready, queued)
+	updateNextBuy(now, ready)
 	updateTarget(now)
 	updateLeap(now)
 	setText("rate", refs.coinRate, Util.t("common.perSecond", { rate = Util.big(incomeRate(now)) }))
@@ -1554,6 +1968,28 @@ function HUD.Start()
 		lastEventAt = Clock.now()
 		refreshAcc = math.huge
 	end)
+	-- v2.0 (lot B2) : HUD v2.0 au premier instantané du serveur (D1, D2) ; disposition de la v1.3 s'il
+	-- disparaît ; la cible de « Prochain achat » suit chaque instantané accepté
+	UpgradeSnapshot.AvailableChanged:Connect(function(on: boolean)
+		if on then
+			buildV2()
+		end
+		applyLayout(on)
+		refreshAcc = math.huge
+	end)
+	UpgradeSnapshot.Changed:Connect(function(snap: any)
+		NextBuy.onSnapshot(snap)
+		refreshAcc = math.huge
+	end)
+	UpgradeSnapshot.start()
+	if UpgradeSnapshot.available() then
+		buildV2()
+		applyLayout(true)
+		local snap = UpgradeSnapshot.current()
+		if snap then
+			NextBuy.onSnapshot(snap)
+		end
+	end
 	WorldStateController.MegaBeat:Connect(function(beat: any)
 		if type(beat) == "table" then
 			refs.megaPoints = Util.num(beat.points, 0, 0)
@@ -1639,13 +2075,21 @@ function HUD.setHint(action: string?, textKey: string?)
 	refreshAcc = math.huge
 end
 
--- Pastilles de la puce Menu : « ! » (action possible, carte en attente) et « ♥ N » (paires de jumeaux)
+-- Pastilles de la puce Menu : « ! » (action possible, carte en attente ; v2.0 : Jelly Ascend prête) et
+-- cœur dessiné + N (paires de jumeaux ; la pastille s'élargit avec le nombre de chiffres)
 function HUD.setMenuBadges(bang: boolean, twins: number)
 	badgeBang = bang == true
 	badgeTwins = math.floor(Util.num(twins, 0, 0, 999))
-	setVisible(refs.bang, badgeBang)
+	setVisible(refs.bang, badgeBang or ascendBang)
 	setVisible(refs.twins, badgeTwins > 0)
-	setText("twins", refs.twinsText, Util.t("hud.twins", { n = badgeTwins }))
+	local text = Util.t("hud.twins", { n = badgeTwins })
+	setText("twins", refs.twinsText, text)
+	local digits = #Format.count(badgeTwins)
+	local box = refs.twins :: Frame?
+	if box then
+		box.Size = UDim2.fromOffset(math.max(46, 4 + TWINS_HEART + 2 + TWINS_DIGIT * digits + 4), BADGE_H)
+	end
+	layoutBadges()
 	local chip = elements.menuChip
 	if chip then
 		chip:SetAttribute("Bang", badgeBang)

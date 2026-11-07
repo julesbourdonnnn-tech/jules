@@ -9,6 +9,7 @@
 local roblox = require("@lune/roblox")
 local TvAudit = require("../harness/TvAudit")
 local ApiAudit = require("../harness/ApiAudit")
+local FontCmap = require("../harness/FontCmap")
 
 local Vector3 = roblox.Vector3
 
@@ -17,6 +18,7 @@ return function(T)
 
 	local NOW = 1800000000
 	local MEGA_LAND = 1800001200
+	local CMAPS = FontCmap.load()
 
 	local function clean(h)
 		expect(table.concat(h.errors, "\n")).toBe("")
@@ -233,17 +235,20 @@ return function(T)
 			})
 			WSC.EventChanged:Fire(state.ev)
 			HUD._refresh()
-			expect(text(h, HUD, "goalTracker", "Value")).toBe("#2 in line · ≈ 0:40")
+			-- « ≈ » (hors police, règle 18) devenu le mot « about » / « environ » (lot B2, D19, journal B2-31)
+			expect(text(h, HUD, "goalTracker", "Value")).toBe("#2 in line · about 0:40")
+			expect(FontCmap.missing(CMAPS, text(h, HUD, "goalTracker", "Value"))).toEqual({})
 			expect(HUD.element("goalTracker"):GetAttribute("Queued")).toBe(true)
 			Clock.advance(10)
 			HUD._refresh()
-			expect(text(h, HUD, "goalTracker", "Value")).toBe("#2 in line · ≈ 0:30")
+			expect(text(h, HUD, "goalTracker", "Value")).toBe("#2 in line · about 0:30")
 			state.ev.spectacle.queue = {
 				{ kind = "splorch", userId = 1, startAt = NOW + 30, slot = 1, position = 1, eta = 12 },
 			}
 			WSC.EventChanged:Fire(state.ev)
 			HUD._refresh()
-			expect(text(h, HUD, "goalTracker", "Value")).toBe("Next in line · ≈ 0:12")
+			expect(text(h, HUD, "goalTracker", "Value")).toBe("Next in line · about 0:12")
+			expect(FontCmap.missing(CMAPS, text(h, HUD, "goalTracker", "Value"))).toEqual({})
 			clean(h)
 		end)
 
@@ -359,7 +364,10 @@ return function(T)
 				local chip = HUD.element("menuChip")
 				expect(chip:GetAttribute("Twins")).toBe(1)
 				expect(chip.Twins.Visible).toBe(true)
-				expect(chip.Twins.Text.Text).toBe("♥ 1")
+				-- « ♥ » (hors police) devenu un cœur DESSINÉ devant le nombre (lot B2, D18, journal B2-31)
+				expect(chip.Twins.Text.Text).toBe("1")
+				expect(chip.Twins.Heart:GetAttribute("Icon")).toBe("heart")
+				expect(chip.Twins.Heart.Visible).toBe(true)
 				expect(chip:GetAttribute("Bang")).toBe(true)
 				clean(h)
 			end
@@ -533,7 +541,12 @@ return function(T)
 			local status = HUD.element("status")
 			expect(status.shield.Visible).toBe(true)
 			expect(status.boost.Visible).toBe(true)
-			expect(status.boost.Minutes.Text).toBe("5′")
+			-- « ′ » (hors police) devenu une marque DESSINÉE après le nombre (lot B2, D20, journal B2-31)
+			expect(status.boost.Minutes.Text).toBe("5")
+			expect(status.boost.Prime:GetAttribute("Icon")).toBe("prime")
+			expect(status.boost.Prime.Visible).toBe(true)
+			expect(status.shield.Minutes.Text ~= "").toBe(true)
+			expect(status.shield.Prime.Visible).toBe(true)
 			expect(status:GetAttribute("Mode")).toBe("rush")
 			expect(text(h, HUD, "eventPill", "Text")).toBe("WOBBLE PARTY ×2 5:00")
 			clean(h)
