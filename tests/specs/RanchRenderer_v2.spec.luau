@@ -3248,5 +3248,183 @@ return function(T)
 				)
 			end
 		)
+
+		it(
+			"16 ranchs entièrement construits (Record R 50, A 10, Monuments 10, Tapis 20, décorations 18, 12 Déco perso, halo, habillages) : pièces par système, instances, lumières, écritures et coût par image",
+			function()
+				-- carte réelle du serveur (WorldService) : son nombre d'instances remplace celui des
+				-- ranchs fabriqués dans le compte du workspace du client
+				local hs = Harness.new()
+				local W = hs:require("ServerScriptService.Server.Services.WorldService")
+				W.Init()
+				W.Start()
+				local map = #hs.game.Workspace:GetDescendants()
+				expect(#hs.errors + #hs:warnings()).toBe(0)
+
+				local c = clientV2({ lighting = true, t = T_WINTER, event = eventState() })
+				local Halo = c.h:require(CLIENT .. "Render.Halo")
+				local WV = c.h:require(CLIENT .. "Render.WorldV2")
+				local L = c.VB.LIMITS
+				local FULL_TILES = { snack = 12, decor = 18, pens = 14, cozyBed = true, seen = 15 }
+				c.snapshot(all16b(function(slot)
+					return { tiles = FULL_TILES, theme = c.Look.SKINS[4 + (slot % 11)] }
+				end))
+				-- pire cas des halos : les 16 joueurs réunis sur la place (à moins de 150 studs les uns des
+				-- autres) ; sur la place, le ranch courant est le mien (D6)
+				local plaza = c.WL.plaza("center")
+				for slot = 1, 16 do
+					if slot ~= 3 then
+						local p = c.h:addPlayer({ userId = 100 + slot, name = "P" .. slot })
+						local a = slot * math.pi / 8
+						placeAt(p.Character, plaza + Vector3.new(20 * math.cos(a), 0, 20 * math.sin(a)))
+					end
+				end
+				local here = plaza + Vector3.new(0, 0, 8)
+				placeAt(c.h.localPlayer.Character, here)
+				c.h.workspace.CurrentCamera.CFrame =
+					CFrame.lookAt(here + Vector3.new(0, 14, 24), here + Vector3.new(0, 2, 0))
+				c.LC.refresh()
+				c.run(2)
+				local function timeSteps(n)
+					local best = math.huge
+					for _ = 1, 3 do
+						local t = os.clock()
+						for _ = 1, n do
+							c.Clock.advance(1 / 30)
+							c.RR._step(1 / 30)
+						end
+						best = math.min(best, (os.clock() - t) / n * 1000)
+					end
+					c.h:settle(1)
+					return best
+				end
+				-- interrupteurs coupés : la v1.3 (aucune image v2.0)
+				local off = census(c.h)
+				local offMs = timeSteps(300)
+				expect(c.steps()).toBe(0)
+				expect(c.V2.on or Halo.on).toBe(false)
+
+				-- tout ouvert : attributs de tous les ranchs, Ambience et costume d'hiver, écran Améliorations
+				for slot = 1, 16 do
+					c.attrs(slot, {
+						TapisTier = 6,
+						BestR = 50,
+						Ascend = 10,
+						Monuments = 10,
+						DecoPerso = DECO12,
+						HaloOn = true,
+						DecorGold = 2 ^ 18 - 1,
+						GoldPennants = true,
+						Cushions = "pinkCushions",
+						GiantTier = 3,
+						SplorchReady = true,
+						AscendReady = slot == 7,
+					})
+				end
+				local ev = eventState()
+				ev.features.costume = "winter2026"
+				ev.features.ambience = true
+				c.setEvent(ev)
+				c.profile({ coins = 0, upgradeSnapshot = upgradeSnap(c.h) })
+				c.LC.refresh()
+				c.run(3)
+				c.LC.refresh()
+				local total, v2, w = v2Count(c, Halo, WV)
+				local halo = Halo.stats().total
+				-- chaque système dans son budget, le total dans le total déclaré, aucun dépassement
+				for _, sys in V2_SYSTEMS do
+					expect({ sys = sys, ok = v2[sys] <= L[sys].parts }).toEqual({ sys = sys, ok = true })
+				end
+				expect(halo <= L.halo.parts).toBe(true)
+				expect(w.observatory + w.kiosk <= L.world.parts).toBe(true)
+				expect(w.meadow <= L.meadow.parts).toBe(true)
+				expect(total <= declaredTotal(c)).toBe(true)
+				expect(c.VB.exceeded()).toBe(0)
+				expect(#metrics(c.h)).toBe(0)
+				-- tout est bien là : 16 halos de 5 gouttes, Observatoire et faisceau, kiosque, Prairie v2,
+				-- glaçons du costume d'hiver (ranch courant et ses 2 voisins)
+				expect(halo).toBe(80)
+				expect(w.observatory).toBe(25)
+				expect(w.kiosk).toBe(15)
+				expect(w.meadow).toBe(32)
+				expect(w.icicles).toBe(3 * WV.ICICLES_PER_RANCH)
+				expect(c.LC.stats().winterParts + w.icicles <= 300).toBe(true)
+				-- workspace du client : carte réelle + monde du client + 2 500 pièces de squishies
+				-- (budget du GDD §12.9) ≤ 15 000 ; aucune lumière ni Highlight de plus ; particules
+				local on = census(c.h)
+				local mock = #c.h.workspace.Wobbleton:GetDescendants()
+				local clientTotal = map + (on.instances - mock) + 2500
+				expect(clientTotal <= 15000).toBe(true)
+				expect(on.lights).toBe(off.lights)
+				expect(on.highlights).toBe(off.highlights)
+				expect(on.v2Lights).toBe(0)
+				expect(on.v2Emitters <= L.tapis.particles + L.record.particles).toBe(true)
+				-- le seul émetteur de plus hors des dossiers v2.0 : les flocons du costume d'hiver (v1.3)
+				local snow = c.LC.stats().snow == true
+				expect(snow).toBe(true)
+				expect(on.emitters - off.emitters).toBe(1)
+				-- image stable : écritures des pièces v2.0 ≤ nombre de pièces animées, par image
+				local writes = 0
+				local watched = {}
+				local world = c.h.workspace.ClientWorld
+				for _, name in V2_FOLDERS do
+					local f = world:FindFirstChild(name)
+					for _, d in (if f then f:GetDescendants() else {}) do
+						if d:IsA("BasePart") then
+							table.insert(
+								watched,
+								d.Changed:Connect(function()
+									writes += 1
+								end)
+							)
+						end
+					end
+				end
+				local frames = 60
+				for _ = 1, frames do
+					c.Clock.advance(1 / 30)
+					c.RR._step(1 / 30)
+				end
+				c.h:settle(1)
+				for _, conn in watched do
+					conn:Disconnect()
+				end
+				local animated = c.V2.stats().anims + halo
+				local perFrame = writes / frames
+				expect(perFrame <= animated).toBe(true)
+				local onMs = timeSteps(300)
+				c.clean()
+				local parts = {}
+				for _, sys in V2_SYSTEMS do
+					table.insert(parts, sys .. " " .. v2[sys] .. "/" .. L[sys].parts)
+				end
+				table.insert(parts, "halo " .. halo .. "/" .. L.halo.parts)
+				table.insert(parts, "monde " .. (w.observatory + w.kiosk) .. "/" .. L.world.parts)
+				table.insert(parts, "Prairie " .. w.meadow .. "/" .. L.meadow.parts)
+				print(
+					string.format(
+						"  16 ranchs construits : %s ; total v2.0 %d / %d ; glaçons %d ; workspace du client %d (carte %d + monde du client %d + 2 500 pièces de squishies) ; lumières %d → %d, Highlight %d → %d, émetteurs %d → %d (v2.0 %d, flocons d'hiver de la v1.3 1) ; écritures v2.0 par image stable %.1f pour %d pièces animées ; RanchRenderer._step %.3f ms coupé, %.3f ms ouvert (300 images)",
+						table.concat(parts, ", "),
+						total,
+						declaredTotal(c),
+						w.icicles,
+						clientTotal,
+						map,
+						on.instances - mock,
+						off.lights,
+						on.lights,
+						off.highlights,
+						on.highlights,
+						off.emitters,
+						on.emitters,
+						on.v2Emitters,
+						perFrame,
+						animated,
+						offMs,
+						onMs
+					)
+				)
+			end
+		)
 	end)
 end
