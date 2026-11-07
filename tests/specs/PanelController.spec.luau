@@ -575,4 +575,241 @@ return function(T)
 			end
 		)
 	end)
+	-- =========================================================================================
+	-- v2.0 (lot B2, étape 4 ; N9, D14-D18) : rail v2.0 et entrée de renaissance
+	-- =========================================================================================
+	describe("PanelController › rail v2.0 (lot B2, étape 4)", function()
+		local UpgradeScreen = require("../harness/UpgradeScreen")
+		local FontCmap = require("../harness/FontCmap")
+		local S = UpgradeScreen.new(T.Harness)
+		local CMAPS = FontCmap.load()
+		local NOW = 1800000000
+		local BIG = { a = TvAudit.squishy(1, { z = 1e15 }) }
+		local FROZEN = { G = 0, g = 0, t = NOW }
+
+		local function regain(r)
+			return function(p)
+				p.ascend = 1
+				p.R = r
+				p.bestR = 15
+			end
+		end
+
+		local function railCheck(c, v2)
+			local L = S.Layout
+			for _, entry in c.PC.entries() do
+				local b = c.PC.entryButton(entry)
+				-- symboles « ✦ ♥ ★ ✓ ⚙ » DESSINÉS (Hud/Icons), « ! # $ » de la police (règle 18, D18)
+				local symbol = b.Icon.Symbol
+				if entry == "Pending" or entry == "Leaderboards" or entry == "Shop" then
+					expect({ entry = entry, text = symbol:IsA("TextLabel") }).toEqual({
+						entry = entry,
+						text = true,
+					})
+				else
+					expect({ entry = entry, icon = symbol:GetAttribute("Icon") ~= "" }).toEqual({
+						entry = entry,
+						icon = true,
+					})
+				end
+				for _, d in b:GetDescendants() do
+					if d:IsA("TextLabel") and d.Text ~= "" then
+						expect({ text = d.Text, missing = FontCmap.missing(CMAPS, d.Text) }).toEqual({
+							text = d.Text,
+							missing = {},
+						})
+					end
+				end
+				local h = if v2 then L.HudV2.Rail.size else nil
+				if h then
+					expect({ entry = entry, h = b.Size.Y.Offset, icon = b.Icon.Size.X.Offset }).toEqual({
+						entry = entry,
+						h = h,
+						icon = L.HudV2.Rail.icon,
+					})
+				else
+					expect(b.Icon.Size.X.Offset).toBe(L.HudContent.menuRail.icon)
+				end
+			end
+		end
+
+		it(
+			"interrupteur coupé : rail de la v1.3 (icône 56, écart 12), symboles dessinés, ni Améliorations ni maintien",
+			function()
+				local c = S.client({ profile = { squishies = BIG, growth = FROZEN } })
+				c.PC.toggleMenu()
+				S.run(c, 0.5)
+				expect(c.PC.entries()).toEqual({
+					"SplorchPreview",
+					"Ranch",
+					"Squishydex",
+					"Objectives",
+					"Leaderboards",
+					"Settings",
+				})
+				expect(c.PC.entryButton("Upgrades")).toBeNil()
+				expect(c.PC.entryButton("SplorchPreview").Label.Text).toBe("Grand Splorch")
+				expect(c.PC.entryButton("SplorchPreview"):FindFirstChild("HoldFill")).toBeNil()
+				expect(c.PC.entryButton("Ranch").Icon.Symbol:GetAttribute("Icon")).toBe("heart")
+				expect(c.PC.entryButton("Squishydex").Icon.Symbol:GetAttribute("Icon")).toBe("star")
+				expect(c.PC.entryButton("Objectives").Icon.Symbol:GetAttribute("Icon")).toBe("check")
+				expect(c.PC.entryButton("Settings").Icon.Symbol:GetAttribute("Icon")).toBe("gear")
+				local rail = c.PC.entryButton("Ranch").Parent
+				expect(rail:GetAttribute("Gap")).toBe(S.Layout.HudContent.menuRail.gap)
+				railCheck(c, false)
+				S.noV2Intent(c, expect)
+				S.clean(c, expect)
+			end
+		)
+
+		it(
+			"v2.0 : Améliorations sous Ranch (flèche dessinée, aucune pastille), boutons de 80, écart 16, icône 48 ; ✕ l'ouvre",
+			function()
+				local c = S.client({
+					snap = S.snap(1),
+					profile = { squishies = { a = TvAudit.squishy(1, { z = 10 }) }, growth = FROZEN },
+				})
+				c.PC.toggleMenu()
+				S.run(c, 0.5)
+				expect(c.PC.entries()).toEqual({
+					"Ranch",
+					"Upgrades",
+					"Squishydex",
+					"Objectives",
+					"Leaderboards",
+					"Settings",
+				})
+				local b = c.PC.entryButton("Upgrades")
+				expect(b.Label.Text).toBe("Upgrades")
+				expect(b.Icon.Symbol:GetAttribute("Icon")).toBe("arrowUp")
+				expect(b.Badge.Visible).toBe(false)
+				expect(b.LayoutOrder > c.PC.entryButton("Ranch").LayoutOrder).toBe(true)
+				expect(b.LayoutOrder < c.PC.entryButton("Squishydex").LayoutOrder).toBe(true)
+				expect(b.Parent:GetAttribute("Gap")).toBe(16)
+				railCheck(c, true)
+				S.select(c, b)
+				Gamepad.tap(c.h, Enum.KeyCode.ButtonA)
+				S.run(c, 0.5)
+				expect(c.PC.current()).toBe("Upgrades")
+				S.clean(c, expect)
+			end
+		)
+
+		it(
+			"entrée de renaissance nommée : Grand Splorch, Jelly Ascend (aperçu sur l'onglet « ascend »), Petit Splorch",
+			function()
+				local c = S.client({
+					snap = S.snap(1),
+					profile = { squishies = BIG, growth = FROZEN },
+					ranch = { AscendReady = true },
+				})
+				local Preview = TvAudit.mod(c.h, "UI.Panels.SplorchPreview")
+				local tabs = {}
+				local open = Preview.open
+				Preview.open = function(tab)
+					table.insert(tabs, tostring(tab))
+					return open(tab)
+				end
+				c.PC.toggleMenu()
+				S.run(c, 0.5)
+				-- Grand Splorch prêt : son nom, même avec l'Ascension prête (une renaissance à la fois)
+				expect(c.PC.entries()[1]).toBe("SplorchPreview")
+				expect(c.PC.entryButton("SplorchPreview").Label.Text).toBe("Grand Splorch")
+				expect(c.PC.rebirth()).toBe("splorch")
+				c.PC.closeAll()
+				S.run(c, 0.5)
+				-- plus prêt, Ascension prête : « Jelly Ascend », ✕ ouvre l'aperçu sur l'Ascension
+				c.h:fireClient(
+					"ReplicatedStorage.Remotes.DataPatch",
+					{ squishies = { a = TvAudit.squishy(1, { z = 10 }) } },
+					{}
+				)
+				S.run(c, 0.5)
+				c.PC.toggleMenu()
+				S.run(c, 0.5)
+				local entry = c.PC.entryButton("SplorchPreview")
+				expect(entry.Visible).toBe(true)
+				expect(entry.Label.Text).toBe("Jelly Ascend")
+				expect(S.selected(c)).toBe(entry)
+				Gamepad.tap(c.h, Enum.KeyCode.ButtonA)
+				S.run(c, 0.5)
+				expect(c.PC.current()).toBe("SplorchPreview")
+				expect(tabs[#tabs]).toBe("ascend")
+				c.PC.closeAll()
+				S.run(c, 0.5)
+				-- remontée et prestige de boucle prêt : « Petit Splorch »
+				c.model:SetAttribute("AscendReady", false)
+				S.patch(c, S.snap(2, regain(3)))
+				c.h:fireClient("ReplicatedStorage.Remotes.DataPatch", { squishies = BIG, R = 3 }, {})
+				S.run(c, 0.5)
+				c.PC.toggleMenu()
+				S.run(c, 0.5)
+				expect(c.PC.entryButton("SplorchPreview").Label.Text).toBe("Petit Splorch")
+				expect(c.PC.rebirth()).toBe("petit")
+				S.noV2Intent(c, expect)
+				S.clean(c, expect)
+			end
+		)
+
+		it(
+			"Petit Splorch : ✕ maintenu 1,5 s = GrandSplorch une fois ; appui court = aperçu ; jamais confirmé par un ✕ tenu d'avant le rail ; premier de la remontée : aucun maintien",
+			function()
+				local c = S.client({
+					snap = S.snap(1, regain(3)),
+					profile = {
+						R = 3,
+						squishies = BIG,
+						growth = FROZEN,
+						onboarding = { step = 11, done = true, demoDone = true },
+					},
+				})
+				local function grand()
+					return #TvAudit.sent(c.h, "GrandSplorch")
+				end
+				-- ✕ tenu en jeu (saut), puis △ : le rail s'ouvre sur l'entrée ; ✕ tenu 3 s de plus : rien
+				Gamepad.press(c.h, Enum.KeyCode.ButtonA)
+				S.run(c, 0.2)
+				Gamepad.tap(c.h, Enum.KeyCode.ButtonY)
+				S.run(c, 0.1)
+				local entry = c.PC.entryButton("SplorchPreview")
+				expect(c.PC.menuOpen()).toBe(true)
+				expect(S.selected(c)).toBe(entry)
+				expect(entry.Label.Text).toBe("Petit Splorch")
+				expect(entry.Glyph.Visible).toBe(true)
+				S.run(c, 3)
+				Gamepad.release(c.h, Enum.KeyCode.ButtonA)
+				S.run(c, 0.3)
+				expect(grand()).toBe(0)
+				expect(c.PC.isOpen("SplorchPreview")).toBe(false)
+				-- vrai maintien de 1,6 s : GrandSplorch(false, « a ») une fois, le rail se ferme
+				S.hold(c, entry, 1.6)
+				expect(grand()).toBe(1)
+				local sent = TvAudit.sent(c.h, "GrandSplorch")[1]
+				expect(sent[1]).toBe(false)
+				expect(sent[2]).toBe("a")
+				expect(c.PC.menuOpen()).toBe(false)
+				-- appui court : l'aperçu, rien d'envoyé
+				c.PC.toggleMenu()
+				S.run(c, 0.5)
+				S.hold(c, entry, 0.2)
+				expect(c.PC.current()).toBe("SplorchPreview")
+				expect(grand()).toBe(1)
+				c.PC.closeAll()
+				S.run(c, 0.5)
+				-- premier Petit Splorch de la remontée (r = Prestige.startR(1, 0) = 0) : ✕ ouvre l'aperçu,
+				-- même tenu 2 s ; aucun glyphe de maintien
+				S.patch(c, S.snap(2, regain(0)))
+				c.h:fireClient("ReplicatedStorage.Remotes.DataPatch", { R = 0 }, {})
+				S.run(c, 0.5)
+				c.PC.toggleMenu()
+				S.run(c, 0.5)
+				expect(entry.Label.Text).toBe("Petit Splorch")
+				expect(entry.Glyph.Visible).toBe(false)
+				S.hold(c, entry, 2)
+				expect(grand()).toBe(1)
+				expect(c.PC.current()).toBe("SplorchPreview")
+				S.clean(c, expect)
+			end
+		)
+	end)
 end

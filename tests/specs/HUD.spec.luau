@@ -12,6 +12,7 @@ local ApiAudit = require("../harness/ApiAudit")
 local FontCmap = require("../harness/FontCmap")
 
 local Vector3 = roblox.Vector3
+local Enum = roblox.Enum
 
 return function(T)
 	local describe, it, expect = T.describe, T.it, T.expect
@@ -645,6 +646,521 @@ return function(T)
 			local issues = ApiAudit.stop()
 			expect(ok and "" or tostring(err)).toBe("")
 			expect(table.concat(issues, "\n")).toBe("")
+		end)
+	end)
+	-- =========================================================================================
+	-- v2.0 (lot B2, étape 4 ; N9, N18, docs/04 §27.14) : HUD v2.0 quand l'instantané du serveur est
+	-- là (interrupteur UpgradesScreen, D1) ; fabriqué dans le test (UpgradeScreen, profil témoin v2)
+	-- =========================================================================================
+	describe("HUD › v2.0 (lot B2)", function()
+		local UpgradeScreen = require("../harness/UpgradeScreen")
+		local S = UpgradeScreen.new(T.Harness)
+		local DONE = { step = 11, done = true, demoDone = true }
+
+		-- profil témoin en remontée : A = 1, boucle r, Record R 15
+		local function regain(r)
+			return function(p)
+				p.ascend = 1
+				p.R = r
+				p.bestR = 15
+			end
+		end
+
+		local function v2setup(opts)
+			opts = opts or {}
+			local profile = opts.profile or {}
+			profile.onboarding = profile.onboarding or DONE
+			-- croissance figée : la taille des squishies ne bouge pas pendant le test
+			profile.growth = profile.growth or { G = 0, g = 0, t = NOW }
+			local c = S.client({ snap = opts.snap, profile = profile, ranch = opts.ranch, lang = opts.lang })
+			local h = c.h
+			h:moveTo(h.localPlayer, Vector3.new(0, 3, 0))
+			local HUD = TvAudit.mod(h, "UI.HUD")
+			local WSC = TvAudit.mod(h, "Controllers.WorldStateController")
+			local state = { ev = opts.ev or eventState(), ranch = opts.ranchPublic }
+			WSC.event = function()
+				return state.ev
+			end
+			WSC.ranch = function(slot)
+				return if slot == 1 then state.ranch else nil
+			end
+			HUD._refresh()
+			return c, HUD, state
+		end
+
+		-- état public de MON ranch (complet : RanchRenderer le lit aussi, le modèle Ranches/1 existant)
+		local function ranchPublic(over)
+			local r = {
+				slot = 1,
+				userId = 1,
+				name = "Me",
+				hidden = false,
+				R = 3,
+				fame = 0,
+				day = 1,
+				mode = "cozy",
+				shield = false,
+				boopable = false,
+				tiles = { snack = 5, decor = 5, pens = 3, cozyBed = true, seen = 0 },
+				vat = false,
+				pool = false,
+				vatFill = 0,
+				growth = { G = 0, g = 1, t = NOW },
+				carry = "",
+				ride = "",
+				saddle = 0,
+				waiting = "",
+				theme = "",
+				flag = "",
+				title = "",
+				saddleColor = "",
+				trail = "",
+			}
+			for k, v in over or {} do
+				r[k] = v
+			end
+			return r
+		end
+
+		-- grand squishy : prestige de boucle prêt quelle que soit la boucle
+		local BIG = { a = TvAudit.squishy(1, { z = 1e15 }) }
+
+		-- aucune intention v2.0 d'achat ni de métrique (UiSeen « nextBuy » compté à part : la puce s'est
+		-- montrée)
+		local function noBuy(c)
+			for _, name in { "BuyUpgrade", "MenuActivity", "ClientMetric" } do
+				expect({ name = name, n = #TvAudit.sent(c.h, name) }).toEqual({ name = name, n = 0 })
+			end
+		end
+
+		local function textsOf(root)
+			local out = {}
+			for _, d in root:GetDescendants() do
+				if (d:IsA("TextLabel") or d:IsA("TextButton")) and d.Text ~= "" then
+					table.insert(out, d.Text)
+				end
+			end
+			return out
+		end
+
+		it(
+			"interrupteur coupé : HUD de la v1.3, aucune instance ni intention v2.0, glyphes dessinés",
+			function()
+				local c, HUD = v2setup({ profile = { fame = 42 } })
+				local h = c.h
+				expect(HUD.element("nextBuy")).toBeNil()
+				expect(HUD.element("status"):FindFirstChild("memory")).toBeNil()
+				expect(HUD.element("menuChip").Label.Size.X.Offset).toBe(96)
+				local L = h:require("ReplicatedStorage.Shared.Config.Layout")
+				expect(HUD.element("status").Size).toEqual(
+					roblox.UDim2.fromOffset(L.Hud.status.rect.w, L.Hud.status.rect.h)
+				)
+				expect(HUD.element("gauge").Size).toEqual(
+					roblox.UDim2.fromOffset(L.Hud.gauge.rect.w, L.Hud.gauge.rect.h)
+				)
+				-- Fame toujours là (v1.3), étoile et cœur dessinés devant les nombres
+				expect(HUD.visible("fame")).toBe(true)
+				expect(HUD.element("fame").FameIcon:GetAttribute("Icon")).toBe("star")
+				expect(HUD.element("fame").FriendsIcon:GetAttribute("Icon")).toBe("heart")
+				expect(HUD.element("fame").Fame.Text).toBe("42")
+				-- aucun caractère hors des polices dans tout le HUD (règle 18, les deux états)
+				for _, t in textsOf(h.localPlayer.PlayerGui.HUD) do
+					expect({ text = t, missing = FontCmap.missing(CMAPS, t) }).toEqual({
+						text = t,
+						missing = {},
+					})
+				end
+				S.run(c, 5)
+				S.noV2Intent(c, expect)
+				S.clean(c, expect)
+			end
+		)
+
+		it(
+			"Prochain achat : cible d'UpgradeAdvisor.next, nom court et niveau ; recalculée seulement après achat, prestige ou plafond ; 2 fois par seconde au plus",
+			function()
+				local c, HUD = v2setup({ snap = S.snap(1) })
+				local h = c.h
+				local NB = TvAudit.mod(h, "UI.Hud.NextBuy")
+				local Advisor = h:require("ReplicatedStorage.Shared.Logic.UpgradeAdvisor")
+				S.run(c, 1)
+				local chip = HUD.element("nextBuy")
+				expect(chip ~= nil and chip.Visible).toBe(true)
+				local first = Advisor.next(c.US.current(), {})
+				expect(NB.target().id).toBe(first.id)
+				expect(NB.target().level).toBe(first.level)
+				-- jamais un niveau déjà possédé ni inexistant
+				expect(first.level).toBe((c.US.current().levels[first.id] or 0) + 1)
+				expect(chip.ShortName.Text).toBe(S.Localization.get("en", "upgrades.short." .. first.id))
+				expect(chip.Icon:GetAttribute("Icon") ~= "").toBe(true)
+				local evals = NB.evaluations()
+				-- 20 instantanés où seules les pièces changent : aucune évaluation, cible inchangée
+				for v = 2, 21 do
+					S.patch(
+						c,
+						S.snap(v, function(p)
+							p.coins = 1000 + v
+						end)
+					)
+					S.run(c, 0.2)
+				end
+				expect(NB.evaluations()).toBe(evals)
+				expect(NB.target().id).toBe(first.id)
+				-- 20 achats en 2 s (un niveau du Tapis toutes les 0,1 s) : au plus 2 évaluations par seconde
+				for v = 22, 41 do
+					S.patch(
+						c,
+						S.snap(v, function(p)
+							p.tiles.snack = 7 + (v - 21) % 5
+						end)
+					)
+					S.run(c, 0.1)
+				end
+				S.run(c, 0.6)
+				local n = NB.evaluations() - evals
+				expect(n >= 2 and n <= 6).toBe(true)
+				-- la cible suit le DERNIER instantané (achat)
+				local last = Advisor.next(c.US.current(), {})
+				expect(NB.target().id).toBe(last.id)
+				expect(NB.target().level).toBe(last.level)
+				-- prestige (r, Record R) et plafonds : recalculée
+				evals = NB.evaluations()
+				S.patch(
+					c,
+					S.snap(42, function(p)
+						p.R = 13
+						p.bestR = 13
+					end)
+				)
+				S.run(c, 0.6)
+				expect(NB.evaluations()).toBe(evals + 1)
+				noBuy(c)
+				S.clean(c, expect)
+			end
+		)
+
+		it(
+			"payable : « Ready! » et une seule pulsation ; « have / need » sinon ; jamais de clignotement",
+			function()
+				local c, HUD = v2setup({ snap = S.snap(1, function(p)
+					p.coins = 1
+				end) })
+				local h = c.h
+				local Juice = TvAudit.mod(h, "UI.Juice")
+				local chip = HUD.element("nextBuy")
+				local pulses = 0
+				local pulse = Juice.pulse
+				Juice.pulse = function(gui, ...)
+					if gui == chip then
+						pulses += 1
+					end
+					return pulse(gui, ...)
+				end
+				S.run(c, 1)
+				expect(chip:GetAttribute("Ready")).toBe(false)
+				expect(string.find(chip.Value.Text, " / ", 1, true) ~= nil).toBe(true)
+				-- assez de pièces : « Ready! », une pulsation ; d'autres instantanés payables : aucune de plus
+				for v = 2, 8 do
+					S.patch(
+						c,
+						S.snap(v, function(p)
+							p.coins = 1e30 + v
+						end)
+					)
+					S.run(c, 0.3)
+				end
+				expect(chip:GetAttribute("Ready")).toBe(true)
+				expect(chip.Value.Text).toBe("Ready!")
+				expect(pulses).toBe(1)
+				S.clean(c, expect)
+			end
+		)
+
+		it(
+			"cachée pendant l'accueil avant la leçon du menu, rail ou panneau ouvert, suivi « Prêt » ; UiSeen une fois ; clic : Améliorations sur Conseillé",
+			function()
+				-- accueil en cours, leçon du menu pas encore vue : la puce Menu (et donc « Prochain
+				-- achat ») ne sont pas encore montrées
+				local c, HUD = v2setup({
+					snap = S.snap(1),
+					profile = { onboarding = { step = 2, done = false, demoDone = false } },
+				})
+				local h = c.h
+				local function seen()
+					local n = 0
+					for _, args in TvAudit.sent(h, "UiSeen") do
+						if args[1] == "nextBuy" then
+							n += 1
+						end
+					end
+					return n
+				end
+				S.run(c, 1)
+				expect(HUD.visible("menuChip")).toBe(false)
+				expect(HUD.visible("nextBuy")).toBe(false)
+				expect(seen()).toBe(0)
+				h:fireClient("ReplicatedStorage.Remotes.DataPatch", { onboarding = DONE }, {})
+				S.run(c, 1)
+				expect(HUD.visible("menuChip")).toBe(true)
+				expect(HUD.visible("nextBuy")).toBe(true)
+				expect(seen()).toBe(1)
+				c.PC.toggleMenu()
+				S.run(c, 0.5)
+				expect(HUD.visible("nextBuy")).toBe(false)
+				c.PC.closeAll()
+				S.run(c, 0.5)
+				expect(HUD.visible("nextBuy")).toBe(true)
+				-- clic de souris : l'écran Améliorations sur Conseillé (D13)
+				HUD.element("nextBuy").Activated:Fire()
+				S.run(c, 0.5)
+				expect(c.PC.current()).toBe("Upgrades")
+				expect(c.Up.currentTab()).toBe("suggested")
+				expect(HUD.visible("nextBuy")).toBe(false)
+				c.PC.closeAll()
+				S.run(c, 0.5)
+				-- suivi « Prêt » (Grand Splorch prêt) : cachée ; l'apparition suivante n'envoie rien
+				h:fireClient("ReplicatedStorage.Remotes.DataPatch", { squishies = BIG }, {})
+				S.run(c, 0.5)
+				expect(HUD.element("goalTracker"):GetAttribute("Ready")).toBe(true)
+				expect(HUD.visible("nextBuy")).toBe(false)
+				h:fireClient(
+					"ReplicatedStorage.Remotes.DataPatch",
+					{ squishies = { a = TvAudit.squishy(1, { z = 10 }) } },
+					{}
+				)
+				S.run(c, 0.5)
+				expect(HUD.visible("nextBuy")).toBe(true)
+				expect(seen()).toBe(1)
+				S.clean(c, expect)
+			end
+		)
+
+		it(
+			"Fame et amis : 3 s quand ils changent, hors du HUD calme (≤ 8 éléments) ; « MENU » à 40 px",
+			function()
+				local c, HUD = v2setup({ snap = S.snap(1), profile = { fame = 10 } })
+				local h = c.h
+				TvAudit.mod(h, "Controllers.PromptController").current = function()
+					return {
+						kind = "squishy",
+						slot = 1,
+						uid = "u1",
+						primary = "press",
+						secondary = "pickup",
+						ready = true,
+						position = Vector3.new(0, 2, -6),
+					}
+				end
+				TvAudit.mod(h, "Controllers.WorldStateController").squishies = function()
+					return { u1 = TvAudit.squishy(2) }
+				end
+				S.run(c, 1)
+				expect(HUD.visible("fame")).toBe(false)
+				local names = {
+					"coins",
+					"fame",
+					"menuChip",
+					"nextBuy",
+					"eventPill",
+					"megaBar",
+					"gauge",
+					"goalTracker",
+					"status",
+					"specialChip",
+					"targetCard",
+					"leap",
+				}
+				local function count()
+					local n = 0
+					for _, name in names do
+						if HUD.visible(name) then
+							n += 1
+						end
+					end
+					return n
+				end
+				expect(HUD.visible("targetCard")).toBe(true)
+				expect(HUD.visible("nextBuy")).toBe(true)
+				expect(count() <= 8).toBe(true)
+				h:fireClient("ReplicatedStorage.Remotes.DataPatch", { fame = 11 }, {})
+				S.run(c, 0.5)
+				expect(HUD.visible("fame")).toBe(true)
+				expect(HUD.element("fame").Fame.Text).toBe("11")
+				S.run(c, 3)
+				expect(HUD.visible("fame")).toBe(false)
+				expect(count() <= 8).toBe(true)
+				-- « MENU » dessiné à ses 40 px dans une boîte de 100 (plus de rétrécissement)
+				local label = HUD.element("menuChip").Label
+				local Text = TvAudit.mod(h, "UI.Text")
+				expect(label.Size.X.Offset).toBe(100)
+				expect(Text.kind(label)).toBe("label")
+				expect(Text.drawnSize(label)).toBe(40)
+				S.clean(c, expect)
+			end
+		)
+
+		it(
+			"puces spéciales : JELLY ASCEND ! (AscendReady, aucun Grand Splorch prêt, pas déjà en file) ; PETIT SPLORCH ! pendant une remontée ; GRAND SPLORCH ! d'abord ; « ! » de la puce Menu",
+			function()
+				local c, HUD, state = v2setup({ snap = S.snap(1), ranch = { AscendReady = true } })
+				local h = c.h
+				local chip = HUD.element("specialChip")
+				S.run(c, 0.5)
+				expect(chip:GetAttribute("Mode")).toBe("ascend")
+				expect(chip:FindFirstChild("Text").Text).toBe("JELLY ASCEND!")
+				expect(chip.Glyph:GetAttribute("GlyphKey")).toBe("ButtonY")
+				expect(HUD.element("menuChip").Bang.Visible).toBe(true)
+				-- déjà dans la file des grands spectacles : plus de puce
+				state.ev = eventState({
+					spectacle = {
+						queue = {
+							{
+								kind = "ascend",
+								userId = 1,
+								startAt = NOW + 40,
+								slot = 1,
+								position = 2,
+								eta = 40,
+							},
+						},
+					},
+				})
+				S.run(c, 0.5)
+				expect(chip:GetAttribute("Mode")).toBe("")
+				state.ev = eventState()
+				-- Grand Splorch prêt (pas de remontée) : GRAND SPLORCH ! d'abord, même avec l'Ascension prête
+				h:fireClient("ReplicatedStorage.Remotes.DataPatch", { squishies = BIG }, {})
+				S.run(c, 0.5)
+				expect(chip:GetAttribute("Mode")).toBe("splorch")
+				expect(chip:FindFirstChild("Text").Text).toBe("GRAND SPLORCH!")
+				-- remontée (A = 1, r 3 < Record R 15) : PETIT SPLORCH !
+				c.model:SetAttribute("AscendReady", false)
+				S.patch(c, S.snap(2, regain(3)))
+				S.run(c, 0.5)
+				expect(chip:GetAttribute("Mode")).toBe("petit")
+				expect(chip:FindFirstChild("Text").Text).toBe("PETIT SPLORCH!")
+				expect(HUD.element("menuChip").Bang.Visible).toBe(false)
+				noBuy(c)
+				expect(#TvAudit.sent(c.h, "GrandSplorch")).toBe(0)
+				S.clean(c, expect)
+			end
+		)
+
+		it(
+			"clic maintenu 1,5 s sur PETIT SPLORCH ! (souris) : GrandSplorch une fois, pas de menu ; premier de la remontée : aucun maintien",
+			function()
+				local c, HUD = v2setup({ snap = S.snap(1, regain(3)), profile = { R = 3, squishies = BIG } })
+				local h = c.h
+				local uis = h.game.UserInputService
+				local chip = HUD.element("specialChip")
+				S.run(c, 0.5)
+				expect(chip:GetAttribute("Mode")).toBe("petit")
+				local function mouseHold(secs)
+					local down = {
+						UserInputType = Enum.UserInputType.MouseButton1,
+						UserInputState = Enum.UserInputState.Begin,
+					}
+					uis.InputBegan:Fire(down, true)
+					chip.MouseButton1Down:Fire(10, 10)
+					S.run(c, secs)
+					uis.InputEnded:Fire({
+						UserInputType = Enum.UserInputType.MouseButton1,
+						UserInputState = Enum.UserInputState.End,
+					}, true)
+					chip.Activated:Fire()
+					S.run(c, 0.3)
+				end
+				-- clic court : le menu s'ouvre sur l'entrée de renaissance, rien n'est envoyé
+				mouseHold(0.2)
+				expect(c.PC.menuOpen()).toBe(true)
+				expect(#TvAudit.sent(h, "GrandSplorch")).toBe(0)
+				c.PC.closeAll()
+				S.run(c, 0.5)
+				-- clic maintenu 1,6 s : GrandSplorch(false, squishy « a ») une fois, le menu reste fermé
+				mouseHold(1.6)
+				local sent = TvAudit.sent(h, "GrandSplorch")
+				expect(#sent).toBe(1)
+				expect(sent[1][1]).toBe(false)
+				expect(sent[1][2]).toBe("a")
+				expect(c.PC.menuOpen()).toBe(false)
+				-- premier Petit Splorch de la remontée (r = Prestige.startR(1, 0) = 0) : aucun maintien
+				S.patch(c, S.snap(2, regain(0)))
+				h:fireClient("ReplicatedStorage.Remotes.DataPatch", { R = 0 }, {})
+				S.run(c, 0.5)
+				expect(chip:GetAttribute("Mode")).toBe("petit")
+				mouseHold(1.6)
+				expect(#TvAudit.sent(h, "GrandSplorch")).toBe(1)
+				S.clean(c, expect)
+			end
+		)
+
+		it(
+			"Souvenir de gelée à la place du bouclier débutant (jamais les deux) ; suivi « Back to record » + « r / Record R » puis « Ready! »",
+			function()
+				local c, HUD = v2setup({
+					snap = S.snap(1, regain(3)),
+					profile = { R = 3 },
+					ranchPublic = ranchPublic({ shield = true }),
+				})
+				local h = c.h
+				S.run(c, 0.5)
+				local status = HUD.element("status")
+				expect(status.memory.Visible).toBe(true)
+				expect(status.shield.Visible).toBe(false)
+				expect(status.memory.Icon.Drop:GetAttribute("Icon")).toBe("drop")
+				expect(string.sub(status.memory.Minutes.Text, 1, 2)).toBe("×")
+				expect(text(h, HUD, "goalTracker", "Title")).toBe("Back to record")
+				expect(text(h, HUD, "goalTracker", "Value")).toBe("3 / 15")
+				expect(HUD.element("goalTracker"):GetAttribute("Regain")).toBe(true)
+				h:fireClient("ReplicatedStorage.Remotes.DataPatch", { squishies = BIG }, {})
+				S.run(c, 0.5)
+				expect(text(h, HUD, "goalTracker", "Value")).toBe("Ready!")
+				-- fin de la remontée (r = Record R) : bouclier de nouveau, titre du Grand Splorch
+				S.patch(
+					c,
+					S.snap(2, function(p)
+						p.ascend = 1
+						p.R = 15
+						p.bestR = 15
+					end)
+				)
+				h:fireClient(
+					"ReplicatedStorage.Remotes.DataPatch",
+					{ squishies = { a = TvAudit.squishy(1) } },
+					{}
+				)
+				S.run(c, 0.5)
+				expect(text(h, HUD, "goalTracker", "Title")).toBe("Grand Splorch")
+				expect(status.shield.Visible).toBe(true)
+				expect(status.memory.Visible).toBe(false)
+				S.clean(c, expect)
+			end
+		)
+
+		it("file des grands spectacles : une entrée « ascend » compte comme un Grand Splorch", function()
+			local c, HUD, state = v2setup({ snap = S.snap(1), ranch = { AscendReady = true } })
+			local h = c.h
+			local WSC = TvAudit.mod(h, "Controllers.WorldStateController")
+			state.ev = eventState({
+				spectacle = {
+					queue = {
+						{
+							kind = "splorch",
+							userId = 9,
+							startAt = NOW + 20,
+							slot = 3,
+							position = 1,
+							eta = 20,
+						},
+						{ kind = "ascend", userId = 1, startAt = NOW + 30, slot = 1, position = 2, eta = 30 },
+					},
+				},
+			})
+			WSC.EventChanged:Fire(state.ev)
+			HUD._refresh()
+			expect(text(h, HUD, "goalTracker", "Value")).toBe("#2 in line · about 0:30")
+			expect(HUD.element("goalTracker"):GetAttribute("Queued")).toBe(true)
+			S.clean(c, expect)
 		end)
 	end)
 end

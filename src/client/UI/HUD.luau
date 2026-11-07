@@ -1097,11 +1097,13 @@ local function updateFame()
 	local fame = Util.num(State.get("fame"), 0, 0)
 	local friends = friendsCount()
 	-- v2.0 : la pastille se montre 3 s quand la Fame ou le nombre d'amis CHANGE (la première valeur
-	-- reçue n'est pas un changement)
-	if (lastFame ~= nil and fame ~= lastFame) or (lastFriends ~= nil and friends ~= lastFriends) then
-		fameUntil = Clock.now() + FAME_SHOW
+	-- après l'arrivée du profil n'est pas un changement)
+	if State.ready then
+		if (lastFame ~= nil and fame ~= lastFame) or (lastFriends ~= nil and friends ~= lastFriends) then
+			fameUntil = Clock.now() + FAME_SHOW
+		end
+		lastFame, lastFriends = fame, friends
 	end
-	lastFame, lastFriends = fame, friends
 	setText("fame", refs.fameText, Util.big(fame))
 	setText("friends", refs.friendsText, Format.count(friends))
 end

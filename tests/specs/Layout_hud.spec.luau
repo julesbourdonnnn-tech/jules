@@ -312,4 +312,315 @@ return function(T)
 			end
 		)
 	end)
+	-- =========================================================================================
+	-- v2.0 (lot B2, étape 4 ; N9, N18, D14 ; docs/04 §27.8) : HUD v2.0 aux rectangles de
+	-- Layout.HudV2.Rects, rail de 8 et 9 entrées avec et sans la barre de Roblox
+	-- =========================================================================================
+	describe("Layout_hud › HUD v2.0 (lot B2)", function()
+		local UpgradeScreen = require("../harness/UpgradeScreen")
+		local MockInstance = require("../harness/MockInstance")
+		local S = UpgradeScreen.new(T.Harness)
+		local NAMES = {
+			coins = "coins",
+			fame = "fame",
+			menuChip = "menuChip",
+			nextBuy = "nextBuy",
+			eventPill = "eventPill",
+			megaBar = "megaBar",
+			gauge = "gauge",
+			message = "message",
+			tracker = "goalTracker",
+			status = "status",
+			card = "card",
+			special = "specialChip",
+			target = "targetCard",
+			dash = "leap",
+		}
+
+		-- barre de Roblox absente (GuiService:GetGuiInset = 0 ; mise en page du harnais sans décalage) ;
+		-- rendue à la fin du cas, quoi qu'il arrive
+		local function withoutBar(fn)
+			local cm = MockInstance.classMethods.GuiService
+			local get = cm.GetGuiInset
+			local inset = Layout.GUI_INSET
+			cm.GetGuiInset = function()
+				return Vector2.new(0, 0), Vector2.zero
+			end
+			Layout.GUI_INSET = 0
+			local ok, err = pcall(fn)
+			cm.GetGuiInset = get
+			Layout.GUI_INSET = inset
+			if not ok then
+				error(err, 0)
+			end
+		end
+
+		-- Client v2.0 au HUD complet (comme fullHud, avec l'instantané du serveur et la puce « Prochain
+		-- achat ») ; opts.shop, opts.pending (carte en attente : 9e entrée du rail), opts.ready
+		local function v2Hud(opts)
+			opts = opts or {}
+			local profile = TvAudit.richProfile(NOW)
+			profile.onboarding = { step = 11, done = true, demoDone = true }
+			profile.growth = { G = 0, g = 0, t = NOW }
+			if opts.ready then
+				profile.squishies.u20.z = 1e15
+			end
+			local c = S.client({
+				snap = S.snap(1, function(p)
+					p.coins = 1
+				end),
+				profile = profile,
+				lang = opts.lang,
+				before = if opts.shop then TvAudit.enableShop else nil,
+			})
+			local h = c.h
+			h:moveTo(h.localPlayer, Vector3.new(0, 3, 0))
+			-- événements du serveur (pastille, jauge), comme fullHud
+			TvAudit.mod(h, "Controllers.WorldStateController").event = function()
+				return {
+					features = {
+						boopRush = "on",
+						megaSquish = true,
+						golden = true,
+						jellyMoon = true,
+						gauge = true,
+						clips = true,
+						costume = "",
+						diagnostics = true,
+					},
+					boost = { kind = "wobble", untilT = NOW + 299, byName = "" },
+					gauge = { points = 400, target = 1200, partyUntil = 0, restUntil = 0 },
+					spectacle = { queue = {} },
+					mega = { phase = "idle", points = 0, target = 0 },
+				}
+			end
+			if opts.pending then
+				TvAudit.mod(h, "UI.Cards").pending = function()
+					return { { id = "x1", kind = "sleepy" } }
+				end
+			end
+			return c
+		end
+
+		local function tvRect(h, obj)
+			local r = Layout.rect(obj)
+			local s = h.viewport.Y / 1080
+			return { x = r.x / s, y = r.y / s, w = r.w / s, h = r.h / s }
+		end
+
+		local function near(a, b)
+			return math.abs(a - b) <= 1.5
+		end
+
+		local function overlap(a, b)
+			local ox = math.min(a.x + a.w, b.x + b.w) - math.max(a.x, b.x)
+			local oy = math.min(a.y + a.h, b.y + b.h) - math.max(a.y, b.y)
+			return ox > 2 and oy > 2
+		end
+
+		it(
+			"chaque élément à son rectangle de Layout.HudV2.Rects, aux 3 résolutions, EN et FR (sans barre) ; paires exclusives ; milieu libre ; aucun chevauchement",
+			function()
+				local all = {}
+				withoutBar(function()
+					for _, lang in { "en", "fr" } do
+						local c = v2Hud({ lang = lang })
+						local h = c.h
+						local L = h:require("ReplicatedStorage.Shared.Config.Layout")
+						local HUD = TvAudit.mod(h, "UI.HUD")
+						-- Fame qui change : la pastille se montre (3 s) ; cible et recharge du bond
+						h:fireClient("ReplicatedStorage.Remotes.DataPatch", { fame = 777 }, {})
+						TvAudit.mod(h, "Controllers.ChaseController").cooldownLeft = function()
+							return 2
+						end
+						TvAudit.mod(h, "Controllers.PromptController").current = function()
+							return {
+								kind = "squishy",
+								slot = 1,
+								uid = "u7",
+								primary = "press",
+								secondary = "pickup",
+								ready = true,
+								position = Vector3.new(0, 2, -6),
+							}
+						end
+						TvAudit.mod(h, "Controllers.WorldStateController").squishies = function()
+							return { u7 = TvAudit.squishy(14, { z = 123456789 }) }
+						end
+						h:fireClient(
+							"ReplicatedStorage.Remotes.Celebrate",
+							{ kind = "objectivesCard", data = { day = 1 } }
+						)
+						S.run(c, 0.5)
+						for _, res in L.TestResolutions do
+							TvAudit.setResolution(h, Vector2.new(res.X, res.Y))
+							HUD._refresh()
+							Layout.apply(h)
+							local seen = {}
+							for rect, name in NAMES do
+								local e = HUD.element(name)
+								if e and e.Visible then
+									local want = L.HudV2.Rects[rect]
+									local got = tvRect(h, e)
+									local same = near(got.x, want.x)
+										and near(got.y, want.y)
+										and near(got.w, want.w)
+										and near(got.h, want.h)
+									if not same and rect ~= "message" and rect ~= "card" then
+										table.insert(
+											all,
+											string.format(
+												"%s %d : %s à (%d, %d, %d × %d), attendu (%d, %d, %d × %d)",
+												lang,
+												res.X,
+												rect,
+												got.x,
+												got.y,
+												got.w,
+												got.h,
+												want.x,
+												want.y,
+												want.w,
+												want.h
+											)
+										)
+									end
+									seen[rect] = got
+									-- milieu de l'écran libre (personnage et squishies)
+									if rect ~= "message" and overlap(got, L.HudV2.Center) then
+										table.insert(
+											all,
+											lang .. " " .. res.X .. " : " .. rect .. " dans le milieu"
+										)
+									end
+								end
+							end
+							-- tous les éléments du HUD calme v2.0 sont là (Fame : ses 3 s)
+							for _, rect in
+								{
+									"coins",
+									"fame",
+									"menuChip",
+									"nextBuy",
+									"eventPill",
+									"gauge",
+									"tracker",
+									"status",
+									"target",
+									"dash",
+								}
+							do
+								if seen[rect] == nil then
+									table.insert(all, lang .. " " .. res.X .. " : " .. rect .. " absent")
+								end
+							end
+							-- paires exclusives : jamais visibles ensemble
+							for _, pair in L.HudV2.Exclusive do
+								if seen[pair[1]] and seen[pair[2]] then
+									table.insert(
+										all,
+										lang .. " " .. res.X .. " : " .. pair[1] .. " et " .. pair[2]
+									)
+								end
+							end
+							for _, issue in audit(h, lang .. " " .. res.X .. "×" .. res.Y) do
+								table.insert(all, issue)
+							end
+						end
+						S.clean(c, expect)
+					end
+				end)
+				expect(table.concat(all, "\n")).toBe("")
+			end
+		)
+
+		it(
+			"rail de 8 et 9 entrées, avec et sans la barre de Roblox, aux 3 résolutions : boutons de 80, jamais sur la pastille des pièces, dans la zone sûre",
+			function()
+				local all = {}
+				local function check(label, pending)
+					local c = v2Hud({ shop = true, ready = true, pending = pending })
+					local h = c.h
+					local L = h:require("ReplicatedStorage.Shared.Config.Layout")
+					local PC = c.PC
+					local HUD = TvAudit.mod(h, "UI.HUD")
+					for _, res in L.TestResolutions do
+						TvAudit.setResolution(h, Vector2.new(res.X, res.Y))
+						PC.closeAll()
+						S.run(c, 0.4)
+						PC.toggleMenu()
+						S.run(c, 0.5)
+						local entries = PC.entries()
+						local want = if pending then 9 else 8
+						if #entries ~= want then
+							table.insert(all, label .. " " .. res.X .. " : " .. #entries .. " entrées")
+						end
+						Layout.apply(h)
+						local rail = PC.entryButton("Ranch").Parent
+						local r = tvRect(h, rail)
+						local coins = tvRect(h, HUD.element("coins"))
+						if r.y < coins.y + coins.h + 12 - 1 then
+							table.insert(
+								all,
+								string.format(
+									"%s %d : rail en y %d, sur les pièces (bas %d)",
+									label,
+									res.X,
+									r.y,
+									coins.y + coins.h
+								)
+							)
+						end
+						local bottom = (h.viewport.Y * 0.95) / (h.viewport.Y / 1080)
+						if r.y + r.h > bottom + 1 then
+							table.insert(
+								all,
+								string.format(
+									"%s %d : rail jusqu'en y %d (zone sûre %d)",
+									label,
+									res.X,
+									r.y + r.h,
+									bottom
+								)
+							)
+						end
+						local gap = rail:GetAttribute("Gap")
+						if gap < 4 or (not pending and gap ~= 16) then
+							table.insert(all, label .. " " .. res.X .. " : écart " .. tostring(gap))
+						end
+						for _, entry in entries do
+							local b = tvRect(h, PC.entryButton(entry))
+							if not near(b.h, 80) then
+								table.insert(
+									all,
+									string.format("%s %d : %s haut de %d", label, res.X, entry, b.h)
+								)
+							end
+						end
+						for _, issue in TvAudit.outsideSafe(h, h.localPlayer.PlayerGui.Menu) do
+							table.insert(all, label .. " " .. res.X .. " : " .. issue)
+						end
+						for _, issue in TvAudit.clipped(h, h.localPlayer.PlayerGui.Menu) do
+							table.insert(all, label .. " " .. res.X .. " : " .. issue)
+						end
+						-- le rail remplace la puce Menu et cache « Prochain achat » (paires exclusives)
+						if HUD.visible("menuChip") or HUD.visible("nextBuy") then
+							table.insert(
+								all,
+								label .. " " .. res.X .. " : puce Menu ou Prochain achat sous le rail"
+							)
+						end
+					end
+					S.clean(c, expect)
+				end
+				check("barre 8", false)
+				check("barre 9", true)
+				withoutBar(function()
+					check("sans barre 8", false)
+					check("sans barre 9", true)
+				end)
+				expect(table.concat(all, "\n")).toBe("")
+			end
+		)
+	end)
 end

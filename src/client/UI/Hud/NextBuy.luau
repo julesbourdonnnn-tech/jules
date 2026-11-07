@@ -51,6 +51,7 @@ local NAME_TEXT = 32
 local VALUE_TEXT = 28
 local PERIOD = 1 / math.max(0.1, Balance.Upgrades.NextChipHz) -- s entre deux évaluations (0,5 s)
 local BAR_H = 6
+local LEVEL_W = 112 -- « Niv. 40 » : 86 px à 32 px
 local GOLD = Theme.Colors.Gold
 local BAR_FILL = Color3.fromRGB(120, 220, 160)
 
@@ -147,10 +148,11 @@ function NextBuy.build(
 	icon.ZIndex = 3
 	refs.icon = icon
 	local textX = 16 + ICON + 16
+	-- nom à gauche, niveau à droite (112), 8 px entre les deux boîtes : jamais l'un sur l'autre
 	refs.name = Util.label({
-		name = "Name",
+		name = "ShortName",
 		parent = b,
-		size = UDim2.fromOffset(RECT.w - textX - 124, 40),
+		size = UDim2.fromOffset(RECT.w - textX - 16 - LEVEL_W - 8, 40),
 		position = UDim2.fromOffset(textX, 6),
 		textSize = NAME_TEXT,
 		align = Enum.TextXAlignment.Left,
@@ -159,8 +161,8 @@ function NextBuy.build(
 	refs.level = Util.label({
 		name = "Level",
 		parent = b,
-		size = UDim2.fromOffset(112, 40),
-		position = UDim2.fromOffset(RECT.w - 16 - 112, 6),
+		size = UDim2.fromOffset(LEVEL_W, 40),
+		position = UDim2.fromOffset(RECT.w - 16 - LEVEL_W, 6),
 		textSize = NAME_TEXT,
 		align = Enum.TextXAlignment.Right,
 		zIndex = 3,
