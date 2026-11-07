@@ -335,7 +335,107 @@ function Glyph.star(parent: Instance?, size: number, color: Color3?, edge: Color
 	return holder
 end
 
--- Recolore une étoile dessinée (texte qui change de couleur : case choisie du Ranch)
+-- =============================================================================================
+-- Couronne et goutte DESSINÉES (lot B4, étape 5 ; D16, D20, INT-B1-GLYPHS2, règle 18 du GDD v2.0
+-- §10.8) : « ♛ » du panneau des ranchs n'est dans aucune des deux polices du jeu ; la couronne est 5
+-- primitives (bandeau, corps et 3 pointes en losange), la goutte du halo 2 (disque et pointe en
+-- losange), dessinées deux fois comme l'étoile : liseré sombre dessous, couleur du texte dessus. Elles
+-- viennent des repères Text.CROWN (« {^} ») et Text.DROP (« {~} ») de UI/Text.
+-- =============================================================================================
+
+-- Primitive d'une icône, en fractions du cadre carré : centre (x, y), taille (w, h), rotation (degrés),
+-- arrondi des coins (UICorner, fraction de la plus petite dimension)
+type Primitive = { name: string, x: number, y: number, w: number, h: number, rot: number, round: number }
+
+local CROWN: { Primitive } = {
+	{ name = "Band", x = 0.5, y = 0.79, w = 0.86, h = 0.17, rot = 0, round = 0.3 },
+	{ name = "Body", x = 0.5, y = 0.62, w = 0.74, h = 0.26, rot = 0, round = 0.1 },
+	{ name = "TipL", x = 0.2, y = 0.43, w = 0.25, h = 0.25, rot = 45, round = 0.2 },
+	{ name = "TipC", x = 0.5, y = 0.33, w = 0.27, h = 0.27, rot = 45, round = 0.2 },
+	{ name = "TipR", x = 0.8, y = 0.43, w = 0.25, h = 0.25, rot = 45, round = 0.2 },
+}
+local DROP: { Primitive } = {
+	{ name = "Bulb", x = 0.5, y = 0.63, w = 0.6, h = 0.6, rot = 0, round = 0.5 },
+	{ name = "Tip", x = 0.5, y = 0.43, w = 0.42, h = 0.42, rot = 45, round = 0.15 },
+}
+
+-- Une couche (Edge ou Fill) des primitives `prims`, agrandies de `grow` (fraction du cadre) chacune
+local function primitiveLayer(
+	holder: Frame,
+	name: string,
+	prims: { Primitive },
+	grow: number,
+	color: Color3,
+	z: number
+)
+	local layer = Instance.new("Frame")
+	layer.Name = name
+	layer.BackgroundTransparency = 1
+	layer.Size = UDim2.fromScale(1, 1)
+	layer.ZIndex = z
+	layer.Parent = holder
+	for _, p in prims do
+		local part = Instance.new("Frame")
+		part.Name = p.name
+		part.BorderSizePixel = 0
+		part.BackgroundColor3 = color
+		part.AnchorPoint = Vector2.new(0.5, 0.5)
+		-- en fractions du cadre : l'icône suit la taille de son cadre sans être reconstruite
+		part.Position = UDim2.fromScale(p.x, p.y)
+		part.Size = UDim2.fromScale(p.w + grow, p.h + grow)
+		part.Rotation = p.rot
+		part.ZIndex = z
+		if p.round > 0 then
+			local round = Instance.new("UICorner")
+			round.CornerRadius = UDim.new(p.round, 0)
+			round.Parent = part
+		end
+		part.Parent = layer
+	end
+end
+
+local function primitiveIcon(
+	icon: string,
+	prims: { Primitive },
+	parent: Instance?,
+	size: number,
+	color: Color3?,
+	edge: Color3?,
+	edgePx: number?
+): Frame
+	local s = if type(size) == "number" and size == size then math.clamp(size, 8, 512) else 32
+	local e = if type(edgePx) == "number" and edgePx == edgePx
+		then math.clamp(edgePx, 0, s / 4)
+		else math.max(1, s / 12)
+	local holder = Instance.new("Frame")
+	holder.Name = string.upper(string.sub(icon, 1, 1)) .. string.sub(icon, 2)
+	holder.BackgroundTransparency = 1
+	holder.Size = UDim2.fromOffset(s, s)
+	holder.Active = false
+	holder.Selectable = false
+	holder:SetAttribute("Icon", icon)
+	if e > 0 then
+		primitiveLayer(holder, "Edge", prims, 2 * e / s, edge or Theme.Colors.Stroke, 1)
+	end
+	primitiveLayer(holder, "Fill", prims, 0, color or Theme.Colors.Gold, 2)
+	if parent then
+		holder.Parent = parent
+	end
+	return holder
+end
+
+-- Couronne de `size` px (repère Text.CROWN) : Name « Crown », attribut Icon = "crown"
+function Glyph.crown(parent: Instance?, size: number, color: Color3?, edge: Color3?, edgePx: number?): Frame
+	return primitiveIcon("crown", CROWN, parent, size, color, edge, edgePx)
+end
+
+-- Goutte de gelée de `size` px (halo, repère Text.DROP) : Name « Drop », attribut Icon = "drop"
+function Glyph.drop(parent: Instance?, size: number, color: Color3?, edge: Color3?, edgePx: number?): Frame
+	return primitiveIcon("drop", DROP, parent, size, color, edge, edgePx)
+end
+
+-- Recolore une étoile dessinée (texte qui change de couleur : case choisie du Ranch) ; vaut aussi pour la
+-- couronne et la goutte (mêmes couches Fill et Edge)
 function Glyph.paintStar(star: Instance, color: Color3?, edge: Color3?, transparency: number?)
 	for _, layerName in { "Fill", "Edge" } do
 		local layer = star:FindFirstChild(layerName)

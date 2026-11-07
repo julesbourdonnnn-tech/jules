@@ -59,6 +59,11 @@ VisualBudget.LIMITS = table.freeze({
 	decoPerso = table.freeze({ parts = 412, particles = 0, lights = 0 }),
 	-- Observatoire et kiosque (D10)
 	world = table.freeze({ parts = 40, particles = 0, lights = 0 }),
+	-- lot B4, étape 5 : halo (D16), 5 gouttes au plus par joueur (16 joueurs), compté à part du ciel : il
+	-- suit le personnage, pas le ranch (B4-55)
+	halo = table.freeze({ parts = 16 * 5, particles = 0, lights = 0 }),
+	-- lot B4, étape 5 : Prairie v2 (D9), qui remplace la Prairie du serveur cachée sur ce client
+	meadow = table.freeze({ parts = 40, particles = 0, lights = 0 }),
 	-- tas de pièces du Pot (8) et anneau de l'aimant (12) : MON ranch seulement (D18)
 	pot = table.freeze({ parts = 20, particles = 0, lights = 0 }),
 	-- accessoires de la silhouette (lot B4 étape 4, D18b) : cadre doré 8, anneau « prêt » 8, anneau-soleil

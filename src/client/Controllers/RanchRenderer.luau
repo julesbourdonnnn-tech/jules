@@ -45,6 +45,7 @@ local TargetRules = require(Shared.Logic.TargetRules)
 local Formulas = require(Shared.Logic.Formulas)
 local FusionRules = require(Shared.Logic.FusionRules)
 local RanchLook = require(Shared.Logic.RanchLook)
+local Prestige = require(Shared.Logic.Prestige)
 local SquishyBuilder = require(Shared.Render.SquishyBuilder)
 local Squash = require(Shared.Render.Squash)
 
@@ -54,10 +55,14 @@ local StateController = require(Client.Controllers.StateController)
 local WorldStateController = require(Client.Controllers.WorldStateController)
 local QualityController = require(Client.Controllers.QualityController)
 local WorldText = require(Client.UI.WorldText)
+local Text = require(Client.UI.Text)
+local Format = require(Client.UI.Format)
 local Util = require(Client.World.Util)
 -- v2.0 (lot B4, étapes 3 et 4, D26) : état et décors v2.0 des ranchs (Render/RanchV2), tous derrière
 -- les attributs de leurs interrupteurs ; interrupteurs coupés, aucun travail ni aucune instance de plus
 local RanchV2 = require(Client.Render.RanchV2)
+-- v2.0 (lot B4, étape 5, D16) : halo du propriétaire de chaque ranch (attributs HaloOn et Ascend)
+local Halo = require(Client.Render.Halo)
 
 local RanchRenderer = {}
 
@@ -856,14 +861,36 @@ local function stepStatue()
 	end
 end
 
+-- Record R montré sur le panneau (lot B4, étape 5, D20) : l'attribut BestR du ranch quand le serveur le
+-- pose (interrupteur RecordR : « ce qu'on voit suit le Record R », un joueur qui vient de faire une
+-- Ascension ne lit pas « 0 »), sinon le r public de la v1.3 ; valeur illisible : le r public
+local function recordOf(slot: number, ranch: Types.RanchPublic): number
+	local model = ranchModel(slot)
+	local attr = if model then model:GetAttribute("BestR") else nil
+	if type(attr) == "number" and attr == attr and attr > -math.huge and attr < math.huge then
+		return math.clamp(math.floor(attr), 0, Balance.Prestige.MaxR)
+	end
+	return Prestige.r(ranch :: any)
+end
+
+-- Attribut booléen v2.0 du modèle du ranch (absent tant que son interrupteur est coupé : faux)
+local function ranchFlag(slot: number, name: string): boolean
+	local model = ranchModel(slot)
+	return model ~= nil and model:GetAttribute(name) == true
+end
+
+-- Panneau du ranch : « Mira · ♛2 · Jour 42 · Booper » (ordre de la v1.3). Lot B4, étape 5 : la couronne
+-- est DESSINÉE (repère Text.CROWN, UI/Glyph.crown : « ♛ » n'est dans aucune police du jeu, D20, dans les
+-- deux états des interrupteurs) ; « PRÊT ! » (world.ready) à la fin tant que le ranch porte SplorchReady
 local function signText(slot: number, ranch: Types.RanchPublic): string
 	if ranch.userId == 0 then
 		return Util.t("name.ranch", { n = slot })
 	end
 	local name = if ranch.hidden or ranch.name == "" then Util.displayName("", ranch.userId) else ranch.name
 	local parts = { name }
-	if ranch.R > 0 then
-		table.insert(parts, "♛" .. tostring(math.floor(ranch.R)))
+	local record = recordOf(slot, ranch)
+	if record > 0 then
+		table.insert(parts, Text.CROWN .. Format.count(record))
 	end
 	if ranch.day > 0 then
 		table.insert(parts, Util.t("world.ranchDay", { n = math.floor(ranch.day) }))
@@ -874,6 +901,9 @@ local function signText(slot: number, ranch: Types.RanchPublic): string
 		elseif ranch.boopable then
 			table.insert(parts, Util.t("prompt.boop"))
 		end
+	end
+	if ranchFlag(slot, "SplorchReady") then
+		table.insert(parts, Util.t("world.ready"))
 	end
 	return table.concat(parts, " · ")
 end
@@ -905,13 +935,34 @@ local function stepSign(slot: number)
 	pcall(WorldText.setText, gui :: BillboardGui, signText(slot, ranch))
 end
 
-local function titleText(ranch: Types.RanchPublic): string
+-- Ascensions montrées par le halo (lot B4, étape 5, D16) : A quand le ranch porte HaloOn = true
+-- [RanchSkins] et Ascend ≥ 1 [JellyAscend] ; 0 sinon (aucun halo, plaque de la v1.3)
+local function haloAscend(slot: number): number
+	local model = ranchModel(slot)
+	if model == nil or model:GetAttribute("HaloOn") ~= true then
+		return 0
+	end
+	local a = model:GetAttribute("Ascend")
+	if type(a) ~= "number" or a ~= a or a < 1 or a == math.huge then
+		return 0
+	end
+	return math.min(math.floor(a), Balance.Prestige.MaxA)
+end
+
+local function titleText(slot: number, ranch: Types.RanchPublic): string
 	local title = if ranch.title ~= "" then Util.t("cosmetic.title." .. ranch.title) else ""
+	local text = title
 	if ranch.hidden or ranch.name == "" then
 		local alias = Util.displayName("", ranch.userId)
-		return if title ~= "" then alias .. " · " .. title else alias
+		text = if title ~= "" then alias .. " · " .. title else alias
 	end
-	return title
+	-- v2.0 (D16) : une goutte dessinée (repère Text.DROP) et le nombre d'Ascensions à la fin de la plaque
+	local a = haloAscend(slot)
+	if a > 0 then
+		local drop = Text.DROP .. Format.count(a)
+		text = if text ~= "" then text .. " · " .. drop else drop
+	end
+	return text
 end
 
 local function stepTitle(slot: number)
@@ -919,7 +970,7 @@ local function stepTitle(slot: number)
 	local entry = titles[slot]
 	local character = if ranch then characterOf(ranch.userId) else nil
 	local head = character and character:FindFirstChild("Head")
-	local text = if ranch then titleText(ranch) else ""
+	local text = if ranch then titleText(slot, ranch) else ""
 	if ranch == nil or head == nil or text == "" then
 		if entry then
 			pcall(WorldText.release, entry.gui)
@@ -946,6 +997,15 @@ local function stepTitle(slot: number)
 		titles[slot] = entry
 	end
 	pcall(WorldText.setText, (entry :: any).gui, text)
+end
+
+-- Halo du propriétaire du ranch (D16) : gouttes autour de sa tête tant que le ranch porte HaloOn et
+-- Ascend ≥ 1 ; rien sans personnage (interrupteurs coupés : une lecture d'attribut par ranch toutes les 0,5 s)
+local function stepHalo(slot: number)
+	local a = haloAscend(slot)
+	local ranch = if a > 0 then WorldStateController.ranch(slot) else nil
+	local character = if ranch then characterOf(ranch.userId) else nil
+	Halo.sync(slot, character, a, cameraPos())
 end
 
 -- v2.0 (lot B4, D11) [StarMat] : au-delà du Tapis 12, la dalle du Tapis que le serveur laisse allumée
@@ -1468,6 +1528,7 @@ function RanchRenderer._step(dt: number)
 			Util.guard("RanchRenderer.silhouette", stepSilhouette, slot)
 			Util.guard("RanchRenderer.sign", stepSign, slot)
 			Util.guard("RanchRenderer.title", stepTitle, slot)
+			Util.guard("RanchRenderer.halo", stepHalo, slot)
 			Util.guard("RanchRenderer.gate", stepGate, slot)
 			Util.guard("RanchRenderer.theme", stepTheme, slot)
 			Util.guard("RanchRenderer.flag", stepFlag, slot)
@@ -1483,6 +1544,9 @@ function RanchRenderer._step(dt: number)
 	-- v2.0 (lot B4, D19) : décors v2.0 seulement tant qu'un ranch en porte (un test sinon)
 	if RanchV2.on then
 		Util.guard("RanchRenderer.v2", RanchV2.step, dt, now)
+	end
+	if Halo.on then
+		Util.guard("RanchRenderer.halo", Halo.step, dt)
 	end
 	if #bulkParts > 0 then
 		local ok, err = pcall(function()
@@ -1723,6 +1787,7 @@ function RanchRenderer._stop()
 	end
 	table.clear(connections)
 	RanchV2.stop()
+	Halo.stop()
 	started = false
 end
 

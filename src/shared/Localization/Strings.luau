@@ -151,6 +151,7 @@ Strings.en = {
 	["prompt.ride"] = "Ride",
 	["prompt.dismount"] = "Get off",
 	["prompt.petsit"] = "Press",
+	["prompt.workshop"] = "Workshop", -- kiosque de Big Plop (lot B4, D21)
 	-- Accueil (GDD §3)
 	["onboarding.twin"] = "Plop's twin!",
 	["onboarding.newPulls"] = "New species guaranteed ({n})",
@@ -757,6 +758,9 @@ Strings.en = {
 	["world.vat.dodo"] = "Dodo Box!",
 	["world.ranchDay"] = "Day {n}",
 	["world.statue"] = "{name} · {size}",
+	-- lot B4, étape 5 (D28) : plaque « prêt » du panneau, kiosque de Big Plop
+	["world.ready"] = "READY!",
+	["world.kiosk"] = "Big Plop's Workshop",
 	-- Emotes et signaux (GDD §6.5)
 	["emote.hello"] = "Hello",
 	["emote.thanks"] = "Thanks",
@@ -1418,6 +1422,7 @@ Strings.fr = {
 	["prompt.ride"] = "Monter",
 	["prompt.dismount"] = "Descendre",
 	["prompt.petsit"] = "Presser",
+	["prompt.workshop"] = "Atelier", -- kiosque de Big Plop (lot B4, D21)
 	-- Accueil (GDD §3)
 	["onboarding.twin"] = "Jumeau de Plop !",
 	["onboarding.newPulls"] = "Nouveauté garantie ({n})",
@@ -2024,6 +2029,9 @@ Strings.fr = {
 	["world.vat.dodo"] = "Boîte à dodo !",
 	["world.ranchDay"] = "Jour {n}",
 	["world.statue"] = "{name} · {size}",
+	-- lot B4, étape 5 (D28) : plaque « prêt » du panneau, kiosque de Big Plop
+	["world.ready"] = "PRÊT !",
+	["world.kiosk"] = "Atelier de Big Plop",
 	-- Emotes et signaux (GDD §6.5)
 	["emote.hello"] = "Salut",
 	["emote.thanks"] = "Merci",

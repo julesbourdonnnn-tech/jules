@@ -69,6 +69,7 @@ local RanchKit = require(script.Parent.RanchKit)
 local RanchTiers = require(script.Parent.RanchTiers)
 local MonumentKit = require(script.Parent.MonumentKit)
 local DecoKit = require(script.Parent.DecoKit)
+local SkyKit = require(script.Parent.SkyKit)
 local Text = require(Client.UI.Text)
 local Format = require(Client.UI.Format)
 local Theme = require(Client.UI.Theme)
@@ -86,6 +87,7 @@ RanchV2.watchedAll = false
 
 local RANCHES = WorldLayout.Const.Ranches
 local MAX_R = Balance.Prestige.MaxR
+local MAX_A = Balance.Prestige.MaxA
 local TIERS_MAX = 6
 local DECOR_MAX = Balance.Tiles.decor.Levels
 local ANIM_HZ = 15
@@ -108,6 +110,7 @@ local WATCHED: { [string]: boolean } = {
 	Monuments = true,
 	DecoPerso = true,
 	GiantTier = true,
+	Ascend = true, -- étape 5 : ciel des Ascensions [JellyAscend]
 }
 -- Un de ces attributs allume les décors v2.0 du ranch (RanchTiers, Monuments, DecoPerso : D1)
 local CARRIERS = { "TapisTier", "Monuments", "DecoPerso" }
@@ -132,6 +135,7 @@ local OBJ_SYSTEM: { [string]: string } = {
 	frame = "silhouette",
 	ready = "silhouette",
 	sun = "silhouette",
+	sky = "sky", -- étape 5 : ciel des Ascensions (D25)
 }
 for k = 1, 6 do
 	OBJ_SYSTEM["tier" .. k] = "tiers"
@@ -144,7 +148,7 @@ for i = 1, DECO_SLOTS do
 	OBJ_SYSTEM["deco" .. i] = "decoPerso"
 end
 local SYSTEMS =
-	{ "tapis", "record", "plinths", "pot", "tiers", "house", "silhouette", "monuments", "decoPerso" }
+	{ "tapis", "record", "plinths", "pot", "tiers", "house", "silhouette", "monuments", "decoPerso", "sky" }
 
 -- Identifiants des éléments (Visuals.RecordTable, Strings monument.n) de chaque objet : ElementBuilt,
 -- elementCFrame
@@ -163,6 +167,7 @@ local ELEMENT_ID: { [string]: string } = {
 	frame = "frame.golden",
 	sun = "giant.sun",
 	house = "helper.house",
+	sky = "sky",
 }
 for n = 1, MonumentKit.COUNT do
 	ELEMENT_ID["mon" .. n] = "monument." .. n
@@ -216,6 +221,7 @@ type View = {
 	radius: number, -- rayon montré de la silhouette, arrondi (0 : aucune silhouette)
 	stars: number, -- étoiles de couronne 0 … 4
 	rainbow: boolean, -- couronne arc-en-ciel
+	ascend: number, -- A (attribut Ascend [JellyAscend]) ; 0 sans attribut : aucun ciel
 }
 type Slot = {
 	slot: number,
@@ -716,6 +722,7 @@ local function readView(st: Slot): View?
 		radius = silhouetteRadius(ranch),
 		stars = stars,
 		rainbow = has["crown.rainbow"] == true,
+		ascend = int(m:GetAttribute("Ascend"), 0, MAX_A),
 	}
 end
 
@@ -773,6 +780,15 @@ local function monumentNatural(st: Slot): string
 		return "reduced"
 	end
 	return if st.slot == current then "full" else "near"
+end
+
+-- Niveau naturel du ciel d'un ranch (SkyKit) : « near » (ranch courant), « mid » (ses voisins en
+-- détail complet), « far » (les autres)
+local function skyNatural(st: Slot): string
+	if st.detail ~= "full" then
+		return "far"
+	end
+	return if st.slot == current then "near" else "mid"
 end
 
 local function tierWants(view: View, full: boolean): (number, number)
@@ -859,6 +875,12 @@ local function computeWants(st: Slot)
 				}
 			end
 		end
+	end
+	if v.tapis and v.ascend >= 1 then
+		st.want.sky = {
+			full = SkyKit.count(v.ascend, skyNatural(st)),
+			reduced = SkyKit.count(v.ascend, "far"),
+		}
 	end
 	if v.monuments > 0 then
 		local natural = monumentNatural(st)
@@ -1466,6 +1488,20 @@ local function renderDeco(st: Slot, view: View?)
 	end
 end
 
+-- Ciel des Ascensions (D25, étape 5) au-dessus de la clôture du fond : le dessin de A (SkyKit), au
+-- niveau du ranch (courant, voisin, autres) ; une Ascension de plus construit le nouvel élément pièce
+-- par pièce (cascade), jamais au chargement ni au changement de ranch ; derrière TapisTier et Ascend
+local function renderSky(st: Slot, view: View?)
+	local a = if view and view.tapis then view.ascend else 0
+	local grant = grantLevel(st, "sky")
+	local level = if grant == "full" then skyNatural(st) elseif grant == "reduced" then "far" else "none"
+	local on = a >= 1 and level ~= "none"
+	local sig = if on then "sky|" .. a .. "|" .. level else "none:" .. level
+	if not unchanged(st, "sky", sig, level) then
+		renderParts(st, "sky", sig, if on then SkyKit.specs(st.slot, a, level) else EMPTY :: any, level)
+	end
+end
+
 local function renderSlot(st: Slot)
 	local view = st.view
 	local owner = if view then view.owner else 0
@@ -1495,6 +1531,7 @@ local function renderSlot(st: Slot)
 	renderRecord(st, view)
 	renderMonuments(st, view)
 	renderDeco(st, view)
+	renderSky(st, view)
 	pruneFolder(st)
 end
 
@@ -1577,6 +1614,8 @@ local function anchorOf(slot: number, key: string): CFrame?
 		return WorldLayout.v2Anchor(slot, "frame")
 	elseif key == "house" then
 		return at(WorldLayout.helperHouse(slot))
+	elseif key == "sky" then
+		return WorldLayout.v2Anchor(slot, "sky")
 	end
 	return nil
 end
@@ -2203,6 +2242,7 @@ function RanchV2.stats(): { [string]: number }
 		silhouette = 0,
 		monuments = 0,
 		decoPerso = 0,
+		sky = 0,
 		painted = 0,
 		renders = counters.renders,
 		created = counters.created,

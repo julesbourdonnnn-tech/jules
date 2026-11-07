@@ -67,6 +67,8 @@ local Text = require(Client.UI.Text)
 local AmbienceDirector = require(Client.Render.AmbienceDirector)
 -- v2.0 (lot B4, étape 4, D23) : lanterne du phare de MON ranch (une des 4 lumières du ranch y est placée)
 local RanchV2 = require(Client.Render.RanchV2)
+-- v2.0 (lot B4, étape 5, D9, D10, D21, D22, D30) : Observatoire, kiosque, Prairie v2 et glaçons d'hiver
+local WorldV2 = require(Client.Render.WorldV2)
 local AmbienceRules = require(Shared.Logic.AmbienceRules)
 local Events = require(Shared.Config.Events)
 
@@ -104,7 +106,7 @@ export type Stats = {
 	winterParts: number,
 }
 
-type LabelEntry = { gui: BillboardGui, label: TextLabel, key: string, timer: string? }
+type LabelEntry = { gui: BillboardGui, label: TextLabel, key: string, timer: string?, v2: boolean? }
 type Dressed = { part: BasePart, color: Color3, material: Enum.Material }
 
 type Budgets = {
@@ -463,6 +465,46 @@ local function sizeLabel(entry: LabelEntry, scale: number)
 	Text.style(entry.label, "label", px, { min = 1, wrapped = false })
 end
 
+-- Étiquette fixe posée sur `inst` (attribut LabelKey) : BillboardGui en px TV, traduite
+local function addLabel(inst: BasePart, key: string, holder: Folder, scale: number, v2: boolean): LabelEntry
+	local gui = Instance.new("BillboardGui")
+	gui.Name = "Label_" .. key
+	gui.Adornee = inst
+	gui.LightInfluence = 0
+	gui.AlwaysOnTop = false
+	gui.MaxDistance = LABEL_DISTANCE
+	gui.StudsOffsetWorldSpace = Vector3.new(0, finite(inst:GetAttribute("LabelHeight"), 2), 0)
+	local label = Instance.new("TextLabel")
+	label.Name = "Text"
+	label.Size = UDim2.fromScale(1, 1)
+	label.BackgroundColor3 = Color3.fromRGB(30, 25, 60)
+	label.BackgroundTransparency = Layout.WorldText.Background
+	label.TextColor3 = Color3.fromRGB(255, 255, 255)
+	label.FontFace = Font.fromEnum(Enum.Font.FredokaOne)
+	Text.raw(label, labelText(key))
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0.3, 0)
+	corner.Parent = label
+	label.Parent = gui
+	gui.Parent = holder
+	local timer = inst:GetAttribute("LabelTimer")
+	local entry: LabelEntry = {
+		gui = gui,
+		label = label,
+		key = key,
+		timer = if type(timer) == "string" then timer else nil,
+		v2 = if v2 then true else nil,
+	}
+	if entry.timer then
+		-- texte et visibilité posés par refreshTimers (interrupteur du serveur d'abord)
+		gui.Enabled = false
+		Text.raw(label, "")
+	end
+	sizeLabel(entry, scale)
+	table.insert(state.labels, entry)
+	return entry
+end
+
 local function buildLabels(world: Folder)
 	-- monde remplacé : les anciennes étiquettes (accrochées à des pièces disparues) partent toutes
 	local previous = state.labelHolder
@@ -478,43 +520,61 @@ local function buildLabels(world: Folder)
 	for _, inst in world:GetDescendants() do
 		local key = inst:GetAttribute("LabelKey")
 		if type(key) == "string" and inst:IsA("BasePart") then
-			local gui = Instance.new("BillboardGui")
-			gui.Name = "Label_" .. key
-			gui.Adornee = inst
-			gui.LightInfluence = 0
-			gui.AlwaysOnTop = false
-			gui.MaxDistance = LABEL_DISTANCE
-			gui.StudsOffsetWorldSpace = Vector3.new(0, finite(inst:GetAttribute("LabelHeight"), 2), 0)
-			local label = Instance.new("TextLabel")
-			label.Name = "Text"
-			label.Size = UDim2.fromScale(1, 1)
-			label.BackgroundColor3 = Color3.fromRGB(30, 25, 60)
-			label.BackgroundTransparency = Layout.WorldText.Background
-			label.TextColor3 = Color3.fromRGB(255, 255, 255)
-			label.FontFace = Font.fromEnum(Enum.Font.FredokaOne)
-			Text.raw(label, labelText(key))
-			local corner = Instance.new("UICorner")
-			corner.CornerRadius = UDim.new(0.3, 0)
-			corner.Parent = label
-			label.Parent = gui
-			gui.Parent = holder
-			local timer = inst:GetAttribute("LabelTimer")
-			local entry: LabelEntry = {
-				gui = gui,
-				label = label,
-				key = key,
-				timer = if type(timer) == "string" then timer else nil,
-			}
-			if entry.timer then
-				-- texte et visibilité posés par refreshTimers (interrupteur du serveur d'abord)
-				gui.Enabled = false
-				Text.raw(label, "")
-			end
-			sizeLabel(entry, scale)
-			table.insert(state.labels, entry)
+			addLabel(inst, key, holder, scale, false)
 		end
 	end
 	state.labelScale = scale
+end
+
+-- v2.0 (lot B4, étape 5) : étiquettes des décors du monde v2.0 (kiosque world.kiosk, panneau de la Prairie
+-- v2 world.meadow), même mécanisme LabelKey ; la Prairie du serveur cachée sur ce client (D9) cache aussi
+-- son étiquette ; interrupteurs coupés : aucune étiquette v2, aucune écriture
+local function syncV2Labels()
+	local anchors = WorldV2.labels()
+	for i = #state.labels, 1, -1 do
+		local entry = state.labels[i]
+		if entry.v2 then
+			local keep = false
+			for _, a in anchors do
+				if a.part == entry.gui.Adornee and a.key == entry.key then
+					keep = true
+					break
+				end
+			end
+			if not keep then
+				entry.gui:Destroy()
+				table.remove(state.labels, i)
+			end
+		end
+	end
+	if #anchors > 0 then
+		local holder = state.labelHolder
+		if holder == nil or holder.Parent == nil then
+			local made = Instance.new("Folder")
+			made.Name = "Labels"
+			made.Parent = clientWorld()
+			state.labelHolder = made
+			holder = made
+		end
+		for _, a in anchors do
+			local found = false
+			for _, entry in state.labels do
+				if entry.v2 and entry.gui.Adornee == a.part then
+					found = true
+					break
+				end
+			end
+			if not found then
+				addLabel(a.part, a.key, holder :: Folder, uiScale(), true)
+			end
+		end
+	end
+	local hidden = WorldV2.meadowV2()
+	for _, entry in state.labels do
+		if not entry.v2 and entry.key == "world.meadow" and entry.gui.Enabled == hidden then
+			entry.gui.Enabled = not hidden
+		end
+	end
 end
 
 local function refreshLabels(force: boolean)
@@ -893,6 +953,15 @@ local function evaluate(force: boolean, siren: boolean)
 	end
 	refreshSnow()
 	refreshPlaza(payload, now)
+	-- v2.0 (lot B4, étape 5) : monde v2.0 (Observatoire, kiosque, Prairie v2, glaçons) et ses étiquettes ;
+	-- interrupteurs coupés : quelques lectures d'attributs, rien de construit
+	WorldV2.update({
+		ambience = state.v2,
+		winter = resolved.winter,
+		payload = payload,
+		world = state.world,
+	})
+	syncV2Labels()
 	-- musique (INT-AUDIO, GDD §9.6) : MusicRush pendant le Rush (après la sirène), MusicMoon pendant la
 	-- Jelly Moon, sinon Music ; musique d'événement à −12 dB pour un nouveau avant l'étape 9 (GDD §3)
 	local rushPhase = EventClock.rush(now)

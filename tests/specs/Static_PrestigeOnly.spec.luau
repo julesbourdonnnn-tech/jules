@@ -21,7 +21,7 @@ return function(T)
 
 	-- Liste fermée des lectures de la v1.3 (fichier → nombre exact), à faire passer par Prestige
 	local LEGACY = {
-		["src/client/Controllers/RanchRenderer.luau"] = 3, -- ranch.R public (B4 : BestR avec RecordR)
+		["src/client/Controllers/RanchRenderer.luau"] = 1, -- ranch.R public (B4 : panneau par BestR / Prestige.r, reste le coût des dalles)
 		["src/server/Ranch/PadRules.luau"] = 1, -- A2
 		["src/server/Services/EconomyService.luau"] = 9, -- A2
 		["src/server/Services/RanchService.luau"] = 2, -- A2

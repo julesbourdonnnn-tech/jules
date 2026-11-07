@@ -650,10 +650,19 @@ end
 -- =============================================================================================
 
 Text.STAR = "{*}"
-local ICON_EM = 1.1 -- largeur réservée à l'étoile (em) : un peu d'air de chaque côté
-local ICON_SIZE = 0.9 -- taille de l'étoile (em)
+-- lot B4, étape 5 (D16, D20, INT-B1-GLYPHS2) : même mécanisme pour la couronne du Record R (panneau des
+-- ranchs, « ♛ » hors des polices) et la goutte du halo (plaque du titre) : UI/Glyph.crown, Glyph.drop
+Text.CROWN = "{^}"
+Text.DROP = "{~}"
+local ICONS: { { marker: string, icon: string } } = {
+	{ marker = Text.STAR, icon = "star" },
+	{ marker = Text.CROWN, icon = "crown" },
+	{ marker = Text.DROP, icon = "drop" },
+}
+local ICON_EM = 1.1 -- largeur réservée à l'icône (em) : un peu d'air de chaque côté
+local ICON_SIZE = 0.9 -- taille de l'icône (em)
 
-type Mark = { prefix: string, count: number }
+type Mark = { prefix: string, count: number, icon: string }
 type IconState = { marks: { Mark }, stars: { Frame }, hooked: boolean }
 local iconStates: { [Instance]: IconState } = setmetatable({}, { __mode = "k" }) :: any
 local GlyphModule: any = nil
@@ -690,9 +699,22 @@ local function spaceWidth(size: number, font: Enum.Font): number
 	return if w > 0.5 then w else size * 0.25
 end
 
--- Remplace chaque repère par des espaces de la largeur de l'étoile ; rend le texte et les repères
+-- Premier repère d'icône de `text` à partir de l'octet 1 : position, longueur, sorte d'icône
+local function nextIcon(text: string): (number?, number, string)
+	local best: number? = nil
+	local len, icon = 0, ""
+	for _, def in ICONS do
+		local i = string.find(text, def.marker, 1, true)
+		if i ~= nil and (best == nil or i < best) then
+			best, len, icon = i, #def.marker, def.icon
+		end
+	end
+	return best, len, icon
+end
+
+-- Remplace chaque repère par des espaces de la largeur de l'icône ; rend le texte et les repères
 local function expandIcons(label: TextObject, text: string): (string, { Mark }?)
-	if string.find(text, Text.STAR, 1, true) == nil then
+	if nextIcon(text) == nil then
 		return text, nil
 	end
 	local size = shownSize(label)
@@ -702,15 +724,15 @@ local function expandIcons(label: TextObject, text: string): (string, { Mark }?)
 	local marks: { Mark } = {}
 	local rest = text
 	while true do
-		local i = string.find(rest, Text.STAR, 1, true)
+		local i, len, icon = nextIcon(rest)
 		if i == nil then
 			table.insert(out, rest)
 			break
 		end
 		table.insert(out, string.sub(rest, 1, i - 1))
-		table.insert(marks, { prefix = table.concat(out), count = count })
+		table.insert(marks, { prefix = table.concat(out), count = count, icon = icon })
 		table.insert(out, pad)
-		rest = string.sub(rest, i + #Text.STAR)
+		rest = string.sub(rest, i + len)
 	end
 	return table.concat(out), marks
 end
@@ -771,9 +793,17 @@ local function placeIcons(label: TextObject)
 	local lines = layoutLines(text, size, font, if box and label.TextWrapped then box.X else nil)
 	local blockH = #lines * lineH
 	for i, mark in st.marks do
-		local star = st.stars[i]
-		if star == nil then
-			star = glyph().star(nil, size * ICON_SIZE)
+		local star: Frame
+		local existing: Frame? = st.stars[i]
+		if existing ~= nil and existing:GetAttribute("Icon") == mark.icon then
+			star = existing
+		else
+			-- première icône à cette place, ou autre sorte d'icône (texte changé) : redessinée
+			if existing ~= nil then
+				existing:Destroy()
+			end
+			local draw = glyph()[mark.icon] or glyph().star
+			star = draw(nil, size * ICON_SIZE)
 			star.Name = "TextIcon" .. i
 			star.AnchorPoint = Vector2.new(0.5, 0.5)
 			star.Parent = label

@@ -87,13 +87,18 @@ return function(T)
 			expect(L.monuments.parts).toBe(200 + 120 + 130)
 			expect(L.sky.parts).toBe(80 + 2 * 10 + 13 * 3)
 			expect(L.decoPerso.parts).toBe(3 * 120 + 13 * 4)
+			-- lot B4, étape 5 (B4-55) : halo à part du ciel (5 gouttes × 16 joueurs, il suit le personnage)
+			-- et Prairie v2 (40, elle remplace la Prairie du serveur cachée sur ce client)
+			expect(L.halo.parts).toBe(16 * 5)
+			expect(L.meadow.parts).toBe(40)
 			local total = 0
 			for _, l in L do
 				expect(l.lights).toBe(0)
 				total += l.parts
 			end
-			-- ≈ 2 040 pièces du GDD (+ 20 pour le tas et l'anneau du Pot de MON ranch, D18)
-			expect(total <= 2040 + 20).toBe(true)
+			-- ≈ 2 040 pièces du GDD (+ 20 pour le tas et l'anneau du Pot de MON ranch, D18 ; + 80 du halo et
+			-- 40 de la Prairie v2, B4-55)
+			expect(total <= 2040 + 20 + 80 + 40).toBe(true)
 			f.clean()
 		end)
 

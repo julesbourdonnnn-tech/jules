@@ -8,7 +8,11 @@
 --   * squishies de mon ranch à Press.Range studs au plus de leur place (prêts d'abord pour □, ○ =
 --     Prendre) ou les 4 au plus d'une clôture côté rue (□ = Booper au Rush, Presser en pet-sitting) :
 --     score distance + 6 × angle / 90°, hystérésis 1,5 stud ou 0,25 s ; L1 / R1 défilent ces candidats ;
---   * comptoir de la Boutique (□ = Boutique).
+--   * comptoir de la Boutique (□ = Boutique) ;
+--   * v2.0 (lot B4, étape 5, INT-B4-KIOSK) : kiosque de Big Plop à 8 studs au plus (□ = Atelier, ouvre
+--     l'écran Améliorations sur l'onglet Atelier), seulement tant que le kiosque est construit
+--     (Render/WorldV2.kioskOpen : instantané de l'écran et une ligne de l'Atelier visible) ; testé après
+--     la Boutique, jamais en portant ni derrière une fenêtre ; interrupteurs coupés : jamais de kiosque.
 -- Après une pression, la cible passe au prochain prêt en Press.RetargetDelay (0,15 s). Clic souris :
 -- projection à l'écran (RanchRenderer.projected + TargetRules.screenPick), cible fixée
 -- ClickTarget.Hold (4 s). Pendant un maintien (boop, bol), la cible est verrouillée (sortie garantie :
@@ -42,15 +46,16 @@ local WorldStateController = require(Client.Controllers.WorldStateController)
 local RanchRenderer = require(Client.Controllers.RanchRenderer)
 local Util = require(Client.World.Util)
 local Catchable = require(Client.World.Catchable)
+local WorldV2 = require(Client.Render.WorldV2)
 
 export type Target = {
-	kind: "squishy" | "fence" | "pad" | "bowl" | "pool" | "pot" | "shop" | "mega" | "creature",
+	kind: "squishy" | "fence" | "pad" | "bowl" | "pool" | "pot" | "shop" | "mega" | "creature" | "kiosk",
 	slot: number,
 	uid: string,
 	id: number,
 	tile: string,
 	ready: boolean,
-	primary: string, -- action de □ : "press" | "throw" | "fusion" | "putInPool" | "buy" | "boop" | "feed" | "catch" | "sell" | "shop" | "petsit" | ""
+	primary: string, -- action de □ : "press" | "throw" | "fusion" | "putInPool" | "buy" | "boop" | "feed" | "catch" | "sell" | "shop" | "petsit" | "workshop" | ""
 	secondary: string, -- action de ○ : "pickup" | "putdown" | ""
 	position: Vector3,
 }
@@ -61,6 +66,7 @@ local PromptController = {}
 PromptController.Changed = Signal.new() :: Signal.Signal<Target?>
 
 local SHOP_RADIUS = 8 -- studs du comptoir de la Boutique
+local KIOSK_RADIUS = 8 -- studs du kiosque de Big Plop (lot B4, D21)
 local LOCK_TIMEOUT = StateTimeouts.seconds("boopHold") + 0.5
 local CLICK_HOLD = Layout.ClickTarget.Hold
 local RETARGET = Balance.Press.RetargetDelay
@@ -352,6 +358,14 @@ local function compute(now: number): Target?
 	if ZoneRules.distXZ(pos, WorldLayout.plaza("shop")) <= SHOP_RADIUS then
 		local t = make("shop", 0, WorldLayout.plaza("shop"))
 		t.primary = "shop"
+		return t
+	end
+	if
+		ZoneRules.distXZ(pos, WorldLayout.plaza("kiosk")) <= KIOSK_RADIUS
+		and Util.safe("WorldV2.kioskOpen", false, WorldV2.kioskOpen)
+	then
+		local t = make("kiosk", 0, WorldLayout.plaza("kiosk"))
+		t.primary = "workshop"
 		return t
 	end
 	return nil
