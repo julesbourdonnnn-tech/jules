@@ -37,6 +37,7 @@ local RanchLook = require(Shared.Logic.RanchLook)
 local Prestige = require(Shared.Logic.Prestige)
 local WorldLayout = require(Shared.Logic.WorldLayout)
 local Formulas = require(Shared.Logic.Formulas)
+local Clock = require(Shared.Util.Clock)
 
 local Client = script.Parent.Parent
 local Prefs = require(Client.Util.Prefs)
@@ -1048,11 +1049,17 @@ end
 local function refresh()
 	anyDirty = false
 	local any = false
+	local my = mySlot()
 	for _, st in slots do
 		if st.dirty then
 			local model = st.model
 			st.on = model ~= nil and model.Parent ~= nil and model:GetAttribute("TapisTier") ~= nil
 			st.view = if st.on then readView(st) else nil
+			if st.on and st.slot == my then
+				-- tas et anneau de MON ranch tout de suite (puis toutes les 0,5 s)
+				st.heap = heapState(Util.safe("Clock.now", 0, Clock.now))
+				st.ring = ringRadius(my)
+			end
 		end
 		if st.on then
 			any = true

@@ -1532,6 +1532,7 @@ function RanchRenderer.Start()
 			themed[slot] = nil
 		end,
 	})
+	Util.guard("RanchRenderer.v2watch", RanchV2.watch)
 	table.insert(
 		connections,
 		WorldStateController.SquishyChanged:Connect(function(slot: number)
