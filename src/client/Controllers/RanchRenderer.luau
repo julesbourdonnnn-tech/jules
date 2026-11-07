@@ -134,7 +134,7 @@ local dirty: { [number]: boolean } = {}
 local farRanch: { [number]: boolean } = {}
 local silhouettes: { [number]: { handle: SquishyBuilder.Handle?, sig: string, label: BillboardGui? } } = {}
 local signs: { [number]: BillboardGui } = {}
-local titles: { [number]: { gui: BillboardGui, character: Model } } = {}
+local titles: { [number]: { gui: BillboardGui, character: Model, head: Instance } } = {}
 local padLabels: { [string]: BillboardGui } = {}
 local gateState: { [number]: boolean } = {}
 local themed: { [number]: string } = {}
@@ -725,13 +725,18 @@ local function stepSilhouette(slot: number)
 	local ranch = WorldStateController.ranch(slot)
 	local entry = silhouettes[slot]
 	local best = if ranch then ranch.best else nil
+	-- étiquette qui n'est plus sur notre modèle (modèle détruit : rendue seule à la réserve de
+	-- WorldText, peut-être reprise par un autre objet) : oubliée sans la toucher (lot B4, étape 6)
+	if entry and entry.label and (entry.handle == nil or entry.label.Adornee ~= entry.handle.body) then
+		entry.label = nil
+	end
 	if ranch == nil or ranch.userId == 0 or type(best) ~= "table" or best.s == 0 then
 		if entry then
-			if entry.handle then
-				pcall(SquishyBuilder.release, entry.handle)
-			end
 			if entry.label then
 				pcall(WorldText.release, entry.label)
+			end
+			if entry.handle then
+				pcall(SquishyBuilder.release, entry.handle)
 			end
 			silhouettes[slot] = nil
 		end
@@ -750,6 +755,12 @@ local function stepSilhouette(slot: number)
 		local first = entry.handle == nil
 			or not string.find(entry.sig, string.format("^%d:%d:", best.s, best.m))
 		if first then
+			-- nouveau modèle : l'étiquette le suivra (rendue tant qu'elle est encore à nous, avant que
+			-- l'ancien modèle ne parte ; lot B4, étape 6)
+			if entry.label then
+				pcall(WorldText.release, entry.label)
+				entry.label = nil
+			end
 			if entry.handle then
 				pcall(SquishyBuilder.release, entry.handle)
 			end
@@ -975,6 +986,13 @@ end
 local function stepTitle(slot: number)
 	local ranch = WorldStateController.ranch(slot)
 	local entry = titles[slot]
+	-- tête détruite (joueur parti, mort ou réapparu) : son étiquette est revenue seule à la réserve de
+	-- WorldText et peut avoir été reprise par un autre objet ; on l'oublie sans la toucher (lot B4,
+	-- étape 6, même règle que la statue)
+	if entry and entry.gui.Adornee ~= entry.head then
+		titles[slot] = nil
+		entry = nil
+	end
 	local character = if ranch then characterOf(ranch.userId) else nil
 	local head = character and character:FindFirstChild("Head")
 	local text = if ranch then titleText(slot, ranch) else ""
@@ -1000,7 +1018,7 @@ local function stepTitle(slot: number)
 		if not ok then
 			return
 		end
-		entry = { gui = gui, character = character :: Model }
+		entry = { gui = gui, character = character :: Model, head = head :: Instance }
 		titles[slot] = entry
 	end
 	pcall(WorldText.setText, (entry :: any).gui, text)

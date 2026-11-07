@@ -932,6 +932,18 @@ local function dropSparkles(obj: Obj?)
 	table.clear(obj.extra)
 end
 
+-- Le ranch garde les étincelles de son Tapis doré après ce rafraîchissement (même règle que
+-- renderTapis : Tapis doré, détail complet accordé, particules permises)
+local function keepsSparkles(st: Slot): boolean
+	local view = st.view
+	return st.on
+		and view ~= nil
+		and view.tapis
+		and view.tier == 4
+		and levelOf(st, "tapis") == "full"
+		and particleFactor() > 0
+end
+
 -- Paliers du Tapis : aspect du grand tapis et de ses biscuits (tous les ranchs), pièces du palier
 -- et étincelles du Tapis doré (détail complet)
 local function renderTapis(st: Slot, view: View?)
@@ -1908,6 +1920,17 @@ local function refresh()
 	elseif declared then
 		for _, sys in SYSTEMS do
 			VisualBudget.allocate(sys, {}, {})
+		end
+	end
+	-- quota de particules rendu avant d'être repris (lot B4, étape 6) : un ranch qui perd les
+	-- étincelles de son Tapis doré (détail réduit, autre palier, Graphismes légers, ranch libéré) les
+	-- rend avant que les ranchs rendus avant lui dans l'ordre des numéros ne les demandent
+	for _, st in slots do
+		if st.dirty then
+			local obj = st.objs.tapis
+			if obj and #obj.extra > 0 and not keepsSparkles(st) then
+				dropSparkles(obj)
+			end
 		end
 	end
 	local alive = false

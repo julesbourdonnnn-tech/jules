@@ -516,6 +516,77 @@ return function(T)
 				c.clean()
 			end
 		)
+		-- Lot B4, étape 6 (trouvé par les 6 h de robots de RanchRenderer_v2) : même défaut que la statue
+		-- (B4-62) pour le titre d'un joueur qui part (sa tête détruite rend l'étiquette à la réserve de
+		-- WorldText) et pour l'étiquette d'une silhouette dont le meilleur squishy change d'espèce
+		it(
+			"titre d'un joueur parti : l'étiquette reprise par un autre objet n'est ni rendue ni écrite ; au retour, un titre neuf",
+			function()
+				local c = client()
+				local bob = c.h:addPlayer({ userId = 2, name = "Bob" })
+				c.snapshot({ ["3"] = ranch(3, 1), ["4"] = ranch(4, 2, { title = "squishologist" }) })
+				c.run(0.6)
+				expect(c.gui("Title4") ~= nil).toBe(true)
+				-- Bob part : sa tête est détruite, son étiquette revient à la réserve ; une autre étiquette
+				-- du monde la reprend aussitôt
+				c.h:removePlayer(bob)
+				local WorldText = c.h:require("StarterPlayer.StarterPlayerScripts.Client.UI.WorldText")
+				local other = WorldText.create(
+					part(c.h.workspace, "Other"),
+					{ kind = "text", maxDistance = 50, name = "OtherLabel" }
+				)
+				WorldText.setText(other, "Autre")
+				c.run(0.6)
+				expect(other.Enabled).toBe(true)
+				expect(other.Name).toBe("OtherLabel")
+				expect(other.Adornee).toBe(c.h.workspace.Other)
+				expect(textOf(other)).toBe("Autre")
+				-- Bob revient : un titre neuf sur sa nouvelle tête, l'autre étiquette intacte
+				local back = c.h:addPlayer({ userId = 2, name = "Bob" })
+				c.run(0.6)
+				local gui = c.gui("Title4")
+				expect(gui ~= nil and gui ~= other).toBe(true)
+				expect(gui.Adornee).toBe(back.Character.Head)
+				expect(string.find(textOf(gui), "Squishologist", 1, true) ~= nil).toBe(true)
+				expect(textOf(other)).toBe("Autre")
+				c.clean()
+			end
+		)
+
+		it(
+			"silhouette : le meilleur squishy change d'espèce, l'étiquette suit le nouveau modèle ; jamais celle d'un autre",
+			function()
+				local c = client()
+				c.snapshot({ ["3"] = ranch(3, 1, { best = { s = 2, m = 0, z = 50, zg = 0 } }) })
+				local far = c.WorldLayout.anchor(3, "silhouette")
+				c.camera(Vector3.new(-far.X, 300, -far.Z) * 3)
+				c.run(0.6)
+				local first = c.gui("Silhouette3")
+				expect(first ~= nil).toBe(true)
+				local oldBody = first.Adornee
+				expect(oldBody ~= nil).toBe(true)
+				-- nouveau meilleur squishy d'une autre espèce : nouveau modèle
+				c.h:fireClient("ReplicatedStorage.Remotes.RanchPatch", {
+					seq = 2,
+					ranches = { ["3"] = { best = { s = 5, m = 0, z = 80, zg = 0 } } },
+					ops = {},
+				})
+				c.h:settle(1)
+				c.run(0.6)
+				local labels = {}
+				for _, d in c.h.workspace:GetDescendants() do
+					if d.ClassName == "BillboardGui" and d.Name == "Silhouette3" and d.Enabled then
+						table.insert(labels, d)
+					end
+				end
+				expect(#labels).toBe(1)
+				local body = labels[1].Adornee
+				expect(body ~= nil and body ~= oldBody).toBe(true)
+				expect(body:IsDescendantOf(c.h.workspace)).toBe(true)
+				c.clean()
+			end
+		)
+
 		-- Revue client-world : la pression de pet-sitting (Celebrate press, petsit = true) écrase le
 		-- squishy de l'AMI (à sa clôture), pas un squishy de mon ranch
 		it("pression de pet-sitting : le squishy de l'ami à sa clôture joue son écrasement", function()

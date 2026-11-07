@@ -24,6 +24,7 @@ local fs = require("@lune/fs")
 local serde = require("@lune/serde")
 local MockInstance = require("../harness/MockInstance")
 local ApiAudit = require("../harness/ApiAudit")
+local rng = require("../harness/Brains").rng
 local Vector3 = roblox.Vector3
 local CFrame = roblox.CFrame
 local Color3 = roblox.Color3
@@ -2601,6 +2602,650 @@ return function(T)
 				expect(WV.stats().icicles).toBe(0)
 				expect(worldV2(c)).toBeNil()
 				c.clean()
+			end
+		)
+	end)
+
+	-- =========================================================================================
+	-- Étape 6 (vérification du lot ; §27.10 « VisualBudget jamais dépassé sur 6 h de robots » ;
+	-- GDD §11.5, §12.9) : 6 h de robots sur 16 ranchs, puis 16 ranchs entièrement construits
+	-- =========================================================================================
+
+	local V2_SYSTEMS = {
+		"tapis",
+		"record",
+		"plinths",
+		"pot",
+		"tiers",
+		"house",
+		"silhouette",
+		"monuments",
+		"decoPerso",
+		"sky",
+	}
+	local V2_ATTRS = {
+		"TapisTier",
+		"BestR",
+		"Monuments",
+		"DecoPerso",
+		"HaloOn",
+		"Ascend",
+		"SplorchReady",
+		"AscendReady",
+		"GiantTier",
+		"DecorGold",
+		"GoldPennants",
+		"Cushions",
+		"PetitSplorchAt",
+	}
+	local V2_FOLDERS = { "RanchesV2", "Halos", "WorldV2" }
+
+	-- Recensement de workspace : instances vivantes (hors étiquettes rangées dans la réserve bornée de
+	-- WorldText : éteintes, sans Adornee), étiquettes vivantes, lumières, Highlight, émetteurs ; et ce
+	-- que contiennent les dossiers v2.0 du client (aucune lumière, aucun Highlight)
+	local function census(h)
+		local out = {
+			instances = 0,
+			pooled = 0,
+			labels = "",
+			lights = 0,
+			highlights = 0,
+			emitters = 0,
+			v2Lights = 0,
+			v2Emitters = 0,
+		}
+		local stored, live = {}, {}
+		local wt = h.workspace:FindFirstChild("WorldText")
+		for _, g in (if wt then wt:GetChildren() else {}) do
+			if g.ClassName == "BillboardGui" then
+				if g.Enabled == false and g.Adornee == nil then
+					stored[g] = true
+				else
+					table.insert(live, g.Name)
+				end
+			end
+		end
+		table.sort(live)
+		out.labels = table.concat(live, ",")
+		for _, d in h.workspace:GetDescendants() do
+			local inPool = false
+			local p = d
+			while p and p ~= wt do
+				if stored[p] then
+					inPool = true
+					break
+				end
+				p = p.Parent
+			end
+			if inPool then
+				out.pooled += 1
+				continue
+			end
+			out.instances += 1
+			local cls = d.ClassName
+			if cls == "PointLight" or cls == "SpotLight" or cls == "SurfaceLight" then
+				out.lights += 1
+			elseif cls == "Highlight" then
+				out.highlights += 1
+			elseif cls == "ParticleEmitter" then
+				out.emitters += 1
+			end
+		end
+		local world = h.workspace:FindFirstChild("ClientWorld")
+		for _, name in V2_FOLDERS do
+			local f = world and world:FindFirstChild(name)
+			for _, d in (if f then f:GetDescendants() else {}) do
+				local cls = d.ClassName
+				if
+					cls == "PointLight"
+					or cls == "SpotLight"
+					or cls == "SurfaceLight"
+					or cls == "Highlight"
+				then
+					out.v2Lights += 1
+				elseif cls == "ParticleEmitter" then
+					out.v2Emitters += 1
+				end
+			end
+		end
+		return out
+	end
+
+	-- Le propriétaire d'un ranch debout dans son ranch (tête au-dessus du corps : le harnais ne la
+	-- déplace pas seul)
+	local function placeAt(character, pos)
+		local root = character and character:FindFirstChild("HumanoidRootPart")
+		if root then
+			root.CFrame = CFrame.new(pos + Vector3.new(0, 3, 0))
+			local head = character:FindFirstChild("Head")
+			if head then
+				head.CFrame = CFrame.new(pos + Vector3.new(0, 4.5, 0))
+			end
+		end
+	end
+
+	-- Pièces v2.0 de tous les systèmes du lot : décors des ranchs, halos, Observatoire, kiosque, Prairie
+	local function v2Count(c, Halo, WV)
+		local v2, w = c.V2.stats(), WV.stats()
+		return v2.parts + Halo.stats().total + w.observatory + w.kiosk + w.meadow, v2, w
+	end
+
+	local function declaredTotal(c)
+		local n = 0
+		for _, l in c.VB.LIMITS do
+			n += l.parts
+		end
+		return n
+	end
+
+	describe("RanchRenderer_v2 › étape 6 : 6 h de robots et 16 ranchs entièrement construits", function()
+		-- vrai défaut trouvé par les 6 h de robots : les étincelles du Tapis doré étaient prises dans
+		-- l'ordre des ranchs ; un ranch de petit numéro qui passait en détail complet demandait son
+		-- quota avant qu'un ranch de grand numéro qui le quittait ne le rende : refus (dépassement
+		-- compté, ClientMetric envoyée) et plus aucune étincelle nulle part
+		it(
+			"16 Tapis dorés : le ranch courant change, le quota d'étincelles est rendu avant d'être repris",
+			function()
+				local c = clientV2()
+				c.snapshot(all16())
+				for slot = 1, 16 do
+					c.attrs(slot, { TapisTier = 4 })
+				end
+				c.at(9, Vector3.new(0, 0, 36))
+				c.run(1)
+				expect(c.V2.current()).toBe(9)
+				expect(emitters(c.h)).toBe(3)
+				expect(c.VB.used("tapis", "particles")).toBe(6)
+				-- vers le ranch 3 : ses voisins 2 et 4 passent en détail complet avant que 8, 9 et 10 ne
+				-- le quittent dans l'ordre des ranchs
+				c.at(3, Vector3.new(0, 0, 36))
+				c.run(1)
+				expect(c.V2.current()).toBe(3)
+				expect(emitters(c.h)).toBe(3)
+				for _, slot in { 2, 3, 4 } do
+					expect({
+						slot = slot,
+						sparkles = c.models[slot].SnackMat.Mat:FindFirstChild("TapisSparkles") ~= nil,
+					}).toEqual({ slot = slot, sparkles = true })
+				end
+				expect(c.VB.used("tapis", "particles")).toBe(6)
+				expect(c.VB.stats().tapis.refused).toBe(0)
+				expect(c.VB.exceeded()).toBe(0)
+				expect(#metrics(c.h)).toBe(0)
+				c.clean()
+			end
+		)
+
+		it(
+			"6 h de robots (graine fixe) : chaque système dans son budget, file de la cascade ≤ 10, zéro trace, aucune fuite",
+			function()
+				local started = os.clock()
+				local c = clientV2({ lighting = true, t = T_WINTER, event = eventState() })
+				local Halo = c.h:require(CLIENT .. "Render.Halo")
+				local WV = c.h:require(CLIENT .. "Render.WorldV2")
+				local L = c.VB.LIMITS
+				local TOTAL = declaredTotal(c)
+				local rand = rng(20261107)
+				local START = { snack = 5, decor = 4, pens = 3, cozyBed = true, seen = 15 }
+				-- état de départ = la v1.3 (aucun attribut v2.0) : 16 ranchs occupés, 15 autres joueurs
+				-- debout dans leur ranch
+				c.snapshot(all16b())
+				local players = {}
+				local function arriveAs(slot, userId)
+					players[slot] = c.h:addPlayer({ userId = userId, name = "P" .. userId })
+					placeAt(players[slot].Character, c.WL.toWorld(slot, Vector3.new(6, 0, 40)))
+				end
+				for slot = 1, 16 do
+					if slot ~= 3 then
+						arriveAs(slot, 100 + slot)
+					end
+				end
+				local me = c.h.localPlayer.Character
+				local function walk(pos)
+					placeAt(me, pos)
+					c.h.workspace.CurrentCamera.CFrame =
+						CFrame.lookAt(pos + Vector3.new(0, 14, 24), pos + Vector3.new(0, 2, 0))
+				end
+				walk(c.WL.toWorld(3, Vector3.new(0, 0, 30)))
+				c.LC.refresh()
+				c.run(2)
+				local n0 = census(c.h)
+				local game0 = #c.h.game:GetDescendants()
+				expect(c.V2.on).toBe(false)
+				expect(n0.v2Lights + n0.v2Emitters).toBe(0)
+
+				-- État de chaque ranch (ce que les services du serveur montreraient)
+				local S = {}
+				local function fresh(slot, userId)
+					S[slot] = {
+						userId = userId,
+						bestR = rand:NextInteger(0, 3),
+						A = 0,
+						tier = 1,
+						decor = 4,
+						pens = 3,
+						snack = 5,
+						deco = "",
+						gold = 0,
+						gp = false,
+						halo = rand:NextNumber() < 0.5,
+						theme = "",
+						ready = false,
+						aready = false,
+						giant = 0,
+						cushions = "",
+						petit = 0,
+						present = true,
+						away = 0,
+						sent = {},
+						tiles = "",
+					}
+				end
+				for slot = 1, 16 do
+					fresh(slot, if slot == 3 then 1 else 100 + slot)
+				end
+				local stats = {
+					splorchs = 0,
+					leaves = 0,
+					arrivals = 0,
+					maxR = 0,
+					maxA = 0,
+					maxParts = 0,
+					maxQueue = 0,
+					frames = 0,
+					peaks = {},
+				}
+				local problems = {}
+				local function problem(msg)
+					if #problems < 12 then
+						table.insert(problems, msg)
+					end
+				end
+				-- coupures d'interrupteurs en direct (étapes) : RanchTiers, Monuments + DecoPerso, Ambience,
+				-- écran Améliorations (kiosque)
+				local function cut(i, name)
+					if name == "TapisTier" then
+						return i >= 200 and i < 215
+					elseif name == "Monuments" or name == "DecoPerso" then
+						return i >= 430 and i < 445
+					end
+					return false
+				end
+				local function attrsOf(s, i)
+					local out = {
+						TapisTier = s.tier,
+						BestR = s.bestR,
+						Monuments = math.min(10, s.bestR // 6),
+						DecoPerso = s.deco,
+						HaloOn = s.halo,
+						Ascend = s.A,
+						SplorchReady = s.ready,
+						AscendReady = s.aready,
+						GiantTier = s.giant,
+						DecorGold = s.gold,
+						GoldPennants = s.gp,
+						Cushions = s.cushions,
+						PetitSplorchAt = s.petit,
+					}
+					for _, name in V2_ATTRS do
+						if cut(i, name) then
+							out[name] = nil
+						end
+					end
+					return out
+				end
+				-- n'envoie que ce qui change (comme la réplication des attributs)
+				local function sync(slot, i)
+					local s = S[slot]
+					local want = attrsOf(s, i)
+					local set, unset = {}, {}
+					for _, name in V2_ATTRS do
+						if want[name] ~= s.sent[name] then
+							if want[name] == nil then
+								table.insert(unset, name)
+							else
+								set[name] = want[name]
+							end
+							s.sent[name] = want[name]
+						end
+					end
+					if next(set) then
+						c.attrs(slot, set)
+					end
+					if #unset > 0 then
+						c.unset(slot, unset)
+					end
+					local tiles =
+						{ snack = s.snack, decor = s.decor, pens = s.pens, cozyBed = true, seen = 15 }
+					local key = s.snack .. "," .. s.decor .. "," .. s.pens .. "," .. s.theme
+					if key ~= s.tiles then
+						s.tiles = key
+						c.patch(slot, { tiles = tiles, theme = s.theme })
+					end
+				end
+				local function leave(slot)
+					local s = S[slot]
+					s.present = false
+					s.away = rand:NextInteger(3, 12)
+					c.unset(slot, V2_ATTRS)
+					s.sent = {}
+					c.patch(slot, { userId = 0 })
+					c.h:removePlayer(players[slot])
+					players[slot] = nil
+					stats.leaves += 1
+				end
+				local function arrive(slot)
+					local userId = 1000 + slot * 100 + stats.arrivals
+					fresh(slot, userId)
+					arriveAs(slot, userId)
+					c.patch(slot, { userId = userId, name = "P" .. userId })
+					stats.arrivals += 1
+				end
+				local DECO_SIZES = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 20, 33, 40, 41 }
+				local function randomDeco()
+					local list = {}
+					for k = 1, 12 do
+						list[k] = if rand:NextNumber() < 0.3
+							then 0
+							else DECO_SIZES[rand:NextInteger(1, #DECO_SIZES)]
+					end
+					return table.concat(list, ",")
+				end
+				local CUSHIONS = { "", "pinkCushions", "nope" }
+
+				local function act(slot, i)
+					local s = S[slot]
+					if not s.present then
+						s.away -= 1
+						if s.away <= 0 then
+							arrive(slot)
+						end
+						return
+					end
+					local targetR = math.floor(60 * math.min(1, i / 600))
+					local targetA = math.floor(8 * math.min(1, i / 640))
+					-- décorations 0 → 18, prêt, puis Grand Splorch (décorations à 0, Record R vers la cible)
+					if s.ready then
+						s.ready = false
+						s.decor = 0
+						s.bestR = math.min(60, math.max(s.bestR + 1, targetR))
+						stats.splorchs += 1
+					elseif s.decor >= 18 then
+						s.ready = true
+					else
+						s.decor = math.min(18, s.decor + rand:NextInteger(1, 4))
+					end
+					s.tier = math.min(6, 1 + s.bestR // 9)
+					s.snack = math.min(12, 4 + s.tier)
+					-- Jelly Ascend : prêt, puis fait (A vers la cible)
+					if s.bestR >= 20 and s.A < targetA and rand:NextNumber() < 0.3 then
+						if s.aready then
+							s.A += 1
+							s.aready = false
+						else
+							s.aready = true
+						end
+					end
+					stats.maxR = math.max(stats.maxR, s.bestR)
+					stats.maxA = math.max(stats.maxA, s.A)
+					if rand:NextNumber() < 0.3 then
+						local roll = rand:NextInteger(1, 9)
+						if roll == 1 then
+							s.deco = randomDeco()
+						elseif roll == 2 then
+							s.gold = rand:NextInteger(0, 2 ^ 18 - 1)
+							s.gp = rand:NextNumber() < 0.5
+						elseif roll == 3 then
+							s.halo = not s.halo
+						elseif roll == 4 then
+							s.theme = c.Look.SKINS[rand:NextInteger(1, #c.Look.SKINS)]
+						elseif roll == 5 then
+							s.petit = c.Clock.unix()
+						elseif roll == 6 then
+							s.giant = rand:NextInteger(0, 4)
+						elseif roll == 7 then
+							s.cushions = CUSHIONS[rand:NextInteger(1, #CUSHIONS)]
+						elseif roll == 8 then
+							s.pens = math.min(14, s.pens + 1)
+						elseif slot ~= 3 then
+							leave(slot)
+							return
+						end
+					end
+					sync(slot, i)
+				end
+
+				-- EventState du moment : Jelly Moon, BOOP RUSH, MEGA, fête, météo, Jelly Ascend en cours ;
+				-- Ambience ouvert sauf de 600 à 629 ; costume d'hiver (13 décembre)
+				local function eventAt(i)
+					local p = eventState()
+					p.features.costume = "winter2026"
+					if not (i >= 600 and i < 630) then
+						p.features.ambience = true
+					end
+					local now, unix = c.Clock.now(), c.Clock.unix()
+					if i % 120 >= 40 and i % 120 < 46 then
+						p.moon = { active = true, session = 1, endsAt = now + 60, nextAt = 0 }
+					end
+					if i % 90 >= 20 and i % 90 < 23 then
+						p.rush =
+							{ active = true, index = i, endsAt = now + 60, nextAt = 0, moonBoopable = false }
+					end
+					local m = i % 150
+					if m >= 70 and m <= 73 then
+						p.mega = {
+							phase = if m == 70 then "warn" elseif m == 73 then "burst" else "press",
+							points = 0,
+							target = 100,
+							endsAt = now + 20,
+						}
+					end
+					if i % 100 >= 55 and i % 100 < 60 then
+						p.gauge.partyUntil = now + 60
+					end
+					if i % 80 >= 10 and i % 80 < 20 then
+						p.weather = { kind = 1 + (i // 80) % 4, endsAt = unix + 300 }
+					end
+					if i % 170 == 120 or i % 170 == 121 then
+						local hero = S[1 + i % 16]
+						p.spectacle = {
+							queue = {},
+							current = {
+								kind = "ascend",
+								userId = hero.userId,
+								startedAt = now - 1,
+								burstAt = now + 3,
+								endsAt = now + 20,
+								level = 3,
+							},
+						}
+					end
+					return p
+				end
+
+				local function check(i)
+					for name, s in c.VB.stats() do
+						if
+							s.used > s.parts
+							or s.usedParticles > s.particles
+							or s.usedLights > 0
+							or s.refused > 0
+						then
+							problem(`étape {i} : budget {name} {s.used}/{s.parts}, refus {s.refused}`)
+						end
+						stats.peaks[name] = math.max(stats.peaks[name] or 0, s.peak)
+					end
+					local total, v2, w = v2Count(c, Halo, WV)
+					for _, sys in V2_SYSTEMS do
+						if v2[sys] > L[sys].parts then
+							problem(`étape {i} : {sys} {v2[sys]} > {L[sys].parts}`)
+						end
+					end
+					if Halo.stats().total > L.halo.parts then
+						problem(`étape {i} : halo {Halo.stats().total}`)
+					end
+					if w.observatory + w.kiosk > L.world.parts or w.meadow > L.meadow.parts then
+						problem(`étape {i} : monde {w.observatory} + {w.kiosk}, Prairie {w.meadow}`)
+					end
+					if total > TOTAL then
+						problem(`étape {i} : {total} pièces v2.0 > {TOTAL}`)
+					end
+					stats.maxParts = math.max(stats.maxParts, total)
+					if c.LC.stats().winterParts + w.icicles > 300 then
+						problem(`étape {i} : costume d'hiver {c.LC.stats().winterParts} + {w.icicles}`)
+					end
+					local q = c.BC.stats()
+					if q.queued > 10 or q.maxQueue > 10 then
+						problem(`étape {i} : file de la cascade {q.queued} (au plus {q.maxQueue})`)
+					end
+					stats.maxQueue = math.max(stats.maxQueue, q.maxQueue)
+					if c.VB.exceeded() > 0 or #metrics(c.h) > 0 then
+						problem(`étape {i} : budget visuel dépassé ({c.VB.exceeded()})`)
+					end
+					if #c.h.errors > 0 or #c.h:warnings() > 0 then
+						problem(`étape {i} : trace {c.h.errors[1] or c.h:warnings()[1]}`)
+					end
+					if i % 12 == 0 then
+						local n = census(c.h)
+						if n.v2Lights > 0 or n.v2Emitters > L.tapis.particles + L.record.particles then
+							problem(`étape {i} : {n.v2Lights} lumières, {n.v2Emitters} émetteurs v2.0`)
+						end
+						if n.lights > 24 or n.highlights > 12 or n.instances > 15000 then
+							problem(
+								`étape {i} : {n.lights} lumières, {n.highlights} Highlight, {n.instances} instances`
+							)
+						end
+					end
+				end
+
+				-- 720 étapes de 30 s = 6 h ; à chaque étape : l'horloge avance, les robots jouent, l'écran
+				-- Améliorations s'ouvre parfois, mon personnage va d'un ranch à la place, au kiosque, à la
+				-- Prairie ; puis des images (15 Hz du détail, 0,5 s du rafraîchissement lent, cascades)
+				c.profile({ coins = 0, upgradeSnapshot = upgradeSnap(c.h) })
+				local kiosk = true
+				for i = 0, 719 do
+					local frames = if i % 12 == 0 then 2 else 0.5
+					c.Clock.advance(30 - frames)
+					for slot = 1, 16 do
+						act(slot, i)
+					end
+					c.setEvent(eventAt(i))
+					local wantKiosk = not (i >= 660 and i < 675)
+					if wantKiosk ~= kiosk then
+						kiosk = wantKiosk
+						if kiosk then
+							c.h:fireClient(
+								"ReplicatedStorage.Remotes.DataPatch",
+								{ upgradeSnapshot = upgradeSnap(c.h) }
+							)
+						else
+							c.h:fireClient("ReplicatedStorage.Remotes.DataPatch", {}, { "upgradeSnapshot" })
+						end
+						c.h:settle(1)
+					end
+					c.open = i % 23 < 2
+					local low = i >= 330 and i < 360
+					local reduced = i >= 480 and i < 510
+					if low ~= c.flags.low or reduced ~= c.flags.reduced then
+						c.flags.low, c.flags.reduced = low, reduced
+						c.V2.onQualityChanged()
+					end
+					local where = i % 6
+					if where == 0 then
+						local slot = rand:NextInteger(1, 16)
+						walk(
+							c.WL.toWorld(
+								slot,
+								Vector3.new(rand:NextInteger(-30, 30), 0, rand:NextInteger(2, 70))
+							)
+						)
+					elseif where == 1 then
+						walk(c.WL.plaza("center") + Vector3.new(0, 0, 8))
+					elseif where == 2 then
+						walk(c.WL.plaza("kiosk") + Vector3.new(0, 0, 6))
+					elseif where == 3 then
+						walk(c.WL.toWorld(3, Vector3.new(0, 0, 30)))
+					elseif where == 4 then
+						walk(c.WL.meadowCenter(true))
+					end
+					c.LC.refresh()
+					c.run(frames)
+					stats.frames += math.floor(frames * 30 + 0.5)
+					check(i)
+				end
+				expect(table.concat(problems, "\n")).toBe("")
+				-- la partie a bien tout joué
+				expect(stats.maxR).toBe(60)
+				expect(stats.maxA).toBe(8)
+				expect(stats.splorchs > 300).toBe(true)
+				expect(stats.leaves > 20 and stats.arrivals > 20).toBe(true)
+				expect(c.BC.stats().played > 0).toBe(true)
+				for _, sys in V2_SYSTEMS do
+					expect({ sys = sys, seen = (stats.peaks[sys] or 0) > 0 }).toEqual({
+						sys = sys,
+						seen = true,
+					})
+				end
+
+				-- retour à l'état de départ (v1.3) : plus aucun attribut, propriétaires d'origine, écran
+				-- Améliorations fermé, EventState de base, qualité normale, mon personnage chez moi
+				c.open = false
+				c.flags.low, c.flags.reduced = false, false
+				c.V2.onQualityChanged()
+				c.h:fireClient("ReplicatedStorage.Remotes.DataPatch", {}, { "upgradeSnapshot" })
+				c.h:settle(1)
+				c.setEvent(eventState())
+				for slot = 1, 16 do
+					c.unset(slot, V2_ATTRS)
+					if slot ~= 3 and S[slot].userId ~= 100 + slot then
+						if players[slot] then
+							c.h:removePlayer(players[slot])
+						end
+						arriveAs(slot, 100 + slot)
+					end
+					c.patch(slot, {
+						userId = if slot == 3 then 1 else 100 + slot,
+						name = "P" .. slot,
+						tiles = START,
+						theme = "",
+					})
+				end
+				walk(c.WL.toWorld(3, Vector3.new(0, 0, 30)))
+				c.LC.refresh()
+				c.run(3)
+				local n1 = census(c.h)
+				-- même monde vivant qu'au départ (mêmes étiquettes vivantes) ; la réserve de WorldText
+				-- garde au plus 64 étiquettes par sorte (bornée : pas une fuite)
+				local pooled0, pooled1 = n0.pooled, n1.pooled
+				n0.pooled, n1.pooled = 0, 0
+				expect(n1).toEqual(n0)
+				local WorldText = c.h:require(CLIENT .. "UI.WorldText")
+				expect(WorldText.stats().pooled <= 3 * 64).toBe(true)
+				expect(#c.h.game:GetDescendants() - pooled1).toBe(game0 - pooled0)
+				for _, sys in V2_SYSTEMS do
+					expect({ sys = sys, used = c.VB.used(sys) }).toEqual({ sys = sys, used = 0 })
+				end
+				expect(c.VB.used("halo") + c.VB.used("world") + c.VB.used("meadow")).toBe(0)
+				expect(c.V2.stats().parts).toBe(0)
+				expect(c.BC.stats().queued).toBe(0)
+				c.clean()
+				print(
+					string.format(
+						"  6 h de robots : 720 étapes, %d images, %d Grands Splorchs, %d départs, %d arrivées, pièces v2.0 au plus %d / %d, file de la cascade au plus %d, %d cascades jouées, %d instances vivantes avant et après (réserve de WorldText %d → %d), %.1f s",
+						stats.frames,
+						stats.splorchs,
+						stats.leaves,
+						stats.arrivals,
+						stats.maxParts,
+						TOTAL,
+						stats.maxQueue,
+						c.BC.stats().played,
+						n0.instances,
+						pooled0,
+						pooled1,
+						os.clock() - started
+					)
+				)
 			end
 		)
 	end)
