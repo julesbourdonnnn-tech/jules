@@ -2109,7 +2109,7 @@ Comet Conga est sorti avec des bugs d'affichage dans ses écrans d'amélioration
 - **Kiosque de Big Plop** sur la place (invite □ « Atelier ») : ouvre le même écran sur l'onglet Atelier (*lot B4 : `PanelController.open("Upgrades", "workshop")`, prêt depuis le lot B2*).
 - **« Dépenser d'abord »** (aperçu du Grand Splorch, §4.15) : ouvre l'écran sur l'onglet Ranch, **sans changer l'ordre des lignes** ; la sélection se pose sur la première ligne **gardée au Grand Splorch** et payable (Enclos, Lit douillet, Monuments), sinon sur la première ligne gardée. ○ ramène à l'aperçu : ○ revient toujours à ce qui a ouvert l'écran (*lot B3 : `PanelController.open("Upgrades", "spendFirst")`, prêt et testé depuis le lot B2*).
 - **Les dalles au sol restent** (Tapis, décoration suivante, Enclos, Lit douillet) pour le geste du début (§4.6) ; les familles nouvelles (Tapis Étoilé, Gants, École, Monuments, Atelier) s'achètent seulement depuis l'écran. L'onglet *Dalles* du panneau Ranch est **retiré** : l'écran Améliorations le remplace (le panneau Ranch prend l'onglet *Mon style*, §10.3).
-- **Pendant son propre Grand Splorch ou sa Jelly Ascend**, l'écran se ferme tout seul au début du spectacle (la caméra suit le squishy, §9.4) ; il se rouvre à l'état neuf de la boucle.
+- **Pendant son propre Grand Splorch ou sa Jelly Ascend**, l'écran se ferme tout seul au début du spectacle (la caméra suit le squishy, §9.4) ; il se rouvre à l'état neuf de la boucle. *(Relecture du lot B2)* Rouvert pendant le spectacle, il se ferme encore à l'éclatement, quand la boucle change (r, Record R ou A) : jamais les prix ni les plafonds de l'ancienne boucle avec les niveaux de la nouvelle.
 
 #### 10.7.2 Le rail du menu avec 8 boutons
 
