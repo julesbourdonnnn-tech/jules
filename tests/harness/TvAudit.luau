@@ -307,7 +307,18 @@ function TvAudit.overlaps(h, root)
 		if isContent(obj) and Layout.visible(obj) and not decorative(obj) then
 			local r = Layout.rect(obj)
 			if r and r.w > 1 and r.h > 1 and onScreen(h, r) then
-				table.insert(items, { obj = obj, r = r })
+				-- partie DESSINÉE seulement : un objet coupé par un parent qui découpe (rangée entrouverte
+				-- d'une liste qui défile, lot B2 étape 5) ne recouvre rien hors de sa découpe
+				local shown = r
+				if r.clip ~= nil then
+					local cl = r.clip
+					local x0, y0 = math.max(r.x, cl.x), math.max(r.y, cl.y)
+					local x1, y1 = math.min(r.x + r.w, cl.x + cl.w), math.min(r.y + r.h, cl.y + cl.h)
+					shown = { x = x0, y = y0, w = x1 - x0, h = y1 - y0 }
+				end
+				if shown.w > 1 and shown.h > 1 then
+					table.insert(items, { obj = obj, r = shown })
+				end
 			end
 		end
 	end

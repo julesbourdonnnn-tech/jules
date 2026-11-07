@@ -152,6 +152,95 @@ return function(T)
 		)
 	end)
 
+	-- v2.0 (lot B2, étape 5 ; GDD §10.7.1, §10.7.2, N9) : l'écran Améliorations atteint à la manette en 3
+	-- appuis depuis le jeu (△ ouvre le rail sur Ranch, ↓ descend sur Améliorations, juste dessous, ✕
+	-- l'ouvre) ; interrupteur UpgradesScreen coupé (aucun instantané du serveur) : aucune entrée, les
+	-- mêmes appuis ouvrent le Squishydex comme dans la v1.3, aucune intention v2.0
+	describe("Console_panels › v2.0 : Améliorations (lot B2)", function()
+		local UpgradeScreen = require("../harness/UpgradeScreen")
+		local S = UpgradeScreen.new(T.Harness)
+		local DONE = { step = 11, done = true, demoDone = true }
+
+		local function threePresses(c)
+			local h = c.h
+			TvAudit.tick(h, 0.5)
+			Gamepad.tap(h, Enum.KeyCode.ButtonY)
+			TvAudit.tick(h, 0.5)
+			local afterMenu = h.game.GuiService.SelectedObject
+			Gamepad.tap(h, Enum.KeyCode.DPadDown)
+			TvAudit.tick(h, 0.5)
+			Gamepad.tap(h, Enum.KeyCode.ButtonA)
+			TvAudit.tick(h, 0.5)
+			return afterMenu
+		end
+
+		it(
+			"△, ↓, ✕ : l'écran Améliorations s'ouvre sur Conseillé ; ○ revient au rail puis au jeu",
+			function()
+				local c = S.client({ snap = S.snap(1), profile = { onboarding = DONE } })
+				local h, PC = c.h, c.PC
+				local first = threePresses(c)
+				expect(first).toBe(PC.entryButton("Ranch"))
+				expect(PC.current()).toBe("Upgrades")
+				expect(c.Up.isOpen()).toBe(true)
+				expect(c.Up.currentTab()).toBe("suggested")
+				-- sélection sur la première carte du Conseillé, dans la fenêtre de l'écran
+				local sel = h.game.GuiService.SelectedObject
+				expect(sel ~= nil and sel:IsDescendantOf(PC.window("Upgrades"))).toBe(true)
+				expect(sel).toBe(c.Up._card(1))
+				-- ✕ de l'ouverture : rien acheté (garde d'entrée, maintien de 0,6 s)
+				expect(#TvAudit.sent(h, "BuyUpgrade")).toBe(0)
+				TvAudit.tick(h, 0.5)
+				Gamepad.tap(h, Enum.KeyCode.ButtonB)
+				TvAudit.tick(h, 0.5)
+				expect(PC.current()).toBeNil()
+				expect(PC.menuOpen()).toBe(true)
+				expect(h.game.GuiService.SelectedObject).toBe(PC.entryButton("Upgrades"))
+				expect(TvAudit.toGame(h)).toBe(true)
+				S.clean(c, expect)
+			end
+		)
+
+		it(
+			"interrupteur coupé : aucune entrée Améliorations ; △, ↓, ✕ ouvrent le Squishydex (v1.3)",
+			function()
+				local c = S.client({ profile = { onboarding = DONE } })
+				local h, PC = c.h, c.PC
+				expect(PC.entryButton("Upgrades")).toBeNil()
+				expect(PC.window("Upgrades")).toBeNil()
+				local first = threePresses(c)
+				expect(first).toBe(PC.entryButton("Ranch"))
+				expect(PC.current()).toBe("Squishydex")
+				S.noV2Intent(c, expect)
+				expect(TvAudit.toGame(h)).toBe(true)
+				S.clean(c, expect)
+			end
+		)
+
+		it(
+			"parcours à 3 touches avec l'écran Améliorations : chaque onglet atteint, sans faute ; ○ rend toujours la main",
+			function()
+				local profile = TvAudit.richProfile()
+				profile.upgradeSnapshot = S.snap(1)
+				local h = TvAudit.client({ before = TvAudit.enableShop, profile = profile })
+				local report = TvAudit.walk(h, { maxScreens = 120 })
+				expect(table.concat(report.issues, "\n")).toBe("")
+				local tabs = {}
+				for id in report.screens do
+					local tab = string.match(id, "^panel:Upgrades/(%w+)")
+					if tab then
+						tabs[tab] = true
+					end
+				end
+				for _, tab in { "suggested", "ranch", "helpers", "workshop" } do
+					expect({ tab = tab, reached = tabs[tab] == true }).toEqual({ tab = tab, reached = true })
+				end
+				expect(#TvAudit.sent(h, "BuyUpgrade")).toBe(0)
+				clean(h)
+			end
+		)
+	end)
+
 	describe("Console_panels › clavier et souris (second)", function()
 		it(
 			"clic = ✕, Retour arrière = ○, libellés des touches du clavier ; aucune touche manette affichée",

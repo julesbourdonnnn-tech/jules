@@ -52,6 +52,8 @@ Langues : `fr`, `en`. Groupes (`--groups`) :
 | `late` | fin de partie (Grand Splorch XII, tout possédé) : HUD et tous les panneaux |
 | `huge` | très grands nombres : 1,2 M, 1,2 T, 987 Qa, 4,56 Dc, 999 Dc (dernier suffixe), 1,23e36 |
 | `fx` | toutes les bannières, les messages les plus longs, les messages de célébration, les grands tampons et les textes flottants des effets, l'aperçu du Grand Splorch hors du ranch |
+| `upgrades` | v2.0 (lot B2) : l'écran Améliorations, instantané du serveur fabriqué (interrupteurs ouverts dans le scénario seulement) : chaque onglet, chaque état d'une ligne et d'une carte (Prêt, Il manque, MAX, cadenas « Record n » / « Ascension n », « Boucle n », En cours, Réessaie), modes ×1 / ×10 / Max, retours et refus du serveur, Atelier vide / à moitié / complet et « Pour le plaisir », Souvenir, pires nombres (1,00e300, 99 999 et 100 000 Confettis, Record 400, 40/40) et libellés les plus longs |
+| `hudv2` | v2.0 (lot B2) : HUD v2.0 calme et « Prochain achat — Prêt ! », Fame 3 s, rail de 8 et 9 entrées (Grand Splorch, Jelly Ascend, Petit Splorch), puces spéciales, Souvenir, suivi « Retour au record », file des grands spectacles au pire cas |
 
 Les noms sont les plus longs possibles : joueurs de 20 caractères, nom d'espèce et de mutation les
 plus longs de la langue, titre le plus long, nombres de 1e18 à 999 Dc.
@@ -141,7 +143,15 @@ L'outil dessine donc une police CSS de `TextSize ÷ (hauteur de ligne de la poli
   l'emplacement de message, etc.).
 - `tests/specs/Screens_display.spec.luau` vérifie sur les vrais écrans (TV 1080p et 720p, deux
   langues) : contraste ≥ 3, rien ne dépasse de sa fenêtre, curseur visible, aucune ligne coupée en
-  deux par un parent, aucun texte teinté par un dégradé.
+  deux par un parent, aucun texte teinté par un dégradé (v2.0 : tous les écrans des groupes
+  `upgrades` et `hudv2`).
+- `tests/specs/Upgrades_Reference.spec.luau` (lot B2, captures de référence du GDD §10.8) : les 24
+  états clés (`Screens.REFERENCE`) à 1920 × 1080, en anglais et en français ; un relevé normalisé
+  (une ligne par objet visible : chemin, rectangle en px TV, texte, sélection) comparé à
+  `tests/fixtures/upgrades-reference/<état>.<langue>.txt`. `RS_UPDATE_REFERENCE=1 lune run tests/run
+  -- Upgrades_Reference` réécrit les références après un changement voulu (relire le diff, une ligne
+  de journal). Images des mêmes écrans : `./tools/screens/run.sh --groups upgrades,hudv2` (l'outil
+  joue le groupe entier, la spec seulement les 24 états : un compteur qui défile encore peut différer).
 
 Les problèmes **déjà connus** sont listés : `tests/fixtures/TextFitPending.luau` (écrans, vide
 aujourd'hui) et `tests/fixtures/TextFitKeysPending.luau` (clés utilisées par l'interface mais

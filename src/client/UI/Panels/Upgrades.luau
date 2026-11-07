@@ -698,6 +698,10 @@ local function buildList(body: Frame, tab: string, snap: Snapshot)
 	sf.ElasticBehavior = Enum.ElasticBehavior.Never
 	sf.Selectable = false
 	sf.ZIndex = 2
+	-- rangée entrouverte voulue (48 px de la 5e en bas, ou de la ligne d'au-dessus une fois la liste
+	-- défilée : elle annonce la suite, GDD §10.6 règle 7, §10.7.5) : même marque que les listes de
+	-- Widgets, l'outil d'écrans la classe « peek » au lieu d'un texte coupé (lot B2, étape 5)
+	sf:SetAttribute("PeekRows", true)
 	sf.Visible = false
 	sf.Parent = body
 	scrolls[tab] = sf

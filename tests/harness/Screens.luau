@@ -2338,11 +2338,10 @@ local function upgradeScreens()
 		end,
 	})
 	-- r = 5 (aucune Ascension) : Conseillé, puis l'onglet Ranch
+	local R5_TILES = { snack = 6, star = 0, decor = 5, pens = 7, cozyBed = true, gloves = 4, school = 0 }
 	local function r5(p)
-		tiles(
-			p,
-			{ snack = 6, star = 0, decor = 5, pens = 7, cozyBed = true, gloves = 4, school = 0, monuments = 0 }
-		)
+		tiles(p, R5_TILES)
+		p.tiles.monuments = 0
 		p.R = 5
 		p.bestR = 5
 		p.coins = 1500000
@@ -2367,19 +2366,16 @@ local function upgradeScreens()
 		tab = "ranch",
 		select = "snack",
 		edit = function(p)
-			tiles(
-				p,
-				{
-					snack = 12,
-					star = 8,
-					decor = 14,
-					pens = 14,
-					cozyBed = true,
-					gloves = 22,
-					school = 9,
-					monuments = 2,
-				}
-			)
+			tiles(p, {
+				snack = 12,
+				star = 8,
+				decor = 14,
+				pens = 14,
+				cozyBed = true,
+				gloves = 22,
+				school = 9,
+				monuments = 2,
+			})
 			p.R = 10
 			p.bestR = 10
 			p.coins = 8.5e12
@@ -2439,19 +2435,16 @@ local function upgradeScreens()
 		tab = "ranch",
 		select = "snack",
 		edit = function(p)
-			tiles(
-				p,
-				{
-					snack = 4,
-					star = 0,
-					decor = 6,
-					pens = 14,
-					cozyBed = true,
-					gloves = 12,
-					school = 6,
-					monuments = 2,
-				}
-			)
+			tiles(p, {
+				snack = 4,
+				star = 0,
+				decor = 6,
+				pens = 14,
+				cozyBed = true,
+				gloves = 12,
+				school = 6,
+				monuments = 2,
+			})
 			p.ascend = 1
 			p.R = 4
 			p.bestR = 15

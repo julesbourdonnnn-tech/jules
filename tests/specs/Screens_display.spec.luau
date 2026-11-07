@@ -15,7 +15,9 @@
 --   * grand tampon des effets (« FLOP ! LE PLUS RARE · 1 sur 2,00B », cote la plus rare du jeu) :
 --     jamais sur un élément du HUD ;
 --   * écran de chargement : aucun texte ni bouton teinté par le dégradé d'un CanvasGroup (Roblox
---     applique l'UIGradient d'un CanvasGroup à TOUT son contenu).
+--     applique l'UIGradient d'un CanvasGroup à TOUT son contenu) ;
+--   * v2.0 (lot B2) : chaque écran des groupes « upgrades » (écran Améliorations) et « hudv2 » (HUD
+--     v2.0 et rail), interrupteurs v2.0 ouverts dans le scénario seulement.
 
 local Screens = require("../harness/Screens")
 
@@ -23,6 +25,12 @@ return function(T)
 	local describe, it, expect, Harness = T.describe, T.it, T.expect, T.Harness
 
 	local PROFILES = { Screens.profileById("tv1080"), Screens.profileById("tv720") }
+	-- groupe dont chaque écran est vérifié
+	local ALL = setmetatable({}, {
+		__index = function()
+			return true
+		end,
+	})
 	-- écrans vérifiés (identifiants de tests/harness/Screens), par groupe
 	local WANTED = {
 		new = {
@@ -67,6 +75,11 @@ return function(T)
 			["stamp.flop"] = true,
 			["stamp.combo"] = true,
 		},
+		-- v2.0 (lot B2, étape 5) : TOUS les écrans de l'écran Améliorations (24 états clés du GDD §10.8,
+		-- chaque état d'une ligne et d'une carte, achats, pires nombres et libellés) et du HUD v2.0 (rail
+		-- de 8 et 9 entrées, puces spéciales, Souvenir, remontée, file)
+		upgrades = ALL,
+		hudv2 = ALL,
 	}
 
 	for _, profile in PROFILES do
