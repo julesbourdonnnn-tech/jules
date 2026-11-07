@@ -58,6 +58,7 @@ local WorldStateController = require(Client.Controllers.WorldStateController)
 local QualityController = require(Client.Controllers.QualityController)
 local Widgets = require(Client.UI.Panels.Widgets)
 local UpgradeSnapshot = require(Client.UI.UpgradeSnapshot)
+local MetaFlags = require(Client.UI.MetaFlags)
 local Icons = require(Client.UI.Hud.Icons)
 
 local Panels = {
@@ -259,6 +260,17 @@ end
 local function rebirth(): (string?, boolean)
 	local ok, kind, first = pcall(UpgradeSnapshot.rebirth, loopReady())
 	if not ok then
+		return nil, false
+	end
+	-- v2.0 (lot B3, D4 ; relecture du lot B2) : aucune renaissance tant que MON prestige est dans la file
+	-- ou en cours (MetaFlags.myPrestige). Le serveur garde AscendReady vrai jusqu'à l'éclatement (4,0 s) :
+	-- sans ce test, l'entrée redevenait « Jelly Ascend » pendant MA propre Ascension ; un Grand Splorch
+	-- déjà dans la file ne se renvoie pas. Chemin de la v1.3 (sans instantané) inchangé : aucune lecture
+	if
+		kind ~= nil
+		and (kind == "ascend" or UpgradeSnapshot.available())
+		and MetaFlags.myPrestige() ~= nil
+	then
 		return nil, false
 	end
 	return kind, first == true
@@ -1306,6 +1318,8 @@ function PanelController.Start()
 		end
 	end)
 	UpgradeSnapshot.start()
+	-- v2.0 (lot B3, D2) : interrupteurs v2.0 vus par le client (EventState.features.v2, version du profil)
+	MetaFlags.start()
 	if UpgradeSnapshot.available() and not built[UPGRADES] then
 		ensureBuilt(UPGRADES)
 	end
@@ -1316,6 +1330,21 @@ function PanelController.Start()
 	UpgradeSnapshot.Changed:Connect(function()
 		if FocusGuard.isOpen(MENU) then
 			refreshRail()
+		end
+	end)
+	-- v2.0 (lot B3, D4) : MON prestige qui entre dans la file, commence ou finit, rail ouvert : l'entrée de
+	-- renaissance suit. Chemin de la v1.3 (sans instantané) : un seul test par EventState, rien d'autre
+	local lastPrestige: string? = nil
+	WorldStateController.EventChanged:Connect(function()
+		if not UpgradeSnapshot.available() then
+			return
+		end
+		local now = MetaFlags.myPrestige()
+		if now ~= lastPrestige then
+			lastPrestige = now
+			if FocusGuard.isOpen(MENU) then
+				refreshRail()
+			end
 		end
 	end)
 	FocusGuard.WindowClosed:Connect(onWindowClosed)

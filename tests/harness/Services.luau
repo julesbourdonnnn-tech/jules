@@ -430,7 +430,38 @@ function Services.install(h)
 		end,
 	}
 
-	-- TweenService : applique les valeurs finales immédiatement, Completed différé
+	-- TweenService : applique les valeurs finales immédiatement, Completed différé.
+	-- Les méthodes de la classe Tween sont posées dès l'installation du service (et plus au premier
+	-- Create) : tout contexte sauvé ensuite (Wire.saveContext) les contient, si bien qu'un Tween créé
+	-- dans un contexte puis joué après Wire.restoreContext d'un autre trouve toujours Play/Cancel/Pause
+	-- (D27 du lot B3 : ClientReplay intermittent sous forte charge, note de la porte B4).
+	local tweenMethods = {
+		Play = function(self)
+			local s = MockInstance.state(self)
+			if s.props.PlaybackState == Enum.PlaybackState.Cancelled then
+				return
+			end
+			for k, v in s.goals do
+				s.props.Instance[k] = v
+			end
+			s.props.PlaybackState = Enum.PlaybackState.Playing
+			task.defer(function()
+				if s.props.PlaybackState == Enum.PlaybackState.Playing then
+					s.props.PlaybackState = Enum.PlaybackState.Completed
+					self.Completed:Fire(Enum.PlaybackState.Completed)
+				end
+			end)
+		end,
+		Cancel = function(self)
+			local s = MockInstance.state(self)
+			s.props.PlaybackState = Enum.PlaybackState.Cancelled
+			self.Completed:Fire(Enum.PlaybackState.Cancelled)
+		end,
+		Pause = function(self)
+			MockInstance.state(self).props.PlaybackState = Enum.PlaybackState.Paused
+		end,
+	}
+	cm.Tween = tweenMethods
 	cm.TweenService = {
 		Create = function(_, inst, info, goals)
 			assert(MockInstance.is(inst), "TweenService:Create : instance attendue")
@@ -440,33 +471,8 @@ function Services.install(h)
 			local st = MockInstance.state(tween)
 			st.props.PlaybackState = Enum.PlaybackState.Begin
 			st.props.Instance = inst
-			MockInstance.classMethods.Tween = MockInstance.classMethods.Tween
-				or {
-					Play = function(self)
-						local s = MockInstance.state(self)
-						if s.props.PlaybackState == Enum.PlaybackState.Cancelled then
-							return
-						end
-						for k, v in s.goals do
-							s.props.Instance[k] = v
-						end
-						s.props.PlaybackState = Enum.PlaybackState.Playing
-						task.defer(function()
-							if s.props.PlaybackState == Enum.PlaybackState.Playing then
-								s.props.PlaybackState = Enum.PlaybackState.Completed
-								self.Completed:Fire(Enum.PlaybackState.Completed)
-							end
-						end)
-					end,
-					Cancel = function(self)
-						local s = MockInstance.state(self)
-						s.props.PlaybackState = Enum.PlaybackState.Cancelled
-						self.Completed:Fire(Enum.PlaybackState.Cancelled)
-					end,
-					Pause = function(self)
-						MockInstance.state(self).props.PlaybackState = Enum.PlaybackState.Paused
-					end,
-				}
+			-- filet : un contexte restauré qui aurait été sauvé avant toute installation
+			MockInstance.classMethods.Tween = MockInstance.classMethods.Tween or tweenMethods
 			st.goals = goals
 			h.stats.tweens += 1
 			return tween

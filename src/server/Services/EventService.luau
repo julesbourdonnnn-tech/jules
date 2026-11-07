@@ -22,7 +22,8 @@
 --   * Jelly Moon : Autel (5 min de présence) → Goutte de Lune, une par séance et par compte (moon.lastSession).
 --   * LiveOps (MessagingService, administrateurs) et AdminCommand ("clock" en Studio seulement).
 --   * EventState : à chaque changement (jauge : au plus toutes les GAUGE_SEND s), à PlayerReady, à
---     RequestWorld et après chaque Features.set appliqué.
+--     RequestWorld et après chaque Features.set appliqué. features.v2 (lot B3, INT-B3-FEATURES) : les
+--     interrupteurs v2 ouverts que le client doit connaître, clé absente quand aucun ne l'est.
 --   * v2.0 (lot A4, étape 3 ; GDD v2.0 §4.23, §5.6, §7.5 ; docs/04 §27.5) : jauge du Petit Splorch
 --     (PrestigeApplied « petit » : Events.Gauge.Points.petitSplorch ; Splorched = Grand Splorch seulement ;
 --     Jelly Ascend : 0) ; place en fête [Fete] (points en mémoire : Grand Splorch, Jelly Ascend, MEGA
@@ -895,6 +896,36 @@ end
 -- EventState
 -- =============================================================================================
 
+-- v2.0 (lot B3, INT-B3-FEATURES) : interrupteurs v2 que le client doit connaître (Logic/Owned.FLAGS, plus
+-- PetitSplorch, Confetti et Hearts) ; liste FIXE : un interrupteur hors liste n'apparaît jamais
+local V2_CLIENT_FLAGS = {
+	"RecordR",
+	"JellyAscend",
+	"PetitSplorch",
+	"Confetti",
+	"Workshop",
+	"Carnet",
+	"WeeklyTrack",
+	"Mastery",
+	"RanchSkins",
+	"DecoPerso",
+	"Hearts",
+}
+
+-- Ensemble des interrupteurs de la liste OUVERTS (chacun = true) ; nil quand aucun ne l'est : la clé v2
+-- est alors absente d'EventState (charge de la v1.3 inchangée, aucune table créée)
+local function openV2Flags(): { [string]: boolean }?
+	local open: { [string]: boolean }? = nil
+	for _, key in V2_CLIENT_FLAGS do
+		if Features.get(key) == true then
+			local set = open or {}
+			set[key] = true
+			open = set
+		end
+	end
+	return open
+end
+
 local function features(): Types.EventFeatures
 	return {
 		boopRush = tostring(Features.get("BoopRush")),
@@ -908,6 +939,9 @@ local function features(): Types.EventFeatures
 		-- v2.0 (lot B4, INT-B4-AMBIENCE) : clé présente seulement interrupteur Ambience ouvert (le client ne
 		-- lit jamais Config/Features) ; absente sinon : charge de la v1.3 inchangée
 		ambience = if Features.get("Ambience") == true then true else nil,
+		-- v2.0 (lot B3, INT-B3-FEATURES) : interrupteurs v2 ouverts vus par le client (UI/MetaFlags) ; absente
+		-- quand aucun n'est ouvert
+		v2 = openV2Flags(),
 	}
 end
 

@@ -812,4 +812,175 @@ return function(T)
 			end
 		)
 	end)
+
+	-- =========================================================================================
+	-- Lot B3, étape 1, D4 (relecture du lot B2) : le serveur garde AscendReady vrai jusqu'à l'éclatement
+	-- (4,0 s) : sans garde, l'entrée de renaissance redevenait « Jelly Ascend » pendant MA propre
+	-- Ascension (et ✕ pouvait renvoyer l'intention). Chemin v2.0 (instantané reçu) : aucune renaissance
+	-- tant que MON prestige est dans la file ou en cours (MetaFlags.myPrestige) ; v1.3 inchangée.
+	describe("PanelController › renaissance pendant MON prestige (lot B3, D4)", function()
+		local UpgradeScreen = require("../harness/UpgradeScreen")
+		local S = UpgradeScreen.new(T.Harness)
+		local NOW = 1800000000
+		local BIG = { a = TvAudit.squishy(1, { z = 1e15 }) }
+		local SMALL = { a = TvAudit.squishy(1, { z = 10 }) }
+		local FROZEN = { G = 0, g = 0, t = NOW }
+		local ME = 1 -- joueur local du harnais client
+
+		-- EventState complet ; `spectacle` : { current?, queue } ; `v2` : features.v2 (nil : absente)
+		local function eventState(spectacle, v2)
+			return {
+				rush = { active = false, index = 0, endsAt = 0, nextAt = 0, moonBoopable = false },
+				mega = {
+					phase = "idle",
+					index = 0,
+					landsAt = 0,
+					endsAt = 0,
+					target = 0,
+					points = 0,
+					species = 1,
+					moon = false,
+					result = "",
+				},
+				golden = { active = false, id = 0, endsAt = 0 },
+				moon = { active = false, session = 0, endsAt = 0, nextAt = 0 },
+				gauge = { points = 0, target = 1000, partyUntil = 0, restUntil = 0 },
+				boost = { kind = "", untilT = 0, byName = "" },
+				spectacle = spectacle or { queue = {} },
+				features = {
+					boopRush = "on",
+					megaSquish = true,
+					golden = true,
+					jellyMoon = true,
+					gauge = true,
+					clips = true,
+					costume = "",
+					diagnostics = true,
+					v2 = v2,
+				},
+				offset = 0,
+			}
+		end
+
+		local V2 = { JellyAscend = true, PetitSplorch = true, RecordR = true, Confetti = true }
+
+		local function show(kind, userId)
+			return {
+				current = {
+					kind = kind,
+					userId = userId,
+					startedAt = NOW,
+					burstAt = NOW + 4,
+					endsAt = NOW + 10,
+					level = 16,
+				},
+				queue = {},
+			}
+		end
+
+		local function queued(kind, userId)
+			return {
+				queue = {
+					{ kind = kind, userId = userId, startAt = NOW + 20, slot = 1, position = 1, eta = 20 },
+				},
+			}
+		end
+
+		local function send(c, spectacle, v2)
+			c.h:fireClient("ReplicatedStorage.Remotes.EventState", eventState(spectacle, v2))
+			S.run(c, 0.2)
+		end
+
+		local function railEntry(c)
+			c.PC.closeAll()
+			S.run(c, 0.5)
+			c.PC.toggleMenu()
+			S.run(c, 0.5)
+			local b = c.PC.entryButton("SplorchPreview")
+			local shown = b ~= nil and b.Visible and table.find(c.PC.entries(), "SplorchPreview") ~= nil
+			local label = if shown then b.Label.Text else nil
+			c.PC.closeAll()
+			S.run(c, 0.5)
+			return label
+		end
+
+		it(
+			"Jelly Ascend : MA Ascension dans la file puis en cours (AscendReady encore vrai) : aucune entrée « Jelly Ascend » ; celle d'un autre ou la danse : rien ne change ; après l'éclatement : normal",
+			function()
+				local c = S.client({
+					snap = S.snap(1),
+					profile = { squishies = SMALL, growth = FROZEN },
+					ranch = { AscendReady = true },
+				})
+				send(c, nil, V2)
+				expect(c.PC.rebirth()).toBe("ascend")
+				expect(railEntry(c)).toBe("Jelly Ascend")
+				-- MA Jelly Ascend dans la file
+				send(c, queued("ascend", ME), V2)
+				expect(c.PC.rebirth()).toBeNil()
+				expect(railEntry(c)).toBeNil()
+				-- MA Jelly Ascend en cours, AscendReady toujours vrai (jusqu'à l'éclatement)
+				send(c, show("ascend", ME), V2)
+				expect(c.model:GetAttribute("AscendReady")).toBe(true)
+				expect(c.PC.rebirth()).toBeNil()
+				expect(railEntry(c)).toBeNil()
+				-- celle d'un autre joueur, la danse de Big Plop : MON Ascension reste proposée
+				send(c, show("ascend", 77), V2)
+				expect(c.PC.rebirth()).toBe("ascend")
+				send(c, show("dance", 0), V2)
+				expect(c.PC.rebirth()).toBe("ascend")
+				send(c, queued("splorch", 77), V2)
+				expect(c.PC.rebirth()).toBe("ascend")
+				-- après l'éclatement : AscendReady faux, spectacle fini : rien ; puis boucle prête : normal
+				c.model:SetAttribute("AscendReady", false)
+				send(c, nil, V2)
+				expect(c.PC.rebirth()).toBeNil()
+				c.h:fireClient("ReplicatedStorage.Remotes.DataPatch", { squishies = BIG }, {})
+				S.run(c, 0.5)
+				expect(c.PC.rebirth()).toBe("splorch")
+				expect(railEntry(c)).toBe("Grand Splorch")
+				S.noV2Intent(c, expect)
+				S.clean(c, expect)
+			end
+		)
+
+		it(
+			"chemin v2.0 : MON Grand Splorch dans la file puis en cours : aucune entrée de renaissance (aucun second envoi possible)",
+			function()
+				local c = S.client({
+					snap = S.snap(1),
+					profile = { squishies = BIG, growth = FROZEN },
+				})
+				send(c, nil, V2)
+				expect(c.PC.rebirth()).toBe("splorch")
+				send(c, queued("splorch", ME), V2)
+				expect(c.PC.rebirth()).toBeNil()
+				expect(railEntry(c)).toBeNil()
+				send(c, show("splorch", ME), V2)
+				expect(c.PC.rebirth()).toBeNil()
+				expect(railEntry(c)).toBeNil()
+				-- fini (EventState sans spectacle) : le Grand Splorch revient s'il est encore prêt
+				send(c, nil, V2)
+				expect(c.PC.rebirth()).toBe("splorch")
+				S.noV2Intent(c, expect)
+				S.clean(c, expect)
+			end
+		)
+
+		it(
+			"client de la v1.3 (aucun instantané, aucune clé v2) : MON Grand Splorch dans la file ne change rien (comportement de la v1.3)",
+			function()
+				local c = S.client({ profile = { squishies = BIG, growth = FROZEN } })
+				send(c, nil, nil)
+				expect(c.PC.rebirth()).toBe("splorch")
+				send(c, queued("splorch", ME), nil)
+				expect(c.PC.rebirth()).toBe("splorch")
+				expect(railEntry(c)).toBe("Grand Splorch")
+				send(c, show("splorch", ME), nil)
+				expect(c.PC.rebirth()).toBe("splorch")
+				S.noV2Intent(c, expect)
+				S.clean(c, expect)
+			end
+		)
+	end)
 end

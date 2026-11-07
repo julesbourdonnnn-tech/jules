@@ -320,6 +320,12 @@ export type EventFeatures = {
 	-- v2.0 (lot B4, INT-B4-AMBIENCE) : présent (true) seulement quand l'interrupteur Ambience est ouvert
 	-- (directeur d'ambiance et éclairage unifié côté client) ; absent sinon : charge de la v1.3 inchangée
 	ambience: boolean?,
+	-- v2.0 (lot B3, INT-B3-FEATURES) : interrupteurs v2 OUVERTS que le client doit connaître pour ne rien
+	-- montrer ni envoyer d'un système coupé (règle (1) du §27.3), pris dans la liste fixe RecordR,
+	-- JellyAscend, PetitSplorch, Confetti, Workshop, Carnet, WeeklyTrack, Mastery, RanchSkins, DecoPerso,
+	-- Hearts ; présent seulement quand au moins un d'eux est ouvert et ne contient que les ouverts (= true) ;
+	-- absent sinon : charge de la v1.3 inchangée. Lu côté client par UI/MetaFlags seulement
+	v2: { [string]: boolean }?,
 }
 
 export type EventStatePayload = {
