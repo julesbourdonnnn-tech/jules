@@ -487,4 +487,92 @@ return function(T)
 			end
 		)
 	end)
+
+	-- v2.0 (lot B2, étape 3 ; D11, décision N23 du propriétaire) : MenuActivity — rail ou panneau
+	-- ouvert, navigation dedans ; une au plus toutes les 20 s ; seulement si MON ranch porte Helpers > 0
+	describe("PanelController › MenuActivity (lot B2, D11)", function()
+		local UpgradeScreen = require("../harness/UpgradeScreen")
+		local S = UpgradeScreen.new(T.Harness)
+
+		local function activity(c)
+			return #TvAudit.sent(c.h, "MenuActivity")
+		end
+
+		local function browse(c, seconds)
+			-- navigation à la croix dans le rail ou le panneau, toutes les 0,5 s
+			local t = 0
+			while t < seconds do
+				Gamepad.tap(c.h, Enum.KeyCode.DPadDown)
+				S.run(c, 0.5)
+				t += 0.5
+			end
+		end
+
+		it(
+			"interrupteur coupé (aucun attribut Helpers) : jamais envoyée, ni au rail, ni aux panneaux",
+			function()
+				local c = S.client({})
+				c.PC.toggleMenu()
+				S.run(c, 0.5)
+				browse(c, 3)
+				c.PC.open("Ranch")
+				S.run(c, 0.5)
+				browse(c, 25)
+				Gamepad.tap(c.h, Enum.KeyCode.ButtonR1)
+				S.run(c, 0.5)
+				expect(activity(c)).toBe(0)
+				S.noV2Intent(c, expect)
+				S.clean(c, expect)
+			end
+		)
+
+		it(
+			"Helpers = 0 ou attribut absent : rien ; Helpers > 0 : à l'ouverture, puis au plus une toutes les 20 s",
+			function()
+				local c = S.client({ snap = S.snap(1), ranch = { Helpers = 0 } })
+				c.PC.toggleMenu()
+				S.run(c, 0.5)
+				browse(c, 2)
+				expect(activity(c)).toBe(0)
+				c.PC.closeAll()
+				S.run(c, 0.5)
+				-- des Plopettes : l'ouverture du rail envoie
+				c.model:SetAttribute("Helpers", 2)
+				c.PC.toggleMenu()
+				S.run(c, 0.5)
+				expect(activity(c)).toBe(1)
+				-- navigation continue pendant 19 s : rien de plus ; à 20 s : une de plus
+				browse(c, 18.5)
+				expect(activity(c)).toBe(1)
+				browse(c, 2)
+				expect(activity(c)).toBe(2)
+				-- panneau ouvert, onglets (L1 / R1), défilement : jamais plus d'une toutes les 20 s
+				c.PC.open("Upgrades", "ranch")
+				S.run(c, 0.5)
+				for _ = 1, 10 do
+					Gamepad.tap(c.h, Enum.KeyCode.ButtonR1)
+					S.run(c, 0.5)
+					Gamepad.stick(c.h, Enum.KeyCode.Thumbstick2, roblox.Vector2.new(0, -1))
+					S.run(c, 0.5)
+				end
+				expect(activity(c)).toBe(2)
+				S.run(c, 10)
+				-- mode (□) et achat comptent comme navigation
+				Gamepad.tap(c.h, Enum.KeyCode.ButtonX)
+				S.run(c, 0.5)
+				expect(activity(c)).toBe(3)
+				-- jeu (rien d'ouvert) : rien, même avec des Plopettes
+				c.PC.closeAll()
+				S.run(c, 25)
+				expect(activity(c)).toBe(3)
+				-- l'attribut disparaît (interrupteur coupé en direct) : plus rien
+				c.model:SetAttribute("Helpers", nil)
+				c.PC.toggleMenu()
+				S.run(c, 0.5)
+				browse(c, 25)
+				expect(activity(c)).toBe(3)
+				S.clean(c, expect)
+			end
+		)
+	end)
 end

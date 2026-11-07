@@ -634,4 +634,76 @@ return function(T)
 			end
 		end
 	)
+
+	describe(
+		"Upgrades_Snapshot › écran (étape 3) : vrais maintiens, réponse et patch dans les deux ordres",
+		function()
+			local UpgradeScreen = require("../harness/UpgradeScreen")
+			local S = UpgradeScreen.new(Harness)
+
+			local function prof(level, coins)
+				return function(p)
+					p.tiles.decor = level
+					p.coins = coins
+				end
+			end
+
+			for _, order in { "réponse puis patch", "patch puis réponse" } do
+				it(
+					"maintien de 0,6 s, " .. order .. " : Prêt → En cours → Prêt, jamais Il manque",
+					function()
+						local c = S.client({ snap = S.snap(1, prof(5, 1e15)) })
+						S.open(c, "ranch")
+						local row = c.Up._row("decor")
+						local seen = {}
+						local function note()
+							local st = row:GetAttribute("State")
+							if seen[#seen] ~= st then
+								table.insert(seen, st)
+							end
+						end
+						note()
+						row:GetAttributeChangedSignal("State"):Connect(note)
+						S.hold(c, row, 0.7)
+						local sent = S.sent(c, "BuyUpgrade")
+						expect(#sent).toBe(1)
+						expect({ sent[1][1], sent[1][2], sent[1][3] }).toEqual({ "decor", 1, 5 })
+						local s2 = S.snap(2, prof(6, 1e15 - 1e6))
+						local function patch()
+							c.h:fireClient(
+								"ReplicatedStorage.Remotes.DataPatch",
+								{ upgradeSnapshot = s2, coins = 1e15 - 1e6 },
+								{}
+							)
+							c.h:settle(1)
+						end
+						local function respond()
+							S.answer(c, sent[1], { to = 6, spent = 1e6, snap = s2 })
+						end
+						if order == "réponse puis patch" then
+							respond()
+							note()
+							patch()
+						else
+							patch()
+							note()
+							-- le patch seul (même version que la réponse) : la ligne attend toujours sa réponse
+							expect(row:GetAttribute("State")).toBe("busy")
+							respond()
+						end
+						note()
+						for _ = 1, 20 do
+							TvAudit.tick(c.h, 0.1)
+							note()
+						end
+						expect(seen).toEqual({ "ready", "busy", "ready" })
+						expect(c.US.current().version).toBe(2)
+						expect(#c.Up._feedbacks()).toBe(1)
+						expect(c.Up._view(row).level).toBe(6)
+						S.clean(c, expect)
+					end
+				)
+			end
+		end
+	)
 end

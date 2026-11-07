@@ -971,6 +971,8 @@ local function onNavInput(input: InputObject)
 	if dir == nil or not ourWindowOnTop() then
 		return
 	end
+	-- la croix dans le rail ou un panneau, même au bout d'une liste : navigation (MenuActivity, D11)
+	noteMenuActivity()
 	local before = GuiService.SelectedObject
 	if before == nil then
 		return
