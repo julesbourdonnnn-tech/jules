@@ -222,4 +222,73 @@ return function(T)
 			clean(h)
 		end)
 	end)
+	-- =========================================================================================
+	-- v2.0 (lot B2, étape 4 ; N9, D14-D17) : manette seule sur le HUD et le rail v2.0
+	-- =========================================================================================
+	describe("Console_hud › HUD et rail v2.0 (lot B2)", function()
+		local UpgradeScreen = require("../harness/UpgradeScreen")
+		local S = UpgradeScreen.new(T.Harness)
+		local NOW = 1800000000
+
+		it(
+			"manette seule : △ ouvre le rail sur l'entrée de renaissance, croix jusqu'à Améliorations, ✕ l'ouvre, ○ revient puis rend la main ; glyphes PlayStation, aucune lettre Xbox",
+			function()
+				local c = S.client({
+					snap = S.snap(1, function(p)
+						p.ascend = 1
+						p.R = 3
+						p.bestR = 15
+					end),
+					profile = {
+						R = 3,
+						squishies = { a = TvAudit.squishy(1, { z = 1e15 }) },
+						growth = { G = 0, g = 0, t = NOW },
+						onboarding = DONE,
+					},
+				})
+				local h = c.h
+				h:moveTo(h.localPlayer, Vector3.new(0, 3, 0))
+				S.run(c, 0.5)
+				local HUD = TvAudit.mod(h, "UI.HUD")
+				HUD._refresh()
+				-- puce PETIT SPLORCH ! avec △ (glyphe PlayStation)
+				local chip = HUD.element("specialChip")
+				expect(chip:GetAttribute("Mode")).toBe("petit")
+				expect(chip.Glyph:GetAttribute("GlyphKey")).toBe("ButtonY")
+				expect(chip.Glyph:GetAttribute("GlyphMode")).toBe("image")
+				Gamepad.tap(h, Enum.KeyCode.ButtonY)
+				S.run(c, 0.5)
+				local PC = c.PC
+				local entry = PC.entryButton("SplorchPreview")
+				expect(PC.menuOpen()).toBe(true)
+				expect(h.game.GuiService.SelectedObject).toBe(entry)
+				-- maintien du Petit Splorch : glyphe ✕ de la manette sur l'entrée
+				expect(entry.Glyph:GetAttribute("GlyphKey")).toBe("ButtonA")
+				expect(entry.Glyph:GetAttribute("GlyphMode")).toBe("image")
+				local gui = h.localPlayer.PlayerGui
+				expect(table.concat(TvAudit.glyphs(h, gui.HUD), "\n")).toBe("")
+				expect(table.concat(TvAudit.glyphs(h, gui.Menu), "\n")).toBe("")
+				expect(table.concat(TvAudit.check(h, "rail v2 : "), "\n")).toBe("")
+				-- croix ↓ : Ranch, puis Améliorations ; ✕ l'ouvre
+				Gamepad.tap(h, Enum.KeyCode.DPadDown)
+				Gamepad.tap(h, Enum.KeyCode.DPadDown)
+				expect(h.game.GuiService.SelectedObject).toBe(PC.entryButton("Upgrades"))
+				S.run(c, 0.5)
+				Gamepad.tap(h, Enum.KeyCode.ButtonA)
+				S.run(c, 0.5)
+				expect(PC.current()).toBe("Upgrades")
+				-- ○ revient au rail (sur Améliorations), ○ encore rend la main au jeu
+				Gamepad.tap(h, Enum.KeyCode.ButtonB)
+				S.run(c, 0.5)
+				expect(PC.current()).toBeNil()
+				expect(h.game.GuiService.SelectedObject).toBe(PC.entryButton("Upgrades"))
+				Gamepad.tap(h, Enum.KeyCode.ButtonB)
+				S.run(c, 0.5)
+				expect(PC.menuOpen()).toBe(false)
+				expect(TvAudit.toGame(h)).toBe(true)
+				expect(#TvAudit.sent(h, "GrandSplorch")).toBe(0)
+				S.clean(c, expect)
+			end
+		)
+	end)
 end
