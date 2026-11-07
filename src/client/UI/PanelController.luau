@@ -172,6 +172,10 @@ local RAIL_V2_GAP_TIGHT = 12
 local RAIL_V2_GAP_MIN = 4
 local RAIL_TOP_MIN = Layout.HudV2.Rects.fame.y - SAFE.y
 local PETIT_HOLD = Balance.Splorch.HoldConfirm -- 1,5 s
+-- glyphe ✕ du maintien : 48 px à 12 px du bord droit, 8 px avant lui ; le libellé garde 192 px
+-- (« Petit Splorch » : 187 px à 36 px, sur une ligne)
+local PETIT_GLYPH_RIGHT = 12
+local PETIT_ROOM = Layout.Glyph.Min + PETIT_GLYPH_RIGHT + 8 - 16
 local PREVIEW_KEYS = { "R", "growth", "squishies", "coins", "pot" }
 
 local initialized = false
@@ -719,7 +723,7 @@ local function ensureV2Rail()
 			Enum.KeyCode.ButtonA,
 			Enum.KeyCode.Return,
 			Layout.Glyph.Min,
-			UDim2.new(1, -16, 0.5, 0),
+			UDim2.new(1, -PETIT_GLYPH_RIGHT, 0.5, 0),
 			Vector2.new(1, 0.5)
 		)
 		petitGlyph.frame.Visible = false
@@ -829,7 +833,7 @@ local function refreshRail()
 				-- (jamais de chevauchement)
 				local room = if text ~= "" then badgeW + 16 else 0
 				if entry == "SplorchPreview" and petit then
-					room = Layout.Glyph.Min + 16
+					room = PETIT_ROOM
 				end
 				label.Position = UDim2.new(0, labelX, 0.5, 0)
 				label.Size = UDim2.new(1, -(labelX + 16 + room), 1, -16)

@@ -113,7 +113,7 @@ local FAME_ICON = 30 -- étoile et cœur dessinés de la pastille Fame (texte de
 local BADGE_H = 36 -- pastilles « ! » et jumeaux de la puce Menu
 local TWINS_HEART = 20
 local TWINS_DIGIT = 16 -- largeur réservée d'un chiffre à 28 px
-local PRIME = 14 -- marque des minutes dessinée
+local PRIME = 18 -- marque des minutes dessinée (liseré bleu nuit : lisible sur le ciel, comme le nombre)
 local PRIME_GAP = 2
 -- v2.0 (lot B2)
 local V2 = Layout.HudV2
@@ -607,6 +607,14 @@ local function statusIcon(parent: Instance, name: string, color: Color3): Frame
 		nil,
 		4
 	)
+	for _, part in prime:GetChildren() do
+		if part:IsA("Frame") then
+			local edge = Instance.new("UIStroke")
+			edge.Color = Theme.Colors.Stroke
+			edge.Thickness = 2
+			edge.Parent = part
+		end
+	end
 	prime.Visible = false
 	refs["statusPrime_" .. name] = prime
 	holder.Parent = parent
@@ -640,7 +648,7 @@ local function setMinutes(name: string, minutes: number?)
 	label.Position = UDim2.fromOffset(left - 2, icon)
 	label.Size = UDim2.fromOffset(w + 4, 32)
 	if prime then
-		prime.Position = UDim2.fromOffset(left + w + PRIME_GAP, icon + 4)
+		prime.Position = UDim2.fromOffset(left + w + PRIME_GAP, icon + 2)
 		prime.Visible = true
 	end
 end
@@ -1316,9 +1324,14 @@ local function updateGoal(now: number): (boolean, boolean)
 			then Util.t("hud.goal.ready")
 			else Util.t("common.ratio", { have = Util.big(biggest), need = Util.big(target) })
 	end
-	-- v2.0 : remontée vers le record (instantané : A ≥ 1 et r < Record R)
+	-- v2.0 : remontée vers le record (instantané : A ≥ 1 et r < Record R) ; ma Jelly Ascend dans la
+	-- file : le suivi porte son nom (jamais « Grand Splorch » pour une Ascension)
 	local regain = v2() and UpgradeSnapshot.regain()
-	setText("goalTitle", refs.goalTitle, Util.t(if regain then "hud.regainTrack" else "hud.goal.splorch"))
+	local titleKey = if entry and entry.kind == "ascend"
+		then "ascend.title"
+		elseif regain then "hud.regainTrack"
+		else "hud.goal.splorch"
+	setText("goalTitle", refs.goalTitle, Util.t(titleKey))
 	if regain and entry == nil and not ready then
 		local snap = UpgradeSnapshot.current()
 		if snap then

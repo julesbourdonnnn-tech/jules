@@ -1748,6 +1748,196 @@ local function tiles(p, t)
 	end
 end
 
+-- ---------------------------------------------------------------------------------------------
+-- v2.0 (lot B2, étape 4) : HUD v2.0 et rail (groupe « hudv2 ») ; d'abord deux états de la v1.3
+-- (pastilles de la puce Menu l'une sur l'autre, file au pire cas), puis l'instantané du serveur
+-- arrive (DataPatch upgradeSnapshot, profil témoin v2) et le HUD v2.0 se construit
+-- ---------------------------------------------------------------------------------------------
+
+local function hudV2Screens()
+	local list = {}
+	local DONE = { step = 11, done = true, demoDone = true }
+	local function frozen(c)
+		return { G = 0, g = 0, t = c.Clock.now() }
+	end
+	-- profil du client (squishies, boucle r) et instantané (édition du profil témoin v2) ; ranch :
+	-- attributs v2.0 de Ranches/1 (AscendReady) ; ready : prestige de boucle prêt
+	local function v2State(c, opts)
+		Screens.myRanchModel(c, opts.ranch or { HelperMode = "active", AscendReady = false })
+		local big = if opts.ready then 1e15 else 10
+		c.h:fireClient(REMOTES .. "DataPatch", {
+			onboarding = DONE,
+			R = opts.r or 3,
+			growth = frozen(c),
+			squishies = {
+				v2a = {
+					s = 1,
+					m = 0,
+					st = 0,
+					z = big,
+					zg = 0,
+					at = "pen",
+					bf = 0,
+					o = "",
+					lk = false,
+					b = 0,
+					gd = 0,
+				},
+			},
+		}, {})
+		c.h:fireClient(
+			REMOTES .. "DataPatch",
+			{ upgradeSnapshot = Screens.upgradeSnapshot(c, opts.edit) },
+			{}
+		)
+		frames(c, 3, 0.1)
+		ranchStub(c, "cozy", opts.ranchPublic)
+		-- EventState « reçu » maintenant : l'attente de la file part de son eta (pire cas 59:59)
+		c.WSC.EventChanged:Fire(eventStub(c, c.Clock.now(), opts.ev))
+		if opts.pending then
+			stub(c, c.h:require(CLIENT .. "UI.Cards"), "pending", function()
+				return { { id = "hudv2", kind = "sleepy" } }
+			end)
+		end
+	end
+	local function regain(r, coins)
+		return function(p)
+			p.ascend = 1
+			p.R = r
+			p.bestR = 15
+			p.coins = coins or 1
+		end
+	end
+	local function add(id, setup)
+		table.insert(list, hudScreen("hudv2." .. id, setup))
+	end
+	-- v1.3 : « ! » et jumeaux (2 chiffres) l'un sur l'autre à droite de la puce Menu ; file au pire
+	-- cas (99e, 59:59) ; indicateurs avec leurs minutes (marque dessinée)
+	table.insert(
+		list,
+		hudScreen("hud.badges", function(c)
+			ranchStub(c, "rush", { shield = true })
+			local now = c.Clock.now()
+			local ev = eventStub(c, now, {
+				boost = { kind = "wobble", untilT = now + 3599, byName = "" },
+				spectacle = {
+					queue = {
+						{
+							kind = "splorch",
+							userId = 1,
+							startAt = now + 3599,
+							slot = 1,
+							position = 99,
+							eta = 3599,
+						},
+					},
+				},
+			})
+			c.WSC.EventChanged:Fire(ev)
+			c.HUD.setMenuBadges(true, 12)
+		end)
+	)
+	-- HUD calme v2.0 : « Prochain achat » pas encore payable, puis « Prêt ! »
+	add("calm", function(c)
+		v2State(c, {
+			edit = function(p)
+				p.coins = 1
+			end,
+		})
+	end)
+	add("ready", function(c)
+		v2State(c, {
+			edit = function(p)
+				p.coins = 1e30
+			end,
+		})
+	end)
+	-- très grands nombres : « … / … » au Record R le plus haut (prix de la boucle 400)
+	add("huge", function(c)
+		v2State(c, {
+			edit = function(p)
+				p.R = 400
+				p.bestR = 400
+				p.coins = 9.87e93
+			end,
+			r = 400,
+		})
+	end)
+	-- Fame qui change : la pastille se montre 3 s (étoile et cœur dessinés)
+	add("fame", function(c)
+		v2State(c, {})
+		c.h:fireClient(REMOTES .. "DataPatch", { fame = 987654 }, {})
+		frames(c, 2, 0.1)
+	end)
+	-- rail v2.0 : 8 entrées (Grand Splorch prêt), 9 entrées (carte en attente), Jelly Ascend, Petit
+	-- Splorch (maintien : glyphe ✕)
+	local function rail(id, opts)
+		table.insert(list, {
+			id = "hudv2." .. id,
+			run = function(c)
+				closeAll(c)
+				flushAll(c)
+				unstub(c)
+				v2State(c, opts)
+				refreshHud(c)
+				c.PC.openMenu()
+				frames(c, 8, 0.1)
+			end,
+		})
+	end
+	rail("rail8", { ready = true })
+	rail("rail9", { ready = true, pending = true })
+	rail("railAscend", { ranch = { HelperMode = "active", AscendReady = true } })
+	rail("railPetit", { ready = true, edit = regain(4), r = 4 })
+	-- puces spéciales : JELLY ASCEND ! ; remontée : Souvenir et « Retour au record 4 / 15 », puis
+	-- PETIT SPLORCH ! et « Prêt ! »
+	add("ascendChip", function(c)
+		v2State(c, { ranch = { HelperMode = "active", AscendReady = true } })
+	end)
+	add("regain", function(c)
+		v2State(c, { edit = regain(4), r = 4 })
+	end)
+	add("petitChip", function(c)
+		v2State(c, { edit = regain(4), r = 4, ready = true })
+	end)
+	-- file des grands spectacles : ma Jelly Ascend en tête (« Prochain · environ 0:12 »), puis au pire
+	-- cas
+	add("queueNext", function(c)
+		local now = c.Clock.now()
+		v2State(c, {
+			ranch = { HelperMode = "active", AscendReady = true },
+			ev = {
+				spectacle = {
+					queue = {
+						{ kind = "ascend", userId = 1, startAt = now + 12, slot = 1, position = 1, eta = 12 },
+					},
+				},
+			},
+		})
+	end)
+	add("queueAscend", function(c)
+		local now = c.Clock.now()
+		v2State(c, {
+			ranch = { HelperMode = "active", AscendReady = true },
+			ev = {
+				spectacle = {
+					queue = {
+						{
+							kind = "ascend",
+							userId = 1,
+							startAt = now + 3599,
+							slot = 1,
+							position = 99,
+							eta = 3599,
+						},
+					},
+				},
+			},
+		})
+	end)
+	return list
+end
+
 local function upgradeScreens()
 	local list = {}
 	local function add(id, opts)
@@ -2375,6 +2565,8 @@ function Screens.groups()
 
 	-- v2.0 (lot B2) : écran Améliorations, chaque onglet et chaque état atteignable sans achat
 	table.insert(groups, { id = "upgrades", state = "mid", screens = upgradeScreens() })
+	-- v2.0 (lot B2, étape 4) : HUD v2.0 et rail
+	table.insert(groups, { id = "hudv2", state = "mid", screens = hudV2Screens() })
 
 	return groups
 end

@@ -49,6 +49,9 @@ TextFitKeys.FAMILIES = {
 	-- (étape 3) raison d'un refus du serveur : la même boîte (retour de la ligne ou de la carte) les
 	-- montre tour à tour ; chacune a aussi son scénario dans une ligne (groupe Screens « upgrades »)
 	{ id = "upgrades.refused", pattern = "^upgrades%.refused%.[%w_]+$" },
+	-- (étape 4) nom court de la famille dans la puce « Prochain achat » du HUD : une seule boîte, la
+	-- famille que le Conseillé désigne (8 familles de pièces, D21)
+	{ id = "upgrades.short", pattern = "^upgrades%.short%.[%w_]+$" },
 	-- pas de famille « prompt » : la plaque d'une invite est taillée sur SON mot (WorldText), chaque
 	-- verbe a son scénario
 }
