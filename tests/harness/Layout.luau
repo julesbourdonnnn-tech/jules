@@ -459,12 +459,22 @@ function Layout.apply(h, opts)
 end
 
 -- Mise en page d'une interface quelconque (BillboardGui, SurfaceGui…) de w × h px, origine (0, 0) ;
--- mêmes options que Layout.apply. AbsolutePosition / AbsoluteSize ne sont pas écrits (interfaces du
--- monde : seul Layout.rect sert).
+-- mêmes options que Layout.apply. AbsolutePosition n'est jamais écrit (interfaces du monde : seul
+-- Layout.rect sert) ; AbsoluteSize l'est avec opts.absoluteSize (lot B4, étape 5 : comme dans Roblox,
+-- les connexions du jeu sont prévenues, par exemple les icônes dessinées de UI/Text, posées d'après la
+-- boîte du libellé ; sans cela un texte du monde gardait la boîte de 100 × 100 du harnais)
 function Layout.applyRoot(root, w, h, opts)
 	fidelity = if opts and opts.fidelity then opts else nil
 	local saved = setAbsolute
-	setAbsolute = function() end
+	if opts and opts.absoluteSize then
+		setAbsolute = function(obj, key, value)
+			if key == "AbsoluteSize" then
+				saved(obj, key, value)
+			end
+		end
+	else
+		setAbsolute = function() end
+	end
 	local ok, err = pcall(
 		layoutChildren,
 		root,

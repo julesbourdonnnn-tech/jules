@@ -360,7 +360,7 @@ return function(T)
 		local h = Harness.new({ mode = "client", console = true })
 		h:createRemotes()
 		local Clock = h:require("ReplicatedStorage.Shared.Util.Clock")
-		Clock.freeze(T0)
+		Clock.freeze(opts.t or T0)
 		local Prefs = h:require(CLIENT .. "Util.Prefs")
 		Prefs.Init()
 		local flags = { low = opts.low == true, reduced = opts.reduced == true }
@@ -397,9 +397,22 @@ return function(T)
 		end
 		RR.Init()
 		RR.Start()
+		-- étape 5 : opts.lighting démarre LightingController (monde v2.0, étiquettes) avec un EventState
+		-- fabriqué (c.setEvent) et l'écoute de l'instantané de l'écran Améliorations (kiosque)
+		local LC, event = nil, opts.event
+		if opts.lighting then
+			WSC.event = function()
+				return event
+			end
+			h:require(CLIENT .. "UI.UpgradeSnapshot").start()
+			LC = h:require(CLIENT .. "Controllers.LightingController")
+			LC.Init()
+			LC.Start()
+		end
 		local c = {
 			h = h,
 			RR = RR,
+			LC = LC,
 			V2 = V2,
 			BC = BC,
 			VB = VB,
@@ -419,6 +432,11 @@ return function(T)
 		})
 		function c.steps()
 			return steps
+		end
+		function c.setEvent(p)
+			event = p
+			WSC.EventChanged:Fire(p)
+			h:settle(1)
 		end
 		function c.snapshot(ranches, squishies)
 			c.seq = 1
@@ -2003,6 +2021,586 @@ return function(T)
 				local issues = ApiAudit.stop()
 				expect(ok and true or err).toBe(true)
 				expect(table.concat(issues, "\n")).toBe("")
+			end
+		)
+	end)
+
+	-- =========================================================================================
+	-- Étape 5 (partie 3 ; D9, D10, D16, D20-D22, D25, D30) : halo, ciel, Observatoire, kiosque,
+	-- Prairie v2, glaçons du costume d'hiver ; interrupteurs coupés : rien de tout cela
+	-- =========================================================================================
+
+	local T_WINTER = 1797156120 -- dimanche 13/12/2026 10:02 UTC : costume d'hiver en vigueur
+
+	local function eventState(over)
+		local p = {
+			features = {
+				boopRush = "on",
+				megaSquish = true,
+				golden = true,
+				jellyMoon = true,
+				gauge = true,
+				clips = true,
+				costume = "",
+				diagnostics = true,
+			},
+			mega = { phase = "idle", points = 0, target = 0 },
+			rush = { active = false, index = 0, endsAt = 0, nextAt = 0, moonBoopable = false },
+			golden = { active = false, id = 0, endsAt = 0 },
+			moon = { active = false, session = 0, endsAt = 0, nextAt = 0 },
+			gauge = { points = 0, target = 1000, partyUntil = 0, restUntil = 0 },
+			boost = { kind = "", untilT = 0, byName = "" },
+			spectacle = { queue = {} },
+			offset = 0,
+		}
+		for k, v in over or {} do
+			p[k] = v
+		end
+		return p
+	end
+
+	-- Instantané v2.0 de l'écran Améliorations (profil témoin v2, interrupteurs ouverts ; `edit` peut
+	-- couper des interrupteurs : flags.Workshop = false cache toutes les lignes de l'Atelier)
+	local snapVersion = 0
+	local function upgradeSnap(h, edit)
+		local UM = h:require("ReplicatedStorage.Shared.Logic.UpgradeMath")
+		local Features = h:require("ReplicatedStorage.Shared.Config.Features")
+		local flags = {}
+		for k, v in Features.Defaults do
+			flags[k] = if type(v) == "boolean" then true else v
+		end
+		local p = serde.decode("json", fs.readFile("tests/fixtures/profiles/v2.json"))
+		if edit then
+			edit(p, flags)
+		end
+		snapVersion += 1
+		return UM.snapshot(p, flags, snapVersion)
+	end
+
+	local function worldV2(c)
+		local world = c.h.workspace:FindFirstChild("ClientWorld")
+		return world and world:FindFirstChild("WorldV2")
+	end
+
+	local function partsOf(folder)
+		local out = {}
+		if folder then
+			for _, d in folder:GetDescendants() do
+				if d:IsA("BasePart") then
+					table.insert(out, d)
+				end
+			end
+		end
+		return out
+	end
+
+	-- toutes les pièces v2.0 du monde : ancrées, non solides, sans ombre, opaques, matériaux permis
+	local function checkParts(list)
+		local allowed = {
+			[Enum.Material.SmoothPlastic] = true,
+			[Enum.Material.Neon] = true,
+			[Enum.Material.Foil] = true,
+			[Enum.Material.Ice] = true,
+		}
+		for _, p in list do
+			expect({
+				name = p.Name,
+				ok = p.Anchored
+					and not p.CanCollide
+					and not p.CanQuery
+					and not p.CanTouch
+					and not p.CastShadow
+					and p.Transparency == 0
+					and allowed[p.Material] == true,
+			}).toEqual({ name = p.Name, ok = true })
+		end
+	end
+
+	local function labelOf(c, key)
+		local out = {}
+		local world = c.h.workspace:FindFirstChild("ClientWorld")
+		local holder = world and world:FindFirstChild("Labels")
+		for _, gui in (if holder then holder:GetChildren() else {}) do
+			if gui.Name == "Label_" .. key then
+				table.insert(out, gui)
+			end
+		end
+		return out
+	end
+
+	describe("RanchRenderer_v2 › étape 5 : interrupteurs coupés", function()
+		it(
+			"aucun halo, aucun ciel, aucun monde v2.0 ; le panneau garde la couronne dessinée et le r public",
+			function()
+				local c = clientV2({ lighting = true, event = eventState() })
+				for slot = 1, 16 do
+					part(c.models[slot], "Sign", { Size = Vector3.new(6, 2, 0.4) })
+				end
+				c.snapshot(all16())
+				c.at(3, Vector3.new(0, 0, 30))
+				c.run(2)
+				c.LC.refresh()
+				c.run(1)
+				local Halo = c.h:require(CLIENT .. "Render.Halo")
+				local WV = c.h:require(CLIENT .. "Render.WorldV2")
+				expect(Halo.on).toBe(false)
+				expect(c.h.workspace.ClientWorld:FindFirstChild("Halos")).toBeNil()
+				expect(worldV2(c)).toBeNil()
+				expect(WV.stats()).toEqual({
+					observatory = 0,
+					kiosk = 0,
+					meadow = 0,
+					icicles = 0,
+					icicleRanches = 0,
+					hidden = 0,
+				})
+				expect(WV.kioskOpen()).toBe(false)
+				expect(c.V2.stats().sky).toBe(0)
+				expect(c.V2.on).toBe(false)
+				-- panneau de la v1.3 : « P3 · ♛4 · Jour 4 », couronne DESSINÉE (D20, les deux états)
+				local Text = c.h:require(CLIENT .. "UI.Text")
+				local gui = find(c.h.workspace, "Sign3")
+				local label = gui.Plate.Text
+				expect(string.find(label.Text, "{^}", 1, true)).toBeNil()
+				expect(string.find(label.Text, "♛", 1, true)).toBeNil()
+				expect(string.match(label.Text, "^P3 ·  +4 · Day 4$") ~= nil).toBe(true)
+				local icons = Text.icons(label)
+				expect(#icons).toBe(1)
+				expect(icons[1]:GetAttribute("Icon")).toBe("crown")
+				c.clean()
+			end
+		)
+	end)
+
+	describe("RanchRenderer_v2 › étape 5 : halo et plaque du titre (D16)", function()
+		it(
+			"min(A, 5) gouttes autour de la tête, 15 Hz ; Mouvement réduit : immobiles ; plaque : goutte et A",
+			function()
+				local c = clientV2()
+				c.snapshot(all16())
+				c.at(3, Vector3.new(0, 0, 30))
+				-- la tête suit le corps (le personnage du harnais ne la déplace pas tout seul)
+				local character = c.h.localPlayer.Character
+				character.Head.CFrame = character.HumanoidRootPart.CFrame * CFrame.new(0, 1.5, 0)
+				c.attrs(3, { HaloOn = true, Ascend = 3 })
+				c.run(0.6)
+				local Halo = c.h:require(CLIENT .. "Render.Halo")
+				local Visuals = c.h:require("ReplicatedStorage.Shared.Config.Visuals")
+				local drops = Halo.drops(3)
+				expect(#drops).toBe(3)
+				local head = c.h.localPlayer.Character.Head
+				for i, d in drops do
+					expect(d.Shape).toBe(Enum.PartType.Ball)
+					expect(d.Anchored and not d.CanCollide and not d.CanQuery and not d.CastShadow).toBe(true)
+					local off = d.Position - head.Position
+					expect(math.abs(math.sqrt(off.X * off.X + off.Z * off.Z) - 1.7) < 0.05).toBe(true)
+					expect(Visuals.Halo[i] ~= nil).toBe(true)
+				end
+				-- en orbite : les gouttes tournent
+				local before = drops[1].Position
+				c.run(0.5)
+				expect((drops[1].Position - before).Magnitude > 0.1).toBe(true)
+				-- plaque du titre : goutte dessinée et « 3 » (aucun titre, nom visible : la goutte seule)
+				local Text = c.h:require(CLIENT .. "UI.Text")
+				local plate = find(c.h.workspace, "Title3").Plate.Text
+				expect(string.match(plate.Text, "^ +3$") ~= nil).toBe(true)
+				expect(Text.icons(plate)[1]:GetAttribute("Icon")).toBe("drop")
+				-- A = 60 : 5 gouttes (arc-en-ciel la 5e) et « 60 » sur la plaque
+				c.attrs(3, { Ascend = 60 })
+				c.run(0.6)
+				expect(#Halo.drops(3)).toBe(5)
+				expect(string.match(plate.Text, "^ +60$") ~= nil).toBe(true)
+				-- Mouvement réduit : immobiles autour de la tête
+				c.flags.reduced = true
+				c.run(0.2)
+				local still = Halo.drops(3)[2].Position
+				c.run(0.6)
+				expect((Halo.drops(3)[2].Position - still).Magnitude < 1e-6).toBe(true)
+				-- 15 Hz au plus : 2 s d'images à 60 Hz donnent au plus 30 placements par goutte
+				c.flags.reduced = false
+				local moves = 0
+				local d1 = Halo.drops(3)[1]
+				d1:GetPropertyChangedSignal("CFrame"):Connect(function()
+					moves += 1
+				end)
+				for _ = 1, 120 do
+					c.Clock.advance(1 / 60)
+					c.RR._step(1 / 60)
+				end
+				c.h:settle(1)
+				expect(moves <= 31).toBe(true)
+				-- halo éteint par le joueur (HaloOn = false) : plus rien, plaque sans goutte
+				c.attrs(3, { HaloOn = false })
+				c.run(0.6)
+				expect(#Halo.drops(3)).toBe(0)
+				expect(Halo.on).toBe(false)
+				c.clean()
+			end
+		)
+
+		it(
+			"sans personnage : rien, sans trace ; personnage revenu : le halo revient ; ranch libéré : retiré",
+			function()
+				local c = clientV2()
+				c.snapshot(all16())
+				c.attrs(3, { HaloOn = true, Ascend = 2 })
+				c.run(0.6)
+				local Halo = c.h:require(CLIENT .. "Render.Halo")
+				expect(#Halo.drops(3)).toBe(2)
+				local character = c.h.localPlayer.Character
+				c.h.localPlayer.Character = nil
+				c.run(0.6)
+				expect(#Halo.drops(3)).toBe(0)
+				c.h.localPlayer.Character = character
+				c.run(0.6)
+				expect(#Halo.drops(3)).toBe(2)
+				-- attributs illisibles : aucun halo
+				c.attrs(3, { Ascend = 0 / 0 })
+				c.run(0.6)
+				expect(#Halo.drops(3)).toBe(0)
+				c.attrs(3, { Ascend = "5" })
+				c.run(0.6)
+				expect(#Halo.drops(3)).toBe(0)
+				c.unset(3, { HaloOn, "Ascend" })
+				c.run(0.6)
+				expect(Halo.stats().total).toBe(0)
+				c.clean()
+			end
+		)
+	end)
+
+	describe("RanchRenderer_v2 › étape 5 : ciel des Ascensions (D25)", function()
+		it(
+			"dessin de A au-dessus de la clôture du fond, hors de la colonne du centre ; niveaux par ranch",
+			function()
+				local c = clientV2()
+				c.snapshot(all16())
+				c.at(3, Vector3.new(0, 0, 30))
+				local SkyKit = c.h:require(CLIENT .. "Render.SkyKit")
+				for a = 1, 20 do
+					c.attrs(3, { TapisTier = 1, Ascend = a })
+					c.run(1.6) -- cascade finie (1,2 s au plus) : poses finales
+					local n = c.count(3, "sky")
+					expect({ a = a, n = n }).toEqual({ a = a, n = SkyKit.count(a, "near") })
+					expect(n <= SkyKit.NEAR_MAX).toBe(true)
+					-- emprise « sky » du plan (D8) : disque de rayon 12 autour de (0, 84), Y de 34 à 48
+					for name, p in c.parts(3) do
+						if string.sub(name, 1, 3) == "sky" then
+							local l = c.WL.toLocal(3, p.Position)
+							local r = math.sqrt(l.X * l.X + (l.Z - 84) ^ 2)
+							expect({ name = name, inside = r <= 12.5 and l.Y >= 33 and l.Y <= 49 }).toEqual({
+								name = name,
+								inside = true,
+							})
+							-- jamais dans la colonne du centre (silhouette)
+							local col = c.WL.centerColumn()
+							local dc = math.sqrt((l.X - col.center.X) ^ 2 + (l.Z - col.center.Z) ^ 2)
+							expect(dc > col.radius).toBe(true)
+						end
+					end
+				end
+				checkParts((function()
+					local out = {}
+					for name, p in c.parts(3) do
+						if string.sub(name, 1, 3) == "sky" then
+							table.insert(out, p)
+						end
+					end
+					return out
+				end)())
+				-- voisin (détail complet) : ≤ 10 pièces ; ranch lointain : 3 pièces
+				c.attrs(4, { TapisTier = 1, Ascend = 5 })
+				c.attrs(10, { TapisTier = 1, Ascend = 10 })
+				c.run(0.6)
+				expect(c.count(4, "sky")).toBe(SkyKit.count(5, "mid"))
+				expect(c.count(4, "sky") <= SkyKit.MID_MAX).toBe(true)
+				expect(c.count(10, "sky")).toBe(SkyKit.FAR)
+				-- sans TapisTier (RanchTiers coupé) : aucun ciel, même avec Ascend
+				c.unset(4, { "TapisTier" })
+				c.run(0.6)
+				expect(c.count(4, "sky")).toBe(0)
+				c.clean()
+			end
+		)
+
+		it(
+			"une Ascension de plus construit le nouvel élément pièce par pièce (cascade, ElementBuilt) ; étoiles A11-A20",
+			function()
+				local c = clientV2()
+				c.snapshot(all16())
+				c.at(3, Vector3.new(0, 0, 30))
+				c.attrs(3, { TapisTier = 1, Ascend = 1 })
+				c.run(0.6)
+				local built = {}
+				c.V2.ElementBuilt:Connect(function(slot, id)
+					table.insert(built, slot .. ":" .. id)
+				end)
+				local cascades = c.V2.stats().cascades
+				c.attrs(3, { Ascend = 2 })
+				c.run(0.1)
+				expect(c.V2.stats().cascades).toBe(cascades + 1)
+				expect(table.find(built, "3:sky") ~= nil).toBe(true)
+				c.run(2)
+				-- étoiles de la Constellation : une Ascension de plus = une étoile et son trait (2 pièces neuves)
+				c.attrs(3, { Ascend = 11 })
+				c.run(2)
+				local created = c.V2.stats().created
+				c.attrs(3, { Ascend = 12 })
+				c.run(2)
+				expect(c.V2.stats().created - created).toBe(2)
+				expect(c.count(3, "sky10near.s")).toBe(12)
+				-- au-delà de A20 : 20 étoiles, rien de plus
+				c.attrs(3, { Ascend = 60 })
+				c.run(2)
+				expect(c.count(3, "sky10near.s")).toBe(20)
+				-- second rendu identique : rien de créé
+				local after = c.V2.stats().created
+				c.run(2)
+				expect(c.V2.stats().created).toBe(after)
+				c.clean()
+			end
+		)
+	end)
+
+	describe("RanchRenderer_v2 › étape 5 : Observatoire et faisceau (D10, D25)", function()
+		it(
+			"construit tant que MON ranch porte TapisTier ; faisceau : AscendReady (le mien d'abord), puis le héros d'une Ascension",
+			function()
+				local c = clientV2({ lighting = true, event = eventState() })
+				c.snapshot(all16())
+				c.run(1)
+				local WV = c.h:require(CLIENT .. "Render.WorldV2")
+				c.attrs(7, { TapisTier = 1 }) -- un autre ranch seul : rien
+				c.LC.refresh()
+				expect(WV.stats().observatory).toBe(0)
+				c.attrs(3, { TapisTier = 1 })
+				c.LC.refresh()
+				expect(WV.stats().observatory).toBe(24)
+				expect(WV.beamTarget()).toBe(0)
+				local obs = worldV2(c).Observatory
+				checkParts(partsOf(obs))
+				-- loin de la place, au-delà du mur du bord (r ≈ 340) : inaccessible
+				local base = c.WL.observatory().Position
+				expect(math.abs(math.sqrt(base.X ^ 2 + base.Z ^ 2) - 340) < 1).toBe(true)
+				c.attrs(7, { AscendReady = true })
+				c.LC.refresh()
+				expect(WV.beamTarget()).toBe(7)
+				local beam = obs:FindFirstChild("Beam")
+				expect(beam.Material).toBe(Enum.Material.Neon)
+				expect(WV.stats().observatory).toBe(25)
+				-- le faisceau va du bout de la lunette au ranch visé
+				local target = c.WL.toWorld(7, Vector3.new(0, 2, 36))
+				local tip = beam.CFrame * Vector3.new(beam.Size.X / 2, 0, 0)
+				expect((tip - target).Magnitude < 1).toBe(true)
+				-- le mien d'abord
+				c.attrs(3, { AscendReady = true })
+				c.LC.refresh()
+				expect(WV.beamTarget()).toBe(3)
+				-- Jelly Ascend en cours : le ranch du héros (joueur 109, ranch 9)
+				local now = c.Clock.now()
+				c.setEvent(eventState({
+					spectacle = {
+						queue = {},
+						current = {
+							kind = "ascend",
+							userId = 109,
+							startedAt = now - 1,
+							burstAt = now + 3,
+							endsAt = now + 9,
+							level = 3,
+						},
+					},
+				}))
+				expect(WV.beamTarget()).toBe(9)
+				-- spectacle fini : de nouveau le mien ; plus rien de prêt : aucun faisceau
+				c.setEvent(eventState())
+				expect(WV.beamTarget()).toBe(3)
+				c.unset(3, { "AscendReady" })
+				c.unset(7, { "AscendReady" })
+				c.LC.refresh()
+				expect(WV.beamTarget()).toBe(0)
+				expect(obs:FindFirstChild("Beam")).toBeNil()
+				-- TapisTier coupé en direct : plus d'Observatoire, budget rendu
+				c.unset(3, { "TapisTier" })
+				c.LC.refresh()
+				expect(WV.stats().observatory).toBe(0)
+				expect(worldV2(c)).toBeNil()
+				expect(c.VB.used("world")).toBe(0)
+				c.clean()
+			end
+		)
+	end)
+
+	describe("RanchRenderer_v2 › étape 5 : kiosque de Big Plop (D21)", function()
+		it(
+			"seulement avec l'instantané de l'écran Améliorations et une ligne de l'Atelier visible ; étiquette world.kiosk",
+			function()
+				local c = clientV2({ lighting = true, event = eventState() })
+				c.snapshot(all16())
+				c.run(1)
+				local WV = c.h:require(CLIENT .. "Render.WorldV2")
+				c.LC.refresh()
+				expect(WV.kioskOpen()).toBe(false)
+				-- instantané où l'Atelier est coupé (interrupteur Workshop) : toutes ses lignes cachées
+				c.profile({
+					coins = 0,
+					upgradeSnapshot = upgradeSnap(c.h, function(p, flags)
+						-- toutes les règles d'ouverture remplies : une ligne fermée est alors coupée (cachée)
+						p.bestR, p.ascend = 400, 60
+						flags.Workshop = false
+					end),
+				})
+				c.LC.refresh()
+				expect(WV.kioskOpen()).toBe(false)
+				expect(#labelOf(c, "world.kiosk")).toBe(0)
+				-- instantané complet : le kiosque (15 pièces rayées menthe) et son étiquette
+				c.h:fireClient("ReplicatedStorage.Remotes.DataPatch", { upgradeSnapshot = upgradeSnap(c.h) })
+				c.h:settle(1)
+				c.LC.refresh()
+				expect(WV.kioskOpen()).toBe(true)
+				expect(WV.stats().kiosk).toBe(15)
+				local kiosk = worldV2(c).Kiosk
+				checkParts(partsOf(kiosk))
+				local center = Vector3.new(0, 0, 0)
+				for _, p in partsOf(kiosk) do
+					local d = Vector3.new(p.Position.X, 0, p.Position.Z) - Vector3.new(-30, 0, 24)
+					expect(d.Magnitude < 5).toBe(true)
+				end
+				local labels = labelOf(c, "world.kiosk")
+				expect(#labels).toBe(1)
+				expect(labels[1].Text.Text).toBe("Big Plop's Workshop")
+				expect(labels[1].Adornee.Parent).toBe(kiosk)
+				-- même état : rien de recréé ni de réécrit
+				local same = kiosk.Kiosk1
+				c.LC.refresh()
+				expect(worldV2(c).Kiosk.Kiosk1).toBe(same)
+				expect(#labelOf(c, "world.kiosk")).toBe(1)
+				-- instantané retiré (UpgradesScreen coupé en direct) : kiosque et étiquette retirés
+				c.h:fireClient("ReplicatedStorage.Remotes.DataPatch", {}, { "upgradeSnapshot" })
+				c.h:settle(1)
+				c.LC.refresh()
+				expect(WV.kioskOpen()).toBe(false)
+				expect(#labelOf(c, "world.kiosk")).toBe(0)
+				expect(worldV2(c)).toBeNil()
+				expect(center).toBe(Vector3.new(0, 0, 0))
+				c.clean()
+			end
+		)
+	end)
+
+	describe("RanchRenderer_v2 › étape 5 : Prairie v2 (D9)", function()
+		it(
+			"MON ranch porte Monuments : Prairie du serveur cachée (et son étiquette), Prairie v2 ; coupé : tout revient exactement",
+			function()
+				local c = clientV2({ lighting = true, event = eventState() })
+				-- Prairie du serveur (World/Town.meadow) : sol, fleurs, poteau, panneau étiqueté
+				local meadow = folder(c.h.workspace.Wobbleton, "Meadow")
+				local field = part(meadow, "Field", { Transparency = 0 })
+				local flower = part(meadow, "Flower1", { Transparency = 0.25 })
+				local post = part(meadow, "SignPost", { Transparency = 0 })
+				local sign = part(meadow, "Sign", { Transparency = 0 })
+				sign:SetAttribute("LabelKey", "world.meadow")
+				sign:SetAttribute("LabelHeight", 2)
+				c.LC.refresh()
+				-- monde déjà trouvé au démarrage : l'étiquette de la v1.3 est posée par la recherche du monde
+				c.h.workspace.ClientWorld.Labels:Destroy()
+				c.h:require(CLIENT .. "Controllers.LightingController")
+				c.snapshot(all16())
+				c.run(1)
+				local WV = c.h:require(CLIENT .. "Render.WorldV2")
+				c.attrs(3, { Monuments = 2 })
+				c.LC.refresh()
+				expect(WV.meadowV2()).toBe(true)
+				expect(WV.stats().meadow).toBe(32)
+				for _, p in { field, flower, post, sign } do
+					expect(p.Transparency).toBe(1)
+				end
+				checkParts(partsOf(worldV2(c).Meadow))
+				-- Prairie v2 dans son jardin (r ≈ 145, D9), panneau world.meadow
+				local center = c.WL.meadowCenter(true)
+				for _, p in partsOf(worldV2(c).Meadow) do
+					local d = Vector3.new(p.Position.X - center.X, 0, p.Position.Z - center.Z)
+					expect(d.Magnitude <= 12.5).toBe(true)
+				end
+				local v2Labels = {}
+				for _, gui in labelOf(c, "world.meadow") do
+					if gui.Adornee and gui.Adornee:IsDescendantOf(worldV2(c)) then
+						table.insert(v2Labels, gui)
+					end
+				end
+				expect(#v2Labels).toBe(1)
+				expect(v2Labels[1].Enabled).toBe(true)
+				-- coupé en direct : la Prairie du serveur revient exactement (0,25 reste 0,25)
+				c.unset(3, { "Monuments" })
+				c.LC.refresh()
+				expect(WV.meadowV2()).toBe(false)
+				expect(field.Transparency).toBe(0)
+				expect(flower.Transparency).toBe(0.25)
+				expect(post.Transparency).toBe(0)
+				expect(sign.Transparency).toBe(0)
+				expect(worldV2(c)).toBeNil()
+				for _, gui in labelOf(c, "world.meadow") do
+					expect(gui.Adornee and gui.Adornee:IsDescendantOf(c.h.workspace.Wobbleton.Meadow)).toBe(
+						true
+					)
+					expect(gui.Enabled).toBe(true)
+				end
+				expect(c.VB.used("meadow")).toBe(0)
+				c.clean()
+			end
+		)
+	end)
+
+	describe("RanchRenderer_v2 › étape 5 : glaçons du costume d'hiver (D30)", function()
+		local function winter(on)
+			local p = eventState()
+			p.features.costume = "winter2026"
+			if on then
+				p.features.ambience = true
+			end
+			return p
+		end
+
+		it(
+			"seulement avec Ambience ET le costume d'hiver : ranch courant et ses 2 voisins, 12 pièces chacun",
+			function()
+				local c = clientV2({ lighting = true, t = T_WINTER, event = winter(false) })
+				c.snapshot(all16())
+				c.at(3, Vector3.new(0, 0, 30))
+				c.run(1)
+				local WV = c.h:require(CLIENT .. "Render.WorldV2")
+				c.LC.refresh()
+				-- costume sans Ambience : le costume de la v1.3, aucun glaçon
+				expect(c.LC.current()).toBe("winter")
+				expect(WV.stats().icicles).toBe(0)
+				-- Ambience ouvert, sans costume : rien
+				local noCostume = eventState()
+				noCostume.features.ambience = true
+				c.setEvent(noCostume)
+				expect(WV.stats().icicles).toBe(0)
+				-- les deux : ranchs 2, 3, 4
+				c.setEvent(winter(true))
+				expect(WV.icicleSlots()).toEqual({ 2, 3, 4 })
+				expect(WV.stats().icicles).toBe(3 * WV.ICICLES_PER_RANCH)
+				checkParts(partsOf(worldV2(c)))
+				-- sous la lisse haute de la clôture de devant, hors du portail
+				for _, p in partsOf(worldV2(c).Icicles3) do
+					local l = c.WL.toLocal(3, p.Position)
+					expect(math.abs(l.Z - 0.5) < 0.01 and math.abs(l.X) > 5 and l.Y > 1.6 and l.Y < 3.2).toBe(
+						true
+					)
+				end
+				-- décor du costume ≤ 300 pièces avec le sucre glace et les guirlandes
+				expect(c.LC.stats().winterParts + WV.stats().icicles <= 300).toBe(true)
+				-- le joueur va chez le voisin (≥ 10 studs dedans) : les glaçons suivent
+				c.at(5, Vector3.new(0, 0, 30))
+				c.LC.refresh()
+				expect(WV.icicleSlots()).toEqual({ 4, 5, 6 })
+				-- Ambience coupé en direct : plus aucun glaçon
+				c.setEvent(winter(false))
+				expect(WV.stats().icicles).toBe(0)
+				expect(worldV2(c)).toBeNil()
+				c.clean()
 			end
 		)
 	end)

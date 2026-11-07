@@ -474,6 +474,48 @@ return function(T)
 			expect(string.find(textOf(gui), "Mira", 1, true) ~= nil).toBe(true)
 			c.clean()
 		end)
+
+		-- lot B4, étape 5 (bug trouvé par les captures du groupe « world ») : la pièce de la statue
+		-- remplacée (place reconstruite) rendait son étiquette à la réserve de WorldText ; RanchRenderer
+		-- gardait cette étiquette morte (setText sans effet, ou pire : écrit sur l'étiquette d'un autre
+		-- objet qui l'avait reprise) et la nouvelle statue n'avait plus de texte
+		it(
+			"statue remplacée : la nouvelle pièce a son étiquette, aucune étiquette d'un autre n'est écrite",
+			function()
+				local c = client({
+					world = function(h)
+						local w = folder(h.workspace, "Wobbleton")
+						local plaza = folder(w, "Plaza")
+						local statue = part(plaza, "Statue", { Size = Vector3.new(6, 6, 6) })
+						statue:SetAttribute("StatueSpecies", 2)
+						statue:SetAttribute("StatueSize", 1500)
+						statue:SetAttribute("StatueName", "Mira")
+					end,
+				})
+				c.snapshot({ ["3"] = ranch(3, 1) })
+				c.run(0.6)
+				expect(c.gui("StatueLabel") ~= nil).toBe(true)
+				local plaza = c.h.workspace.Wobbleton.Plaza
+				plaza.Statue:Destroy()
+				c.run(0.6)
+				-- une autre étiquette du monde reprend l'étiquette rendue à la réserve
+				local WorldText = c.h:require("StarterPlayer.StarterPlayerScripts.Client.UI.WorldText")
+				local other = WorldText.create(
+					part(c.h.workspace, "Other"),
+					{ kind = "text", maxDistance = 50, name = "OtherLabel" }
+				)
+				WorldText.setText(other, "Autre")
+				local statue = part(plaza, "Statue", { Size = Vector3.new(6, 6, 6) })
+				statue:SetAttribute("StatueSpecies", 0)
+				c.run(0.6)
+				local gui = c.gui("StatueLabel")
+				expect(gui ~= nil).toBe(true)
+				expect(gui.Adornee).toBe(statue)
+				expect(textOf(gui)).toBe("Biggest squishy")
+				expect(textOf(other)).toBe("Autre")
+				c.clean()
+			end
+		)
 		-- Revue client-world : la pression de pet-sitting (Celebrate press, petsit = true) écrase le
 		-- squishy de l'AMI (à sa clôture), pas un squishy de mon ranch
 		it("pression de pet-sitting : le squishy de l'ami à sa clôture joue son écrasement", function()

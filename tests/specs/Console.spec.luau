@@ -393,6 +393,62 @@ return function(T)
 		end)
 	end)
 
+	-- lot B4, étape 5 (D21, INT-B4-KIOSK) : l'invite du kiosque de Big Plop se joue à la manette seule et
+	-- montre le glyphe de la plateforme (Carré PlayStation sur PS5, X sur Xbox, E au clavier)
+	describe("Console › invite du kiosque de Big Plop", function()
+		it(
+			"□ « Atelier » : icône du Carré sur PS5, icône X sur Xbox, E au clavier ; audit console propre",
+			function()
+				local TvAudit = require("../harness/TvAudit")
+				local h = TvAudit.client({
+					console = true,
+					profile = { onboarding = { step = 11, done = true, demoDone = true } },
+				})
+				local Prompt = TvAudit.mod(h, "UI.Prompt")
+				local PC = TvAudit.mod(h, "Controllers.PromptController")
+				local target = {
+					kind = "kiosk",
+					slot = 0,
+					uid = "",
+					id = 0,
+					tile = "",
+					ready = true,
+					primary = "workshop",
+					secondary = "",
+					position = roblox.Vector3.new(-30, 0, 24),
+				}
+				PC.current = function()
+					return target
+				end
+				Prompt._step()
+				local plate = Prompt.plates()[1]
+				expect(#Prompt.plates()).toBe(1)
+				expect(plate.Text.Text).toBe("Workshop")
+				expect(plate.Glyph:GetAttribute("GlyphKey")).toBe("ButtonX")
+				expect(plate.Glyph:GetAttribute("GlyphMode")).toBe("image")
+				expect(plate.Glyph.Image.Image).toBe(Gamepad.PS_GLYPHS .. "ButtonSquare@2x.png")
+				expect(TvAudit.glyphs(h, h.workspace)).toEqual({})
+				-- clavier-souris : E
+				h.game.UserInputService.LastInputTypeChanged:Fire(Enum.UserInputType.Keyboard)
+				h:settle(2)
+				Prompt._step()
+				plate = Prompt.plates()[1]
+				expect(plate.Glyph:GetAttribute("GlyphKey")).toBe("E")
+				-- Xbox (manette Xbox, icônes Xbox du moteur) : le X de la manette, jamais une lettre écrite
+				h.console = false
+				h.game.UserInputService.LastInputTypeChanged:Fire(Enum.UserInputType.Gamepad1)
+				h:settle(2)
+				Prompt._step()
+				plate = Prompt.plates()[1]
+				expect(plate.Glyph:GetAttribute("GlyphKey")).toBe("ButtonX")
+				expect(plate.Glyph:GetAttribute("GlyphMode")).toBe("image")
+				expect(plate.Glyph.Image.Image).toBe(Gamepad.XBOX_GLYPHS .. "ButtonX@2x.png")
+				expect(table.concat(h.errors, "\n")).toBe("")
+				expect(table.concat(h:warnings(), "\n")).toBe("")
+			end
+		)
+	end)
+
 	describe("Console › Util/Haptics", function()
 		-- Événements neutres ajoutés à la carte (mêmes réglages que les vibrations de jeu de Comet Conga)
 		local TEST_EVENTS = {

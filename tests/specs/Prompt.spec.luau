@@ -95,6 +95,40 @@ return function(T)
 			end
 		)
 
+		-- lot B4, étape 5 (D21, INT-B4-KIOSK) : invite du kiosque de Big Plop, « □ Atelier » (une seule plaque)
+		it(
+			"kiosque : une seule plaque « Workshop » sur □ (console) ou E (clavier), aucune ligne ○",
+			function()
+				local function kiosk()
+					return {
+						kind = "kiosk",
+						slot = 0,
+						uid = "",
+						id = 0,
+						tile = "",
+						ready = true,
+						primary = "workshop",
+						secondary = "",
+						position = Vector3.new(-30, 0, 24),
+					}
+				end
+				local h, P, _, setTarget = setup({ console = true })
+				setTarget(kiosk())
+				local plates = P.plates()
+				expect(#plates).toBe(1)
+				expect(plates[1].Text.Text).toBe("Workshop")
+				expect(glyphKey(plates[1])).toBe("ButtonX")
+				setTarget(nil)
+				expect(#P.plates()).toBe(0)
+				clean(h)
+				local h2, P2, _, setTarget2 = setup({ console = false })
+				setTarget2(kiosk())
+				expect(#P2.plates()).toBe(1)
+				expect(glyphKey(P2.plates()[1])).toBe("E")
+				clean(h2)
+			end
+		)
+
 		it("avant la leçon de fusion : seulement « □ Presser »", function()
 			local h, P, _, setTarget = setup({ onboarding = { step = 2, done = false, demoDone = false } })
 			setTarget(squishy())

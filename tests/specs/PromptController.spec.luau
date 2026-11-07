@@ -323,5 +323,83 @@ return function(T)
 			expect(c.PC._pressedCount() <= 1).toBe(true)
 			c.clean()
 		end)
+
+		-- lot B4, étape 5 (D21, INT-B4-KIOSK) : kiosque de Big Plop, □ « Atelier » ; le kiosque n'existe que
+		-- construit par Render/WorldV2 (instantané de l'écran Améliorations et une ligne de l'Atelier)
+		it(
+			"kiosque : □ « Atelier » à 8 studs seulement s'il est construit ; jamais en portant ni derrière une fenêtre",
+			function()
+				local c = client({ squishies = { a = sq(0) } })
+				local base = "StarterPlayer.StarterPlayerScripts.Client."
+				local WV = c.h:require(base .. "Render.WorldV2")
+				local kiosk = c.WorldLayout.plaza("kiosk")
+				c.place(kiosk + Vector3.new(4, 0, -3))
+				c.run(0.1)
+				-- interrupteurs coupés (aucun instantané) : aucun kiosque, aucune cible
+				WV.update({ ambience = false, winter = false })
+				c.run(0.1)
+				expect(WV.kioskOpen()).toBe(false)
+				expect(c.PC.current()).toBe(nil)
+				-- instantané de l'écran Améliorations : le kiosque est construit, □ « Atelier »
+				local fs = require("@lune/fs")
+				local serde = require("@lune/serde")
+				local UM = c.h:require("ReplicatedStorage.Shared.Logic.UpgradeMath")
+				local Features = c.h:require("ReplicatedStorage.Shared.Config.Features")
+				local flags = {}
+				for k, v in Features.Defaults do
+					flags[k] = if type(v) == "boolean" then true else v
+				end
+				local profile = serde.decode("json", fs.readFile("tests/fixtures/profiles/v2.json"))
+				c.h:require(base .. "UI.UpgradeSnapshot").start()
+				c.h:fireClient(
+					"ReplicatedStorage.Remotes.DataSnapshot",
+					{ coins = 0, upgradeSnapshot = UM.snapshot(profile, flags, 1) }
+				)
+				c.h:settle(1)
+				WV.update({ ambience = false, winter = false })
+				expect(WV.kioskOpen()).toBe(true)
+				c.run(0.1)
+				local t = c.PC.current()
+				expect(t ~= nil and t.kind).toBe("kiosk")
+				expect(t.primary).toBe("workshop")
+				expect(t.secondary).toBe("")
+				expect(t.slot).toBe(0)
+				-- à 9 studs : rien
+				c.place(kiosk + Vector3.new(9, 0, 0))
+				c.run(0.1)
+				expect(c.PC.current()).toBe(nil)
+				-- fenêtre ouverte : rien ; fermée : la cible revient
+				c.place(kiosk + Vector3.new(4, 0, -3))
+				c.run(0.1)
+				c.FocusGuard.WindowOpened:Fire("Upgrades")
+				c.h:settle(1)
+				c.run(0.1)
+				expect(c.PC.current()).toBe(nil)
+				c.FocusGuard.WindowClosed:Fire("Upgrades")
+				c.h:settle(1)
+				c.run(0.1)
+				expect(c.PC.current().kind).toBe("kiosk")
+				-- en portant un squishy : seul le Bassin compte, jamais le kiosque
+				c.h:fireClient(
+					"ReplicatedStorage.Remotes.RanchPatch",
+					{ seq = 2, ranches = { ["3"] = { carry = "a" } }, ops = {} }
+				)
+				c.h:settle(1)
+				c.run(0.1)
+				expect(c.PC.current()).toBe(nil)
+				-- kiosque retiré (instantané retiré) : plus de cible
+				c.h:fireClient(
+					"ReplicatedStorage.Remotes.RanchPatch",
+					{ seq = 3, ranches = { ["3"] = { carry = "" } }, ops = {} }
+				)
+				c.h:fireClient("ReplicatedStorage.Remotes.DataPatch", {}, { "upgradeSnapshot" })
+				c.h:settle(1)
+				WV.update({ ambience = false, winter = false })
+				c.run(0.1)
+				expect(WV.kioskOpen()).toBe(false)
+				expect(c.PC.current()).toBe(nil)
+				c.clean()
+			end
+		)
 	end)
 end

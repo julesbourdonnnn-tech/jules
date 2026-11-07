@@ -366,7 +366,13 @@ local function billboards(c, rootScale, layoutOptions)
 			local w = size.X.Offset + size.X.Scale * pxPerStud
 			local hh = size.Y.Offset + size.Y.Scale * pxPerStud
 			if w >= 2 and hh >= 2 then
-				Layout.applyRoot(bb, w, hh, layoutOptions)
+				-- deux passes (lot B4, étape 5) : AbsoluteSize écrit, les icônes dessinées se replacent,
+				-- puis la mise en page qui les dessine (comme Screens.billboardTexts)
+				local options = table.clone(layoutOptions or {})
+				options.absoluteSize = true
+				Layout.applyRoot(bb, w, hh, options)
+				h:settle(1)
+				Layout.applyRoot(bb, w, hh, options)
 				local nodes, index = {}, {}
 				dumpTree(bb, 1, nodes, index, 1, function(obj)
 					return visibleIn(obj, bb)

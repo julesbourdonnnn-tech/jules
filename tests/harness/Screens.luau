@@ -1774,11 +1774,109 @@ end
 
 -- Monde v2.0 (lot B4) : textes du monde du ranch qui évolue, interrupteurs ouverts DANS le scénario
 -- seulement (le client suit ce que le serveur montre). Étape 1 : étiquette de la dalle du Tapis Étoilé
--- (D11) allumée par le serveur au-delà du Tapis 12 : cas courant, puis pire cas (niveau 20, prix au
--- Record R maximal et à A maximal). Les étapes suivantes du lot complètent ce groupe.
+-- (D11) allumée par le serveur au-delà du Tapis 12. Étape 5 : panneaux des ranchs (nom de 20 caractères,
+-- couronne dessinée et Record R 400, « Jour 9 999 », badge boop, bouclier, ranch libre, « PRÊT ! »), dalle
+-- du Tapis 1, Tapis Étoilé 13 et 20 (prix géants), plaque du titre avec la goutte du halo et 60, statue
+-- (nom long et taille géante, puis vide), bulle « Boîte à dodo ! », panneau de la Prairie v2, kiosque de
+-- Big Plop (étiquette et invite □ « Atelier ») ; le kiosque vient en dernier (instantané de l'écran
+-- Améliorations : il reste jusqu'à la fin du groupe)
 local function worldScreens()
 	local list = {}
-	local function starPad(c, R, A, star)
+	local V2_ATTRS = { "BestR", "SplorchReady", "HaloOn", "Ascend", "Monuments", "TapisTier" }
+	local function child(parent, name, class, size)
+		local f = parent:FindFirstChild(name)
+		if f == nil then
+			f = MockInstance.new(class)
+			f.Name = name
+			if size then
+				f.Size = size
+			end
+			f.Parent = parent
+		end
+		return f
+	end
+	local function ranchModelAt(c, slot)
+		local world = child(c.h.workspace, "Wobbleton", "Folder")
+		return child(child(world, "Ranches", "Folder"), tostring(slot), "Model")
+	end
+	-- monde de la scène : panneaux des 4 ranchs du stub, Cuve de mon ranch, attributs v2.0 retirés
+	local function worldReset(c)
+		closeAll(c)
+		flushAll(c)
+		unstub(c)
+		for slot = 1, 4 do
+			local model = ranchModelAt(c, slot)
+			child(model, "Sign", "Part", Vector3.new(6, 2, 0.4))
+			for _, name in V2_ATTRS do
+				model:SetAttribute(name, nil)
+			end
+		end
+		child(ranchModelAt(c, 1), "Vat", "Part", Vector3.new(4, 4, 4))
+		local plaza = c.h.workspace.Wobbleton:FindFirstChild("Plaza")
+		if plaza then
+			plaza:Destroy()
+		end
+	end
+	local function ranches(c, mine, second)
+		c.seq = (c.seq or 0) + 1
+		local mineRec = ranchPublic(c, 1, c.h.localPlayer.UserId, Screens.LONG_NAME, mine)
+		c.h:fireClient(REMOTES .. "RanchSnapshot", {
+			seq = c.seq,
+			ranches = {
+				["1"] = mineRec,
+				["2"] = ranchPublic(c, 2, c.players[1].UserId, Screens.LONG_NAME_2, second),
+				["3"] = ranchPublic(c, 3, c.players[4].UserId, "", { hidden = true, title = "" }),
+				["4"] = ranchPublic(
+					c,
+					4,
+					0,
+					"",
+					{ title = "", best = { s = 0, m = 0, z = 0, zg = 0 }, R = 0 }
+				),
+			},
+			squishies = { ["1"] = {}, ["2"] = {}, ["3"] = {}, ["4"] = {} },
+		})
+		c.h:settle(2)
+	end
+	local function settle(c)
+		frames(c, 20, 1 / 30)
+		pcall(c.h:require(CLIENT .. "Controllers.LightingController").refresh)
+		frames(c, 4, 1 / 30)
+	end
+	-- panneaux au pire cas : nom de 20 caractères, Record R 400 (BestR), « Jour 9 999 », Rush : badge boop
+	-- sur le mien, bouclier sur le voisin ; ranch au nom caché (alias) ; ranch libre (« Ranch 4 »)
+	table.insert(list, {
+		id = "world.sign",
+		run = function(c)
+			worldReset(c)
+			ranchModelAt(c, 1):SetAttribute("BestR", 400)
+			ranches(
+				c,
+				{ mode = "rush", boopable = true, day = 9999, R = 0 },
+				{ mode = "rush", shield = true, day = 9999, R = 400 }
+			)
+			settle(c)
+		end,
+	})
+	-- « PRÊT ! » (world.ready) au bout du panneau : le pire cas (badge boop et « PRÊT ! ») et le calme
+	table.insert(list, {
+		id = "world.sign.ready",
+		run = function(c)
+			worldReset(c)
+			local mine = ranchModelAt(c, 1)
+			mine:SetAttribute("BestR", 400)
+			mine:SetAttribute("SplorchReady", true)
+			ranchModelAt(c, 2):SetAttribute("SplorchReady", true)
+			ranches(
+				c,
+				{ mode = "rush", boopable = true, day = 9999, R = 0 },
+				{ mode = "cozy", day = 9999, R = 400 }
+			)
+			settle(c)
+		end,
+	})
+	local function starPad(c, R, A, star, snack)
+		worldReset(c)
 		local model = Screens.myRanchModel(c, {})
 		local pads = model:FindFirstChild("Pads")
 		if pads == nil then
@@ -1794,7 +1892,7 @@ local function worldScreens()
 		end
 		pad.Transparency = 0
 		pad:SetAttribute("Maxed", false)
-		local base = { snack = 12, decor = 5, pens = 3, cozyBed = true, seen = 15 }
+		local base = { snack = snack or 12, decor = 5, pens = 3, cozyBed = true, seen = 15 }
 		local mine = table.clone(base)
 		mine.star = star
 		c.h:fireClient(
@@ -1805,17 +1903,90 @@ local function worldScreens()
 		ranchStub(c, "cozy", { R = R, tiles = base })
 		frames(c, 20, 1 / 30)
 	end
-	for _, case in { { "world.starPad", 12, 2, 3 }, { "world.starPad.max", 400, 60, 7 } } do
+	-- dalle du Tapis 1 (dalle de la v1.3) ; Tapis Étoilé 13 (premier niveau), 15, puis 20 au Record R et à
+	-- A maximaux (prix géants de BigNumber)
+	for _, case in
+		{
+			{ "world.pad.snack1", 0, 0, 0, 0 },
+			{ "world.starPad.13", 12, 2, 0, 12 },
+			{ "world.starPad", 12, 2, 3, 12 },
+			{ "world.starPad.max", 400, 60, 7, 12 },
+		}
+	do
 		table.insert(list, {
 			id = case[1],
 			run = function(c)
-				closeAll(c)
-				flushAll(c)
-				unstub(c)
-				starPad(c, case[2], case[3], case[4])
+				starPad(c, case[2], case[3], case[4], case[5])
 			end,
 		})
 	end
+	-- plaque du titre au-dessus de ma tête : titre le plus long, goutte dessinée du halo et 60 Ascensions
+	table.insert(list, {
+		id = "world.title.halo",
+		run = function(c)
+			worldReset(c)
+			local mine = ranchModelAt(c, 1)
+			mine:SetAttribute("HaloOn", true)
+			mine:SetAttribute("Ascend", 60)
+			ranches(c, { day = 42 }, { day = 42 })
+			settle(c)
+		end,
+	})
+	-- statue de la place : nom de 20 caractères et taille géante, puis aucune (« Plus gros squishy »)
+	for _, case in { { "world.statue", 1 }, { "world.statue.empty", 0 } } do
+		table.insert(list, {
+			id = case[1],
+			run = function(c)
+				worldReset(c)
+				ranches(c, { day = 42 }, { day = 42 })
+				local plaza = child(c.h.workspace.Wobbleton, "Plaza", "Folder")
+				local statue = child(plaza, "Statue", "Part", Vector3.new(6, 6, 6))
+				statue:SetAttribute("StatueSpecies", if case[2] == 1 then longestSpecies(c) else 0)
+				statue:SetAttribute("StatueMutation", if case[2] == 1 then longestMutation(c) else 0)
+				statue:SetAttribute("StatueSize", if case[2] == 1 then 9.99e35 else 0)
+				statue:SetAttribute("StatueName", if case[2] == 1 then Screens.LONG_NAME_2 else "")
+				settle(c)
+			end,
+		})
+	end
+	-- bulle « Boîte à dodo ! » sur ma Cuve : une naissance part au Dodo
+	table.insert(list, {
+		id = "world.dodo",
+		run = function(c)
+			worldReset(c)
+			ranches(c, { day = 42 }, { day = 42 })
+			c.h:fireClient(REMOTES .. "Celebrate", { kind = "hatch", data = { at = "dodo", mutation = 0 } })
+			c.h:settle(1)
+			frames(c, 3, 1 / 30)
+		end,
+	})
+	-- Prairie v2 (D9, interrupteur Monuments) : le panneau « Coucou ! » du jardin du quartier nord
+	table.insert(list, {
+		id = "world.meadow.v2",
+		run = function(c)
+			worldReset(c)
+			ranchModelAt(c, 1):SetAttribute("Monuments", 3)
+			ranches(c, { day = 42 }, { day = 42 })
+			settle(c)
+		end,
+	})
+	-- kiosque de Big Plop (D21) : instantané de l'écran Améliorations (une ligne de l'Atelier visible),
+	-- étiquette world.kiosk, puis le joueur à 4 studs du comptoir : invite □ « Atelier » (vraie cible de
+	-- PromptController, glyphe de la plateforme)
+	table.insert(list, {
+		id = "world.kiosk",
+		run = function(c)
+			worldReset(c)
+			ranches(c, { day = 42 }, { day = 42 })
+			c.h:fireClient(REMOTES .. "DataPatch", { upgradeSnapshot = Screens.upgradeSnapshot(c) }, {})
+			c.h:settle(1)
+			settle(c)
+			local kiosk = c.WorldLayout.plaza("kiosk")
+			c.h:moveTo(c.h.localPlayer, kiosk + Vector3.new(4, 3, -4))
+			frames(c, 12, 1 / 30)
+			refreshHud(c)
+		end,
+	})
 	return list
 end
 
@@ -2931,6 +3102,8 @@ end
 -- ---------------------------------------------------------------------------------------------
 
 Screens.LAYOUT_OPTIONS = { fidelity = true, measureText = TextFit.measureAuto }
+-- textes du monde : AbsoluteSize écrit (Layout.applyRoot), comme Roblox le fait pour un BillboardGui
+Screens.BILLBOARD_OPTIONS = { fidelity = true, measureText = TextFit.measureAuto, absoluteSize = true }
 
 -- Deux passes : le jeu réagit aux tailles écrites (AbsoluteSize) avant la mesure finale
 function Screens.layout(c)
@@ -3133,7 +3306,11 @@ function Screens.billboardTexts(c)
 			local w = size.X.Offset + size.X.Scale * pxPerStud
 			local hh = size.Y.Offset + size.Y.Scale * pxPerStud
 			if w >= 2 and hh >= 2 then
-				Layout.applyRoot(bb, w, hh, Screens.LAYOUT_OPTIONS)
+				-- deux passes (lot B4, étape 5) : la première écrit AbsoluteSize (les icônes dessinées de
+				-- UI/Text se replacent d'après la vraie boîte de leur libellé), la seconde les met en page
+				Layout.applyRoot(bb, w, hh, Screens.BILLBOARD_OPTIONS)
+				h:settle(1)
+				Layout.applyRoot(bb, w, hh, Screens.BILLBOARD_OPTIONS)
 				for _, d in bb:GetDescendants() do
 					if
 						TextFit.isText(d)
@@ -3243,6 +3420,21 @@ function Screens.keyBoxes(c)
 		local source = obj:GetAttribute("TextSource")
 		local shownText = if type(source) == "string" then source elseif d then d.text else ""
 		local set = if d and d.text ~= "" then Screens.keysOf(c, shownText) else nil
+		if set == nil and d and d.text ~= "" and string.find(shownText, " · ", 1, true) then
+			-- lot B4, étape 5 : texte du monde fait de morceaux traduits séparés par « · » (panneau des
+			-- ranchs : nom, Record R, « Jour 42 », badge, « PRÊT ! ») : chaque morceau traduit est relié à
+			-- sa clé et mesuré dans la boîte du texte entier (le texte entier est vérifié tel quel par
+			-- textIssues, dans les deux langues)
+			for segment in string.gmatch(shownText .. " · ", "(.-) · ") do
+				local part = Screens.keysOf(c, segment)
+				if part then
+					set = set or {}
+					for key, vars in part do
+						set[key] = vars
+					end
+				end
+			end
+		end
 		-- texte "fit" de UI/Text (lot B1) : le jeu reprend la règle de l'ancien TextScaled pour chaque
 		-- texte posé (plus grande taille entière de [TextFitMin, TextFitMax] qui tient) ; toute clé est
 		-- donc mesurée dans la boîte avec cette règle, pas à la taille relevée pour le texte affiché

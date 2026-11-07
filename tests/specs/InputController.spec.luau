@@ -275,6 +275,42 @@ return function(T)
 	end)
 
 	describe("InputController › actions", function()
+		-- lot B4, étape 5 (D21, INT-B4-KIOSK) : □ sur le kiosque de Big Plop ouvre l'écran Améliorations sur
+		-- l'onglet Atelier, et rien d'autre (aucune intention envoyée au serveur)
+		it(
+			'□ sur le kiosque : PanelController.open("Upgrades", "workshop") seulement, aucune intention',
+			function()
+				local h, _, _, world = setup()
+				local PC = TvAudit.mod(h, "UI.PanelController")
+				local opened = {}
+				local realOpen = PC.open
+				PC.open = function(panel, tab, ...)
+					table.insert(opened, tostring(panel) .. ":" .. tostring(tab))
+					return realOpen(panel, tab, ...)
+				end
+				world.target = {
+					kind = "kiosk",
+					slot = 0,
+					uid = "",
+					id = 0,
+					tile = "",
+					ready = true,
+					primary = "workshop",
+					secondary = "",
+					position = Vector3.new(-30, 0, 24),
+				}
+				local before = #h.log.serverEvents
+				Gamepad.tap(h, Enum.KeyCode.ButtonX)
+				expect(opened).toEqual({ "Upgrades:workshop" })
+				expect(#h.log.serverEvents).toBe(before)
+				-- ○ sur le kiosque : rien (aucune seconde action)
+				Gamepad.tap(h, Enum.KeyCode.ButtonB)
+				expect(#opened).toBe(1)
+				expect(#h.log.serverEvents).toBe(before)
+				clean(h)
+			end
+		)
+
 		it("□ presse la cible prête (Press uid, tClient) ; en recharge : Bump, rien d'envoyé", function()
 			local h, _, _, world = setup()
 			world.target = {

@@ -158,6 +158,94 @@ return function(T)
 			end
 		)
 
+		-- lot B4, étape 5 (D16, D20, INT-B1-GLYPHS2) : « ♛ » du panneau des ranchs (hors des polices) devient
+		-- une couronne DESSINÉE (repère Text.CROWN), la goutte du halo une goutte dessinée (Text.DROP)
+		it(
+			"couronne « {^} » : jamais montrée telle quelle, dessinée, suit couleur, taille, texte et langue",
+			function()
+				local c = setup()
+				local l = label(c)
+				c.Text.raw(l, "Mira · " .. c.Text.CROWN .. "2 · Jour 42")
+				Layout.apply(c.h)
+				expect(string.find(l.Text, "{^}", 1, true)).toBeNil()
+				expect(string.find(l.Text, "♛", 1, true)).toBeNil()
+				expect(string.match(l.Text, "^Mira · +2 · Jour 42$") ~= nil).toBe(true)
+				local icons = c.Text.icons(l)
+				expect(#icons).toBe(1)
+				local crown = icons[1]
+				expect(crown:GetAttribute("Icon")).toBe("crown")
+				expect(crown.Parent).toBe(l)
+				-- 5 primitives (bandeau, corps, 3 pointes), liseré sombre dessous, couleur du texte dessus
+				expect(#crown.Fill:GetChildren()).toBe(5)
+				expect(#crown.Edge:GetChildren()).toBe(5)
+				expect(crown.Fill.Band.BackgroundColor3).toBe(c.Theme.Colors.Gold)
+				expect(crown.Fill.ZIndex > crown.Edge.ZIndex).toBe(true)
+				for _, part in crown:GetDescendants() do
+					expect(part.ClassName == "ImageLabel" or part.ClassName == "TextLabel").toBe(false)
+				end
+				-- après « Mira · » (aligné à gauche), dans la boîte
+				local x1 = crown.Position.X.Offset
+				expect(x1 > 40 and x1 < 160).toBe(true)
+				local r, lr = Layout.rect(crown), Layout.rect(l)
+				expect(r.x >= lr.x and r.y >= lr.y and r.x + r.w <= lr.x + lr.w and r.y + r.h <= lr.y + lr.h).toBe(
+					true
+				)
+				-- couleur du texte changée : couronne repeinte
+				l.TextColor3 = Color3.fromRGB(16, 12, 30)
+				expect(crown.Fill.TipC.BackgroundColor3).toBe(Color3.fromRGB(16, 12, 30))
+				-- taille changée : couronne agrandie
+				local size = crown.Size.X.Offset
+				-- (le panneau est réécrit par RanchRenderer : l'icône est replacée à la nouvelle taille)
+				c.Text.style(l, "label", 48)
+				c.h:settle(1)
+				c.Text.raw(l, "Mira · " .. c.Text.CROWN .. "2 · Jour 42")
+				Layout.apply(c.h)
+				expect(c.Text.icons(l)[1].Size.X.Offset > size).toBe(true)
+				-- autre langue (panneau réécrit par RanchRenderer) : toujours une couronne, plus loin (nom plus long)
+				c.Text.style(l, "label", 32)
+				c.h:settle(1)
+				c.Text.raw(l, "Maximilian · " .. c.Text.CROWN .. "400 · Day 9999")
+				Layout.apply(c.h)
+				expect(#c.Text.icons(l)).toBe(1)
+				expect(c.Text.icons(l)[1].Position.X.Offset > x1).toBe(true)
+				-- étoile puis couronne à la même place : l'icône est redessinée dans la bonne forme
+				c.Text.raw(l, "5" .. c.Text.STAR)
+				expect(c.Text.icons(l)[1]:GetAttribute("Icon")).toBe("star")
+				c.Text.raw(l, "5" .. c.Text.CROWN)
+				expect(c.Text.icons(l)[1]:GetAttribute("Icon")).toBe("crown")
+				expect(#c.Text.icons(l)).toBe(1)
+				-- goutte du halo : 2 primitives, attribut Icon « drop »
+				c.Text.raw(l, "Sky Keeper · " .. c.Text.DROP .. "60")
+				local drop = c.Text.icons(l)[1]
+				expect(drop:GetAttribute("Icon")).toBe("drop")
+				expect(#drop.Fill:GetChildren()).toBe(2)
+				expect(string.find(l.Text, "{~}", 1, true)).toBeNil()
+				-- les trois repères dans un texte : trois icônes, chacune la sienne
+				c.Text.raw(l, c.Text.CROWN .. "1 " .. c.Text.STAR .. "2 " .. c.Text.DROP .. "3")
+				local kinds = {}
+				for _, icon in c.Text.icons(l) do
+					table.insert(kinds, icon:GetAttribute("Icon"))
+				end
+				expect(kinds).toEqual({ "crown", "star", "drop" })
+				-- texte sans repère : plus aucune icône
+				c.Text.raw(l, "Mira")
+				expect(#c.Text.icons(l)).toBe(0)
+				clean(c)
+			end
+		)
+
+		it("Glyph.crown et Glyph.drop : tailles hostiles bornées, jamais d'erreur", function()
+			local c = setup()
+			for _, size in { 0 / 0, -5, 0, 4, 1e9, 48 } do
+				for _, make in { c.Glyph.crown, c.Glyph.drop } do
+					local g = make(nil, size)
+					expect(g.Size.X.Offset >= 8 and g.Size.X.Offset <= 512).toBe(true)
+					g:Destroy()
+				end
+			end
+			clean(c)
+		end)
+
 		it("Glyph.star : tailles hostiles bornées, jamais d'erreur", function()
 			local c = setup()
 			for _, size in { 0 / 0, -5, 0, 4, 1e9, 48 } do

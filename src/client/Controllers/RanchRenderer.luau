@@ -808,6 +808,13 @@ local function stepStatue()
 	local name = Util.str(part:GetAttribute("StatueName"), "", 40)
 	local scale = SizeScale.display(z, "statue")
 	local sig = string.format("%d:%d:%.2f:%s", s, m, scale, name)
+	-- pièce remplacée (place reconstruite) : son étiquette a été rendue à la réserve de WorldText (et
+	-- peut-être reprise par un autre objet) ; on l'oublie sans la toucher et tout est refait (lot B4)
+	local label = statue.label
+	if label and label.Adornee ~= part then
+		statue.label = nil
+		statue.sig = ""
+	end
 	if statue.sig == sig then
 		return
 	end

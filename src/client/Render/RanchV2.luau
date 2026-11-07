@@ -1497,8 +1497,16 @@ local function renderSky(st: Slot, view: View?)
 	local level = if grant == "full" then skyNatural(st) elseif grant == "reduced" then "far" else "none"
 	local on = a >= 1 and level ~= "none"
 	local sig = if on then "sky|" .. a .. "|" .. level else "none:" .. level
-	if not unchanged(st, "sky", sig, level) then
-		renderParts(st, "sky", sig, if on then SkyKit.specs(st.slot, a, level) else EMPTY :: any, level)
+	-- niveau de cascade : le ciel du ranch courant joue sa cascade comme un élément en détail complet
+	local cascadeLevel = if level == "near" then "full" else level
+	if not unchanged(st, "sky", sig, cascadeLevel) then
+		renderParts(
+			st,
+			"sky",
+			sig,
+			if on then SkyKit.specs(st.slot, a, level) else EMPTY :: any,
+			cascadeLevel
+		)
 	end
 end
 
