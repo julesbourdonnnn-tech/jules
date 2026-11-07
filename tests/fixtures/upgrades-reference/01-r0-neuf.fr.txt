@@ -1,0 +1,142 @@
+Body 240,139,1440,860
+Body.Title 272,151,272,88 "Améliorations"
+Body.CoinsIcon 936,171,48,48
+Body.CoinsIcon.P1 956,184,8,22
+Body.CoinsIcon.R1 940,175,40,40
+Body.Coins 992,167,224,56 "40"
+Body.ConfettiIcon 1232,171,48,48
+Body.ConfettiIcon.P1 1240,182,12,7
+Body.ConfettiIcon.P2 1259,181,12,7
+Body.ConfettiIcon.P3 1242,202,12,7
+Body.ConfettiIcon.P4 1260,200,12,7
+Body.Confetti 1288,167,144,56 "0"
+Body.Mode 1448,159,200,72 ""
+Body.Mode.Glyph 1460,171,48,48
+Body.Mode.Glyph.Image 1460,171,48,48
+Body.Mode.Label 1516,167,120,56 "×1"
+Body.Glyph 272,247,48,48
+Body.Glyph.Image 272,247,48,48
+Body.Tab_suggested 336,243,194,56 ""
+Body.Tab_suggested.Label 348,249,170,44 "Conseillé"
+Body.Tab_suggested.Underline 365,289,136,6
+Body.Tab_ranch 546,243,160,56 ""
+Body.Tab_ranch.Label 558,249,136,44 "Ranch"
+Body.Tab_ranch.Underline 626,289,0,6
+Body.Tab_helpers 722,243,351,56 ""
+Body.Tab_helpers.Label 735,249,156,44 "Plopettes"
+Body.Tab_helpers.LockWord 934,251,123,40 "Record 2"
+Body.Tab_helpers.Lock 898,257,28,28
+Body.Tab_helpers.Lock.P1 903,269,18,13
+Body.Tab_helpers.Lock.P2 911,273,3,6
+Body.Tab_helpers.Lock.R1 906,260,12,14
+Body.Tab_helpers.Underline 898,289,0,6
+Body.Tab_workshop 1089,243,182,56 ""
+Body.Tab_workshop.Label 1101,249,158,44 "Atelier"
+Body.Tab_workshop.Underline 1180,289,0,6
+Body.Glyph 1287,247,48,48
+Body.Glyph.Image 1287,247,48,48
+Body.Close 1592,243,56,56 ""
+Body.Close.Glyph 1600,251,40,40
+Body.Close.Glyph.Image 1600,251,40,40
+Body.Glyph 1528,247,48,48
+Body.Glyph.Image 1528,247,48,48
+Body.Glyph 1472,247,48,48
+Body.Glyph.Image 1472,247,48,48
+Body.Suggested 272,303,1376,560
+Body.Suggested.Card1 272,319,432,528 "" *
+Body.Suggested.Card1.Icon 448,335,80,80
+Body.Suggested.Card1.Icon.P1 454,372,69,29
+Body.Suggested.Card1.Icon.P2 468,372,8,29
+Body.Suggested.Card1.Icon.P3 500,372,8,29
+Body.Suggested.Card1.Icon.P4 476,352,24,24
+Body.Suggested.Card1.Name 288,423,400,48 "Tapis à Goûter"
+Body.Suggested.Card1.LevelA 288,511,168,40 "Niv. 0"
+Body.Suggested.Card1.LevelArrow 472,515,32,32
+Body.Suggested.Card1.LevelArrow.P1 476,528,22,5
+Body.Suggested.Card1.LevelArrow.P2 489,533,12,5
+Body.Suggested.Card1.LevelArrow.P3 489,524,12,5
+Body.Suggested.Card1.LevelB 520,511,168,40 "1"
+Body.Suggested.Card1.EffectLabel 288,559,400,40 "Croissance"
+Body.Suggested.Card1.Before 288,599,168,40 "×1"
+Body.Suggested.Card1.EffectArrow 472,603,32,32
+Body.Suggested.Card1.EffectArrow.P1 476,616,22,5
+Body.Suggested.Card1.EffectArrow.P2 489,621,12,5
+Body.Suggested.Card1.EffectArrow.P3 489,612,12,5
+Body.Suggested.Card1.After 520,599,168,40 "×2"
+Body.Suggested.Card1.Reason 288,647,400,36 "Pour grandir plus vite"
+Body.Suggested.Card1.Currency 400,691,48,48
+Body.Suggested.Card1.Currency.P1 420,704,8,22
+Body.Suggested.Card1.Currency.R1 404,695,40,40
+Body.Suggested.Card1.Price 456,691,232,48 "20"
+Body.Suggested.Card1.Buy 288,751,400,80
+Body.Suggested.Card1.Buy.Glyph 376,767,48,48
+Body.Suggested.Card1.Buy.Glyph.Image 376,767,48,48
+Body.Suggested.Card1.StateIcon 376,767,48,48
+Body.Suggested.Card1.Word 436,763,252,56 "Acheter"
+Body.Suggested.UpgradeCard_Shadow 272,325,432,528
+Body.Suggested.Card2 744,319,432,528 ""
+Body.Suggested.Card2.Icon 920,335,80,80
+Body.Suggested.Card2.Icon.P1 946,397,23,4
+Body.Suggested.Card2.Icon.P2 938,345,45,45
+Body.Suggested.Card2.Icon.P3 956,385,8,8
+Body.Suggested.Card2.Icon.P4 946,354,10,10
+Body.Suggested.Card2.Name 760,423,400,48 "Décorations"
+Body.Suggested.Card2.LevelA 760,511,168,40 "Niv. 0"
+Body.Suggested.Card2.LevelArrow 944,515,32,32
+Body.Suggested.Card2.LevelArrow.P1 948,528,22,5
+Body.Suggested.Card2.LevelArrow.P2 961,533,12,5
+Body.Suggested.Card2.LevelArrow.P3 961,524,12,5
+Body.Suggested.Card2.LevelB 992,511,168,40 "1"
+Body.Suggested.Card2.EffectLabel 760,559,400,40 "Revenu total +1,2 %"
+Body.Suggested.Card2.EffectArrow 944,603,32,32
+Body.Suggested.Card2.Reason 760,647,400,36 "Pour gagner plus"
+Body.Suggested.Card2.Currency 872,691,48,48
+Body.Suggested.Card2.Currency.P1 892,704,8,22
+Body.Suggested.Card2.Currency.R1 876,695,40,40
+Body.Suggested.Card2.Price 928,691,232,48 "80"
+Body.Suggested.Card2.PriceBar 760,743,400,8
+Body.Suggested.Card2.PriceBar.Fill 760,743,200,8
+Body.Suggested.Card2.StateIcon 848,767,48,48
+Body.Suggested.Card2.StateIcon.P1 855,788,35,7
+Body.Suggested.Card2.StateIcon.P2 855,788,35,7
+Body.Suggested.Card2.StateIcon.P3 857,771,31,6
+Body.Suggested.Card2.StateIcon.P4 857,805,31,6
+Body.Suggested.Card2.Word 908,763,252,56 "Il manque"
+Body.Suggested.UpgradeCard_Shadow 744,325,432,528
+Body.Suggested.Card3 1216,319,432,528 ""
+Body.Suggested.Card3.Icon 1392,335,80,80
+Body.Suggested.Card3.Icon.P1 1406,355,11,50
+Body.Suggested.Card3.Icon.P2 1447,355,11,50
+Body.Suggested.Card3.Icon.P3 1398,366,69,8
+Body.Suggested.Card3.Icon.P4 1398,387,69,8
+Body.Suggested.Card3.Name 1232,423,400,48 "Enclos"
+Body.Suggested.Card3.Tier 1232,471,400,36 "Herbe tendre"
+Body.Suggested.Card3.LevelA 1232,511,168,40 "Niv. 0"
+Body.Suggested.Card3.LevelArrow 1416,515,32,32
+Body.Suggested.Card3.LevelArrow.P1 1420,528,22,5
+Body.Suggested.Card3.LevelArrow.P2 1433,533,12,5
+Body.Suggested.Card3.LevelArrow.P3 1433,524,12,5
+Body.Suggested.Card3.LevelB 1464,511,168,40 "1"
+Body.Suggested.Card3.EffectLabel 1232,559,400,40 "Places"
+Body.Suggested.Card3.Before 1232,599,168,40 "4"
+Body.Suggested.Card3.EffectArrow 1416,603,32,32
+Body.Suggested.Card3.EffectArrow.P1 1420,616,22,5
+Body.Suggested.Card3.EffectArrow.P2 1433,621,12,5
+Body.Suggested.Card3.EffectArrow.P3 1433,612,12,5
+Body.Suggested.Card3.After 1464,599,168,40 "5"
+Body.Suggested.Card3.Reason 1232,647,400,36 "Plus de place"
+Body.Suggested.Card3.Currency 1344,691,48,48
+Body.Suggested.Card3.Currency.P1 1364,704,8,22
+Body.Suggested.Card3.Currency.R1 1348,695,40,40
+Body.Suggested.Card3.Price 1400,691,232,48 "1200"
+Body.Suggested.Card3.PriceBar 1232,743,400,8
+Body.Suggested.Card3.PriceBar.Fill 1232,743,13,8
+Body.Suggested.Card3.StateIcon 1320,767,48,48
+Body.Suggested.Card3.StateIcon.P1 1327,788,35,7
+Body.Suggested.Card3.StateIcon.P2 1327,788,35,7
+Body.Suggested.Card3.StateIcon.P3 1329,771,31,6
+Body.Suggested.Card3.StateIcon.P4 1329,805,31,6
+Body.Suggested.Card3.Word 1380,763,252,56 "Il manque"
+Body.Suggested.UpgradeCard_Shadow 1216,325,432,528
+Body.Detail 272,863,1376,120
+Body.Detail.Sentence 296,875,1328,96 "Repart de zéro au Grand Splorch"

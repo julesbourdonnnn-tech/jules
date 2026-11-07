@@ -1,0 +1,200 @@
+Body 240,139,1440,860
+Body.Title 272,151,272,88 "Améliorations"
+Body.CoinsIcon 936,171,48,48
+Body.CoinsIcon.P1 956,184,8,22
+Body.CoinsIcon.R1 940,175,40,40
+Body.Coins 992,167,224,56 "4,25B"
+Body.ConfettiIcon 1232,171,48,48
+Body.ConfettiIcon.P1 1240,182,12,7
+Body.ConfettiIcon.P2 1259,181,12,7
+Body.ConfettiIcon.P3 1242,202,12,7
+Body.ConfettiIcon.P4 1260,200,12,7
+Body.Confetti 1288,167,144,56 "139"
+Body.Mode 1448,159,200,72 ""
+Body.Mode.Glyph 1460,171,48,48
+Body.Mode.Glyph.Image 1460,171,48,48
+Body.Mode.Label 1516,167,120,56 "×1"
+Body.Glyph 272,247,48,48
+Body.Glyph.Image 272,247,48,48
+Body.Tab_suggested 336,243,194,56 ""
+Body.Tab_suggested.Label 348,249,170,44 "Conseillé"
+Body.Tab_suggested.Underline 433,289,0,6
+Body.Tab_ranch 546,243,160,56 ""
+Body.Tab_ranch.Label 558,249,136,44 "Ranch"
+Body.Tab_ranch.Underline 626,289,0,6
+Body.Tab_helpers 722,243,180,56 ""
+Body.Tab_helpers.Label 734,249,156,44 "Plopettes"
+Body.Tab_helpers.Underline 812,289,0,6
+Body.Tab_workshop 918,243,182,56 ""
+Body.Tab_workshop.Label 930,249,158,44 "Atelier"
+Body.Tab_workshop.Underline 945,289,127,6
+Body.Glyph 1116,247,48,48
+Body.Glyph.Image 1116,247,48,48
+Body.Close 1592,243,56,56 ""
+Body.Close.Glyph 1600,251,40,40
+Body.Close.Glyph.Image 1600,251,40,40
+Body.Glyph 1528,247,48,48
+Body.Glyph.Image 1528,247,48,48
+Body.Glyph 1472,247,48,48
+Body.Glyph.Image 1472,247,48,48
+Body.List_workshop 272,303,1376,560
+Body.List_workshop.Row_startMat 296,239,1328,112 ""
+Body.List_workshop.Row_startMat.Icon 312,255,80,80
+Body.List_workshop.Row_startMat.Icon.P1 318,292,69,29
+Body.List_workshop.Row_startMat.Icon.P2 332,292,8,29
+Body.List_workshop.Row_startMat.Icon.P3 364,292,8,29
+Body.List_workshop.Row_startMat.EffectLabel 408,297,244,44 "Départ"
+Body.List_workshop.Row_startMat.Before 660,297,120,44 "2"
+Body.List_workshop.Row_startMat.EffectArrow 784,303,32,32
+Body.List_workshop.Row_startMat.EffectArrow.P1 788,316,22,5
+Body.List_workshop.Row_startMat.EffectArrow.P2 801,321,12,5
+Body.List_workshop.Row_startMat.EffectArrow.P3 801,312,12,5
+Body.List_workshop.Row_startMat.After 820,297,120,44 "3"
+Body.List_workshop.Row_startMat.StateIcon 1376,271,48,48
+Body.List_workshop.Row_startMat.StateIcon.P1 1377,299,24,8
+Body.List_workshop.Row_startMat.Word 1432,267,176,56 "Prêt"
+Body.List_workshop.Row_startMat.LevelBar 964,311,140,12
+Body.List_workshop.Row_startMat.LevelBar.Fill 964,311,93,12
+Body.List_workshop.Row_startMat.PriceBar 1120,315,240,8
+Body.List_workshop.Row_startMat.PriceBar.Fill 1120,315,240,8
+Body.List_workshop.Row_magnet 296,367,1328,112 ""
+Body.List_workshop.Row_magnet.Icon 312,383,80,80
+Body.List_workshop.Row_magnet.Icon.P1 327,399,14,42
+Body.List_workshop.Row_magnet.Icon.P2 362,399,14,42
+Body.List_workshop.Row_magnet.Icon.P3 327,433,50,14
+Body.List_workshop.Row_magnet.Icon.P4 327,398,50,8
+Body.List_workshop.Row_magnet.Name 408,377,540,44 "Aimant à pièces"
+Body.List_workshop.Row_magnet.EffectLabel 408,425,244,44 "Aimant"
+Body.List_workshop.Row_magnet.Before 660,425,120,44 "8"
+Body.List_workshop.Row_magnet.EffectArrow 784,431,32,32
+Body.List_workshop.Row_magnet.EffectArrow.P1 788,444,22,5
+Body.List_workshop.Row_magnet.EffectArrow.P2 801,449,12,5
+Body.List_workshop.Row_magnet.EffectArrow.P3 801,440,12,5
+Body.List_workshop.Row_magnet.After 820,425,120,44 "11 studs"
+Body.List_workshop.Row_magnet.LevelA 964,381,140,48 "1/3"
+Body.List_workshop.Row_magnet.LevelArrow 1020,391,28,28
+Body.List_workshop.Row_magnet.Currency 1120,385,40,40
+Body.List_workshop.Row_magnet.Currency.P1 1127,394,10,6
+Body.List_workshop.Row_magnet.Currency.P2 1143,393,10,6
+Body.List_workshop.Row_magnet.Currency.P3 1128,411,10,6
+Body.List_workshop.Row_magnet.Currency.P4 1144,409,10,6
+Body.List_workshop.Row_magnet.Price 1168,381,192,48 "8"
+Body.List_workshop.Row_magnet.StateIcon 1376,399,48,48
+Body.List_workshop.Row_magnet.StateIcon.P1 1377,427,24,8
+Body.List_workshop.Row_magnet.StateIcon.P2 1386,420,41,8
+Body.List_workshop.Row_magnet.Word 1432,395,176,56 "Prêt"
+Body.List_workshop.Row_magnet.LevelBar 964,439,140,12
+Body.List_workshop.Row_magnet.LevelBar.Fill 964,439,47,12
+Body.List_workshop.Row_magnet.PriceBar 1120,443,240,8
+Body.List_workshop.Row_magnet.PriceBar.Fill 1120,443,240,8
+Body.List_workshop.Row_superStreak 296,495,1328,112 ""
+Body.List_workshop.Row_superStreak.Icon 312,511,80,80
+Body.List_workshop.Row_superStreak.Icon.P1 325,529,52,11
+Body.List_workshop.Row_superStreak.Icon.P2 335,545,35,11
+Body.List_workshop.Row_superStreak.Icon.P3 328,561,52,11
+Body.List_workshop.Row_superStreak.Name 408,505,540,44 "Super Série"
+Body.List_workshop.Row_superStreak.EffectLabel 408,553,244,44 "Série max"
+Body.List_workshop.Row_superStreak.Before 660,553,120,44 "6"
+Body.List_workshop.Row_superStreak.EffectArrow 784,559,32,32
+Body.List_workshop.Row_superStreak.EffectArrow.P1 788,572,22,5
+Body.List_workshop.Row_superStreak.EffectArrow.P2 801,577,12,5
+Body.List_workshop.Row_superStreak.EffectArrow.P3 801,568,12,5
+Body.List_workshop.Row_superStreak.After 820,553,120,44 "7"
+Body.List_workshop.Row_superStreak.LevelA 964,509,140,48 "1/2"
+Body.List_workshop.Row_superStreak.LevelArrow 1020,519,28,28
+Body.List_workshop.Row_superStreak.Currency 1120,513,40,40
+Body.List_workshop.Row_superStreak.Currency.P1 1127,522,10,6
+Body.List_workshop.Row_superStreak.Currency.P2 1143,521,10,6
+Body.List_workshop.Row_superStreak.Currency.P3 1128,539,10,6
+Body.List_workshop.Row_superStreak.Currency.P4 1144,537,10,6
+Body.List_workshop.Row_superStreak.Price 1168,509,192,48 "20"
+Body.List_workshop.Row_superStreak.StateIcon 1376,527,48,48
+Body.List_workshop.Row_superStreak.StateIcon.P1 1377,555,24,8
+Body.List_workshop.Row_superStreak.StateIcon.P2 1386,548,41,8
+Body.List_workshop.Row_superStreak.Word 1432,523,176,56 "Prêt"
+Body.List_workshop.Row_superStreak.LevelBar 964,567,140,12
+Body.List_workshop.Row_superStreak.LevelBar.Fill 964,567,70,12
+Body.List_workshop.Row_superStreak.PriceBar 1120,571,240,8
+Body.List_workshop.Row_superStreak.PriceBar.Fill 1120,571,240,8
+Body.List_workshop.Row_keptDecor 296,623,1328,112 "" *
+Body.List_workshop.Row_keptDecor.Icon 312,639,80,80
+Body.List_workshop.Row_keptDecor.Icon.P1 338,701,23,4
+Body.List_workshop.Row_keptDecor.Icon.P2 330,649,45,45
+Body.List_workshop.Row_keptDecor.Icon.P3 348,689,8,8
+Body.List_workshop.Row_keptDecor.Icon.P4 338,658,10,10
+Body.List_workshop.Row_keptDecor.Name 408,633,540,44 "Déco qui reste"
+Body.List_workshop.Row_keptDecor.EffectLabel 408,681,244,44 "Déco gardées"
+Body.List_workshop.Row_keptDecor.Before 660,681,120,44 "6"
+Body.List_workshop.Row_keptDecor.EffectArrow 784,687,32,32
+Body.List_workshop.Row_keptDecor.EffectArrow.P1 788,700,22,5
+Body.List_workshop.Row_keptDecor.EffectArrow.P2 801,705,12,5
+Body.List_workshop.Row_keptDecor.EffectArrow.P3 801,696,12,5
+Body.List_workshop.Row_keptDecor.After 820,681,120,44 "9"
+Body.List_workshop.Row_keptDecor.LevelA 964,637,140,48 "1/2"
+Body.List_workshop.Row_keptDecor.LevelArrow 1020,647,28,28
+Body.List_workshop.Row_keptDecor.Currency 1120,641,40,40
+Body.List_workshop.Row_keptDecor.Currency.P1 1127,650,10,6
+Body.List_workshop.Row_keptDecor.Currency.P2 1143,649,10,6
+Body.List_workshop.Row_keptDecor.Currency.P3 1128,667,10,6
+Body.List_workshop.Row_keptDecor.Currency.P4 1144,665,10,6
+Body.List_workshop.Row_keptDecor.Price 1168,637,192,48 "60"
+Body.List_workshop.Row_keptDecor.StateIcon 1376,655,48,48
+Body.List_workshop.Row_keptDecor.StateIcon.P1 1377,683,24,8
+Body.List_workshop.Row_keptDecor.StateIcon.P2 1386,676,41,8
+Body.List_workshop.Row_keptDecor.Word 1432,651,176,56 "Prêt"
+Body.List_workshop.Row_keptDecor.LevelBar 964,695,140,12
+Body.List_workshop.Row_keptDecor.LevelBar.Fill 964,695,70,12
+Body.List_workshop.Row_keptDecor.PriceBar 1120,699,240,8
+Body.List_workshop.Row_keptDecor.PriceBar.Fill 1120,699,240,8
+Body.List_workshop.Row_nightBag 296,751,1328,112 ""
+Body.List_workshop.Row_nightBag.Icon 312,767,80,80
+Body.List_workshop.Row_nightBag.Icon.P1 324,797,56,42
+Body.List_workshop.Row_nightBag.Icon.P2 355,805,13,13
+Body.List_workshop.Row_nightBag.Icon.R1 338,781,29,24
+Body.List_workshop.Row_nightBag.Name 408,761,540,44 "Sac de nuit"
+Body.List_workshop.Row_nightBag.EffectLabel 408,809,244,44 "Nuit"
+Body.List_workshop.Row_nightBag.Before 660,809,120,44 "14 h"
+Body.List_workshop.Row_nightBag.EffectArrow 784,815,32,32
+Body.List_workshop.Row_nightBag.EffectArrow.P1 788,828,22,5
+Body.List_workshop.Row_nightBag.EffectArrow.P2 801,833,12,5
+Body.List_workshop.Row_nightBag.EffectArrow.P3 801,824,12,5
+Body.List_workshop.Row_nightBag.After 820,809,120,44 "15 h"
+Body.List_workshop.Row_nightBag.LevelA 964,765,140,48 "2/3"
+Body.List_workshop.Row_nightBag.LevelArrow 1020,775,28,28
+Body.List_workshop.Row_nightBag.Currency 1120,769,40,40
+Body.List_workshop.Row_nightBag.Currency.P1 1127,778,10,6
+Body.List_workshop.Row_nightBag.Currency.P2 1143,777,10,6
+Body.List_workshop.Row_nightBag.Currency.P3 1128,795,10,6
+Body.List_workshop.Row_nightBag.Currency.P4 1144,793,10,6
+Body.List_workshop.Row_nightBag.Price 1168,765,192,48 "20"
+Body.List_workshop.Row_nightBag.StateIcon 1376,783,48,48
+Body.List_workshop.Row_nightBag.StateIcon.P1 1377,811,24,8
+Body.List_workshop.Row_nightBag.StateIcon.P2 1386,804,41,8
+Body.List_workshop.Row_nightBag.Word 1432,779,176,56 "Prêt"
+Body.List_workshop.Row_nightBag.LevelBar 964,823,140,12
+Body.List_workshop.Row_nightBag.LevelBar.Fill 964,823,93,12
+Body.List_workshop.Row_nightBag.PriceBar 1120,827,240,8
+Body.List_workshop.Row_nightBag.PriceBar.Fill 1120,827,240,8
+Body.List_workshop.Advised1 368,375,32,32
+Body.List_workshop.Advised1.P1 373,388,28,6
+Body.List_workshop.Advised1.P2 372,392,28,6
+Body.List_workshop.Advised1.P3 368,392,28,6
+Body.List_workshop.Advised1.P4 366,388,28,6
+Body.List_workshop.Advised1.P5 370,386,28,6
+Body.List_workshop.Advised1.R1 378,386,12,12
+Body.List_workshop.Advised2 368,503,32,32
+Body.List_workshop.Advised2.P1 373,516,28,6
+Body.List_workshop.Advised2.P2 372,520,28,6
+Body.List_workshop.Advised2.P3 368,520,28,6
+Body.List_workshop.Advised2.P4 366,516,28,6
+Body.List_workshop.Advised2.P5 370,514,28,6
+Body.List_workshop.Advised2.R1 378,514,12,12
+Body.List_workshop.Advised3 368,759,32,32
+Body.List_workshop.Advised3.P1 373,772,28,6
+Body.List_workshop.Advised3.P2 372,776,28,6
+Body.List_workshop.Advised3.P3 368,776,28,6
+Body.List_workshop.Advised3.P4 366,772,28,6
+Body.List_workshop.Advised3.P5 370,770,28,6
+Body.List_workshop.Advised3.R1 378,770,12,12
+Body.Detail 272,863,1376,120
+Body.Detail.Sentence 296,875,1328,96 "Gardé pour toujours"

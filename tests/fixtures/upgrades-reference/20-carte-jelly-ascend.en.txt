@@ -1,0 +1,107 @@
+Body 240,139,1440,860
+Body.Title 272,151,272,88 "Upgrades"
+Body.CoinsIcon 936,171,48,48
+Body.CoinsIcon.P1 956,184,8,22
+Body.CoinsIcon.R1 940,175,40,40
+Body.Coins 992,167,224,56 "0"
+Body.ConfettiIcon 1232,171,48,48
+Body.ConfettiIcon.P1 1240,182,12,7
+Body.ConfettiIcon.P2 1259,181,12,7
+Body.ConfettiIcon.P3 1242,202,12,7
+Body.ConfettiIcon.P4 1260,200,12,7
+Body.Confetti 1288,167,144,56 "139"
+Body.Mode 1448,159,200,72 ""
+Body.Mode.Glyph 1460,171,48,48
+Body.Mode.Glyph.Image 1460,171,48,48
+Body.Mode.Label 1516,167,120,56 "×1"
+Body.Glyph 272,247,48,48
+Body.Glyph.Image 272,247,48,48
+Body.Tab_suggested 336,243,194,56 ""
+Body.Tab_suggested.Label 348,249,170,44 "Suggested"
+Body.Tab_suggested.Underline 365,289,136,6
+Body.Tab_ranch 546,243,160,56 ""
+Body.Tab_ranch.Label 558,249,136,44 "Ranch"
+Body.Tab_ranch.Underline 626,289,0,6
+Body.Tab_helpers 722,243,180,56 ""
+Body.Tab_helpers.Label 734,249,156,44 "Plopettes"
+Body.Tab_helpers.Underline 812,289,0,6
+Body.Tab_workshop 918,243,182,56 ""
+Body.Tab_workshop.Label 930,249,158,44 "Workshop"
+Body.Tab_workshop.Underline 1009,289,0,6
+Body.Glyph 1116,247,48,48
+Body.Glyph.Image 1116,247,48,48
+Body.Close 1592,243,56,56 ""
+Body.Close.Glyph 1600,251,40,40
+Body.Close.Glyph.Image 1600,251,40,40
+Body.Glyph 1528,247,48,48
+Body.Glyph.Image 1528,247,48,48
+Body.Glyph 1472,247,48,48
+Body.Glyph.Image 1472,247,48,48
+Body.Suggested 272,303,1376,560
+Body.Suggested.Card1 272,319,432,528 ""
+Body.Suggested.Card1.Icon 448,335,80,80
+Body.Suggested.Card1.Icon.P1 478,351,21,48
+Body.Suggested.Card1.Icon.P2 464,399,48,10
+Body.Suggested.Card1.Icon.P3 481,341,14,14
+Body.Suggested.Card1.Name 288,423,400,48 "Monuments"
+Body.Suggested.Card1.LevelA 288,511,168,40 "Lv. 0"
+Body.Suggested.Card1.LevelArrow 472,515,32,32
+Body.Suggested.Card1.LevelArrow.P1 476,528,22,5
+Body.Suggested.Card1.LevelArrow.P2 489,533,12,5
+Body.Suggested.Card1.LevelArrow.P3 489,524,12,5
+Body.Suggested.Card1.LevelB 520,511,168,40 "1"
+Body.Suggested.Card1.EffectLabel 288,559,400,40 "Income +0%"
+Body.Suggested.Card1.EffectArrow 472,603,32,32
+Body.Suggested.Card1.EffectArrow.P1 476,616,22,5
+Body.Suggested.Card1.EffectArrow.P2 489,621,12,5
+Body.Suggested.Card1.EffectArrow.P3 489,612,12,5
+Body.Suggested.Card1.After 520,599,168,40 "+1%"
+Body.Suggested.Card1.Reason 288,647,400,36 "Beautiful forever"
+Body.Suggested.Card1.Currency 400,691,48,48
+Body.Suggested.Card1.Currency.P1 420,704,8,22
+Body.Suggested.Card1.Currency.R1 404,695,40,40
+Body.Suggested.Card1.Price 456,691,232,48 "1.69T"
+Body.Suggested.Card1.PriceBar 288,743,400,8
+Body.Suggested.Card1.PriceBar.Fill 288,743,0,8
+Body.Suggested.Card1.StateIcon 376,767,48,48
+Body.Suggested.Card1.StateIcon.P1 383,788,35,7
+Body.Suggested.Card1.StateIcon.P2 383,788,35,7
+Body.Suggested.Card1.StateIcon.P3 385,771,31,6
+Body.Suggested.Card1.StateIcon.P4 385,805,31,6
+Body.Suggested.Card1.Word 436,763,252,56 "Need"
+Body.Suggested.UpgradeCard_Shadow 272,325,432,528
+Body.Suggested.Card2 744,319,432,528 "" *
+Body.Suggested.Card2.Icon 920,335,80,80
+Body.Suggested.Card2.Icon.P1 933,368,71,15
+Body.Suggested.Card2.Icon.P2 930,378,71,15
+Body.Suggested.Card2.Icon.P3 919,378,71,15
+Body.Suggested.Card2.Icon.P4 916,368,71,15
+Body.Suggested.Card2.Icon.P5 925,361,71,15
+Body.Suggested.Card2.Icon.R1 945,363,29,29
+Body.Suggested.Card2.Name 760,423,400,48 "Jelly Ascend"
+Body.Suggested.Card2.LevelArrow 944,515,32,32
+Body.Suggested.Card2.EffectArrow 944,603,32,32
+Body.Suggested.Card2.Reason 760,647,400,36 "Ready: a new layer!"
+Body.Suggested.Card2.Currency 872,691,48,48
+Body.Suggested.Card2.Buy 760,751,400,80
+Body.Suggested.Card2.Buy.Glyph 848,767,48,48
+Body.Suggested.Card2.Buy.Glyph.Image 848,767,48,48
+Body.Suggested.Card2.StateIcon 848,767,48,48
+Body.Suggested.Card2.Word 908,763,252,56 "See"
+Body.Suggested.UpgradeCard_Shadow 744,325,432,528
+Body.Suggested.Card3 1216,319,432,528 ""
+Body.Suggested.Card3.Icon 1392,335,80,80
+Body.Suggested.Card3.Icon.P1 1405,368,71,15
+Body.Suggested.Card3.Icon.P2 1402,378,71,15
+Body.Suggested.Card3.Icon.P3 1391,378,71,15
+Body.Suggested.Card3.Icon.P4 1388,368,71,15
+Body.Suggested.Card3.Icon.P5 1397,361,71,15
+Body.Suggested.Card3.Icon.R1 1417,363,29,29
+Body.Suggested.Card3.Name 1232,423,400,408 "Everything maxed! Next goal: Grand Splorch"
+Body.Suggested.Card3.LevelArrow 1416,515,32,32
+Body.Suggested.Card3.EffectArrow 1416,603,32,32
+Body.Suggested.Card3.Currency 1344,691,48,48
+Body.Suggested.Card3.StateIcon 1320,767,48,48
+Body.Suggested.UpgradeCard_Shadow 1216,325,432,528
+Body.Detail 272,863,1376,120
+Body.Detail.Sentence 296,875,1328,96 "×3 every loop!"

@@ -1058,7 +1058,10 @@ local function stepCoins(now: number)
 		alpha = 1
 	end
 	local eased = 1 - (1 - alpha) ^ 5
-	setText("coins", label, Util.big(roll.from + (roll.to - roll.from) * eased))
+	-- fin du défilement : la valeur finale EXACTE (from + (to − from) × 1 perd `to` quand from ≫ to :
+	-- 1e30 → 4,25B affichait « 0 » ; règle 4 du GDD §10.8, relecture des références du lot B2, étape 5)
+	local value = if alpha >= 1 then roll.to else roll.from + (roll.to - roll.from) * eased
+	setText("coins", label, Util.big(value))
 	if alpha >= 1 then
 		coinRoll = nil
 	end

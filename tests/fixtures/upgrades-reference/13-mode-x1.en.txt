@@ -1,0 +1,173 @@
+Body 240,139,1440,860
+Body.Title 272,151,272,88 "Upgrades"
+Body.CoinsIcon 936,171,48,48
+Body.CoinsIcon.P1 956,184,8,22
+Body.CoinsIcon.R1 940,175,40,40
+Body.Coins 992,167,224,56 "9.99No"
+Body.ConfettiIcon 1232,171,48,48
+Body.ConfettiIcon.P1 1240,182,12,7
+Body.ConfettiIcon.P2 1259,181,12,7
+Body.ConfettiIcon.P3 1242,202,12,7
+Body.ConfettiIcon.P4 1260,200,12,7
+Body.Confetti 1288,167,144,56 "139"
+Body.Mode 1448,159,200,72 ""
+Body.Mode.Glyph 1460,171,48,48
+Body.Mode.Glyph.Image 1460,171,48,48
+Body.Mode.Label 1516,167,120,56 "×1"
+Body.Glyph 272,247,48,48
+Body.Glyph.Image 272,247,48,48
+Body.Tab_suggested 336,243,194,56 ""
+Body.Tab_suggested.Label 348,249,170,44 "Suggested"
+Body.Tab_suggested.Underline 433,289,0,6
+Body.Tab_ranch 546,243,160,56 ""
+Body.Tab_ranch.Label 558,249,136,44 "Ranch"
+Body.Tab_ranch.Underline 570,289,112,6
+Body.Tab_helpers 722,243,180,56 ""
+Body.Tab_helpers.Label 734,249,156,44 "Plopettes"
+Body.Tab_helpers.Underline 812,289,0,6
+Body.Tab_workshop 918,243,182,56 ""
+Body.Tab_workshop.Label 930,249,158,44 "Workshop"
+Body.Tab_workshop.Underline 1009,289,0,6
+Body.Glyph 1116,247,48,48
+Body.Glyph.Image 1116,247,48,48
+Body.Close 1592,243,56,56 ""
+Body.Close.Glyph 1600,251,40,40
+Body.Close.Glyph.Image 1600,251,40,40
+Body.Glyph 1528,247,48,48
+Body.Glyph.Image 1528,247,48,48
+Body.Glyph 1472,247,48,48
+Body.Glyph.Image 1472,247,48,48
+Body.List_ranch 272,303,1376,560
+Body.List_ranch.Row_decor 296,239,1328,112 ""
+Body.List_ranch.Row_decor.Icon 312,255,80,80
+Body.List_ranch.Row_decor.Icon.P1 338,317,23,4
+Body.List_ranch.Row_decor.Icon.P2 330,265,45,45
+Body.List_ranch.Row_decor.Icon.P3 348,305,8,8
+Body.List_ranch.Row_decor.EffectLabel 408,297,540,44 "Total income +1.2%"
+Body.List_ranch.Row_decor.EffectArrow 784,303,32,32
+Body.List_ranch.Row_decor.StateIcon 1376,271,48,48
+Body.List_ranch.Row_decor.StateIcon.P1 1377,299,24,8
+Body.List_ranch.Row_decor.Word 1432,267,176,56 "Ready"
+Body.List_ranch.Row_decor.LevelBar 964,311,140,12
+Body.List_ranch.Row_decor.LevelBar.Fill 964,311,47,12
+Body.List_ranch.Row_decor.PriceBar 1120,315,240,8
+Body.List_ranch.Row_decor.PriceBar.Fill 1120,315,240,8
+Body.List_ranch.Row_pens 296,367,1328,112 ""
+Body.List_ranch.Row_pens.Icon 312,383,80,80
+Body.List_ranch.Row_pens.Icon.P1 326,403,11,50
+Body.List_ranch.Row_pens.Icon.P2 367,403,11,50
+Body.List_ranch.Row_pens.Icon.P3 318,414,69,8
+Body.List_ranch.Row_pens.Icon.P4 318,435,69,8
+Body.List_ranch.Row_pens.Name 408,377,540,44 "Pens"
+Body.List_ranch.Row_pens.EffectLabel 408,425,244,44 "Spots"
+Body.List_ranch.Row_pens.Before 660,425,120,44 "18"
+Body.List_ranch.Row_pens.EffectArrow 784,431,32,32
+Body.List_ranch.Row_pens.LevelA 964,381,140,48 "14/14"
+Body.List_ranch.Row_pens.LevelArrow 1020,391,28,28
+Body.List_ranch.Row_pens.Currency 1120,385,40,40
+Body.List_ranch.Row_pens.Currency.P1 1137,396,6,18
+Body.List_ranch.Row_pens.Currency.R1 1123,388,34,34
+Body.List_ranch.Row_pens.Price 1168,381,192,48 "—"
+Body.List_ranch.Row_pens.StateIcon 1376,399,48,48
+Body.List_ranch.Row_pens.StateIcon.P1 1384,419,42,9
+Body.List_ranch.Row_pens.StateIcon.P2 1382,425,42,9
+Body.List_ranch.Row_pens.StateIcon.P3 1376,425,42,9
+Body.List_ranch.Row_pens.StateIcon.P4 1374,419,42,9
+Body.List_ranch.Row_pens.StateIcon.P5 1379,415,42,9
+Body.List_ranch.Row_pens.StateIcon.R1 1391,416,18,18
+Body.List_ranch.Row_pens.Word 1432,395,176,56 "MAX"
+Body.List_ranch.Row_pens.Badge 368,375,32,32
+Body.List_ranch.Row_pens.Badge.R1 371,384,13,13
+Body.List_ranch.Row_pens.Badge.R2 383,384,13,13
+Body.List_ranch.Row_pens.LevelBar 964,439,140,12
+Body.List_ranch.Row_pens.LevelBar.Fill 964,439,140,12
+Body.List_ranch.Row_cozyBed 296,495,1328,112 ""
+Body.List_ranch.Row_cozyBed.Icon 312,511,80,80
+Body.List_ranch.Row_cozyBed.Icon.P1 322,532,10,48
+Body.List_ranch.Row_cozyBed.Icon.P2 325,557,64,19
+Body.List_ranch.Row_cozyBed.Icon.P3 330,547,21,13
+Body.List_ranch.Row_cozyBed.Name 408,505,540,44 "Cozy Bed"
+Body.List_ranch.Row_cozyBed.EffectLabel 408,553,244,44 "Night"
+Body.List_ranch.Row_cozyBed.Before 660,553,120,44 "12 h"
+Body.List_ranch.Row_cozyBed.EffectArrow 784,559,32,32
+Body.List_ranch.Row_cozyBed.LevelA 964,509,140,48 "1/1"
+Body.List_ranch.Row_cozyBed.LevelArrow 1020,519,28,28
+Body.List_ranch.Row_cozyBed.Currency 1120,513,40,40
+Body.List_ranch.Row_cozyBed.Currency.P1 1137,524,6,18
+Body.List_ranch.Row_cozyBed.Currency.R1 1123,516,34,34
+Body.List_ranch.Row_cozyBed.Price 1168,509,192,48 "—"
+Body.List_ranch.Row_cozyBed.StateIcon 1376,527,48,48
+Body.List_ranch.Row_cozyBed.StateIcon.P1 1384,547,42,9
+Body.List_ranch.Row_cozyBed.StateIcon.P2 1382,553,42,9
+Body.List_ranch.Row_cozyBed.StateIcon.P3 1376,553,42,9
+Body.List_ranch.Row_cozyBed.StateIcon.P4 1374,547,42,9
+Body.List_ranch.Row_cozyBed.StateIcon.P5 1379,543,42,9
+Body.List_ranch.Row_cozyBed.StateIcon.R1 1391,544,18,18
+Body.List_ranch.Row_cozyBed.Word 1432,523,176,56 "MAX"
+Body.List_ranch.Row_cozyBed.Badge 368,503,32,32
+Body.List_ranch.Row_cozyBed.Badge.R1 371,512,13,13
+Body.List_ranch.Row_cozyBed.Badge.R2 383,512,13,13
+Body.List_ranch.Row_cozyBed.LevelBar 964,567,140,12
+Body.List_ranch.Row_cozyBed.LevelBar.Fill 964,567,140,12
+Body.List_ranch.Row_gloves 296,623,1328,112 "" *
+Body.List_ranch.Row_gloves.Icon 312,639,80,80
+Body.List_ranch.Row_gloves.Icon.P1 313,664,32,14
+Body.List_ranch.Row_gloves.Icon.P2 333,655,45,45
+Body.List_ranch.Row_gloves.Icon.P3 336,698,38,13
+Body.List_ranch.Row_gloves.Name 408,633,540,44 "Squishy Gloves"
+Body.List_ranch.Row_gloves.EffectLabel 408,681,244,44 "Presses"
+Body.List_ranch.Row_gloves.Before 660,681,120,44 "×1.125"
+Body.List_ranch.Row_gloves.EffectArrow 784,687,32,32
+Body.List_ranch.Row_gloves.EffectArrow.P1 788,700,22,5
+Body.List_ranch.Row_gloves.EffectArrow.P2 801,705,12,5
+Body.List_ranch.Row_gloves.EffectArrow.P3 801,696,12,5
+Body.List_ranch.Row_gloves.After 820,681,120,44 "×1.150"
+Body.List_ranch.Row_gloves.LevelA 964,637,140,48 "5/40"
+Body.List_ranch.Row_gloves.LevelArrow 1020,647,28,28
+Body.List_ranch.Row_gloves.Currency 1120,641,40,40
+Body.List_ranch.Row_gloves.Currency.P1 1137,652,6,18
+Body.List_ranch.Row_gloves.Currency.R1 1123,644,34,34
+Body.List_ranch.Row_gloves.Price 1168,637,192,48 "60.4B"
+Body.List_ranch.Row_gloves.StateIcon 1376,655,48,48
+Body.List_ranch.Row_gloves.StateIcon.P1 1377,683,24,8
+Body.List_ranch.Row_gloves.StateIcon.P2 1386,676,41,8
+Body.List_ranch.Row_gloves.Word 1432,651,176,56 "Ready"
+Body.List_ranch.Row_gloves.Badge 368,631,32,32
+Body.List_ranch.Row_gloves.Badge.P1 377,637,10,4
+Body.List_ranch.Row_gloves.Badge.P2 377,632,10,4
+Body.List_ranch.Row_gloves.Badge.R1 373,636,22,22
+Body.List_ranch.Row_gloves.LevelBar 964,695,140,12
+Body.List_ranch.Row_gloves.LevelBar.Fill 964,695,0,12
+Body.List_ranch.Row_gloves.PriceBar 1120,699,240,8
+Body.List_ranch.Row_gloves.PriceBar.Fill 1120,699,240,8
+Body.List_ranch.Row_monument 296,751,1328,112 ""
+Body.List_ranch.Row_monument.Icon 312,767,80,80
+Body.List_ranch.Row_monument.Icon.P1 342,783,21,48
+Body.List_ranch.Row_monument.Icon.P2 328,831,48,10
+Body.List_ranch.Row_monument.Icon.P3 345,773,14,14
+Body.List_ranch.Row_monument.Name 408,761,540,44 "Monuments"
+Body.List_ranch.Row_monument.EffectLabel 408,809,372,44 "Income +0%"
+Body.List_ranch.Row_monument.EffectArrow 784,815,32,32
+Body.List_ranch.Row_monument.EffectArrow.P1 788,828,22,5
+Body.List_ranch.Row_monument.EffectArrow.P2 801,833,12,5
+Body.List_ranch.Row_monument.EffectArrow.P3 801,824,12,5
+Body.List_ranch.Row_monument.After 820,809,120,44 "+1%"
+Body.List_ranch.Row_monument.LevelA 964,765,140,48 "0/10"
+Body.List_ranch.Row_monument.LevelArrow 1020,775,28,28
+Body.List_ranch.Row_monument.Currency 1120,769,40,40
+Body.List_ranch.Row_monument.Currency.P1 1137,780,6,18
+Body.List_ranch.Row_monument.Currency.R1 1123,772,34,34
+Body.List_ranch.Row_monument.Price 1168,765,192,48 "1.69T"
+Body.List_ranch.Row_monument.StateIcon 1376,783,48,48
+Body.List_ranch.Row_monument.StateIcon.P1 1377,811,24,8
+Body.List_ranch.Row_monument.StateIcon.P2 1386,804,41,8
+Body.List_ranch.Row_monument.Word 1432,779,176,56 "Ready"
+Body.List_ranch.Row_monument.Badge 368,759,32,32
+Body.List_ranch.Row_monument.Badge.R1 371,768,13,13
+Body.List_ranch.Row_monument.Badge.R2 383,768,13,13
+Body.List_ranch.Row_monument.LevelBar 964,823,140,12
+Body.List_ranch.Row_monument.LevelBar.Fill 964,823,0,12
+Body.List_ranch.Row_monument.PriceBar 1120,827,240,8
+Body.List_ranch.Row_monument.PriceBar.Fill 1120,827,240,8
+Body.Detail 272,863,1376,120
+Body.Detail.Sentence 296,875,1328,96 "Starts over at the Grand Splorch"

@@ -1,0 +1,96 @@
+Cards.Safe 0,58,1920,1022
+Menu.Safe 0,58,1920,1022
+Menu.Safe.Rail 96,274,340,752
+Menu.Safe.Rail.Entry_SplorchPreview 96,274,340,80 "" *
+Menu.Safe.Rail.Entry_SplorchPreview.Icon 112,290,48,48
+Menu.Safe.Rail.Entry_SplorchPreview.Icon.Symbol 122,300,28,28
+Menu.Safe.Rail.Entry_SplorchPreview.Icon.Symbol.P1 127,311,25,5
+Menu.Safe.Rail.Entry_SplorchPreview.Icon.Symbol.P2 125,315,25,5
+Menu.Safe.Rail.Entry_SplorchPreview.Icon.Symbol.P3 122,315,25,5
+Menu.Safe.Rail.Entry_SplorchPreview.Icon.Symbol.P4 121,311,25,5
+Menu.Safe.Rail.Entry_SplorchPreview.Icon.Symbol.P5 124,309,25,5
+Menu.Safe.Rail.Entry_SplorchPreview.Icon.Symbol.R1 131,310,10,10
+Menu.Safe.Rail.Entry_SplorchPreview.Label 176,282,244,64 "Jelly Ascend"
+Menu.Safe.Rail.Entry_SplorchPreview.HoldFill 96,274,0,80
+Menu.Safe.Rail.Entry_Ranch 96,370,340,80 ""
+Menu.Safe.Rail.Entry_Ranch.Icon 112,386,48,48
+Menu.Safe.Rail.Entry_Ranch.Icon.Symbol 122,396,28,28
+Menu.Safe.Rail.Entry_Ranch.Icon.Symbol.P1 129,405,14,14
+Menu.Safe.Rail.Entry_Ranch.Icon.Symbol.P2 124,400,14,14
+Menu.Safe.Rail.Entry_Ranch.Icon.Symbol.P3 134,400,14,14
+Menu.Safe.Rail.Entry_Ranch.Label 176,378,244,64 "Ranch"
+Menu.Safe.Rail.Entry_Squishydex 96,562,340,80 ""
+Menu.Safe.Rail.Entry_Squishydex.Icon 112,578,48,48
+Menu.Safe.Rail.Entry_Squishydex.Icon.Symbol 122,588,28,28
+Menu.Safe.Rail.Entry_Squishydex.Icon.Symbol.P1 127,599,25,5
+Menu.Safe.Rail.Entry_Squishydex.Icon.Symbol.P2 125,603,25,5
+Menu.Safe.Rail.Entry_Squishydex.Icon.Symbol.P3 122,603,25,5
+Menu.Safe.Rail.Entry_Squishydex.Icon.Symbol.P4 121,599,25,5
+Menu.Safe.Rail.Entry_Squishydex.Icon.Symbol.P5 124,597,25,5
+Menu.Safe.Rail.Entry_Squishydex.Icon.Symbol.R1 131,598,10,10
+Menu.Safe.Rail.Entry_Squishydex.Label 176,570,168,64 "Squishydex"
+Menu.Safe.Rail.Entry_Squishydex.Badge 368,582,60,40 "!"
+Menu.Safe.Rail.Entry_Objectives 96,658,340,80 ""
+Menu.Safe.Rail.Entry_Objectives.Icon 112,674,48,48
+Menu.Safe.Rail.Entry_Objectives.Icon.Symbol 122,684,28,28
+Menu.Safe.Rail.Entry_Objectives.Icon.Symbol.P1 123,700,14,4
+Menu.Safe.Rail.Entry_Objectives.Icon.Symbol.P2 128,696,24,4
+Menu.Safe.Rail.Entry_Objectives.Label 176,666,168,64 "Objectifs"
+Menu.Safe.Rail.Entry_Objectives.Badge 368,678,60,40 "!"
+Menu.Safe.Rail.Entry_Leaderboards 96,754,340,80 ""
+Menu.Safe.Rail.Entry_Leaderboards.Icon 112,770,48,48
+Menu.Safe.Rail.Entry_Leaderboards.Icon.Symbol 112,770,48,48 "#"
+Menu.Safe.Rail.Entry_Leaderboards.Label 176,762,244,64 "Classements"
+Menu.Safe.Rail.Entry_Shop 96,850,340,80 ""
+Menu.Safe.Rail.Entry_Shop.Icon 112,866,48,48
+Menu.Safe.Rail.Entry_Shop.Icon.Symbol 112,866,48,48 "$"
+Menu.Safe.Rail.Entry_Shop.Label 176,858,244,64 "Boutique"
+Menu.Safe.Rail.Entry_Settings 96,946,340,80 ""
+Menu.Safe.Rail.Entry_Settings.Icon 112,962,48,48
+Menu.Safe.Rail.Entry_Settings.Icon.Symbol 122,972,28,28
+Menu.Safe.Rail.Entry_Settings.Icon.Symbol.P1 123,983,25,6
+Menu.Safe.Rail.Entry_Settings.Icon.Symbol.P2 123,983,25,6
+Menu.Safe.Rail.Entry_Settings.Icon.Symbol.P3 123,983,25,6
+Menu.Safe.Rail.Entry_Settings.Icon.Symbol.P4 123,983,25,6
+Menu.Safe.Rail.Entry_Settings.Icon.Symbol.P5 127,977,18,18
+Menu.Safe.Rail.Entry_Settings.Icon.Symbol.P6 132,982,7,7
+Menu.Safe.Rail.Entry_Settings.Label 176,954,244,64 "Réglages"
+Menu.Safe.Rail.Entry_Upgrades 96,466,340,80 ""
+Menu.Safe.Rail.Entry_Upgrades.Icon 112,482,48,48
+Menu.Safe.Rail.Entry_Upgrades.Icon.Symbol 122,492,28,28
+Menu.Safe.Rail.Entry_Upgrades.Icon.Symbol.P1 126,505,19,4
+Menu.Safe.Rail.Entry_Upgrades.Icon.Symbol.P2 134,497,11,4
+Menu.Safe.Rail.Entry_Upgrades.Icon.Symbol.P3 127,497,11,4
+Menu.Safe.Rail.Entry_Upgrades.Label 176,474,244,64 "Améliorations"
+HUD.Safe 0,58,1920,1022
+HUD.Safe.coins 96,112,440,112
+HUD.Safe.coins.Coin 112,128,80,80
+HUD.Safe.coins.Coin.Shine 122,138,28,28
+HUD.Safe.coins.Amount 208,116,316,60 "4,25B"
+HUD.Safe.coins.Rate 208,180,316,38 "+0/s"
+HUD.Safe.eventPill 680,112,560,72
+HUD.Safe.eventPill.Text 696,118,528,60 "Golden Wobbler 0:19"
+HUD.Safe.gauge 740,196,440,48
+HUD.Safe.gauge.Plop 740,200,40,40
+HUD.Safe.gauge.Plop.Eye 750,213,8,8
+HUD.Safe.gauge.Plop.Eye2 762,213,8,8
+HUD.Safe.gauge.Bar 780,206,400,28
+HUD.Safe.gauge.Bar.Fill 780,206,133,28
+HUD.Safe.message 460,256,1000,112
+HUD.Safe.goalTracker 1384,112,440,104
+HUD.Safe.goalTracker.Ring 1400,128,72,72
+HUD.Safe.goalTracker.Ring.Mask 1400,128,72,72
+HUD.Safe.goalTracker.Ring.Mask.Fill 1400,200,72,0
+HUD.Safe.goalTracker.Title 1488,120,320,42 "Grand Splorch"
+HUD.Safe.goalTracker.Value 1488,168,320,40 "10 / 260K"
+HUD.Safe.status 1608,228,216,96
+HUD.Safe.status.mode 1760,228,64,96
+HUD.Safe.status.mode.Icon 1760,228,64,64
+HUD.Safe.status.mode.Icon.Moon 1777,245,30,30
+HUD.Safe.status.mode.Icon.Moon.Bite 1786,243,26,26
+HUD.Safe.status.mode.Minutes 1760,292,64,32 ""
+HUD.Safe.specialChip 690,818,541,100 ""
+HUD.Safe.specialChip.Glyph 710,843,50,50
+HUD.Safe.specialChip.Glyph.Image 710,843,50,50
+HUD.Safe.specialChip.Text 777,835,433,67 "JELLY ASCEND !"
+ScreenFX.Safe 0,58,1920,1022

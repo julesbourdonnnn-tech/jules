@@ -1,0 +1,46 @@
+Cards.Safe 0,58,1920,1022
+Menu.Safe 0,58,1920,1022
+HUD.Safe 0,58,1920,1022
+HUD.Safe.coins 96,112,440,112
+HUD.Safe.coins.Coin 112,128,80,80
+HUD.Safe.coins.Coin.Shine 122,138,28,28
+HUD.Safe.coins.Amount 208,116,316,60 "1"
+HUD.Safe.coins.Rate 208,180,316,38 "+82.6T/s"
+HUD.Safe.menuChip 96,304,260,80 ""
+HUD.Safe.menuChip.Glyph 112,320,48,48
+HUD.Safe.menuChip.Glyph.Image 112,320,48,48
+HUD.Safe.menuChip.Label 170,312,100,64 "MENU"
+HUD.Safe.menuChip.Bang 314,326,36,36
+HUD.Safe.menuChip.Bang.Text 314,326,36,36 "!"
+HUD.Safe.eventPill 680,112,560,72
+HUD.Safe.eventPill.Text 696,118,528,60 "Golden Wobbler 0:14"
+HUD.Safe.gauge 740,196,440,48
+HUD.Safe.gauge.Plop 740,200,40,40
+HUD.Safe.gauge.Plop.Eye 750,213,8,8
+HUD.Safe.gauge.Plop.Eye2 762,213,8,8
+HUD.Safe.gauge.Bar 780,206,400,28
+HUD.Safe.gauge.Bar.Fill 780,206,133,28
+HUD.Safe.message 460,256,1000,112
+HUD.Safe.goalTracker 1384,112,440,104
+HUD.Safe.goalTracker.Ring 1400,128,72,72
+HUD.Safe.goalTracker.Ring.Mask 1400,128,72,72
+HUD.Safe.goalTracker.Ring.Mask.Fill 1400,128,72,72
+HUD.Safe.goalTracker.Title 1488,120,320,42 "Back to record"
+HUD.Safe.goalTracker.Value 1488,168,320,40 "4 / 15"
+HUD.Safe.status 1608,228,216,96
+HUD.Safe.status.mode 1760,228,64,96
+HUD.Safe.status.mode.Icon 1760,228,64,64
+HUD.Safe.status.mode.Icon.Moon 1777,245,30,30
+HUD.Safe.status.mode.Icon.Moon.Bite 1786,243,26,26
+HUD.Safe.status.mode.Minutes 1760,292,64,32 ""
+HUD.Safe.status.memory 1684,228,64,96
+HUD.Safe.status.memory.Icon 1684,228,64,64
+HUD.Safe.status.memory.Icon.Drop 1698,242,36,36
+HUD.Safe.status.memory.Icon.Drop.P1 1708,250,15,15
+HUD.Safe.status.memory.Icon.Drop.P2 1706,254,21,21
+HUD.Safe.status.memory.Minutes 1684,292,64,32 "×3"
+HUD.Safe.specialChip 690,818,541,100 ""
+HUD.Safe.specialChip.Glyph 710,843,50,50
+HUD.Safe.specialChip.Glyph.Image 710,843,50,50
+HUD.Safe.specialChip.Text 777,835,433,67 "PETIT SPLORCH!"
+ScreenFX.Safe 0,58,1920,1022

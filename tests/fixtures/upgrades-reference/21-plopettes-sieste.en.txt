@@ -1,0 +1,108 @@
+Body 240,139,1440,860
+Body.Title 272,151,272,88 "Upgrades"
+Body.CoinsIcon 936,171,48,48
+Body.CoinsIcon.P1 956,184,8,22
+Body.CoinsIcon.R1 940,175,40,40
+Body.Coins 992,167,224,56 "4.25B"
+Body.ConfettiIcon 1232,171,48,48
+Body.ConfettiIcon.P1 1240,182,12,7
+Body.ConfettiIcon.P2 1259,181,12,7
+Body.ConfettiIcon.P3 1242,202,12,7
+Body.ConfettiIcon.P4 1260,200,12,7
+Body.Confetti 1288,167,144,56 "139"
+Body.Mode 1448,159,200,72 ""
+Body.Mode.Glyph 1460,171,48,48
+Body.Mode.Glyph.Image 1460,171,48,48
+Body.Mode.Label 1516,167,120,56 "×1"
+Body.Glyph 272,247,48,48
+Body.Glyph.Image 272,247,48,48
+Body.Tab_suggested 336,243,194,56 ""
+Body.Tab_suggested.Label 348,249,170,44 "Suggested"
+Body.Tab_suggested.Underline 433,289,0,6
+Body.Tab_ranch 546,243,160,56 ""
+Body.Tab_ranch.Label 558,249,136,44 "Ranch"
+Body.Tab_ranch.Underline 626,289,0,6
+Body.Tab_helpers 722,243,180,56 ""
+Body.Tab_helpers.Label 734,249,156,44 "Plopettes"
+Body.Tab_helpers.Underline 749,289,126,6
+Body.Tab_workshop 918,243,182,56 ""
+Body.Tab_workshop.Label 930,249,158,44 "Workshop"
+Body.Tab_workshop.Underline 1009,289,0,6
+Body.Glyph 1116,247,48,48
+Body.Glyph.Image 1116,247,48,48
+Body.Close 1592,243,56,56 ""
+Body.Close.Glyph 1600,251,40,40
+Body.Close.Glyph.Image 1600,251,40,40
+Body.Glyph 1528,247,48,48
+Body.Glyph.Image 1528,247,48,48
+Body.Glyph 1472,247,48,48
+Body.Glyph.Image 1472,247,48,48
+Body.List_helpers 272,303,1376,560
+Body.List_helpers.Row_school 296,303,1328,112 ""
+Body.List_helpers.Row_school.Icon 312,319,80,80
+Body.List_helpers.Row_school.Icon.P1 332,333,40,40
+Body.List_helpers.Row_school.Icon.P2 330,357,45,34
+Body.List_helpers.Row_school.Icon.P3 346,373,11,18
+Body.List_helpers.Row_school.Name 408,313,540,44 "Plopette School"
+Body.List_helpers.Row_school.EffectLabel 408,361,244,44 "Helper"
+Body.List_helpers.Row_school.Before 660,361,120,44 "10.5 s"
+Body.List_helpers.Row_school.EffectArrow 784,367,32,32
+Body.List_helpers.Row_school.EffectArrow.P1 788,380,22,5
+Body.List_helpers.Row_school.EffectArrow.P2 801,385,12,5
+Body.List_helpers.Row_school.EffectArrow.P3 801,376,12,5
+Body.List_helpers.Row_school.After 820,361,120,44 "10.2 s"
+Body.List_helpers.Row_school.LevelA 964,317,140,48 "5/20"
+Body.List_helpers.Row_school.LevelArrow 1020,327,28,28
+Body.List_helpers.Row_school.Currency 1120,321,40,40
+Body.List_helpers.Row_school.Currency.P1 1137,332,6,18
+Body.List_helpers.Row_school.Currency.R1 1123,324,34,34
+Body.List_helpers.Row_school.Price 1168,317,192,48 "1.10T"
+Body.List_helpers.Row_school.StateIcon 1376,335,48,48
+Body.List_helpers.Row_school.StateIcon.P1 1383,356,35,7
+Body.List_helpers.Row_school.StateIcon.P2 1383,356,35,7
+Body.List_helpers.Row_school.StateIcon.P3 1385,339,31,6
+Body.List_helpers.Row_school.StateIcon.P4 1385,373,31,6
+Body.List_helpers.Row_school.Word 1432,331,176,56 "Need"
+Body.List_helpers.Row_school.Badge 368,311,32,32
+Body.List_helpers.Row_school.Badge.P1 377,317,10,4
+Body.List_helpers.Row_school.Badge.P2 377,312,10,4
+Body.List_helpers.Row_school.Badge.R1 373,316,22,22
+Body.List_helpers.Row_school.LevelBar 964,375,140,12
+Body.List_helpers.Row_school.LevelBar.Fill 964,375,0,12
+Body.List_helpers.Row_school.PriceBar 1120,379,240,8
+Body.List_helpers.Row_school.PriceBar.Fill 1120,379,1,8
+Body.List_helpers.Row_helper.pip 296,431,1328,112 "" *
+Body.List_helpers.Row_helper.pip.Icon 312,447,80,80
+Body.List_helpers.Row_helper.pip.Icon.P1 346,455,11,11
+Body.List_helpers.Row_helper.pip.Icon.P2 325,466,54,54
+Body.List_helpers.Row_helper.pip.Icon.P3 339,485,6,11
+Body.List_helpers.Row_helper.pip.Icon.P4 358,485,6,11
+Body.List_helpers.Row_helper.pip.Name 408,441,540,44 "Pip"
+Body.List_helpers.Row_helper.pip.EffectLabel 408,489,540,44 "Napping"
+Body.List_helpers.Row_helper.pip.StateIcon 1376,463,48,48
+Body.List_helpers.Row_helper.pop 296,559,1328,112 ""
+Body.List_helpers.Row_helper.pop.Icon 312,575,80,80
+Body.List_helpers.Row_helper.pop.Icon.P1 346,583,11,11
+Body.List_helpers.Row_helper.pop.Icon.P2 325,594,54,54
+Body.List_helpers.Row_helper.pop.Icon.P3 339,613,6,11
+Body.List_helpers.Row_helper.pop.Icon.P4 358,613,6,11
+Body.List_helpers.Row_helper.pop.Name 408,569,540,44 "Pop"
+Body.List_helpers.Row_helper.pop.EffectLabel 408,617,540,44 "Napping"
+Body.List_helpers.Row_helper.pop.StateIcon 1376,591,48,48
+Body.List_helpers.Row_helper.pim 296,687,1328,112 ""
+Body.List_helpers.Row_helper.pim.Icon 312,703,80,80
+Body.List_helpers.Row_helper.pim.Icon.P1 346,711,11,11
+Body.List_helpers.Row_helper.pim.Icon.P2 325,722,54,54
+Body.List_helpers.Row_helper.pim.Icon.P3 339,741,6,11
+Body.List_helpers.Row_helper.pim.Icon.P4 358,741,6,11
+Body.List_helpers.Row_helper.pim.Name 408,697,540,44 "Pim"
+Body.List_helpers.Row_helper.pim.EffectLabel 408,745,540,44 "Napping"
+Body.List_helpers.Row_helper.pim.StateIcon 1376,719,48,48
+Body.List_helpers.Row_helper.pom 296,815,1328,112 ""
+Body.List_helpers.Row_helper.pom.Icon 312,831,80,80
+Body.List_helpers.Row_helper.pom.Icon.P1 346,839,11,11
+Body.List_helpers.Row_helper.pom.Icon.P2 325,850,54,54
+Body.List_helpers.Row_helper.pom.Name 408,825,540,44 "Pom"
+Body.List_helpers.Row_helper.pom.StateIcon 1376,847,48,48
+Body.Detail 272,863,1376,120
+Body.Detail.Sentence 296,875,1328,96 "Comes with your record: nothing to buy"

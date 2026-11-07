@@ -148,6 +148,26 @@ return function(T)
 			expect(string.sub(text(h, HUD, "coins", "Rate"), 1, 1)).toBe("+")
 			clean(h)
 		end)
+
+		-- relecture des références de l'étape 5 du lot B2 (Upgrades_Reference, rail après « Prêt ! ») : une
+		-- baisse de 1e30 à 4,25B finissait sur « 0 » (from + (to − from) × 1 perd `to` quand from ≫ to,
+		-- double à 53 bits) ; règle 4 du GDD §10.8 : la valeur finale est toujours posée, exactement
+		it(
+			"défilement des pièces : la valeur finale est exacte, même après une très grande baisse",
+			function()
+				local h, HUD = setup({ profile = { coins = 1e30 } })
+				local Clock = h:require("ReplicatedStorage.Shared.Util.Clock")
+				expect(text(h, HUD, "coins", "Amount")).toBe("1.00No")
+				for _, case in { { 4.25e9, "4.25B" }, { 25, "25" }, { 1e30, "1.00No" }, { 7, "7" } } do
+					h:fireClient("ReplicatedStorage.Remotes.DataPatch", { coins = case[1] }, {})
+					h:settle(2)
+					Clock.advance(0.6)
+					HUD._refresh()
+					expect(text(h, HUD, "coins", "Amount")).toBe(case[2])
+				end
+				clean(h)
+			end
+		)
 	end)
 
 	describe("HUD › événements", function()
