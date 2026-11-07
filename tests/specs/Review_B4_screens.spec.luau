@@ -121,5 +121,41 @@ return function(T)
 				S.clean(c, expect)
 			end
 		)
+
+		-- Garde (aucun défaut trouvé, cas gardé pour la suite) : le joueur qui saute (✕) en arrivant au
+		-- kiosque n'achète rien par accident ; un vrai maintien de 0,6 s achète une seule fois (GDD §10.6
+		-- règle 6, §10.7.8)
+		it(
+			"□ au kiosque avec ✕ déjà tenu : aucun achat ; ✕ relâché puis tenu 0,7 s : un seul achat",
+			function()
+				local c = atKiosk()
+				Gamepad.press(c.h, Enum.KeyCode.ButtonA)
+				S.run(c, 0.2)
+				tap(c, Enum.KeyCode.ButtonX)
+				expect(c.PC.isOpen("Upgrades")).toBe(true)
+				local first = c.Up._shown("workshop")[1]
+				expect(selected(c)).toBe(c.Up._row(first))
+				-- ✕ tenu depuis avant l'ouverture : 2 s sans achat
+				S.run(c, 2)
+				Gamepad.release(c.h, Enum.KeyCode.ButtonA)
+				S.run(c, 0.3)
+				expect(#TvAudit.sent(c.h, "BuyUpgrade")).toBe(0)
+				-- appui court : rien
+				Gamepad.press(c.h, Enum.KeyCode.ButtonA)
+				S.run(c, 0.2)
+				Gamepad.release(c.h, Enum.KeyCode.ButtonA)
+				S.run(c, 0.3)
+				expect(#TvAudit.sent(c.h, "BuyUpgrade")).toBe(0)
+				-- vrai maintien : une ligne de l'Atelier achetée une fois
+				Gamepad.press(c.h, Enum.KeyCode.ButtonA)
+				S.run(c, 0.7)
+				Gamepad.release(c.h, Enum.KeyCode.ButtonA)
+				S.run(c, 0.3)
+				local sent = TvAudit.sent(c.h, "BuyUpgrade")
+				expect(#sent).toBe(1)
+				expect(sent[1][1]).toBe(first)
+				S.clean(c, expect)
+			end
+		)
 	end)
 end

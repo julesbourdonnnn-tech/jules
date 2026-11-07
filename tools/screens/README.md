@@ -54,6 +54,7 @@ Langues : `fr`, `en`. Groupes (`--groups`) :
 | `fx` | toutes les bannières, les messages les plus longs, les messages de célébration, les grands tampons et les textes flottants des effets, l'aperçu du Grand Splorch hors du ranch |
 | `upgrades` | v2.0 (lot B2) : l'écran Améliorations, instantané du serveur fabriqué (interrupteurs ouverts dans le scénario seulement) : chaque onglet, chaque état d'une ligne et d'une carte (Prêt, Il manque, MAX, cadenas « Record n » / « Ascension n », « Boucle n », En cours, Réessaie), modes ×1 / ×10 / Max, retours et refus du serveur, Atelier vide / à moitié / complet et « Pour le plaisir », Souvenir, pires nombres (1,00e300, 99 999 et 100 000 Confettis, Record 400, 40/40) et libellés les plus longs |
 | `hudv2` | v2.0 (lot B2) : HUD v2.0 calme et « Prochain achat — Prêt ! », Fame 3 s, rail de 8 et 9 entrées (Grand Splorch, Jelly Ascend, Petit Splorch), puces spéciales, Souvenir, suivi « Retour au record », file des grands spectacles au pire cas |
+| `world` | v2.0 (lot B4) : textes du monde du ranch qui évolue (planche `.billboards.png`) : panneaux des ranchs au pire cas (couronne dessinée, Record R 400, « PRÊT ! »), dalles du Tapis et du Tapis Étoilé (Niv. 13 à 20, prix géants), plaque du titre avec la goutte du halo, statue, « Boîte à dodo ! », Prairie v2, kiosque de Big Plop (étiquette, invite □ « Atelier », écran ouvert par □ à la manette, retour au jeu par ○) |
 
 Les noms sont les plus longs possibles : joueurs de 20 caractères, nom d'espèce et de mutation les
 plus longs de la langue, titre le plus long, nombres de 1e18 à 999 Dc.
@@ -192,4 +193,11 @@ raison écrite à la main dans la liste des clés est gardée quand on la régé
   sur la console (à comparer sur une photo de l'écran).
 - Pas de monde 3D, pas d'images réelles (cases neutres), pas d'animations : chaque capture est un
   instant figé.
+- **Icônes dessinées dans un texte** (étoile ★, couronne du Record R, goutte du halo : repères de
+  `UI/Text`) : le jeu les place d'après la mesure Luau du texte qui les précède, sans crénage ;
+  Chromium crène ce texte et le dessine plus court : après un long préfixe, l'icône paraît décalée vers
+  le caractère qui la suit (relecture des écrans du lot B4 : « MaximilianWolfgang20 · » perd 0,217 em
+  de crénage en Fredoka One, la couronne touche presque « 400 » dans la capture). Dans le moteur, mesure
+  et dessin crènent pareil : l'icône est centrée dans sa place. Ne pas élargir la place pour « corriger »
+  une capture : comparer d'abord avec une photo de la console.
 - Polices de secours des symboles et emoji : Noto ici, celles de Roblox en jeu.

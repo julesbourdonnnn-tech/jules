@@ -1985,16 +1985,42 @@ local function worldScreens()
 	-- kiosque de Big Plop (D21) : instantané de l'écran Améliorations (une ligne de l'Atelier visible),
 	-- étiquette world.kiosk, puis le joueur à 4 studs du comptoir : invite □ « Atelier » (vraie cible de
 	-- PromptController, glyphe de la plateforme)
+	local function kioskScene(c)
+		worldReset(c)
+		ranches(c, { day = 42 }, { day = 42 })
+		c.h:fireClient(REMOTES .. "DataPatch", { upgradeSnapshot = Screens.upgradeSnapshot(c) }, {})
+		c.h:settle(1)
+		settle(c)
+		local kiosk = c.WorldLayout.plaza("kiosk")
+		c.h:moveTo(c.h.localPlayer, kiosk + Vector3.new(4, 3, -4))
+		frames(c, 12, 1 / 30)
+		refreshHud(c)
+	end
+	table.insert(list, { id = "world.kiosk", run = kioskScene })
+	-- relecture des écrans du lot B4 (B4-83) : □ sur le kiosque, à la manette (vraie entrée) : l'écran
+	-- Améliorations ouvert sur l'Atelier, 1re ligne sous le focus ; puis ○ : retour au jeu en un appui (ni
+	-- menu ni sélection), l'invite □ « Atelier » revenue
 	table.insert(list, {
-		id = "world.kiosk",
+		id = "world.kiosk.open",
 		run = function(c)
-			worldReset(c)
-			ranches(c, { day = 42 }, { day = 42 })
-			c.h:fireClient(REMOTES .. "DataPatch", { upgradeSnapshot = Screens.upgradeSnapshot(c) }, {})
-			c.h:settle(1)
-			settle(c)
-			local kiosk = c.WorldLayout.plaza("kiosk")
-			c.h:moveTo(c.h.localPlayer, kiosk + Vector3.new(4, 3, -4))
+			kioskScene(c)
+			c.Clock.advance(1)
+			Gamepad.tap(c.h, Enum.KeyCode.ButtonX)
+			c.h:settle(2)
+			frames(c, 12, 1 / 30)
+		end,
+	})
+	table.insert(list, {
+		id = "world.kiosk.back",
+		run = function(c)
+			kioskScene(c)
+			c.Clock.advance(1)
+			Gamepad.tap(c.h, Enum.KeyCode.ButtonX)
+			c.h:settle(2)
+			frames(c, 12, 1 / 30)
+			c.Clock.advance(1)
+			Gamepad.tap(c.h, Enum.KeyCode.ButtonB)
+			c.h:settle(2)
 			frames(c, 12, 1 / 30)
 			refreshHud(c)
 		end,
