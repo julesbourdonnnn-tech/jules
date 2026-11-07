@@ -210,6 +210,12 @@ local frameNo = 0
 -- un panneau en remplace un autre (L2 / R2, raccourci, carte) : le voile, le flou et l'écran des
 -- panneaux restent affichés et Changed ne passe pas par nil entre les deux
 local switching = false
+-- v2.0 (relecture des écrans du lot B4, B4-83) : panneau ouvert DEPUIS LE JEU (kiosque de Big Plop :
+-- open(panel, tab, true)) alors que le menu était fermé ; ○ le ferme avec le rail et rend la main au jeu
+-- en un appui (GDD §10.6, table de navigation : Améliorations « → ce qui l'a ouvert (menu, aperçu du Grand
+-- Splorch, jeu) », règle 4). Remis à nil par toute autre ouverture (rail, L2 / R2 : on navigue alors dans
+-- le menu) et à la fermeture du panneau ou du rail
+local backToGame: string? = nil
 -- v2.0 (lot B2, D11 ; décision N23 du propriétaire) : MenuActivity, une au plus toutes les 20 s,
 -- seulement quand MON ranch porte l'attribut Helpers > 0 (interrupteur Helpers du serveur)
 local MENU_ACTIVITY_EVERY = 20
@@ -1112,6 +1118,7 @@ end
 
 local function onWindowClosed(windowName: string)
 	if windowName == MENU then
+		backToGame = nil
 		local frame = railFrame
 		if frame then
 			frame.Visible = false
@@ -1131,6 +1138,9 @@ local function onWindowClosed(windowName: string)
 		return
 	end
 	table.remove(openOrder, i)
+	if backToGame == name then
+		backToGame = nil
+	end
 	Widgets.cancelHolds()
 	local mod = Panels[name]
 	if mod then
@@ -1184,7 +1194,16 @@ local function showPanel(name: string, tab: string?)
 			return safe(name .. ".defaultSelection", nil, mod.defaultSelection)
 		end,
 		onBack = function(): boolean
-			return safe(name .. ".onBack", false, mod.onBack) == true
+			if safe(name .. ".onBack", false, mod.onBack) == true then
+				return true
+			end
+			-- ouvert depuis le jeu (kiosque) : ○ ferme le panneau ET le rail, la main revient au jeu
+			if backToGame == name then
+				backToGame = nil
+				PanelController.closeAll()
+				return true
+			end
+			return false
 		end,
 		opener = opener,
 	})
@@ -1385,7 +1404,9 @@ function PanelController.openMenu(entry: string?)
 end
 
 -- Ouvre un panneau (onglet demandé ou le dernier) ; le rail reste ouvert dessous
-function PanelController.open(panel: string, tab: string?)
+-- `fromGame` (v2.0, relecture des écrans du lot B4, B4-83) : vrai quand le jeu ouvre le panneau (kiosque
+-- de Big Plop) ; si le menu était fermé, ○ ferme alors le panneau avec le rail (retour au jeu en un appui)
+function PanelController.open(panel: string, tab: string?, fromGame: boolean?)
 	if not initialized or type(panel) ~= "string" or Panels[panel] == nil then
 		return
 	end
@@ -1418,7 +1439,8 @@ function PanelController.open(panel: string, tab: string?)
 	if panel == UPGRADES and windows[panel] then
 		windows[panel].ZIndex = if stackOver then 10 else 5
 	end
-	if not FocusGuard.isOpen(MENU) then
+	local menuWasOpen = FocusGuard.isOpen(MENU)
+	if not menuWasOpen then
 		preferredEntry = if railButtons[panel] then panel else nil
 		openMenuWindow()
 	end
@@ -1435,6 +1457,7 @@ function PanelController.open(panel: string, tab: string?)
 			GuiService.SelectedObject = b
 		end
 	end
+	backToGame = if fromGame == true and not menuWasOpen and not stackOver then panel else nil
 	showPanel(panel, tab)
 end
 

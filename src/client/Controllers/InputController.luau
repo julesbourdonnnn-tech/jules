@@ -257,8 +257,9 @@ local function primaryBegin(byMouse: boolean)
 		fire("shop")
 	elseif p == "workshop" then
 		-- v2.0 (lot B4, étape 5, INT-B4-KIOSK) : kiosque de Big Plop → écran Améliorations sur l'onglet
-		-- Atelier, rien d'autre (aucune intention envoyée ; sans instantané, open ne fait rien)
-		Util.safe("PanelController.open", nil, PanelController.open, "Upgrades", "workshop")
+		-- Atelier, rien d'autre (aucune intention envoyée ; sans instantané, open ne fait rien) ; ouvert
+		-- depuis le jeu : ○ y ramène en un appui (relecture des écrans, B4-83)
+		Util.safe("PanelController.open", nil, PanelController.open, "Upgrades", "workshop", true)
 	end
 end
 
