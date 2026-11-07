@@ -97,7 +97,7 @@ Body.Suggested.Card3.Icon.P3 1391,378,71,15
 Body.Suggested.Card3.Icon.P4 1388,368,71,15
 Body.Suggested.Card3.Icon.P5 1397,361,71,15
 Body.Suggested.Card3.Icon.R1 1417,363,29,29
-Body.Suggested.Card3.Name 1232,423,400,408 "Everything maxed! Next goal: Grand Splorch"
+Body.Suggested.Card3.Name 1232,423,400,408 "Everything maxed! Next\ngoal: Grand Splorch"
 Body.Suggested.Card3.LevelArrow 1416,515,32,32
 Body.Suggested.Card3.EffectArrow 1416,603,32,32
 Body.Suggested.Card3.Currency 1344,691,48,48

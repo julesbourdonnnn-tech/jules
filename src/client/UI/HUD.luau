@@ -1290,6 +1290,18 @@ local function queueEntry(): { [string]: any }?
 	return nil
 end
 
+-- v2.0 : MON grand spectacle en cours (EventState.spectacle.current : Grand Splorch ou Jelly Ascend).
+-- Le serveur garde AscendReady vrai jusqu'à l'éclatement (4,0 s, Prestige.apply) : sans ce test, la
+-- puce « JELLY ASCEND ! » revenait pendant MA propre Ascension (relecture du lot B2, B2-68)
+local function myShowNow(): boolean
+	local ev = eventState()
+	if ev == nil then
+		return false
+	end
+	local cur = Util.tbl(Util.tbl(ev.spectacle).current)
+	return (cur.kind == "splorch" or cur.kind == "ascend") and cur.userId == localUserId()
+end
+
 -- Suivi d'objectif ; rend (Grand Splorch prêt et pas encore dans la file, prestige du joueur dans la
 -- file). v2.0 : pendant une remontée, « Retour au record » + « r / Record R », même quand le Petit
 -- Splorch est prêt (la puce « PETIT SPLORCH ! » le dit ; D1, D32)
@@ -1477,7 +1489,7 @@ local function updateSpecial(now: number, splorchReady: boolean, queued: boolean
 		mode = "hint"
 	elseif splorchReady and revealed.menuChip ~= false then
 		mode = if kind == "petit" then "petit" else "splorch"
-	elseif kind == "ascend" and not queued and revealed.menuChip ~= false then
+	elseif kind == "ascend" and not queued and revealed.menuChip ~= false and not myShowNow() then
 		mode = "ascend"
 	end
 	setPetitHold(mode == "petit" and not first)
@@ -1668,8 +1680,9 @@ local function updateMenuChip(now: number)
 	local covered = panelCovering()
 	setVisible(elements.coins, revealed.coins ~= false and not photo and not covered)
 	setVisible(elements.goalTracker, revealed.goalTracker ~= false and not photo and not covered)
-	-- v2.0 (D17, GDD §4.27 étape 1) : « ! » aussi quand le ranch porte AscendReady
-	local ascend = v2() and UpgradeSnapshot.ranchAttribute("AscendReady") == true
+	-- v2.0 (D17, GDD §4.27 étape 1) : « ! » aussi quand le ranch porte AscendReady (jamais pendant MON
+	-- grand spectacle : AscendReady reste vrai jusqu'à l'éclatement ; B2-68)
+	local ascend = v2() and UpgradeSnapshot.ranchAttribute("AscendReady") == true and not myShowNow()
 	if ascend ~= ascendBang then
 		ascendBang = ascend
 		local chip = elements.menuChip

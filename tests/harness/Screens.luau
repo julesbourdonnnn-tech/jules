@@ -2251,6 +2251,23 @@ local function upgradeScreens()
 		hold = 0.7,
 		answer = upgradeAnswer({ levels = 4, edit = boughtDecor(4) }),
 	})
+	-- Tapis 12 acheté écran ouvert à r ≥ 6 (profil témoin : r = 12) : la même ligne continue avec le
+	-- Tapis Étoilé, « 12/20 » et Prêt (relecture du lot B2, B2-65 : elle montrait « 12/12 » et MAX
+	-- jusqu'à la réouverture)
+	local function mat(snack)
+		return function(p)
+			tiles(p, { snack = snack, star = 0 })
+			p.coins = 9.99e94
+		end
+	end
+	add("buy.starContinues", {
+		tab = "ranch",
+		select = "snack",
+		edit = mat(11),
+		hold = 0.7,
+		settle = 2,
+		answer = upgradeAnswer({ levels = 1, edit = mat(12) }),
+	})
 	for _, reason in { "coins", "confetti", "locked", "maxed", "loopCap", "busy" } do
 		add("buy.refused." .. reason, {
 			tab = "ranch",

@@ -112,6 +112,93 @@ return function(T)
 		)
 	end)
 
+	describe("Review_B2 › puce JELLY ASCEND ! du HUD v2.0 (D17, GDD §10.2)", function()
+		-- Défaut 4 : la puce se cachait quand MA Jelly Ascend était dans la file, mais pas quand son
+		-- spectacle commençait (EventState.spectacle.current) : le serveur garde AscendReady vrai
+		-- jusqu'à l'éclatement (4,0 s, Prestige.apply), et « JELLY ASCEND ! » revenait, pulsant, pendant
+		-- MON spectacle
+		local NOW = 1800000000
+		local function eventState(spectacle)
+			return {
+				rush = { active = false, index = 0, endsAt = 0, nextAt = 0, moonBoopable = false },
+				mega = {
+					phase = "idle",
+					index = 0,
+					landsAt = 0,
+					endsAt = 0,
+					target = 0,
+					points = 0,
+					species = 1,
+					moon = false,
+					result = "",
+				},
+				golden = { active = false, id = 0, endsAt = 0 },
+				moon = { active = false, session = 0, endsAt = 0, nextAt = 0 },
+				gauge = { points = 300, target = 1200, partyUntil = 0, restUntil = 0 },
+				boost = { kind = "", untilT = 0, byName = "" },
+				spectacle = spectacle,
+				features = {
+					boopRush = "on",
+					megaSquish = true,
+					golden = true,
+					jellyMoon = true,
+					gauge = true,
+					clips = true,
+					costume = "",
+					diagnostics = true,
+				},
+				offset = 0,
+			}
+		end
+
+		it("MA Jelly Ascend commence (spectacle en cours, AscendReady encore vrai) : plus de puce", function()
+			local c = S.client({
+				snap = S.snap(1),
+				profile = {
+					onboarding = { step = 11, done = true, demoDone = true },
+					growth = { G = 0, g = 0, t = NOW },
+				},
+				ranch = { AscendReady = true },
+			})
+			local h = c.h
+			local me = h.localPlayer.UserId
+			local HUD = TvAudit.mod(h, "UI.HUD")
+			local WSC = TvAudit.mod(h, "Controllers.WorldStateController")
+			local ev = eventState({ queue = {} })
+			WSC.event = function()
+				return ev
+			end
+			HUD._refresh()
+			local chip = HUD.element("specialChip")
+			S.run(c, 0.5)
+			expect(chip:GetAttribute("Mode")).toBe("ascend")
+			local bang = HUD.element("menuChip").Bang
+			expect(bang.Visible).toBe(true)
+			-- le spectacle d'un AUTRE joueur ne change rien
+			ev = eventState({
+				queue = {},
+				current = { kind = "ascend", userId = me + 1, startedAt = c.Clock.now() },
+			})
+			S.run(c, 0.5)
+			expect(chip:GetAttribute("Mode")).toBe("ascend")
+			-- le MIEN commence : l'Ascension est en cours, la puce ne l'offre plus
+			ev = eventState({
+				queue = {},
+				current = { kind = "ascend", userId = me, startedAt = c.Clock.now() },
+			})
+			S.run(c, 0.5)
+			expect(chip:GetAttribute("Mode")).toBe("")
+			-- ni « ! » sur la puce Menu (GDD §4.27 étape 1 : l'Ascension n'est plus à faire)
+			expect(bang.Visible).toBe(false)
+			-- fini (plus de spectacle) et AscendReady effacé à l'éclatement : toujours rien
+			c.model:SetAttribute("AscendReady", false)
+			ev = eventState({ queue = {} })
+			S.run(c, 0.5)
+			expect(chip:GetAttribute("Mode")).toBe("")
+			S.clean(c, expect)
+		end)
+	end)
+
 	describe("Review_B2 › effet réel des Décorations (N25, D30)", function()
 		-- Défaut 3 : D30 veut l'A_bonus du revenu du HUD ; l'écran le calculait avec friends = 0, alors
 		-- que le revenu compte les amis présents (+0,10 chacun) : avec un ami sur le serveur, « Revenu
