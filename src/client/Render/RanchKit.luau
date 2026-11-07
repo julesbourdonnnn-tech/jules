@@ -69,13 +69,13 @@ end
 -- Couleur éclaircie vers le blanc de `t` (0 … 1)
 function RanchKit.lighten(c: Color3, t: number): Color3
 	local k = math.clamp(if t == t then t else 0, 0, 1)
-	return Color3.new(c.R + (1 - c.R) * k, c.G + (1 - c.G) * k, c.B + (1 - c.B) * k)
+	return c:Lerp(Color3.new(1, 1, 1), k)
 end
 
 -- Mélange de deux couleurs
 function RanchKit.mix(a: Color3, b: Color3, t: number): Color3
 	local k = math.clamp(if t == t then t else 0, 0, 1)
-	return Color3.new(a.R + (b.R - a.R) * k, a.G + (b.G - a.G) * k, a.B + (b.B - a.B) * k)
+	return a:Lerp(b, k)
 end
 
 -- Crée la pièce d'une spec (propriétés fixes des décors v2.0) sous `parent`

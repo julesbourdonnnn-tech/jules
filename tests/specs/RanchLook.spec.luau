@@ -383,6 +383,66 @@ return function(T)
 		end)
 	end)
 
+	describe("RanchLook › aspects du Tapis, des coussins et du Pot (étape 3, D14, D18, D18b)", function()
+		it("6 paliers du Tapis : aspect complet, matériaux permis ; 0 et illisibles → nil", function()
+			local allowed = { SmoothPlastic = true, Neon = true, Foil = true, Ice = true }
+			for tier = 1, 6 do
+				local look = RanchLook.tapisLook(tier)
+				expect(look ~= nil).toBe(true)
+				expect(typeof(look.mat)).toBe("Color3")
+				expect(allowed[look.material]).toBe(true)
+				expect(#look.accents >= 1).toBe(true)
+			end
+			-- Gelée dorée en Foil ; Bonbon arc-en-ciel : 7 couleurs de bandes
+			expect(RanchLook.tapisLook(4).material).toBe("Foil")
+			expect(#RanchLook.tapisLook(3).accents).toBe(7)
+			for _, bad in { 0, 7, 2.5, 0 / 0, "1", {}, nil } do
+				expect(RanchLook.tapisLook(bad)).toBe(nil)
+			end
+		end)
+
+		it("coussins : style de la semaine, inconnu → nil ; étoilés au Record R 11", function()
+			expect(RanchLook.cushionStyle("pinkCushions")).toBe(roblox.Color3.fromRGB(255, 182, 213))
+			for _, bad in { "", "nimporte", 5, nil, {} } do
+				expect(RanchLook.cushionStyle(bad)).toBe(nil)
+			end
+			for r = 0, 60 do
+				expect(RanchLook.starCushions(r)).toBe(r >= 11)
+			end
+			expect(RanchLook.starCushions(0 / 0)).toBe(false)
+			expect(RanchLook.STAR_CUSHION.material).toBe("Foil")
+		end)
+
+		it("Pot : cuivre, argent, cristal (Ice) ; doré = l'aspect de la v1.3 (aucune ligne)", function()
+			for _, name in { "copper", "silver", "crystal" } do
+				local look = RanchLook.potLook(name)
+				expect(look ~= nil).toBe(true)
+				expect(look.material == "Foil" or look.material == "Ice").toBe(true)
+			end
+			expect(RanchLook.potLook("crystal").material).toBe("Ice")
+			expect(RanchLook.potLook("gold")).toBe(nil)
+			expect(RanchLook.potLook(nil)).toBe(nil)
+			-- chaque matériau que potMaterial peut rendre a une ligne ou vaut l'aspect de la v1.3
+			for r = 0, 60 do
+				local name = RanchLook.potMaterial(r)
+				expect(name == "gold" or RanchLook.potLook(name) ~= nil).toBe(true)
+			end
+		end)
+
+		it("habillages v2.0 : les 11 nouveaux, jamais les 3 de la v1.3 ni un inconnu", function()
+			local n = 0
+			for _, id in RanchLook.SKINS do
+				if RanchLook.isV2Skin(id) then
+					n += 1
+				end
+			end
+			expect(n).toBe(11)
+			for _, id in { "color", "moonlit", "candyNight", "", "nope", 3 } do
+				expect(RanchLook.isV2Skin(id)).toBe(false)
+			end
+		end)
+	end)
+
 	describe("RanchLook › Déco perso", function()
 		it(
 			"12 numéros sûrs : bon placement gardé ; inconnu, mauvaise taille, doublon, illisible → 0",

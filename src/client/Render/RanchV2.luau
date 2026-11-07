@@ -193,14 +193,10 @@ local function particleFactor(): number
 	return Util.num(if type(b) == "table" then (b :: any).particles else 1, 1, 0, 1)
 end
 
--- Clé de couleur (signatures) : entiers 0 … 255, identique d'un appel à l'autre
+-- Clé de couleur (signatures) : teinte, saturation, valeur, identique d'un appel à l'autre
 local function hex(c: Color3): string
-	return string.format(
-		"%d,%d,%d",
-		math.floor(c.R * 255 + 0.5),
-		math.floor(c.G * 255 + 0.5),
-		math.floor(c.B * 255 + 0.5)
-	)
+	local h, sat, v = c:ToHSV()
+	return string.format("%.4f,%.4f,%.4f", h, sat, v)
 end
 
 local function newObj(): Obj
@@ -615,6 +611,27 @@ local function levelOf(st: Slot, sys: string): string
 	return if st.detail == "full" and st.grants[sys] == "full" then "full" else "reduced"
 end
 
+-- L'objet a déjà cette signature : rien à construire ni à écrire (rendu idempotent)
+local function unchanged(st: Slot, key: string, sig: string, level: string): boolean
+	local obj = st.objs[key]
+	if obj ~= nil and obj.sig == sig then
+		markRendered(st, key, level)
+		return true
+	end
+	return false
+end
+
+local function dropSparkles(obj: Obj?)
+	if obj == nil then
+		return
+	end
+	for _, inst in obj.extra do
+		inst:Destroy()
+		VisualBudget.release("tapis", SPARKLE_PARTICLES, "particles")
+	end
+	table.clear(obj.extra)
+end
+
 -- Paliers du Tapis : aspect du grand tapis et de ses biscuits (tous les ranchs), pièces du palier
 -- et étincelles du Tapis doré (détail complet)
 local function renderTapis(st: Slot, view: View?)
@@ -623,26 +640,25 @@ local function renderTapis(st: Slot, view: View?)
 	local snack = model and model:FindFirstChild("SnackMat")
 	local look = if view then RanchLook.tapisLook(view.tier) else nil
 	if view == nil or look == nil or snack == nil then
-		update(st, "tapis", "none", EMPTY :: any, EMPTY :: any)
-		local obj = st.objs.tapis
-		if obj then
-			for _, inst in obj.extra do
-				inst:Destroy()
-				VisualBudget.release("tapis", SPARKLE_PARTICLES, "particles")
-			end
-			table.clear(obj.extra)
+		if not unchanged(st, "tapis", "none", level) then
+			update(st, "tapis", "none", EMPTY :: any, EMPTY :: any)
+			dropSparkles(st.objs.tapis)
+			markRendered(st, "tapis", level)
 		end
-		markRendered(st, "tapis", level)
 		return
 	end
 	local v = view :: View
 	local tapisLook = look :: RanchLook.TapisLook
 	-- 8 % par niveau dans le palier : niveau public du Tapis (1 … 12) ; Tapis Étoilé : le palier seul
 	local shade = if v.tier <= 4 then RanchLook.tapisShade(v.snack) else 0
+	local factor = particleFactor()
+	local sparkle = level == "full" and v.tier == 4 and factor > 0
+	local sig = table.concat({ v.tier, shade, level, if sparkle then factor else 0 }, "|")
+	if unchanged(st, "tapis", sig, level) then
+		return
+	end
 	local matColor = RanchKit.lighten(tapisLook.mat, shade)
 	local material = RanchKit.material(tapisLook.material)
-	local sparkle = level == "full" and v.tier == 4 and particleFactor() > 0
-	local sig = table.concat({ v.tier, shade, level, if sparkle then 1 else 0 }, "|")
 	local paints: { Paint } = {}
 	local mat = (snack :: Instance):FindFirstChild("Mat")
 	if mat and mat:IsA("BasePart") then
@@ -658,13 +674,13 @@ local function renderTapis(st: Slot, view: View?)
 	local created, createdSpecs = update(st, "tapis", sig, specs, paints)
 	local obj = st.objs.tapis
 	-- étincelles du Tapis doré : un émetteur sur le tapis du serveur, dans le quota de particules
-	if obj and obj.sig == sig then
-		local has = #obj.extra > 0
-		if sparkle and not has and mat and mat:IsA("BasePart") then
+	if obj then
+		local rate = SPARKLE_RATE * factor
+		if sparkle and #obj.extra == 0 and mat and mat:IsA("BasePart") then
 			if VisualBudget.take("tapis", SPARKLE_PARTICLES, "particles") then
 				local e = Instance.new("ParticleEmitter")
 				e.Name = "TapisSparkles"
-				e.Rate = SPARKLE_RATE * particleFactor()
+				e.Rate = rate
 				e.Lifetime = NumberRange.new(0.8, 1.2)
 				e.Speed = NumberRange.new(0.5, 1.5)
 				e.Size = NumberSequence.new(0.4)
@@ -674,12 +690,14 @@ local function renderTapis(st: Slot, view: View?)
 				e.Parent = mat
 				table.insert(obj.extra, e)
 			end
-		elseif not sparkle and has then
+		elseif sparkle then
 			for _, inst in obj.extra do
-				inst:Destroy()
-				VisualBudget.release("tapis", SPARKLE_PARTICLES, "particles")
+				if inst:IsA("ParticleEmitter") and inst.Rate ~= rate then
+					inst.Rate = rate
+				end
 			end
-			table.clear(obj.extra)
+		else
+			dropSparkles(obj)
 		end
 	end
 	if real and level == "full" then
@@ -692,7 +710,10 @@ end
 local function renderCushions(st: Slot, view: View?)
 	local level = levelOf(st, "tapis")
 	if view == nil or level ~= "full" then
-		renderParts(st, "cushions", "none:" .. level, EMPTY :: any, level)
+		local sig = "none:" .. level
+		if not unchanged(st, "cushions", sig, level) then
+			renderParts(st, "cushions", sig, EMPTY :: any, level)
+		end
 		return
 	end
 	local v = view :: View
@@ -705,18 +726,26 @@ local function renderCushions(st: Slot, view: View?)
 		material = RanchKit.material(star.material)
 	end
 	local sig = table.concat({ n, hex(color), material.Name, level }, "|")
-	renderParts(st, "cushions", sig, RanchKit.cushions(st.slot, n, color, material), level)
+	if not unchanged(st, "cushions", sig, level) then
+		renderParts(st, "cushions", sig, RanchKit.cushions(st.slot, n, color, material), level)
+	end
 end
 
 -- Lit douillet : lit à baldaquin et mobile de 3 lunes (tiles.cozyBed)
 local function renderBed(st: Slot, view: View?)
 	local level = levelOf(st, "tapis")
 	if view == nil or level ~= "full" or not (view :: View).cozyBed then
-		renderParts(st, "bed", "none:" .. level, EMPTY :: any, level)
+		local sig = "none:" .. level
+		if not unchanged(st, "bed", sig, level) then
+			renderParts(st, "bed", sig, EMPTY :: any, level)
+		end
 		return
 	end
 	local color = RanchKit.lighten((view :: View).color, 0.35)
-	renderParts(st, "bed", "bed|" .. hex(color) .. "|" .. level, RanchKit.bed(st.slot, color), level)
+	local sig = "bed|" .. hex(color) .. "|" .. level
+	if not unchanged(st, "bed", sig, level) then
+		renderParts(st, "bed", sig, RanchKit.bed(st.slot, color), level)
+	end
 end
 
 -- Socles de souvenir (décoration k pas construite, Record R ≥ 1) ; socle → décoration : le socle
@@ -725,6 +754,9 @@ local function renderPlinths(st: Slot, view: View?)
 	local level = levelOf(st, "plinths")
 	local list = if view and level == "full" then plinthList(view :: View) else EMPTY :: any
 	local sig = table.concat(list, ",") .. "|" .. level
+	if unchanged(st, "plinths", sig, level) then
+		return
+	end
 	local real = realChange(st, "plinths", level)
 	local obj = st.objs.plinths
 	local before: { [number]: boolean } = if obj and type(obj.data) == "table" then obj.data else {}
@@ -792,6 +824,10 @@ end
 -- Décorations dorées (bit k − 1 de DecorGold) : couleur et matériau locaux de leurs pièces
 local function renderGolden(st: Slot, view: View?)
 	local gold = if view then (view :: View).gold else 0
+	local sig = "gold|" .. gold
+	if unchanged(st, "golden", sig, "all") then
+		return
+	end
 	local paints: { Paint } = {}
 	if gold ~= 0 then
 		for k = 1, DECOR_MAX do
@@ -808,7 +844,7 @@ local function renderGolden(st: Slot, view: View?)
 			end
 		end
 	end
-	update(st, "golden", "gold|" .. gold, EMPTY :: any, paints)
+	update(st, "golden", sig, EMPTY :: any, paints)
 	markRendered(st, "golden", "all")
 end
 
@@ -816,28 +852,38 @@ end
 local function renderPennants(st: Slot, view: View?)
 	local level = levelOf(st, "record")
 	if view == nil or level ~= "full" then
-		renderParts(st, "pennants", "none:" .. level, EMPTY :: any, level)
+		local sig = "none:" .. level
+		if not unchanged(st, "pennants", sig, level) then
+			renderParts(st, "pennants", sig, EMPTY :: any, level)
+		end
 		return
 	end
 	local v = view :: View
 	local list = pennantList(v)
+	local sig = table.concat(list, ",") .. "|" .. (if v.goldPennants then "g" else "c") .. "|" .. level
+	if unchanged(st, "pennants", sig, level) then
+		return
+	end
 	local specs: { RanchKit.Spec } = {}
 	for _, k in list do
 		for _, spec in RanchKit.pennant(st.slot, k, v.color, v.goldPennants) do
 			table.insert(specs, spec)
 		end
 	end
-	local sig = table.concat(list, ",") .. "|" .. (if v.goldPennants then "g" else "c") .. "|" .. level
 	renderParts(st, "pennants", sig, specs, level)
 end
 
 -- Matériau du Pot (tous les ranchs) : cuivre, argent (R2), doré (R6, l'aspect de la v1.3), cristal
 local function renderPotMaterial(st: Slot, view: View?)
 	local name = if view then RanchLook.potMaterial((view :: View).bestR) else "gold"
-	local look = RanchLook.potLook(name)
-	local paints: { Paint } = {}
 	local model = st.model
 	local pot = model and model:FindFirstChild("Pot")
+	local sig = "pot|" .. name .. "|" .. (if pot then 1 else 0)
+	if unchanged(st, "potMat", sig, "all") then
+		return
+	end
+	local look = RanchLook.potLook(name)
+	local paints: { Paint } = {}
 	if look and pot then
 		local material = RanchKit.material(look.material)
 		for _, partName in { "Body", "Rim" } do
@@ -847,7 +893,7 @@ local function renderPotMaterial(st: Slot, view: View?)
 			end
 		end
 	end
-	update(st, "potMat", "pot|" .. name .. "|" .. (if pot then 1 else 0), EMPTY :: any, paints)
+	update(st, "potMat", sig, EMPTY :: any, paints)
 	markRendered(st, "potMat", "all")
 end
 
@@ -857,11 +903,22 @@ local function renderPot(st: Slot, view: View?)
 	local mine = view ~= nil and st.slot == mySlot() and level == "full"
 	local heap = if mine then st.heap else 0
 	local ring = if mine then st.ring else 0
-	update(st, "heap", "heap|" .. heap .. "|" .. level, RanchKit.heap(st.slot, heap), EMPTY :: any)
-	markRendered(st, "heap", level)
-	local ringSpecs = if ring > 0 then RanchKit.ring(st.slot, ring) else EMPTY :: any
-	update(st, "ring", "ring|" .. ring .. "|" .. level, ringSpecs, EMPTY :: any)
-	markRendered(st, "ring", level)
+	local heapSig = "heap|" .. heap .. "|" .. level
+	if not unchanged(st, "heap", heapSig, level) then
+		update(st, "heap", heapSig, RanchKit.heap(st.slot, heap), EMPTY :: any)
+		markRendered(st, "heap", level)
+	end
+	local ringSig = "ring|" .. ring .. "|" .. level
+	if not unchanged(st, "ring", ringSig, level) then
+		update(
+			st,
+			"ring",
+			ringSig,
+			if ring > 0 then RanchKit.ring(st.slot, ring) else EMPTY :: any,
+			EMPTY :: any
+		)
+		markRendered(st, "ring", level)
+	end
 end
 
 local function renderSlot(st: Slot)
@@ -1269,15 +1326,28 @@ function RanchV2.watch()
 end
 
 -- Patch du ranch public (WorldStateController.RanchChanged) : revoir ce ranch s'il est v2.0
+-- Champs du ranch public qui changent ses décors v2.0 (les autres, fréquents, ne réveillent rien)
+local RELEVANT: { [string]: boolean } = { ["*"] = true, tiles = true, R = true, userId = true }
+
 function RanchV2.onRanchChanged(slot: number, fields: { string }?)
 	local st = slots[slot]
 	if st == nil or not (st.on or next(st.objs) ~= nil) then
 		return
 	end
-	st.dirty = true
-	anyDirty = true
-	RanchV2.on = true
-	local _ = fields
+	local relevant = type(fields) ~= "table"
+	if not relevant then
+		for _, f in fields :: { string } do
+			if RELEVANT[f] then
+				relevant = true
+				break
+			end
+		end
+	end
+	if relevant then
+		st.dirty = true
+		anyDirty = true
+		RanchV2.on = true
+	end
 end
 
 -- Qualité ou Graphismes légers changés : détail et étincelles revus

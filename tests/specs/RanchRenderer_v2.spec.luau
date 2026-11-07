@@ -408,11 +408,11 @@ return function(T)
 		function c.steps()
 			return steps
 		end
-		function c.snapshot(ranches)
+		function c.snapshot(ranches, squishies)
 			c.seq = 1
 			h:fireClient(
 				"ReplicatedStorage.Remotes.RanchSnapshot",
-				{ seq = 1, ranches = ranches, squishies = {} }
+				{ seq = 1, ranches = ranches, squishies = squishies or {} }
 			)
 			h:settle(1)
 		end
@@ -785,6 +785,48 @@ return function(T)
 			expect(cloth(4).Color).toBe(Color3.fromRGB(255, 255, 255))
 			c.clean()
 		end)
+
+		it(
+			"selle et traînée v2.0 sur la monture ; inconnues : couleur du ranch, rose par défaut",
+			function()
+				local c = clientV2()
+				local SB = c.h:require("ReplicatedStorage.Shared.Render.SquishyBuilder")
+				local saddles = {}
+				local real = SB.setSaddleColor
+				SB.setSaddleColor = function(handle, color)
+					table.insert(saddles, color)
+					return real(handle, color)
+				end
+				local mount = { s = 1, m = 0, st = 0, z = 50, zg = 0, at = "pen", bf = 0, o = "", ready = 0 }
+				c.snapshot(
+					all16(function(slot)
+						return if slot == 3
+							then { ride = "a", saddle = 1, saddleColor = "goldenJelly", trail = "jellyArc" }
+							else nil
+					end),
+					{ ["3"] = { a = mount } }
+				)
+				c.at(3, Vector3.new(0, 0, 30))
+				c.run(0.6)
+				local function trail()
+					for _, d in c.h.workspace:GetDescendants() do
+						if d.Name == "MountTrail" then
+							return d
+						end
+					end
+					return nil
+				end
+				expect(saddles[#saddles]).toBe(Color3.fromRGB(255, 205, 80))
+				expect(trail().Color).toBe(roblox.ColorSequence.new(Color3.fromRGB(140, 220, 255)))
+				c.patch(3, { saddleColor = "nope", trail = "nope2" })
+				c.run(0.6)
+				local Cosmetics = c.h:require("ReplicatedStorage.Shared.Config.Cosmetics")
+				expect(saddles[#saddles]).toBe(Cosmetics.RanchColors[3])
+				expect(trail().Color).toBe(roblox.ColorSequence.new(Color3.fromRGB(255, 220, 240)))
+				SB.setSaddleColor = real
+				c.clean()
+			end
+		)
 
 		it("tas du Pot et anneau de l'aimant : MON ranch seulement, anneau près du Pot", function()
 			local c = clientV2()
