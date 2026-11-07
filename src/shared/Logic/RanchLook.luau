@@ -13,7 +13,10 @@
 --   * decoPerso(attr) : les 12 numéros sûrs de l'attribut DecoPerso ;
 --   * currentRanch, detail : niveau de détail par ranch, jamais par distance (D6) ;
 --   * padLabel : copie client de Server/Ranch/PadRules (visible / target / progress) pour la dalle du
---     Tapis au-delà du Tapis 12 (Tapis Étoilé, D11), comparée à PadRules par RanchLook.spec.
+--     Tapis au-delà du Tapis 12 (Tapis Étoilé, D11), comparée à PadRules par RanchLook.spec ;
+--   * moonLit(payload, now) : Jelly Moon en cours pour les lampions de la clôture (Record R 12), même
+--     règle que LightingController.resolve (interrupteur jellyMoon, EventState actif ou EventClock),
+--     comparée à resolve par RanchLook.spec.
 -- r, Record R et A passent par Logic/Prestige (jamais une lecture directe du champ du profil).
 
 -- Bibliothèques gardées en local : appels rapides, aussi dans l'environnement injecté du harnais
@@ -25,6 +28,7 @@ local Cosmetics = require(script.Parent.Parent.Config.Cosmetics)
 local Prestige = require(script.Parent.Prestige)
 local UpgradeMath = require(script.Parent.UpgradeMath)
 local WorldLayout = require(script.Parent.WorldLayout)
+local EventClock = require(script.Parent.EventClock)
 
 export type VatLook = {
 	rings: number, -- anneaux lumineux 1 … 8 (qualité de la Cuve)
@@ -667,6 +671,33 @@ function RanchLook.padLabel(profile: any, tile: any, flags: any): PadLabel
 			Prestige.bestR(profile)
 		),
 	}
+end
+
+-- =============================================================================================
+-- Jelly Moon (lampions de la clôture, Record R 12)
+-- =============================================================================================
+
+-- Jelly Moon en cours à l'instant `now` (Clock.now()) selon le dernier EventState : interrupteur
+-- jellyMoon du serveur ET (EventState.moon actif jusqu'à son heure de fin, ou l'horloge des
+-- événements) ; exactement la règle de LightingController.resolve ; illisible → faux
+function RanchLook.moonLit(payload: any, now: any): boolean
+	if type(payload) ~= "table" then
+		return false
+	end
+	local features = payload.features
+	if type(features) ~= "table" or features.jellyMoon ~= true then
+		return false
+	end
+	local t = if finite(now) then now else 0
+	local moon = payload.moon
+	if
+		type(moon) == "table"
+		and moon.active == true
+		and t < (if finite(moon.endsAt) then moon.endsAt else 0)
+	then
+		return true
+	end
+	return EventClock.moon(t).active == true
 end
 
 return RanchLook

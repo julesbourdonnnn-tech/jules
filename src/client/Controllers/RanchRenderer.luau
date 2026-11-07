@@ -55,11 +55,21 @@ local WorldStateController = require(Client.Controllers.WorldStateController)
 local QualityController = require(Client.Controllers.QualityController)
 local WorldText = require(Client.UI.WorldText)
 local Util = require(Client.World.Util)
--- v2.0 (lot B4, étape 3, D26) : état et décors v2.0 des ranchs (Render/RanchV2), tous derrière les
--- attributs de leurs interrupteurs ; interrupteurs coupés, aucun travail ni aucune instance de plus
+-- v2.0 (lot B4, étapes 3 et 4, D26) : état et décors v2.0 des ranchs (Render/RanchV2), tous derrière
+-- les attributs de leurs interrupteurs ; interrupteurs coupés, aucun travail ni aucune instance de plus
 local RanchV2 = require(Client.Render.RanchV2)
 
 local RanchRenderer = {}
+
+-- Crochets pour B5 (lot B4, étape 4 ; plan B4 §2.2) :
+--   * RanchRenderer.detail(slot) : « full » | « reduced », détail v2.0 du ranch (D6 : ranch courant et
+--     ses 2 voisins complets ; Graphismes légers : mon ranch et le courant) ;
+--   * RanchRenderer.elementCFrame(slot, id) : repère d'un élément v2.0 dessiné (paliers, Cuve, fontaine,
+--     lampions, portail, geyser, cadre, anneau-soleil, maisonnette, Monuments, Déco perso), nil sinon ;
+--   * RanchRenderer.ElementBuilt (slot, id) : un élément vient d'être construit pour de vrai (premier
+--     passage, joué en cascade ; jamais au chargement ni au changement de ranch) ;
+--   * Render/BuildCascade.Piece (slot, position, index) : chaque pièce d'une cascade qui sort.
+RanchRenderer.ElementBuilt = RanchV2.ElementBuilt
 
 -- Distances et cadences (GDD §5.2, §9.3, §12.9)
 local LOD = {
@@ -1494,8 +1504,14 @@ local function onCelebrate(payload: any)
 		return
 	end
 	local data = payload.data
-	if payload.kind == "hatch" and data.at == "dodo" then
-		showDodo()
+	if payload.kind == "hatch" then
+		if data.at == "dodo" then
+			showDodo()
+		end
+		-- v2.0 (lot B4, étape 4) : étincelles des buses de ma Cuve sur une naissance mutée (rien sans Cuve v2.0)
+		if RanchV2.on then
+			Util.guard("RanchRenderer.v2hatch", RanchV2.onHatch, data)
+		end
 	elseif payload.kind == "press" and type(data.uid) == "string" then
 		local slot = WorldStateController.mySlot()
 		if data.petsit == true then
@@ -1584,6 +1600,16 @@ end
 -- =============================================================================================
 -- API
 -- =============================================================================================
+
+-- Détail v2.0 d'un ranch (« full » | « reduced ») : crochet pour B5 (lot B4, étape 4)
+function RanchRenderer.detail(slot: number): string
+	return RanchV2.detail(slot)
+end
+
+-- Repère d'un élément v2.0 dessiné sur ce ranch, nil sinon : crochet pour B5 (lot B4, étape 4)
+function RanchRenderer.elementCFrame(slot: number, id: string): CFrame?
+	return RanchV2.elementCFrame(slot, id)
+end
 
 -- Position dessinée d'un squishy (cible, effets) ; repli : centre de sa place
 function RanchRenderer.positionOf(slot: number, uid: string): Vector3?

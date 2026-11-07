@@ -42,8 +42,9 @@ export type SystemStats = {
 VisualBudget.LIMITS = table.freeze({
 	-- Tapis, coussins, lit : (20 + 24 + 10) × 3 ; étincelles du Tapis doré ≤ 6
 	tapis = table.freeze({ parts = 162, particles = 6, lights = 0 }),
-	-- changements par Record R (Cuve, Pot, Bassin, lampions, portail, geyser, fanions) : 40 × 3
-	record = table.freeze({ parts = 120, particles = 0, lights = 0 }),
+	-- changements par Record R (Cuve, Bassin, lampions, portail, geyser) : 40 × 3 ; étincelles des 5
+	-- buses de MA Cuve (une par buse et par naissance mutée, lot B4 étape 4)
+	record = table.freeze({ parts = 120, particles = 5, lights = 0 }),
 	-- 6 paliers : 3 × 96 + 13 × 9
 	tiers = table.freeze({ parts = 405, particles = 0, lights = 0 }),
 	-- socles de souvenir : 18 × 2 × 3
@@ -60,6 +61,9 @@ VisualBudget.LIMITS = table.freeze({
 	world = table.freeze({ parts = 40, particles = 0, lights = 0 }),
 	-- tas de pièces du Pot (8) et anneau de l'aimant (12) : MON ranch seulement (D18)
 	pot = table.freeze({ parts = 20, particles = 0, lights = 0 }),
+	-- accessoires de la silhouette (lot B4 étape 4, D18b) : cadre doré 8, anneau « prêt » 8, anneau-soleil
+	-- 9 ; détail complet seulement : 25 × 3
+	silhouette = table.freeze({ parts = 75, particles = 0, lights = 0 }),
 })
 
 local METRIC_GAP = 60 -- s entre deux envois au plus

@@ -914,11 +914,19 @@ return function(T)
 					if expected[tier] ~= "" then
 						expect(c.count(3, expected[tier])).toBe(counts[tier])
 					end
-					local total = 0
-					for _ in c.parts(3) do
-						total += 1
-					end
-					expect(total).toBe(c.Kit.tapisCount(tier))
+					-- étape 4 (B4-38) : paliers et éléments du Record R (r public 4) se dessinent aussi ;
+					-- le système « tapis » compte exactement les pièces du palier (ni coussin ni lit ici)
+					local st = c.V2.stats()
+					expect(st.tapis).toBe(c.Kit.tapisCount(tier))
+					expect(
+						c.count(3, "picnic")
+							+ c.count(3, "hole")
+							+ c.count(3, "scallop")
+							+ c.count(3, "band")
+							+ c.count(3, "star")
+							+ c.count(3, "galaxy")
+							+ c.count(3, "shoot")
+					).toBe(c.Kit.tapisCount(tier))
 					expect(emitters(c.h)).toBe(if tier == 4 then 1 else 0)
 					local mat = c.models[3].SnackMat.Mat
 					expect(mat.Material).toBe(
@@ -948,13 +956,17 @@ return function(T)
 				c.at(3, Vector3.new(0, 0, 30))
 				c.attrs(3, FULL3)
 				c.run(1.5)
+				-- étape 4 (B4-38) : les pièces animées à 15 Hz (lanterne du phare, agitateur, goutte du
+				-- geyser) n'écrivent que leur pose ou leur couleur d'animation ; tout le reste : rien
 				local function hash()
 					local list = {}
 					for name, p in c.parts(3) do
-						table.insert(
-							list,
-							name .. "=" .. tostring(p.CFrame) .. tostring(p.Size) .. tostring(p.Color)
-						)
+						if not c.V2.isAnimated(p) then
+							table.insert(
+								list,
+								name .. "=" .. tostring(p.CFrame) .. tostring(p.Size) .. tostring(p.Color)
+							)
+						end
 					end
 					table.sort(list)
 					return table.concat(list, ";")
@@ -967,8 +979,11 @@ return function(T)
 					if d.ClassName == "Part" then
 						table.insert(
 							watched,
-							d.Changed:Connect(function()
-								writes += 1
+							d.Changed:Connect(function(prop)
+								local animation = c.V2.isAnimated(d) and (prop == "CFrame" or prop == "Color")
+								if not animation then
+									writes += 1
+								end
 							end)
 						)
 					end
@@ -1072,14 +1087,25 @@ return function(T)
 
 	describe("RanchRenderer_v2 › étape 3 : détail par ranch", function()
 		-- 16 ranchs v2.0 : nombre de pièces v2.0 par ranch (0 = couleur seulement)
+		-- étape 4 (B4-38) : les pièces du détail réduit des paliers (« far… » : tour, phare, couronne)
+		-- sont comptées à part (reducedPerSlot) ; perSlot compte les pièces du détail complet
 		local function perSlot(c)
 			local out = {}
 			for slot = 1, 16 do
 				local n = 0
-				for _ in c.parts(slot) do
-					n += 1
+				for name in c.parts(slot) do
+					if string.sub(name, 1, 3) ~= "far" then
+						n += 1
+					end
 				end
 				out[slot] = n
+			end
+			return out
+		end
+		local function reducedPerSlot(c)
+			local out = {}
+			for slot = 1, 16 do
+				out[slot] = c.count(slot, "far")
 			end
 			return out
 		end
@@ -1094,11 +1120,15 @@ return function(T)
 			c.at(3, Vector3.new(0, 0, 30))
 			c.run(1)
 			local ref = perSlot(c)
+			local far = reducedPerSlot(c)
 			expect(ref[2] > 0 and ref[3] > 0 and ref[4] > 0).toBe(true)
 			for slot = 5, 16 do
 				expect(ref[slot]).toBe(0)
+				expect(far[slot]).toBe(3) -- Record R 5 (palier 3) : la tour réduite seulement
 			end
 			expect(ref[1]).toBe(0)
+			expect(far[1]).toBe(3)
+			expect(far[2] + far[3] + far[4]).toBe(0)
 			local renders = c.V2.stats().renders
 			-- dans tous les sens, le long des clôtures, par le portail, dans la rue
 			local path = {}
@@ -1122,8 +1152,10 @@ return function(T)
 				c.run(0.2)
 				expect(c.V2.current()).toBe(3)
 				local now = perSlot(c)
+				local nowFar = reducedPerSlot(c)
 				for slot = 1, 16 do
 					expect(now[slot]).toBe(ref[slot])
+					expect(nowFar[slot]).toBe(far[slot])
 				end
 			end
 			expect(c.V2.stats().renders).toBe(renders)
@@ -1153,9 +1185,12 @@ return function(T)
 				c.run(1)
 				expect(c.V2.current()).toBe(7)
 				local n = perSlot(c)
+				local far = reducedPerSlot(c)
 				for slot = 1, 16 do
 					expect(n[slot] > 0).toBe(slot == 3 or slot == 7)
 					expect(c.V2.detail(slot)).toBe(if slot == 3 or slot == 7 then "full" else "reduced")
+					-- r public 4 (palier 2) : la tour réduite (3 pièces) sur les ranchs réduits
+					expect(far[slot]).toBe(if slot == 3 or slot == 7 then 0 else 3)
 				end
 				-- qualité normale : le courant et ses 2 voisins
 				c.flags.low = false
@@ -1228,15 +1263,33 @@ return function(T)
 					expect(v2.plinths <= c.VB.LIMITS.plinths.parts).toBe(true)
 					expect(v2.record <= c.VB.LIMITS.record.parts).toBe(true)
 					expect(v2.pot <= c.VB.LIMITS.pot.parts).toBe(true)
-					expect(v2.parts).toBe(v2.tapis + v2.plinths + v2.record + v2.pot)
+					-- étape 4 (B4-38) : toutes les pièces v2.0 sont dans un système ; fanions ★ comptés avec
+					-- les socles (une décoration gardée porte un fanion OU est un socle : 18 × 2 par ranch)
+					local sum = 0
+					for _, sys in
+						{
+							"tapis",
+							"plinths",
+							"record",
+							"pot",
+							"tiers",
+							"house",
+							"silhouette",
+							"monuments",
+							"decoPerso",
+						}
+					do
+						sum += v2[sys]
+						expect(v2[sys] <= c.VB.LIMITS[sys].parts).toBe(true)
+					end
+					expect(v2.parts).toBe(sum)
 					expect(c.VB.exceeded()).toBe(0)
 					expect(#metrics(c.h)).toBe(0) -- aucune métrique visualBudget
 					expect(v2.pot).toBe(8 + 12)
 					expect(v2.tapis).toBe((20 + 14 + 10) * 3)
-					if decor == 0 then
-						expect(v2.plinths).toBe(18 * 2 * 3)
-					else
-						expect(v2.record).toBe(6 * 2 * 3)
+					expect(v2.plinths).toBe(18 * 2 * 3)
+					if decor == 6 then
+						expect(c.count(3, "flag")).toBe(6)
 					end
 					-- budget réduit : les ranchs les plus lointains se dégradent d'abord, le mien en dernier
 					c.VB.declare("tapis", { parts = 60 })

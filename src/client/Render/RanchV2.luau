@@ -33,11 +33,14 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared", 30) :: Folder
 local Balance = require(Shared.Config.Balance)
 local Cosmetics = require(Shared.Config.Cosmetics)
+local Visuals = require(Shared.Config.Visuals)
 local RanchLook = require(Shared.Logic.RanchLook)
 local Prestige = require(Shared.Logic.Prestige)
 local WorldLayout = require(Shared.Logic.WorldLayout)
 local Formulas = require(Shared.Logic.Formulas)
+local SizeScale = require(Shared.Logic.SizeScale)
 local Clock = require(Shared.Util.Clock)
+local Signal = require(Shared.Util.Signal)
 
 local Client = script.Parent.Parent
 local Prefs = require(Client.Util.Prefs)
@@ -48,8 +51,18 @@ local Util = require(Client.World.Util)
 local VisualBudget = require(script.Parent.VisualBudget)
 local BuildCascade = require(script.Parent.BuildCascade)
 local RanchKit = require(script.Parent.RanchKit)
+local RanchTiers = require(script.Parent.RanchTiers)
+local MonumentKit = require(script.Parent.MonumentKit)
+local DecoKit = require(script.Parent.DecoKit)
+local Text = require(Client.UI.Text)
+local Format = require(Client.UI.Format)
+local Theme = require(Client.UI.Theme)
 
 local RanchV2 = {}
+
+-- Crochets pour B5 (D25, plan B4 §2.2) : un élément du ranch vient d'être construit pour de vrai
+-- (premier passage, joué en cascade) : (slot, identifiant de l'élément)
+RanchV2.ElementBuilt = Signal.new() :: Signal.Signal<number, string>
 
 -- Au moins un ranch v2.0 (ou un décor à défaire) : RanchRenderer n'appelle step que si vrai
 RanchV2.on = false
@@ -68,7 +81,7 @@ local SPARKLE_RATE = 2 -- étincelles par seconde du Tapis doré (GDD §11.5)
 local SPARKLE_PARTICLES = 2 -- particules à l'écran par Tapis doré (budget « tapis » ≤ 6)
 local STRING_MAX = 32
 
--- Attributs qui changent les décors de cette étape (le reste viendra aux étapes 4 et 5)
+-- Attributs qui changent les décors des étapes 3 et 4 (le reste viendra à l'étape 5)
 local WATCHED: { [string]: boolean } = {
 	TapisTier = true,
 	BestR = true,
@@ -76,19 +89,78 @@ local WATCHED: { [string]: boolean } = {
 	GoldPennants = true,
 	Cushions = true,
 	OwnerUserId = true,
+	SplorchReady = true,
+	Monuments = true,
+	DecoPerso = true,
+	GiantTier = true,
 }
+-- Un de ces attributs allume les décors v2.0 du ranch (RanchTiers, Monuments, DecoPerso : D1)
+local CARRIERS = { "TapisTier", "Monuments", "DecoPerso" }
 
--- Objets dessinés et système du budget visuel de chacun
+-- Objets dessinés et système du budget visuel de chacun ; fanions ★ comptés avec les socles (une
+-- décoration gardée porte un fanion OU est un socle, jamais les deux : 18 × 2 par ranch)
 local OBJ_SYSTEM: { [string]: string } = {
 	tapis = "tapis",
 	cushions = "tapis",
 	bed = "tapis",
 	plinths = "plinths",
-	pennants = "record",
+	pennants = "plinths",
 	heap = "pot",
 	ring = "pot",
+	vat = "record",
+	fountain = "record",
+	lanterns = "record",
+	gate = "record",
+	geyser = "record",
+	house = "house",
+	frame = "silhouette",
+	ready = "silhouette",
+	sun = "silhouette",
 }
-local SYSTEMS = { "tapis", "record", "plinths", "pot" }
+for k = 1, 6 do
+	OBJ_SYSTEM["tier" .. k] = "tiers"
+end
+for n = 1, MonumentKit.COUNT do
+	OBJ_SYSTEM["mon" .. n] = "monuments"
+end
+local DECO_SLOTS = #Cosmetics.DecoSlots
+for i = 1, DECO_SLOTS do
+	OBJ_SYSTEM["deco" .. i] = "decoPerso"
+end
+local SYSTEMS =
+	{ "tapis", "record", "plinths", "pot", "tiers", "house", "silhouette", "monuments", "decoPerso" }
+
+-- Identifiants des éléments (Visuals.RecordTable, Strings monument.n) de chaque objet : ElementBuilt,
+-- elementCFrame
+local ELEMENT_ID: { [string]: string } = {
+	tier1 = "tier1.pompomArch",
+	tier2 = "tier2.candyTower",
+	tier3 = "tier3.jellyBalcony",
+	tier4 = "tier4.jellyLighthouse",
+	tier5 = "tier5.neonDome",
+	tier6 = "tier6.floatingCrown",
+	vat = "vat",
+	fountain = "pool.fountain",
+	lanterns = "fence.lanterns8",
+	gate = "gate.rainbow",
+	geyser = "geyser",
+	frame = "frame.golden",
+	sun = "giant.sun",
+	house = "helper.house",
+}
+for n = 1, MonumentKit.COUNT do
+	ELEMENT_ID["mon" .. n] = "monument." .. n
+end
+for i = 1, DECO_SLOTS do
+	ELEMENT_ID["deco" .. i] = "deco." .. i
+end
+-- Objets sans cascade : signal (anneau « prêt »)
+local NO_CASCADE: { [string]: boolean } = { ready = true }
+local NUMERAL_CANVAS = Vector2.new(320, 120) -- px de la plaque du chiffre romain (3,2 × 1,2 studs)
+local NUMERAL_TEXT = 96 -- px : plus grande taille « fit » du chiffre romain
+local NUMERAL_COLOR = Color3.fromRGB(110, 40, 90)
+local SPARK_SPEED = NumberRange.new(2, 4)
+local SPARK_LIFE = 0.8 -- s : l'émetteur d'une étincelle est détruit après sa particule
 
 type Painted = { color: Color3, material: Enum.Material, paintColor: Color3, paintMaterial: Enum.Material }
 type Paint = { part: BasePart, color: Color3, material: Enum.Material }
@@ -105,7 +177,8 @@ type Obj = {
 }
 type View = {
 	owner: number,
-	tier: number,
+	tapis: boolean, -- le ranch porte TapisTier (RanchTiers) : décors des étapes 3 et 4 sauf Monuments, Déco perso
+	tier: number, -- palier du Tapis (TapisTier)
 	bestR: number,
 	gold: number,
 	goldPennants: boolean,
@@ -115,6 +188,18 @@ type View = {
 	pens: number,
 	cozyBed: boolean,
 	color: Color3,
+	has: { [string]: boolean }, -- éléments visibles (RanchLook.elements)
+	ranchTier: number, -- palier du ranch 0 … 6 (RanchLook.tier)
+	vat: RanchLook.VatLook,
+	vatBuilt: boolean,
+	poolBuilt: boolean,
+	ready: boolean, -- SplorchReady
+	giant: number, -- GiantTier
+	monuments: number, -- 0 … 10 ; −1 sans attribut (Monuments coupé)
+	deco: { number }?, -- 12 numéros sûrs ; nil sans attribut (DecoPerso coupé)
+	radius: number, -- rayon montré de la silhouette, arrondi (0 : aucune silhouette)
+	stars: number, -- étoiles de couronne 0 … 4
+	rainbow: boolean, -- couronne arc-en-ciel
 }
 type Slot = {
 	slot: number,
@@ -125,7 +210,7 @@ type Slot = {
 	owner: number,
 	detail: string,
 	grants: { [string]: string },
-	want: { [string]: number },
+	want: { [string]: VisualBudget.Want },
 	objs: { [string]: Obj },
 	folder: Folder?,
 	saved: { [BasePart]: Painted },
@@ -135,16 +220,19 @@ type Slot = {
 	ring: number, -- rayon montré (0 : aucun)
 	view: View?,
 }
-type Anim = { slot: number, spec: RanchKit.Spec, still: boolean }
+type Anim = { slot: number, spec: RanchKit.Spec, still: boolean, idx: number }
 type Shrink = { slot: number, parts: { BasePart }, sizes: { Vector3 }, t: number }
 
 local slots: { [number]: Slot } = {}
 local anims: { [BasePart]: Anim } = {}
 local shrinking: { Shrink } = {}
+-- étincelles des buses de MA Cuve en vol (une particule par buse, détruites après SPARK_LIFE)
+local sparks: { { slot: number, emitter: ParticleEmitter, t: number } } = {}
 local hooks: { skinChanged: ((number) -> ())? } = {}
 local declared = false
 local anyDirty = false
 local current = 0
+local moon = false -- Jelly Moon en cours (lampions allumés), revue toutes les 0,5 s
 local animAcc = 0
 local animTime = 0
 local slowAcc = 0
@@ -377,6 +465,7 @@ local function update(
 				if a then
 					a.spec = spec
 					a.still = false
+					a.idx = -1
 				end
 			end
 		else
@@ -389,7 +478,7 @@ local function update(
 			table.insert(created, part :: BasePart)
 			table.insert(createdSpecs, spec)
 			if spec.anim then
-				anims[part :: BasePart] = { slot = st.slot, spec = spec, still = false }
+				anims[part :: BasePart] = { slot = st.slot, spec = spec, still = false, idx = -1 }
 			end
 		end
 		obj.specs[spec.key] = spec
@@ -461,12 +550,24 @@ local function cascade(st: Slot, key: string, parts: { BasePart }, specs: { Ranc
 	end
 end
 
--- Rendu d'un objet de pièces v2.0 avec cascade sur un vrai changement
-local function renderParts(st: Slot, key: string, sig: string, specs: { RanchKit.Spec }, level: string)
+-- Rendu d'un objet de pièces v2.0 avec cascade sur un vrai changement (premier passage d'un élément,
+-- jamais au chargement, au changement de propriétaire ni de détail) ; ElementBuilt pour B5
+local function renderParts(
+	st: Slot,
+	key: string,
+	sig: string,
+	specs: { RanchKit.Spec },
+	level: string,
+	sound: string?
+)
 	local real = realChange(st, key, level)
 	local created, createdSpecs = update(st, key, sig, specs, EMPTY :: any)
-	if real and level == "full" then
-		cascade(st, key, created, createdSpecs, nil)
+	if real and level == "full" and #created > 0 and not NO_CASCADE[key] then
+		cascade(st, key, created, createdSpecs, sound)
+		local id = ELEMENT_ID[key]
+		if id then
+			RanchV2.ElementBuilt:Fire(st.slot, id)
+		end
 	end
 	markRendered(st, key, level)
 end
@@ -474,6 +575,14 @@ end
 -- Détruit tous les objets d'un ranch et rend les peintures (aspect exact de la v1.3)
 local function clearSlot(st: Slot)
 	BuildCascade.flush(st.slot)
+	for i = #sparks, 1, -1 do
+		local sp = sparks[i]
+		if sp.slot == st.slot then
+			sp.emitter:Destroy()
+			VisualBudget.release("record", 1, "particles")
+			table.remove(sparks, i)
+		end
+	end
 	for key, obj in st.objs do
 		for _, part in obj.parts do
 			forget(part)
@@ -502,32 +611,70 @@ end
 -- Lecture de l'état v2.0 d'un ranch (attributs validés + ranch public)
 -- =============================================================================================
 
+local function carries(model: Instance?): boolean
+	if model == nil or model.Parent == nil then
+		return false
+	end
+	for _, name in CARRIERS do
+		if model:GetAttribute(name) ~= nil then
+			return true
+		end
+	end
+	return false
+end
+
+-- Rayon montré de la silhouette du meilleur squishy (même calcul que RanchRenderer : taille d'après
+-- la croissance, échelle « silhouette »), arrondi au pair (RanchTiers.quantize) ; 0 sans silhouette
+local function silhouetteRadius(ranch: any): number
+	local best = ranch.best
+	if type(best) ~= "table" or type(best.s) ~= "number" or best.s == 0 then
+		return 0
+	end
+	local ok, radius = pcall(function(): number
+		local G = Formulas.G(ranch.growth, Clock.now())
+		local size = Formulas.clampSize(best.z + (G - best.zg))
+		return Balance.SizeScale.BaseDiameter * SizeScale.display(size, "silhouette") / 2
+	end)
+	return if ok then RanchTiers.quantize(radius) else 0
+end
+
 local function readView(st: Slot): View?
 	local model = st.model
-	if model == nil or model.Parent == nil then
+	if not carries(model) then
 		return nil
 	end
-	local tierAttr = model:GetAttribute("TapisTier")
-	if tierAttr == nil then
-		return nil
-	end
+	local m = model :: Instance
 	local ranch = WorldStateController.ranch(st.slot)
 	if ranch == nil or ranch.userId == 0 then
 		return nil
 	end
 	local tiles: any = if type(ranch.tiles) == "table" then ranch.tiles else {}
-	local bestAttr = model:GetAttribute("BestR")
+	local tierAttr = m:GetAttribute("TapisTier")
+	local bestAttr = m:GetAttribute("BestR")
 	local bestR = if type(bestAttr) == "number" and bestAttr == bestAttr
 		then int(bestAttr, 0, MAX_R)
 		else Prestige.r(ranch :: any)
-	local goldAttr = model:GetAttribute("DecorGold")
-	local cushionsAttr = model:GetAttribute("Cushions")
+	local goldAttr = m:GetAttribute("DecorGold")
+	local cushionsAttr = m:GetAttribute("Cushions")
+	local has: { [string]: boolean } = {}
+	for _, id in RanchLook.elements(bestR, 0) do
+		has[id] = true
+	end
+	local stars = 0
+	for k = 1, #Visuals.CrownStarsAt do
+		if has["crown.star" .. k] then
+			stars += 1
+		end
+	end
+	local monAttr = m:GetAttribute("Monuments")
+	local decoAttr = m:GetAttribute("DecoPerso")
 	return {
 		owner = ranch.userId,
+		tapis = tierAttr ~= nil,
 		tier = int(tierAttr, 0, TIERS_MAX),
 		bestR = bestR,
 		gold = int(goldAttr, 0, 2 ^ DECOR_MAX - 1),
-		goldPennants = model:GetAttribute("GoldPennants") == true,
+		goldPennants = m:GetAttribute("GoldPennants") == true,
 		cushions = if type(cushionsAttr) == "string" and #cushionsAttr <= STRING_MAX
 			then cushionsAttr
 			else "",
@@ -536,6 +683,18 @@ local function readView(st: Slot): View?
 		pens = int(tiles.pens, 0, Balance.Tiles.pens.Levels),
 		cozyBed = tiles.cozyBed == true,
 		color = Cosmetics.RanchColors[st.slot] or Cosmetics.FreeRanchColor,
+		has = has,
+		ranchTier = RanchLook.tier(bestR),
+		vat = RanchLook.vat(bestR),
+		vatBuilt = ranch.vat == true,
+		poolBuilt = ranch.pool == true,
+		ready = m:GetAttribute("SplorchReady") == true,
+		giant = int(m:GetAttribute("GiantTier"), 0, 99),
+		monuments = if monAttr == nil then -1 else int(monAttr, 0, MonumentKit.COUNT),
+		deco = if decoAttr == nil then nil else RanchLook.decoPerso(decoAttr),
+		radius = silhouetteRadius(ranch),
+		stars = stars,
+		rainbow = has["crown.rainbow"] == true,
 	}
 end
 
@@ -584,22 +743,120 @@ local function pennantList(view: View): { number }
 	return out
 end
 
+local ZERO_WANT: VisualBudget.Want = table.freeze({ full = 0, reduced = 0 }) :: any
+
+-- Niveau naturel des Monuments d'un ranch : « full » (ranch courant), « near » (ses voisins en détail
+-- complet), « reduced » (les autres)
+local function monumentNatural(st: Slot): string
+	if st.detail ~= "full" then
+		return "reduced"
+	end
+	return if st.slot == current then "full" else "near"
+end
+
+local function tierWants(view: View, full: boolean): (number, number)
+	local f, r = 0, 0
+	for k = 1, view.ranchTier do
+		f += RanchTiers.TIER_PARTS[k]
+		r += RanchTiers.REDUCED_PARTS[k]
+	end
+	if view.ranchTier >= 6 then
+		f += view.stars * RanchTiers.STAR_PARTS
+	end
+	return if full then f else r, r
+end
+
+local function vatState(view: View): RanchTiers.VatState
+	local v = view.vat
+	return {
+		rings = v.rings,
+		nozzles = v.nozzles,
+		period = v.stirrerPeriod,
+		rainbow = v.rainbow,
+		golden = v.golden,
+	}
+end
+
+local function recordWant(view: View): number
+	local n = 0
+	if view.vatBuilt then
+		n += RanchTiers.vatCount(vatState(view))
+	end
+	if view.has["pool.fountain"] and view.poolBuilt then
+		n += RanchTiers.FOUNTAIN_PARTS
+	end
+	if view.has["fence.lanterns8"] then
+		n += RanchTiers.LANTERN_PARTS
+	end
+	if view.has["gate.rainbow"] then
+		n += RanchTiers.GATE_PARTS
+	end
+	if view.has["geyser"] then
+		n += RanchTiers.GEYSER_PARTS
+	end
+	return n
+end
+
+local function silhouetteWant(view: View): number
+	if view.radius <= 0 then
+		return 0
+	end
+	return (if view.has["frame.golden"] then RanchTiers.FRAME_PARTS else 0)
+		+ (if view.ready then RanchTiers.READY_PARTS else 0)
+		+ (if view.giant >= 3 then RanchTiers.SUN_PARTS else 0)
+end
+
 local function computeWants(st: Slot)
 	local view = st.view
 	local full = st.detail == "full"
 	for _, sys in SYSTEMS do
-		st.want[sys] = 0
+		st.want[sys] = ZERO_WANT
 	end
-	if view == nil or not full then
+	if view == nil then
 		return
 	end
-	st.want.tapis = RanchKit.tapisCount(view.tier)
-		+ RanchLook.cushions(view.pens, 0)
-		+ (if view.cozyBed then 10 else 0)
-	st.want.record = 2 * #pennantList(view)
-	st.want.plinths = 2 * #plinthList(view)
-	if st.slot == mySlot() then
-		st.want.pot = RanchKit.heapCount(st.heap) + (if st.ring > 0 then RanchKit.RING_DOTS else 0)
+	local v = view :: View
+	if v.tapis then
+		local tf, tr = tierWants(v, full)
+		st.want.tiers = { full = tf, reduced = tr }
+		if full then
+			st.want.tapis = {
+				full = RanchKit.tapisCount(v.tier) + RanchLook.cushions(v.pens, 0) + (if v.cozyBed
+					then 10
+					else 0),
+				reduced = 0,
+			}
+			st.want.plinths = { full = 2 * (#plinthList(v) + #pennantList(v)), reduced = 0 }
+			st.want.record = { full = recordWant(v), reduced = 0 }
+			st.want.house =
+				{ full = if v.has["helper.house"] then RanchTiers.HOUSE_PARTS else 0, reduced = 0 }
+			st.want.silhouette = { full = silhouetteWant(v), reduced = 0 }
+			if st.slot == mySlot() then
+				st.want.pot = {
+					full = RanchKit.heapCount(st.heap) + (if st.ring > 0 then RanchKit.RING_DOTS else 0),
+					reduced = 0,
+				}
+			end
+		end
+	end
+	if v.monuments > 0 then
+		local natural = monumentNatural(st)
+		local f, r = 0, 0
+		for n = 1, v.monuments do
+			f += MonumentKit.count(n, natural)
+			r += MonumentKit.count(n, "reduced")
+		end
+		st.want.monuments = { full = f, reduced = r }
+	end
+	if v.deco then
+		local f, r = 0, 0
+		for _, n in v.deco :: { number } do
+			if n ~= 0 then
+				f += DecoKit.count(n, if full then "full" else "reduced")
+				r += DecoKit.count(n, "reduced")
+			end
+		end
+		st.want.decoPerso = { full = f, reduced = r }
 	end
 end
 
@@ -921,6 +1178,275 @@ local function renderPot(st: Slot, view: View?)
 	end
 end
 
+-- =============================================================================================
+-- Rendu des objets de l'étape 4 : paliers, éléments du Record R, accessoires, Monuments, Déco perso
+-- =============================================================================================
+
+-- Niveau accordé par le budget : « full » (détail complet), « reduced » (dessin réduit), « none »
+local function grantLevel(st: Slot, sys: string): string
+	local g = st.grants[sys]
+	if g == nil or g == "none" then
+		return "none"
+	end
+	return if st.detail == "full" and g == "full" then "full" else "reduced"
+end
+
+local function tierState(view: View): RanchTiers.TierState
+	return { color = view.color, ready = view.ready, stars = view.stars, rainbow = view.rainbow }
+end
+
+-- Les 6 paliers (un objet chacun : cascade et ElementBuilt par palier)
+local function renderTiers(st: Slot, view: View?)
+	local level = if view and view.tapis then grantLevel(st, "tiers") else "none"
+	for k = 1, 6 do
+		local key = "tier" .. k
+		local sig = "none:" .. level
+		local v: View? = if view and level ~= "none" and k <= view.ranchTier then view else nil
+		if v then
+			-- état propre au palier dans la signature : drapeau (tour), lanterne (phare), étoiles (couronne)
+			local extra = if k == 2
+				then hex(v.color)
+				elseif k == 4 then (if v.ready then "ready" else "")
+				elseif k == 6 then v.stars .. (if v.rainbow then "r" else "")
+				else ""
+			sig = table.concat({ k, level, extra }, "|")
+		end
+		if not unchanged(st, key, sig, level) then
+			local specs: { RanchKit.Spec } = EMPTY :: any
+			if v then
+				specs = if level == "full"
+					then RanchTiers.tier(st.slot, k, tierState(v))
+					else RanchTiers.tierReduced(st.slot, k, tierState(v))
+			end
+			renderParts(st, key, sig, specs, level)
+		end
+	end
+end
+
+-- Chiffre romain du Record R sur la plaque de l'arche (SurfaceGui, sorte « fit » de UI/Text, jamais
+-- TextScaled) ; détail complet seulement, texte réécrit seulement quand le Record R change
+local function renderNumeral(st: Slot, view: View?)
+	local obj = st.objs.tier1
+	local plate = obj and obj.parts[RanchTiers.PLATE_KEY]
+	if obj == nil or plate == nil or plate.Parent == nil or view == nil then
+		return
+	end
+	local data: any = if type(obj.data) == "table" then obj.data else {}
+	obj.data = data
+	local gui: SurfaceGui? = data.gui
+	local label: TextLabel? = data.label
+	if gui == nil or label == nil or gui.Parent ~= plate then
+		local g = Instance.new("SurfaceGui")
+		g.Name = "Numeral"
+		g.Face = Enum.NormalId.Front
+		g.SizingMode = Enum.SurfaceGuiSizingMode.FixedSize
+		g.CanvasSize = NUMERAL_CANVAS
+		g.LightInfluence = 0
+		g.MaxDistance = 150
+		g.ResetOnSpawn = false
+		local l = Instance.new("TextLabel")
+		l.Name = "Roman"
+		l.Size = UDim2.fromScale(1, 1)
+		l.BackgroundTransparency = 1
+		l.FontFace = Theme.Fonts.Title
+		l.TextColor3 = NUMERAL_COLOR
+		l.TextXAlignment = Enum.TextXAlignment.Center
+		l.TextYAlignment = Enum.TextYAlignment.Center
+		local pad = Instance.new("UIPadding")
+		pad.PaddingLeft = UDim.new(0, 8)
+		pad.PaddingRight = UDim.new(0, 8)
+		pad.PaddingTop = UDim.new(0, 8)
+		pad.PaddingBottom = UDim.new(0, 8)
+		pad.Parent = l
+		l.Parent = g
+		g.Parent = plate
+		Text.style(l, "fit", NUMERAL_TEXT, { min = 28, wrapped = false })
+		data.gui, data.label, data.text = g, l, nil
+		gui, label = g, l
+	end
+	local text = Format.roman((view :: View).bestR)
+	if data.text ~= text then
+		data.text = text
+		Text.raw(label :: TextLabel, text)
+	end
+end
+
+-- Cuve : anneaux, agitateur, buses (détail complet, Cuve construite) ; dorée (pièces du serveur) pour tous
+local function renderVat(st: Slot, view: View?)
+	local level = grantLevel(st, "record")
+	local v = view
+	local show = v ~= nil and v.tapis and v.vatBuilt and level == "full"
+	local vs = if show then vatState(v :: View) else nil
+	local sig = if vs
+		then table.concat(
+			{
+				vs.rings,
+				vs.nozzles,
+				vs.period,
+				if vs.rainbow then 1 else 0,
+				if vs.golden then 1 else 0,
+				level,
+			},
+			"|"
+		)
+		else "none:" .. level
+	if not unchanged(st, "vat", sig, level) then
+		renderParts(st, "vat", sig, if vs then RanchTiers.vat(st.slot, vs) else EMPTY :: any, level)
+	end
+	-- Cuve dorée (Record R 7) : socle, couvercle et tuyau du serveur en or, sur tous les ranchs
+	local golden = v ~= nil and v.tapis and v.vatBuilt and v.vat.golden
+	local model = st.model
+	local vat = model and model:FindFirstChild("Vat")
+	local gsig = "vatGold|" .. (if golden then 1 else 0) .. "|" .. (if vat then 1 else 0)
+	if not unchanged(st, "vatGold", gsig, "all") then
+		local paints: { Paint } = {}
+		if golden and vat then
+			for _, name in { "Base", "Lid", "Pipe" } do
+				local part = (vat :: Instance):FindFirstChild(name)
+				if part and part:IsA("BasePart") then
+					table.insert(
+						paints,
+						{ part = part, color = RanchLook.GOLD, material = Enum.Material.Foil }
+					)
+				end
+			end
+		end
+		update(st, "vatGold", gsig, EMPTY :: any, paints)
+		markRendered(st, "vatGold", "all")
+	end
+end
+
+-- Étagère dorée (Record R 19) : pièces de l'étagère du serveur en or, sur tous les ranchs
+local function renderShelf(st: Slot, view: View?)
+	local golden = view ~= nil and (view :: View).tapis and (view :: View).has["shelf.golden"] == true
+	local model = st.model
+	local shelf = model and model:FindFirstChild("Shelf")
+	local sig = "shelf|" .. (if golden then 1 else 0) .. "|" .. (if shelf then 1 else 0)
+	if unchanged(st, "shelfGold", sig, "all") then
+		return
+	end
+	local paints: { Paint } = {}
+	if golden and shelf then
+		for _, d in (shelf :: Instance):GetChildren() do
+			if d:IsA("BasePart") then
+				table.insert(paints, { part = d, color = RanchLook.GOLD, material = Enum.Material.Foil })
+			end
+		end
+	end
+	update(st, "shelfGold", sig, EMPTY :: any, paints)
+	markRendered(st, "shelfGold", "all")
+end
+
+-- Un élément simple du Record R (détail complet) : `show` dit s'il est là, `build` ses pièces
+local function renderElement(
+	st: Slot,
+	key: string,
+	sys: string,
+	show: boolean,
+	extra: string,
+	build: () -> { RanchKit.Spec }
+)
+	local level = grantLevel(st, sys)
+	local on = show and level == "full"
+	local sig = if on then key .. "|" .. extra .. "|" .. level else "none:" .. level
+	if not unchanged(st, key, sig, level) then
+		renderParts(st, key, sig, if on then build() else EMPTY :: any, level)
+	end
+end
+
+-- Élément `id` visible sur ce ranch (décors derrière TapisTier)
+local function hasEl(view: View?, id: string): boolean
+	return view ~= nil and view.tapis and view.has[id] == true
+end
+
+local function renderRecord(st: Slot, view: View?)
+	local t = view ~= nil and view.tapis
+	local poolBuilt = view ~= nil and view.poolBuilt
+	renderElement(st, "fountain", "record", hasEl(view, "pool.fountain") and poolBuilt, "", function()
+		return RanchTiers.fountain(st.slot)
+	end)
+	renderElement(
+		st,
+		"lanterns",
+		"record",
+		hasEl(view, "fence.lanterns8"),
+		if moon then "moon" else "",
+		function()
+			return RanchTiers.lanterns(st.slot, moon)
+		end
+	)
+	renderElement(st, "gate", "record", hasEl(view, "gate.rainbow"), "", function()
+		return RanchTiers.rainbowGate(st.slot)
+	end)
+	renderElement(st, "geyser", "record", hasEl(view, "geyser"), "", function()
+		return RanchTiers.geyser(st.slot)
+	end)
+	renderElement(st, "house", "house", hasEl(view, "helper.house"), "", function()
+		return RanchTiers.house(st.slot)
+	end)
+	local r = if view then view.radius else 0
+	local ready = view ~= nil and view.ready
+	local giant = if view then view.giant else 0
+	renderElement(st, "frame", "silhouette", r > 0 and hasEl(view, "frame.golden"), tostring(r), function()
+		return RanchTiers.frame(st.slot, r)
+	end)
+	renderElement(st, "ready", "silhouette", t and r > 0 and ready, tostring(r), function()
+		return RanchTiers.readyRing(st.slot, r)
+	end)
+	renderElement(st, "sun", "silhouette", t and r > 0 and giant >= 3, tostring(r), function()
+		return RanchTiers.sunRing(st.slot, r)
+	end)
+end
+
+-- Monuments 1 … n (attribut Monuments) : 20 pièces pour le ranch courant, 6 pour ses voisins, une
+-- silhouette pour les autres (D17) ; un nouveau Monument sort en cascade
+local function renderMonuments(st: Slot, view: View?)
+	local n = if view then (view :: View).monuments else -1
+	local grant = grantLevel(st, "monuments")
+	local level = if grant == "full"
+		then monumentNatural(st)
+		elseif grant == "reduced" then "reduced"
+		else "none"
+	for k = 1, MonumentKit.COUNT do
+		local key = "mon" .. k
+		local on = level ~= "none" and k <= n
+		local sig = if on then key .. "|" .. level else "none:" .. level
+		if not unchanged(st, key, sig, level) then
+			renderParts(
+				st,
+				key,
+				sig,
+				if on then MonumentKit.specs(st.slot, k, level) else EMPTY :: any,
+				level
+			)
+		end
+	end
+end
+
+-- Déco perso (attribut DecoPerso, RanchLook.decoPerso) : un objet par emplacement ; détail complet :
+-- le dessin, réduit : la silhouette des grands ; un objet posé sort en cascade (DecoPlace)
+local function renderDeco(st: Slot, view: View?)
+	local list = if view then (view :: View).deco else nil
+	local grant = grantLevel(st, "decoPerso")
+	for i = 1, DECO_SLOTS do
+		local key = "deco" .. i
+		local n = if list and grant ~= "none" then (list :: { number })[i] or 0 else 0
+		local level = if n ~= 0 then grant else "none"
+		local count = if n ~= 0 then DecoKit.count(n, level) else 0
+		local sig = if count > 0 then key .. "|" .. n .. "|" .. level else "none:" .. level
+		if not unchanged(st, key, sig, level) then
+			renderParts(
+				st,
+				key,
+				sig,
+				if count > 0 then DecoKit.specs(st.slot, i, n, level) else EMPTY :: any,
+				level,
+				"DecoPlace"
+			)
+		end
+	end
+end
+
 local function renderSlot(st: Slot)
 	local view = st.view
 	local owner = if view then view.owner else 0
@@ -933,14 +1459,23 @@ local function renderSlot(st: Slot)
 		clearSlot(st)
 		return
 	end
-	renderTapis(st, view)
-	renderCushions(st, view)
-	renderBed(st, view)
-	renderPlinths(st, view)
-	renderGolden(st, view)
-	renderPennants(st, view)
-	renderPotMaterial(st, view)
-	renderPot(st, view)
+	-- décors des étapes 3 et 4 derrière TapisTier (RanchTiers) ; Monuments et Déco perso à part
+	local tv = if view.tapis then view else nil
+	renderTapis(st, tv)
+	renderCushions(st, tv)
+	renderBed(st, tv)
+	renderPlinths(st, tv)
+	renderGolden(st, tv)
+	renderPennants(st, tv)
+	renderPotMaterial(st, tv)
+	renderPot(st, tv)
+	renderTiers(st, view)
+	renderNumeral(st, tv)
+	renderVat(st, view)
+	renderShelf(st, view)
+	renderRecord(st, view)
+	renderMonuments(st, view)
+	renderDeco(st, view)
 	pruneFolder(st)
 end
 
@@ -983,6 +1518,123 @@ end
 -- Ranch courant (où se tient le personnage, D6)
 function RanchV2.current(): number
 	return current
+end
+
+-- Point d'un élément (repère tourné comme le ranch) : clé d'objet → repère WorldLayout
+local ELEMENT_KEY: { [string]: string } = {}
+for key, id in ELEMENT_ID do
+	ELEMENT_KEY[id] = key
+end
+local TIER_ANCHOR = { "arch", "tower", "balcony", "lighthouse", "dome", "crown" }
+
+local function anchorOf(slot: number, key: string): CFrame?
+	local tier = tonumber(string.match(key, "^tier(%d)$") or "")
+	if tier and TIER_ANCHOR[tier] then
+		return WorldLayout.v2Anchor(slot, TIER_ANCHOR[tier] :: any)
+	end
+	local mon = tonumber(string.match(key, "^mon(%d+)$") or "")
+	if mon then
+		return WorldLayout.monumentSlot(slot, mon)
+	end
+	local deco = tonumber(string.match(key, "^deco(%d+)$") or "")
+	if deco then
+		return WorldLayout.decoPersoSlot(slot, deco)
+	end
+	local frame = WorldLayout.ranchCFrame(slot)
+	local function at(p: Vector3): CFrame
+		return frame * CFrame.new(WorldLayout.toLocal(slot, p))
+	end
+	if key == "vat" then
+		return at(WorldLayout.anchor(slot, "vat"))
+	elseif key == "fountain" then
+		return at(WorldLayout.anchor(slot, "pool"))
+	elseif key == "lanterns" then
+		return WorldLayout.v2Anchor(slot, "lantern1")
+	elseif key == "gate" then
+		return at(WorldLayout.anchor(slot, "gate"))
+	elseif key == "geyser" then
+		return WorldLayout.v2Anchor(slot, "geyser")
+	elseif key == "frame" or key == "sun" then
+		return WorldLayout.v2Anchor(slot, "frame")
+	elseif key == "house" then
+		return at(WorldLayout.helperHouse(slot))
+	end
+	return nil
+end
+
+-- Repère d'un élément dessiné sur ce ranch (B5 : Chantier de Big Plop, squishies qui se tournent
+-- vers lui) ; identifiants : tier1.pompomArch … tier6.floatingCrown, vat, pool.fountain,
+-- fence.lanterns8, gate.rainbow, geyser, frame.golden, giant.sun, helper.house, monument.1 … 10,
+-- deco.1 … 12 ; nil s'il n'est pas dessiné (interrupteur coupé, pas encore construit, détail réduit
+-- sans pièce)
+function RanchV2.elementCFrame(slot: number, id: string): CFrame?
+	if type(slot) ~= "number" or type(id) ~= "string" then
+		return nil
+	end
+	local key = ELEMENT_KEY[id]
+	local st = slots[slot]
+	local obj = if key and st then st.objs[key] else nil
+	if obj == nil or next(obj.parts) == nil then
+		return nil
+	end
+	return anchorOf(slot, key :: string)
+end
+
+-- Lanterne du phare de ce ranch quand le palier 4 est dessiné en détail complet (LightingController
+-- y place une des 4 lumières de MON ranch, D23) ; nil sinon
+function RanchV2.lanternPart(slot: number): BasePart?
+	local st = if type(slot) == "number" then slots[slot] else nil
+	local obj = if st then st.objs.tier4 else nil
+	if obj == nil or obj.level ~= "full" then
+		return nil
+	end
+	local part = obj.parts[RanchTiers.LANTERN_KEY]
+	return if part and part.Parent ~= nil then part else nil
+end
+
+-- Naissance mutée sur MON ranch (Celebrate « hatch » de RanchRenderer) : une étincelle par buse de
+-- la Cuve (au plus 5 particules, budget « record ») ; émetteurs créés pour l'étincelle et détruits
+-- après SPARK_LIFE ; rien sans buse, sans détail complet ou en Graphismes légers
+function RanchV2.onHatch(data: any)
+	if type(data) ~= "table" or type(data.mutation) ~= "number" or data.mutation == 0 then
+		return
+	end
+	local slot = mySlot()
+	local st = slots[slot]
+	local obj = if st then st.objs.vat else nil
+	if obj == nil or obj.level ~= "full" or particleFactor() <= 0 then
+		return
+	end
+	local nozzles: { BasePart } = {}
+	for i = 1, 5 do
+		local part = obj.parts["vatNozzle" .. i]
+		if part and part.Parent ~= nil then
+			table.insert(nozzles, part)
+		end
+	end
+	if #nozzles == 0 or not VisualBudget.take("record", #nozzles, "particles") then
+		return
+	end
+	for _, nozzle in nozzles do
+		local e = Instance.new("ParticleEmitter")
+		e.Name = "NozzleSpark"
+		e.Rate = 0
+		e.Lifetime = NumberRange.new(0.4, 0.7)
+		e.Speed = SPARK_SPEED
+		e.Size = NumberSequence.new(0.35)
+		e.Color = ColorSequence.new(Color3.fromRGB(255, 240, 160))
+		e.LightEmission = 1
+		e.EmissionDirection = Enum.NormalId.Right
+		e.Parent = nozzle
+		e:Emit(1)
+		table.insert(sparks, { slot = slot, emitter = e, t = SPARK_LIFE })
+	end
+	RanchV2.on = true
+end
+
+-- Pièce animée par RanchV2 (specs : écritures attendues d'une animation)
+function RanchV2.isAnimated(part: Instance): boolean
+	return anims[part :: any] ~= nil
 end
 
 -- =============================================================================================
@@ -1072,7 +1724,43 @@ local function ringRadius(slot: number): number
 	return radius
 end
 
+-- Jelly Moon (lampions de la clôture, Record R 12) : revue au rafraîchissement et toutes les 0,5 s
+local function checkMoon(now: number)
+	local payload = Util.safe("WorldStateController.event", nil, WorldStateController.event)
+	local m = RanchLook.moonLit(payload, now)
+	if m == moon then
+		return
+	end
+	moon = m
+	for _, st in slots do
+		local v = st.view
+		if st.on and v and v.has["fence.lanterns8"] then
+			st.dirty = true
+			anyDirty = true
+		end
+	end
+end
+
 local function slowRefresh(now: number)
+	checkMoon(now)
+	-- rayon des silhouettes qui grandissent (cadre doré, anneau « prêt », anneau-soleil)
+	for slot, st in slots do
+		local v = st.view
+		if
+			st.on
+			and v
+			and v.tapis
+			and st.detail == "full"
+			and (v.has["frame.golden"] or v.ready or v.giant >= 3)
+		then
+			local ranch = WorldStateController.ranch(slot)
+			local r = if ranch then silhouetteRadius(ranch) else 0
+			if r ~= v.radius then
+				st.dirty = true
+				anyDirty = true
+			end
+		end
+	end
 	local my = mySlot()
 	local st = slots[my]
 	if st == nil or not st.on then
@@ -1107,10 +1795,11 @@ local function refresh()
 	anyDirty = false
 	local any = false
 	local my = mySlot()
+	checkMoon(Util.safe("Clock.now", 0, Clock.now))
 	for _, st in slots do
 		if st.dirty then
 			local model = st.model
-			st.on = model ~= nil and model.Parent ~= nil and model:GetAttribute("TapisTier") ~= nil
+			st.on = carries(model)
 			st.view = if st.on then readView(st) else nil
 			if st.on and st.slot == my then
 				-- tas et anneau de MON ranch tout de suite (puis toutes les 0,5 s)
@@ -1136,7 +1825,7 @@ local function refresh()
 			local wants: { [number]: VisualBudget.Want } = {}
 			for slot, st in slots do
 				if st.on then
-					wants[slot] = { full = st.want[sys] or 0, reduced = 0 }
+					wants[slot] = st.want[sys] or ZERO_WANT
 				end
 			end
 			local levels = VisualBudget.allocate(sys, order, wants)
@@ -1165,7 +1854,7 @@ local function refresh()
 			alive = true
 		end
 	end
-	RanchV2.on = alive or #shrinking > 0 or BuildCascade.busy()
+	RanchV2.on = alive or #shrinking > 0 or #sparks > 0 or BuildCascade.busy()
 end
 
 -- Socles qui rétrécissent (0,2 s), puis détruits
@@ -1204,6 +1893,7 @@ local function animate()
 			if rm then
 				if not a.still then
 					a.still = true
+					a.idx = -1
 					table.insert(bulkParts, part)
 					table.insert(bulkCFrames, spec.cf)
 					if part.Color ~= spec.color then
@@ -1231,6 +1921,31 @@ local function animate()
 					local k = 0.5 + 0.5 * math.sin(2 * math.pi * (animTime / 3 + phase))
 					part.Color = RanchKit.mix(spec.color, spec.alt :: Color3, k)
 					writes += 1
+				elseif spec.anim == "spin" and spec.pivot then
+					table.insert(bulkParts, part)
+					table.insert(
+						bulkCFrames,
+						RanchKit.spin(spec.cf, spec.pivot :: Vector3, spec.period or 1, animTime, phase)
+					)
+					writes += 1
+				elseif spec.anim == "bob" then
+					table.insert(bulkParts, part)
+					table.insert(
+						bulkCFrames,
+						RanchKit.bob(spec.cf, spec.amp or 0.5, spec.period or 1, animTime, phase)
+					)
+					writes += 1
+				elseif spec.anim == "pulse" and spec.alt then
+					-- au plus 3 changements de couleur par seconde : écrite seulement quand l'indice change
+					local idx = RanchKit.pulseIndex(animTime, phase)
+					if idx ~= a.idx then
+						a.idx = idx
+						local c = if idx == 0 then spec.color else spec.alt :: Color3
+						if part.Color ~= c then
+							part.Color = c
+						end
+						writes += 1
+					end
 				end
 			end
 		end
@@ -1249,6 +1964,16 @@ end
 -- Une image (RanchRenderer, seulement tant que RanchV2.on) ; now = Clock.now()
 function RanchV2.step(dt: number, now: number)
 	local d = Util.num(dt, 0, 0, 1)
+	for i = #sparks, 1, -1 do
+		local sp = sparks[i]
+		sp.t -= d
+		if sp.t <= 0 or sp.emitter.Parent == nil then
+			sp.emitter:Destroy()
+			VisualBudget.release("record", 1, "particles")
+			table.remove(sparks, i)
+			anyDirty = true -- RanchV2.on revu
+		end
+	end
 	if BuildCascade.busy() and not BuildCascade.step(now) then
 		anyDirty = true -- cascade finie : RanchV2.on revu
 	end
@@ -1315,7 +2040,7 @@ function RanchV2.watch()
 				onAttribute(slot, name)
 			end)
 			-- attributs déjà posés avant l'écoute
-			if model:GetAttribute("TapisTier") ~= nil then
+			if carries(model) then
 				st.dirty = true
 				anyDirty = true
 				RanchV2.on = true
@@ -1452,6 +2177,11 @@ function RanchV2.stats(): { [string]: number }
 		record = 0,
 		plinths = 0,
 		pot = 0,
+		tiers = 0,
+		house = 0,
+		silhouette = 0,
+		monuments = 0,
+		decoPerso = 0,
 		painted = 0,
 		renders = counters.renders,
 		created = counters.created,
@@ -1503,11 +2233,17 @@ function RanchV2.stop()
 		end
 	end
 	table.clear(shrinking)
+	for _, sp in sparks do
+		sp.emitter:Destroy()
+		VisualBudget.release("record", 1, "particles")
+	end
+	table.clear(sparks)
 	BuildCascade.flush(nil)
 	RanchV2.on = false
 	RanchV2.watchedAll = false
 	anyDirty = false
 	current = 0
+	moon = false
 	animAcc, animTime, slowAcc = 0, 0, 0
 	hooks = {}
 	for key in counters do

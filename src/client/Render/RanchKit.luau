@@ -29,10 +29,20 @@ export type Spec = {
 	cf: CFrame,
 	color: Color3,
 	material: Enum.Material,
-	anim: string?, -- animation à 15 Hz (twinkle, orbit, shoot, hop) ; nil = immobile
+	anim: string?, -- animation à 15 Hz (twinkle, orbit, shoot, hop, spin, bob, pulse) ; nil = immobile
 	phase: number?, -- décalage de l'animation (0 … 1)
-	alt: Color3?, -- seconde couleur du scintillement
+	alt: Color3?, -- seconde couleur du scintillement ou de la pulsation
+	pivot: Vector3?, -- spin : point de l'axe vertical de rotation (monde)
+	period: number?, -- spin, bob : secondes par tour ou par aller-retour
+	amp: number?, -- bob : amplitude verticale (studs)
 }
+-- Ligne compacte d'un dessin (Monuments, Déco perso, paliers) :
+-- { forme, x, y, z, sx, sy, sz, couleur, matériau?, rx?, ry?, rz? } ; forme "b" bloc (sx, sy, sz),
+-- "c" cylindre vertical (sx = diamètre, sy = hauteur), "x" cylindre selon X (sx = longueur,
+-- sy = diamètre), "s" boule (sx = diamètre) ; (x, y, z) = centre de la pièce dans le repère du dessin
+-- (Y vers le haut, −Z vers l'avant) ; couleur = nom de la palette ; matériau nil ou "p" SmoothPlastic,
+-- "n" Neon, "f" Foil, "i" Ice ; rotations en degrés (X, puis Y, puis Z du repère de la pièce)
+export type Row = { any }
 
 -- Matériaux permis sur une pièce v2.0
 local MATERIALS: { [string]: Enum.Material } = {
@@ -129,6 +139,124 @@ function RanchKit.same(a: Spec, b: Spec): boolean
 		and a.anim == b.anim
 		and a.phase == b.phase
 		and a.alt == b.alt
+		and a.pivot == b.pivot
+		and a.period == b.period
+		and a.amp == b.amp
+end
+
+-- =============================================================================================
+-- Lignes compactes (dessins des Monuments, de la Déco perso et des paliers)
+-- =============================================================================================
+
+local ROW_MATERIALS: { [string]: Enum.Material } = {
+	p = Enum.Material.SmoothPlastic,
+	n = Enum.Material.Neon,
+	f = Enum.Material.Foil,
+	i = Enum.Material.Ice,
+}
+local DEFAULT_COLOR = Color3.fromRGB(255, 240, 245)
+local UP = CFrame.Angles(0, 0, math.pi / 2) -- cylindre « c » : axe vers le haut
+
+local function rnum(x: any): number
+	return if type(x) == "number" and x == x and x ~= math.huge and x ~= -math.huge then x else 0
+end
+
+-- Spec de la ligne `r` posée dans le repère `base` ; couleurs prises dans `palette` (nom inconnu :
+-- crème) ou données telles quelles (Color3)
+function RanchKit.row(base: CFrame, key: string, r: Row, palette: { [string]: Color3 }): Spec
+	local shape = r[1]
+	local x, y, z = rnum(r[2]), rnum(r[3]), rnum(r[4])
+	local sx, sy, sz = math.max(0.05, rnum(r[5])), math.max(0.05, rnum(r[6])), math.max(0.05, rnum(r[7]))
+	local c = r[8]
+	local color = if typeof(c) == "Color3"
+		then c :: Color3
+		elseif type(c) == "string" and palette[c] then palette[c]
+		else DEFAULT_COLOR
+	local material = (type(r[9]) == "string" and ROW_MATERIALS[r[9]]) or Enum.Material.SmoothPlastic
+	local cf = base * CFrame.new(x, y, z)
+	if r[10] ~= nil or r[11] ~= nil or r[12] ~= nil then
+		cf = cf * CFrame.Angles(math.rad(rnum(r[10])), math.rad(rnum(r[11])), math.rad(rnum(r[12])))
+	end
+	local partShape: Shape = "Block"
+	local size = Vector3.new(sx, sy, sz)
+	if shape == "c" then
+		partShape = "Cylinder"
+		size = Vector3.new(sy, sx, sx)
+		cf = cf * UP
+	elseif shape == "x" then
+		partShape = "Cylinder"
+		size = Vector3.new(sx, sy, sy)
+	elseif shape == "s" then
+		partShape = "Ball"
+		size = Vector3.new(sx, sx, sx)
+	end
+	return { key = key, shape = partShape, size = size, cf = cf, color = color, material = material }
+end
+
+-- Specs des lignes `rows` (clés prefix .. 1, prefix .. 2 …), ajoutées à `out`
+function RanchKit.rows(
+	out: { Spec },
+	base: CFrame,
+	prefix: string,
+	rows: { Row },
+	palette: { [string]: Color3 }
+): { Spec }
+	for i, r in rows do
+		table.insert(out, RanchKit.row(base, prefix .. i, r, palette))
+	end
+	return out
+end
+
+-- Ligne compacte d'un segment droit de (u1, y1) à (u2, y2) dans le plan vertical (X, Y) du repère :
+-- bloc d'épaisseur `t` (Y) et de profondeur `d` (Z) à la profondeur z, allongé de `overlap`
+function RanchKit.segment(
+	u1: number,
+	y1: number,
+	u2: number,
+	y2: number,
+	z: number,
+	t: number,
+	d: number,
+	color: any,
+	material: string?,
+	overlap: number?
+): Row
+	local du, dy = u2 - u1, y2 - y1
+	local len = math.sqrt(du * du + dy * dy) + (overlap or 0)
+	return {
+		"b",
+		(u1 + u2) / 2,
+		(y1 + y2) / 2,
+		z,
+		len,
+		t,
+		d,
+		color,
+		material,
+		0,
+		0,
+		math.deg(math.atan2(dy, du)),
+	}
+end
+
+-- Pose d'une pièce qui tourne autour de l'axe vertical passant par `pivot` (un tour en `period` s)
+function RanchKit.spin(base: CFrame, pivot: Vector3, period: number, t: number, phase: number): CFrame
+	local p = if period > 0 then period else 1
+	local angle = 2 * math.pi * ((t / p) + phase)
+	return CFrame.new(pivot) * CFrame.Angles(0, angle, 0) * (CFrame.new(-pivot) * base)
+end
+
+-- Pose d'une pièce qui monte et descend (amplitude `amp`, aller-retour en `period` s)
+function RanchKit.bob(base: CFrame, amp: number, period: number, t: number, phase: number): CFrame
+	local p = if period > 0 then period else 1
+	return base + Vector3.new(0, amp * math.sin(2 * math.pi * ((t / p) + phase)), 0)
+end
+
+-- Pulsation : au plus 3 changements de couleur par seconde (GDD §11.5) ; rend l'indice de la
+-- couleur (0 : couleur de base, 1 : seconde couleur) à l'instant t
+RanchKit.PULSE_HZ = 3
+function RanchKit.pulseIndex(t: number, phase: number): number
+	return math.floor(t * RanchKit.PULSE_HZ + phase * 2) % 2
 end
 
 -- =============================================================================================

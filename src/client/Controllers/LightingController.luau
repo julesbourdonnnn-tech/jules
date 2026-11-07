@@ -65,6 +65,8 @@ local AudioController = require(script.Parent.AudioController)
 local Root = require(Client.UI.Root)
 local Text = require(Client.UI.Text)
 local AmbienceDirector = require(Client.Render.AmbienceDirector)
+-- v2.0 (lot B4, étape 4, D23) : lanterne du phare de MON ranch (une des 4 lumières du ranch y est placée)
+local RanchV2 = require(Client.Render.RanchV2)
 local AmbienceRules = require(Shared.Logic.AmbienceRules)
 local Events = require(Shared.Config.Events)
 
@@ -132,6 +134,9 @@ local state = {
 	labels = {} :: { LabelEntry },
 	labelHolder = nil :: Folder?,
 	labelScale = 0,
+	-- lumière de MON ranch placée dans la lanterne du phare (D23) : la lumière, son parent d'origine et
+	-- le point d'attache local (Attachment sous ce parent, à la position de la lanterne)
+	lighthouse = nil :: { light: PointLight, parent: Instance, attachment: Attachment }?,
 	ring = nil :: Dressed?, -- anneau du MEGA pad (couleur et matériau du serveur)
 	jarJelly = nil :: Dressed?, -- gelée de la jarre de la jauge
 	winter = nil :: Folder?,
@@ -611,6 +616,19 @@ local function refreshPlaza(payload: Types.EventStatePayload?, now: number)
 	refreshTimers(payload, now)
 end
 
+-- Rend la lumière empruntée par le phare à sa pièce d'origine (aspect exact de la v1.3)
+local function releaseLighthouse()
+	local b = state.lighthouse
+	if b == nil then
+		return
+	end
+	state.lighthouse = nil
+	if b.parent.Parent ~= nil and b.light.Parent ~= nil then
+		b.light.Parent = b.parent
+	end
+	b.attachment:Destroy()
+end
+
 -- Recherche bornée du monde (StreamingEnabled coupé : présent dès la fin du chargement)
 local function findWorld(): Folder?
 	if state.world and state.world.Parent ~= nil then
@@ -624,6 +642,7 @@ local function findWorld(): Folder?
 		return nil
 	end
 	state.world = world
+	releaseLighthouse()
 	table.clear(state.ranchLights)
 	table.clear(state.lampLights)
 	for _, light in CollectionService:GetTagged("RanchLight") do
@@ -653,12 +672,75 @@ local function lightPosition(light: PointLight): Vector3?
 	if parent and parent:IsA("BasePart") then
 		return parent.Position
 	end
+	-- lumière placée dans la lanterne du phare (D23) : point d'attache sous sa pièce d'origine
+	if parent and parent:IsA("Attachment") then
+		local holder = parent.Parent
+		if holder and holder:IsA("BasePart") then
+			return holder.CFrame * parent.Position
+		end
+	end
 	return nil
+end
+
+-- Phare de MON ranch (palier 4 dessiné en détail complet, D23) : une des 4 lumières de mon ranch (la
+-- fontaine d'abord) est placée localement dans la lanterne ; aucune lumière de plus, quotas inchangés ;
+-- rendue dès que le phare ou le ranch s'en va. Interrupteurs coupés : RanchV2 ne dessine aucun phare.
+local function updateLighthouse(mySlot: any, player: Player?)
+	local lantern = if type(mySlot) == "number" then RanchV2.lanternPart(mySlot) else nil
+	local b = state.lighthouse
+	if lantern == nil or player == nil then
+		releaseLighthouse()
+		return
+	end
+	if b then
+		local entryOk = b.light.Parent == b.attachment and b.attachment.Parent == b.parent
+		local model = b.parent:FindFirstAncestorWhichIsA("Model")
+		while model and model:GetAttribute("Slot") == nil do
+			model = model.Parent and model.Parent:FindFirstAncestorWhichIsA("Model") or nil
+		end
+		if not entryOk or model == nil or model:GetAttribute("Slot") ~= mySlot then
+			releaseLighthouse()
+			b = nil
+		end
+	end
+	if b == nil then
+		local pick: PointLight? = nil
+		for _, entry in state.ranchLights do
+			local light = entry.light
+			local parent = light.Parent
+			if
+				entry.model:GetAttribute("Slot") == mySlot
+				and entry.model:GetAttribute("OwnerUserId") == player.UserId
+				and parent ~= nil
+				and parent:IsA("BasePart")
+			then
+				if pick == nil or parent.Name == "Jet" then
+					pick = light
+				end
+			end
+		end
+		if pick == nil then
+			return
+		end
+		local parent = (pick :: PointLight).Parent :: BasePart
+		local attachment = Instance.new("Attachment")
+		attachment.Name = "LighthouseLight"
+		attachment.Position = parent.CFrame:PointToObjectSpace(lantern.Position)
+		attachment.Parent = parent;
+		(pick :: PointLight).Parent = attachment
+		state.lighthouse = { light = pick :: PointLight, parent = parent, attachment = attachment }
+		return
+	end
+	local want = b.parent.CFrame:PointToObjectSpace(lantern.Position)
+	if b.attachment.Position ~= want then
+		b.attachment.Position = want
+	end
 end
 
 local function refreshLights(b: Budgets)
 	local player = Players.LocalPlayer
 	local mySlot = if player then player:GetAttribute("RanchSlot") else nil
+	updateLighthouse(mySlot, player)
 	local cam = camera()
 	local camPos = if cam then cam.CFrame.Position else nil
 	local function inRange(light: PointLight): boolean
