@@ -1772,6 +1772,53 @@ end
 -- arrive (DataPatch upgradeSnapshot, profil témoin v2) et le HUD v2.0 se construit
 -- ---------------------------------------------------------------------------------------------
 
+-- Monde v2.0 (lot B4) : textes du monde du ranch qui évolue, interrupteurs ouverts DANS le scénario
+-- seulement (le client suit ce que le serveur montre). Étape 1 : étiquette de la dalle du Tapis Étoilé
+-- (D11) allumée par le serveur au-delà du Tapis 12 : cas courant, puis pire cas (niveau 20, prix au
+-- Record R maximal et à A maximal). Les étapes suivantes du lot complètent ce groupe.
+local function worldScreens()
+	local list = {}
+	local function starPad(c, R, A, star)
+		local model = Screens.myRanchModel(c, {})
+		local pads = model:FindFirstChild("Pads")
+		if pads == nil then
+			pads = MockInstance.new("Folder")
+			pads.Name = "Pads"
+			pads.Parent = model
+		end
+		local pad = pads:FindFirstChild("1")
+		if pad == nil then
+			pad = MockInstance.new("Part")
+			pad.Name = "1"
+			pad.Parent = pads
+		end
+		pad.Transparency = 0
+		pad:SetAttribute("Maxed", false)
+		local base = { snack = 12, decor = 5, pens = 3, cozyBed = true, seen = 15 }
+		local mine = table.clone(base)
+		mine.star = star
+		c.h:fireClient(
+			REMOTES .. "DataPatch",
+			{ version = 2, R = R, bestR = R, ascend = A, tiles = mine },
+			{}
+		)
+		ranchStub(c, "cozy", { R = R, tiles = base })
+		frames(c, 20, 1 / 30)
+	end
+	for _, case in { { "world.starPad", 12, 2, 3 }, { "world.starPad.max", 400, 60, 7 } } do
+		table.insert(list, {
+			id = case[1],
+			run = function(c)
+				closeAll(c)
+				flushAll(c)
+				unstub(c)
+				starPad(c, case[2], case[3], case[4])
+			end,
+		})
+	end
+	return list
+end
+
 local function hudV2Screens()
 	local list = {}
 	local DONE = { step = 11, done = true, demoDone = true }
@@ -2845,6 +2892,8 @@ function Screens.groups()
 	table.insert(groups, { id = "upgrades", state = "mid", screens = upgradeScreens() })
 	-- v2.0 (lot B2, étape 4) : HUD v2.0 et rail
 	table.insert(groups, { id = "hudv2", state = "mid", screens = hudV2Screens() })
+	-- v2.0 (lot B4) : textes du monde du ranch qui évolue
+	table.insert(groups, { id = "world", state = "mid", screens = worldScreens() })
 
 	return groups
 end
