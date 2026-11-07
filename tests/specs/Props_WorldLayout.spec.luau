@@ -102,6 +102,89 @@ return function(T)
 			)
 		end)
 
+		-- Monde v2.0 (lot B4, étape 1, D8) : règle de placement en propriété, pour les 16 ranchs
+		local footprints = W.v2Footprints()
+		local grounds = {}
+		for _, f in footprints do
+			if f.bottom < W.Const.V2Elevated then
+				table.insert(grounds, f)
+			end
+		end
+		-- point de l'emprise f pour deux tirages u, v ∈ [0 ; 1]
+		local function pointIn(f, u, v)
+			if f.kind == "disc" then
+				local a = 2 * math.pi * u
+				local r = f.r * math.sqrt(v)
+				return f.x + r * math.cos(a), f.z + r * math.sin(a)
+			end
+			return f.x0 + (f.x1 - f.x0) * u, f.z0 + (f.z1 - f.z0) * v
+		end
+		local function contains(f, x, z)
+			if f.kind == "disc" then
+				return (x - f.x) ^ 2 + (z - f.z) ^ 2 <= f.r * f.r
+			end
+			return x >= f.x0 and x <= f.x1 and z >= f.z0 and z <= f.z1
+		end
+
+		it(
+			"16 ranchs : tout point d'une emprise v2 au sol est à ≥ 6 studs du bord de chaque dalle",
+			function()
+				Props.check(
+					5000,
+					Props.tuple(slots, Props.int(1, #grounds), Props.number(0, 1), Props.number(0, 1)),
+					function(v)
+						local f = grounds[v[2]]
+						local x, z = pointIn(f, v[3], v[4])
+						local p = W.toWorld(v[1], Vector3.new(x, 0, z))
+						for socket = 1, 4 do
+							local pad = W.padSocket(v[1], socket)
+							local d = Vector3.new(p.X - pad.X, 0, p.Z - pad.Z).Magnitude
+							if d - 2 < 6 - 1e-3 then -- disque de la dalle : rayon 2
+								return false
+							end
+						end
+						return true
+					end
+				)
+			end
+		)
+
+		it(
+			"rien de la v2 au-dessus de Y = 21 au centre du ranch (colonne de la silhouette), sauf ses accessoires",
+			function()
+				local column = W.centerColumn()
+				Props.check(5000, Props.tuple(Props.number(0, 1), Props.number(0, 1)), function(v)
+					local a, r = 2 * math.pi * v[1], column.radius * math.sqrt(v[2])
+					local x, z = column.center.X + r * math.cos(a), column.center.Z + r * math.sin(a)
+					for _, f in footprints do
+						if contains(f, x, z) and f.top > column.floor and not f.accessory then
+							return false
+						end
+					end
+					return true
+				end)
+			end
+		)
+
+		it("monde v2.0 : entrées bizarres (slot, n, nom, v2) jamais d'erreur, valeurs finies", function()
+			local function finite(vec)
+				return vec.X == vec.X and vec.Z == vec.Z and math.abs(vec.X) < 1e6 and math.abs(vec.Z) < 1e6
+			end
+			Props.check(
+				3000,
+				Props.tuple(Props.any(), Props.any(), Props.anyNumber(), Props.any()),
+				function(v)
+					return finite(W.monumentSlot(v[1], v[3]).Position)
+						and finite(W.decoPersoSlot(v[1], v[3]).Position)
+						and finite(W.v2Anchor(v[1], v[2]).Position)
+						and finite(W.meadowPoint(v[3], v[4]))
+						and finite(W.meadowCenter(v[4]))
+						and finite(W.helperHouse(v[1]))
+						and type(W.hasV2Anchor(v[2])) == "boolean"
+				end
+			)
+		end)
+
 		it("zéro trace", function()
 			expect(#h.errors).toBe(0)
 			expect(#h:warnings()).toBe(0)
