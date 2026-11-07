@@ -126,6 +126,7 @@ local RING_DOT = 6
 local RING_LIT = 10
 local RING_DIM = 0.5 -- transparence d'un point pas encore atteint
 local HOLD_GLYPH = 40 -- glyphe de l'appareil devant la consigne du bandeau
+local ALL_MAX_KEY = "upgrades.detail.allMax" -- « Tout est acheté : bravo ! » (tout l'onglet au maximum)
 local SPIN_PERIOD = 1.2 -- s : un tour du sablier « En cours »
 local SNACK_MAX = UpgradeMath.maxLevel("snack") -- 12 : le Tapis Étoilé continue la même ligne
 
@@ -874,9 +875,32 @@ local function setBanner(t: UpgradeView.Text?)
 	end
 end
 
+-- Toutes les lignes achetables de l'onglet ouvert (ses cartes au Conseillé) sont-elles au maximum ?
+-- « Tout est acheté : bravo ! » n'est vrai qu'alors (relecture des écrans du lot B2, B2-72)
+local function tabAllMax(): boolean
+	if current == "suggested" then
+		for _, card in cards do
+			local v = views[card.root]
+			if v ~= nil and v.kind ~= "note" and v.state ~= "max" then
+				return false
+			end
+		end
+		return true
+	end
+	for _, id in shownRows[current] or {} do
+		local row = rows[id]
+		local v = if row then views[row.root] else nil
+		if v ~= nil and not v.readOnly and v.state ~= "max" then
+			return false
+		end
+	end
+	return true
+end
+
 -- Phrase du bandeau pour l'objet sélectionné : la consigne du maintien juste après un relâchement trop
 -- tôt, sinon celle de son état et du mode, sinon ce que devient la ligne au Grand Splorch ; « — » pour
--- un onglet ou le bouton de mode
+-- un onglet ou le bouton de mode. Une ligne au maximum dit « Tout est acheté : bravo ! » quand tout
+-- l'onglet l'est, sinon ce qu'elle devient au Grand Splorch (les autres lignes restent à acheter)
 local function bannerFor(obj: Instance?)
 	if hintObj ~= nil and (obj == hintObj or obj == nil) and Clock.now() < hintUntil then
 		setBanner(UpgradeView.HOLD)
@@ -887,7 +911,11 @@ local function bannerFor(obj: Instance?)
 		setBanner(nil)
 		return
 	end
-	setBanner(view.banner or view.fate)
+	local banner = view.banner
+	if banner ~= nil and banner.key == ALL_MAX_KEY and not tabAllMax() then
+		banner = nil
+	end
+	setBanner(banner or view.fate)
 end
 
 local function renderHeader(snap: Snapshot, animate: boolean)

@@ -170,4 +170,4 @@ Body.List_ranch.Row_gloves.Badge.P1 377,829,10,4
 Body.List_ranch.Row_gloves.Badge.P2 377,824,10,4
 Body.List_ranch.Row_gloves.Badge.R1 373,828,22,22
 Body.Detail 272,863,1376,120
-Body.Detail.Sentence 296,875,1328,96 "Tout est acheté : bravo !"
+Body.Detail.Sentence 296,875,1328,96 "Repart de zéro au Grand Splorch"

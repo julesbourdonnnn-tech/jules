@@ -2178,7 +2178,7 @@ Une seule chose sélectionnable par ligne : la ligne elle-même (↑ ↓ seuleme
 |---|---|---|---|---|
 | **Payable** | Ouvert, pas au maximum, pièces (ou Confettis) ≥ prix du mode | Coche « Prêt » / « Ready » | Montant en blanc, barre pleine | ✕ (×1) ou maintien (×10, Max) |
 | **Il manque** | Ouvert, pas au maximum, pas assez | Sablier « Il manque » / « Need » | Montant en gris clair ; barre partielle ; le bandeau dit « Il manque 1,2 K » | Refus doux : son `Bump`, vibration `refuse`, aucune secousse |
-| **Au maximum** | Niveau = maximum de la famille | Étoile « MAX » / « MAX » | Colonne vide sauf « — » | Rien ; bandeau « Tout est acheté : bravo ! » |
+| **Au maximum** | Niveau = maximum de la famille | Étoile « MAX » / « MAX » | Colonne vide sauf « — » | Rien ; bandeau « Tout est acheté : bravo ! » quand toutes les lignes de l'onglet (ses cartes au Conseillé) sont au maximum, sinon ce que devient la ligne au Grand Splorch (« Gardé pour toujours » / « Repart de zéro au Grand Splorch ») : la phrase ne dit jamais « tout » à côté d'une ligne encore à acheter (relecture des écrans du lot B2, B2-72) |
 | **Verrouillé** | Record R ou Ascension pas atteints | Cadenas « Record 6 » / « Record 6 » (ou « Ascension 1 » / « Ascend 1 » pour une ligne d'Ascension) | Prix du premier niveau en gris | Rien ; bandeau « S'ouvre au Grand Splorch 6 » / « Opens at Grand Splorch 6 » |
 | **Plafond de la boucle** (Tapis Étoilé seulement) | Niveau = plafond par r, inférieur à 20 | Boucle « Boucle 7 » / « Loop 7 » | Prix du niveau suivant en gris | Rien ; bandeau du §10.7.5 |
 | **En cours** | Achat envoyé, réponse attendue (3 s au plus) | Sablier animé « En cours » / « Busy » | Inchangé | Appuis ignorés |
