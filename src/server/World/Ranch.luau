@@ -77,6 +77,7 @@ export type Handle = {
 	tiles: { [string]: any }, -- dernières dalles appliquées (dalles recalculées quand le propriétaire change)
 	lights: { PointLight },
 	owner: number,
+	starLit: boolean, -- v2.0 [StarMat] (lot B4, D11) : dalle du Tapis allumée au-delà du Tapis 12
 }
 
 local function localPos(slot: number, world: Vector3): Vector3
@@ -489,6 +490,7 @@ function Ranch.build(parent: Instance, slot: number, walls: { WorldLayout.Box })
 		lights = lights,
 		owner = 0,
 		tiles = {},
+		starLit = false,
 	}
 end
 
@@ -533,7 +535,8 @@ local function int(x: any, lo: number, hi: number): number
 end
 
 -- Dalles : visibles une fois découvertes (bit de tiles.seen) sur un ranch occupé, cachées une fois
--- tout acheté (dernières dalles appliquées)
+-- tout acheté (dernières dalles appliquées) ; v2.0 [StarMat] : la dalle du Tapis reste allumée au-delà
+-- du Tapis 12 quand WorldService le dit (starLit, Tapis Étoilé ouvert dans la boucle)
 function refreshPads(handle: Handle)
 	local t: any = handle.tiles
 	local seen = int(t.seen, 0, 2 ^ 30)
@@ -547,7 +550,7 @@ function refreshPads(handle: Handle)
 		else
 			local max = padMax(key)
 			local level = int(t[key], 0, 1e6)
-			maxed = max ~= nil and level >= max
+			maxed = max ~= nil and level >= max and not (key == "snack" and handle.starLit and owned)
 		end
 		local visible = discovered and not maxed
 		if pad:GetAttribute("Maxed") ~= maxed then
@@ -560,8 +563,9 @@ function refreshPads(handle: Handle)
 	end
 end
 
--- Montre les décorations construites, l'aspect du Tapis, la Cuve, le Bassin et les dalles découvertes
-function Ranch.setBuild(handle: Handle, tiles: Types.Tiles, vat: boolean, pool: boolean)
+-- Montre les décorations construites, l'aspect du Tapis, la Cuve, le Bassin et les dalles découvertes ;
+-- starLit (v2.0, lot B4) : dalle du Tapis allumée au-delà du Tapis 12 (absent ou false : la v1.3)
+function Ranch.setBuild(handle: Handle, tiles: Types.Tiles, vat: boolean, pool: boolean, starLit: boolean?)
 	local t: any = if type(tiles) == "table" then tiles else {}
 	local decorCount = int(t.decor, 0, #handle.decor)
 	if decorCount ~= handle.decorShown then
@@ -600,6 +604,7 @@ function Ranch.setBuild(handle: Handle, tiles: Types.Tiles, vat: boolean, pool: 
 		handle.poolShown = showPool
 	end
 	handle.tiles = table.clone(t)
+	handle.starLit = starLit == true
 	refreshPads(handle)
 end
 

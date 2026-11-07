@@ -44,6 +44,7 @@ local PressTiming = require(Shared.Logic.PressTiming)
 local TargetRules = require(Shared.Logic.TargetRules)
 local Formulas = require(Shared.Logic.Formulas)
 local FusionRules = require(Shared.Logic.FusionRules)
+local RanchLook = require(Shared.Logic.RanchLook)
 local SquishyBuilder = require(Shared.Render.SquishyBuilder)
 local Squash = require(Shared.Render.Squash)
 
@@ -905,6 +906,19 @@ local function stepTitle(slot: number)
 	pcall(WorldText.setText, (entry :: any).gui, text)
 end
 
+-- v2.0 (lot B4, D11) [StarMat] : au-delà du Tapis 12, la dalle du Tapis que le serveur laisse allumée
+-- (visible, Maxed = false) achète le Tapis Étoilé ; c'est le signal de l'interrupteur côté client (le
+-- client ne lit jamais Config/Features). Niveau affiché (13 … 20) et prix : MON profil
+-- (StateController) par RanchLook.padLabel, la copie de PadRules. Interrupteur coupé : dalle cachée par
+-- le serveur, rien de plus que la v1.3.
+local STAR_ON = table.freeze({ StarMat = true })
+local SNACK_MAX = Balance.Tiles.snack.Levels
+local myProfile: { [string]: any } = setmetatable({}, {
+	__index = function(_, key)
+		return StateController.get(key)
+	end,
+}) :: any
+
 local function levelOf(tiles: Types.Tiles, key: string): number
 	local v = (tiles :: any)[key]
 	if type(v) == "boolean" then
@@ -932,6 +946,23 @@ local function stepPads()
 				and pad.Transparency < 1
 				and pad:GetAttribute("Maxed") ~= true
 				and cost < math.huge
+			-- Tapis Étoilé : dalle du Tapis allumée par le serveur au-delà du Tapis 12 (D11)
+			local star: RanchLook.PadLabel? = nil
+			if
+				not visible
+				and key == "snack"
+				and lvl >= SNACK_MAX
+				and pad ~= nil
+				and pad:IsA("BasePart")
+				and pad.Transparency < 1
+				and pad:GetAttribute("Maxed") ~= true
+			then
+				local label = RanchLook.padLabel(myProfile, key, STAR_ON)
+				if label.lit then
+					star = label
+					visible = true
+				end
+			end
 			if visible then
 				seen[id] = true
 				local gui = padLabels[id]
@@ -946,9 +977,14 @@ local function stepPads()
 					padLabels[id] = gui :: any
 				end
 				if gui then
-					local text = Util.t("celebrate.tileBuilt", { name = Util.t("pad." .. key), n = lvl + 1 })
-						.. " · "
-						.. Util.number(cost)
+					local text = if star
+						then Util.t(
+							"celebrate.tileBuilt",
+							{ name = Util.t("upgrades.family.star"), n = star.level }
+						) .. " · " .. Util.number(star.price)
+						else Util.t("celebrate.tileBuilt", { name = Util.t("pad." .. key), n = lvl + 1 })
+							.. " · "
+							.. Util.number(cost)
 					pcall(WorldText.setText, gui, text)
 				end
 			end

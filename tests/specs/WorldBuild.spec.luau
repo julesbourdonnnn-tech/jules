@@ -1184,4 +1184,164 @@ return function(T)
 			end
 		)
 	end)
+
+	-- =========================================================================================
+	-- Dalle du Tapis Étoilé (lot B4, étape 1, décision D11 du plan B4 ; N21, docs/04 §27.13) : avec
+	-- StarMat et un profil v2, la dalle du Tapis reste allumée au-delà du Tapis 12 tant qu'un niveau du
+	-- Tapis Étoilé est ouvert dans la boucle (PadRules.visible) ; interrupteur coupé ou profil v1 : la
+	-- v1.3 au bit près (dalle cachée au Tapis 12), sans lecture du profil
+	-- =========================================================================================
+	describe("WorldBuild › dalle du Tapis Étoilé (lot B4)", function()
+		local Bots = require("../harness/Bots")
+		local T0 = 1800000000
+		local S = "ServerScriptService.Server.Services."
+		local HarnessV2 = setmetatable({
+			new = function(options)
+				local hh = Harness.new(options)
+				hh:require("ReplicatedStorage.Shared.Config.Features").Defaults.SchemaV2 = true
+				return hh
+			end,
+		}, { __index = Harness })
+
+		-- Serveur complet ; le joueur 1 arrive avec un profil au Tapis 12 (r = R, Record R = R)
+		local function boot(flags, R, harness)
+			local caught = {}
+			local w = Bots.boot(harness or HarnessV2, {
+				t0 = T0,
+				before = function(w)
+					w.DS.Settings.AUTOSAVE_INTERVAL = 1e6
+					local Diag = w.h:require(S .. "DiagnosticsService")
+					Diag.reportCaught = function(where, err)
+						table.insert(caught, where .. " : " .. tostring(err))
+					end
+					Diag.stateTimedOut = function() end
+					w.F = w.h:require("ReplicatedStorage.Shared.Config.Features")
+					for _, key in flags do
+						assert(w.F.set(key, true), key)
+					end
+					local d = Bots.profile(w, { onboarding = { step = 11, done = true, demoDone = true } })
+					d.tiles.seen = 15
+					d.tiles.snack = 12
+					d.coins = 1e30
+					d.R = R
+					if d.version >= 2 then
+						d.bestR = R
+						d.tiles.star = 0
+					end
+					Bots.saveProfile(w, 1, d)
+				end,
+			})
+			w.caught = caught
+			w.Economy = w.h:require(S .. "EconomyService")
+			w.Ranch = w.h:require(S .. "RanchService")
+			w.World = w.h:require(S .. "WorldService")
+			w.Pads = w.h:require("ReplicatedStorage.Shared.Config.Pads")
+			return w
+		end
+
+		local function clean(w)
+			expect(table.concat(w.caught, "\n")).toBe("")
+			expect(table.concat(w.h.errors, "\n")).toBe("")
+			expect(table.concat(w.h:warnings(), "\n")).toBe("")
+		end
+
+		-- (visible, Maxed) de la dalle du Tapis du ranch `slot`
+		local function snackPad(w, slot)
+			local pad = w.World.ranchModel(slot).Pads[tostring(w.Pads.Defs.snack.socket)]
+			return { visible = pad.Transparency == 0, maxed = pad:GetAttribute("Maxed") }
+		end
+
+		it(
+			"StarMat ouvert, profil v2 : allumée (Maxed = false) du Tapis 12 jusqu'au plafond de la boucle, cachée au plafond",
+			function()
+				-- r = 7 : 2 niveaux du Tapis Étoilé ouverts dans la boucle (Prestige.starCap)
+				local w = boot({ "StarMat" }, 7)
+				local p = Bots.join(1)
+				local slot = w.Ranch.slotOf(p)
+				expect(slot > 0).toBe(true)
+				expect(snackPad(w, slot)).toEqual({ visible = true, maxed = false })
+				-- un achat par la dalle (Tapis Étoilé 1) : toujours allumée
+				expect(w.Economy.buyTile(p, "snack", "pad")).toBe(true)
+				expect(w.DS.get(p).tiles.star).toBe(1)
+				expect(snackPad(w, slot)).toEqual({ visible = true, maxed = false })
+				-- deuxième achat : plafond de la boucle atteint, la dalle se cache
+				expect(w.Economy.buyTile(p, "snack", "pad")).toBe(true)
+				expect(w.DS.get(p).tiles.star).toBe(2)
+				expect(snackPad(w, slot)).toEqual({ visible = false, maxed = true })
+				-- un niveau rouvert (r plus haut au prochain passage, ici écrit à la main) : rallumée
+				w.DS.get(p).R = 10
+				w.Ranch.refreshBuild(p)
+				expect(snackPad(w, slot)).toEqual({ visible = true, maxed = false })
+				clean(w)
+			end
+		)
+
+		it(
+			"StarMat coupé, profil v1, ou aucun niveau ouvert (r < 6) : cachée au Tapis 12 comme en v1.3, sans lire le profil",
+			function()
+				local cases = {
+					{ flags = {}, R = 10, harness = HarnessV2 }, -- interrupteur coupé
+					{ flags = { "StarMat" }, R = 10, harness = Harness }, -- profil v1
+					{ flags = { "StarMat" }, R = 3, harness = HarnessV2 }, -- r = 3 : aucun niveau ouvert
+				}
+				for i, case in cases do
+					local w = boot(case.flags, case.R, case.harness)
+					local p = Bots.join(1)
+					local slot = w.Ranch.slotOf(p)
+					expect({ i = i, pad = snackPad(w, slot) }).toEqual({
+						i = i,
+						pad = { visible = false, maxed = true },
+					})
+					-- interrupteur coupé : setRanchBuild ne lit aucun profil (même chemin que la v1.3)
+					if #case.flags == 0 then
+						local reads = 0
+						local get = w.DS.get
+						w.DS.get = function(...)
+							reads += 1
+							return get(...)
+						end
+						w.World.setRanchBuild(
+							slot,
+							{ snack = 12, decor = 0, pens = 0, cozyBed = false, seen = 15 },
+							true,
+							true
+						)
+						w.DS.get = get
+						expect(reads).toBe(0)
+						expect(snackPad(w, slot)).toEqual({ visible = false, maxed = true })
+					end
+					clean(w)
+				end
+			end
+		)
+
+		it(
+			"ranch libre ou propriétaire parti : jamais allumée au-delà du Tapis 12, aucune erreur",
+			function()
+				local w = boot({ "StarMat" }, 7)
+				local p = Bots.join(1)
+				local slot = w.Ranch.slotOf(p)
+				expect(snackPad(w, slot).visible).toBe(true)
+				-- autre ranch, libre : StarMat ouvert, Tapis 12 → cachée (personne à lire)
+				local free = slot % 16 + 1
+				w.World.setRanchBuild(
+					free,
+					{ snack = 12, decor = 0, pens = 0, cozyBed = false, seen = 15 },
+					true,
+					true
+				)
+				expect(snackPad(w, free)).toEqual({ visible = false, maxed = true })
+				-- propriétaire inconnu du serveur (identifiant sans joueur) : cachée
+				w.World.setRanchOwner(free, 424242)
+				w.World.setRanchBuild(
+					free,
+					{ snack = 12, decor = 0, pens = 0, cozyBed = false, seen = 15 },
+					true,
+					true
+				)
+				expect(snackPad(w, free)).toEqual({ visible = false, maxed = true })
+				clean(w)
+			end
+		)
+	end)
 end

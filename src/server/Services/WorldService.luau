@@ -12,9 +12,15 @@
 -- Construction protégée (pcall par bloc) : un bloc en panne est compté par Diagnostics
 -- (reportCaught("world:<bloc>")), le reste se construit. Clés de profil : aucune. Remotes : aucun.
 -- Aides : src/server/World/{Parts,Town,Ranch,Decor}.luau ; décor partagé : Render/WorldDecor.
+-- v2.0 (lot B4, décision D11 du plan, N21) [StarMat] : au-delà du Tapis 12, la dalle du Tapis reste
+-- allumée (Maxed = false) tant que PadRules.visible le dit (Tapis Étoilé ouvert dans la boucle, profil
+-- v2) : setRanchBuild lit alors le profil du propriétaire (DataService.get). Interrupteur coupé ou Tapis
+-- < 12 : la v1.3 au bit près, aucune lecture du profil. Après un changement EN DIRECT de StarMat, la
+-- dalle suit au prochain RanchService.refreshBuild (achat, prestige) : note pour A2 / I.
 
 local CollectionService = game:GetService("CollectionService")
 local PhysicsService = game:GetService("PhysicsService")
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ServerScriptService = game:GetService("ServerScriptService")
 
@@ -23,11 +29,13 @@ local Types = require(Shared.Types)
 local Species = require(Shared.Config.Species)
 local Mutations = require(Shared.Config.Mutations)
 local Balance = require(Shared.Config.Balance)
+local Features = require(Shared.Config.Features)
 local WorldLayout = require(Shared.Logic.WorldLayout)
 local Palette = require(Shared.Render.Palette)
 
 local Server = ServerScriptService:WaitForChild("Server")
 local DiagnosticsService = require(Server.Services.DiagnosticsService)
+local PadRules = require(Server.Ranch.PadRules)
 local World = Server.World
 local Parts = require(World.Parts)
 local Town = require(World.Town)
@@ -230,6 +238,29 @@ function WorldService.setRanchOwner(slot: number, userId: number, color: Color3?
 	end)
 end
 
+-- Tapis Étoilé [StarMat] (D11) : la dalle du Tapis de ce ranch reste-t-elle allumée au-delà du Tapis 12 ?
+-- Seulement interrupteur ouvert et Tapis ≥ 12 ; alors le profil du propriétaire présent sur ce serveur
+-- (DataService requis ici, au premier besoin : il précède WorldService dans l'ordre des services)
+local function starLit(handle: Ranch.Handle, tiles: any): boolean
+	if Features.get("StarMat") ~= true then
+		return false
+	end
+	local snack = if type(tiles) == "table" then tiles.snack else nil
+	if type(snack) ~= "number" or snack ~= snack or snack < Balance.Tiles.snack.Levels then
+		return false
+	end
+	if handle.owner == 0 then
+		return false
+	end
+	local player = Players:GetPlayerByUserId(handle.owner)
+	if player == nil then
+		return false
+	end
+	local DataService = require(Server.Services.DataService) :: any
+	local data = DataService.get(player)
+	return type(data) == "table" and PadRules.visible(data, "snack")
+end
+
 -- Montre les décorations construites, l'aspect du Tapis, la Cuve et le Bassin
 function WorldService.setRanchBuild(slot: number, tiles: Types.Tiles, vat: boolean, pool: boolean)
 	if not validSlot(slot) then
@@ -240,7 +271,7 @@ function WorldService.setRanchBuild(slot: number, tiles: Types.Tiles, vat: boole
 		return
 	end
 	protect("world:build" .. slot, function()
-		Ranch.setBuild(handle, tiles, vat == true, pool == true)
+		Ranch.setBuild(handle, tiles, vat == true, pool == true, starLit(handle, tiles))
 	end)
 end
 
