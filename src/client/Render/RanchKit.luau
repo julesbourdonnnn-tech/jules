@@ -10,7 +10,9 @@
 --   * bed(slot, color) : lit à baldaquin autour du coussin du Meilleur Ami, mobile de 3 lunes ;
 --   * plinth(slot, k) : socle de souvenir de la décoration k (disque de vermicelles + icône Neon) ;
 --   * pennant(slot, k, color, golden) : fanion ★ d'une décoration gardée ;
---   * heap(slot, state) : tas de pièces du Pot (0 … 3) ; ring(slot, radius) : anneau de l'aimant.
+--   * heap(slot, state) : tas de pièces du Pot (0 … 3) ; ring(slot, radius) : anneau de l'aimant ;
+--   * étape 4 : lignes compactes des dessins (row, rows, segment) et poses animées (spin, bob,
+--     pulseIndex) partagées par Render/RanchTiers, Render/MonumentKit et Render/DecoKit.
 -- Rien n'est créé ici sauf par create ; jamais d'erreur.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")

@@ -1,6 +1,6 @@
 --!strict
--- RanchV2 (lot B4, étape 3 ; docs/04 §27.5, §27.7 ; GDD v2.0 §9.4, §11.5, §12.9 ; décisions D1, D6,
--- D12-D14, D18, D18b, D19, D26 du plan B4). État v2.0 de chaque ranch et rendu de ses décors, pour
+-- RanchV2 (lot B4, étapes 3 et 4 ; docs/04 §27.5, §27.7 ; GDD v2.0 §9.4, §11.5, §12.9 ; décisions
+-- D1, D6, D12-D19, D23, D25, D26 du plan B4). État v2.0 de chaque ranch et rendu de ses décors, pour
 -- RanchRenderer (qui reste le point d'entrée) :
 --   * le client ne lit jamais Config/Features : un ranch dessine ses décors v2.0 tant que son modèle
 --     Wobbleton/Ranches/<k> porte l'attribut TapisTier (RanchTiers), avec BestR (Record R, sinon le r
@@ -23,8 +23,23 @@
 --     DecoPlace), décorations dorées (DecorGold), fanions ★ (dorés avec GoldPennants), matériau du Pot
 --     pour tous ; tas de pièces et anneau de l'aimant pour MON ranch seulement ; habillages v2.0
 --     (HaloOn) appliqués par stepTheme de RanchRenderer ;
+--   * contenu de l'étape 4 (Render/RanchTiers, Render/MonumentKit, Render/DecoKit) : les 6 paliers
+--     (un objet chacun, détail réduit : tour, phare et couronne en 3 pièces), chiffre romain du Record R
+--     sur la plaque de l'arche (SurfaceGui, sorte « fit » de UI/Text), étoiles et couronne arc-en-ciel ;
+--     éléments du Record R : Cuve (anneaux, agitateur, buses ; dorée), fontaine du Bassin, 8 lampions
+--     (Neon pendant la Jelly Moon, RanchLook.moonLit), portail arc-en-ciel, geyser, étagère dorée,
+--     maisonnette des Plopettes ; accessoires de la silhouette (cadre doré, anneau rose « prêt »,
+--     anneau-soleil de GiantTier ≥ 3) ; étincelles des buses sur une naissance mutée de MON ranch
+--     (onHatch) ; Monuments (attribut Monuments : ranch courant, voisins, autres) et Déco perso
+--     (attribut DecoPerso) ; un ranch est allumé par TapisTier, Monuments ou DecoPerso (chacun son
+--     interrupteur), tout le reste suit TapisTier ;
+--   * crochets pour B5 : detail(slot), elementCFrame(slot, id), signal ElementBuilt(slot, id) (premier
+--     passage seulement), et Render/BuildCascade.Piece ; lanternPart(slot) pour LightingController
+--     (lumière du phare de MON ranch, D23) ;
 --   * travail par image seulement tant qu'un ranch v2.0 existe (RanchV2.on) : la cascade quand elle
---     joue, les pièces animées (points de la galaxie, étoiles, pièces qui sautillent) à 15 Hz.
+--     joue, les pièces animées à 15 Hz (galaxie, étoiles, pièces qui sautillent, couronne et lanterne
+--     qui tournent, agitateur, goutte du geyser, anneau « prêt » qui pulse : 3 changements de couleur
+--     par seconde au plus) ; Mouvement réduit : tout immobile à sa pose de base.
 -- Jamais d'erreur : un attribut illisible donne l'aspect sûr, un modèle ou un personnage absent ne
 -- dessine rien.
 
@@ -96,6 +111,7 @@ local WATCHED: { [string]: boolean } = {
 }
 -- Un de ces attributs allume les décors v2.0 du ranch (RanchTiers, Monuments, DecoPerso : D1)
 local CARRIERS = { "TapisTier", "Monuments", "DecoPerso" }
+local CARRIER: { [string]: boolean } = { TapisTier = true, Monuments = true, DecoPerso = true }
 
 -- Objets dessinés et système du budget visuel de chacun ; fanions ★ comptés avec les socles (une
 -- décoration gardée porte un fanion OU est un socle, jamais les deux : 18 × 2 par ranch)
@@ -589,6 +605,11 @@ local function clearSlot(st: Slot)
 		end
 		for _, inst in obj.extra do
 			inst:Destroy()
+			-- étincelles du Tapis doré : leur réservation de particules est rendue (sans cela, le
+			-- quota « tapis » fuyait à chaque Tapis doré retiré, B4-41)
+			if key == "tapis" then
+				VisualBudget.release("tapis", SPARKLE_PARTICLES, "particles")
+			end
 		end
 		for part in obj.paints do
 			unpaint(st, part)
@@ -1278,17 +1299,14 @@ local function renderVat(st: Slot, view: View?)
 	local show = v ~= nil and v.tapis and v.vatBuilt and level == "full"
 	local vs = if show then vatState(v :: View) else nil
 	local sig = if vs
-		then table.concat(
-			{
-				vs.rings,
-				vs.nozzles,
-				vs.period,
-				if vs.rainbow then 1 else 0,
-				if vs.golden then 1 else 0,
-				level,
-			},
-			"|"
-		)
+		then table.concat({
+			vs.rings,
+			vs.nozzles,
+			vs.period,
+			if vs.rainbow then 1 else 0,
+			if vs.golden then 1 else 0,
+			level,
+		}, "|")
 		else "none:" .. level
 	if not unchanged(st, "vat", sig, level) then
 		renderParts(st, "vat", sig, if vs then RanchTiers.vat(st.slot, vs) else EMPTY :: any, level)
@@ -1431,7 +1449,8 @@ local function renderDeco(st: Slot, view: View?)
 	for i = 1, DECO_SLOTS do
 		local key = "deco" .. i
 		local n = if list and grant ~= "none" then (list :: { number })[i] or 0 else 0
-		local level = if n ~= 0 then grant else "none"
+		-- niveau du ranch même pour un emplacement vide : l'objet posé ensuite est un vrai changement
+		local level = grant
 		local count = if n ~= 0 then DecoKit.count(n, level) else 0
 		local sig = if count > 0 then key .. "|" .. n .. "|" .. level else "none:" .. level
 		if not unchanged(st, key, sig, level) then
@@ -2012,7 +2031,9 @@ local function onAttribute(slot: number, name: string)
 		return
 	end
 	local st = stateOf(slot)
-	if name == "OwnerUserId" and not st.on then
+	-- un ranch sans décor v2.0 ne se réveille que pour un attribut qui l'allume (TapisTier, Monuments,
+	-- DecoPerso) : BestR, SplorchReady, GiantTier… d'un interrupteur voisin seuls ne coûtent rien
+	if not st.on and not CARRIER[name] then
 		return
 	end
 	st.dirty = true

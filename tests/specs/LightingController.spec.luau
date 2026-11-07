@@ -539,6 +539,87 @@ return function(T)
 			end
 		)
 
+		it(
+			"phare de MON ranch (lot B4, D23) : une de mes 4 lumières dans la lanterne, quota inchangé, rendue",
+			function()
+				local c = client({ before = fixture })
+				local V2 = c.h:require("StarterPlayer.StarterPlayerScripts.Client.Render.RanchV2")
+				local lantern = MockInstance.new("Part")
+				lantern.Name = "lhLantern"
+				lantern.Position = Vector3.new(330, 22, 80)
+				lantern.CFrame = CFrame.new(330, 22, 80)
+				local lanternOf = {}
+				V2.lanternPart = function(slot)
+					return lanternOf[slot]
+				end
+				c.LC.refresh()
+				local ranches = c.h.game.Workspace.Wobbleton.Ranches
+				local function lights(slot)
+					local out = {}
+					for _, d in ranches[tostring(slot)]:GetDescendants() do
+						if d.ClassName == "PointLight" then
+							table.insert(out, d)
+						end
+					end
+					return out
+				end
+				expect(#lights(3)).toBe(4)
+				-- interrupteurs coupés (aucun phare) : rien ne bouge
+				for _, light in lights(3) do
+					expect(light.Parent.ClassName).toBe("Part")
+				end
+				-- phare dessiné sur le ranch voisin (4) : jamais sa lumière (Neon seulement)
+				lanternOf[4] = lantern
+				c.LC.refresh()
+				for _, light in lights(4) do
+					expect(light.Parent.ClassName).toBe("Part")
+					expect(light.Enabled).toBe(false)
+				end
+				-- mon phare (palier 4, détail complet) : une lumière de mon ranch placée dans la lanterne
+				lanternOf[3] = lantern
+				c.LC.refresh()
+				local moved = {}
+				for _, light in lights(3) do
+					if light.Parent.ClassName == "Attachment" then
+						table.insert(moved, light)
+					end
+				end
+				expect(#moved).toBe(1)
+				local attachment = moved[1].Parent
+				expect(attachment.Name).toBe("LighthouseLight")
+				local holder = attachment.Parent
+				expect(holder.ClassName).toBe("Part")
+				expect(((holder.CFrame * attachment.Position) - lantern.Position).Magnitude < 1e-3).toBe(true)
+				-- aucune lumière de plus, quota des 4 lumières du ranch inchangé
+				local total = 0
+				for _, d in c.h.game.Workspace:GetDescendants() do
+					if d.ClassName == "PointLight" then
+						total += 1
+					end
+				end
+				expect(total).toBe(4 + 4 + 20)
+				expect(c.LC.stats().ranchLightsOn).toBe(4)
+				-- deuxième évaluation : rien ne change (même lumière, même attache)
+				c.LC.refresh()
+				expect(moved[1].Parent).toBe(attachment)
+				-- le phare s'en va (palier perdu, interrupteur coupé, détail réduit) : lumière rendue
+				lanternOf[3] = nil
+				c.LC.refresh()
+				expect(moved[1].Parent).toBe(holder)
+				expect(attachment.Parent).toBe(nil)
+				expect(c.LC.stats().ranchLightsOn).toBe(4)
+				-- je perds mon ranch avec le phare dessiné : rendue aussi
+				lanternOf[3] = lantern
+				c.LC.refresh()
+				expect(moved[1].Parent.ClassName).toBe("Attachment")
+				c.h.localPlayer:SetAttribute("RanchSlot", 0)
+				c.LC.refresh()
+				expect(moved[1].Parent).toBe(holder)
+				expect(c.LC.stats().ranchLightsOn).toBe(0)
+				zeroLog(c.h)
+			end
+		)
+
 		it("qualité réduite : lumières coupées au-delà de 60 studs de la caméra", function()
 			local c = client({
 				before = fixture,

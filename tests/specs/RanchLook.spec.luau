@@ -750,6 +750,76 @@ return function(T)
 		end)
 	end)
 
+	describe("RanchLook › Jelly Moon des lampions (étape 4)", function()
+		it("moonLit = LightingController.resolve(…).moon sur 6 000 instants et charges tirés", function()
+			local hc = Harness.new({ mode = "client" })
+			local LC = hc:require("StarterPlayer.StarterPlayerScripts.Client.Controllers.LightingController")
+			local EventClock = h:require(L .. "Logic.EventClock")
+			local rng = newRng(4242)
+			local t0 = 1796724120
+			local active, total = 0, 0
+			for _ = 1, 6000 do
+				local t = t0 + rng:NextNumber(0, 7 * 86400)
+				local roll = rng:NextInteger(1, 8)
+				local payload
+				if roll == 1 then
+					payload = nil
+				elseif roll == 2 then
+					payload = { features = "x" }
+				else
+					local jm = ({ true, false, nil, "true" })[rng:NextInteger(1, 4)]
+					local features = { jellyMoon = jm }
+					local moon = nil
+					if rng:NextInteger(1, 3) > 1 then
+						moon = {
+							active = rng:NextInteger(1, 4) > 1,
+							endsAt = t + rng:NextNumber(-600, 600),
+						}
+					end
+					payload = { features = features, moon = moon }
+				end
+				local want = LC.resolve(payload, t, false, t).moon
+				expect(RanchLook.moonLit(payload, t)).toBe(want)
+				total += 1
+				if want then
+					active += 1
+				end
+			end
+			-- les deux cas se présentent (séances actives et calme)
+			expect(active > 100 and active < total).toBe(true)
+			-- l'horloge des événements seule (pas de charge moon) : même règle
+			local inMoon = nil
+			for k = 0, 2000 do
+				local t = t0 + k * 300
+				if EventClock.moon(t).active then
+					inMoon = t
+					break
+				end
+			end
+			expect(inMoon ~= nil).toBe(true)
+			expect(RanchLook.moonLit({ features = { jellyMoon = true } }, inMoon)).toBe(true)
+			expect(RanchLook.moonLit({ features = { jellyMoon = false } }, inMoon)).toBe(false)
+			for _, bad in HOSTILE do
+				expect(RanchLook.moonLit(bad, bad)).toBe(false)
+				-- heure de fin illisible : la séance ne compte pas, seule l'horloge des événements décide
+				expect(
+					RanchLook.moonLit(
+						{ features = { jellyMoon = true }, moon = { active = true, endsAt = bad } },
+						t0
+					)
+				).toBe(
+					if type(bad) == "number"
+							and bad == bad
+							and bad > t0
+						then bad ~= math.huge or EventClock.moon(t0).active
+						else EventClock.moon(t0).active
+				)
+			end
+			expect(#hc.errors).toBe(0)
+			expect(#hc:warnings()).toBe(0)
+		end)
+	end)
+
 	describe("RanchLook › entrées hostiles", function()
 		it("aucune erreur, valeurs finies, aspect sûr par défaut", function()
 			for _, v in HOSTILE do

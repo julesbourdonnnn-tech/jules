@@ -27,6 +27,7 @@ local ApiAudit = require("../harness/ApiAudit")
 local Vector3 = roblox.Vector3
 local CFrame = roblox.CFrame
 local Color3 = roblox.Color3
+local Vector2 = roblox.Vector2
 local Enum = roblox.Enum
 
 local T0 = 1796724120
@@ -326,6 +327,17 @@ return function(T)
 		part(gate, "LanternL", { Material = Enum.Material.Neon })
 		part(r, "PenFloor", { Color = P.World.penFloor, Material = Enum.Material.SmoothPlastic })
 		part(r, "Cushion", {})
+		-- étape 4 : Cuve, Bassin, étagère (pièces que la v2.0 peint ou habille)
+		local vat = folder(r, "Vat", "Model")
+		part(vat, "Base", { Color = P.World.vatBase, Material = Enum.Material.SmoothPlastic })
+		part(vat, "Glass", { Color = P.World.glass, Material = Enum.Material.Glass, Transparency = 0.5 })
+		part(vat, "Jelly", { Color = P.World.vatJelly, Material = Enum.Material.Neon })
+		part(vat, "Lid", { Color = P.World.vatBase, Material = Enum.Material.SmoothPlastic })
+		part(vat, "Pipe", { Color = P.World.vatBase, Material = Enum.Material.SmoothPlastic })
+		local shelf = folder(r, "Shelf", "Model")
+		for _, name in { "Back", "Plank1", "Plank2", "Plank3", "SideL", "SideR" } do
+			part(shelf, name, { Color = P.World.shelf, Material = Enum.Material.SmoothPlastic })
+		end
 		return r
 	end
 
@@ -1299,6 +1311,698 @@ return function(T)
 					expect(c.count(2, "cushion") + c.count(4, "cushion")).toBe(0)
 					c.clean()
 				end
+			end
+		)
+	end)
+	-- =========================================================================================
+	-- Étape 4 : paliers, éléments du Record R, accessoires, Monuments, Déco perso (partie 2)
+	-- =========================================================================================
+
+	-- Ranch public au meilleur squishy présent (silhouette), Cuve et Bassin construits
+	local BEST = { s = 1, m = 0, z = 60, zg = 0 }
+	local function ranch4(slot, over)
+		local r = ranchV2(slot, { best = BEST, vat = true, pool = true })
+		for k, v in over or {} do
+			r[k] = v
+		end
+		return r
+	end
+	local function all16b(over)
+		local out = {}
+		for slot = 1, 16 do
+			out[tostring(slot)] = ranch4(slot, over and over(slot))
+		end
+		return out
+	end
+	-- 12 objets de Déco perso valides : 8 petits (emplacements 1 … 8) puis 4 grands (9 … 12)
+	local DECO12 = "1,2,3,4,5,7,9,10,6,8,12,14"
+	local FULL4 = {
+		TapisTier = 6,
+		BestR = 50,
+		SplorchReady = true,
+		Monuments = 10,
+		DecoPerso = DECO12,
+		GiantTier = 3,
+	}
+	local SYSTEMS4 =
+		{ "tapis", "plinths", "record", "pot", "tiers", "house", "silhouette", "monuments", "decoPerso" }
+
+	describe(
+		"RanchRenderer_v2 › étape 4 : défaut de l'étape 3 (quota de particules du Tapis doré)",
+		function()
+			it(
+				"Tapis doré retiré puis remis 4 fois : les étincelles reviennent, leur quota est rendu",
+				function()
+					local c = clientV2()
+					c.snapshot(all16())
+					c.at(3, Vector3.new(0, 0, 30))
+					for _ = 1, 4 do
+						c.attrs(3, { TapisTier = 4 })
+						c.run(0.6)
+						expect(emitters(c.h)).toBe(1)
+						expect(c.VB.used("tapis", "particles")).toBe(2)
+						c.unset(3, { "TapisTier" })
+						c.run(0.6)
+						expect(emitters(c.h)).toBe(0)
+						expect(c.VB.used("tapis", "particles")).toBe(0)
+					end
+					c.clean()
+				end
+			)
+		end
+	)
+
+	describe("RanchRenderer_v2 › étape 4 : éléments à leur Record R ou à leur attribut", function()
+		it(
+			"chaque élément apparaît exactement à son Record R, jamais avant (R 0 … 20, 25 … 50)",
+			function()
+				local c = clientV2()
+				c.snapshot(all16b())
+				c.at(3, Vector3.new(0, 0, 30))
+				local Visuals = c.h:require("ReplicatedStorage.Shared.Config.Visuals")
+				local Format = c.h:require(CLIENT .. "UI.Format")
+				local m = c.models[3]
+				local base = { Base = m.Vat.Base.Color, Back = m.Shelf.Back.Color, Pot = m.Pot.Body.Color }
+				local rs = {}
+				for r = 0, 20 do
+					table.insert(rs, r)
+				end
+				for _, r in { 24, 25, 30, 35, 40, 49, 50 } do
+					table.insert(rs, r)
+				end
+				for _, r in rs do
+					c.attrs(3, { TapisTier = 1, BestR = r })
+					c.run(0.6)
+					local tier = 0
+					for _, at in Visuals.RanchTiersAt do
+						if r >= at then
+							tier += 1
+						end
+					end
+					local function has(prefix)
+						return c.count(3, prefix) > 0
+					end
+					expect(has("archSeg")).toBe(tier >= 1)
+					expect(has("tower")).toBe(tier >= 2)
+					expect(has("balcony")).toBe(tier >= 3)
+					expect(has("lh")).toBe(tier >= 4)
+					expect(has("dome")).toBe(tier >= 5)
+					expect(has("crownBand")).toBe(tier >= 6)
+					local stars = 0
+					for _, at in Visuals.CrownStarsAt do
+						if r >= at then
+							stars += 1
+						end
+					end
+					expect(c.count(3, "crownStar")).toBe(if tier >= 6 then stars else 0)
+					if tier >= 6 then
+						expect(c.parts(3).crownBand1.Material).toBe(
+							if r >= Visuals.RainbowCrownAt then Enum.Material.Neon else Enum.Material.Foil
+						)
+					end
+					-- Cuve : anneaux 1 … 8, agitateur arc-en-ciel au R4, buses 0 … 5, dorée au R7
+					local vat = c.Look.vat(r)
+					expect(c.count(3, "vatRing")).toBe(vat.rings)
+					expect(c.count(3, "vatNozzle")).toBe(vat.nozzles)
+					expect(c.count(3, "vatBlade")).toBe(3)
+					expect(c.parts(3).vatBlade1.Material).toBe(
+						if r >= 4 then Enum.Material.Neon else Enum.Material.SmoothPlastic
+					)
+					expect(m.Vat.Base.Color).toBe(if r >= 7 then c.Look.GOLD else base.Base)
+					expect(m.Vat.Glass.Material).toBe(Enum.Material.Glass) -- le verre n'est jamais peint
+					-- Pot : cuivre, argent (R2), doré (R6), cristal (R16)
+					local pot = c.Look.potLook(c.Look.potMaterial(r))
+					expect(m.Pot.Body.Color).toBe(if pot then pot.color else base.Pot) -- doré : l'aspect de la v1.3
+					expect(has("house")).toBe(r >= 2)
+					expect(c.count(3, "fountainJet")).toBe(if r >= 9 then 3 else 0)
+					expect(c.count(3, "lantern")).toBe(if r >= 12 then 8 else 0)
+					expect(c.count(3, "gateBand")).toBe(if r >= 13 then 7 else 0)
+					expect(c.count(3, "geyser")).toBe(if r >= 17 then 3 else 0)
+					expect(c.count(3, "frame")).toBe(if r >= 18 then 8 else 0)
+					expect(m.Shelf.Back.Color).toBe(if r >= 19 then c.Look.GOLD else base.Back)
+					-- chiffre romain du Record R sur la plaque de l'arche (sorte « fit », jamais TextScaled)
+					if tier >= 1 then
+						local label = c.parts(3).archPlate.Numeral.Roman
+						expect(label.Text).toBe(Format.roman(r))
+						expect(label.TextScaled).toBe(false)
+					end
+				end
+				c.clean()
+			end
+		)
+
+		it(
+			"attributs : prêt (anneau rose + lanterne), Squishy-Soleil (GiantTier ≥ 3), Monuments n, Déco perso",
+			function()
+				local c = clientV2()
+				c.snapshot(all16b())
+				c.at(3, Vector3.new(0, 0, 30))
+				local Tiers = c.h:require(CLIENT .. "Render.RanchTiers")
+				c.attrs(3, { TapisTier = 1, BestR = 10 })
+				c.run(0.6)
+				expect(c.count(3, "readyRing")).toBe(0)
+				expect(c.parts(3).lhLantern.Color).toBe(Tiers.LANTERN)
+				c.attrs(3, { SplorchReady = true })
+				c.run(0.6)
+				expect(c.count(3, "readyRing")).toBe(8)
+				expect(c.parts(3).lhLantern.Color).toBe(Tiers.READY)
+				c.attrs(3, { SplorchReady = false })
+				c.run(0.6)
+				expect(c.count(3, "readyRing")).toBe(0)
+				expect(c.parts(3).lhLantern.Color).toBe(Tiers.LANTERN)
+				for _, g in { 0, 1, 2, 3, 7 } do
+					c.attrs(3, { GiantTier = g })
+					c.run(0.6)
+					expect(c.count(3, "sun")).toBe(if g >= 3 then 9 else 0)
+				end
+				for _, n in { 0, 1, 4, 10, 11, -3, "x" } do
+					c.attrs(3, { Monuments = n })
+					c.run(0.6)
+					local want = if type(n) == "number" then math.clamp(n, 0, 10) else 0
+					local total = 0
+					for k = 1, want do
+						total += c.h:require(CLIENT .. "Render.MonumentKit").count(k, "full")
+					end
+					expect(c.count(3, "mon")).toBe(total)
+				end
+				-- sans silhouette (best.s = 0) : ni cadre, ni anneau, ni soleil (rien à entourer)
+				c.attrs(3, { BestR = 20, SplorchReady = true, GiantTier = 3 })
+				c.patch(3, { best = { s = 0, m = 0, z = 0, zg = 0 } })
+				c.run(0.6)
+				expect(c.count(3, "frame") + c.count(3, "readyRing") + c.count(3, "sun")).toBe(0)
+				c.clean()
+			end
+		)
+	end)
+	describe("RanchRenderer_v2 › étape 4 : retour à la v1.3, interrupteurs séparés", function()
+		it(
+			"tout retiré en direct : aucune instance v2.0, Cuve, étagère et Pot de la v1.3 exacts",
+			function()
+				local c = clientV2()
+				local before = serverLook(c.models[3])
+				c.snapshot(all16b())
+				c.at(3, Vector3.new(0, 0, 30))
+				c.attrs(3, FULL4)
+				c.run(1)
+				expect(c.count(3, "tower") > 0 and c.count(3, "mon") > 0 and c.count(3, "deco") > 0).toBe(
+					true
+				)
+				expect(c.models[3].Shelf.Back.Color).toBe(c.Look.GOLD)
+				c.unset(3, { "TapisTier", "BestR", "SplorchReady", "Monuments", "DecoPerso", "GiantTier" })
+				c.run(1)
+				expect(c.folder(3)).toBe(nil)
+				expect(
+					c.h.workspace:FindFirstChild("ClientWorld") == nil
+						or c.h.workspace.ClientWorld:FindFirstChild("RanchesV2") == nil
+				).toBe(true)
+				expect(sameLook(before, serverLook(c.models[3]))).toBe("ok")
+				expect(emitters(c.h)).toBe(0)
+				expect(c.V2.on).toBe(false)
+				c.clean()
+			end
+		)
+
+		it(
+			"interrupteurs séparés : Monuments ou Déco perso seuls, sans palier ; GiantTier ou SplorchReady seuls : rien",
+			function()
+				local c = clientV2()
+				c.snapshot(all16b())
+				c.at(3, Vector3.new(0, 0, 30))
+				-- attributs d'autres lots sans interrupteur de dessin : rien de la v2.0
+				c.attrs(3, { GiantTier = 4, SplorchReady = true, BestR = 30 })
+				c.run(1)
+				expect(c.V2.on).toBe(false)
+				expect(c.steps()).toBe(0) -- pas même une image v2.0
+				expect(c.folder(3)).toBe(nil)
+				-- Monuments seul (RanchTiers coupé) : les Monuments, aucun palier ni élément du Record R
+				c.attrs(3, { Monuments = 3 })
+				c.run(1)
+				expect(c.count(3, "mon") > 0).toBe(true)
+				expect(c.count(3, "tower") + c.count(3, "vat") + c.count(3, "readyRing") + c.count(3, "sun")).toBe(
+					0
+				)
+				-- Déco perso seule
+				c.unset(3, { "Monuments" })
+				c.attrs(3, { DecoPerso = DECO12 })
+				c.run(1)
+				expect(c.count(3, "deco") > 0).toBe(true)
+				expect(c.count(3, "mon") + c.count(3, "tower")).toBe(0)
+				c.unset(3, { "DecoPerso" })
+				c.run(1)
+				expect(c.folder(3)).toBe(nil)
+				c.clean()
+			end
+		)
+	end)
+
+	describe("RanchRenderer_v2 › étape 4 : lampions, signal « prêt », lumière du phare", function()
+		it("lampions (R12) en Neon seulement pendant la Jelly Moon (interrupteur jellyMoon)", function()
+			local c = clientV2()
+			local WSC = c.h:require(CLIENT .. "Controllers.WorldStateController")
+			local event = nil
+			WSC.event = function()
+				return event
+			end
+			c.snapshot(all16b())
+			c.at(3, Vector3.new(0, 0, 30))
+			c.attrs(3, { TapisTier = 1, BestR = 12 })
+			c.run(1)
+			local Tiers = c.h:require(CLIENT .. "Render.RanchTiers")
+			local function lit()
+				local n = 0
+				for i = 1, 8 do
+					local p = c.parts(3)["lantern" .. i]
+					if p.Material == Enum.Material.Neon then
+						expect(p.Color).toBe(Tiers.LIT)
+						n += 1
+					else
+						expect(p.Color).toBe(Tiers.UNLIT)
+					end
+				end
+				return n
+			end
+			expect(lit()).toBe(0)
+			local now = c.Clock.now()
+			event = { features = { jellyMoon = true }, moon = { active = true, endsAt = now + 300 } }
+			c.run(1)
+			expect(lit()).toBe(8)
+			-- interrupteur coupé en direct : éteints, même si la séance court encore
+			event = { features = { jellyMoon = false }, moon = { active = true, endsAt = now + 300 } }
+			c.run(1)
+			expect(lit()).toBe(0)
+			-- fin de la séance : éteints
+			event = { features = { jellyMoon = true }, moon = { active = true, endsAt = c.Clock.now() - 1 } }
+			c.run(1)
+			expect(lit()).toBe(c.Look.moonLit(event, c.Clock.now()) and 8 or 0)
+			expect(c.count(3, "lantern")).toBe(8) -- aucune pièce recréée, seulement repeinte
+			c.clean()
+		end)
+
+		it(
+			"anneau « prêt » : au plus 3 changements de couleur par seconde ; rose fixe en Mouvement réduit",
+			function()
+				local c = clientV2()
+				c.snapshot(all16b())
+				c.at(3, Vector3.new(0, 0, 30))
+				c.attrs(3, { TapisTier = 1, BestR = 10, SplorchReady = true })
+				c.run(1)
+				local Tiers = c.h:require(CLIENT .. "Render.RanchTiers")
+				local ring = c.parts(3).readyRing1
+				local changes = 0
+				local conn = ring:GetPropertyChangedSignal("Color"):Connect(function()
+					changes += 1
+				end)
+				c.run(4)
+				expect(changes >= 4 and changes <= 3 * 4 + 1).toBe(true)
+				-- Mouvement réduit : rose fixe, plus aucun changement
+				c.flags.reduced = true
+				c.run(0.5)
+				expect(ring.Color).toBe(Tiers.READY)
+				changes = 0
+				c.run(3)
+				expect(changes).toBe(0)
+				-- la lanterne du phare : rose, immobile en Mouvement réduit
+				local lantern = c.parts(3).lhLantern
+				local cf = lantern.CFrame
+				c.run(1)
+				expect(lantern.CFrame).toBe(cf)
+				expect(lantern.Color).toBe(Tiers.READY)
+				conn:Disconnect()
+				c.clean()
+			end
+		)
+
+		it(
+			"lanterne du phare (D23) : celle de MON ranch en détail complet au palier 4, rien sinon",
+			function()
+				local c = clientV2()
+				c.snapshot(all16b())
+				c.at(3, Vector3.new(0, 0, 30))
+				c.attrs(3, { TapisTier = 1, BestR = 9 })
+				c.attrs(4, { TapisTier = 1, BestR = 15 })
+				c.run(1)
+				expect(c.V2.lanternPart(3)).toBe(nil) -- palier 3 seulement
+				expect(c.V2.lanternPart(4)).toBe(c.parts(4).lhLantern) -- voisin : Neon, sans lumière (LightingController ne prend que le mien)
+				c.attrs(3, { BestR = 10 })
+				c.run(1)
+				expect(c.V2.lanternPart(3)).toBe(c.parts(3).lhLantern)
+				-- je pars loin (ranch 10) : mon ranch passe en détail réduit, plus de lanterne complète
+				c.at(10, Vector3.new(0, 0, 36))
+				c.run(1)
+				expect(c.V2.lanternPart(3)).toBe(nil)
+				c.at(3, Vector3.new(0, 0, 36))
+				c.run(1)
+				expect(c.V2.lanternPart(3) ~= nil).toBe(true)
+				c.unset(3, { "TapisTier" })
+				c.run(1)
+				expect(c.V2.lanternPart(3)).toBe(nil)
+				expect(c.V2.lanternPart(0 / 0)).toBe(nil)
+				c.clean()
+			end
+		)
+
+		it(
+			"étincelles des buses (≤ 5) sur une naissance mutée de MON ranch, rendues après 0,8 s",
+			function()
+				local c = clientV2()
+				c.snapshot(all16b())
+				c.at(3, Vector3.new(0, 0, 30))
+				c.attrs(3, { TapisTier = 1, BestR = 5 }) -- 5 buses au Record R 5
+				c.run(1)
+				expect(emitters(c.h)).toBe(0) -- aucun émetteur permanent
+				local function hatch(m)
+					c.h:fireClient("ReplicatedStorage.Remotes.Celebrate", {
+						kind = "hatch",
+						data = {
+							uid = "u",
+							species = 1,
+							rarity = 1,
+							mutation = m,
+							oneIn = 1,
+							isNew = false,
+							scripted = false,
+							at = "pen",
+						},
+					})
+					c.h:settle(1)
+				end
+				hatch(0)
+				expect(emitters(c.h)).toBe(0) -- naissance sans mutation : rien
+				hatch(3)
+				expect(emitters(c.h)).toBe(5)
+				expect(c.VB.used("record", "particles")).toBe(5)
+				hatch(4) -- quota plein : pas d'étincelle de plus, jamais d'erreur
+				expect(emitters(c.h)).toBe(5)
+				c.run(1)
+				expect(emitters(c.h)).toBe(0)
+				expect(c.VB.used("record", "particles")).toBe(0)
+				-- Graphismes légers : aucune étincelle
+				c.flags.low = true
+				c.h:require(CLIENT .. "Controllers.QualityController").Changed:Fire(true)
+				c.run(0.5)
+				hatch(3)
+				expect(emitters(c.h)).toBe(0)
+				c.clean()
+			end
+		)
+	end)
+
+	describe("RanchRenderer_v2 › étape 4 : Déco perso hostile, cascades, crochets de B5", function()
+		it("chaînes DecoPerso hostiles : seuls les objets valides sont dessinés, sans trace", function()
+			local c = clientV2()
+			c.snapshot(all16b())
+			c.at(3, Vector3.new(0, 0, 30))
+			local Deco = c.h:require(CLIENT .. "Render.DecoKit")
+			local cases = {
+				"",
+				"x",
+				DECO12 .. ",15",
+				"-1,2,-3",
+				"1e9",
+				"1000000000,2",
+				"1,1,1,1",
+				"6",
+				"1,,3,,,,,,6",
+				",,,,,,,,6,8",
+				string.rep("9", 200),
+				"0,0,0,0,0,0,0,0,0,0,0,0",
+				DECO12,
+			}
+			for _, attr in cases do
+				c.attrs(3, { DecoPerso = attr })
+				c.run(0.6)
+				local want = 0
+				for _, n in c.Look.decoPerso(attr) do
+					if n ~= 0 then
+						want += Deco.count(n, "full")
+					end
+				end
+				expect(c.count(3, "deco")).toBe(want)
+			end
+			-- un attribut d'un autre type : aucun objet
+			c.attrs(3, { DecoPerso = 12 })
+			c.run(0.6)
+			expect(c.count(3, "deco")).toBe(0)
+			c.clean()
+		end)
+
+		it(
+			"premier passage : cascade et ElementBuilt ; chargement, retour au ranch, nouveau propriétaire : rien",
+			function()
+				local built = {}
+				local c = clientV2({
+					attrs = { [3] = { TapisTier = 1, BestR = 9, Monuments = 0, DecoPerso = "" } },
+				})
+				c.RR.ElementBuilt:Connect(function(slot, id)
+					table.insert(built, slot .. ":" .. id)
+				end)
+				c.snapshot(all16b())
+				c.at(3, Vector3.new(0, 0, 30))
+				c.run(1)
+				expect(c.BC.stats().pushed).toBe(0) -- chargement : posé sans animation
+				expect(#built).toBe(0)
+				c.attrs(3, { BestR = 10 }) -- le phare se construit
+				c.run(0.2)
+				expect(c.BC.stats().pushed).toBe(1)
+				expect(table.concat(built, ",")).toBe("3:tier4.jellyLighthouse")
+				c.run(2)
+				expect(c.parts(3).lh1.CFrame).toBe(
+					c.h
+						:require(CLIENT .. "Render.RanchTiers")
+						.tier(3, 4, { color = Color3.new(), ready = false, stars = 0, rainbow = false })[1].cf
+				)
+				c.attrs(3, { Monuments = 1 })
+				c.run(0.2)
+				expect(built[2]).toBe("3:monument.1")
+				c.attrs(3, { DecoPerso = "1" })
+				c.run(0.2)
+				expect(built[3]).toBe("3:deco.1")
+				c.run(2)
+				local pushed = c.BC.stats().pushed
+				-- je pars au ranch 10 puis je reviens : détail changé, aucune cascade
+				c.at(10, Vector3.new(0, 0, 36))
+				c.run(1)
+				c.at(3, Vector3.new(0, 0, 36))
+				c.run(1)
+				expect(c.BC.stats().pushed).toBe(pushed)
+				-- nouveau propriétaire : posé tel quel
+				c.patch(3, { userId = 0 })
+				c.run(0.5)
+				c.patch(3, { userId = 1 })
+				c.run(1)
+				expect(c.BC.stats().pushed).toBe(pushed)
+				expect(#built).toBe(3)
+				-- crochets de B5 : détail et repère des éléments dessinés
+				expect(c.RR.detail(3)).toBe("full")
+				expect(c.RR.elementCFrame(3, "tier4.jellyLighthouse")).toBe(c.WL.v2Anchor(3, "lighthouse"))
+				expect(c.RR.elementCFrame(3, "monument.1")).toBe(c.WL.monumentSlot(3, 1))
+				expect(c.RR.elementCFrame(3, "monument.2")).toBe(nil)
+				expect(c.RR.elementCFrame(3, "tier6.floatingCrown")).toBe(nil)
+				expect(c.RR.elementCFrame(3, "nope")).toBe(nil)
+				c.clean()
+			end
+		)
+
+		it(
+			"chiffre romain : sorte « fit » qui tient dans la plaque jusqu'au Record R 400 (MaxR)",
+			function()
+				local Screens = require("../harness/Screens")
+				local c = clientV2()
+				Screens.realTextService()
+				c.snapshot(all16b())
+				c.at(3, Vector3.new(0, 0, 30))
+				c.attrs(3, { TapisTier = 1, BestR = 1 })
+				c.run(1)
+				local Text = c.h:require(CLIENT .. "UI.Text")
+				local Format = c.h:require(CLIENT .. "UI.Format")
+				local Balance = c.h:require("ReplicatedStorage.Shared.Config.Balance")
+				local gui = c.parts(3).archPlate.Numeral
+				local label = gui.Roman
+				expect(gui.SizingMode).toBe(Enum.SurfaceGuiSizingMode.FixedSize)
+				expect(gui.Face).toBe(Enum.NormalId.Front)
+				expect(Text.kind(label)).toBe("fit")
+				-- le moteur donne au libellé la taille de la toile (SizingMode FixedSize)
+				label.AbsoluteSize = gui.CanvasSize
+				c.h:settle(1)
+				local box = Vector2.new(gui.CanvasSize.X - 16, gui.CanvasSize.Y - 16)
+				local TextService = c.h.game.TextService
+				local worst = ""
+				for r = 1, Balance.Prestige.MaxR do
+					local text = Format.roman(r)
+					if #text > #worst then
+						worst = text
+					end
+					Text.raw(label, text)
+					local size = Text.displaySize(label)
+					expect(size >= 28).toBe(true)
+					local w = TextService:GetTextSize(text, size, Enum.Font.FredokaOne, Vector2.new(1e5, 1e5))
+					expect(w.X <= box.X + 0.5 and w.Y <= box.Y + 0.5).toBe(true)
+					expect(label.TextScaled).toBe(false)
+				end
+				expect(worst).toBe("CCCLXXXVIII")
+				c.clean()
+			end
+		)
+	end)
+
+	describe("RanchRenderer_v2 › étape 4 : idempotence, robot, 16 ranchs au maximum", function()
+		it(
+			"second rendu : rien de créé ni d'écrit (hors animations) ; un robot qui traverse ne change rien",
+			function()
+				local c = clientV2()
+				c.snapshot(all16b())
+				for slot = 1, 16 do
+					c.attrs(slot, FULL4)
+				end
+				c.at(3, Vector3.new(0, 0, 30))
+				c.run(1.5)
+				local function counts()
+					local out = {}
+					for slot = 1, 16 do
+						local n = 0
+						for _ in c.parts(slot) do
+							n += 1
+						end
+						out[slot] = n
+					end
+					return out
+				end
+				local ref = counts()
+				local n0 = instanceCount(c.h)
+				local renders = c.V2.stats().renders
+				local writes = 0
+				local watched = {}
+				-- pièces du serveur (Wobbleton) et décors v2.0 (ClientWorld) ; le personnage bouge, lui
+				local clientWorld = c.h.workspace:FindFirstChild("ClientWorld")
+				for _, d in c.h.workspace:GetDescendants() do
+					local world = d:IsDescendantOf(c.h.workspace.Wobbleton)
+						or (clientWorld ~= nil and d:IsDescendantOf(clientWorld))
+					if d.ClassName == "Part" and world then
+						table.insert(
+							watched,
+							d.Changed:Connect(function(prop)
+								if not (c.V2.isAnimated(d) and (prop == "CFrame" or prop == "Color")) then
+									writes += 1
+								end
+							end)
+						)
+					end
+				end
+				-- même état revu, puis un robot qui traverse son ranch dans tous les sens
+				c.patch(3, { tiles = { snack = 5, decor = 4, pens = 3, cozyBed = true, seen = 15 } })
+				c.V2.onQualityChanged()
+				c.attrs(3, { Monuments = 10, DecoPerso = DECO12 })
+				for _, z in { 2, 20, 50, 71 } do
+					for _, x in { -31, 0, 31 } do
+						c.at(3, Vector3.new(x, 0, z))
+						c.run(0.2)
+						expect(c.V2.current()).toBe(3)
+					end
+				end
+				c.at(3, Vector3.new(0, 0, -6))
+				c.run(0.5)
+				local now = counts()
+				for slot = 1, 16 do
+					expect(now[slot]).toBe(ref[slot])
+				end
+				expect(instanceCount(c.h)).toBe(n0)
+				expect(writes).toBe(0)
+				expect(c.V2.stats().renders).toBe(renders)
+				expect(c.BC.stats().pushed).toBe(0)
+				for _, conn in watched do
+					conn:Disconnect()
+				end
+				c.clean()
+			end
+		)
+
+		it(
+			"16 ranchs au maximum (Record R 50, Monuments 10, 12 Déco perso) : chaque système dans son budget",
+			function()
+				local c = clientV2()
+				c.snapshot(all16b())
+				for slot = 1, 16 do
+					c.attrs(slot, FULL4)
+				end
+				c.at(3, Vector3.new(0, 0, 30))
+				c.run(2)
+				local Deco = c.h:require(CLIENT .. "Render.DecoKit")
+				local st = c.VB.stats()
+				local v2 = c.V2.stats()
+				local sum = 0
+				for _, sys in SYSTEMS4 do
+					expect(st[sys].used <= st[sys].parts).toBe(true)
+					expect(st[sys].refused).toBe(0)
+					expect(v2[sys] <= c.VB.LIMITS[sys].parts).toBe(true)
+					sum += v2[sys]
+				end
+				expect(v2.parts).toBe(sum)
+				expect(c.VB.exceeded()).toBe(0)
+				expect(#metrics(c.h)).toBe(0)
+				-- détail : complet (2, 3, 4), réduit (les 13 autres)
+				expect(v2.tiers).toBe(3 * (86 + 4) + 13 * 9)
+				expect(v2.record).toBe(3 * (8 + 4 + 5 + 3 + 8 + 7 + 3))
+				expect(v2.house).toBe(3 * 6)
+				expect(v2.silhouette).toBe(3 * (8 + 8 + 9))
+				expect(v2.monuments).toBe(10 * 20 + 2 * 10 * 6 + 13 * 10)
+				local decoFull = 0
+				for _, n in c.Look.decoPerso(DECO12) do
+					decoFull += Deco.count(n, "full")
+				end
+				expect(v2.decoPerso).toBe(3 * decoFull + 13 * 4)
+				expect(v2.plinths).toBe(3 * 18 * 2)
+				-- les ranchs réduits : tour, phare, couronne réduits, silhouettes des Monuments et des grands objets
+				for slot = 5, 16 do
+					for name in c.parts(slot) do
+						local reduced = string.sub(name, 1, 3) == "far"
+							or string.sub(name, 1, 4) == "monF"
+							or string.match(name, "^deco%d+_%d+_far$") ~= nil
+						expect(reduced and name or "ok").toBe(name)
+					end
+					expect(c.count(slot, "far")).toBe(9)
+					expect(c.count(slot, "monF")).toBe(10)
+				end
+				-- voisins : Monuments à 6 pièces ; ranch courant : 20
+				expect(c.count(2, "monN")).toBe(60)
+				expect(c.count(3, "mon1_")).toBe(20)
+				c.clean()
+			end
+		)
+
+		it(
+			"API Roblox valide (ApiAudit) : paliers, plaque et chiffre, Monuments, Déco perso, étincelles",
+			function()
+				ApiAudit.start()
+				local ok, err = pcall(function()
+					local c = clientV2()
+					c.snapshot(all16b())
+					c.at(3, Vector3.new(0, 0, 30))
+					c.attrs(3, FULL4)
+					c.attrs(4, FULL4)
+					c.run(1)
+					c.h:fireClient("ReplicatedStorage.Remotes.Celebrate", {
+						kind = "hatch",
+						data = {
+							uid = "u",
+							species = 1,
+							rarity = 1,
+							mutation = 2,
+							oneIn = 1,
+							isNew = false,
+							scripted = false,
+							at = "pen",
+						},
+					})
+					c.h:settle(1)
+					c.attrs(3, { BestR = 49 })
+					c.run(1)
+					c.attrs(3, { BestR = 50, Monuments = 9 })
+					c.run(1.5)
+					c.clean()
+				end)
+				local issues = ApiAudit.stop()
+				expect(ok and true or err).toBe(true)
+				expect(table.concat(issues, "\n")).toBe("")
 			end
 		)
 	end)
