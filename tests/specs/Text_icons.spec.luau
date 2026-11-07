@@ -234,6 +234,78 @@ return function(T)
 			end
 		)
 
+		-- lot B4, étape 5 (captures du groupe « world ») : la couronne et son liseré remplissaient toute la
+		-- place réservée (5 espaces de Fredoka One, 1,05 de la taille du texte, pour un dessin de 1,01) :
+		-- elle touchait le chiffre qui la suit (« ♛400 » du panneau des ranchs). Liseré compris, couronne
+		-- et goutte laissent au moins 0,1 de la taille du texte d'air de chaque côté, dans les deux polices
+		-- du thème (Fredoka One, Luckiest Guy).
+		it(
+			"couronne et goutte : le dessin, liseré compris, laisse de l'air avant et après (≥ 0,1 de la taille)",
+			function()
+				local c = setup()
+				local TextService = c.h.game:GetService("TextService")
+				local function width(text, size, font)
+					return TextService:GetTextSize(text, size, font, roblox.Vector2.new(1e5, 1e5)).X
+				end
+				-- étendue horizontale du liseré (la couche la plus large) autour du centre de l'icône :
+				-- rectangles arrondis tournés (pointes de la couronne et de la goutte à 45°)
+				local function extent(icon)
+					local s = icon.Size.X.Offset
+					local lo, hi = math.huge, -math.huge
+					for _, part in icon.Edge:GetChildren() do
+						local a, b = part.Size.X.Scale * s, part.Size.Y.Scale * s
+						local corner = part:FindFirstChildOfClass("UICorner")
+						local rho = if corner then corner.CornerRadius.Scale * math.min(a, b) else 0
+						local t = math.rad(part.Rotation)
+						local half = (a / 2 - rho) * math.abs(math.cos(t))
+							+ (b / 2 - rho) * math.abs(math.sin(t))
+							+ rho
+						local cx = (part.Position.X.Scale - 0.5) * s
+						lo = math.min(lo, cx - half)
+						hi = math.max(hi, cx + half)
+					end
+					return lo, hi
+				end
+				local fonts = {
+					{ name = "Title", face = c.Theme.Fonts.Title, enum = Enum.Font.FredokaOne },
+					{ name = "Stamp", face = c.Theme.Fonts.Stamp, enum = Enum.Font.LuckiestGuy },
+				}
+				for _, font in fonts do
+					for _, marker in { c.Text.CROWN, c.Text.DROP } do
+						for _, size in { 20, 32, 48 } do
+							local l = label(c)
+							l.FontFace = font.face
+							c.Text.style(l, "label", size)
+							c.h:settle(1)
+							c.Text.raw(l, "A" .. marker .. "4")
+							Layout.apply(c.h)
+							local icon = c.Text.icons(l)[1]
+							local lo, hi = extent(icon)
+							local x = icon.Position.X.Offset
+							local before = width("A", l.TextSize, font.enum)
+							local after = width(string.sub(l.Text, 1, #l.Text - 1), l.TextSize, font.enum)
+							local air = 0.1 * l.TextSize
+							expect({
+								font = font.name,
+								icon = icon:GetAttribute("Icon"),
+								size = size,
+								airBefore = x + lo - before >= air,
+								airAfter = after - (x + hi) >= air,
+							}).toEqual({
+								font = font.name,
+								icon = icon:GetAttribute("Icon"),
+								size = size,
+								airBefore = true,
+								airAfter = true,
+							})
+							l:Destroy()
+						end
+					end
+				end
+				clean(c)
+			end
+		)
+
 		it("Glyph.crown et Glyph.drop : tailles hostiles bornées, jamais d'erreur", function()
 			local c = setup()
 			for _, size in { 0 / 0, -5, 0, 4, 1e9, 48 } do

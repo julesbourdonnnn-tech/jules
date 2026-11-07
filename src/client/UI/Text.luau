@@ -654,12 +654,17 @@ Text.STAR = "{*}"
 -- ranchs, « ♛ » hors des polices) et la goutte du halo (plaque du titre) : UI/Glyph.crown, Glyph.drop
 Text.CROWN = "{^}"
 Text.DROP = "{~}"
-local ICONS: { { marker: string, icon: string } } = {
+-- Place réservée (en tailles du texte) : l'étoile (lot B1) garde l'arrondi au plus proche de ICON_EM ;
+-- la couronne et la goutte réservent AU MOINS `atLeast` (arrondi au-dessus, quelle que soit la police) :
+-- leur dessin liseré compris (couronne 1,01, pointes à 45° ; goutte 0,69) plus 0,1 d'air de chaque
+-- côté. Captures du lot B4 : avec 5 espaces de Fredoka One (1,05), la couronne touchait « 400 ».
+type IconDef = { marker: string, icon: string, atLeast: number? }
+local ICONS: { IconDef } = {
 	{ marker = Text.STAR, icon = "star" },
-	{ marker = Text.CROWN, icon = "crown" },
-	{ marker = Text.DROP, icon = "drop" },
+	{ marker = Text.CROWN, icon = "crown", atLeast = 1.21 },
+	{ marker = Text.DROP, icon = "drop", atLeast = 0.9 },
 }
-local ICON_EM = 1.1 -- largeur réservée à l'icône (em) : un peu d'air de chaque côté
+local ICON_EM = 1.1 -- largeur réservée à l'étoile (em) : un peu d'air de chaque côté
 local ICON_SIZE = 0.9 -- taille de l'icône (em)
 
 type Mark = { prefix: string, count: number, icon: string }
@@ -699,17 +704,26 @@ local function spaceWidth(size: number, font: Enum.Font): number
 	return if w > 0.5 then w else size * 0.25
 end
 
--- Premier repère d'icône de `text` à partir de l'octet 1 : position, longueur, sorte d'icône
-local function nextIcon(text: string): (number?, number, string)
+-- Premier repère d'icône de `text` à partir de l'octet 1 : position et définition de l'icône
+local function nextIcon(text: string): (number?, IconDef?)
 	local best: number? = nil
-	local len, icon = 0, ""
+	local found: IconDef? = nil
 	for _, def in ICONS do
 		local i = string.find(text, def.marker, 1, true)
 		if i ~= nil and (best == nil or i < best) then
-			best, len, icon = i, #def.marker, def.icon
+			best, found = i, def
 		end
 	end
-	return best, len, icon
+	return best, found
+end
+
+-- Nombre d'espaces réservés à l'icône `def` (avance d'une espace `sw` à la taille `size`)
+local function iconSpaces(def: IconDef, size: number, sw: number): number
+	local atLeast = def.atLeast
+	if atLeast ~= nil then
+		return math.max(1, math.ceil(atLeast * size / sw - 1e-6))
+	end
+	return math.max(1, math.floor(ICON_EM * size / sw + 0.5))
 end
 
 -- Remplace chaque repère par des espaces de la largeur de l'icône ; rend le texte et les repères
@@ -718,21 +732,21 @@ local function expandIcons(label: TextObject, text: string): (string, { Mark }?)
 		return text, nil
 	end
 	local size = shownSize(label)
-	local count = math.max(1, math.floor(ICON_EM * size / spaceWidth(size, enumFont(label)) + 0.5))
-	local pad = string.rep(" ", count)
+	local sw = spaceWidth(size, enumFont(label))
 	local out: { string } = {}
 	local marks: { Mark } = {}
 	local rest = text
 	while true do
-		local i, len, icon = nextIcon(rest)
-		if i == nil then
+		local i, def = nextIcon(rest)
+		if i == nil or def == nil then
 			table.insert(out, rest)
 			break
 		end
+		local count = iconSpaces(def, size, sw)
 		table.insert(out, string.sub(rest, 1, i - 1))
-		table.insert(marks, { prefix = table.concat(out), count = count, icon = icon })
-		table.insert(out, pad)
-		rest = string.sub(rest, i + len)
+		table.insert(marks, { prefix = table.concat(out), count = count, icon = def.icon })
+		table.insert(out, string.rep(" ", count))
+		rest = string.sub(rest, i + #def.marker)
 	end
 	return table.concat(out), marks
 end

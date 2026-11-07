@@ -1955,7 +1955,11 @@ local function worldScreens()
 		run = function(c)
 			worldReset(c)
 			ranches(c, { day = 42 }, { day = 42 })
-			c.h:fireClient(REMOTES .. "Celebrate", { kind = "hatch", data = { at = "dodo", mutation = 0 } })
+			-- message complet comme SquishyService (sans espèce, le texte qui monte serait « + » seul)
+			c.h:fireClient(REMOTES .. "Celebrate", {
+				kind = "hatch",
+				data = { uid = 1, species = 1, rarity = 1, mutation = 0, oneIn = 1, isNew = false, at = "dodo" },
+			})
 			c.h:settle(1)
 			frames(c, 3, 1 / 30)
 		end,
