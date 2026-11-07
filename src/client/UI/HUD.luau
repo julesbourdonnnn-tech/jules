@@ -84,6 +84,7 @@ local PanelController = require(Client.UI.PanelController)
 local Util = require(Client.UI.Hud.Util)
 local Messages = require(Client.UI.Hud.Messages)
 local Chase = require(Client.UI.Hud.Chase)
+local Friends = require(Client.UI.Hud.Friends)
 local Icons = require(Client.UI.Hud.Icons)
 local NextBuy = require(Client.UI.Hud.NextBuy)
 local UpgradeView = require(Client.UI.Hud.UpgradeView)
@@ -151,7 +152,6 @@ local hint: { action: string?, key: string }? = nil
 local badgeBang = false
 local badgeTwins = 0
 local holds: { [string]: number } = {} -- maintien en cours (bol, dalle) → endsAt
-local friendsHere: { [number]: boolean } = {}
 local lastEventAt = 0 -- Clock.now() du dernier EventState reçu (attente de la file qui décompte)
 local refreshAcc = math.huge
 local leapWasCooling = false
@@ -1002,15 +1002,10 @@ local function boostActive(now: number): (boolean, number)
 	return false, 0
 end
 
+-- amis présents : la liste de Hud/Friends, la même que le contexte des effets de l'écran Améliorations
+-- (D30 ; relecture du lot B2, B2-67)
 local function friendsCount(): number
-	local n = 0
-	for userId in friendsHere do
-		local p = Players:GetPlayerByUserId(userId)
-		if p and p.Parent then
-			n += 1
-		end
-	end
-	return n
+	return Friends.count()
 end
 
 local function incomeRate(now: number): number
@@ -1904,32 +1899,7 @@ local function onHoldState(payload: any)
 end
 
 local function watchFriends()
-	local me = Players.LocalPlayer
-	if me == nil then
-		return
-	end
-	local function check(p: Player)
-		if p == me then
-			return
-		end
-		task.spawn(function()
-			local ok, friend = pcall(function()
-				return me:IsFriendsWith(p.UserId)
-			end)
-			if ok and friend == true and p.Parent ~= nil then
-				friendsHere[p.UserId] = true
-				updateFame()
-			end
-		end)
-	end
-	Players.PlayerAdded:Connect(check)
-	Players.PlayerRemoving:Connect(function(p: Player)
-		friendsHere[p.UserId] = nil
-		task.defer(updateFame)
-	end)
-	for _, p in Players:GetPlayers() do
-		check(p)
-	end
+	Friends.watch(updateFame)
 end
 
 -- =============================================================================================

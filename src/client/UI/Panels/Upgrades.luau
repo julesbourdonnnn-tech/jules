@@ -63,6 +63,7 @@ local Clock = require(Shared.Util.Clock)
 local Layout = require(Shared.Config.Layout)
 local Balance = require(Shared.Config.Balance)
 local UpgradeAdvisor = require(Shared.Logic.UpgradeAdvisor)
+local UpgradeMath = require(Shared.Logic.UpgradeMath)
 local Formulas = require(Shared.Logic.Formulas)
 local QuestRules = require(Shared.Logic.QuestRules)
 local BigNumber = require(Shared.Logic.BigNumber)
@@ -85,6 +86,7 @@ local UpgradeCard = require(Client.UI.UpgradeCard)
 local Icons = require(Client.UI.Hud.Icons)
 local UpgradeView = require(Client.UI.Hud.UpgradeView)
 local UpgradeBuys = require(Client.UI.Hud.UpgradeBuys)
+local Friends = require(Client.UI.Hud.Friends)
 
 type Nav = {
 	open: (panel: string, tab: string?) -> (),
@@ -125,6 +127,7 @@ local RING_LIT = 10
 local RING_DIM = 0.5 -- transparence d'un point pas encore atteint
 local HOLD_GLYPH = 40 -- glyphe de l'appareil devant la consigne du bandeau
 local SPIN_PERIOD = 1.2 -- s : un tour du sablier « En cours »
+local SNACK_MAX = UpgradeMath.maxLevel("snack") -- 12 : le Tapis Étoilé continue la même ligne
 
 Upgrades.TABS = table.freeze({ "suggested", "ranch", "helpers", "workshop" })
 Upgrades.LIST_TABS = table.freeze({ "ranch", "helpers", "workshop" })
@@ -254,14 +257,15 @@ local function ranchAttribute(name: string): any
 	return if ok then value else nil
 end
 
--- Contexte des vues (D30, D31, note A3) : mêmes valeurs que le revenu du HUD
+-- Contexte des vues (D30, D31, note A3) : mêmes valeurs que le revenu du HUD (amis présents compris :
+-- liste de Hud/Friends ; relecture du lot B2, B2-67)
 local function viewCtx(): UpgradeView.Ctx
 	local tiles = Widgets.tbl(Widgets.state("tiles"))
 	local passes = Widgets.tbl(Widgets.state("passes"))
 	local dex = Widgets.tbl(Widgets.state("dex"))
 	local aBonus = Widgets.safe("Formulas.A", 1, Formulas.A, {
 		decor = Widgets.n(tiles.decor),
-		friends = 0,
+		friends = Widgets.safe("Friends.count", 0, Friends.count),
 		fame = Widgets.n(Widgets.state("fame")),
 		trophyBonus = Widgets.safe(
 			"Formulas.trophyBonus",
@@ -290,13 +294,24 @@ local function viewCtx(): UpgradeView.Ctx
 end
 
 -- Instantané montré : structure figée à l'ouverture (plafonds, r, Record R, A ; D7) + pièces,
--- Confettis et niveaux du dernier instantané accepté
+-- Confettis et niveaux du dernier instantané accepté. Le Tapis Étoilé n'a de plafond qu'APRÈS le
+-- Tapis 12 (UpgradeMath.cap) : ouvert avant, l'écran n'a figé ni son interrupteur ni son plafond de
+-- boucle, seulement « pas encore » ; le Tapis 12 acheté écran ouvert, la même ligne continue avec le
+-- plafond de l'Étoilé du serveur (même boucle, r figé = r du serveur). Sans cela, l'Étoilé passait
+-- pour coupé par son interrupteur : « 12/12 », MAX, jusqu'à la réouverture (relecture du lot B2, B2-65)
 local function merge(live: Snapshot, base: Snapshot): Snapshot
+	local caps = base.caps
+	local baseSnack = base.levels.snack or 0
+	if baseSnack < SNACK_MAX and (live.levels.snack or 0) >= SNACK_MAX and live.r == base.r then
+		local withStar = table.clone(caps)
+		withStar.star = live.caps.star
+		caps = table.freeze(withStar)
+	end
 	return table.freeze({
 		coins = live.coins,
 		confetti = live.confetti,
 		levels = live.levels,
-		caps = base.caps,
+		caps = caps,
 		r = base.r,
 		bestR = base.bestR,
 		ascend = base.ascend,
@@ -1207,6 +1222,17 @@ local function onSnapshot(snap: Snapshot)
 	local base = frozen
 	if base == nil then
 		return
+	end
+	-- prestige appliqué écran ouvert (rouvert pendant SON spectacle, avant l'éclatement ; D28 ne ferme
+	-- qu'au début) : r, Record R ou A changent et la boucle repart de zéro. Mêler r, A et plafonds figés
+	-- de l'ancienne boucle aux niveaux de la nouvelle montrait les prix de l'ancienne boucle : l'écran se
+	-- ferme, la réouverture est neuve (relecture du lot B2, B2-66)
+	if snap.r ~= base.r or snap.bestR ~= base.bestR or snap.ascend ~= base.ascend then
+		local n = nav
+		if n ~= nil and n.closeAll ~= nil then
+			n.closeAll()
+			return
+		end
 	end
 	display = merge(snap, base)
 	renderAll(true)
