@@ -494,5 +494,38 @@ return function(T: any)
 				expect(offenders).toEqual({})
 			end
 		)
+
+		-- Lot B3, étape 1 (journal B3-9) : « {*}{n} » (étoile AVANT le nombre) donnait, dans les captures de
+		-- la fiche d'espèce du Squishydex, une étoile posée SUR le chiffre : le texte réserve la place de
+		-- l'icône par des espaces, que l'outil d'écrans retire en tête de ligne (comme toute mise en page qui
+		-- ne garde pas les espaces de tête) ; une icône après du texte (« {n}{*} », la forme de common.stars)
+		-- ne dépend pas de cette règle
+		it(
+			"un repère d'icône dessinée ({*}, {^}, {~}) ne commence jamais un texte ni une ligne (sa place serait des espaces de tête)",
+			function()
+				local S = strings()
+				local offenders = {}
+				for _, lang in { "en", "fr" } do
+					for key, text in S[lang] do
+						for _, marker in { "{*}", "{^}", "{~}" } do
+							local from = 1
+							while true do
+								local i = string.find(text, marker, from, true)
+								if i == nil then
+									break
+								end
+								local line = string.match(string.sub(text, 1, i - 1), "([^\n]*)$") or ""
+								if string.match(line, "^%s*$") then
+									table.insert(offenders, lang .. " " .. key .. " : " .. marker)
+								end
+								from = i + #marker
+							end
+						end
+					end
+				end
+				table.sort(offenders)
+				expect(offenders).toEqual({})
+			end
+		)
 	end)
 end
