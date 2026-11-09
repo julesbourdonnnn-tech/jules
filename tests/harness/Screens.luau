@@ -2826,6 +2826,27 @@ Screens.REFERENCE = {
 	{ n = 24, name = "24-hud-remontee", group = "hudv2", id = "hudv2.petitChip", hud = true },
 }
 
+-- v2.0 (lot B3) : écrans de renaissance et de méta, remplis étape par étape (plan B3, D26). Étape 1 :
+-- la bannière de la Jelly Ascend (« banner.ascend », renommée de « ascend.banner », D18) avec un nom de
+-- 20 caractères (Screens.LONG_NAME) ; les pires cas des étapes suivantes s'ajoutent ici
+local function metaScreens()
+	local list = {}
+	table.insert(list, {
+		id = "meta.banner.ascend",
+		run = function(c)
+			closeAll(c)
+			flushAll(c)
+			c.Banners.show({
+				kind = "ascend",
+				args = { name = Screens.LONG_NAME, userId = c.players[1].UserId },
+				priority = 1,
+			})
+			frames(c, 4, 0.1)
+		end,
+	})
+	return list
+end
+
 -- Groupes d'écrans : un client démarré par groupe (état de données), écrans joués dans l'ordre
 function Screens.groups()
 	local groups = {}
@@ -3103,6 +3124,8 @@ function Screens.groups()
 	table.insert(groups, { id = "hudv2", state = "mid", screens = hudV2Screens() })
 	-- v2.0 (lot B4) : textes du monde du ranch qui évolue
 	table.insert(groups, { id = "world", state = "mid", screens = worldScreens() })
+	-- v2.0 (lot B3) : écrans de renaissance et de méta
+	table.insert(groups, { id = "meta", state = "mid", screens = metaScreens() })
 
 	return groups
 end

@@ -706,4 +706,93 @@ return function(T)
 			end
 		end
 	)
+	-- =========================================================================================
+	-- Lot B3, étape 1, D5 (relecture du lot B2) : le premier Petit Splorch d'une remontée passe par
+	-- l'aperçu. Il était reconnu par r == Prestige.startR(A, Tremplin) : faux quand un Tremplin est
+	-- acheté PENDANT la remontée (le départ de l'Ascension suivante monte, r non). Règle : remontée
+	-- (A ≥ 1, r < Record R), r ≤ Prestige.startR(A, Tremplin) et aucune hausse de r vue pendant la
+	-- séance à cet A (plus petit r gardé par A, remis à zéro quand A change). Après une reconnexion en
+	-- pleine remontée avec un Tremplin acheté : au plus un aperçu de trop (documenté, journal B3-5).
+	describe("Upgrades_Snapshot › premier Petit Splorch de la remontée (lot B3, D5)", function()
+		local Upgrades = shared:require("ReplicatedStorage.Shared.Config.Upgrades")
+		local Prestige = shared:require("ReplicatedStorage.Shared.Logic.Prestige")
+		local SPRING = Upgrades.WorkshopIndex.springboard
+
+		-- remontée : Ascension A, r, Record R 15, Tremplin au niveau sb
+		local function regainSnap(version, A, r, sb)
+			return snapOf(nil, version, function(p)
+				p.ascend = A
+				p.R = r
+				p.bestR = 15
+				p.atelier[SPRING] = sb
+			end)
+		end
+
+		local function first(c)
+			local kind, isFirst = c.US.rebirth(true)
+			expect(kind).toBe("petit")
+			return isFirst
+		end
+
+		it(
+			"Tremplin acheté pendant la remontée alors que r = startR(A, 0) : toujours le premier ; r + 1 au même A : plus le premier",
+			function()
+				expect(Prestige.startR(1, 0)).toBe(0)
+				expect(Prestige.startR(1, 1)).toBe(1)
+				local c = setup(regainSnap(1, 1, 0, 0))
+				c.US.start()
+				expect(c.US.current().levels.springboard).toBe(0)
+				expect(first(c)).toBe(true)
+				-- Tremplin acheté (niveau 1) : r reste 0, le départ de l'Ascension suivante devient 1
+				patch(c.h, { upgradeSnapshot = regainSnap(2, 1, 0, 1) })
+				expect(c.US.current().levels.springboard).toBe(1)
+				expect(first(c)).toBe(true)
+				-- premier Petit Splorch fait : r = 1 = startR(1, 1), mais une hausse a été vue à cet A
+				patch(c.h, { upgradeSnapshot = regainSnap(3, 1, 1, 1) })
+				expect(first(c)).toBe(false)
+				patch(c.h, { upgradeSnapshot = regainSnap(4, 1, 2, 1) })
+				expect(first(c)).toBe(false)
+				noV2Intent(c.h)
+				clean(c.h)
+			end
+		)
+
+		it(
+			"nouvelle Ascension (A change) : le premier de la nouvelle remontée repasse par l'aperçu",
+			function()
+				local c = setup(regainSnap(1, 1, 0, 1))
+				c.US.start()
+				patch(c.h, { upgradeSnapshot = regainSnap(2, 1, 3, 1) })
+				expect(first(c)).toBe(false)
+				local start2 = Prestige.startR(2, 1)
+				patch(c.h, { upgradeSnapshot = regainSnap(3, 2, start2, 1) })
+				expect(first(c)).toBe(true)
+				patch(c.h, { upgradeSnapshot = regainSnap(4, 2, start2 + 1, 1) })
+				expect(first(c)).toBe(false)
+				clean(c.h)
+			end
+		)
+
+		it(
+			"séance neuve à r = startR(A, 0) + 1 avec un Tremplin de 2 : reconnu premier (un aperçu de trop au plus, documenté) ; sans Tremplin : pas le premier",
+			function()
+				expect(Prestige.startR(1, 2)).toBe(2)
+				local c = setup(regainSnap(1, 1, 1, 2))
+				c.US.start()
+				expect(first(c)).toBe(true)
+				local d = setup(regainSnap(1, 1, 1, 0))
+				d.US.start()
+				expect(first(d)).toBe(false)
+				-- hors remontée (r = Record R) : un Grand Splorch, jamais « premier »
+				local e = setup(regainSnap(1, 1, 15, 0))
+				e.US.start()
+				local kind, isFirst = e.US.rebirth(true)
+				expect(kind).toBe("splorch")
+				expect(isFirst).toBe(false)
+				clean(c.h)
+				clean(d.h)
+				clean(e.h)
+			end
+		)
+	end)
 end

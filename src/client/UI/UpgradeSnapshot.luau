@@ -80,6 +80,10 @@ end
 local shown: Types.UpgradeSnapshot? = nil
 local present = false
 local started = false
+-- v2.0 (lot B3, D5) : plus petit r vu pendant la séance pour l'Ascension `lowA` (instantanés acceptés) ;
+-- une hausse de r à cet A = le premier Petit Splorch de la remontée est déjà fait
+local lowA: number? = nil
+local lowR = 0
 
 -- =============================================================================================
 -- Vérification (pure : aucune trace)
@@ -193,6 +197,16 @@ end
 -- État
 -- =============================================================================================
 
+-- Note le r d'un instantané accepté (plus petit r de l'A courant ; remis à zéro quand A change)
+local function noteRegain(snap: Types.UpgradeSnapshot)
+	if lowA ~= snap.ascend then
+		lowA = snap.ascend
+		lowR = snap.r
+	elseif snap.r < lowR then
+		lowR = snap.r
+	end
+end
+
 -- Accepte un instantané valide de version strictement plus grande que celle montrée (vrai si accepté)
 function UpgradeSnapshot.apply(raw: any): boolean
 	local snap = UpgradeSnapshot.validate(raw)
@@ -204,6 +218,7 @@ function UpgradeSnapshot.apply(raw: any): boolean
 		return false
 	end
 	shown = snap
+	noteRegain(snap)
 	UpgradeSnapshot.Changed:Fire(snap)
 	return true
 end
@@ -239,6 +254,7 @@ local function onState(value: any)
 	local fresh = cur == nil or snap.version > cur.version
 	if fresh then
 		shown = snap
+		noteRegain(snap)
 	end
 	setPresent(true)
 	if fresh then
@@ -283,9 +299,12 @@ export type Rebirth = "splorch" | "petit" | "ascend"
 
 -- Renaissance prête (lot B2, D16, D16b, D17, D32) : `loopReady` = le plus gros squishy atteint
 -- l'objectif de la boucle (aperçu du Grand Splorch). Pendant une remontée (instantané : A ≥ 1 et
--- r < Record R), le prestige de boucle est un Petit Splorch ; `first` = premier de la remontée
--- (r == Prestige.startR(A, Tremplin) : il passe par l'aperçu). Sinon, la Jelly Ascend quand le ranch
--- porte AscendReady (et qu'aucun prestige de boucle n'est prêt : le Grand Splorch d'abord, GDD
+-- r < Record R), le prestige de boucle est un Petit Splorch ; `first` = premier de la remontée (il
+-- passe par l'aperçu). Lot B3, D5 (relecture du lot B2) : premier ⇔ r ≤ Prestige.startR(A, Tremplin)
+-- ET aucune hausse de r vue pendant la séance à cet A (un Tremplin acheté PENDANT la remontée monte le
+-- départ de l'Ascension suivante, pas r : l'ancien test r == startR le manquait ; après une reconnexion
+-- en pleine remontée avec un Tremplin acheté, un aperçu de trop au plus). Sinon, la Jelly Ascend quand
+-- le ranch porte AscendReady (et qu'aucun prestige de boucle n'est prêt : le Grand Splorch d'abord, GDD
 -- §10.7.2). Sans instantané : la v1.3 (Grand Splorch prêt ou rien)
 function UpgradeSnapshot.rebirth(loopReady: boolean): (Rebirth?, boolean)
 	local snap = shown
@@ -295,7 +314,8 @@ function UpgradeSnapshot.rebirth(loopReady: boolean): (Rebirth?, boolean)
 	if loopReady == true then
 		if snap.ascend >= 1 and snap.r < snap.bestR then
 			local springboard = snap.levels.springboard or 0
-			return "petit", snap.r == Prestige.startR(snap.ascend, springboard)
+			local climbed = lowA == snap.ascend and snap.r > lowR
+			return "petit", snap.r <= Prestige.startR(snap.ascend, springboard) and not climbed
 		end
 		return "splorch", false
 	end

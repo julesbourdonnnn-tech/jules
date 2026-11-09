@@ -14,7 +14,8 @@
 --     v1.3 en prennent déjà ≈ 2 460 (Ranch ≈ 950, Squishydex ≈ 460, Diagnostics ≈ 250…) et l'écran
 --     ≈ 1 200 (le GDD lui en donne 1 400). Garde contre une régression en attendant la décision :
 --     l'écran n'ajoute que ses propres objets, et le total reste ≤ 3 800 (3 700 jusqu'à l'étape 3 ; le
---     HUD v2.0 et les glyphes dessinés de l'étape 4 en ajoutent 85, journal B2-49).
+--     HUD v2.0 et les glyphes dessinés de l'étape 4 en ajoutent 85, journal B2-49) ; ≤ 3 875 depuis le
+--     lot B3, étape 1 (les 5 badges d'étoiles dessinés du Squishydex : + 75, journal B3-8).
 -- Zéro trace.
 local roblox = require("@lune/roblox")
 local TvAudit = require("../harness/TvAudit")
@@ -128,8 +129,10 @@ return function(T)
 				expect(#parts >= 9).toBe(true)
 				expect(screen <= S.Layout.Upgrades.MaxInstances).toBe(true)
 				-- garde contre une régression en attendant la décision sur le budget de 3 000 (§12.9) :
-				-- 3 681 à l'étape 3, 3 766 à l'étape 4 (HUD v2.0 et glyphes dessinés : + 85, journal B2-49)
-				expect(whole <= 3800).toBe(true)
+				-- 3 681 à l'étape 3, 3 766 à l'étape 4 (HUD v2.0 et glyphes dessinés : + 85, journal B2-49) ;
+				-- lot B3, étape 1 (D24, journal B3-8) : 3 841, + 75 = les 5 badges ★1-★5 de la fiche du
+				-- Squishydex dessinés par UI/Text (étoile UI/Glyph de 15 objets, règle 18) : garde + 75
+				expect(whole <= 3875).toBe(true)
 				S.clean(c, expect)
 			end
 		)
