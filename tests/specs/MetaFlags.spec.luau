@@ -10,7 +10,10 @@
 --   * client (UI/MetaFlags, en fin de fichier) : on(flag), v2Profile(), owned(), attr(name),
 --     myPrestige() ; charges hostiles éteintes sans trace ; aucun travail par image.
 -- Zéro trace (ZeroLog), horloge figée.
+local fs = require("@lune/fs")
 local Brains = require("../harness/Brains")
+local TvAudit = require("../harness/TvAudit")
+local UpgradeScreen = require("../harness/UpgradeScreen")
 
 local V13_FEATURES = "boopRush,clips,costume,diagnostics,gauge,golden,jellyMoon,megaSquish"
 local LISTED = {
@@ -138,7 +141,11 @@ return function(T)
 				end
 				-- tous les autres interrupteurs booléens de Config/Features ouverts aussi (SchemaV2 est figé)
 				for key, value in w.Features.Defaults do
-					if type(value) == "boolean" and not table.find(LISTED, key) and not w.Features.Static[key] then
+					if
+						type(value) == "boolean"
+						and not table.find(LISTED, key)
+						and not w.Features.Static[key]
+					then
 						admin(w, p, key .. "=true")
 					end
 				end
@@ -188,5 +195,371 @@ return function(T)
 				expect(table.concat(Brains.problems(wB), "\n")).toBe("")
 			end
 		)
+	end)
+	-- =========================================================================================
+	describe("MetaFlags › client (UI/MetaFlags)", function()
+		local S = UpgradeScreen.new(Harness)
+		local NOW = 1800000000
+		local ME = 1 -- joueur local du harnais client
+
+		-- EventState complet (même forme que le serveur) ; `v2` : features.v2 (nil : clé absente)
+		local function eventState(v2, spectacle)
+			return {
+				rush = { active = false, index = 0, endsAt = 0, nextAt = 0, moonBoopable = false },
+				mega = {
+					phase = "idle",
+					index = 0,
+					landsAt = 0,
+					endsAt = 0,
+					target = 0,
+					points = 0,
+					species = 1,
+					moon = false,
+					result = "",
+				},
+				golden = { active = false, id = 0, endsAt = 0 },
+				moon = { active = false, session = 0, endsAt = 0, nextAt = 0 },
+				gauge = { points = 0, target = 1000, partyUntil = 0, restUntil = 0 },
+				boost = { kind = "", untilT = 0, byName = "" },
+				spectacle = spectacle or { queue = {} },
+				features = {
+					boopRush = "on",
+					megaSquish = true,
+					golden = true,
+					jellyMoon = true,
+					gauge = true,
+					clips = true,
+					costume = "",
+					diagnostics = true,
+					v2 = v2,
+				},
+				offset = 0,
+			}
+		end
+
+		local function send(c, v2, spectacle)
+			c.h:fireClient("ReplicatedStorage.Remotes.EventState", eventState(v2, spectacle))
+			S.run(c, 0.1)
+		end
+
+		local function patch(c, values)
+			c.h:fireClient("ReplicatedStorage.Remotes.DataPatch", values, {})
+			S.run(c, 0.1)
+		end
+
+		local function client(opts)
+			local c = S.client(opts)
+			c.MF = TvAudit.mod(c.h, "UI.MetaFlags")
+			c.changed = 0
+			c.MF.Changed:Connect(function()
+				c.changed += 1
+			end)
+			return c
+		end
+
+		-- liste des interrupteurs ouverts vus par le client (ordre de la liste)
+		local function openList(c)
+			local out = {}
+			for _, key in LISTED do
+				if c.MF.on(key) then
+					table.insert(out, key)
+				end
+			end
+			return table.concat(out, ",")
+		end
+
+		local function ownedList(c)
+			local out = {}
+			local owned = c.MF.owned()
+			local keys = {}
+			for k in owned do
+				table.insert(keys, k)
+			end
+			table.sort(keys)
+			for _, k in keys do
+				table.insert(out, k .. "=" .. tostring(owned[k]))
+			end
+			return table.concat(out, ",")
+		end
+
+		it(
+			"aucune clé v2 (configuration livrée), profil v1 : on() faux pour chaque interrupteur, owned() tout faux, v2Profile() faux, aucun Changed",
+			function()
+				local c = client({ profile = {} })
+				send(c, nil)
+				expect(openList(c)).toBe("")
+				for _, key in LISTED do
+					expect({ key = key, on = c.MF.on(key) }).toEqual({ key = key, on = false })
+				end
+				expect(ownedList(c)).toBe(
+					"Carnet=false,DecoPerso=false,JellyAscend=false,Mastery=false,RanchSkins=false,RecordR=false,WeeklyTrack=false,Workshop=false"
+				)
+				expect(c.MF.v2Profile()).toBe(false)
+				expect(c.MF.myPrestige()).toBeNil()
+				-- entrées absurdes : faux, jamais d'erreur
+				expect(c.MF.on(nil)).toBe(false)
+				expect(c.MF.on(5)).toBe(false)
+				expect(c.MF.on("Weather")).toBe(false)
+				expect(c.changed).toBe(0)
+				S.noV2Intent(c, expect)
+				S.clean(c, expect)
+			end
+		)
+
+		it(
+			"ensemble exact depuis une table v2 ; owned() suit (gardée tant que le même ensemble revient) ; Changed une fois par vrai changement ; clé inconnue ignorée",
+			function()
+				local c = client({ profile = {} })
+				send(c, { Carnet = true })
+				expect(openList(c)).toBe("Carnet")
+				expect(c.changed).toBe(1)
+				local first = c.MF.owned()
+				expect(first.Carnet).toBe(true)
+				expect(first.RecordR).toBe(false)
+				expect(table.isfrozen(first)).toBe(true)
+				-- même ensemble dans un nouvel EventState : ni Changed ni nouvelle table
+				send(c, { Carnet = true })
+				expect(c.changed).toBe(1)
+				expect(c.MF.owned() == first).toBe(true)
+				-- deux de plus (dont une hors de Owned.FLAGS) et une clé inconnue, une valeur fausse
+				send(c, { Carnet = true, RecordR = true, Hearts = true, Weather = true, Mastery = false })
+				expect(openList(c)).toBe("RecordR,Carnet,Hearts")
+				expect(c.MF.on("Weather")).toBe(false)
+				expect(c.MF.on("Mastery")).toBe(false)
+				expect(c.changed).toBe(2)
+				local second = c.MF.owned()
+				expect(second == first).toBe(false)
+				expect(ownedList(c)).toBe(
+					"Carnet=true,DecoPerso=false,JellyAscend=false,Mastery=false,RanchSkins=false,RecordR=true,WeeklyTrack=false,Workshop=false"
+				)
+				-- toute la liste
+				local all = {}
+				for _, key in LISTED do
+					all[key] = true
+				end
+				send(c, all)
+				expect(openList(c)).toBe(table.concat(LISTED, ","))
+				expect(c.changed).toBe(3)
+				-- recoupé en direct (clé absente) : tout faux
+				send(c, nil)
+				expect(openList(c)).toBe("")
+				expect(c.MF.owned().RecordR).toBe(false)
+				expect(c.changed).toBe(4)
+				S.noV2Intent(c, expect)
+				S.clean(c, expect)
+			end
+		)
+
+		it(
+			'charges hostiles (v2 = 3, { RecordR = "yes" }, clés non chaînes, 65 entrées…) : tout coupé, sans aucune trace',
+			function()
+				local c = client({ profile = {} })
+				send(c, { RecordR = true })
+				expect(openList(c)).toBe("RecordR")
+				local big = {}
+				for i = 1, 65 do
+					big["K" .. i] = true
+				end
+				big.RecordR = true
+				local hostile = {
+					3,
+					"RecordR",
+					true,
+					{ RecordR = "yes" },
+					{ RecordR = true, JellyAscend = "yes" },
+					{ RecordR = 1 },
+					{ [1] = true },
+					{ RecordR = true, [2] = true },
+					{ RecordR = { true } },
+					big,
+				}
+				for i, v2 in hostile do
+					send(c, { RecordR = true })
+					expect(openList(c)).toBe("RecordR")
+					send(c, v2)
+					expect({ case = i, open = openList(c) }).toEqual({ case = i, open = "" })
+					expect(c.MF.owned().RecordR).toBe(false)
+				end
+				-- features absente, EventState absurde : ignorés par WorldStateController, rien ne casse
+				c.h:fireClient("ReplicatedStorage.Remotes.EventState", { features = 5 })
+				c.h:fireClient("ReplicatedStorage.Remotes.EventState", 42)
+				S.run(c, 0.1)
+				expect(openList(c)).toBe("")
+				S.noV2Intent(c, expect)
+				S.clean(c, expect)
+			end
+		)
+
+		it(
+			"v2Profile() : version 2 vrai, version 1 faux, valeurs hostiles faux ; Changed suit la version",
+			function()
+				local c = client({ profile = {} })
+				expect(c.MF.v2Profile()).toBe(false)
+				patch(c, { version = 2 })
+				expect(c.MF.v2Profile()).toBe(true)
+				expect(c.changed).toBe(1)
+				patch(c, { version = 1 })
+				expect(c.MF.v2Profile()).toBe(false)
+				expect(c.changed).toBe(2)
+				for _, bad in { "2", 2.5, 0 / 0, math.huge, -3, 1e9, true } do
+					patch(c, { version = bad })
+					expect({ bad = tostring(bad), v2 = c.MF.v2Profile() }).toEqual({
+						bad = tostring(bad),
+						v2 = false,
+					})
+				end
+				expect(c.changed).toBe(2)
+				-- profil v2 dès l'arrivée
+				local d = client({ profile = { version = 2 } })
+				expect(d.MF.v2Profile()).toBe(true)
+				S.clean(c, expect)
+				S.clean(d, expect)
+			end
+		)
+
+		it(
+			"attr(name) = attribut de MON ranch (UpgradeSnapshot.ranchAttribute) ; nil sans l'attribut ou pour un nom absurde",
+			function()
+				local c = client({ profile = {}, ranch = { AscendReady = true, BestR = 12 } })
+				expect(c.MF.attr("AscendReady")).toBe(true)
+				expect(c.MF.attr("BestR")).toBe(12)
+				expect(c.MF.attr("HaloOn")).toBeNil()
+				expect(c.MF.attr(5)).toBeNil()
+				S.clean(c, expect)
+			end
+		)
+
+		it(
+			"myPrestige() : MON Grand Splorch ou MA Jelly Ascend dans la file → « queued », en cours → « show » ; celui d'un autre, la danse, une entrée abîmée → nil",
+			function()
+				local c = client({ profile = {} })
+				local function entry(kind, userId)
+					return {
+						kind = kind,
+						userId = userId,
+						startAt = NOW + 20,
+						slot = 1,
+						position = 1,
+						eta = 20,
+					}
+				end
+				local function current(kind, userId)
+					return {
+						kind = kind,
+						userId = userId,
+						startedAt = NOW,
+						burstAt = NOW + 4,
+						endsAt = NOW + 10,
+						level = 16,
+					}
+				end
+				local cases = {
+					{ name = "file vide", sp = { queue = {} }, want = nil },
+					{
+						name = "mon splorch en file",
+						sp = { queue = { entry("splorch", ME) } },
+						want = "queued",
+					},
+					{
+						name = "mon ascend en file",
+						sp = { queue = { entry("ascend", ME) } },
+						want = "queued",
+					},
+					{
+						name = "mon ascend 2e de la file",
+						sp = { queue = { entry("splorch", 77), entry("ascend", ME) } },
+						want = "queued",
+					},
+					{ name = "splorch d'un autre", sp = { queue = { entry("splorch", 77) } }, want = nil },
+					{
+						name = "mon splorch en cours",
+						sp = { current = current("splorch", ME), queue = {} },
+						want = "show",
+					},
+					{
+						name = "mon ascend en cours",
+						sp = { current = current("ascend", ME), queue = {} },
+						want = "show",
+					},
+					{
+						name = "ascend d'un autre",
+						sp = { current = current("ascend", 77), queue = {} },
+						want = nil,
+					},
+					{
+						name = "danse de Big Plop",
+						sp = { current = current("dance", 0), queue = {} },
+						want = nil,
+					},
+					{
+						name = "danse avec mon id",
+						sp = { current = current("dance", ME), queue = {} },
+						want = nil,
+					},
+					{
+						name = "en cours et en file",
+						sp = { current = current("splorch", ME), queue = { entry("ascend", ME) } },
+						want = "show",
+					},
+					{
+						name = "entrée abîmée",
+						sp = { queue = { 5, "x", { kind = "splorch" }, { userId = ME } } },
+						want = nil,
+					},
+					{ name = "file absurde", sp = { queue = 7 }, want = nil },
+					{ name = "id en texte", sp = { queue = { entry("splorch", "1") } }, want = nil },
+				}
+				for _, case in cases do
+					send(c, nil, case.sp)
+					expect({ case = case.name, got = c.MF.myPrestige() }).toEqual({
+						case = case.name,
+						got = case.want,
+					})
+				end
+				S.noV2Intent(c, expect)
+				S.clean(c, expect)
+			end
+		)
+
+		it(
+			"aucun travail par image : start() idempotent (aucune connexion de plus), aucun RunService dans le module",
+			function()
+				local c = client({ profile = {} })
+				local before = c.h:counts().connections
+				c.MF.start()
+				c.MF.start()
+				expect(c.h:counts().connections).toBe(before)
+				local src = fs.readFile("src/client/UI/MetaFlags.luau")
+				for _, word in
+					{
+						"RunService",
+						"RenderStepped",
+						"Heartbeat",
+						"BindToRenderStep",
+						"Stepped",
+						"task.spawn",
+						"task.delay",
+						"while ",
+					}
+				do
+					expect({ word = word, found = string.find(src, word, 1, true) ~= nil }).toEqual({
+						word = word,
+						found = false,
+					})
+				end
+				-- jamais Config/Features côté client
+				expect(string.find(src, "Config.Features", 1, true)).toBeNil()
+				S.clean(c, expect)
+			end
+		)
+
+		it("_reset() oublie l'état lu : relu au prochain appel depuis le dernier EventState", function()
+			local c = client({ profile = {} })
+			send(c, { Hearts = true })
+			expect(openList(c)).toBe("Hearts")
+			c.MF._reset()
+			expect(openList(c)).toBe("Hearts")
+			S.clean(c, expect)
+		end)
 	end)
 end

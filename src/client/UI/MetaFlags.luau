@@ -65,9 +65,10 @@ local MAX_VERSION = 1000 -- version de schéma plausible
 local EMPTY: { [string]: boolean } = table.freeze({})
 
 local started = false
--- dernière table `features.v2` lue (identité) et ensemble ouvert qui en est tiré
+-- dernière table `features.v2` lue (identité), ensemble ouvert qui en est tiré et sa signature
 local readFrom: any = nil
 local openSet: { [string]: boolean } = EMPTY
+local openSig = ""
 local ownedCache: Owned.Flags? = nil
 -- dernier état annoncé par Changed (signature de l'ensemble ouvert, profil v2)
 local lastSignature = ""
@@ -109,21 +110,7 @@ local function rawV2(): any
 	return rawget(features, "v2")
 end
 
--- Ensemble ouvert à jour (relu seulement quand la table `features.v2` a changé d'identité)
-local function current(): { [string]: boolean }
-	local raw = rawV2()
-	if raw ~= readFrom then
-		readFrom = raw
-		local fresh = parse(raw)
-		if fresh ~= openSet then
-			openSet = fresh
-			ownedCache = nil
-		end
-	end
-	return openSet
-end
-
--- Signature stable de l'ensemble ouvert (ordre de la liste)
+-- Signature stable d'un ensemble ouvert (ordre de la liste)
 local function signature(set: { [string]: boolean }): string
 	local parts = {}
 	for _, key in MetaFlags.FLAGS do
@@ -132,6 +119,23 @@ local function signature(set: { [string]: boolean }): string
 		end
 	end
 	return table.concat(parts, ",")
+end
+
+-- Ensemble ouvert à jour (relu seulement quand la table `features.v2` a changé d'identité ; gardé, avec
+-- la table de owned(), tant que le même ensemble revient)
+local function current(): { [string]: boolean }
+	local raw = rawV2()
+	if raw ~= readFrom then
+		readFrom = raw
+		local fresh = parse(raw)
+		local sig = signature(fresh)
+		if sig ~= openSig then
+			openSet = fresh
+			openSig = sig
+			ownedCache = nil
+		end
+	end
+	return openSet
 end
 
 -- Vrai si l'interrupteur `flag` est ouvert sur le serveur
@@ -216,7 +220,8 @@ end
 
 -- Relit l'ensemble et la version ; Changed quand l'un des deux a changé depuis la dernière annonce
 local function refresh()
-	local sig = signature(current())
+	current()
+	local sig = openSig
 	local v2 = MetaFlags.v2Profile()
 	if sig ~= lastSignature or v2 ~= lastV2Profile then
 		lastSignature = sig
@@ -243,6 +248,7 @@ end
 function MetaFlags._reset()
 	readFrom = nil
 	openSet = EMPTY
+	openSig = ""
 	ownedCache = nil
 	lastSignature = ""
 	lastV2Profile = false
