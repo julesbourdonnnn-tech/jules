@@ -53,13 +53,11 @@ local FONT_ORDER = { "FredokaOne", "LuckiestGuy" }
 -- 2 « ★ » (common.stars, celebrate.star : étoile dessinée, repère « {*} » de UI/Text) sont sorties de
 -- la liste au lot B1 (étape 2) ; « ♥ » de hud.twins (cœur dessiné devant le nombre) et « ≈ » de
 -- hud.queue.next / hud.queue.place (le mot « about » / « environ ») au lot B2 (étape 4, D18, D19,
--- journal B2-48).
-local BASE_EXCEPTIONS: { [string]: Exception } = {
-	["panel.dex.starBadge"] = { chars = "★", owner = "B3" },
-	["panel.ranch.twins"] = { chars = "♥", owner = "B3" },
-	["settings.emoteLeft"] = { chars = "←", owner = "B3" },
-	["panel.shop.coinsAmount"] = { chars = "≈", owner = "B3" },
-}
+-- journal B2-48) ; les 4 dernières au lot B3 (étape 1, D17, journal B3-6) : « ★ » de panel.dex.starBadge
+-- (étoile dessinée, repère « {*} »), « ♥ » de panel.ranch.twins (le mot « Twins » / « Jumeaux »), « ← »
+-- de settings.emoteLeft (les mots « D-pad left » / « croix gauche »), « ≈ » de panel.shop.coinsAmount
+-- (le mot « about » / « environ »). La liste est vide : toute clé du jeu de base tient dans les polices.
+local BASE_EXCEPTIONS: { [string]: Exception } = {}
 
 -- Les formateurs de nombres et de durées écrivent eux aussi des caractères dans les étiquettes
 -- (variables {x} des clés) : même règle, avec leur propre liste FERMÉE d'exceptions du jeu de base,

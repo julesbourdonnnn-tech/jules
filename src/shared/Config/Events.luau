@@ -234,8 +234,8 @@ Events.Banners = {
 		adminParty = 7,
 	} :: { [string]: number },
 	-- v2.0 (lot A4, D5) : priorités des bannières v2.0, recopiées aussi dans Notify.BANNER_PRIORITY par
-	-- CommunityService.Init ; leur texte n'est pas encore de la famille « banner.<sorte> » (« ascend.banner »,
-	-- décision C10) : fusionnées dans Priority à l'étape I avec le renommage que B3 prouve
+	-- CommunityService.Init ; texte « banner.<sorte> » depuis le lot B3 (« banner.ascend », renommé de
+	-- « ascend.banner », D18, journal B3-7) : fusionnées dans Priority à l'étape I
 	PriorityV2 = {
 		ascend = 1,
 	} :: { [string]: number },
