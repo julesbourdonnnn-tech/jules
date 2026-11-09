@@ -671,7 +671,7 @@ function MetaView.challenges(profile: any, ctx: Ctx?): { Challenge }
 				p = p,
 				target = target,
 				done = done,
-				text = text("challenge.progress", { n = num(p, lang), m = num(target, lang) }),
+				text = text("track.challengeProgress", { n = num(p, lang), m = num(target, lang) }),
 			})
 		end
 	end
