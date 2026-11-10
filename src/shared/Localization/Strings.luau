@@ -528,6 +528,10 @@ Strings.en = {
 	["panel.splorch.reset"] = "Starts over",
 	["panel.splorch.keep.list"] = "Squishies, Vat, saddles, pens, Squishydex, Fame, passes",
 	["panel.splorch.reset.list"] = "Coins, Pot, Snack Mat, decorations, sizes",
+	-- v2.0 (lot B3, étape 6, B3-69) : page « Détails » de l'aperçu quand le Record R, les Confettis et
+	-- l'Atelier sont ouverts (GDD §4.15)
+	["panel.splorch.keep.listV2"] = "Squishies, Record R, Confetti, Workshop, Plopettes, Monuments, pens, Vat",
+	["panel.splorch.reset.listV2"] = "Coins, Pot, Mats, Gloves, School, decor not kept, sizes",
 	["panel.splorch.goHome"] = "Go back to your ranch",
 	["panel.splorch.lose"] = "You will lose {coins} coins",
 	["panel.splorch.next"] = "Next goal: {target}",
@@ -1832,6 +1836,8 @@ Strings.fr = {
 	["panel.splorch.reset"] = "Repart de zéro",
 	["panel.splorch.keep.list"] = "Squishies, Cuve, selles, enclos, Squishydex, Fame, passes",
 	["panel.splorch.reset.list"] = "Pièces, Pot, Tapis à Goûter, décorations, tailles",
+	["panel.splorch.keep.listV2"] = "Squishies, Record R, Confettis, Atelier, Plopettes, Monuments, enclos, Cuve",
+	["panel.splorch.reset.listV2"] = "Pièces, Pot, Tapis, Gants, École, déco non gardée, tailles",
 	["panel.splorch.goHome"] = "Rentre dans ton ranch",
 	["panel.splorch.lose"] = "Tu vas perdre {coins} pièces",
 	["panel.splorch.next"] = "Prochain objectif : {target}",

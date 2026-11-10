@@ -419,6 +419,48 @@ return function(T)
 			end
 		)
 
+		-- lot B3, étape 6 (journal B3-69) : la page Détails disait encore ce que la v1.3 garde et remet à
+		-- zéro (« Coins, Pot, Snack Mat, decorations, sizes »), faux en v2.0 : Gants, École et Tapis Étoilé
+		-- repartent aussi, les décorations gardées restent ; Record R, Confettis, Atelier, Plopettes et
+		-- Monuments sont gardés (GDD §4.15)
+		it(
+			"page Détails : listes de la v2.0 avec Record R, Confettis et Atelier ouverts ; sinon celles de la v1.3",
+			function()
+				local function lists(c)
+					local page = c.SP._v2().page
+					return { page.Column1.List.Text, page.Column2.List.Text }
+				end
+				local c = v2client({ r = 5 })
+				openPreview(c)
+				c.SP._v2().details.Activated:Fire()
+				S.run(c, 0.5)
+				expect(lists(c)).toEqual({
+					"Squishies, Record R, Confetti, Workshop, Plopettes, Monuments, pens, Vat",
+					"Coins, Pot, Mats, Gloves, School, decor not kept, sizes",
+				})
+				S.clean(c, expect)
+				local fr = v2client({ r = 5, lang = "fr" })
+				openPreview(fr)
+				fr.SP._v2().details.Activated:Fire()
+				S.run(fr, 0.5)
+				expect(lists(fr)).toEqual({
+					"Squishies, Record R, Confettis, Atelier, Plopettes, Monuments, enclos, Cuve",
+					"Pièces, Pot, Tapis, Gants, École, déco non gardée, tailles",
+				})
+				S.clean(fr, expect)
+				-- Atelier coupé (LiveOps) : les listes de la v1.3
+				local old = v2client({ r = 5, flags = except("Workshop") })
+				openPreview(old)
+				old.SP._v2().details.Activated:Fire()
+				S.run(old, 0.5)
+				expect(lists(old)).toEqual({
+					"Squishies, Vat, saddles, pens, Squishydex, Fame, passes",
+					"Coins, Pot, Snack Mat, decorations, sizes",
+				})
+				S.clean(old, expect)
+			end
+		)
+
 		it("aucun bouton Dépenser d'abord sans ligne gardée payable", function()
 			-- pièces à perdre, mais aucune ligne gardée payable (Enclos au maximum, Lit douillet acheté) :
 			-- la phrase neutre, aucun bouton

@@ -174,6 +174,7 @@ type V2Parts = {
 	holdLabel: TextLabel?,
 	details: TextButton,
 	page: Frame, -- page « Détails »
+	lists: { TextLabel }, -- « Tu gardes », « Repart de zéro » : listes de la page « Détails »
 	next: TextLabel,
 	flyerName: TextLabel,
 	prev: TextButton,
@@ -957,8 +958,22 @@ local function refreshSplorchPage(kind: string)
 	Widgets.setDisabled(parts.hold.button, reason ~= "")
 end
 
+-- Listes de la v2.0 (GDD §4.15 : Gants, École et Tapis Étoilé repartent aussi, les décorations gardées
+-- restent ; Record R, Confettis, Atelier, Plopettes et Monuments sont gardés) quand le Record R, les
+-- Confettis et l'Atelier sont ouverts ; sinon celles de la v1.3 (interrupteurs à la carte du LiveOps ;
+-- lot B3, étape 6, B3-69)
+local function detailLists(): (string, string)
+	if MetaFlags.on("RecordR") and MetaFlags.on("Confetti") and MetaFlags.on("Workshop") then
+		return "panel.splorch.keep.listV2", "panel.splorch.reset.listV2"
+	end
+	return "panel.splorch.keep.list", "panel.splorch.reset.list"
+end
+
 local function refreshDetails(kind: string)
 	local parts = v2 :: V2Parts
+	local keep, reset = detailLists()
+	Widgets.setText(parts.lists[1], keep)
+	Widgets.setText(parts.lists[2], reset)
 	Widgets.setText(parts.next, "panel.splorch.next", { target = Widgets.num(Widgets.n(preview.nextTarget)) })
 	local uid = flyers[flyerIndex]
 	local rec = if uid then squishies()[uid] else nil
@@ -1380,6 +1395,7 @@ local function buildV2(c: Frame)
 	local d = Widgets.group(root, "Details", UDim2.fromOffset(width, height), UDim2.new())
 	d.Visible = false
 	local colW = math.floor((width - 96 - Layout.Spacing.Normal) / 2)
+	local lists: { TextLabel } = {}
 	for i, spec in
 		{
 			{ "panel.splorch.keep", "panel.splorch.keep.list", Widgets.Colors.Success },
@@ -1402,7 +1418,7 @@ local function buildV2(c: Frame)
 			textSize = 44,
 			color = spec[3],
 		})
-		Widgets.label({
+		lists[i] = Widgets.label({
 			parent = f,
 			name = "List",
 			size = UDim2.new(1, -32, 1, -88),
@@ -1518,6 +1534,7 @@ local function buildV2(c: Frame)
 		holdLabel = Widgets.buttonLabel(h.button),
 		details = detailsB,
 		page = d,
+		lists = lists,
 		next = nextLabel,
 		flyerName = flyerName,
 		prev = prev,
