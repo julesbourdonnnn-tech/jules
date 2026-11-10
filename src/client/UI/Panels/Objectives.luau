@@ -874,10 +874,14 @@ local function buildTrack(page: Frame)
 	local width = page.Size.X.Offset
 	local points, fill = header(page)
 	points.Name = "Points"
+	local ENDS_W = 560
+	-- les points s'arrêtent 16 px avant « Fin dans n j » (les deux cadres se recouvraient de 72 px :
+	-- relevé du cas « v2.0 méta » de Layout_panels, lot B3 étape 6, B3-67)
+	points.Size = UDim2.fromOffset(width - 56 - ENDS_W - 16 - 56, 48)
 	local ends = Widgets.label({
 		parent = page,
 		name = "Ends",
-		size = UDim2.fromOffset(560, 40),
+		size = UDim2.fromOffset(ENDS_W, 40),
 		position = UDim2.new(1, -56, 0, 8),
 		anchor = Vector2.new(1, 0),
 		text = "",
@@ -970,11 +974,12 @@ local function buildTrack(page: Frame)
 			textSize = 28,
 			xAlign = Enum.TextXAlignment.Left,
 		})
+		-- sous le nom, sans le recouvrir (y + 32 : 2 px TV de recouvrement, 4 px à 3840 × 2160 ; B3-67)
 		local status = Widgets.label({
 			parent = soon,
 			name = "Status" .. i,
 			size = UDim2.new(1, -32, 0, 34),
-			position = UDim2.fromOffset(16, y + 32),
+			position = UDim2.fromOffset(16, y + 34),
 			text = "",
 			textSize = 28,
 			color = Widgets.Colors.TextDim,
