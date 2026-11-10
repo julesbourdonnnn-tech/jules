@@ -241,6 +241,70 @@ return function(T)
 		)
 	end)
 
+	-- Lot B3, étape 2 (D9, D25 ; GDD §10.6) : aperçu de renaissance à la manette seule, interrupteurs v2.0
+	-- ouverts DANS le test (EventState.features.v2), Grand Splorch ET Jelly Ascend prêts
+	describe("Console_panels › v2.0 : aperçus de renaissance (lot B3)", function()
+		local UpgradeScreen = require("../harness/UpgradeScreen")
+		local S = UpgradeScreen.new(T.Harness)
+		local DONE = { step = 11, done = true, demoDone = true }
+
+		it(
+			"entrée de renaissance → aperçu, maintien sélectionné ; R1 → onglet Jelly Ascend (son maintien) ; L1 → retour ; ○ → menu sur l'entrée",
+			function()
+				local snap = S.snap(1, function(p)
+					p.R = 15
+					p.bestR = 15
+					p.ascend = 0
+				end)
+				local c = S.client({
+					snap = snap,
+					profile = {
+						version = 2,
+						onboarding = DONE,
+						R = 15,
+						squishies = {
+							a = TvAudit.squishy(1, { z = 3e15, bf = 1 }),
+							b = TvAudit.squishy(5, { z = 2e15 }),
+						},
+						growth = { G = 0, g = 0, t = 1800000000 },
+					},
+					ranch = { AscendReady = true },
+				})
+				S.event(c, UpgradeScreen.V2_ALL)
+				local h, PC = c.h, c.PC
+				local SP = TvAudit.mod(h, "UI.Panels.SplorchPreview")
+				TvAudit.tick(h, 0.5)
+				Gamepad.tap(h, Enum.KeyCode.ButtonY)
+				TvAudit.tick(h, 0.5)
+				local entry = PC.entryButton("SplorchPreview")
+				expect(h.game.GuiService.SelectedObject).toBe(entry)
+				Gamepad.tap(h, Enum.KeyCode.ButtonA)
+				TvAudit.tick(h, 0.5)
+				expect(PC.current()).toBe("SplorchPreview")
+				expect(SP.currentTab()).toBe("splorch")
+				local parts = SP._v2()
+				expect(h.game.GuiService.SelectedObject).toBe(parts.hold)
+				Gamepad.tap(h, Enum.KeyCode.ButtonR1)
+				TvAudit.tick(h, 0.5)
+				expect(SP.currentTab()).toBe("ascend")
+				expect(h.game.GuiService.SelectedObject).toBe(parts.ascendHold)
+				Gamepad.tap(h, Enum.KeyCode.ButtonL1)
+				TvAudit.tick(h, 0.5)
+				expect(SP.currentTab()).toBe("splorch")
+				expect(h.game.GuiService.SelectedObject).toBe(parts.hold)
+				Gamepad.tap(h, Enum.KeyCode.ButtonB)
+				TvAudit.tick(h, 0.5)
+				expect(PC.current()).toBeNil()
+				expect(PC.menuOpen()).toBe(true)
+				expect(h.game.GuiService.SelectedObject).toBe(entry)
+				expect(TvAudit.toGame(h)).toBe(true)
+				expect(#TvAudit.sent(h, "JellyAscend")).toBe(0)
+				expect(#TvAudit.sent(h, "GrandSplorch")).toBe(0)
+				S.clean(c, expect)
+			end
+		)
+	end)
+
 	describe("Console_panels › clavier et souris (second)", function()
 		it(
 			"clic = ✕, Retour arrière = ○, libellés des touches du clavier ; aucune touche manette affichée",

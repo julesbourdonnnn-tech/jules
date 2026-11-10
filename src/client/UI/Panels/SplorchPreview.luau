@@ -1278,6 +1278,8 @@ local function buildV2(c: Frame)
 	local width = c.Size.X.Offset
 	local height = c.Size.Y.Offset
 	local root = Widgets.group(c, "V2", UDim2.fromOffset(width, height), UDim2.new())
+	-- pages à deux niveaux pour le robot TvAudit (Splorch, Details, Ascend : un écran chacune)
+	root:SetAttribute("TvLevels", true)
 	local win = Widgets.label({
 		parent = root,
 		name = "Win",

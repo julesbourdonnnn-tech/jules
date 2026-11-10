@@ -15,6 +15,7 @@ local TvAudit = require("../harness/TvAudit")
 local Gamepad = require("../harness/Gamepad")
 
 local Enum = roblox.Enum
+local Vector2 = roblox.Vector2
 local Vector3 = roblox.Vector3
 
 return function(T)
@@ -614,6 +615,63 @@ return function(T)
 				S.patch(h, { r = 0 / 0, bestR = "x", ascend = -1, coins = math.huge, levels = 3 })
 				expect(tileTexts(h)).toEqual(before)
 				S.clean(h, expect)
+			end
+		)
+
+		it(
+			"disposition (TvAudit) : page principale avec « Dépenser d'abord » et un refus, Détails, onglet ascend, carte ; 3 résolutions × 2 langues",
+			function()
+				local c = v2client({
+					r = 15,
+					A = 0,
+					coins = 4000,
+					ranch = { AscendReady = true },
+					edit = function(p)
+						p.coins = 1e30
+						p.tiles.pens = 3
+					end,
+				})
+				local h = c.h
+				local issues = {}
+				local function audit(label)
+					for _, res in { Vector2.new(1920, 1080), Vector2.new(3840, 2160), Vector2.new(1280, 720) } do
+						TvAudit.setResolution(h, res)
+						for _, lang in { "en", "fr" } do
+							TvAudit.setLanguage(h, lang)
+							S.run(c, 0.2)
+							for _, issue in TvAudit.check(h, `[{label} {res.X} {lang}] `) do
+								table.insert(issues, issue)
+							end
+						end
+					end
+				end
+				openPreview(c)
+				local parts = c.SP._v2()
+				-- hors du ranch : boîte des refus à côté de « Dépenser d'abord »
+				local root = h.localPlayer.Character.HumanoidRootPart
+				root.CFrame = h.globals.CFrame.new(Vector3.new(0, 3, 0))
+				S.run(c, 0.3)
+				expect(parts.refusalBox.Visible).toBe(true)
+				expect(parts.spend.Visible).toBe(true)
+				audit("principale")
+				S.select(c, parts.details)
+				Gamepad.tap(h, Enum.KeyCode.ButtonA)
+				S.run(c, 0.5)
+				audit("détails")
+				Gamepad.tap(h, Enum.KeyCode.ButtonB)
+				S.run(c, 0.5)
+				local WorldLayout = h:require("ReplicatedStorage.Shared.Logic.WorldLayout")
+				root.CFrame = h.globals.CFrame.new(WorldLayout.toWorld(1, Vector3.new(0, 3, 36)))
+				Gamepad.tap(h, Enum.KeyCode.ButtonR1)
+				S.run(c, 0.5)
+				expect(c.SP.currentTab()).toBe("ascend")
+				audit("ascend")
+				S.hold(c, parts.ascendHold, 3.3)
+				expect(c.SP._state().card).toBe(true)
+				S.run(c, 1)
+				audit("carte")
+				expect(table.concat(issues, "\n")).toBe("")
+				S.clean(c, expect)
 			end
 		)
 
