@@ -736,4 +736,860 @@ return function(T)
 			expect(table.concat(issues, "\n")).toBe("")
 		end)
 	end)
+
+	-- =========================================================================================
+	-- v2.0 (lot B5, étape 1)
+	-- =========================================================================================
+
+	local VISUALS = "ReplicatedStorage.Shared.Config.Visuals"
+
+	-- Propriétés qui changent pendant fn() : [pièce][propriété] = nombre de changements
+	local function watch(handle, fn)
+		local counts, conns = {}, {}
+		for i, part in handle.parts do
+			counts[i] = {}
+			table.insert(
+				conns,
+				part.Changed:Connect(function(prop)
+					counts[i][prop] = (counts[i][prop] or 0) + 1
+				end)
+			)
+		end
+		fn()
+		for _, c in conns do
+			c:Disconnect()
+		end
+		return counts
+	end
+
+	local function partOf(handle, name)
+		for i, part in handle.parts do
+			if part.Name == name then
+				return part, i
+			end
+		end
+		return nil
+	end
+
+	local function near(a, b, eps)
+		return (a - b).Magnitude < (eps or 1e-5)
+	end
+
+	-- identifiants d'une sorte dans Cosmetics.ListV2 puis dans la rotation de la semaine
+	local function v2Ids(Cosmetics, kind)
+		local out = {}
+		for _, list in { Cosmetics.ListV2, Cosmetics.WeeklyRotation } do
+			for _, def in list do
+				if def.kind == kind then
+					table.insert(out, def.id)
+				end
+			end
+		end
+		return out
+	end
+
+	local function witness()
+		local lines = string.split(fs.readFile("tests/fixtures/squishy-recipes/v13.txt"), "\n")
+		if lines[#lines] == "" then
+			table.remove(lines)
+		end
+		return lines
+	end
+
+	describe("SquishyBuilder › yeux « bébé » (lot B5, D5)", function()
+		it(
+			"version A (livrée) : recettes et plans EXACTEMENT ceux de la v1.3 (témoin écrit sur REL-B3) pour les 26 espèces",
+			function()
+				local h, SB, Species, Mutations = load()
+				local Visuals = h:require(VISUALS)
+				expect(Visuals.EyeChoice).toBe("A")
+				expect(Visuals.Eyes.A).toEqual({ size = 0.22, height = 0.12 })
+				expect(Visuals.Eyes.B).toEqual({ size = 0.26, height = 0.04 })
+				expect(Visuals.Eyes.C).toEqual({ size = 0.30, height = 0.00 })
+				local expected = witness()
+				local lines = RecipeDump.lines(SB, Species, Mutations)
+				expect(#lines).toBe(#expected)
+				expect(#lines > 26 * 6).toBe(true)
+				for i, line in lines do
+					if line ~= expected[i] then
+						expect({ i = i, line = line }).toEqual({ i = i, line = expected[i] })
+					end
+				end
+				zeroLog(h)
+			end
+		)
+
+		it(
+			"versions B et C : seuls les yeux et leurs reflets changent (plus gros, plus bas) ; yeux des grenouilles : taille seulement ; 12 pièces au plus",
+			function()
+				local hA, SBA, Species = load()
+				local expected = witness()
+				for _, choice in { "B", "C" } do
+					local h, SB, _, Mutations = load()
+					local Visuals = h:require(VISUALS)
+					Visuals.EyeChoice = choice
+					local k = Visuals.Eyes[choice].size / 0.22
+					expect(k > 1).toBe(true)
+					-- tout sauf les yeux et les reflets : lignes du témoin de la v1.3
+					local lines = RecipeDump.lines(SB, Species, Mutations)
+					expect(#lines).toBe(#expected)
+					local eyeLines = 0
+					for i, line in lines do
+						local fields = string.split(expected[i], "|")
+						local role = fields[2]
+						if string.sub(line, 1, 2) == "D " then
+							expect(string.sub(expected[i], 1, 2)).toBe("D ")
+						elseif role == "eye" or role == "glint" then
+							eyeLines += 1
+							expect({ i = i, changed = line ~= expected[i] }).toEqual({ i = i, changed = true })
+						elseif line ~= expected[i] then
+							expect({ i = i, line = line }).toEqual({ i = i, line = expected[i] })
+						end
+					end
+					expect(eyeLines > 26 * 2).toBe(true)
+					for _, def in Species.List do
+						local a, b = SBA.recipe(def.id), SB.recipe(def.id)
+						expect(#b.pieces).toBe(#a.pieces)
+						local bulgy = def.eyes == "bulgy"
+							or def.eyes == "bulgyWink"
+							or string.sub(def.top, 1, 7) == "bugEyes"
+						for i, pa in a.pieces do
+							local pb = b.pieces[i]
+							expect(pb.name).toBe(pa.name)
+							local label = def.key .. " " .. pa.name .. " " .. choice
+							if pa.role == "eye" then
+								-- largeur × k, pour chaque sorte d'œil
+								expect({ label, math.abs(pb.size.X - pa.size.X * k) < 1e-5 }).toEqual({
+									label,
+									true,
+								})
+								if pa.name == "Eye3" or bulgy then
+									expect({ label, near(pb.offset, pa.offset) }).toEqual({ label, true })
+								else
+									-- plus bas sur le visage, toujours à la surface du corps (devant)
+									expect({ label, pb.offset.Y < pa.offset.Y - 0.03 * def.body.y }).toEqual({
+										label,
+										true,
+									})
+									expect({ label, pb.offset.Z < 0 }).toEqual({ label, true })
+									local h0 = (pb.offset.Y - def.body.y / 2) / def.body.y
+									expect({ label, math.abs(h0 - Visuals.Eyes[choice].height) < 0.01 }).toEqual({
+										label,
+										true,
+									})
+								end
+							elseif pa.role == "glint" then
+								expect({ label, near(pb.size, pa.size * k) }).toEqual({ label, true })
+							end
+						end
+						-- budget inchangé : mêmes nombres de pièces à chaque niveau de détail
+						for _, lod in { 1, 2, 3 } do
+							local s = spec(def.id, { lod = lod, outfit = "partyHat", saddle = "classic" })
+							expect(SB.partCount(s)).toBe(SBA.partCount(s))
+							expect(SB.partCount(s) <= 12).toBe(true)
+						end
+					end
+					zeroLog(h)
+				end
+				zeroLog(hA)
+			end
+		)
+
+		it("version inconnue ou abîmée : les recettes de la version A, sans trace", function()
+			local expected = witness()
+			local bad = {
+				function(V)
+					V.EyeChoice = "Z"
+				end,
+				function(V)
+					V.EyeChoice = nil
+				end,
+				function(V)
+					V.EyeChoice = 3
+				end,
+				function(V)
+					V.Eyes.A = { size = "gros", height = 0.12 }
+				end,
+				function(V)
+					V.Eyes.A = { size = 0 / 0, height = 0.12 }
+				end,
+				function(V)
+					V.Eyes.A = { size = 5, height = 0.12 }
+				end,
+				function(V)
+					V.Eyes.A = { size = 0.22, height = -3 }
+				end,
+				function(V)
+					V.Eyes.A = 7
+				end,
+				function(V)
+					V.Eyes = {}
+				end,
+			}
+			for case, spoil in bad do
+				local h, SB, Species, Mutations = load()
+				spoil(h:require(VISUALS))
+				local lines = RecipeDump.lines(SB, Species, Mutations)
+				for i, line in lines do
+					if line ~= expected[i] then
+						expect({ case = case, i = i, line = line }).toEqual({
+							case = case,
+							i = i,
+							line = expected[i],
+						})
+					end
+				end
+				SB.release(SB.build(spec(1)))
+				zeroLog(h)
+			end
+		end)
+	end)
+
+	describe("SquishyBuilder › visages (lot B5, D6)", function()
+		it("FACES = Config/Visuals.Faces (les 6 visages du GDD §5.6), « happy » par défaut", function()
+			local h, SB = load()
+			local Visuals = h:require(VISUALS)
+			expect(SB.FACES).toEqual(Visuals.Faces)
+			expect(SB.FACES).toEqual(FACES)
+			expect(table.isfrozen(SB.FACES)).toBe(true)
+			local handle = SB.build(spec(1))
+			expect(SB.faceOf(handle)).toBe("happy")
+			zeroLog(h)
+		end)
+
+		it(
+			"chaque espèce × chaque visage : UNE écriture de Size au plus par œil et par reflet, aucune ailleurs ; même visage : rien ; retour à « happy » : tailles, matériaux et décalages exacts",
+			function()
+				local h, SB, Species = load()
+				for _, def in Species.List do
+					local handle = SB.build(spec(def.id, { stars = 0 }))
+					local pieces = SB._plan(handle.spec)
+					expect(#pieces).toBe(#handle.parts)
+					local size0, mat0, off0, tr0, col0 = {}, {}, {}, {}, {}
+					for i, part in handle.parts do
+						size0[i], mat0[i], off0[i] = part.Size, part.Material, handle.offsets[i]
+						tr0[i], col0[i] = part.Transparency, part.Color
+					end
+					for _, face in FACES do
+						if face ~= "happy" then
+							local label = def.key .. " " .. face
+							local counts = watch(handle, function()
+								SB.setFace(handle, face)
+							end)
+							expect(SB.faceOf(handle)).toBe(face)
+							local seen = false
+							for i in handle.parts do
+								local role = pieces[i].role
+								local n = counts[i].Size or 0
+								local limit = if role == "eye" or role == "glint" then 1 else 0
+								expect({ label, pieces[i].name, n <= limit }).toEqual({
+									label,
+									pieces[i].name,
+									true,
+								})
+								for prop in counts[i] do
+									local allowed = prop == "Size" or (prop == "Material" and role == "glint")
+									expect({ label, pieces[i].name, prop, allowed }).toEqual({
+										label,
+										pieces[i].name,
+										prop,
+										true,
+									})
+								end
+								if n > 0 or handle.offsets[i] ~= off0[i] then
+									seen = true
+								end
+								-- un décalage ne bouge que pour les yeux, les reflets et la bouche
+								if handle.offsets[i] ~= off0[i] then
+									local moves = role == "eye" or role == "glint" or role == "mouth"
+									expect({ label, pieces[i].name, moves }).toEqual({
+										label,
+										pieces[i].name,
+										true,
+									})
+								end
+							end
+							-- chaque visage se voit sur chaque espèce
+							expect({ label, seen }).toEqual({ label, true })
+							-- même visage : aucune écriture
+							local again = watch(handle, function()
+								SB.setFace(handle, face)
+							end)
+							for i in handle.parts do
+								expect({ label, next(again[i]) == nil }).toEqual({ label, true })
+							end
+							-- retour à « happy » : une écriture au plus, tout revient exactement
+							local back = watch(handle, function()
+								SB.setFace(handle, "happy")
+							end)
+							expect(SB.faceOf(handle)).toBe("happy")
+							for i, part in handle.parts do
+								expect({ label, (back[i].Size or 0) <= 1 }).toEqual({ label, true })
+								expect({ label, part.Size == size0[i] }).toEqual({ label, true })
+								expect({ label, part.Material == mat0[i] }).toEqual({ label, true })
+								expect({ label, handle.offsets[i] == off0[i] }).toEqual({ label, true })
+								expect({ label, part.Transparency == tr0[i] }).toEqual({ label, true })
+								expect({ label, part.Color == col0[i] }).toEqual({ label, true })
+							end
+						end
+					end
+					SB.release(handle)
+				end
+				zeroLog(h)
+			end
+		)
+
+		it(
+			"Plop : Ravi (yeux fermés relevés, reflets cachés, grand sourire), Surpris (× 1,2, bouche ronde), Endormi, Étoilé (reflets × 1,6 en Neon), Boudeur (yeux du Flop, bouche à l'envers)",
+			function()
+				local h, SB = load()
+				local handle = SB.build(spec(1, { stars = 0 }))
+				local d = handle.body.Size.X -- 2 studs
+				local eye, eyeIndex = partOf(handle, "Eye1")
+				local glint = partOf(handle, "Glint1")
+				local _, m1 = partOf(handle, "Mouth1")
+				local _, m2 = partOf(handle, "Mouth2")
+				local _, m3 = partOf(handle, "Mouth3")
+				local eye0, glint0 = eye.Size, glint.Size
+				local function at(i)
+					local parts, cframes = SB.pose(handle, CFrame.new())
+					for j, part in parts do
+						if part == handle.parts[i] then
+							return cframes[j].Position
+						end
+					end
+					return nil
+				end
+				local eyeY, mouth1, mouth2, mouth3 = at(eyeIndex).Y, at(m1), at(m2), at(m3)
+				expect(mouth2.Y < mouth1.Y).toBe(true) -- sourire de la recette : le milieu plus bas
+				local smile = mouth3.X - mouth1.X
+
+				SB.setFace(handle, "delighted")
+				expect(eye.Size.Y < eye.Size.X * 0.4).toBe(true)
+				expect(eye.Size.Y >= 0.05 * d - 1e-6).toBe(true)
+				expect(glint.Size.Magnitude < 0.01).toBe(true)
+				expect(math.abs(at(eyeIndex).Y - (eyeY + 0.02 * d)) < 1e-5).toBe(true)
+				expect(at(m3).X - at(m1).X > smile * 1.2).toBe(true)
+				expect(at(m2).Y < at(m1).Y).toBe(true)
+
+				SB.setFace(handle, "surprised")
+				expect(near(eye.Size, eye0 * 1.2)).toBe(true)
+				expect(near(glint.Size, glint0 * 1.2)).toBe(true)
+				expect(math.abs(at(eyeIndex).Y - eyeY) < 1e-5).toBe(true)
+				-- bouche ronde : les 3 pièces serrées (elles se touchent)
+				local ball = handle.parts[m1].Size.X
+				expect((at(m1) - at(m2)).Magnitude < ball).toBe(true)
+				expect((at(m3) - at(m2)).Magnitude < ball).toBe(true)
+				expect((at(m3) - at(m1)).Magnitude < ball).toBe(true)
+
+				SB.setFace(handle, "sleepy")
+				expect(eye.Size.Y < eye.Size.X * 0.4).toBe(true)
+				expect(glint.Size.Magnitude < 0.01).toBe(true)
+				expect(at(eyeIndex).Y < eyeY).toBe(true)
+				expect(math.abs(at(m2).Y - at(m1).Y) < 0.002 * d).toBe(true) -- bouche droite
+				expect(at(m3).X - at(m1).X < smile).toBe(true)
+
+				SB.setFace(handle, "starry")
+				expect(eye.Size).toBe(eye0)
+				expect(near(glint.Size, glint0 * 1.6)).toBe(true)
+				expect(glint.Material).toBe(Enum.Material.Neon)
+				expect(at(m2)).toBe(mouth2)
+
+				SB.setFace(handle, "sulky")
+				expect(near(eye.Size, Vector3.new(eye0.X, eye0.Y * 0.5, eye0.Z))).toBe(true)
+				expect(glint.Size.Magnitude < 0.01).toBe(true)
+				expect(glint.Material).toBe(Enum.Material.SmoothPlastic)
+				expect(at(m2).Y > at(m1).Y).toBe(true) -- bouche à l'envers : le milieu plus haut
+
+				SB.setFace(handle, "happy")
+				expect(eye.Size).toBe(eye0)
+				expect(glint.Size).toBe(glint0)
+				expect(at(m1)).toBe(mouth1)
+				expect(at(m2)).toBe(mouth2)
+				expect(at(m3)).toBe(mouth3)
+				zeroLog(h)
+			end
+		)
+
+		it(
+			"yeux fermés ou mi-clos de la recette : Surpris les ouvre en rond ; Ravi et Endormi ne les amincissent jamais ; sans reflet, Étoilé agrandit les yeux",
+			function()
+				local h, SB = load()
+				-- Purrpudding (6) : yeux fermés ; Wibble (2) : mi-clos ; Lotlolly (15) : clin d'œil ; aucun reflet
+				for _, species in { 6, 2 } do
+					local handle = SB.build(spec(species, { stars = 0 }))
+					expect(partOf(handle, "Glint1")).toBeNil()
+					local eye = partOf(handle, "Eye1")
+					local eye0 = eye.Size
+					expect(eye0.Y < eye0.X * 0.5).toBe(true)
+					SB.setFace(handle, "surprised")
+					expect(math.abs(eye.Size.Y - eye0.X * 1.2) < 1e-5).toBe(true)
+					expect(math.abs(eye.Size.X - eye0.X * 1.2) < 1e-5).toBe(true)
+					for _, face in { "delighted", "sleepy", "sulky" } do
+						SB.setFace(handle, face)
+						expect({ species, face, eye.Size.Y >= math.min(eye0.Y, 0.05 * 2) - 1e-6 }).toEqual({
+							species,
+							face,
+							true,
+						})
+					end
+					SB.setFace(handle, "starry")
+					expect(near(eye.Size, eye0 * 1.15)).toBe(true)
+					SB.setFace(handle, "happy")
+					expect(eye.Size).toBe(eye0)
+				end
+				local wink = SB.build(spec(15, { stars = 0 }))
+				local open, closed = partOf(wink, "Eye1"), partOf(wink, "Eye2")
+				expect(closed.Size.Y < open.Size.Y).toBe(true)
+				SB.setFace(wink, "surprised")
+				expect(math.abs(closed.Size.Y - open.Size.Y) < 1e-5).toBe(true)
+				zeroLog(h)
+			end
+		)
+
+		it(
+			"visage inconnu, valeurs hostiles, Handle rendu : rien, jamais d'erreur ; release() rend « happy » au modèle de la réserve et un modèle repris repart avec « happy »",
+			function()
+				local h, SB = load()
+				local a = SB.build(spec(1, { stars = 0 }))
+				local size0, mat0 = {}, {}
+				for i, part in a.parts do
+					size0[i], mat0[i] = part.Size, part.Material
+				end
+				SB.setFace(a, "starry")
+				for _, bad in { "angry", "", "Happy", 5, 0 / 0, true, {}, nil } do
+					local counts = watch(a, function()
+						SB.setFace(a, bad)
+					end)
+					for i in a.parts do
+						expect(next(counts[i]) == nil).toBe(true)
+					end
+					expect(SB.faceOf(a)).toBe("starry")
+				end
+				expect(SB.faceOf(nil)).toBe("happy")
+				expect(SB.faceOf({})).toBe("happy")
+				SB.setFace(nil, "starry")
+				SB.setFace({}, "starry")
+				-- rendu : le modèle de la réserve a déjà son visage de repos
+				local parts = table.clone(a.parts)
+				SB.release(a)
+				expect(SB.faceOf(a)).toBe("happy")
+				for i, part in parts do
+					expect(part.Size).toBe(size0[i])
+					expect(part.Material).toBe(mat0[i])
+				end
+				-- l'ancien Handle ne touche plus au modèle
+				local counts = {}
+				local conns = {}
+				for i, part in parts do
+					table.insert(
+						conns,
+						part.Changed:Connect(function(prop)
+							counts[i] = prop
+						end)
+					)
+				end
+				SB.setFace(a, "sulky")
+				expect(next(counts)).toBeNil()
+				for _, c in conns do
+					c:Disconnect()
+				end
+				-- repris : même modèle, visage « happy », tailles et décalages de la recette
+				local b = SB.build(spec(1, { stars = 0 }))
+				expect(b.model).toBe(a.model)
+				expect(SB.faceOf(b)).toBe("happy")
+				local fresh = SB.build(spec(1, { stars = 0 }))
+				expect(fresh.model ~= b.model).toBe(true)
+				for i, part in b.parts do
+					expect(part.Size).toBe(fresh.parts[i].Size)
+					expect(part.Material).toBe(fresh.parts[i].Material)
+					expect(b.offsets[i]).toBe(fresh.offsets[i])
+				end
+				zeroLog(h)
+			end
+		)
+
+		it(
+			"sous un visage : setScale garde le visage, setMutation aussi (nouveau jeu de pièces), le niveau de détail ne change aucune taille",
+			function()
+				local h, SB, _, Mutations = load()
+				local handle = SB.build(spec(1, { stars = 0 }))
+				local eye = partOf(handle, "Eye1")
+				local eye0 = eye.Size
+				SB.setFace(handle, "surprised")
+				SB.setScale(handle, 3)
+				expect(near(eye.Size, eye0 * 1.2 * 3)).toBe(true)
+				SB.setFace(handle, "happy")
+				expect(near(eye.Size, eye0 * 3)).toBe(true)
+				SB.setScale(handle, 1)
+				expect(eye.Size).toBe(eye0)
+				-- niveau de détail : les reflets cachés par le LOD gardent la taille du visage
+				SB.setFace(handle, "starry")
+				local glint = partOf(handle, "Glint1")
+				local starry = glint.Size
+				SB.setLod(handle, 2)
+				expect(glint.Transparency).toBe(1)
+				expect(glint.Size).toBe(starry)
+				SB.setLod(handle, 1)
+				expect(glint.Transparency).toBe(0)
+				expect(glint.Size).toBe(starry)
+				-- chaque mutation : le visage reste, sur les pièces du nouvel aspect
+				for m = 1, Mutations.Count do
+					SB.setMutation(handle, m, false)
+					expect(SB.faceOf(handle)).toBe("starry")
+					local pieces = SB._plan(handle.spec)
+					local d = 2
+					for i, p in pieces do
+						if p.role == "glint" then
+							expect({ m, near(handle.parts[i].Size, p.size * 1.6 * d) }).toEqual({ m, true })
+							expect({ m, handle.parts[i].Material }).toEqual({ m, Enum.Material.Neon })
+						elseif p.role == "eye" then
+							local alone = true
+							for _, q in pieces do
+								if q.role == "glint" then
+									alone = false
+								end
+							end
+							local f = if alone then 1.15 else 1
+							expect({ m, near(handle.parts[i].Size, p.size * f * d) }).toEqual({ m, true })
+						end
+					end
+				end
+				SB.setFace(handle, "happy")
+				local pieces = SB._plan(handle.spec)
+				for i, p in pieces do
+					if p.role == "eye" or p.role == "glint" then
+						expect(near(handle.parts[i].Size, p.size * 2)).toBe(true)
+					end
+				end
+				zeroLog(h)
+			end
+		)
+
+		it(
+			"clignement : depuis la taille du visage (Surpris), jamais sous un visage qui ferme les yeux (Ravi, Endormi) ; visage posé pendant un clignement : la taille du visage, puis le clignement reprend",
+			function()
+				local h, SB = load()
+				local handle = SB.build(spec(1, { stars = 0 }))
+				local eye = partOf(handle, "Eye1")
+				local eye0 = eye.Size
+				-- t = 0 : début d'un clignement pour toute période ; t = 1 : yeux ouverts
+				SB.animate(handle, 0)
+				expect(near(eye.Size, Vector3.new(eye0.X, eye0.Y * 0.1, eye0.Z))).toBe(true)
+				SB.animate(handle, 1)
+				expect(eye.Size).toBe(eye0)
+				SB.setFace(handle, "surprised")
+				local wide = eye.Size
+				SB.animate(handle, 0)
+				expect(near(eye.Size, Vector3.new(wide.X, wide.Y * 0.1, wide.Z))).toBe(true)
+				SB.animate(handle, 1)
+				expect(eye.Size).toBe(wide)
+				for _, face in { "delighted", "sleepy" } do
+					SB.setFace(handle, face)
+					local closed = eye.Size
+					local counts = watch(handle, function()
+						SB.animate(handle, 0)
+						SB.animate(handle, 0.05)
+						SB.animate(handle, 1)
+					end)
+					expect(eye.Size).toBe(closed)
+					for i in handle.parts do
+						expect({ face, counts[i].Size }).toEqual({ face, nil })
+					end
+				end
+				-- visage posé pendant un clignement
+				SB.setFace(handle, "happy")
+				SB.animate(handle, 0)
+				SB.setFace(handle, "sulky")
+				local sulky = Vector3.new(eye0.X, eye0.Y * 0.5, eye0.Z)
+				expect(near(eye.Size, sulky)).toBe(true)
+				SB.animate(handle, 0.01)
+				expect(near(eye.Size, Vector3.new(sulky.X, sulky.Y * 0.1, sulky.Z))).toBe(true)
+				SB.animate(handle, 1)
+				expect(near(eye.Size, sulky)).toBe(true)
+				-- visage fermé posé pendant un clignement : il s'arrête là
+				SB.animate(handle, 0)
+				SB.setFace(handle, "sleepy")
+				local closed = eye.Size
+				SB.animate(handle, 0.02)
+				expect(eye.Size).toBe(closed)
+				SB.setFace(handle, "happy")
+				SB.animate(handle, 1)
+				expect(eye.Size).toBe(eye0)
+				zeroLog(h)
+			end
+		)
+	end)
+
+	describe("SquishyBuilder › étoiles dessinées (lot B5, D11, INT-B1-STARS)", function()
+		local function arc(handle)
+			return handle.body:FindFirstChild("Stars")
+		end
+
+		-- instances de l'arc d'étoiles d'un modèle (l'arc et ce qu'il porte)
+		local function arcInstances(handle)
+			local gui = arc(handle)
+			return if gui then 1 + #gui:GetDescendants() else 0
+		end
+
+		it(
+			"ni TextLabel, ni TextScaled, ni caractère étoile : 3 Frames dorées par étoile, mêmes places en arc qu'en v1.3",
+			function()
+				local h, SB = load()
+				local handle = SB.build(spec(1, { stars = 5 }))
+				local gui = arc(handle)
+				expect(gui.ClassName).toBe("BillboardGui")
+				expect(gui.MaxDistance).toBe(60)
+				expect(gui.Enabled).toBe(true)
+				expect(gui.AlwaysOnTop).toBe(false)
+				expect(gui.LightInfluence).toBe(0)
+				expect(#gui:GetChildren()).toBe(15)
+				for _, d in handle.model:GetDescendants() do
+					local text = d.ClassName == "TextLabel"
+						or d.ClassName == "TextButton"
+						or d.ClassName == "TextBox"
+					expect({ d.ClassName, text }).toEqual({ d.ClassName, false })
+				end
+				local angles = {}
+				for i = 1, 5 do
+					local x = 0.5 + (i - 3) * 0.2
+					local y = 0.5 + math.abs(i - 3) * 0.12
+					for k = 1, 3 do
+						local ray = gui:FindFirstChild("Star" .. i .. "Ray" .. k)
+						expect(ray.ClassName).toBe("Frame")
+						expect(#ray:GetChildren()).toBe(0)
+						expect(ray.Visible).toBe(true)
+						expect(ray.BackgroundColor3).toBe(GOLD)
+						expect(ray.BorderSizePixel).toBe(0)
+						expect(ray.AnchorPoint).toBe(roblox.Vector2.new(0.5, 0.5))
+						expect(math.abs(ray.Position.X.Scale - x) < 1e-6).toBe(true)
+						expect(math.abs(ray.Position.Y.Scale - y) < 1e-6).toBe(true)
+						expect(ray.Position.X.Offset).toBe(0)
+						-- un trait : long de 96 % du côté de l'étoile (0,2 × la largeur de l'arc), épais de
+						-- 28 % ; à l'écran l'arc fait 1,4 D × 0,36 D
+						local length = ray.Size.X.Scale * 1.4
+						local thickness = ray.Size.Y.Scale * 0.36
+						expect(math.abs(length - 0.2 * 1.4 * 0.96) < 1e-5).toBe(true)
+						expect(math.abs(thickness - 0.2 * 1.4 * 0.28) < 1e-5).toBe(true)
+						expect(length <= 0.2 * 1.4).toBe(true) -- l'étoile tient dans sa case
+						angles[i] = angles[i] or {}
+						angles[i][ray.Rotation] = true
+					end
+					-- 3 traits qui se croisent : 3 directions à 60° l'une de l'autre, une pointe en haut
+					expect(angles[i][90] and angles[i][30] and angles[i][150]).toBe(true)
+				end
+				-- arc : l'étoile du milieu plus haute que celles des bouts
+				expect(gui.Star3Ray1.Position.Y.Scale < gui.Star1Ray1.Position.Y.Scale).toBe(true)
+				expect(gui.Star1Ray1.Position.Y.Scale).toBe(gui.Star5Ray1.Position.Y.Scale)
+				-- le code n'écrit plus aucun texte d'étoile
+				local src = fs.readFile("src/shared/Render/SquishyBuilder.luau")
+				for _, pattern in
+					{
+						'Instance%.new%("TextLabel"%)',
+						"%.TextScaled",
+						"%.Text%s*=",
+						"%.FontFace",
+						'"[^"\n]*\u{2605}[^"\n]*"',
+					}
+				do
+					expect({ pattern, string.find(src, pattern) }).toEqual({ pattern, nil })
+				end
+				zeroLog(h)
+			end
+		)
+
+		it(
+			"construites à la première étoile montrée : 0 instance sans étoile, 1 + 3 n pour n étoiles (v1.3 : 11 par modèle), rien de détruit ni de reconstruit ensuite",
+			function()
+				local h, SB = load()
+				local a = SB.build(spec(1, { stars = 0 }))
+				expect(arc(a)).toBeNil()
+				expect(arcInstances(a)).toBe(0)
+				-- sans étoile : chaque fonction marche sans arc
+				SB.setLod(a, 2)
+				SB.setLod(a, 1)
+				SB.setScale(a, 2)
+				SB.setScale(a, 1)
+				SB.setStars(a, 0)
+				expect(arc(a)).toBeNil()
+				for n = 1, 5 do
+					local b = SB.build(spec(n + 1, { stars = n }))
+					expect({ n, arcInstances(b) }).toEqual({ n, 1 + 3 * n })
+				end
+				SB.setStars(a, 2)
+				local gui = arc(a)
+				expect(arcInstances(a)).toBe(7)
+				expect(gui.Enabled).toBe(true)
+				local first = gui.Star1Ray1
+				SB.setStars(a, 1)
+				expect(arcInstances(a)).toBe(7)
+				expect(gui.Star1Ray1.Visible).toBe(true)
+				expect(gui.Star2Ray1.Visible).toBe(false)
+				SB.setStars(a, 0)
+				expect(gui.Enabled).toBe(false)
+				expect(gui.Star1Ray1.Visible).toBe(false)
+				expect(arcInstances(a)).toBe(7)
+				SB.setStars(a, 99)
+				expect(arcInstances(a)).toBe(16)
+				expect(gui.Star1Ray1).toBe(first)
+				expect(arc(a)).toBe(gui)
+				-- réserve : le modèle repris sans étoile garde son arc, éteint
+				SB.release(a)
+				local b = SB.build(spec(1, { stars = 0 }))
+				expect(b.model).toBe(a.model)
+				expect(arc(b)).toBe(gui)
+				expect(gui.Enabled).toBe(false)
+				for _, ray in gui:GetChildren() do
+					expect(ray.Visible).toBe(false)
+				end
+				zeroLog(h)
+			end
+		)
+
+		it(
+			"l'arc suit la taille du modèle (1,4 D × 0,36 D au-dessus de la tête), même construit après un changement d'échelle ; détail complet seulement",
+			function()
+				local h, SB = load()
+				local handle = SB.build(spec(1, { stars = 0, displayScale = 3 }))
+				SB.setStars(handle, 1)
+				local gui = arc(handle)
+				local function sized(d)
+					local s, o = gui.Size, gui.StudsOffsetWorldSpace
+					return math.abs(s.X.Scale - 1.4 * d) < 1e-4
+						and math.abs(s.Y.Scale - 0.36 * d) < 1e-4
+						and math.abs(o.Y - (d / 2 + 0.32 * d)) < 1e-4
+				end
+				expect(sized(6)).toBe(true)
+				SB.setScale(handle, 1)
+				expect(sized(2)).toBe(true)
+				SB.setLod(handle, 2)
+				expect(gui.Enabled).toBe(false)
+				SB.setStars(handle, 4) -- construites hors du détail complet : éteintes
+				expect(gui.Enabled).toBe(false)
+				expect(#gui:GetChildren()).toBe(12)
+				SB.setLod(handle, 1)
+				expect(gui.Enabled).toBe(true)
+				-- autre aspect (mutation) : nouvel arc à la bonne taille, mêmes étoiles
+				SB.setMutation(handle, 2, false)
+				local next = arc(handle)
+				expect(next ~= gui).toBe(true)
+				expect(next.Enabled).toBe(true)
+				expect(#next:GetChildren()).toBe(12)
+				zeroLog(h)
+			end
+		)
+	end)
+
+	describe("SquishyBuilder › cosmétiques de la v2.0 (lot B5, D12)", function()
+		it(
+			"4 tenues de la v2.0 : une pièce « Outfit » chacune, pour chaque espèce, différente des autres tenues ; tenue inconnue : aucune pièce, aucune trace",
+			function()
+				local h, SB, Species = load()
+				local Cosmetics = h:require("ReplicatedStorage.Shared.Config.Cosmetics")
+				local ids = v2Ids(Cosmetics, "outfit")
+				table.sort(ids)
+				expect(table.concat(ids, ",")).toBe("buildersCrown,partyHat,polkaBow,starGlasses")
+				local sorted = table.clone(OUTFITS_V2)
+				table.sort(sorted)
+				expect(sorted).toEqual(ids)
+				for _, def in Species.List do
+					local seen = {}
+					for _, outfit in OUTFITS do
+						if outfit then
+							local found = {}
+							for _, p in SB._plan(spec(def.id, { outfit = outfit })) do
+								if p.role == "outfit" then
+									table.insert(found, p)
+								end
+							end
+							local label = def.key .. " " .. outfit
+							expect({ label, #found }).toEqual({ label, 1 })
+							expect(found[1].name).toBe("Outfit")
+							local dump = RecipeDump.piece(found[1])
+							expect({ label, seen[dump] }).toEqual({ label, nil })
+							seen[dump] = outfit
+							if table.find(OUTFITS_V2, outfit) then
+								-- sur la tête : au-dessus des yeux, à moins d'un diamètre du centre
+								local p = found[1]
+								expect({ label, p.offset.Y > 0.75 * def.body.y }).toEqual({ label, true })
+								expect({ label, p.offset.Magnitude < 1.6 }).toEqual({ label, true })
+								expect({ label, p.size.X > 0.1 and p.size.Y > 0.1 and p.size.Z > 0.05 }).toEqual({
+									label,
+									true,
+								})
+								expect({ label, p.transparency }).toEqual({ label, 0 })
+							end
+						end
+					end
+					for _, outfit in OUTFITS_V2 do
+						local handle = SB.build(spec(def.id, { outfit = outfit }))
+						local part = handle.model:FindFirstChild("Outfit")
+						expect({ def.key, outfit, part ~= nil }).toEqual({ def.key, outfit, true })
+						expect(part.Transparency).toBe(0)
+						expect(#handle.parts <= 12).toBe(true)
+						SB.release(handle)
+					end
+				end
+				for _, bad in { "nope", "", "PartyHat", "partyhat", 7, true } do
+					for _, p in SB._plan(spec(1, { outfit = bad })) do
+						expect(p.role ~= "outfit").toBe(true)
+					end
+					local handle = SB.build(spec(1, { outfit = bad }))
+					expect(handle.model:FindFirstChild("Outfit")).toBeNil()
+					SB.release(handle)
+				end
+				zeroLog(h)
+			end
+		)
+
+		it(
+			"9 selles de la v2.0 : chacune sa couleur sur un modèle construit seul, les mêmes que la table SADDLE_V2 de RanchRenderer ; selles de la v1.3 inchangées ; inconnue : rose par défaut",
+			function()
+				local h, SB = load()
+				local Cosmetics = h:require("ReplicatedStorage.Shared.Config.Cosmetics")
+				local DEFAULT = Color3.fromRGB(255, 150, 170)
+				local function saddleOf(id)
+					local handle = SB.build(spec(1, { saddle = id }))
+					local part = handle.model:FindFirstChild("Saddle")
+					local color = part.Color
+					SB.release(handle)
+					return color
+				end
+				-- table de RanchRenderer (lot B4, D19b), lue dans sa source : Shared ne peut pas la requérir
+				local src = fs.readFile("src/client/Controllers/RanchRenderer.luau")
+				local block = string.match(src, "local SADDLE_V2: { %[string%]: Color3 } = {(.-)\n}")
+				expect(block ~= nil).toBe(true)
+				local renderer = {}
+				local count = 0
+				for id, r, g, b in string.gmatch(block, "(%w+) = Color3%.fromRGB%((%d+), (%d+), (%d+)%)") do
+					renderer[id] = Color3.fromRGB(tonumber(r), tonumber(g), tonumber(b))
+					count += 1
+				end
+				local ids = v2Ids(Cosmetics, "saddle")
+				expect(#ids).toBe(9)
+				expect(count).toBe(9)
+				local seen = {}
+				for _, id in ids do
+					local color = saddleOf(id)
+					expect({ id, color }).toEqual({ id, renderer[id] })
+					expect({ id, SB._saddleColor(id) }).toEqual({ id, renderer[id] })
+					expect({ id, color ~= DEFAULT }).toEqual({ id, true })
+					local key = tostring(color)
+					expect({ id, seen[key] }).toEqual({ id, nil })
+					seen[key] = id
+				end
+				for _, def in Cosmetics.List do
+					if def.kind == "saddle" then
+						expect({ def.id, saddleOf(def.id) }).toEqual({ def.id, def.color or DEFAULT })
+					end
+				end
+				for _, bad in { "nope", "", "Cosmic" } do
+					expect({ bad, saddleOf(bad) }).toEqual({ bad, DEFAULT })
+				end
+				expect(SB._saddleColor(nil)).toBe(DEFAULT)
+				expect(SB._saddleColor(5)).toBe(DEFAULT)
+				zeroLog(h)
+			end
+		)
+	end)
 end

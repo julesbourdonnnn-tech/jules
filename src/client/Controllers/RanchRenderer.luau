@@ -63,6 +63,12 @@ local Util = require(Client.World.Util)
 local RanchV2 = require(Client.Render.RanchV2)
 -- v2.0 (lot B4, étape 5, D16) : halo du propriétaire de chaque ranch (attributs HaloOn et Ascend)
 local Halo = require(Client.Render.Halo)
+-- v2.0 (lot B5, étape 1, INT-B5-RANCH ; plan B5 D3) : personnalités des squishies (World/Personality,
+-- derrière l'interrupteur Personalities vu par World/Flags) ; trois crochets seulement : la pose d'un
+-- squishy passe par Personality.pose APRÈS le calcul de sa pose de repos (d.pos, positionOf et
+-- projected ne changent pas : le ciblage lit toujours la place de repos), RanchRenderer.handleOf, et
+-- Personality.forget quand un modèle est rendu. Interrupteur coupé : aucun appel (un booléen local).
+local Personality = require(Client.World.Personality)
 
 local RanchRenderer = {}
 
@@ -73,7 +79,8 @@ local RanchRenderer = {}
 --     lampions, portail, geyser, cadre, anneau-soleil, maisonnette, Monuments, Déco perso), nil sinon ;
 --   * RanchRenderer.ElementBuilt (slot, id) : un élément vient d'être construit pour de vrai (premier
 --     passage, joué en cascade ; jamais au chargement ni au changement de ranch) ;
---   * Render/BuildCascade.Piece (slot, position, index) : chaque pièce d'une cascade qui sort.
+--   * Render/BuildCascade.Piece (slot, position, index) : chaque pièce d'une cascade qui sort ;
+--   * RanchRenderer.handleOf(slot, uid) (lot B5, INT-B5-RANCH) : modèle dessiné d'un squishy ou nil.
 RanchRenderer.ElementBuilt = RanchV2.ElementBuilt
 
 -- Distances et cadences (GDD §5.2, §9.3, §12.9)
@@ -153,6 +160,8 @@ local animT = 0
 local slowAcc = 0
 local folder: Folder? = nil
 local started = false
+-- v2.0 (lot B5) : Personality.active(), relu seulement sur Personality.Changed (jamais par image)
+local personalityOn = false
 local connections: { any } = {}
 local bulkParts: { BasePart } = {}
 local bulkCFrames: { CFrame } = {}
@@ -327,6 +336,9 @@ local function release(d: Drawn)
 	if h then
 		d.handle = nil
 		d.light = nil
+		if personalityOn then
+			Personality.forget(d.slot, d.uid)
+		end
 		pcall(SquishyBuilder.release, h)
 	end
 end
@@ -592,6 +604,11 @@ local function stepSquishy(
 			local lv = root.CFrame.LookVector
 			cf = CFrame.lookAt(pos, pos + Vector3.new(lv.X, 0, lv.Z))
 		end
+	end
+	-- v2.0 (lot B5, INT-B5-RANCH) : saynète du squishy, composée sur sa pose de repos (d.pos est déjà
+	-- écrit : la cible et la projection du clic ne la voient pas) ; une erreur garde la pose de repos
+	if personalityOn then
+		cf = Util.safe("Personality.pose", cf, Personality.pose, d, h, rec, where, base, cf, now)
 	end
 	local ok, parts, cframes = pcall(SquishyBuilder.pose, h, cf)
 	if ok and type(parts) == "table" and type(cframes) == "table" then
@@ -1638,6 +1655,13 @@ function RanchRenderer.Start()
 		end,
 	})
 	Util.guard("RanchRenderer.v2watch", RanchV2.watch)
+	personalityOn = Personality.active()
+	table.insert(
+		connections,
+		Personality.Changed:Connect(function()
+			personalityOn = Personality.active()
+		end)
+	)
 	table.insert(
 		connections,
 		WorldStateController.SquishyChanged:Connect(function(slot: number)
@@ -1698,6 +1722,19 @@ end
 -- Repère d'un élément v2.0 dessiné sur ce ranch, nil sinon : crochet pour B5 (lot B4, étape 4)
 function RanchRenderer.elementCFrame(slot: number, id: string): CFrame?
 	return RanchV2.elementCFrame(slot, id)
+end
+
+-- Modèle dessiné d'un squishy (Handle de SquishyBuilder), nil s'il n'est pas dessiné : crochet du
+-- lot B5 (visages, spectacles) ; le Handle ne vaut que tant que le squishy reste dessiné
+function RanchRenderer.handleOf(slot: number, uid: string): SquishyBuilder.Handle?
+	if type(slot) ~= "number" or type(uid) ~= "string" then
+		return nil
+	end
+	local d = drawn[slot] and drawn[slot][uid]
+	if d then
+		return d.handle
+	end
+	return nil
 end
 
 -- Position dessinée d'un squishy (cible, effets) ; repli : centre de sa place
@@ -1813,6 +1850,7 @@ function RanchRenderer._stop()
 	table.clear(connections)
 	RanchV2.stop()
 	Halo.stop()
+	personalityOn = false
 	started = false
 end
 

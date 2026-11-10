@@ -9,6 +9,7 @@
 local roblox = require("@lune/roblox")
 local MockInstance = require("../harness/MockInstance")
 local ApiAudit = require("../harness/ApiAudit")
+local UpgradeScreen = require("../harness/UpgradeScreen")
 local Vector3 = roblox.Vector3
 local CFrame = roblox.CFrame
 
@@ -682,5 +683,158 @@ return function(T)
 			table.clear(c.h.errors)
 			c.clean()
 		end)
+
+		-- v2.0 (lot B5, étape 1, INT-B5-RANCH ; plan B5 D3) : crochets des personnalités. L'interrupteur
+		-- Personalities n'arrive au client que par EventState.features.v2 (World/Flags)
+		it(
+			"personnalités (lot B5) : interrupteur coupé, Personality.pose et forget jamais appelés ; ouvert : pose appelée seulement pour les squishies dessinés, une fois par image, après leur pose de repos ; positionOf et projected lisent toujours la pose de repos",
+			function()
+				local c = client()
+				local P = c.h:require("StarterPlayer.StarterPlayerScripts.Client.World.Personality")
+				local calls, forgets = {}, {}
+				local shift = Vector3.zero
+				local realPose, realForget = P.pose, P.forget
+				P.pose = function(d, h, rec, where, base, cf, now)
+					table.insert(
+						calls,
+						{ slot = d.slot, uid = d.uid, handle = h, where = where, rest = cf.Position }
+					)
+					expect(typeof(base)).toBe("Vector3")
+					expect(type(now)).toBe("number")
+					expect(type(rec)).toBe("table")
+					return realPose(d, h, rec, where, base, cf, now) + shift
+				end
+				P.forget = function(slot, uid)
+					table.insert(forgets, slot .. ":" .. uid)
+					return realForget(slot, uid)
+				end
+				local far = {}
+				for i = 1, 6 do
+					far["p" .. i] = sq(1)
+				end
+				c.snapshot(
+					{ ["3"] = ranch(3, 1), ["11"] = ranch(11, 2) },
+					{ ["3"] = { a = sq(1), b = sq(2), c = sq(3, "pool") }, ["11"] = far }
+				)
+				c.camera(c.WorldLayout.penSlot(3, 1) + Vector3.new(0, 8, -10))
+				c.run(1)
+				expect(c.RR.stats().models).toBe(3)
+				-- coupé (configuration livrée) : aucun appel
+				expect(P.active()).toBe(false)
+				expect(#calls).toBe(0)
+				expect(#forgets).toBe(0)
+				for _, uid in { "a", "b", "c" } do
+					expect(c.RR.handleOf(3, uid) ~= nil).toBe(true)
+				end
+				expect(c.RR.handleOf(11, "p1")).toBeNil() -- ranch lointain : pas dessiné
+				expect(c.RR.handleOf(3, "zz")).toBeNil()
+				for _, bad in { { nil, "a" }, { 3, nil }, { "3", "a" }, { 3, 5 }, { 0 / 0, "a" } } do
+					expect(c.RR.handleOf(bad[1], bad[2])).toBeNil()
+				end
+				-- ouvert par le serveur
+				c.h:fireClient(
+					"ReplicatedStorage.Remotes.EventState",
+					UpgradeScreen.eventState({ Personalities = true })
+				)
+				c.h:settle(1)
+				expect(P.active()).toBe(true)
+				c.RR._step(0)
+				-- une image : un appel par squishy dessiné du ranch proche, avec son modèle
+				expect(#calls).toBe(3)
+				local seen = {}
+				for _, call in calls do
+					expect(call.slot).toBe(3)
+					expect(seen[call.uid]).toBeNil()
+					seen[call.uid] = true
+					expect(call.handle).toBe(c.RR.handleOf(3, call.uid))
+					-- la pose de repos passée est celle que lit le ciblage
+					expect(call.rest).toBe(c.RR.positionOf(3, call.uid))
+				end
+				expect(seen.a and seen.b and seen.c).toBe(true)
+				-- caméra de projection (la caméra simulée ne projette pas : une projection simple et fixe
+				-- suffit, la question est de savoir QUELLE position RanchRenderer lui donne)
+				local cam = {
+					FieldOfView = 70,
+					ViewportSize = roblox.Vector2.new(1920, 1080),
+					WorldToViewportPoint = function(_, p)
+						return Vector3.new(960 + p.X * 3, 540 - p.Y * 3, 20 + p.Z * 0.01), true
+					end,
+				}
+				local function projected()
+					local out = {}
+					for _, e in c.RR.projected(cam) do
+						out[e.id] = e
+					end
+					return out
+				end
+				local rest, screen = {}, projected()
+				expect(screen.a ~= nil and screen.b ~= nil).toBe(true)
+				for _, uid in { "a", "b", "c" } do
+					rest[uid] = c.RR.positionOf(3, uid)
+				end
+				-- une saynète déplace le modèle (ici de 1,5 stud de côté et 3 studs en hauteur)…
+				shift = Vector3.new(1.5, 3, 0)
+				table.clear(calls)
+				c.RR._step(0)
+				expect(#calls).toBe(3)
+				local after = projected()
+				for _, uid in { "a", "b", "c" } do
+					local body = c.RR.handleOf(3, uid).body
+					local drawn = body.Position - Vector3.new(0, body.Size.Y / 2, 0)
+					expect({ uid, (drawn - (rest[uid] + shift)).Magnitude < 1e-3 }).toEqual({ uid, true })
+					-- … mais ni la position de la cible ni la projection du clic ne bougent
+					expect({ uid, c.RR.positionOf(3, uid) }).toEqual({ uid, rest[uid] })
+					expect({ uid, after[uid] ~= nil }).toEqual({ uid, screen[uid] ~= nil })
+					if screen[uid] then
+						expect({ uid, after[uid].screen }).toEqual({ uid, screen[uid].screen })
+						expect({ uid, after[uid].radius }).toEqual({ uid, screen[uid].radius })
+					end
+				end
+				shift = Vector3.zero
+				-- une erreur dans une saynète : la pose de repos est dessinée, signalée une fois
+				P.pose = function()
+					error("saynète abîmée (simulée)")
+				end
+				c.RR._step(0)
+				for _, uid in { "a", "b", "c" } do
+					local body = c.RR.handleOf(3, uid).body
+					local drawn = body.Position - Vector3.new(0, body.Size.Y / 2, 0)
+					expect({ uid, (drawn - rest[uid]).Magnitude < 1e-3 }).toEqual({ uid, true })
+				end
+				c.h:settle(1)
+				expect(#c.h.errors).toBe(1)
+				table.clear(c.h.errors)
+				P.pose = function(d, h, rec, where, base, cf, now)
+					table.insert(calls, { slot = d.slot, uid = d.uid })
+					return realPose(d, h, rec, where, base, cf, now)
+				end
+				-- modèles rendus (caméra au loin) : forget pour chacun
+				table.clear(calls)
+				local away = c.WorldLayout.anchor(3, "silhouette")
+				c.camera(Vector3.new(-away.X, 300, -away.Z) * 3)
+				c.run(0.2)
+				expect(c.RR.stats().models).toBe(0)
+				table.sort(forgets)
+				expect(table.concat(forgets, ",")).toBe("3:a,3:b,3:c")
+				expect(#calls).toBe(0)
+				-- recoupé en direct : plus aucun appel, même pour des modèles dessinés puis rendus
+				c.camera(c.WorldLayout.penSlot(3, 1) + Vector3.new(0, 8, -10))
+				c.run(0.5)
+				expect(c.RR.stats().models).toBe(3)
+				expect(#calls > 0).toBe(true)
+				c.h:fireClient("ReplicatedStorage.Remotes.EventState", UpgradeScreen.eventState(nil))
+				c.h:settle(1)
+				expect(P.active()).toBe(false)
+				table.clear(calls)
+				table.clear(forgets)
+				c.run(0.5)
+				c.camera(Vector3.new(-away.X, 300, -away.Z) * 3)
+				c.run(0.2)
+				expect(#calls).toBe(0)
+				expect(#forgets).toBe(0)
+				P.pose, P.forget = realPose, realForget
+				c.clean()
+			end
+		)
 	end)
 end
