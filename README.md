@@ -77,7 +77,7 @@ Pour travailler dans Studio en direct : `rojo serve`, puis le plugin Rojo.
 
 ```bash
 ./scripts/check.sh                     # porte complète : format, lint, tous les tests, build, place
-lune run tests/run                     # tous les tests (environ 20 min)
+lune run tests/run                     # tous les tests, un processus par fichier (environ 55 min)
 lune run tests/run -- SquishyService   # seulement les specs dont le chemin contient ce mot
 ./scripts/soak.sh                      # robot de longue durée : 16 joueurs, 6 h simulées
 stylua src tests                       # formater
