@@ -1915,7 +1915,7 @@ local function stepV2()
 		end
 		-- Ascension devenue impossible carte ouverte (interrupteur JellyAscend coupé en direct, attribut
 		-- AscendReady retiré, fuite, MON prestige dans la file) : la carte se ferme, l'aperçu dit pourquoi
-		-- (jamais « Oui » actif sur une Ascension que le serveur refuserait ; relecture du lot B3, B3-75)
+		-- (jamais « Oui » actif sur une Ascension que le serveur refuserait ; relecture du lot B3, B3-76)
 		if ascendBlocker() ~= "" then
 			if not ascendAvailable() then
 				declineNoted = true -- Ascension retirée par le serveur : aucun refus du joueur à compter
