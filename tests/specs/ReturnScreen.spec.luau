@@ -219,5 +219,45 @@ return function(T)
 				S.clean(v13, expect)
 			end
 		)
+
+		-- lot B3, étape 6 (journal B3-72) : relevé des captures du groupe meta : la carte de 960 × 700
+		-- tranchait la puce « Prochain achat » (« Niv. 1 » coupé à 63-80 %) et la barre du MEGA, laissées
+		-- visibles sous l'écran de retour (fenêtre bloquante) ; comme sous un panneau ou une carte
+		-- bloquante, le HUD les cache le temps de l'écran et les rend à sa fermeture
+		it(
+			"écran de retour ouvert : la puce « Prochain achat » et la barre du MEGA se cachent, puis reviennent",
+			function()
+				local c = client({ snap = S.snap(1) })
+				local hud = c.h.localPlayer.PlayerGui.HUD.Safe
+				-- un instant de MEGA (pression en cours) : la barre du MEGA est montrée
+				local EventClock = c.h:require("ReplicatedStorage.Shared.Logic.EventClock")
+				local t0 = c.Clock.now()
+				local at = nil
+				for i = 0, 9 * 2880 do
+					local t = t0 + 30 * i
+					local m = EventClock.mega(t)
+					if m.active and t + 20 < m.endsAt then
+						at = t
+						break
+					end
+				end
+				expect(at ~= nil).toBe(true)
+				c.Clock.freeze(at)
+				S.run(c, 1)
+				expect(hud.nextBuy.Visible).toBe(true)
+				expect(hud.megaBar.Visible).toBe(true)
+				show(c, false, true)
+				S.run(c, 0.5)
+				local RS = TvAudit.mod(c.h, "UI.ReturnScreen")
+				expect(RS.isOpen()).toBe(true)
+				expect(hud.nextBuy.Visible).toBe(false)
+				expect(hud.megaBar.Visible).toBe(false)
+				RS._close()
+				S.run(c, 1)
+				expect(hud.nextBuy.Visible).toBe(true)
+				expect(hud.megaBar.Visible).toBe(true)
+				S.clean(c, expect)
+			end
+		)
 	end)
 end

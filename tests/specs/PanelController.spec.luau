@@ -39,6 +39,38 @@ return function(T)
 	end
 
 	describe("PanelController › rail", function()
+		-- lot B3, étape 6 (journal B3-72) : les enfants d'un libellé à UIPadding sont posés dans la zone du
+		-- texte (moteur et harnais Layout) ; le cœur dessiné de la pastille (lot B2, D18) était posé à
+		-- (0, 6) avec PaddingLeft 28 : dessiné à 34-54 px, sur le nombre (zone du texte 28-54 px)
+		it("pastille des jumeaux : le cœur dessiné reste à gauche du nombre, jamais dessus", function()
+			local Layout = require("../harness/Layout")
+			local c = setup({
+				profile = {
+					squishies = {
+						a = TvAudit.squishy(1, { z = 10 }),
+						b = TvAudit.squishy(1, { z = 12 }),
+						d = TvAudit.squishy(2, { z = 10 }),
+						e = TvAudit.squishy(2, { z = 11 }),
+					},
+				},
+			})
+			c.PC.toggleMenu()
+			TvAudit.tick(c.h, 0.5)
+			local badge = c.PC.entryButton("Ranch").Badge
+			expect(badge.Visible).toBe(true)
+			expect(badge.Text).toBe("2")
+			Layout.apply(c.h)
+			local b = Layout.rect(badge)
+			local heart = Layout.rect(badge.Heart)
+			local pad = badge:FindFirstChildOfClass("UIPadding")
+			local textLeft = b.x + pad.PaddingLeft.Offset
+			-- le cœur dans la marge gauche de la pastille, le nombre à sa droite
+			expect(heart.x >= b.x).toBe(true)
+			expect(heart.x + heart.w <= textLeft).toBe(true)
+			expect(math.abs((heart.y + heart.h / 2) - (b.y + b.h / 2)) <= 1).toBe(true)
+			clean(c)
+		end)
+
 		it("△ ouvre le rail sur Ranch ; △ juste après est ignoré ; △ ensuite ferme tout", function()
 			local c = setup()
 			expect(c.PC.menuOpen()).toBe(false)

@@ -392,10 +392,12 @@ local function buildEntry(frame: Frame, entry: string)
 	Widgets.corner(badge, UDim.new(0.5, 0))
 	badge.Visible = false
 	if entry == "Ranch" then
-		-- jumeaux : cœur DESSINÉ devant le nombre (« ♥ » hors police, règle 18 ; lot B2, D18)
+		-- jumeaux : cœur DESSINÉ devant le nombre (« ♥ » hors police, règle 18 ; lot B2, D18) ; enfant
+		-- d'un libellé à UIPadding, il est posé dans la zone du TEXTE : x = 6 - TWINS_PAD le ramène à
+		-- 6 px du bord, dans la marge gauche (il était dessiné sur le nombre ; lot B3, B3-72)
 		local heart = Icons.canvas(badge, TWINS_HEART, { "heart" }, "Heart")
 		heart.AnchorPoint = Vector2.new(0, 0.5)
-		heart.Position = UDim2.new(0, 6, 0.5, 0)
+		heart.Position = UDim2.new(0, 6 - TWINS_PAD, 0.5, 0)
 		heart.ZIndex = badge.ZIndex + 1
 		Icons.draw(heart, "heart", Widgets.Colors.Text)
 		local pad = Instance.new("UIPadding")

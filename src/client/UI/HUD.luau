@@ -1190,10 +1190,18 @@ local function panelCovering(): boolean
 	return Util.safe("PanelController.isOpen", false, PanelController.isOpen) == true
 end
 
+-- L'écran de retour (fenêtre bloquante « return » de FocusGuard, carte de 960 × 700 au centre) : la
+-- puce « Prochain achat » et la barre du MEGA étaient tranchées par la carte (relevé des captures du
+-- groupe meta, lot B3, étape 6, journal B3-72) ; elles se cachent le temps de l'écran
+local function returnCovering(): boolean
+	return Util.safe("FocusGuard.isOpen", false, FocusGuard.isOpen, "return") == true
+end
+
 -- Une carte bloquante (choix Rush / Cozy, « booped ») est au centre : la puce d'action dessous
--- serait tranchée par son bord bas ; elle se cache le temps de la carte (revue des écrans)
+-- serait tranchée par son bord bas ; elle se cache le temps de la carte (revue des écrans), et le
+-- temps de l'écran de retour
 local function modalCovering(): boolean
-	if panelCovering() then
+	if panelCovering() or returnCovering() then
 		return true
 	end
 	local card = Util.safe("Cards.current", nil, Cards.current)
@@ -1242,7 +1250,7 @@ local function updateEvents(now: number)
 			refs.megaPoints, refs.megaTarget = nil, nil
 		end
 	end
-	setVisible(elements.megaBar, megaOn and revealed.megaBar ~= false and not photo)
+	setVisible(elements.megaBar, megaOn and revealed.megaBar ~= false and not photo and not returnCovering())
 
 	-- jauge du serveur (hors MEGA) ; grise pendant la sieste de Big Plop
 	local gaugeOn = f ~= nil and f.gauge == true and not megaOn and ev ~= nil
@@ -1695,7 +1703,7 @@ local function updateMenuChip(now: number)
 end
 
 -- v2.0 : puce « Prochain achat » (Hud/NextBuy) ; cachée pendant l'accueil jusqu'à la leçon du menu,
--- rail ou panneau ouvert, suivi du Grand Splorch « Prêt », mode photo (GDD §10.2)
+-- rail ou panneau ouvert, écran de retour, suivi du Grand Splorch « Prêt », mode photo (GDD §10.2)
 local function updateNextBuy(now: number, trackerReady: boolean)
 	if not v2Built then
 		return
@@ -1705,6 +1713,7 @@ local function updateNextBuy(now: number, trackerReady: boolean)
 	local show = revealed.menuChip ~= false
 		and not menuOpen
 		and not panelCovering()
+		and not returnCovering()
 		and not photo
 		and not trackerReady
 	NextBuy.step(now, snap, show)

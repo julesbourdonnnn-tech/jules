@@ -37,7 +37,7 @@ return {
 	["pad.shelf"] = "[auto] clé construite par le client (préfixe « pad. », client/Controllers/RanchRenderer.luau) dans un état que les scénarios ne montrent pas encore",
 	["pad.vat"] = "[auto] clé construite par le client (préfixe « pad. », client/Controllers/RanchRenderer.luau) dans un état que les scénarios ne montrent pas encore",
 	["pad.vatFull"] = "[auto] clé construite par le client (préfixe « pad. », client/Controllers/RanchRenderer.luau) dans un état que les scénarios ne montrent pas encore",
-	["palette.peach"] = "[B3] clé lue par le client (UI/MetaView, vue pure du lot B3, étape 1, D3) ; l'écran qui la montre vient au lot B3, étape 2 (aperçus de renaissance) ou étape 3 (Mon style, Déco perso, garde-robe) : à retirer par son scénario (INT-V2-TEXT)",
+	["palette.peach"] = "[B3] aucun écran ne la montre (lot B3, étape 6, B3-71) : la palette de la semaine (« peach » de Visuals.Palettes) se nomme weekly.peachPalette (Cosmetics.WeeklyRotation) dans Mon style, les cartes et la piste ; aucune source ne nomme palette.peach : I décide (retirer la clé du contrat ou l'utiliser)",
 	["panel.dex.guide.rush.1"] = "[auto] clé construite par le client (préfixe « panel.dex.guide.rush. », client/UI/Panels/Squishydex.luau) dans un état que les scénarios ne montrent pas encore",
 	["panel.dex.guide.rush.2"] = "[auto] clé construite par le client (préfixe « panel.dex.guide.rush. », client/UI/Panels/Squishydex.luau) dans un état que les scénarios ne montrent pas encore",
 	["panel.dex.guide.rush.3"] = "[auto] clé construite par le client (préfixe « panel.dex.guide.rush. », client/UI/Panels/Squishydex.luau) dans un état que les scénarios ne montrent pas encore",
