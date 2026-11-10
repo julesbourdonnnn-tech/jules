@@ -259,5 +259,38 @@ return function(T)
 				S.clean(c, expect)
 			end
 		)
+
+		-- même relevé, nouvelle capture après la correction : hors MEGA, la jauge (440 × 48, y 196-244 en
+		-- 1080p) dépassait du bord haut de la carte (y 218), barre coupée à mi-hauteur, sans texte
+		-- (l'outil ne mesure que les textes)
+		it("écran de retour ouvert : la jauge (hors MEGA) se cache aussi, puis revient", function()
+			local c = client({ snap = S.snap(1) })
+			local hud = c.h.localPlayer.PlayerGui.HUD.Safe
+			local EventClock = c.h:require("ReplicatedStorage.Shared.Logic.EventClock")
+			local t0 = c.Clock.now()
+			local at = nil
+			for i = 0, 9 * 2880 do
+				local t = t0 + 30 * i
+				local m = EventClock.mega(t)
+				local soon = EventClock.mega(t + 20)
+				if not m.active and not soon.active then
+					at = t
+					break
+				end
+			end
+			expect(at ~= nil).toBe(true)
+			c.Clock.freeze(at)
+			S.run(c, 1)
+			expect(hud.gauge.Visible).toBe(true)
+			show(c, false, true)
+			S.run(c, 0.5)
+			local RS = TvAudit.mod(c.h, "UI.ReturnScreen")
+			expect(RS.isOpen()).toBe(true)
+			expect(hud.gauge.Visible).toBe(false)
+			RS._close()
+			S.run(c, 1)
+			expect(hud.gauge.Visible).toBe(true)
+			S.clean(c, expect)
+		end)
 	end)
 end

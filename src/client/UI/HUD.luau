@@ -1191,8 +1191,8 @@ local function panelCovering(): boolean
 end
 
 -- L'écran de retour (fenêtre bloquante « return » de FocusGuard, carte de 960 × 700 au centre) : la
--- puce « Prochain achat » et la barre du MEGA étaient tranchées par la carte (relevé des captures du
--- groupe meta, lot B3, étape 6, journal B3-72) ; elles se cachent le temps de l'écran
+-- puce « Prochain achat », la barre du MEGA et la jauge étaient tranchées par la carte (relevé des
+-- captures du groupe meta, lot B3, étape 6, journal B3-72) ; elles se cachent le temps de l'écran
 local function returnCovering(): boolean
 	return Util.safe("FocusGuard.isOpen", false, FocusGuard.isOpen, "return") == true
 end
@@ -1274,7 +1274,7 @@ local function updateEvents(now: number)
 		setVisible(refs.gaugeFill, not resting)
 		elements.gauge:SetAttribute("Resting", resting)
 	end
-	setVisible(elements.gauge, gaugeOn and revealed.gauge ~= false and not photo)
+	setVisible(elements.gauge, gaugeOn and revealed.gauge ~= false and not photo and not returnCovering())
 end
 
 local function queueEntry(): { [string]: any }?
