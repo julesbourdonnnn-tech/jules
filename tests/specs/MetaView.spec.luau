@@ -145,6 +145,37 @@ return function(T)
 			end
 		)
 
+		-- lot B3, étape 2 (captures, B3-23) : un Grand Splorch sans nouveau record donne 1 Confetti (GDD
+		-- §4.15) : « +1 Confettis » s'affichait en français à chaque boucle d'une remontée
+		it(
+			"un seul Confetti : singulier dans les deux langues (« +1 Confetti »), pluriel au-delà",
+			function()
+				local function inLang(lang, t)
+					local function trL(key, vars)
+						local text = Strings[lang][key] or key
+						return (
+							string.gsub(text, "{(%w+)}", function(name)
+								local v = vars and vars[name]
+								return if v ~= nil then tostring(v) else "{" .. name .. "}"
+							end)
+						)
+					end
+					local r = MV.resolve(t, trL)
+					return trL(r.key, r.vars)
+				end
+				for _, lang in { "en", "fr" } do
+					local one = MV.previewTiles("splorch", { snap = snap(5, 10, 1), on = onAll, lang = lang })
+					expect({ lang = lang, text = inLang(lang, one[3].name) }).toEqual({
+						lang = lang,
+						text = "+1 Confetti",
+					})
+					expectKeys(one[3].name)
+				end
+				local many = MV.previewTiles("splorch", { snap = snap(5, 5), on = onAll, lang = "fr" })
+				expect(inLang("fr", many[3].name)).toBe("+9 Confettis")
+			end
+		)
+
 		it(
 			"R21 : prime de record (+10) ; R22 et R24 : le Monument nommé ; R30 : le titre (unlock.item)",
 			function()

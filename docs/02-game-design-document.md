@@ -2083,7 +2083,7 @@ Le joueur est assis à 2,5-3 m de la télé. Règles officielles retenues (docum
 | Ranch | 1re case de l'onglet ; *Fusionner* : « Choisir A » ; *Mon style* : 1re case (v2.0) | → bouton du menu d'origine | Onglets | Panneaux |
 | Améliorations *(v2.0)* | Onglet Conseillé, carte 1 ; ouvert par « Dépenser d'abord » : 1re ligne gardée et payable de l'onglet Ranch ; ouvert par le kiosque : 1re ligne de l'Atelier | → ce qui l'a ouvert (menu, aperçu du Grand Splorch, jeu) | Onglets | Panneaux |
 | Aperçu de la Jelly Ascend *(v2.0)* | Bouton « Maintenir » (glyphe ✕) | → menu | Onglets (si le Grand Splorch est prêt aussi) | — |
-| Carte « Prêt à monter ? » *(v2.0)* | « Plus tard », après la garde de 0,6 s et le relâchement de ✕ | = Plus tard | — | — |
+| Carte « Prêt à monter ? » *(v2.0)* | « Oui, Ascension ! » (critique M1, §4.27), actif après le relâchement de ✕ et la garde de 0,6 s | = Plus tard (la carte ET l'aperçu se ferment, retour à l'entrée du menu) | — | — |
 | Squishydex | 1re espèce ; fiche d'une espèce : 1re mutation (○ revient à la case de l'espèce) ; *Guide* : 1re ligne (↑ / ↓ font défiler de 70 % les listes en lecture seule) | → menu | Onglets | Panneaux |
 | Objectifs | « Réclamer » disponible, sinon 1re carte | → menu | Onglets | Panneaux |
 | Classements | Onglet en cours | → menu | Onglets | Panneaux |

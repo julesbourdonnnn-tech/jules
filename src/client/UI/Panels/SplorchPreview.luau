@@ -95,7 +95,9 @@ local HOLD_W, HOLD_H = 560, 112 -- maintien de l'Ascension (anneau autour d'un g
 local HOLD_GLYPH = 64
 local RING_DOTS = 12
 local RING_RY = 44 -- rayon vertical de l'anneau (px TV) ; l'horizontal suit la largeur du glyphe
-local RING_DOT, RING_LIT, RING_DIM = 8, 12, 0.5
+-- points de l'anneau : sombres tant que le maintien ne les a pas atteints (lisibles sur le rose du
+-- bouton), blancs et plus gros une fois atteints
+local RING_DOT, RING_LIT, RING_DIM = 8, 12, 0.3
 local CARD_W, CARD_H = 880, 380
 local CARD_WINDOW = "AscendConfirm" -- fenêtre FocusGuard de la carte « Prêt à monter ? »
 local CONFIRM_GUARD = Balance.Ascend.ConfirmGuard -- 0,6 s, comptées depuis le relâchement de ✕
@@ -984,6 +986,7 @@ local function lightRing(alpha: number)
 		local t = if on then 0 else RING_DIM
 		if d.BackgroundTransparency ~= t then
 			d.BackgroundTransparency = t
+			d.BackgroundColor3 = if on then Widgets.Colors.Text else Widgets.Colors.Stroke
 			local px = if on then RING_LIT else RING_DOT
 			d.Size = UDim2.fromOffset(px, px)
 		end
@@ -1021,13 +1024,9 @@ end
 -- boucle de l'aperçu ouvert refait l'écran quand elle change (comme la v1.3 avec sa raison de refus)
 local function signature(): string
 	local reason = if currentTab == "ascend" then ascendBlocker() else blockerV2()
-	return currentTab
-		.. "|"
-		.. reason
-		.. "|"
-		.. tostring(ascendAvailable())
-		.. "|"
-		.. tostring(preview.ready == true)
+	local ascend = if ascendAvailable() then "a" else "-"
+	local loop = if preview.ready == true then "l" else "-"
+	return currentTab .. "|" .. reason .. "|" .. ascend .. loop
 end
 
 local function applyTab()
@@ -1672,7 +1671,7 @@ local function buildAscend(c: Frame)
 		local dot = Instance.new("Frame")
 		dot.Name = "Dot" .. i
 		dot.BorderSizePixel = 0
-		dot.BackgroundColor3 = Widgets.Colors.Text
+		dot.BackgroundColor3 = Widgets.Colors.Stroke
 		dot.BackgroundTransparency = RING_DIM
 		dot.AnchorPoint = Vector2.new(0.5, 0.5)
 		dot.Size = UDim2.fromOffset(RING_DOT, RING_DOT)
@@ -1760,6 +1759,8 @@ local function buildAscend(c: Frame)
 	cardRoot.BorderSizePixel = 0
 	cardRoot.ZIndex = 30
 	cardRoot.Visible = false
+	-- voile arrondi comme la fenêtre (outil d'écrans : un fond carré dépassait de ses coins arrondis)
+	Widgets.corner(cardRoot, Widgets.CORNER_LARGE)
 	cardRoot.Parent = cardParent
 	local panel = Widgets.frame({
 		parent = cardRoot,

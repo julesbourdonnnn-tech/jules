@@ -676,6 +676,23 @@ return function(T)
 		)
 
 		it(
+			"carte « Prêt à monter ? » : voile arrondi comme la fenêtre (aucun coin carré qui dépasse)",
+			function()
+				local c = v2client({ r = 15, A = 0, squishies = SMALL, ranch = { AscendReady = true } })
+				openPreview(c)
+				local parts = c.SP._v2()
+				S.hold(c, parts.ascendHold, 3.3)
+				expect(c.SP._state().card).toBe(true)
+				local win = c.PC.window("SplorchPreview")
+				local winCorner = win:FindFirstChildOfClass("UICorner")
+				local veilCorner = parts.card:FindFirstChildOfClass("UICorner")
+				expect(veilCorner ~= nil).toBe(true)
+				expect(veilCorner.CornerRadius).toBe(winCorner.CornerRadius)
+				S.clean(c, expect)
+			end
+		)
+
+		it(
 			"interrupteurs coupés : arbre de la v1.3 (noms et nombres), aucune partie v2.0, aucune intention v2.0",
 			function()
 				-- client sans instantané (UpgradesScreen coupé) mais profil v2 et EventState complet

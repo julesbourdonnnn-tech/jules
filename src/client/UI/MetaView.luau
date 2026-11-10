@@ -186,6 +186,15 @@ local function text(key: string, vars: { [string]: any }?): Text
 	return { key = key, vars = vars }
 end
 
+-- Gain de Confettis « +{n} … » ; un seul Confetti : « +1 Confetti » (confetti.gainOne), jamais le
+-- pluriel français « +1 Confettis » (lot B3, étape 2 : un Grand Splorch sans nouveau record en donne 1)
+local function confettiText(key: string, n: number, lang: string?): Text
+	if n == 1 then
+		return text("confetti.gainOne")
+	end
+	return text(key, { n = Format.confetti(n, lang) })
+end
+
 -- Nombre en chaîne : entier exact avec séparateurs sous le million (BigNumber.full : « 10,000 »,
 -- « 10 000 »), forme courte au-delà (BigNumber.abbreviate : jamais faux, jamais trop long)
 local function num(n: number, lang: string?): string
@@ -405,7 +414,7 @@ local function splorchTiles(s: Snap, ctx: any): { Tile }
 	local third: Tile
 	if isOn(ctx, "Confetti") then
 		local n = Prestige.confettiGain("splorch", next, s.bestR, 0)
-		third = tile("confetti", text("splorch.tile.confetti", { n = Format.confetti(n, lang) }), "confetti")
+		third = tile("confetti", confettiText("splorch.tile.confetti", n, lang), "confetti")
 	elseif record then
 		third = tile("fame", text("panel.splorch.win.fame"), "star")
 	else
@@ -450,7 +459,7 @@ local function ascendTiles(s: Snap, ctx: any): { Tile }
 	local third: Tile
 	if isOn(ctx, "Confetti") then
 		local n = Prestige.confettiGain("ascend", start, s.bestR, skipped)
-		third = tile("confetti", text("ascend.tile.confetti", { n = Format.confetti(n, lang) }), "confetti")
+		third = tile("confetti", confettiText("ascend.tile.confetti", n, lang), "confetti")
 	else
 		local item = ASCEND_ITEMS[nextA]
 		if item and (item.kind ~= "theme" or isOn(ctx, "RanchSkins")) then

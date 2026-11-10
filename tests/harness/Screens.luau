@@ -2828,7 +2828,92 @@ Screens.REFERENCE = {
 
 -- v2.0 (lot B3) : écrans de renaissance et de méta, remplis étape par étape (plan B3, D26). Étape 1 :
 -- la bannière de la Jelly Ascend (« banner.ascend », renommée de « ascend.banner », D18) avec un nom de
--- 20 caractères (Screens.LONG_NAME) ; les pires cas des étapes suivantes s'ajoutent ici
+-- 20 caractères (Screens.LONG_NAME) ; les pires cas des étapes suivantes s'ajoutent ici.
+-- Étape 2 : aperçus de renaissance (Panels/SplorchPreview, chemin v2.0) : instantané du serveur
+-- fabriqué (profil témoin v2 : r, Record R, A), profil répliqué v2, EventState.features.v2 (les 11
+-- interrupteurs ouverts DANS le scénario), attribut AscendReady de MON ranch ; pires cas : 1,00e300
+-- pièces, nom d'espèce le plus long, Record R 21 / 22 / 30, A = 0 … 9 puis la constellation, file,
+-- carte « Prêt à monter ? »
+local META_V2 = {
+	RecordR = true,
+	JellyAscend = true,
+	PetitSplorch = true,
+	Confetti = true,
+	Workshop = true,
+	Carnet = true,
+	WeeklyTrack = true,
+	Mastery = true,
+	RanchSkins = true,
+	DecoPerso = true,
+	Hearts = true,
+}
+local META_DONE = { step = 11, done = true, demoDone = true }
+
+local function metaFlags(except)
+	local out = {}
+	for k, v in META_V2 do
+		if k ~= except then
+			out[k] = v
+		end
+	end
+	return out
+end
+
+-- Aperçu de renaissance v2.0 ouvert dans l'état demandé : opts.r, opts.bestR, opts.A (instantané),
+-- opts.edit(p) (profil témoin), opts.coins / opts.pot (profil répliqué), opts.loop (prestige de boucle
+-- prêt, vrai par défaut), opts.ascend (AscendReady), opts.flags (features.v2), opts.spectacle,
+-- opts.tab, opts.longest (envol : espèce au nom le plus long)
+local function previewState(c, opts)
+	closeAll(c)
+	flushAll(c)
+	unstub(c)
+	local r = opts.r or 5
+	-- dans son ranch (l'écran « hors du ranch » l'en sort)
+	c.h:moveTo(c.h.localPlayer, c.WorldLayout.spawnCFrame(1).Position + Vector3.new(0, 3, 0))
+	Screens.myRanchModel(c, { HelperMode = "active", AscendReady = opts.ascend == true })
+	local snap = Screens.upgradeSnapshot(c, function(p, UM)
+		p.R = r
+		p.bestR = opts.bestR or r
+		p.ascend = opts.A or 0
+		if opts.edit then
+			opts.edit(p, UM)
+		end
+	end)
+	local function squishy(s, z, bf)
+		return { s = s, m = 0, st = 0, z = z, zg = 0, at = "pen", bf = bf, o = "", lk = false, b = 0, gd = 0 }
+	end
+	local loop = opts.loop ~= false
+	c.h:fireClient(REMOTES .. "DataPatch", {
+		onboarding = META_DONE,
+		version = 2,
+		R = r,
+		coins = opts.coins or 1234567,
+		pot = opts.pot or 0,
+		growth = { G = 0, g = 0, t = c.Clock.now() },
+		squishies = {
+			v2a = squishy(1, if loop then 1e100 else 10, 1),
+			v2b = squishy(if opts.longest then longestSpecies(c) else 5, if loop then 5e99 else 5, 0),
+		},
+	}, {})
+	c.h:fireClient(REMOTES .. "DataPatch", { upgradeSnapshot = snap }, {})
+	frames(c, 3, 0.1)
+	ranchStub(c, "cozy")
+	local features = table.clone(FEATURES)
+	features.v2 = opts.flags or META_V2
+	local ev = eventStub(c, c.Clock.now(), { features = features })
+	c.WSC.EventChanged:Fire(ev)
+	frames(c, 2, 0.1)
+	open(c, "SplorchPreview", opts.tab)
+	-- MON prestige arrivé dans la file écran ouvert (l'entrée du rail n'ouvre rien pendant MON prestige)
+	if opts.spectacle then
+		unstub(c)
+		c.WSC.EventChanged:Fire(
+			eventStub(c, c.Clock.now(), { features = features, spectacle = opts.spectacle })
+		)
+		frames(c, 3, 0.1)
+	end
+end
+
 local function metaScreens()
 	local list = {}
 	table.insert(list, {
@@ -2844,6 +2929,136 @@ local function metaScreens()
 			frames(c, 4, 0.1)
 		end,
 	})
+	local function add(id, run)
+		table.insert(list, { id = "meta.preview." .. id, run = run })
+	end
+	local function payable(coins)
+		return function(p)
+			p.coins = coins
+			p.tiles.pens = 3
+		end
+	end
+	-- Grand Splorch : nouveau record R5 → 6 (phrase neutre : rien de gardé n'est payable)
+	add("grand.new", function(c)
+		previewState(c, { r = 5 })
+	end)
+	-- ligne rouge et « Dépenser d'abord » (Enclos payable)
+	add("grand.spend", function(c)
+		previewState(c, { r = 5, edit = payable(1e30) })
+	end)
+	-- pire nombre : 1,00e300 pièces perdues
+	add("grand.huge", function(c)
+		previewState(c, { r = 5, coins = 1e300, edit = payable(1e300) })
+	end)
+	-- beaucoup de pièces mais aucune ligne gardée payable : la phrase neutre
+	add("grand.neutral", function(c)
+		previewState(c, { r = 8, coins = 9.99e35 })
+	end)
+	-- record regagné (Petit Splorch coupé) : « Cadeau du Splorch »
+	add("grand.regained", function(c)
+		previewState(c, { r = 5, bestR = 10, A = 1, flags = metaFlags("PetitSplorch") })
+	end)
+	-- refus (hors du ranch) à côté de « Dépenser d'abord »
+	add("grand.away", function(c)
+		previewState(c, { r = 5, edit = payable(1e30) })
+		c.h:moveTo(c.h.localPlayer, Vector3.new(0, 3, 0))
+		frames(c, 4, 0.1)
+	end)
+	-- plus gros squishy redevenu trop petit écran ouvert : « Plus gros : … / … »
+	add("grand.notready", function(c)
+		previewState(c, { r = 5 })
+		c.h:fireClient(REMOTES .. "DataPatch", {
+			squishies = {
+				v2a = {
+					s = 1,
+					m = 0,
+					st = 0,
+					z = 10,
+					zg = 0,
+					at = "pen",
+					bf = 1,
+					o = "",
+					lk = false,
+					b = 0,
+					gd = 0,
+				},
+			},
+		}, {})
+		frames(c, 4, 0.1)
+	end)
+	-- Détails : deux colonnes, prochain objectif, envol au nom d'espèce le plus long, « Filmer »
+	add("grand.details", function(c)
+		previewState(c, { r = 5, longest = true })
+		local SP = c.h:require(CLIENT .. "UI.Panels.SplorchPreview")
+		local parts = SP._v2()
+		activate(c, parts.details)
+		-- la sélection sur la flèche de droite (cadre de focus dessiné), l'envol au nom le plus long
+		c.h.game.GuiService.SelectedObject = parts.nextFlyer
+		frames(c, 4, 0.1)
+	end)
+	-- déblocages nommés du Record R : Plopette (R4), Cuve dorée (R7), déco gardée (R8), Tapis Étoilé
+	-- (R9), prime de record (R21), Monument (R22), titre (R30)
+	for _, r in { 3, 6, 7, 8, 20, 21, 29 } do
+		add("grand.r" .. (r + 1), function(c)
+			previewState(c, { r = r })
+		end)
+	end
+	-- premier Petit Splorch de la remontée
+	add("petit.first", function(c)
+		previewState(c, { r = 4, bestR = 12, A = 1 })
+	end)
+	-- boucle ET Jelly Ascend prêtes : barre d'onglets « Grand Splorch » / « Jelly Ascend »
+	add("tabs", function(c)
+		previewState(c, { r = 15, A = 0, ascend = true })
+	end)
+	-- Jelly Ascend de A0 à A9 (condition juste atteinte) : ciel de l'Ascension suivante, départ
+	local Prestige = nil
+	for A = 0, 9 do
+		add("ascend.a" .. A, function(c)
+			Prestige = Prestige or c.h:require("ReplicatedStorage.Shared.Logic.Prestige")
+			local need = Prestige.reqR(A + 1)
+			previewState(c, { r = need, A = A, ascend = true, loop = false, tab = "ascend" })
+		end)
+	end
+	-- au-delà de A10 : la constellation et ses étoiles
+	add("ascend.stars", function(c)
+		Prestige = Prestige or c.h:require("ReplicatedStorage.Shared.Logic.Prestige")
+		previewState(c, { r = Prestige.reqR(16), A = 15, ascend = true, loop = false, tab = "ascend" })
+	end)
+	-- MON Grand Splorch dans la file : « Ton Grand Splorch passe d'abord ! », maintien refusé
+	add("ascend.queued", function(c)
+		previewState(c, {
+			r = 15,
+			A = 0,
+			ascend = true,
+			loop = false,
+			tab = "ascend",
+			spectacle = {
+				queue = {
+					{
+						kind = "splorch",
+						userId = c.h.localPlayer.UserId,
+						startAt = c.Clock.now() + 20,
+						slot = 1,
+						position = 1,
+						eta = 20,
+					},
+				},
+			},
+		})
+	end)
+	-- carte « Prêt à monter ? » après le maintien de 3 s (✕ relâché, garde passée : boutons actifs)
+	add("ascend.card", function(c)
+		previewState(c, { r = 15, A = 0, ascend = true, loop = false, tab = "ascend" })
+		local SP = c.h:require(CLIENT .. "UI.Panels.SplorchPreview")
+		c.h.game.GuiService.SelectedObject = SP._v2().ascendHold
+		c.h:settle(1)
+		frames(c, 5, 0.1)
+		Gamepad.press(c.h, Enum.KeyCode.ButtonA)
+		frames(c, 100, 1 / 30)
+		Gamepad.release(c.h, Enum.KeyCode.ButtonA)
+		frames(c, 10, 0.1)
+	end)
 	return list
 end
 
@@ -3495,6 +3710,31 @@ function Screens.keyBoxes(c)
 					end
 				end
 			end
+		end
+		-- lot B3, étape 2 : variable-clé (UI/MetaView.resolve) : une variable dont la valeur est ELLE-MÊME le
+		-- texte d'une clé (nom d'un ciel, d'un objet, d'une Plopette dans « Halo et ciel : {name} ») relie
+		-- aussi cette clé à la boîte (sa traduction y est mesurée seule ; le texte entier l'est par la clé
+		-- extérieure, avec la variable vue) ; une valeur sans lettre (nombre) n'est jamais une clé
+		if set then
+			local merged = nil
+			for _, vars in set do
+				if type(vars) == "table" then
+					for _, v in vars do
+						local inner = if type(v) == "string" and string.find(v, "%a")
+							then Screens.keysOf(c, v)
+							else nil
+						if inner then
+							for k2, vars2 in inner do
+								if set[k2] == nil then
+									merged = merged or table.clone(set)
+									merged[k2] = vars2
+								end
+							end
+						end
+					end
+				end
+			end
+			set = merged or set
 		end
 		-- texte "fit" de UI/Text (lot B1) : le jeu reprend la règle de l'ancien TextScaled pour chaque
 		-- texte posé (plus grande taille entière de [TextFitMin, TextFitMax] qui tient) ; toute clé est

@@ -80,6 +80,9 @@ return function(T)
 		-- de 8 et 9 entrées, puces spéciales, Souvenir, remontée, file)
 		upgrades = ALL,
 		hudv2 = ALL,
+		-- v2.0 (lot B3, étape 2) : écrans de renaissance et de méta (aperçus du Grand Splorch, du Petit
+		-- Splorch et de la Jelly Ascend, onglets, file, carte « Prêt à monter ? »)
+		meta = ALL,
 	}
 
 	for _, profile in PROFILES do

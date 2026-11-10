@@ -15,7 +15,8 @@
 --     ≈ 1 200 (le GDD lui en donne 1 400). Garde contre une régression en attendant la décision :
 --     l'écran n'ajoute que ses propres objets, et le total reste ≤ 3 800 (3 700 jusqu'à l'étape 3 ; le
 --     HUD v2.0 et les glyphes dessinés de l'étape 4 en ajoutent 85, journal B2-49) ; ≤ 3 875 depuis le
---     lot B3, étape 1 (les 5 badges d'étoiles dessinés du Squishydex : + 75, journal B3-8).
+--     lot B3, étape 1 (les 5 badges d'étoiles dessinés du Squishydex : + 75, journal B3-8) ; ≤ 3 950 depuis
+--     le lot B3, étape 2 (aperçu de renaissance de la v2.0 : 63 → 120, + 57, journal B3-19).
 -- Zéro trace.
 local roblox = require("@lune/roblox")
 local TvAudit = require("../harness/TvAudit")
@@ -87,7 +88,7 @@ return function(T)
 
 	describe("Upgrades_Budget › interface entière, tous les panneaux construits", function()
 		it(
-			"relevé : l'écran n'ajoute que ses objets ; total ≤ 3 875 (3 000 du §12.9 non tenu, B2-13, B2-49, B3-8)",
+			"relevé : l'écran n'ajoute que ses objets ; total ≤ 3 950 (3 000 du §12.9 non tenu, B2-13, B2-49, B3-8, B3-19)",
 			function()
 				local profile = TvAudit.richProfile()
 				profile.squishies.u20.z = 300000 -- Grand Splorch prêt (aperçu construit)
@@ -131,8 +132,11 @@ return function(T)
 				-- garde contre une régression en attendant la décision sur le budget de 3 000 (§12.9) :
 				-- 3 681 à l'étape 3, 3 766 à l'étape 4 (HUD v2.0 et glyphes dessinés : + 85, journal B2-49) ;
 				-- lot B3, étape 1 (D24, journal B3-8) : 3 841, + 75 = les 5 badges ★1-★5 de la fiche du
-				-- Squishydex dessinés par UI/Text (étoile UI/Glyph de 15 objets, règle 18) : garde + 75
-				expect(whole <= 3875).toBe(true)
+				-- Squishydex dessinés par UI/Text (étoile UI/Glyph de 15 objets, règle 18) : garde + 75 ;
+				-- lot B3, étape 2 (D24, journal B3-19) : 3 898, + 57 = l'aperçu de renaissance sur le chemin
+				-- v2.0 (SplorchPreview 63 → 120 : 3 tuiles UpgradeCard « tile » 55, page du Splorch 24, page
+				-- Détails 26, à la place des tuiles de texte et des lignes de la v1.3) : garde + 75
+				expect(whole <= 3950).toBe(true)
 				S.clean(c, expect)
 			end
 		)
