@@ -565,6 +565,60 @@ return function(T)
 		)
 	end)
 
+	-- lot B3, étape 6 (journal B3-68 ; défaut de la v1.3 vu par la promenade ci-dessous) : L1 / R1 à travers
+	-- un onglet VIDE (Dodo, Boîte aux lettres sans squishy : sa sélection par défaut est le bouton de son
+	-- onglet) laissaient la sélection sur le bouton de l'onglet QUITTÉ : ✕ y ramenait. Après chaque L1 / R1,
+	-- la sélection est dans la page de l'onglet affiché ou sur son propre bouton (GDD §10.6 : 1re case de
+	-- l'onglet), interrupteurs coupés
+	describe("Console_panels › L1 / R1 à travers un onglet vide (v1.3)", function()
+		local Layout = require("../harness/Layout")
+		it("après chaque R1 puis L1, la sélection suit l'onglet affiché, jamais le bouton d'un autre onglet", function()
+			local h = TvAudit.client({
+				profile = {
+					onboarding = { step = 11, done = true, demoDone = true },
+					squishies = { a = TvAudit.squishy(1), b = TvAudit.squishy(2) },
+				},
+			})
+			local PC = TvAudit.mod(h, "UI.PanelController")
+			local Ranch = TvAudit.mod(h, "UI.Panels.Ranch")
+			TvAudit.openMenu(h)
+			h.game.GuiService.SelectedObject = PC.entryButton("Ranch")
+			TvAudit.tick(h, 0.5)
+			Gamepad.tap(h, Enum.KeyCode.ButtonA)
+			TvAudit.tick(h, 0.5)
+			expect(PC.current()).toBe("Ranch")
+			local body = PC.window("Ranch").Body
+			local wrong = {}
+			local function look(step)
+				local sel = h.game.GuiService.SelectedObject
+				local tab = Ranch.currentTab()
+				Layout.apply(h)
+				local ok = sel ~= nil
+					and sel:IsDescendantOf(body)
+					and Layout.visible(sel)
+					and (sel:GetAttribute("TvTab") ~= true or sel.Name == "Tab_" .. tab)
+				if not ok then
+					table.insert(wrong, `{step} : onglet {tab}, sélection {if sel then sel.Name else "nil"}`)
+				end
+			end
+			local n = #Ranch.tabs()
+			for i = 1, n do
+				TvAudit.tick(h, 0.5)
+				Gamepad.tap(h, Enum.KeyCode.ButtonR1)
+				TvAudit.tick(h, 0.5)
+				look("R1 n° " .. i)
+			end
+			for i = 1, n do
+				TvAudit.tick(h, 0.5)
+				Gamepad.tap(h, Enum.KeyCode.ButtonL1)
+				TvAudit.tick(h, 0.5)
+				look("L1 n° " .. i)
+			end
+			expect(table.concat(wrong, "\n")).toBe("")
+			clean(h)
+		end)
+	end)
+
 	-- lot B3, étape 6 (D25 ; journal B3-66) : promenade à la MANETTE seule (croix, ✕, ○, △, □, L1 / R1 :
 	-- aucune fenêtre ouverte par le code) dans chaque écran v2.0 du lot B3, aux 3 résolutions et dans les
 	-- 2 langues : sélections par défaut et retours de ○ de D25 ; sur chaque écran, aucune faute de
@@ -815,7 +869,15 @@ return function(T)
 						check(label .. "[plan de Déco perso] ")
 						tap(A)
 						expect(Ranch._state().pickerSlot).toBe(1)
-						expect(nm(sel())).toBe(nm(Ranch._styleCell("deco", "")))
+						-- le choix s'ouvre sur l'objet posé dans l'emplacement (« Aucun » quand il est vide)
+						local placed = nil
+						for _, e in Ranch._styleEntries() do
+							if e.equipped then
+								placed = e
+							end
+						end
+						expect(placed ~= nil and placed.n).toBe(1)
+						expect(nm(sel())).toBe(nm(Ranch._styleCell(placed.kind, placed.id)))
 						check(label .. "[choix de Déco perso] ")
 						tap(B)
 						expect(nm(sel())).toBe(nm(Ranch._decoSlot(1)))
@@ -841,11 +903,17 @@ return function(T)
 						expect(nm(sel())).toBe(nm(dexBody.Tabs.Strip.Tab_records))
 						tap(B)
 						expect(PC.current()).toBeNil()
-						-- 4. Objectifs : R1 → « Cette semaine » (1er palier), R1 → Carnet (1re case) ; ○ → rail
+						-- 4. Objectifs (rouverts sur le dernier onglet vu) : R1 jusqu'à « Cette semaine » (1er palier),
+						-- R1 → Carnet (1re case) ; ○ → rail
 						expect(toEntry("Objectives")).toBe(true)
 						tap(A)
 						expect(PC.current()).toBe("Objectives")
-						tap(R1)
+						for _ = 1, 6 do
+							tap(R1)
+							if Obj.currentTab() == "track" then
+								break
+							end
+						end
 						expect(Obj.currentTab()).toBe("track")
 						local goals = PC.window("Objectives").Body
 						expect(nm(sel())).toBe(nm(goals.Page_track.Tier1))
@@ -862,17 +930,27 @@ return function(T)
 						tap(A)
 						expect(PC.current()).toBe("Settings")
 						local firstToggle = sel()
-						expect(firstToggle ~= nil and firstToggle.Name).toBe("Button")
+						expect(firstToggle ~= nil and firstToggle.Name).toBe("Toggle")
 						local haloText = if fr then "Montrer mon halo" else "Show my halo"
+						-- la ligne de la sélection (1er parent qui porte un libellé direct) dit « Montrer mon halo »
 						local function onHalo()
 							local cur = sel()
-							local row = cur and cur.Parent and cur.Parent.Parent
-							if row == nil then
-								return false
-							end
-							for _, d in row:GetDescendants() do
-								if d:IsA("TextLabel") and d.Text == haloText then
-									return true
+							for _ = 1, 3 do
+								cur = cur and cur.Parent
+								if cur == nil then
+									return false
+								end
+								local labelled = false
+								for _, d in cur:GetChildren() do
+									if d:IsA("TextLabel") and d.Text ~= "" then
+										labelled = true
+										if d.Text == haloText then
+											return true
+										end
+									end
+								end
+								if labelled then
+									return false
 								end
 							end
 							return false

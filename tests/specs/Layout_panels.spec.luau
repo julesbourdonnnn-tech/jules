@@ -231,9 +231,10 @@ return function(T)
 				local Ranch = TvAudit.mod(h, "UI.Panels.Ranch")
 				expect(PC.window("Ranch").Body.Tabs.Strip.Tab_style.Label.Text).toBe("Mon style")
 				expect(Ranch._decoSlot(12) ~= nil).toBe(true)
+				-- (lignes recyclées par Widgets.rows : la liste des réglages affichés, pas les libellés)
 				local halo = false
-				for _, d in PC.window("Settings"):GetDescendants() do
-					if d:IsA("TextLabel") and d.Text == "Montrer mon halo" then
+				for _, item in TvAudit.mod(h, "UI.Panels.Settings")._items() do
+					if item.key == "haloOn" then
 						halo = true
 					end
 				end

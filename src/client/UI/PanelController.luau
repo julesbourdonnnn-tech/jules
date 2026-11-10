@@ -1037,6 +1037,23 @@ local function cycleTab(dir: number)
 	safe(name .. ".setTab", nil, mod.setTab, nextTab)
 	-- la sélection restée sur la page cachée revient tout de suite (onglet changé : pas un sauvetage)
 	FocusGuard.refocus()
+	-- restée sur le bouton d'un AUTRE onglet (onglet vide quitté : sa sélection par défaut est son bouton ;
+	-- ou bande des onglets) : elle suit l'onglet affiché, sa sélection par défaut (GDD §10.6 ; défaut de la
+	-- v1.3 vu par la promenade à la manette du lot B3, étape 6, B3-68 : ✕ ramenait à l'onglet quitté)
+	local win = windows[name]
+	local selected = GuiService.SelectedObject
+	if
+		win ~= nil
+		and selected ~= nil
+		and selected:GetAttribute("TvTab") == true
+		and selected:IsDescendantOf(win)
+		and selected.Name ~= "Tab_" .. nextTab
+	then
+		local default = safe(name .. ".defaultSelection", nil, mod.defaultSelection)
+		if typeof(default) == "Instance" and default:IsA("GuiObject") and default:IsDescendantOf(win) then
+			GuiService.SelectedObject = default
+		end
+	end
 	noteMenuActivity()
 end
 
