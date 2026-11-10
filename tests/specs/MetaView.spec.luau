@@ -430,6 +430,29 @@ return function(T)
 				end
 			end
 		)
+		it(
+			"compteurs : entier exact jusqu'à 99 999, forme courte dès 100 000 (jamais 6 chiffres, GDD §4.2)",
+			function()
+				-- lot B3, étape 4 : « Améliorations achetées : 999 999 » relevé par TextFit_all
+				-- (numberFormat : le jeu abrège un nombre de 6 chiffres) sur l'écran meta.dex.records
+				local p = deepCopy(WITNESS)
+				p.stats.upgradesBought = 999999
+				p.stats.splorches = 99999
+				p.hearts.receivedTotal = 100000
+				for _, lang in { "en", "fr" } do
+					local byId = {}
+					for _, line in MV.records(p, { on = onAll, lang = lang }) do
+						byId[line.id] = line.text.vars.n
+					end
+					expect({ lang = lang, n = byId.upgrades }).toEqual({ lang = lang, n = "999K" })
+					expect({ lang = lang, n = byId.hearts }).toEqual({ lang = lang, n = "100K" })
+					expect({ lang = lang, n = byId.splorches }).toEqual({
+						lang = lang,
+						n = if lang == "en" then "99,999" else "99 999",
+					})
+				end
+			end
+		)
 	end)
 
 	-- =========================================================================================

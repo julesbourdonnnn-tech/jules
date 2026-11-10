@@ -206,10 +206,12 @@ local function confettiText(key: string, n: number, lang: string?): Text
 	return text(key, { n = Format.confetti(n, lang) })
 end
 
--- Nombre en chaîne : entier exact avec séparateurs sous le million (BigNumber.full : « 10,000 »,
--- « 10 000 »), forme courte au-delà (BigNumber.abbreviate : jamais faux, jamais trop long)
+-- Nombre en chaîne : entier exact avec séparateurs jusqu'à 99 999 (BigNumber.full : « 10,000 »,
+-- « 10 000 », comme les Confettis de Format.confetti), forme courte dès 100 000 (BigNumber.abbreviate :
+-- « 999K », jamais faux, jamais trop long). Jamais 6 chiffres à l'écran (GDD §4.2 ; lot B3, étape 4 :
+-- « 999 999 » du Livre des records relevé par TextFit_all, règle numberFormat)
 local function num(n: number, lang: string?): string
-	if finite(n) and math.abs(n) < 1e6 then
+	if finite(n) and math.abs(n) < 1e5 then
 		return BigNumber.full(n, lang)
 	end
 	return BigNumber.abbreviate(n, lang)
