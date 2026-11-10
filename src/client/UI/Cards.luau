@@ -339,8 +339,11 @@ local function texts(card: Card): (string, string)
 		return Util.t("card.booped.title", { species = Util.speciesName(d.species) }),
 			Util.t("card.booped.line")
 	elseif kind == "postBoop" then
+		-- rentré tout seul : ni pièces ni Fame, la ligne des gains se tait (lot B3, B3-72)
 		return Util.t("card.postBoop.title", { name = Util.speciesName(d.species) }),
-			Util.t("card.postBoop.line", { coins = Util.big(Util.num(d.coins, 0, 0)) })
+			if d.alone == true
+				then ""
+				else Util.t("card.postBoop.line", { coins = Util.big(Util.num(d.coins, 0, 0)) })
 	elseif kind == "objectives" then
 		local days = math.floor(Util.num(State.get("plopDays"), 0, 0, 1e9))
 		local fed = Util.num(State.get("lastFeedDay"), -1) == Clock.day()
@@ -1331,6 +1334,9 @@ local function onCelebrate(payload: any)
 					species = Util.num(d.species, 0),
 					coins = Util.num(d.coins, 0, 0),
 					booperId = lastBooper[uid] or 0,
+					-- personne ne l'a attrapé (ChaseService.escapeReturned : ni attrapeur, ni gain)
+					alone = Util.num(d.catcherId, 0, 0, 2 ^ 53) <= 0
+						and Util.str(d.catcherName, "", 100) == "",
 				},
 			})
 		end

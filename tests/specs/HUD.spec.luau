@@ -296,6 +296,42 @@ return function(T)
 	end)
 
 	describe("HUD › retours", function()
+		-- lot B3, étape 6 (journal B3-72) : rentré tout seul (ChaseService.escapeReturned : ownerReturn
+		-- sans attrapeur, 0 pièce, aucune Fame) : le message disait « +1 Fame +0 coins · left a baby for »
+		it("ownerReturn sans attrapeur (rentré tout seul) : aucun message « left a baby for »", function()
+			local h = setup()
+			local M = TvAudit.mod(h, "UI.Hud.Messages")
+			h:fireClient("ReplicatedStorage.Remotes.Celebrate", {
+				kind = "ownerReturn",
+				data = {
+					uid = "u1",
+					species = 2,
+					coins = 0,
+					catcherId = 0,
+					catcherName = "",
+					firstBoop = true,
+				},
+			})
+			h:settle(1)
+			local last = M.last()
+			expect(string.find(if last then last.text else "", "baby", 1, true)).toBeNil()
+			-- avec un attrapeur : le message de la v1.3, inchangé
+			h:fireClient("ReplicatedStorage.Remotes.Celebrate", {
+				kind = "ownerReturn",
+				data = {
+					uid = "u1",
+					species = 2,
+					coins = 50,
+					catcherId = 7,
+					catcherName = "Noah",
+					firstBoop = false,
+				},
+			})
+			h:settle(1)
+			expect(M.last().text).toBe("Wibble came back! +1 Fame +50 coins · left a baby for Noah")
+			clean(h)
+		end)
+
 		it("vibration squishyBack au retour de mon squishy boopé ; aucune quand il s'enfuit", function()
 			local h, HUD = setup()
 			local Haptics = TvAudit.mod(h, "Util.Haptics")

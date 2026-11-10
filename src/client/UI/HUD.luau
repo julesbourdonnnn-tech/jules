@@ -1826,6 +1826,13 @@ local function onCelebrate(payload: any)
 	local kind = payload.kind
 	local d = payload.data
 	if kind == "ownerReturn" then
+		-- rentré tout seul (personne ne l'a attrapé, ChaseService.escapeReturned) : le serveur envoie
+		-- ownerReturn sans attrapeur, 0 pièce et aucune Fame, pour la carte du premier boop seulement ;
+		-- rien à annoncer ici (« +1 Fame +0 pièces · il a laissé un bébé à » était faux ; lot B3,
+		-- étape 6, journal B3-72) ; « returnedBigger » dit le retour quand il a grandi
+		if Util.num(d.catcherId, 0, 0, 2 ^ 53) <= 0 and Util.str(d.catcherName, "", 100) == "" then
+			return
+		end
 		-- le retour d'abord ; vibration douce et positive
 		Haptics.play("squishyBack")
 		Messages.push(

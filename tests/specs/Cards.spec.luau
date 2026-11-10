@@ -218,6 +218,44 @@ return function(T)
 			clean(h)
 		end)
 
+		-- lot B3, étape 6 (journal B3-72) : rentré tout seul (personne ne l'a attrapé,
+		-- ChaseService.escapeReturned) : le serveur envoie ownerReturn sans attrapeur, 0 pièce et aucune
+		-- Fame, pour la carte du premier boop seulement ; la carte promettait « +0 coins +1 Fame »
+		it(
+			"carte « revient toujours ! » d'un squishy rentré tout seul : aucune ligne « +0 coins +1 Fame »",
+			function()
+				local h, C, Clock = setup()
+				celebrate(h, "booped", { uid = "u9", species = 2, booperId = 55 })
+				celebrate(h, "ownerReturn", {
+					uid = "u9",
+					species = 2,
+					coins = 0,
+					catcherId = 0,
+					catcherName = "",
+					firstBoop = true,
+				})
+				Clock.advance(8.01)
+				C._step()
+				expect(C.current().kind).toBe("postBoop")
+				local side = C.frame("side")
+				expect(side.Title.Text).toBe("Wibble always comes back!")
+				expect(side.Line.Visible).toBe(false)
+				-- rouverte depuis le « ! » : la fenêtre non plus
+				Clock.advance(8.01)
+				C._step()
+				local postBoop = nil
+				for _, c in C.pending() do
+					if c.kind == "postBoop" then
+						postBoop = c
+					end
+				end
+				C.open(postBoop.id)
+				expect(C.frame("dialog").Line.Visible).toBe(false)
+				expect(#C.buttons()).toBe(3)
+				clean(h)
+			end
+		)
+
 		it(
 			"carte « Wibble revient toujours ! » (premier boop subi) : Continuer, Mode Cozy, Pas ce joueur",
 			function()
