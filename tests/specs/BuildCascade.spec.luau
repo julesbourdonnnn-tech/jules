@@ -557,5 +557,25 @@ return function(T)
 			BC.configure("x")
 			f.clean()
 		end)
+
+		-- lot B5, étape 2 : World/Personality répartit les vermicelles sur les pièces de la cascade
+		it("playing() : jobs et pièces de la cascade en train de jouer ; 0, 0 quand rien ne joue", function()
+			local f = fresh()
+			expect({ f.BC.playing() }).toEqual({ 0, 0 })
+			f.BC.push(f.job(3, 5))
+			expect({ f.BC.playing() }).toEqual({ 0, 0 }) -- en file, pas encore jouée
+			f.BC.step(f.t)
+			expect({ f.BC.playing() }).toEqual({ 1, 5 })
+			f.run(2)
+			expect({ f.BC.playing() }).toEqual({ 0, 0 })
+			-- achat groupé : deux jobs dans la même cascade
+			f.BC.push(f.job(3, 4))
+			f.BC.push(f.job(3, 6, { id = "second" }))
+			f.BC.step(f.t)
+			expect({ f.BC.playing() }).toEqual({ 2, 10 })
+			f.run(2)
+			expect({ f.BC.playing() }).toEqual({ 0, 0 })
+			f.clean()
+		end)
 	end)
 end

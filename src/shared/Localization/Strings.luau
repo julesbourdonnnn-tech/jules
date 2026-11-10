@@ -1290,6 +1290,8 @@ Strings.en = {
 	["trick.flip"] = "Flip",
 	["trick.dance"] = "Dance",
 	["trick.fireworks"] = "Fireworks",
+	-- lot B5 (étape 2, D8) : annonce d'un tour appris par une de MES espèces (message du HUD)
+	["trick.new"] = "New trick: {name}!",
 	["track.title"] = "This week",
 	["track.points"] = "{n} / {m} points",
 	["track.tier"] = "Tier {n}",
@@ -2596,6 +2598,7 @@ Strings.fr = {
 	["trick.flip"] = "Salto",
 	["trick.dance"] = "Danse",
 	["trick.fireworks"] = "Feu d'artifice",
+	["trick.new"] = "Nouveau tour : {name} !",
 	["track.title"] = "Cette semaine",
 	["track.points"] = "{n} / {m} points",
 	["track.tier"] = "Palier {n}",

@@ -23,7 +23,7 @@
 --     par achat de suite dans les 3 s (+24 % au plus) ; muet pendant un Rush, un MEGA, un Grand Splorch,
 --     une Ascension ou la danse de Big Plop (un seul grand spectacle à la fois, D29) ;
 --   * signal Piece(slot, position, index) à chaque pièce qui sort (B5 : vermicelles, squishies qui se
---     tournent vers l'objet).
+--     tournent vers l'objet) ; playing() : jobs et pièces de la cascade en train de jouer (lot B5).
 -- Aucun travail par image quand la file est vide (busy() faux : RanchRenderer n'appelle pas step).
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -668,6 +668,20 @@ end
 -- Il reste des jobs (en attente ou en train de jouer)
 function BuildCascade.busy(): boolean
 	return #jobs > 0
+end
+
+-- Cascade en train de jouer : nombre de jobs et nombre de pièces (0, 0 quand rien ne joue) ; lot B5,
+-- étape 2 : World/Personality répartit les vermicelles sur les pièces (12 pour un achat seul, 24 pour
+-- un achat groupé : deux jobs ou plus dans la même cascade, GDD §9.4)
+function BuildCascade.playing(): (number, number)
+	local count, pieces = 0, 0
+	for _, live in jobs do
+		if live.playing then
+			count += 1
+			pieces += live.n
+		end
+	end
+	return count, pieces
 end
 
 -- Compteurs (specs, Diagnostics) : jobs en file, poussés, cascades jouées, jobs terminés, plus

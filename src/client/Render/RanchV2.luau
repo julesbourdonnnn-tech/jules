@@ -1583,12 +1583,20 @@ local function updateDetail()
 	end
 end
 
--- Détail d'un ranch (« full » | « reduced ») : B5 et la cascade le lisent
+-- Détail d'un ranch (« full » | « reduced ») : B5 et la cascade le lisent. Lot B5, étape 2 (défaut du
+-- crochet, journal B5-13) : tant qu'aucun ranch ne porte de décor v2.0, step ne tourne pas et personne
+-- ne tient le ranch courant à jour (il restait à 0 : « reduced » partout, donc ni saynète ni Plopette
+-- avec les seuls interrupteurs du lot B5 ouverts) ; il est alors relu ici, à la demande
 function RanchV2.detail(slot: number): string
 	if type(slot) ~= "number" or slot ~= slot then
 		return "reduced"
 	end
-	return detailFor(slot, current, mySlot(), lowQuality())
+	local my = mySlot()
+	if not RanchV2.on then
+		local root = Util.localRoot()
+		current = RanchLook.currentRanch(current, my, if root then root.Position else nil)
+	end
+	return detailFor(slot, current, my, lowQuality())
 end
 
 -- Ranch courant (où se tient le personnage, D6)

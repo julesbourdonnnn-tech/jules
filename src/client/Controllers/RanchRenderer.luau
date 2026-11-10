@@ -80,7 +80,8 @@ local RanchRenderer = {}
 --   * RanchRenderer.ElementBuilt (slot, id) : un élément vient d'être construit pour de vrai (premier
 --     passage, joué en cascade ; jamais au chargement ni au changement de ranch) ;
 --   * Render/BuildCascade.Piece (slot, position, index) : chaque pièce d'une cascade qui sort ;
---   * RanchRenderer.handleOf(slot, uid) (lot B5, INT-B5-RANCH) : modèle dessiné d'un squishy ou nil.
+--   * RanchRenderer.handleOf(slot, uid) (lot B5, INT-B5-RANCH) : modèle dessiné d'un squishy ou nil ;
+--   * RanchRenderer.target() (lot B5, étape 2) : la cible du jeu (ranch, uid), 0 et "" sans cible.
 RanchRenderer.ElementBuilt = RanchV2.ElementBuilt
 
 -- Distances et cadences (GDD §5.2, §9.3, §12.9)
@@ -1851,6 +1852,16 @@ function RanchRenderer.highlightTarget(slot: number?, uid: string?)
 	else
 		target = nil
 	end
+end
+
+-- Cible du jeu posée par highlightTarget (ranch, uid) ; 0 et "" sans cible : crochet du lot B5
+-- (World/Personality : un squishy ciblé ne joue aucune saynète, la sienne s'arrête à l'image même)
+function RanchRenderer.target(): (number, string)
+	local t = target
+	if t then
+		return t.slot, t.uid
+	end
+	return 0, ""
 end
 
 -- Squishies candidats projetés à l'écran (clic souris) : ceux de mon ranch
