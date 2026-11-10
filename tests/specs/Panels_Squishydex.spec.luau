@@ -200,4 +200,233 @@ return function(T)
 			clean(c)
 		end)
 	end)
+
+	describe("Panels/Squishydex › focus (B2-63, lot B3)", function()
+		it(
+			"parcours à 3 touches sur un profil neuf en anglais aux 3 résolutions : aucun FocusRescued:panel:Squishydex ; rouvert depuis le menu, il montre les Espèces",
+			function()
+				local c = setup({})
+				local r = TvAudit.run(c.h, { langs = { "en" } })
+				expect(table.concat(r.issues, "\n")).toBe("")
+				local lost = 0
+				for _, e in TvAudit.mod(c.h, "Controllers.ErrorReporter").entries() do
+					if string.find(e.text, "FocusRescued:panel:Squishydex", 1, true) then
+						lost += e.count
+					end
+				end
+				expect(lost).toBe(0)
+				-- la cause : le panneau rouvrait sur son dernier onglet ; un chemin vers la fiche d'une espèce
+				-- (menu → Squishydex → case) posait alors la sélection sur une case de la page cachée
+				c.PC.closeAll()
+				TvAudit.tick(c.h, 0.5)
+				c.PC.open("Squishydex", "guide")
+				TvAudit.tick(c.h, 0.5)
+				expect(c.Dex.currentTab()).toBe("guide")
+				c.PC.closeAll()
+				TvAudit.tick(c.h, 0.5)
+				c.PC.open("Squishydex")
+				TvAudit.tick(c.h, 0.5)
+				expect(c.Dex.currentTab()).toBe("species")
+				expect(sel(c):IsDescendantOf(body(c).Page_species)).toBe(true)
+				clean(c)
+			end
+		)
+	end)
+
+	describe("Panels/Squishydex › v2.0 (lot B3, Records et maîtrise)", function()
+		local UpgradeScreen = require("../harness/UpgradeScreen")
+		local S = UpgradeScreen.new(T.Harness)
+		local V2 = UpgradeScreen.V2_ALL
+
+		-- profil v2 : Record R 30, A = 3, plus gros squishy 1e300, une espèce maîtrisée (Plop : ★5, page
+		-- dorée, Trophée Cristal), 7 cœurs reçus, 600 niveaux, 99 999 Confettis gagnés
+		local function v2profile(edit)
+			local p = {
+				version = 2,
+				R = 30,
+				bestR = 30,
+				ascend = 3,
+				biggestEver = 1e300,
+				confettiTotal = 99999,
+				stats = { bestCombo = 12, splorches = 40, upgradesBought = 600 },
+				mastery = { 2 },
+				plopDays = 8,
+				hearts = { receivedTotal = 7, givenDay = 0, givenTo = {} },
+				dex = dex({ mut = { [1] = 1023, [2] = 1 }, stars = { [1] = 31, [2] = 16 } }),
+				trophies = { [1] = 2e12, [2] = 10 },
+			}
+			if edit then
+				edit(p)
+			end
+			return p
+		end
+
+		local function v2client(opts)
+			opts = opts or {}
+			local c = S.client({ profile = v2profile(opts.edit), lang = opts.lang })
+			if opts.flags ~= false then
+				S.event(c, opts.flags or V2)
+			end
+			c.Dex = TvAudit.mod(c.h, "UI.Panels.Squishydex")
+			return c
+		end
+
+		local function openTab(c, tab)
+			c.PC.closeAll()
+			TvAudit.tick(c.h, 0.5)
+			c.PC.open("Squishydex", tab)
+			TvAudit.tick(c.h, 0.5)
+		end
+
+		local function lines(list)
+			local out = {}
+			for i = 1, 12 do
+				local l = list.Holder:FindFirstChild("Line" .. i)
+				if l and l.Visible then
+					table.insert(out, (string.gsub(l.Text, "\n", " ")))
+				end
+			end
+			return out
+		end
+
+		local function openSheetOf(c, row, col)
+			openTab(c, "species")
+			local cell = body(c).Page_species.Species.Holder:FindFirstChild("Row" .. row)["Cell" .. col]
+			S.select(c, cell)
+			Gamepad.tap(c.h, Enum.KeyCode.ButtonA)
+			TvAudit.tick(c.h, 0.5)
+			return body(c).Sheet
+		end
+
+		it(
+			"Records : onglet en dernier, Livre des records lu dans le profil (1e300, 99 999), liste sélectionnée",
+			function()
+				local c = v2client()
+				openTab(c, "records")
+				expect(c.Dex.tabs()).toEqual({ "species", "families", "guide", "records" })
+				expect(c.Dex.currentTab()).toBe("records")
+				local list = body(c).Page_records.Records
+				expect(S.selected(c)).toBe(list)
+				local got = lines(list)
+				expect(#got).toBe(10)
+				expect(got[1]).toContain("Biggest squishy: ")
+				expect(string.find(got[1], "inf", 1, true)).toBeNil()
+				expect(string.find(got[1], "nan", 1, true)).toBeNil()
+				expect(got[2]).toBe("Best combo: ×12")
+				expect(got[3]).toBe("Grand Splorches: 40")
+				expect(got[4]).toBe("Jelly Ascends: 3")
+				expect(got[5]).toBe("Best Grand Splorch: 30")
+				expect(got[6]).toBe("Confetti earned: 99,999")
+				expect(got[7]).toBe("Masteries: 1 / 26")
+				expect(got[8]).toBe("Plop days: 8")
+				expect(got[9]).toBe("Hearts received: 7")
+				expect(got[10]).toBe("Upgrades bought: 600")
+				S.clean(c, expect)
+			end
+		)
+
+		it(
+			"Records : champs absents ou hostiles → 0, aucune trace ; un système coupé n'a pas sa ligne",
+			function()
+				local c = v2client({
+					lang = "fr",
+					edit = function(p)
+						p.biggestEver = 0 / 0
+						p.stats = "x"
+						p.hearts = nil
+						p.confettiTotal = -math.huge
+						p.mastery = "y"
+					end,
+					flags = { RecordR = true, Confetti = true },
+				})
+				openTab(c, "records")
+				local got = lines(body(c).Page_records.Records)
+				expect(got).toEqual({
+					"Plus gros squishy : 0",
+					"Meilleur combo : ×0",
+					"Grands Splorch : 0",
+					"Meilleur Grand Splorch : 30",
+					"Confettis gagnés : 0",
+					"Jours de Plop : 8",
+					"Améliorations achetées : 0",
+				})
+				S.clean(c, expect)
+			end
+		)
+
+		it(
+			"maîtrise : colonne de la fiche (compte n / m, 3 cases cochées, dorées quand l'espèce est maîtrisée ; partielle sinon)",
+			function()
+				local c = v2client()
+				local sheet = openSheetOf(c, 1, 1) -- Plop : maîtrisé
+				local m = sheet.Mastery
+				expect(m.Visible).toBe(true)
+				expect(m.Title.Text).toBe("Masteries: 1 / 26")
+				local W = TvAudit.mod(c.h, "UI.Panels.Widgets")
+				for i = 1, 3 do
+					expect(m["Box" .. i].Check:GetAttribute("Icon")).toBe("check")
+					expect(m["Box" .. i].BackgroundColor3).toBe(W.Colors.Gold)
+				end
+				expect(m.Box2.Label.Text).toBe("Golden page")
+				expect(m.Box3.Label.Text).toBe("Crystal")
+				-- ○ puis la 2e espèce (★5 seulement) : 1 case faite (verte), 2 à faire
+				Gamepad.tap(c.h, Enum.KeyCode.ButtonB)
+				TvAudit.tick(c.h, 0.5)
+				sheet = openSheetOf(c, 1, 2)
+				m = sheet.Mastery
+				expect(m.Box1.Check:GetAttribute("Icon")).toBe("check")
+				expect(m.Box1.BackgroundColor3).toBe(W.Colors.Success)
+				expect(m.Box2.Check:GetAttribute("Icon")).toBe("")
+				expect(m.Box3.BackgroundColor3).toBe(W.Colors.Card)
+				S.clean(c, expect)
+			end
+		)
+
+		it(
+			"onglets et colonnes seulement avec leur interrupteur et un profil v2 ; coupés : Squishydex de la v1.3 (rien de la v2.0 construit)",
+			function()
+				-- RecordR seul : l'onglet Records, pas la maîtrise
+				local c = v2client({ flags = { RecordR = true } })
+				openTab(c, "records")
+				expect(c.Dex.currentTab()).toBe("records")
+				local sheet = openSheetOf(c, 1, 1)
+				expect(sheet:FindFirstChild("Mastery")).toBeNil()
+				S.clean(c, expect)
+				-- Mastery seul : la colonne, pas l'onglet
+				local c2 = v2client({ flags = { Mastery = true } })
+				openTab(c2, "records")
+				expect(c2.Dex.tabs()).toEqual({ "species", "families", "guide" })
+				expect(c2.Dex.currentTab()).toBe("species")
+				expect(body(c2):FindFirstChild("Page_records")).toBeNil()
+				expect(openSheetOf(c2, 1, 1).Mastery.Visible).toBe(true)
+				S.clean(c2, expect)
+				-- coupés, puis profil v1 : rien de la v2.0
+				for _, case in
+					{ { flags = false }, {
+						edit = function(p)
+							p.version = 1
+						end,
+					} }
+				do
+					local c3 = v2client(case)
+					openTab(c3, "records")
+					expect(c3.Dex.tabs()).toEqual({ "species", "families", "guide" })
+					expect(body(c3):FindFirstChild("Page_records")).toBeNil()
+					expect(body(c3).Tabs.Strip:FindFirstChild("Tab_records")).toBeNil()
+					expect(openSheetOf(c3, 1, 1):FindFirstChild("Mastery")).toBeNil()
+					S.noV2Intent(c3, expect)
+					S.clean(c3, expect)
+				end
+				-- coupés en direct, panneau rouvert : plus d'onglet Records ni de colonne
+				local c4 = v2client()
+				openTab(c4, "records")
+				S.event(c4, nil)
+				openTab(c4, "records")
+				expect(c4.Dex.currentTab()).toBe("species")
+				expect(body(c4).Tabs.Strip.Tab_records.Visible).toBe(false)
+				expect(openSheetOf(c4, 1, 1).Mastery.Visible).toBe(false)
+				S.clean(c4, expect)
+			end
+		)
+	end)
 end

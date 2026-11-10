@@ -13,7 +13,17 @@
 --     liste en lecture seule : ↑ / ↓ font défiler de 70 %.
 -- Plus d'onglets Mutations (26 × 9) ni Étoiles (v1.2). Grille virtualisée (Widgets.rows). Nombres
 -- géants par BigNumber. UiSeen("dex") à la première ouverture. Sélection par défaut : la 1re espèce ;
--- Guide : la 1re ligne.
+-- Guide : la 1re ligne. Ouvert sans onglet (menu, L2 / R2) : les Espèces, jamais le dernier onglet vu
+-- (GDD §10.6 « 1re espèce » ; lot B3, B2-63 : rouvert sur les Familles, un chemin menu → case d'espèce
+-- posait la sélection sur une case de la page cachée et FocusGuard la rattrapait).
+-- v2.0 (lot B3, étape 4 ; plan B3 D13, D14, D24, D25 ; GDD v2.0 §4.17, §17.1) :
+--   * onglet « Records » [RecordR, profil v2] : le Livre des records (UI/MetaView.records, lu dans le
+--     profil SEUL), liste en lecture seule qui défile de 70 % comme le Guide (même code) ;
+--   * maîtrise [Mastery, profil v2] : colonne de la fiche d'une espèce, à droite des mutations : le
+--     compte « Maîtrises : n / m » puis les 3 cases (★5, page dorée, Trophée Cristal ; Owned.mastery par
+--     MetaView.mastery), coche dessinée par case faite, les 3 dorées quand l'espèce est maîtrisée ;
+--   * barre d'onglets de la v2.0, page Records et colonne de la maîtrise construites au premier besoin,
+--     à l'ouverture (jamais écran ouvert) ; interrupteurs coupés : rien de la v2.0 n'est construit.
 
 local GuiService = game:GetService("GuiService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -31,10 +41,15 @@ local Odds = require(Shared.Logic.Odds)
 local QuestRules = require(Shared.Logic.QuestRules)
 local Clock = require(Shared.Util.Clock)
 
+local BigNumber = require(Shared.Logic.BigNumber)
+
 local Client = script.Parent.Parent.Parent
 local Juice = require(Client.UI.Juice)
 local Prefs = require(Client.Util.Prefs)
 local Format = require(Client.UI.Format)
+local MetaFlags = require(Client.UI.MetaFlags)
+local MetaView = require(Client.UI.MetaView)
+local Icons = require(Client.UI.Hud.Icons)
 local Widgets = require(script.Parent.Widgets)
 
 type Nav = { open: (panel: string, tab: string?) -> (), back: () -> () }
@@ -43,10 +58,39 @@ type SpeciesCell = { button: TextButton, blob: Frame, name: TextLabel, info: Tex
 type SpeciesRow = { label: TextLabel, cells: { SpeciesCell } }
 type FamilyRow =
 	{ button: TextButton, name: TextLabel, bonus: TextLabel, status: TextLabel, blobs: { Frame } }
+-- liste en lecture seule qui défile (Guide, Records) : un seul objet sélectionnable, ↑ / ↓ de 70 %
+type ReadList = {
+	tab: string,
+	scroller: TextButton,
+	holder: Frame,
+	lines: { TextLabel },
+	scroll: number,
+	viewH: number,
+	totalH: number,
+}
+type MasteryBox = { frame: Frame, label: TextLabel, check: Frame }
+type MasteryParts = { holder: Frame, title: TextLabel, boxes: { MasteryBox } }
 
 local Squishydex = {}
 
 local TABS = { "species", "families", "guide" }
+local V2_TABS = { "species", "families", "guide", "records" } -- v2.0 : le Livre des records en dernier
+local RECORD_LINES = 10 -- lignes du Livre des records (MetaView.records en rend 10 au plus)
+-- Profil répliqué sur les clés que lisent MetaView.records et la maîtrise (Owned.mastery)
+local META_KEYS = {
+	"version",
+	"R",
+	"bestR",
+	"ascend",
+	"biggestEver",
+	"stats",
+	"confettiTotal",
+	"mastery",
+	"plopDays",
+	"hearts",
+	"dex",
+	"trophies",
+}
 local CELL = Layout.Panel.cell
 local LABEL_W = 260
 local PER_ROW = 4
@@ -69,12 +113,13 @@ local sheetCells: { TextButton } = {}
 local sheetStars: { TextLabel } = {}
 local sheetLabels: { [string]: TextLabel } = {}
 local sheetBlob: Frame? = nil
-local guideScroller: TextButton? = nil
-local guideHolder: Frame? = nil
-local guideLines: { TextLabel } = {}
-local guideScroll = 0
-local guideViewH = 0
-local guideTotalH = 0
+local guide: ReadList? = nil
+-- v2.0 : barre construite (v1.3, ou celle de la v2.0 au premier besoin), Records, maîtrise
+local barTabs: { string } = TABS
+local buildContainer: Frame? = nil
+local buildTop = 0
+local records: ReadList? = nil
+local mastery: MasteryParts? = nil
 
 local MUTATION_BITS = 0
 local GOLDEN_NEED = 0 -- page dorée : les 8 mutations hors Lunaire (GDD §4.17)
@@ -197,6 +242,8 @@ local function bindSpeciesRow(row: SpeciesRow, _frame: Frame, index: number)
 	end
 end
 
+local renderMastery: (s: number) -> () -- v2.0 (D14), défini plus bas
+
 -- Contenu de la fiche d'une espèce (rappelé à chaque changement du profil tant qu'elle est ouverte)
 local function renderSheet(s: number)
 	local known = stamped(s)
@@ -249,6 +296,7 @@ local function renderSheet(s: number)
 	else
 		sheetLabels.trophy.Visible = false
 	end
+	renderMastery(s)
 end
 
 local function openSheet(cell: SpeciesCell)
@@ -422,37 +470,34 @@ local function guideTexts(): { { text: string, title: boolean } }
 	return out
 end
 
-local function applyGuideScroll(animate: boolean)
-	local holder = guideHolder
-	if holder == nil then
-		return
-	end
+-- Défilement d'une liste en lecture seule (Guide, Records)
+local function applyListScroll(list: ReadList, animate: boolean)
 	-- défilement par lignes entières (GUIDE_LINE) et cadre d'un nombre entier de lignes : aucune
 	-- ligne coupée en deux en haut ni en bas (outil d'écrans : « Givré ×3 » à moitié caché)
-	local maxScroll = math.max(0, guideTotalH - guideViewH)
-	guideScroll = math.clamp(math.floor(guideScroll / GUIDE_LINE + 0.5) * GUIDE_LINE, 0, maxScroll)
-	local goal = UDim2.fromOffset(0, -guideScroll)
+	local maxScroll = math.max(0, list.totalH - list.viewH)
+	list.scroll = math.clamp(math.floor(list.scroll / GUIDE_LINE + 0.5) * GUIDE_LINE, 0, maxScroll)
+	local goal = UDim2.fromOffset(0, -list.scroll)
 	if animate and not Juice.reducedMotion() then
-		Juice.tween(holder, 0.15, { Position = goal })
+		Juice.tween(list.holder, 0.15, { Position = goal })
 	else
-		holder.Position = goal
+		list.holder.Position = goal
 	end
 	-- en haut : ↑ remonte aux onglets ; ailleurs ↑ fait défiler (la sélection reste sur la liste)
-	local scroller = guideScroller
-	if scroller and tabBar then
-		scroller.NextSelectionUp = if guideScroll <= 0 then tabBar.buttons.guide else scroller
+	local scroller = list.scroller
+	if tabBar then
+		scroller.NextSelectionUp = if list.scroll <= 0 then tabBar.buttons[list.tab] else scroller
 		scroller.NextSelectionDown = scroller
 	end
 end
 
 local function refreshGuide()
-	local holder = guideHolder
-	if holder == nil then
+	local list = guide
+	if list == nil then
 		return
 	end
 	local texts = guideTexts()
 	local y = 0
-	for i, label in guideLines do
+	for i, label in list.lines do
 		local entry = texts[i]
 		label.Visible = entry ~= nil
 		if entry then
@@ -462,26 +507,114 @@ local function refreshGuide()
 			y += GUIDE_LINE
 		end
 	end
-	guideTotalH = y
-	applyGuideScroll(false)
+	list.totalH = y
+	applyListScroll(list, false)
 end
 
-local function onGuideInput(input: InputObject)
-	if not isOpen or current ~= "guide" or GuiService.SelectedObject ~= guideScroller then
+local function onListInput(list: ReadList?, input: InputObject)
+	if list == nil or not isOpen or current ~= list.tab or GuiService.SelectedObject ~= list.scroller then
 		return
 	end
-	local step = math.max(GUIDE_LINE, math.floor(guideViewH * GUIDE_STEP / GUIDE_LINE) * GUIDE_LINE)
+	local step = math.max(GUIDE_LINE, math.floor(list.viewH * GUIDE_STEP / GUIDE_LINE) * GUIDE_LINE)
 	if input.KeyCode == Enum.KeyCode.DPadDown then
-		local before = guideScroll
-		guideScroll += step
-		applyGuideScroll(true)
-		if guideScroll <= before then
+		local before = list.scroll
+		list.scroll += step
+		applyListScroll(list, true)
+		if list.scroll <= before then
 			-- déjà en bas : le seul ↓ qui rebondit (son Bump, vibration listEnd)
-			Widgets.listEnd(guideScroller, "Down")
+			Widgets.listEnd(list.scroller, "Down")
 		end
-	elseif input.KeyCode == Enum.KeyCode.DPadUp and guideScroll > 0 then
-		guideScroll -= step
-		applyGuideScroll(true)
+	elseif input.KeyCode == Enum.KeyCode.DPadUp and list.scroll > 0 then
+		list.scroll -= step
+		applyListScroll(list, true)
+	end
+end
+
+-- =============================================================================================
+-- v2.0 (lot B3, D13, D14) : Livre des records, maîtrise
+-- =============================================================================================
+
+local function recordsOn(): boolean
+	return MetaFlags.v2Profile() and MetaFlags.on("RecordR")
+end
+
+local function masteryOn(): boolean
+	return MetaFlags.v2Profile() and MetaFlags.on("Mastery")
+end
+
+local function lang(): string
+	local ok, l = pcall(Prefs.language)
+	return if ok and l == "fr" then "fr" else "en"
+end
+
+local function tr(key: string, vars: { [string]: any }?): string
+	return Widgets.t(key, vars)
+end
+
+-- Texte { key, vars } d'une vue (variables-clés traduites, MetaView.resolve) ; illisible : vide
+local function setView(label: TextLabel, t: any)
+	local r = MetaView.resolve(t, tr)
+	if type(r) == "table" and type(r.key) == "string" then
+		Widgets.setText(label, r.key, r.vars)
+	else
+		Widgets.setRaw(label, "")
+	end
+end
+
+local function refreshRecords()
+	local list = records
+	if list == nil or not recordsOn() then
+		return
+	end
+	local rows = MetaView.records(Widgets.profile(META_KEYS), { lang = lang(), on = MetaFlags.on })
+	local y = 0
+	for i, label in list.lines do
+		local rec = rows[i]
+		label.Visible = rec ~= nil
+		if rec then
+			setView(label, rec.text)
+			label.Position = UDim2.fromOffset(0, y)
+			y += GUIDE_LINE
+		end
+	end
+	list.totalH = y
+	applyListScroll(list, false)
+end
+
+-- Texte bleu nuit sans contour sur une case vive (faite, dorée), sinon la couleur donnée et le contour
+local function ink(label: TextLabel, vivid: boolean, color: Color3)
+	label.TextColor3 = if vivid then Widgets.Colors.Stroke else color
+	local stroke = label:FindFirstChildOfClass("UIStroke")
+	if stroke then
+		stroke.Enabled = not vivid
+	end
+end
+
+-- Colonne de la maîtrise de l'espèce s sur la fiche (cachée tant que Mastery est coupé)
+renderMastery = function(s: number)
+	local parts = mastery
+	if parts == nil then
+		return
+	end
+	local on = masteryOn()
+	parts.holder.Visible = on
+	if not on then
+		return
+	end
+	local profile = Widgets.profile(META_KEYS)
+	local l = lang()
+	local n, m = MetaView.masteryCount(profile)
+	Widgets.setText(parts.title, "records.mastery", { n = BigNumber.full(n, l), m = BigNumber.full(m, l) })
+	local view = MetaView.mastery(profile, s)
+	local done = { view.star5, view.golden, view.crystal }
+	for i, box in parts.boxes do
+		local ok = done[i] == true
+		box.frame.BackgroundColor3 = if view.done
+			then Widgets.Colors.Gold
+			elseif ok then Widgets.Colors.Success
+			else Widgets.Colors.Card
+		ink(box.label, ok, Widgets.Colors.LockedText)
+		Icons.draw(box.check, if ok then "check" else nil, Widgets.Colors.Stroke)
 	end
 end
 
@@ -498,6 +631,8 @@ local function showPage(tab: string)
 		page.Visible = id == tab
 	end
 	if tabBar then
+		-- onglet Records (v2.0) : seulement avec sa page et son interrupteur
+		tabBar.setVisible("records", records ~= nil and recordsOn())
 		tabBar.setActive(tab)
 	end
 end
@@ -516,6 +651,7 @@ local function refresh()
 		familyRows.setCount(#families)
 	end
 	refreshGuide()
+	refreshRecords()
 end
 
 local function buildSpecies(page: Frame)
@@ -839,27 +975,28 @@ local function buildFamiliesPage(page: Frame)
 	})
 end
 
-local function buildGuide(page: Frame)
+-- Liste en lecture seule qui défile (Guide, Records) : un seul bouton qui coupe ce qui dépasse, ses
+-- lignes de 44 px dans un pas de 48 ; ↑ / ↓ la font défiler (onListInput)
+local function buildReadList(page: Frame, name: string, count: number, tab: string): ReadList
 	local width = page.Size.X.Offset - 96
-	-- hauteur visible : un nombre entier de lignes (voir applyGuideScroll)
-	guideViewH = math.max(GUIDE_LINE, math.floor((page.Size.Y.Offset - 16) / GUIDE_LINE) * GUIDE_LINE)
+	-- hauteur visible : un nombre entier de lignes (voir applyListScroll)
+	local viewH = math.max(GUIDE_LINE, math.floor((page.Size.Y.Offset - 16) / GUIDE_LINE) * GUIDE_LINE)
 	local scroller = Widgets.button({
 		parent = page,
-		name = "Guide",
-		size = UDim2.fromOffset(width, guideViewH),
+		name = name,
+		size = UDim2.fromOffset(width, viewH),
 		position = UDim2.fromOffset(48, 0),
 		color = Widgets.Colors.Card,
 		sound = "",
 	})
 	scroller.BackgroundTransparency = 0.4
 	scroller.ClipsDescendants = true
-	-- ↑ / ↓ font défiler le Guide (onGuideInput) : PanelController ne joue pas le bout de liste pour lui
+	-- ↑ / ↓ font défiler la liste (onListInput) : PanelController ne joue pas le bout de liste pour elle
 	scroller:SetAttribute("SelfScroll", true)
-	guideScroller = scroller
-	local holder = Widgets.group(scroller, "Holder", UDim2.fromOffset(width, guideViewH), UDim2.new())
-	guideHolder = holder
-	for i = 1, 48 do
-		guideLines[i] = Widgets.label({
+	local holder = Widgets.group(scroller, "Holder", UDim2.fromOffset(width, viewH), UDim2.new())
+	local lines: { TextLabel } = {}
+	for i = 1, count do
+		lines[i] = Widgets.label({
 			parent = holder,
 			name = "Line" .. i,
 			size = UDim2.fromOffset(width - 64, 44),
@@ -869,26 +1006,158 @@ local function buildGuide(page: Frame)
 			xAlign = Enum.TextXAlignment.Left,
 			zIndex = scroller.ZIndex + 1,
 		})
-		guideLines[i].Visible = false
+		lines[i].Visible = false
 	end
 	local pad = Instance.new("UIPadding")
 	pad.PaddingLeft = UDim.new(0, 24)
 	-- ligne de 44 px dans un pas de 48 : 2 px au-dessus et au-dessous de chaque ligne
 	pad.PaddingTop = UDim.new(0, (GUIDE_LINE - 44) / 2)
 	pad.Parent = holder
-	UserInputService.InputBegan:Connect(onGuideInput)
+	local list: ReadList = {
+		tab = tab,
+		scroller = scroller,
+		holder = holder,
+		lines = lines,
+		scroll = 0,
+		viewH = viewH,
+		totalH = 0,
+	}
+	UserInputService.InputBegan:Connect(function(input: InputObject)
+		onListInput(list, input)
+	end)
+	return list
 end
 
--- Construit le contenu une seule fois dans le cadre du panneau
-function Squishydex.build(container: Frame)
+-- Barre d'onglets : celle de la v1.3, ou celle de la v2.0 (Records en dernier)
+local function buildBar(container: Frame, ids: { string })
 	local specs = {}
-	for _, id in TABS do
+	for _, id in ids do
 		table.insert(specs, { id = id, key = "panel.dex.tab." .. id })
 	end
 	tabBar = Widgets.tabBar(container, specs, function(id: string)
 		Squishydex.setTab(id)
 	end)
-	local top = Layout.Panel.tabHeight + 24
+	barTabs = ids
+end
+
+-- Colonne de la maîtrise sur la fiche, à droite des mutations (alignée sur leurs 3 rangées)
+local MASTERY_KEYS: { { key: string, vars: { [string]: any }? } } = {
+	{ key = "common.stars", vars = { n = 5 } },
+	{ key = "panel.dex.goldenPage" },
+	{ key = "panel.dex.trophy.crystal" },
+}
+local function buildMastery(f: Frame)
+	local mw, mh = 200, 112
+	local x = 48 + 360 + 32 + 3 * (mw + Layout.Spacing.Min) + Layout.Spacing.Min
+	local w = f.Size.X.Offset - 48 - x
+	local holder = Widgets.group(
+		f,
+		"Mastery",
+		UDim2.fromOffset(w, 64 + 3 * (mh + Layout.Spacing.Min)),
+		UDim2.fromOffset(x, 0)
+	)
+	local title = Widgets.label({
+		parent = holder,
+		name = "Title",
+		size = UDim2.fromOffset(w, 52),
+		position = UDim2.fromOffset(0, 4),
+		text = "",
+		textSize = 28,
+		color = Widgets.Colors.Gold,
+		xAlign = Enum.TextXAlignment.Left,
+	})
+	local boxes: { MasteryBox } = {}
+	for i, spec in MASTERY_KEYS do
+		local box = Widgets.frame({
+			parent = holder,
+			name = "Box" .. i,
+			size = UDim2.fromOffset(w, mh),
+			position = UDim2.fromOffset(0, 64 + (i - 1) * (mh + Layout.Spacing.Min)),
+			color = Widgets.Colors.Card,
+		})
+		local check = Icons.canvas(box, 40, { "check" }, "Check")
+		check.AnchorPoint = Vector2.new(0, 0.5)
+		check.Position = UDim2.new(0, 14, 0.5, 0)
+		check.ZIndex = box.ZIndex + 1
+		local label = Widgets.label({
+			parent = box,
+			name = "Label",
+			size = UDim2.new(1, -(14 + 40 + 12 + 12), 1, -16),
+			position = UDim2.fromOffset(14 + 40 + 12, 8),
+			key = spec.key,
+			vars = spec.vars,
+			textSize = 32,
+			color = Widgets.Colors.LockedText,
+			xAlign = Enum.TextXAlignment.Left,
+			zIndex = box.ZIndex + 1,
+		})
+		boxes[i] = { frame = box, label = label, check = check }
+	end
+	holder.Visible = false
+	mastery = { holder = holder, title = title, boxes = boxes }
+end
+
+local v2Watching = false
+-- Parties de la v2.0 construites au premier besoin, À L'OUVERTURE (jamais écran ouvert, D24) : barre
+-- de la v2.0 et page Records [RecordR], colonne de la maîtrise de la fiche [Mastery] ; interrupteurs
+-- coupés : rien n'est construit
+local function prepareOpen()
+	local container = buildContainer
+	if container == nil then
+		return
+	end
+	local wantRecords, wantMastery = recordsOn(), masteryOn()
+	if wantRecords then
+		if barTabs ~= V2_TABS then
+			local old = tabBar
+			if old then
+				old.frame:Destroy()
+			end
+			buildBar(container, V2_TABS)
+		end
+		if records == nil then
+			local page = Widgets.group(
+				container,
+				"Page_records",
+				UDim2.fromOffset(container.Size.X.Offset, container.Size.Y.Offset - buildTop),
+				UDim2.fromOffset(0, buildTop)
+			)
+			page.Visible = false
+			pages.records = page
+			records = buildReadList(page, "Records", RECORD_LINES, "records")
+		end
+	end
+	local f = sheet
+	if wantMastery and mastery == nil and f then
+		buildMastery(f)
+	end
+	if (wantRecords or wantMastery) and not v2Watching then
+		v2Watching = true
+		Widgets.watch(META_KEYS, function()
+			if isOpen then
+				refresh()
+			end
+		end)
+	end
+end
+
+-- Onglets montrés, dans l'ordre (Records seulement avec sa page et son interrupteur)
+local function shownTabs(): { string }
+	local out = {}
+	for _, id in barTabs do
+		if id ~= "records" or (records ~= nil and recordsOn()) then
+			table.insert(out, id)
+		end
+	end
+	return out
+end
+
+-- Construit le contenu une seule fois dans le cadre du panneau
+function Squishydex.build(container: Frame)
+	buildContainer = container
+	buildTop = Layout.Panel.tabHeight + 24
+	buildBar(container, TABS)
+	local top = buildTop
 	for _, id in TABS do
 		local page = Widgets.group(
 			container,
@@ -903,20 +1172,34 @@ function Squishydex.build(container: Frame)
 	buildSpecies(pages.species)
 	buildSheet(container, top)
 	buildFamiliesPage(pages.families)
-	buildGuide(pages.guide)
+	guide = buildReadList(pages.guide, "Guide", 48, "guide")
 	Widgets.watch({ "dex", "trophies", "R", "vat" }, function()
 		if isOpen then
 			refresh()
 		end
 	end)
+	-- interrupteurs ou profil v2 changés écran ouvert : les onglets suivent (rien n'est construit)
+	MetaFlags.Changed:Connect(function()
+		if isOpen then
+			if not table.find(shownTabs(), current) then
+				current = "species"
+			end
+			showPage(current)
+			refresh()
+		end
+	end)
 end
 
--- Affiche le panneau (onglet demandé ou le dernier)
+-- Affiche le panneau : l'onglet demandé, sinon les Espèces (GDD §10.6 « 1re espèce » ; B2-63)
 function Squishydex.open(tab: string?)
 	isOpen = true
 	Widgets.seen("dex")
-	if type(tab) == "string" and table.find(TABS, tab) then
+	-- parties de la v2.0 manquantes construites ICI, avant l'affichage
+	prepareOpen()
+	if type(tab) == "string" and table.find(shownTabs(), tab) then
 		current = tab
+	else
+		current = "species"
 	end
 	showPage(current)
 	refresh()
@@ -931,14 +1214,14 @@ function Squishydex.close()
 	sheetFrom = nil
 end
 
--- Onglets, dans l'ordre (L1 / R1) : Espèces, Familles, Guide
+-- Onglets, dans l'ordre (L1 / R1) : Espèces, Familles, Guide (et Records en v2.0)
 function Squishydex.tabs(): { string }
-	return table.clone(TABS)
+	return shownTabs()
 end
 
 -- Change d'onglet
 function Squishydex.setTab(tab: string)
-	if type(tab) ~= "string" or not table.find(TABS, tab) then
+	if type(tab) ~= "string" or not table.find(shownTabs(), tab) then
 		return
 	end
 	current = tab
@@ -950,7 +1233,7 @@ function Squishydex.currentTab(): string
 	return current
 end
 
--- Sélection par défaut : la 1re espèce ; fiche : la 1re mutation ; Guide : la 1re ligne
+-- Sélection par défaut : la 1re espèce ; fiche : la 1re mutation ; Guide et Records : la liste
 function Squishydex.defaultSelection(): GuiObject?
 	if sheet and sheet.Visible then
 		return sheetCells[1]
@@ -959,8 +1242,10 @@ function Squishydex.defaultSelection(): GuiObject?
 		return speciesRows.firstSelectable()
 	elseif current == "families" and familyRows then
 		return familyRows.firstSelectable()
-	elseif current == "guide" then
-		return guideScroller
+	elseif current == "guide" and guide then
+		return guide.scroller
+	elseif current == "records" and records then
+		return records.scroller
 	end
 	return if tabBar then tabBar.buttons[current] else nil
 end
@@ -995,9 +1280,12 @@ function Squishydex.scroll(dir: number)
 		speciesRows.page(dir)
 	elseif current == "families" and familyRows then
 		familyRows.page(dir)
-	elseif current == "guide" then
-		guideScroll += dir * guideViewH * GUIDE_STEP
-		applyGuideScroll(true)
+	else
+		local list = if current == "guide" then guide elseif current == "records" then records else nil
+		if list then
+			list.scroll += dir * list.viewH * GUIDE_STEP
+			applyListScroll(list, true)
+		end
 	end
 end
 
