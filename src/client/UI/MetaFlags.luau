@@ -54,7 +54,8 @@ local MetaFlags = {}
 
 MetaFlags.Changed = Signal.new() :: Signal.Signal<>
 
--- Interrupteurs v2.0 que le serveur peut annoncer (même liste qu'EventService, INT-B3-FEATURES)
+-- Interrupteurs v2.0 que le serveur peut annoncer (même liste qu'EventService, INT-B3-FEATURES ;
+-- lot B5, INT-B5-FEATURES : + Personalities et PhotoMode, lus côté rendu par World/Flags)
 MetaFlags.FLAGS = table.freeze({
 	"RecordR",
 	"JellyAscend",
@@ -67,6 +68,8 @@ MetaFlags.FLAGS = table.freeze({
 	"RanchSkins",
 	"DecoPerso",
 	"Hearts",
+	"Personalities",
+	"PhotoMode",
 })
 local KNOWN: { [string]: boolean } = {}
 for _, key in MetaFlags.FLAGS do

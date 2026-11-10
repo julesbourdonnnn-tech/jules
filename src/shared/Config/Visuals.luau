@@ -4,7 +4,8 @@
 -- palettes du spectacle, ciel des Ascensions, halo. Contrat v2.0 (architecte, docs/04 §27.6).
 -- Données seulement : RanchRenderer, l'aperçu du Grand Splorch et QuestService lisent cette table,
 -- jamais une copie. Lu seulement quand l'interrupteur correspondant est ouvert (RecordR, RanchTiers,
--- Personalities, JellyAscend). Identifiants définitifs (ajout seulement).
+-- Personalities, JellyAscend), sauf Eyes / EyeChoice que Render/SquishyBuilder lit toujours (la
+-- version A donne exactement les recettes de la v1.3). Identifiants définitifs (ajout seulement).
 -- Contract_unlocks.spec : chaque Record R de 1 à 20 a au moins un déblocage nommé ET un changement
 -- visible dans le ranch ; chaque clé de texte existe en EN et en FR.
 
@@ -79,9 +80,21 @@ Visuals.Tiers = {
 -- Paliers du ranch (bestR) : arche, tour, balcon, phare, dôme, couronne
 Visuals.RanchTiersAt = { 1, 3, 5, 10, 15, 20 }
 
--- Visages (6 personnalités, GDD §5.6) et yeux (3 versions selon la taille)
-Visuals.Faces = { "happy", "sleepy", "proud", "shy", "cheeky", "dreamy" }
-Visuals.Eyes = { "dot", "shine", "sparkle" }
+-- Visages (GDD §5.6 ; lot B5, D5 : la liste suit le GDD) : Content (défaut), Ravi, Surpris, Endormi,
+-- Étoilé, Boudeur. Dessinés par Render/SquishyBuilder.setFace avec les pièces existantes.
+Visuals.Faces = { "happy", "delighted", "surprised", "sleepy", "starry", "sulky" }
+
+-- Yeux « bébé » (GDD §5.6, test M14 ; lot B5, D5) : taille des yeux et hauteur de leur centre au-dessus
+-- du milieu du corps, en diamètres du corps (× D). Trois versions à comparer sur une télé :
+-- A = la v1.3 (recettes inchangées), B et C = yeux plus gros et plus bas. EyeChoice : la version
+-- dessinée (une seule constante à changer pour le test ; SquishyBuilder la lit à chaque recette).
+export type EyeVersion = { size: number, height: number }
+Visuals.Eyes = {
+	A = { size = 0.22, height = 0.12 },
+	B = { size = 0.26, height = 0.04 },
+	C = { size = 0.30, height = 0.00 },
+} :: { [string]: EyeVersion }
+Visuals.EyeChoice = "A"
 
 -- Palettes du spectacle du Grand Splorch : 6 de l'Atelier, 1 du Record R 9, 1 de la semaine
 Visuals.Palettes = { "candy", "mint", "lavender", "rainbow", "softNight", "icing", "fireworks", "peach" }

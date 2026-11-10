@@ -4,9 +4,19 @@
 -- corps), pièces jamais physiques, écrasement d'une seule écriture, pose pour BulkMoveTo, échelle,
 -- 9 aspects de mutation (rendu fixe en Mouvement réduit), étoiles, aura (couleur ET forme),
 -- attaches, réserve (reprise du même modèle, Handle rendu inerte), entrées hostiles, ApiAudit.
+-- v2.0 (lot B5, étape 1 ; plan B5 D5, D6, D11, D12 ; journal docs/04 B5-2 à B5-6), en fin de fichier :
+--   * yeux « bébé » : version A de Config/Visuals = EXACTEMENT les recettes de la v1.3 (témoin
+--     tests/fixtures/squishy-recipes/v13.txt écrit sur REL-B3) ; B et C ne changent que les yeux ;
+--   * visages (setFace) : une écriture de Size par œil et par reflet, bouche par CFrame, retour exact à
+--     « happy », réserve, clignement, changement d'échelle et de mutation sous un visage ;
+--   * étoiles DESSINÉES (INT-B1-STARS) : aucun TextLabel, aucun TextScaled, 3 Frames par étoile,
+--     construites à la première étoile montrée ;
+--   * 4 tenues de la v2.0 (une pièce chacune, ≤ 12 pièces partout), couleurs des 9 selles de la v2.0.
 local roblox = require("@lune/roblox")
+local fs = require("@lune/fs")
 local ApiAudit = require("../harness/ApiAudit")
 local MockInstance = require("../harness/MockInstance")
+local RecipeDump = require("../harness/RecipeDump")
 
 local Enum = roblox.Enum
 local CFrame = roblox.CFrame
@@ -49,7 +59,23 @@ return function(T)
 		expect(table.concat(h:warnings(), "\n")).toBe("")
 	end
 
-	local OUTFITS = { false, "plopBib", "sweater", "jellyCrown", "winterScarf", "bowTie" }
+	-- tenues de la v1.3 puis, depuis le lot B5 (D12), les 4 tenues de la v2.0 (Cosmetics.ListV2 et tenue
+	-- de la semaine) : le budget de 12 pièces vaut pour toutes
+	local OUTFITS = {
+		false,
+		"plopBib",
+		"sweater",
+		"jellyCrown",
+		"winterScarf",
+		"bowTie",
+		"partyHat",
+		"starGlasses",
+		"buildersCrown",
+		"polkaBow",
+	}
+	local OUTFITS_V2 = { "partyHat", "starGlasses", "buildersCrown", "polkaBow" }
+	local FACES = { "happy", "delighted", "surprised", "sleepy", "starry", "sulky" }
+	local GOLD = Color3.fromRGB(255, 205, 60)
 
 	describe("SquishyBuilder › recettes", function()
 		it(
@@ -97,7 +123,7 @@ return function(T)
 				for _, def in Species.List do
 					for m = 0, Mutations.Count do
 						for _, outfit in OUTFITS do
-							for _, saddle in { false, "classic" } do
+							for _, saddle in { false, "classic", "cosmic" } do
 								for _, aura in { false, true } do
 									local s = spec(def.id, {
 										mutation = m,
@@ -294,10 +320,20 @@ return function(T)
 			local gui = handle.body:FindFirstChild("Stars")
 			expect(gui.ClassName).toBe("BillboardGui")
 			expect(gui.MaxDistance).toBe(60)
+			-- étoiles DESSINÉES depuis le lot B5 (D11, INT-B1-STARS ; attente changée, journal B5-4 : elle
+			-- comptait des TextLabel « ★ ») : une étoile est montrée quand ses 3 traits le sont
 			local function shown()
 				local n = 0
-				for _, l in gui:GetChildren() do
-					if l.ClassName == "TextLabel" and l.Visible then
+				for i = 1, 5 do
+					local rays = 0
+					for k = 1, 3 do
+						local ray = gui:FindFirstChild("Star" .. i .. "Ray" .. k)
+						if ray and ray.Visible then
+							rays += 1
+						end
+					end
+					expect({ star = i, rays = rays == 0 or rays == 3 }).toEqual({ star = i, rays = true })
+					if rays == 3 then
 						n += 1
 					end
 				end
@@ -683,7 +719,16 @@ return function(T)
 				SB.setAura(handle, false)
 				SB.setSaddleColor(handle, Color3.new(1, 0, 0))
 				SB.attachments(handle)
+				-- v2.0 (lot B5) : visages, étoiles dessinées, tenues de la v2.0
+				for _, face in FACES do
+					SB.setFace(handle, face)
+					SB.animate(handle, 1.23)
+				end
+				SB.setStars(handle, 5)
 				SB.release(handle)
+				for _, outfit in OUTFITS_V2 do
+					SB.release(SB.build(spec(1, { outfit = outfit, saddle = "cosmic", stars = 2 })))
+				end
 				zeroLog(h)
 			end)
 			local issues = ApiAudit.stop()

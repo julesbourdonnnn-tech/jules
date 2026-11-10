@@ -4,7 +4,8 @@
 -- jamais lire Config/Features.
 --   * serveur (INT-B3-FEATURES) : EventState.features.v2 = l'ensemble des interrupteurs OUVERTS parmi la
 --     liste fixe RecordR, JellyAscend, PetitSplorch, Confetti, Workshop, Carnet, WeeklyTrack, Mastery,
---     RanchSkins, DecoPerso, Hearts (chacun = true) ; clé ABSENTE quand aucun n'est ouvert (charge de la
+--     RanchSkins, DecoPerso, Hearts, Personalities, PhotoMode (chacun = true ; les deux derniers : lot B5,
+--     INT-B5-FEATURES, journal B5-1) ; clé ABSENTE quand aucun n'est ouvert (charge de la
 --     v1.3 identique à celle d'un serveur témoin) ; renvoyé à tous après chaque changement d'interrupteur
 --     (commande « feature » d'un administrateur) ; un interrupteur hors liste (Weather…) n'y paraît jamais ;
 --   * client (UI/MetaFlags, en fin de fichier) : on(flag), v2Profile(), owned(), attr(name),
@@ -28,6 +29,8 @@ local LISTED = {
 	"RanchSkins",
 	"DecoPerso",
 	"Hearts",
+	"Personalities",
+	"PhotoMode",
 }
 
 local function keysOf(t)
@@ -129,7 +132,27 @@ return function(T)
 		)
 
 		it(
-			"toute la liste ouverte : exactement les 11 clés (chacune true) ; les interrupteurs v2.0 hors liste (Weather, UpgradesScreen, Monuments, Helpers…) n'y paraissent jamais",
+			"lot B5 (INT-B5-FEATURES) : Personalities puis PhotoMode ouverts seuls : EventState renvoyé à tous avec exactement cette clé ; recoupés : clé v2 absente",
+			function()
+				local w, p, q = boot(1800000000 + 120)
+				for _, key in { "Personalities", "PhotoMode" } do
+					expect({ key = key, value = w.Features.get(key) }).toEqual({ key = key, value = false })
+					expect(admin(w, p, key .. "=true", q)).toBe(1)
+					for _, who in { p, q } do
+						local f = lastState(w, who).features
+						expect(deepEqual(f.v2, { [key] = true })).toBe(true)
+						expect(keysOf(f)).toBe(V13_FEATURES .. ",v2")
+					end
+					expect(admin(w, p, key .. "=false", q)).toBe(1)
+					expect(lastState(w, q).features.v2).toBeNil()
+					expect(keysOf(lastState(w, q).features)).toBe(V13_FEATURES)
+				end
+				expect(table.concat(Brains.problems(w), "\n")).toBe("")
+			end
+		)
+
+		it(
+			"toute la liste ouverte : exactement les 13 clés (chacune true ; Personalities et PhotoMode depuis le lot B5) ; les interrupteurs v2.0 hors liste (Weather, UpgradesScreen, Monuments, Helpers…) n'y paraissent jamais",
 			function()
 				local w, p, q = boot(1800000000 + 120)
 				-- hors liste seul : aucune clé v2
@@ -182,7 +205,7 @@ return function(T)
 				for _, key in LISTED do
 					admin(wB, pB, key .. "=false")
 				end
-				-- le témoin avance des mêmes images (2 × 11 commandes)
+				-- le témoin avance des mêmes images (2 × 13 commandes)
 				Brains.frames(wA, ADMIN_FRAMES * 2 * #LISTED)
 				Brains.frames(wA, 1)
 				Brains.frames(wB, 1)

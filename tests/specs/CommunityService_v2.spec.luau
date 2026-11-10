@@ -1100,12 +1100,15 @@ return function(T)
 			args[1] = copy
 			return args, v2
 		end
-		-- SOCIAL sans PhotoMode (hors de la liste du client)
+		-- SOCIAL en entier : PhotoMode est dans la liste du client depuis le lot B5 (INT-B5-FEATURES,
+		-- docs/04 §27.11, journal B5-1 : le mode photo du joueur est un système du client seul, sans
+		-- attribut ni réponse du serveur ; attente changée, elle ne l'annonçait pas avant)
 		local SOCIAL_ANNOUNCED = ser({
 			Carnet = true,
 			DecoPerso = true,
 			Hearts = true,
 			Mastery = true,
+			PhotoMode = true,
 			RanchSkins = true,
 			WeeklyTrack = true,
 			Workshop = true,
@@ -1150,7 +1153,7 @@ return function(T)
 					expect({ i = i, line = on.sent[i] }).toEqual({ i = i, line = line })
 				end
 				-- features.v2 (INT-B3-FEATURES) : absente coupé ; ouvert, exactement les interrupteurs du lot
-				-- que le client doit connaître (PhotoMode n'est pas de la liste), à chaque EventState
+				-- que le client doit connaître (PhotoMode compris depuis le lot B5), à chaque EventState
 				expect(#off.announced > 0).toBe(true)
 				expect(#on.announced).toBe(#off.announced)
 				for i, v2 in off.announced do

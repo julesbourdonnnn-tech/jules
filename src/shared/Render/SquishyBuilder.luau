@@ -17,7 +17,21 @@
 --     aura) ; build() en reprend un. Aucune création en rafale ; un Handle rendu ne fait plus rien.
 --   * Repère du modèle : origine au CENTRE DU DESSOUS du corps (posé au sol), visage vers −Z
 --     (LookVector) ; D = diamètre en studs = Balance.SizeScale.BaseDiameter × displayScale.
--- Dépendances : Config/{Species, Mutations, Rarities, Cosmetics, Balance} seulement.
+-- v2.0 (lot B5, étape 1 ; plan B5 D5, D6, D11, D12 ; GDD §5.6, §10.8 règle 18) :
+--   * yeux « bébé » : taille et hauteur des yeux lues dans Config/Visuals.Eyes[Visuals.EyeChoice] à
+--     chaque recette ; la version A donne EXACTEMENT les recettes de la v1.3 (témoin
+--     tests/fixtures/squishy-recipes/v13.txt) ; B et C ne changent que les yeux et leurs reflets ;
+--   * visages : setFace(handle, face) (Visuals.Faces) écrit les tailles des yeux et des reflets UNE
+--     fois par changement (reflets en Neon pour « starry »), déplace la bouche et les yeux par leur
+--     décalage (CFrame) seulement, jamais une animation de Size ; release() et un modèle repris dans
+--     la réserve rendent « happy » ; visage inconnu : rien ;
+--   * étoiles DESSINÉES (INT-B1-STARS) : plus de TextLabel « ★ » ni de TextScaled (« ★ » n'est dans
+--     aucune police du jeu) ; chaque étoile = 3 traits dorés qui se croisent (3 Frames), construits à
+--     la première fois qu'un modèle la montre (setStars) ; même arc, même or, mêmes règles de
+--     visibilité (détail complet, 60 studs) ; dans les deux états des interrupteurs ;
+--   * tenues de la v2.0 (partyHat, starGlasses, buildersCrown, polkaBow) : UNE pièce chacune ;
+--     couleurs des 9 selles de la v2.0 (les mêmes que RanchRenderer) pour un modèle construit seul.
+-- Dépendances : Config/{Species, Mutations, Rarities, Cosmetics, Balance, Visuals} seulement.
 
 local Config = script.Parent.Parent.Config
 local Species = require(Config.Species)
@@ -25,6 +39,7 @@ local Mutations = require(Config.Mutations)
 local Rarities = require(Config.Rarities)
 local Cosmetics = require(Config.Cosmetics)
 local Balance = require(Config.Balance)
+local Visuals = require(Config.Visuals)
 
 export type BuildSpec = {
 	species: number,
@@ -156,29 +171,57 @@ local function piece(
 	}
 end
 
+-- Yeux « bébé » (GDD §5.6, test M14 ; lot B5, D5) : version choisie de Config/Visuals, lue à chaque
+-- recette. Rend (taille de l'œil courant, facteur de taille des autres yeux et des reflets, hauteur).
+-- Version A (0,22 ; 0,12) : facteur exactement 1 et hauteur 0,12, soit les recettes de la v1.3 au
+-- flottant près (2 × 0,12 == 0,24, la direction de la v1.3) ; version absente ou abîmée : A.
+local EYE_SIZE_A = 0.22
+local EYE_HEIGHT_A = 0.12
+local function eyeVersion(): (number, number, number)
+	local version: any = (Visuals.Eyes :: any)[Visuals.EyeChoice]
+	if type(version) == "table" then
+		local size, height = version.size, version.height
+		if
+			type(size) == "number"
+			and type(height) == "number"
+			and size == size
+			and height == height
+			and size >= 0.1
+			and size <= 0.4
+			and height >= -0.1
+			and height <= 0.3
+		then
+			return size, size / EYE_SIZE_A, height
+		end
+	end
+	return EYE_SIZE_A, 1, EYE_HEIGHT_A
+end
+
 -- Yeux (2, ou 3 pour Moonplop) et reflets selon le type d'yeux de la ligne
 local function eyePieces(b: Body, eyes: string, top: string): ({ Piece }, { Piece })
 	local list: { Piece } = {}
 	local glints: { Piece } = {}
 	local bulgy = eyes == "bulgy" or eyes == "bulgyWink" or string.sub(top, 1, 7) == "bugEyes"
-	local size = 0.22
+	-- k : facteur des yeux de la version (1 pour A) ; les yeux sur le dessus de la tête (grenouilles)
+	-- gardent leur place, signe de leur famille : seule leur taille suit la version
+	local size, k, height = eyeVersion()
 	if eyes == "bigShiny" then
-		size = 0.26
+		size = 0.26 * k
 	elseif eyes == "dots" then
-		size = 0.14
+		size = 0.14 * k
 	elseif bulgy then
-		size = 0.2
+		size = 0.2 * k
 	end
 	local color = if eyes == "hearts" then rgb(255, 90, 140) else EYE
 	local glintColor = if eyes == "stars" then GOLD else WHITE
 	local glintMaterial = if eyes == "stars" or eyes == "sparkle" then "Neon" else "SmoothPlastic"
-	local glintSize = if eyes == "sparkle" or eyes == "stars" then 0.09 else 0.07
+	local glintSize = (if eyes == "sparkle" or eyes == "stars" then 0.09 else 0.07) * k
 	for i, side in { -1, 1 } do
 		local pos: Vector3
 		if bulgy then
 			pos = surface(b, side * 0.38, 0.85, -0.25, 1.15) + Vector3.new(0, 0.02, -0.12 * b.z)
 		else
-			pos = surface(b, side * 0.4, 0.24, -0.88, 0.97)
+			pos = surface(b, side * 0.4, 2 * height, -0.88, 0.97)
 		end
 		local closed = eyes == "happyClosed" or (side > 0 and (eyes == "wink" or eyes == "bulgyWink"))
 		local s = Vector3.new(size, size, size * 0.65)
@@ -196,7 +239,7 @@ local function eyePieces(b: Body, eyes: string, top: string): ({ Piece }, { Piec
 					"glint",
 					"ball",
 					Vector3.new(glintSize, glintSize, glintSize),
-					pos + Vector3.new(0.04, 0.05, -size * 0.32),
+					pos + Vector3.new(0.04 * k, 0.05 * k, -size * 0.32),
 					glintColor,
 					{ material = glintMaterial }
 				)
@@ -210,7 +253,7 @@ local function eyePieces(b: Body, eyes: string, top: string): ({ Piece }, { Piec
 				"Eye3",
 				"eye",
 				"sphere",
-				Vector3.new(0.13, 0.13, 0.09),
+				Vector3.new(0.13 * k, 0.13 * k, 0.09 * k),
 				surface(b, 0, 0.5, -0.86, 0.98),
 				color,
 				{ reflectance = 0.3, lod = 2 }
@@ -735,7 +778,24 @@ local function clonePiece(p: Piece): Piece
 	return c
 end
 
--- Couleur d'une selle (Config/Cosmetics) ; « classic » = couleur du ranch, posée par setSaddleColor
+-- v2.0 (lot B5, D12) : couleurs des 9 selles de la v2.0 (Cosmetics.ListV2 et selle de la semaine), LES
+-- MÊMES que la table SADDLE_V2 de Controllers/RanchRenderer (lot B4, D19b ; Shared ne peut pas la lire :
+-- égalité vérifiée par SquishyBuilder.spec) : un modèle construit seul (aperçus, spectacles) porte la
+-- couleur que le ranch montre
+local SADDLE_V2: { [string]: Color3 } = {
+	confetti = rgb(255, 150, 200),
+	goldenJelly = rgb(255, 205, 80),
+	cosmos = rgb(70, 60, 150),
+	titan = rgb(150, 160, 185),
+	partyPopper = rgb(255, 125, 95),
+	brick = rgb(205, 95, 65),
+	icingSugar = rgb(235, 245, 255),
+	cosmic = rgb(115, 75, 205),
+	cookieSaddle = rgb(205, 150, 95),
+}
+
+-- Couleur d'une selle (Config/Cosmetics) ; « classic » = couleur du ranch, posée par setSaddleColor ;
+-- une selle de la v1.3 garde sa couleur, une selle de la v2.0 prend la sienne, une inconnue le rose
 local DEFAULT_SADDLE = rgb(255, 150, 170)
 local function saddleColor(id: string?): Color3
 	if type(id) == "string" then
@@ -743,9 +803,13 @@ local function saddleColor(id: string?): Color3
 		if def and (def :: any).color then
 			return (def :: any).color
 		end
+		if def == nil and SADDLE_V2[id] then
+			return SADDLE_V2[id]
+		end
 	end
 	return DEFAULT_SADDLE
 end
+SquishyBuilder._saddleColor = saddleColor
 
 -- Tenue (Config/Cosmetics, + nœud papillon de Big Plop) : une pièce
 local function outfitPiece(b: Body, outfit: string?): Piece?
@@ -800,6 +864,51 @@ local function outfitPiece(b: Body, outfit: string?): Piece?
 			Vector3.new(0.3, 0.12, 0.08),
 			surface(b, 0, -0.35, -0.94, 1.02),
 			rgb(255, 220, 80)
+		)
+	elseif outfit == "partyHat" then
+		-- v2.0 (lot B5, D12) : chapeau de fête pointu, un peu penché sur le côté de la tête
+		return piece(
+			"Outfit",
+			"outfit",
+			"sphere",
+			Vector3.new(0.3, 0.52, 0.3),
+			surface(b, 0.45, 1, -0.1) + Vector3.new(0.06, 0.2, 0),
+			rgb(255, 110, 185),
+			{ rot = deg(0, 0, -16) }
+		)
+	elseif outfit == "starGlasses" then
+		-- lunettes étoiles relevées sur le front, couchées sur la surface (46° : la normale du front) :
+		-- les yeux (et les visages) restent visibles
+		return piece(
+			"Outfit",
+			"outfit",
+			"sphere",
+			Vector3.new(0.62 * b.x, 0.16, 0.12),
+			surface(b, 0, 0.72, -0.7, 1.03),
+			rgb(255, 214, 64),
+			{ rot = deg(46, 0, 0), reflectance = 0.25 }
+		)
+	elseif outfit == "buildersCrown" then
+		-- couronne de chantier : large, jaune casque, mate (la Couronne de gelée est rose et en Neon)
+		return piece(
+			"Outfit",
+			"outfit",
+			"cylinder",
+			Vector3.new(0.14, 0.5, 0.5),
+			surface(b, 0, 1, 0) + Vector3.new(0, 0.03, 0),
+			rgb(255, 196, 40),
+			{ rot = deg(0, 0, 90) }
+		)
+	elseif outfit == "polkaBow" then
+		-- nœud à pois posé sur le côté de la tête
+		return piece(
+			"Outfit",
+			"outfit",
+			"sphere",
+			Vector3.new(0.36, 0.17, 0.1),
+			surface(b, 0.42, 0.82, -0.36, 1.03),
+			rgb(255, 95, 150),
+			{ rot = deg(0, 0, -22) }
 		)
 	end
 	return nil
@@ -863,13 +972,14 @@ local function mutationPieces(
 		)
 	end
 	if look.thirdEye then
+		local _, k = eyeVersion()
 		table.insert(
 			eyes,
 			piece(
 				"Eye3",
 				"eye",
 				"sphere",
-				Vector3.new(0.12, 0.12, 0.08),
+				Vector3.new(0.12 * k, 0.12 * k, 0.08 * k),
 				surface(b, 0, 0.45, -0.89, 0.98),
 				EYE,
 				{
@@ -1065,9 +1175,11 @@ type Record = {
 	parts: { BasePart },
 	pieces: { Piece },
 	body3: Vector3, -- proportions du corps (× D), dégonflage du Flop compris
+	speciesBody: Body, -- proportions de la ligne de l'espèce (places du visage, sans le dégonflage)
+	glints: number, -- nombre de reflets des yeux (visages)
 	signature: string,
-	stars: BillboardGui,
-	starLabels: { TextLabel },
+	stars: BillboardGui?, -- arc d'étoiles : construit à la première étoile montrée (lot B5, D11)
+	starRays: { { Frame } }, -- [étoile] = ses 3 traits
 	aura: BillboardGui?,
 	light: PointLight?,
 	emitters: { ParticleEmitter },
@@ -1087,6 +1199,7 @@ type State = {
 	reduced: boolean,
 	blinkSeed: number,
 	blinking: boolean,
+	face: string, -- visage courant (Visuals.Faces ; « happy » = la recette)
 }
 
 local states: { [Handle]: State } = setmetatable({}, { __mode = "k" }) :: any
@@ -1260,35 +1373,62 @@ local function buildAura(body: BasePart, rarity: Rarities.RarityDef): BillboardG
 	return gui
 end
 
--- Arc d'étoiles (BillboardGui sous 60 studs) : 5 étoiles dorées, n visibles
-local function buildStars(body: BasePart): (BillboardGui, { TextLabel })
-	local gui = Instance.new("BillboardGui")
-	gui.Name = "Stars"
-	gui.LightInfluence = 0
-	gui.AlwaysOnTop = false
-	gui.MaxDistance = SquishyBuilder.STARS_DISTANCE
-	gui.Enabled = false
-	gui.Parent = body
-	local labels: { TextLabel } = {}
-	for i = 1, SquishyBuilder.STARS_MAX do
-		local label = Instance.new("TextLabel")
-		label.Name = "Star" .. i
-		label.AnchorPoint = Vector2.new(0.5, 0.5)
-		label.Size = UDim2.fromScale(0.2, 1)
-		label.BackgroundTransparency = 1
-		label.Text = "★"
-		label.TextScaled = true
-		label.TextColor3 = GOLD
-		label.FontFace = Font.fromEnum(Enum.Font.FredokaOne)
-		label.Visible = false
-		local stroke = Instance.new("UIStroke")
-		stroke.Thickness = 2
-		stroke.Color = rgb(30, 25, 60)
-		stroke.Parent = label
-		label.Parent = gui
-		labels[i] = label
+-- Arc d'étoiles DESSINÉES (lot B5, D11, INT-B1-STARS ; GDD §5.2, règle 18 du §10.8 « aucun symbole
+-- hors police ») : BillboardGui sous 60 studs, 1 à 5 étoiles dorées. « ★ » n'est dans aucune des deux
+-- polices du jeu : chaque étoile est faite de 3 traits dorés qui se croisent en son centre (6 branches,
+-- une pointe en haut ; même idée que l'étoile de Client/UI/Glyph, que Shared ne peut pas lire), en
+-- fractions de l'arc : elle suit la taille du modèle sans être reconstruite. L'arc et chaque étoile
+-- sont construits la première fois qu'un modèle les montre : 1 + 3 n instances pour n étoiles (0 sans
+-- étoile), contre 11 par modèle avec les 5 TextLabel et leurs 5 UIStroke de la v1.3.
+local STAR_BOX = 0.2 -- côté d'une étoile, en fraction de la largeur de l'arc
+local STAR_ARC_X, STAR_ARC_Y = 1.4, 0.36 -- taille de l'arc (× D), celle de la v1.3
+local STAR_RAY_LENGTH = 0.96 -- trait : fractions du côté de l'étoile
+local STAR_RAY_THICKNESS = 0.28
+local STAR_ANGLES = { 90, 30, 150 }
+
+local function sizeStars(rec: Record, d: number)
+	local gui = rec.stars
+	if gui then
+		gui.Size = UDim2.fromScale(STAR_ARC_X * d, STAR_ARC_Y * d)
+		gui.StudsOffsetWorldSpace = Vector3.new(0, rec.body3.Y * d / 2 + 0.32 * d, 0)
 	end
-	return gui, labels
+end
+
+-- Construit l'arc (une fois) puis les étoiles qui manquent jusqu'à la n-ième
+local function ensureStars(rec: Record, n: number, d: number)
+	local gui = rec.stars
+	if gui == nil then
+		local created = Instance.new("BillboardGui")
+		created.Name = "Stars"
+		created.LightInfluence = 0
+		created.AlwaysOnTop = false
+		created.MaxDistance = SquishyBuilder.STARS_DISTANCE
+		created.Enabled = false
+		created.Parent = rec.body
+		rec.stars = created
+		gui = created
+		sizeStars(rec, d)
+	end
+	-- un trait couché, puis tourné : longueur en fraction de la largeur de l'arc, épaisseur en
+	-- fraction de sa hauteur (l'étoile reste carrée à l'écran)
+	local size =
+		UDim2.fromScale(STAR_BOX * STAR_RAY_LENGTH, STAR_BOX * STAR_RAY_THICKNESS * STAR_ARC_X / STAR_ARC_Y)
+	for i = #rec.starRays + 1, math.min(n, SquishyBuilder.STARS_MAX) do
+		local rays: { Frame } = {}
+		for k, angle in STAR_ANGLES do
+			local ray = Instance.new("Frame")
+			ray.Name = "Star" .. i .. "Ray" .. k
+			ray.AnchorPoint = Vector2.new(0.5, 0.5)
+			ray.Size = size
+			ray.Rotation = angle
+			ray.BackgroundColor3 = GOLD
+			ray.BorderSizePixel = 0
+			ray.Visible = false
+			ray.Parent = gui
+			rays[k] = ray
+		end
+		rec.starRays[i] = rays
+	end
 end
 
 local function newRecord(spec: BuildSpec): Record
@@ -1303,8 +1443,13 @@ local function newRecord(spec: BuildSpec): Record
 	end
 	local body = parts[1]
 	model.PrimaryPart = body
-	local stars, labels = buildStars(body)
 	local def = speciesDef(spec.species)
+	local glints = 0
+	for _, p in pieces do
+		if p.role == "glint" then
+			glints += 1
+		end
+	end
 	local rarity = Rarities.List[def.rarity]
 	local aura: BillboardGui? = nil
 	local light: PointLight? = nil
@@ -1342,9 +1487,11 @@ local function newRecord(spec: BuildSpec): Record
 		parts = parts,
 		pieces = pieces,
 		body3 = Vector3.new(body3.x, body3.y, body3.z),
+		speciesBody = { x = def.body.x, y = def.body.y, z = def.body.z },
+		glints = glints,
 		signature = signatureOf(spec),
-		stars = stars,
-		starLabels = labels,
+		stars = nil,
+		starRays = {},
 		aura = aura,
 		light = light,
 		emitters = emitters,
@@ -1367,6 +1514,135 @@ local function diameterOf(displayScale: any): number
 	return BASE_D * math.clamp(finite(displayScale, 1), 0.05, 1e4)
 end
 
+-- =============================================================================================
+-- Visages (v2.0, lot B5, D6 ; GDD §5.6) : six visages faits avec les pièces existantes. « happy »
+-- (Content) est la recette ; les cinq autres changent la taille des yeux et des reflets (une écriture
+-- par changement, jamais animée), le matériau des reflets (« starry »), et déplacent la bouche et les
+-- yeux par leur décalage (CFrame). Les tailles restent des facteurs de la recette : elles suivent
+-- l'espèce, la mutation (yeux mi-clos du Flop) et la version des yeux (Visuals.EyeChoice).
+-- =============================================================================================
+
+type FaceDef = {
+	eye: Vector3, -- facteurs de taille des yeux
+	eyeAlone: Vector3?, -- facteurs des yeux d'un modèle sans reflet (le visage se lit quand même)
+	open: boolean, -- un œil fermé ou mi-clos de la recette s'ouvre en grand
+	lift: number, -- décalage vertical des yeux et des reflets (× D)
+	glint: number, -- facteur de taille des reflets (0 = cachés)
+	neon: boolean, -- reflets en Neon
+	mouth: { { number } }?, -- directions (u, v) des 3 pièces de la bouche ; nil = sourire de la recette
+	turn: boolean, -- bouche d'une seule pièce tournée d'un quart de tour (bouche ronde)
+	blink: boolean, -- les yeux clignent encore (jamais quand le visage les ferme)
+}
+
+local DEFAULT_FACE = "happy"
+
+-- stylua: ignore start
+local FACES: { [string]: FaceDef } = {
+	-- Ravi : yeux fermés en arc, un peu relevés, grand sourire
+	delighted = { eye = Vector3.new(1.1, 0.3, 0.8), open = false, lift = 0.02, glint = 0, neon = false,
+		mouth = { { -0.13, -0.09 }, { 0, -0.17 }, { 0.13, -0.09 } }, turn = false, blink = false },
+	-- Surpris : yeux × 1,2 (un œil fermé s'ouvre), bouche ronde
+	surprised = { eye = Vector3.new(1.2, 1.2, 1.2), open = true, lift = 0, glint = 1.2, neon = false,
+		mouth = { { -0.035, -0.105 }, { 0, -0.165 }, { 0.035, -0.105 } }, turn = true, blink = true },
+	-- Endormi : yeux fermés, un peu bas, petite bouche droite
+	sleepy = { eye = Vector3.new(1, 0.2, 0.8), open = false, lift = -0.015, glint = 0, neon = false,
+		mouth = { { -0.07, -0.125 }, { 0, -0.125 }, { 0.07, -0.125 } }, turn = false, blink = false },
+	-- Étoilé : reflets × 1,6 en Neon (sans reflet : yeux × 1,15)
+	starry = { eye = Vector3.one, eyeAlone = Vector3.new(1.15, 1.15, 1.15), open = false, lift = 0, glint = 1.6,
+		neon = true, mouth = nil, turn = false, blink = true },
+	-- Boudeur : le visage du Flop (yeux mi-clos, sans reflet), bouche à l'envers
+	sulky = { eye = Vector3.new(1, 0.5, 1), open = false, lift = 0, glint = 0, neon = false,
+		mouth = { { -0.1, -0.15 }, { 0, -0.1 }, { 0.1, -0.15 } }, turn = false, blink = true },
+}
+-- stylua: ignore end
+
+local EYE_CLOSED = 0.05 -- épaisseur d'un œil fermé (× D), celle des yeux fermés de la v1.3
+local GLINT_HIDDEN = Vector3.new(0.001, 0.001, 0.001) -- reflet caché : la plus petite pièce du moteur
+local MOUTH_INDEX: { [string]: number } = { Mouth1 = 1, Mouth2 = 2, Mouth3 = 3 }
+local QUARTER_TURN = CFrame.Angles(0, 0, math.pi / 2)
+
+-- Taille (× D) d'un œil sous un visage ; `alone` : le modèle n'a aucun reflet
+local function faceEyeSize(face: FaceDef, p: Piece, alone: boolean): Vector3
+	local s = p.size
+	local f = if alone and face.eyeAlone then face.eyeAlone else face.eye
+	if face.open and s.Y < s.X * 0.5 then
+		-- œil fermé ou mi-clos de la recette : rond comme un œil ouvert, puis le facteur du visage
+		return Vector3.new(s.X * f.X, s.X * f.Y, s.X * 0.65 * f.Z)
+	end
+	local y = s.Y * f.Y
+	if f.Y < 1 and y < EYE_CLOSED then
+		y = math.min(s.Y, EYE_CLOSED) -- jamais plus fin qu'un œil fermé
+	end
+	return Vector3.new(s.X * f.X, y, s.Z * f.Z)
+end
+
+-- Taille (studs) d'un reflet sous un visage
+local function faceGlintSize(face: FaceDef, p: Piece, d: number): Vector3
+	if face.glint <= 0 then
+		return GLINT_HIDDEN
+	end
+	return p.size * (face.glint * d)
+end
+
+-- Décalage d'une pièce sous un visage (les pièces en orbite sont posées par animate)
+local function faceOffset(face: FaceDef, p: Piece, d: number, b: Body): CFrame
+	if p.role == "eye" or p.role == "glint" then
+		if face.lift ~= 0 then
+			return CFrame.new((p.offset + Vector3.new(0, face.lift, 0)) * d) * p.rot
+		end
+	elseif p.role == "mouth" then
+		local index = MOUTH_INDEX[p.name]
+		local mouth = face.mouth
+		if index and mouth then
+			local uv = mouth[index]
+			return CFrame.new(surface(b, uv[1], uv[2], -0.99, 1.0) * d) * p.rot
+		elseif index == nil and face.turn then
+			return CFrame.new(p.offset * d) * p.rot * QUARTER_TURN
+		end
+	end
+	return CFrame.new(p.offset * d) * p.rot
+end
+
+-- Pose le visage courant : yeux et reflets (une écriture de Size au plus par pièce, aucune si la
+-- taille ne change pas), matériau des reflets, décalages des yeux, des reflets et de la bouche
+local function applyFace(handle: Handle, st: State)
+	local rec = st.record
+	local d = st.d
+	local face = FACES[st.face]
+	local alone = rec.glints == 0
+	local offsets = handle.offsets
+	for i, p in rec.pieces do
+		local role = p.role
+		if role == "eye" or role == "glint" then
+			local part = rec.parts[i]
+			local size: Vector3
+			if face == nil then
+				size = p.size * d
+			elseif role == "eye" then
+				size = faceEyeSize(face, p, alone) * d
+			else
+				size = faceGlintSize(face, p, d)
+			end
+			if part.Size ~= size then
+				part.Size = size
+			end
+			if role == "glint" then
+				local mat = material(if face and face.neon then "Neon" else p.material)
+				if part.Material ~= mat then
+					part.Material = mat
+				end
+			end
+		end
+		if (role == "eye" or role == "glint" or role == "mouth") and p.orbit == nil then
+			offsets[i] = if face
+				then faceOffset(face, p, d, rec.speciesBody)
+				else CFrame.new(p.offset * d) * p.rot
+		end
+	end
+	-- les yeux viennent d'être écrits ouverts : le clignement repart de là (animate)
+	st.blinking = false
+end
+
 -- Couleurs, matériaux et transparences des pièces selon la mutation (rendu fixe en Mouvement réduit)
 local function applyLook(st: State, spec: BuildSpec)
 	local rec = st.record
@@ -1377,11 +1653,17 @@ local function applyLook(st: State, spec: BuildSpec)
 	local rainbowFixed =
 		{ rgb(255, 120, 120), rgb(255, 210, 110), rgb(130, 230, 150), rgb(120, 180, 255), rgb(210, 140, 255) }
 	local featureIndex = 0
+	-- v2.0 (lot B5, D6) : reflets en Neon tant que le visage le demande (« starry »)
+	local face = FACES[st.face]
+	local neonGlints = face ~= nil and face.neon
 	for i, p in rec.pieces do
 		local part = rec.parts[i]
 		local color = p.color
 		local mat = p.material
 		local transparency = p.transparency
+		if neonGlints and p.role == "glint" then
+			mat = "Neon"
+		end
 		if p.role == "body" and look then
 			color = look.color or def.colors.main
 			mat = look.material or "SmoothPlastic"
@@ -1409,24 +1691,34 @@ local function applyLook(st: State, spec: BuildSpec)
 	end
 end
 
--- Tailles et décalages au diamètre courant (écrasement : seulement le corps)
+-- Tailles et décalages au diamètre courant (écrasement : seulement le corps). Visage « happy »
+-- (face == nil) : exactement le chemin de la v1.3 ; sinon yeux, reflets et bouche du visage.
 local function applyScale(handle: Handle, st: State)
 	local rec = st.record
 	local d = st.d
+	local face = FACES[st.face]
+	local alone = rec.glints == 0
 	local offsets: { CFrame } = {}
 	for i, p in rec.pieces do
 		local part = rec.parts[i]
 		local size = p.size * d
 		if i == 1 then
 			size = Vector3.new(size.X * st.squash.X, size.Y * st.squash.Y, size.Z * st.squash.Z)
+		elseif face then
+			if p.role == "eye" then
+				size = faceEyeSize(face, p, alone) * d
+			elseif p.role == "glint" then
+				size = faceGlintSize(face, p, d)
+			end
 		end
 		part.Size = size
-		offsets[i] = CFrame.new(p.offset * d) * p.rot
+		offsets[i] = if face
+			then faceOffset(face, p, d, rec.speciesBody)
+			else CFrame.new(p.offset * d) * p.rot
 	end
 	handle.offsets = offsets
 	local b = rec.body3
-	rec.stars.Size = UDim2.fromScale(1.4 * d, 0.36 * d)
-	rec.stars.StudsOffsetWorldSpace = Vector3.new(0, b.Y * d / 2 + 0.32 * d, 0)
+	sizeStars(rec, d)
 	local aura = rec.aura
 	if aura then
 		aura.Size = UDim2.fromScale(1.7 * d * math.max(b.X, b.Y), 1.7 * d * math.max(b.X, b.Y))
@@ -1453,7 +1745,10 @@ local function applyLod(handle: Handle, st: State, lod: number)
 			part.Transparency = target
 		end
 	end
-	rec.stars.Enabled = lod == 1 and (handle.spec.stars or 0) > 0
+	local stars = rec.stars
+	if stars then
+		stars.Enabled = lod == 1 and (handle.spec.stars or 0) > 0
+	end
 	local aura = rec.aura
 	if aura then
 		aura.Enabled = st.auraOn and lod <= 2
@@ -1489,6 +1784,7 @@ local function newState(rec: Record): State
 		reduced = false,
 		blinkSeed = math.random(),
 		blinking = false,
+		face = DEFAULT_FACE,
 	}
 end
 
@@ -1674,17 +1970,26 @@ function SquishyBuilder.setStars(handle: Handle, stars: number)
 	end
 	local n = math.clamp(math.floor(finite(stars, 0)), 0, SquishyBuilder.STARS_MAX)
 	handle.spec.stars = n
-	for i, label in st.record.starLabels do
+	local rec = st.record
+	if n > #rec.starRays then
+		ensureStars(rec, n, st.d) -- première fois que ce modèle montre cette étoile
+	end
+	for i, rays in rec.starRays do
 		local visible = i <= n
-		label.Visible = visible
-		if visible then
-			-- arc : les étoiles du milieu un peu plus haut
-			local x = 0.5 + (i - (n + 1) / 2) * 0.2
-			local y = 0.5 + math.abs(i - (n + 1) / 2) * 0.12
-			label.Position = UDim2.fromScale(x, y)
+		-- arc : les étoiles du milieu un peu plus haut
+		local x = 0.5 + (i - (n + 1) / 2) * STAR_BOX
+		local y = 0.5 + math.abs(i - (n + 1) / 2) * 0.12
+		for _, ray in rays do
+			ray.Visible = visible
+			if visible then
+				ray.Position = UDim2.fromScale(x, y)
+			end
 		end
 	end
-	st.record.stars.Enabled = n > 0 and handle.lod == 1
+	local gui = rec.stars
+	if gui then
+		gui.Enabled = n > 0 and handle.lod == 1
+	end
 end
 
 -- Points d'attache (selle, tenue, tête) en repère du modèle
@@ -1707,6 +2012,11 @@ function SquishyBuilder.release(handle: Handle)
 	local st = states[handle]
 	if st == nil or st.released then
 		return
+	end
+	-- v2.0 (lot B5, D6) : le modèle repart à la réserve avec son visage de repos
+	if st.face ~= DEFAULT_FACE then
+		st.face = DEFAULT_FACE
+		applyFace(handle, st)
 	end
 	st.released = true
 	local rec = st.record
@@ -1758,6 +2068,41 @@ function SquishyBuilder.setSaddleColor(handle: Handle, color: Color3)
 			st.record.parts[i].Color = color
 		end
 	end
+end
+
+-- Visages que setFace sait dessiner, dans l'ordre de Config/Visuals.Faces (v2.0, lot B5)
+do
+	local list: { string } = {}
+	for _, name in Visuals.Faces do
+		if name == DEFAULT_FACE or FACES[name] then
+			table.insert(list, name)
+		end
+	end
+	SquishyBuilder.FACES = table.freeze(list)
+end
+
+-- Visage du modèle (v2.0, lot B5, D6 ; Visuals.Faces) : une écriture des tailles des yeux et des
+-- reflets, bouche et yeux déplacés par leur décalage (pris à la prochaine pose()). Même visage,
+-- visage inconnu, Handle rendu : rien. release() et un modèle repris dans la réserve rendent « happy ».
+function SquishyBuilder.setFace(handle: Handle, face: string)
+	local st = states[handle]
+	if st == nil or st.released then
+		return
+	end
+	if type(face) ~= "string" or (face ~= DEFAULT_FACE and FACES[face] == nil) or face == st.face then
+		return
+	end
+	st.face = face
+	applyFace(handle, st)
+end
+
+-- Visage courant (« happy » pour un Handle rendu ou inconnu)
+function SquishyBuilder.faceOf(handle: Handle): string
+	local st = states[handle]
+	if st == nil or st.released then
+		return DEFAULT_FACE
+	end
+	return st.face
 end
 
 -- Facteur des particules de la mutation (budget : 1, 0,3 en qualité réduite, 0 = coupées)
@@ -1826,14 +2171,23 @@ function SquishyBuilder.animate(handle: Handle, t: number, reducedMotion: boolea
 			end
 		end
 	end
-	-- clignement : yeux à 10 % de leur hauteur pendant 0,08 s, toutes les 3 à 6 s
+	-- clignement : yeux à 10 % de leur hauteur pendant 0,08 s, toutes les 3 à 6 s (v2.0, lot B5 : depuis
+	-- la taille du visage courant ; jamais sous un visage qui ferme déjà les yeux)
 	local period = 3 + 3 * st.blinkSeed
 	local blink = handle.lod <= 2 and (now % period) < 0.08
+	local face: FaceDef? = nil
+	if st.face ~= DEFAULT_FACE and (blink or st.blinking) then
+		face = FACES[st.face]
+		if face and not face.blink then
+			blink = false
+		end
+	end
 	if blink ~= st.blinking then
 		st.blinking = blink
+		local alone = rec.glints == 0
 		for i, p in rec.pieces do
 			if p.role == "eye" then
-				local size = p.size * d
+				local size = if face then faceEyeSize(face, p, alone) * d else p.size * d
 				rec.parts[i].Size = if blink then Vector3.new(size.X, size.Y * 0.1, size.Z) else size
 			end
 		end
