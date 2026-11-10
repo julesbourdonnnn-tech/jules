@@ -305,6 +305,96 @@ return function(T)
 		)
 	end)
 
+	describe("Console_panels › v2.0 : Mon style et Déco perso (lot B3)", function()
+		local UpgradeScreen = require("../harness/UpgradeScreen")
+		local Layout = require("../harness/Layout")
+		local S = UpgradeScreen.new(T.Harness)
+		local DONE = { step = 11, done = true, demoDone = true }
+
+		it(
+			"onglet Mon style à la croix ; sortes ↓ ; plan : chaque emplacement atteint ; choix ; ○ : choix → emplacement → sortes → menu",
+			function()
+				local c = S.client({
+					snap = S.snap(1),
+					profile = {
+						version = 2,
+						onboarding = DONE,
+						R = 10,
+						bestR = 10,
+						ascend = 1,
+						plopDays = 8,
+						stats = { playSeconds = 400 },
+						cosmetics = { saddle = "classic", theme = "color", trail = "", title = "", flag = "" },
+						decoPerso = { owned = { 0, 0 }, slots = { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 } },
+						squishies = { a = TvAudit.squishy(1) },
+					},
+					ranch = { DecoPerso = "1,0,0,0,0,0,0,0,0,0,0,0" },
+				})
+				S.event(c, UpgradeScreen.V2_ALL)
+				local h, PC = c.h, c.PC
+				local Ranch = TvAudit.mod(h, "UI.Panels.Ranch")
+				local function sel()
+					return h.game.GuiService.SelectedObject
+				end
+				PC.open("Ranch", "pens")
+				TvAudit.tick(h, 0.5)
+				local tabs = PC.window("Ranch").Body.Tabs.Strip
+				local guard = 0
+				while sel() ~= tabs.Tab_style and guard < 14 do
+					guard += 1
+					if sel():IsDescendantOf(tabs) then
+						Gamepad.tap(h, Enum.KeyCode.DPadRight)
+					else
+						Gamepad.tap(h, Enum.KeyCode.DPadUp)
+					end
+				end
+				expect(sel()).toBe(tabs.Tab_style)
+				expect(tabs.Tab_style.Label.Text).toBe("My style")
+				expect(tabs.Tab_pads.Visible).toBe(false)
+				TvAudit.tick(h, 0.5)
+				Gamepad.tap(h, Enum.KeyCode.ButtonA)
+				TvAudit.tick(h, 0.5)
+				expect(Ranch.currentTab()).toBe("style")
+				-- ○ : de la grille à la liste des sortes ; ↓ : Déco perso ; ✕ : l'emplacement 1
+				h.game.GuiService.SelectedObject = Ranch._styleCell("theme", "color")
+				TvAudit.tick(h, 0.5)
+				Gamepad.tap(h, Enum.KeyCode.ButtonB)
+				expect(sel()).toBe(Ranch._styleKindButton("theme"))
+				TvAudit.tick(h, 0.5)
+				Gamepad.tap(h, Enum.KeyCode.DPadDown)
+				expect(sel()).toBe(Ranch._styleKindButton("deco"))
+				TvAudit.tick(h, 0.5)
+				Gamepad.tap(h, Enum.KeyCode.ButtonA)
+				TvAudit.tick(h, 0.5)
+				expect(sel()).toBe(Ranch._decoSlot(1))
+				Layout.apply(h)
+				expect(#Layout.unreachable(h, Ranch._decoSlot(1).Parent, Ranch._decoSlot(1))).toBe(0)
+				-- → depuis l'emplacement 2 (en bas, au milieu) : un autre emplacement, jamais hors du panneau
+				h.game.GuiService.SelectedObject = Ranch._decoSlot(2)
+				TvAudit.tick(h, 0.5)
+				Gamepad.tap(h, Enum.KeyCode.DPadRight)
+				expect(sel():IsDescendantOf(PC.window("Ranch"))).toBe(true)
+				h.game.GuiService.SelectedObject = Ranch._decoSlot(2)
+				TvAudit.tick(h, 0.5)
+				Gamepad.tap(h, Enum.KeyCode.ButtonA)
+				TvAudit.tick(h, 0.5)
+				expect(Ranch._state().pickerSlot).toBe(2)
+				expect(sel()).toBe(Ranch._styleCell("deco", ""))
+				Gamepad.tap(h, Enum.KeyCode.ButtonB)
+				TvAudit.tick(h, 0.5)
+				expect(sel()).toBe(Ranch._decoSlot(2))
+				Gamepad.tap(h, Enum.KeyCode.ButtonB)
+				TvAudit.tick(h, 0.5)
+				expect(sel()).toBe(Ranch._styleKindButton("deco"))
+				Gamepad.tap(h, Enum.KeyCode.ButtonB)
+				TvAudit.tick(h, 0.5)
+				expect(PC.current()).toBeNil()
+				expect(#TvAudit.sent(h, "PlaceDeco")).toBe(0)
+				clean(h)
+			end
+		)
+	end)
+
 	describe("Console_panels › clavier et souris (second)", function()
 		it(
 			"clic = ✕, Retour arrière = ○, libellés des touches du clavier ; aucune touche manette affichée",

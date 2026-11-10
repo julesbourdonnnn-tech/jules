@@ -424,4 +424,476 @@ return function(T)
 			end
 		)
 	end)
+
+	describe("Panels/Ranch › glyphes dessinés (règle 18, lot B3)", function()
+		it(
+			"cœur des jumeaux, pastille du Meilleur Ami (cœur + nombre) et coche de la case choisie dessinés ; aucun « ♥ » ni « ✓ » écrit",
+			function()
+				local c = setup({
+					squishies = {
+						a = sq(1, { z = 50 }),
+						b = sq(1, { z = 40 }),
+						best = sq(2, { z = 900, bf = 1 }),
+					},
+				})
+				c.PC.open("Ranch", "pens")
+				TvAudit.tick(c.h, 0.5)
+				local cellA = c.Ranch._cellFor("a")
+				expect(cellA.Mark:GetAttribute("Icon")).toBe("heart")
+				local cellBest = c.Ranch._cellFor("best")
+				expect(cellBest.Mark:GetAttribute("Icon")).toBe("")
+				expect(cellBest.BestFriend.Visible).toBe(true)
+				expect(cellBest.BestFriend.Text).toBe("1")
+				expect(cellBest.BestFriend.Heart:GetAttribute("Icon")).toBe("heart")
+				-- Vendre : la case choisie porte la coche (même toile, plus grande, à gauche)
+				c.Ranch.setTab("sell")
+				TvAudit.tick(c.h, 0.5)
+				press(c, c.Ranch._cellFor("a"))
+				expect(c.Ranch._cellFor("a").Mark:GetAttribute("Icon")).toBe("check")
+				expect(c.Ranch._cellFor("b").Mark:GetAttribute("Icon")).toBe("heart")
+				for _, d in c.PC.window("Ranch"):GetDescendants() do
+					if d:IsA("TextLabel") or d:IsA("TextButton") then
+						expect(
+							string.find(d.Text, "♥", 1, true) == nil
+								and string.find(d.Text, "✓", 1, true) == nil
+						).toBe(true)
+					end
+				end
+				clean(c)
+			end
+		)
+	end)
+
+	describe("Panels/Ranch › v2.0 (lot B3)", function()
+		local UpgradeScreen = require("../harness/UpgradeScreen")
+		local Layout = require("../harness/Layout")
+		local S = UpgradeScreen.new(T.Harness)
+		local V2 = UpgradeScreen.V2_ALL
+		local Cosmetics = T.Harness.new():require("ReplicatedStorage.Shared.Config.Cosmetics")
+		local DECO = "1,0,0,0,0,0,0,0,0,0,0,0" -- Fanion à ton nom posé sur l'emplacement 1 (petit)
+
+		-- profil v2 riche : Record R 30, A = 3, palettes Bonbon et Menthe (Atelier), selle Biscuit
+		-- (piste), 600 niveaux (Carnet), géant 2e15, Fanion (5 min de jeu), Gamelle (8 jours de Plop)…
+		local function richProfile(edit)
+			local p = {
+				version = 2,
+				R = 30,
+				bestR = 30,
+				ascend = 3,
+				cosmetics = {
+					saddle = "classic",
+					trail = "",
+					title = "",
+					theme = "color",
+					flag = "",
+					palette = "candy",
+					cushions = "",
+				},
+				outfits = { owned = { plopBib = 1, partyHat = 1 }, worn = {} },
+				atelierCosmetics = { 3 },
+				stats = { upgradesBought = 600, playSeconds = 400, objectivesClaimed = 30, tracksDone = 1 },
+				weeklyTrack = { won = { 1 } },
+				biggestEver = 2e15,
+				season = { frostDays = 0 },
+				plopDays = 8,
+				moon = { sessions = 1 },
+				decoPerso = { owned = { 0, 0 }, slots = { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 } },
+				squishies = { a = sq(1) },
+			}
+			if edit then
+				edit(p)
+			end
+			return p
+		end
+
+		local function v2client(opts)
+			opts = opts or {}
+			local c = S.client({
+				snap = if opts.snap == false then nil else S.snap(1),
+				profile = richProfile(opts.edit),
+				ranch = opts.ranch or { DecoPerso = DECO },
+			})
+			if opts.flags ~= false then
+				S.event(c, opts.flags or V2)
+			end
+			c.Ranch = TvAudit.mod(c.h, "UI.Panels.Ranch")
+			c.OP = TvAudit.mod(c.h, "UI.Panels.OutfitPreview")
+			c.sounds, c.haptics = {}, {}
+			local Audio = TvAudit.mod(c.h, "Controllers.AudioController")
+			local play = Audio.play
+			Audio.play = function(name, ...)
+				table.insert(c.sounds, name)
+				return play(name, ...)
+			end
+			TvAudit.mod(c.h, "Util.Haptics").Played:Connect(function(name)
+				table.insert(c.haptics, name)
+			end)
+			return c
+		end
+
+		-- arguments du i-ème envoi de `remote` (sans le champ n de table.pack)
+		local function args(c, remote, i)
+			local a = TvAudit.sent(c.h, remote)[i]
+			if a == nil then
+				return nil
+			end
+			local out = {}
+			for k = 1, a.n or #a do
+				out[k] = a[k]
+			end
+			return out
+		end
+
+		local function entryOf(c, kind, id)
+			for _, e in c.Ranch._styleEntries() do
+				if e.kind == kind and e.id == id then
+					return e
+				end
+			end
+			return nil
+		end
+
+		local function stylePage(c)
+			return c.PC.window("Ranch").Body.Page_style
+		end
+
+		it(
+			"N8 : Dalles absentes (page jamais construite) tant que l'écran Améliorations est disponible ; instantané retiré → Dalles à l'ouverture suivante",
+			function()
+				local c = v2client()
+				c.PC.open("Ranch", "pens")
+				TvAudit.tick(c.h, 0.5)
+				local body = c.PC.window("Ranch").Body
+				expect(c.Ranch.tabs()).toEqual({ "pens", "dodo", "mail", "fuse", "sell", "style" })
+				expect(body:FindFirstChild("Page_pads")).toBeNil()
+				expect(c.Ranch._state().padsBuilt).toBe(false)
+				expect(body.Tabs.Strip.Tab_pads.Visible).toBe(false)
+				c.Ranch.setTab("pads")
+				expect(c.Ranch.currentTab()).toBe("pens")
+				c.PC.closeAll()
+				TvAudit.tick(c.h, 0.5)
+				c.PC.open("Ranch", "padsKept")
+				expect(c.Ranch.currentTab()).toBe("pens")
+				expect(c.Ranch._state().keptFirst).toBe(false)
+				-- interrupteur coupé à chaud : DataPatch qui retire l'instantané
+				c.PC.closeAll()
+				TvAudit.tick(c.h, 0.5)
+				c.h:fireClient("ReplicatedStorage.Remotes.DataPatch", {}, { "upgradeSnapshot" })
+				c.h:settle(1)
+				c.PC.open("Ranch", "pads")
+				TvAudit.tick(c.h, 0.5)
+				expect(c.Ranch.tabs()).toEqual({ "pens", "dodo", "mail", "fuse", "sell", "pads", "style" })
+				expect(c.Ranch.currentTab()).toBe("pads")
+				expect(body:FindFirstChild("Page_pads") ~= nil).toBe(true)
+				expect(body.Tabs.Strip.Tab_pads.Visible).toBe(true)
+				expect(c.Ranch._tileButton("snack") ~= nil).toBe(true)
+				expect(#TvAudit.sent(c.h, "PlaceDeco")).toBe(0)
+				expect(#TvAudit.sent(c.h, "EquipCosmetic")).toBe(0)
+				S.clean(c, expect)
+			end
+		)
+
+		it(
+			"Mon style : sortes, nombre d'objets par sorte, possédé / verrouillé / équipé (14 habillages, 8 tenues, 66 titres)",
+			function()
+				local c = v2client()
+				c.PC.open("Ranch", "style")
+				TvAudit.tick(c.h, 0.5)
+				local st = c.Ranch._state()
+				expect(st.styleMode).toBe("v2")
+				expect(st.v13Built).toBe(false)
+				expect(st.kinds).toEqual({
+					"theme",
+					"deco",
+					"saddle",
+					"trail",
+					"title",
+					"flag",
+					"outfits",
+					"palette",
+					"cushions",
+				})
+				expect(c.PC.window("Ranch").Body.Tabs.Strip.Tab_style.Label.Text).toBe("My style")
+				expect(stylePage(c):FindFirstChild("Kinds")).toBeNil()
+				expect(stylePage(c):FindFirstChild("Items")).toBeNil()
+				-- 1re sorte : l'habillage, sélection sur l'habillage équipé
+				expect(st.styleKind).toBe("theme")
+				expect(sel(c)).toBe(c.Ranch._styleCell("theme", "color"))
+				local want = {
+					theme = 14,
+					saddle = 20,
+					trail = 17,
+					title = 67,
+					flag = 7,
+					outfits = 8,
+					palette = 9,
+					cushions = 2,
+				}
+				for _, kind in
+					{ "theme", "saddle", "trail", "title", "flag", "outfits", "palette", "cushions" }
+				do
+					press(c, c.Ranch._styleKindButton(kind))
+					expect({ kind = kind, n = #c.Ranch._styleEntries() }).toEqual({
+						kind = kind,
+						n = want[kind],
+					})
+				end
+				local function state(kind, id)
+					press(c, c.Ranch._styleKindButton(kind))
+					local e = entryOf(c, if kind == "outfits" then "outfit" else kind, id)
+					return { id = id, unlocked = e.unlocked, equipped = e.equipped }
+				end
+				expect(state("theme", "color")).toEqual({ id = "color", unlocked = true, equipped = true })
+				expect(state("theme", "marshmallow")).toEqual({
+					id = "marshmallow",
+					unlocked = true,
+					equipped = false,
+				})
+				expect(state("theme", "aurora")).toEqual({ id = "aurora", unlocked = true, equipped = false })
+				expect(state("theme", "celestial")).toEqual({
+					id = "celestial",
+					unlocked = false,
+					equipped = false,
+				})
+				expect(state("saddle", "cookieSaddle")).toEqual({
+					id = "cookieSaddle",
+					unlocked = true,
+					equipped = false,
+				})
+				expect(state("saddle", "cosmic")).toEqual({ id = "cosmic", unlocked = true, equipped = false })
+				expect(state("saddle", "icingSugar")).toEqual({
+					id = "icingSugar",
+					unlocked = false,
+					equipped = false,
+				})
+				expect(state("saddle", "partyPopper")).toEqual({
+					id = "partyPopper",
+					unlocked = false,
+					equipped = false,
+				})
+				expect(state("saddle", "royal")).toEqual({ id = "royal", unlocked = false, equipped = false })
+				expect(state("palette", "candy")).toEqual({ id = "candy", unlocked = true, equipped = true })
+				expect(state("palette", "lavender")).toEqual({
+					id = "lavender",
+					unlocked = false,
+					equipped = false,
+				})
+				expect(state("palette", "fireworks")).toEqual({
+					id = "fireworks",
+					unlocked = true,
+					equipped = false,
+				})
+				expect(state("outfits", "partyHat")).toEqual({
+					id = "partyHat",
+					unlocked = true,
+					equipped = false,
+				})
+				expect(state("outfits", "starGlasses")).toEqual({
+					id = "starGlasses",
+					unlocked = false,
+					equipped = false,
+				})
+				expect(state("title", "r400")).toEqual({ id = "r400", unlocked = false, equipped = false })
+				S.clean(c, expect)
+			end
+		)
+
+		it(
+			'EquipCosmetic : habillage v2 ; palette « Aucun » → "" ; verrouillé refusé sans envoi ; tenue v2 → OutfitPreview',
+			function()
+				local c = v2client()
+				c.PC.open("Ranch", "style")
+				TvAudit.tick(c.h, 0.5)
+				press(c, c.Ranch._styleCell("theme", "marshmallow"))
+				expect(args(c, "EquipCosmetic", 1)).toEqual({ "theme", "marshmallow" })
+				press(c, c.Ranch._styleCell("theme", "celestial"))
+				expect(#TvAudit.sent(c.h, "EquipCosmetic")).toBe(1)
+				expect(refused(c)).toBe(true)
+				press(c, c.Ranch._styleKindButton("palette"))
+				press(c, c.Ranch._styleCell("palette", "candy")) -- déjà équipée : rien
+				expect(#TvAudit.sent(c.h, "EquipCosmetic")).toBe(1)
+				press(c, c.Ranch._styleCell("palette", ""))
+				expect(args(c, "EquipCosmetic", 2)).toEqual({ "palette", "" })
+				press(c, c.Ranch._styleKindButton("outfits"))
+				press(c, c.Ranch._styleCell("outfit", "partyHat"))
+				expect(c.PC.current()).toBe("OutfitPreview")
+				expect(c.OP._state().outfit).toBe("partyHat")
+				TvAudit.tick(c.h, 0.5)
+				Gamepad.tap(c.h, Enum.KeyCode.ButtonB)
+				expect(c.PC.current()).toBe("Ranch")
+				S.clean(c, expect)
+			end
+		)
+
+		it(
+			"Déco perso : 12 emplacements P / G ; choix filtré par la taille, sans l'objet posé ailleurs ; PlaceDeco ; ○ par niveaux",
+			function()
+				local c = v2client()
+				c.PC.open("Ranch", "style")
+				TvAudit.tick(c.h, 0.5)
+				press(c, c.Ranch._styleKindButton("deco"))
+				expect(sel(c)).toBe(c.Ranch._decoSlot(1))
+				for i = 1, 12 do
+					local b = c.Ranch._decoSlot(i)
+					expect(b:GetAttribute("SlotSize")).toBe(Cosmetics.DecoSlots[i])
+					expect(b:GetAttribute("DecoItem")).toBe(if i == 1 then 1 else 0)
+				end
+				expect(c.Ranch._decoSlot(1).Label.Text).toBe("Name Pennant")
+				expect(c.Ranch._decoSlot(2).Label.Text).toBe("Empty spot")
+				-- la croix atteint chaque emplacement du plan
+				Layout.apply(c.h)
+				expect(#Layout.unreachable(c.h, c.Ranch._decoSlot(1).Parent, c.Ranch._decoSlot(1))).toBe(0)
+				-- emplacement 2 (petit) : « Aucun », puis les petits possédés, puis les petits verrouillés
+				press(c, c.Ranch._decoSlot(2))
+				expect(c.Ranch._state().pickerSlot).toBe(2)
+				local entries = c.Ranch._styleEntries()
+				expect(#entries).toBe(24) -- « Aucun » + 23 petits (le Fanion est posé en 1)
+				expect(entries[1]).toEqual({ kind = "deco", id = "", n = 0, unlocked = true, equipped = true })
+				local lockedSeen = false
+				for i, e in entries do
+					if i > 1 then
+						expect(Cosmetics.DecoPerso[e.n].size).toBe("P")
+						expect(e.n ~= 1).toBe(true)
+						if not e.unlocked then
+							lockedSeen = true
+						else
+							expect(lockedSeen).toBe(false) -- possédés d'abord
+						end
+					end
+				end
+				expect(entryOf(c, "deco", "plopBowl").unlocked).toBe(true)
+				expect(entryOf(c, "deco", "workbench").unlocked).toBe(false)
+				expect(sel(c)).toBe(c.Ranch._styleCell("deco", ""))
+				-- verrouillé : refusé, rien n'est envoyé
+				press(c, c.Ranch._styleCell("deco", "workbench"))
+				expect(#TvAudit.sent(c.h, "PlaceDeco")).toBe(0)
+				expect(refused(c)).toBe(true)
+				-- « Aucun » sur un emplacement vide : rien
+				press(c, c.Ranch._styleCell("deco", ""))
+				expect(#TvAudit.sent(c.h, "PlaceDeco")).toBe(0)
+				expect(sel(c)).toBe(c.Ranch._decoSlot(2))
+				press(c, c.Ranch._decoSlot(2))
+				press(c, c.Ranch._styleCell("deco", "plopBowl"))
+				expect(args(c, "PlaceDeco", 1)).toEqual({ 7, 2 })
+				expect(c.Ranch._state().pickerSlot).toBe(0)
+				expect(sel(c)).toBe(c.Ranch._decoSlot(2))
+				-- emplacement 9 (grand) : « Aucun » + les 16 grands
+				press(c, c.Ranch._decoSlot(9))
+				expect(#c.Ranch._styleEntries()).toBe(17)
+				for i, e in c.Ranch._styleEntries() do
+					if i > 1 then
+						expect(Cosmetics.DecoPerso[e.n].size).toBe("G")
+					end
+				end
+				-- ○ : choix → son emplacement ; plan → liste des sortes ; liste → menu
+				TvAudit.tick(c.h, 0.5)
+				Gamepad.tap(c.h, Enum.KeyCode.ButtonB)
+				expect(sel(c)).toBe(c.Ranch._decoSlot(9))
+				TvAudit.tick(c.h, 0.5)
+				Gamepad.tap(c.h, Enum.KeyCode.ButtonB)
+				expect(sel(c)).toBe(c.Ranch._styleKindButton("deco"))
+				-- « Aucun » sur l'emplacement 1 occupé : PlaceDeco(0, 1)
+				press(c, c.Ranch._styleKindButton("deco"))
+				press(c, c.Ranch._decoSlot(1))
+				press(c, c.Ranch._styleCell("deco", ""))
+				expect(args(c, "PlaceDeco", 2)).toEqual({ 0, 1 })
+				TvAudit.tick(c.h, 0.5)
+				Gamepad.tap(c.h, Enum.KeyCode.ButtonB)
+				TvAudit.tick(c.h, 0.5)
+				Gamepad.tap(c.h, Enum.KeyCode.ButtonB)
+				expect(c.PC.current()).toBeNil()
+				S.clean(c, expect)
+			end
+		)
+
+		it(
+			"l'attribut DecoPerso change : le plan suit sans créer d'instance ; attribut hostile : emplacements vides, sans trace",
+			function()
+				local c = v2client()
+				c.PC.open("Ranch", "style")
+				TvAudit.tick(c.h, 0.5)
+				press(c, c.Ranch._styleKindButton("deco"))
+				local win = c.PC.window("Ranch")
+				local before = #win:GetDescendants()
+				c.model:SetAttribute("DecoPerso", "1,7,0,0,0,0,0,0,6,0,0,0")
+				c.h:settle(1)
+				expect(c.Ranch._decoSlot(2):GetAttribute("DecoItem")).toBe(7)
+				expect(c.Ranch._decoSlot(9):GetAttribute("DecoItem")).toBe(6)
+				expect(c.Ranch._decoSlot(2).Label.Text).toBe("Plop's Bowl")
+				expect(#win:GetDescendants()).toBe(before)
+				-- chaîne hostile : chaque jeton vérifié (taille de l'emplacement, numéro connu, une seule fois)
+				c.model:SetAttribute("DecoPerso", "6,1,abc,,,-3,99,1e9,7,7,7,7")
+				c.h:settle(1)
+				for i = 1, 12 do
+					expect({ i = i, n = c.Ranch._decoSlot(i):GetAttribute("DecoItem") }).toEqual({
+						i = i,
+						n = if i == 2 then 1 else 0,
+					})
+				end
+				-- trop longue : tout vide
+				c.model:SetAttribute("DecoPerso", string.rep("9,", 200))
+				c.h:settle(1)
+				for i = 1, 12 do
+					expect(c.Ranch._decoSlot(i):GetAttribute("DecoItem")).toBe(0)
+				end
+				expect(#win:GetDescendants()).toBe(before)
+				-- pas une chaîne, puis retiré : plus de sorte Déco perso (retour à la 1re sorte), sans trace
+				for _, hostile in { 42, true } do
+					c.model:SetAttribute("DecoPerso", hostile)
+					c.h:settle(1)
+					expect(table.find(c.Ranch._state().kinds, "deco")).toBeNil()
+					expect(c.Ranch._state().styleKind).toBe("theme")
+				end
+				c.model:SetAttribute("DecoPerso", nil)
+				c.h:settle(1)
+				expect(table.find(c.Ranch._state().kinds, "deco")).toBeNil()
+				expect(#win:GetDescendants()).toBe(before)
+				expect(#TvAudit.sent(c.h, "PlaceDeco")).toBe(0)
+				S.clean(c, expect)
+			end
+		)
+
+		it(
+			"interrupteurs coupés (profil v2, rien d'annoncé) : onglet Style de la v1.3 identique (instances, textes, intentions)",
+			function()
+				local function styleTree(c)
+					local out = {}
+					for _, d in stylePage(c):GetDescendants() do
+						if d:IsA("GuiObject") then
+							table.insert(out, d.Name)
+						end
+					end
+					table.sort(out)
+					return out
+				end
+				local base = setup({ plopDays = 8 })
+				base.PC.open("Ranch", "style")
+				TvAudit.tick(base.h, 0.5)
+				local c = v2client({ flags = false, snap = false })
+				c.PC.open("Ranch", "style")
+				TvAudit.tick(c.h, 0.5)
+				expect(c.Ranch._state().styleMode).toBe("v13")
+				expect(c.Ranch._state().v2Built).toBe(false)
+				expect(c.Ranch.tabs()).toEqual({ "pens", "dodo", "mail", "fuse", "sell", "pads", "style" })
+				expect(c.PC.window("Ranch").Body.Tabs.Strip.Tab_style.Label.Text).toBe("Style")
+				expect(styleTree(c)).toEqual(styleTree(base))
+				expect(stylePage(c):FindFirstChild("KindsV2")).toBeNil()
+				expect(stylePage(c):FindFirstChild("Plan")).toBeNil()
+				press(c, c.Ranch._styleCell("saddle", "peach"))
+				expect(args(c, "EquipCosmetic", 1)).toEqual({ "saddle", "peach" })
+				press(c, c.Ranch._styleKindButton("theme"))
+				expect(c.Ranch._styleCell("theme", "marshmallow")).toBeNil()
+				expect(#TvAudit.sent(c.h, "PlaceDeco")).toBe(0)
+				-- instantané présent mais aucun interrupteur méta : Dalles retirées, Style de la v1.3
+				local d = v2client({ flags = false })
+				d.PC.open("Ranch", "style")
+				TvAudit.tick(d.h, 0.5)
+				expect(d.Ranch._state().styleMode).toBe("v13")
+				expect(d.Ranch.tabs()).toEqual({ "pens", "dodo", "mail", "fuse", "sell", "style" })
+				clean(base)
+				S.clean(c, expect)
+				S.clean(d, expect)
+			end
+		)
+	end)
 end

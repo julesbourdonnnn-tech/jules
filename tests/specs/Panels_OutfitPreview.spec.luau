@@ -115,4 +115,46 @@ return function(T)
 			clean(c)
 		end)
 	end)
+
+	describe("Panels/OutfitPreview › v2.0 (lot B3)", function()
+		it(
+			"flèches dessinées (règle 18) ; tenue de la v2.0 avec un profil v2 : nom de sa clé, possession outfits.owned, Mettre, sans pièce 3D avant B5 ni trace ; profil v1 : refusée",
+			function()
+				local c = setup({
+					version = 2,
+					squishies = { a = TvAudit.squishy(5, { z = 900 }) },
+					outfits = { owned = { partyHat = 1 }, worn = {} },
+				})
+				c.PC.open("Settings")
+				c.PC.open("OutfitPreview", "partyHat")
+				local b = body(c)
+				expect(c.OP._state().outfit).toBe("partyHat")
+				expect(b.Outfit.Text).toBe("Party Hat")
+				expect(b.Owned.Text).toBe("In wardrobe: 1")
+				-- « ◀ » « ▶ » absents des polices : flèches dessinées, celle de gauche tournée de 180°
+				expect(b.Prev:FindFirstChild("Label")).toBeNil()
+				expect(b.Prev.Arrow:GetAttribute("Icon")).toBe("arrowRight")
+				expect(b.Prev.Arrow.Rotation).toBe(180)
+				expect(b.Next.Arrow.Rotation).toBe(0)
+				press(c, b.Wear)
+				local args = TvAudit.sent(c.h, "EquipOutfit")[1]
+				expect(args[1]).toBe("partyHat")
+				expect(args[2]).toBe("a")
+				-- tenue de la semaine (WeeklyRotation) : acceptée, pas possédée → « Mettre » refusé
+				c.OP.setTab("polkaBow")
+				expect(c.OP._state().outfit).toBe("polkaBow")
+				expect(b.Outfit.Text).toBe("Polka Bow")
+				press(c, b.Wear)
+				expect(#TvAudit.sent(c.h, "EquipOutfit")).toBe(1)
+				expect(b.Buy.Visible).toBe(false)
+				clean(c)
+				-- profil v1 (interrupteurs coupés) : les tenues de la v2.0 n'existent pas
+				local d = setup({ squishies = {} })
+				d.PC.open("Settings")
+				d.PC.open("OutfitPreview", "partyHat")
+				expect(d.OP._state().outfit).toBe("plopBib")
+				clean(d)
+			end
+		)
+	end)
 end
