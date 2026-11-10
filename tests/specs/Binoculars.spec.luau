@@ -250,6 +250,38 @@ return function(T)
 		)
 	end)
 
+	-- Lot B3, étape 5 : relevé sur les captures (tv2160) : la carte touchait la puce spéciale du bas
+	-- (« GRAND SPLORCH ! », Layout.Hud.specialChip) ; elle reste 24 px au-dessus, et le glyphe ✕ n'est
+	-- montré que quand ✕ donne un cœur
+	describe("Binoculars › disposition", function()
+		it(
+			"la carte reste à 24 px au moins au-dessus des puces du bas ; ✕ caché sur un bouton grisé",
+			function()
+				local c = client()
+				local Layout = c.h:require("ReplicatedStorage.Shared.Config.Layout")
+				atGate(c, 2)
+				expect(c.B.open(OWNER)).toBe(true)
+				local card = c.B.button().Parent
+				-- zone sûre : y de Layout.Safe.y à 1080 − Layout.Safe.y ; la carte est ancrée en bas
+				local bottom = 1080 - Layout.Safe.y + card.Position.Y.Offset
+				expect(card.AnchorPoint.Y).toBe(1)
+				expect(card.Position.Y.Scale).toBe(1)
+				expect(bottom <= Layout.Hud.specialChip.rect.y - 24).toBe(true)
+				local glyph = c.B.button():FindFirstChild("Glyph", true)
+				expect(glyph ~= nil and glyph.Visible).toBe(true)
+				c.h:fireClient(
+					"ReplicatedStorage.Remotes.DataPatch",
+					{ hearts = { receivedTotal = 0, givenDay = today(c), givenTo = { OWNER } } },
+					{}
+				)
+				c.h:settle(1)
+				expect(c.B.state()).toBe("given")
+				expect(glyph.Visible).toBe(false)
+				S.clean(c, expect)
+			end
+		)
+	end)
+
 	describe("Binoculars › interrupteurs et règles", function()
 		it("interrupteurs coupés ou profil v1 : ni invite, ni fenêtre, ni intention", function()
 			local v1 = client({ v1 = true })

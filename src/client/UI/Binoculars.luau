@@ -52,7 +52,10 @@ export type State = "give" | "given" | "limit"
 local DISPLAY_ORDER = 42 -- au-dessus des cartes (40), sous l'écran de retour (45)
 local CARD = { w = 720, h = 152 } -- px TV
 local BUTTON = { w = 656, h = 112, text = 40 }
-local BOTTOM = 216 -- px TV entre le bas de la zone sûre et la carte (au-dessus des puces du bas)
+-- px TV entre le bas de la zone sûre et la carte : son bas 32 px au-dessus de la puce spéciale du bas
+-- (Layout.Hud.specialChip, y = 822 px TV ; la spec en demande 24 au moins). Relevé des captures tv2160 :
+-- à 216 px, la carte touchait la puce
+local BOTTOM = 1080 - Layout.Safe.y - (Layout.Hud.specialChip.rect.y - 32)
 local HEART = 56 -- px TV : cœur dessiné du bouton
 local PER_DAY = Balance.Hearts.PerDay
 local PENDING = 3 -- s : un seul GiveHeart en vol (la réponse du serveur arrive par DataPatch)
@@ -68,6 +71,7 @@ local card: Frame? = nil
 local button: TextButton? = nil
 local label: TextLabel? = nil
 local heart: Frame? = nil
+local glyphFrame: GuiObject? = nil -- ✕ : montré seulement quand ✕ donne un cœur
 local opened = false
 local owner = 0 -- userId du propriétaire regardé
 local current: State? = nil
@@ -142,6 +146,10 @@ local function refresh()
 	Widgets.setText(l, KEYS[s])
 	Widgets.setDisabled(b, s ~= "give")
 	Icons.paint(h, if s == "limit" then Widgets.Colors.Locked else Widgets.Colors.Pink)
+	local g = glyphFrame
+	if g then
+		g.Visible = s == "give"
+	end
 	b:SetAttribute("HeartState", s)
 end
 
@@ -228,6 +236,7 @@ local function build()
 		UDim2.new(0, 20, 0.5, 0),
 		Vector2.new(0, 0.5)
 	)
+	glyphFrame = glyph.frame
 	local h = Icons.new("heart", HEART, Widgets.Colors.Pink, b)
 	h.Name = "HeartIcon"
 	h.AnchorPoint = Vector2.new(0, 0.5)
