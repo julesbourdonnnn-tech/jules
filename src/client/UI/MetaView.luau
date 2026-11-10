@@ -31,6 +31,15 @@
 --   MetaView.weeklyIn(index, period)  -- semaines avant le retour du cosmétique de la semaine `index`
 --   MetaView.resolve(text, tr)        -- texte prêt pour Text.set (variables-clés traduites par tr)
 --   MetaView.TILE_ICONS               -- dessins (Hud/Icons) que portent les tuiles d'aperçu (liste figée)
+--   MetaView.styleItems(kind, ctx)    -- onglet Mon style (lot B3, étape 3, D10) : objets d'une sorte
+--       (« Aucun » d'abord pour traînée, titre, drapeau, palette et coussins ; ceux de la v1.3 dans
+--       leur ordre ; puis ceux de la v2.0 dont l'interrupteur de la source est ouvert) :
+--       { kind, id, name, v2, source?, color? }
+--   MetaView.decoItems(size?, ctx)    -- les 40 objets de Déco perso (D11), de la taille P / G demandée :
+--       { n, id, size, name, source }
+--   MetaView.planLayout(slots, w, h)  -- plan vu du dessus (D11) : rectangle { x, y, w, h, col, row } de
+--       chaque emplacement de WorldLayout.decoPersoSlots(), dans une grille 5 × 4 du rectangle w × h,
+--       une case par emplacement (jamais deux boutons l'un sur l'autre), P petit et G grand
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -40,6 +49,8 @@ local Balance = require(Shared.Config.Balance)
 local Cosmetics = require(Shared.Config.Cosmetics)
 local Quests = require(Shared.Config.Quests)
 local Species = require(Shared.Config.Species)
+local Upgrades = require(Shared.Config.Upgrades)
+local Visuals = require(Shared.Config.Visuals)
 local Prestige = require(Shared.Logic.Prestige)
 local QuestRules = require(Shared.Logic.QuestRules)
 local Owned = require(Shared.Logic.Owned)
@@ -974,6 +985,257 @@ function MetaView.resolve(t: any, tr: (string, { [string]: any }?) -> string, de
 		end
 	end
 	return { key = t.key, vars = out }
+end
+
+-- =============================================================================================
+-- Mon style (lot B3, étape 3, D10, D11) : catalogue de chaque sorte, objets de Déco perso, plan
+-- =============================================================================================
+
+export type StyleItem = {
+	kind: string, -- sorte du profil (cosmetics.<kind>, EquipCosmetic) ; « outfit » pour les tenues
+	id: string, -- "" : « Aucun »
+	name: Text,
+	v2: boolean,
+	source: Text?, -- d'où vient l'objet (montré tant qu'il est verrouillé) ; nil : « Aucun »
+	color: Color3?,
+}
+export type DecoItem = { n: number, id: string, size: string, name: Text, source: Text }
+export type PlanRect = { x: number, y: number, w: number, h: number, col: number, row: number, size: string }
+
+-- Sortes de l'onglet Mon style, dans l'ordre de l'écran (D10) ; « outfits » = tenues, « deco » = plan
+MetaView.STYLE_KINDS =
+	table.freeze({ "theme", "deco", "saddle", "trail", "title", "flag", "outfits", "palette", "cushions" })
+
+-- Sortes qui ont « Aucun » (retirer) ; palette et coussins : la couleur du ranch par défaut
+local NONE_KINDS: { [string]: boolean } =
+	{ trail = true, title = true, flag = true, palette = true, cushions = true }
+
+-- Interrupteur de chaque source de la v2.0 : MÊME règle que Logic/Owned (FLAG_OF ; croisé par
+-- MetaView.spec : un objet montré est gagnable avec ces interrupteurs, et seulement avec eux) ;
+-- « season » : aucun (gagnée pour toujours)
+local SOURCE_FLAG: { [string]: string } = {
+	recordR = "RecordR",
+	ascend = "JellyAscend",
+	atelier = "Workshop",
+	carnet = "Carnet",
+	won = "WeeklyTrack",
+	size = "Mastery",
+}
+MetaView.SOURCE_FLAG = table.freeze(table.clone(SOURCE_FLAG))
+
+type V2Entry = { id: string, key: string, source: { kind: string, value: number } }
+
+-- Objets de la v1.3 par sorte (Cosmetics.List, ordre) ; objets de la v2.0 par sorte, dans l'ordre de
+-- Logic/Owned (ListV2, cosmétiques de la semaine, palettes de l'Atelier, palettes de la table des
+-- Record R ; un identifiant de la v1.3 garde sa source de la v1.3, la première source déclarée gagne)
+local V13_KIND: { [string]: { Cosmetics.CosmeticDef } } = {}
+local V2_KIND: { [string]: { V2Entry } } = {}
+do
+	for _, def in Cosmetics.List do
+		local list = V13_KIND[def.kind] or {}
+		V13_KIND[def.kind] = list
+		table.insert(list, def)
+	end
+	for _, list in V13_KIND do
+		table.sort(list, function(a, b)
+			return a.order < b.order
+		end)
+	end
+	local seen: { [string]: boolean } = {}
+	local function add(kind: string, id: string, key: string, sourceKind: string, value: number)
+		local k = kind .. ":" .. id
+		if Cosmetics.ByKindId[k] ~= nil or seen[k] then
+			return
+		end
+		seen[k] = true
+		local list = V2_KIND[kind] or {}
+		V2_KIND[kind] = list
+		table.insert(list, { id = id, key = key, source = { kind = sourceKind, value = value } })
+	end
+	for _, def in Cosmetics.ListV2 :: { any } do
+		add(def.kind, def.id, def.key, def.source.kind, def.source.value or 0)
+	end
+	for i, item in WEEKLY do
+		add(item.kind, item.id, item.key, "won", i)
+	end
+	for _, line in Upgrades.Fun do
+		if line.store == "bits" then
+			for j, grant in line.grants do
+				local id = string.match(grant, "^palette%.(.+)$")
+				if id ~= nil then
+					add("palette", id, grant, "atelier", (line.firstBit or 1) + j - 1)
+				end
+			end
+		end
+	end
+	for r, row in Visuals.RecordTable do
+		for _, unlock in row.unlocks do
+			local name = if unlock.vars then unlock.vars.name else nil
+			local id = if type(name) == "string" then string.match(name, "^palette%.(.+)$") else nil
+			if id ~= nil and type(name) == "string" then
+				add("palette", id, name, "recordR", r)
+			end
+		end
+	end
+end
+
+-- Texte de la source d'un objet (v1.3 et v2.0) ; nombres en chiffres (BigNumber), taille abrégée
+local function sourceOf(kind: any, value: any, lang: string?): Text
+	local v = if finite(value) then value else 0
+	if kind == "recordR" or kind == "rebirth" then
+		return text("cosmetic.source.rebirth", { n = num(v, lang) })
+	elseif kind == "won" then
+		return text("cosmetic.source.track")
+	elseif kind == "season" then
+		return text("cosmetic.source.season", { n = num(Owned.FROST_DAYS, lang) })
+	elseif kind == "size" then
+		return text("cosmetic.source.size", { size = BigNumber.abbreviate(v, lang) })
+	elseif kind == "play" then
+		return text("cosmetic.source.play", { n = num(math.max(1, math.floor(v / 60)), lang) })
+	elseif kind == "track" then
+		return text("cosmetic.source.tracks", { n = num(v, lang) })
+	elseif kind == "atelier" or kind == "pass" or kind == "product" or kind == "weekly" or kind == "free" then
+		return text("cosmetic.source." .. kind)
+	elseif
+		kind == "dex"
+		or kind == "plopDay"
+		or kind == "ascend"
+		or kind == "carnet"
+		or kind == "objectives"
+		or kind == "moon"
+	then
+		return text("cosmetic.source." .. kind, { n = num(v, lang) })
+	end
+	return text("panel.ranch.style.locked")
+end
+
+-- Objet de la v2.0 montré : interrupteur de sa source ouvert (habillage : RanchSkins aussi) ; sans
+-- ctx.on (interrupteurs inconnus) : aucun, même la selle de saison qui n'a pas d'interrupteur
+local function v2Shown(kind: string, sourceKind: string, ctx: any): boolean
+	if type(field(ctx, "on")) ~= "function" then
+		return false
+	end
+	local flag = SOURCE_FLAG[sourceKind]
+	if flag ~= nil and not isOn(ctx, flag) then
+		return false
+	end
+	if kind == "theme" and not isOn(ctx, "RanchSkins") then
+		return false
+	end
+	return true
+end
+
+-- Objets de la sorte `kind` de Mon style (voir l'en-tête) ; sorte inconnue : liste vide
+function MetaView.styleItems(kind: string, ctx: Ctx?): { StyleItem }
+	local out: { StyleItem } = {}
+	if type(kind) ~= "string" then
+		return out
+	end
+	local realKind = if kind == "outfits" then "outfit" else kind
+	local lang = langOf(ctx)
+	if NONE_KINDS[realKind] then
+		table.insert(out, { kind = realKind, id = "", name = text("panel.ranch.style.none"), v2 = false })
+	end
+	for _, def in V13_KIND[realKind] or {} do
+		table.insert(out, {
+			kind = realKind,
+			id = def.id,
+			name = text("cosmetic." .. realKind .. "." .. def.id),
+			v2 = false,
+			source = sourceOf(def.source.kind, def.source.value, lang),
+			color = def.color,
+		})
+	end
+	for _, entry in V2_KIND[realKind] or {} do
+		if v2Shown(realKind, entry.source.kind, ctx) then
+			table.insert(out, {
+				kind = realKind,
+				id = entry.id,
+				name = text(entry.key),
+				v2 = true,
+				source = sourceOf(entry.source.kind, entry.source.value, lang),
+			})
+		end
+	end
+	return out
+end
+
+-- Objets de Déco perso de la taille `size` ("P" | "G" ; nil : les 40), dans l'ordre de l'Annexe B.1
+function MetaView.decoItems(size: string?, ctx: Ctx?): { DecoItem }
+	local out: { DecoItem } = {}
+	local lang = langOf(ctx)
+	for _, def in Cosmetics.DecoPerso do
+		if size == nil or def.size == size then
+			table.insert(out, {
+				n = def.n,
+				id = def.id,
+				size = def.size,
+				name = text(def.key),
+				source = sourceOf(def.source.kind, def.source.value, lang),
+			})
+		end
+	end
+	return out
+end
+
+-- Plan vu du dessus (D11) : X local de droite à gauche (le joueur entre par le portail, en bas, et
+-- regarde vers le fond : +X est à sa gauche), Z du portail (bas) au fond (haut). Chaque emplacement,
+-- dans l'ordre, prend la case libre la plus proche d'une grille PLAN_COLS × PLAN_ROWS : une case par
+-- emplacement, donc aucun chevauchement et tout dans le rectangle, quelles que soient les positions
+local PLAN_COLS, PLAN_ROWS = 5, 4
+local HALF_W, DEPTH = 31.5, 72 -- demi-largeur et profondeur du ranch (studs, repère local)
+MetaView.PLAN_COLS, MetaView.PLAN_ROWS = PLAN_COLS, PLAN_ROWS
+function MetaView.planLayout(slots: any, width: number, height: number): { PlanRect }
+	local out: { PlanRect } = {}
+	if type(slots) ~= "table" or not finite(width) or not finite(height) or width <= 0 or height <= 0 then
+		return out
+	end
+	local cw, ch = width / PLAN_COLS, height / PLAN_ROWS
+	local taken: { [number]: boolean } = {}
+	for i = 1, #slots do
+		local def = slots[i]
+		local p = if type(def) == "table" then rawget(def, "position") else nil
+		local x = if typeof(p) == "Vector3" and finite(p.X) then p.X else 0
+		local z = if typeof(p) == "Vector3" and finite(p.Z) then p.Z else 0
+		local u = math.clamp((HALF_W - x) / (2 * HALF_W), 0, 1)
+		local w = math.clamp(z / DEPTH, 0, 1)
+		local best, bestD = 0, math.huge
+		for row = 1, PLAN_ROWS do
+			for col = 1, PLAN_COLS do
+				local cell = (row - 1) * PLAN_COLS + col
+				if not taken[cell] then
+					local du = (col - 0.5) / PLAN_COLS - u
+					local dw = (row - 0.5) / PLAN_ROWS - w
+					local d = du * du + dw * dw
+					if d < bestD - 1e-9 then
+						best, bestD = cell, d
+					end
+				end
+			end
+		end
+		if best == 0 then
+			break -- plus de 20 emplacements : les suivants ne sont pas posés
+		end
+		taken[best] = true
+		local col = (best - 1) % PLAN_COLS + 1
+		local row = (best - 1) // PLAN_COLS + 1
+		local size = if type(def) == "table" and rawget(def, "size") == "G" then "G" else "P"
+		-- G : presque toute la case ; P : plus bas (deux tailles bien visibles)
+		local bw = math.floor(cw - (if size == "G" then 8 else 24))
+		local bh = math.floor(ch * (if size == "G" then 0.92 else 0.68))
+		local cx = (col - 0.5) * cw
+		local cy = height - (row - 0.5) * ch -- rangée 1 = portail, en bas
+		out[i] = {
+			x = math.floor(cx - bw / 2),
+			y = math.floor(cy - bh / 2),
+			w = bw,
+			h = bh,
+			col = col,
+			row = row,
+			size = size,
+		}
+	end
+	return out
 end
 
 return MetaView

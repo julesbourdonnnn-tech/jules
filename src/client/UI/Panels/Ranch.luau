@@ -16,9 +16,26 @@
 --   * Style : sous-listes Selle, Traînée, Titre, Thème, Drapeau, Tenues ; « Équipé », ou cadenas et
 --     source ; ✕ sur un objet débloqué → EquipCosmetic(kind, id) (« Aucun » pour retirer) ; ✕ sur une
 --     tenue possédée → OutfitPreview ; verrouillé : refusé sans envoi (son Error, vibration refuse).
+-- v2.0 (lot B3, étape 3 ; plan B3 D10, D11, D12, D17, D24, D25) :
+--   * N8 : l'onglet Dalles n'existe pas tant que l'écran Améliorations est disponible (instantané du
+--     serveur, UpgradeSnapshot.available) ; sa page n'est alors pas construite (elle l'est à
+--     l'ouverture suivante si le chemin de la v1.3 revient) ; open("padsKept") garde son sens v1.3 ;
+--   * Mon style (profil v2 et au moins un interrupteur v2.0 annoncé, UI/MetaFlags) : l'onglet Style
+--     s'appelle « Mon style » ; sortes habillage (14), Déco perso (plan vu du dessus, seulement si MON
+--     ranch porte l'attribut DecoPerso), selle, traînée, titre (jusqu'à 66), drapeau, tenues (8),
+--     palette et coussins (Owned.kindOpen) ; liste des sortes et grille virtualisée (Widgets.rows,
+--     5 colonnes) communes à toutes les sortes ; possession : v1.3 par cosmeticUnlocked, v2.0 par
+--     Logic/Owned, tenues par outfits.owned ; plan : 12 emplacements de WorldLayout.decoPersoSlots(),
+--     contenu de RanchLook.decoPerso(attribut DecoPerso), ✕ → choix dans la grille (« Aucun », objets
+--     possédés de la taille, puis verrouillés) → PlaceDeco(n, emplacement) ; ○ : choix → son
+--     emplacement, plan ou grille → liste des sortes, liste → menu. Rien n'est construit, envoyé ni
+--     montré de la v2.0 interrupteurs coupés : l'onglet Style de la v1.3 reste identique ;
+--   * glyphes de la règle 18 (D17) : cœur des jumeaux, cœur de la pastille du Meilleur Ami et coche de
+--     la case choisie DESSINÉS (Hud/Icons), dans les deux chemins.
 -- Un bouton refusé (enclos pleins, pas assez de pièces, verrouillé) ne part jamais au serveur ; le
 -- serveur revalide tout. Sélection par défaut (GDD §10.6) : 1re case ; Fusionner : « Choisir A » ;
--- Dalles : la moins chère achetable ; Style : l'objet équipé de la 1re sous-liste.
+-- Dalles : la moins chère achetable ; Style : l'objet équipé de la 1re sous-liste ; Mon style :
+-- l'objet équipé de la 1re sorte (habillage), plan : l'emplacement 1.
 
 local GuiService = game:GetService("GuiService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -33,6 +50,10 @@ local Formulas = require(Shared.Logic.Formulas)
 local FusionRules = require(Shared.Logic.FusionRules)
 local Odds = require(Shared.Logic.Odds)
 local QuestRules = require(Shared.Logic.QuestRules)
+local Owned = require(Shared.Logic.Owned)
+local Bitset = require(Shared.Logic.Bitset)
+local RanchLook = require(Shared.Logic.RanchLook)
+local WorldLayout = require(Shared.Logic.WorldLayout)
 local Clock = require(Shared.Util.Clock)
 local Net = require(Shared.Net)
 
@@ -42,6 +63,10 @@ local WorldStateController = require(Client.Controllers.WorldStateController)
 local Prefs = require(Client.Util.Prefs)
 local Widgets = require(script.Parent.Widgets)
 local Format = require(Client.UI.Format)
+local Icons = require(Client.UI.Hud.Icons)
+local MetaFlags = require(Client.UI.MetaFlags)
+local MetaView = require(Client.UI.MetaView)
+local UpgradeSnapshot = require(Client.UI.UpgradeSnapshot)
 
 type Nav = { open: (panel: string, tab: string?) -> (), back: () -> () }
 type Item = { uid: string, rec: { [string]: any }, size: number, income: number }
@@ -52,11 +77,33 @@ type Cell = {
 	size: TextLabel,
 	line: TextLabel,
 	bf: TextLabel,
-	twin: TextLabel,
+	bfHeart: Frame,
+	-- une seule toile (Hud/Icons) : coche de la case choisie, sinon cœur des jumeaux (règle 18, D17)
+	mark: Frame,
 	lock: Frame,
 	mount: Frame,
-	check: TextLabel,
 	uid: string,
+}
+-- Mon style (v2.0) : case de la grille commune, liste des sortes, entrée liée à une case
+type V2Cell = {
+	button: TextButton,
+	swatch: Frame,
+	lock: Frame,
+	name: TextLabel,
+	status: TextLabel,
+	index: number, -- entrée liée (0 : aucune)
+}
+type V2Row = { cells: { V2Cell } }
+type KindRow = { button: TextButton, kind: string }
+type V2Entry = {
+	kind: string, -- sorte du profil (EquipCosmetic) ; « deco » : choix d'un objet de Déco perso
+	id: string, -- "" : « Aucun »
+	n: number, -- Déco perso : numéro de l'objet (0 : « Aucun »)
+	name: MetaView.Text,
+	source: MetaView.Text?,
+	color: Color3?,
+	unlocked: boolean,
+	equipped: boolean,
 }
 type Row = { cells: { Cell } }
 type StyleCell = {
@@ -82,6 +129,15 @@ local GAP = Layout.Spacing.Min
 local BAR_H = Layout.Button.MinHeight
 local BAR_GAP = Layout.Spacing.Normal -- 24 : le bouton sélectionné grossit sans toucher son voisin
 local HOLD = Balance.Sell.Hold
+-- glyphes dessinés (D17) : pastille du Meilleur Ami (cœur + nombre), cœur des jumeaux, coche
+local BF_W, BF_HEART = 64, 22
+local MARK_HEART = { x = 8, y = 8, size = 32 }
+local MARK_CHECK = { x = 10, y = 56, size = 52 }
+-- Mon style (v2.0, D10, D11, D24) : liste des sortes, grille de 5 colonnes, plan vu du dessus
+local V2_KIND_W = 260
+local V2_COLS = 5
+local V2_CELL_H = 200
+local PLAN_TOP = 56 -- titre du plan au-dessus du rectangle
 
 local nav: Nav? = nil
 local isOpen = false
@@ -116,6 +172,27 @@ local styleKind = "saddle"
 local styleKindButtons: { [string]: TextButton } = {}
 local styleCells: { StyleCell } = {}
 local sessionUnlocks: { [string]: boolean } = {} -- titres de la semaine (Celebrate "unlock")
+-- construction paresseuse (D12, D24) : dalles et parties de Style construites sur leur premier besoin
+local buildContainer: Frame? = nil
+local buildTop = 0
+local padsBuilt = false
+local stylePage: Frame? = nil
+local styleMode = "" -- "v13" | "v2" : chemin de Style montré (choisi à l'ouverture, jamais écran ouvert)
+local v13Built = false
+local v2Built = false
+local v13Kinds: Frame? = nil
+local v13Items: Frame? = nil
+-- Mon style
+local kindsV2: { string } = {}
+local kindRows: Widgets.Rows? = nil
+local itemRows: Widgets.Rows? = nil
+local v2Entries: { V2Entry } = {}
+local planFrame: Frame? = nil
+local slotButtons: { TextButton } = {}
+local pickerSlot = 0 -- Déco perso : emplacement dont le choix est ouvert (0 : le plan)
+local decoContents: { number } = table.create(#Cosmetics.DecoSlots, 0)
+local decoModel: Instance? = nil
+local decoConn: RBXScriptConnection? = nil
 
 -- =============================================================================================
 -- Données
@@ -349,11 +426,26 @@ local function bindCell(cell: Cell, item: Item?)
 	inkOn(cell.line, isSelected, lineColor)
 	local bf = math.floor(Widgets.n(rec.bf))
 	cell.bf.Visible = bf > 0
-	Widgets.setRaw(cell.bf, "♥" .. Format.count(bf))
-	cell.twin.Visible = hasTwin(item.uid, rec)
+	-- « ♥n » : cœur DESSINÉ devant le nombre (« ♥ » absent des polices, règle 18 ; lot B3, D17)
+	Widgets.setRaw(cell.bf, Format.count(bf))
+	-- une seule toile : la coche de la case choisie (grande, à gauche, bleu nuit sur le vert), sinon le
+	-- cœur des jumeaux (en haut à droite) ; à Fusionner, la case choisie est un jumeau (budget, D24)
+	local mark = cell.mark
+	if isSelected then
+		mark.AnchorPoint = Vector2.zero
+		mark.Position = UDim2.fromOffset(MARK_CHECK.x, MARK_CHECK.y)
+		mark.Size = UDim2.fromOffset(MARK_CHECK.size, MARK_CHECK.size)
+		Icons.draw(mark, "check", Widgets.Colors.Stroke)
+	elseif hasTwin(item.uid, rec) then
+		mark.AnchorPoint = Vector2.new(1, 0)
+		mark.Position = UDim2.new(1, -MARK_HEART.x, 0, MARK_HEART.y)
+		mark.Size = UDim2.fromOffset(MARK_HEART.size, MARK_HEART.size)
+		Icons.draw(mark, "heart")
+	else
+		Icons.draw(mark, nil)
+	end
 	cell.lock.Visible = rec.lk == true
 	cell.mount.Visible = Widgets.state("mount") == item.uid
-	cell.check.Visible = isSelected
 	local base = Widgets.rarityColor(rarityOf(rec)):Lerp(Widgets.Colors.Card, 0.6)
 	cell.button.BackgroundColor3 = if isSelected then Widgets.Colors.Success else base
 	Widgets.setDisabled(cell.button, cellDisabled(item))
@@ -401,11 +493,12 @@ local function makeCell(frame: Frame, c: number): Cell
 	local size = text("Size", 154, 34, 28, Widgets.Colors.TextDim)
 	local line = text("Line", 192, 34, 28)
 	-- « ♥1 » bleu nuit sur l'or, sans contour (un contour bleu nuit fondait les lettres en une tache ;
-	-- revue des écrans)
+	-- revue des écrans) ; le cœur est DESSINÉ devant le nombre (règle 18, D17), place gardée par un
+	-- retrait, comme la pastille des jumeaux du rail (lot B2)
 	local bf = Widgets.label({
 		parent = b,
 		name = "BestFriend",
-		size = UDim2.fromOffset(60, 36),
+		size = UDim2.fromOffset(BF_W, 36),
 		position = UDim2.fromOffset(6, 6),
 		text = "",
 		textSize = 28,
@@ -416,17 +509,20 @@ local function makeCell(frame: Frame, c: number): Cell
 		zIndex = b.ZIndex + 3,
 	})
 	Widgets.corner(bf, UDim.new(0.5, 0))
-	local twin = Widgets.label({
-		parent = b,
-		name = "Twin",
-		size = UDim2.fromOffset(40, 36),
-		position = UDim2.new(1, -6, 0, 6),
-		anchor = Vector2.new(1, 0),
-		text = "♥",
-		textSize = 32,
-		color = Widgets.Colors.Pink,
-		zIndex = b.ZIndex + 3,
-	})
+	local bfHeart = Icons.canvas(bf, BF_HEART, { "heart" }, "Heart")
+	bfHeart.AnchorPoint = Vector2.new(0, 0.5)
+	bfHeart.Position = UDim2.new(0, 8, 0.5, 0)
+	bfHeart.ZIndex = bf.ZIndex + 1
+	Icons.draw(bfHeart, "heart", Widgets.Colors.Stroke)
+	local pad = Instance.new("UIPadding")
+	pad.PaddingLeft = UDim.new(0, BF_HEART + 12)
+	pad.PaddingRight = UDim.new(0, 6)
+	pad.PaddingTop = UDim.new(0, 0)
+	pad.PaddingBottom = UDim.new(0, 0)
+	pad.Parent = bf
+	-- coche (case choisie) ou cœur des jumeaux : une toile, placée par bindCell
+	local mark = Icons.canvas(b, MARK_HEART.size, { "check", "heart" }, "Mark")
+	mark.ZIndex = b.ZIndex + 4
 	local lock = Widgets.frame({
 		parent = b,
 		name = "Lock",
@@ -458,16 +554,6 @@ local function makeCell(frame: Frame, c: number): Cell
 		corner = UDim.new(0, 8),
 		zIndex = b.ZIndex + 3,
 	})
-	local check = Widgets.label({
-		parent = b,
-		name = "Check",
-		size = UDim2.fromOffset(64, 56),
-		position = UDim2.fromOffset(6, 54),
-		text = "✓",
-		textSize = 48,
-		color = Widgets.Colors.Text,
-		zIndex = b.ZIndex + 4,
-	})
 	cell = {
 		button = b,
 		blob = blob,
@@ -475,10 +561,10 @@ local function makeCell(frame: Frame, c: number): Cell
 		size = size,
 		line = line,
 		bf = bf,
-		twin = twin,
+		bfHeart = bfHeart,
+		mark = mark,
 		lock = lock,
 		mount = mount,
-		check = check,
 		uid = "",
 	}
 	return cell
@@ -994,7 +1080,7 @@ local function styleEntries(kind: string): { { kind: string, id: string } }
 	return out
 end
 
-local function refreshStyle()
+local function refreshStyleV13()
 	for kind, b in styleKindButtons do
 		b.BackgroundColor3 = if kind == styleKind then Widgets.Colors.Accent else Widgets.Colors.Card
 	end
@@ -1087,8 +1173,495 @@ local function onStyleCell(cell: StyleCell)
 end
 
 -- =============================================================================================
+-- Mon style (v2.0, lot B3, étape 3 ; plan B3 D10, D11, D24, D25) : parties construites à la première
+-- ouverture qui en a besoin, jamais interrupteurs coupés ; sur ce chemin, les parties de la v1.3
+-- (6 sous-listes, 15 cases) ne sont pas construites (elles le sont à l'ouverture suivante si le chemin
+-- de la v1.3 revient)
+-- =============================================================================================
+
+-- Chemin Mon style : profil v2 et au moins un interrupteur v2.0 annoncé par le serveur (D10)
+local function styleV2(): boolean
+	if not MetaFlags.v2Profile() then
+		return false
+	end
+	for _, flag in MetaFlags.FLAGS do
+		if MetaFlags.on(flag) then
+			return true
+		end
+	end
+	return false
+end
+
+local function lang(): string
+	local ok, l = pcall(Prefs.language)
+	return if ok and l == "fr" then "fr" else "en"
+end
+
+local function metaCtx(): MetaView.Ctx
+	return { lang = lang(), on = MetaFlags.on }
+end
+
+-- Profil répliqué sur les clés que lisent Logic/Owned et Logic/Prestige (possession, D10, D11)
+local OWNED_KEYS = {
+	"version",
+	"R",
+	"bestR",
+	"ascend",
+	"atelierCosmetics",
+	"atelier",
+	"stats",
+	"weeklyTrack",
+	"biggestEver",
+	"season",
+	"plopDays",
+	"dex",
+	"moon",
+	"decoPerso",
+}
+
+-- MON ranch porte l'attribut DecoPerso (interrupteur DecoPerso ouvert sur le serveur, profil v2)
+local function decoOpen(): boolean
+	return type(MetaFlags.attr("DecoPerso")) == "string"
+end
+
+-- Sortes de Mon style montrées (D10) : Déco perso seulement avec l'attribut ; palette et coussins
+-- seulement quand une de leurs sources est ouverte (Owned.kindOpen)
+local function kindsFor(): { string }
+	local flags = MetaFlags.owned()
+	local out = {}
+	for _, kind in MetaView.STYLE_KINDS do
+		if kind == "deco" then
+			if decoOpen() then
+				table.insert(out, kind)
+			end
+		elseif kind == "palette" or kind == "cushions" then
+			if Owned.kindOpen(kind, flags) then
+				table.insert(out, kind)
+			end
+		else
+			table.insert(out, kind)
+		end
+	end
+	return out
+end
+
+local function kindKey(kind: string): string
+	return if kind == "deco" then "deco.title" else "panel.ranch.style." .. kind
+end
+
+local function worn(kind: string): string
+	local value = Widgets.tbl(Widgets.state("cosmetics"))[kind]
+	return if type(value) == "string" then value else ""
+end
+
+-- Entrées d'une sorte (sauf Déco perso) : possession v1.3 par cosmeticUnlocked (inchangée), v2.0 par
+-- Logic/Owned avec les interrupteurs annoncés, tenues par outfits.owned (D10)
+local function styleEntriesV2(kind: string): { V2Entry }
+	local out: { V2Entry } = {}
+	local profile = Widgets.profile(OWNED_KEYS)
+	local flags = MetaFlags.owned()
+	local owned = Widgets.tbl(Widgets.tbl(Widgets.state("outfits")).owned)
+	for _, item in MetaView.styleItems(kind, metaCtx()) do
+		local unlocked: boolean
+		if item.kind == "outfit" then
+			unlocked = Widgets.n(owned[item.id]) > 0
+		elseif item.id == "" then
+			unlocked = true
+		elseif item.v2 then
+			unlocked = worn(item.kind) == item.id or Owned.cosmetic(profile, item.kind, item.id, flags)
+		else
+			unlocked = cosmeticUnlocked(item.kind, item.id)
+		end
+		table.insert(out, {
+			kind = item.kind,
+			id = item.id,
+			n = 0,
+			name = item.name,
+			source = item.source,
+			color = item.color,
+			unlocked = unlocked,
+			equipped = item.kind ~= "outfit" and worn(item.kind) == item.id,
+		})
+	end
+	return out
+end
+
+-- Objet n de Déco perso possédé : même règle que le serveur (bit de decoPerso.owned, ou source
+-- gagnée : Owned.deco ; CommunityService.onPlaceDeco)
+local function decoOwned(profile: { [string]: any }, n: number, flags: Owned.Flags): boolean
+	local deco = profile.decoPerso
+	local bits = if type(deco) == "table" then deco.owned else nil
+	return Bitset.has(bits, n) or Owned.deco(profile, n, flags)
+end
+
+-- Choix d'un objet pour l'emplacement `slot` (D11) : « Aucun », objets possédés de SA taille, puis
+-- verrouillés (grisés, avec leur source) ; un objet posé dans un AUTRE emplacement n'est pas proposé
+-- (le serveur refuserait : jamais deux fois)
+local function pickerEntries(slot: number): { V2Entry }
+	local current = decoContents[slot] or 0
+	local out: { V2Entry } = {
+		{
+			kind = "deco",
+			id = "",
+			n = 0,
+			name = { key = "panel.ranch.style.none" },
+			unlocked = true,
+			equipped = current == 0,
+		},
+	}
+	local size = Cosmetics.DecoSlots[slot]
+	if size == nil then
+		return out
+	end
+	local elsewhere: { [number]: boolean } = {}
+	for i, n in decoContents do
+		if i ~= slot and n > 0 then
+			elsewhere[n] = true
+		end
+	end
+	local profile = Widgets.profile(OWNED_KEYS)
+	local flags = MetaFlags.owned()
+	local locked: { V2Entry } = {}
+	for _, item in MetaView.decoItems(size, metaCtx()) do
+		if not elsewhere[item.n] then
+			local own = item.n == current or decoOwned(profile, item.n, flags)
+			table.insert(if own then out else locked, {
+				kind = "deco",
+				id = item.id,
+				n = item.n,
+				name = item.name,
+				source = item.source,
+				unlocked = own,
+				equipped = item.n == current,
+			})
+		end
+	end
+	for _, e in locked do
+		table.insert(out, e)
+	end
+	return out
+end
+
+local function setTextOf(label: TextLabel, t: MetaView.Text?)
+	if t == nil then
+		Widgets.setRaw(label, "")
+		return
+	end
+	Widgets.setText(label, t.key, t.vars)
+end
+
+local function bindV2Cell(cell: V2Cell, index: number)
+	local e = v2Entries[index]
+	cell.button.Visible = e ~= nil
+	if e == nil then
+		cell.index = 0
+		return
+	end
+	cell.index = index
+	setTextOf(cell.name, e.name)
+	cell.swatch.Visible = e.color ~= nil
+	if e.color then
+		cell.swatch.BackgroundColor3 = e.color
+	end
+	cell.lock.Visible = not e.unlocked
+	cell.button:SetAttribute("Locked", not e.unlocked)
+	if e.equipped then
+		Widgets.setText(cell.status, "panel.ranch.style.equipped")
+		cell.status.TextColor3 = Widgets.Colors.Text
+	elseif not e.unlocked then
+		setTextOf(cell.status, e.source)
+		cell.status.TextColor3 = Widgets.Colors.TextDim
+	elseif e.kind == "outfit" then
+		local owned = Widgets.tbl(Widgets.tbl(Widgets.state("outfits")).owned)
+		Widgets.setText(cell.status, "panel.shop.outfitOwned", { n = math.floor(Widgets.n(owned[e.id])) })
+		cell.status.TextColor3 = Widgets.Colors.Text
+	else
+		Widgets.setText(cell.status, "panel.ranch.style.equip")
+		cell.status.TextColor3 = Widgets.Colors.Text
+	end
+	cell.button.BackgroundColor3 = if e.equipped
+		then Widgets.Colors.Success:Lerp(Widgets.Colors.Card, 0.4)
+		elseif e.unlocked then Widgets.Colors.CardLight
+		else Widgets.Colors.Locked
+	-- tenue possédée : ouvre la garde-robe (OutfitPreview) ; emplacement : ouvre son choix
+	cell.button:SetAttribute("TvNav", e.kind == "outfit" and e.unlocked)
+end
+
+local function bindKindRow(row: KindRow, _frame: Frame, index: number)
+	local kind = kindsV2[index]
+	row.kind = kind or ""
+	if kind then
+		local label = Widgets.buttonLabel(row.button)
+		if label then
+			Widgets.setText(label, kindKey(kind))
+		end
+		row.button.BackgroundColor3 = if kind == styleKind then Widgets.Colors.Accent else Widgets.Colors.Card
+	end
+end
+
+-- Plan (D11) : nom de l'objet posé (deco.<id>) ou « Emplacement libre », d'après l'attribut DecoPerso
+-- de MON ranch (RanchLook.decoPerso : valeur hostile = emplacements vides) ; aucune instance créée
+local function bindPlan()
+	for i, b in slotButtons do
+		local n = decoContents[i] or 0
+		local def = if n > 0 then Cosmetics.DecoPerso[n] else nil
+		local label = Widgets.buttonLabel(b)
+		if label then
+			if def then
+				Widgets.setText(label, def.key)
+				label.TextColor3 = Widgets.Colors.Text
+			else
+				Widgets.setText(label, "deco.empty")
+				label.TextColor3 = Widgets.Colors.TextDim
+			end
+		end
+		b.BackgroundColor3 = if def
+			then Widgets.Colors.Success:Lerp(Widgets.Colors.Card, 0.4)
+			else Widgets.Colors.CardLight
+		b:SetAttribute("DecoItem", n)
+	end
+end
+
+-- Modèle de MON ranch (Wobbleton/Ranches/<slot>) : l'attribut DecoPerso y est écrit par le serveur
+local function myRanchModel(): Instance?
+	local ok, slot = pcall(WorldStateController.mySlot)
+	if not ok or type(slot) ~= "number" or slot <= 0 then
+		return nil
+	end
+	local world = workspace:FindFirstChild("Wobbleton")
+	local list = world and world:FindFirstChild("Ranches")
+	return if list then list:FindFirstChild(Format.id(slot)) else nil
+end
+
+local refreshStyle: () -> ()
+
+-- Plan relié quand l'attribut DecoPerso de MON ranch change (connexion refaite si le ranch change ;
+-- chemin v2.0 seulement : jamais interrupteurs coupés)
+local function watchDeco()
+	local model = myRanchModel()
+	if model == decoModel then
+		return
+	end
+	local old = decoConn
+	decoConn = nil
+	if old then
+		old:Disconnect()
+	end
+	decoModel = model
+	if model then
+		decoConn = model:GetAttributeChangedSignal("DecoPerso"):Connect(function()
+			if isOpen and current == "style" and styleMode == "v2" then
+				refreshStyle()
+			end
+		end)
+	end
+end
+
+local function refreshStyleV2()
+	local kRows, iRows, plan = kindRows, itemRows, planFrame
+	if kRows == nil or iRows == nil or plan == nil then
+		return
+	end
+	kindsV2 = kindsFor()
+	if not table.find(kindsV2, styleKind) then
+		styleKind = kindsV2[1]
+		pickerSlot = 0
+	end
+	if styleKind ~= "deco" then
+		pickerSlot = 0
+	end
+	watchDeco()
+	decoContents = RanchLook.decoPerso(MetaFlags.attr("DecoPerso"))
+	kRows.setCount(#kindsV2)
+	kRows.refresh()
+	local showPlan = styleKind == "deco" and pickerSlot == 0
+	if showPlan then
+		v2Entries = {}
+		bindPlan()
+	elseif styleKind == "deco" then
+		v2Entries = pickerEntries(pickerSlot)
+	else
+		v2Entries = styleEntriesV2(styleKind)
+	end
+	plan.Visible = showPlan
+	iRows.frame.Visible = not showPlan
+	iRows.setCount(math.ceil(#v2Entries / V2_COLS))
+	iRows.refresh()
+end
+
+-- Style : le chemin choisi à l'ouverture (D10)
+refreshStyle = function()
+	if styleMode == "v2" then
+		refreshStyleV2()
+	elseif styleMode == "v13" then
+		refreshStyleV13()
+	end
+end
+
+-- Case de l'objet équipé (sinon la 1re case) de la grille de Mon style
+local function selectedV2Cell(): GuiObject?
+	local rows = itemRows
+	if rows == nil or #v2Entries == 0 then
+		return nil
+	end
+	local index = 1
+	for i, e in v2Entries do
+		if e.equipped then
+			index = i
+			break
+		end
+	end
+	return rows.selectableAt((index - 1) // V2_COLS + 1, (index - 1) % V2_COLS + 1)
+end
+
+local function kindButtonV2(kind: string): GuiObject?
+	local rows = kindRows
+	local i = table.find(kindsV2, kind)
+	if rows == nil or i == nil then
+		return nil
+	end
+	return rows.selectableAt(i, 1)
+end
+
+-- ○ sur le choix d'un objet : revient au plan, sélection sur son emplacement
+local function closePicker(focus: boolean)
+	local slot = pickerSlot
+	pickerSlot = 0
+	refreshStyle()
+	local b = slotButtons[slot]
+	if focus and b then
+		GuiService.SelectedObject = b
+	end
+end
+
+-- ✕ sur un emplacement du plan : son choix dans la grille (sélection : l'objet posé, ou « Aucun »)
+local function openPicker(slot: number)
+	local b = slotButtons[slot]
+	if b == nil then
+		return
+	end
+	if not styleV2() or not decoOpen() then
+		Widgets.refuse(b)
+		return
+	end
+	pickerSlot = slot
+	refreshStyle()
+	local target = selectedV2Cell()
+	if target then
+		GuiService.SelectedObject = target
+	end
+end
+
+-- ✕ dans le choix : PlaceDeco(n, emplacement), ou PlaceDeco(0, emplacement) pour « Aucun » sur un
+-- emplacement occupé ; rien quand l'objet y est déjà (D11 ; le plan suit l'attribut, jamais deviné)
+local function pickDeco(e: V2Entry)
+	local slot = pickerSlot
+	if slot < 1 or slotButtons[slot] == nil then
+		return
+	end
+	local here = decoContents[slot] or 0
+	if e.n ~= here then
+		Widgets.send("PlaceDeco", e.n, slot)
+	end
+	closePicker(true)
+end
+
+local function onV2Cell(cell: V2Cell)
+	local e = v2Entries[cell.index]
+	if e == nil then
+		return
+	end
+	-- verrouillé, ou interrupteur coupé pendant l'écran : refusé, rien n'est envoyé
+	if not e.unlocked or not styleV2() then
+		Widgets.refuse(cell.button)
+		return
+	end
+	if e.kind == "deco" then
+		pickDeco(e)
+		return
+	end
+	if e.kind == "outfit" then
+		if nav then
+			nav.open("OutfitPreview", e.id)
+		end
+		return
+	end
+	if worn(e.kind) == e.id then
+		return -- déjà équipé
+	end
+	-- palette et coussins : « Aucun » → "" (couleur du ranch)
+	Widgets.send("EquipCosmetic", e.kind, e.id)
+end
+
+local function onKindV2(row: KindRow)
+	local kind = row.kind
+	if kind == "" then
+		return
+	end
+	styleKind = kind
+	pickerSlot = 0
+	refreshStyle()
+	local target = if kind == "deco" then slotButtons[1] else selectedV2Cell()
+	if target then
+		GuiService.SelectedObject = target
+	end
+end
+
+-- =============================================================================================
 -- Rafraîchissement
 -- =============================================================================================
+
+-- Dalles retirées tant que l'écran Améliorations est disponible (N8, D12)
+local function padsHidden(): boolean
+	return UpgradeSnapshot.available()
+end
+
+-- Onglet Dalles caché ou montré selon le chemin ; vrai si l'onglet courant a dû changer
+local function syncPads(): boolean
+	local hidden = padsHidden()
+	if tabBar then
+		tabBar.setVisible("pads", not hidden)
+	end
+	if hidden and current == "pads" then
+		current = "pens"
+		keptFirst = false
+		return true
+	end
+	return false
+end
+
+-- Parties de Style du chemin courant visibles, les autres cachées ; libellé de l'onglet (D10)
+local function applyStyleMode()
+	local v2 = styleMode == "v2"
+	if v13Kinds then
+		v13Kinds.Visible = not v2
+	end
+	if v13Items then
+		v13Items.Visible = not v2
+	end
+	if kindRows then
+		kindRows.frame.Visible = v2
+	end
+	if itemRows then
+		itemRows.frame.Visible = v2
+	end
+	if planFrame and not v2 then
+		planFrame.Visible = false
+	end
+	local styleTab = if tabBar then tabBar.buttons.style else nil
+	local label = if styleTab then Widgets.buttonLabel(styleTab) else nil
+	if label then
+		Widgets.setText(label, if v2 then "panel.ranch.tab.myStyle" else "panel.ranch.tab.style")
+	end
+end
+
+-- 1re sorte du chemin de Style courant (v1.3 : Selle ; Mon style : habillage)
+local function firstStyleKind(): string
+	if styleMode == "v2" then
+		return kindsFor()[1] or "theme"
+	end
+	return STYLE_KINDS[1]
+end
 
 local function showTab()
 	if tabBar then
@@ -1116,6 +1689,19 @@ local function refresh()
 	if tabBar == nil then
 		return
 	end
+	-- instantané arrivé ou parti écran ouvert : l'onglet Dalles suit (sans rien construire)
+	if syncPads() then
+		showTab()
+	end
+	-- chemin de Style changé écran ouvert : bascule seulement si ses parties sont déjà construites
+	-- (sinon à l'ouverture suivante ; jamais d'instance créée écran ouvert)
+	local wantStyle = if styleV2() then "v2" else "v13"
+	if wantStyle ~= styleMode and (if wantStyle == "v2" then v2Built else v13Built) then
+		styleMode = wantStyle
+		pickerSlot = 0
+		applyStyleMode()
+		styleKind = firstStyleKind()
+	end
 	if GRID_TABS[current] then
 		items = itemsFor(current)
 		-- sélection multiple et choix A : seulement des squishies encore là
@@ -1138,7 +1724,9 @@ local function refresh()
 		refreshBars()
 		refreshDetail()
 	elseif current == "pads" then
-		refreshPads()
+		if padsBuilt then
+			refreshPads()
+		end
 	elseif current == "style" then
 		refreshStyle()
 	end
@@ -1577,6 +2165,7 @@ local function buildPads(container: Frame, top: number)
 	)
 	page.Visible = false
 	pages.pads = page
+	padsBuilt = true
 	labels.coins = Widgets.label({
 		parent = page,
 		name = "Coins",
@@ -1646,21 +2235,13 @@ local function buildPads(container: Frame, top: number)
 	end
 end
 
-local function buildStyle(container: Frame, top: number)
-	local width = container.Size.X.Offset
-	local page = Widgets.group(
-		container,
-		"Page_style",
-		UDim2.fromOffset(width, container.Size.Y.Offset - top),
-		UDim2.fromOffset(0, top)
-	)
-	page.Visible = false
-	-- deux niveaux : liste des sous-listes (« Kinds »), puis objets (« Items ») ; ○ remonte de l'un à l'autre
-	page:SetAttribute("TvLevels", true)
-	pages.style = page
+-- Parties de Style de la v1.3 (6 sous-listes, 15 cases fixes) : construites sur le chemin de la v1.3
+local function buildStyleV13(page: Frame)
+	local width = page.Size.X.Offset
 	local listW = 300
 	local pageH = page.Size.Y.Offset
 	local kinds = Widgets.group(page, "Kinds", UDim2.fromOffset(listW, pageH), UDim2.fromOffset(48, 0))
+	v13Kinds = kinds
 	for i, kind in STYLE_KINDS do
 		styleKindButtons[kind] = Widgets.button({
 			parent = kinds,
@@ -1685,6 +2266,7 @@ local function buildStyle(container: Frame, top: number)
 	local cols = 5
 	local areaW = width - left - 48
 	local itemsFrame = Widgets.group(page, "Items", UDim2.fromOffset(areaW, pageH), UDim2.fromOffset(left, 0))
+	v13Items = itemsFrame
 	local cw = math.floor((areaW - (cols - 1) * GAP) / cols)
 	local ch = 200
 	for i = 1, 15 do
@@ -1734,23 +2316,306 @@ local function buildStyle(container: Frame, top: number)
 		cell = { button = b, name = name, status = status, swatch = swatch, kind = "", id = "" }
 		styleCells[i] = cell
 	end
+	v13Built = true
+end
+
+-- Case de la grille de Mon style (même dessin que la case de la v1.3 ; cadenas : les 2 cadres de celui
+-- de la grille de l'Enclos, D24)
+local function makeV2Cell(frame: Frame, c: number, cw: number): V2Cell
+	local cell: V2Cell
+	local b = Widgets.button({
+		parent = frame,
+		name = "Item" .. c,
+		size = UDim2.fromOffset(cw, V2_CELL_H),
+		position = UDim2.fromOffset((c - 1) * (cw + GAP), 0),
+		color = Widgets.Colors.CardLight,
+		grow = false,
+		onActivate = function()
+			onV2Cell(cell)
+		end,
+	})
+	local swatch = Widgets.frame({
+		parent = b,
+		name = "Swatch",
+		size = UDim2.fromOffset(44, 44),
+		position = UDim2.new(0.5, 0, 0, 10),
+		anchor = Vector2.new(0.5, 0),
+		color = Color3.new(1, 1, 1),
+		corner = UDim.new(0.5, 0),
+		zIndex = b.ZIndex + 1,
+	})
+	local lock = Widgets.frame({
+		parent = b,
+		name = "Lock",
+		size = UDim2.fromOffset(26, 22),
+		position = UDim2.new(1, -12, 0, 24),
+		anchor = Vector2.new(1, 0),
+		color = Widgets.Colors.LockedText,
+		corner = UDim.new(0, 4),
+		zIndex = b.ZIndex + 3,
+	})
+	Widgets.frame({
+		parent = lock,
+		name = "Ring",
+		size = UDim2.fromOffset(16, 14),
+		position = UDim2.new(0.5, 0, 0, -10),
+		anchor = Vector2.new(0.5, 0),
+		color = Widgets.Colors.LockedText,
+		transparency = 1,
+		corner = UDim.new(0.5, 0),
+		zIndex = lock.ZIndex,
+	})
+	local name = Widgets.label({
+		parent = b,
+		name = "Name",
+		size = UDim2.new(1, -12, 0, 68),
+		position = UDim2.fromOffset(6, 58),
+		text = "",
+		textSize = 32,
+		wrapped = true,
+		zIndex = b.ZIndex + 2,
+	})
+	local status = Widgets.label({
+		parent = b,
+		name = "Status",
+		size = UDim2.new(1, -12, 0, 68),
+		position = UDim2.fromOffset(6, 128),
+		text = "",
+		textSize = 28,
+		wrapped = true,
+		zIndex = b.ZIndex + 2,
+	})
+	cell = { button = b, swatch = swatch, lock = lock, name = name, status = status, index = 0 }
+	return cell
+end
+
+-- Plan vu du dessus (D11) : 12 boutons placés par MetaView.planLayout depuis
+-- WorldLayout.decoPersoSlots() (P petit, G grand ; une case de la grille 5 × 4 chacun), repères des
+-- enclos (milieu) et du portail (en bas) ; la croix va d'un emplacement à l'autre par la géométrie
+local function buildPlan(page: Frame, left: number, width: number, height: number)
+	local plan = Widgets.group(page, "Plan", UDim2.fromOffset(width, height), UDim2.fromOffset(left, 0))
+	plan.Visible = false
+	planFrame = plan
+	Widgets.label({
+		parent = plan,
+		name = "Title",
+		size = UDim2.fromOffset(width, 48),
+		position = UDim2.new(),
+		key = "deco.title",
+		textSize = 40,
+		color = Widgets.Colors.Gold,
+		xAlign = Enum.TextXAlignment.Left,
+	})
+	local groundH = height - PLAN_TOP
+	local ground = Widgets.frame({
+		parent = plan,
+		name = "Ground",
+		size = UDim2.fromOffset(width, groundH),
+		position = UDim2.fromOffset(0, PLAN_TOP),
+		color = Widgets.Colors.Card,
+		corner = Widgets.CORNER,
+		zIndex = 2,
+	})
+	local rowH = groundH / MetaView.PLAN_ROWS
+	Widgets.frame({
+		parent = ground,
+		name = "Pens",
+		size = UDim2.fromOffset(width - 96, math.floor(rowH - 32)),
+		position = UDim2.fromOffset(48, math.floor(groundH - 2 * rowH + 16)),
+		color = Widgets.Colors.PanelLight,
+		transparency = 0.5,
+		corner = Widgets.CORNER,
+		zIndex = 3,
+	})
+	Widgets.frame({
+		parent = ground,
+		name = "Gate",
+		size = UDim2.fromOffset(160, 12),
+		position = UDim2.new(0.5, 0, 1, -10),
+		anchor = Vector2.new(0.5, 0.5),
+		color = Widgets.Colors.Gold,
+		corner = UDim.new(0.5, 0),
+		zIndex = 3,
+	})
+	for i, r in MetaView.planLayout(WorldLayout.decoPersoSlots(), width, groundH) do
+		local b = Widgets.button({
+			parent = ground,
+			name = "Slot" .. i,
+			size = UDim2.fromOffset(r.w, r.h),
+			position = UDim2.fromOffset(r.x, r.y),
+			key = "deco.empty",
+			textSize = 28,
+			color = Widgets.Colors.CardLight,
+			zIndex = 4,
+			nav = true,
+			grow = false,
+			onActivate = function()
+				openPicker(i)
+			end,
+		})
+		b:SetAttribute("SlotSize", r.size)
+		slotButtons[i] = b
+	end
+end
+
+-- Parties de Mon style (v2.0) : liste des sortes (lignes de 80 px, défilante : jusqu'à 9 sortes pour
+-- 7 visibles), grille commune de 5 colonnes, plan ; écoute des clés v2 du profil
+local function buildStyleV2(page: Frame)
+	local width = page.Size.X.Offset
+	local pageH = page.Size.Y.Offset
+	kindRows = Widgets.rows({
+		parent = page,
+		name = "KindsV2",
+		size = Vector2.new(V2_KIND_W, pageH),
+		position = UDim2.fromOffset(48, 0),
+		rowHeight = Layout.Button.MinHeight,
+		gap = GAP,
+		makeRow = function(frame: Frame, _slot: number): KindRow
+			local row: KindRow
+			local b = Widgets.button({
+				parent = frame,
+				name = "Kind",
+				size = UDim2.fromOffset(V2_KIND_W, Layout.Button.MinHeight),
+				key = "panel.ranch.style.theme",
+				textSize = 36,
+				color = Widgets.Colors.Card,
+				nav = true,
+				grow = false,
+				onActivate = function()
+					onKindV2(row)
+				end,
+			})
+			row = { button = b, kind = "" }
+			return row
+		end,
+		bindRow = bindKindRow,
+		selectables = function(row: KindRow): { GuiObject }
+			return { row.button }
+		end,
+	})
+	local left = 48 + V2_KIND_W + 32
+	local areaW = width - left - 48
+	local cw = math.floor((areaW - (V2_COLS - 1) * GAP) / V2_COLS)
+	itemRows = Widgets.rows({
+		parent = page,
+		name = "ItemsV2",
+		size = Vector2.new(V2_COLS * cw + (V2_COLS - 1) * GAP, pageH),
+		position = UDim2.fromOffset(left, 0),
+		rowHeight = V2_CELL_H,
+		gap = GAP,
+		makeRow = function(frame: Frame, _slot: number): V2Row
+			local cells = {}
+			for c = 1, V2_COLS do
+				cells[c] = makeV2Cell(frame, c, cw)
+			end
+			return { cells = cells }
+		end,
+		bindRow = function(row: V2Row, _frame: Frame, index: number)
+			for c, cell in row.cells do
+				bindV2Cell(cell, (index - 1) * V2_COLS + c)
+			end
+		end,
+		selectables = function(row: V2Row): { GuiObject }
+			local out = {}
+			for _, cell in row.cells do
+				table.insert(out, cell.button)
+			end
+			return out
+		end,
+	})
+	buildPlan(page, left, areaW, pageH)
+	v2Built = true
+	-- clés du profil v2 lues par la possession (jamais construites interrupteurs coupés)
+	Widgets.watch({
+		"version",
+		"bestR",
+		"ascend",
+		"atelierCosmetics",
+		"atelier",
+		"stats",
+		"weeklyTrack",
+		"season",
+		"moon",
+		"decoPerso",
+	}, function()
+		if isOpen and current == "style" and styleMode == "v2" then
+			refreshStyle()
+		end
+	end)
+end
+
+-- Page Style et les parties du chemin courant (deux niveaux : sous-listes, puis objets ; ○ remonte)
+local function buildStyle(container: Frame, top: number)
+	local width = container.Size.X.Offset
+	local page = Widgets.group(
+		container,
+		"Page_style",
+		UDim2.fromOffset(width, container.Size.Y.Offset - top),
+		UDim2.fromOffset(0, top)
+	)
+	page.Visible = false
+	page:SetAttribute("TvLevels", true)
+	pages.style = page
+	stylePage = page
+	if styleV2() then
+		buildStyleV2(page)
+		styleMode = "v2"
+	else
+		buildStyleV13(page)
+		styleMode = "v13"
+	end
+end
+
+-- À l'ouverture (jamais écran ouvert) : chemin de Style et parties manquantes construites (D10, D24),
+-- page Dalles construite si le chemin de la v1.3 revient (D12)
+local function prepareOpen()
+	local container = buildContainer
+	if container and not padsBuilt and not padsHidden() then
+		buildPads(container, buildTop)
+	end
+	local page = stylePage
+	if page then
+		local want = if styleV2() then "v2" else "v13"
+		if want == "v2" and not v2Built then
+			buildStyleV2(page)
+		elseif want == "v13" and not v13Built then
+			buildStyleV13(page)
+		end
+		styleMode = want
+	end
+	pickerSlot = 0
+	applyStyleMode()
 end
 
 -- Construit le contenu une seule fois dans le cadre du panneau
 function Ranch.build(container: Frame)
 	local specs = {}
+	local myStyle = styleV2()
 	for _, id in TABS do
-		table.insert(specs, { id = id, key = "panel.ranch.tab." .. id })
+		local key = if id == "style" and myStyle then "panel.ranch.tab.myStyle" else "panel.ranch.tab." .. id
+		table.insert(specs, { id = id, key = key })
 	end
 	tabBar = Widgets.tabBar(container, specs, function(id: string)
 		Ranch.setTab(id)
 	end)
 	local top = Layout.Panel.tabHeight + 24
+	buildContainer = container
+	buildTop = top
 	buildGridPage(container, top)
 	buildDetail(container, top)
 	buildOverlay(container, top)
-	buildPads(container, top)
+	-- N8 : l'écran Améliorations remplace les Dalles ; leur page n'est pas construite (D12)
+	if not padsHidden() then
+		buildPads(container, top)
+	end
 	buildStyle(container, top)
+	syncPads()
+	-- interrupteurs ou profil v2 changés : le chemin suit au rafraîchissement (jamais d'instance créée)
+	MetaFlags.Changed:Connect(function()
+		if isOpen then
+			refresh()
+		end
+	end)
 	Widgets.watch({
 		"squishies",
 		"mount",
@@ -1766,6 +2631,7 @@ function Ranch.build(container: Frame)
 		"biggestEver",
 		"fame",
 		"trophies",
+		"upgradeSnapshot",
 	}, function()
 		if isOpen then
 			refresh()
@@ -1801,6 +2667,8 @@ end
 -- Affiche le panneau (onglet demandé ou le dernier) ; « padsKept » : Dalles, gardées d'abord
 function Ranch.open(tab: string?)
 	isOpen = true
+	-- parties manquantes construites ICI, avant l'affichage (D12, D24)
+	prepareOpen()
 	if tab == "padsKept" then
 		current = "pads"
 		keptFirst = true
@@ -1810,10 +2678,13 @@ function Ranch.open(tab: string?)
 	else
 		keptFirst = false
 	end
+	-- N8 : Dalles absentes tant que l'écran Améliorations est disponible (« padsKept » : chemin v1.3)
+	syncPads()
 	fuseA = ""
 	table.clear(selected)
-	-- Style s'ouvre toujours sur la 1re sous-liste (Selle) : sélection par défaut = son objet équipé
-	styleKind = STYLE_KINDS[1]
+	-- Style s'ouvre toujours sur la 1re sous-liste (Selle ; Mon style : habillage) : sélection par
+	-- défaut = son objet équipé
+	styleKind = firstStyleKind()
 	showTab()
 	refresh()
 end
@@ -1830,10 +2701,20 @@ function Ranch.close()
 	overlayMode = ""
 	fuseA = ""
 	table.clear(selected)
+	pickerSlot = 0
 end
 
--- Onglets, dans l'ordre (L1 / R1)
+-- Onglets, dans l'ordre (L1 / R1) ; sans Dalles tant que l'écran Améliorations est disponible (N8)
 function Ranch.tabs(): { string }
+	if padsHidden() then
+		local out = {}
+		for _, id in TABS do
+			if id ~= "pads" then
+				table.insert(out, id)
+			end
+		end
+		return out
+	end
 	return table.clone(TABS)
 end
 
@@ -1842,12 +2723,16 @@ function Ranch.setTab(tab: string)
 	if type(tab) ~= "string" then
 		return
 	end
+	if (tab == "pads" or tab == "padsKept") and (padsHidden() or not padsBuilt) then
+		return -- N8 : pas d'onglet Dalles sur le chemin de l'écran Améliorations
+	end
 	if tab == "padsKept" then
 		current = "pads"
 		keptFirst = true
 	elseif table.find(TABS, tab) then
 		if tab == "style" and current ~= "style" then
-			styleKind = STYLE_KINDS[1] -- entrée dans Style : 1re sous-liste (Selle)
+			styleKind = firstStyleKind() -- entrée dans Style : 1re sous-liste (Selle ; habillage)
+			pickerSlot = 0
 		end
 		current = tab
 		if tab ~= "pads" then
@@ -1881,6 +2766,13 @@ function Ranch.defaultSelection(): GuiObject?
 	elseif current == "pads" then
 		return cheapestTile()
 	elseif current == "style" then
+		if styleMode == "v2" then
+			-- Mon style : l'objet équipé de la sorte (ou la 1re case) ; plan : l'emplacement 1 (D25)
+			if styleKind == "deco" and pickerSlot == 0 then
+				return slotButtons[1] or kindButtonV2("deco")
+			end
+			return selectedV2Cell() or kindButtonV2(styleKind)
+		end
 		return equippedStyleCell() or styleKindButtons.saddle
 	end
 	local first = if grid then grid.firstSelectable() else nil
@@ -1915,6 +2807,25 @@ function Ranch.onBack(): boolean
 		fuseA = ""
 		refresh()
 		return true
+	end
+	if current == "style" and styleMode == "v2" then
+		-- Mon style (D25) : choix d'un objet → son emplacement ; plan ou grille → liste des sortes
+		local sel = GuiService.SelectedObject
+		local rows, plan = itemRows, planFrame
+		local inGrid = sel ~= nil and rows ~= nil and sel:IsDescendantOf(rows.frame)
+		local inPlan = sel ~= nil and plan ~= nil and sel:IsDescendantOf(plan)
+		if inGrid and pickerSlot > 0 then
+			closePicker(true)
+			return true
+		end
+		if inGrid or inPlan then
+			local b = kindButtonV2(styleKind)
+			if b then
+				GuiService.SelectedObject = b
+			end
+			return true
+		end
+		return false
 	end
 	if current == "style" then
 		local sel = GuiService.SelectedObject
@@ -1975,7 +2886,29 @@ function Ranch._state(): { [string]: any }
 		overlay = overlayMode,
 		styleKind = styleKind,
 		items = #items,
+		styleMode = styleMode,
+		padsBuilt = padsBuilt,
+		v13Built = v13Built,
+		v2Built = v2Built,
+		kinds = table.clone(kindsV2),
+		pickerSlot = pickerSlot,
+		entries = #v2Entries,
+		deco = table.clone(decoContents),
 	}
+end
+
+-- Mon style (specs) : entrées liées à la grille (sorte, identifiant, possédé, équipé)
+function Ranch._styleEntries(): { { kind: string, id: string, n: number, unlocked: boolean, equipped: boolean } }
+	local out = {}
+	for _, e in v2Entries do
+		table.insert(out, { kind = e.kind, id = e.id, n = e.n, unlocked = e.unlocked, equipped = e.equipped })
+	end
+	return out
+end
+
+-- Emplacement n° i du plan de Déco perso (specs)
+function Ranch._decoSlot(i: number): TextButton?
+	return slotButtons[i]
 end
 
 -- Case de la grille qui montre un squishy (specs)
@@ -2000,6 +2933,19 @@ function Ranch._tileButton(tile: string): TextButton?
 end
 
 function Ranch._styleCell(kind: string, id: string): TextButton?
+	if styleMode == "v2" then
+		-- case de la grille de Mon style (ramenée à l'écran par la liste virtualisée)
+		local rows = itemRows
+		if rows == nil then
+			return nil
+		end
+		for i, e in v2Entries do
+			if e.kind == kind and e.id == id then
+				return rows.selectableAt((i - 1) // V2_COLS + 1, (i - 1) % V2_COLS + 1) :: TextButton?
+			end
+		end
+		return nil
+	end
 	for _, cell in styleCells do
 		if cell.button.Visible and cell.kind == kind and cell.id == id then
 			return cell.button
@@ -2009,6 +2955,9 @@ function Ranch._styleCell(kind: string, id: string): TextButton?
 end
 
 function Ranch._styleKindButton(kind: string): TextButton?
+	if styleMode == "v2" then
+		return kindButtonV2(kind) :: TextButton?
+	end
 	return styleKindButtons[kind]
 end
 

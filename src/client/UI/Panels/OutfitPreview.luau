@@ -8,6 +8,12 @@
 -- Ouvert par le navigateur avec la tenue en onglet : nav.open("OutfitPreview", "sweater").
 -- Sélection par défaut : « Mettre » ; ○ revient au panneau d'où l'on vient (fenêtre empilée).
 -- Le modèle vient de Render/SquishyBuilder (réserve) et lui est rendu à la fermeture.
+-- v2.0 (lot B3, étape 3 ; plan B3 D17, D28 ; fichier sans propriétaire v2.0, ajouts seulement) :
+--   * flèches DESSINÉES (Hud/Icons arrowRight, celle de gauche tournée de 180°) à la place de « ◀ » « ▶ »,
+--     absents des polices (règle 18) ;
+--   * profil v2 : les tenues de la v2.0 (Cosmetics.ListV2 sorte outfit, tenue de la semaine
+--     WeeklyRotation « polkaBow ») sont acceptées, nommées par leur clé, possédées par outfits.owned ;
+--     leur pièce 3D vient au lot B5 (Render/SquishyBuilder ne la dessine pas encore : aucune erreur).
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -23,6 +29,8 @@ local Clock = require(Shared.Util.Clock)
 local Client = script.Parent.Parent.Parent
 local Juice = require(Client.UI.Juice)
 local Format = require(Client.UI.Format)
+local Icons = require(Client.UI.Hud.Icons)
+local MetaFlags = require(Client.UI.MetaFlags)
 local Widgets = require(script.Parent.Widgets)
 
 type Nav = { open: (panel: string, tab: string?) -> (), back: () -> () }
@@ -30,6 +38,51 @@ type Nav = { open: (panel: string, tab: string?) -> (), back: () -> () }
 local OutfitPreview = {}
 
 local ORBIT_PERIOD = 6 -- s pour un tour de caméra
+local ARROW = 48 -- flèches dessinées du choix du squishy (px TV)
+
+-- Tenues de la v2.0 (lot B3) : identifiant → clé du nom (ListV2 puis cosmétiques de la semaine)
+local V2_OUTFITS: { [string]: string } = {}
+for _, def in Cosmetics.ListV2 :: { any } do
+	if def.kind == "outfit" and Cosmetics.ByKindId["outfit:" .. def.id] == nil then
+		V2_OUTFITS[def.id] = def.key
+	end
+end
+for _, def in Cosmetics.WeeklyRotation do
+	if
+		def.kind == "outfit"
+		and V2_OUTFITS[def.id] == nil
+		and Cosmetics.ByKindId["outfit:" .. def.id] == nil
+	then
+		V2_OUTFITS[def.id] = def.key
+	end
+end
+
+-- Tenue connue : celles de la v1.3 ; celles de la v2.0 seulement avec un profil v2 (D10 du plan B3)
+local function knownOutfit(id: any): boolean
+	if type(id) ~= "string" then
+		return false
+	end
+	if Cosmetics.ByKindId["outfit:" .. id] then
+		return true
+	end
+	return V2_OUTFITS[id] ~= nil and MetaFlags.v2Profile()
+end
+
+local function nameKey(id: string): string
+	return V2_OUTFITS[id] or ("cosmetic.outfit." .. id)
+end
+
+-- Flèche dessinée d'un bouton du choix du squishy (règle 18 : « ◀ » « ▶ » absents des polices)
+local function arrow(button: GuiButton, left: boolean)
+	local c = Icons.canvas(button, ARROW, { "arrowRight" }, "Arrow")
+	c.AnchorPoint = Vector2.new(0.5, 0.5)
+	c.Position = UDim2.fromScale(0.5, 0.5)
+	c.ZIndex = button.ZIndex + 1
+	if left then
+		c.Rotation = 180
+	end
+	Icons.draw(c, "arrowRight", Widgets.Colors.Text)
+end
 
 local nav: Nav? = nil
 local isOpen = false
@@ -166,7 +219,7 @@ local function buildModel()
 end
 
 local function refresh()
-	local name = Widgets.t("cosmetic.outfit." .. outfit)
+	local name = Widgets.t(nameKey(outfit))
 	Widgets.setRaw(labels.title, name)
 	local uid = uids[index]
 	local rec = if uid then squishies()[uid] else nil
@@ -260,12 +313,11 @@ function OutfitPreview.build(container: Frame)
 		name = "Prev",
 		size = UDim2.fromOffset(120, Layout.Button.MinHeight),
 		position = UDim2.fromOffset(math.floor(width / 2) - 360, rowY),
-		text = "◀",
-		textSize = 40,
 		onActivate = function()
 			step(-1)
 		end,
 	})
+	arrow(prevButton :: TextButton, true)
 	labels.who = Widgets.label({
 		parent = container,
 		name = "Who",
@@ -279,12 +331,11 @@ function OutfitPreview.build(container: Frame)
 		name = "Next",
 		size = UDim2.fromOffset(120, Layout.Button.MinHeight),
 		position = UDim2.fromOffset(math.floor(width / 2) + 240, rowY),
-		text = "▶",
-		textSize = 40,
 		onActivate = function()
 			step(1)
 		end,
 	})
+	arrow(nextButton :: TextButton, false)
 	local actionsY = rowY + Layout.Button.MinHeight + 16
 	wearButton = Widgets.button({
 		parent = container,
@@ -339,8 +390,8 @@ end
 -- Affiche le panneau ; `tab` = tenue (Config/Cosmetics, kind "outfit")
 function OutfitPreview.open(tab: string?)
 	isOpen = true
-	if type(tab) == "string" and Cosmetics.ByKindId["outfit:" .. tab] then
-		outfit = tab
+	if knownOutfit(tab) then
+		outfit = tab :: string
 	end
 	uids = collectUids()
 	index = 1
@@ -372,7 +423,7 @@ end
 
 -- Change de tenue
 function OutfitPreview.setTab(tab: string)
-	if type(tab) == "string" and Cosmetics.ByKindId["outfit:" .. tab] then
+	if knownOutfit(tab) then
 		outfit = tab
 		if isOpen then
 			uids = collectUids()

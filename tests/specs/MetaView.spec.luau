@@ -785,4 +785,228 @@ return function(T)
 			expect(type(render(deep))).toBe("string")
 		end)
 	end)
+
+	describe("MetaView › Mon style et Déco perso (lot B3, étape 3)", function()
+		local Owned = h:require("ReplicatedStorage.Shared.Logic.Owned")
+		local WorldLayout = h:require("ReplicatedStorage.Shared.Logic.WorldLayout")
+		local ALL = { lang = "fr", on = onAll }
+
+		-- profil qui a TOUT gagné (sources de la v2.0 au maximum)
+		local function maxProfile()
+			local words = {}
+			for i = 1, 8 do
+				words[i] = 4294967295
+			end
+			return {
+				version = 2,
+				R = 400,
+				bestR = 400,
+				ascend = 60,
+				atelierCosmetics = table.clone(words),
+				stats = { upgradesBought = 1e9 },
+				weeklyTrack = { won = table.clone(words) },
+				biggestEver = 1e30,
+				season = { frostDays = 99 },
+			}
+		end
+		local function flagsWith(off)
+			local f = {}
+			for _, k in Owned.FLAGS do
+				f[k] = k ~= off
+			end
+			return f
+		end
+
+		it(
+			"nombre d'objets par sorte (14 habillages, 8 tenues, 66 titres + « Aucun ») ; clés EN et FR",
+			function()
+				local want = {
+					theme = 14,
+					saddle = 20,
+					trail = 17,
+					title = 67,
+					flag = 7,
+					outfits = 8,
+					palette = 9,
+					cushions = 2,
+				}
+				for kind, n in want do
+					local list = MV.styleItems(kind, ALL)
+					expect({ kind = kind, n = #list }).toEqual({ kind = kind, n = n })
+					local seen = {}
+					for _, item in list do
+						expectKeys(item.name)
+						if item.source then
+							expectKeys(item.source)
+						end
+						local k = item.kind .. ":" .. item.id
+						expect(seen[k]).toBeNil()
+						seen[k] = true
+					end
+				end
+				-- « Aucun » en tête des sortes qui se retirent, jamais pour l'habillage, la selle, les tenues
+				for _, kind in { "trail", "title", "flag", "palette", "cushions" } do
+					expect(MV.styleItems(kind, ALL)[1].id).toBe("")
+				end
+				for _, kind in { "theme", "saddle", "outfits" } do
+					expect(MV.styleItems(kind, ALL)[1].id ~= "").toBe(true)
+				end
+				expect(MV.styleItems("outfits", ALL)[1].kind).toBe("outfit")
+				expect(#MV.styleItems("inconnue", ALL)).toBe(0)
+				expect(#MV.styleItems(nil, ALL)).toBe(0)
+			end
+		)
+
+		it("interrupteurs coupés : seuls les objets de la v1.3 (rien de la v2.0 montré)", function()
+			local want = {
+				theme = 3,
+				saddle = 11,
+				trail = 10,
+				title = 14,
+				flag = 3,
+				outfits = 4,
+				palette = 1,
+				cushions = 1,
+			}
+			for kind, n in want do
+				local list = MV.styleItems(kind, { lang = "en" })
+				expect({ kind = kind, n = #list }).toEqual({ kind = kind, n = n })
+				for _, item in list do
+					expect(item.v2).toBe(false)
+				end
+			end
+			-- habillages de la v2.0 : RanchSkins aussi (sources Record R / Ascension ouvertes)
+			expect(#MV.styleItems("theme", { on = onExcept("RanchSkins") })).toBe(3)
+		end)
+
+		it(
+			"croisé avec Logic/Owned : un objet montré est gagnable avec ces interrupteurs, et seulement avec eux",
+			function()
+				local profile = maxProfile()
+				for _, kind in
+					{ "theme", "saddle", "trail", "title", "flag", "outfits", "palette", "cushions" }
+				do
+					for _, item in MV.styleItems(kind, ALL) do
+						if item.v2 then
+							expect({
+								k = item.kind .. ":" .. item.id,
+								owned = Owned.cosmetic(profile, item.kind, item.id, flagsWith(nil)),
+							}).toEqual({
+								k = item.kind .. ":" .. item.id,
+								owned = true,
+							})
+						end
+					end
+					for _, flag in Owned.FLAGS do
+						local shown = {}
+						for _, item in MV.styleItems(kind, { on = onExcept(flag) }) do
+							shown[item.kind .. ":" .. item.id] = true
+						end
+						for _, item in MV.styleItems(kind, ALL) do
+							local k = item.kind .. ":" .. item.id
+							if item.v2 then
+								local owned = Owned.cosmetic(profile, item.kind, item.id, flagsWith(flag))
+								expect({ k = k, flag = flag, shown = shown[k] == true }).toEqual({
+									k = k,
+									flag = flag,
+									shown = owned,
+								})
+							end
+						end
+					end
+				end
+			end
+		)
+
+		it("sources : Record R, Ascension, Atelier, Carnet 10 000, taille 1e24, semaine, saison", function()
+			local function find(kind, id)
+				for _, item in MV.styleItems(kind, ALL) do
+					if item.id == id then
+						return item
+					end
+				end
+				return nil
+			end
+			expect(find("theme", "marshmallow").source).toEqual({
+				key = "cosmetic.source.rebirth",
+				vars = { n = "1" },
+			})
+			expect(find("theme", "celestial").source).toEqual({
+				key = "cosmetic.source.ascend",
+				vars = { n = "5" },
+			})
+			expect(find("outfits", "buildersCrown").source).toEqual({
+				key = "cosmetic.source.carnet",
+				vars = { n = "10 000" },
+			})
+			expect(find("title", "sunKeeper").source.key).toBe("cosmetic.source.size")
+			expect(type(find("title", "sunKeeper").source.vars.size)).toBe("string")
+			expect(find("saddle", "cookieSaddle").source).toEqual({ key = "cosmetic.source.track" })
+			expect(find("saddle", "icingSugar").source).toEqual({
+				key = "cosmetic.source.season",
+				vars = { n = "5" },
+			})
+			expect(find("palette", "candy").source).toEqual({ key = "cosmetic.source.atelier" })
+			expect(find("palette", "fireworks").source).toEqual({
+				key = "cosmetic.source.rebirth",
+				vars = { n = "9" },
+			})
+			expect(find("palette", "candy").name).toEqual({ key = "palette.candy" })
+			expect(find("cushions", "pinkCushions").name).toEqual({ key = "weekly.pinkCushions" })
+			-- v1.3 : mêmes clés qu'avant (cosmetic.<kind>.<id>, cosmetic.source.<kind>)
+			expect(find("saddle", "royal").name).toEqual({ key = "cosmetic.saddle.royal" })
+			expect(find("saddle", "royal").source).toEqual({ key = "cosmetic.source.pass" })
+		end)
+
+		it("Déco perso : 24 petits + 16 grands, sources lisibles, clés EN et FR", function()
+			expect(#MV.decoItems("P", ALL)).toBe(24)
+			expect(#MV.decoItems("G", ALL)).toBe(16)
+			expect(#MV.decoItems(nil, ALL)).toBe(40)
+			for _, item in MV.decoItems(nil, ALL) do
+				expectKeys(item.name)
+				expectKeys(item.source)
+				expect(Cosmetics.DecoPerso[item.n].size).toBe(item.size)
+			end
+			local first = MV.decoItems("P", ALL)[1]
+			expect(first.id).toBe("namePennant")
+			expect(first.source).toEqual({ key = "cosmetic.source.play", vars = { n = "5" } })
+			expect(MV.decoItems("G", ALL)[1].id).toBe("goldFountain")
+		end)
+
+		it(
+			"plan vu du dessus : 12 emplacements dans le rectangle, sans chevauchement, P plus petits que G",
+			function()
+				local slots = WorldLayout.decoPersoSlots()
+				local W, H = 1052, 612
+				local rects = MV.planLayout(slots, W, H)
+				expect(#rects).toBe(12)
+				local cells = {}
+				for i, r in rects do
+					expect(r.x >= 0 and r.y >= 0 and r.x + r.w <= W and r.y + r.h <= H).toBe(true)
+					expect(r.size).toBe(slots[i].size)
+					expect(r.size).toBe(Cosmetics.DecoSlots[i])
+					local cell = r.row * 10 + r.col
+					expect(cells[cell]).toBeNil()
+					cells[cell] = true
+					for j = i + 1, #rects do
+						local o = rects[j]
+						local apart = r.x + r.w <= o.x
+							or o.x + o.w <= r.x
+							or r.y + r.h <= o.y
+							or o.y + o.h <= r.y
+						expect({ i = i, j = j, apart = apart }).toEqual({ i = i, j = j, apart = true })
+					end
+				end
+				expect(rects[1].w * rects[1].h < rects[9].w * rects[9].h).toBe(true)
+				-- portail en bas : les emplacements de devant (Z 5 à 9,5) sur la rangée du bas
+				expect(rects[1].row).toBe(1)
+				expect(rects[9].row).toBe(1)
+				expect(rects[5].row > 2).toBe(true)
+				-- entrées hostiles : rien, sans erreur
+				expect(#MV.planLayout(nil, W, H)).toBe(0)
+				expect(#MV.planLayout(slots, 0 / 0, H)).toBe(0)
+				expect(#MV.planLayout({ { position = "x" }, 3 }, W, H)).toBe(2)
+			end
+		)
+	end)
 end
