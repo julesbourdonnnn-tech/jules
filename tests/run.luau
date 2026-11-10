@@ -7,7 +7,10 @@
 -- fichier est rendue au système avant le suivant (porte du lot B3, journal docs/04 B3-83 : les 246
 -- fichiers dans un seul processus montaient à 14 Go de mémoire résidente et le processus était tué
 -- faute de mémoire). `-- --isolate <filtre>` isole aussi une partie ; `-- --single-process` garde
--- l'ancien mode (tous les fichiers dans ce processus).
+-- l'ancien mode (tous les fichiers dans ce processus). Le code de sortie de chaque fils fait foi :
+-- un fils sorti en erreur n'est jamais compté vert, quoi que dise sa sortie (journal B3-84).
+-- `-- --dir <dossier>` lit les specs d'un autre dossier de tests/ : il sert à la spec du lanceur
+-- lui-même (`Runner.spec`, specs jouets de tests/fixtures/runner), jamais à la suite du jeu.
 
 local fs = require("@lune/fs")
 local process = require("@lune/process")
@@ -15,15 +18,27 @@ local stdio = require("@lune/stdio")
 local Test = require("./harness/Test")
 local Harness = require("./harness/Harness")
 
+local DEFAULT_DIR = "tests/specs"
+
 local filter = nil
 local single, isolate = false, false
-for _, arg in process.args do
-	if arg == "--single-process" then
-		single = true
-	elseif arg == "--isolate" then
-		isolate = true
-	elseif arg ~= "--" then
-		filter = arg
+local dir = DEFAULT_DIR
+do
+	local args = process.args
+	local i = 1
+	while i <= #args do
+		local arg = args[i]
+		if arg == "--single-process" then
+			single = true
+		elseif arg == "--isolate" then
+			isolate = true
+		elseif arg == "--dir" then
+			i += 1
+			dir = args[i] or dir
+		elseif arg ~= "--" then
+			filter = arg
+		end
+		i += 1
 	end
 end
 
@@ -32,7 +47,7 @@ local function selected(path: string): boolean
 	if filter == nil then
 		return true
 	end
-	if string.match(filter, "^tests/specs/.+%.spec%.luau$") then
+	if string.sub(filter, 1, #dir + 1) == dir .. "/" and string.match(filter, ".%.spec%.luau$") then
 		return path == filter
 	end
 	return string.find(path, filter, 1, true) ~= nil
@@ -49,7 +64,7 @@ local function collect(dir: string)
 		end
 	end
 end
-collect("tests/specs")
+collect(dir)
 table.sort(specs)
 
 -- Programme Lune des processus fils : « lune » du PATH, sinon ~/.cargo/bin/lune ou ~/.rokit/bin/lune
@@ -65,8 +80,12 @@ local function luneProgram(): string?
 end
 
 -- Un processus par fichier de specs : sortie du fils recopiée, comptes additionnés, échecs détaillés
--- rassemblés à la fin (même forme que le mode à un seul processus) ; un fils arrêté sans sa ligne de
--- comptes (mémoire, plantage) compte comme une spec non chargée
+-- rassemblés à la fin (même forme que le mode à un seul processus). Les comptes d'un fils sont ceux
+-- de la dernière ligne de comptes de sa sortie, et son code de sortie fait foi : un fils arrêté sans
+-- ligne de comptes (mémoire, plantage, process.exit en plein cas), ou sorti en erreur alors que la
+-- ligne lue n'annonce aucun échec (le texte d'un échec imite cette ligne, plantage après les comptes),
+-- compte comme une spec non chargée. Un fils vert n'écrit rien après sa ligne de comptes : ses
+-- comptes sont donc exacts, et aucun échec ne peut finir en résultat vert (journal docs/04 B3-84)
 local SUMMARY = "(%d+) réussis, (%d+) échoués, (%d+) specs non chargées"
 
 local function runIsolated(program: string)
@@ -74,7 +93,13 @@ local function runIsolated(program: string)
 	local details = {}
 	for _, path in specs do
 		if selected(path) then
-			local ok, res = pcall(process.exec, program, { "run", "tests/run", "--", path })
+			local childArgs = { "run", "tests/run", "--" }
+			if dir ~= DEFAULT_DIR then
+				table.insert(childArgs, "--dir")
+				table.insert(childArgs, dir)
+			end
+			table.insert(childArgs, path)
+			local ok, res = pcall(process.exec, program, childArgs)
 			local out = if ok then res.stdout else ""
 			if ok and res.stderr ~= "" then
 				stdio.ewrite(res.stderr)
@@ -102,6 +127,19 @@ local function runIsolated(program: string)
 						.. why
 						.. ")\27[0m\n"
 						.. errTail
+				)
+			elseif res.code ~= 0 and f == 0 and l == 0 then
+				-- sorti en erreur, mais la dernière ligne de comptes de sa sortie n'annonce aucun échec :
+				-- cette ligne n'est pas la sienne (ou il a planté après) ; ses comptes ne sont pas repris
+				stdio.write(out)
+				notLoaded += 1
+				table.insert(
+					details,
+					"\n\27[31m✗ "
+						.. path
+						.. " : sorti en erreur (code "
+						.. tostring(res.code)
+						.. ") alors que la dernière ligne de comptes de sa sortie n'annonce aucun échec\27[0m\n"
 				)
 			else
 				stdio.write((string.gsub(string.sub(out, 1, at - 1), "%s+$", "")) .. "\n")
