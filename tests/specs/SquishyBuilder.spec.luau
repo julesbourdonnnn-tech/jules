@@ -1365,13 +1365,14 @@ return function(T)
 						expect(math.abs(ray.Position.X.Scale - x) < 1e-6).toBe(true)
 						expect(math.abs(ray.Position.Y.Scale - y) < 1e-6).toBe(true)
 						expect(ray.Position.X.Offset).toBe(0)
-						-- un trait : long de 96 % du côté de l'étoile (0,2 × la largeur de l'arc), épais de
-						-- 28 % ; à l'écran l'arc fait 1,4 D × 0,36 D
+						-- un trait : long de 86 % du côté de l'étoile (0,2 × la largeur de l'arc), épais de
+						-- 22 % ; à l'écran l'arc fait 1,4 D × 0,36 D
 						local length = ray.Size.X.Scale * 1.4
 						local thickness = ray.Size.Y.Scale * 0.36
-						expect(math.abs(length - 0.2 * 1.4 * 0.96) < 1e-5).toBe(true)
-						expect(math.abs(thickness - 0.2 * 1.4 * 0.28) < 1e-5).toBe(true)
-						expect(length <= 0.2 * 1.4).toBe(true) -- l'étoile tient dans sa case
+						expect(math.abs(length - 0.2 * 1.4 * 0.86) < 1e-5).toBe(true)
+						expect(math.abs(thickness - 0.2 * 1.4 * 0.22) < 1e-5).toBe(true)
+						-- l'étoile tient dans sa case, avec de l'air entre deux voisines
+						expect(length <= 0.9 * 0.2 * 1.4).toBe(true)
 						angles[i] = angles[i] or {}
 						angles[i][ray.Rotation] = true
 					end

@@ -408,6 +408,10 @@ return function(T)
 		it("le serveur ne lit jamais la personnalité (affichage du client seulement, GDD §5.6)", function()
 			local fs = require("@lune/fs")
 			local offenders = {}
+			-- lot B5 (INT-B5-FEATURES, docs/04 §27.11, journal B5-1) : UNE mention permise dans src/server,
+			-- le nom de l'interrupteur dans la liste fixe qu'EventService ANNONCE au client
+			-- (V2_CLIENT_FLAGS → EventState.features.v2) ; aucune règle du serveur ne le lit pour autant
+			local announced = 0
 			local function scan(dir)
 				for _, entry in fs.readDir(dir) do
 					local full = dir .. "/" .. entry
@@ -415,6 +419,13 @@ return function(T)
 						scan(full)
 					elseif string.find(entry, "%.luau$") then
 						local source = fs.readFile(full)
+						if full == "src/server/Services/EventService.luau" then
+							local block = string.match(source, "local V2_CLIENT_FLAGS = {.-\n}")
+							if block then
+								announced = select(2, string.gsub(block, '"Personalities"', ""))
+								source = string.gsub(source, "local V2_CLIENT_FLAGS = {.-\n}", "", 1)
+							end
+						end
 						if
 							string.find(source, "%.perso%f[^%w_]")
 							or string.find(source, "Personalities", 1, true)
@@ -426,6 +437,7 @@ return function(T)
 			end
 			scan("src/server")
 			expect(offenders).toEqual({})
+			expect(announced).toBe(1)
 		end)
 	end)
 

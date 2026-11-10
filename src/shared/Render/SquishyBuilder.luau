@@ -1382,8 +1382,10 @@ end
 -- étoile), contre 11 par modèle avec les 5 TextLabel et leurs 5 UIStroke de la v1.3.
 local STAR_BOX = 0.2 -- côté d'une étoile, en fraction de la largeur de l'arc
 local STAR_ARC_X, STAR_ARC_Y = 1.4, 0.36 -- taille de l'arc (× D), celle de la v1.3
-local STAR_RAY_LENGTH = 0.96 -- trait : fractions du côté de l'étoile
-local STAR_RAY_THICKNESS = 0.28
+-- trait : fractions du côté de l'étoile (0,86 : les étoiles voisines ne se touchent pas ; 0,22 : branches
+-- nettes de près, encore pleines de loin ; choisi sur un aperçu hors moteur, à regarder sur une télé)
+local STAR_RAY_LENGTH = 0.86
+local STAR_RAY_THICKNESS = 0.22
 local STAR_ANGLES = { 90, 30, 150 }
 
 local function sizeStars(rec: Record, d: number)

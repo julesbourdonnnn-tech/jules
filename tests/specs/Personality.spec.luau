@@ -249,13 +249,7 @@ return function(T)
 				drawn3(c)
 				c.flags({ Personalities = true })
 				local faces = { a = "delighted", b = "surprised", c = "sleepy" }
-				local sizes = {}
 				for uid, face in faces do
-					local handle = c.RR.handleOf(3, uid)
-					sizes[uid] = {}
-					for i, part in handle.parts do
-						sizes[uid][i] = part.Size
-					end
 					expect(c.P.setFace(3, uid, face)).toBe(true)
 				end
 				local atChange = {}
@@ -270,10 +264,14 @@ return function(T)
 					local handle = c.RR.handleOf(3, uid)
 					expect({ uid, atChange[uid] }).toEqual({ uid, "happy" })
 					expect({ uid, c.P.faceOf(3, uid) }).toEqual({ uid, "happy" })
-					for i, part in handle.parts do
-						-- le corps est écrasé par l'animation : seules les autres pièces se comparent
+					-- tailles de la recette (jamais une taille relevée avant : un œil peut cligner à cet
+					-- instant, la graine du clignement est tirée au hasard ; le corps, lui, est écrasé par
+					-- l'animation et ne se compare pas)
+					local d = handle.spec.displayScale * 2
+					for i, p in c.SB._plan(handle.spec) do
 						if i > 1 then
-							expect({ uid, i, part.Size }).toEqual({ uid, i, sizes[uid][i] })
+							local same = (handle.parts[i].Size - p.size * d).Magnitude < 1e-4
+							expect({ uid, p.name, same }).toEqual({ uid, p.name, true })
 						end
 					end
 				end

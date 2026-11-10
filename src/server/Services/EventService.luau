@@ -898,9 +898,11 @@ end
 
 -- v2.0 (lot B3, INT-B3-FEATURES) : interrupteurs v2 que le client doit connaître (Logic/Owned.FLAGS, plus
 -- PetitSplorch, Confetti et Hearts) ; liste FIXE : un interrupteur hors liste n'apparaît jamais.
--- Lot B5 (INT-B5-FEATURES, docs/04 §27.11) : + Personalities et PhotoMode, deux systèmes du client seul
--- (aucun attribut de ranch, aucune clé d'EventState ne les montrait : sans eux la règle (1) du §27.3 ne
--- peut pas tenir côté client, et une coupure en direct par LiveOps n'atteindrait jamais le client)
+-- Lot B5 (INT-B5-FEATURES, docs/04 §27.11) : + les deux derniers noms de la liste (personnalités et mode
+-- photo), deux systèmes du client seul (aucun attribut de ranch, aucune clé d'EventState ne les
+-- montrait : sans eux la règle (1) du §27.3 ne peut pas tenir côté client, et une coupure en direct par
+-- LiveOps n'atteindrait jamais le client). Le serveur ne fait qu'ANNONCER l'interrupteur des
+-- personnalités : aucune règle ne le lit (Contract_unlocks : seule mention permise dans src/server)
 local V2_CLIENT_FLAGS = {
 	"RecordR",
 	"JellyAscend",
