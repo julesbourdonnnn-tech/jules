@@ -467,6 +467,56 @@ return function(T)
 			expect(table.concat(issues, "\n")).toBe("")
 		end)
 	end)
+	-- Lot B3, étape 5 : défaut de la v1.3 trouvé par le nouvel écran « card.reopened.postBoop.refuse »
+	-- (TextFit) : rouverte avec 3 boutons (boopeur connu), « Pas ce joueur » / « Not this player » passait
+	-- sur 2 lignes de 40 px dans un bouton de 80 px (boutons de 229 px)
+	describe("Cards › carte rouverte à 3 boutons", function()
+		local TextFit = require("../harness/TextFit")
+		for _, lang in { "en", "fr" } do
+			it("chaque libellé tient sur une ligne dans son bouton (" .. lang .. ")", function()
+				local h = TvAudit.client({
+					profile = { onboarding = { step = 11, done = true, demoDone = true } },
+					lang = lang,
+				})
+				local C = TvAudit.mod(h, "UI.Cards")
+				h:fireClient("ReplicatedStorage.Remotes.Celebrate", {
+					kind = "booped",
+					data = { uid = "u9", species = 2, booperId = 77 },
+				})
+				h:fireClient("ReplicatedStorage.Remotes.Celebrate", {
+					kind = "ownerReturn",
+					data = { uid = "u9", species = 2, coins = 10, firstBoop = true },
+				})
+				h:settle(1)
+				local postBoop = nil
+				for _ = 1, 4 do
+					local Clock = h:require("ReplicatedStorage.Shared.Util.Clock")
+					Clock.advance(8.01)
+					C._step()
+				end
+				for _, card in C.pending() do
+					if card.kind == "postBoop" then
+						postBoop = card
+					end
+				end
+				C.open(postBoop.id)
+				local buttons = C.buttons()
+				expect(#buttons).toBe(3)
+				local dlg = C.frame("dialog")
+				local right = 0
+				for _, b in buttons do
+					local label = b.Label
+					local need = TextFit.width(label.Text, label.FontFace, label.TextSize)
+					expect(need <= b.Size.X.Offset - 24).toBe(true)
+					right = math.max(right, b.Position.X.Offset + b.Size.X.Offset)
+				end
+				-- les boutons restent dans la carte (32 px de marge de chaque côté)
+				expect(right <= dlg.Size.X.Offset - 64).toBe(true)
+				clean(h)
+			end)
+		end
+	end)
+
 	-- =========================================================================================
 	-- Lot B3, étape 5 (D19) : cartes de la v2.0 (profil v2, EventState.features.v2 du serveur)
 	-- =========================================================================================

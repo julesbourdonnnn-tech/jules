@@ -55,6 +55,11 @@ TextFitKeys.FAMILIES = {
 	-- (étape 4) nom court de la famille dans la puce « Prochain achat » du HUD : une seule boîte, la
 	-- famille que le Conseillé désigne (8 familles de pièces, D21)
 	{ id = "upgrades.short", pattern = "^upgrades%.short%.[%w_]+$" },
+	-- (lot B3, étape 5) noms des Monuments et des paliers du ranch : la carte « Nouveau : {name} » du
+	-- premier passage (RanchRenderer.ElementBuilt) les montre tour à tour dans la même case ; les écrans
+	-- montrent le nom le plus long de chaque langue (et le Monument 10), les autres y sont mesurés
+	{ id = "monument", pattern = "^monument%.%d+$" },
+	{ id = "ranchTier", pattern = "^ranchTier%.%d$" },
 	-- pas de famille « prompt » : la plaque d'une invite est taillée sur SON mot (WorldText), chaque
 	-- verbe a son scénario
 }

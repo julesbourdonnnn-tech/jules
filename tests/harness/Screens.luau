@@ -1298,6 +1298,101 @@ local function cardScreens()
 			end
 		end,
 	})
+	-- lot B3, étape 5 : états de la v1.3 que les scénarios ne montraient pas (TextFitKeysPending [auto])
+	-- nouvelle espèce sans mutation (« NOUVEAU ! … »)
+	celebrate("dexNew.plain", "dexNew", function(c)
+		return { species = longestSpecies(c), mutation = 0, star = 1 }
+	end)
+	-- « Garder ton clip ? » rouverte depuis « ! » : Garder, Partager, Fermer
+	table.insert(list, {
+		id = "card.reopened.clip",
+		run = function(c)
+			closeAll(c)
+			flushAll(c)
+			c.Cards.push({
+				id = "",
+				kind = "clip",
+				blocking = false,
+				data = { save = function() end, share = function() end },
+			})
+			frames(c, 4, 0.1)
+			flushCards(c)
+			for _, card in c.Cards.pending() do
+				if card.kind == "clip" then
+					c.Cards.open(card.id)
+				end
+			end
+			frames(c, 6, 0.1)
+		end,
+	})
+	-- « revient toujours » d'un boopeur connu, rouverte : Continuer, Mode Cozy, Pas ce joueur
+	table.insert(list, {
+		id = "card.reopened.postBoop.refuse",
+		run = function(c)
+			closeAll(c)
+			flushAll(c)
+			unstub(c)
+			local booper = c.players[1].UserId
+			c.h:fireClient(REMOTES .. "Celebrate", {
+				kind = "booped",
+				data = { uid = "u9", species = longestSpecies(c), booperId = booper },
+			})
+			c.h:fireClient(REMOTES .. "Celebrate", {
+				kind = "ownerReturn",
+				data = {
+					uid = "u9",
+					species = longestSpecies(c),
+					coins = 1.23456789e18,
+					firstBoop = true,
+					catcherId = booper,
+					catcherName = Screens.LONG_NAME_2,
+				},
+			})
+			frames(c, 4, 0.1)
+			flushCards(c)
+			for _, card in c.Cards.pending() do
+				if card.kind == "postBoop" then
+					c.Cards.open(card.id)
+				end
+			end
+			frames(c, 6, 0.1)
+		end,
+	})
+	-- carte du choix Rush / Cozy à la fin de sa petite animation : « … avec des cadeaux ! »
+	table.insert(list, {
+		id = "card.mode.gifts",
+		run = function(c)
+			closeAll(c)
+			flushAll(c)
+			unstub(c)
+			ranchStub(c, "cozy")
+			eventStub(c, c.Clock.now())
+			c.h:fireClient(REMOTES .. "ModePrompt", {})
+			frames(c, 10, 0.2)
+			frames(c, 12, 0.2)
+		end,
+	})
+	-- absence de moins d'une heure : « 12 min »
+	table.insert(list, {
+		id = "return.minutes",
+		run = function(c)
+			closeAll(c)
+			flushAll(c)
+			c.h:fireClient(REMOTES .. "Celebrate", {
+				kind = "return",
+				data = {
+					seconds = 720,
+					uid = "u1",
+					species = longestSpecies(c),
+					grew = 1.23456789e18,
+					pot = 9.87654321e17,
+					splorchReady = false,
+					nearlyReady = false,
+				},
+			})
+			frames(c, 30, 0.1)
+		end,
+	})
 	for _, variant in { { "ready", true, false }, { "nearly", false, true }, { "plain", false, false } } do
 		table.insert(list, {
 			id = "return." .. variant[1],
@@ -3363,6 +3458,303 @@ local function metaScreens()
 	settingsScreen("emotes", { emote = "confettiCrown", show = "emoteLeft" })
 	settingsScreen("emote.bellyFlop", { emote = "bellyFlop", show = "emoteLeft" })
 	settingsScreen("emote.crown", { emote = "crown", show = "emoteLeft" })
+
+	-- Lot B3, étape 5 (D19-D22) : cartes de la v2.0 (noms les plus longs de la langue), petite ligne du
+	-- Grand Splorch, Pluie d'étoiles, écran de retour du Petit Splorch, jumelles et leur invite
+	local Cos = nil
+	local function cosmetics(c)
+		Cos = Cos or c.h:require("ReplicatedStorage.Shared.Config.Cosmetics")
+		return Cos
+	end
+	-- clé de la liste dont la traduction est la plus longue dans la langue du client
+	local function longestKey(c, keys)
+		local best, bestLen = keys[1], -1
+		for _, key in keys do
+			local text = c.Prefs.t(key)
+			local n = utf8.len(text) or #text
+			if n > bestLen then
+				best, bestLen = key, n
+			end
+		end
+		return best
+	end
+	-- « kind.id » de Cosmetics.ListV2 / WeeklyRotation (filtre facultatif) au nom le plus long
+	local function longestV2(c, filter)
+		local C = cosmetics(c)
+		local keys, refs = {}, {}
+		for _, list2 in { C.ListV2, C.WeeklyRotation } do
+			for _, def in list2 do
+				if filter == nil or filter(def) then
+					table.insert(keys, def.key)
+					refs[def.key] = def
+				end
+			end
+		end
+		return refs[longestKey(c, keys)]
+	end
+	local function v2State(c, opts)
+		closeAll(c)
+		flushAll(c)
+		unstub(c)
+		-- cartes rangées des écrans précédents oubliées : la carte rouverte est celle de cet écran
+		for _, card in c.Cards.pending() do
+			c.Cards.dismiss(card.id)
+		end
+		local snap = Screens.upgradeSnapshot(c, function(p)
+			p.R = opts.r or 30
+			p.bestR = opts.bestR or 30
+			p.ascend = opts.A or 3
+		end)
+		c.h:fireClient(
+			REMOTES .. "DataPatch",
+			{ onboarding = META_DONE, version = 2, upgradeSnapshot = snap },
+			{}
+		)
+		frames(c, 3, 0.1)
+		v2Event(c, opts.flags)
+	end
+	-- carte affichée (8 s à droite) ; opts.reopen : rangée puis rouverte depuis « ! »
+	local function cardScreen(id, kind, data, opts)
+		opts = opts or {}
+		table.insert(list, {
+			id = "meta.card." .. id,
+			run = function(c)
+				v2State(c, opts)
+				local d = if type(data) == "function" then data(c) else data
+				if kind == "element" then
+					c.h:require(CLIENT .. "Controllers.RanchRenderer").ElementBuilt:Fire(c.WSC.mySlot(), d.id)
+				else
+					c.h:fireClient(REMOTES .. "Celebrate", { kind = kind, data = d })
+				end
+				frames(c, 8, 0.1)
+				if opts.reopen then
+					flushCards(c)
+					local pending = c.Cards.pending()
+					local last = pending[#pending]
+					if last then
+						c.Cards.open(last.id)
+						frames(c, 6, 0.1)
+					end
+				end
+			end,
+		})
+	end
+	local HIGHLIGHTS = { highlights = { "unlock.workshop", "unlock.gloves", "unlock.skin" } }
+	cardScreen("welcomeV2", "welcomeV2", HIGHLIGHTS)
+	cardScreen("welcomeV2.open", "welcomeV2", HIGHLIGHTS, { reopen = true })
+	cardScreen("regainDone", "regainDone", { bestR = 400, confetti = 99999 }, { r = 399, bestR = 400 })
+	cardScreen("regainDone.one", "regainDone", { bestR = 15, confetti = 1 }, { reopen = true })
+	cardScreen("recordStep", "recordStep", { share = 0.75 })
+	cardScreen("unlock.deco", "unlock", function(c)
+		local keys, ids = {}, {}
+		for _, def in cosmetics(c).DecoPerso do
+			table.insert(keys, def.key)
+			ids[def.key] = def.id
+		end
+		return { kind = "deco", id = ids[longestKey(c, keys)] }
+	end)
+	cardScreen("unlock.v2.open", "unlock", function(c)
+		local def = longestV2(c, function(d)
+			return d.kind ~= "emote"
+		end)
+		return { kind = def.kind, id = def.id }
+	end, { reopen = true })
+	-- unlock2 : 2e déblocage des Records R 1 (Gants), 15 (Jelly Ascend) et 17 (habillage)
+	for _, r in { 1, 15, 17 } do
+		cardScreen("unlock2.r" .. r, "unlock2", { recordR = r, keys = {} })
+	end
+	cardScreen("trackTier.confetti", "trackTier", { tier = 11, reward = "confetti" })
+	cardScreen("trackTier.drop", "trackTier", { tier = 8, reward = "drop" }, { reopen = true })
+	cardScreen("trackTier.cosmetic", "trackTier", function(c)
+		local C = cosmetics(c)
+		local keys, refs = {}, {}
+		for _, def in C.WeeklyRotation do
+			table.insert(keys, def.key)
+			refs[def.key] = def
+		end
+		local def = refs[longestKey(c, keys)]
+		return { tier = 12, reward = def.kind .. "." .. def.id }
+	end)
+	cardScreen("carnet", "carnet", function(c)
+		local Quests = c.h:require("ReplicatedStorage.Shared.Config.Quests")
+		local C = cosmetics(c)
+		local keyOf = {}
+		for _, def in C.ListV2 do
+			keyOf[def.kind .. "." .. def.id] = def.key
+		end
+		local keys, tierOf, refOf = {}, {}, {}
+		for i, at in Quests.Carnet.Tiers do
+			local ref = Quests.Carnet.Rewards[at]
+			local key = ref and keyOf[ref]
+			if key then
+				table.insert(keys, key)
+				tierOf[key], refOf[key] = i, ref
+			end
+		end
+		local key = longestKey(c, keys)
+		return { tier = tierOf[key], reward = refOf[key] }
+	end)
+	cardScreen("mastery", "mastery", function(c)
+		return { species = longestSpecies(c) }
+	end, { reopen = true })
+	-- premier passage d'un élément de MON ranch : le palier, le Monument au nom le plus long, la
+	-- maisonnette (les autres noms de la même famille passent dans la même case, TextFitKeys)
+	cardScreen("element.tier", "element", function(c)
+		local keys = {}
+		for n = 1, 6 do
+			table.insert(keys, "ranchTier." .. n)
+		end
+		local key = longestKey(c, keys)
+		return { id = "tier" .. string.match(key, "%d+$") .. ".built" }
+	end)
+	cardScreen("element.monument", "element", function(c)
+		local keys = {}
+		for n = 1, 10 do
+			table.insert(keys, "monument." .. n)
+		end
+		return { id = longestKey(c, keys) }
+	end)
+	cardScreen("element.monument10", "element", { id = "monument.10" })
+	cardScreen("element.house", "element", { id = "helper.house" })
+
+	-- petite ligne du Grand Splorch d'un autre (sa bannière ne vient pas : une toutes les 3 min) et
+	-- Pluie d'étoiles de la Jelly Ascend d'un autre (messages du HUD)
+	table.insert(list, {
+		id = "meta.message.splorchLine",
+		run = function(c)
+			v2State(c, {})
+			local now = c.Clock.now()
+			c.h:fireClient(REMOTES .. "Celebrate", {
+				kind = "splorch",
+				data = {
+					userId = c.players[1].UserId,
+					level = 1,
+					flyer = { s = 1, m = 0, st = 0, z = 10 },
+					startedAt = now,
+					burstAt = now + 1,
+					endsAt = now + 5,
+					short = false,
+				},
+			})
+			frames(c, 30, 0.1)
+		end,
+	})
+	table.insert(list, {
+		id = "meta.message.starRain",
+		run = function(c)
+			v2State(c, {})
+			local now = c.Clock.now()
+			local hero = c.players[1].UserId
+			c.h:fireClient(REMOTES .. "Celebrate", {
+				kind = "ascend",
+				data = {
+					userId = hero,
+					ascend = 2,
+					startR = 1,
+					bestR = 30,
+					startedAt = now,
+					burstAt = now + 4,
+					endsAt = now + 10,
+					flyer = { s = 1, m = 0, st = 0, z = 10 },
+				},
+			})
+			c.h:fireClient(REMOTES .. "Celebrate", {
+				kind = "giftRain",
+				data = {
+					heroId = hero,
+					heroName = Screens.LONG_NAME_2,
+					coins = 0,
+					uid = "",
+					species = 0,
+					short = false,
+				},
+			})
+			frames(c, 4, 0.1)
+		end,
+	})
+	-- écran de retour pendant une remontée (Petit Splorch prêt / presque prêt)
+	for _, variant in { { "petit", true, false }, { "petitNearly", false, true } } do
+		table.insert(list, {
+			id = "meta.return." .. variant[1],
+			run = function(c)
+				v2State(c, { r = 12, bestR = 30, A = 2 })
+				c.h:fireClient(REMOTES .. "Celebrate", {
+					kind = "return",
+					data = {
+						seconds = 43199,
+						uid = "u1",
+						species = longestSpecies(c),
+						grew = 1.23456789e18,
+						pot = 9.87654321e17,
+						splorchReady = variant[2],
+						nearlyReady = variant[3],
+					},
+				})
+				frames(c, 30, 0.1)
+			end,
+		})
+	end
+	-- jumelles : devant le portail du ranch 2 (voisin au nom long, BestR posé), invite □ « Regarder »,
+	-- puis la fenêtre du cœur (normal, déjà donné, plafond du jour)
+	local function binocularsState(c, hearts)
+		v2State(c, {})
+		local function child(parent, name, class)
+			local f = parent:FindFirstChild(name)
+			if f == nil then
+				f = MockInstance.new(class)
+				f.Name = name
+				f.Parent = parent
+			end
+			return f
+		end
+		local world = child(c.h.workspace, "Wobbleton", "Folder")
+		child(child(world, "Ranches", "Folder"), "2", "Model"):SetAttribute("BestR", 12)
+		if hearts then
+			c.h:fireClient(REMOTES .. "DataPatch", { hearts = hearts }, {})
+			c.h:settle(1)
+		end
+		c.h:moveTo(c.h.localPlayer, c.WorldLayout.gateOutside(2))
+		frames(c, 12, 1 / 30)
+		refreshHud(c)
+	end
+	table.insert(list, {
+		id = "meta.binoculars.prompt",
+		run = function(c)
+			binocularsState(c, nil)
+		end,
+	})
+	local function others(n)
+		local out = {}
+		for i = 1, n do
+			out[i] = 9000 + i
+		end
+		return out
+	end
+	for _, variant in
+		{
+			{ "give", nil },
+			{ "given", "given" },
+			{ "limit", "limit" },
+		}
+	do
+		table.insert(list, {
+			id = "meta.binoculars." .. variant[1],
+			run = function(c)
+				local day = math.floor(c.Clock.now() / 86400)
+				local hearts = nil
+				if variant[2] == "given" then
+					hearts = { receivedTotal = 0, givenDay = day, givenTo = { c.players[1].UserId } }
+				elseif variant[2] == "limit" then
+					hearts = { receivedTotal = 0, givenDay = day, givenTo = others(20) }
+				end
+				binocularsState(c, hearts)
+				c.Clock.advance(1)
+				Gamepad.tap(c.h, Enum.KeyCode.ButtonX)
+				c.h:settle(2)
+				frames(c, 12, 1 / 30)
+			end,
+		})
+	end
 	return list
 end
 

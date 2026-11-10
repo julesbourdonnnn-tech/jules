@@ -97,6 +97,10 @@ local SHOW_SECONDS = Layout.Cards.NonBlockingSeconds
 local QUEUE_MAX = 12
 local PENDING_MAX = 10
 local DIALOG_W = 800
+-- carte rouverte à 3 boutons (« Pas ce joueur » d'un boopeur connu, clip) : plus large, chaque libellé
+-- de 40 px tient sur une ligne (lot B3, étape 5 : « Pas ce joueur » passait sur 2 lignes dans 229 px) ;
+-- toujours à droite du rail du menu (x ≥ 440 px TV)
+local DIALOG_W3 = 1024
 local MODE_GUARD = Events.Rush.CardEntryGuard
 local MODE_TIMEOUT = Events.Rush.CardTimeout
 local STILL_FOR = Events.Rush.CardStillFor
@@ -970,7 +974,8 @@ local function openDialog(entry: Entry)
 	local list = actions(entry.card)
 	local n = #list
 	local gap = Layout.Spacing.Normal
-	local innerW = DIALOG_W - 64
+	local width = if n >= 3 then DIALOG_W3 else DIALOG_W
+	local innerW = width - 64
 	local bw = math.floor((innerW - gap * (n - 1)) / n)
 	for i, action in list do
 		local b = Util.button({
@@ -1003,7 +1008,7 @@ local function openDialog(entry: Entry)
 		moreLabel.Position = UDim2.fromOffset(32, 92 + lineH + 8)
 		height += DIALOG_MORE_H + 8
 	end
-	dlg.Size = UDim2.fromOffset(DIALOG_W, height)
+	dlg.Size = UDim2.fromOffset(width, height)
 	dlg.Visible = true
 	dlg:SetAttribute("CardKind", entry.card.kind)
 	if not Prefs.reducedMotion() then
