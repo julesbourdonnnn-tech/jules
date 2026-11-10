@@ -974,6 +974,36 @@ return function(T)
 		end)
 
 		it(
+			"sources au nombre 1 sans pluriel faux (captures de l'étape 3 : « 1 pistes finies »)",
+			function()
+				local function inLang(lang, t)
+					local text = Strings[lang][t.key] or t.key
+					return (
+						string.gsub(text, "{(%w+)}", function(name)
+							local v = t.vars and t.vars[name]
+							return if v ~= nil then tostring(v) else "{" .. name .. "}"
+						end)
+					)
+				end
+				local want = {
+					en = { ribbonChest = "Weekly tracks done: 1", plushMoon = "Jelly Moons: 1" },
+					fr = { ribbonChest = "Pistes finies : 1", plushMoon = "Jelly Moon : 1" },
+				}
+				for lang, ids in want do
+					for _, item in MV.decoItems(nil, { lang = lang, on = onAll }) do
+						if ids[item.id] then
+							expect({ lang = lang, id = item.id, text = inLang(lang, item.source) }).toEqual({
+								lang = lang,
+								id = item.id,
+								text = ids[item.id],
+							})
+						end
+					end
+				end
+			end
+		)
+
+		it(
 			"plan vu du dessus : 12 emplacements dans le rectangle, sans chevauchement, P plus petits que G",
 			function()
 				local slots = WorldLayout.decoPersoSlots()

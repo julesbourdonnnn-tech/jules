@@ -509,9 +509,11 @@ local function makeCell(frame: Frame, c: number): Cell
 		zIndex = b.ZIndex + 3,
 	})
 	Widgets.corner(bf, UDim.new(0.5, 0))
+	-- les enfants d'un libellé à UIPadding sont posés dans la zone du texte : le cœur recule du retrait
+	-- pour rester à 8 px du bord de la pastille, devant le nombre (spec Panels_Ranch, captures)
 	local bfHeart = Icons.canvas(bf, BF_HEART, { "heart" }, "Heart")
 	bfHeart.AnchorPoint = Vector2.new(0, 0.5)
-	bfHeart.Position = UDim2.new(0, 8, 0.5, 0)
+	bfHeart.Position = UDim2.new(0, 8 - (BF_HEART + 12), 0.5, 0)
 	bfHeart.ZIndex = bf.ZIndex + 1
 	Icons.draw(bfHeart, "heart", Widgets.Colors.Stroke)
 	local pad = Instance.new("UIPadding")
@@ -2365,13 +2367,15 @@ local function makeV2Cell(frame: Frame, c: number, cw: number): V2Cell
 		corner = UDim.new(0.5, 0),
 		zIndex = lock.ZIndex,
 	})
+	-- nom en 28 px sur 2 lignes au plus (GDD Annexe B, case (a) de Mon style : 66 titres, noms de la
+	-- semaine « Titre « Copain fidèle » »)
 	local name = Widgets.label({
 		parent = b,
 		name = "Name",
 		size = UDim2.new(1, -12, 0, 68),
 		position = UDim2.fromOffset(6, 58),
 		text = "",
-		textSize = 32,
+		textSize = 28,
 		wrapped = true,
 		zIndex = b.ZIndex + 2,
 	})
@@ -2417,7 +2421,7 @@ local function buildPlan(page: Frame, left: number, width: number, height: numbe
 		zIndex = 2,
 	})
 	local rowH = groundH / MetaView.PLAN_ROWS
-	Widgets.frame({
+	local pens = Widgets.frame({
 		parent = ground,
 		name = "Pens",
 		size = UDim2.fromOffset(width - 96, math.floor(rowH - 32)),
@@ -2426,6 +2430,16 @@ local function buildPlan(page: Frame, left: number, width: number, height: numbe
 		transparency = 0.5,
 		corner = Widgets.CORNER,
 		zIndex = 3,
+	})
+	-- repère lisible : les enclos au milieu du ranch (même mot que l'onglet)
+	Widgets.label({
+		parent = pens,
+		name = "PensLabel",
+		size = UDim2.fromScale(1, 1),
+		key = "panel.ranch.tab.pens",
+		textSize = 32,
+		color = Widgets.Colors.TextDim,
+		zIndex = 4,
 	})
 	Widgets.frame({
 		parent = ground,
@@ -2585,6 +2599,11 @@ local function prepareOpen()
 	end
 	pickerSlot = 0
 	applyStyleMode()
+	-- liste des sortes ramenée en haut à chaque ouverture (la 1re sorte entière à l'écran)
+	local rows = kindRows
+	if styleMode == "v2" and rows then
+		rows.ensureVisible(1)
+	end
 end
 
 -- Construit le contenu une seule fois dans le cadre du panneau

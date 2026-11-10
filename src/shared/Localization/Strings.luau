@@ -842,8 +842,8 @@ Strings.en = {
 	["cosmetic.source.track"] = "Weekly track",
 	["cosmetic.source.play"] = "Play {n} min",
 	["cosmetic.source.objectives"] = "{n} daily goals",
-	["cosmetic.source.moon"] = "{n} Jelly Moons",
-	["cosmetic.source.tracks"] = "{n} weekly tracks done",
+	["cosmetic.source.moon"] = "Jelly Moons: {n}",
+	["cosmetic.source.tracks"] = "Weekly tracks done: {n}",
 	-- =========================================================================================
 	-- Contrat v2.0 (GDD v2.0, Annexe B, docs/04 §27.8) : textes du jeu complet, affichés seulement
 	-- quand leur interrupteur Config/Features est ouvert (en attente dans TextFitKeysPending jusque-là).
@@ -2143,8 +2143,8 @@ Strings.fr = {
 	["cosmetic.source.track"] = "Piste de la semaine",
 	["cosmetic.source.play"] = "Joue {n} min",
 	["cosmetic.source.objectives"] = "{n} objectifs du jour",
-	["cosmetic.source.moon"] = "{n} Jelly Moon",
-	["cosmetic.source.tracks"] = "{n} pistes finies",
+	["cosmetic.source.moon"] = "Jelly Moon : {n}",
+	["cosmetic.source.tracks"] = "Pistes finies : {n}",
 	-- =========================================================================================
 	-- Contrat v2.0 (GDD v2.0, Annexe B, docs/04 §27.8) : textes du jeu complet, affichés seulement
 	-- quand leur interrupteur Config/Features est ouvert (en attente dans TextFitKeysPending jusque-là).
@@ -2460,7 +2460,7 @@ Strings.fr = {
 	["deco.mushroom"] = "Champignon guimauve",
 	["deco.candyBucket"] = "Seau de bonbons",
 	["deco.birdhouse"] = "Nichoir sucré",
-	["deco.hiSign"] = "Panneau « Coucou »",
+	["deco.hiSign"] = "Panneau «{_}Coucou{_}»",
 	["deco.puddingStool"] = "Tabouret pudding",
 	["deco.mintLantern"] = "Lanterne menthe",
 	["deco.wishingWell"] = "Puits à vœux",
@@ -2483,14 +2483,14 @@ Strings.fr = {
 	["deco.jellyDragon"] = "Dragon de gelée",
 	["deco.title"] = "Déco perso",
 	["deco.empty"] = "Emplacement libre",
-	["weekly.cookieSaddle"] = "Selle « Biscuit »",
-	["weekly.bubbleTrail"] = "Traînée « Bulles »",
-	["weekly.strawberryFlag"] = "Drapeau « Fraise »",
+	["weekly.cookieSaddle"] = "Selle «{_}Biscuit{_}»",
+	["weekly.bubbleTrail"] = "Traînée «{_}Bulles{_}»",
+	["weekly.strawberryFlag"] = "Drapeau «{_}Fraise{_}»",
 	["weekly.polkaBow"] = "Nœud à pois",
-	["weekly.hugEmote"] = "Emote « Câlin »",
-	["weekly.loyalBuddy"] = "Titre « Copain fidèle »",
-	["weekly.peachPalette"] = "Palette « Pêche »",
-	["weekly.pinkCushions"] = "Coussins « Nuage rose »",
+	["weekly.hugEmote"] = "Emote «{_}Câlin{_}»",
+	["weekly.loyalBuddy"] = "Titre «{_}Copain fidèle{_}»",
+	["weekly.peachPalette"] = "Palette «{_}Pêche{_}»",
+	["weekly.pinkCushions"] = "Coussins «{_}Nuage rose{_}»",
 	["v2cosmetic.saddle.confetti"] = "Confetti",
 	["v2cosmetic.saddle.goldenJelly"] = "Gelée d'or",
 	["v2cosmetic.saddle.cosmos"] = "Cosmos",

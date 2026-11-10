@@ -40,6 +40,9 @@ TextFitKeys.FAMILIES = {
 	{ id = "cosmetic.emote", pattern = "^cosmetic%.emote%.[%w_]+$" },
 	{ id = "cosmetic.outfit", pattern = "^cosmetic%.outfit%.[%w_]+$" },
 	{ id = "cosmetic.flag", pattern = "^cosmetic%.flag%.[%w_]+$" },
+	-- titres de la v2.0 (Mon style, lot B3, étape 3) : 66 titres dans la même case de la grille ; les
+	-- écrans montrent le début, la fin et le titre « taille 1e24 », les autres sont mesurés dans ces cases
+	{ id = "title", pattern = "^title%.[%w_]+$" },
 	{ id = "hud.now", pattern = "^hud%.now%.[%w_]+$" },
 	{ id = "hud.next", pattern = "^hud%.next%.[%w_]+$" },
 	-- écran Améliorations (lot B2, étape 2) : palier et raison courte d'une carte du Conseillé (une
@@ -106,7 +109,9 @@ end
 -- Mesure d'un texte dans une boîte relevée ; liste de problèmes (vide : il tient)
 function TextFitKeys.measure(text: string, box): { string }
 	local issues = {}
-	local plain = TextFit.plain(text)
+	-- repère « {_} » de UI/Text (lot B1) : une espace qui ne coupe jamais la ligne, mesurée comme
+	-- l'espace insécable (lot B3, étape 3 : « Selle «{_}Biscuit{_}» » était mesuré avec ses 3 signes)
+	local plain = TextFit.plain((string.gsub(text, "{_}", "\u{A0}")))
 	if string.gsub(plain, "%s", "") == "" then
 		return issues
 	end

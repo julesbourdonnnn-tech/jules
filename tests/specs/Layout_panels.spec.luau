@@ -44,7 +44,9 @@ return function(T)
 	-- B2-49 : les 3 000 du §12.9 ne tiennent pas avec la v1.3 entière plus l'écran, décision demandée) ;
 	-- ≤ 3 875 depuis le lot B3, étape 1 (D24, journal B3-8 : + 75 des 5 badges d'étoiles dessinés de la
 	-- fiche du Squishydex, règle 18) ; ≤ 3 950 depuis le lot B3, étape 2 (D24, journal B3-19 : + 57 de
-	-- l'aperçu de renaissance de la v2.0, SplorchPreview 63 → 120)
+	-- l'aperçu de renaissance de la v2.0, SplorchPreview 63 → 120) ; ≤ 4 125 depuis le lot B3, étape 3
+	-- (D24, journal B3-31 : + 152, cœurs et coche dessinés des 30 cases du Ranch, garde-robe, Dalles
+	-- non construites sur le chemin de l'écran Améliorations)
 	describe("Layout_panels › v2.0 : écran Améliorations et rail v2.0 (lot B2)", function()
 		it("aucune faute de disposition sur aucun écran, 3 résolutions × 2 langues ; budgets", function()
 			local UpgradeScreen = require("../harness/UpgradeScreen")
@@ -91,7 +93,7 @@ return function(T)
 			)
 			expect(screen + 1 <= 1400).toBe(true)
 			expect(atLoad <= 3000).toBe(true)
-			expect(whole <= 3950).toBe(true)
+			expect(whole <= 4125).toBe(true)
 			expect(table.concat(h.errors, "\n")).toBe("")
 			expect(table.concat(h:warnings(), "\n")).toBe("")
 		end)

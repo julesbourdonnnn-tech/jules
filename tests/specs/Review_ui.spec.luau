@@ -795,8 +795,10 @@ return function(T)
 				local bad = {}
 				local win = c.PC.window("Ranch")
 				for _, cell in (win and win:GetDescendants() or {}) do
-					local check = cell:IsA("GuiButton") and cell:FindFirstChild("Check")
-					if check and shown(cell) and shown(check) then
+					-- case choisie : la coche DESSINÉE de sa toile « Mark » (lot B3, D17 : le libellé « ✓ »
+					-- « Check » n'existe plus, règle 18)
+					local mark = cell:IsA("GuiButton") and cell:FindFirstChild("Mark")
+					if mark and mark:GetAttribute("Icon") == "check" and shown(cell) and shown(mark) then
 						picked += 1
 						for _, name in { "Name", "Size", "Line" } do
 							local d = cell:FindFirstChild(name)

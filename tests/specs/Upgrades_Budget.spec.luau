@@ -16,7 +16,9 @@
 --     l'écran n'ajoute que ses propres objets, et le total reste ≤ 3 800 (3 700 jusqu'à l'étape 3 ; le
 --     HUD v2.0 et les glyphes dessinés de l'étape 4 en ajoutent 85, journal B2-49) ; ≤ 3 875 depuis le
 --     lot B3, étape 1 (les 5 badges d'étoiles dessinés du Squishydex : + 75, journal B3-8) ; ≤ 3 950 depuis
---     le lot B3, étape 2 (aperçu de renaissance de la v2.0 : 63 → 120, + 57, journal B3-19).
+--     le lot B3, étape 2 (aperçu de renaissance de la v2.0 : 63 → 120, + 57, journal B3-19) ; ≤ 4 125
+--     depuis le lot B3, étape 3 (+ 152 : cœurs et coche dessinés des 30 cases de la grille du Ranch
+--     + 180, garde-robe + 6, page des Dalles non construite − 34 ; journal B3-31).
 -- Zéro trace.
 local roblox = require("@lune/roblox")
 local TvAudit = require("../harness/TvAudit")
@@ -88,7 +90,7 @@ return function(T)
 
 	describe("Upgrades_Budget › interface entière, tous les panneaux construits", function()
 		it(
-			"relevé : l'écran n'ajoute que ses objets ; total ≤ 3 950 (3 000 du §12.9 non tenu, B2-13, B2-49, B3-8, B3-19)",
+			"relevé : l'écran n'ajoute que ses objets ; total ≤ 4 125 (3 000 du §12.9 non tenu, B2-13, B2-49, B3-8, B3-19, B3-31)",
 			function()
 				local profile = TvAudit.richProfile()
 				profile.squishies.u20.z = 300000 -- Grand Splorch prêt (aperçu construit)
@@ -136,7 +138,7 @@ return function(T)
 				-- lot B3, étape 2 (D24, journal B3-19) : 3 898, + 57 = l'aperçu de renaissance sur le chemin
 				-- v2.0 (SplorchPreview 63 → 120 : 3 tuiles UpgradeCard « tile » 55, page du Splorch 24, page
 				-- Détails 26, à la place des tuiles de texte et des lignes de la v1.3) : garde + 75
-				expect(whole <= 3950).toBe(true)
+				expect(whole <= 4125).toBe(true)
 				S.clean(c, expect)
 			end
 		)

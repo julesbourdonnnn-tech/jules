@@ -3059,6 +3059,122 @@ local function metaScreens()
 		Gamepad.release(c.h, Enum.KeyCode.ButtonA)
 		frames(c, 10, 0.1)
 	end)
+	-- Étape 3 : Panels/Ranch › Mon style (D10, D11) : profil v2 répliqué (Record R 30, A = 3, palettes
+	-- de l'Atelier Bonbon / Menthe / Lavande, selle Biscuit de la piste, 600 niveaux, géant 2e15, Fanion,
+	-- Gamelle), attribut DecoPerso de MON ranch, instantané (Dalles retirées), EventState.features.v2 ;
+	-- pires cas : noms français les plus longs sur le plan, 66 titres (début, fin, « taille 1e24 »),
+	-- sources verrouillées (Carnet 10 000, taille 1e15 / 1e24, saison, semaine, Atelier, Ascension)
+	local function styleState(c, opts)
+		closeAll(c)
+		flushAll(c)
+		unstub(c)
+		c.h:moveTo(c.h.localPlayer, c.WorldLayout.spawnCFrame(1).Position + Vector3.new(0, 3, 0))
+		Screens.myRanchModel(c, { DecoPerso = opts.deco or "1,7,0,0,0,0,0,0,0,0,0,0" })
+		local snap = Screens.upgradeSnapshot(c, function(p)
+			p.R = 30
+			p.bestR = 30
+			p.ascend = 3
+		end)
+		local poor = opts.poor == true
+		local profile = {
+			onboarding = META_DONE,
+			version = 2,
+			R = 30,
+			bestR = 30,
+			ascend = 3,
+			plopDays = if poor then 0 else 8,
+			cosmetics = {
+				saddle = "classic",
+				trail = "",
+				title = "",
+				theme = "marshmallow",
+				flag = "",
+				palette = "candy",
+				cushions = "",
+			},
+			outfits = { owned = { plopBib = 1, partyHat = 1 }, worn = {} },
+			atelierCosmetics = { if poor then 0 else 7 },
+			stats = if poor
+				then { upgradesBought = 0, playSeconds = 0, objectivesClaimed = 0, tracksDone = 0 }
+				else { upgradesBought = 600, playSeconds = 400, objectivesClaimed = 30, tracksDone = 1 },
+			weeklyTrack = { won = { if poor then 0 else 1 } },
+			biggestEver = if poor then 10 else 2e15,
+			season = { frostDays = 0 },
+			moon = { sessions = if poor then 0 else 1 },
+			decoPerso = { owned = { 0, 0 }, slots = { 1, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 } },
+		}
+		c.h:fireClient(REMOTES .. "DataPatch", profile, {})
+		c.h:fireClient(REMOTES .. "DataPatch", { upgradeSnapshot = snap }, {})
+		frames(c, 3, 0.1)
+		ranchStub(c, "cozy")
+		local features = table.clone(FEATURES)
+		features.v2 = opts.flags or META_V2
+		local ev = eventStub(c, c.Clock.now(), { features = features })
+		c.WSC.EventChanged:Fire(ev)
+		frames(c, 2, 0.1)
+		open(c, "Ranch", "style")
+		local Ranch = c.h:require(CLIENT .. "UI.Panels.Ranch")
+		if opts.kind then
+			local b = Ranch._styleKindButton(opts.kind)
+			if b then
+				activate(c, b)
+			end
+		end
+		if opts.slot then
+			local b = Ranch._decoSlot(opts.slot)
+			if b then
+				activate(c, b)
+			end
+		end
+		-- case à montrer (la liste virtualisée défile jusqu'à elle) : « last » = la dernière
+		if opts.show then
+			local entries = Ranch._styleEntries()
+			local want = if opts.show == "last" then entries[#entries] else nil
+			if want == nil then
+				for _, e in entries do
+					if e.id == opts.show then
+						want = e
+					end
+				end
+			end
+			local cell = if want then Ranch._styleCell(want.kind, want.id) else nil
+			if cell then
+				c.h.game.GuiService.SelectedObject = cell
+				c.h:settle(1)
+				frames(c, 6, 0.1)
+			end
+		end
+	end
+	local function style(id, opts)
+		table.insert(list, {
+			id = "meta.style." .. id,
+			run = function(c)
+				styleState(c, opts)
+			end,
+		})
+	end
+	style("theme", {}) -- 14 habillages, l'habillage équipé sélectionné
+	style("saddle", { kind = "saddle" })
+	style("saddle.last", { kind = "saddle", show = "last" })
+	style("trail", { kind = "trail", show = "last" })
+	style("titles.first", { kind = "title" })
+	style("titles.size", { kind = "title", show = "sunKeeper", poor = true })
+	style("titles.last", { kind = "title", show = "last" })
+	style("flag", { kind = "flag" })
+	style("outfits", { kind = "outfits" })
+	style("palette", { kind = "palette" })
+	style("cushions", { kind = "cushions" })
+	style("locked", { kind = "saddle", show = "last", poor = true })
+	-- Déco perso : plan vide, plan plein (noms français les plus longs : petits 1-8, grands 9-12)
+	style("deco.empty", { kind = "deco", deco = "0,0,0,0,0,0,0,0,0,0,0,0" })
+	style("deco.full", { kind = "deco", deco = "17,4,21,31,5,34,26,1,37,12,25,27" })
+	style("deco.pickerP", { kind = "deco", deco = "0,0,0,0,0,0,0,0,0,0,0,0", slot = 2 })
+	style(
+		"deco.pickerP.last",
+		{ kind = "deco", deco = "0,0,0,0,0,0,0,0,0,0,0,0", slot = 2, show = "last", poor = true }
+	)
+	style("deco.pickerG", { kind = "deco", deco = "0,0,0,0,0,0,0,0,0,0,0,0", slot = 9, poor = true })
+	style("deco.pickerG.last", { kind = "deco", deco = "0,0,0,0,0,0,0,0,0,0,0,0", slot = 9, show = "last" })
 	return list
 end
 
