@@ -336,6 +336,9 @@ return function(T)
 				for i = 1, 12 do
 					expect(page["Tier" .. i].Check:GetAttribute("Icon")).toBe("check")
 				end
+				-- palier 12 réclamé : le cosmétique de la période est à lui (« Possédé »), même si le bit
+				-- `won` n'est pas encore arrivé
+				expect(page.Soon.Status1.Text).toBe("Owned")
 				S.clean(c, expect)
 				S.clean(c2, expect)
 			end

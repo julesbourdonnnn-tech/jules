@@ -271,6 +271,9 @@ return function(T)
 				expect(emote.values).toEqual({ "bravo", "splorch", "wave", "hammerTap", "hugEmote" })
 				local choice = c.Settings._controlFor("emoteLeft")
 				expect(choice.Label.Text).toBe("Hug Emote")
+				-- bouton élargi (noms des emotes gagnées : « Couronne de confettis » sur une ligne)
+				expect(choice.Size.X.Offset).toBe(440)
+				expect(choice.Parent.Title.Size.X.Offset).toBe(-540)
 				pressControl(c, "emoteLeft")
 				local sent = TvAudit.sent(c.h, "SetSetting")
 				expect(sent[#sent][1]).toBe("emoteLeft")
@@ -301,6 +304,8 @@ return function(T)
 					end
 				end
 				expect(c.Settings._controlFor("emoteLeft").Label.Text).toBe("Bravo")
+				expect(c.Settings._controlFor("emoteLeft").Size.X.Offset).toBe(320)
+				expect(rowFor(c, "emoteLeft").Title.Size.X.Offset).toBe(-420)
 				S.noV2Intent(c, expect)
 				S.clean(c, expect)
 			end

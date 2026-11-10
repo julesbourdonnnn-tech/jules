@@ -977,7 +977,7 @@ end
 
 -- Liste en lecture seule qui défile (Guide, Records) : un seul bouton qui coupe ce qui dépasse, ses
 -- lignes de 44 px dans un pas de 48 ; ↑ / ↓ la font défiler (onListInput)
-local function buildReadList(page: Frame, name: string, count: number, tab: string): ReadList
+local function buildReadList(page: Frame, name: string, count: number, tab: string, top: number?): ReadList
 	local width = page.Size.X.Offset - 96
 	-- hauteur visible : un nombre entier de lignes (voir applyListScroll)
 	local viewH = math.max(GUIDE_LINE, math.floor((page.Size.Y.Offset - 16) / GUIDE_LINE) * GUIDE_LINE)
@@ -1010,8 +1010,9 @@ local function buildReadList(page: Frame, name: string, count: number, tab: stri
 	end
 	local pad = Instance.new("UIPadding")
 	pad.PaddingLeft = UDim.new(0, 24)
-	-- ligne de 44 px dans un pas de 48 : 2 px au-dessus et au-dessous de chaque ligne
-	pad.PaddingTop = UDim.new(0, (GUIDE_LINE - 44) / 2)
+	-- ligne de 44 px dans un pas de 48 : 2 px au-dessus et au-dessous de chaque ligne (Records : la 1re
+	-- ligne descend sous le cadre de focus dessiné dans la liste)
+	pad.PaddingTop = UDim.new(0, top or (GUIDE_LINE - 44) / 2)
 	pad.Parent = holder
 	local list: ReadList = {
 		tab = tab,
@@ -1124,7 +1125,7 @@ local function prepareOpen()
 			)
 			page.Visible = false
 			pages.records = page
-			records = buildReadList(page, "Records", RECORD_LINES, "records")
+			records = buildReadList(page, "Records", RECORD_LINES, "records", 18)
 		end
 	end
 	local f = sheet

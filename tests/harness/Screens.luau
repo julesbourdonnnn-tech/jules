@@ -3175,6 +3175,194 @@ local function metaScreens()
 	)
 	style("deco.pickerG", { kind = "deco", deco = "0,0,0,0,0,0,0,0,0,0,0,0", slot = 9, poor = true })
 	style("deco.pickerG.last", { kind = "deco", deco = "0,0,0,0,0,0,0,0,0,0,0,0", slot = 9, show = "last" })
+
+	-- Étape 4 : Objectifs (« Cette semaine », Défis, Carnet), Squishydex (Records, maîtrise), Réglages
+	-- (halo, emotes gagnées) ; profil v2 répliqué, EventState.features.v2 ; à T0 (vendredi, semaine 2975)
+	-- le cosmétique de la semaine est le 8e de la rotation, Coussins « Nuage rose » (le plus long en
+	-- français) ; Défis aux noms les plus longs (« Fais naître 2 Rares ou mieux »)
+	local WEEK, EPOCH = 604800, 345600
+	local function v2Event(c, flags)
+		ranchStub(c, "cozy")
+		local features = table.clone(FEATURES)
+		features.v2 = flags or META_V2
+		c.WSC.EventChanged:Fire(eventStub(c, c.Clock.now(), { features = features }))
+		frames(c, 2, 0.1)
+	end
+	local PARTIAL = {
+		{ id = 7, p = 1, done = false },
+		{ id = 6, p = 1, done = true },
+		{ id = 12, p = 17, done = false },
+	}
+	local function goalsState(c, opts)
+		closeAll(c)
+		flushAll(c)
+		unstub(c)
+		local week = math.floor((c.Clock.unix() - EPOCH) / WEEK)
+		c.h:fireClient(REMOTES .. "DataPatch", {
+			onboarding = META_DONE,
+			version = 2,
+			objectives = opts.objectives,
+			weeklyTrack = {
+				period = if opts.first then 0 else week,
+				firstPeriodEnd = if opts.first then 0 else EPOCH + (week - 4) * WEEK,
+				points = opts.points or 9,
+				claimed = { opts.claimed or 15 },
+				won = { opts.won or 0 },
+				challenges = opts.challenges or PARTIAL,
+				play = { 0, 0, 0, 0, 0, 0, 0 },
+				playDay = 0,
+			},
+			carnet = { opts.carnet or 15 },
+			stats = {
+				upgradesBought = opts.bought or 600,
+				playSeconds = 400,
+				objectivesClaimed = 30,
+				tracksDone = 1,
+				splorches = 40,
+				bestCombo = 12,
+			},
+		}, {})
+		frames(c, 3, 0.1)
+		v2Event(c, opts.flags)
+		open(c, "Objectives", opts.tab or "track")
+	end
+	local function goals(id, opts)
+		table.insert(list, {
+			id = "meta.goals." .. id,
+			run = function(c)
+				goalsState(c, opts)
+			end,
+		})
+	end
+	goals("track.first", { first = true, points = 0, claimed = 0, challenges = {} }) -- 1re période : 10 jours
+	goals("track.full", { points = 30, claimed = 4095 }) -- 24 / 24, les 12 paliers réclamés
+	goals("track.cosmetic.next", {}) -- rien de gagné : la semaine prochaine, dans 2 semaines
+	goals("track.cosmetic.six", { won = 31 + 128 }) -- celui de la période et les 5 suivants gagnés
+	goals("challenges", {
+		challenges = {
+			{ id = 7, p = 2, done = true },
+			{ id = 10, p = 3, done = true },
+			{ id = 9, p = 2, done = true },
+		},
+	})
+	goals("carnet.0", { tab = "carnet", bought = 0, carnet = 0 })
+	goals("carnet.2500", { tab = "carnet", bought = 2500, carnet = 63 })
+	goals("carnet.10000", { tab = "carnet", bought = 10000, carnet = 255 })
+	-- v1.3 dans le même panneau : relance du jour déjà utilisée (« Plus de relance aujourd'hui »)
+	goals("today.noReroll", {
+		tab = "today",
+		objectives = {
+			day = math.floor(T0 / 86400),
+			list = {
+				{ id = 1, p = 3, done = false, claimed = false },
+				{ id = 7, p = 0, done = false, claimed = false },
+				{ id = 14, p = 0, done = false, claimed = false },
+			},
+			rerolls = 1,
+			allClaimed = false,
+		},
+	})
+
+	-- Squishydex : Livre des records (plus gros squishy 1e300, compteurs à 5 chiffres) et maîtrise
+	-- (Plop maîtrisé 3 / 3 ; 2e espèce 0 / 3 avec un trophée d'or ; 3e 1 / 3 avec un trophée d'argent)
+	local function dexState(c, opts)
+		closeAll(c)
+		flushAll(c)
+		unstub(c)
+		local mut = table.create(26, 0)
+		local stars = table.create(26, 0)
+		mut[1], mut[2], mut[3] = 1023, 1, 1
+		stars[1], stars[3] = 31, 16
+		c.h:fireClient(REMOTES .. "DataPatch", {
+			onboarding = META_DONE,
+			version = 2,
+			R = 30,
+			bestR = 30,
+			ascend = 3,
+			biggestEver = if opts.empty then 0 else 1e300,
+			confettiTotal = if opts.empty then 0 else 99999,
+			stats = if opts.empty then {} else { bestCombo = 99, splorches = 99999, upgradesBought = 999999 },
+			mastery = { 2 },
+			plopDays = if opts.empty then 0 else 9999,
+			hearts = { receivedTotal = if opts.empty then 0 else 99999, givenDay = 0, givenTo = {} },
+			dex = { mut = mut, stars = stars, fam = table.create(7, 0), rewards = 0 },
+			trophies = { 2e12, 2e9, 5e6 },
+		}, {})
+		frames(c, 3, 0.1)
+		v2Event(c, opts.flags)
+		open(c, "Squishydex", opts.tab or "species")
+		if opts.species then
+			local row = c.PC.window("Squishydex").Body.Page_species.Species.Holder:FindFirstChild("Row1")
+			local cell = row and row:FindFirstChild("Cell" .. opts.species)
+			if cell then
+				activate(c, cell)
+			end
+		end
+	end
+	local function dexScreen(id, opts)
+		table.insert(list, {
+			id = "meta.dex." .. id,
+			run = function(c)
+				dexState(c, opts)
+			end,
+		})
+	end
+	dexScreen("records", { tab = "records" })
+	dexScreen("records.empty", { tab = "records", empty = true })
+	dexScreen("mastery.3", { species = 1 })
+	dexScreen("mastery.0", { species = 2 })
+	dexScreen("mastery.1", { species = 3 })
+
+	-- Réglages : « Montrer mon halo » (attribut HaloOn de MON ranch) et emote de la croix ← (nom le plus
+	-- long des emotes gagnées : « Couronne de confettis », Record R 19 ; Belly Flop au 10e jour de Plop,
+	-- Couronne au jalon 260 du Squishydex)
+	local function settingsState(c, opts)
+		closeAll(c)
+		flushAll(c)
+		unstub(c)
+		Screens.myRanchModel(c, { HaloOn = true })
+		local settings = table.clone(c.data.settings or {})
+		settings.lang = c.lang
+		settings.emoteLeft = opts.emote or "bravo"
+		settings.haloOn = opts.halo ~= false
+		local dex = table.clone(c.data.dex or {})
+		dex.rewards = if opts.emote == "crown" then 260 else 0
+		c.h:fireClient(REMOTES .. "DataPatch", {
+			onboarding = META_DONE,
+			version = 2,
+			R = 30,
+			bestR = 30,
+			ascend = 3,
+			plopDays = if opts.emote == "bellyFlop" then 10 else 8,
+			dex = dex,
+			stats = { upgradesBought = 2500, playSeconds = 400, objectivesClaimed = 30, tracksDone = 1 },
+			weeklyTrack = { won = { 16 } },
+			settings = settings,
+		}, {})
+		frames(c, 3, 0.1)
+		v2Event(c, opts.flags)
+		open(c, "Settings")
+		local Settings = c.h:require(CLIENT .. "UI.Panels.Settings")
+		local control = Settings._controlFor(opts.show or "haloOn")
+		if control then
+			c.h.game.GuiService.SelectedObject = control
+			c.h:settle(1)
+			frames(c, 6, 0.1)
+		end
+	end
+	local function settingsScreen(id, opts)
+		table.insert(list, {
+			id = "meta.settings." .. id,
+			run = function(c)
+				settingsState(c, opts)
+			end,
+		})
+	end
+	settingsScreen("halo", {})
+	settingsScreen("halo.off", { halo = false })
+	settingsScreen("emotes", { emote = "confettiCrown", show = "emoteLeft" })
+	settingsScreen("emote.bellyFlop", { emote = "bellyFlop", show = "emoteLeft" })
+	settingsScreen("emote.crown", { emote = "crown", show = "emoteLeft" })
 	return list
 end
 

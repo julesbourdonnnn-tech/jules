@@ -298,8 +298,8 @@ local CARNET_KIND: { [string]: string } = {
 	saddle = "panel.ranch.style.saddle",
 	flag = "panel.ranch.style.flag",
 	trail = "panel.ranch.style.trail",
-	emote = "settings.emoteLeft",
-	outfit = "panel.ranch.style.outfits",
+	emote = "carnet.kind.emote",
+	outfit = "carnet.kind.outfit",
 	deco = "deco.title",
 }
 
@@ -413,6 +413,8 @@ local function refreshTrack()
 	-- récompenses de la semaine : « Palier 12 » ou « Possédé » pour celle de la période, puis le
 	-- retour des prochaines (« Aucune peur de rater », GDD §7.5)
 	local items = soonItems(view)
+	local last = view.tiers[#view.tiers]
+	local lastClaimed = last ~= nil and last.claimed
 	parts.soon.Visible = #items > 0
 	for i, line in parts.soonLines do
 		local item = items[i]
@@ -420,7 +422,8 @@ local function refreshTrack()
 		line.status.Visible = item ~= nil
 		if item then
 			setView(line.name, item.name)
-			if item.won then
+			-- gagné (bit du serveur), ou le palier 12 de la période déjà réclamé : « Possédé »
+			if item.won or (item.current and lastClaimed) then
 				Widgets.setText(line.status, "common.owned")
 			elseif item.current then
 				Widgets.setText(line.status, "track.tier", { n = #view.tiers })
@@ -676,7 +679,8 @@ end
 local function statusCheck(cell: TextButton)
 	local check = Icons.canvas(cell, CHECK, { "check" }, "Status")
 	check.AnchorPoint = Vector2.new(0, 1)
-	check.Position = UDim2.new(0, 12, 1, -8)
+	-- hors du cadre de focus dessiné dans la case (8 px)
+	check.Position = UDim2.new(0, 16, 1, -12)
 	check.ZIndex = cell.ZIndex + 1
 end
 
@@ -780,15 +784,17 @@ local function newPage(id: string): Frame?
 end
 
 -- Contenu d'une case de palier : en-tête à gauche (« Palier 3 », seuil du Carnet) et coche dessinée
--- en haut à droite, puis la sorte (Carnet) et le nom de la récompense sur toute la largeur
-local function makeCell(b: TextButton, headSize: number, withKind: boolean): Cell
+-- en haut à droite, hors du cadre de focus dessiné dans la case (8 px), puis la sorte (Carnet) et le
+-- nom de la récompense sur toute la largeur, centré dans la place qui reste
+local INSET = 16 -- px TV : marge des textes et de la coche, au-delà du cadre de focus
+local function makeCell(b: TextButton, headSize: number, nameSize: number, withKind: boolean): Cell
 	local h = b.Size.Y.Offset
 	local z = b.ZIndex + 1
 	local head = Widgets.label({
 		parent = b,
 		name = "Head",
-		size = UDim2.new(1, -(20 + CHECK + 6), 0, headSize + 8),
-		position = UDim2.fromOffset(10, 6),
+		size = UDim2.new(1, -(2 * INSET + CHECK + 4), 0, headSize + 8),
+		position = UDim2.fromOffset(INSET, 10),
 		text = "",
 		textSize = headSize,
 		color = Widgets.Colors.Gold,
@@ -797,16 +803,16 @@ local function makeCell(b: TextButton, headSize: number, withKind: boolean): Cel
 	})
 	local check = Icons.canvas(b, CHECK, { "check" }, "Check")
 	check.AnchorPoint = Vector2.new(1, 0)
-	check.Position = UDim2.new(1, -10, 0, 8)
+	check.Position = UDim2.new(1, -(INSET - 2), 0, 12)
 	check.ZIndex = z
-	local nameTop = headSize + 18
+	local nameTop = headSize + 22
 	local kind: TextLabel? = nil
 	if withKind then
 		kind = Widgets.label({
 			parent = b,
 			name = "Kind",
-			size = UDim2.new(1, -16, 0, 34),
-			position = UDim2.fromOffset(8, nameTop),
+			size = UDim2.new(1, -2 * INSET, 0, 34),
+			position = UDim2.fromOffset(INSET, nameTop),
 			text = "",
 			textSize = 28,
 			color = Widgets.Colors.TextDim,
@@ -817,10 +823,10 @@ local function makeCell(b: TextButton, headSize: number, withKind: boolean): Cel
 	local name = Widgets.label({
 		parent = b,
 		name = "Reward",
-		size = UDim2.new(1, -16, 0, h - nameTop - 8),
-		position = UDim2.fromOffset(8, nameTop),
+		size = UDim2.new(1, -2 * INSET, 0, h - nameTop - 10),
+		position = UDim2.fromOffset(INSET, nameTop),
 		text = "",
-		textSize = 28,
+		textSize = nameSize,
 		wrapped = true,
 		zIndex = z,
 	})
@@ -881,7 +887,7 @@ local function buildTrack(page: Frame)
 	local tiers: { Cell } = {}
 	local count = #Quests.WeeklyTrack.Tiers
 	for i, b in cellGrid(page, "Tier", 96, count, 6, TIER_W, TIER_H, function() end) do
-		tiers[i] = makeCell(b, 28, false)
+		tiers[i] = makeCell(b, 28, 28, false)
 	end
 	-- Défis de Splorch
 	local challengesTitle = Widgets.label({
@@ -1002,8 +1008,8 @@ local function buildCarnet(page: Frame)
 	local gap = Layout.Spacing.Min
 	local w = math.floor((width - 112 - (cols - 1) * gap) / cols)
 	local cells: { Cell } = {}
-	for i, b in cellGrid(page, "Cell", 96, count, cols, w, 260, function() end) do
-		cells[i] = makeCell(b, 40, true)
+	for i, b in cellGrid(page, "Cell", 96, count, cols, w, 232, function() end) do
+		cells[i] = makeCell(b, 40, 32, true)
 	end
 	carnet = { progress = progress, fill = fill, cells = cells }
 end

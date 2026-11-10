@@ -221,12 +221,31 @@ local function activateChoice(item: Item)
 	end
 end
 
+-- Bouton de choix : 320 px (v1.3) ; élargi pour l'emote quand une emote gagnée en v2.0 est proposée
+-- (« Couronne de confettis » tient sur une ligne), les textes de la ligne reculent d'autant
+local CHOICE_W, CHOICE_WIDE = 320, 440
+local TEXT_ROOM, TEXT_ROOM_WIDE = 420, 540
+
+local function hasV2Emote(values: { string }?): boolean
+	for _, id in values or {} do
+		if V2_EMOTE_KEYS[id] ~= nil then
+			return true
+		end
+	end
+	return false
+end
+
 local function bindRow(row: Row, _frame: Frame, index: number)
 	local item = items[index]
 	row.item = item
 	if item == nil then
 		return
 	end
+	local wide = item.key == "emoteLeft" and hasV2Emote(item.values)
+	row.choice.Size = UDim2.fromOffset(if wide then CHOICE_WIDE else CHOICE_W, Layout.Button.MinHeight)
+	local room = if wide then TEXT_ROOM_WIDE else TEXT_ROOM
+	row.title.Size = UDim2.new(1, -room, 0, 48)
+	row.desc.Size = UDim2.new(1, -room, 0, 36)
 	Widgets.setText(row.title, "settings." .. item.key)
 	Widgets.setText(row.desc, "settings." .. item.key .. ".desc")
 	local isToggle = item.kind == "toggle"
@@ -258,7 +277,7 @@ local function makeRow(frame: Frame, _slot: number): Row
 	local title = Widgets.label({
 		parent = frame,
 		name = "Title",
-		size = UDim2.new(1, -420, 0, 48),
+		size = UDim2.new(1, -TEXT_ROOM, 0, 48),
 		position = UDim2.fromOffset(24, 4),
 		textSize = 36,
 		xAlign = Enum.TextXAlignment.Left,
@@ -266,7 +285,7 @@ local function makeRow(frame: Frame, _slot: number): Row
 	local desc = Widgets.label({
 		parent = frame,
 		name = "Desc",
-		size = UDim2.new(1, -420, 0, 36),
+		size = UDim2.new(1, -TEXT_ROOM, 0, 36),
 		position = UDim2.fromOffset(24, 54),
 		textSize = 28,
 		color = Widgets.Colors.TextDim,
@@ -299,7 +318,7 @@ local function makeRow(frame: Frame, _slot: number): Row
 	local choice = Widgets.button({
 		parent = frame,
 		name = "Choice",
-		size = UDim2.fromOffset(320, Layout.Button.MinHeight),
+		size = UDim2.fromOffset(CHOICE_W, Layout.Button.MinHeight),
 		position = UDim2.new(1, -24, 0.5, 0),
 		anchor = Vector2.new(1, 0.5),
 		text = "",
