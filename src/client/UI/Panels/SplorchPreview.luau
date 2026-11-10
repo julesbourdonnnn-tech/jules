@@ -1902,6 +1902,14 @@ local function stepV2()
 			decline()
 			return
 		end
+		-- Ascension devenue impossible carte ouverte (interrupteur JellyAscend coupé en direct, attribut
+		-- AscendReady retiré, fuite, MON prestige dans la file) : la carte se ferme, l'aperçu dit pourquoi
+		-- (jamais « Oui » actif sur une Ascension que le serveur refuserait ; relecture du lot B3, B3-75)
+		if ascendBlocker() ~= "" then
+			closeCard()
+			refreshV2()
+			return
+		end
 		local ready = cardReady(now)
 		if ready ~= cardActive then
 			paintCard(ready)

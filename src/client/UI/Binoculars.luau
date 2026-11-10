@@ -300,6 +300,14 @@ local function hook()
 			Binoculars.close()
 		end
 	end)
+	-- propriétaire parti (ranch libéré ou repris par un autre) : la fenêtre se referme tout de suite,
+	-- jamais « Donner un cœur » devant un ranch vide (relecture du lot B3, B3-74) ; fenêtre fermée : un
+	-- seul test
+	WorldStateController.RanchChanged:Connect(function()
+		if opened and not ownerPresent(owner) then
+			Binoculars.close()
+		end
+	end)
 end
 
 -- =============================================================================================
