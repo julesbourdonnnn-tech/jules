@@ -87,7 +87,7 @@ return function(T)
 
 	describe("Upgrades_Budget › interface entière, tous les panneaux construits", function()
 		it(
-			"relevé : l'écran n'ajoute que ses objets ; total ≤ 3 800 (3 000 du §12.9 non tenu, B2-13, B2-49)",
+			"relevé : l'écran n'ajoute que ses objets ; total ≤ 3 875 (3 000 du §12.9 non tenu, B2-13, B2-49, B3-8)",
 			function()
 				local profile = TvAudit.richProfile()
 				profile.squishies.u20.z = 300000 -- Grand Splorch prêt (aperçu construit)
