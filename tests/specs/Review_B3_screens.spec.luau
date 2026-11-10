@@ -189,4 +189,223 @@ return function(T)
 			Screens.finish()
 		end)
 	end)
+
+	-- Joué à la manette (vrai client console, style ClientReplay) : les deux listes défilantes de Mon style
+	-- (9 sortes pour 7 visibles ; « Aucun » et 66 titres en 14 rangées) parcourues à la croix seule, d'un bout à l'autre
+	-- et retour : la sélection avance d'une sorte ou d'une rangée par appui, reste dans la partie visible
+	-- de sa liste (jamais cachée par la découpe), n'est jamais rendue par FocusGuard, ↓ en bout et ↑ en
+	-- tête n'en sortent pas ; ○ remonte de la grille à la sorte, puis au menu ; aucune intention envoyée.
+	describe("Review_B3_screens › Mon style à la croix : listes défilantes", function()
+		local TvAudit = require("../harness/TvAudit")
+		local Gamepad = require("../harness/Gamepad")
+		local UpgradeScreen = require("../harness/UpgradeScreen")
+		local S = UpgradeScreen.new(Harness)
+		local DONE = { step = 11, done = true, demoDone = true }
+		local DOWN, UP, B = Enum.KeyCode.DPadDown, Enum.KeyCode.DPadUp, Enum.KeyCode.ButtonB
+
+		it(
+			"sortes ↓ jusqu'à la 9e puis ↑ ; Titre : ↓ rangée par rangée jusqu'à la 14e puis ↑ ; ○ → la sorte → le menu",
+			function()
+				local c = S.client({
+					snap = S.snap(1),
+					profile = {
+						version = 2,
+						onboarding = DONE,
+						R = 30,
+						bestR = 30,
+						ascend = 3,
+						plopDays = 8,
+						stats = { playSeconds = 400, upgradesBought = 600 },
+						cosmetics = { saddle = "classic", theme = "color", trail = "", title = "", flag = "" },
+						decoPerso = { owned = { 0, 0 }, slots = { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 } },
+						squishies = { a = TvAudit.squishy(1) },
+					},
+					ranch = { DecoPerso = "1,0,0,0,0,0,0,0,0,0,0,0" },
+				})
+				S.event(c, UpgradeScreen.V2_ALL)
+				local h, PC = c.h, c.PC
+				local Ranch = TvAudit.mod(h, "UI.Panels.Ranch")
+				local FG = TvAudit.mod(h, "UI.FocusGuard")
+				local function sel()
+					return h.game.GuiService.SelectedObject
+				end
+				local function tap(key)
+					Gamepad.tap(h, key)
+					TvAudit.tick(h, 0.5)
+				end
+				-- la sélection est dessinée en entier dans la partie visible de sa liste et de la fenêtre
+				local function shown(what)
+					Layout.apply(h)
+					local s = sel()
+					expect(s ~= nil).toBe(true)
+					expect(s:IsDescendantOf(PC.window("Ranch"))).toBe(true)
+					local r = Layout.rect(s)
+					expect(r ~= nil).toBe(true)
+					if r.clip then
+						local inside = r.y >= r.clip.y - 0.5
+							and r.y + r.h <= r.clip.y + r.clip.h + 0.5
+							and r.x >= r.clip.x - 0.5
+							and r.x + r.w <= r.clip.x + r.clip.w + 0.5
+						if not inside then
+							error(what .. " : sélection tranchée par la découpe de sa liste")
+						end
+					end
+				end
+				PC.open("Ranch", "style")
+				TvAudit.tick(h, 0.5)
+				local rescues = FG.rescues()
+				local kinds = Ranch._state().kinds
+				expect(#kinds).toBe(9)
+				-- ○ : de la grille à la liste des sortes (sur l'habillage, sorte ouverte)
+				tap(B)
+				expect(sel()).toBe(Ranch._styleKindButton("theme"))
+				for i = 2, #kinds do
+					tap(DOWN)
+					expect(sel()).toBe(Ranch._styleKindButton(kinds[i]))
+					shown("sorte " .. kinds[i])
+				end
+				tap(DOWN)
+				expect(sel()).toBe(Ranch._styleKindButton(kinds[#kinds]))
+				for i = #kinds - 1, 1, -1 do
+					tap(UP)
+					expect(sel()).toBe(Ranch._styleKindButton(kinds[i]))
+					shown("sorte " .. kinds[i])
+				end
+				-- Titre : ✕ ouvre la grille (66 titres, 5 par rangée) ; ↓ descend d'une rangée par appui
+				local title = Ranch._styleKindButton("title")
+				h.game.GuiService.SelectedObject = title
+				TvAudit.tick(h, 0.5)
+				tap(Enum.KeyCode.ButtonA)
+				local entries = Ranch._styleEntries()
+				expect(#entries >= 66).toBe(true) -- « Aucun » puis les 66 titres
+				local rows = math.ceil(#entries / 5)
+				-- rangée de la case choisie : attribut RowIndex posé par la liste virtuelle (Widgets.rows) ;
+				-- jamais Ranch._styleCell ici, qui fait défiler la liste jusqu'à l'entrée demandée
+				local function rowOf(s)
+					local idx = if s then s:GetAttribute("RowIndex") else nil
+					return if type(idx) == "number" then idx else 0
+				end
+				h.game.GuiService.SelectedObject = Ranch._styleCell("title", entries[1].id)
+				TvAudit.tick(h, 0.5)
+				expect(rowOf(sel())).toBe(1)
+				for r = 2, rows do
+					tap(DOWN)
+					expect(rowOf(sel())).toBe(r)
+					shown("titres, rangée " .. r)
+				end
+				-- ↓ sur la dernière rangée : la sélection reste dans la grille, sur la dernière rangée (avant la
+				-- correction B3-80, elle sautait dans la liste des sortes, à gauche)
+				tap(DOWN)
+				expect(sel():IsDescendantOf(PC.window("Ranch").Body.Page_style.ItemsV2)).toBe(true)
+				expect(rowOf(sel())).toBe(rows)
+				for r = rows - 1, 1, -1 do
+					tap(UP)
+					expect(rowOf(sel())).toBe(r)
+					shown("titres, rangée " .. r)
+				end
+				-- ○ : la sorte Titre, puis le menu
+				tap(B)
+				expect(sel()).toBe(Ranch._styleKindButton("title"))
+				tap(B)
+				expect(PC.current()).toBeNil()
+				expect(FG.rescues()).toBe(rescues)
+				expect(#TvAudit.sent(h, "EquipCosmetic")).toBe(0)
+				expect(#TvAudit.sent(h, "PlaceDeco")).toBe(0)
+				S.clean(c, expect)
+			end
+		)
+
+		-- Défaut 2 (B3-80) : la page Mon style met côte à côte trois colonnes (liste des sortes à gauche ;
+		-- grille ou plan de Déco perso à droite) sans groupe de sélection : à la croix, ↓ sur la dernière
+		-- rangée de la grille (ou sur un emplacement du bas du plan) sautait dans la liste des sortes, sur
+		-- une sorte plus basse (Tenues, Palettes…), et ↓ sur la dernière sorte (Coussins) sautait dans la
+		-- grille des titres. Règle : ↑ et ↓ ne font jamais changer de colonne (← et → le font), pour chaque
+		-- sorte, grille au début et à la fin, plan et choix d'un objet.
+		it(
+			"↑ / ↓ ne changent jamais de colonne : sortes, grille (début et fin), plan, choix d'un objet",
+			function()
+				local c = S.client({
+					snap = S.snap(1),
+					profile = {
+						version = 2,
+						onboarding = DONE,
+						R = 30,
+						bestR = 30,
+						ascend = 3,
+						cosmetics = { saddle = "classic", theme = "color", trail = "", title = "", flag = "" },
+						decoPerso = { owned = { 0, 0 }, slots = { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 } },
+						squishies = { a = TvAudit.squishy(1) },
+					},
+					ranch = { DecoPerso = "1,0,0,0,0,0,0,0,0,0,0,0" },
+				})
+				S.event(c, UpgradeScreen.V2_ALL)
+				local h, PC = c.h, c.PC
+				local Ranch = TvAudit.mod(h, "UI.Panels.Ranch")
+				PC.open("Ranch", "style")
+				TvAudit.tick(h, 0.5)
+				local page = PC.window("Ranch").Body.Page_style
+				local function column(o)
+					for _, name in { "KindsV2", "ItemsV2", "Plan" } do
+						local f = page:FindFirstChild(name)
+						if f and o:IsDescendantOf(f) then
+							return name
+						end
+					end
+					return nil
+				end
+				local bad, seen = {}, {}
+				local function audit(label)
+					Layout.apply(h)
+					for _, o in Layout.selectables(h, PC.window("Ranch")) do
+						local from = column(o)
+						if from then
+							for _, dir in { "Up", "Down" } do
+								local nxt = Layout.step(h, o, dir)
+								local to = if nxt then column(nxt) else nil
+								if to and to ~= from then
+									local line = string.format("%s · %s : %s → %s", label, dir, from, to)
+									if not seen[line] then
+										seen[line] = true
+										table.insert(bad, line)
+									end
+								end
+							end
+						end
+					end
+				end
+				local function pick(obj)
+					h.game.GuiService.SelectedObject = obj
+					TvAudit.tick(h, 0.5)
+				end
+				for _, kind in Ranch._state().kinds do
+					pick(Ranch._styleKindButton(kind))
+					Gamepad.tap(h, Enum.KeyCode.ButtonA)
+					TvAudit.tick(h, 0.5)
+					audit(kind)
+					local entries = Ranch._styleEntries()
+					local last = entries[#entries]
+					local cell = if last then Ranch._styleCell(last.kind, last.id) else nil
+					if cell then
+						pick(cell)
+						audit(kind .. " (fin)")
+					end
+					if kind == "deco" then
+						-- choix d'un objet pour l'emplacement 2 (petit) : même grille, autre contenu
+						pick(Ranch._decoSlot(2))
+						Gamepad.tap(h, Enum.KeyCode.ButtonA)
+						TvAudit.tick(h, 0.5)
+						expect(Ranch._state().pickerSlot).toBe(2)
+						audit("deco, choix")
+						Gamepad.tap(h, B)
+						TvAudit.tick(h, 0.5)
+					end
+				end
+				table.sort(bad)
+				expect(table.concat(bad, "\n")).toBe("")
+				expect(#TvAudit.sent(h, "EquipCosmetic")).toBe(0)
+				expect(#TvAudit.sent(h, "PlaceDeco")).toBe(0)
+				S.clean(c, expect)
+			end
+		)
+	end)
 end

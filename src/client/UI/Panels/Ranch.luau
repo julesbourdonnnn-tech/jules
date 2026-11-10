@@ -2398,12 +2398,22 @@ local function makeV2Cell(frame: Frame, c: number, cw: number): V2Cell
 	return cell
 end
 
+-- Colonne de Mon style (liste des sortes, grille, plan) : groupe de sélection dont ↓ ne sort pas ; ↑, ←
+-- et → en sortent (onglets au-dessus, l'autre colonne à côté). Sans lui, ↓ sur la dernière rangée de la
+-- grille (ou un emplacement du bas du plan) sautait dans la liste des sortes, et ↓ sur la dernière
+-- sorte dans la grille (relecture des écrans du lot B3, B3-80)
+local function columnGroup(f: GuiObject)
+	f.SelectionGroup = true
+	f.SelectionBehaviorDown = Enum.SelectionBehavior.Stop
+end
+
 -- Plan vu du dessus (D11) : 12 boutons placés par MetaView.planLayout depuis
 -- WorldLayout.decoPersoSlots() (P petit, G grand ; une case de la grille 5 × 4 chacun), repères des
 -- enclos (milieu) et du portail (en bas) ; la croix va d'un emplacement à l'autre par la géométrie
 local function buildPlan(page: Frame, left: number, width: number, height: number)
 	local plan = Widgets.group(page, "Plan", UDim2.fromOffset(width, height), UDim2.fromOffset(left, 0))
 	plan.Visible = false
+	columnGroup(plan)
 	planFrame = plan
 	Widgets.label({
 		parent = plan,
@@ -2542,6 +2552,8 @@ local function buildStyleV2(page: Frame)
 			return out
 		end,
 	})
+	columnGroup((kindRows :: Widgets.Rows).frame)
+	columnGroup((itemRows :: Widgets.Rows).frame)
 	buildPlan(page, left, areaW, pageH)
 	v2Built = true
 	-- clés du profil v2 lues par la possession (jamais construites interrupteurs coupés)
