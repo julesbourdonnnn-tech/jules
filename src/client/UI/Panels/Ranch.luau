@@ -137,6 +137,11 @@ local MARK_CHECK = { x = 10, y = 56, size = 52 }
 local V2_KIND_W = 260
 local V2_COLS = 5
 local V2_CELL_H = 200
+-- px : marge des textes d'une case de Mon style (nom, source) : le cadre de focus couvre les 8 px du bord
+-- de la case choisie (liseré 2 + trait blanc 6) et le contour du texte déborde de 2 px ; à 6 px, les
+-- noms longs (« Dragon de gelée ») avaient leur 1re et leur dernière lettre sous le trait blanc
+-- (relecture des écrans du lot B3, B3-79)
+local V2_TEXT_INSET = Layout.Focus.Frame + Layout.Focus.Border + 2
 local PLAN_TOP = 56 -- titre du plan au-dessus du rectangle
 
 local nav: Nav? = nil
@@ -2372,8 +2377,8 @@ local function makeV2Cell(frame: Frame, c: number, cw: number): V2Cell
 	local name = Widgets.label({
 		parent = b,
 		name = "Name",
-		size = UDim2.new(1, -12, 0, 68),
-		position = UDim2.fromOffset(6, 58),
+		size = UDim2.new(1, -2 * V2_TEXT_INSET, 0, 68),
+		position = UDim2.fromOffset(V2_TEXT_INSET, 58),
 		text = "",
 		textSize = 28,
 		wrapped = true,
@@ -2382,8 +2387,8 @@ local function makeV2Cell(frame: Frame, c: number, cw: number): V2Cell
 	local status = Widgets.label({
 		parent = b,
 		name = "Status",
-		size = UDim2.new(1, -12, 0, 68),
-		position = UDim2.fromOffset(6, 128),
+		size = UDim2.new(1, -2 * V2_TEXT_INSET, 0, 68),
+		position = UDim2.fromOffset(V2_TEXT_INSET, 128),
 		text = "",
 		textSize = 28,
 		wrapped = true,
