@@ -1077,6 +1077,17 @@ local function refreshV2()
 		list = { if table.find(list, currentTab) then currentTab else list[1] }
 	end
 	shownTabs = list
+	-- l'Ascension n'est plus proposée (interrupteur JellyAscend coupé en direct, AscendReady retiré) et
+	-- aucune autre renaissance n'est prête : l'aperçu revient au menu, jamais la page d'un système coupé
+	-- (règle (1) du §27.3 ; relecture du lot B3, B3-77) ; le joueur n'a rien refusé : aucun ascendDeclined
+	if #list == 0 and currentTab == "ascend" and isOpen and not ascendAvailable() then
+		declineNoted = true -- la carte, si elle est ouverte, se ferme avec l'aperçu (SplorchPreview.close)
+		local n = nav
+		if n then
+			n.back()
+		end
+		return
+	end
 	if #list > 0 and not table.find(list, currentTab) then
 		currentTab = list[1]
 		if detailsOpen and currentTab == "ascend" then
@@ -1906,6 +1917,9 @@ local function stepV2()
 		-- AscendReady retiré, fuite, MON prestige dans la file) : la carte se ferme, l'aperçu dit pourquoi
 		-- (jamais « Oui » actif sur une Ascension que le serveur refuserait ; relecture du lot B3, B3-75)
 		if ascendBlocker() ~= "" then
+			if not ascendAvailable() then
+				declineNoted = true -- Ascension retirée par le serveur : aucun refus du joueur à compter
+			end
 			closeCard()
 			refreshV2()
 			return

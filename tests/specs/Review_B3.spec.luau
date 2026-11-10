@@ -186,6 +186,29 @@ return function(T)
 			S.clean(c, expect)
 		end)
 
+		-- Défaut (même famille) : onglet ascend seul montré, interrupteur coupé en direct et aucune autre
+		-- renaissance prête : la page de la Jelly Ascend (titre, « 9 fois plus vite », icônes gardées)
+		-- restait à l'écran jusqu'à ○ ; l'aperçu revient au menu, sans faux « ascendDeclined »
+		it("JellyAscend coupé en direct sur l'onglet ascend seul : l'aperçu revient au menu", function()
+			local c = ascendClient()
+			c.PC.closeAll()
+			S.run(c, 0.5)
+			c.PC.open("SplorchPreview", "ascend")
+			S.run(c, 0.6)
+			expect(c.PC.current()).toBe("SplorchPreview")
+			expect(c.SP.currentTab()).toBe("ascend")
+			local flags = table.clone(V2)
+			flags.JellyAscend = nil
+			S.event(c, flags)
+			S.run(c, 0.5)
+			expect(c.PC.current() == "SplorchPreview").toBe(false)
+			expect(#S.sent(c, "JellyAscend")).toBe(0)
+			for _, args in S.sent(c, "ClientMetric") do
+				expect(args[1] == "ascendDeclined").toBe(false)
+			end
+			S.clean(c, expect)
+		end)
+
 		it("AscendReady retiré, carte ouverte : la carte se ferme, rien n'est envoyé", function()
 			local c = ascendClient()
 			toCard(c)
