@@ -1348,8 +1348,8 @@ function PanelController.Start()
 		end
 	end)
 	FocusGuard.WindowClosed:Connect(onWindowClosed)
-	Cards.Requested:Connect(function(kind: string, action: string)
-		PanelController._onCardRequest(kind, action)
+	Cards.Requested:Connect(function(kind: string, action: string, panel: string?, tab: string?)
+		PanelController._onCardRequest(kind, action, panel, tab)
 	end)
 	if type(Cards.Changed) == "table" then
 		Cards.Changed:Connect(function()
@@ -1602,11 +1602,33 @@ local CARD_PANELS: { [string]: { panel: string, tab: string? } } = {
 	booped = { panel = "Settings" },
 }
 
-function PanelController._onCardRequest(kind: string, action: string)
+-- v2.0 (lot B3, étape 5, D19) : cartes de la v2.0 rouvertes depuis « ! » ; « Voir » ouvre l'écran que
+-- la carte porte (UI/MetaView.cardText : panneau, onglet), seulement parmi ces panneaux ; sans écran
+-- porté (ou un écran hors de cette liste) : l'écran par défaut de la sorte
+local CARD_PANELS_V2: { [string]: { panel: string, tab: string? } } = {
+	trackTier = { panel = "Objectives", tab = "track" },
+	carnet = { panel = "Objectives", tab = "carnet" },
+	mastery = { panel = "Squishydex", tab = "species" },
+	unlockNew = { panel = "Ranch", tab = "style" },
+}
+local CARD_TARGETS_V2: { [string]: boolean } = {
+	Objectives = true,
+	Squishydex = true,
+	Ranch = true,
+	Settings = true,
+}
+
+function PanelController._onCardRequest(kind: string, action: string, panel: string?, tab: string?)
 	if action ~= "open" or type(kind) ~= "string" then
 		return
 	end
 	local target = CARD_PANELS[kind]
+	if target == nil then
+		target = CARD_PANELS_V2[kind]
+		if target ~= nil and type(panel) == "string" and CARD_TARGETS_V2[panel] then
+			target = { panel = panel, tab = if type(tab) == "string" and #tab <= 16 then tab else nil }
+		end
+	end
 	if target then
 		PanelController.open(target.panel, target.tab)
 	end

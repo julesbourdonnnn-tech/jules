@@ -168,14 +168,24 @@ Layout.Cards = {
 	-- « Un de tes squishies s'enfuit ! » avec « Continuer » et « Pas ce joueur » (RefuseBooper), jamais
 	-- un Toast (un Toast ne prend jamais la sélection). Cards ne lie aucune touche : △ / croix ↓ ouvre
 	-- le menu (InputController → PanelController.toggleMenu), dont l'entrée « ! » rouvre la carte.
+	-- v2.0 (lot B3, étape 5, D19) : cartes de la v2.0 intercalées, ordre relatif de la v1.3 inchangé
+	-- (« Bienvenue dans la v2 ! » et « De retour à ton record » juste après le retour et les boops ;
+	-- « Nouveau », piste, Carnet, maîtrise et étape du record après le Squishydex)
 	Order = {
 		"return",
 		"mode",
 		"postBoop",
 		"booped",
+		"welcomeV2",
+		"regainDone",
 		"objectives",
 		"newObjectives",
 		"dex",
+		"unlockNew",
+		"trackTier",
+		"carnet",
+		"mastery",
+		"recordStep",
 		"clip",
 		"sleepy",
 	},

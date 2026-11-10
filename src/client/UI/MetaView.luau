@@ -857,9 +857,8 @@ function MetaView.cardText(kind: string, data: any, ctx: Ctx?): Card?
 		local confetti = count(field(data, "confetti"))
 		return {
 			title = text("card.regainDone", { r = num(bestR, lang) }),
-			line = if confetti > 0
-				then text("confetti.gain", { n = Format.confetti(confetti, lang) })
-				else nil,
+			-- un seul Confetti : « +1 Confetti » (confetti.gainOne, lot B3, étape 5), jamais « +1 Confettis »
+			line = if confetti > 0 then confettiText("confetti.gain", confetti, lang) else nil,
 		}
 	elseif kind == "recordStep" then
 		local share = field(data, "share")
@@ -913,9 +912,7 @@ function MetaView.cardText(kind: string, data: any, ctx: Ctx?): Card?
 		local line: Text? = nil
 		if reward == "confetti" then
 			local n = TRACK.Tiers[tierN]
-			line = if type(n) == "number"
-				then text("confetti.gain", { n = Format.confetti(n, lang) })
-				else nil
+			line = if type(n) == "number" then confettiText("confetti.gain", n, lang) else nil
 		elseif reward == "drop" then
 			line = text("track.drop")
 		elseif type(reward) == "string" and reward ~= "" then

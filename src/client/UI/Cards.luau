@@ -824,6 +824,18 @@ local function showSide(entry: Entry, now: number)
 	Text.raw(sideTitle :: TextLabel, title)
 	Text.raw(sideLine :: TextLabel, line);
 	(sideLine :: TextLabel).Visible = line ~= ""
+	-- « Bienvenue dans la v2 ! » (lot B3, D19) : sa phrase prend 3 lignes, à la place de « △ Voir »
+	-- (la carte se range quand même dans « ! ») ; toute autre carte : la mise en page de la v1.3
+	local long = entry.card.kind == "welcomeV2"
+	local wantH = if long then LONG_LINE_H else LINE_H
+	local lineLabel = sideLine :: TextLabel
+	if lineLabel.Size.Y.Offset ~= wantH then
+		lineLabel.Size = UDim2.new(1, -40, 0, wantH)
+	end
+	local hint = sideHint
+	if hint and hint.Visible == long then
+		hint.Visible = not long
+	end
 	if sideGlyph then
 		sideGlyph:set({ gamepad = Enum.KeyCode.ButtonY, keyboard = Util.menuKey() })
 	end
@@ -893,6 +905,34 @@ local function closeWindow(restow: boolean)
 	changed()
 end
 
+-- Titre « fit » (nom d'un objet, d'un Monument, d'une espèce : longueur libre) et déblocages de
+-- « Bienvenue » de la carte rouverte v2.0, construits à la première carte v2.0 rouverte
+local function ensureDialogV2(dlg: Frame)
+	if dialogTitleV2 ~= nil and dialogTitleV2.Parent == dlg then
+		return
+	end
+	dialogTitleV2 = Util.label({
+		name = "TitleV2",
+		parent = dlg,
+		size = UDim2.new(1, -64, 0, 60),
+		position = UDim2.fromOffset(32, 24),
+		textSize = Layout.Text.Title,
+		zIndex = 11,
+		fit = true,
+	})
+	dialogMoreV2 = Util.label({
+		name = "MoreV2",
+		parent = dlg,
+		size = UDim2.new(1, -64, 0, DIALOG_MORE_H),
+		position = UDim2.fromOffset(32, 92 + DIALOG_LONG_H + 8),
+		textSize = Layout.Text.Body,
+		color = Theme.Colors.Gold,
+		font = Theme.Fonts.Body,
+		wrapped = true,
+		zIndex = 11,
+	})
+end
+
 local function openDialog(entry: Entry)
 	build()
 	local dlg = dialog
@@ -900,7 +940,30 @@ local function openDialog(entry: Entry)
 		return
 	end
 	local title, line = texts(entry.card)
-	setLabel(dlg, "Title", title)
+	-- v2.0 (lot B3, D19) : titre « fit », corps de « Bienvenue » sur 2 lignes et ses déblocages ;
+	-- carte de la v1.3 : sa mise en page d'origine
+	local view = cardView(entry.card)
+	local welcome = view ~= nil and entry.card.kind == "welcomeV2"
+	local more = if view ~= nil and welcome then highlightsText(view) else ""
+	local lineH = if welcome then DIALOG_LONG_H else DIALOG_LINE_H
+	if view ~= nil then
+		ensureDialogV2(dlg)
+		setLabel(dlg, "Title", "")
+		setLabel(dlg, "TitleV2", title)
+		setLabel(dlg, "MoreV2", more)
+	else
+		setLabel(dlg, "Title", title)
+		if dialogTitleV2 then
+			dialogTitleV2.Visible = false
+		end
+		if dialogMoreV2 then
+			dialogMoreV2.Visible = false
+		end
+	end
+	local lineLabel = dlg:FindFirstChild("Line")
+	if lineLabel and lineLabel:IsA("TextLabel") and lineLabel.Size.Y.Offset ~= lineH then
+		lineLabel.Size = UDim2.new(1, -64, 0, lineH)
+	end
 	setLabel(dlg, "Line", line)
 	clearDialogButtons()
 	local row = dlg:FindFirstChild("Buttons") :: Frame
@@ -934,7 +997,13 @@ local function openDialog(entry: Entry)
 		b.NextSelectionRight = dialogButtons[i + 1]
 	end
 	local hasLine = line ~= ""
-	dlg.Size = UDim2.fromOffset(DIALOG_W, if hasLine then 280 else 230)
+	local height = if hasLine then 280 + (lineH - DIALOG_LINE_H) else 230
+	local moreLabel = dialogMoreV2
+	if more ~= "" and moreLabel then
+		moreLabel.Position = UDim2.fromOffset(32, 92 + lineH + 8)
+		height += DIALOG_MORE_H + 8
+	end
+	dlg.Size = UDim2.fromOffset(DIALOG_W, height)
 	dlg.Visible = true
 	dlg:SetAttribute("CardKind", entry.card.kind)
 	if not Prefs.reducedMotion() then
@@ -1183,6 +1252,37 @@ end
 -- Remotes
 -- =============================================================================================
 
+-- Carte v2.0 (lot B3, D19) : profil v2 seulement ; texte vérifié par MetaView.cardText (charge
+-- abîmée, sorte ou identifiant inconnu, cosmétique de la v1.3 : aucune carte, aucune trace)
+local function pushV2(source: string, d: { [string]: any })
+	if not Util.safe("MetaFlags.v2Profile", false, MetaFlags.v2Profile) then
+		return
+	end
+	local kind = if source == "element" then "unlockNew" else V2_KINDS[source]
+	if kind == nil then
+		return
+	end
+	local payload = v2Data(d)
+	local ok, view = pcall(MetaView.cardText, source, payload, viewCtx())
+	if not ok or view == nil then
+		return
+	end
+	Cards.push({ id = "", kind = kind, blocking = false, data = { v2 = source, payload = payload } })
+end
+
+-- Premier passage d'un élément du ranch (RanchRenderer.ElementBuilt) : MON ranch seulement ; paliers,
+-- Monuments et maisonnette des Plopettes (MetaView : autres identifiants ignorés)
+local function onElementBuilt(slot: any, id: any)
+	if type(slot) ~= "number" or type(id) ~= "string" then
+		return
+	end
+	local mine = Util.safe("WorldStateController.mySlot", 0, WorldStateController.mySlot)
+	if mine <= 0 or slot ~= mine then
+		return
+	end
+	pushV2("element", { id = id })
+end
+
 local function onCelebrate(payload: any)
 	if type(payload) ~= "table" or type(payload.data) ~= "table" then
 		return
@@ -1246,6 +1346,8 @@ local function onCelebrate(payload: any)
 		})
 	elseif kind == "sleepy" then
 		Cards.push({ id = "", kind = "sleepy", blocking = false, data = { minutes = Util.num(d.minutes, 0) } })
+	elseif type(kind) == "string" and V2_KINDS[kind] then
+		pushV2(kind, d)
 	end
 end
 
@@ -1272,6 +1374,10 @@ function Cards.Start()
 	Net.event("Celebrate").OnClientEvent:Connect(onCelebrate)
 	Net.event("ModePrompt").OnClientEvent:Connect(function()
 		Cards.push({ id = "", kind = "mode", blocking = true, data = {} })
+	end)
+	-- v2.0 (lot B3, D19) : cartes « Nouveau » des paliers, des Monuments et de la maisonnette
+	pcall(function()
+		RanchRenderer.ElementBuilt:Connect(onElementBuilt)
 	end)
 	FocusGuard.WindowClosed:Connect(function(name: string)
 		local win = windowEntry

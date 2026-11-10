@@ -24,18 +24,31 @@
 --  * une partie v2.0 d'un écran n'existe que si son interrupteur est ouvert ET que le profil est v2 ;
 --  * aucun travail par image : lecture paresseuse (l'ensemble est relu seulement quand la table
 --    EventState change), signaux du réseau seulement.
+--  * mesures de diagnostic de la v2.0 (lot B3, étape 5, D23 ; docs/04 §27.5 ClientMetric) :
+--    textScale = arrondi(Text.factor() × 100) (une fois par séance, puis à chaque nouvelle valeur
+--    mesurée, 3 envois au plus) et styleFallback = 1 (ombre UIShadow absente) | 2 (dégradé radial
+--    absent), une fois par sorte (crochet Theme.onStyleFallback posé dès le chargement : les replis du
+--    démarrage comptent). Envoyées par le seau partagé de Widgets.send, au mieux, SEULEMENT tant que
+--    EventState.features.v2 est présent (interrupteurs coupés : aucun envoi, trafic de la v1.3) et pas
+--    avant METRIC_DELAY s après le premier features.v2 vu (jamais dans la rafale de l'arrivée, où le
+--    seau sert à ascendPreview et upgradeMode) : au premier EventState, changement de version ou
+--    nouvelle mesure de Text qui suit.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared", 30) :: Folder
 local Signal = require(Shared.Util.Signal)
+local Clock = require(Shared.Util.Clock)
 local Owned = require(Shared.Logic.Owned)
 
 local Client = script.Parent.Parent
 local State = require(Client.Controllers.StateController)
 local WorldStateController = require(Client.Controllers.WorldStateController)
 local UpgradeSnapshot = require(Client.UI.UpgradeSnapshot)
+local Theme = require(Client.UI.Theme)
+local Text = require(Client.UI.Text)
+local Widgets = require(Client.UI.Panels.Widgets)
 
 local MetaFlags = {}
 
@@ -74,6 +87,19 @@ local ownedCache: Owned.Flags? = nil
 -- dernier état annoncé par Changed (signature de l'ensemble ouvert, profil v2)
 local lastSignature = ""
 local lastV2Profile = false
+
+-- Mesures de diagnostic (D23)
+local METRIC_DELAY = 60 -- s après le premier features.v2 vu
+local TEXT_MAX = 3 -- envois de textScale au plus par séance
+local FALLBACKS: { { kind: string, value: number } } = {
+	{ kind = "shadow", value = 1 },
+	{ kind = "radial", value = 2 },
+}
+local v2SeenAt: number? = nil
+local textSent = 0
+local textLast: number? = nil
+local fallbackSeen: { [string]: boolean } = {}
+local fallbackSent: { [string]: boolean } = {}
 
 -- Ensemble ouvert tiré d'une valeur `features.v2` (vérifiée : autre chose qu'une table de booléens =
 -- tout coupé, sans trace)
@@ -220,6 +246,57 @@ function MetaFlags.myPrestige(): (("show" | "queued")?, string?)
 	return nil
 end
 
+-- Mesures de diagnostic dues (D23) : seulement après start(), features.v2 présent et METRIC_DELAY s
+-- passées depuis le premier features.v2 vu ; un envoi refusé par le seau est retenté au déclencheur
+-- suivant (EventState, version, mesure de Text)
+local function flushMetrics()
+	if not started or next(current()) == nil then
+		return
+	end
+	local now = Clock.now()
+	local seen = v2SeenAt
+	if seen == nil or now < seen then
+		v2SeenAt = now
+		return
+	end
+	if now - seen < METRIC_DELAY then
+		return
+	end
+	if textSent < TEXT_MAX then
+		local ok, factor = pcall(Text.factor)
+		if ok and type(factor) == "number" and factor == factor and factor > 0 and factor < 100 then
+			local value = math.clamp(math.floor(factor * 100 + 0.5), 0, 1000)
+			if value ~= textLast and Widgets.send("ClientMetric", "textScale", value) then
+				textSent += 1
+				textLast = value
+			end
+		end
+	end
+	for _, f in FALLBACKS do
+		if fallbackSeen[f.kind] and not fallbackSent[f.kind] then
+			if not Widgets.send("ClientMetric", "styleFallback", f.value) then
+				return
+			end
+			fallbackSent[f.kind] = true
+		end
+	end
+end
+
+-- Replis de style (Theme, dès le chargement : ceux du démarrage comptent) ; un crochet déjà posé est
+-- gardé et appelé d'abord
+do
+	local previous = Theme.onStyleFallback
+	Theme.onStyleFallback = function(kind: string)
+		if previous then
+			pcall(previous, kind)
+		end
+		if (kind == "shadow" or kind == "radial") and not fallbackSeen[kind] then
+			fallbackSeen[kind] = true
+			flushMetrics()
+		end
+	end
+end
+
 -- Relit l'ensemble et la version ; Changed quand l'un des deux a changé depuis la dernière annonce
 local function refresh()
 	current()
@@ -230,6 +307,7 @@ local function refresh()
 		lastV2Profile = v2
 		MetaFlags.Changed:Fire()
 	end
+	flushMetrics()
 end
 
 -- Écoute EventState et la version du profil (une seule fois, quel que soit le nombre d'appels)
@@ -244,6 +322,10 @@ function MetaFlags.start()
 	State.observe("version", function()
 		refresh()
 	end)
+	-- nouvelle mesure du facteur de texte (taille de texte du joueur changée) : textScale à jour
+	Text.onMeasured(function()
+		flushMetrics()
+	end)
 end
 
 -- Specs : oublie l'état lu (les connexions de start() restent)
@@ -254,6 +336,21 @@ function MetaFlags._reset()
 	ownedCache = nil
 	lastSignature = ""
 	lastV2Profile = false
+	v2SeenAt = nil
+	textSent = 0
+	textLast = nil
+	table.clear(fallbackSent)
+end
+
+-- Mesures envoyées (specs) : envois de textScale, sortes de styleFallback envoyées
+function MetaFlags._metrics(): { textScale: number, styleFallback: { string } }
+	local kinds: { string } = {}
+	for _, f in FALLBACKS do
+		if fallbackSent[f.kind] then
+			table.insert(kinds, f.kind)
+		end
+	end
+	return { textScale = textSent, styleFallback = kinds }
 end
 
 return MetaFlags

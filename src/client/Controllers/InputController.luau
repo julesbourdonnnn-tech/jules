@@ -50,6 +50,7 @@ local HUD = require(Client.UI.HUD)
 local Prompt = require(Client.UI.Prompt)
 local Util = require(Client.UI.Hud.Util)
 local Lesson = require(Client.UI.Hud.Lesson)
+local Binoculars = require(Client.UI.Binoculars)
 
 local InputController = {}
 
@@ -260,6 +261,14 @@ local function primaryBegin(byMouse: boolean)
 		-- Atelier, rien d'autre (aucune intention envoyée ; sans instantané, open ne fait rien) ; ouvert
 		-- depuis le jeu : ○ y ramène en un appui (relecture des écrans, B4-83)
 		Util.safe("PanelController.open", nil, PanelController.open, "Upgrades", "workshop", true)
+	elseif p == "binoculars" then
+		-- v2.0 (lot B3, étape 5, D22, INT-B3-BINOCULARS) : jumelles devant le portail d'un voisin →
+		-- fenêtre du cœur (UI/Binoculars), rien d'autre ; aucune intention ici (le cœur part de la
+		-- fenêtre, ✕ capté) ; ○ y ramène au jeu
+		local ownerId = Util.num(t.id, 0, 0, 2 ^ 53)
+		if ownerId > 0 then
+			Util.safe("Binoculars.open", false, Binoculars.open, ownerId)
+		end
 	end
 end
 

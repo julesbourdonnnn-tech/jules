@@ -13,6 +13,12 @@
 --     l'écran Améliorations sur l'onglet Atelier), seulement tant que le kiosque est construit
 --     (Render/WorldV2.kioskOpen : instantané de l'écran et une ligne de l'Atelier visible) ; testé après
 --     la Boutique, jamais en portant ni derrière une fenêtre ; interrupteurs coupés : jamais de kiosque.
+--   * v2.0 (lot B3, étape 5, D22, INT-B3-BINOCULARS) : jumelles (□ = Regarder, ouvre UI/Binoculars par
+--     InputController) à 8 studs au plus du portail du ranch occupé d'un AUTRE joueur, debout dans la
+--     rue (jamais dans un ranch), testées en dernier ; seulement interrupteur Hearts ouvert, profil v2
+--     (UI/MetaFlags, lu sur ses signaux : un booléen par image interrupteurs coupés) et ranch visé qui
+--     porte l'attribut BestR (preuve v2.0 du serveur, qui revérifie tout) ; jamais en portant ni
+--     derrière une fenêtre.
 -- Après une pression, la cible passe au prochain prêt en Press.RetargetDelay (0,15 s). Clic souris :
 -- projection à l'écran (RanchRenderer.projected + TargetRules.screenPick), cible fixée
 -- ClickTarget.Hold (4 s). Pendant un maintien (boop, bol), la cible est verrouillée (sortie garantie :
@@ -47,15 +53,26 @@ local RanchRenderer = require(Client.Controllers.RanchRenderer)
 local Util = require(Client.World.Util)
 local Catchable = require(Client.World.Catchable)
 local WorldV2 = require(Client.Render.WorldV2)
+local MetaFlags = require(Client.UI.MetaFlags)
 
 export type Target = {
-	kind: "squishy" | "fence" | "pad" | "bowl" | "pool" | "pot" | "shop" | "mega" | "creature" | "kiosk",
+	kind: "squishy"
+		| "fence"
+		| "pad"
+		| "bowl"
+		| "pool"
+		| "pot"
+		| "shop"
+		| "mega"
+		| "creature"
+		| "kiosk"
+		| "binoculars",
 	slot: number,
 	uid: string,
 	id: number,
 	tile: string,
 	ready: boolean,
-	primary: string, -- action de □ : "press" | "throw" | "fusion" | "putInPool" | "buy" | "boop" | "feed" | "catch" | "sell" | "shop" | "petsit" | "workshop" | ""
+	primary: string, -- action de □ : "press" | "throw" | "fusion" | "putInPool" | "buy" | "boop" | "feed" | "catch" | "sell" | "shop" | "petsit" | "workshop" | "binoculars" | ""
 	secondary: string, -- action de ○ : "pickup" | "putdown" | ""
 	position: Vector3,
 }
@@ -67,6 +84,7 @@ PromptController.Changed = Signal.new() :: Signal.Signal<Target?>
 
 local SHOP_RADIUS = 8 -- studs du comptoir de la Boutique
 local KIOSK_RADIUS = 8 -- studs du kiosque de Big Plop (lot B4, D21)
+local BINOCULARS_RADIUS = 8 -- studs du portail d'un autre ranch (jumelles, lot B3, D22)
 local LOCK_TIMEOUT = StateTimeouts.seconds("boopHold") + 0.5
 local CLICK_HOLD = Layout.ClickTarget.Hold
 local RETARGET = Balance.Press.RetargetDelay
@@ -89,6 +107,8 @@ local windows: { [string]: boolean } = {}
 local animT = 0
 local started = false
 local connections: { any } = {}
+-- jumelles possibles (interrupteur Hearts ouvert et profil v2), relu sur MetaFlags.Changed seulement
+local binocularsOn = false
 
 local function keyOf(t: Target?): string
 	if t == nil then
@@ -273,6 +293,47 @@ local function nearestCreature(pos: Vector3, now: number): Target?
 	return best
 end
 
+-- Le ranch `slot` porte-t-il l'attribut BestR (posé par le serveur, v2.0) ?
+local function hasBestR(slot: number): boolean
+	local root = workspace:FindFirstChild("Wobbleton")
+	local ranches = root and root:FindFirstChild("Ranches")
+	local model = ranches and ranches:FindFirstChild(tostring(slot))
+	if model == nil then
+		return false
+	end
+	local ok, value = pcall(function()
+		return model:GetAttribute("BestR")
+	end)
+	return ok and type(value) == "number" and value == value
+end
+
+-- Jumelles (v2.0, D22) : portail du ranch occupé d'un autre joueur à 8 studs au plus, dans la rue
+local function binocularsTarget(pos: Vector3, mySlot: number): Target?
+	if WorldLayout.ranchAt(pos) ~= 0 then
+		return nil -- dans un ranch : jamais de jumelles
+	end
+	local player = Players.LocalPlayer
+	local me = if player then player.UserId else 0
+	local best: Target? = nil
+	local bestD = math.huge
+	for slot = 1, WorldLayout.Const.Ranches do
+		if slot ~= mySlot then
+			local r = WorldStateController.ranch(slot)
+			if r and type(r.userId) == "number" and r.userId > 0 and r.userId ~= me then
+				local gate = WorldLayout.anchor(slot, "gate")
+				local d = ZoneRules.distXZ(pos, gate)
+				if d <= BINOCULARS_RADIUS and d < bestD and hasBestR(slot) then
+					local t = make("binoculars", slot, gate)
+					t.id = r.userId
+					t.primary = "binoculars"
+					best, bestD = t, d
+				end
+			end
+		end
+	end
+	return best
+end
+
 -- Calcule la cible du moment (sans hystérésis pour les catégories uniques)
 local function compute(now: number): Target?
 	if windowOpen() then
@@ -367,6 +428,9 @@ local function compute(now: number): Target?
 		local t = make("kiosk", 0, WorldLayout.plaza("kiosk"))
 		t.primary = "workshop"
 		return t
+	end
+	if binocularsOn then
+		return binocularsTarget(pos, slot)
 	end
 	return nil
 end
@@ -505,6 +569,14 @@ function PromptController.Start()
 			end
 		end
 	end
+	-- jumelles (v2.0, D22) : interrupteur Hearts et profil v2 relus sur les signaux de UI/MetaFlags
+	-- seulement (aucune lecture par image) ; MetaFlags.start est idempotent
+	local function readFlags()
+		binocularsOn = MetaFlags.on("Hearts") and MetaFlags.v2Profile()
+	end
+	Util.safe("MetaFlags.start", nil, MetaFlags.start)
+	table.insert(connections, MetaFlags.Changed:Connect(readFlags))
+	readFlags()
 	table.insert(
 		connections,
 		RunService.Heartbeat:Connect(function(dt: number)

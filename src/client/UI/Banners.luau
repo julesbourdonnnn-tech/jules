@@ -13,6 +13,16 @@
 --     d'événement ; les bannières des autres sont retenues puis jetées après Events.Banners.StaleAfter
 --     (30 s) ; les siennes et les personnelles passent.
 -- Juice : apparition 0,85 → 1 (Back Out) et sortie 0,15 s, fondus en Mouvement réduit. Temps : Clock.
+-- v2.0 (lot B3, étape 5, D20 ; GDD v2.0 §4.27, §6.6 ; notes du lot A2) :
+--   * « banner.ascend » (Jelly Ascend d'un joueur, sorte « ascend » du serveur) passe comme les autres ;
+--   * Pluie d'étoiles : le héros du Celebrate « ascend » en cours est retenu jusqu'à son endsAt + 5 s ; un
+--     Celebrate « giftRain » dont heroId est ce héros (cadeaux de son Ascension) donne le message
+--     « Pluie d'étoiles ! » (Hud/Messages), une fois ;
+--   * petite ligne (le serveur ne montre qu'une bannière de Grand Splorch toutes les 3 min par joueur
+--     avec la progression v2.0) : interrupteur RecordR ouvert, un Celebrate « splorch » d'un AUTRE joueur
+--     sans sa bannière « splorch » à burstAt + 1,5 s donne le texte de « banner.splorch » en message ;
+--     jamais pendant le mode discret du nouveau ; une bannière de ce joueur arrivée en retard après la
+--     ligne est jetée (jamais les deux). Interrupteurs coupés : rien de tout cela (aucune ligne).
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -26,6 +36,7 @@ local Layout = require(Shared.Config.Layout)
 local Events = require(Shared.Config.Events)
 local EventClock = require(Shared.Logic.EventClock)
 local BigNumber = require(Shared.Logic.BigNumber)
+local WorldLayout = require(Shared.Logic.WorldLayout)
 
 local Client = script.Parent.Parent
 local Root = require(Client.UI.Root)
@@ -38,6 +49,7 @@ local WorldStateController = require(Client.Controllers.WorldStateController)
 local HUD = require(Client.UI.HUD)
 local Util = require(Client.UI.Hud.Util)
 local Messages = require(Client.UI.Hud.Messages)
+local MetaFlags = require(Client.UI.MetaFlags)
 
 local Banners = {}
 
@@ -53,6 +65,12 @@ local EVENT_SOUNDS: { [string]: string } = {
 	moonStart = "MoonStart",
 }
 local CHECK_EVERY = 0.25 -- s entre deux calculs des bannières d'événement
+-- v2.0 (lot B3, D20) : Pluie d'étoiles et petite ligne du Grand Splorch
+local STAR_RAIN_GRACE = 5 -- s après endsAt du Celebrate « ascend » : héros encore retenu
+local LINE_DELAY = 1.5 -- s après burstAt : sans bannière « splorch » de ce joueur, la petite ligne
+local LINE_LATE = 20 -- s : une bannière de ce joueur arrivée après sa ligne est jetée pendant ce temps
+local LINE_MAX = 16 -- Grands Splorch suivis au plus (un par joueur du serveur)
+local WINDOW_S = 120 -- s : heure d'une charge plus loin que cela de Clock.now() : charge ignorée
 
 local ACCENTS: { [string]: Color3 } = {
 	rushSoon = Color3.fromRGB(255, 150, 210),
@@ -90,6 +108,12 @@ local lineLabel: TextLabel? = nil
 local accentBar: Frame? = nil
 local shownEvents: { [string]: number } = {} -- sorte d'événement → dernier index montré
 local checkAcc = 0
+-- v2.0 (D20) : héros de la Jelly Ascend en cours ; Grands Splorch des autres en attente de leur bannière
+-- (userId → heure de la petite ligne) ; petites lignes montrées (userId → heure)
+local ascendHero: { userId: number, untilT: number }? = nil
+local pendingLines: { [number]: number } = {}
+local pendingCount = 0
+local linesShown: { [number]: number } = {}
 
 -- =============================================================================================
 -- Construction
@@ -242,7 +266,45 @@ local function showEntry(entry: Entry, now: number)
 	end
 end
 
+-- Nom affiché d'un joueur pour la petite ligne : celui de son ranch (alias s'il le cache)
+local function playerName(userId: number): string
+	for slot = 1, WorldLayout.Const.Ranches do
+		local r = Util.safe("WorldStateController.ranch", nil, WorldStateController.ranch, slot)
+		if type(r) == "table" and r.userId == userId then
+			return Util.displayName(userId, r.name)
+		end
+	end
+	return Util.displayName(userId, "")
+end
+
+-- Lignes montrées oubliées après LINE_LATE (borne mémoire : un joueur du serveur au plus chacun)
+local function pruneShown(now: number)
+	for userId, at in linesShown do
+		if now - at > LINE_LATE or now < at then
+			linesShown[userId] = nil
+		end
+	end
+end
+
+-- Petites lignes dues (v2.0, D20) : seulement si RecordR est toujours ouvert et hors mode discret
+local function stepLines(now: number)
+	pruneShown(now)
+	for userId, due in pendingLines do
+		if now >= due or now < due - WINDOW_S then
+			pendingLines[userId] = nil
+			pendingCount -= 1
+			if now >= due and now - due <= LINE_LATE and not quiet and MetaFlags.on("RecordR") then
+				linesShown[userId] = now
+				Messages.push(Prefs.t("banner.splorch", { name = playerName(userId) }), "info")
+			end
+		end
+	end
+end
+
 local function step(now: number)
+	if pendingCount > 0 then
+		stepLines(now)
+	end
 	-- bannières des autres retenues pour un nouveau : jetées après StaleAfter
 	for i = #queue, 1, -1 do
 		local e = queue[i]
@@ -411,6 +473,22 @@ local function onBanner(payload: any)
 		return
 	end
 	local fromId = Util.num(args.userId, 0, 0, 2 ^ 53)
+	if kind == "splorch" and fromId > 0 then
+		-- v2.0 (D20) : sa bannière est arrivée, aucune petite ligne ; arrivée en retard après la ligne :
+		-- jetée (le joueur a déjà vu la nouvelle)
+		if pendingLines[fromId] ~= nil then
+			pendingLines[fromId] = nil
+			pendingCount -= 1
+		end
+		local shownAt = linesShown[fromId]
+		if shownAt ~= nil then
+			linesShown[fromId] = nil
+			local age = Clock.now() - shownAt
+			if age >= 0 and age <= LINE_LATE then
+				return
+			end
+		end
+	end
 	local personal = payload.personal == true
 	enqueue({
 		kind = kind,
@@ -444,9 +522,15 @@ function Banners.Start()
 	build()
 	Net.event("Banner").OnClientEvent:Connect(onBanner)
 	Net.event("Celebrate").OnClientEvent:Connect(function(payload: any)
-		if type(payload) == "table" and payload.kind == "photo" and type(payload.data) == "table" then
+		if type(payload) ~= "table" or type(payload.data) ~= "table" then
+			return
+		end
+		local kind = payload.kind
+		if kind == "photo" then
 			photo = payload.data.on == true
 			step(Clock.now())
+		elseif kind == "ascend" or kind == "giftRain" or kind == "splorch" then
+			Banners._onCelebrateV2(kind, payload.data)
 		end
 	end)
 	RunService.Heartbeat:Connect(function(dt: number)
@@ -461,6 +545,62 @@ function Banners.Start()
 	Prefs.LanguageChanged:Connect(function()
 		-- textes déjà traduits : la bannière en cours garde sa langue (3 s au plus)
 	end)
+end
+
+-- Heure d'une charge (Clock.now() du serveur) plausible, sinon nil
+local function timeOf(v: any, now: number): number?
+	if type(v) ~= "number" or v ~= v or math.abs(v - now) > WINDOW_S then
+		return nil
+	end
+	return v
+end
+
+-- v2.0 (D20) : Celebrate « ascend » (héros retenu), « giftRain » (Pluie d'étoiles de ce héros) et
+-- « splorch » d'un autre joueur (petite ligne si sa bannière ne vient pas) ; charge vérifiée, rien
+-- avec les interrupteurs coupés
+function Banners._onCelebrateV2(kind: string, d: { [string]: any })
+	local now = Clock.now()
+	if kind == "ascend" then
+		local userId = Util.num(d.userId, 0, 0, 2 ^ 53)
+		local endsAt = timeOf(d.endsAt, now)
+		if userId > 0 and userId % 1 == 0 and endsAt ~= nil and MetaFlags.on("JellyAscend") then
+			ascendHero = { userId = userId, untilT = endsAt + STAR_RAIN_GRACE }
+		end
+	elseif kind == "giftRain" then
+		local hero = ascendHero
+		if hero == nil then
+			return
+		end
+		if now > hero.untilT then
+			ascendHero = nil
+			return
+		end
+		if d.heroId == hero.userId then
+			ascendHero = nil -- une Pluie d'étoiles par Ascension
+			Messages.push(Prefs.t("ascend.starRain"), "reward")
+		end
+	elseif kind == "splorch" then
+		local userId = Util.num(d.userId, 0, 0, 2 ^ 53)
+		local burstAt = timeOf(d.burstAt, now)
+		if
+			userId <= 0
+			or userId % 1 ~= 0
+			or userId == localUserId()
+			or burstAt == nil
+			or quiet
+			or not MetaFlags.on("RecordR")
+		then
+			return
+		end
+		if pendingLines[userId] == nil then
+			if pendingCount >= LINE_MAX then
+				return
+			end
+			pendingCount += 1
+		end
+		pendingLines[userId] = burstAt + LINE_DELAY
+		linesShown[userId] = nil
+	end
 end
 
 -- Met une bannière dans la file (charge utile de serveur, validée comme si elle venait du réseau)
@@ -488,6 +628,11 @@ function Banners.current(): { kind: string, title: string }?
 		return nil
 	end
 	return { kind = cur.kind, title = cur.title }
+end
+
+-- Petites lignes en attente (specs : borne mémoire)
+function Banners._pendingLines(): number
+	return pendingCount
 end
 
 -- Un tour tout de suite (specs ; la boucle par image fait de même)

@@ -67,6 +67,7 @@ local PRIMARY_KEYS: { [string]: string } = {
 	shop = "prompt.shop",
 	petsit = "prompt.petsit",
 	workshop = "prompt.workshop", -- kiosque de Big Plop (lot B4, étape 5, INT-B4-KIOSK)
+	binoculars = "prompt.binoculars", -- jumelles devant le portail d'un voisin (lot B3, étape 5, D22)
 }
 local SECONDARY_KEYS: { [string]: string } = {
 	pickup = "prompt.pickup",

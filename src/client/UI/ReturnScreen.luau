@@ -7,6 +7,10 @@
 -- de FocusGuard (« return ») : les touches du jeu restent déliées tant qu'elle est ouverte. Aucune
 -- offre, aucune publicité. Charge utile revalidée (nombres finis, bornes) : une donnée abîmée
 -- donne un écran sobre, jamais une erreur.
+-- v2.0 (lot B3, étape 5, D21 ; GDD v2.0 §4.27 « Des textes vrais ») : pendant une remontée vers le
+-- record (UpgradeSnapshot.regain(), interrupteur PetitSplorch ouvert), le prestige de la boucle est un
+-- Petit Splorch : « Petit Splorch prêt ! » / « Presque prêt pour le Petit Splorch ! » remplacent les
+-- textes du Grand Splorch ; la ligne suit l'instantané et les interrupteurs tant que l'écran est ouvert.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -23,6 +27,8 @@ local Prefs = require(Client.Util.Prefs)
 local AudioController = require(Client.Controllers.AudioController)
 local Widgets = require(Client.UI.Panels.Widgets)
 local Format = require(Client.UI.Format)
+local MetaFlags = require(Client.UI.MetaFlags)
+local UpgradeSnapshot = require(Client.UI.UpgradeSnapshot)
 
 local ReturnScreen = {}
 
@@ -38,6 +44,8 @@ local okButton: TextButton? = nil
 local blob: Frame? = nil
 local labels: { [string]: TextLabel } = {}
 local opened = false
+-- ligne du prestige de la boucle reçue avec l'écran : "ready" | "nearly" | "" (aucune)
+local splorchState = ""
 
 local function num(v: any, maxValue: number): number
 	if type(v) ~= "number" or v ~= v or v == math.huge or v == -math.huge then
@@ -181,6 +189,26 @@ local function build()
 	okButton = ok
 end
 
+-- Ligne du prestige de la boucle (« prêt » / « presque prêt ») : Petit Splorch pendant une remontée
+-- (v2.0, D21), Grand Splorch sinon (v1.3)
+local function refreshSplorch()
+	local label = labels.splorch
+	if label == nil then
+		return
+	end
+	if splorchState == "" then
+		label.Visible = false
+		return
+	end
+	local okRegain, regain = pcall(UpgradeSnapshot.regain)
+	local petit = okRegain and regain == true and MetaFlags.on("PetitSplorch")
+	local key = if splorchState == "ready"
+		then (if petit then "return.petit" else "return.splorch")
+		else (if petit then "return.petitNearly" else "return.nearly")
+	Widgets.setText(label, key)
+	label.Visible = true
+end
+
 local function onWindowClosed(name: string)
 	if name ~= WINDOW then
 		return
@@ -202,6 +230,14 @@ function ReturnScreen.Start()
 	end
 	started = true
 	FocusGuard.WindowClosed:Connect(onWindowClosed)
+	-- v2.0 (D21) : instantané ou interrupteurs arrivés après l'écran : la ligne suit (écran ouvert)
+	local function follow()
+		if opened then
+			refreshSplorch()
+		end
+	end
+	UpgradeSnapshot.Changed:Connect(follow)
+	MetaFlags.Changed:Connect(follow)
 	pcall(function()
 		Net.event("Celebrate").OnClientEvent:Connect(function(payload: any)
 			if type(payload) == "table" and payload.kind == "return" and type(payload.data) == "table" then
@@ -228,15 +264,8 @@ function ReturnScreen.show(data: Types.ReturnScreenData)
 	labels.grew.Visible = grew > 0
 	Widgets.setText(labels.pot, "return.pot", { coins = Widgets.num(pot) })
 	labels.pot.Visible = pot > 0
-	if d.splorchReady == true then
-		Widgets.setText(labels.splorch, "return.splorch")
-		labels.splorch.Visible = true
-	elseif d.nearlyReady == true then
-		Widgets.setText(labels.splorch, "return.nearly")
-		labels.splorch.Visible = true
-	else
-		labels.splorch.Visible = false
-	end
+	splorchState = if d.splorchReady == true then "ready" elseif d.nearlyReady == true then "nearly" else ""
+	refreshSplorch()
 	local b = blob :: Frame
 	Widgets.paintBlob(b, species, species > 0)
 	local screen = gui :: ScreenGui
