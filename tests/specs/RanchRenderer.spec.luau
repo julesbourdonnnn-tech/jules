@@ -684,6 +684,161 @@ return function(T)
 			c.clean()
 		end)
 
+		-- Lot B5, étape 1 (journal B5-8) : défaut de la v1.3 trouvé en reliant les selles de la v2.0. Le
+		-- modèle de la monture était construit sans sa pièce de selle (BuildSpec.saddle jamais passé) :
+		-- setSaddleColor ne coloriait rien, aucune selle n'était visible (GDD §2 « une selle apparaît »,
+		-- §5.4 selles) ; et un modèle rendu puis reconstruit en selle perdait sa traînée
+		it(
+			"monture : la pièce de selle est dessinée, à la couleur de la selle choisie (classique : couleur du ranch) ; modèle reconstruit en selle : selle et traînée reviennent ; pied à terre : ni selle ni traînée",
+			function()
+				local c = client()
+				local Cosmetics = c.h:require("ReplicatedStorage.Shared.Config.Cosmetics")
+				c.snapshot({
+					["3"] = ranch(3, 1, { ride = "a", saddle = 1, saddleColor = "royal", trail = "stars" }),
+				}, { ["3"] = { a = sq(1), b = sq(2) } })
+				local character = c.h.localPlayer.Character
+				local root = character.HumanoidRootPart
+				root.CFrame = CFrame.new(c.WorldLayout.penSlot(3, 1) + Vector3.new(0, 8, 0))
+				c.camera(root.Position + Vector3.new(0, 6, -12))
+				c.run(0.6)
+				local function saddle(uid)
+					local handle = c.RR.handleOf(3, uid)
+					return handle and handle.model:FindFirstChild("Saddle")
+				end
+				local function trails()
+					local n = 0
+					for _, d in c.h.workspace:GetDescendants() do
+						if d.Name == "MountTrail" then
+							n += 1
+						end
+					end
+					return n
+				end
+				expect(saddle("a") ~= nil).toBe(true)
+				expect(saddle("a").Color).toBe(Cosmetics.ByKindId["saddle:royal"].color)
+				expect(saddle("a").Transparency).toBe(0)
+				expect(saddle("b")).toBeNil() -- seul le squishy monté porte une selle
+				expect(#c.RR.handleOf(3, "a").parts <= 12).toBe(true)
+				expect(trails()).toBe(1)
+				-- selle classique : couleur du ranch
+				c.h:fireClient(
+					"ReplicatedStorage.Remotes.RanchPatch",
+					{ seq = 2, ranches = { ["3"] = { saddleColor = "" } }, ops = {} }
+				)
+				c.h:settle(1)
+				c.run(0.2)
+				expect(saddle("a").Color).toBe(Cosmetics.RanchColors[3])
+				-- le personnage disparaît un instant (réapparition) : modèle rendu, puis reconstruit en selle
+				root.Parent = nil
+				c.run(0.2)
+				expect(c.RR.handleOf(3, "a")).toBeNil()
+				expect(trails()).toBe(0)
+				root.Parent = character
+				c.run(0.2)
+				expect(saddle("a") ~= nil).toBe(true)
+				expect(saddle("a").Color).toBe(Cosmetics.RanchColors[3])
+				expect(trails()).toBe(1)
+				-- pied à terre : le squishy retrouve sa place sans selle ni traînée
+				c.h:fireClient(
+					"ReplicatedStorage.Remotes.RanchPatch",
+					{ seq = 3, ranches = { ["3"] = { ride = "" } }, ops = {} }
+				)
+				c.h:settle(1)
+				c.run(0.2)
+				expect(c.RR.handleOf(3, "a") ~= nil).toBe(true)
+				expect(saddle("a")).toBeNil()
+				expect(trails()).toBe(0)
+				expect(c.RR.stats().models).toBe(2)
+				-- en selle de nouveau : la selle revient
+				c.h:fireClient(
+					"ReplicatedStorage.Remotes.RanchPatch",
+					{ seq = 4, ranches = { ["3"] = { ride = "a", saddleColor = "royal" } }, ops = {} }
+				)
+				c.h:settle(1)
+				c.run(0.2)
+				expect(saddle("a").Color).toBe(Cosmetics.ByKindId["saddle:royal"].color)
+				expect(trails()).toBe(1)
+				c.clean()
+			end
+		)
+
+		-- Lot B5, étape 1 (journal B5-9) : second défaut de la v1.3 trouvé avec les tenues de la v2.0. Le
+		-- modèle d'un squishy dessiné gardait l'aspect de sa construction : une tenue mise ou retirée,
+		-- une mutation ou des étoiles changées dans le miroir ne se voyaient qu'après une reconstruction
+		-- (s'éloigner de 220 studs et revenir)
+		it(
+			"squishy dessiné dont la tenue, la mutation ou les étoiles changent dans le miroir : le modèle suit ; une pression (autre champ) ne reconstruit rien",
+			function()
+				local c = client()
+				c.snapshot({ ["3"] = ranch(3, 1) }, { ["3"] = { a = sq(1), b = sq(2) } })
+				c.camera(c.WorldLayout.penSlot(3, 1) + Vector3.new(0, 8, -10))
+				c.run(0.5)
+				local seq = 1
+				local function update(uid, species, fields)
+					local rec = sq(species)
+					for k, v in fields do
+						rec[k] = v
+					end
+					seq += 1
+					c.h:fireClient("ReplicatedStorage.Remotes.RanchPatch", {
+						seq = seq,
+						ranches = {},
+						ops = { { slot = 3, op = "update", uid = uid, rec = rec } },
+					})
+					c.h:settle(1)
+					c.run(0.1)
+				end
+				local function outfit(uid)
+					local handle = c.RR.handleOf(3, uid)
+					return handle and handle.model:FindFirstChild("Outfit")
+				end
+				local function stars(uid)
+					local gui = c.RR.handleOf(3, uid).body:FindFirstChild("Stars")
+					local n = 0
+					if gui and gui.Enabled then
+						for i = 1, 5 do
+							local ray = gui:FindFirstChild("Star" .. i .. "Ray1")
+							if ray and ray.Visible then
+								n += 1
+							end
+						end
+					end
+					return n
+				end
+				local first = c.RR.handleOf(3, "a")
+				local other = c.RR.handleOf(3, "b")
+				expect(outfit("a")).toBeNil()
+				expect(stars("a")).toBe(0)
+				-- une pression : `ready` change, rien d'autre : le même modèle reste
+				update("a", 1, { ready = T0 + 8 })
+				expect(c.RR.handleOf(3, "a")).toBe(first)
+				-- tenue de la v1.3, puis de la v2.0, puis retirée
+				update("a", 1, { o = "sweater" })
+				expect(outfit("a") ~= nil).toBe(true)
+				local sweater = outfit("a").Color
+				update("a", 1, { o = "partyHat" })
+				expect(outfit("a") ~= nil).toBe(true)
+				expect(outfit("a").Color ~= sweater).toBe(true)
+				update("a", 1, { o = "" })
+				expect(outfit("a")).toBeNil()
+				-- étoiles : même modèle, l'arc suit
+				local kept = c.RR.handleOf(3, "a")
+				update("a", 1, { st = 3 })
+				expect(c.RR.handleOf(3, "a")).toBe(kept)
+				expect(stars("a")).toBe(3)
+				update("a", 1, { st = 5 })
+				expect(stars("a")).toBe(5)
+				-- mutation : l'aspect de la mutation, les étoiles gardées
+				update("a", 1, { st = 5, m = 2 })
+				expect(c.RR.handleOf(3, "a").spec.mutation).toBe(2)
+				expect(stars("a")).toBe(5)
+				-- l'autre squishy n'a jamais été touché
+				expect(c.RR.handleOf(3, "b")).toBe(other)
+				expect(c.RR.stats().models).toBe(2)
+				c.clean()
+			end
+		)
+
 		-- v2.0 (lot B5, étape 1, INT-B5-RANCH ; plan B5 D3) : crochets des personnalités. L'interrupteur
 		-- Personalities n'arrive au client que par EventState.features.v2 (World/Flags)
 		it(
@@ -833,6 +988,134 @@ return function(T)
 				expect(#calls).toBe(0)
 				expect(#forgets).toBe(0)
 				P.pose, P.forget = realPose, realForget
+				c.clean()
+			end
+		)
+	end)
+
+	-- v2.0 (lot B5, étape 1 ; plan B5 D12 ; consigne du propriétaire (2c)) : les cosmétiques de la v2.0
+	-- (Cosmetics.ListV2 et rotation de la semaine) se VOIENT en jeu. Selles, traînées et drapeaux : couleurs
+	-- du lot B4 (D19b) ; tenues et selle d'un modèle construit seul : lot B5 (Render/SquishyBuilder).
+	describe("RanchRenderer › cosmétiques de la v2.0 portés en jeu (lot B5, D12)", function()
+		it(
+			"chaque selle, traînée, drapeau et tenue de la v2.0 a son aspect en jeu, différent du repli et des autres ; la selle a la couleur d'un modèle construit seul ; identifiant inconnu : le repli d'aujourd'hui, sans trace",
+			function()
+				local c = client()
+				local Cosmetics = c.h:require("ReplicatedStorage.Shared.Config.Cosmetics")
+				local SB = c.h:require("ReplicatedStorage.Shared.Render.SquishyBuilder")
+				local Color3 = roblox.Color3
+				local function ids(kind)
+					local out = {}
+					for _, list in { Cosmetics.ListV2, Cosmetics.WeeklyRotation } do
+						for _, def in list do
+							if def.kind == kind then
+								table.insert(out, def.id)
+							end
+						end
+					end
+					return out
+				end
+				local saddles, trails, flags, outfits =
+					ids("saddle"), ids("trail"), ids("flag"), ids("outfit")
+				expect({ #saddles, #trails, #flags, #outfits }).toEqual({ 9, 7, 4, 4 })
+				c.snapshot(
+					{ ["3"] = ranch(3, 1, { ride = "a", saddle = 1 }) },
+					{ ["3"] = { a = sq(1), b = sq(2) } }
+				)
+				local root = c.h.localPlayer.Character.HumanoidRootPart
+				root.CFrame = CFrame.new(c.WorldLayout.penSlot(3, 1) + Vector3.new(0, 8, 0))
+				c.camera(root.Position + Vector3.new(0, 6, -12))
+				c.run(0.6)
+				local seq = 1
+				local function patch(fields, ops)
+					seq += 1
+					c.h:fireClient(
+						"ReplicatedStorage.Remotes.RanchPatch",
+						{ seq = seq, ranches = if fields then { ["3"] = fields } else {}, ops = ops or {} }
+					)
+					c.h:settle(1)
+					c.run(0.6)
+				end
+				local function distinct(seen, key, id)
+					expect({ id, seen[key] }).toEqual({ id, nil })
+					seen[key] = id
+				end
+
+				-- selles : sur la monture
+				local ranchColor = Cosmetics.RanchColors[3]
+				local function saddle()
+					return c.RR.handleOf(3, "a").model:FindFirstChild("Saddle").Color
+				end
+				expect(saddle()).toBe(ranchColor)
+				local seen = {}
+				for _, id in saddles do
+					patch({ saddleColor = id })
+					local color = saddle()
+					expect({ id, color ~= ranchColor }).toEqual({ id, true })
+					distinct(seen, tostring(color), id)
+					local alone = SB.build({
+						species = 1,
+						mutation = 0,
+						stars = 0,
+						displayScale = 1,
+						lod = 1,
+						saddle = id,
+					})
+					expect({ id, alone.model:FindFirstChild("Saddle").Color }).toEqual({ id, color })
+					SB.release(alone)
+				end
+				patch({ saddleColor = "nope" })
+				expect(saddle()).toBe(ranchColor)
+
+				-- traînées : sur la monture
+				local PINK = roblox.ColorSequence.new(Color3.fromRGB(255, 220, 240))
+				local function trail()
+					local found = find(c.h.workspace, "MountTrail")
+					return found and found.Color
+				end
+				seen = {}
+				for _, id in trails do
+					patch({ trail = id })
+					local color = trail()
+					expect({ id, color ~= nil and color ~= PINK }).toEqual({ id, true })
+					distinct(seen, tostring(color), id)
+				end
+				patch({ trail = "nope" })
+				expect(trail()).toBe(PINK)
+
+				-- drapeaux : à côté du portail
+				local WHITE = Color3.fromRGB(255, 255, 255)
+				local function flag()
+					local found = find(c.h.workspace, "Flag3")
+					return found and found.Cloth.Color
+				end
+				seen = {}
+				for _, id in flags do
+					patch({ flag = id })
+					local color = flag()
+					expect({ id, color ~= nil and color ~= WHITE }).toEqual({ id, true })
+					distinct(seen, tostring(color), id)
+				end
+				patch({ flag = "nope" })
+				expect(flag()).toBe(WHITE)
+
+				-- tenues : sur un squishy de l'enclos, mises pendant qu'il est dessiné
+				local function wear(id)
+					local rec = sq(2)
+					rec.o = id
+					patch(nil, { { slot = 3, op = "update", uid = "b", rec = rec } })
+					return c.RR.handleOf(3, "b").model:FindFirstChild("Outfit")
+				end
+				seen = {}
+				for _, id in outfits do
+					local part = wear(id)
+					expect({ id, part ~= nil }).toEqual({ id, true })
+					expect(part.Transparency).toBe(0)
+					distinct(seen, tostring(part.Color) .. tostring(part.Size), id)
+				end
+				expect(wear("nope")).toBeNil()
+				expect(wear("")).toBeNil()
+				expect(c.RR.stats().models).toBe(2)
 				c.clean()
 			end
 		)

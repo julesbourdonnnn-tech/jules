@@ -13,7 +13,7 @@
 --     absents des polices (règle 18) ;
 --   * profil v2 : les tenues de la v2.0 (Cosmetics.ListV2 sorte outfit, tenue de la semaine
 --     WeeklyRotation « polkaBow ») sont acceptées, nommées par leur clé, possédées par outfits.owned ;
---     leur pièce 3D vient au lot B5 (Render/SquishyBuilder ne la dessine pas encore : aucune erreur).
+--     leur pièce 3D est dessinée par Render/SquishyBuilder depuis le lot B5 (étape 1, D12).
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")

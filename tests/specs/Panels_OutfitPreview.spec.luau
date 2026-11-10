@@ -118,7 +118,7 @@ return function(T)
 
 	describe("Panels/OutfitPreview › v2.0 (lot B3)", function()
 		it(
-			"flèches dessinées (règle 18) ; tenue de la v2.0 avec un profil v2 : nom de sa clé, possession outfits.owned, Mettre, sans pièce 3D avant B5 ni trace ; profil v1 : refusée",
+			"flèches dessinées (règle 18) ; tenue de la v2.0 avec un profil v2 : nom de sa clé, possession outfits.owned, Mettre, sans trace ; profil v1 : refusée",
 			function()
 				local c = setup({
 					version = 2,
@@ -154,6 +154,70 @@ return function(T)
 				d.PC.open("OutfitPreview", "partyHat")
 				expect(d.OP._state().outfit).toBe("plopBib")
 				clean(d)
+			end
+		)
+	end)
+
+	-- Lot B5, étape 1 (plan B5 D12) : Render/SquishyBuilder dessine les 4 tenues de la v2.0 ; l'aperçu
+	-- les montre donc sur le squishy choisi (le lot B3 les acceptait sans pièce 3D)
+	describe("Panels/OutfitPreview › v2.0 (lot B5)", function()
+		it(
+			"chaque tenue de la v2.0 montre sa pièce dans la vue 3D, sur le squishy choisi ; une pièce différente par tenue ; ≤ 12 pièces ; modèle rendu à la fermeture",
+			function()
+				local c = setup({
+					version = 2,
+					squishies = {
+						big = TvAudit.squishy(5, { z = 900 }),
+						small = TvAudit.squishy(9, { z = 10 }),
+					},
+					outfits = {
+						owned = { partyHat = 1, starGlasses = 1, buildersCrown = 1, polkaBow = 1 },
+						worn = {},
+					},
+				})
+				c.PC.open("Settings")
+				c.PC.open("OutfitPreview", "partyHat")
+				local b = body(c)
+				local world = b.Viewport.WorldModel
+				local function piece()
+					local found = nil
+					local parts = 0
+					for _, d in world:GetDescendants() do
+						if d:IsA("BasePart") then
+							parts += 1
+							if d.Name == "Outfit" then
+								expect(found).toBeNil() -- une seule pièce de tenue
+								found = d
+							end
+						end
+					end
+					expect(parts <= 12).toBe(true)
+					return found
+				end
+				local seen = {}
+				for _, outfit in { "partyHat", "starGlasses", "buildersCrown", "polkaBow" } do
+					c.OP.setTab(outfit)
+					TvAudit.tick(c.h, 0.1)
+					expect(c.OP._state().outfit).toBe(outfit)
+					expect(c.OP._state().model).toBe(true)
+					local part = piece()
+					expect({ outfit, part ~= nil }).toEqual({ outfit, true })
+					expect(part.Transparency).toBe(0)
+					local key = tostring(part.Color) .. tostring(part.Size)
+					expect({ outfit, seen[key] }).toEqual({ outfit, nil })
+					seen[key] = outfit
+					-- le squishy suivant porte la même tenue
+					press(c, b.Next)
+					expect(c.OP._state().uid).toBe("small")
+					expect({ outfit, piece() ~= nil }).toEqual({ outfit, true })
+					press(c, b.Prev)
+					expect(c.OP._state().uid).toBe("big")
+				end
+				TvAudit.tick(c.h, 0.5)
+				Gamepad.tap(c.h, Enum.KeyCode.ButtonB)
+				expect(c.OP._state().model).toBe(false)
+				expect(piece()).toBeNil()
+				clean(c)
 			end
 		)
 	end)

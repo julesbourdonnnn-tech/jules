@@ -133,6 +133,14 @@ type Drawn = {
 	light: PointLight?,
 	saddleKey: string,
 	trail: Trail?,
+	saddled: boolean, -- le modèle porte la pièce de selle (construit pour la monture)
+	-- aspect du modèle construit (lot B5, journal B5-9) et drapeau « à revoir » posé par SquishyChanged :
+	-- le modèle suit une tenue, une mutation ou des étoiles qui changent, sans rien comparer par image
+	species: number,
+	mutation: number,
+	outfit: string,
+	stars: number,
+	check: boolean,
 }
 
 local drawn: { [number]: { [string]: Drawn } } = {}
@@ -332,6 +340,9 @@ local function release(d: Drawn)
 		d.trail:Destroy()
 		d.trail = nil
 	end
+	-- lot B5 (défaut de la v1.3, journal B5-8) : le prochain modèle de la monture reprend sa couleur de
+	-- selle et sa traînée (la clé gardée faisait sauter dressMount après une reconstruction)
+	d.saddleKey = ""
 	local h = d.handle
 	if h then
 		d.handle = nil
@@ -377,7 +388,10 @@ local function saddleColorOf(slot: number, key: string): Color3
 	return Cosmetics.RanchColors[slot] or Cosmetics.FreeRanchColor
 end
 
-local function build(d: Drawn, rec: Types.PublicSquishy, lod: number, scale: number)
+-- `saddled` : modèle de la monture, construit avec sa pièce de selle (lot B5, défaut de la v1.3, journal
+-- B5-8 : BuildSpec.saddle n'était jamais passé, aucune selle n'était dessinée et setSaddleColor ne
+-- coloriait rien) ; dressMount pose ensuite la couleur de la selle choisie
+local function build(d: Drawn, rec: Types.PublicSquishy, lod: number, scale: number, saddled: boolean)
 	local ok, h = pcall(SquishyBuilder.build, {
 		species = rec.s,
 		mutation = rec.m,
@@ -385,6 +399,7 @@ local function build(d: Drawn, rec: Types.PublicSquishy, lod: number, scale: num
 		displayScale = scale,
 		lod = lod,
 		outfit = if rec.o ~= "" then rec.o else nil,
+		saddle = if saddled then "classic" else nil,
 	}, clientFolder())
 	if not ok or type(h) ~= "table" then
 		return
@@ -392,6 +407,9 @@ local function build(d: Drawn, rec: Types.PublicSquishy, lod: number, scale: num
 	d.handle = h
 	d.lod = lod
 	d.scale = scale
+	d.saddled = saddled
+	d.species, d.mutation, d.outfit, d.stars = rec.s, rec.m, rec.o, rec.st
+	d.check = false
 	pcall(SquishyBuilder.setParticles, h, if lowGraphics() then 0 else Util.num(budgets().particles, 1, 0, 1))
 	if d.rarity >= LEGENDARY then
 		local light = h.model:FindFirstChild("AuraLight", true)
@@ -436,6 +454,12 @@ local function ensureDrawn(slot: number, uid: string, rec: Types.PublicSquishy):
 			light = nil,
 			saddleKey = "",
 			trail = nil,
+			saddled = false,
+			species = rec.s,
+			mutation = rec.m,
+			outfit = rec.o,
+			stars = rec.st,
+			check = false,
 		}
 		local r = WorldStateController.ranch(slot)
 		d.offset = Util.safe("PressTiming.offset", 0, PressTiming.offset, if r then r.userId else 0, uid)
@@ -511,12 +535,32 @@ local function stepSquishy(
 		d.where = where
 		d.animAt = -math.huge -- changement de lieu : nouvelle pose même immobile
 	end
+	-- la monture porte une selle, les autres non : en montant ou en mettant pied à terre, le modèle est
+	-- rendu puis reconstruit avec l'autre jeu de pièces (sa traînée part avec lui)
+	local saddled = where == "ride"
+	if d.handle ~= nil and d.saddled ~= saddled then
+		release(d)
+	end
+	-- le miroir a changé ce squishy (SquishyChanged) : autre espèce, mutation ou tenue = autre jeu de
+	-- pièces (modèle rendu puis reconstruit) ; autres étoiles : l'arc du même modèle
+	if d.check then
+		d.check = false
+		local current = d.handle
+		if current then
+			if d.species ~= rec.s or d.mutation ~= rec.m or d.outfit ~= rec.o then
+				release(d)
+			elseif d.stars ~= rec.st then
+				d.stars = rec.st
+				pcall(SquishyBuilder.setStars, current, rec.st)
+			end
+		end
+	end
 	if d.handle == nil then
 		if buildBudget.n <= 0 then
 			return
 		end
 		buildBudget.n -= 1
-		build(d, rec, lod, scale)
+		build(d, rec, lod, scale, saddled)
 		if d.handle == nil then
 			return
 		end
@@ -1664,8 +1708,14 @@ function RanchRenderer.Start()
 	)
 	table.insert(
 		connections,
-		WorldStateController.SquishyChanged:Connect(function(slot: number)
+		WorldStateController.SquishyChanged:Connect(function(slot: number, uid: string)
 			dirty[slot] = true
+			-- lot B5 (journal B5-9) : l'aspect de ce squishy est à revoir à sa prochaine image
+			local list = drawn[slot]
+			local d = if list and type(uid) == "string" then list[uid] else nil
+			if d then
+				d.check = true
+			end
 		end)
 	)
 	table.insert(
