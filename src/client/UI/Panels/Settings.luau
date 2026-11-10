@@ -9,6 +9,14 @@
 -- dors » en bas. Interrupteurs de 120 × 64 px TV ; ✕ envoie SetSetting / SetMode (le serveur valide
 -- et le profil répliqué fait foi : l'interrupteur suit le DataPatch). Aucun onglet.
 -- Sélection par défaut : le 1er interrupteur ; ○ → menu.
+-- v2.0 (lot B3, étape 4 ; plan B3 D16 ; GDD v2.0 §10.3 Réglages) :
+--   * « Montrer mon halo » (settings.haloOn) après l'emote, seulement quand MON ranch porte l'attribut
+--     HaloOn (interrupteur RanchSkins, profil v2) : SetSetting("haloOn", valeur) ; l'interrupteur suit
+--     settings.haloOn du profil répliqué ;
+--   * emote de la croix ← : celles de la v1.3 débloquées, puis les emotes de la v2.0 possédées
+--     (Logic/Owned avec les interrupteurs annoncés par le serveur, UI/MetaFlags), nommées par leur clé
+--     de Cosmetics.ListV2 / WeeklyRotation ; interrupteurs coupés : les lignes, les choix et les
+--     intentions de la v1.3, à l'identique.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -18,8 +26,11 @@ local SettingsConfig = require(Shared.Config.Settings)
 local Cosmetics = require(Shared.Config.Cosmetics)
 local Layout = require(Shared.Config.Layout)
 
+local Owned = require(Shared.Logic.Owned)
+
 local Client = script.Parent.Parent.Parent
 local Prefs = require(Client.Util.Prefs)
+local MetaFlags = require(Client.UI.MetaFlags)
 local Widgets = require(script.Parent.Widgets)
 local Diagnostics = require(script.Parent.Diagnostics)
 
@@ -85,6 +96,42 @@ local function emoteUnlocked(id: string): boolean
 	return false
 end
 
+-- v2.0 (D16) : emotes de la croix ← gagnées en v2.0 (Record R, Atelier, Carnet, semaine), dans l'ordre
+-- de Config/Settings.emoteLeft, et la clé de leur nom (Cosmetics.ListV2, WeeklyRotation)
+local V2_EMOTES = { "splorch", "wave", "confettiCrown", "bigPlopDance", "hammerTap", "hugEmote" }
+local V2_EMOTE_KEYS: { [string]: string } = {}
+for _, def in Cosmetics.ListV2 do
+	if def.kind == "emote" then
+		V2_EMOTE_KEYS[def.id] = def.key
+	end
+end
+for _, def in Cosmetics.WeeklyRotation do
+	if def.kind == "emote" then
+		V2_EMOTE_KEYS[def.id] = def.key
+	end
+end
+
+-- Profil répliqué sur les clés que lit Logic/Owned pour une emote (Record R, Atelier, Carnet, semaine)
+local OWNED_KEYS =
+	{ "version", "R", "bestR", "ascend", "atelierCosmetics", "atelier", "stats", "weeklyTrack" }
+
+-- Emote de la v2.0 possédée (profil v2, interrupteur de sa source ouvert sur le serveur)
+local function v2EmoteOwned(id: string): boolean
+	if V2_EMOTE_KEYS[id] == nil or not MetaFlags.v2Profile() then
+		return false
+	end
+	local ok, owned = pcall(Owned.cosmetic, Widgets.profile(OWNED_KEYS), "emote", id, MetaFlags.owned())
+	return ok and owned == true
+end
+
+-- « Montrer mon halo » : MON ranch porte l'attribut HaloOn (le serveur ne le pose qu'avec RanchSkins et
+-- un profil v2) ; jamais une intention que le serveur refuserait
+local function haloShown(): boolean
+	return MetaFlags.v2Profile()
+		and MetaFlags.on("RanchSkins")
+		and type(MetaFlags.attr("HaloOn")) == "boolean"
+end
+
 local function buildItems(): { Item }
 	local list: { Item } = { { kind = "mode", key = "mode" } }
 	for _, key in TOGGLES do
@@ -98,7 +145,17 @@ local function buildItems(): { Item }
 			table.insert(emotes, id)
 		end
 	end
+	if MetaFlags.v2Profile() then
+		for _, id in V2_EMOTES do
+			if v2EmoteOwned(id) then
+				table.insert(emotes, id)
+			end
+		end
+	end
 	table.insert(list, { kind = "choice", key = "emoteLeft", values = emotes })
+	if haloShown() then
+		table.insert(list, { kind = "toggle", key = "haloOn" })
+	end
 	table.insert(list, { kind = "choice", key = "lang", values = { "auto", "en", "fr" } })
 	if privateOwner() then
 		table.insert(list, { kind = "toggle", key = "allowRush" })
@@ -119,6 +176,10 @@ local function choiceText(item: Item): string
 		return Prefs.t("settings.lang." .. (if v == "en" or v == "fr" then v else "auto"))
 	elseif item.key == "emoteLeft" then
 		local v = Prefs.get("emoteLeft")
+		local v2Key = if type(v) == "string" then V2_EMOTE_KEYS[v] else nil
+		if v2Key and v2EmoteOwned(v) then
+			return Prefs.t(v2Key)
+		end
 		return Prefs.t(
 			"settings.emoteLeft." .. (if type(v) == "string" and emoteUnlocked(v) then v else "bravo")
 		)
@@ -321,6 +382,13 @@ function Settings.build(container: Frame)
 		color = Widgets.Colors.TextDim,
 	})
 	Widgets.watch({ "settings", "mode", "plopDays", "dex" }, function()
+		if isOpen then
+			refresh()
+		end
+	end)
+	-- interrupteurs ou profil v2 changés écran ouvert : lignes et choix suivent (liste virtualisée,
+	-- aucune instance créée)
+	MetaFlags.Changed:Connect(function()
 		if isOpen then
 			refresh()
 		end

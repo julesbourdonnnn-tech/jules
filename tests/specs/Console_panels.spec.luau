@@ -395,6 +395,95 @@ return function(T)
 		)
 	end)
 
+	describe("Console_panels › v2.0 : piste, Carnet et Records (lot B3, étape 4)", function()
+		local UpgradeScreen = require("../harness/UpgradeScreen")
+		local S = UpgradeScreen.new(T.Harness)
+		local DONE = { step = 11, done = true, demoDone = true }
+
+		it(
+			"R1 jusqu'à « Cette semaine » puis « Carnet » (1er palier sélectionné) ; Records : liste sélectionnée, ↓ en bout rebondit, ↑ remonte à l'onglet ; ○ → menu",
+			function()
+				local c = S.client({
+					profile = {
+						version = 2,
+						onboarding = DONE,
+						R = 10,
+						bestR = 10,
+						ascend = 1,
+						objectives = {
+							day = 20833,
+							list = {
+								{ id = 1, p = 0, done = false, claimed = false },
+								{ id = 7, p = 0, done = false, claimed = false },
+								{ id = 14, p = 0, done = false, claimed = false },
+							},
+							rerolls = 0,
+							allClaimed = false,
+						},
+						weeklyTrack = {
+							period = 2975,
+							points = 4,
+							claimed = { 3 },
+							won = { 0 },
+							challenges = {},
+						},
+						carnet = { 1 },
+						stats = { upgradesBought = 120, splorches = 9, bestCombo = 3 },
+						biggestEver = 5e6,
+						plopDays = 3,
+					},
+				})
+				S.event(c, UpgradeScreen.V2_ALL)
+				local h, PC = c.h, c.PC
+				local function sel()
+					return h.game.GuiService.SelectedObject
+				end
+				local function tap(key)
+					TvAudit.tick(h, 0.5)
+					Gamepad.tap(h, key)
+					TvAudit.tick(h, 0.5)
+				end
+				PC.open("Objectives")
+				TvAudit.tick(h, 0.5)
+				local Obj = TvAudit.mod(h, "UI.Panels.Objectives")
+				expect(sel()).toBe(PC.window("Objectives").Body.Page_today.Card1.Action)
+				tap(Enum.KeyCode.ButtonR1)
+				expect(Obj.currentTab()).toBe("track")
+				local body = PC.window("Objectives").Body
+				expect(sel()).toBe(body.Page_track.Tier1)
+				-- → parcourt les paliers, ↓ descend aux Défis (aucun : la page reste sur les paliers)
+				tap(Enum.KeyCode.DPadRight)
+				expect(sel()).toBe(body.Page_track.Tier2)
+				tap(Enum.KeyCode.ButtonR1)
+				expect(Obj.currentTab()).toBe("carnet")
+				expect(sel()).toBe(body.Page_carnet.Cell1)
+				tap(Enum.KeyCode.ButtonB)
+				expect(PC.current()).toBeNil()
+				expect(PC.menuOpen()).toBe(true)
+				-- Squishydex › Records (dernier onglet : L1 depuis les Espèces)
+				PC.open("Squishydex")
+				TvAudit.tick(h, 0.5)
+				local Dex = TvAudit.mod(h, "UI.Panels.Squishydex")
+				tap(Enum.KeyCode.ButtonL1)
+				expect(Dex.currentTab()).toBe("records")
+				local dexBody = PC.window("Squishydex").Body
+				local list = dexBody.Page_records.Records
+				expect(sel()).toBe(list)
+				-- tout le Livre tient à l'écran : ↓ rebondit (la sélection reste sur la liste), ↑ remonte
+				-- à l'onglet Records
+				tap(Enum.KeyCode.DPadDown)
+				expect(sel()).toBe(list)
+				expect(list.Holder.Position.Y.Offset).toBe(0)
+				tap(Enum.KeyCode.DPadUp)
+				expect(sel()).toBe(dexBody.Tabs.Strip.Tab_records)
+				tap(Enum.KeyCode.ButtonB)
+				expect(PC.current()).toBeNil()
+				expect(PC.menuOpen()).toBe(true)
+				clean(h)
+			end
+		)
+	end)
+
 	describe("Console_panels › clavier et souris (second)", function()
 		it(
 			"clic = ✕, Retour arrière = ○, libellés des touches du clavier ; aucune touche manette affichée",

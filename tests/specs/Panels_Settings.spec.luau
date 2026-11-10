@@ -142,4 +142,168 @@ return function(T)
 			end
 		)
 	end)
+
+	describe("Panels/Settings › v2.0 (lot B3, halo et emotes gagnées)", function()
+		local UpgradeScreen = require("../harness/UpgradeScreen")
+		local S = UpgradeScreen.new(T.Harness)
+		local V2 = UpgradeScreen.V2_ALL
+		local V13_KEYS = {
+			"mode",
+			"hideName",
+			"receiveGifts",
+			"clips",
+			"reducedMotion",
+			"lowGraphics",
+			"music",
+			"sfx",
+			"vibration",
+			"emoteLeft",
+			"lang",
+		}
+
+		-- profil v2 : Record R 13 (Splorch! au Record R 4, Ola au 13 ; Couronne de confettis au 19 : non),
+		-- 2 500 niveaux (Coup de maillet du Carnet), Câlin gagné sur la piste (5e de la rotation)
+		local function v2client(opts)
+			opts = opts or {}
+			local profile = {
+				version = 2,
+				R = 13,
+				bestR = 13,
+				ascend = 0,
+				stats = { upgradesBought = 2500 },
+				weeklyTrack = { won = { 16 } },
+				settings = {
+					emoteLeft = opts.emote or "bravo",
+					haloOn = opts.halo ~= false,
+					lang = opts.lang or "auto",
+				},
+			}
+			if opts.edit then
+				opts.edit(profile)
+			end
+			local c = S.client({ profile = profile, ranch = opts.ranch or { HaloOn = true } })
+			if opts.flags ~= false then
+				S.event(c, opts.flags or V2)
+			end
+			c.Settings = TvAudit.mod(c.h, "UI.Panels.Settings")
+			return c
+		end
+
+		local function open(c)
+			c.PC.closeAll()
+			TvAudit.tick(c.h, 0.5)
+			c.PC.open("Settings")
+			TvAudit.tick(c.h, 0.5)
+		end
+
+		local function pressControl(c, key)
+			local control = c.Settings._controlFor(key)
+			S.select(c, control)
+			Gamepad.tap(c.h, Enum.KeyCode.ButtonA)
+			TvAudit.tick(c.h, 0.5)
+			return control
+		end
+
+		local function withHalo()
+			local out = table.clone(V13_KEYS)
+			table.insert(out, #out, "haloOn")
+			return out
+		end
+
+		it(
+			"halo : ligne « Montrer mon halo » après l'emote quand MON ranch porte HaloOn ; l'interrupteur suit settings.haloOn ; ✕ → SetSetting(\"haloOn\", false)",
+			function()
+				local c = v2client()
+				open(c)
+				expect(keys(c)).toEqual(withHalo())
+				local row = rowFor(c, "haloOn")
+				expect(row.Title.Text).toBe("Show my halo")
+				expect(row.Desc.Text).toBe("Jelly drops that circle your head")
+				expect(row.Toggle:GetAttribute("On")).toBe(true)
+				pressControl(c, "haloOn")
+				local sent = TvAudit.sent(c.h, "SetSetting")
+				expect(sent[#sent][1]).toBe("haloOn")
+				expect(sent[#sent][2]).toBe(false)
+				-- réglage du profil coupé : l'interrupteur suit le profil répliqué
+				local c2 = v2client({ halo = false })
+				open(c2)
+				expect(rowFor(c2, "haloOn").Toggle:GetAttribute("On")).toBe(false)
+				S.clean(c, expect)
+				S.clean(c2, expect)
+			end
+		)
+
+		it(
+			"halo : pas d'attribut HaloOn, RanchSkins coupé ou profil v1 → aucune ligne, aucun envoi",
+			function()
+				for _, opts in
+					{
+						{ ranch = {} },
+						{ ranch = { HaloOn = "oui" } },
+						{ flags = { RecordR = true, Carnet = true, WeeklyTrack = true } },
+						{
+							edit = function(p)
+								p.version = 1
+							end,
+						},
+					}
+				do
+					local c = v2client(opts)
+					open(c)
+					expect(table.find(keys(c), "haloOn")).toBeNil()
+					expect(c.Settings._controlFor("haloOn")).toBeNil()
+					S.clean(c, expect)
+				end
+			end
+		)
+
+		it(
+			"emote de la croix ← : emotes de la v1.3 débloquées puis emotes de la v2.0 possédées, nommées par leur clé ; ✕ fait tourner les choix",
+			function()
+				local c = v2client({ emote = "hugEmote" })
+				open(c)
+				local emote
+				for _, item in c.Settings._items() do
+					if item.key == "emoteLeft" then
+						emote = item
+					end
+				end
+				expect(emote.values).toEqual({ "bravo", "splorch", "wave", "hammerTap", "hugEmote" })
+				local choice = c.Settings._controlFor("emoteLeft")
+				expect(choice.Label.Text).toBe("Hug Emote")
+				pressControl(c, "emoteLeft")
+				local sent = TvAudit.sent(c.h, "SetSetting")
+				expect(sent[#sent][1]).toBe("emoteLeft")
+				expect(sent[#sent][2]).toBe("bravo") -- en boucle après la dernière
+				-- emote d'une source coupée (Carnet) : plus proposée ; choisie, elle s'affiche « Bravo »
+				local c2 = v2client({ emote = "hammerTap", flags = { RecordR = true } })
+				open(c2)
+				for _, item in c2.Settings._items() do
+					if item.key == "emoteLeft" then
+						expect(item.values).toEqual({ "bravo", "splorch", "wave" })
+					end
+				end
+				expect(c2.Settings._controlFor("emoteLeft").Label.Text).toBe("Bravo")
+				S.clean(c, expect)
+				S.clean(c2, expect)
+			end
+		)
+
+		it(
+			"interrupteurs coupés : lignes, choix et intentions de la v1.3 à l'identique (attribut et emotes v2.0 ignorés)",
+			function()
+				local c = v2client({ flags = false, emote = "wave" })
+				open(c)
+				expect(keys(c)).toEqual(V13_KEYS)
+				for _, item in c.Settings._items() do
+					if item.key == "emoteLeft" then
+						expect(item.values).toEqual({ "bravo" })
+					end
+				end
+				expect(c.Settings._controlFor("emoteLeft").Label.Text).toBe("Bravo")
+				S.noV2Intent(c, expect)
+				S.clean(c, expect)
+			end
+		)
+	end)
 end
