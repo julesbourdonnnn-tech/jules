@@ -2073,15 +2073,13 @@ function SquishyBuilder.setSaddleColor(handle: Handle, color: Color3)
 end
 
 -- Visages que setFace sait dessiner, dans l'ordre de Config/Visuals.Faces (v2.0, lot B5)
-do
-	local list: { string } = {}
-	for _, name in Visuals.Faces do
-		if name == DEFAULT_FACE or FACES[name] then
-			table.insert(list, name)
-		end
+local faceNames: { string } = {}
+for _, name in Visuals.Faces do
+	if name == DEFAULT_FACE or FACES[name] then
+		table.insert(faceNames, name)
 	end
-	SquishyBuilder.FACES = table.freeze(list)
 end
+SquishyBuilder.FACES = table.freeze(faceNames)
 
 -- Visage du modèle (v2.0, lot B5, D6 ; Visuals.Faces) : une écriture des tailles des yeux et des
 -- reflets, bouche et yeux déplacés par leur décalage (pris à la prochaine pose()). Même visage,
