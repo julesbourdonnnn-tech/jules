@@ -256,4 +256,198 @@ return function(T)
 			clean(h)
 		end)
 	end)
+	-- =========================================================================================
+	-- Lot B3, étape 5 (D20) : bannière de la Jelly Ascend, Pluie d'étoiles, petite ligne
+	-- =========================================================================================
+	describe("Banners › v2.0 (lot B3, étape 5)", function()
+		local V2 = { RecordR = true, JellyAscend = true }
+		local function v2on(h)
+			local f = allOn()
+			f.v2 = V2
+			setFeatures(h, f)
+		end
+		local function celebrate(h, kind, data)
+			h:fireClient("ReplicatedStorage.Remotes.Celebrate", { kind = kind, data = data })
+			h:settle(1)
+		end
+		local function ascend(h, userId, now)
+			celebrate(h, "ascend", {
+				userId = userId,
+				ascend = 1,
+				startR = 1,
+				bestR = 20,
+				startedAt = now,
+				burstAt = now + 4,
+				endsAt = now + 10,
+				flyer = { s = 1, m = 0, st = 0, z = 10 },
+			})
+		end
+		local function gift(h, heroId)
+			celebrate(
+				h,
+				"giftRain",
+				{ heroId = heroId, heroName = "", coins = 10, uid = "", species = 0, short = false }
+			)
+		end
+		local function splorch(h, userId, now)
+			celebrate(h, "splorch", {
+				userId = userId,
+				level = 1,
+				flyer = { s = 1, m = 0, st = 0, z = 10 },
+				startedAt = now,
+				burstAt = now + 4,
+				endsAt = now + 8,
+				short = false,
+			})
+		end
+		-- messages montrés (textes), dans l'ordre
+		local function shown(h)
+			local M = TvAudit.mod(h, "UI.Hud.Messages")
+			local out = {}
+			local last = M.last()
+			if last then
+				table.insert(out, last.text)
+			end
+			return out
+		end
+		local function run(h, B, Clock, seconds)
+			local steps = math.max(1, math.floor(seconds / 0.25 + 0.5))
+			for _ = 1, steps do
+				Clock.advance(seconds / steps)
+				B._step()
+				TvAudit.tick(h, 0)
+			end
+			h:settle(1)
+		end
+
+		it(
+			"banner.ascend : la Jelly Ascend d'un joueur a sa bannière (« banner. » + la sorte du serveur)",
+			function()
+				local h, B = setup()
+				local L = h:require("ReplicatedStorage.Shared.Localization")
+				banner(h, "ascend", { userId = 2, name = "Mira" }, 1)
+				expect(B.current().kind).toBe("ascend")
+				expect(B.current().title).toBe(L.get("en", "banner.ascend", { name = "Mira" }))
+				clean(h)
+			end
+		)
+
+		it(
+			"Pluie d'étoiles : giftRain du héros de l'Ascension en cours → « Star Rain! », une fois ; un autre héros, après endsAt + 5 s ou interrupteurs coupés : rien",
+			function()
+				local h, B, Clock = setup()
+				local M = TvAudit.mod(h, "UI.Hud.Messages")
+				v2on(h)
+				local now = Clock.now()
+				ascend(h, 7, now)
+				gift(h, 8) -- cadeaux d'un Grand Splorch d'un autre : aucune Pluie d'étoiles
+				expect(M.last() == nil or M.last().text ~= "Star Rain!").toBe(true)
+				gift(h, 7)
+				expect(M.last().text).toBe("Star Rain!")
+				-- une seule par Ascension
+				run(h, B, Clock, 4)
+				local before = M.last().at
+				gift(h, 7)
+				run(h, B, Clock, 4)
+				expect(M.last().at).toBe(before)
+				-- après endsAt + 5 s : le héros est oublié
+				local t2 = Clock.now()
+				ascend(h, 9, t2)
+				run(h, B, Clock, 16)
+				gift(h, 9)
+				run(h, B, Clock, 4)
+				expect(M.last().at).toBe(before)
+				-- interrupteurs coupés : jamais
+				setFeatures(h, allOn())
+				ascend(h, 11, Clock.now())
+				gift(h, 11)
+				run(h, B, Clock, 4)
+				expect(M.last().at).toBe(before)
+				clean(h)
+			end
+		)
+
+		it(
+			"petite ligne : Grand Splorch d'un autre sans sa bannière à burstAt + 1,5 s → le texte de banner.splorch en message ; bannière à temps : aucune ligne ; bannière en retard : jetée ; le mien : rien",
+			function()
+				local h, B, Clock = setup()
+				local M = TvAudit.mod(h, "UI.Hud.Messages")
+				v2on(h)
+				-- 1. aucune bannière : la ligne à burstAt + 1,5 s, nom caché → alias
+				splorch(h, 7, Clock.now())
+				run(h, B, Clock, 5)
+				expect(M.last() == nil or not string.find(M.last().text, "GRAND SPLORCH", 1, true)).toBe(true)
+				run(h, B, Clock, 0.75)
+				expect(string.find(M.last().text, "GRAND SPLORCH", 1, true) ~= nil).toBe(true)
+				expect(string.find(M.last().text, "Squishy Fan #", 1, true) ~= nil).toBe(true)
+				local lineAt = M.last().at
+				-- sa bannière arrive en retard (file du serveur) : jetée, jamais les deux
+				banner(h, "splorch", { userId = 7, name = "" }, 1)
+				expect(B.current()).toBe(nil)
+				expect(B.queued()).toBe(0)
+				-- 2. la bannière arrive à temps : aucune ligne
+				run(h, B, Clock, 6)
+				splorch(h, 8, Clock.now())
+				run(h, B, Clock, 4)
+				banner(h, "splorch", { userId = 8, name = "Mira" }, 1)
+				expect(B.current().kind).toBe("splorch")
+				run(h, B, Clock, 4)
+				expect(M.last().at).toBe(lineAt)
+				-- 3. mon Grand Splorch : jamais de ligne (ma bannière, ou rien)
+				local me = h.localPlayer.UserId
+				splorch(h, me, Clock.now())
+				run(h, B, Clock, 8)
+				expect(M.last().at).toBe(lineAt)
+				expect(B._pendingLines()).toBe(0)
+				-- 4. charges abîmées : rien, aucune trace
+				celebrate(h, "splorch", { userId = "7", burstAt = Clock.now() })
+				celebrate(h, "splorch", { userId = 7, burstAt = 0 / 0 })
+				celebrate(h, "splorch", { userId = 7, burstAt = Clock.now() + 1e6 })
+				celebrate(h, "ascend", { userId = -1, endsAt = Clock.now() })
+				expect(B._pendingLines()).toBe(0)
+				-- 5. au plus 16 suivis à la fois
+				for uid = 100, 140 do
+					splorch(h, uid, Clock.now())
+				end
+				expect(B._pendingLines()).toBe(16)
+				run(h, B, Clock, 30)
+				expect(B._pendingLines()).toBe(0)
+				clean(h)
+			end
+		)
+
+		it(
+			"jamais pendant le mode discret du nouveau ; interrupteurs coupés : une bannière manquée ne donne jamais de ligne",
+			function()
+				local h, B, Clock = setup()
+				local M = TvAudit.mod(h, "UI.Hud.Messages")
+				v2on(h)
+				B.setQuiet(true)
+				splorch(h, 7, Clock.now())
+				run(h, B, Clock, 8)
+				expect(M.last() == nil or not string.find(M.last().text, "GRAND SPLORCH", 1, true)).toBe(true)
+				B.setQuiet(false)
+				-- ligne attendue puis mode discret : jetée
+				splorch(h, 8, Clock.now())
+				B.setQuiet(true)
+				run(h, B, Clock, 8)
+				expect(M.last() == nil or not string.find(M.last().text, "GRAND SPLORCH", 1, true)).toBe(true)
+				B.setQuiet(false)
+				-- interrupteurs coupés (aucun features.v2) : aucune ligne, comme la v1.3
+				setFeatures(h, allOn())
+				splorch(h, 9, Clock.now())
+				run(h, B, Clock, 8)
+				expect(M.last() == nil or not string.find(M.last().text, "GRAND SPLORCH", 1, true)).toBe(true)
+				expect(B._pendingLines()).toBe(0)
+				-- RecordR seul coupé (JellyAscend ouvert) : aucune ligne non plus
+				local f = allOn()
+				f.v2 = { JellyAscend = true }
+				setFeatures(h, f)
+				splorch(h, 10, Clock.now())
+				run(h, B, Clock, 8)
+				expect(M.last() == nil or not string.find(M.last().text, "GRAND SPLORCH", 1, true)).toBe(true)
+				clean(h)
+			end
+		)
+	end)
 end

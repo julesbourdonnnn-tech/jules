@@ -449,6 +449,56 @@ return function(T)
 		)
 	end)
 
+	-- lot B3, étape 5 (D22, INT-B3-BINOCULARS) : l'invite des jumelles se joue à la manette seule, avec le
+	-- glyphe de la plateforme (Carré PlayStation, X de la manette Xbox, E au clavier)
+	describe("Console › invite des jumelles", function()
+		it(
+			"□ « Look » : icône du Carré sur PS5, icône X sur Xbox, E au clavier ; audit console propre",
+			function()
+				local TvAudit = require("../harness/TvAudit")
+				local h = TvAudit.client({
+					console = true,
+					profile = { onboarding = { step = 11, done = true, demoDone = true } },
+				})
+				local Prompt = TvAudit.mod(h, "UI.Prompt")
+				local PC = TvAudit.mod(h, "Controllers.PromptController")
+				local target = {
+					kind = "binoculars",
+					slot = 2,
+					uid = "",
+					id = 22,
+					tile = "",
+					ready = true,
+					primary = "binoculars",
+					secondary = "",
+					position = roblox.Vector3.new(30, 0, -170),
+				}
+				PC.current = function()
+					return target
+				end
+				Prompt._step()
+				local plate = Prompt.plates()[1]
+				expect(#Prompt.plates()).toBe(1)
+				expect(plate.Text.Text).toBe("Look")
+				expect(plate.Glyph:GetAttribute("GlyphKey")).toBe("ButtonX")
+				expect(plate.Glyph.Image.Image).toBe(Gamepad.PS_GLYPHS .. "ButtonSquare@2x.png")
+				h.game.UserInputService.LastInputTypeChanged:Fire(Enum.UserInputType.Keyboard)
+				h:settle(2)
+				Prompt._step()
+				expect(Prompt.plates()[1].Glyph:GetAttribute("GlyphKey")).toBe("E")
+				h.console = false
+				h.game.UserInputService.LastInputTypeChanged:Fire(Enum.UserInputType.Gamepad1)
+				h:settle(2)
+				Prompt._step()
+				plate = Prompt.plates()[1]
+				expect(plate.Glyph:GetAttribute("GlyphKey")).toBe("ButtonX")
+				expect(plate.Glyph.Image.Image).toBe(Gamepad.XBOX_GLYPHS .. "ButtonX@2x.png")
+				expect(table.concat(h.errors, "\n")).toBe("")
+				expect(table.concat(h:warnings(), "\n")).toBe("")
+			end
+		)
+	end)
+
 	describe("Console › Util/Haptics", function()
 		-- Événements neutres ajoutés à la carte (mêmes réglages que les vibrations de jeu de Comet Conga)
 		local TEST_EVENTS = {

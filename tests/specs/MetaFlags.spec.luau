@@ -571,4 +571,100 @@ return function(T)
 			S.clean(c, expect)
 		end)
 	end)
+
+	-- Lot B3, étape 5 (D23) : mesures de diagnostic textScale et styleFallback, envoyées par le seau partagé
+	-- de Widgets.send seulement tant que EventState.features.v2 est présent, et pas avant 60 s
+	describe("MetaFlags › mesures de diagnostic (lot B3, étape 5, D23)", function()
+		local UpgradeScreen = require("../harness/UpgradeScreen")
+		local S = UpgradeScreen.new(T.Harness)
+		local DONE = { step = 11, done = true, demoDone = true }
+		local function metrics(c, kinds)
+			local out = {}
+			for _, args in S.sent(c, "ClientMetric") do
+				if kinds == nil or kinds[args[1]] then
+					table.insert(out, tostring(args[1]) .. "=" .. tostring(args[2]))
+				end
+			end
+			return out
+		end
+		local D23 = { textScale = true, styleFallback = true }
+		-- EventState du serveur (une nouvelle table à chaque fois : la file change)
+		local n = 0
+		local function event(c, v2)
+			n += 1
+			S.event(c, v2, { queue = {}, current = nil, seq = n })
+		end
+
+		it(
+			"interrupteurs coupés : aucune mesure pendant toute une séance (replis, nouvelles mesures, EventState)",
+			function()
+				local c = S.client({ profile = { onboarding = DONE } })
+				local Theme = TvAudit.mod(c.h, "UI.Theme")
+				local Text = TvAudit.mod(c.h, "UI.Text")
+				for _ = 1, 6 do
+					event(c, nil)
+					Theme.onStyleFallback("shadow")
+					Theme.onStyleFallback("radial")
+					Text.remeasure()
+					S.run(c, 30)
+				end
+				expect(metrics(c)).toEqual({})
+				S.clean(c, expect)
+			end
+		)
+
+		it(
+			"v2 : textScale une fois après 60 s, puis à chaque nouvelle valeur (3 au plus) ; styleFallback une fois par sorte ; un refus du seau est retenté au déclencheur suivant",
+			function()
+				local c = S.client({ profile = { version = 2, onboarding = DONE } })
+				local Theme = TvAudit.mod(c.h, "UI.Theme")
+				local Text = TvAudit.mod(c.h, "UI.Text")
+				local MF = TvAudit.mod(c.h, "UI.MetaFlags")
+				event(c, UpgradeScreen.V2_ALL)
+				Theme.onStyleFallback("shadow")
+				S.run(c, 30)
+				event(c, UpgradeScreen.V2_ALL)
+				-- moins de 60 s après le premier features.v2 : rien
+				expect(metrics(c, D23)).toEqual({})
+				S.run(c, 31)
+				event(c, UpgradeScreen.V2_ALL)
+				-- textScale part ; le repli attend le seau (1 envoi par 5 s)
+				expect(metrics(c, D23)).toEqual({ "textScale=100" })
+				S.run(c, 6)
+				event(c, UpgradeScreen.V2_ALL)
+				expect(metrics(c, D23)).toEqual({ "textScale=100", "styleFallback=1" })
+				-- même sorte encore : rien ; l'autre sorte : une fois
+				Theme.onStyleFallback("shadow")
+				S.run(c, 6)
+				Theme.onStyleFallback("radial")
+				Theme.onStyleFallback("radial")
+				S.run(c, 6)
+				event(c, UpgradeScreen.V2_ALL)
+				expect(metrics(c, D23)).toEqual({ "textScale=100", "styleFallback=1", "styleFallback=2" })
+				-- facteur du moteur changé (taille de texte du joueur) : nouvelle valeur, 3 envois au plus
+				for _, f in { 1.5, 1.5, 1.25, 1.4, 1 } do
+					Text.factor = function()
+						return f
+					end
+					S.run(c, 6)
+					event(c, UpgradeScreen.V2_ALL)
+				end
+				expect(metrics(c, D23)).toEqual({
+					"textScale=100",
+					"styleFallback=1",
+					"styleFallback=2",
+					"textScale=150",
+					"textScale=125",
+				})
+				expect(MF._metrics().textScale).toBe(3)
+				expect(MF._metrics().styleFallback).toEqual({ "shadow", "radial" })
+				-- sorte inconnue de repli : ignorée
+				Theme.onStyleFallback("glow")
+				S.run(c, 6)
+				event(c, UpgradeScreen.V2_ALL)
+				expect(#metrics(c, D23)).toBe(5)
+				S.clean(c, expect)
+			end
+		)
+	end)
 end

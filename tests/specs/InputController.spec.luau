@@ -311,6 +311,41 @@ return function(T)
 			end
 		)
 
+		-- lot B3, étape 5 (D22, INT-B3-BINOCULARS) : □ sur les jumelles ouvre UI/Binoculars sur le ranch du
+		-- voisin, et rien d'autre (aucune intention : le cœur part de la fenêtre)
+		it("□ sur les jumelles : Binoculars.open(propriétaire) seulement, aucune intention", function()
+			local h, _, _, world = setup()
+			local B = TvAudit.mod(h, "UI.Binoculars")
+			local opened = {}
+			B.open = function(ownerId)
+				table.insert(opened, ownerId)
+				return true
+			end
+			world.target = {
+				kind = "binoculars",
+				slot = 2,
+				uid = "",
+				id = 22,
+				tile = "",
+				ready = true,
+				primary = "binoculars",
+				secondary = "",
+				position = Vector3.new(30, 0, -170),
+			}
+			local before = #h.log.serverEvents
+			Gamepad.tap(h, Enum.KeyCode.ButtonX)
+			expect(opened).toEqual({ 22 })
+			expect(#h.log.serverEvents).toBe(before)
+			-- identifiant abîmé : rien
+			world.target.id = -5
+			Gamepad.tap(h, Enum.KeyCode.ButtonX)
+			expect(#opened).toBe(1)
+			-- ○ : aucune seconde action
+			Gamepad.tap(h, Enum.KeyCode.ButtonB)
+			expect(#h.log.serverEvents).toBe(before)
+			clean(h)
+		end)
+
 		it("□ presse la cible prête (Press uid, tClient) ; en recharge : Bump, rien d'envoyé", function()
 			local h, _, _, world = setup()
 			world.target = {

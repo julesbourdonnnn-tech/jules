@@ -140,4 +140,84 @@ return function(T)
 			end
 		)
 	end)
+	-- Lot B3, étape 5 (D21) : pendant une remontée vers le record, le prestige de la boucle est un Petit
+	-- Splorch : l'écran de retour le nomme (GDD v2.0 §4.27 « Des textes vrais »)
+	describe("ReturnScreen › v2.0 (lot B3, étape 5)", function()
+		local UpgradeScreen = require("../harness/UpgradeScreen")
+		local S = UpgradeScreen.new(T.Harness)
+		local DONE = { step = 11, done = true, demoDone = true }
+		local function regainSnap(version)
+			return S.snap(version or 1, function(p)
+				p.ascend = 1
+				p.R = 3
+				p.bestR = 10
+			end)
+		end
+		local function client(opts)
+			local c =
+				S.client({ profile = { version = 2, onboarding = DONE }, snap = opts.snap, lang = opts.lang })
+			if opts.flags ~= false then
+				S.event(c, opts.flags or UpgradeScreen.V2_ALL)
+			end
+			return c
+		end
+		local function show(c, ready, nearly)
+			c.h:fireClient("ReplicatedStorage.Remotes.Celebrate", {
+				kind = "return",
+				data = {
+					seconds = 3600,
+					uid = "",
+					species = 1,
+					grew = 10,
+					pot = 5,
+					splorchReady = ready,
+					nearlyReady = nearly,
+				},
+			})
+			c.h:settle(2)
+			return card(c.h)
+		end
+
+		it(
+			"remontée (A ≥ 1, r < Record R) et PetitSplorch ouvert : « Petit Splorch prêt ! » / « Presque prêt… »",
+			function()
+				local c = client({ snap = regainSnap() })
+				local f = show(c, true, false)
+				expect(f.Splorch.Text).toBe("Petit Splorch ready!")
+				local RS = TvAudit.mod(c.h, "UI.ReturnScreen")
+				S.run(c, 0.5)
+				RS._close()
+				S.run(c, 0.5)
+				f = show(c, false, true)
+				expect(f.Splorch.Text).toBe("Almost ready for the Petit Splorch!")
+				S.clean(c, expect)
+				local fr = client({ snap = regainSnap(), lang = "fr" })
+				expect(show(fr, true, false).Splorch.Text).toBe("Petit Splorch prêt !")
+				S.clean(fr, expect)
+			end
+		)
+
+		it(
+			"PetitSplorch coupé, hors remontée ou sans instantané : les textes de la v1.3 ; la ligne suit l'instantané arrivé après l'écran",
+			function()
+				local flags = table.clone(UpgradeScreen.V2_ALL)
+				flags.PetitSplorch = nil
+				local c = client({ snap = regainSnap(), flags = flags })
+				expect(show(c, true, false).Splorch.Text).toBe("Grand Splorch ready!")
+				S.clean(c, expect)
+				local loop = client({ snap = S.snap(1) })
+				expect(show(loop, true, false).Splorch.Text).toBe("Grand Splorch ready!")
+				S.clean(loop, expect)
+				-- v1.3 : aucun instantané, aucun features.v2
+				local v13 = client({ flags = false })
+				local f = show(v13, false, true)
+				expect(f.Splorch.Text).toBe("Almost ready for the Grand Splorch!")
+				-- l'instantané de la remontée et les interrupteurs arrivent écran ouvert : la ligne suit
+				S.event(v13, UpgradeScreen.V2_ALL)
+				S.patch(v13, regainSnap(2))
+				expect(f.Splorch.Text).toBe("Almost ready for the Petit Splorch!")
+				S.clean(v13, expect)
+			end
+		)
+	end)
 end

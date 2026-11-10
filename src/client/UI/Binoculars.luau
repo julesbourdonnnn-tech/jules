@@ -339,9 +339,11 @@ function Binoculars.open(ownerId: number): boolean
 	return true
 end
 
+-- Fermeture voulue par le jeu (interrupteur coupé, propriétaire parti) : tout de suite, même juste
+-- après l'ouverture (○ passe par FocusGuard et sa garde du double appui)
 function Binoculars.close()
 	if opened then
-		FocusGuard.close(Binoculars.WINDOW)
+		FocusGuard.closeNow(Binoculars.WINDOW)
 	end
 end
 

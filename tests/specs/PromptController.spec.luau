@@ -401,5 +401,80 @@ return function(T)
 				c.clean()
 			end
 		)
+
+		-- lot B3, étape 5 (D22, INT-B3-BINOCULARS) : jumelles à 8 studs du portail d'un AUTRE ranch occupé,
+		-- dans la rue ; seulement interrupteur Hearts ouvert, profil v2 et ranch visé qui porte BestR
+		it(
+			"jumelles : □ « Regarder » devant le portail du voisin (Hearts, profil v2, BestR) ; jamais en portant, derrière une fenêtre, ni interrupteurs coupés",
+			function()
+				local MockInstance = require("../harness/MockInstance")
+				local UpgradeScreen = require("../harness/UpgradeScreen")
+				local c = client({ other = { name = "" } })
+				local world = MockInstance.new("Folder")
+				world.Name = "Wobbleton"
+				world.Parent = c.h.workspace
+				local list = MockInstance.new("Folder")
+				list.Name = "Ranches"
+				list.Parent = world
+				local m4 = MockInstance.new("Model")
+				m4.Name = "4"
+				m4.Parent = list
+				m4:SetAttribute("BestR", 3)
+				local gate = c.WorldLayout.gateOutside(4)
+				c.place(gate)
+				c.run(0.1)
+				-- interrupteurs coupés (aucun features.v2, profil v1) : rien
+				expect(c.PC.current()).toBe(nil)
+				c.h:fireClient("ReplicatedStorage.Remotes.DataSnapshot", { coins = 0, version = 2 })
+				c.h:fireClient(
+					"ReplicatedStorage.Remotes.EventState",
+					UpgradeScreen.eventState(UpgradeScreen.V2_ALL)
+				)
+				c.h:settle(1)
+				c.run(0.1)
+				local t = c.PC.current()
+				expect(t ~= nil and t.kind).toBe("binoculars")
+				expect(t.primary).toBe("binoculars")
+				expect(t.secondary).toBe("")
+				expect(t.slot).toBe(4)
+				expect(t.id).toBe(2)
+				-- fenêtre ouverte : rien ; fermée : la cible revient
+				c.FocusGuard.WindowOpened:Fire("Settings")
+				c.h:settle(1)
+				c.run(0.1)
+				expect(c.PC.current()).toBe(nil)
+				c.FocusGuard.WindowClosed:Fire("Settings")
+				c.h:settle(1)
+				c.run(0.1)
+				expect(c.PC.current().kind).toBe("binoculars")
+				-- en portant : seul le Bassin compte
+				c.h:fireClient(
+					"ReplicatedStorage.Remotes.RanchPatch",
+					{ seq = 2, ranches = { ["3"] = { carry = "a" } }, ops = {} }
+				)
+				c.h:settle(1)
+				c.run(0.1)
+				expect(c.PC.current()).toBe(nil)
+				c.h:fireClient(
+					"ReplicatedStorage.Remotes.RanchPatch",
+					{ seq = 3, ranches = { ["3"] = { carry = "" } }, ops = {} }
+				)
+				c.h:settle(1)
+				c.run(0.1)
+				expect(c.PC.current().kind).toBe("binoculars")
+				-- sans BestR : rien ; interrupteur Hearts coupé : rien
+				m4:SetAttribute("BestR", nil)
+				c.run(0.1)
+				expect(c.PC.current()).toBe(nil)
+				m4:SetAttribute("BestR", 3)
+				local flags = table.clone(UpgradeScreen.V2_ALL)
+				flags.Hearts = nil
+				c.h:fireClient("ReplicatedStorage.Remotes.EventState", UpgradeScreen.eventState(flags))
+				c.h:settle(1)
+				c.run(0.1)
+				expect(c.PC.current()).toBe(nil)
+				c.clean()
+			end
+		)
 	end)
 end

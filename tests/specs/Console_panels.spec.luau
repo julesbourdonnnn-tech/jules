@@ -484,6 +484,87 @@ return function(T)
 		)
 	end)
 
+	-- lot B3, étape 5 (D19, D25) : une carte de la v2.0 rangée dans « ! » se rouvre à la manette et son
+	-- « Voir » ouvre l'écran qu'elle porte ; ○ sur la carte rouverte la range de nouveau
+	describe("Console_panels › v2.0 : cartes rouvertes depuis « ! » (lot B3, étape 5)", function()
+		local UpgradeScreen = require("../harness/UpgradeScreen")
+		local S = UpgradeScreen.new(T.Harness)
+		local DONE = { step = 11, done = true, demoDone = true }
+
+		it(
+			"△ → « ! » → ✕ rouvre la carte du palier ; ○ la range ; ✕ sur « Voir » ouvre Objectifs › Cette semaine ; maîtrise → fiche de l'espèce",
+			function()
+				local c = S.client({
+					profile = {
+						version = 2,
+						onboarding = DONE,
+						weeklyTrack = {
+							period = 2975,
+							points = 4,
+							claimed = { 3 },
+							won = { 0 },
+							challenges = {},
+						},
+						carnet = { 1 },
+						stats = { upgradesBought = 120 },
+					},
+				})
+				S.event(c, UpgradeScreen.V2_ALL)
+				local h, PC = c.h, c.PC
+				local C = TvAudit.mod(h, "UI.Cards")
+				local function sel()
+					return h.game.GuiService.SelectedObject
+				end
+				local function tap(key)
+					TvAudit.tick(h, 0.5)
+					Gamepad.tap(h, key)
+					TvAudit.tick(h, 0.5)
+				end
+				local function stow(kind, data)
+					h:fireClient("ReplicatedStorage.Remotes.Celebrate", { kind = kind, data = data })
+					h:settle(1)
+					c.Clock.advance(8.01)
+					C._step()
+					TvAudit.tick(h, 0.2)
+				end
+				stow("trackTier", { tier = 2, reward = "confetti" })
+				expect(#C.pending()).toBe(1)
+				tap(Enum.KeyCode.ButtonY)
+				expect(PC.menuOpen()).toBe(true)
+				local pending = PC.entryButton("Pending")
+				h.game.GuiService.SelectedObject = pending
+				tap(Enum.KeyCode.ButtonA)
+				expect(C.current() ~= nil and C.current().kind).toBe("trackTier")
+				local buttons = C.buttons()
+				expect(sel()).toBe(buttons[1])
+				expect(buttons[1].Label.Text).toBe("See")
+				-- ○ : la carte se range, retour au rail sur « ! »
+				tap(Enum.KeyCode.ButtonB)
+				expect(#C.pending()).toBe(1)
+				expect(PC.menuOpen()).toBe(true)
+				h.game.GuiService.SelectedObject = PC.entryButton("Pending")
+				tap(Enum.KeyCode.ButtonA)
+				tap(Enum.KeyCode.ButtonA)
+				expect(PC.current()).toBe("Objectives")
+				expect(TvAudit.mod(h, "UI.Panels.Objectives").currentTab()).toBe("track")
+				expect(#C.pending()).toBe(0)
+				tap(Enum.KeyCode.ButtonB)
+				-- maîtrise : la fiche des espèces du Squishydex
+				stow("mastery", { species = 2 })
+				PC.closeAll()
+				TvAudit.tick(h, 0.5)
+				tap(Enum.KeyCode.ButtonY)
+				h.game.GuiService.SelectedObject = PC.entryButton("Pending")
+				tap(Enum.KeyCode.ButtonA)
+				expect(C.current().kind).toBe("mastery")
+				tap(Enum.KeyCode.ButtonA)
+				expect(PC.current()).toBe("Squishydex")
+				expect(TvAudit.mod(h, "UI.Panels.Squishydex").currentTab()).toBe("species")
+				clean(h)
+			end
+		)
+	end)
+
 	describe("Console_panels › clavier et souris (second)", function()
 		it(
 			"clic = ✕, Retour arrière = ○, libellés des touches du clavier ; aucune touche manette affichée",

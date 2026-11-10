@@ -129,6 +129,40 @@ return function(T)
 			end
 		)
 
+		-- lot B3, étape 5 (D22, INT-B3-BINOCULARS) : jumelles devant le portail d'un voisin, « □ Regarder »
+		it(
+			"jumelles : une seule plaque « Look » sur □ (console) ou E (clavier), aucune ligne ○",
+			function()
+				local function binoculars()
+					return {
+						kind = "binoculars",
+						slot = 2,
+						uid = "",
+						id = 22,
+						tile = "",
+						ready = true,
+						primary = "binoculars",
+						secondary = "",
+						position = Vector3.new(30, 0, -170),
+					}
+				end
+				local h, P, _, setTarget = setup({ console = true })
+				setTarget(binoculars())
+				local plates = P.plates()
+				expect(#plates).toBe(1)
+				expect(plates[1].Text.Text).toBe("Look")
+				expect(glyphKey(plates[1])).toBe("ButtonX")
+				setTarget(nil)
+				expect(#P.plates()).toBe(0)
+				clean(h)
+				local h2, P2, _, setTarget2 = setup({ console = false })
+				setTarget2(binoculars())
+				expect(#P2.plates()).toBe(1)
+				expect(glyphKey(P2.plates()[1])).toBe("E")
+				clean(h2)
+			end
+		)
+
 		it("avant la leçon de fusion : seulement « □ Presser »", function()
 			local h, P, _, setTarget = setup({ onboarding = { step = 2, done = false, demoDone = false } })
 			setTarget(squishy())
