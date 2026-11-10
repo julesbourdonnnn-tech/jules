@@ -23,6 +23,15 @@
 -- Chaque état a sa sortie : 8 s pour une carte affichée, 20 s pour la carte du choix, ○ et les
 -- boutons pour une carte rouverte ; file et rangement bornés. Temps : Clock (specs : voyage dans le
 -- temps) ; une seule connexion par image.
+-- v2.0 (lot B3, étape 5, D19 ; GDD v2.0 §4.15, §4.17, §4.27, §7.5, Annexe B.8) : cartes « Bienvenue dans
+-- la v2 ! », « De retour à ton record », « Étape du record », « Nouveau » (unlock2, objet de Déco perso,
+-- cosmétique de la v2.0, et premier passage d'un palier, d'un Monument ou de la maisonnette des
+-- Plopettes sur MON ranch : RanchRenderer.ElementBuilt), palier de la piste, Carnet et maîtrise. Textes
+-- par UI/MetaView.cardText (charge vérifiée : sorte ou identifiant inconnu = aucune carte), seulement
+-- pour un profil v2 (UI/MetaFlags.v2Profile) : interrupteurs coupés, rien de neuf (ni carte, ni objet).
+-- Toutes non bloquantes (8 s, puis « ! ») ; rouverte, « Voir » ouvre l'écran qu'elle porte (piste,
+-- Carnet, fiche de l'espèce, Mon style, Réglages) par Requested(sorte, "open", panneau, onglet). Les
+-- cosmétiques de la v1.3 gardent le message du HUD (jamais de carte en double).
 
 local GuiService = game:GetService("GuiService")
 local Players = game:GetService("Players")
@@ -53,6 +62,10 @@ local State = require(Client.Controllers.StateController)
 local WorldStateController = require(Client.Controllers.WorldStateController)
 local Util = require(Client.UI.Hud.Util)
 local Chase = require(Client.UI.Hud.Chase)
+local RanchRenderer = require(Client.Controllers.RanchRenderer)
+local MetaFlags = require(Client.UI.MetaFlags)
+local MetaView = require(Client.UI.MetaView)
+local UpgradeSnapshot = require(Client.UI.UpgradeSnapshot)
 
 export type Card = {
 	id: string,
@@ -64,9 +77,11 @@ export type Card = {
 local Cards = {}
 
 Cards.Changed = Signal.new() :: Signal.Signal<>
--- (sorte de carte, action) : un bouton de carte demande un panneau, ex. ("objectives", "open"),
--- ("dex", "open") ; écouté par PanelController (jamais d'appel direct vers un module plus tardif)
-Cards.Requested = Signal.new() :: Signal.Signal<string, string>
+-- (sorte de carte, action, panneau?, onglet?) : un bouton de carte demande un panneau, ex.
+-- ("objectives", "open"), ("dex", "open") ; carte v2.0 (lot B3) : l'écran qu'elle porte en plus, ex.
+-- ("trackTier", "open", "Objectives", "track") ; écouté par PanelController (jamais d'appel direct
+-- vers un module plus tardif)
+Cards.Requested = Signal.new() :: Signal.Signal<string, string, string?, string?>
 
 local ORDER: { [string]: number } = {}
 for i, kind in Layout.Cards.Order do
@@ -93,6 +108,37 @@ local CALM_EVERY = 0.25 -- s entre deux vérifications du calme (créatures proc
 local RUSH_GLYPH = { gamepad = Enum.KeyCode.ButtonA, keyboard = Enum.KeyCode.Return }
 local NO_GLYPH = {}
 
+-- v2.0 (lot B3, étape 5, D19) : célébration du serveur → sorte de carte (Layout.Cards.Order) ;
+-- « element » : RanchRenderer.ElementBuilt de MON ranch (jamais une célébration du serveur)
+local V2_KINDS: { [string]: string } = {
+	welcomeV2 = "welcomeV2",
+	regainDone = "regainDone",
+	recordStep = "recordStep",
+	unlock = "unlockNew",
+	unlock2 = "unlockNew",
+	trackTier = "trackTier",
+	carnet = "carnet",
+	mastery = "mastery",
+}
+local V2_CARDS: { [string]: boolean } = {
+	welcomeV2 = true,
+	regainDone = true,
+	recordStep = true,
+	unlockNew = true,
+	trackTier = true,
+	carnet = true,
+	mastery = true,
+}
+-- champs gardés d'une charge v2.0 (copie bornée : nombres, booléens, chaînes de 64 caractères au plus,
+-- 3 déblocages de « Bienvenue ») ; MetaView.cardText vérifie le reste
+local V2_FIELDS = { "bestR", "confetti", "share", "kind", "id", "recordR", "tier", "reward", "species" }
+local MAX_FIELD = 64
+local LONG_LINE_H = 132 -- px : ligne de 3 lignes de la carte de côté « Bienvenue dans la v2 ! »
+local LINE_H = 76 -- px : ligne de la carte de côté (v1.3)
+local DIALOG_LINE_H = 48 -- px : ligne de la carte rouverte (v1.3)
+local DIALOG_LONG_H = 84 -- px : 2 lignes (corps de « Bienvenue dans la v2 ! »)
+local DIALOG_MORE_H = 84 -- px : déblocages de « Bienvenue » (2 lignes au plus)
+
 type Entry = { card: Card, seq: number }
 
 local initialized = false
@@ -117,7 +163,12 @@ local side: TextButton? = nil -- carte non bloquante (cliquable à la souris, ja
 local sideTitle: TextLabel? = nil
 local sideLine: TextLabel? = nil
 local sideGlyph: Glyph.Handle? = nil
+local sideHint: Frame? = nil -- « △ Voir »
 local dialog: Frame? = nil -- carte rouverte (fenêtre non bloquante)
+-- v2.0 : titre « fit » et déblocages de « Bienvenue » de la carte rouverte, construits à la première
+-- carte v2.0 rouverte (jamais avec les interrupteurs coupés)
+local dialogTitleV2: TextLabel? = nil
+local dialogMoreV2: TextLabel? = nil
 local dialogButtons: { TextButton } = {}
 local modeFrame: Frame? = nil -- carte du choix (fenêtre bloquante)
 local modeRush: TextButton? = nil
@@ -189,6 +240,82 @@ local function blockedByWindow(): boolean
 end
 
 -- =============================================================================================
+-- Cartes v2.0 (lot B3, étape 5, D19)
+-- =============================================================================================
+
+-- Copie bornée d'une charge v2.0 (champs connus seulement ; chaîne trop longue ou table : écartée)
+local function v2Data(d: { [string]: any }): { [string]: any }
+	local out: { [string]: any } = {}
+	for _, field in V2_FIELDS do
+		local v = rawget(d, field)
+		local t = type(v)
+		if t == "number" or t == "boolean" or (t == "string" and #v <= MAX_FIELD) then
+			out[field] = v
+		end
+	end
+	local list = rawget(d, "highlights")
+	if type(list) == "table" then
+		local keys: { string } = {}
+		for i = 1, 3 do
+			local k = rawget(list, i)
+			if type(k) == "string" and #k <= MAX_FIELD then
+				table.insert(keys, k)
+			end
+		end
+		out.highlights = keys
+	end
+	return out
+end
+
+-- Contexte des vues de UI/MetaView : langue, interrupteurs du serveur, instantané (Record R)
+local function viewCtx(): MetaView.Ctx
+	return {
+		lang = Util.safe("Prefs.language", "en", Prefs.language),
+		on = MetaFlags.on,
+		snap = Util.safe("UpgradeSnapshot.current", nil, UpgradeSnapshot.current),
+	}
+end
+
+-- Vue d'une carte v2.0 (nil : carte de la v1.3, ou charge devenue illisible)
+local function cardView(card: Card): MetaView.Card?
+	if not V2_CARDS[card.kind] then
+		return nil
+	end
+	local d = card.data
+	if type(d.v2) ~= "string" or type(d.payload) ~= "table" then
+		return nil
+	end
+	local ok, view = pcall(MetaView.cardText, d.v2, d.payload, viewCtx())
+	return if ok then view else nil
+end
+
+-- Texte traduit d'une vue (variables-clés traduites d'abord) ; "" sans texte
+local function translate(t: MetaView.Text?): string
+	if t == nil then
+		return ""
+	end
+	local ok, resolved = pcall(MetaView.resolve, t, function(key: string, vars: { [string]: any }?): string
+		return Util.t(key, vars)
+	end)
+	if not ok or resolved == nil then
+		return ""
+	end
+	return Util.t(resolved.key, resolved.vars)
+end
+
+-- Déblocages de « Bienvenue dans la v2 ! », traduits, séparés par « · » (carte rouverte)
+local function highlightsText(view: MetaView.Card): string
+	local parts: { string } = {}
+	for _, t in view.highlights or {} do
+		local s = translate(t)
+		if s ~= "" then
+			table.insert(parts, s)
+		end
+	end
+	return table.concat(parts, " · ")
+end
+
+-- =============================================================================================
 -- Textes et boutons de chaque sorte
 -- =============================================================================================
 
@@ -197,6 +324,13 @@ type Action = { key: string, run: (Entry) -> () }
 local function texts(card: Card): (string, string)
 	local d = card.data
 	local kind = card.kind
+	if V2_CARDS[kind] then
+		local view = cardView(card)
+		if view == nil then
+			return "", ""
+		end
+		return translate(view.title), translate(view.line)
+	end
 	if kind == "booped" then
 		return Util.t("card.booped.title", { species = Util.speciesName(d.species) }),
 			Util.t("card.booped.line")
@@ -295,6 +429,22 @@ local function actions(card: Card): { Action }
 			},
 			cont,
 		}
+	elseif V2_CARDS[kind] then
+		-- carte v2.0 : « Voir » ouvre l'écran qu'elle porte (piste, Carnet, fiche, Mon style, Réglages)
+		local view = cardView(card)
+		if view ~= nil and view.panel ~= nil then
+			local panel, tab = view.panel, view.tab
+			return {
+				{
+					key = "card.see",
+					run = function(e: Entry)
+						Cards.dismiss(e.card.id)
+						Cards.Requested:Fire(e.card.kind, "open", panel, tab)
+					end,
+				},
+				cont,
+			}
+		end
 	elseif kind == "clip" then
 		return {
 			{
@@ -435,6 +585,7 @@ local function build()
 		zIndex = 7,
 	})
 	hint.Parent = s
+	sideHint = hint
 	s.Activated:Connect(function()
 		local d = displayed
 		if d then
