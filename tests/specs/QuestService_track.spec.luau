@@ -1154,6 +1154,25 @@ return function(T)
 			Brains.frames(w, 60)
 		end
 
+		-- v2.0 (lot B3, INT-B3-FEATURES, docs/04 §27.5, journal B3-82) : chaque EventState porte
+		-- features.v2, les interrupteurs ouverts de la liste fixe du client, quel que soit le profil (le
+		-- client d'un profil v1 n'en montre et n'en envoie rien, UI/MetaFlags.v2Profile) ; mis à part de la
+		-- comparaison à l'octet près (copie : l'envoi journalisé n'est pas touché) et vérifié tel quel
+		local function withoutV2(e)
+			local payload = e.args[1]
+			if e.remote ~= "EventState" or type(payload) ~= "table" or type(payload.features) ~= "table" then
+				return e.args, nil
+			end
+			local features = table.clone(payload.features)
+			local v2 = features.v2
+			features.v2 = nil
+			local copy = table.clone(payload)
+			copy.features = features
+			local args = table.clone(e.args)
+			args[1] = copy
+			return args, v2
+		end
+
 		-- clés du profil écrites par QuestService (v1.3) et cartes envoyées
 		local QUEST_KEYS =
 			{ "stats", "onboarding", "objectives", "dex", "season", "plopDays", "lastFeedDay", "codes" }
@@ -1165,10 +1184,14 @@ return function(T)
 				d.objectives = objectives(w, { entry(1), entry(9), entry(14) })
 			end)
 			play(w, p)
-			local sent, celebrate = {}, {}
+			local sent, celebrate, announced = {}, {}, {}
 			for _, e in w.h.log.clientEvents do
 				if e.player == p then
-					table.insert(sent, e.remote .. ser(e.args))
+					local args, v2 = withoutV2(e)
+					if e.remote == "EventState" then
+						table.insert(announced, ser(v2))
+					end
+					table.insert(sent, e.remote .. ser(args))
 					if e.remote == "Celebrate" then
 						table.insert(celebrate, ser(e.args))
 					end
@@ -1184,6 +1207,7 @@ return function(T)
 				quest = ser(quest),
 				sent = sent,
 				celebrate = celebrate,
+				announced = announced,
 				v2 = v2Cards(p),
 				d = d,
 			}
@@ -1199,7 +1223,7 @@ return function(T)
 		end
 
 		it(
-			"profil v1 (SchemaV2 coupé) : aucun champ v2 écrit, aucune carte v2 ; piste et Carnet ouverts : mêmes données et mêmes envois",
+			"profil v1 (SchemaV2 coupé) : aucun champ v2 écrit, aucune carte v2 ; piste et Carnet ouverts : mêmes données et mêmes envois (EventState.features.v2 annonce exactement les interrupteurs ouverts)",
 			function()
 				local off, w = run({})
 				-- interrupteurs lus par QuestService seul : rien ne change, à l'octet près
@@ -1208,6 +1232,15 @@ return function(T)
 				expect(mine.v2).toBe(0)
 				expect(mine.profile).toBe(off.profile)
 				same(off.sent, mine.sent)
+				-- features.v2 (INT-B3-FEATURES) : absente coupé ; ouvert, exactement { Carnet, WeeklyTrack }, à
+				-- chaque EventState
+				expect(#off.announced > 0).toBe(true)
+				expect(#mine.announced).toBe(#off.announced)
+				local expected = ser({ Carnet = true, WeeklyTrack = true })
+				for i, v2 in off.announced do
+					expect({ i = i, v2 = v2 }).toEqual({ i = i, v2 = "nil" })
+					expect({ i = i, v2 = mine.announced[i] }).toEqual({ i = i, v2 = expected })
+				end
 				-- tous les interrupteurs que lit QuestService (Record R, écran Améliorations et Confettis sont aussi
 				-- lus par d'autres services) : mêmes clés de QuestService, mêmes cartes, aucune carte v2
 				local all = run({ "WeeklyTrack", "Carnet", "RecordR", "UpgradesScreen", "Confetti" })

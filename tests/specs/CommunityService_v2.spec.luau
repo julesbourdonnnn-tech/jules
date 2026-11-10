@@ -1082,6 +1082,35 @@ return function(T)
 			tick(w, 31)
 		end
 
+		-- v2.0 (lot B3, INT-B3-FEATURES, docs/04 §27.5, journal B3-82) : chaque EventState porte
+		-- features.v2, les interrupteurs ouverts de la liste fixe du client, quel que soit le profil (le
+		-- client d'un profil v1 n'en montre et n'en envoie rien, UI/MetaFlags.v2Profile) ; mis à part de la
+		-- comparaison à l'octet près (copie : l'envoi journalisé n'est pas touché) et vérifié tel quel
+		local function withoutV2(e)
+			local payload = e.args[1]
+			if e.remote ~= "EventState" or type(payload) ~= "table" or type(payload.features) ~= "table" then
+				return e.args, nil
+			end
+			local features = table.clone(payload.features)
+			local v2 = features.v2
+			features.v2 = nil
+			local copy = table.clone(payload)
+			copy.features = features
+			local args = table.clone(e.args)
+			args[1] = copy
+			return args, v2
+		end
+		-- SOCIAL sans PhotoMode (hors de la liste du client)
+		local SOCIAL_ANNOUNCED = ser({
+			Carnet = true,
+			DecoPerso = true,
+			Hearts = true,
+			Mastery = true,
+			RanchSkins = true,
+			WeeklyTrack = true,
+			Workshop = true,
+		})
+
 		local function run(flags)
 			local w = boot({ v1 = true, flags = flags })
 			local p = join(w, 1, function(d)
@@ -1090,13 +1119,18 @@ return function(T)
 			end)
 			local q = join(w, 2)
 			play(w, p, q)
-			local sent = {}
+			local sent, announced = {}, {}
 			for _, e in w.h.log.clientEvents do
 				if e.player == p or e.player == q then
-					table.insert(sent, e.remote .. ser(e.args))
+					local args, v2 = withoutV2(e)
+					if e.remote == "EventState" then
+						table.insert(announced, ser(v2))
+					end
+					table.insert(sent, e.remote .. ser(args))
 				end
 			end
-			local out = { profile = ser(data(w, p)), other = ser(data(w, q)), sent = sent }
+			local out =
+				{ profile = ser(data(w, p)), other = ser(data(w, q)), sent = sent, announced = announced }
 			for _, name in { "DecoPerso", "HaloOn", "Palette", "Cushions" } do
 				expect({ name = name, value = attr(w, p, name) }).toEqual({ name = name, value = nil })
 			end
@@ -1105,7 +1139,7 @@ return function(T)
 		end
 
 		it(
-			"profil v1 : interrupteurs du lot ouverts ou coupés, mêmes données et mêmes envois (à l'octet près)",
+			"profil v1 : interrupteurs du lot ouverts ou coupés, mêmes données et mêmes envois (à l'octet près ; EventState.features.v2 annonce exactement les interrupteurs ouverts)",
 			function()
 				local off = run({})
 				local on = run(SOCIAL)
@@ -1114,6 +1148,14 @@ return function(T)
 				expect(#on.sent).toBe(#off.sent)
 				for i, line in off.sent do
 					expect({ i = i, line = on.sent[i] }).toEqual({ i = i, line = line })
+				end
+				-- features.v2 (INT-B3-FEATURES) : absente coupé ; ouvert, exactement les interrupteurs du lot
+				-- que le client doit connaître (PhotoMode n'est pas de la liste), à chaque EventState
+				expect(#off.announced > 0).toBe(true)
+				expect(#on.announced).toBe(#off.announced)
+				for i, v2 in off.announced do
+					expect({ i = i, v2 = v2 }).toEqual({ i = i, v2 = "nil" })
+					expect({ i = i, v2 = on.announced[i] }).toEqual({ i = i, v2 = SOCIAL_ANNOUNCED })
 				end
 			end
 		)
