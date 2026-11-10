@@ -572,51 +572,57 @@ return function(T)
 	-- l'onglet), interrupteurs coupés
 	describe("Console_panels › L1 / R1 à travers un onglet vide (v1.3)", function()
 		local Layout = require("../harness/Layout")
-		it("après chaque R1 puis L1, la sélection suit l'onglet affiché, jamais le bouton d'un autre onglet", function()
-			local h = TvAudit.client({
-				profile = {
-					onboarding = { step = 11, done = true, demoDone = true },
-					squishies = { a = TvAudit.squishy(1), b = TvAudit.squishy(2) },
-				},
-			})
-			local PC = TvAudit.mod(h, "UI.PanelController")
-			local Ranch = TvAudit.mod(h, "UI.Panels.Ranch")
-			TvAudit.openMenu(h)
-			h.game.GuiService.SelectedObject = PC.entryButton("Ranch")
-			TvAudit.tick(h, 0.5)
-			Gamepad.tap(h, Enum.KeyCode.ButtonA)
-			TvAudit.tick(h, 0.5)
-			expect(PC.current()).toBe("Ranch")
-			local body = PC.window("Ranch").Body
-			local wrong = {}
-			local function look(step)
-				local sel = h.game.GuiService.SelectedObject
-				local tab = Ranch.currentTab()
-				Layout.apply(h)
-				local ok = sel ~= nil
-					and sel:IsDescendantOf(body)
-					and Layout.visible(sel)
-					and (sel:GetAttribute("TvTab") ~= true or sel.Name == "Tab_" .. tab)
-				if not ok then
-					table.insert(wrong, `{step} : onglet {tab}, sélection {if sel then sel.Name else "nil"}`)
+		it(
+			"après chaque R1 puis L1, la sélection suit l'onglet affiché, jamais le bouton d'un autre onglet",
+			function()
+				local h = TvAudit.client({
+					profile = {
+						onboarding = { step = 11, done = true, demoDone = true },
+						squishies = { a = TvAudit.squishy(1), b = TvAudit.squishy(2) },
+					},
+				})
+				local PC = TvAudit.mod(h, "UI.PanelController")
+				local Ranch = TvAudit.mod(h, "UI.Panels.Ranch")
+				TvAudit.openMenu(h)
+				h.game.GuiService.SelectedObject = PC.entryButton("Ranch")
+				TvAudit.tick(h, 0.5)
+				Gamepad.tap(h, Enum.KeyCode.ButtonA)
+				TvAudit.tick(h, 0.5)
+				expect(PC.current()).toBe("Ranch")
+				local body = PC.window("Ranch").Body
+				local wrong = {}
+				local function look(step)
+					local sel = h.game.GuiService.SelectedObject
+					local tab = Ranch.currentTab()
+					Layout.apply(h)
+					local ok = sel ~= nil
+						and sel:IsDescendantOf(body)
+						and Layout.visible(sel)
+						and (sel:GetAttribute("TvTab") ~= true or sel.Name == "Tab_" .. tab)
+					if not ok then
+						table.insert(
+							wrong,
+							`{step} : onglet {tab}, sélection {if sel then sel.Name else "nil"}`
+						)
+					end
 				end
+				local n = #Ranch.tabs()
+				for i = 1, n do
+					TvAudit.tick(h, 0.5)
+					Gamepad.tap(h, Enum.KeyCode.ButtonR1)
+					TvAudit.tick(h, 0.5)
+					look("R1 n° " .. i)
+				end
+				for i = 1, n do
+					TvAudit.tick(h, 0.5)
+					Gamepad.tap(h, Enum.KeyCode.ButtonL1)
+					TvAudit.tick(h, 0.5)
+					look("L1 n° " .. i)
+				end
+				expect(table.concat(wrong, "\n")).toBe("")
+				clean(h)
 			end
-			local n = #Ranch.tabs()
-			for i = 1, n do
-				TvAudit.tick(h, 0.5)
-				Gamepad.tap(h, Enum.KeyCode.ButtonR1)
-				TvAudit.tick(h, 0.5)
-				look("R1 n° " .. i)
-			end
-			for i = 1, n do
-				TvAudit.tick(h, 0.5)
-				Gamepad.tap(h, Enum.KeyCode.ButtonL1)
-				TvAudit.tick(h, 0.5)
-				look("L1 n° " .. i)
-			end
-			expect(table.concat(wrong, "\n")).toBe("")
-			clean(h)
-		end)
+		)
 	end)
 
 	-- lot B3, étape 6 (D25 ; journal B3-66) : promenade à la MANETTE seule (croix, ✕, ○, △, □, L1 / R1 :
@@ -624,415 +630,419 @@ return function(T)
 	-- 2 langues : sélections par défaut et retours de ○ de D25 ; sur chaque écran, aucune faute de
 	-- TvAudit.check (sélection dans la fenêtre, rien ne s'échappe, aucun chevauchement ni texte coupé,
 	-- glyphes PlayStation, zone sûre)
-	describe("Console_panels › v2.0 : promenade à la manette dans les écrans du lot B3 (étape 6)", function()
-		local UpgradeScreen = require("../harness/UpgradeScreen")
-		local MockInstance = require("../harness/MockInstance")
-		local LayoutH = require("../harness/Layout")
-		local S = UpgradeScreen.new(T.Harness)
-		local DONE = { step = 11, done = true, demoDone = true }
-		local OWNER = 22
-		local A, B, X, Y = Enum.KeyCode.ButtonA, Enum.KeyCode.ButtonB, Enum.KeyCode.ButtonX, Enum.KeyCode.ButtonY
-		local L1, R1 = Enum.KeyCode.ButtonL1, Enum.KeyCode.ButtonR1
-		local UP, DOWN = Enum.KeyCode.DPadUp, Enum.KeyCode.DPadDown
-		local WEEK, EPOCH = 604800, 345600
+	describe(
+		"Console_panels › v2.0 : promenade à la manette dans les écrans du lot B3 (étape 6)",
+		function()
+			local UpgradeScreen = require("../harness/UpgradeScreen")
+			local MockInstance = require("../harness/MockInstance")
+			local LayoutH = require("../harness/Layout")
+			local S = UpgradeScreen.new(T.Harness)
+			local DONE = { step = 11, done = true, demoDone = true }
+			local OWNER = 22
+			local A, B, X, Y =
+				Enum.KeyCode.ButtonA, Enum.KeyCode.ButtonB, Enum.KeyCode.ButtonX, Enum.KeyCode.ButtonY
+			local L1, R1 = Enum.KeyCode.ButtonL1, Enum.KeyCode.ButtonR1
+			local UP, DOWN = Enum.KeyCode.DPadUp, Enum.KeyCode.DPadDown
+			local WEEK, EPOCH = 604800, 345600
 
-		local function ranchRow(slot, userId, me)
-			return {
-				slot = slot,
-				userId = userId,
-				name = if userId == me then "Moi" else "",
-				hidden = userId ~= me,
-				R = 0,
-				fame = 0,
-				day = 0,
-				mode = "cozy",
-				shield = false,
-				boopable = false,
-				tiles = { snack = 0, decor = 0, pens = 0, cozyBed = false, seen = 0 },
-				vat = true,
-				pool = true,
-				vatFill = 0,
-				growth = { G = 0, g = 0, t = 1800000000 },
-				carry = "",
-				ride = "",
-				saddle = 0,
-				waiting = "",
-				theme = "",
-				flag = "",
-				title = "",
-				saddleColor = "",
-				trail = "",
-				best = { s = 0, m = 0, z = 0, zg = 0 },
-			}
-		end
-
-		it(
-			"aperçu (onglets, maintien de 3 s, carte), Mon style (plan, choix), Records, piste, Carnet, halo, carte rouverte, jumelles ; ○ selon D25",
-			function()
-				local week = math.floor((1800000000 - EPOCH) / WEEK)
-				local settings = TvAudit.defaults().settings
-				settings.haloOn = true
-				local snap = S.snap(1, function(p)
-					p.R = 15
-					p.bestR = 15
-					p.ascend = 0
-				end)
-				local c = S.client({
-					snap = snap,
-					profile = {
-						version = 2,
-						onboarding = DONE,
-						R = 15,
-						bestR = 15,
-						ascend = 0,
-						settings = settings,
-						squishies = {
-							a = TvAudit.squishy(1, { z = 3e15, bf = 1 }),
-							b = TvAudit.squishy(5, { z = 2e15 }),
-						},
-						growth = { G = 0, g = 0, t = 1800000000 },
-						cosmetics = {
-							saddle = "classic",
-							theme = "color",
-							trail = "",
-							title = "",
-							flag = "",
-							palette = "",
-							cushions = "",
-						},
-						outfits = { owned = { plopBib = 1, partyHat = 1 }, worn = {} },
-						decoPerso = { owned = { 0, 0 }, slots = { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 } },
-						weeklyTrack = {
-							period = week,
-							firstPeriodEnd = EPOCH + (week - 4) * WEEK,
-							points = 9,
-							claimed = { 3 },
-							won = { 0 },
-							challenges = {
-								{ id = 7, p = 1, done = false },
-								{ id = 6, p = 1, done = true },
-								{ id = 12, p = 17, done = false },
-							},
-							play = { 0, 0, 0, 0, 0, 0, 0 },
-							playDay = 0,
-						},
-						carnet = { 1 },
-						mastery = { 2 },
-						hearts = { receivedTotal = 7, givenDay = 0, givenTo = {} },
-						stats = { upgradesBought = 120, splorches = 9, bestCombo = 3, playSeconds = 400 },
-						biggestEver = 3e15,
-						plopDays = 3,
-					},
-					ranch = {
-						AscendReady = true,
-						HaloOn = true,
-						DecoPerso = "1,0,0,0,0,0,0,0,0,0,0,0",
-						BestR = 15,
-					},
-				})
-				S.event(c, UpgradeScreen.V2_ALL)
-				local h, PC = c.h, c.PC
-				local me = h.localPlayer.UserId
-				-- le voisin OWNER au ranch 2 (jumelles : preuve v2.0 BestR sur son modèle)
-				h:fireClient("ReplicatedStorage.Remotes.RanchSnapshot", {
-					seq = 1,
-					ranches = { ["1"] = ranchRow(1, me, me), ["2"] = ranchRow(2, OWNER, me) },
-					squishies = { ["1"] = {}, ["2"] = {} },
-				})
-				h:settle(1)
-				local list = h.workspace.Wobbleton.Ranches
-				local other = list:FindFirstChild("2")
-				if other == nil then
-					other = MockInstance.new("Model")
-					other.Name = "2"
-					other.Parent = list
-				end
-				other:SetAttribute("BestR", 5)
-				local WorldLayout = h:require("ReplicatedStorage.Shared.Logic.WorldLayout")
-				local SP = TvAudit.mod(h, "UI.Panels.SplorchPreview")
-				local Ranch = TvAudit.mod(h, "UI.Panels.Ranch")
-				local Dex = TvAudit.mod(h, "UI.Panels.Squishydex")
-				local Obj = TvAudit.mod(h, "UI.Panels.Objectives")
-				local Cards = TvAudit.mod(h, "UI.Cards")
-				local Bino = TvAudit.mod(h, "UI.Binoculars")
-				local Prompt = TvAudit.mod(h, "Controllers.PromptController")
-				local FG = c.FG
-				local issues = {}
-				local function sel()
-					return h.game.GuiService.SelectedObject
-				end
-				local function nm(obj)
-					return if obj then LayoutH.name(obj) else "nil"
-				end
-				local function tap(key)
-					TvAudit.tick(h, 0.5)
-					Gamepad.tap(h, key)
-					TvAudit.tick(h, 0.5)
-				end
-				local function check(label)
-					for _, issue in TvAudit.check(h, label) do
-						table.insert(issues, issue)
-					end
-				end
-				-- l'entrée `name` du rail, à la croix (↓ puis ↑)
-				local function toEntry(name)
-					local target = PC.entryButton(name)
-					for _, key in { DOWN, UP } do
-						for _ = 1, 10 do
-							if sel() == target then
-								return true
-							end
-							tap(key)
-						end
-					end
-					return sel() == target
-				end
-				local function inRanch()
-					h.localPlayer.Character.HumanoidRootPart.CFrame =
-						h.globals.CFrame.new(WorldLayout.toWorld(1, roblox.Vector3.new(0, 3, 36)))
-					S.run(c, 0.3)
-				end
-				local resolutions = {
-					roblox.Vector2.new(1920, 1080),
-					roblox.Vector2.new(3840, 2160),
-					roblox.Vector2.new(1280, 720),
+			local function ranchRow(slot, userId, me)
+				return {
+					slot = slot,
+					userId = userId,
+					name = if userId == me then "Moi" else "",
+					hidden = userId ~= me,
+					R = 0,
+					fame = 0,
+					day = 0,
+					mode = "cozy",
+					shield = false,
+					boopable = false,
+					tiles = { snack = 0, decor = 0, pens = 0, cozyBed = false, seen = 0 },
+					vat = true,
+					pool = true,
+					vatFill = 0,
+					growth = { G = 0, g = 0, t = 1800000000 },
+					carry = "",
+					ride = "",
+					saddle = 0,
+					waiting = "",
+					theme = "",
+					flag = "",
+					title = "",
+					saddleColor = "",
+					trail = "",
+					best = { s = 0, m = 0, z = 0, zg = 0 },
 				}
-				local round = 0
-				for _, res in resolutions do
-					TvAudit.setResolution(h, res)
-					for _, lang in { "en", "fr" } do
-						TvAudit.setLanguage(h, lang)
-						round += 1
-						local fr = lang == "fr"
-						local label = `[{res.X}x{res.Y} {lang}] `
-						expect(TvAudit.toGame(h)).toBe(true)
-						inRanch()
-						-- 1. Aperçu : △ → rail sur l'entrée de renaissance ; ✕ → onglet du Grand Splorch, maintien
-						-- choisi ; R1 → Jelly Ascend, son maintien ; ✕ tenu 3 s → carte, « Oui » choisi après la
-						-- garde ; ○ = « Plus tard » : carte ET aperçu fermés, retour sur l'entrée du rail
-						tap(Y)
-						local entry = PC.entryButton("SplorchPreview")
-						expect(nm(sel())).toBe(nm(entry))
-						tap(A)
-						expect(PC.current()).toBe("SplorchPreview")
-						expect(SP.currentTab()).toBe("splorch")
-						local parts = SP._v2()
-						expect(nm(sel())).toBe(nm(parts.hold))
-						check(label .. "[aperçu/splorch] ")
-						tap(R1)
-						expect(SP.currentTab()).toBe("ascend")
-						expect(nm(sel())).toBe(nm(parts.ascendHold))
-						check(label .. "[aperçu/ascend] ")
-						Gamepad.press(h, A)
-						S.run(c, 3.2)
-						expect(SP._state().card).toBe(true)
-						Gamepad.release(h, A)
-						S.run(c, 1.0)
-						expect(SP._state().cardActive).toBe(true)
-						expect(nm(sel())).toBe(nm(SP._v2().yes))
-						check(label .. "[carte Prêt à monter ?] ")
-						tap(B)
-						expect(SP._state().card).toBe(false)
-						expect(PC.isOpen("SplorchPreview")).toBe(false)
-						expect(PC.menuOpen()).toBe(true)
-						expect(nm(sel())).toBe(nm(entry))
-						-- l'aperçu rouvert : ○ → le rail, sur l'entrée
-						tap(A)
-						expect(PC.current()).toBe("SplorchPreview")
-						tap(B)
-						expect(PC.current()).toBeNil()
-						expect(nm(sel())).toBe(nm(entry))
-						-- 2. Mon style : Ranch, R1 jusqu'à « Mon style » (l'habillage équipé choisi) ; ○ → sortes ;
-						-- ↓ → Déco perso ; ✕ → emplacement 1 ; ✕ → choix (« Aucun » choisi) ; ○ → emplacement ;
-						-- ○ → sortes ; ○ → rail
-						expect(toEntry("Ranch")).toBe(true)
-						tap(A)
-						expect(PC.current()).toBe("Ranch")
-						for _ = 1, 8 do
-							if Ranch.currentTab() == "style" then
-								break
-							end
-							tap(R1)
+			end
+
+			it(
+				"aperçu (onglets, maintien de 3 s, carte), Mon style (plan, choix), Records, piste, Carnet, halo, carte rouverte, jumelles ; ○ selon D25",
+				function()
+					local week = math.floor((1800000000 - EPOCH) / WEEK)
+					local settings = TvAudit.defaults().settings
+					settings.haloOn = true
+					local snap = S.snap(1, function(p)
+						p.R = 15
+						p.bestR = 15
+						p.ascend = 0
+					end)
+					local c = S.client({
+						snap = snap,
+						profile = {
+							version = 2,
+							onboarding = DONE,
+							R = 15,
+							bestR = 15,
+							ascend = 0,
+							settings = settings,
+							squishies = {
+								a = TvAudit.squishy(1, { z = 3e15, bf = 1 }),
+								b = TvAudit.squishy(5, { z = 2e15 }),
+							},
+							growth = { G = 0, g = 0, t = 1800000000 },
+							cosmetics = {
+								saddle = "classic",
+								theme = "color",
+								trail = "",
+								title = "",
+								flag = "",
+								palette = "",
+								cushions = "",
+							},
+							outfits = { owned = { plopBib = 1, partyHat = 1 }, worn = {} },
+							decoPerso = { owned = { 0, 0 }, slots = { 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 } },
+							weeklyTrack = {
+								period = week,
+								firstPeriodEnd = EPOCH + (week - 4) * WEEK,
+								points = 9,
+								claimed = { 3 },
+								won = { 0 },
+								challenges = {
+									{ id = 7, p = 1, done = false },
+									{ id = 6, p = 1, done = true },
+									{ id = 12, p = 17, done = false },
+								},
+								play = { 0, 0, 0, 0, 0, 0, 0 },
+								playDay = 0,
+							},
+							carnet = { 1 },
+							mastery = { 2 },
+							hearts = { receivedTotal = 7, givenDay = 0, givenTo = {} },
+							stats = { upgradesBought = 120, splorches = 9, bestCombo = 3, playSeconds = 400 },
+							biggestEver = 3e15,
+							plopDays = 3,
+						},
+						ranch = {
+							AscendReady = true,
+							HaloOn = true,
+							DecoPerso = "1,0,0,0,0,0,0,0,0,0,0,0",
+							BestR = 15,
+						},
+					})
+					S.event(c, UpgradeScreen.V2_ALL)
+					local h, PC = c.h, c.PC
+					local me = h.localPlayer.UserId
+					-- le voisin OWNER au ranch 2 (jumelles : preuve v2.0 BestR sur son modèle)
+					h:fireClient("ReplicatedStorage.Remotes.RanchSnapshot", {
+						seq = 1,
+						ranches = { ["1"] = ranchRow(1, me, me), ["2"] = ranchRow(2, OWNER, me) },
+						squishies = { ["1"] = {}, ["2"] = {} },
+					})
+					h:settle(1)
+					local list = h.workspace.Wobbleton.Ranches
+					local other = list:FindFirstChild("2")
+					if other == nil then
+						other = MockInstance.new("Model")
+						other.Name = "2"
+						other.Parent = list
+					end
+					other:SetAttribute("BestR", 5)
+					local WorldLayout = h:require("ReplicatedStorage.Shared.Logic.WorldLayout")
+					local SP = TvAudit.mod(h, "UI.Panels.SplorchPreview")
+					local Ranch = TvAudit.mod(h, "UI.Panels.Ranch")
+					local Dex = TvAudit.mod(h, "UI.Panels.Squishydex")
+					local Obj = TvAudit.mod(h, "UI.Panels.Objectives")
+					local Cards = TvAudit.mod(h, "UI.Cards")
+					local Bino = TvAudit.mod(h, "UI.Binoculars")
+					local Prompt = TvAudit.mod(h, "Controllers.PromptController")
+					local FG = c.FG
+					local issues = {}
+					local function sel()
+						return h.game.GuiService.SelectedObject
+					end
+					local function nm(obj)
+						return if obj then LayoutH.name(obj) else "nil"
+					end
+					local function tap(key)
+						TvAudit.tick(h, 0.5)
+						Gamepad.tap(h, key)
+						TvAudit.tick(h, 0.5)
+					end
+					local function check(label)
+						for _, issue in TvAudit.check(h, label) do
+							table.insert(issues, issue)
 						end
-						expect(Ranch.currentTab()).toBe("style")
-						local strip = PC.window("Ranch").Body.Tabs.Strip
-						expect(strip.Tab_style.Label.Text).toBe(if fr then "Mon style" else "My style")
-						expect(strip.Tab_pads.Visible).toBe(false)
-						expect(nm(sel())).toBe(nm(Ranch._styleCell("theme", "color")))
-						check(label .. "[Mon style] ")
-						tap(B)
-						expect(nm(sel())).toBe(nm(Ranch._styleKindButton("theme")))
-						tap(DOWN)
-						expect(nm(sel())).toBe(nm(Ranch._styleKindButton("deco")))
-						tap(A)
-						expect(nm(sel())).toBe(nm(Ranch._decoSlot(1)))
-						check(label .. "[plan de Déco perso] ")
-						tap(A)
-						expect(Ranch._state().pickerSlot).toBe(1)
-						-- le choix s'ouvre sur l'objet posé dans l'emplacement (« Aucun » quand il est vide)
-						local placed = nil
-						for _, e in Ranch._styleEntries() do
-							if e.equipped then
-								placed = e
-							end
-						end
-						expect(placed ~= nil and placed.n).toBe(1)
-						expect(nm(sel())).toBe(nm(Ranch._styleCell(placed.kind, placed.id)))
-						check(label .. "[choix de Déco perso] ")
-						tap(B)
-						expect(nm(sel())).toBe(nm(Ranch._decoSlot(1)))
-						tap(B)
-						expect(nm(sel())).toBe(nm(Ranch._styleKindButton("deco")))
-						tap(B)
-						expect(PC.current()).toBeNil()
-						expect(PC.menuOpen()).toBe(true)
-						-- 3. Records : Squishydex (rouvert sur les Espèces), L1 → Records, la liste choisie ;
-						-- ↓ rebondit, ↑ → l'onglet ; ○ → rail
-						expect(toEntry("Squishydex")).toBe(true)
-						tap(A)
-						expect(PC.current()).toBe("Squishydex")
-						expect(Dex.currentTab()).toBe("species")
-						tap(L1)
-						expect(Dex.currentTab()).toBe("records")
-						local dexBody = PC.window("Squishydex").Body
-						expect(nm(sel())).toBe(nm(dexBody.Page_records.Records))
-						check(label .. "[Records] ")
-						tap(DOWN)
-						expect(nm(sel())).toBe(nm(dexBody.Page_records.Records))
-						tap(UP)
-						expect(nm(sel())).toBe(nm(dexBody.Tabs.Strip.Tab_records))
-						tap(B)
-						expect(PC.current()).toBeNil()
-						-- 4. Objectifs (rouverts sur le dernier onglet vu) : R1 jusqu'à « Cette semaine » (1er palier),
-						-- R1 → Carnet (1re case) ; ○ → rail
-						expect(toEntry("Objectives")).toBe(true)
-						tap(A)
-						expect(PC.current()).toBe("Objectives")
-						for _ = 1, 6 do
-							tap(R1)
-							if Obj.currentTab() == "track" then
-								break
-							end
-						end
-						expect(Obj.currentTab()).toBe("track")
-						local goals = PC.window("Objectives").Body
-						expect(nm(sel())).toBe(nm(goals.Page_track.Tier1))
-						check(label .. "[Cette semaine] ")
-						tap(R1)
-						expect(Obj.currentTab()).toBe("carnet")
-						expect(nm(sel())).toBe(nm(goals.Page_carnet.Cell1))
-						check(label .. "[Carnet] ")
-						tap(B)
-						expect(PC.current()).toBeNil()
-						-- 5. Réglages : le 1er interrupteur choisi ; ↓ jusqu'à « Montrer mon halo » ; ✕ →
-						-- SetSetting("haloOn", false) ; ○ → rail
-						expect(toEntry("Settings")).toBe(true)
-						tap(A)
-						expect(PC.current()).toBe("Settings")
-						local firstToggle = sel()
-						expect(firstToggle ~= nil and firstToggle.Name).toBe("Toggle")
-						local haloText = if fr then "Montrer mon halo" else "Show my halo"
-						-- la ligne de la sélection (1er parent qui porte un libellé direct) dit « Montrer mon halo »
-						local function onHalo()
-							local cur = sel()
-							for _ = 1, 3 do
-								cur = cur and cur.Parent
-								if cur == nil then
-									return false
+					end
+					-- l'entrée `name` du rail, à la croix (↓ puis ↑)
+					local function toEntry(name)
+						local target = PC.entryButton(name)
+						for _, key in { DOWN, UP } do
+							for _ = 1, 10 do
+								if sel() == target then
+									return true
 								end
-								local labelled = false
-								for _, d in cur:GetChildren() do
-									if d:IsA("TextLabel") and d.Text ~= "" then
-										labelled = true
-										if d.Text == haloText then
-											return true
+								tap(key)
+							end
+						end
+						return sel() == target
+					end
+					local function inRanch()
+						h.localPlayer.Character.HumanoidRootPart.CFrame =
+							h.globals.CFrame.new(WorldLayout.toWorld(1, roblox.Vector3.new(0, 3, 36)))
+						S.run(c, 0.3)
+					end
+					local resolutions = {
+						roblox.Vector2.new(1920, 1080),
+						roblox.Vector2.new(3840, 2160),
+						roblox.Vector2.new(1280, 720),
+					}
+					local round = 0
+					for _, res in resolutions do
+						TvAudit.setResolution(h, res)
+						for _, lang in { "en", "fr" } do
+							TvAudit.setLanguage(h, lang)
+							round += 1
+							local fr = lang == "fr"
+							local label = `[{res.X}x{res.Y} {lang}] `
+							expect(TvAudit.toGame(h)).toBe(true)
+							inRanch()
+							-- 1. Aperçu : △ → rail sur l'entrée de renaissance ; ✕ → onglet du Grand Splorch, maintien
+							-- choisi ; R1 → Jelly Ascend, son maintien ; ✕ tenu 3 s → carte, « Oui » choisi après la
+							-- garde ; ○ = « Plus tard » : carte ET aperçu fermés, retour sur l'entrée du rail
+							tap(Y)
+							local entry = PC.entryButton("SplorchPreview")
+							expect(nm(sel())).toBe(nm(entry))
+							tap(A)
+							expect(PC.current()).toBe("SplorchPreview")
+							expect(SP.currentTab()).toBe("splorch")
+							local parts = SP._v2()
+							expect(nm(sel())).toBe(nm(parts.hold))
+							check(label .. "[aperçu/splorch] ")
+							tap(R1)
+							expect(SP.currentTab()).toBe("ascend")
+							expect(nm(sel())).toBe(nm(parts.ascendHold))
+							check(label .. "[aperçu/ascend] ")
+							Gamepad.press(h, A)
+							S.run(c, 3.2)
+							expect(SP._state().card).toBe(true)
+							Gamepad.release(h, A)
+							S.run(c, 1.0)
+							expect(SP._state().cardActive).toBe(true)
+							expect(nm(sel())).toBe(nm(SP._v2().yes))
+							check(label .. "[carte Prêt à monter ?] ")
+							tap(B)
+							expect(SP._state().card).toBe(false)
+							expect(PC.isOpen("SplorchPreview")).toBe(false)
+							expect(PC.menuOpen()).toBe(true)
+							expect(nm(sel())).toBe(nm(entry))
+							-- l'aperçu rouvert : ○ → le rail, sur l'entrée
+							tap(A)
+							expect(PC.current()).toBe("SplorchPreview")
+							tap(B)
+							expect(PC.current()).toBeNil()
+							expect(nm(sel())).toBe(nm(entry))
+							-- 2. Mon style : Ranch, R1 jusqu'à « Mon style » (l'habillage équipé choisi) ; ○ → sortes ;
+							-- ↓ → Déco perso ; ✕ → emplacement 1 ; ✕ → choix (« Aucun » choisi) ; ○ → emplacement ;
+							-- ○ → sortes ; ○ → rail
+							expect(toEntry("Ranch")).toBe(true)
+							tap(A)
+							expect(PC.current()).toBe("Ranch")
+							for _ = 1, 8 do
+								if Ranch.currentTab() == "style" then
+									break
+								end
+								tap(R1)
+							end
+							expect(Ranch.currentTab()).toBe("style")
+							local strip = PC.window("Ranch").Body.Tabs.Strip
+							expect(strip.Tab_style.Label.Text).toBe(if fr then "Mon style" else "My style")
+							expect(strip.Tab_pads.Visible).toBe(false)
+							expect(nm(sel())).toBe(nm(Ranch._styleCell("theme", "color")))
+							check(label .. "[Mon style] ")
+							tap(B)
+							expect(nm(sel())).toBe(nm(Ranch._styleKindButton("theme")))
+							tap(DOWN)
+							expect(nm(sel())).toBe(nm(Ranch._styleKindButton("deco")))
+							tap(A)
+							expect(nm(sel())).toBe(nm(Ranch._decoSlot(1)))
+							check(label .. "[plan de Déco perso] ")
+							tap(A)
+							expect(Ranch._state().pickerSlot).toBe(1)
+							-- le choix s'ouvre sur l'objet posé dans l'emplacement (« Aucun » quand il est vide)
+							local placed = nil
+							for _, e in Ranch._styleEntries() do
+								if e.equipped then
+									placed = e
+								end
+							end
+							expect(placed ~= nil and placed.n).toBe(1)
+							expect(nm(sel())).toBe(nm(Ranch._styleCell(placed.kind, placed.id)))
+							check(label .. "[choix de Déco perso] ")
+							tap(B)
+							expect(nm(sel())).toBe(nm(Ranch._decoSlot(1)))
+							tap(B)
+							expect(nm(sel())).toBe(nm(Ranch._styleKindButton("deco")))
+							tap(B)
+							expect(PC.current()).toBeNil()
+							expect(PC.menuOpen()).toBe(true)
+							-- 3. Records : Squishydex (rouvert sur les Espèces), L1 → Records, la liste choisie ;
+							-- ↓ rebondit, ↑ → l'onglet ; ○ → rail
+							expect(toEntry("Squishydex")).toBe(true)
+							tap(A)
+							expect(PC.current()).toBe("Squishydex")
+							expect(Dex.currentTab()).toBe("species")
+							tap(L1)
+							expect(Dex.currentTab()).toBe("records")
+							local dexBody = PC.window("Squishydex").Body
+							expect(nm(sel())).toBe(nm(dexBody.Page_records.Records))
+							check(label .. "[Records] ")
+							tap(DOWN)
+							expect(nm(sel())).toBe(nm(dexBody.Page_records.Records))
+							tap(UP)
+							expect(nm(sel())).toBe(nm(dexBody.Tabs.Strip.Tab_records))
+							tap(B)
+							expect(PC.current()).toBeNil()
+							-- 4. Objectifs (rouverts sur le dernier onglet vu) : R1 jusqu'à « Cette semaine » (1er palier),
+							-- R1 → Carnet (1re case) ; ○ → rail
+							expect(toEntry("Objectives")).toBe(true)
+							tap(A)
+							expect(PC.current()).toBe("Objectives")
+							for _ = 1, 6 do
+								tap(R1)
+								if Obj.currentTab() == "track" then
+									break
+								end
+							end
+							expect(Obj.currentTab()).toBe("track")
+							local goals = PC.window("Objectives").Body
+							expect(nm(sel())).toBe(nm(goals.Page_track.Tier1))
+							check(label .. "[Cette semaine] ")
+							tap(R1)
+							expect(Obj.currentTab()).toBe("carnet")
+							expect(nm(sel())).toBe(nm(goals.Page_carnet.Cell1))
+							check(label .. "[Carnet] ")
+							tap(B)
+							expect(PC.current()).toBeNil()
+							-- 5. Réglages : le 1er interrupteur choisi ; ↓ jusqu'à « Montrer mon halo » ; ✕ →
+							-- SetSetting("haloOn", false) ; ○ → rail
+							expect(toEntry("Settings")).toBe(true)
+							tap(A)
+							expect(PC.current()).toBe("Settings")
+							local firstToggle = sel()
+							expect(firstToggle ~= nil and firstToggle.Name).toBe("Toggle")
+							local haloText = if fr then "Montrer mon halo" else "Show my halo"
+							-- la ligne de la sélection (1er parent qui porte un libellé direct) dit « Montrer mon halo »
+							local function onHalo()
+								local cur = sel()
+								for _ = 1, 3 do
+									cur = cur and cur.Parent
+									if cur == nil then
+										return false
+									end
+									local labelled = false
+									for _, d in cur:GetChildren() do
+										if d:IsA("TextLabel") and d.Text ~= "" then
+											labelled = true
+											if d.Text == haloText then
+												return true
+											end
 										end
 									end
+									if labelled then
+										return false
+									end
 								end
-								if labelled then
-									return false
+								return false
+							end
+							for _ = 1, 10 do
+								if onHalo() then
+									break
 								end
+								tap(DOWN)
 							end
-							return false
+							expect(onHalo()).toBe(true)
+							check(label .. "[Réglages, halo] ")
+							local before = #TvAudit.sent(h, "SetSetting")
+							tap(A)
+							local sets = TvAudit.sent(h, "SetSetting")
+							expect(#sets).toBe(before + 1)
+							expect(sets[#sets][1]).toBe("haloOn")
+							expect(sets[#sets][2]).toBe(false)
+							tap(B)
+							expect(PC.current()).toBeNil()
+							tap(B)
+							expect(FG.anyOpen()).toBe(false)
+							-- 6. Carte v2.0 rangée dans « ! » : △ → rail, ↓ → « ! », ✕ → carte rouverte (« Voir »
+							-- choisi), ✕ → Objectifs › Cette semaine ; ○ → rail ; ○ → jeu
+							h:fireClient("ReplicatedStorage.Remotes.Celebrate", {
+								kind = "trackTier",
+								data = { tier = round, reward = "confetti" },
+							})
+							h:settle(1)
+							c.Clock.advance(8.01)
+							Cards._step()
+							TvAudit.tick(h, 0.2)
+							expect(#Cards.pending()).toBe(1)
+							tap(Y)
+							expect(PC.menuOpen()).toBe(true)
+							expect(toEntry("Pending")).toBe(true)
+							tap(A)
+							expect(Cards.current() ~= nil and Cards.current().kind).toBe("trackTier")
+							local buttons = Cards.buttons()
+							expect(nm(sel())).toBe(nm(buttons[1]))
+							expect(buttons[1].Label.Text).toBe(if fr then "Voir" else "See")
+							check(label .. "[carte rouverte] ")
+							tap(A)
+							expect(PC.current()).toBe("Objectives")
+							expect(Obj.currentTab()).toBe("track")
+							expect(#Cards.pending()).toBe(0)
+							tap(B)
+							expect(PC.current()).toBeNil()
+							tap(B)
+							expect(FG.anyOpen()).toBe(false)
+							-- 7. Jumelles : devant le portail du voisin, □ → fenêtre (le cœur choisi) ; ✕ → un
+							-- GiveHeart(voisin) ; ○ → jeu
+							h:moveTo(h.localPlayer, WorldLayout.gateOutside(2))
+							S.run(c, 0.3)
+							local target = Prompt.current()
+							expect(target ~= nil and target.kind).toBe("binoculars")
+							tap(X)
+							expect(Bino.isOpen()).toBe(true)
+							expect(nm(sel())).toBe(nm(Bino.button()))
+							check(label .. "[jumelles] ")
+							local hearts = #TvAudit.sent(h, "GiveHeart")
+							tap(A)
+							local given = TvAudit.sent(h, "GiveHeart")
+							expect(#given).toBe(hearts + 1)
+							expect(given[#given][1]).toBe(OWNER)
+							S.run(c, 3.5)
+							tap(B)
+							expect(Bino.isOpen()).toBe(false)
+							expect(FG.anyOpen()).toBe(false)
 						end
-						for _ = 1, 10 do
-							if onHalo() then
-								break
-							end
-							tap(DOWN)
-						end
-						expect(onHalo()).toBe(true)
-						check(label .. "[Réglages, halo] ")
-						local before = #TvAudit.sent(h, "SetSetting")
-						tap(A)
-						local sets = TvAudit.sent(h, "SetSetting")
-						expect(#sets).toBe(before + 1)
-						expect(sets[#sets][1]).toBe("haloOn")
-						expect(sets[#sets][2]).toBe(false)
-						tap(B)
-						expect(PC.current()).toBeNil()
-						tap(B)
-						expect(FG.anyOpen()).toBe(false)
-						-- 6. Carte v2.0 rangée dans « ! » : △ → rail, ↓ → « ! », ✕ → carte rouverte (« Voir »
-						-- choisi), ✕ → Objectifs › Cette semaine ; ○ → rail ; ○ → jeu
-						h:fireClient("ReplicatedStorage.Remotes.Celebrate", {
-							kind = "trackTier",
-							data = { tier = round, reward = "confetti" },
-						})
-						h:settle(1)
-						c.Clock.advance(8.01)
-						Cards._step()
-						TvAudit.tick(h, 0.2)
-						expect(#Cards.pending()).toBe(1)
-						tap(Y)
-						expect(PC.menuOpen()).toBe(true)
-						expect(toEntry("Pending")).toBe(true)
-						tap(A)
-						expect(Cards.current() ~= nil and Cards.current().kind).toBe("trackTier")
-						local buttons = Cards.buttons()
-						expect(nm(sel())).toBe(nm(buttons[1]))
-						expect(buttons[1].Label.Text).toBe(if fr then "Voir" else "See")
-						check(label .. "[carte rouverte] ")
-						tap(A)
-						expect(PC.current()).toBe("Objectives")
-						expect(Obj.currentTab()).toBe("track")
-						expect(#Cards.pending()).toBe(0)
-						tap(B)
-						expect(PC.current()).toBeNil()
-						tap(B)
-						expect(FG.anyOpen()).toBe(false)
-						-- 7. Jumelles : devant le portail du voisin, □ → fenêtre (le cœur choisi) ; ✕ → un
-						-- GiveHeart(voisin) ; ○ → jeu
-						h:moveTo(h.localPlayer, WorldLayout.gateOutside(2))
-						S.run(c, 0.3)
-						local target = Prompt.current()
-						expect(target ~= nil and target.kind).toBe("binoculars")
-						tap(X)
-						expect(Bino.isOpen()).toBe(true)
-						expect(nm(sel())).toBe(nm(Bino.button()))
-						check(label .. "[jumelles] ")
-						local hearts = #TvAudit.sent(h, "GiveHeart")
-						tap(A)
-						local given = TvAudit.sent(h, "GiveHeart")
-						expect(#given).toBe(hearts + 1)
-						expect(given[#given][1]).toBe(OWNER)
-						S.run(c, 3.5)
-						tap(B)
-						expect(Bino.isOpen()).toBe(false)
-						expect(FG.anyOpen()).toBe(false)
 					end
+					expect(table.concat(issues, "\n")).toBe("")
+					-- intentions de toute la promenade : un cœur et un halo par tour, rien d'autre
+					expect(#TvAudit.sent(h, "JellyAscend")).toBe(0)
+					expect(#TvAudit.sent(h, "GrandSplorch")).toBe(0)
+					expect(#TvAudit.sent(h, "PlaceDeco")).toBe(0)
+					expect(#TvAudit.sent(h, "EquipCosmetic")).toBe(0)
+					expect(#TvAudit.sent(h, "GiveHeart")).toBe(round)
+					S.clean(c, expect)
 				end
-				expect(table.concat(issues, "\n")).toBe("")
-				-- intentions de toute la promenade : un cœur et un halo par tour, rien d'autre
-				expect(#TvAudit.sent(h, "JellyAscend")).toBe(0)
-				expect(#TvAudit.sent(h, "GrandSplorch")).toBe(0)
-				expect(#TvAudit.sent(h, "PlaceDeco")).toBe(0)
-				expect(#TvAudit.sent(h, "EquipCosmetic")).toBe(0)
-				expect(#TvAudit.sent(h, "GiveHeart")).toBe(round)
-				S.clean(c, expect)
-			end
-		)
-	end)
+			)
+		end
+	)
 
 	describe("Console_panels › clavier et souris (second)", function()
 		it(

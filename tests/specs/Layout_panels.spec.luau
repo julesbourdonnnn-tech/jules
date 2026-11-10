@@ -224,7 +224,10 @@ return function(T)
 						"panel:Settings",
 					}
 				do
-					expect({ screen = prefix, reached = reached(prefix) }).toEqual({ screen = prefix, reached = true })
+					expect({ screen = prefix, reached = reached(prefix) }).toEqual({
+						screen = prefix,
+						reached = true,
+					})
 				end
 				local PC = c.PC
 				-- chemin v2.0 bien pris : onglet « Mon style », plan de Déco perso, ligne du halo
@@ -315,7 +318,9 @@ return function(T)
 				local safe = h.localPlayer.PlayerGui:FindFirstChild("Panels")
 				safe = safe and safe:FindFirstChild("Safe")
 				for _, w in if safe then safe:GetChildren() else {} do
-					if string.sub(w.Name, 1, 6) == "Panel_" and not string.find(w.Name, "_Shadow", 1, true) then
+					if
+						string.sub(w.Name, 1, 6) == "Panel_" and not string.find(w.Name, "_Shadow", 1, true)
+					then
 						local n = 1
 						for _, d in w:GetDescendants() do
 							if d:IsA("GuiObject") then
@@ -355,7 +360,11 @@ return function(T)
 				)
 				expect(screen + 1 <= 1400).toBe(true)
 				expect(atLoad <= 3000).toBe(true)
-				expect(whole <= 9999).toBe(true)
+				-- garde de non-régression du chemin méta (D24, journal B3-65) : 4 631 mesurés à l'étape 6 du lot
+				-- B3 (chargement 1 506, écran 1 219 ; + 865 sur la référence de 3 766 du lot B2 : Ranch + 322,
+				-- Objectifs + 230, aperçu + 166, Squishydex + 123, jumelles + 16, garde-robe + 6, cartes + 2),
+				-- arrondis aux 25 du dessus ; les 3 000 du §12.9 ne tiennent pas (B2-13, décision du lot I)
+				expect(whole <= 4650).toBe(true)
 				expect(#TvAudit.sent(h, "JellyAscend")).toBe(0)
 				expect(#TvAudit.sent(h, "GiveHeart")).toBe(0)
 				expect(table.concat(h.errors, "\n")).toBe("")
