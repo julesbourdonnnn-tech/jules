@@ -30,6 +30,7 @@
 --   MetaView.cardText(kind, data, ctx)    -- carte « Nouveau » / v2.0 : { title, line?, panel?, tab? } ou nil
 --   MetaView.weeklyIn(index, period)  -- semaines avant le retour du cosmétique de la semaine `index`
 --   MetaView.resolve(text, tr)        -- texte prêt pour Text.set (variables-clés traduites par tr)
+--   MetaView.TILE_ICONS               -- dessins (Hud/Icons) que portent les tuiles d'aperçu (liste figée)
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -270,6 +271,30 @@ local KEY_KIND: { [string]: string } = {}
 for _, def in Cosmetics.ListV2 do
 	KEY_KIND[def.key] = def.kind
 end
+
+-- Dessins qu'une tuile d'aperçu peut porter (lot B3, étape 2) : la toile de UI/UpgradeCard est taillée
+-- pour eux seuls (budget de l'interface, règle 20 ; UpgradeCard.new("tile", parent, { icons = … }))
+local TILE_ICONS: { string } = {}
+do
+	local seen: { [string]: boolean } = {}
+	local function add(kind: string)
+		if not seen[kind] then
+			seen[kind] = true
+			table.insert(TILE_ICONS, kind)
+		end
+	end
+	for _, kind in { "arrowUp", "gift", "vat", "confetti", "star", "heart", "bed", "title" } do
+		add(kind)
+	end
+	for _, kind in UNLOCK_ICONS do
+		add(kind)
+	end
+	for _, kind in ITEM_ICONS do
+		add(kind)
+	end
+	table.sort(TILE_ICONS)
+end
+MetaView.TILE_ICONS = table.freeze(TILE_ICONS)
 
 local function unlockIcon(tile: Prestige.UnlockTile): string
 	local icon = UNLOCK_ICONS[tile.key]

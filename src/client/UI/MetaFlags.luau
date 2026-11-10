@@ -10,7 +10,8 @@
 --                              -- seulement quand l'ensemble ouvert change
 --   MetaFlags.attr(name)       -- attribut de MON ranch (= UpgradeSnapshot.ranchAttribute) ou nil
 --   MetaFlags.myPrestige()     -- "show" (MON Grand Splorch ou MA Jelly Ascend en cours), "queued" (dans la
---                              -- file) ou nil : même lecture que le HUD (queueEntry, myShowNow)
+--                              -- file) ou nil : même lecture que le HUD (queueEntry, myShowNow) ; 2e valeur :
+--                              -- la sorte ("splorch" | "ascend"), pour le texte du refus de l'aperçu
 --   MetaFlags.Changed          -- fn() quand l'ensemble ouvert ou v2Profile() change
 --   MetaFlags._reset()         -- specs : oublie l'état lu (les connexions de start() restent)
 --
@@ -180,10 +181,11 @@ function MetaFlags.attr(name: string): any
 	return if ok then value else nil
 end
 
--- MON prestige (Grand Splorch ou Jelly Ascend) : "show" en cours, "queued" dans la file, sinon nil.
--- Même lecture que le HUD (queueEntry, myShowNow) : EventState.spectacle.current / .queue, sortes
--- "splorch" et "ascend", userId du joueur local
-function MetaFlags.myPrestige(): ("show" | "queued")?
+-- MON prestige (Grand Splorch ou Jelly Ascend) : "show" en cours, "queued" dans la file, sinon nil ;
+-- 2e valeur : sa sorte (lot B3, étape 2 : l'aperçu dit « Ton Grand Splorch passe d'abord ! » seulement
+-- quand c'est un Grand Splorch qui attend). Même lecture que le HUD (queueEntry, myShowNow) :
+-- EventState.spectacle.current / .queue, sortes "splorch" et "ascend", userId du joueur local
+function MetaFlags.myPrestige(): (("show" | "queued")?, string?)
 	local ok, ev = pcall(WorldStateController.event)
 	if not ok or type(ev) ~= "table" then
 		return nil
@@ -201,7 +203,7 @@ function MetaFlags.myPrestige(): ("show" | "queued")?
 	if type(cur) == "table" then
 		local kind = rawget(cur, "kind")
 		if (kind == "splorch" or kind == "ascend") and rawget(cur, "userId") == me then
-			return "show"
+			return "show", kind
 		end
 	end
 	local queue = rawget(spectacle, "queue")
@@ -210,7 +212,7 @@ function MetaFlags.myPrestige(): ("show" | "queued")?
 			if type(entry) == "table" then
 				local kind = rawget(entry, "kind")
 				if (kind == "splorch" or kind == "ascend") and rawget(entry, "userId") == me then
-					return "queued"
+					return "queued", kind
 				end
 			end
 		end

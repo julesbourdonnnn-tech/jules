@@ -25,6 +25,57 @@ local WITNESS = serde.decode("json", fs.readFile("tests/fixtures/profiles/v2.jso
 
 UpgradeScreen.V2_INTENTS = { "BuyUpgrade", "MenuActivity", "ClientMetric", "UiSeen" }
 
+-- Lot B3 : les 11 interrupteurs v2.0 que le serveur annonce dans EventState.features.v2 (INT-B3-FEATURES)
+UpgradeScreen.V2_ALL = table.freeze({
+	RecordR = true,
+	JellyAscend = true,
+	PetitSplorch = true,
+	Confetti = true,
+	Workshop = true,
+	Carnet = true,
+	WeeklyTrack = true,
+	Mastery = true,
+	RanchSkins = true,
+	DecoPerso = true,
+	Hearts = true,
+})
+
+-- EventState complet (même forme que le serveur) ; `v2` : features.v2 (nil : clé absente, configuration
+-- livrée) ; `spectacle` : { current?, queue } (nil : file vide)
+function UpgradeScreen.eventState(v2, spectacle)
+	return {
+		rush = { active = false, index = 0, endsAt = 0, nextAt = 0, moonBoopable = false },
+		mega = {
+			phase = "idle",
+			index = 0,
+			landsAt = 0,
+			endsAt = 0,
+			target = 0,
+			points = 0,
+			species = 1,
+			moon = false,
+			result = "",
+		},
+		golden = { active = false, id = 0, endsAt = 0 },
+		moon = { active = false, session = 0, endsAt = 0, nextAt = 0 },
+		gauge = { points = 0, target = 1000, partyUntil = 0, restUntil = 0 },
+		boost = { kind = "", untilT = 0, byName = "" },
+		spectacle = spectacle or { queue = {} },
+		features = {
+			boopRush = "on",
+			megaSquish = true,
+			golden = true,
+			jellyMoon = true,
+			gauge = true,
+			clips = true,
+			costume = "",
+			diagnostics = true,
+			v2 = v2,
+		},
+		offset = 0,
+	}
+end
+
 local function deepCopy(t)
 	if type(t) ~= "table" then
 		return t
@@ -118,6 +169,12 @@ function UpgradeScreen.new(Harness)
 		end
 		c.model = model
 		return model
+	end
+
+	-- EventState du serveur (lot B3) : features.v2 et spectacle, puis 0,2 s de jeu
+	function S.event(c, v2, spectacle)
+		c.h:fireClient("ReplicatedStorage.Remotes.EventState", UpgradeScreen.eventState(v2, spectacle))
+		S.run(c, 0.2)
 	end
 
 	function S.patch(c, snap, removed)

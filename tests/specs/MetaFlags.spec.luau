@@ -459,27 +459,32 @@ return function(T)
 						name = "mon splorch en file",
 						sp = { queue = { entry("splorch", ME) } },
 						want = "queued",
+						kind = "splorch",
 					},
 					{
 						name = "mon ascend en file",
 						sp = { queue = { entry("ascend", ME) } },
 						want = "queued",
+						kind = "ascend",
 					},
 					{
 						name = "mon ascend 2e de la file",
 						sp = { queue = { entry("splorch", 77), entry("ascend", ME) } },
 						want = "queued",
+						kind = "ascend",
 					},
 					{ name = "splorch d'un autre", sp = { queue = { entry("splorch", 77) } }, want = nil },
 					{
 						name = "mon splorch en cours",
 						sp = { current = current("splorch", ME), queue = {} },
 						want = "show",
+						kind = "splorch",
 					},
 					{
 						name = "mon ascend en cours",
 						sp = { current = current("ascend", ME), queue = {} },
 						want = "show",
+						kind = "ascend",
 					},
 					{
 						name = "ascend d'un autre",
@@ -500,6 +505,7 @@ return function(T)
 						name = "en cours et en file",
 						sp = { current = current("splorch", ME), queue = { entry("ascend", ME) } },
 						want = "show",
+						kind = "splorch",
 					},
 					{
 						name = "entrée abîmée",
@@ -511,9 +517,12 @@ return function(T)
 				}
 				for _, case in cases do
 					send(c, nil, case.sp)
-					expect({ case = case.name, got = c.MF.myPrestige() }).toEqual({
+					-- 2e valeur (lot B3, étape 2) : la sorte du prestige (texte du refus de l'aperçu)
+					local state, kind = c.MF.myPrestige()
+					expect({ case = case.name, got = state, kind = kind }).toEqual({
 						case = case.name,
 						got = case.want,
+						kind = case.kind,
 					})
 				end
 				S.noV2Intent(c, expect)
