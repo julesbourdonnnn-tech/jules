@@ -38,6 +38,7 @@ local MockInstance = require("./MockInstance")
 local Enum = roblox.Enum
 local Vector2 = roblox.Vector2
 local Vector3 = roblox.Vector3
+local CFrame = roblox.CFrame
 
 local Screens = {}
 
@@ -3794,6 +3795,48 @@ local function lifeScreens()
 			records[1] = tricks[best].size
 			c.h:fireClient(REMOTES .. "DataPatch", { trophies = records }, {})
 			frames(c, 6, 0.1)
+		end,
+	})
+	-- Étape 3 : étiquette du Chantier de Big Plop sur MON ranch (« Nouveau : … », clé card.unlockNew des
+	-- cartes « Nouveau » du lot B3) avec le nom d'élément le plus long de la langue (paliers, Monuments,
+	-- maisonnette) ; planche `.billboards.png` (texte du monde). L'élément n'est pas dessiné dans cette
+	-- scène : son repère est donné un instant à RanchRenderer.elementCFrame (devant mon personnage), lu
+	-- une seule fois par Big Plop quand ElementBuilt part
+	table.insert(list, {
+		id = "life.chantier",
+		run = function(c)
+			closeAll(c)
+			flushAll(c)
+			unstub(c)
+			local ids = { "helper.house" }
+			for k = 1, 6 do
+				table.insert(ids, "tier" .. k .. ".x")
+			end
+			for k = 1, 10 do
+				table.insert(ids, "monument." .. k)
+			end
+			local function keyOf(id)
+				local tier = string.match(id, "^tier(%d)")
+				return if tier then "ranchTier." .. tier else id
+			end
+			local best, bestLen = ids[1], -1
+			for _, id in ids do
+				local len = utf8.len(c.Prefs.t(keyOf(id))) or 0
+				if len > bestLen then
+					best, bestLen = id, len
+				end
+			end
+			local RR = c.h:require(CLIENT .. "Controllers.RanchRenderer")
+			local slot = c.WSC.mySlot()
+			local WL = c.h:require("ReplicatedStorage.Shared.Logic.WorldLayout")
+			local saved = RR.elementCFrame
+			RR.elementCFrame = function()
+				return CFrame.new(WL.penSlot(slot, 1))
+			end
+			RR.ElementBuilt:Fire(slot, best)
+			c.h:settle(1)
+			RR.elementCFrame = saved
+			frames(c, 10, 0.1)
 		end,
 	})
 	return list

@@ -347,22 +347,19 @@ return function(T)
 				c.event(nil)
 				c.build(3, "monument.1")
 				c.play(1)
-				c.event(
-					nil,
-					{
-						mega = {
-							phase = "warn",
-							index = 1,
-							landsAt = T0 + 99,
-							endsAt = T0 + 199,
-							target = 10,
-							points = 0,
-							species = 1,
-							moon = false,
-							result = "",
-						},
-					}
-				)
+				c.event(nil, {
+					mega = {
+						phase = "warn",
+						index = 1,
+						landsAt = T0 + 99,
+						endsAt = T0 + 199,
+						target = 10,
+						points = 0,
+						species = 1,
+						moon = false,
+						result = "",
+					},
+				})
 				c.play(1 / 60)
 				expect(c.BP._state()).toBeNil()
 				expect(c.instances()).toBe(0)
@@ -471,18 +468,15 @@ return function(T)
 				c.play(20, 2)
 				expect(c.BP.stats().gestures).toBe(0)
 				c.me(c.WL.penSlot(3, 5))
-				c.event(
-					{ JellyAscend = true },
-					{
-						rush = {
-							active = true,
-							index = 1,
-							endsAt = T0 + 9999,
-							nextAt = 0,
-							moonBoopable = false,
-						},
-					}
-				)
+				c.event({ JellyAscend = true }, {
+					rush = {
+						active = true,
+						index = 1,
+						endsAt = T0 + 9999,
+						nextAt = 0,
+						moonBoopable = false,
+					},
+				})
 				c.play(20, 2)
 				expect(c.BP.stats().gestures).toBe(0)
 				c.event({ JellyAscend = true })
