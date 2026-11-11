@@ -3759,6 +3759,46 @@ local function metaScreens()
 end
 
 -- Groupes d'écrans : un client démarré par groupe (état de données), écrans joués dans l'ordre
+-- ---------------------------------------------------------------------------------------------
+-- v2.0 (lot B5) : la vie des squishies. Étape 2 : l'annonce d'un tour appris (message du HUD, clé
+-- trick.new) avec le nom de tour le plus long de la langue ; l'interrupteur Personalities est ouvert
+-- DANS le scénario (EventState.features.v2), jamais dans le jeu livré
+-- ---------------------------------------------------------------------------------------------
+local function lifeScreens()
+	local list = {}
+	table.insert(list, {
+		id = "life.toast.trick",
+		run = function(c)
+			closeAll(c)
+			flushAll(c)
+			unstub(c)
+			local features = table.clone(FEATURES)
+			features.v2 = { Personalities = true }
+			c.WSC.EventChanged:Fire(eventStub(c, c.Clock.now(), { features = features }))
+			frames(c, 2, 0.1)
+			-- tour au nom le plus long de la langue (« Feu d'artifice », « Fireworks »)
+			local tricks = c.h:require("ReplicatedStorage.Shared.Config.Quests").Mastery.Tricks
+			local best, bestLen = 1, -1
+			for i, trick in tricks do
+				local len = utf8.len(c.Prefs.t(trick.key)) or 0
+				if len > bestLen then
+					best, bestLen = i, len
+				end
+			end
+			-- les records repartent de 0 (rien n'est annoncé), puis celui de Plop passe le seuil du tour :
+			-- World/Personality annonce « Nouveau tour : … ! » par le message du HUD
+			local records = table.create(#c.Species.List, 0)
+			c.h:fireClient(REMOTES .. "DataPatch", { trophies = records }, {})
+			frames(c, 2, 0.1)
+			records = table.clone(records)
+			records[1] = tricks[best].size
+			c.h:fireClient(REMOTES .. "DataPatch", { trophies = records }, {})
+			frames(c, 6, 0.1)
+		end,
+	})
+	return list
+end
+
 function Screens.groups()
 	local groups = {}
 
@@ -4037,6 +4077,8 @@ function Screens.groups()
 	table.insert(groups, { id = "world", state = "mid", screens = worldScreens() })
 	-- v2.0 (lot B3) : écrans de renaissance et de méta
 	table.insert(groups, { id = "meta", state = "mid", screens = metaScreens() })
+	-- v2.0 (lot B5) : la vie des squishies (textes nouveaux du lot)
+	table.insert(groups, { id = "life", state = "mid", screens = lifeScreens() })
 
 	return groups
 end

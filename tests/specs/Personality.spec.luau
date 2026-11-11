@@ -1519,6 +1519,26 @@ return function(T)
 				c.play(1.2, 60)
 				expect(lifeLabels(c)).toEqual({})
 				expect(c.WT.stats().live).toBe(labels)
+				-- « Cœurs » sans joueur à 8 studs ou moins : la saynète se joue, aucune gerbe
+				expect(c.P._play(3, "a", "hearts")).toBe(true)
+				c.play(1, 60)
+				expect({ c.P.stats().bursts, c.VB.used("life", "particles") }).toEqual({ 0, 0 })
+				c.play(1.2, 60)
+				-- « Bisou au voisin » : un cœur (1 particule, 20 au plus en vie), rendu à la fin de la gerbe
+				expect(c.P._play(3, "a", "kiss")).toBe(true)
+				c.play(1.2, 60)
+				expect({ c.P.stats().bursts, c.VB.used("life", "particles") }).toEqual({ 1, 1 })
+				expect(looksAt(c, 3, "a", c.RR.positionOf(3, "b")) > 0.9).toBe(true) -- tourné vers son voisin
+				c.play(1.5, 60)
+				expect({ c.P.stats().bursts, c.VB.used("life", "particles") }).toEqual({ 0, 0 })
+				-- une saynète en cours s'arrête quand le squishy s'endort (le visage du sommeil reste)
+				expect(c.P._play(3, "a", "parade")).toBe(true)
+				c.play(0.5, 60)
+				expect(c.P.react(3, "sleep", { uid = "a" })).toBe(1)
+				expect(c.P.sceneOf(3, "a")).toBe(nil)
+				expect(faces(c, 3, "a")).toEqual({ "sleepy", "sleepy" })
+				expect(c.P.react(3, "wake", { uid = "a" })).toBe(1)
+				expect(faces(c, 3, "a")).toEqual({ "happy", "happy" })
 				-- « Mini-sieste » : « z »
 				expect(c.P._play(3, "b", "nap")).toBe(true)
 				c.play(1, 60)
@@ -2561,6 +2581,7 @@ return function(T)
 				end
 				local snapshots = {}
 				local frames = 0
+				local ids, forced = allIds(c.Scenes), 0
 				for step = 1, 720 do
 					c.Clock.advance(30 - 12 / 30)
 					local k = (step - 1) % 16 + 1
@@ -2648,9 +2669,15 @@ return function(T)
 						c.h:fireClient(REMOTES .. "DataPatch", { released = table.clone(released) }, {})
 						c.camera(c.WL.meadowCenter() + Vector3.new(0, 20, 30 + rand(60)))
 					else
+						-- une pression, une cible, et chaque saynète et chaque tour à son tour, joués en entier
+						-- (étiquettes « z » et « ? », cœurs, étoiles, gerbe du Feu d'artifice)
 						c.RR.play(k, "q02", "press")
 						c.RR.highlightTarget(k, "q03")
-						c.P._play(k, "q04", c.Scenes.LIST[rand(18)])
+						if c.P._play(k, "q04", ids[(step // 12) % #ids + 1]) then
+							forced += 1
+						end
+						c.play(1.4, 30, watch)
+						frames += 42
 					end
 					if step % 60 == 30 then
 						c.flags(nil) -- coupure en direct
@@ -2697,9 +2724,10 @@ return function(T)
 				-- limites tenues à chaque image
 				expect(most.over).toBe(0)
 				expect(most.running <= 6 and most.running >= 3).toBe(true)
-				expect(most.particles <= 20).toBe(true)
-				expect(most.labels <= 6).toBe(true)
-				expect(most.attachments <= 6).toBe(true)
+				expect(most.particles <= 20 and most.particles >= 12).toBe(true)
+				expect(most.labels <= 6 and most.labels >= 1).toBe(true)
+				expect(most.attachments <= 6 and most.attachments >= 1).toBe(true)
+				expect(forced >= 40).toBe(true)
 				local s = c.P.stats()
 				expect(s.started > 300).toBe(true)
 				expect(s.tricks > 10).toBe(true)

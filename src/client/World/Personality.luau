@@ -1001,6 +1001,10 @@ local function sleep(r: Rec, now: number): boolean
 	r.sceneFace = ""
 	r.sleeping = true
 	sleepers += 1
+	-- endormi : sa saynète s'arrête (le visage du sommeil reste)
+	if r.scene ~= nil then
+		endScene(r, now, true, nil)
+	end
 	return true
 end
 
@@ -1464,9 +1468,6 @@ local function presence(now: number)
 				if not r.sleeping and (r.where == "pen" or r.where == "pool") and reachable(r, now) then
 					local dx, dz = r.px - p.X, r.pz - p.Z
 					if dx * dx + dz * dz <= SLEEP_RADIUS * SLEEP_RADIUS and sleep(r, now) then
-						if r.scene ~= nil then
-							endScene(r, now, true, nil)
-						end
 						counters.reactions += 1
 					end
 				end
