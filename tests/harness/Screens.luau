@@ -39,6 +39,7 @@ local Enum = roblox.Enum
 local Vector2 = roblox.Vector2
 local Vector3 = roblox.Vector3
 local CFrame = roblox.CFrame
+local Color3 = roblox.Color3
 
 local Screens = {}
 
@@ -3837,6 +3838,36 @@ local function lifeScreens()
 			c.h:settle(1)
 			RR.elementCFrame = saved
 			frames(c, 10, 0.1)
+		end,
+	})
+	-- Étape 4 : textes des spectacles. Tampon « JELLY ASCEND ★A » (clé ascend.stamp, étoile dessinée
+	-- par UI/Text ; A = 999, le plus grand que ShowsV2 écrit) puis « ×3 à chaque boucle ! » (ascend.show),
+	-- comme VFXController.stamp les pose à l'éclat ; petit texte du Petit Splorch au propriétaire
+	-- (splorch.show, nom d'espèce le plus long de la langue, 32 px par UI/WorldText : planche
+	-- `.billboards.png`)
+	for _, entry in { { "ascend.stamp", { n = 999 } }, { "ascend.show" } } do
+		table.insert(list, {
+			id = "life." .. entry[1],
+			run = function(c)
+				closeAll(c)
+				flushAll(c)
+				local VFX = c.h:require(CLIENT .. "Controllers.VFXController")
+				VFX.stamp(entry[1], entry[2], Color3.fromRGB(255, 205, 60))
+				frames(c, 3, 0.05)
+			end,
+		})
+	end
+	table.insert(list, {
+		id = "life.petit.text",
+		run = function(c)
+			closeAll(c)
+			flushAll(c)
+			frames(c, 6, 0.5)
+			local VFX = c.h:require(CLIENT .. "Controllers.VFXController")
+			local name = c.Prefs.t("species." .. c.Species.ById[longestSpecies(c)].key)
+			local pos = c.WorldLayout.spawnCFrame(1).Position + Vector3.new(0, 6, 0)
+			VFX.floatText(pos, c.Prefs.t("splorch.show", { name = name }), Color3.fromRGB(255, 205, 60), 0.8)
+			frames(c, 2, 0.05)
 		end,
 	})
 	return list
