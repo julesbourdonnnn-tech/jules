@@ -482,4 +482,72 @@ return function(T)
 			end
 		)
 	end)
+
+	-- Lot I, étape 2 (plan I M6, M7, D15 ; journal I-16)
+	describe("RanchService_v2 › intégration (lot I)", function()
+		it(
+			"KeptDecor [Workshop, profil v2] = décorations gardées au prochain Grand Splorch (Record R 8 et 14, + 3 par niveau, 12 au plus) ; suit l'achat ; coupé ou profil v1 : absent",
+			function()
+				local w = boot({ "UpgradesScreen", "Confetti", "Workshop" })
+				local Upgrades = w.h:require(L .. "Config.Upgrades")
+				local Prestige = w.h:require(L .. "Logic.Prestige")
+				local row = Upgrades.WorkshopIndex.keptDecor
+				local p = Bots.join(1)
+				local slot = w.Ranch.slotOf(p)
+				local data = w.DS.get(p)
+				w.h:settle(2)
+				local model = w.World.ranchModel(slot)
+				-- Record R 12 : 3 (Record R 8)
+				expect(model:GetAttribute("KeptDecor")).toBe(3)
+				data.atelier[row] = 2
+				data.bestR = 14
+				w.Ranch.refreshV2(p)
+				expect(model:GetAttribute("KeptDecor")).toBe(Prestige.keptDecor(14, data.atelier))
+				expect(model:GetAttribute("KeptDecor")).toBe(12)
+				-- Workshop coupé en direct : effacé au tick suivant ; rouvert : revient
+				Bots.frames(5) -- ticks du serveur (empreinte des interrupteurs relevée)
+				expect(w.F.set("Workshop", false)).toBe(true)
+				Bots.frames(5)
+				expect(model:GetAttribute("KeptDecor")).toBeNil()
+				expect(w.F.set("Workshop", true)).toBe(true)
+				Bots.frames(5)
+				expect(model:GetAttribute("KeptDecor")).toBe(12)
+				clean(w)
+				-- profil v1 (serveur de la v1.3, Workshop ouvert dans le test) : jamais posé
+				local w1 =
+					boot({ "UpgradesScreen", "Confetti", "Workshop" }, nil, Flags.harness(Harness, "v13"))
+				local p1 = Bots.join(1)
+				w1.h:settle(2)
+				w1.Ranch.refreshV2(p1)
+				expect(w1.World.ranchModel(w1.Ranch.slotOf(p1)):GetAttribute("KeptDecor")).toBeNil()
+				clean(w1)
+			end
+		)
+
+		it(
+			"StarMat changé en direct : refreshBuild une fois pour chaque ranch attribué (la dalle du Tapis suit aussitôt) ; sans changement : jamais",
+			function()
+				local w = boot({ "UpgradesScreen", "StarMat" })
+				local p = Bots.join(1)
+				local q = Bots.join(2)
+				w.h:settle(2)
+				Bots.frames(5)
+				local builds = {}
+				local original = w.Ranch.refreshBuild
+				w.Ranch.refreshBuild = function(player)
+					builds[player] = (builds[player] or 0) + 1
+					return original(player)
+				end
+				Bots.frames(10)
+				expect(next(builds)).toBeNil()
+				expect(w.F.set("StarMat", false)).toBe(true)
+				Bots.frames(3)
+				expect({ builds[p], builds[q] }).toEqual({ 1, 1 })
+				expect(w.F.set("StarMat", true)).toBe(true)
+				Bots.frames(3)
+				expect({ builds[p], builds[q] }).toEqual({ 2, 2 })
+				clean(w)
+			end
+		)
+	end)
 end

@@ -13,6 +13,7 @@
 -- Les gestes de jeu passent par les vraies API (EconomyService.addCoins, buyUpgrade, addConfetti,
 -- Activity.note) ; l'horloge avance d'une seconde à la fois et DiagnosticsService.step fait le reste.
 local Brains = require("../harness/Brains")
+local Bots = require("../harness/Bots")
 
 return function(T)
 	local describe, it, expect, Harness = T.describe, T.it, T.expect, T.Harness
@@ -629,6 +630,88 @@ return function(T)
 						})
 					end
 					expect(table.concat(Brains.problems(w), "\n")).toBe("")
+				end
+			end
+		)
+	end)
+
+	-- Lot I, étape 2 (D5, plan I M2, journal I-17) : AscendDone(A, r, jours depuis la précédente) ; la
+	-- première Ascension compte depuis la première arrivée (firstJoin) ; horloge reculée : 0
+	describe("Analytics_v2 › AscendDone et ses jours (lot I, D5)", function()
+		local DAY = 86400
+		local function ascendOnce(edit)
+			local w = Brains.boot(HarnessV2, { t0 = T0, stubMeta = false })
+			for _, key in { "RecordR", "Confetti", "JellyAscend", "PetitSplorch" } do
+				assert(w.Features.set(key, true), key)
+			end
+			local hero = Brains.join(w, 1, {
+				profile = Brains.profile(w, {
+					coins = 5000,
+					R = 15,
+					squishies = { { s = 1, z = 100, bf = 1 }, { s = 2, z = 20000 }, { s = 3, z = 300 } },
+					tiles = { snack = 12, decor = 10 },
+					edit = function(d)
+						d.bestR = 15
+						edit(d)
+					end,
+				}),
+			})
+			Bots.place(hero, Brains.atRanch(w, hero, 0, 30))
+			Brains.frames(w, 2)
+			w.h:fireServer("ReplicatedStorage.Remotes.JellyAscend", hero, true)
+			Brains.frames(w, 200)
+			local found = {}
+			for _, c in w.h.log.analytics do
+				if c.method == "LogCustomEvent" and c.args[2] == "AscendDone" then
+					table.insert(found, { value = c.args[3], f = fieldsOf(w, c.args) })
+				end
+			end
+			local data = w.DS.get(hero)
+			expect(table.concat(Brains.problems(w), "\n")).toBe("")
+			return found, data, w
+		end
+
+		it(
+			"première Ascension : jours depuis firstJoin ; suivante : depuis ascendDay ; horloge reculée : 0 ; ascendDay = jour de l'Ascension",
+			function()
+				local today = math.floor(T0 / DAY)
+				for _, case in
+					{
+						{
+							edit = function(d)
+								d.firstJoin = T0 - 10 * DAY
+								d.ascendDay = 0
+							end,
+							days = 10,
+						},
+						{
+							edit = function(d)
+								d.firstJoin = T0 - 40 * DAY
+								d.ascendDay = today - 4
+							end,
+							days = 4,
+						},
+						{
+							edit = function(d)
+								d.firstJoin = T0 - 40 * DAY
+								d.ascendDay = today + 3
+							end,
+							days = 0,
+						},
+						{
+							edit = function(d)
+								d.firstJoin = 0
+								d.ascendDay = 0
+							end,
+							days = 0,
+						},
+					}
+				do
+					local found, data = ascendOnce(case.edit)
+					expect(#found).toBe(1)
+					expect(found[1].value).toBe(1) -- A après l'Ascension
+					expect(found[1].f).toEqual({ bestR = "15", days = tostring(case.days), r = "15" })
+					expect(data.ascendDay).toBe(today)
 				end
 			end
 		)

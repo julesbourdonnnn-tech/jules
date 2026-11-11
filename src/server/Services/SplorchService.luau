@@ -775,8 +775,20 @@ local function burstAscend(show: Show, now: number)
 		diag("PrestigeRefused", hero)
 		return
 	end
-	-- jour de cette Ascension (lot I, D5 : jours écoulés de la suivante pour AscendDone)
-	data.ascendDay = Clock.day()
+	-- jours depuis la précédente (lot I, D5 ; GDD §16 « A, r, jours depuis la précédente ») : depuis la
+	-- dernière Ascension (ascendDay) ; la première : depuis la première arrivée (firstJoin) ; 0 si aucun
+	-- des deux n'est lisible ; jamais négatif (horloge reculée)
+	local today = Clock.day()
+	local since = 0
+	local last = data.ascendDay
+	local first = data.firstJoin
+	if type(last) == "number" and last == last and last > 0 and last ~= math.huge then
+		since = math.max(0, today - math.floor(last))
+	elseif type(first) == "number" and first == first and first > 0 and first ~= math.huge then
+		since = math.max(0, today - Clock.day(first))
+	end
+	-- jour de cette Ascension (lu à la suivante)
+	data.ascendDay = today
 	DataService.markDirty(hero, "ascendDay")
 	SquishyService.resetSizes(hero)
 	SquishyService.setWaiting(hero, nil)
@@ -788,7 +800,7 @@ local function burstAscend(show: Show, now: number)
 		Guard.try("splorch:starRain", starRain, show, player)
 	end
 	Notify.banner("ascend", { userId = hero.UserId, name = displayName(hero), ascend = report.ascend }, hero)
-	Guard.analytics(hero, "AscendDone", report.ascend, { r = fromR, bestR = report.bestR })
+	Guard.analytics(hero, "AscendDone", report.ascend, { r = fromR, bestR = report.bestR, days = since })
 	lastSplorchAt[hero] = now
 	readyAtLogin[hero] = false
 end

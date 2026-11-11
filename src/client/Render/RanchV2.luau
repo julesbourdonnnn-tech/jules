@@ -104,6 +104,7 @@ local WATCHED: { [string]: boolean } = {
 	BestR = true,
 	DecorGold = true,
 	GoldPennants = true,
+	KeptDecor = true, -- lot I (D15) : fanions ★ des décorations gardées par l'Atelier
 	Cushions = true,
 	OwnerUserId = true,
 	SplorchReady = true,
@@ -203,6 +204,7 @@ type View = {
 	bestR: number,
 	gold: number,
 	goldPennants: boolean,
+	keptDecor: any, -- attribut KeptDecor (nil si absent ; RanchLook.pennants le borne)
 	cushions: string,
 	snack: number,
 	decor: number,
@@ -702,6 +704,7 @@ local function readView(st: Slot): View?
 		bestR = bestR,
 		gold = int(goldAttr, 0, 2 ^ DECOR_MAX - 1),
 		goldPennants = m:GetAttribute("GoldPennants") == true,
+		keptDecor = m:GetAttribute("KeptDecor"),
 		cushions = if type(cushionsAttr) == "string" and #cushionsAttr <= STRING_MAX
 			then cushionsAttr
 			else "",
@@ -763,7 +766,7 @@ end
 
 local function pennantList(view: View): { number }
 	local out: { number } = {}
-	for k = 1, RanchLook.pennants(view.bestR) do
+	for k = 1, RanchLook.pennants(view.bestR, view.keptDecor) do
 		if view.decor >= k then
 			table.insert(out, k)
 		end
@@ -1160,7 +1163,7 @@ local function renderGolden(st: Slot, view: View?)
 	markRendered(st, "golden", "all")
 end
 
--- Fanions ★ des décorations gardées (Record R 8 : 3, 14 : 6), dorés avec GoldPennants
+-- Fanions ★ des décorations gardées (Record R 8 : 3, 14 : 6 ; KeptDecor jusqu'à 12), dorés avec GoldPennants
 local function renderPennants(st: Slot, view: View?)
 	local level = levelOf(st, "record")
 	if view == nil or level ~= "full" then

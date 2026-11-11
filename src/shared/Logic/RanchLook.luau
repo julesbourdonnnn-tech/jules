@@ -57,6 +57,7 @@ export type PadLabel = {
 local RanchLook = {}
 
 local MAX_R = Balance.Prestige.MaxR
+local KEPT_MAX = Balance.SplorchV2.KeptDecorMax -- décorations gardées au plus (Prestige.keptDecor)
 local MAX_A = Balance.Prestige.MaxA
 local RANCHES = WorldLayout.Const.Ranches
 local SNACK_MAX = Balance.Tiles.snack.Levels
@@ -273,15 +274,18 @@ function RanchLook.decorState(k: any, decorLevel: any, bestR: any): string
 	return "none"
 end
 
--- Fanions ★ sur les décorations gardées : 0, 3 (Record R 8), 6 (Record R 14)
-function RanchLook.pennants(bestR: any): number
+-- Fanions ★ sur les décorations gardées : 0, 3 (Record R 8), 6 (Record R 14) ; `kept` (attribut
+-- KeptDecor du serveur, lot I D15 : décorations gardées, « Déco qui reste » de l'Atelier comprise) monte
+-- jusqu'à 12 quand il est plus grand ; absent ou illisible : le Record R seul
+function RanchLook.pennants(bestR: any, kept: any): number
 	local r = int(bestR, 0, MAX_R)
+	local n = 0
 	if r >= firstR("decor.pennants6") then
-		return 6
+		n = 6
 	elseif r >= firstR("decor.pennants3") then
-		return 3
+		n = 3
 	end
-	return 0
+	return math.max(n, int(kept, 0, KEPT_MAX))
 end
 
 -- Coussins ronds de l'enclos : un par place achetée (`pens`) et par place offerte (`offered`), au plus

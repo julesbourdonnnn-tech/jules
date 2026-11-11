@@ -254,6 +254,27 @@ return function(T)
 			end
 		)
 
+		-- Lot I, étape 2 (D15, journal I-16) : KeptDecor (décorations gardées, Atelier compris) monte les
+		-- fanions jusqu'à 12 ; jamais sous le compte du Record R ; valeur hostile ou absente : Record R seul
+		it(
+			"fanions avec KeptDecor : max(Record R, KeptDecor), 12 au plus ; absent ou illisible : Record R seul",
+			function()
+				expect({
+					RanchLook.pennants(7, nil),
+					RanchLook.pennants(7, 9),
+					RanchLook.pennants(14, 3),
+					RanchLook.pennants(14, 9),
+					RanchLook.pennants(20, 12),
+					RanchLook.pennants(20, 40),
+					RanchLook.pennants(8, -5),
+					RanchLook.pennants(8, 0 / 0),
+					RanchLook.pennants(8, math.huge),
+					RanchLook.pennants(8, "9"),
+					RanchLook.pennants(8, 7.5),
+				}).toEqual({ 0, 9, 6, 9, 12, 12, 3, 3, 3, 3, 7 })
+			end
+		)
+
 		it("fanions 0 / 3 (R8) / 6 (R14) ; coussins ; halo ; ciel", function()
 			expect({
 				RanchLook.pennants(7),

@@ -161,6 +161,7 @@ local V2_ATTRIBUTES: { [string]: string } = {
 	GoldPennants = "boolean",
 	Palette = "string",
 	Cushions = "string",
+	KeptDecor = "number", -- lot I (D15) : décorations gardées au prestige (0 à 12) [Workshop]
 }
 local DECO_PERSO_MAX = 64 -- caractères de l'attribut DecoPerso (12 identifiants séparés par des virgules)
 -- attributs calculés ici (le reste est posé par son service) et leur interrupteur
@@ -172,9 +173,10 @@ local OWN_ATTRIBUTES: { [string]: string } = {
 	ApronTier = "RanchTiers",
 	DecorGold = "RanchTiers", -- lot A4 (D31) : décorations dorées
 	GoldPennants = "Workshop", -- lot A4 (D31) : « Fanions dorés » de « Pour le plaisir »
+	KeptDecor = "Workshop", -- lot I (D15) : décorations gardées au prestige (fanions ★ du 7e au 12e)
 }
--- attributs lus dans un champ v2 (decorBuilds, atelierCosmetics) : absents pour un profil v1
-local V2_PROFILE_ONLY: { [string]: boolean } = { DecorGold = true, GoldPennants = true }
+-- attributs lus dans un champ v2 (decorBuilds, atelierCosmetics, atelier) : absents pour un profil v1
+local V2_PROFILE_ONLY: { [string]: boolean } = { DecorGold = true, GoldPennants = true, KeptDecor = true }
 -- interrupteurs de ces attributs (ordre fixe) : un changement en direct (LiveOps) les fait revoir au
 -- tick suivant pour chaque joueur (relecture du lot A2 : sans lui, posés ou effacés seulement au
 -- prochain achat ou prestige)
@@ -184,6 +186,9 @@ local OWN_FLAGS = { "RecordR", "Monuments", "RanchTiers", "Workshop" }
 local DECOR_COUNT = Balance.Tiles.decor.Levels
 local DECOR_GOLD_AT = 10
 local ownPrint = 0 -- empreinte des OWN_FLAGS au dernier tick
+-- interrupteur StarMat au dernier tick : changé en direct, la dalle du Tapis de chaque ranch est revue
+-- (refreshBuild ; lot I, étape 2, B4-11)
+local starMatOn = false
 local v2Values: { [Player]: { [string]: any } } = {} -- valeurs voulues (gardées jusqu'au ranch attribué)
 local modelAttrs: { [number]: { [string]: boolean } } = {} -- attributs posés sur chaque modèle
 
@@ -907,6 +912,7 @@ end
 
 -- Connexions et boucles
 function RanchService.Start()
+	starMatOn = Features.get("StarMat") == true
 	Players.PlayerAdded:Connect(onPlayerAdded)
 	Players.PlayerRemoving:Connect(onPlayerRemoving)
 	DataService.Loaded:Connect(function(player: Player)
@@ -996,6 +1002,15 @@ function RanchService.step(now: number, actors: { [Player]: Types.TickActor })
 		ownPrint = print
 		for player in loaded do
 			Guard.try("ranch:refreshV2", RanchService.refreshV2, player)
+		end
+	end
+	-- Tapis Étoilé [StarMat] changé en direct : la dalle du Tapis (allumée au-delà du Tapis 12 ou non)
+	-- suit aussitôt pour chaque ranch attribué
+	local star = Features.get("StarMat") == true
+	if star ~= starMatOn then
+		starMatOn = star
+		for player in slotOf do
+			Guard.try("ranch:refreshBuild", RanchService.refreshBuild, player)
 		end
 	end
 	-- états minutés de tous les joueurs (même sans acteur) : renvoi, arrivée, placement
@@ -1419,6 +1434,11 @@ function RanchService.refreshV2(player: Player)
 	end
 	if on.GoldPennants then
 		attrs.GoldPennants = UpgradeMath.level("pennants", data) >= 1
+	end
+	if on.KeptDecor then
+		-- décorations gardées au prochain Grand Splorch (Record R 8 et 14, + 3 par niveau de « Déco qui
+		-- reste », 12 au plus : GDD §4.6.1, §4.26) ; le client pose un fanion ★ sur chacune (RanchLook)
+		attrs.KeptDecor = Prestige.keptDecor(Prestige.bestR(data), data.atelier)
 	end
 	if next(attrs) == nil and #clear == 0 then
 		return

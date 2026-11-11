@@ -661,6 +661,7 @@ export type RanchAttributesV2 = {
 	GiantTier: number, -- [Mastery] jalons géants atteints (0 à 4 : 1e15, 1e18, 1e21, 1e24 ; Squishy-Soleil ≥ 3)
 	DecorGold: number, -- [RanchTiers] décorations dorées : bit k − 1 quand decorBuilds[k] ≥ 10 (18 bits)
 	GoldPennants: boolean, -- [Workshop] « Fanions dorés » de « Pour le plaisir » achetés
+	KeptDecor: number, -- [Workshop, profil v2] décorations gardées au prestige (0 à 12 ; lot I, D15)
 	Palette: string, -- palette choisie du spectacle du Grand Splorch ("" = celle du ranch ; CommunityService)
 	Cushions: string, -- coussins choisis des enclos ("" = ceux du ranch ; CommunityService)
 }
