@@ -1041,6 +1041,99 @@ return function(T)
 					S.clean(c, expect)
 				end
 			)
+
+			-- lot B5, étape 5 (D24-D26) : mode photo à la MANETTE seule : △ → rail → Réglages, ↓ jusqu'à
+			-- « Mode photo », ✕ → mode photo (menu fermé, bouton de sortie choisi, ○ dessiné) ; aucun bouton
+			-- n'envoie d'intention ; ○ → JEU en un appui ; aux 3 résolutions
+			it("mode photo (lot B5) : croix, ✕ et ○ seulement ; ○ ramène au jeu", function()
+				local flags = table.clone(UpgradeScreen.V2_ALL)
+				flags.PhotoMode = true
+				local c = S.client({ profile = { version = 2, onboarding = DONE } })
+				S.event(c, flags)
+				local h, PC, FG = c.h, c.PC, c.FG
+				local Cam = TvAudit.mod(h, "Controllers.CameraController")
+				local Hud = TvAudit.mod(h, "UI.PhotoHud")
+				local function sel()
+					return h.game.GuiService.SelectedObject
+				end
+				local function tap(key)
+					TvAudit.tick(h, 0.5)
+					Gamepad.tap(h, key)
+					TvAudit.tick(h, 0.5)
+				end
+				local function toEntry(name)
+					local target = PC.entryButton(name)
+					for _, key in { DOWN, UP } do
+						for _ = 1, 10 do
+							if sel() == target then
+								return true
+							end
+							tap(key)
+						end
+					end
+					return sel() == target
+				end
+				for _, res in
+					{
+						roblox.Vector2.new(1920, 1080),
+						roblox.Vector2.new(3840, 2160),
+						roblox.Vector2.new(1280, 720),
+					}
+				do
+					TvAudit.setResolution(h, res)
+					local from = #h.log.serverEvents
+					tap(Y)
+					expect(PC.menuOpen()).toBe(true)
+					expect(toEntry("Settings")).toBe(true)
+					tap(A)
+					expect(PC.current()).toBe("Settings")
+					-- la ligne de la sélection dit « Photo mode » (liste virtualisée : on lit la ligne choisie)
+					local function onPhoto()
+						local cur = sel()
+						local row = cur and cur.Parent
+						local title = row and row:FindFirstChild("Title")
+						return cur ~= nil
+							and cur.Name == "Choice"
+							and title ~= nil
+							and title.Text == "Photo mode"
+					end
+					for _ = 1, 20 do
+						if onPhoto() then
+							break
+						end
+						tap(DOWN)
+					end
+					expect(onPhoto()).toBe(true)
+					tap(A)
+					expect(Cam.photoOn()).toBe(true)
+					expect(PC.menuOpen()).toBe(false)
+					expect(sel()).toBe(Hud.exitButton())
+					expect(Hud.exitButton():FindFirstChild("Glyph", true):GetAttribute("GlyphKey")).toBe(
+						"ButtonB"
+					)
+					-- la croix, △, □, L1 / R1 : rien ne sort, aucune intention (sauf SetPhotoMode)
+					for _, key in { UP, DOWN, Y, X, L1, R1 } do
+						tap(key)
+						expect(Cam.photoOn()).toBe(true)
+						expect(sel()).toBe(Hud.exitButton())
+					end
+					tap(B)
+					expect(Cam.photoOn()).toBe(false)
+					expect(FG.anyOpen()).toBe(false)
+					for i = from + 1, #h.log.serverEvents do
+						local e = h.log.serverEvents[i]
+						local name = e.remote
+						expect(
+							name == "SetPhotoMode"
+								or name == "MenuActivity"
+								or name == "RequestWorld" -- resynchronisation du monde (résolution changée)
+								or (name == "ClientEvent" and e.args[1] == "qualityReduced")
+						).toBe(true)
+					end
+					TvAudit.tick(h, 2)
+				end
+				S.clean(c, expect)
+			end)
 		end
 	)
 

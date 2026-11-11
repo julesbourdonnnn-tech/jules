@@ -310,5 +310,38 @@ return function(T)
 				S.clean(c, expect)
 			end
 		)
+
+		-- INT-B5-SETTINGS (lot B5, étape 5 ; plan B5 D24)
+		it(
+			"mode photo (lot B5) : ligne « Photo mode » tout en bas, bouton « Cheese! », seulement PhotoMode ouvert ; ✕ ferme le menu et entre en mode photo ; coupé : aucune ligne ni intention",
+			function()
+				local flags = table.clone(V2)
+				flags.PhotoMode = true
+				local c = v2client({ flags = flags })
+				open(c)
+				local list = keys(c)
+				expect(list[#list]).toBe("photo")
+				expect(#list).toBe(#withHalo() + 1)
+				local control = c.Settings._controlFor("photo")
+				expect(control.Label.Text).toBe("Cheese!")
+				expect(control.Parent.Title.Text).toBe("Photo mode")
+				expect(control.Parent.Desc.Text).toBe("Hide the screen and take nice pictures")
+				local Cam = TvAudit.mod(c.h, "Controllers.CameraController")
+				pressControl(c, "photo")
+				expect(Cam.photoOn()).toBe(true)
+				expect(c.PC.menuOpen()).toBe(false)
+				expect(c.PC.isOpen()).toBe(false)
+				expect(#TvAudit.sent(c.h, "SetSetting")).toBe(0)
+				Cam.photo(false)
+				TvAudit.tick(c.h, 0.5)
+				-- interrupteur coupé en direct, écran ouvert : la ligne disparaît
+				open(c)
+				S.event(c, V2)
+				expect(table.find(keys(c), "photo")).toBeNil()
+				expect(c.Settings._controlFor("photo")).toBeNil()
+				expect(Cam.photo(true)).toBe(false)
+				S.clean(c, expect)
+			end
+		)
 	end)
 end
