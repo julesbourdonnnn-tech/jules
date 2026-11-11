@@ -51,15 +51,15 @@ local Defaults = {
 	WeeklyTrack = true, -- piste de la semaine et Défis de Splorch
 	Carnet = true, -- Carnet du Ranch (paliers d'achats)
 	Mastery = true, -- maîtrise d'espèce (+25 Confettis) et jalons géants
-	RanchTiers = false, -- ranch qui évolue (paliers, Cuve, Pot, coussins, socles) ; lot I, étape 5
+	RanchTiers = true, -- ranch qui évolue (paliers, Cuve, Pot, coussins, socles) ; lot I, étape 5
 	RanchSkins = true, -- 11 habillages de ranch de plus (valeurs de cosmetics.theme, EquipCosmetic)
 	DecoPerso = true, -- Déco perso : 40 objets, 12 emplacements (PlaceDeco)
 	Hearts = true, -- cœurs entre ranchs (GiveHeart)
-	PhotoMode = false, -- mode photo (SetPhotoMode)
-	Weather = false, -- météo de Wobbleton (purement visuelle, décision par défaut n° 4)
-	Fete = false, -- place en fête
-	Personalities = false, -- personnalités, saynètes, visages, tours appris
-	Ambience = false, -- directeur d'ambiance et Unified Lighting (N12)
+	PhotoMode = true, -- mode photo (SetPhotoMode)
+	Weather = true, -- météo de Wobbleton (purement visuelle, décision par défaut n° 4)
+	Fete = true, -- place en fête
+	Personalities = true, -- personnalités, saynètes, visages, tours appris
+	Ambience = true, -- directeur d'ambiance et Unified Lighting (N12)
 }
 
 -- Interrupteurs FIGÉS : lus à la création du module (Features.Defaults), jamais changés en direct

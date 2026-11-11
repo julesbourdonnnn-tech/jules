@@ -8,10 +8,10 @@ local roblox = require("@lune/roblox")
 -- Cible d'éclairage de la place (N12, INT-V2-LIGHT ; lot B4, décision D2) : « v1.3 » vérifie
 -- Technology = ShadowMap (place d'aujourd'hui) ; « v2.0 » vérifie l'éclairage unifié réglé explicitement
 -- (LightingStyle = Soft, PrioritizeLightingQuality = false) et ne regarde plus Technology. La place
--- reste en v1.3 tant que l'interrupteur Ambience est coupé : l'étape d'intégration I passe cette valeur
--- à « v2.0 » dans le même commit que default.project.json et Ambience = true. En ligne de commande :
---   lune run scripts/verify-place build/Game.rbxl --lighting v2.0
-local LIGHTING = "v1.3"
+-- est en v2.0 depuis le lot I, étape 5 (même commit que default.project.json et Ambience = true) ;
+-- « --lighting v1.3 » vérifie encore l'ancienne place (Technology = ShadowMap). En ligne de commande :
+--   lune run scripts/verify-place build/Game.rbxl --lighting v1.3
+local LIGHTING = "v2.0"
 
 local problems = {}
 

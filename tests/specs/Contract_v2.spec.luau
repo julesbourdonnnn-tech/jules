@@ -9,8 +9,8 @@ local serde = require("@lune/serde")
 local Flags = require("../harness/Flags")
 
 -- Interrupteurs des systèmes v2.0 (Config/Features, docs/04 §27.3) : ouverts par groupe au lot I
--- (OPEN_AT_LAUNCH : les clés déjà ouvertes dans la configuration livrée ; les autres restent coupées
--- jusqu'à l'étape de leur groupe : monde et vie)
+-- (OPEN_AT_LAUNCH : les clés ouvertes dans la configuration livrée ; toutes depuis l'étape 5, monde
+-- et vie)
 local V2_FLAGS = {
 	"JellyAscend",
 	"SchemaV2",
@@ -59,7 +59,19 @@ local OPEN_AT_LAUNCH = {
 	RanchSkins = true,
 	DecoPerso = true,
 	Hearts = true,
+	-- lot I, étape 5 (monde et vie) : plus aucune clé v2.0 coupée au lancement
+	RanchTiers = true,
+	Ambience = true,
+	Personalities = true,
+	Weather = true,
+	Fete = true,
+	PhotoMode = true,
 }
+
+-- Clés de Config/Features qui ne sont PAS des systèmes de lancement de la v2.0 (docs/04 §27.3, dernière
+-- phrase ; plan I, C1) : elles restent coupées dans la configuration livrée
+local NOT_LAUNCH =
+	{ "Season", "SlowJelly", "Duo", "Parcels", "WorldFirst", "FameLineage", "GreatJelly", "RewardedAds" }
 
 local V2_SIGNALS = { "PrestigeApplied", "UpgradeBought", "ConfettiChanged", "RecordReached", "HelperPressed" }
 
@@ -248,15 +260,19 @@ return function(T)
 	-- ---------------------------------------------------------------------------------------------
 	describe("Contrat v2 › Interrupteurs (le jeu de base joue comme avant)", function()
 		it(
-			"chaque système v2.0 a son interrupteur : SchemaV2, la progression et la méta ouverts au lancement, les autres coupés jusqu'à leur groupe",
+			"chaque système v2.0 a son interrupteur, OUVERT au lancement (lot I, étape 5 : les 23 clés) ; les clés qui ne sont pas du lancement restent coupées",
 			function()
 				local h = Harness.new()
 				local F = shared(h, "Config.Features")
 				F.reset()
 				for _, key in V2_FLAGS do
 					local want = OPEN_AT_LAUNCH[key] == true
+					expect(want).toBe(true)
 					expect({ key = key, default = F.Defaults[key] }).toEqual({ key = key, default = want })
 					expect({ key = key, now = F.get(key) }).toEqual({ key = key, now = want })
+				end
+				for _, key in NOT_LAUNCH do
+					expect({ key = key, default = F.Defaults[key] }).toEqual({ key = key, default = false })
 				end
 				-- la liste du harnais (tests/harness/Flags) est la même que celle du contrat
 				local listed = {}

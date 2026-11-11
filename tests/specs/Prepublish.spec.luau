@@ -143,40 +143,45 @@ return M
 	end)
 
 	describe("scripts/verify-place.luau (INT-PREPUBLISH)", function()
-		it("place construite : streaming coupé, curseur virtuel désactivé, ShadowMap", function()
-			local roblox = require("@lune/roblox")
-			local function placeWith(streaming, cursor, tech)
-				local game = roblox.Instance.new("DataModel")
-				local ws = game:GetService("Workspace")
-				ws.StreamingEnabled = streaming
-				game:GetService("StarterGui").VirtualCursorMode = cursor
-				game:GetService("Lighting").Technology = tech
-				local path = "build/verify-place-test-" .. tostring(math.random(1, 1e9)) .. ".rbxl"
-				fs.writeFile(path, roblox.serializePlace(game))
-				local r = lune({ "run", "scripts/verify-place", path })
-				fs.removeFile(path)
-				return r
+		-- lot I, étape 5 : la cible par défaut est « v2.0 » (place de lancement) ; ce cas vérifie la cible
+		-- « v1.3 » demandée explicitement (--lighting v1.3), son chemin reste prouvé
+		it(
+			"place construite (--lighting v1.3) : streaming coupé, curseur virtuel désactivé, ShadowMap",
+			function()
+				local roblox = require("@lune/roblox")
+				local function placeWith(streaming, cursor, tech)
+					local game = roblox.Instance.new("DataModel")
+					local ws = game:GetService("Workspace")
+					ws.StreamingEnabled = streaming
+					game:GetService("StarterGui").VirtualCursorMode = cursor
+					game:GetService("Lighting").Technology = tech
+					local path = "build/verify-place-test-" .. tostring(math.random(1, 1e9)) .. ".rbxl"
+					fs.writeFile(path, roblox.serializePlace(game))
+					local r = lune({ "run", "scripts/verify-place", path, "--lighting", "v1.3" })
+					fs.removeFile(path)
+					return r
+				end
+				local E = roblox.Enum
+				local bad = placeWith(true, E.VirtualCursorMode.Enabled, E.Technology.Future)
+				expect(bad ~= nil).toBe(true)
+				expect(bad.code ~= 0).toBe(true)
+				local out = bad.stdout .. bad.stderr
+				expect(string.find(out, "StreamingEnabled", 1, true) ~= nil).toBe(true)
+				expect(string.find(out, "VirtualCursorMode", 1, true) ~= nil).toBe(true)
+				expect(string.find(out, "Technology", 1, true) ~= nil).toBe(true)
+				-- réglages justes : plus aucune ligne sur ces trois propriétés (le reste de la structure
+				-- manque dans cette place vide)
+				local good = placeWith(false, E.VirtualCursorMode.Disabled, E.Technology.ShadowMap)
+				local goodOut = good.stdout .. good.stderr
+				expect(string.find(goodOut, "StreamingEnabled =", 1, true)).toBe(nil)
+				expect(string.find(goodOut, "VirtualCursorMode =", 1, true)).toBe(nil)
+				expect(string.find(goodOut, "Technology =", 1, true)).toBe(nil)
 			end
-			local E = roblox.Enum
-			local bad = placeWith(true, E.VirtualCursorMode.Enabled, E.Technology.Future)
-			expect(bad ~= nil).toBe(true)
-			expect(bad.code ~= 0).toBe(true)
-			local out = bad.stdout .. bad.stderr
-			expect(string.find(out, "StreamingEnabled", 1, true) ~= nil).toBe(true)
-			expect(string.find(out, "VirtualCursorMode", 1, true) ~= nil).toBe(true)
-			expect(string.find(out, "Technology", 1, true) ~= nil).toBe(true)
-			-- réglages justes : plus aucune ligne sur ces trois propriétés (le reste de la structure
-			-- manque dans cette place vide)
-			local good = placeWith(false, E.VirtualCursorMode.Disabled, E.Technology.ShadowMap)
-			local goodOut = good.stdout .. good.stderr
-			expect(string.find(goodOut, "StreamingEnabled =", 1, true)).toBe(nil)
-			expect(string.find(goodOut, "VirtualCursorMode =", 1, true)).toBe(nil)
-			expect(string.find(goodOut, "Technology =", 1, true)).toBe(nil)
-		end)
+		)
 
 		-- Lot B4 (décision D2, N12, INT-V2-LIGHT) : cible d'éclairage « v2.0 » (--lighting v2.0) : éclairage
-		-- unifié réglé explicitement ; Technology n'est plus vérifié. La cible par défaut reste « v1.3 »
-		-- (cas ci-dessus) jusqu'à l'étape d'intégration I.
+		-- unifié réglé explicitement ; Technology n'est plus vérifié. Cible par défaut depuis le lot I,
+		-- étape 5 (fin du cas ci-dessous : sans option).
 		it(
 			"--lighting v2.0 : LightingStyle Soft et PrioritizeLightingQuality false acceptés ; Realistic ou true refusés",
 			function()
@@ -222,7 +227,17 @@ return M
 				).toBe(true)
 				-- l'option peut précéder le chemin ; une cible inconnue est refusée et nommée
 				local before = placeWith(E.LightingStyle.Realistic, false, E.Technology.ShadowMap, {})
-				expect(string.find(before, "LightingStyle =", 1, true)).toBe(nil) -- sans option : la cible v1.3
+				-- sans option : la cible par défaut est « v2.0 » depuis le lot I, étape 5 (avant : « v1.3 ») ;
+				-- Realistic y est donc refusé
+				expect(
+					string.find(
+						before,
+						"LightingStyle = Enum.LightingStyle.Realistic (attendu Soft)",
+						1,
+						true
+					) ~= nil
+				).toBe(true)
+				expect(string.find(before, "éclairage v2.0", 1, true) ~= nil).toBe(true)
 				local unknown =
 					placeWith(E.LightingStyle.Soft, false, E.Technology.ShadowMap, { "--lighting", "v9" })
 				expect(string.find(unknown, "--lighting v9 inconnu", 1, true) ~= nil).toBe(true)

@@ -2133,15 +2133,20 @@ return function(T)
 		end)
 
 		it(
-			"projet Rojo : StreamingEnabled coupé, curseur virtuel désactivé, Lighting ShadowMap (remarque A28)",
+			"projet Rojo : StreamingEnabled coupé, curseur virtuel désactivé, Lighting unifié LightingStyle Soft et PrioritizeLightingQuality false, sans Technology (remarque A28 ; N12, INT-V2-LIGHT, lot I étape 5)",
 			function()
 				local serde = require("@lune/serde")
 				local project = serde.decode("json", fs.readFile("default.project.json"))
 				local tree = project.tree
 				expect(tree.Workspace["$properties"].StreamingEnabled).toBe(false)
-				local lighting = tree.Lighting["$properties"].Technology
-				local tech = if type(lighting) == "table" then lighting.Enum or lighting[1] else lighting
-				expect(tostring(tech)).toBe("ShadowMap")
+				-- lot I, étape 5 : place de la v2.0 (GDD §11.3), les deux clés réglées explicitement
+				local props = tree.Lighting["$properties"]
+				local style = props.LightingStyle
+				expect(tostring(if type(style) == "table" then style.Enum or style[1] else style)).toBe(
+					"Soft"
+				)
+				expect(props.PrioritizeLightingQuality).toBe(false)
+				expect(props.Technology).toBeNil()
 				local starterGui = tree.StarterGui and tree.StarterGui["$properties"] or {}
 				local cursor = starterGui.VirtualCursorMode
 				local mode = if type(cursor) == "table" then cursor.Enum or cursor[1] else cursor
