@@ -7,6 +7,7 @@
 -- P et B appliqués UNE seule fois, plafonds (consumeCap, consumeFriendCap, remise à zéro du jour),
 -- BuyTile (source pad / panel), lastOnline au départ, zéro trace.
 local Bots = require("../harness/Bots")
+local Flags = require("../harness/Flags")
 
 return function(T)
 	local describe, it, expect, Harness = T.describe, T.it, T.expect, T.Harness
@@ -14,9 +15,10 @@ return function(T)
 	local T0 = 1800000000
 	local S = "ServerScriptService.Server.Services."
 
-	local function boot(before)
+	-- harness : Harness (configuration livrée) par défaut ; un préréglage pour un cas qui prouve la v1.3
+	local function boot(before, harness)
 		local caught = {}
-		local w = Bots.boot(Harness, {
+		local w = Bots.boot(harness or Harness, {
 			t0 = T0,
 			before = function(w)
 				w.DS.Settings.AUTOSAVE_INTERVAL = 1e6
@@ -213,13 +215,17 @@ return function(T)
 			clean(w)
 		end)
 
+		-- règle hors ligne de la v1.3 (arrêt à 90 %, 8 h) : serveur de la v1.3 (préréglage « v13 », lot I
+		-- D2 a, journal I-19 ; elle reste le chemin d'un interrupteur coupé en direct). Le chemin du
+		-- lancement (N6 : arrêt à MinPlaySeconds de croissance maximale, Sac de nuit) est prouvé par
+		-- Formulas › N6 et EconomyService_upgrades › « hors ligne : Sac de nuit »
 		it("arrêt à 90 % de l'objectif (nearlyReady) ; 8 h au plus ; premier chargement : rien", function()
 			local w = boot(function(w)
 				local d = profile(w, { lastOnline = T0 - 100000 })
 				d.squishies["1"].z = 13000 -- objectif R0 = 15 000 : arrêt à 13 500
 				d.growth = { G = 0, g = 1, t = 0 }
 				Bots.saveProfile(w, 1, d)
-			end)
+			end, Flags.harness(Harness, "v13"))
 			local p = Bots.join(1)
 			local data = w.DS.get(p)
 			expect(near(data.growth.G, 500, 1e-12)).toBe(true)

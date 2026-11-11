@@ -528,7 +528,10 @@ return function(T)
 				-- 114 = Σ (3 + min(k, 20)) pour k = 1 … 12 ; + 25 : une place offerte sur une dalle pleine
 				expect(SchemaV1.confettiCatchUp(12)).toBe(114)
 				expect({ s.unlocksSeen, s.ascendDay, s.memoryR }).toEqual({ 12, 0, 0 })
-				expect(s.onboarding.welcomeV2Pending).toBe(true)
+				-- migration : welcomeV2Pending = true ; la progression ouverte (Record R), la première séance
+				-- montre la carte « Bienvenue dans la v2 ! » et l'efface (QuestService ; lot I, étape 2,
+				-- journal I-19) : la sauvegarde la porte à false
+				expect(s.onboarding.welcomeV2Pending).toBe(false)
 				-- chaque valeur v1.3 survit : v1.json est d'un autre jour (gains hors ligne, objectifs du
 				-- jour, plafonds remis à zéro…) ; la même séance sur un serveur v1.3 donne la référence, et
 				-- le serveur de lancement doit garder chaque feuille v1 qu'elle garde

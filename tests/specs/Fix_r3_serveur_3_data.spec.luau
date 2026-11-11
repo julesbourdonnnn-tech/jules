@@ -220,6 +220,11 @@ return function(T)
 			c:settle(2)
 			local got = State.get("items")
 			expect(count(got)).toBe(640)
+			-- lot I, étape 2 (journal I-20) : l'instantané versionné de l'écran Améliorations, retenu hors
+			-- de l'instantané d'arrivée d'un grand profil, arrive avec le premier morceau du flux
+			if ctx.h:require("ReplicatedStorage.Shared.Config.Features").get("UpgradesScreen") == true then
+				expect(State.get("upgradeSnapshot") ~= nil).toBe(true)
+			end
 			for uid, r in expected do
 				expect(got[uid]).toEqual(r)
 			end

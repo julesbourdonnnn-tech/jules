@@ -992,10 +992,15 @@ return function(T)
 	describe("AmbienceDirector › serveur (INT-B4-AMBIENCE)", function()
 		local V13_FEATURES = "boopRush,clips,costume,diagnostics,gauge,golden,jellyMoon,megaSquish"
 
+		-- clés triées ; `features.v2` (liste des interrupteurs v2.0 vus par le client, présente dès qu'un
+		-- interrupteur v2.0 est ouvert : lot I, étape 2, journal I-19) est mise à part et vérifiée seule
+		-- (leçon B3-82)
 		local function keysOf(t)
 			local keys = {}
 			for k in t do
-				table.insert(keys, k)
+				if k ~= "v2" then
+					table.insert(keys, k)
+				end
 			end
 			table.sort(keys)
 			return table.concat(keys, ",")
@@ -1058,6 +1063,8 @@ return function(T)
 				local sA, sB = wA.Event.state(), wB.Event.state()
 				expect(keysOf(sA.features)).toBe(V13_FEATURES)
 				expect(deepEqual(sA.features, sB.features)).toBe(true)
+				-- features.v2 : la même chez le témoin et chez B (Ambience n'y change rien d'autre)
+				expect(deepEqual(sA.features.v2, sB.features.v2)).toBe(true)
 				expect(keysOf(sA)).toBe(keysOf(sB))
 				expect(table.concat(Brains.problems(wA), "\n")).toBe("")
 				expect(table.concat(Brains.problems(wB), "\n")).toBe("")

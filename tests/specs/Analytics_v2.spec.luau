@@ -14,6 +14,7 @@
 -- Activity.note) ; l'horloge avance d'une seconde à la fois et DiagnosticsService.step fait le reste.
 local Brains = require("../harness/Brains")
 local Bots = require("../harness/Bots")
+local Flags = require("../harness/Flags")
 
 return function(T)
 	local describe, it, expect, Harness = T.describe, T.it, T.expect, T.Harness
@@ -439,10 +440,11 @@ return function(T)
 	end)
 
 	describe("Analytics_v2 › interrupteurs coupés", function()
-		-- jeu de base (profils v1, interrupteurs du lancement) : mêmes gestes, 30 min ; rend le relevé
-		-- { "méthode|nom|sku|monnaie" = nombre } et la liste des noms
+		-- jeu de base (profils v1, interrupteurs coupés : serveur de la v1.3, préréglage « v13 », lot I D2 a ;
+		-- le chemin du lancement est couvert par « une heure de jeu v2.0 » plus haut) : mêmes gestes, 30 min ;
+		-- rend le relevé { "méthode|nom|sku|monnaie" = nombre } et la liste des noms
 		local function baseRun(withMeta)
-			local w = world(Harness, {
+			local w = world(Flags.harness(Harness, "v13"), {
 				n = 6,
 				R = 2,
 				before = if withMeta
@@ -559,7 +561,9 @@ return function(T)
 						end
 					end
 					-- Confettis en poche dès l'arrivée : un achat de l'Atelier reste possible Confetti coupé
-					local w = world(HarnessV2, { flags = flags, n = 2, confetti = 200 })
+					-- départ « coupure d'urgence » (préréglage « cut » : SchemaV2 seul ; lot I, étape 2) puis
+					-- tout ouvert en direct sauf l'interrupteur observé
+					local w = world(Flags.harness(Harness, "cut"), { flags = flags, n = 2, confetti = 200 })
 					local E = w.Economy
 					local UpgradeMath = w.h:require(L .. "Logic.UpgradeMath")
 					for t = 1, 900 do

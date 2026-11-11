@@ -19,7 +19,7 @@ local Defaults = {
 	Diagnostics = true, -- false : coupe seulement l'envoi des clients ; les comptes du serveur restent
 	RewardedAds = false, -- aucune publicité au lancement (la clé existe pour ne jamais l'ajouter par défaut)
 	-- janvier et février (crochets seulement)
-	JellyAscend = false,
+	JellyAscend = true, -- OUVERT au lot I, étape 2 (avec PetitSplorch, même commit : D32 du lot B2)
 	Season = false,
 	SlowJelly = false,
 	Duo = false,
@@ -37,15 +37,16 @@ local Defaults = {
 	-- OUVERT au lot I (étape 1, docs/04 §27.2 règle D3) : une fois ouvert, JAMAIS recoupé en production
 	-- (un profil migré ne revient jamais en v1 ; un serveur v1 refuse un profil v2 sans rien écrire)
 	SchemaV2 = true, -- schéma v2 et migration v1 → v2 (Data/Schema) ; FIGÉ : jamais changé en direct
-	UpgradesScreen = false, -- écran Améliorations (4 onglets), BuyUpgrade, puce « Prochain achat »
-	Confetti = false, -- 2e monnaie (gains de Prestige.apply, piste, maîtrise)
-	Workshop = false, -- Atelier de Big Plop (9 lignes) et « Pour le plaisir »
-	StarMat = false, -- Tapis Étoilé (niveaux 13 à 20 du Tapis)
-	Gloves = false, -- Gants Moelleux (40 niveaux)
-	Monuments = false, -- 10 Monuments derrière le ranch
-	RecordR = false, -- Record R séparé de r (bestR), table des déblocages du §4.29
-	PetitSplorch = false, -- Petit Splorch hors file (après une Ascension)
-	Helpers = false, -- Plopettes (HelperService) et École des Plopettes
+	-- OUVERTS au lot I, étape 2 (progression, journal I-19) : coupables en direct par LiveOps
+	UpgradesScreen = true, -- écran Améliorations (4 onglets), BuyUpgrade, puce « Prochain achat »
+	Confetti = true, -- 2e monnaie (gains de Prestige.apply, piste, maîtrise)
+	Workshop = true, -- Atelier de Big Plop (9 lignes) et « Pour le plaisir »
+	StarMat = true, -- Tapis Étoilé (niveaux 13 à 20 du Tapis)
+	Gloves = true, -- Gants Moelleux (40 niveaux)
+	Monuments = true, -- 10 Monuments derrière le ranch
+	RecordR = true, -- Record R séparé de r (bestR), table des déblocages du §4.29
+	PetitSplorch = true, -- Petit Splorch hors file (après une Ascension)
+	Helpers = true, -- Plopettes (HelperService) et École des Plopettes
 	WeeklyTrack = false, -- piste de la semaine et Défis de Splorch
 	Carnet = false, -- Carnet du Ranch (paliers d'achats)
 	Mastery = false, -- maîtrise d'espèce (+25 Confettis) et jalons géants

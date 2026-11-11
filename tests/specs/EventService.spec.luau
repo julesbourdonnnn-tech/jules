@@ -439,8 +439,16 @@ return function(T)
 			"héros parti pendant son spectacle avant l'éclatement : current effacé aussitôt et EventState renvoyé",
 			function()
 				local w = boot()
-				local a =
-					Brains.join(w, 1, { profile = Brains.profile(w, { squishies = { { s = 2, z = 50 } } }) })
+				-- héros vraiment prêt (plus gros au-delà de l'objectif de r = 0) : avec la progression v2.0
+				-- ouverte, SplorchService rend la place d'un héros qui ne l'est pas au départ du spectacle
+				-- (« SplorchNotReadyAtStart », lot A2) ; lot I, étape 2, journal I-19
+				local ready =
+					math.ceil(w.h:require("ReplicatedStorage.Shared.Logic.Formulas").splorchTarget(0) * 1.05)
+				local a = Brains.join(
+					w,
+					1,
+					{ profile = Brains.profile(w, { squishies = { { s = 2, z = ready } } }) }
+				)
 				local b = Brains.join(w, 2)
 				Brains.frames(w, 2)
 				-- le héros attend son Grand Splorch (squishy qui s'envole), comme après GrandSplorch

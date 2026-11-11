@@ -29,13 +29,10 @@ return function(T)
 	local S = "ServerScriptService.Server.Services."
 	local R = "ReplicatedStorage.Remotes."
 
-	local HarnessV2 = setmetatable({
-		new = function(options)
-			local hh = Harness.new(options)
-			hh:require(L .. "Config.Features").Defaults.SchemaV2 = true
-			return hh
-		end,
-	}, { __index = Harness })
+	-- serveur v2 parti de la « coupure d'urgence » (préréglage « cut » : SchemaV2 seul ouvert ; lot I,
+	-- étape 2, D2 a, journal I-19) : chaque cas ouvre lui-même ses interrupteurs (Features.set) et
+	-- Features.reset() revient à « tout coupé » ; le chemin du lancement est couvert par Boot et Soak
+	local HarnessV2 = Flags.harness(Harness, "cut")
 
 	-- opts : v1 (serveur v1), off (Helpers coupé), flags (autres interrupteurs ouverts), t0
 	local function boot(opts)

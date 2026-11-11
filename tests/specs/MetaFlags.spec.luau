@@ -84,8 +84,10 @@ return function(T)
 		end
 
 		-- serveur avec deux joueurs (le premier administrateur) ; témoin sans aucun changement
+		-- serveur parti de la coupure d'urgence (préréglage « cut » : SchemaV2 seul ouvert ; lot I, étape 2,
+		-- D2 a, journal I-19) : chaque cas ouvre en direct ce qu'il prouve, comme un administrateur
 		local function boot(t0)
-			local w = Brains.boot(Harness, { t0 = t0 })
+			local w = Brains.boot(Harness, { t0 = t0, preset = "cut" })
 			local p = Brains.join(w, 1)
 			local q = Brains.join(w, 2)
 			w.meta.admins[1] = true

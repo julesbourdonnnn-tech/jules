@@ -9,6 +9,7 @@
 -- StyleFallback:<v>, VisualBudgetExceeded et analytique ; 20 par session ; chaque sorte derrière son
 -- interrupteur et un profil v2 ; jamais un changement du jeu).
 local Bots = require("../harness/Bots")
+local Flags = require("../harness/Flags")
 local Brains = require("../harness/Brains")
 local Fuzz = require("../harness/Fuzz")
 
@@ -379,13 +380,10 @@ return function(T)
 	-- =========================================================================================
 	-- v2.0 (lot A4, étape 6, D29) : ClientMetric
 	-- =========================================================================================
-	local HarnessV2 = setmetatable({
-		new = function(options)
-			local hh = Harness.new(options)
-			hh:require("ReplicatedStorage.Shared.Config.Features").Defaults.SchemaV2 = true
-			return hh
-		end,
-	}, { __index = Harness })
+	-- serveur v2 parti de la « coupure d'urgence » (préréglage « cut » : SchemaV2 seul ouvert ; lot I,
+	-- étape 2, D2 a, journal I-19) : chaque cas ouvre lui-même ses interrupteurs (Features.set) et
+	-- Features.reset() revient à « tout coupé » ; le chemin du lancement est couvert par Boot et Soak
+	local HarnessV2 = Flags.harness(Harness, "cut")
 
 	-- serveur v2 (schéma v2 figé), interrupteurs `flags` ouverts
 	local function worldV2(flags)

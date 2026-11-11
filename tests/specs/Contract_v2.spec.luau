@@ -37,8 +37,22 @@ local V2_FLAGS = {
 	"Ambience",
 }
 
--- Lot I, étape 1 (journal I-4) : SchemaV2 seul (données d'abord ; un profil migré ne revient jamais)
-local OPEN_AT_LAUNCH = { SchemaV2 = true }
+-- Lot I, étape 1 (journal I-4) : SchemaV2 seul (données d'abord ; un profil migré ne revient jamais) ;
+-- étape 2 (journal I-19) : la progression (Record R, écran Améliorations, Confettis, Atelier, familles,
+-- Jelly Ascend et Petit Splorch ensemble, Plopettes)
+local OPEN_AT_LAUNCH = {
+	SchemaV2 = true,
+	UpgradesScreen = true,
+	Confetti = true,
+	Workshop = true,
+	StarMat = true,
+	Gloves = true,
+	Monuments = true,
+	RecordR = true,
+	JellyAscend = true,
+	PetitSplorch = true,
+	Helpers = true,
+}
 
 local V2_SIGNALS = { "PrestigeApplied", "UpgradeBought", "ConfettiChanged", "RecordReached", "HelperPressed" }
 
@@ -227,7 +241,7 @@ return function(T)
 	-- ---------------------------------------------------------------------------------------------
 	describe("Contrat v2 › Interrupteurs (le jeu de base joue comme avant)", function()
 		it(
-			"chaque système v2.0 a son interrupteur : SchemaV2 ouvert au lancement, les autres coupés jusqu'à leur groupe",
+			"chaque système v2.0 a son interrupteur : SchemaV2 et la progression ouverts au lancement, les autres coupés jusqu'à leur groupe",
 			function()
 				local h = Harness.new()
 				local F = shared(h, "Config.Features")
@@ -246,14 +260,14 @@ return function(T)
 				for _, key in V2_FLAGS do
 					expect({ key = key, listed = listed[key] == true }).toEqual({ key = key, listed = true })
 				end
-				-- un interrupteur v2.0 se change en direct (LiveOps), sauf SchemaV2 (figé : jamais recoupé)
-				expect(F.set("UpgradesScreen", true)).toBe(true)
-				expect(F.get("UpgradesScreen")).toBe(true)
+				-- un interrupteur v2.0 se coupe en direct (LiveOps), sauf SchemaV2 (figé : jamais recoupé)
+				expect(F.set("UpgradesScreen", false)).toBe(true)
+				expect(F.get("UpgradesScreen")).toBe(false)
 				expect(F.set("SchemaV2", false)).toBe(false)
 				expect(F.get("SchemaV2")).toBe(true)
 				expect(F.Static.SchemaV2).toBe(true)
 				F.reset()
-				expect(F.get("UpgradesScreen")).toBe(false)
+				expect(F.get("UpgradesScreen")).toBe(true)
 			end
 		)
 
@@ -274,7 +288,11 @@ return function(T)
 				end
 			end
 			for _, key in named do
-				expect({ key = key, known = F.Defaults[key] == false }).toEqual({ key = key, known = true })
+				-- un interrupteur booléen du contrat (ouvert ou non au lancement : lot I, journal I-19)
+				expect({ key = key, known = type(F.Defaults[key]) == "boolean" }).toEqual({
+					key = key,
+					known = true,
+				})
 			end
 		end)
 

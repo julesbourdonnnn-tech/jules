@@ -3,7 +3,10 @@
 return function(T)
 	local describe, it, expect, Harness = T.describe, T.it, T.expect, T.Harness
 
-	local h = Harness.new()
+	-- interrupteurs v2.0 coupés au départ (préréglage « cut » : SchemaV2 seul ; lot I, étape 2, D2 a,
+	-- journal I-19) : chaque cas ouvre lui-même ce qu'il prouve (Features.set) ; le chemin du lancement
+	-- est couvert par EconomyPacing, Boot et Soak
+	local h = Harness.new({ flags = "cut" })
 	local F = h:require("ReplicatedStorage.Shared.Logic.Formulas")
 	local Balance = h:require("ReplicatedStorage.Shared.Config.Balance")
 

@@ -15,6 +15,7 @@
 -- Interrupteurs v2.0 ouverts DANS le test (Features.set) ; SchemaV2 (figé) posé dans le harnais avant le
 -- premier require du schéma (recette de DataChaos).
 local Bots = require("../harness/Bots")
+local Flags = require("../harness/Flags")
 local Brains = require("../harness/Brains")
 local MockInstance = require("../harness/MockInstance")
 
@@ -26,13 +27,10 @@ return function(T)
 	local L = "ReplicatedStorage.Shared."
 	local R = "ReplicatedStorage.Remotes."
 
-	local HarnessV2 = setmetatable({
-		new = function(options)
-			local hh = Harness.new(options)
-			hh:require(L .. "Config.Features").Defaults.SchemaV2 = true
-			return hh
-		end,
-	}, { __index = Harness })
+	-- serveur v2 parti de la « coupure d'urgence » (préréglage « cut » : SchemaV2 seul ouvert ; lot I,
+	-- étape 2, D2 a, journal I-19) : chaque cas ouvre lui-même ses interrupteurs (Features.set) et
+	-- Features.reset() revient à « tout coupé » ; le chemin du lancement est couvert par Boot et Soak
+	local HarnessV2 = Flags.harness(Harness, "cut")
 
 	local FLAGS = { "RecordR", "Confetti", "JellyAscend", "PetitSplorch", "Fete" }
 
@@ -40,7 +38,8 @@ return function(T)
 	local function boot(opts)
 		opts = opts or {}
 		local w = Brains.boot(
-			if opts.v1 then Harness else HarnessV2,
+			-- opts.v1 : serveur de la v1.3 (préréglage « v13 », lot I D2 a, journal I-19)
+			if opts.v1 then Flags.harness(Harness, "v13") else HarnessV2,
 			{ t0 = opts.t0 or T0, stubMeta = opts.stubMeta }
 		)
 		w.Prestige = w.h:require(L .. "Logic.Prestige")

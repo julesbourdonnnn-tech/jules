@@ -213,7 +213,9 @@ local patchRemote: RemoteEvent
 
 -- Flux d'arrivée : sous-clés de data[key] restant à envoyer (dans l'ordre), par joueur
 type StreamPart = { key: string, order: { string }, index: number }
-type Stream = { data: { [string]: any }, parts: { StreamPart }, nextAt: number }
+-- extras : valeurs dérivées (setPatchExtra) retenues hors de l'instantané d'arrivée, envoyées avec le
+-- premier morceau du flux (lot I, étape 2, journal I-20 : la seconde d'arrivée reste sous 8 Ko)
+type Stream = { data: { [string]: any }, parts: { StreamPart }, nextAt: number, extras: boolean? }
 local streams: { [Player]: Stream } = {}
 local streamOrder: { [string]: ({ [string]: any }) -> { string } } = {}
 -- boucle du flux en cours (une seule, vivante tant que `streams` n'est pas vide)
@@ -314,6 +316,9 @@ end
 -- Envoie le morceau suivant d'un flux d'arrivée ; vrai quand le flux est terminé. Les valeurs sont
 -- lues à l'instant de l'envoi (état vivant) : une entrée supprimée entre-temps est sautée (sa
 -- suppression est déjà partie), une entrée modifiée part à jour.
+-- valeur dérivée d'un crochet setPatchExtra (définie plus bas, utilisée par le premier morceau du flux)
+local extraValue: (PatchExtra, Player, { [string]: any }, { [string]: boolean }?) -> any
+
 local function sendStreamChunk(player: Player, stream: Stream): boolean
 	local budget = math.max(1, math.floor(Settings.STREAM_CHUNK))
 	local entries: Types.DataPatchEntries = {}
@@ -344,8 +349,21 @@ local function sendStreamChunk(player: Player, stream: Stream): boolean
 			any = true
 		end
 	end
+	-- premier morceau : les valeurs dérivées retenues hors de l'instantané (calculées maintenant, sur
+	-- l'état du moment)
+	local patch: { [string]: any } = {}
+	if stream.extras then
+		stream.extras = nil
+		for _, extra in patchExtras do
+			local value = extraValue(extra, player, stream.data, nil)
+			if value ~= nil then
+				patch[extra.name] = value
+				any = true
+			end
+		end
+	end
 	if any then
-		patchRemote:FireClient(player, {}, {}, entries)
+		patchRemote:FireClient(player, patch, {}, entries)
 	end
 	for _, part in stream.parts do
 		if part.index <= #part.order then
@@ -398,7 +416,7 @@ end
 
 -- Valeur dérivée `extra` pour ce joueur (nil : rien à ajouter) ; une erreur du crochet est signalée
 -- (warn : un défaut du service qui s'est enregistré) et rien n'est ajouté
-local function extraValue(
+function extraValue(
 	extra: PatchExtra,
 	player: Player,
 	data: { [string]: any },
@@ -435,15 +453,25 @@ local function sendSnapshot(player: Player, data: { [string]: any })
 			end
 		end
 	end
-	for _, extra in patchExtras do
-		local value = extraValue(extra, player, data, nil)
-		if value ~= nil then
-			view[extra.name] = value
+	-- valeurs dérivées (setPatchExtra) : dans l'instantané, sauf quand un flux suit (grand profil) :
+	-- elles partent alors avec son premier morceau, après la seconde d'arrivée (budget de 8 Ko de la
+	-- seconde d'arrivée, docs/04 §17 ; lot I, étape 2, journal I-20)
+	if #parts == 0 then
+		for _, extra in patchExtras do
+			local value = extraValue(extra, player, data, nil)
+			if value ~= nil then
+				view[extra.name] = value
+			end
 		end
 	end
 	snapshotRemote:FireClient(player, view)
 	if #parts > 0 then
-		streams[player] = { data = data, parts = parts, nextAt = Clock.now() + Settings.STREAM_DELAY }
+		streams[player] = {
+			data = data,
+			parts = parts,
+			nextAt = Clock.now() + Settings.STREAM_DELAY,
+			extras = #patchExtras > 0,
+		}
 		ensureStreamLoop()
 	else
 		streams[player] = nil
