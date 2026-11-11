@@ -799,6 +799,69 @@ return function(T)
 		)
 
 		it(
+			"manette seule (lot B5, étape 6) : □ devant le portail → vue zoomée (bail « binoculars ») → sticks, L2 / R2, L1 / R1, □ ; △ ouvre le menu par-dessus, ○ le referme → ○ : jumelles fermées, caméra rendue, retour au jeu, aucune intention du jeu",
+			function()
+				local c = client()
+				atGate(c, 2)
+				local before = camState(c)
+				local from = #c.h.log.serverEvents
+				Gamepad.tap(c.h, Enum.KeyCode.ButtonX)
+				c.h:settle(1)
+				expect(c.B.isOpen()).toBe(true)
+				expect(c.Cam.binocularsSlot()).toBe(2)
+				expect(c.Cam.leaseHolder()).toBe("binoculars")
+				play(c, 0.5, 0.1)
+				expect(c.camera.FieldOfView).toBeNear(50, 1e-6)
+				-- la fenêtre ne bloque pas : les sticks bougent le personnage (pas la caméra), les autres
+				-- boutons de la manette ne vendent, n'achètent, ne boopent ni ne lancent rien
+				Gamepad.stick(c.h, Enum.KeyCode.Thumbstick2, Vector2.new(0.8, 0.4))
+				for _, key in
+					{
+						Enum.KeyCode.ButtonL2,
+						Enum.KeyCode.ButtonR2,
+						Enum.KeyCode.ButtonL1,
+						Enum.KeyCode.ButtonR1,
+						Enum.KeyCode.ButtonX,
+					}
+				do
+					Gamepad.tap(c.h, key)
+					play(c, 0.2, 0.1)
+					expect(c.FG.names()).toEqual({ "binoculars" })
+				end
+				Gamepad.stick(c.h, Enum.KeyCode.Thumbstick2, Vector2.zero)
+				expect(c.B.isOpen()).toBe(true)
+				expect(c.Cam.binocularsSlot()).toBe(2)
+				-- △ ouvre le menu PAR-DESSUS les jumelles (fenêtre non bloquante) ; ○ ferme le menu et
+				-- rend les jumelles, la vue zoomée n'a pas bougé
+				S.run(c, 0.5)
+				Gamepad.tap(c.h, Enum.KeyCode.ButtonY)
+				S.run(c, 0.5)
+				expect(c.PC.menuOpen()).toBe(true)
+				expect(c.FG.names()).toEqual({ "binoculars", "menu" })
+				Gamepad.tap(c.h, Enum.KeyCode.ButtonB)
+				S.run(c, 0.5)
+				expect(c.PC.menuOpen()).toBe(false)
+				expect(c.B.isOpen()).toBe(true)
+				expect(c.Cam.binocularsSlot()).toBe(2)
+				Gamepad.tap(c.h, Enum.KeyCode.ButtonB)
+				c.h:settle(1)
+				expect(c.B.isOpen()).toBe(false)
+				expect(c.FG.anyOpen()).toBe(false)
+				expect(c.PC.menuOpen()).toBe(false)
+				expect(c.Cam.leaseHolder()).toBeNil()
+				expect(camState(c)).toEqual(before)
+				-- seules intentions permises : mesures de l'interface (aucune action du jeu)
+				for _, name in intents(c, from) do
+					expect({ name, name == "ClientMetric" or name == "MenuActivity" or name == "UiSeen" }).toEqual({
+						name,
+						true,
+					})
+				end
+				S.clean(c, expect)
+			end
+		)
+
+		it(
 			"Mouvement réduit : vue tout de suite ; un spectacle prend la caméra : les jumelles se referment, caméra rendue à la fin",
 			function()
 				local c = client()
