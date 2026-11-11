@@ -268,7 +268,7 @@ local function takePart(name: string, shape: Enum.PartType, size: Vector3, color
 	part.Color = color
 	part.Material = if neon then Enum.Material.Neon else Enum.Material.SmoothPlastic
 	-- un point du geste rendu encore invisible ne fait pas un casque invisible (relecture approfondie
-	-- B5, journal B5-66)
+	-- B5, journal B5-67)
 	part.Transparency = 0
 	part.Parent = clientFolder()
 	return part

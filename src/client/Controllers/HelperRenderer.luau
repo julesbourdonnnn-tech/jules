@@ -767,7 +767,7 @@ end
 local function stepHop(r: Ranch, hop: Hop, now: number, idleTick: boolean)
 	local state = hop.state
 	-- horloge du jeu qui recule (décalage du serveur) : un saut qui commence « dans le futur » se pose
-	-- tout de suite sur sa cible, sans « pop » (relecture approfondie B5, journal B5-67 ; sinon la
+	-- tout de suite sur sa cible, sans « pop » (relecture approfondie B5, journal B5-68 ; sinon la
 	-- Plopette restait figée au départ jusqu'à ce que l'horloge revienne)
 	if
 		(state == "jump" or state == "home" or state == "wait")

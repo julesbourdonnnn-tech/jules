@@ -1,5 +1,5 @@
 --!nocheck
--- Relecture approfondie du lot B5 avant l'intégration (docs/04 §27.12, journal B5-65 et suivants) :
+-- Relecture approfondie du lot B5 avant l'intégration (docs/04 §27.12, journal B5-66 et suivants) :
 -- défauts trouvés en relisant ligne par ligne le code du client du lot B5, chacun vu ROUGE sur 3636608
 -- avant sa correction, puis vert. Clients légers du harnais, horloge figée, zéro trace.
 local roblox = require("@lune/roblox")
@@ -63,11 +63,11 @@ return function(T)
 	end
 
 	-- =========================================================================================
-	-- B5-65 : caméra laissée scriptée quand un Grand Splorch arrive pendant MA Jelly Ascend
+	-- B5-66 : caméra laissée scriptée quand un Grand Splorch arrive pendant MA Jelly Ascend
 	-- =========================================================================================
 	describe("Review_B5_deep › bail de caméra « show » partagé", function()
 		it(
-			"B5-65 : un travelling du Grand Splorch qui arrive pendant le travelling de MA Jelly Ascend ne laisse jamais la caméra scriptée (un seul travelling, le plus récent ; caméra rendue à la fin)",
+			"B5-66 : un travelling du Grand Splorch qui arrive pendant le travelling de MA Jelly Ascend ne laisse jamais la caméra scriptée (un seul travelling, le plus récent ; caméra rendue à la fin)",
 			function()
 				local h = Harness.new({ mode = "client", console = true })
 				h:createRemotes()
@@ -126,11 +126,11 @@ return function(T)
 	end)
 
 	-- =========================================================================================
-	-- B5-66 : pièce de Big Plop reprise de la réserve encore invisible
+	-- B5-67 : pièce de Big Plop reprise de la réserve encore invisible
 	-- =========================================================================================
 	describe("Review_B5_deep › réserve des pièces de Big Plop", function()
 		it(
-			"B5-66 : un geste coupé tôt (points encore invisibles) ne rend pas le casque et le maillet du Chantier suivant invisibles (Transparency remise à 0 à la reprise)",
+			"B5-67 : un geste coupé tôt (points encore invisibles) ne rend pas le casque et le maillet du Chantier suivant invisibles (Transparency remise à 0 à la reprise)",
 			function()
 				local h = Harness.new({ mode = "client", console = true })
 				h:createRemotes()
@@ -236,11 +236,11 @@ return function(T)
 	end)
 
 	-- =========================================================================================
-	-- B5-67 : Plopette figée en plein saut quand l'horloge du jeu recule
+	-- B5-68 : Plopette figée en plein saut quand l'horloge du jeu recule
 	-- =========================================================================================
 	describe("Review_B5_deep › horloge qui recule pendant un saut de Plopette", function()
 		it(
-			"B5-67 : l'horloge recule d'une heure en plein saut (décalage du serveur) : la Plopette se pose sur sa cible tout de suite au lieu de rester figée au départ jusqu'à ce que l'horloge revienne",
+			"B5-68 : l'horloge recule d'une heure en plein saut (décalage du serveur) : la Plopette se pose sur sa cible tout de suite au lieu de rester figée au départ jusqu'à ce que l'horloge revienne",
 			function()
 				local h = Harness.new({ mode = "client", console = true })
 				h:createRemotes()
