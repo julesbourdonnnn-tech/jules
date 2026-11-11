@@ -60,6 +60,9 @@ local Text = require(Client.UI.Text)
 local Format = require(Client.UI.Format)
 local Util = require(Client.World.Util)
 local SplorchPath = require(Client.World.SplorchPath)
+-- v2.0 (lot B5, étape 3, D19) : petit Big Plop du client (Chantier, geste vers l'Observatoire) ; sa
+-- boucle par image n'est branchée que tant qu'il a quelque chose à faire (interrupteurs coupés : aucune)
+local BigPlop = require(Client.World.BigPlop)
 
 local VFXController = {}
 
@@ -1362,6 +1365,7 @@ function VFXController.Start()
 		end)
 	)
 	task.spawn(checkPolicy)
+	Util.guard("BigPlop.start", BigPlop.start)
 end
 
 -- Coupe les connexions (fin de session, specs)
@@ -1370,6 +1374,7 @@ function VFXController._stop()
 		c:Disconnect()
 	end
 	table.clear(connections)
+	Util.guard("BigPlop.stop", BigPlop.stop)
 	started = false
 end
 
