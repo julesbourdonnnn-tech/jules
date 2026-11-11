@@ -395,6 +395,117 @@ return function(T)
 		)
 	end)
 
+	-- Lot I (M17, relecture des écrans B3, « à vérifier sur la console ») : modèle de navigation.
+	-- (1) Une rangée d'une liste virtuelle défilée hors de la vue (au-dessus) n'est jamais choisie par ↑
+	-- depuis un onglet : la barre d'onglets est un groupe de sélection qui s'arrête en haut
+	-- (SelectionGroup + SelectionBehaviorUp = Stop, règle du moteur de Roblox, pas une position).
+	-- (2) Deux boutons côte à côte dont l'un grossit au focus (×1,05 : maintien et Détails de l'aperçu)
+	-- ne se passent jamais la sélection sur ↑ / ↓.
+	describe("Console_panels › modèle de navigation (lot I, M17)", function()
+		local UpgradeScreen = require("../harness/UpgradeScreen")
+		local Layout = require("../harness/Layout")
+		local S = UpgradeScreen.new(T.Harness)
+		local DONE = { step = 11, done = true, demoDone = true }
+
+		it(
+			"↑ depuis un onglet ne choisit jamais une rangée défilée hors de la vue (Titres, 14 rangées)",
+			function()
+				local c = S.client({
+					snap = S.snap(1),
+					profile = {
+						version = 2,
+						onboarding = DONE,
+						R = 30,
+						bestR = 30,
+						ascend = 3,
+						cosmetics = { saddle = "classic", theme = "color", trail = "", title = "", flag = "" },
+						squishies = { a = TvAudit.squishy(1) },
+					},
+				})
+				S.event(c, UpgradeScreen.V2_ALL)
+				local h, PC = c.h, c.PC
+				local Ranch = TvAudit.mod(h, "UI.Panels.Ranch")
+				PC.open("Ranch", "style")
+				TvAudit.tick(h, 0.5)
+				h.game.GuiService.SelectedObject = Ranch._styleKindButton("title")
+				TvAudit.tick(h, 0.5)
+				Gamepad.tap(h, Enum.KeyCode.ButtonA)
+				TvAudit.tick(h, 0.5)
+				local entries = Ranch._styleEntries()
+				-- dernière case : la liste défile, les premières rangées sortent de la vue par le haut
+				h.game.GuiService.SelectedObject = Ranch._styleCell("title", entries[#entries].id)
+				TvAudit.tick(h, 0.5)
+				local strip = PC.window("Ranch").Body.Tabs.Strip
+				Layout.apply(h)
+				for _, tab in strip:GetChildren() do
+					if tab:IsA("GuiObject") and tab.Visible and tab.Selectable then
+						local up = Layout.step(h, tab, "Up")
+						expect(up == nil or up:IsDescendantOf(strip)).toBe(true)
+					end
+				end
+				h.game.GuiService.SelectedObject = strip.Tab_style
+				TvAudit.tick(h, 0.5)
+				Gamepad.tap(h, Enum.KeyCode.DPadUp)
+				TvAudit.tick(h, 0.5)
+				expect(h.game.GuiService.SelectedObject:IsDescendantOf(strip)).toBe(true)
+				expect(#TvAudit.sent(h, "EquipCosmetic")).toBe(0)
+				clean(h)
+			end
+		)
+
+		it(
+			"deux boutons côte à côte, l'un grossi (×1,05) : ↑ / ↓ ne passent jamais de l'un à l'autre",
+			function()
+				local c = S.client({
+					snap = S.snap(1, function(p)
+						p.R = 5
+						p.bestR = 5
+					end),
+					profile = {
+						version = 2,
+						onboarding = DONE,
+						R = 5,
+						bestR = 5,
+						squishies = { a = TvAudit.squishy(1, { z = 1e100 }) },
+					},
+				})
+				S.event(c, UpgradeScreen.V2_ALL)
+				local h, PC = c.h, c.PC
+				PC.open("SplorchPreview")
+				TvAudit.tick(h, 0.5)
+				Layout.apply(h)
+				local win = PC.window("SplorchPreview")
+				local pairs = {}
+				for _, a in Layout.selectables(h, win) do
+					for _, b in Layout.selectables(h, win) do
+						if a ~= b and a.Parent == b.Parent then
+							local ra, rb = Layout.rect(a), Layout.rect(b)
+							if ra and rb and math.abs((ra.y + ra.h / 2) - (rb.y + rb.h / 2)) < 12 then
+								table.insert(pairs, { a, b })
+							end
+						end
+					end
+				end
+				expect(#pairs > 0).toBe(true)
+				local bad = {}
+				for _, pair in pairs do
+					local a, b = pair[1], pair[2]
+					-- a choisi (il grossit) : ↑ et ↓ ne mènent jamais à b
+					h.game.GuiService.SelectedObject = a
+					TvAudit.tick(h, 0.5)
+					Layout.apply(h)
+					for _, dir in { "Up", "Down" } do
+						if Layout.step(h, a, dir) == b then
+							table.insert(bad, Layout.name(a) .. " " .. dir .. " → " .. Layout.name(b))
+						end
+					end
+				end
+				expect(table.concat(bad, "\n")).toBe("")
+				clean(h)
+			end
+		)
+	end)
+
 	describe("Console_panels › v2.0 : piste, Carnet et Records (lot B3, étape 4)", function()
 		local UpgradeScreen = require("../harness/UpgradeScreen")
 		local S = UpgradeScreen.new(T.Harness)

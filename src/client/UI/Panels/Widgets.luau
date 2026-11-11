@@ -1029,6 +1029,11 @@ function Widgets.tabBar(parent: Instance, tabs: { TabSpec }, onSelect: (id: stri
 	local frame = Widgets.group(parent, "Tabs", UDim2.new(1, -48, 0, height + 8), UDim2.fromOffset(24, 4))
 	local strip =
 		Widgets.group(frame, "Strip", UDim2.new(1, -2 * (glyph + 16), 1, 0), UDim2.fromOffset(glyph + 16, 0))
+	-- lot I (M17) : rien n'est au-dessus des onglets dans un panneau ; ↑ depuis un onglet s'arrête là
+	-- (groupe de sélection du moteur) au lieu de choisir une rangée d'une liste défilée hors de la vue,
+	-- placée au-dessus de la zone découpée
+	strip.SelectionGroup = true
+	strip.SelectionBehaviorUp = Enum.SelectionBehavior.Stop
 	local list = Instance.new("UIListLayout")
 	list.FillDirection = Enum.FillDirection.Horizontal
 	list.Padding = UDim.new(0, Layout.Spacing.Min)

@@ -601,6 +601,37 @@ return function(T)
 			end
 		)
 
+		-- Lot I (D20, relecture B3) : interrupteurs coupés en direct, page Mon style OUVERTE : la page Style
+		-- de la v1.3 est construite sur place et montrée tout de suite, la sélection sur sa 1re sorte (avant :
+		-- Mon style restait affiché jusqu'à l'ouverture suivante) ; rouverts : Mon style revient sur place
+		it(
+			"coupure en direct, Mon style ouvert : la page Style de la v1.3 la remplace sur place, et retour",
+			function()
+				local c = v2client()
+				c.PC.open("Ranch", "style")
+				TvAudit.tick(c.h, 0.5)
+				expect(c.Ranch._state().styleMode).toBe("v2")
+				S.event(c, nil)
+				TvAudit.tick(c.h, 0.5)
+				local st = c.Ranch._state()
+				expect(st.styleMode).toBe("v13")
+				expect(st.v13Built).toBe(true)
+				expect(c.PC.current()).toBe("Ranch")
+				expect(c.Ranch.currentTab()).toBe("style")
+				local page = stylePage(c)
+				expect(page.Kinds.Visible).toBe(true)
+				local sel = c.h.game.GuiService.SelectedObject
+				expect(sel ~= nil and sel:IsDescendantOf(page.Kinds)).toBe(true)
+				S.event(c, V2)
+				TvAudit.tick(c.h, 0.5)
+				expect(c.Ranch._state().styleMode).toBe("v2")
+				sel = c.h.game.GuiService.SelectedObject
+				expect(sel ~= nil and sel:IsDescendantOf(page)).toBe(true)
+				expect(#TvAudit.sent(c.h, "EquipCosmetic")).toBe(0)
+				S.clean(c, expect)
+			end
+		)
+
 		it(
 			"Mon style : sortes, nombre d'objets par sorte, possédé / verrouillé / équipé (14 habillages, 8 tenues, 66 titres)",
 			function()

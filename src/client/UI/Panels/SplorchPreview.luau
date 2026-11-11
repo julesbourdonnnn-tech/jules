@@ -651,6 +651,10 @@ local function buildV13(c: Frame)
 			setDetails(true)
 		end,
 	})
+	-- lot I (M17) : rangée du bas, côte à côte ; le bouton choisi grossit (×1,05) et ↓ passait à
+	-- l'autre : rien en dessous, ↓ reste sur place (← / → passent de l'un à l'autre)
+	hold.button.NextSelectionDown = hold.button
+	detailsButton.NextSelectionDown = detailsButton
 	-- Détails : Tu gardes / Repart de zéro, prochain objectif
 	local d = Widgets.group(c, "DetailsPage", UDim2.fromOffset(width, height), UDim2.new())
 	d.Visible = false
@@ -1402,6 +1406,9 @@ local function buildV2(c: Frame)
 			setDetailsV2(true)
 		end,
 	})
+	-- lot I (M17) : même règle que la page de la v1.3 (↓ ne passe jamais à l'autre bouton de la rangée)
+	h.button.NextSelectionDown = h.button
+	detailsB.NextSelectionDown = detailsB
 	-- page « Détails » : deux colonnes, prochain objectif, envol (flèches dessinées), « Filmer »
 	local d = Widgets.group(root, "Details", UDim2.fromOffset(width, height), UDim2.new())
 	d.Visible = false

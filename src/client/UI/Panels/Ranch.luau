@@ -1693,6 +1693,9 @@ local function showTab()
 	end
 end
 
+-- construit le chemin de Style `want` ("v2" | "v13") s'il manque (posé après buildStyleV2, plus bas)
+local buildStylePath: ((want: string) -> ())? = nil
+
 local function refresh()
 	if tabBar == nil then
 		return
@@ -1701,14 +1704,27 @@ local function refresh()
 	if syncPads() then
 		showTab()
 	end
-	-- chemin de Style changé écran ouvert : bascule seulement si ses parties sont déjà construites
-	-- (sinon à l'ouverture suivante ; jamais d'instance créée écran ouvert)
+	-- chemin de Style changé écran ouvert (interrupteurs coupés ou rouverts en direct). Lot I (D20) : le
+	-- chemin manquant est construit sur place et montré tout de suite (avant : à l'ouverture suivante) ;
+	-- sur l'onglet Style, la sélection passe sur la 1re sorte du nouveau chemin
 	local wantStyle = if styleV2() then "v2" else "v13"
-	if wantStyle ~= styleMode and (if wantStyle == "v2" then v2Built else v13Built) then
-		styleMode = wantStyle
-		pickerSlot = 0
-		applyStyleMode()
-		styleKind = firstStyleKind()
+	if wantStyle ~= styleMode and styleMode ~= "" then
+		local build = buildStylePath
+		if build and not (if wantStyle == "v2" then v2Built else v13Built) then
+			build(wantStyle)
+		end
+		if if wantStyle == "v2" then v2Built else v13Built then
+			styleMode = wantStyle
+			pickerSlot = 0
+			applyStyleMode()
+			styleKind = firstStyleKind()
+			if current == "style" then
+				local kindButton = Ranch._styleKindButton(styleKind)
+				if kindButton then
+					GuiService.SelectedObject = kindButton
+				end
+			end
+		end
 	end
 	if GRID_TABS[current] then
 		items = itemsFor(current)
@@ -2579,6 +2595,18 @@ local function buildStyleV2(page: Frame)
 end
 
 -- Page Style et les parties du chemin courant (deux niveaux : sous-listes, puis objets ; ○ remonte)
+buildStylePath = function(want: string)
+	local page = stylePage
+	if page == nil then
+		return
+	end
+	if want == "v2" and not v2Built then
+		buildStyleV2(page)
+	elseif want == "v13" and not v13Built then
+		buildStyleV13(page)
+	end
+end
+
 local function buildStyle(container: Frame, top: number)
 	local width = container.Size.X.Offset
 	local page = Widgets.group(
