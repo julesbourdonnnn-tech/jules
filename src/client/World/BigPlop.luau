@@ -739,6 +739,7 @@ local function onElement(slot: any, id: any)
 			maxDistance = LABEL_DISTANCE,
 			studsOffset = Vector3.new(0, Balance.SizeScale.BaseDiameter * SCALE + 1.5, 0),
 			name = "ChantierLabel",
+			photoHide = true, -- caché en mode photo (lot I, étape 5, D22)
 		})
 		if ok and gui then
 			pcall(WorldText.setText, gui, Util.t("card.unlockNew", { name = Util.t(key :: string) }))

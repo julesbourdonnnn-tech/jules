@@ -1084,6 +1084,25 @@ return function(T)
 		)
 
 		it(
+			'Palier envoyé par le serveur (lot I, étape 5, M29 : RanchService, charge { family = "snack" | "star", tier, key }) : joué une fois par message, palier 5 du Tapis Étoilé compris',
+			function()
+				local c = client({ best = BEST })
+				c.event({ RecordR = true })
+				c.attr(3, "TapisTier", 3)
+				c.cele("tier", { family = "snack", tier = 3, key = "upgrades.tier.snack.3" })
+				expect(c.SH.stats().tiers).toBe(1)
+				c.play(3)
+				c.cele("tier", { family = "star", tier = 5, key = "upgrades.tier.snack.5" })
+				expect(c.SH.stats().tiers).toBe(2)
+				expect(#c.named(c.sounds, "LevelUp")).toBe(2)
+				expect(#c.named(c.haptics, "tierUp")).toBe(2)
+				c.play(3)
+				expect(c.vfxModels()).toBe(0)
+				c.clean()
+			end
+		)
+
+		it(
 			"palette du spectacle : « peachPalette » (identifiant gardé, lot I D4 ; « peach » n'en est plus un), nom inconnu ou abîmé = couleurs de la v1.3 ; le nuage du Grand Splorch du ranch prend la palette",
 			function()
 				local c = client({ best = BEST })

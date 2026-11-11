@@ -190,6 +190,10 @@ local ownPrint = 0 -- empreinte des OWN_FLAGS au dernier tick
 -- (refreshBuild ; lot I, étape 2, B4-11)
 local starMatOn = false
 local v2Values: { [Player]: { [string]: any } } = {} -- valeurs voulues (gardées jusqu'au ranch attribué)
+-- Palier du Tapis le plus haut vu pendant la séance (lot I, étape 5, item M29) : le premier calcul
+-- (chargement, ou interrupteur RanchTiers ouvert en direct) arme sans fêter ; ensuite seul un palier
+-- au-dessus de tout ce qui a été vu envoie Celebrate("tier") au propriétaire (jamais deux fois le même)
+local tierSeen: { [Player]: number } = {}
 local modelAttrs: { [number]: { [string]: boolean } } = {} -- attributs posés sur chaque modèle
 
 local zoneHandlers: { [string]: (Player, string) -> () } = {}
@@ -666,6 +670,7 @@ local function onPlayerRemoving(player: Player)
 	dwells[player] = nil
 	padBought[player] = nil
 	v2Values[player] = nil
+	tierSeen[player] = nil
 	if slot ~= nil and ownerAt[slot] == player then
 		releaseSlot(slot)
 		-- un joueur en attente de renvoi (serveur plein) reçoit le ranch libéré, plus ancien d'abord
@@ -1405,6 +1410,9 @@ function RanchService.refreshV2(player: Player)
 			table.insert(clear, name)
 		end
 	end
+	if not on.TapisTier then
+		tierSeen[player] = nil -- interrupteur coupé : la prochaine ouverture arme sans fêter
+	end
 	if on.BestR then
 		attrs.BestR = Prestige.bestR(data)
 	end
@@ -1413,9 +1421,20 @@ function RanchService.refreshV2(player: Player)
 	end
 	if on.TapisTier then
 		local star = UpgradeMath.level("star", data)
-		attrs.TapisTier = if star > 0
-			then TierRules.of("star", star)
-			else TierRules.of("snack", UpgradeMath.level("snack", data))
+		local family = if star > 0 then "star" else "snack"
+		local level = if star > 0 then star else UpgradeMath.level("snack", data)
+		local tier = TierRules.of(family, level)
+		attrs.TapisTier = tier
+		-- Palier (GDD §9.4 « Palier », plan I M29) : le Tapis monte d'un palier jamais vu de la séance
+		local seen = tierSeen[player]
+		tierSeen[player] = math.max(seen or 0, tier)
+		if seen ~= nil and tier > seen then
+			Notify.celebrate(
+				player,
+				"tier",
+				{ family = family, tier = tier, key = TierRules.key(family, level) or "" }
+			)
+		end
 		attrs.GloveTier = TierRules.of("gloves", UpgradeMath.level("gloves", data))
 		attrs.ApronTier = TierRules.of("school", UpgradeMath.level("school", data))
 	end

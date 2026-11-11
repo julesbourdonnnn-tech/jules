@@ -46,6 +46,7 @@ export type Options = {
 	studsOffset: Vector3?, -- décalage au-dessus de l'objet (StudsOffsetWorldSpace)
 	alwaysOnTop: boolean?,
 	name: string?,
+	photoHide: boolean?, -- caché tant que le mode photo est ouvert (lot I, étape 5, D22)
 }
 
 -- État d'une étiquette vivante (clé : le BillboardGui)
@@ -79,6 +80,10 @@ local pool: { [Kind]: { Entry } } = { text = {}, plus = {}, glyph = {} }
 local folder: Folder? = nil
 local watching = false
 local serial = 0
+-- Étiquettes cachées en mode photo (option photoHide : « z » des Plopettes et des squishies,
+-- « Nouveau : … » du Chantier ; lot I, étape 5, décision D22 du plan I) et état du mode photo
+local photoHide: { [BillboardGui]: boolean } = {}
+local photoHidden = false
 
 -- =============================================================================================
 -- Outils
@@ -303,7 +308,13 @@ function WorldText.create(adornee: Instance, options: Options): BillboardGui
 		else Vector3.zero
 	gui.SizeOffset = Vector2.zero
 	gui.AlwaysOnTop = opts.alwaysOnTop == true
-	gui.Enabled = true
+	if opts.photoHide == true then
+		photoHide[gui] = true
+		gui.Enabled = not photoHidden
+	else
+		photoHide[gui] = nil
+		gui.Enabled = true
+	end
 	e.text = ""
 	Text.raw(e.label, "")
 	e.label.TextTransparency = 0
@@ -465,6 +476,7 @@ function WorldText.release(gui: BillboardGui)
 		return
 	end
 	live[gui] = nil
+	photoHide[gui] = nil
 	local w = e.watch
 	e.watch = nil
 	if w then
@@ -483,6 +495,20 @@ function WorldText.release(gui: BillboardGui)
 	end
 	gui.Parent = getFolder()
 	table.insert(list, e)
+end
+
+-- Mode photo (CameraController, lot I, étape 5, D22) : cache (on) ou remontre les étiquettes créées
+-- avec photoHide = true, y compris celles créées pendant le mode photo ; les autres (prix, « PRÊT ! »,
+-- invites) ne changent pas
+function WorldText.setPhotoHidden(on: boolean)
+	photoHidden = on == true
+	for gui in photoHide do
+		gui.Enabled = not photoHidden
+	end
+end
+
+function WorldText.photoHidden(): boolean
+	return photoHidden
 end
 
 -- Taille de la plaque en px TV (specs, bornage des invites)

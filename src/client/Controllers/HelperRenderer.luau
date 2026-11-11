@@ -337,6 +337,7 @@ local function refreshLabel(r: Ranch)
 		maxDistance = Z_DISTANCE,
 		studsOffset = Vector3.new(0, Z_HEIGHT, 0),
 		name = "HelperNap",
+		photoHide = true, -- caché en mode photo (lot I, étape 5, D22)
 	})
 	if ok and created then
 		pcall(WorldText.setText, created, "z")

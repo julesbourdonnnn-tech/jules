@@ -191,6 +191,62 @@ return function(T)
 		)
 
 		it(
+			'Celebrate("tier") au propriétaire seul quand TapisTier monte (lot I, étape 5, M29) : jamais au chargement, jamais deux fois le même palier dans la séance, rien avec RanchTiers coupé ; réouverture en direct : arme sans fêter',
+			function()
+				local w = boot({ "UpgradesScreen", "RecordR", "RanchTiers", "StarMat" }, function(d)
+					d.tiles.star = 0
+					d.tiles.snack = 6 -- palier 2 du Tapis (seuils 1, 4, 7, 10)
+				end)
+				local p = Bots.join(1)
+				local q = Bots.join(2)
+				local slot = w.Ranch.slotOf(p)
+				local data = w.DS.get(p)
+				w.Economy.step(w.Clock.now())
+				w.h:settle(3)
+				local TierRules = w.h:require(L .. "Logic.TierRules")
+				local function tiers(player)
+					local out = {}
+					for _, args in w.h:sentTo(player, "Celebrate") do
+						if args[1].kind == "tier" then
+							table.insert(out, args[1].data)
+						end
+					end
+					return out
+				end
+				expect(attrs(w, slot).TapisTier).toBe(2)
+				expect(tiers(p)).toEqual({}) -- chargement : rien
+				-- Tapis 6 → 7 : palier 3
+				data.coins = 1e30
+				w.Economy.buyUpgrade(p, "snack", 1, 6)
+				w.h:settle(3)
+				expect(attrs(w, slot).TapisTier).toBe(3)
+				expect(tiers(p)).toEqual({ { family = "snack", tier = 3, key = TierRules.key("snack", 7) } })
+				expect(tiers(q)).toEqual({}) -- voisin : rien
+				-- Grand Splorch : Tapis à 0 puis remonté au palier 3 : déjà fêté dans la séance
+				w.Economy.applySplorch(p)
+				w.h:require(S .. "SquishyService").resetSizes(p)
+				w.Signals.Splorched:Fire(p, 7, 0)
+				w.h:settle(3)
+				expect(attrs(w, slot).TapisTier).toBe(0)
+				data.tiles.snack = 7
+				w.Ranch.refreshV2(p)
+				expect(attrs(w, slot).TapisTier).toBe(3)
+				expect(#tiers(p)).toBe(1)
+				-- coupé en direct : aucun Celebrate ; rouvert au palier 4 : arme sans fêter
+				w.F.set("RanchTiers", false)
+				w.Ranch.refreshV2(p)
+				data.tiles.snack = 10
+				w.Ranch.refreshV2(p)
+				expect(attrs(w, slot).TapisTier).toBeNil()
+				w.F.set("RanchTiers", true)
+				w.Ranch.refreshV2(p)
+				expect(attrs(w, slot).TapisTier).toBe(4)
+				expect(#tiers(p)).toBe(1)
+				clean(w)
+			end
+		)
+
+		it(
 			"un interrupteur coupé en direct efface ses attributs ; le ranch libéré n'en garde aucun",
 			function()
 				local w = boot({ "UpgradesScreen", "RecordR", "Monuments", "RanchTiers" })

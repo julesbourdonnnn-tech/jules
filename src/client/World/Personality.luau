@@ -490,6 +490,7 @@ local function showLabel(r: Rec, h: SquishyBuilder.Handle, kind: string, seconds
 		maxDistance = LABEL_DISTANCE,
 		studsOffset = Vector3.new(0, r.dia * 0.75 + 0.8, 0),
 		name = "LifeLabel",
+		photoHide = true, -- caché en mode photo (lot I, étape 5, D22)
 	})
 	if not ok or gui == nil then
 		return

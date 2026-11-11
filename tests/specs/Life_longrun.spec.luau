@@ -734,8 +734,14 @@ return function(T)
 						expect({ header, from ~= nil }).toEqual({ header, true })
 						local to = string.find(src, "\nend\n", from, true)
 						local body = string.gsub(string.sub(src, from, to), "%-%-[^\n]*", "")
-						expect({ header, string.find(body, "require(", 1, true) ~= nil }).toEqual({ header, false })
-						expect({ header, string.find(body, "lazy(", 1, true) ~= nil }).toEqual({ header, false })
+						expect({ header, string.find(body, "require(", 1, true) ~= nil }).toEqual({
+							header,
+							false,
+						})
+						expect({ header, string.find(body, "lazy(", 1, true) ~= nil }).toEqual({
+							header,
+							false,
+						})
 					end
 				end
 			end

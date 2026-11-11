@@ -263,6 +263,70 @@ return function(T)
 		)
 
 		it(
+			"textes flottants du monde (lot I, étape 5, D22) : « z » et « Nouveau : … » (photoHide) cachés pendant le mode photo, même créés pendant ; remontrés à la sortie ; les autres (prix, PRÊT !) restent",
+			function()
+				local c = client()
+				local WT = TvAudit.mod(c.h, "UI.WorldText")
+				local anchor = c.h.globals.Instance.new("Part")
+				anchor.Parent = c.h.workspace
+				local nap = WT.create(
+					anchor,
+					{ kind = "plus", maxDistance = 60, name = "HelperNap", photoHide = true }
+				)
+				local price = WT.create(anchor, { kind = "text", maxDistance = 20, name = "Price" })
+				expect({ nap.Enabled, price.Enabled }).toEqual({ true, true })
+				enterFromMenu(c)
+				expect(c.Cam.photoOn()).toBe(true)
+				expect({ nap.Enabled, price.Enabled }).toEqual({ false, true })
+				local chantier = WT.create(
+					anchor,
+					{ kind = "text", maxDistance = 60, name = "ChantierLabel", photoHide = true }
+				)
+				expect(chantier.Enabled).toBe(false)
+				-- ○ (après la garde d'ouverture) : retour au jeu, tout est remontré
+				play(c, 1)
+				Gamepad.tap(c.h, Enum.KeyCode.ButtonB)
+				c.h:settle(1)
+				expect(c.Cam.photoOn()).toBe(false)
+				expect({ nap.Enabled, price.Enabled, chantier.Enabled }).toEqual({ true, true, true })
+				-- une étiquette rendue puis reprise sans photoHide ne garde pas la marque
+				WT.release(chantier)
+				enterFromMenu(c)
+				local plain = WT.create(anchor, { kind = "text", maxDistance = 20, name = "Plain" })
+				expect({ plain.Enabled, nap.Enabled }).toEqual({ true, false })
+				play(c, 1)
+				Gamepad.tap(c.h, Enum.KeyCode.ButtonB)
+				c.h:settle(1)
+				WT.release(nap)
+				WT.release(price)
+				WT.release(plain)
+				S.clean(c, expect)
+			end
+		)
+
+		it(
+			"règle B5-50 (lot I, étape 5, D25) : une carte arrivée pendant le mode photo attend dans la file (rien par-dessus la photo, aucun panneau ouvert) et se montre après la sortie",
+			function()
+				local c = client()
+				local Cards = TvAudit.mod(c.h, "UI.Cards")
+				enterFromMenu(c)
+				expect(c.Cam.photoOn()).toBe(true)
+				local id = Cards.push({ kind = "dex", data = { species = 1 } })
+				expect(id ~= "").toBe(true)
+				play(c, 20)
+				expect(Cards.current()).toBeNil()
+				expect(c.FG.names()).toEqual({ "photo" })
+				Gamepad.tap(c.h, Enum.KeyCode.ButtonB)
+				c.h:settle(1)
+				expect(c.Cam.photoOn()).toBe(false)
+				play(c, 1)
+				local shown = Cards.current()
+				expect(shown ~= nil and shown.id).toBe(id)
+				S.clean(c, expect)
+			end
+		)
+
+		it(
 			"1 000 entrées et sorties mêlées au hasard à des spectacles, des jumelles, des réapparitions, des coupures, des panneaux ouverts par une carte : caméra exacte, mêmes ScreenGuis, aucun sauvetage, aucune instance de plus",
 			function()
 				local c = client()

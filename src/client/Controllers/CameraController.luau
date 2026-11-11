@@ -57,6 +57,8 @@ local AscendPath = require(Client.World.AscendPath)
 local ascendSample: AscendPath.Sample = { pos = Vector3.zero, grow = 0, phase = "done" }
 local Flags = require(Client.World.Flags)
 local AudioController = require(Client.Controllers.AudioController)
+-- textes flottants du monde cachés en mode photo (lot I, étape 5, D22)
+local WorldText = require(Client.UI.WorldText)
 
 local CameraController = {}
 
@@ -455,6 +457,7 @@ local function endPhoto(closeHud: boolean, giveBack: boolean)
 	end
 	photo = nil
 	photoCount.exits += 1
+	pcall(WorldText.setPhotoHidden, false)
 	for _, name in { A_MOVE, A_TURN, A_ZOOM, A_FILTER } do
 		ContextActionService:UnbindAction(name)
 	end
@@ -642,6 +645,7 @@ function CameraController.photo(on: boolean): boolean
 	p.focus = clampFocus(p, root.Position)
 	photo = p
 	photoCount.entries += 1
+	pcall(WorldText.setPhotoHidden, true)
 	local ok, opened = pcall(hud.open, function()
 		-- fenêtre fermée (○, ✕ sur le bouton, autre fenêtre, FocusGuard) : l'écran est déjà fermé
 		endPhoto(false, true)
