@@ -19,6 +19,7 @@ local Wire = require("../harness/Wire")
 local ApiAudit = require("../harness/ApiAudit")
 local MockInstance = require("../harness/MockInstance")
 local task = require("@lune/task")
+local Flags = require("../harness/Flags")
 
 return function(T)
 	local describe, it, expect, Harness = T.describe, T.it, T.expect, T.Harness
@@ -46,7 +47,10 @@ return function(T)
 
 	local function world(opts)
 		opts = opts or {}
-		local w = Brains.boot(Harness, { t0 = opts.t0 or (H0 + 60), stubMeta = false, before = opts.before })
+		local w = Brains.boot(
+			opts.harness or Harness,
+			{ t0 = opts.t0 or (H0 + 60), stubMeta = false, before = opts.before }
+		)
 		w.Q = w.h:require(S .. "QuestService")
 		w.C = w.h:require(S .. "CommunityService")
 		w.L = w.h:require(S .. "LeaderboardService")
@@ -651,6 +655,229 @@ return function(T)
 				expect(table.concat(rec.problems, "\n")).toBe("")
 				expect(table.concat(allTexts(w, rec), "\n")).toBe("")
 				expect(table.concat(apiIssues, "\n")).toBe("")
+				expect(#w.h.log.kicks).toBe(0)
+				local counts = w.D.counts()
+				expect({ errors = counts.errors, warnings = counts.warnings }).toEqual({
+					errors = 0,
+					warnings = 0,
+				})
+				expect(table.concat(zeroTrace(w), "\n")).toBe("")
+			end
+		)
+
+		-- Lot I, étape 2 (plan I T2, D13 ; journal I-18) : la progression v2.0 ouverte (interrupteurs de
+		-- l'étape 2, même dans le test : le cas ne dépend pas de l'ordre d'ouverture), 16 joueurs, des
+		-- Ascensions par voyage dans le temps : Grand Splorch → Jelly Ascend → Petit Splorch. À chaque
+		-- tick (en plus de checkTick) : Record R de chaque joueur jamais en baisse, Confettis jamais
+		-- négatifs, squishies des héros tous gardés par chaque renaissance
+		it(
+			"progression v2.0 ouverte, 16 joueurs : Grand Splorch, Jelly Ascend puis Petit Splorch par voyage dans le temps ; Record R jamais en baisse, squishies gardés, Confettis ≥ 0",
+			function()
+				local PROGRESSION = {
+					"UpgradesScreen",
+					"Confetti",
+					"Workshop",
+					"StarMat",
+					"Gloves",
+					"Monuments",
+					"RecordR",
+					"JellyAscend",
+					"PetitSplorch",
+					"Helpers",
+				}
+				local preset = {}
+				for _, key in PROGRESSION do
+					preset[key] = true
+				end
+				local w = world({ harness = Flags.harness(Harness, preset) })
+				local Prestige = w.h:require("ReplicatedStorage.Shared.Logic.Prestige")
+				for _, key in PROGRESSION do
+					expect({ key = key, on = w.Features.get(key) }).toEqual({ key = key, on = true })
+				end
+				local seed = 11
+				local players = {}
+				-- 1-4 : prêts pour le Grand Splorch (R 2, Record R 2) ; 5-6 : prêts pour la Jelly Ascend
+				-- (R = Record R = 15) ; 7-16 : vétérans pilotés par leur cerveau
+				for i = 1, 16 do
+					local profile
+					if i <= 4 then
+						profile = Brains.profile(w, {
+							coins = 5000,
+							R = 2,
+							squishies = {
+								{ s = 1, z = 100, bf = 1 },
+								{ s = 2 + i, z = math.ceil(w.Formulas.splorchTarget(2) * 1.05) },
+								{ s = 9, z = 300 },
+							},
+							edit = function(d)
+								d.bestR = 2
+							end,
+						})
+					elseif i <= 6 then
+						profile = Brains.profile(w, {
+							coins = 5000,
+							R = 15,
+							squishies = {
+								{ s = 1, z = 100, bf = 1 },
+								{ s = 2, z = 20000 },
+								{ s = 3, z = 300 },
+							},
+							tiles = { snack = 12, decor = 10 },
+							edit = function(d)
+								d.bestR = 15
+							end,
+						})
+					else
+						profile = veteran(w, i)
+					end
+					players[i] = Brains.join(w, i, { profile = profile })
+				end
+				expect(#w.players).toBe(16)
+				for i = 7, 16 do
+					Bots.setBrain(players[i], Brains.player(w, seed + i))
+				end
+				local heroes = { players[1], players[2], players[3], players[4], players[5], players[6] }
+				for _, p in heroes do
+					takeOver(w, p)
+					walk(w, p, Brains.atRanch(w, p, 0, 30))
+				end
+				-- contrôles v2.0 de chaque tick
+				local best, uids = {}, {}
+				local function keysOf(t)
+					local out = {}
+					for k in t do
+						out[k] = true
+					end
+					return out
+				end
+				for _, p in heroes do
+					uids[p] = keysOf(w.DS.get(p).squishies)
+				end
+				local function playV2(n)
+					for _ = 1, n do
+						play(w, 1)
+						for _, p in w.players do
+							if p.Parent ~= nil and w.DS.isLoaded(p) then
+								local data = w.DS.get(p)
+								local b = Prestige.bestR(data)
+								if b < (best[p] or 0) then
+									problem(
+										w,
+										"Record R en baisse " .. p.UserId .. " : " .. best[p] .. " → " .. b
+									)
+								end
+								best[p] = math.max(best[p] or 0, b)
+								if not (type(data.confetti) == "number" and data.confetti >= 0) then
+									problem(
+										w,
+										"Confettis négatifs " .. p.UserId .. " : " .. tostring(data.confetti)
+									)
+								end
+								local kept = uids[p]
+								if kept then
+									for uid in kept do
+										if data.squishies[uid] == nil then
+											problem(w, "squishy perdu " .. p.UserId .. " : " .. uid)
+										end
+									end
+								end
+							end
+						end
+					end
+				end
+				local function readyUid(p)
+					local target = w.Formulas.splorchTarget(w.DS.get(p).R)
+					for uid, r in w.Squishy.records(p) do
+						if r.at == "pen" and w.Squishy.sizeOf(p, uid) >= target then
+							return uid
+						end
+					end
+					return nil
+				end
+				playV2(5)
+
+				-- ---------------------------------------------------------------- Grand Splorch (4 héros, file)
+				for i = 1, 4 do
+					local flyer = readyUid(players[i])
+					expect({ i = i, ready = flyer ~= nil }).toEqual({ i = i, ready = true })
+					Bots.fire("GrandSplorch", players[i], false, flyer)
+				end
+				for _ = 1, 3000 do
+					playV2(1)
+					local done = true
+					for i = 1, 4 do
+						done = done and w.DS.get(players[i]).R == 3
+					end
+					if done then
+						break
+					end
+				end
+				for i = 1, 4 do
+					local data = w.DS.get(players[i])
+					expect({ i = i, R = data.R, bestR = data.bestR }).toEqual({ i = i, R = 3, bestR = 3 })
+					expect(data.confetti > 0).toBe(true)
+				end
+
+				-- ---------------------------------------------------------------- voyage : le lendemain, Jelly Ascend
+				travel(w, w.Clock.now() + DAY)
+				playV2(20)
+				for i = 5, 6 do
+					Bots.fire("JellyAscend", players[i], true)
+				end
+				for _ = 1, 3000 do
+					playV2(1)
+					if w.DS.get(players[5]).ascend == 1 and w.DS.get(players[6]).ascend == 1 then
+						break
+					end
+				end
+				local startR = Prestige.startR(1, 0)
+				for i = 5, 6 do
+					local data = w.DS.get(players[i])
+					expect({ i = i, A = data.ascend, R = data.R, bestR = data.bestR }).toEqual({
+						i = i,
+						A = 1,
+						R = startR,
+						bestR = 15,
+					})
+					expect(data.ascendDay).toBe(w.Clock.day())
+				end
+				playV2(50)
+
+				-- ---------------------------------------------------------------- voyage : Petit Splorch (r ≤ Record R)
+				-- les squishies grandissent avec le temps : sauts d'une heure jusqu'à l'objectif de r
+				local petitFlyer = {}
+				for _ = 1, 72 do
+					travel(w, w.Clock.now() + 3600)
+					playV2(5)
+					local ready = true
+					for i = 5, 6 do
+						petitFlyer[i] = readyUid(players[i])
+						ready = ready and petitFlyer[i] ~= nil
+					end
+					if ready then
+						break
+					end
+				end
+				for i = 5, 6 do
+					expect({ i = i, ready = petitFlyer[i] ~= nil }).toEqual({ i = i, ready = true })
+					local before = w.DS.get(players[i]).confetti
+					Bots.fire("GrandSplorch", players[i], false, petitFlyer[i])
+					playV2(5)
+					local data = w.DS.get(players[i])
+					expect({ i = i, R = data.R, bestR = data.bestR }).toEqual({
+						i = i,
+						R = startR + 1,
+						bestR = 15,
+					})
+					expect(data.confetti > before).toBe(true)
+				end
+				for _, p in heroes do
+					Bots.setBrain(p, Brains.player(w, seed + p.UserId))
+				end
+				playV2(300)
+
+				-- ---------------------------------------------------------------- bilan
+				expect(table.concat(w.problems, "\n")).toBe("")
 				expect(#w.h.log.kicks).toBe(0)
 				local counts = w.D.counts()
 				expect({ errors = counts.errors, warnings = counts.warnings }).toEqual({
