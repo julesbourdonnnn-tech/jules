@@ -102,6 +102,7 @@ local StateController = require(Client.Controllers.StateController)
 local WorldStateController = require(Client.Controllers.WorldStateController)
 local QualityController = require(Client.Controllers.QualityController)
 local AudioController = require(Client.Controllers.AudioController)
+local CameraController = require(Client.Controllers.CameraController)
 local WorldText = require(Client.UI.WorldText)
 local VisualBudget = require(Client.Render.VisualBudget)
 local BuildCascade = require(Client.Render.BuildCascade)
@@ -362,21 +363,10 @@ local function renderer(): any
 	return nil
 end
 
--- Mode photo en cours (relecture B5, journal B5-62) : CameraController requis à la demande et gardé
-local cameraModule: any = nil
+-- Mode photo en cours (relecture B5, journal B5-62) : CameraController ne requiert ni ce module ni
+-- RanchRenderer (aucune boucle de require) ; requis au chargement, jamais dans une image
 local function photoOn(): boolean
-	local m = cameraModule
-	if m == nil then
-		local ok, mod = pcall(function(): any
-			return require(Client.Controllers.CameraController) :: any
-		end)
-		if not ok or type(mod) ~= "table" or type(mod.photoOn) ~= "function" then
-			return false
-		end
-		cameraModule = mod
-		m = mod
-	end
-	local ok, on = pcall(m.photoOn)
+	local ok, on = pcall(CameraController.photoOn)
 	return ok and on == true
 end
 
