@@ -195,7 +195,9 @@ return function(T)
 				local seed = 20261111
 				local function rand(n)
 					seed = (seed * 1103515245 + 12345) % 2147483648
-					return seed % n + 1
+					-- bits de poids fort (les bits faibles d'un générateur congruentiel modulo 2^31 ont
+					-- des périodes courtes)
+					return (seed // 65536) % n + 1
 				end
 				-- un joueur proche (emotes v2.0)
 				local friend = h:addPlayer({ userId = 50 })
@@ -238,11 +240,27 @@ return function(T)
 					-- caméra du jeu derrière le personnage (le moteur simulé ne la fait pas suivre) : le
 					-- niveau de détail des squishies dépend de la caméra
 					c.camera.CameraType = Enum.CameraType.Custom
-					c.camera.CFrame = CFrame.lookAt(
-						c.WL.penSlot(1, 5) + Vector3.new(0, 12, -14),
-						c.WL.penSlot(1, 5)
-					)
-					c.play(60, 30, watch)
+					c.camera.CFrame =
+						CFrame.lookAt(c.WL.penSlot(1, 5) + Vector3.new(0, 12, -14), c.WL.penSlot(1, 5))
+					c.play(50, 30, watch)
+					-- les 10 dernières secondes sous la danse de Big Plop : aucune saynète ne commence,
+					-- gerbes, étiquettes et visages des saynètes finis (comme le point calme de
+					-- Personality.spec)
+					local now = c.Clock.now()
+					c.event(FLAGS, {
+						spectacle = {
+							current = {
+								kind = "dance",
+								userId = 0,
+								startedAt = now,
+								burstAt = now + 1,
+								endsAt = now + 30,
+								level = 1,
+							},
+							queue = {},
+						},
+					})
+					c.play(10, 30, watch)
 					local counts = h:counts()
 					-- réserves bornées (pas des fuites) : étiquettes rangées de UI/WorldText (64 par sorte
 					-- au plus) et étoiles dessinées à la première étoile d'un modèle de la réserve de
@@ -280,7 +298,8 @@ return function(T)
 					return {
 						instances = #h.game:GetDescendants() - pooled() - voices,
 						worldText = c.WT.stats().live,
-						connections = counts.connections - voices,
+						-- chaque étiquette de UI/WorldText (vivante ou rangée) garde sa connexion Destroying
+						connections = counts.connections - voices - c.WT.stats().live - c.WT.stats().pooled,
 						threads = counts.threads - voices,
 						looping = looping(),
 						weatherParts = c.WX.stats().parts,
@@ -290,18 +309,6 @@ return function(T)
 						lease = c.Cam.leaseHolder(),
 						fg = c.FG.anyOpen(),
 						shows = c.VB.used("shows"),
-						NAMES = (function()
-							local m = {}
-							for _, d in h.game:GetDescendants() do
-								local key, x = d.ClassName, d
-								while x and x ~= h.game do
-									key = tostring(x.Name) .. "." .. key
-									x = x.Parent
-								end
-								m[key] = (m[key] or 0) + 1
-							end
-							return m
-						end)(),
 					}
 				end
 				local snapshots = {}
@@ -417,7 +424,7 @@ return function(T)
 							counters.bino += 1
 							c.play(1, 30, watch)
 							frames += 30
-							local how = step % 3
+							local how = (step // 12) % 3
 							if how == 0 then
 								Gamepad.tap(h, Enum.KeyCode.ButtonB)
 							elseif how == 1 then
@@ -519,21 +526,6 @@ return function(T)
 					end
 				end
 				expect(#snapshots).toBe(3)
-				for i = 2, 3 do
-					local a, b = snapshots[1].NAMES, snapshots[i].NAMES
-					for k2, v in a do
-						if b[k2] ~= v then
-							print("DIFF", i, k2, v, b[k2])
-						end
-					end
-					for k2, v in b do
-						if a[k2] == nil then
-							print("DIFF", i, k2, nil, v)
-						end
-					end
-					snapshots[i].NAMES = nil
-				end
-				snapshots[1].NAMES = nil
 				expect(snapshots[2]).toEqual(snapshots[1])
 				expect(snapshots[3]).toEqual(snapshots[1])
 				expect({ snapshots[1].looping, snapshots[1].shows, snapshots[1].photo, snapshots[1].fg }).toEqual({
@@ -548,7 +540,6 @@ return function(T)
 				end
 				local hs, ss, es = c.HR.stats(), c.SH.stats(), c.EM.stats()
 				expect(hs.jumps > 1000).toBe(true)
-				print("STATS", ss.petits, ss.starRains, ss.ascends, ss.ascendDrawn, es.shown, c.BP.stats().chantiers, c.P.stats().started)
 				expect(ss.petits > 0 and ss.starRains > 0).toBe(true)
 				expect(es.shown > 0).toBe(true)
 				expect(c.P.stats().started > 100).toBe(true)
