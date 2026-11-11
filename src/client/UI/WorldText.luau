@@ -25,6 +25,7 @@
 -- ≥ Layout.WorldText.MinProjected (28 px TV) à 20 studs, en 1920 × 1080, 3840 × 2160 et 1280 × 720.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TextService = game:GetService("TextService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared", 30) :: Folder
 local Layout = require(Shared.Config.Layout)
@@ -123,6 +124,18 @@ local function getFolder(): Folder
 	return f
 end
 
+-- Largeur (px TV) d'un texte d'une ligne à la taille `size` : mesure du moteur + 2 px (contour du
+-- texte), repli sur l'estimation avec sa marge
+local function measure(text: string, size: number): number
+	local ok, v = pcall(function()
+		return TextService:GetTextSize(text, size, Enum.Font.FredokaOne, Vector2.new(1e5, 1e5))
+	end)
+	if ok and typeof(v) == "Vector2" and v.X > 0 and v.X == v.X then
+		return math.ceil(v.X) + 2
+	end
+	return math.ceil(Util.textEm(text) * size * TEXT_MARGIN)
+end
+
 -- Mesure et applique les tailles de la plaque (px TV) puis du BillboardGui (pixels d'écran)
 local function layoutEntry(e: Entry)
 	local glyphW = 0
@@ -130,10 +143,11 @@ local function layoutEntry(e: Entry)
 	if g and g:shown() then
 		glyphW = math.max(e.glyphSize, g.frame.Size.X.Offset)
 	end
-	-- largeur estimée (Util.textEm) avec 15 % de marge : l'estimation par classe de caractère sous-estime
-	-- jusqu'à 12 % les mots courts aux lettres larges de FredokaOne (« Off », « Attraper » : 3 px de
-	-- débord à 40 px, outil d'écrans) ; le texte est en taille fixe, il ne rétrécit pas
-	local textW = if e.text ~= "" then math.ceil(Util.textEm(e.text) * e.textSize * TEXT_MARGIN) else 0
+	-- lot I (D30) : largeur MESURÉE par le moteur (TextService:GetTextSize, police de la plaque :
+	-- FredokaOne) ; les plaques étaient 25 à 35 % plus larges que leur texte (estimation × 1,15). Repli
+	-- quand la mesure échoue : largeur estimée (Util.textEm) avec 15 % de marge (l'estimation par classe
+	-- de caractère sous-estime jusqu'à 12 % les mots courts aux lettres larges) ; taille fixe, une ligne
+	local textW = if e.text ~= "" then measure(e.text, e.textSize) else 0
 	local gap = if glyphW > 0 and textW > 0 then GAP else 0
 	local h = math.max(e.textSize * 1.25, if glyphW > 0 then e.glyphSize else 0) + 2 * PAD_Y
 	local w = math.max(MIN_WIDTH, glyphW + gap + textW + 2 * PAD_X)

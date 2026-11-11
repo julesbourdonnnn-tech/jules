@@ -30,7 +30,8 @@
     },
     "StarterGui": {
       "$properties": {
-        "VirtualCursorMode": "Disabled"
+        "VirtualCursorMode": "Disabled",
+        "ClipsDescendantsSupportsRotation": "Enabled"
       }
     },
     "Players": {

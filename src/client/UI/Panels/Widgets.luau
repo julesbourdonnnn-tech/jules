@@ -214,9 +214,68 @@ local function allow(name: string): boolean
 	return true
 end
 
+-- Lot I (D16) : file unique des mesures ClientMetric (tous les envoyeurs passent par Widgets.send) :
+-- seau de 1 / 5 s, au plus METRIC_QUEUE sortes en attente (une par sorte, la valeur la plus récente
+-- gagne, la plus ancienne sorte en trop est oubliée), vidée une par une au rythme du seau (boucle
+-- Heartbeat du module), plafond de METRIC_CAP envois par séance (celui du serveur). Une mesure n'est
+-- donc plus perdue parce qu'une autre vient de partir (« ascendDeclined » après « ascendPreview »).
+local METRIC_QUEUE = 4
+local METRIC_CAP = 20
+local metricOrder: { string } = {}
+local metricValue: { [string]: any } = {}
+local metricSent = 0
+local ensureLoops: () -> () -- défini plus bas (boucle Heartbeat du module)
+
+local function fireMetric(kind: string, value: any)
+	metricSent += 1
+	pcall(function()
+		Net.event("ClientMetric"):FireServer(kind, value)
+	end)
+end
+
+local function flushMetrics()
+	if #metricOrder == 0 or metricSent >= METRIC_CAP then
+		if metricSent >= METRIC_CAP then
+			table.clear(metricOrder)
+			table.clear(metricValue)
+		end
+		return
+	end
+	if not allow("ClientMetric") then
+		return
+	end
+	local kind = table.remove(metricOrder, 1) :: string
+	local value = metricValue[kind]
+	metricValue[kind] = nil
+	fireMetric(kind, value)
+end
+
+local function queueMetric(kind: any, value: any): boolean
+	if type(kind) ~= "string" or metricSent >= METRIC_CAP then
+		return false
+	end
+	if #metricOrder == 0 and allow("ClientMetric") then
+		fireMetric(kind, value)
+		return true
+	end
+	if metricValue[kind] == nil then
+		table.insert(metricOrder, kind)
+		if #metricOrder > METRIC_QUEUE then
+			local dropped = table.remove(metricOrder, 1) :: string
+			metricValue[dropped] = nil
+		end
+	end
+	metricValue[kind] = value
+	ensureLoops()
+	return true
+end
+
 -- Envoie une intention (jamais une valeur de jeu) ; faux si le débit client la retient ou si le
--- remote est indisponible
+-- remote est indisponible. ClientMetric : file unique ci-dessus (vrai = envoyée ou en attente)
 function Widgets.send(name: string, ...: any): boolean
+	if name == "ClientMetric" then
+		return queueMetric(...)
+	end
 	if not allow(name) then
 		return false
 	end
@@ -227,9 +286,12 @@ function Widgets.send(name: string, ...: any): boolean
 	return ok
 end
 
--- Remise à zéro des seaux (specs)
+-- Remise à zéro des seaux et de la file des mesures (specs)
 function Widgets._resetBuckets()
 	table.clear(buckets)
+	table.clear(metricOrder)
+	table.clear(metricValue)
+	metricSent = 0
 end
 
 -- Achat Robux (pass ou produit) : invite de Roblox sous pcall ; la sélection est tenue pendant la
@@ -275,7 +337,6 @@ end
 -- l'étape 10 de l'accueil, jamais perdue pour la session.
 local seen: { [string]: boolean } = {}
 local seenPending: { [string]: boolean } = {}
-local ensureLoops: () -> () -- défini plus bas (boucle Heartbeat du module)
 
 local function trySeen(screen: string): boolean
 	if not allow("UiSeen") then
@@ -1311,6 +1372,9 @@ ensureLoops = function()
 			stepAttention(dt)
 			if next(seenPending) ~= nil then
 				flushSeen()
+			end
+			if #metricOrder > 0 then
+				flushMetrics()
 			end
 		end)
 	end

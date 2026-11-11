@@ -902,6 +902,15 @@ return function(T)
 				expect(project.tree.StarterGui["$properties"].VirtualCursorMode).toBe("Disabled")
 			end
 		)
+		-- lot I (M18, relecture des écrans B2 et B4) : un cadre tourné (pastilles, étoiles dessinées)
+		-- découpé par un parent ClipsDescendants est découpé selon sa forme tournée, pas selon une boîte
+		-- droite (Roblox : StarterGui.ClipsDescendantsSupportsRotation)
+		it("découpe des cadres tournés activée (StarterGui.ClipsDescendantsSupportsRotation)", function()
+			local fs = require("@lune/fs")
+			local serde = require("@lune/serde")
+			local project = serde.decode("json", fs.readFile("default.project.json"))
+			expect(project.tree.StarterGui["$properties"].ClipsDescendantsSupportsRotation).toBe("Enabled")
+		end)
 	end)
 
 	describe("Console › démarrage complet en console, manette seule", function()

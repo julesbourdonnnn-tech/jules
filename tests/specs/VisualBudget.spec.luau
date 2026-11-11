@@ -284,8 +284,10 @@ return function(T)
 			expect(#sent).toBe(before + 1)
 			expect(sent[#sent][1]).toBe("visualBudget")
 			expect(sent[#sent][2]).toBe(1)
-			-- même seau : une autre métrique du client dans les 5 s est retenue par Widgets.send
-			expect(Widgets.send("ClientMetric", "textScale", 100)).toBe(false)
+			-- même seau : une autre métrique du client dans les 5 s est retenue par Widgets.send (lot I, D16 :
+			-- mise en file, acceptée mais pas encore envoyée ; avant : refusée et perdue)
+			expect(Widgets.send("ClientMetric", "textScale", 100)).toBe(true)
+			expect(#TvAudit.sent(h, "ClientMetric")).toBe(before + 1)
 			expect(table.concat(h.errors, "\n")).toBe("")
 			expect(table.concat(h:warnings(), "\n")).toBe("")
 		end)
