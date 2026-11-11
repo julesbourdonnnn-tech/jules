@@ -647,7 +647,13 @@ return function(T)
 					tr(c, "card.unlockNew", { name = tr(c, deco.key) }),
 					""
 				)
-				local v2 = c.Cos.ListV2[1]
+				-- premier cosmétique de la v2.0 (Cosmetics.List fusionnée au lot I : since = 2)
+				local v2 = nil
+				for _, def in c.Cos.List do
+					if v2 == nil and def.since ~= nil then
+						v2 = def
+					end
+				end
 				check(
 					"unlock",
 					{ kind = v2.kind, id = v2.id },
@@ -848,8 +854,8 @@ return function(T)
 					return realOpen(panel, tab, ...)
 				end
 				local emote = nil
-				for _, def in c.Cos.ListV2 do
-					if def.kind == "emote" and emote == nil then
+				for _, def in c.Cos.List do
+					if def.kind == "emote" and def.since ~= nil and emote == nil then
 						emote = def
 					end
 				end
@@ -907,13 +913,8 @@ return function(T)
 						table.insert(both, kind .. "." .. id .. (if hud then " (deux)" else " (aucun)"))
 					end
 				end
+				-- Cosmetics.List fusionnée au lot I (D6) : v1.3, v2.0 et cosmétiques de la semaine
 				for _, def in c.Cos.List do
-					probe(def.kind, def.id)
-				end
-				for _, def in c.Cos.ListV2 do
-					probe(def.kind, def.id)
-				end
-				for _, def in c.Cos.WeeklyRotation do
 					probe(def.kind, def.id)
 				end
 				for _, def in c.Cos.DecoPerso do

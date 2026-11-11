@@ -97,19 +97,17 @@ local WAITING_EXTRA = StateTimeouts.seconds("spectacle")
 -- tenues connues (Config/Cosmetics, kind "outfit")
 local OUTFITS: { [string]: boolean } = {}
 for _, def in Cosmetics.List do
-	if def.kind == "outfit" then
+	if def.kind == "outfit" and def.since == nil then
 		OUTFITS[def.id] = true
 	end
 end
--- v2.0 (lot A4, D21) : tenues de Cosmetics.ListV2 (partyHat, starGlasses, buildersCrown) et de la
--- rotation de la semaine (polkaBow), connues pour un profil v2 SEULEMENT (profil v1 : refus muet
+-- v2.0 (lot A4, D21) : tenues de la v2.0 de Cosmetics.List (since = 2 : partyHat, starGlasses,
+-- buildersCrown et polkaBow de la semaine), connues pour un profil v2 SEULEMENT (profil v1 : refus muet
 -- d'aujourd'hui) ; toujours bornées par outfits.owned
 local OUTFITS_V2: { [string]: boolean } = {}
-for _, list in { Cosmetics.ListV2 :: { any }, Cosmetics.WeeklyRotation :: { any } } do
-	for _, def in list do
-		if def.kind == "outfit" and not OUTFITS[def.id] then
-			OUTFITS_V2[def.id] = true
-		end
+for _, def in Cosmetics.List do
+	if def.kind == "outfit" and def.since ~= nil and not OUTFITS[def.id] then
+		OUTFITS_V2[def.id] = true
 	end
 end
 

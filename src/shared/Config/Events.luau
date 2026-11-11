@@ -232,11 +232,8 @@ Events.Banners = {
 		squishPartyBy = 7,
 		wobbleParty = 7,
 		adminParty = 7,
-	} :: { [string]: number },
-	-- v2.0 (lot A4, D5) : priorités des bannières v2.0, recopiées aussi dans Notify.BANNER_PRIORITY par
-	-- CommunityService.Init ; texte « banner.<sorte> » depuis le lot B3 (« banner.ascend », renommé de
-	-- « ascend.banner », D18, journal B3-7) : fusionnées dans Priority à l'étape I
-	PriorityV2 = {
+		-- v2.0 (lot A4, D5 ; fusionnée de PriorityV2 au lot I) : Jelly Ascend ; texte « banner.ascend »
+		-- (lot B3, D18) ; jamais envoyée tant que JellyAscend est coupé
 		ascend = 1,
 	} :: { [string]: number },
 	RecordThresholds = { 1e6, 1e9, 1e12, 1e15 },

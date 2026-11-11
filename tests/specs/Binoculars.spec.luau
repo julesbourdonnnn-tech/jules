@@ -82,7 +82,7 @@ return function(T)
 		if opts.hearts then
 			profile.hearts = opts.hearts
 		end
-		local c = S.client({ profile = profile, lang = opts.lang })
+		local c = S.client({ profile = profile, lang = opts.lang, before = opts.before })
 		local me = c.h.localPlayer.UserId
 		c.h:fireClient("ReplicatedStorage.Remotes.RanchSnapshot", {
 			seq = 1,
@@ -283,6 +283,43 @@ return function(T)
 	end)
 
 	describe("Binoculars › interrupteurs et règles", function()
+		it(
+			"lot I (M14) : devant le portail d'un joueur que j'ai bloqué (GetBlockedUserIds), aucune invite ; WorldStateController.isBlocked le dit ; un autre voisin garde la sienne",
+			function()
+				local c = client({
+					before = function(h)
+						h:setBlocked(h.localPlayer, { OWNER })
+					end,
+				})
+				local WSC = TvAudit.mod(c.h, "Controllers.WorldStateController")
+				expect(WSC.isBlocked(OWNER)).toBe(true)
+				expect(WSC.isBlocked(OWNER + 1)).toBe(false)
+				expect(WSC.isBlocked("22")).toBe(false)
+				atGate(c, 2)
+				expect(c.Prompt.current()).toBe(nil)
+				Gamepad.tap(c.h, Enum.KeyCode.ButtonX)
+				c.h:settle(1)
+				expect(c.B.isOpen()).toBe(false)
+				expect(#S.sent(c, "GiveHeart")).toBe(0)
+				-- un voisin non bloqué au ranch 3 : son invite reste
+				c.h:fireClient("ReplicatedStorage.Remotes.RanchSnapshot", {
+					seq = 2,
+					ranches = {
+						["1"] = ranch(1, c.h.localPlayer.UserId, { name = "Moi", hidden = false }),
+						["2"] = ranch(2, OWNER),
+						["3"] = ranch(3, OWNER + 1),
+					},
+					squishies = { ["1"] = {}, ["2"] = {}, ["3"] = {} },
+				})
+				c.h:settle(1)
+				atGate(c, 3)
+				local t = c.Prompt.current()
+				expect(t ~= nil and t.kind).toBe("binoculars")
+				expect(t ~= nil and t.id).toBe(OWNER + 1)
+				S.clean(c, expect)
+			end
+		)
+
 		it("interrupteurs coupés ou profil v1 : ni invite, ni fenêtre, ni intention", function()
 			local v1 = client({ v1 = true })
 			atGate(v1, 2)

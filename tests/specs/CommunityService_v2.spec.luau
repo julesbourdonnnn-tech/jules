@@ -192,7 +192,11 @@ return function(T)
 								d.bestR = st.R -- Record R = r : la règle « rebirth » lit le Record R (N1)
 							end
 							d.outfits.owned.sweater = st.outfit
+							-- objets de la v1.3 (Cosmetics.List fusionnée au lot I : since absent)
 							for _, def in w.Cosmetics.List do
+								if def.since ~= nil then
+									continue
+								end
 								local want = oldRule(w, p, def)
 								expect({
 									v1 = v1,
@@ -255,13 +259,11 @@ return function(T)
 					d.plopDays = 75
 				end)
 				local themes = {}
+				-- Cosmetics.List fusionnée au lot I (D6) : since = 2 = thème de la v2.0
 				for _, def in w.Cosmetics.List do
-					if def.kind == "theme" then
+					if def.kind == "theme" and def.since == nil then
 						table.insert(themes, { id = def.id, v1 = true })
-					end
-				end
-				for _, def in w.Cosmetics.ListV2 do
-					if def.kind == "theme" then
+					elseif def.kind == "theme" then
 						table.insert(themes, { id = def.id, v1 = false, source = def.source.kind })
 					end
 				end
@@ -288,8 +290,9 @@ return function(T)
 				-- chaque habillage v2.0 exactement à son seuil
 				for _, t in themes do
 					if not t.v1 then
+						-- lot I (D6) : fusionné dans Cosmetics.List, marqué since = 2
 						local def = w.Cosmetics.ByKindId["theme:" .. t.id]
-						expect(def).toBeNil()
+						expect(def.since).toBe(2)
 					end
 				end
 				local d = data(w, p)

@@ -1038,8 +1038,8 @@ local function cosmeticUnlocked(kind: string, id: string): boolean
 		return true
 	end
 	local def = Cosmetics.ByKindId[kind .. ":" .. id]
-	if def == nil then
-		return false
+	if def == nil or def.since ~= nil then
+		return false -- page Style de la v1.3 : objets de la v1.3 seulement (lot I, D6)
 	end
 	local source = def.source
 	if source.kind == "free" then
@@ -1074,7 +1074,8 @@ local function styleEntries(kind: string): { { kind: string, id: string } }
 	end
 	local defs = {}
 	for _, def in Cosmetics.List do
-		if def.kind == realKind then
+		-- page Style de la v1.3 : objets de la v1.3 seulement (since = 2 : Mon style, lot I, D6)
+		if def.kind == realKind and def.since == nil then
 			table.insert(defs, def)
 		end
 	end

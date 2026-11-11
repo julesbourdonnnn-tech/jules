@@ -3482,16 +3482,15 @@ local function metaScreens()
 		end
 		return best
 	end
-	-- « kind.id » de Cosmetics.ListV2 / WeeklyRotation (filtre facultatif) au nom le plus long
+	-- « kind.id » d'un cosmétique v2.0 de Cosmetics.List (since = 2, semaine comprise ; filtre
+	-- facultatif) au nom le plus long
 	local function longestV2(c, filter)
 		local C = cosmetics(c)
 		local keys, refs = {}, {}
-		for _, list2 in { C.ListV2, C.WeeklyRotation } do
-			for _, def in list2 do
-				if filter == nil or filter(def) then
-					table.insert(keys, def.key)
-					refs[def.key] = def
-				end
+		for _, def in C.List do
+			if def.since ~= nil and (filter == nil or filter(def)) then
+				table.insert(keys, def.key)
+				refs[def.key] = def
 			end
 		end
 		return refs[longestKey(c, keys)]
@@ -3583,8 +3582,10 @@ local function metaScreens()
 		local Quests = c.h:require("ReplicatedStorage.Shared.Config.Quests")
 		local C = cosmetics(c)
 		local keyOf = {}
-		for _, def in C.ListV2 do
-			keyOf[def.kind .. "." .. def.id] = def.key
+		for _, def in C.List do
+			if def.since ~= nil and def.weekly == nil then
+				keyOf[def.kind .. "." .. def.id] = def.key
+			end
 		end
 		local keys, tierOf, refOf = {}, {}, {}
 		for i, at in Quests.Carnet.Tiers do

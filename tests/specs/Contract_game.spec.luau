@@ -1297,8 +1297,12 @@ return function(T)
 				expect(prio >= 1 and prio <= 7).toBe(true)
 				expectString(Strings, "banner." .. kind)
 			end
+			-- lot I (D6) : un cosmétique de la v2.0 (since = 2, fusionné dans List) porte sa clé `key`
 			for _, def in C.List do
-				expectString(Strings, "cosmetic." .. def.kind .. "." .. def.id)
+				expectString(
+					Strings,
+					if def.since == nil then "cosmetic." .. def.kind .. "." .. def.id else def.key
+				)
 			end
 			expect(#C.RanchColors).toBe(16)
 			for _, e in C.EmoteSignals do

@@ -1120,9 +1120,10 @@ return function(T)
 				for i = 2, #E.Fete.Levels do
 					expect(E.Fete.Levels[i] > E.Fete.Levels[i - 1]).toBe(true)
 				end
-				-- priorité v2.0 à part de Priority (règle « banner.<sorte> » de Contract_game inchangée)
-				expect(E.Banners.PriorityV2.ascend).toBe(1)
-				expect(E.Banners.Priority.ascend).toBeNil()
+				-- lot I (D6) : priorité v2.0 fusionnée dans Priority (règle « banner.<sorte> » de Contract_game
+				-- inchangée) ; PriorityV2 n'existe plus
+				expect(E.Banners.Priority.ascend).toBe(1)
+				expect(E.Banners.PriorityV2).toBeNil()
 			end
 		)
 	end)

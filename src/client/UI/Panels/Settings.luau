@@ -15,7 +15,7 @@
 --     settings.haloOn du profil répliqué ;
 --   * emote de la croix ← : celles de la v1.3 débloquées, puis les emotes de la v2.0 possédées
 --     (Logic/Owned avec les interrupteurs annoncés par le serveur, UI/MetaFlags), nommées par leur clé
---     de Cosmetics.ListV2 / WeeklyRotation ; interrupteurs coupés : les lignes, les choix et les
+--     de Cosmetics.List (since = 2) ; interrupteurs coupés : les lignes, les choix et les
 --     intentions de la v1.3, à l'identique.
 -- v2.0 (lot B5, étape 5 ; plan B5 D24 ; INT-B5-SETTINGS) : une ligne « Mode photo » (photo.on) tout
 -- en bas, seulement interrupteur PhotoMode ouvert (UI/MetaFlags) : ✕ sur « Cheese ! » ferme le menu et
@@ -86,8 +86,8 @@ end
 -- Emotes de la croix ← débloquées (source free, plopDay, dex : jalon réclamé)
 local function emoteUnlocked(id: string): boolean
 	local def = Cosmetics.ByKindId["emote:" .. id]
-	if def == nil then
-		return false
+	if def == nil or def.since ~= nil then
+		return false -- emote de la v2.0 : Logic/Owned (plus bas)
 	end
 	local source = def.source
 	if source.kind == "free" then
@@ -101,17 +101,13 @@ local function emoteUnlocked(id: string): boolean
 end
 
 -- v2.0 (D16) : emotes de la croix ← gagnées en v2.0 (Record R, Atelier, Carnet, semaine), dans l'ordre
--- de Config/Settings.emoteLeft, et la clé de leur nom (Cosmetics.ListV2, WeeklyRotation)
+-- de Config/Settings.emoteLeft, et la clé de leur nom (Cosmetics.List, since = 2, semaine comprise)
 local V2_EMOTES = { "splorch", "wave", "confettiCrown", "bigPlopDance", "hammerTap", "hugEmote" }
 local V2_EMOTE_KEYS: { [string]: string } = {}
-for _, def in Cosmetics.ListV2 do
-	if def.kind == "emote" then
-		V2_EMOTE_KEYS[def.id] = def.key
-	end
-end
-for _, def in Cosmetics.WeeklyRotation do
-	if def.kind == "emote" then
-		V2_EMOTE_KEYS[def.id] = def.key
+for _, def in Cosmetics.List do
+	local key = def.key
+	if def.kind == "emote" and def.since ~= nil and key ~= nil then
+		V2_EMOTE_KEYS[def.id] = key
 	end
 end
 

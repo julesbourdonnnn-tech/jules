@@ -312,12 +312,8 @@ return function(T)
 			"les 14 identifiants sont les valeurs de cosmetics.theme (v1.3 + v2.0), chacun a sa ligne",
 			function()
 				local ids = {}
+				-- Cosmetics.List fusionnée au lot I (D6) : 3 thèmes de la v1.3 et 11 de la v2.0 (since = 2)
 				for _, item in Cosmetics.List do
-					if item.kind == "theme" then
-						table.insert(ids, item.id)
-					end
-				end
-				for _, item in Cosmetics.ListV2 do
 					if item.kind == "theme" then
 						table.insert(ids, item.id)
 					end

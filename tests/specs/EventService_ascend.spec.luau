@@ -577,14 +577,14 @@ return function(T)
 		)
 
 		it(
-			"bannière « ascend » : priorité 1 (Events.Banners.PriorityV2) ; passe avant une bannière de priorité 4 demandée avant elle",
+			"bannière « ascend » : priorité 1 (Events.Banners.Priority, fusionnée au lot I) ; passe avant une bannière de priorité 4 demandée avant elle",
 			function()
 				local w = boot({ stubMeta = false })
 				local a = Brains.join(w, 1, { profile = veteran(w) })
 				local b = Brains.join(w, 2, { profile = spectator(w) })
 				Brains.frames(w, 2)
 				expect(w.Notify.BANNER_PRIORITY.ascend).toBe(1)
-				expect(w.Notify.BANNER_PRIORITY.ascend).toBe(w.Events.Banners.PriorityV2.ascend)
+				expect(w.Notify.BANNER_PRIORITY.ascend).toBe(w.Events.Banners.Priority.ascend)
 				local before = #w.h:sentTo(b, "Banner")
 				w.Notify.banner("legendHatch", { userId = 2, name = "B", species = 3 }, b)
 				w.Notify.banner("ascend", { ascend = 1 }, a)

@@ -59,7 +59,7 @@ return function(T)
 		expect(table.concat(h:warnings(), "\n")).toBe("")
 	end
 
-	-- tenues de la v1.3 puis, depuis le lot B5 (D12), les 4 tenues de la v2.0 (Cosmetics.ListV2 et tenue
+	-- tenues de la v1.3 puis, depuis le lot B5 (D12), les 4 tenues de la v2.0 (Cosmetics.List since = 2 et tenue
 	-- de la semaine) : le budget de 12 pièces vaut pour toutes
 	local OUTFITS = {
 		false,
@@ -775,14 +775,13 @@ return function(T)
 		return (a - b).Magnitude < (eps or 1e-5)
 	end
 
-	-- identifiants d'une sorte dans Cosmetics.ListV2 puis dans la rotation de la semaine
+	-- identifiants d'une sorte de la v2.0 (Cosmetics.List since = 2 : liste de la v2.0 puis rotation de la
+	-- semaine, fusionnées au lot I dans cet ordre)
 	local function v2Ids(Cosmetics, kind)
 		local out = {}
-		for _, list in { Cosmetics.ListV2, Cosmetics.WeeklyRotation } do
-			for _, def in list do
-				if def.kind == kind then
-					table.insert(out, def.id)
-				end
+		for _, def in Cosmetics.List do
+			if def.kind == kind and def.since ~= nil then
+				table.insert(out, def.id)
 			end
 		end
 		return out
@@ -1579,8 +1578,9 @@ return function(T)
 					expect({ id, seen[key] }).toEqual({ id, nil })
 					seen[key] = id
 				end
+				-- selles de la v1.3 (since absent ; celles de la v2.0 : cas plus haut)
 				for _, def in Cosmetics.List do
-					if def.kind == "saddle" then
+					if def.kind == "saddle" and def.since == nil then
 						expect({ def.id, saddleOf(def.id) }).toEqual({ def.id, def.color or DEFAULT })
 					end
 				end

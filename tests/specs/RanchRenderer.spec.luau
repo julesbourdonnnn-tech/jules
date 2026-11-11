@@ -994,7 +994,7 @@ return function(T)
 	end)
 
 	-- v2.0 (lot B5, étape 1 ; plan B5 D12 ; consigne du propriétaire (2c)) : les cosmétiques de la v2.0
-	-- (Cosmetics.ListV2 et rotation de la semaine) se VOIENT en jeu. Selles, traînées et drapeaux : couleurs
+	-- (Cosmetics.List since = 2, rotation de la semaine comprise) se VOIENT en jeu. Selles, traînées et drapeaux : couleurs
 	-- du lot B4 (D19b) ; tenues et selle d'un modèle construit seul : lot B5 (Render/SquishyBuilder).
 	describe("RanchRenderer › cosmétiques de la v2.0 portés en jeu (lot B5, D12)", function()
 		it(
@@ -1006,11 +1006,9 @@ return function(T)
 				local Color3 = roblox.Color3
 				local function ids(kind)
 					local out = {}
-					for _, list in { Cosmetics.ListV2, Cosmetics.WeeklyRotation } do
-						for _, def in list do
-							if def.kind == kind then
-								table.insert(out, def.id)
-							end
+					for _, def in Cosmetics.List do
+						if def.kind == kind and def.since ~= nil then
+							table.insert(out, def.id)
 						end
 					end
 					return out

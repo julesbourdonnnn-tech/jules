@@ -65,7 +65,7 @@ Visuals.RecordTable = {
 -- stylua: ignore end
 
 -- Au-delà de 20 : prime de record (+10 Confettis au premier passage), Monuments 9 et 10 (22, 24),
--- titres (Cosmetics.ListV2), étoiles de la couronne (25, 30, 35, 40), couronne arc-en-ciel (50)
+-- titres (Cosmetics.List, since = 2), étoiles de la couronne (25, 30, 35, 40), couronne arc-en-ciel (50)
 Visuals.CrownStarsAt = { 25, 30, 35, 40 }
 Visuals.RainbowCrownAt = 50
 

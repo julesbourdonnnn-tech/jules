@@ -65,18 +65,16 @@ local LOCATIONS = { pen = true, pool = true, dodo = true, mail = true }
 -- tenues connues (Config/Cosmetics, kind "outfit")
 local OUTFITS: { [string]: boolean } = {}
 for _, def in Cosmetics.List do
-	if def.kind == "outfit" then
+	if def.kind == "outfit" and def.since == nil then
 		OUTFITS[def.id] = true
 	end
 end
--- lot A4 (D21) : tenues v2.0 (Cosmetics.ListV2, rotation de la semaine), connues d'un profil v2 seulement
+-- lot A4 (D21) : tenues v2.0 (Cosmetics.List, since = 2, semaine comprise), connues d'un profil v2 seulement
 -- (mêmes listes que SquishyService : portées, jamais retirées au chargement)
 local OUTFITS_V2: { [string]: boolean } = {}
-for _, list in { Cosmetics.ListV2 :: { any }, Cosmetics.WeeklyRotation :: { any } } do
-	for _, def in list do
-		if def.kind == "outfit" then
-			OUTFITS_V2[def.id] = true
-		end
+for _, def in Cosmetics.List do
+	if def.kind == "outfit" and def.since ~= nil and not OUTFITS[def.id] then
+		OUTFITS_V2[def.id] = true
 	end
 end
 
@@ -138,11 +136,10 @@ for _, line in Upgrades.Fun do
 end
 -- habillages connus (cosmetics.theme : 3 de la v1.3 et 11 de la v2.0) → condition pour l'avoir
 local THEMES: { [string]: any } = {}
-for _, list in { Cosmetics.List, Cosmetics.ListV2 } do
-	for _, def in list :: { any } do
-		if def.kind == "theme" then
-			THEMES[def.id] = def.source
-		end
+-- (Cosmetics.List fusionnée, lot I : v1.3 et since = 2 ; réparation du profil v2 seulement)
+for _, def in Cosmetics.List do
+	if def.kind == "theme" then
+		THEMES[def.id] = def.source
 	end
 end
 -- lot A4 : palettes du spectacle connues (cosmetics.palette : ligne « palettes » de « Pour le

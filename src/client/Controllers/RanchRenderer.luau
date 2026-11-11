@@ -355,8 +355,8 @@ local function release(d: Drawn)
 	end
 end
 
--- v2.0 (lot B4, D19b) : couleurs des selles, traînées et drapeaux de la v2.0 (Cosmetics.ListV2 et
--- cosmétiques de la semaine) ; un identifiant de la v1.3 garde son rendu, un inconnu le repli d'aujourd'hui
+-- v2.0 (lot B4, D19b) : couleurs des selles, traînées et drapeaux de la v2.0 (Cosmetics.List, since = 2,
+-- cosmétiques de la semaine compris) ; un identifiant de la v1.3 garde son rendu, un inconnu le repli d'aujourd'hui
 local SADDLE_V2: { [string]: Color3 } = {
 	confetti = Color3.fromRGB(255, 150, 200),
 	goldenJelly = Color3.fromRGB(255, 205, 80),
@@ -383,7 +383,7 @@ local function saddleColorOf(slot: number, key: string): Color3
 	if def and def.color then
 		return def.color
 	end
-	if def == nil and SADDLE_V2[key] then
+	if (def == nil or def.since ~= nil) and SADDLE_V2[key] then
 		return SADDLE_V2[key]
 	end
 	return Cosmetics.RanchColors[slot] or Cosmetics.FreeRanchColor
@@ -701,7 +701,7 @@ local function dressMount(d: Drawn, ranch: Types.RanchPublic)
 		trail.Lifetime = 0.5
 		local color = if def and def.color
 			then def.color
-			elseif def == nil and TRAIL_V2[ranch.trail] then TRAIL_V2[ranch.trail]
+			elseif (def == nil or def.since ~= nil) and TRAIL_V2[ranch.trail] then TRAIL_V2[ranch.trail]
 			else Color3.fromRGB(255, 220, 240)
 		trail.Color = ColorSequence.new(color)
 		trail.Parent = body

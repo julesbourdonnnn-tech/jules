@@ -1069,11 +1069,8 @@ end
 
 -- Création des remotes et des états ; aucun yield long
 function CommunityService.Init()
+	-- v1.3 et v2.0 (« ascend », fusionnée au lot I : jamais envoyée tant que JellyAscend est coupé)
 	for kind, priority in BANNERS.Priority do
-		Notify.BANNER_PRIORITY[kind] = priority
-	end
-	-- v2.0 (lot A4, D5) : bannières v2.0 (« ascend »), jamais envoyées tant que leur interrupteur est coupé
-	for kind, priority in BANNERS.PriorityV2 do
 		Notify.BANNER_PRIORITY[kind] = priority
 	end
 	Guard.connect("PetPress", onPetPress)
@@ -1353,7 +1350,10 @@ function CommunityService.unlockSession(player: Player, kind: string, id: string
 	if typeof(player) ~= "Instance" or type(kind) ~= "string" or type(id) ~= "string" then
 		return
 	end
-	if Cosmetics.ByKindId[kind .. ":" .. id] == nil then
+	-- titres de la v1.3 seulement (Cosmetics.List fusionnée au lot I : une entrée since = 2 se gagne
+	-- dans le profil, jamais pour la session)
+	local def = Cosmetics.ByKindId[kind .. ":" .. id]
+	if def == nil or def.since ~= nil then
 		return
 	end
 	local list = unlocks[player]

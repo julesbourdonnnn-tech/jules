@@ -13,8 +13,8 @@
 --       [RecordR], ascend [JellyAscend], atelier = bit de « Pour le plaisir » (atelierCosmetics)
 --       [Workshop], carnet = stats.upgradesBought [Carnet], cosmétique de la semaine = bit de
 --       weeklyTrack.won [WeeklyTrack], size = biggestEver [Mastery], season = season.frostDays ≥
---       FROST_DAYS (sans interrupteur : gagnée pour toujours). Un habillage de la v2.0 (sorte « theme »
---       de Cosmetics.ListV2) demande AUSSI RanchSkins. Palettes du spectacle du Grand Splorch :
+--       FROST_DAYS (sans interrupteur : gagnée pour toujours). Un habillage de la v2.0 (sorte « theme »,
+--       since = 2 dans Cosmetics.List) demande AUSSI RanchSkins. Palettes du spectacle du Grand Splorch :
 --       « Pour le plaisir » (bits de la ligne « palettes »), table des Record R (« palette.fireworks »
 --       au Record R 9), palette de la semaine (« peachPalette ») ; coussins : ceux de la semaine.
 --   * Owned.deco(profile, n, flags) : objet n de Déco perso gagné [DecoPerso], profil v2 : jeu cumulé,
@@ -25,7 +25,8 @@
 --   * Owned.mastery(profile, s) : les 3 cases de la fiche de maîtrise de l'espèce s (★5, page dorée,
 --     Trophée Cristal) ; Owned.giantTier(profile) : jalons géants atteints (0 à 4).
 -- `flags` : table de booléens construite par l'appelant depuis Features.get (Owned.flags(Features.get)).
--- Lit Cosmetics.List, ListV2, WeeklyRotation et DecoPerso tant que l'étape I ne les fusionne pas (C16).
+-- Lit Cosmetics.List (fusionnée au lot I, D6 : une entrée since = 2 est de la v2.0, profil v2 seulement)
+-- et Cosmetics.DecoPerso.
 
 local Shared = script.Parent.Parent
 local Cosmetics = require(Shared.Config.Cosmetics)
@@ -89,13 +90,16 @@ local V1_KIND: { [string]: boolean } = {}
 local KIND_FLAGS: { [string]: { [string]: boolean } } = {}
 
 for _, def in Cosmetics.List do
-	V1_KIND[def.kind] = true
+	if def.since == nil then
+		V1_KIND[def.kind] = true
+	end
 end
 
 local function add(kind: string, id: string, sourceKind: string, value: number)
 	local key = kind .. ":" .. id
 	-- la v1.3 d'abord (réponses inchangées), puis la première source déclarée
-	if Cosmetics.ByKindId[key] ~= nil or V2[key] ~= nil then
+	local def = Cosmetics.ByKindId[key]
+	if (def ~= nil and def.since == nil) or V2[key] ~= nil then
 		return
 	end
 	V2[key] = { kind = sourceKind, value = value }
@@ -107,11 +111,11 @@ local function add(kind: string, id: string, sourceKind: string, value: number)
 	end
 end
 
-for _, def in Cosmetics.ListV2 :: { any } do
-	add(def.kind, def.id, def.source.kind, def.source.value or 0)
-end
-for i, item in Cosmetics.WeeklyRotation do
-	add(item.kind, item.id, "won", i)
+-- entrées de la v2.0 de la liste (cosmétiques de la semaine compris : source won i)
+for _, def in Cosmetics.List do
+	if def.since ~= nil then
+		add(def.kind, def.id, def.source.kind, def.source.value or 0)
+	end
 end
 for _, line in Upgrades.Fun do
 	if line.store == "bits" then
@@ -194,7 +198,7 @@ function Owned.cosmetic(profile: any, kind: string, id: string, flags: Flags?): 
 	end
 	local key = kind .. ":" .. id
 	local def = Cosmetics.ByKindId[key]
-	if def ~= nil then
+	if def ~= nil and def.since == nil then
 		return v1Owned(profile, def.source)
 	end
 	local source = V2[key]

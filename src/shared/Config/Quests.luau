@@ -219,7 +219,7 @@ Quests.Challenges = {
 -- stylua: ignore end
 
 -- Carnet du Ranch : paliers de niveaux achetés (stats.upgradesBought) et leur récompense
--- (Cosmetics.ListV2 ou Cosmetics.DecoPerso, source carnet)
+-- (Cosmetics.List since = 2 ou Cosmetics.DecoPerso, source carnet)
 Quests.Carnet = {
 	Tiers = { 50, 100, 250, 500, 1000, 2500, 5000, 10000 },
 	Rewards = {

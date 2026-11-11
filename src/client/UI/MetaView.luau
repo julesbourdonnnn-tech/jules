@@ -232,15 +232,13 @@ end
 -- Index de la configuration (chargés une fois)
 -- =============================================================================================
 
--- « kind.id » → définition d'un cosmétique de la v2.0 (Cosmetics.ListV2, puis WeeklyRotation)
+-- « kind.id » → définition d'un cosmétique de la v2.0 (Cosmetics.List, since = 2 : liste de la v2.0
+-- puis cosmétiques de la semaine, fusionnés au lot I)
 local V2_BY: { [string]: { kind: string, id: string, key: string } } = {}
-for _, def in Cosmetics.ListV2 do
-	V2_BY[def.kind .. "." .. def.id] = { kind = def.kind, id = def.id, key = def.key }
-end
-for _, def in WEEKLY do
-	local k = def.kind .. "." .. def.id
-	if V2_BY[k] == nil then
-		V2_BY[k] = { kind = def.kind, id = def.id, key = def.key }
+for _, def in Cosmetics.List do
+	local key = def.key
+	if def.since ~= nil and key ~= nil then
+		V2_BY[def.kind .. "." .. def.id] = { kind = def.kind, id = def.id, key = key }
 	end
 end
 
@@ -252,10 +250,17 @@ end
 
 -- Cosmétiques de la v2.0 gagnés à la n-ième Ascension (tuile de repli Confetti coupé)
 local ASCEND_ITEMS: { [number]: { kind: string, key: string } } = {}
-for _, def in Cosmetics.ListV2 do
-	local source = def.source
-	if source and source.kind == "ascend" and ASCEND_ITEMS[source.value] == nil then
-		ASCEND_ITEMS[source.value] = { kind = def.kind, key = def.key }
+for _, def in Cosmetics.List do
+	local source, key = def.source, def.key
+	local value = source.value
+	if
+		def.since ~= nil
+		and key ~= nil
+		and source.kind == "ascend"
+		and value ~= nil
+		and ASCEND_ITEMS[value] == nil
+	then
+		ASCEND_ITEMS[value] = { kind = def.kind, key = key }
 	end
 end
 
@@ -277,7 +282,7 @@ local UNLOCK_ICONS: { [string]: string } = {
 	["unlock.plumeRow"] = "helper",
 	["unlock.fountainPool"] = "decor",
 }
--- Dessin d'un objet nommé (unlock.item : clé de Cosmetics.ListV2 ou palette)
+-- Dessin d'un objet nommé (unlock.item : clé d'un cosmétique v2.0 de Cosmetics.List ou palette)
 local ITEM_ICONS: { [string]: string } = {
 	saddle = "saddle",
 	trail = "trail",
@@ -290,8 +295,11 @@ local ITEM_ICONS: { [string]: string } = {
 	cushions = "bed",
 }
 local KEY_KIND: { [string]: string } = {}
-for _, def in Cosmetics.ListV2 do
-	KEY_KIND[def.key] = def.kind
+for _, def in Cosmetics.List do
+	local key = def.key
+	if def.since ~= nil and key ~= nil and def.weekly == nil then
+		KEY_KIND[key] = def.kind
+	end
 end
 
 -- Dessins qu'une tuile d'aperçu peut porter (lot B3, étape 2) : la toile de UI/UpgradeCard est taillée
@@ -725,7 +733,7 @@ function MetaView.challenges(profile: any, ctx: Ctx?): { Challenge }
 	return out
 end
 
--- Nom d'une récompense du Carnet (« kind.id » de Cosmetics.ListV2)
+-- Nom d'une récompense du Carnet (« kind.id » d'un cosmétique v2.0 de Cosmetics.List)
 local function rewardName(ref: any): Text?
 	local def = if type(ref) == "string" then V2_BY[ref] else nil
 	return if def then text(def.key) else nil
@@ -1024,16 +1032,19 @@ MetaView.SOURCE_FLAG = table.freeze(table.clone(SOURCE_FLAG))
 
 type V2Entry = { id: string, key: string, source: { kind: string, value: number } }
 
--- Objets de la v1.3 par sorte (Cosmetics.List, ordre) ; objets de la v2.0 par sorte, dans l'ordre de
--- Logic/Owned (ListV2, cosmétiques de la semaine, palettes de l'Atelier, palettes de la table des
--- Record R ; un identifiant de la v1.3 garde sa source de la v1.3, la première source déclarée gagne)
+-- Objets de la v1.3 par sorte (Cosmetics.List sans since, ordre) ; objets de la v2.0 par sorte, dans
+-- l'ordre de Logic/Owned (Cosmetics.List since = 2, cosmétiques de la semaine compris, palettes de
+-- l'Atelier, palettes de la table des Record R ; un identifiant de la v1.3 garde sa source de la v1.3,
+-- la première source déclarée gagne)
 local V13_KIND: { [string]: { Cosmetics.CosmeticDef } } = {}
 local V2_KIND: { [string]: { V2Entry } } = {}
 do
 	for _, def in Cosmetics.List do
-		local list = V13_KIND[def.kind] or {}
-		V13_KIND[def.kind] = list
-		table.insert(list, def)
+		if def.since == nil then
+			local list = V13_KIND[def.kind] or {}
+			V13_KIND[def.kind] = list
+			table.insert(list, def)
+		end
 	end
 	for _, list in V13_KIND do
 		table.sort(list, function(a, b)
@@ -1043,7 +1054,8 @@ do
 	local seen: { [string]: boolean } = {}
 	local function add(kind: string, id: string, key: string, sourceKind: string, value: number)
 		local k = kind .. ":" .. id
-		if Cosmetics.ByKindId[k] ~= nil or seen[k] then
+		local v13 = Cosmetics.ByKindId[k]
+		if (v13 ~= nil and v13.since == nil) or seen[k] then
 			return
 		end
 		seen[k] = true
@@ -1051,11 +1063,11 @@ do
 		V2_KIND[kind] = list
 		table.insert(list, { id = id, key = key, source = { kind = sourceKind, value = value } })
 	end
-	for _, def in Cosmetics.ListV2 :: { any } do
-		add(def.kind, def.id, def.key, def.source.kind, def.source.value or 0)
-	end
-	for i, item in WEEKLY do
-		add(item.kind, item.id, item.key, "won", i)
+	for _, def in Cosmetics.List do
+		local key = def.key
+		if def.since ~= nil and key ~= nil then
+			add(def.kind, def.id, key, def.source.kind, def.source.value or 0)
+		end
 	end
 	for _, line in Upgrades.Fun do
 		if line.store == "bits" then

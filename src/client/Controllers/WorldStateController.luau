@@ -15,6 +15,8 @@
 -- prêts, cas réel au démarrage), il est réessayé toutes les 2 s pendant 30 s ; dès qu'il répond une
 -- liste non vide, elle repart UNE fois, au débit du serveur (1 / 10 s, CommunityService remplace la
 -- liste) : sinon un joueur bloqué ne serait jamais filtré de la session (revue client-world).
+-- Lot I (M14) : la dernière liste lue est gardée (isBlocked) pour que le client ne propose jamais une
+-- interaction sociale (invite des jumelles) devant un joueur bloqué ; le serveur reste l'arbitre.
 -- Toute charge utile est vérifiée (types, nombres finis, bornes) : une charge hostile ou abîmée est
 -- ignorée sans erreur ni avertissement. Une seule connexion Heartbeat (ménage à 4 Hz).
 
@@ -117,6 +119,7 @@ local startedAt = math.huge
 local blockedSent = false
 local blockedRetry = false -- GetCore a levé au Start : réessayé (housekeep) jusqu'à BLOCKED_GIVE_UP
 local blockedTriedAt = -math.huge
+local blockedSet: { [number]: boolean } = {} -- dernière liste de blocage lue (lot I, M14)
 local started = false
 local connections: { RBXScriptConnection } = {}
 local accum = 0
@@ -620,6 +623,11 @@ local function blockedList(): ({ number }, boolean)
 			table.insert(out, n)
 		end
 	end
+	-- liste lue : elle remplace la précédente (isBlocked)
+	table.clear(blockedSet)
+	for _, n in out do
+		blockedSet[n] = true
+	end
 	return out, true
 end
 
@@ -867,6 +875,11 @@ function WorldStateController.stats(): { [string]: number }
 		seq = lastSeq,
 		resyncing = if resyncing then 1 else 0,
 	}
+end
+
+-- Joueur bloqué par le joueur local (dernière liste GetBlockedUserIds lue ; lot I, M14)
+function WorldStateController.isBlocked(userId: any): boolean
+	return type(userId) == "number" and blockedSet[userId] == true
 end
 
 -- Coupe les connexions (fin de session, specs)

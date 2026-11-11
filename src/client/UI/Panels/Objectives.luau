@@ -291,7 +291,7 @@ end
 -- Profil répliqué sur les clés que lisent MetaView.track, .challenges et .carnet
 local META_KEYS = { "version", "weeklyTrack", "carnet", "stats" }
 
--- Sorte d'une récompense du Carnet (« kind.id » de Cosmetics.ListV2, objet de Déco perso) : clé du
+-- Sorte d'une récompense du Carnet (« kind.id » de Cosmetics.List since = 2, objet de Déco perso) : clé du
 -- petit libellé qui dit ce que c'est (un titre, une selle…)
 local CARNET_KIND: { [string]: string } = {
 	title = "panel.ranch.style.title",

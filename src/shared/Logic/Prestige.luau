@@ -498,7 +498,7 @@ end
 -- =============================================================================================
 
 -- Tuiles « Tu gagnes » du premier passage d'un Record R : table du §4.29 pour 1 … 20 ; au-delà,
--- prime de record, Monuments 9 et 10 (22, 24) et titres (Cosmetics.ListV2, source recordR)
+-- prime de record, Monuments 9 et 10 (22, 24) et titres (Cosmetics.List, since = 2, source recordR)
 function Prestige.unlockTiles(bestR: number): { UnlockTile }
 	local R = int(bestR, 0, MAX_R)
 	local out: { UnlockTile } = {}
@@ -520,9 +520,9 @@ function Prestige.unlockTiles(bestR: number): { UnlockTile }
 			table.insert(out, { key = "unlock.monument", vars = { n = n } })
 		end
 	end
-	for _, item in Cosmetics.ListV2 do
+	for _, item in Cosmetics.List do
 		local source = item.source
-		if source and source.kind == "recordR" and source.value == R then
+		if item.since ~= nil and item.key ~= nil and source.kind == "recordR" and source.value == R then
 			table.insert(out, { key = "unlock.item", vars = { name = item.key } })
 		end
 	end

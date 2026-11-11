@@ -9,20 +9,49 @@
 --   product key      produit Robux (tenues)
 --   rebirth n        R ≥ n
 --   weekly key       top 10 d'un classement de la semaine (titre porté la semaine suivante, session)
--- Textes : « cosmetic.<kind>.<id> » (EN/FR).
+--   v2.0 (lot I, D6 : ListV2 et WeeklyRotation fusionnées ici, since = 2) : recordR n, ascend n,
+--   atelier i, carnet n, season n, size n (voir plus bas), won i (cosmétique de la semaine : bit i de
+--   weeklyTrack.won, palier 12 de la piste)
+-- Textes : « cosmetic.<kind>.<id> » (EN/FR) pour la v1.3 ; champ `key` pour la v2.0.
 
 export type CosmeticSource = {
-	kind: "free" | "plopDay" | "dex" | "pass" | "product" | "rebirth" | "weekly",
-	value: number?, -- jours, tampons ou R
+	kind: "free"
+		| "plopDay"
+		| "dex"
+		| "pass"
+		| "product"
+		| "rebirth"
+		| "weekly"
+		| "recordR"
+		| "ascend"
+		| "atelier"
+		| "carnet"
+		| "season"
+		| "size"
+		| "won",
+	value: number?, -- jours, tampons, R, A, bit, niveaux du Carnet ou taille
 	key: string?, -- pass, produit ou classement
 }
 
 export type CosmeticDef = {
 	id: string,
-	kind: "saddle" | "trail" | "outfit" | "title" | "theme" | "flag" | "emote" | "sticker" | "bowl",
-	order: number,
+	kind: "saddle"
+		| "trail"
+		| "outfit"
+		| "title"
+		| "theme"
+		| "flag"
+		| "emote"
+		| "sticker"
+		| "bowl"
+		| "palette"
+		| "cushions",
+	order: number, -- rang dans sa sorte (v1.3 d'abord, puis la v2.0 dans l'ordre déclaré)
 	source: CosmeticSource,
 	color: Color3?, -- selles, traînées
+	since: number?, -- lot I (D6) : 2 = cosmétique de la v2.0 (profil v2 seulement) ; absent = v1.3
+	key: string?, -- v2.0 : clé du nom (EN/FR) ; v1.3 : « cosmetic.<kind>.<id> »
+	weekly: number?, -- cosmétique de la semaine : son bit dans weeklyTrack.won (ordre figé)
 }
 
 local function rgb(r: number, g: number, b: number): Color3
@@ -32,7 +61,7 @@ end
 local Cosmetics = {}
 
 -- stylua: ignore start
-Cosmetics.List = {
+local V13: { CosmeticDef } = {
 	-- Selles (couleur)
 	{ id = "classic", kind = "saddle", order = 1, source = { kind = "free" } }, -- couleur du ranch
 	{ id = "peach", kind = "saddle", order = 2, source = { kind = "plopDay", value = 3 }, color = rgb(255, 190, 150) },
@@ -88,7 +117,7 @@ Cosmetics.List = {
 	-- Autocollant et bol (Nourrir Plop)
 	{ id = "day1", kind = "sticker", order = 1, source = { kind = "plopDay", value = 1 } },
 	{ id = "goldenBowl", kind = "bowl", order = 1, source = { kind = "plopDay", value = 100 } },
-} :: { CosmeticDef }
+}
 -- stylua: ignore end
 
 -- Palette des 16 ranchs (couleur du propriétaire), index = numéro du ranch (1 … 16)
@@ -120,16 +149,10 @@ Cosmetics.EmoteSignals = {
 	{ kind = 3, key = "bravo", dpad = "Left", keyboard = "Three", emote = "cheer", icon = "star" },
 }
 
-local ById: { [string]: CosmeticDef } = {}
-for _, def in Cosmetics.List do
-	ById[def.kind .. ":" .. def.id] = def
-end
-Cosmetics.ByKindId = ById -- clé « <kind>:<id> »
-
 -- =================================================================================================
 -- Contrat v2.0 (GDD v2.0 Annexe B, §4.29, §5.4, §7.5, §11.5 ; docs/04 §27.6) : contenu nommé du jeu
--- complet. À PART de Cosmetics.List (que le jeu de base parcourt) tant que les interrupteurs sont
--- coupés ; fusionné dans List à l'étape d'intégration I (mêmes identifiants, ajout seulement).
+-- complet. Fusionné dans Cosmetics.List au lot I (D6 : since = 2, mêmes identifiants, ajout seulement ;
+-- un lecteur de la v1.3 filtre `since` là où il décide d'une possession ou d'une réparation).
 -- Sources v2.0 (`source.kind`) : recordR n (premier passage du Record R n), ascend n (A ≥ n),
 -- atelier i (ligne « Pour le plaisir » : bit i de atelierCosmetics, ou objet i de la ligne decoShop),
 -- carnet n (Carnet du Ranch : n niveaux achetés), season n (costume de saison), track (palier 12 de
@@ -189,8 +212,9 @@ Cosmetics.DecoPerso = {
 -- « G » ; un objet ne se pose que sur un emplacement de SA taille (PlaceDeco, ProfileRepair, Invariants)
 Cosmetics.DecoSlots = { "P", "P", "P", "P", "P", "P", "P", "P", "G", "G", "G", "G" }
 
--- Les 8 cosmétiques de la semaine (Annexe B.2, palier 12 de la piste), dans l'ordre de rotation
-Cosmetics.WeeklyRotation = {
+-- Les 8 cosmétiques de la semaine (Annexe B.2, palier 12 de la piste), dans l'ordre de rotation.
+-- ORDRE FIGÉ : la position i est le bit i de weeklyTrack.won (stocké) ; jamais réordonnés.
+local WEEKLY: { any } = {
 	{ id = "cookieSaddle", key = "weekly.cookieSaddle", kind = "saddle" },
 	{ id = "bubbleTrail", key = "weekly.bubbleTrail", kind = "trail" },
 	{ id = "strawberryFlag", key = "weekly.strawberryFlag", kind = "flag" },
@@ -203,7 +227,7 @@ Cosmetics.WeeklyRotation = {
 
 -- Selles, traînées, drapeaux, tenues, emotes, titres et habillages (thèmes) de la v2.0 (Annexe B.3,
 -- B.5, B.6) ; key = clé de texte (EN/FR)
-Cosmetics.ListV2 = {
+local V2: { any } = {
 	{ id = "confetti", kind = "saddle", key = "v2cosmetic.saddle.confetti", source = { kind = "recordR", value = 2 } },
 	{ id = "goldenJelly", kind = "saddle", key = "v2cosmetic.saddle.goldenJelly", source = { kind = "recordR", value = 11 } },
 	{ id = "cosmos", kind = "saddle", key = "v2cosmetic.saddle.cosmos", source = { kind = "recordR", value = 17 } },
@@ -294,5 +318,51 @@ Cosmetics.ListV2 = {
 	{ id = "celestial", kind = "theme", key = "skin.celestial", source = { kind = "ascend", value = 5 } },
 }
 -- stylua: ignore end
+
+-- Liste unique (lot I, D6) : la v1.3 telle quelle, puis la v2.0 (since = 2) dans l'ordre déclaré,
+-- puis les 8 cosmétiques de la semaine (since = 2, weekly = i, source won i). `order` d'une entrée
+-- v2.0 = rang suivant dans sa sorte.
+local List: { CosmeticDef } = {}
+local lastOrder: { [string]: number } = {}
+local function push(def: CosmeticDef)
+	lastOrder[def.kind] = math.max(lastOrder[def.kind] or 0, def.order)
+	table.insert(List, def)
+end
+for _, def in V13 do
+	push(def)
+end
+for _, item in V2 do
+	push({
+		id = item.id,
+		kind = item.kind,
+		order = (lastOrder[item.kind] or 0) + 1,
+		source = item.source,
+		since = 2,
+		key = item.key,
+	})
+end
+local Weekly: { CosmeticDef } = {}
+for i, item in WEEKLY do
+	local def: CosmeticDef = {
+		id = item.id,
+		kind = item.kind,
+		order = (lastOrder[item.kind] or 0) + 1,
+		source = { kind = "won", value = i },
+		since = 2,
+		key = item.key,
+		weekly = i,
+	}
+	push(def)
+	table.insert(Weekly, def)
+end
+Cosmetics.List = List
+-- Vue dérivée des cosmétiques de la semaine (mêmes tables que List), dans l'ordre figé des bits
+Cosmetics.WeeklyRotation = Weekly
+
+local ById: { [string]: CosmeticDef } = {}
+for _, def in List do
+	ById[def.kind .. ":" .. def.id] = def
+end
+Cosmetics.ByKindId = ById -- clé « <kind>:<id> » (v1.3 et v2.0)
 
 return Cosmetics

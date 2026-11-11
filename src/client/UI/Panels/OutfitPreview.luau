@@ -11,7 +11,7 @@
 -- v2.0 (lot B3, étape 3 ; plan B3 D17, D28 ; fichier sans propriétaire v2.0, ajouts seulement) :
 --   * flèches DESSINÉES (Hud/Icons arrowRight, celle de gauche tournée de 180°) à la place de « ◀ » « ▶ »,
 --     absents des polices (règle 18) ;
---   * profil v2 : les tenues de la v2.0 (Cosmetics.ListV2 sorte outfit, tenue de la semaine
+--   * profil v2 : les tenues de la v2.0 (Cosmetics.List since = 2 sorte outfit, tenue de la semaine
 --     WeeklyRotation « polkaBow ») sont acceptées, nommées par leur clé, possédées par outfits.owned ;
 --     leur pièce 3D est dessinée par Render/SquishyBuilder depuis le lot B5 (étape 1, D12).
 
@@ -40,20 +40,18 @@ local OutfitPreview = {}
 local ORBIT_PERIOD = 6 -- s pour un tour de caméra
 local ARROW = 48 -- flèches dessinées du choix du squishy (px TV)
 
--- Tenues de la v2.0 (lot B3) : identifiant → clé du nom (ListV2 puis cosmétiques de la semaine)
+-- Tenues de la v2.0 (lot B3) : identifiant → clé du nom (Cosmetics.List, since = 2, cosmétiques de la
+-- semaine compris : fusionnés au lot I)
 local V2_OUTFITS: { [string]: string } = {}
-for _, def in Cosmetics.ListV2 :: { any } do
-	if def.kind == "outfit" and Cosmetics.ByKindId["outfit:" .. def.id] == nil then
-		V2_OUTFITS[def.id] = def.key
-	end
-end
-for _, def in Cosmetics.WeeklyRotation do
-	if
-		def.kind == "outfit"
-		and V2_OUTFITS[def.id] == nil
-		and Cosmetics.ByKindId["outfit:" .. def.id] == nil
-	then
-		V2_OUTFITS[def.id] = def.key
+-- Tenues de la v1.3 (sans since)
+local V13_OUTFITS: { [string]: boolean } = {}
+for _, def in Cosmetics.List do
+	if def.kind == "outfit" then
+		if def.since == nil then
+			V13_OUTFITS[def.id] = true
+		elseif def.key ~= nil and V2_OUTFITS[def.id] == nil then
+			V2_OUTFITS[def.id] = def.key
+		end
 	end
 end
 
@@ -62,7 +60,7 @@ local function knownOutfit(id: any): boolean
 	if type(id) ~= "string" then
 		return false
 	end
-	if Cosmetics.ByKindId["outfit:" .. id] then
+	if V13_OUTFITS[id] then
 		return true
 	end
 	return V2_OUTFITS[id] ~= nil and MetaFlags.v2Profile()

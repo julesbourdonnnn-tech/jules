@@ -307,7 +307,8 @@ local function hasBestR(slot: number): boolean
 	return ok and type(value) == "number" and value == value
 end
 
--- Jumelles (v2.0, D22) : portail du ranch occupé d'un autre joueur à 8 studs au plus, dans la rue
+-- Jumelles (v2.0, D22) : portail du ranch occupé d'un autre joueur à 8 studs au plus, dans la rue ;
+-- jamais devant un joueur que j'ai bloqué (lot I, M14 : le serveur refuse le cœur de toute façon)
 local function binocularsTarget(pos: Vector3, mySlot: number): Target?
 	if WorldLayout.ranchAt(pos) ~= 0 then
 		return nil -- dans un ranch : jamais de jumelles
@@ -319,7 +320,13 @@ local function binocularsTarget(pos: Vector3, mySlot: number): Target?
 	for slot = 1, WorldLayout.Const.Ranches do
 		if slot ~= mySlot then
 			local r = WorldStateController.ranch(slot)
-			if r and type(r.userId) == "number" and r.userId > 0 and r.userId ~= me then
+			if
+				r
+				and type(r.userId) == "number"
+				and r.userId > 0
+				and r.userId ~= me
+				and not WorldStateController.isBlocked(r.userId)
+			then
 				local gate = WorldLayout.anchor(slot, "gate")
 				local d = ZoneRules.distXZ(pos, gate)
 				if d <= BINOCULARS_RADIUS and d < bestD and hasBestR(slot) then

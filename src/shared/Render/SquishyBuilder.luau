@@ -778,7 +778,7 @@ local function clonePiece(p: Piece): Piece
 	return c
 end
 
--- v2.0 (lot B5, D12) : couleurs des 9 selles de la v2.0 (Cosmetics.ListV2 et selle de la semaine), LES
+-- v2.0 (lot B5, D12) : couleurs des 9 selles de la v2.0 (Cosmetics.List since = 2, selle de la semaine comprise), LES
 -- MÊMES que la table SADDLE_V2 de Controllers/RanchRenderer (lot B4, D19b ; Shared ne peut pas la lire :
 -- égalité vérifiée par SquishyBuilder.spec) : un modèle construit seul (aperçus, spectacles) porte la
 -- couleur que le ranch montre
@@ -803,7 +803,7 @@ local function saddleColor(id: string?): Color3
 		if def and (def :: any).color then
 			return (def :: any).color
 		end
-		if def == nil and SADDLE_V2[id] then
+		if (def == nil or def.since ~= nil) and SADDLE_V2[id] then
 			return SADDLE_V2[id]
 		end
 	end

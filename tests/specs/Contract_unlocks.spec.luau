@@ -190,12 +190,22 @@ return function(T)
 			local C = shared(h, "Config.Cosmetics")
 			local S = shared(h, "Localization.Strings")
 			local U = shared(h, "Config.Upgrades")
+			-- lot I (D6) : la liste de la v2.0 est fusionnée dans List (since = 2) ; les cosmétiques de
+			-- la semaine (weekly) ont leur case à part plus bas
 			local seen = {}
 			for _, def in C.List do
-				seen[def.kind .. ":" .. def.id] = "v1.3"
+				if def.since == nil then
+					seen[def.kind .. ":" .. def.id] = "v1.3"
+				end
+			end
+			local V2 = {}
+			for _, def in C.List do
+				if def.since ~= nil and def.weekly == nil then
+					table.insert(V2, def)
+				end
 			end
 			local byKindId = {}
-			for _, def in C.ListV2 do
+			for _, def in V2 do
 				local k = def.kind .. ":" .. def.id
 				expect({ k = k, twice = seen[k] ~= nil }).toEqual({ k = k, twice = false })
 				seen[k] = "v2.0"
@@ -209,7 +219,7 @@ return function(T)
 			-- 11 habillages de plus (14 avec les 3 thèmes de la v1.3) ; 52 titres v2.0 (51 jusqu'au lot
 			-- A4 : + « Sun Keeper », jalon géant 1e24 du GDD §4.17, §5.4, oublié par l'Annexe B ; A4-3)
 			local themes, titles = 0, 0
-			for _, def in C.ListV2 do
+			for _, def in V2 do
 				if def.kind == "theme" then
 					themes += 1
 				elseif def.kind == "title" then
@@ -225,7 +235,7 @@ return function(T)
 				{ k = "title.sunKeeper", size = 1e24, en = "Sun Keeper", fr = "Gardien du Soleil" },
 			}
 			local sized = 0
-			for _, def in C.ListV2 do
+			for _, def in V2 do
 				if def.source.kind == "size" then
 					sized += 1
 				end
@@ -265,6 +275,75 @@ return function(T)
 		end)
 
 		it(
+			"liste unique (lot I, D6) : Cosmetics.List = v1.3 puis v2.0 (since = 2) puis semaine ; paires sorte:id uniques, ByKindId complet, ListV2 retirée",
+			function()
+				local h = Harness.new()
+				local C = shared(h, "Config.Cosmetics")
+				expect(C.ListV2).toBeNil()
+				local seen, v13, v2, weekly = {}, 0, 0, 0
+				local phase = 1 -- 1 = v1.3, 2 = v2.0, 3 = semaine : jamais en arrière
+				local orders = {}
+				for _, def in C.List do
+					local k = def.kind .. ":" .. def.id
+					expect({ k = k, twice = seen[k] ~= nil }).toEqual({ k = k, twice = false })
+					seen[k] = true
+					expect({ k = k, byKindId = C.ByKindId[k] == def }).toEqual({ k = k, byKindId = true })
+					local at = if def.since == nil then 1 elseif def.weekly == nil then 2 else 3
+					expect({ k = k, order = at >= phase }).toEqual({ k = k, order = true })
+					phase = at
+					if at == 1 then
+						v13 += 1
+						expect(def.key).toBeNil()
+					else
+						expect({ k = k, since = def.since }).toEqual({ k = k, since = 2 })
+						expect({ k = k, key = type(def.key) }).toEqual({ k = k, key = "string" })
+						if at == 2 then
+							v2 += 1
+						else
+							weekly += 1
+							expect(def.weekly).toBe(weekly)
+							expect(def.source).toEqual({ kind = "won", value = weekly })
+						end
+					end
+					-- rang dans la sorte : strictement croissant dans l'ordre de la liste
+					expect({ k = k, order = def.order > (orders[def.kind] or 0) }).toEqual({
+						k = k,
+						order = true,
+					})
+					orders[def.kind] = def.order
+				end
+				-- 47 objets de la v1.3 (liste de 3636608), 88 de la v2.0, 8 de la semaine
+				expect({ v13 = v13, v2 = v2, weekly = weekly }).toEqual({ v13 = 47, v2 = 88, weekly = 8 })
+				local n = 0
+				for _ in C.ByKindId do
+					n += 1
+				end
+				expect(n).toBe(#C.List)
+				-- WeeklyRotation : vue dérivée, mêmes tables, ORDRE FIGÉ (bit i de weeklyTrack.won, stocké)
+				local ids = {}
+				for i, def in C.WeeklyRotation do
+					expect(def.weekly).toBe(i)
+					expect(C.ByKindId[def.kind .. ":" .. def.id]).toBe(def)
+					table.insert(ids, def.kind .. ":" .. def.id)
+				end
+				expect(ids).toEqual({
+					"saddle:cookieSaddle",
+					"trail:bubbleTrail",
+					"flag:strawberryFlag",
+					"outfit:polkaBow",
+					"emote:hugEmote",
+					"title:loyalBuddy",
+					"palette:peachPalette",
+					"cushions:pinkCushions",
+				})
+				-- bannières : PriorityV2 fusionnée dans Priority
+				local E = shared(h, "Config.Events")
+				expect(E.Banners.PriorityV2).toBeNil()
+				expect(E.Banners.Priority.ascend).toBe(1)
+			end
+		)
+
+		it(
 			"Défis (12), Carnet (8 paliers), tours appris (5), météo visuelle : textes et cohérence",
 			function()
 				local h = Harness.new()
@@ -279,8 +358,10 @@ return function(T)
 					expect(ch.target >= 1).toBe(true)
 				end
 				local byKindId = {}
-				for _, def in C.ListV2 do
-					byKindId[def.kind .. "." .. def.id] = def
+				for _, def in C.List do
+					if def.since ~= nil and def.weekly == nil then
+						byKindId[def.kind .. "." .. def.id] = def
+					end
 				end
 				expect(Q.Carnet.Tiers).toEqual({ 50, 100, 250, 500, 1000, 2500, 5000, 10000 })
 				for _, tier in Q.Carnet.Tiers do

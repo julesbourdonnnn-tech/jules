@@ -419,16 +419,19 @@ local RECORD_STEPS = { 0.25, 0.5, 0.75 } -- étapes du record : part de l'object
 local RECORD_STEP_EVERY = 2 -- s entre deux vues des étapes du record
 local FROST_COSTUME = "winter2026" -- costume d'hiver : jours de givre (selle « Sucre glace », D33)
 local MASTERY_EVERY = 10 -- s entre deux vues de la maîtrise et des jalons géants (D13, D16)
--- tenues gagnées au Record R (Cosmetics.ListV2 : chapeau de fête au R7, lunettes étoiles au R16)
+-- tenues gagnées au Record R (Cosmetics.List, since = 2 : chapeau de fête au R7, lunettes étoiles au R16)
 local RECORD_OUTFITS: { { id: string, at: number } } = {}
--- cosmétiques des jalons géants (Cosmetics.ListV2, source « size » : selle 1e15, traînée 1e18, titre 1e24)
+-- cosmétiques des jalons géants (Cosmetics.List, since = 2, source « size » : selle 1e15, traînée 1e18, titre 1e24)
 local SIZE_COSMETICS: { { kind: string, id: string, at: number } } = {}
-for _, def in Cosmetics.ListV2 :: { any } do
-	if def.kind == "outfit" and type(def.source) == "table" and def.source.kind == "recordR" then
-		table.insert(RECORD_OUTFITS, { id = def.id, at = def.source.value })
-	end
-	if type(def.source) == "table" and def.source.kind == "size" then
-		table.insert(SIZE_COSMETICS, { kind = def.kind, id = def.id, at = def.source.value })
+for _, def in Cosmetics.List do
+	local value = def.source.value
+	if def.since ~= nil and value ~= nil then
+		if def.kind == "outfit" and def.source.kind == "recordR" then
+			table.insert(RECORD_OUTFITS, { id = def.id, at = value })
+		end
+		if def.source.kind == "size" then
+			table.insert(SIZE_COSMETICS, { kind = def.kind, id = def.id, at = value })
+		end
 	end
 end
 -- crochets des compteurs à vie (QuestService.onLifetime)
