@@ -163,7 +163,9 @@ return function(T)
 		it(
 			"débit ≤ 10 par minute et par joueur, rien de jeté ; valeurs cumulées, Confettis, HelperCoinsShare et NextGoalGap exacts",
 			function()
-				local w = world(HarnessV2, { flags = FLAGS })
+				-- départ « cut » (lot I, étape 3, I-24) : la case ouvre exactement FLAGS ; la piste de la
+				-- semaine ouverte au lancement donnerait ses propres Confettis (paliers), hors du compte de la case
+				local w = world(Flags.harness(Harness, "cut"), { flags = FLAGS })
 				local A, D, Meta, E, Activity = w.A, w.D, w.Meta, w.Economy, w.Activity
 				-- pièces créditées par joueur et par tranche (enveloppe de EconomyService.addCoins)
 				local credited = {} -- [userId][tranche] = { helper, gameplay }

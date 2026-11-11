@@ -921,7 +921,12 @@ return function(T)
 				it(
 					"le modèle refuse des interrupteurs v2.0 mélangés (aucun état hybride simulé)",
 					function()
+						-- mélange explicite (lot I, I-24 : au lancement tous les interrupteurs de l'économie sont
+						-- ouverts, la remise à zéro seule ne fait plus de mélange) : tout coupé sauf RecordR
 						Features.reset()
+						for _, key in EconomyModel.ECON_FLAGS do
+							Features.set(key, false)
+						end
 						Features.set("RecordR", true)
 						local ok, err = pcall(function()
 							model.simulateFor({ players = 16 })(Sim.newRng(1), 1, 1)

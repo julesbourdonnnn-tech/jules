@@ -783,7 +783,9 @@ return function(T)
 					data.decoPerso.slots[1],
 					#data.weeklyTrack.challenges,
 					data.unlocksSeen,
-				}).toEqual({ 12, 500, 500, 0, 10, 0, 2, "color", 0, 1, 12 })
+				}).toEqual({ 12, 500, 500, 0, 10, 0, 2, "color", 0, 3, 12 })
+				-- Défis : réparés à 1 (doublon retiré, chemin « weeklyTrack.challenges » ci-dessus), puis
+				-- WeeklyTrack ouvert au lancement (lot I, I-24) : QuestService complète les 3 Défis de la semaine
 				expect(w.Invariants.profile(data)).toEqual({})
 				w.Squishy.give(p, { s = 1, m = 0, st = 0, z = 1 }, "test")
 				local nextUid = data.nextUid

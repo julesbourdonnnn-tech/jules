@@ -11,6 +11,7 @@
 local roblox = require("@lune/roblox")
 local Bots = require("../harness/Bots")
 local Brains = require("../harness/Brains")
+local Flags = require("../harness/Flags")
 
 return function(T)
 	local describe, it, expect, Harness = T.describe, T.it, T.expect, T.Harness
@@ -273,13 +274,9 @@ return function(T)
 	-- 1re Ascension (r = Record R = 15) : seule une confirmation booléenne vraie peut l'accepter
 	describe("Remotes_Chase › JellyAscend ouverte (lot A2)", function()
 		local L = "ReplicatedStorage.Shared."
-		local HarnessV2 = setmetatable({
-			new = function(options)
-				local hh = Harness.new(options)
-				hh:require(L .. "Config.Features").Defaults.SchemaV2 = true
-				return hh
-			end,
-		}, { __index = Harness })
+		-- départ « cut » (SchemaV2 seul ; lot I, I-24) : la case ouvre ses interrupteurs ; la piste de la
+		-- semaine ouverte au lancement donnerait ses Confettis de palier (l'Ascension compte pour la piste)
+		local HarnessV2 = Flags.harness(Harness, "cut")
 
 		local function bootV2()
 			-- loin de tout Rush ou MEGA : le spectacle de l'Ascension part tout de suite

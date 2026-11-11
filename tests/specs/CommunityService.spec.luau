@@ -344,8 +344,9 @@ return function(T)
 				expect(w.DS.get(p).settings.haloOn).toBeNil()
 				expect(patches(w, p)).toBe(before)
 				expect(changed).toBe(0)
-				-- profil v2 : RanchSkins coupé → refusé, rien d'envoyé ; ouvert → écrit et envoyé
-				local w2 = world(nil, HarnessV2)
+				-- profil v2 : RanchSkins coupé → refusé, rien d'envoyé ; ouvert → écrit et envoyé (départ « cut » :
+				-- RanchSkins est ouvert au lancement depuis le lot I, I-24)
+				local w2 = world(nil, Flags.harness(Harness, "cut"))
 				local q = owned(w2, 1, 1)
 				local F2 = w2.h:require("ReplicatedStorage.Shared.Config.Features")
 				local seen = {}
@@ -378,7 +379,15 @@ return function(T)
 				expect(w.DS.get(p).cosmetics.title).toBe("")
 				w.C.unlockSession(p, "title", "stamp_hunter")
 				expect(w.C.hasCosmetic(p, "title", "stamp_hunter")).toBe(true)
-				expect(#Bots.celebrations(p, "unlock")).toBe(1)
+				-- une carte « unlock » de titre ; depuis l'ouverture de DecoPerso au lancement (lot I, I-24), le
+				-- profil de test (1 h de jeu) gagne aussi le fanion des 5 min (carte « unlock » de sorte deco)
+				local titles = {}
+				for _, d in Bots.celebrations(p, "unlock") do
+					if d.kind == "title" then
+						table.insert(titles, d.id)
+					end
+				end
+				expect(titles).toEqual({ "stamp_hunter" })
 				w.osClock.advance(1)
 				w.h:fireServer(R .. "EquipCosmetic", p, "title", "stamp_hunter")
 				expect(w.DS.get(p).cosmetics.title).toBe("stamp_hunter")

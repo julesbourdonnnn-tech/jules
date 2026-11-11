@@ -10,7 +10,7 @@ local Flags = require("../harness/Flags")
 
 -- Interrupteurs des systèmes v2.0 (Config/Features, docs/04 §27.3) : ouverts par groupe au lot I
 -- (OPEN_AT_LAUNCH : les clés déjà ouvertes dans la configuration livrée ; les autres restent coupées
--- jusqu'à l'étape de leur groupe : progression, méta, monde et vie)
+-- jusqu'à l'étape de leur groupe : monde et vie)
 local V2_FLAGS = {
 	"JellyAscend",
 	"SchemaV2",
@@ -52,6 +52,13 @@ local OPEN_AT_LAUNCH = {
 	JellyAscend = true,
 	PetitSplorch = true,
 	Helpers = true,
+	-- lot I, étape 3 (méta)
+	WeeklyTrack = true,
+	Carnet = true,
+	Mastery = true,
+	RanchSkins = true,
+	DecoPerso = true,
+	Hearts = true,
 }
 
 local V2_SIGNALS = { "PrestigeApplied", "UpgradeBought", "ConfettiChanged", "RecordReached", "HelperPressed" }
@@ -241,7 +248,7 @@ return function(T)
 	-- ---------------------------------------------------------------------------------------------
 	describe("Contrat v2 › Interrupteurs (le jeu de base joue comme avant)", function()
 		it(
-			"chaque système v2.0 a son interrupteur : SchemaV2 et la progression ouverts au lancement, les autres coupés jusqu'à leur groupe",
+			"chaque système v2.0 a son interrupteur : SchemaV2, la progression et la méta ouverts au lancement, les autres coupés jusqu'à leur groupe",
 			function()
 				local h = Harness.new()
 				local F = shared(h, "Config.Features")

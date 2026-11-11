@@ -49,8 +49,15 @@ return function(T)
 			DS.increment(p, "coins", 7)
 			h:settle(2)
 			local patches = h:sentTo(p, "DataPatch")
-			expect(#patches).toBe(1)
-			expect(patches[1][1].coins).toBe(12)
+			-- patchs qui portent les pièces : un seul (les deux increments groupés) ; depuis l'ouverture de
+			-- WeeklyTrack au lancement (lot I, I-24) QuestService pose aussi weeklyTrack à l'arrivée (son patch)
+			local withCoins = {}
+			for _, pa in patches do
+				if pa[1].coins ~= nil then
+					table.insert(withCoins, pa[1].coins)
+				end
+			end
+			expect(withCoins).toEqual({ 12 })
 		end)
 
 		it("increment refuse un delta non fini ou une clé non numérique", function()
