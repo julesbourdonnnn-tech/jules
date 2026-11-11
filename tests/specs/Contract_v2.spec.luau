@@ -50,7 +50,6 @@ local V2_TYPES = {
 	"HelperPressEntry",
 	"HelperPressPayload",
 	"HelperState",
-	"CelebrateKindV2",
 	"CelebrateAscend",
 	"CelebratePetitSplorch",
 	"RanchAttributesV2",
@@ -1042,17 +1041,45 @@ return function(T)
 			end
 		end)
 
-		it("types v2.0 figés dans Shared/Types (charges utiles des deux voies)", function()
-			local source = fs.readFile("src/shared/Types.luau")
-			for _, name in V2_TYPES do
-				local found = string.find(source, "export type " .. name .. " =", 1, true) ~= nil
-				expect({ name = name, found = found }).toEqual({ name = name, found = true })
+		it(
+			"types v2.0 figés dans Shared/Types (charges utiles des deux voies) ; sortes v2.0 fusionnées dans CelebrateKind",
+			function()
+				local source = fs.readFile("src/shared/Types.luau")
+				for _, name in V2_TYPES do
+					local found = string.find(source, "export type " .. name .. " =", 1, true) ~= nil
+					expect({ name = name, found = found }).toEqual({ name = name, found = true })
+				end
+				local snap = string.match(source, "export type UpgradeSnapshot = (%b{})")
+				for _, field in { "coins", "confetti", "levels", "caps", "version" } do
+					expect(string.find(snap, "\t" .. field .. ":", 1, true) ~= nil).toBe(true)
+				end
+				-- Lot I, étape 2 (INT-V2-CELEBRATE, journal I-13) : les sortes v2.0 sont fusionnées dans
+				-- CelebrateKind ; le type à part CelebrateKindV2 n'existe plus (la table du §10.3 est vérifiée
+				-- contre l'union par Contract_game)
+				expect(string.find(source, "CelebrateKindV2", 1, true)).toBeNil()
+				local union =
+					string.match(source, "export type CelebrateKind =(.-)\nexport type CelebratePayload")
+				expect(union ~= nil).toBe(true)
+				for _, kind in
+					{
+						"petitSplorch",
+						"ascend",
+						"tier",
+						"unlock2",
+						"confetti",
+						"trackTier",
+						"carnet",
+						"mastery",
+						"regainDone",
+						"recordStep",
+						"welcomeV2",
+					}
+				do
+					local found = string.find(union :: string, '"' .. kind .. '"', 1, true) ~= nil
+					expect({ kind = kind, found = found }).toEqual({ kind = kind, found = true })
+				end
 			end
-			local snap = string.match(source, "export type UpgradeSnapshot = (%b{})")
-			for _, field in { "coins", "confetti", "levels", "caps", "version" } do
-				expect(string.find(snap, "\t" .. field .. ":", 1, true) ~= nil).toBe(true)
-			end
-		end)
+		)
 
 		-- lot A4, étape 3 (D3, D4, D5, D26 ; journal A4-17)
 		it(

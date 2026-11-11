@@ -428,6 +428,41 @@ return function(T)
 			end
 		)
 
+		-- Lot I, étape 2 (D25 du lot B2, plan I M5, journal I-15) : le serveur retire upgradeSnapshot à
+		-- la coupure en direct ; l'écran ouvert se ferme (règle (1) du §27.3), U et l'entrée du rail ne
+		-- l'ouvrent plus ; rouvert : il revient
+		it(
+			"coupé en direct (DataPatch qui retire upgradeSnapshot) : l'écran ouvert se ferme, il ne s'ouvre plus ; rouvert : il revient",
+			function()
+				local c = S.client({ snap = S.snap(1) })
+				c.PC.open("Upgrades", "ranch", true)
+				TvAudit.tick(c.h, 0.5)
+				expect(c.PC.isOpen("Upgrades")).toBe(true)
+				c.h:fireClient("ReplicatedStorage.Remotes.DataPatch", {}, { "upgradeSnapshot" })
+				TvAudit.tick(c.h, 0.5)
+				expect(c.PC.available("Upgrades")).toBe(false)
+				expect(c.PC.isOpen("Upgrades")).toBe(false)
+				expect(table.concat(TvAudit.mod(c.h, "UI.FocusGuard").names(), ",")).toBe("")
+				c.PC.open("Upgrades", "ranch")
+				TvAudit.tick(c.h, 0.5)
+				expect(c.PC.isOpen("Upgrades")).toBe(false)
+				-- menu ouvert sur l'écran puis coupure : l'écran se ferme, le menu reste (rail sans l'entrée)
+				c.h:fireClient("ReplicatedStorage.Remotes.DataPatch", { upgradeSnapshot = S.snap(2) }, {})
+				TvAudit.tick(c.h, 0.5)
+				expect(c.PC.available("Upgrades")).toBe(true)
+				c.PC.openMenu("Upgrades")
+				TvAudit.tick(c.h, 0.5)
+				c.PC.open("Upgrades", "ranch")
+				TvAudit.tick(c.h, 0.5)
+				expect(c.PC.isOpen("Upgrades")).toBe(true)
+				c.h:fireClient("ReplicatedStorage.Remotes.DataPatch", {}, { "upgradeSnapshot" })
+				TvAudit.tick(c.h, 0.5)
+				expect(c.PC.isOpen("Upgrades")).toBe(false)
+				expect(c.PC.menuOpen()).toBe(true)
+				S.clean(c, expect)
+			end
+		)
+
 		it("instantané reçu : construit pendant le chargement, ouvert sur demande, fenêtre nue", function()
 			local c = S.client({ snap = S.snap(1) })
 			expect(c.PC.available("Upgrades")).toBe(true)

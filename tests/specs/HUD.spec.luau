@@ -8,6 +8,7 @@
 -- affichage progressif ; charges hostiles sans erreur. Zéro trace.
 local roblox = require("@lune/roblox")
 local TvAudit = require("../harness/TvAudit")
+local Gamepad = require("../harness/Gamepad")
 local ApiAudit = require("../harness/ApiAudit")
 local FontCmap = require("../harness/FontCmap")
 
@@ -1011,14 +1012,18 @@ return function(T)
 				c.PC.closeAll()
 				S.run(c, 0.5)
 				expect(HUD.visible("nextBuy")).toBe(true)
-				-- clic de souris : l'écran Améliorations sur Conseillé (D13)
+				-- clic de souris : l'écran Améliorations sur Conseillé (D13), ouvert depuis le jeu (lot I,
+				-- étape 2, plan I M4 / D14, journal I-14) : ○ rend la main au jeu en un appui (ni écran ni rail)
 				HUD.element("nextBuy").Activated:Fire()
 				S.run(c, 0.5)
 				expect(c.PC.current()).toBe("Upgrades")
 				expect(c.Up.currentTab()).toBe("suggested")
 				expect(HUD.visible("nextBuy")).toBe(false)
-				c.PC.closeAll()
+				Gamepad.tap(h, Enum.KeyCode.ButtonB)
 				S.run(c, 0.5)
+				expect(c.PC.isOpen("Upgrades")).toBe(false)
+				expect(c.PC.menuOpen()).toBe(false)
+				expect(table.concat(TvAudit.mod(h, "UI.FocusGuard").names(), ",")).toBe("")
 				-- suivi « Prêt » (Grand Splorch prêt) : cachée ; l'apparition suivante n'envoie rien
 				h:fireClient("ReplicatedStorage.Remotes.DataPatch", { squishies = BIG }, {})
 				S.run(c, 0.5)

@@ -344,7 +344,7 @@ local function after(
 		RanchService.offeredPlace(player, report.fullPen, fullPen)
 	end
 	if report.regain then
-		Notify.celebrate(player, "regainDone" :: any, { bestR = report.bestR, confetti = regain })
+		Notify.celebrate(player, "regainDone", { bestR = report.bestR, confetti = regain })
 	end
 	refreshAttrs(player)
 	Signals.PrestigeApplied:Fire(player, report.kind, fromR, report.toR, report.ascend)
@@ -404,7 +404,7 @@ local function applyPetit(player: Player): boolean
 	attrsSet[player] = set
 	Notify.celebrate(
 		player,
-		"petitSplorch" :: any,
+		"petitSplorch",
 		{
 			userId = player.UserId,
 			level = report.toR,
@@ -583,7 +583,7 @@ local function startAscend(hero: Player, entry: Queued, t: number)
 	}
 	for _, player in Players:GetPlayers() do
 		if RanchService.isReady(player) then
-			Notify.celebrate(player, "ascend" :: any, payload :: any)
+			Notify.celebrate(player, "ascend", payload :: any)
 		end
 	end
 end

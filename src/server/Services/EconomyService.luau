@@ -155,6 +155,8 @@ local counters: { [string]: number } = {}
 local configOk = true
 local configWhy: string? = nil
 local flagPrint = ""
+-- interrupteur UpgradesScreen au tick précédent (coupure en direct : instantané retiré, D25 du lot B2)
+local upgradesWasOn = false
 
 -- =============================================================================================
 -- Outils
@@ -868,6 +870,7 @@ function EconomyService.Init()
 	-- invariant de stabilité de la configuration (refus compté par Diagnostics)
 	EconomyService.validateConfig(Balance)
 	flagPrint = flagFingerprint()
+	upgradesWasOn = Features.get("UpgradesScreen") == true
 end
 
 -- Connexions et boucles
@@ -910,6 +913,15 @@ function EconomyService.step(now: number)
 	if print ~= flagPrint then
 		flagPrint = print
 		EconomyService.validateConfig(Balance)
+	end
+	-- écran Améliorations coupé en direct : l'instantané versionné est retiré chez chaque joueur (le
+	-- client ferme l'écran et cache son entrée ; lot I, étape 2, D25 du lot B2)
+	local upgradesOn = Features.get("UpgradesScreen") == true
+	if upgradesOn ~= upgradesWasOn then
+		upgradesWasOn = upgradesOn
+		if not upgradesOn then
+			DataService.dropPatchExtra("upgradeSnapshot")
+		end
 	end
 	local recordOn = Features.get("RecordR") == true
 	local serverOn = serverBoostActive(now)

@@ -101,7 +101,7 @@ return function(T)
 				"Two",
 			})
 			expect(keysOf(h, "HudMenu")).toEqual({ "ButtonY", "DPadDown", "M", "Semicolon" })
-			expect(keysOf(h, "HudPanels")).toEqual({ "B", "C", "G", "J", "L", "P" })
+			expect(keysOf(h, "HudPanels")).toEqual({ "B", "C", "G", "J", "L", "P", "U" })
 			for _, name in { "HudPrimary", "HudMenu", "HudPanels" } do
 				expect(h.actionBindings[name].priority >= Enum.ContextActionPriority.High.Value).toBe(true)
 			end
@@ -220,6 +220,65 @@ return function(T)
 					"Shop",
 					"Settings",
 				})
+				clean(h)
+			end
+		)
+
+		-- Lot I, étape 2 (plan I M3, journal I-14) : U ouvre l'écran Améliorations depuis le jeu
+		-- (fromGame = true) quand il est disponible ; sinon la touche passe, sans son, sans maintien
+		-- coupé ni action (la sonde B2-63 relevait « U ne fait rien » : vrai seulement écran indisponible)
+		it(
+			"clavier : U ouvre les Améliorations depuis le jeu (fromGame) ; indisponible : la touche passe, rien d'autre",
+			function()
+				local h, IC, _, world = setup({ console = false })
+				local PC = TvAudit.mod(h, "UI.PanelController")
+				local opened = {}
+				PC.open = function(...)
+					table.insert(opened, table.pack(...))
+				end
+				local available = false
+				PC.available = function(panel)
+					return panel == "Upgrades" and available
+				end
+				local played = bump(h)
+				local actions = {}
+				IC.Action:Connect(function(action)
+					table.insert(actions, action)
+				end)
+				-- un maintien en cours (bol) : U indisponible ne l'arrête pas
+				world.target = {
+					kind = "bowl",
+					slot = 1,
+					uid = "",
+					ready = true,
+					primary = "feed",
+					secondary = "",
+					position = Vector3.new(0, 2, -6),
+				}
+				h:require("ReplicatedStorage.Shared.Util.Clock").advance(1)
+				Gamepad.press(h, Enum.KeyCode.ButtonX)
+				expect(IC.holding()).toBe("feed")
+				table.clear(actions)
+				table.clear(played)
+				-- Gamepad.dispatch rend le nom de l'action qui garde la touche, nil si toutes la passent
+				local result = Gamepad.dispatch(h, Enum.KeyCode.U, Enum.UserInputState.Begin)
+				expect(result).toBeNil()
+				expect(#opened).toBe(0)
+				expect(played).toEqual({})
+				expect(actions).toEqual({})
+				expect(IC.holding()).toBe("feed")
+				expect(#TvAudit.sent(h, "FeedPlop")).toBe(1)
+				Gamepad.release(h, Enum.KeyCode.ButtonX)
+				table.clear(actions)
+				-- disponible : ouvert avec fromGame = true, action « panel »
+				available = true
+				result = Gamepad.dispatch(h, Enum.KeyCode.U, Enum.UserInputState.Begin)
+				expect(result).toBe("HudPanels")
+				expect(#opened).toBe(1)
+				expect(opened[1][1]).toBe("Upgrades")
+				expect(opened[1][2]).toBeNil()
+				expect(opened[1][3]).toBe(true)
+				expect(actions).toEqual({ "panel" })
 				clean(h)
 			end
 		)

@@ -920,12 +920,13 @@ local function buildV2()
 	NextBuy.build(safeFrame :: Frame, function(obj: GuiObject)
 		Util.place(obj, { rect = V2.Rects.nextBuy, anchor = "topLeft", column = "left" })
 	end, function()
-		-- clic de souris : l'écran Améliorations sur Conseillé (D13 ; InputGuard)
+		-- clic de souris : l'écran Améliorations sur Conseillé (D13 ; InputGuard), ouvert depuis le jeu :
+		-- ○ y rend la main au jeu en un appui (lot I, étape 2, plan I M4 / D14 ; GDD §10.7 « → jeu »)
 		if not Widgets.confirmed() then
 			return
 		end
 		AudioController.play("Click")
-		Util.safe("PanelController.open", nil, PanelController.open, "Upgrades", "suggested")
+		Util.safe("PanelController.open", nil, PanelController.open, "Upgrades", "suggested", true)
 	end, function()
 		-- première vraie apparition : UiSeen("nextBuy"), une fois par session (D12)
 		Widgets.seen("nextBuy")

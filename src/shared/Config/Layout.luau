@@ -141,6 +141,9 @@ Layout.Keyboard = {
 		Leaderboards = "L",
 		Shop = "B",
 		Settings = "P",
+		-- écran Améliorations (lot I, étape 2, plan I M3) : seulement quand il est disponible ;
+		-- sinon la touche passe (aucun son, aucun maintien coupé)
+		Upgrades = "U",
 	} :: { [string]: string },
 	BackpackRetry = 10,
 }

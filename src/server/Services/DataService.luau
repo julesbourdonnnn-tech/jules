@@ -1200,6 +1200,27 @@ function DataService.setPatchExtra(
 	table.insert(patchExtras, { name = name, fn = fn })
 end
 
+-- Retire chez chaque joueur chargé la valeur dérivée `name` (crochet de setPatchExtra devenu muet, par
+-- exemple après un interrupteur coupé en direct : lot I, étape 2, décision D25 du lot B2) : un DataPatch
+-- sans valeur, `name` dans la liste `removed` ; rien d'autre n'est envoyé. Un nom inconnu ne fait rien.
+function DataService.dropPatchExtra(name: string)
+	local known = false
+	for _, extra in patchExtras do
+		if extra.name == name then
+			known = true
+			break
+		end
+	end
+	if not known or patchRemote == nil then
+		return
+	end
+	for player in profiles do
+		if player.Parent then
+			patchRemote:FireClient(player, {}, { name })
+		end
+	end
+end
+
 -- Enregistre un crochet appelé (sans yield) juste avant chaque sauvegarde du joueur :
 -- autosave, saveNow, départ et BindToClose. `release` vaut true pour la sauvegarde de libération
 -- (départ, BindToClose) : le travail « de départ » doit être fait là, le Player peut encore être

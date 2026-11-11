@@ -1125,4 +1125,60 @@ return function(T)
 			end
 		)
 	end)
+
+	-- Lot I, étape 2 (D25 du lot B2, plan I M5, journal I-15) : l'écran Améliorations coupé en direct
+	describe("EconomyService_upgrades › coupure en direct de l'écran (D25 du lot B2)", function()
+		it(
+			"UpgradesScreen coupé en direct : un DataPatch retire upgradeSnapshot à chaque joueur chargé (et rien d'autre) ; plus aucun patch ne le porte ; rouvert : il revient",
+			function()
+				local w = boot({})
+				local p = Bots.join(1)
+				local q = Bots.join(2)
+				w.h:settle(3)
+				local snaps = w.h:sentTo(p, "DataSnapshot")
+				expect(#snaps >= 1 and snaps[#snaps][1].upgradeSnapshot ~= nil).toBe(true)
+				local function drops(player)
+					local out = {}
+					for _, args in w.h:sentTo(player, "DataPatch") do
+						if type(args[2]) == "table" and table.find(args[2], "upgradeSnapshot") then
+							table.insert(out, args)
+						end
+					end
+					return out
+				end
+				expect(#drops(p)).toBe(0)
+				local d = w.DS.get(p)
+				d.coins += 5
+				w.DS.markDirty(p, "coins")
+				Bots.frames(20)
+				local before = #patchesWithSnapshot(w, p)
+				expect(before >= 1).toBe(true)
+				-- coupure en direct (commande LiveOps d'un administrateur → Features.set)
+				expect(w.F.set("UpgradesScreen", false)).toBe(true)
+				Bots.frames(20)
+				for _, player in { p, q } do
+					local list = drops(player)
+					expect(#list).toBe(1)
+					expect(list[1][1]).toEqual({})
+					expect(list[1][2]).toEqual({ "upgradeSnapshot" })
+					expect(list[1][3]).toBeNil()
+				end
+				-- les patchs suivants (pièces qui coulent) ne le portent plus
+				d.coins += 5
+				w.DS.markDirty(p, "coins")
+				Bots.frames(20)
+				expect(#patchesWithSnapshot(w, p)).toBe(before)
+				expect(#drops(p)).toBe(1)
+				-- rouvert : le patch suivant qui touche ce qu'il montre le porte de nouveau
+				expect(w.F.set("UpgradesScreen", true)).toBe(true)
+				Bots.frames(10)
+				d.coins += 5
+				w.DS.markDirty(p, "coins")
+				Bots.frames(20)
+				expect(#patchesWithSnapshot(w, p) > before).toBe(true)
+				expect(#drops(p)).toBe(1)
+				clean(w)
+			end
+		)
+	end)
 end

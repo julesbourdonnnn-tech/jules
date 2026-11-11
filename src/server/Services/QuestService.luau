@@ -540,7 +540,7 @@ local function deliverOnce(player: Player, data: { [string]: any }, s: Session, 
 			end
 			Bitset.set(track.claimed, tier)
 			DataService.markDirty(player, "weeklyTrack")
-			Notify.celebrate(player, "trackTier" :: any, { tier = tier, reward = reward })
+			Notify.celebrate(player, "trackTier", { tier = tier, reward = reward })
 			Analytics.custom(player, "WeeklyTrackTier", tier)
 			if tier == TRACK_TIERS then
 				addLifetime(player, data, "tracksDone", 1)
@@ -723,7 +723,7 @@ local function carnetCheck(player: Player, data: { [string]: any }, silent: bool
 				Guard.try("quest:carnetOutfit", SquishyService.grantOutfit, player, string.sub(reward, 8), 1)
 			end
 			if not silent then
-				Notify.celebrate(player, "carnet" :: any, { tier = i, reward = reward })
+				Notify.celebrate(player, "carnet", { tier = i, reward = reward })
 			end
 		end
 	end
@@ -782,10 +782,10 @@ local function recordCards(player: Player, data: { [string]: any }, atLogin: boo
 	if atLogin and onboarding.welcomeV2Pending == true then
 		onboarding.welcomeV2Pending = false
 		DataService.markDirty(player, "onboarding")
-		Notify.celebrate(player, "welcomeV2" :: any, { highlights = highlights(best) })
+		Notify.celebrate(player, "welcomeV2", { highlights = highlights(best) })
 		setSeen(player, data, best)
 	elseif num(data.unlocksSeen, 0) < best then
-		Notify.celebrate(player, "unlock2" :: any, { recordR = best, keys = Prestige.unlocksFor(best) })
+		Notify.celebrate(player, "unlock2", { recordR = best, keys = Prestige.unlocksFor(best) })
 		setSeen(player, data, best)
 	end
 	recordOutfits(player, data, best)
@@ -825,7 +825,7 @@ local function recordSteps(player: Player, data: { [string]: any }, s: Session)
 		end
 	end
 	if top > 0 and not first then
-		Notify.celebrate(player, "recordStep" :: any, { share = RECORD_STEPS[top] })
+		Notify.celebrate(player, "recordStep", { share = RECORD_STEPS[top] })
 	end
 end
 
@@ -913,7 +913,7 @@ local function masteryCheck(player: Player, data: { [string]: any }, silent: boo
 				Bitset.set(bits, species)
 				DataService.markDirty(player, "mastery")
 				if not silent then
-					Notify.celebrate(player, "mastery" :: any, { species = species })
+					Notify.celebrate(player, "mastery", { species = species })
 				end
 			end
 		end

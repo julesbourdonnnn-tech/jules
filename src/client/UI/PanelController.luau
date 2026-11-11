@@ -1332,6 +1332,16 @@ function PanelController.Start()
 		if on then
 			ensureV2Rail()
 		end
+		-- coupé en direct (le serveur retire upgradeSnapshot, D25 du lot B2 ; lot I, étape 2) : l'écran
+		-- ouvert se ferme (règle (1) du §27.3) ; ouvert depuis le jeu, la main revient au jeu, sinon au rail
+		if not on and panelOpen(UPGRADES) then
+			if backToGame == UPGRADES then
+				backToGame = nil
+				PanelController.closeAll()
+			else
+				FocusGuard.closeNow(PANEL_PREFIX .. UPGRADES)
+			end
+		end
 		if FocusGuard.isOpen(MENU) then
 			refreshRail()
 		end

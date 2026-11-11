@@ -81,6 +81,18 @@ export type CelebrateKind =
 	| "fanfare"
 	| "photo"
 	| "testError"
+	-- v2.0 (lot I, étape 2, INT-V2-CELEBRATE : sortes v2.0 fusionnées ici, plus de type à part)
+	| "petitSplorch"
+	| "ascend"
+	| "tier"
+	| "unlock2"
+	| "confetti"
+	| "trackTier"
+	| "carnet"
+	| "mastery"
+	| "regainDone"
+	| "recordStep"
+	| "welcomeV2"
 export type CelebratePayload = {
 	kind: CelebrateKind,
 	data: { [string]: any },
@@ -601,19 +613,7 @@ export type HelperPressEntry = { helper: number, uid: Uid, tPress: number }
 export type HelperPressPayload = { ownerId: number, presses: { HelperPressEntry } }
 export type HelperState = "idle" | "moving" | "nap" | "paused"
 
--- Célébrations v2.0 (Celebrate, sortes à fusionner dans CelebrateKind à l'intégration I)
-export type CelebrateKindV2 =
-	"petitSplorch"
-	| "ascend"
-	| "tier"
-	| "unlock2"
-	| "confetti"
-	| "trackTier"
-	| "carnet"
-	| "mastery"
-	| "regainDone"
-	| "recordStep"
-	| "welcomeV2"
+-- Charges des célébrations v2.0 (sortes dans CelebrateKind, fusionnées au lot I)
 export type CelebratePetitSplorch = { userId: number, level: number, startedAt: number, endsAt: number }
 export type CelebrateAscend = {
 	userId: number,

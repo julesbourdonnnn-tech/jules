@@ -18,7 +18,8 @@
 --     de retour) : rien n'est lié. Avant la leçon du menu (étape 10 de l'accueil), △ / croix ↓ / M
 --     et les raccourcis ne jouent qu'un petit son Bump.
 --   * Raccourcis directs du clavier G C J L B P → PanelController.open(Ranch, Squishydex, Objectives,
---     Leaderboards, Shop, Settings) (Config/Layout.Keyboard.Panels).
+--     Leaderboards, Shop, Settings) (Config/Layout.Keyboard.Panels) ; U → écran Améliorations ouvert
+--     depuis le jeu, seulement quand PanelController.available("Upgrades") (sinon la touche passe).
 --   * Sac à objets de Roblox coupé (StarterGui:SetCoreGuiEnabled(Backpack, false) sous pcall, nouveaux
 --     essais pendant Layout.Keyboard.BackpackRetry s) pour que 1, 2, 3 ne servent qu'aux emotes.
 --   * ○ en portant : un menu ouvert se ferme d'abord (FocusGuard lie ○ dans les fenêtres), puis ○ pose.
@@ -395,12 +396,23 @@ local function onPanels(_name: string, state: Enum.UserInputState, input: any): 
 	if panel == nil then
 		return Enum.ContextActionResult.Pass
 	end
+	-- U (écran Améliorations) : indisponible (interrupteur coupé, aucun instantané du serveur) → la
+	-- touche passe, sans son, sans maintien coupé ni intention (plan I M3)
+	local upgrades = panel == "Upgrades"
+	if upgrades and not Util.safe("PanelController.available", false, PanelController.available, panel) then
+		return Enum.ContextActionResult.Pass
+	end
 	if not menuUnlocked() then
 		bump()
 		return Enum.ContextActionResult.Sink
 	end
 	endHold()
-	Util.safe("PanelController.open", nil, PanelController.open, panel)
+	if upgrades then
+		-- ouvert depuis le jeu : ○ rend la main au jeu en un appui (GDD §10.7, « → jeu »)
+		Util.safe("PanelController.open", nil, PanelController.open, panel, nil, true)
+	else
+		Util.safe("PanelController.open", nil, PanelController.open, panel)
+	end
 	fire("panel")
 	return Enum.ContextActionResult.Sink
 end

@@ -1852,7 +1852,7 @@ return function(T)
 		)
 
 		it(
-			"types : sortes de Celebrate = table du §10.3 de docs/04 ; champs ajoutés par le contrat v1.2",
+			"types : sortes de Celebrate = table du §10.3 de docs/04 (dans les deux sens, v2.0 fusionnée) ; champs ajoutés par le contrat v1.2",
 			function()
 				local source = fs.readFile("src/shared/Types.luau")
 				local union =
@@ -1876,6 +1876,23 @@ return function(T)
 					end
 				end
 				expect(documented >= 30).toBe(true)
+				-- Lot I, étape 2 (INT-V2-CELEBRATE, journal I-13) : dans les deux sens, chaque sorte de
+				-- l'union (v1.3 et v2.0 fusionnées) a sa ligne dans la table
+				local inTable = {}
+				for line in string.gmatch(section, "[^\n]+") do
+					for kind in string.gmatch(string.match(line, "^| ([^|]+) |") or "", "`(%w+)`") do
+						inTable[kind] = true
+					end
+				end
+				local typedCount = 0
+				for kind in kinds do
+					typedCount += 1
+					expect({ kind = kind, documented = inTable[kind] == true }).toEqual({
+						kind = kind,
+						documented = true,
+					})
+				end
+				expect(typedCount).toBe(41)
 				for _, needle in
 					{
 						"\tgd: number,",
@@ -2141,6 +2158,7 @@ return function(T)
 					Leaderboards = "L",
 					Shop = "B",
 					Settings = "P",
+					Upgrades = "U", -- lot I, étape 2 (plan I M3, journal I-14)
 				})
 				for _, key in L.Keyboard.Menu do
 					expect(key ~= "Tab").toBe(true)
