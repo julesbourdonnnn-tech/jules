@@ -118,11 +118,12 @@ return function(T)
 			local root = h.workspace:FindFirstChild("ClientWorld")
 			return if root then #root:GetDescendants() else 0
 		end
-		-- une NOUVELLE fenêtre (endsAt distinct, comme deux fenêtres réelles du serveur)
+		-- une NOUVELLE fenêtre (endsAt distinct, comme deux fenêtres réelles du serveur) ; jamais plus de
+		-- 300 s devant (AmbienceRules.fromEvent refuse un endsAt plus loin que la plus longue fenêtre)
 		local windows = 0
 		function c.weather(kind, seconds)
 			windows += 1
-			c.event({ weather = { kind = kind, endsAt = Clock.unix() + (seconds or 300) + windows % 2 } })
+			c.event({ weather = { kind = kind, endsAt = Clock.unix() + (seconds or 290) - windows % 2 } })
 		end
 		return c
 	end
