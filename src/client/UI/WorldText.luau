@@ -124,14 +124,14 @@ local function getFolder(): Folder
 	return f
 end
 
--- Largeur (px TV) d'un texte d'une ligne à la taille `size` : mesure du moteur + 2 px (contour du
+-- Largeur (px TV) d'un texte d'une ligne à la taille `size` : mesure du moteur + 6 px (contour du
 -- texte), repli sur l'estimation avec sa marge
 local function measure(text: string, size: number): number
 	local ok, v = pcall(function()
 		return TextService:GetTextSize(text, size, Enum.Font.FredokaOne, Vector2.new(1e5, 1e5))
 	end)
 	if ok and typeof(v) == "Vector2" and v.X > 0 and v.X == v.X then
-		return math.ceil(v.X) + 2
+		return math.ceil(v.X) + 6
 	end
 	return math.ceil(Util.textEm(text) * size * TEXT_MARGIN)
 end

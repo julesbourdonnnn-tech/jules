@@ -4758,6 +4758,19 @@ function Screens.keyBoxes(c)
 				end
 			end
 		end
+		if set == nil and d and d.text ~= "" and string.find(shownText, "\n", 1, true) then
+			-- lot I (D19) : texte fait de lignes traduites, une par ligne (déblocages de la carte unlock2
+			-- rouverte) : chaque ligne est reliée à sa clé et mesurée dans la boîte du texte entier
+			for line in string.gmatch(shownText .. "\n", "(.-)\n") do
+				local part = if line ~= "" then Screens.keysOf(c, line) else nil
+				if part then
+					set = set or {}
+					for key, vars in part do
+						set[key] = vars
+					end
+				end
+			end
+		end
 		-- lot B3, étape 2 : variable-clé (UI/MetaView.resolve) : une variable dont la valeur est ELLE-MÊME le
 		-- texte d'une clé (nom d'un ciel, d'un objet, d'une Plopette dans « Halo et ciel : {name} ») relie
 		-- aussi cette clé à la boîte (sa traduction y est mesurée seule ; le texte entier l'est par la clé
