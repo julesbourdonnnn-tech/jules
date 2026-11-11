@@ -610,6 +610,28 @@ return function(T)
 								label .. " " .. res.X .. " : puce Menu ou Prochain achat sous le rail"
 							)
 						end
+						-- lot I (M21, revue de la galerie) : un panneau ouvert, le bas du rail ne dépasse
+						-- jamais sous le coin du panneau (Réglages passait sous le coin en bas à gauche)
+						PC.open("Ranch")
+						S.run(c, 0.6)
+						Layout.apply(h)
+						local win = PC.window("Ranch")
+						if win then
+							local w = tvRect(h, win)
+							local rr = tvRect(h, rail)
+							if rr.y + rr.h > w.y + w.h + 1 then
+								table.insert(
+									all,
+									string.format(
+										"%s %d : rail jusqu'en y %d sous le panneau (bas %d)",
+										label,
+										res.X,
+										rr.y + rr.h,
+										w.y + w.h
+									)
+								)
+							end
+						end
 					end
 					S.clean(c, expect)
 				end

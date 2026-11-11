@@ -789,16 +789,23 @@ local function refreshRail()
 	local needed: number = n * h + (n - 1) * gap
 	if v2 then
 		-- v2.0 (D14) : boutons de 80, écart 16 ; le rail monte s'il le faut, jamais au-dessus de la
-		-- pastille Fame (y 178) ; sinon l'écart se resserre (12, puis ce qui tient, jamais sous 4)
-		if top + needed > safeH then
-			top = safeH - needed
+		-- pastille Fame (y 178) ; sinon l'écart se resserre (12, puis ce qui tient, jamais sous 4).
+		-- Lot I (M21) : panneau ouvert, le bas du rail ne descend jamais sous le bas du panneau (centré
+		-- dans la zone sûre) : sinon le dernier bouton (Réglages) dépassait sous son coin. Le HUD du
+		-- haut est caché sous le voile : le rail peut monter jusqu'à la pastille Fame
+		local bottom = safeH
+		if #openOrder > 0 then
+			bottom = math.min(safeH, math.floor(safeH / 2 + PANEL_RECT.h / 2))
+		end
+		if top + needed > bottom then
+			top = bottom - needed
 			if top < RAIL_TOP_MIN then
 				if n > 1 then
-					local fit = math.floor((safeH - RAIL_TOP_MIN - n * h) / (n - 1))
+					local fit = math.floor((bottom - RAIL_TOP_MIN - n * h) / (n - 1))
 					gap = math.clamp(fit, RAIL_V2_GAP_MIN, RAIL_V2_GAP_TIGHT)
 				end
 				needed = n * h + (n - 1) * gap
-				top = math.max(0, math.min(RAIL_RECT.y - SAFE.y, safeH - needed))
+				top = math.max(0, math.min(RAIL_RECT.y - SAFE.y, bottom - needed))
 			end
 		end
 	else
@@ -1207,6 +1214,9 @@ local function showPanel(name: string, tab: string?)
 		Juice.tween(scale, 0.22, { Scale = 1 }, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
 	end
 	table.insert(openOrder, name)
+	if #openOrder == 1 then
+		refreshRail() -- lot I (M21) : le rail se range au-dessus du bas du panneau
+	end
 	safe(name .. ".open", nil, mod.open, tab)
 	-- ouvrir un panneau termine le portage (le rail, non)
 	if carrying() then

@@ -206,7 +206,7 @@ local function resyncSoon()
 	end)
 end
 
-local function activateChoice(item: Item)
+local function activateChoice(item: Item, gui: GuiObject?)
 	if item.kind == "mode" then
 		local mode = Widgets.tbl(Widgets.state("mode"))
 		Widgets.send("SetMode", not (mode.rush == true))
@@ -223,20 +223,30 @@ local function activateChoice(item: Item)
 		Widgets.send("SetSetting", item.key, nextValue)
 		resyncSoon()
 	elseif item.kind == "action" and item.key == "photo" then
-		-- INT-B5-SETTINGS : le menu se ferme, le mode photo commence (refusé : rien d'autre)
+		-- INT-B5-SETTINGS : le menu se ferme, le mode photo commence. Lot I (M22) : impossible maintenant
+		-- (spectacle qui tient la caméra, personnage absent) → refus sur la ligne, le menu RESTE ouvert
 		if not MetaFlags.on("PhotoMode") then
 			return
+		end
+		local ok, camera = pcall(function(): any
+			return require(Client.Controllers.CameraController) :: any
+		end)
+		if not ok or type(camera) ~= "table" or type(camera.photo) ~= "function" then
+			Widgets.refuse(gui)
+			return
+		end
+		if type(camera.canPhoto) == "function" then
+			local okCan, can = pcall(camera.canPhoto)
+			if not okCan or can ~= true then
+				Widgets.refuse(gui)
+				return
+			end
 		end
 		local n = nav
 		if n and n.closeAll then
 			n.closeAll()
 		end
-		local ok, camera = pcall(function(): any
-			return require(Client.Controllers.CameraController) :: any
-		end)
-		if ok and type(camera) == "table" and type(camera.photo) == "function" then
-			pcall(camera.photo, true)
-		end
+		pcall(camera.photo, true)
 	end
 end
 
@@ -348,7 +358,7 @@ local function makeRow(frame: Frame, _slot: number): Row
 		onActivate = function()
 			local item = row.item
 			if item then
-				activateChoice(item)
+				activateChoice(item, row.choice)
 			end
 		end,
 	})

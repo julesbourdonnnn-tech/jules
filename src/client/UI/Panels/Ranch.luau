@@ -2301,11 +2301,13 @@ local function buildStyleV13(page: Frame)
 			corner = UDim.new(0.5, 0),
 			zIndex = b.ZIndex + 1,
 		})
+		-- lot I (M16) : marge de 10 px comme les cases de Mon style (B3-79) : le cadre de focus (8 px
+		-- dedans) ne couvre plus le début ni la fin des sources longues (« Squishydex: 160 stamps »)
 		local name = Widgets.label({
 			parent = b,
 			name = "Name",
-			size = UDim2.new(1, -12, 0, 68),
-			position = UDim2.fromOffset(6, 58),
+			size = UDim2.new(1, -2 * V2_TEXT_INSET, 0, 68),
+			position = UDim2.fromOffset(V2_TEXT_INSET, 58),
 			text = "",
 			textSize = 32,
 			wrapped = true,
@@ -2314,8 +2316,8 @@ local function buildStyleV13(page: Frame)
 		local status = Widgets.label({
 			parent = b,
 			name = "Status",
-			size = UDim2.new(1, -12, 0, 68),
-			position = UDim2.fromOffset(6, 128),
+			size = UDim2.new(1, -2 * V2_TEXT_INSET, 0, 68),
+			position = UDim2.fromOffset(V2_TEXT_INSET, 128),
 			text = "",
 			textSize = 28,
 			wrapped = true,

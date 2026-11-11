@@ -29,6 +29,9 @@ Glyph.__index = Glyph
 export type Binding = {
 	keyboard: Enum.KeyCode?,
 	gamepad: Enum.KeyCode?,
+	-- lot I (M22) : touches groupées du clavier dans une seule pastille (« W A S D », « ← ↑ → ↓ ») à la
+	-- place du nom de la touche `keyboard`
+	keyboardText: string?,
 }
 
 export type Props = {
@@ -192,6 +195,10 @@ function Glyph.refresh(self: Handle)
 		return
 	end
 	local info = Platform.glyph(key)
+	local group = self._binding.keyboardText
+	if group ~= nil and group ~= "" and key == self._binding.keyboard then
+		info = { keyCode = key, gamepad = false, text = group }
+	end
 	local mode
 	if info.image ~= nil then
 		mode = "image"

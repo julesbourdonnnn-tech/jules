@@ -653,6 +653,18 @@ return function(T)
 				c.h.game.UserInputService.LastInputTypeChanged:Fire(Enum.UserInputType.Keyboard)
 				c.h:settle(1)
 				expect(keys()).toBe("Backspace:text,F:text,Left:text,PageDown:text,PageUp:text,W:text")
+				-- lot I (M22) : touches groupées dans une pastille ; boîte de l'aide à la largeur du contenu
+				local box = gui:FindFirstChild("Hint", true)
+				expect(box.Row1.Glyph1.Text.Text).toBe("W A S D")
+				expect(box.Row2.Glyph1.Text.Text).toBe("← ↑ → ↓")
+				expect(box.Size.X.Offset < 460).toBe(true)
+				for _, line in box:GetChildren() do
+					local label = line:FindFirstChild("Label")
+					if label then
+						-- le texte (largeur estimée du moteur simulé) tient dans la boîte
+						expect(label.Position.X.Offset + 16 <= box.Size.X.Offset).toBe(true)
+					end
+				end
 				-- touches du clavier : WASD absorbées (le personnage ne bouge pas), F change le filtre
 				for _, key in { Enum.KeyCode.W, Enum.KeyCode.A, Enum.KeyCode.Space, Enum.KeyCode.F } do
 					local input = Gamepad.input(key, Enum.UserInputState.Begin)
@@ -688,6 +700,32 @@ return function(T)
 				end
 				Cam.photo(false)
 				S.clean(x, expect)
+			end
+		)
+
+		-- Lot I (M22, relecture des écrans B5) : « Cheese ! » quand le mode photo est impossible (un
+		-- spectacle tient la caméra) : le menu reste ouvert sur la ligne, refus (son, vibration), aucune
+		-- intention ; avant, le menu se fermait et rien ne se passait
+		it(
+			"« Cheese ! » impossible (spectacle en cours) : le menu reste ouvert, refus, aucune intention",
+			function()
+				local c = client()
+				local from = #c.h.log.serverEvents
+				expect(c.Cam.takeLease("show")).toBe(true)
+				local row = enterFromMenu(c)
+				S.run(c, 0.5)
+				expect(c.Cam.photoOn()).toBe(false)
+				expect(c.PC.current()).toBe("Settings")
+				expect(c.h.game.GuiService.SelectedObject).toBe(row)
+				expect(#intents(c, from)).toBe(0)
+				c.Cam.giveLease("show")
+				-- caméra rendue : la même ligne entre bien en mode photo, le menu se ferme
+				Gamepad.tap(c.h, Enum.KeyCode.ButtonA)
+				c.h:settle(1)
+				expect(c.Cam.photoOn()).toBe(true)
+				expect(c.PC.current()).toBeNil()
+				c.Cam.photo(false)
+				S.clean(c, expect)
 			end
 		)
 

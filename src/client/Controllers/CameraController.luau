@@ -569,6 +569,23 @@ local function entryZone(at: Vector3): (string, number, Vector3, number)
 end
 
 -- Entre (vrai) ou sort (faux) du mode photo ; vrai : le mode photo est actif après l'appel
+-- Lot I (M22) : le mode photo peut-il commencer maintenant ? (mêmes conditions que photo(true), sans
+-- rien changer : interrupteur, personnage, caméra, et aucun bail plus fort — spectacle — en cours).
+-- Panels/Settings le demande AVANT de fermer le menu : impossible → refus sur la ligne, menu ouvert
+function CameraController.canPhoto(): boolean
+	if photo ~= nil then
+		return true
+	end
+	if not Flags.on("PhotoMode") then
+		return false
+	end
+	if Players.LocalPlayer == nil or Util.localRoot() == nil or camera() == nil then
+		return false
+	end
+	local cur = lease
+	return cur == nil or cur == "photo" or PRIORITY[cur] <= PRIORITY.photo
+end
+
 function CameraController.photo(on: boolean): boolean
 	if on ~= true then
 		endPhoto(true, true)

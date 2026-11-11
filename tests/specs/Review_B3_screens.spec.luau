@@ -190,6 +190,72 @@ return function(T)
 		end)
 	end)
 
+	-- Lot I (étape 4, M16, relecture des écrans B3) : même défaut sur la page Style de la v1.3 (chemin
+	-- « interrupteurs coupés », toujours jouable après une coupure en direct) : les noms et sources des
+	-- cases étaient à 6 px du bord, sous le cadre de focus en anglais (« Saddles & Trails pass »).
+	-- Chaque sorte, chaque case visible, EN et FR.
+	describe("Review_B3_screens › Style de la v1.3 : le cadre de focus ne couvre aucun texte", function()
+		local profile = Screens.profileById("tv1080")
+		local function midStyle()
+			for _, group in Screens.groups() do
+				if group.id == "mid" then
+					for _, screen in group.screens do
+						if screen.id == "panel.Ranch.style" then
+							return group, screen
+						end
+					end
+				end
+			end
+			error("écran inconnu : panel.Ranch.style")
+		end
+		for _, lang in Screens.LANGS do
+			it(lang .. " · chaque sorte, chaque case", function()
+				local group, screen = midStyle()
+				local c = Screens.boot(Harness, profile, lang, group.state)
+				local shown, err = Screens.show(c, screen)
+				expect(err).toBeNil()
+				expect(shown).toBe(true)
+				local Ranch = c.h:require(Screens.CLIENT .. "UI.Panels.Ranch")
+				local GuiService = c.h.game.GuiService
+				local problems, seen = {}, {}
+				local function look(obj)
+					GuiService.SelectedObject = obj
+					Screens.frames(c, 3, 0.1)
+					Screens.layout(c)
+					for _, line in underFrame(obj) do
+						if not seen[line] then
+							seen[line] = true
+							table.insert(problems, line)
+						end
+					end
+				end
+				local items = c.PC.window("Ranch").Body.Page_style:FindFirstChild("Items")
+				expect(items ~= nil).toBe(true)
+				local looked = 0
+				for _, kind in { "saddle", "trail", "title", "theme", "flag", "outfits" } do
+					local b = Ranch._styleKindButton(kind)
+					expect(b ~= nil).toBe(true)
+					look(b)
+					Screens.activate(c, b)
+					for i = 1, 15 do
+						local cell = items:FindFirstChild("Item" .. i)
+						if cell and cell.Visible then
+							look(cell)
+							looked += 1
+						end
+					end
+				end
+				expect(looked > 30).toBe(true)
+				table.sort(problems)
+				expect(table.concat(problems, "\n")).toBe("")
+				Harness.disposeAll()
+			end)
+		end
+		it("fin des écrans", function()
+			Screens.finish()
+		end)
+	end)
+
 	-- Joué à la manette (vrai client console, style ClientReplay) : les deux listes défilantes de Mon style
 	-- (9 sortes pour 7 visibles ; « Aucun » et 66 titres en 14 rangées) parcourues à la croix seule, d'un bout à l'autre
 	-- et retour : la sélection avance d'une sorte ou d'une rangée par appui, reste dans la partie visible

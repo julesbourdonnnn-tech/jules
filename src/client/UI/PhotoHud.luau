@@ -31,6 +31,7 @@
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TextService = game:GetService("TextService")
 
 local Shared = ReplicatedStorage:WaitForChild("Shared", 30) :: Folder
 local Clock = require(Shared.Util.Clock)
@@ -40,6 +41,7 @@ local Client = script.Parent.Parent
 local Root = require(Client.UI.Root)
 local FocusGuard = require(Client.UI.FocusGuard)
 local Widgets = require(Client.UI.Panels.Widgets)
+local Glyph = require(Client.UI.Glyph)
 
 local PhotoHud = {}
 
@@ -58,11 +60,22 @@ local TINTS: { [string]: { color: Color3, transparency: number } } = {
 	pink = { color = Color3.fromRGB(255, 120, 190), transparency = 0.8 },
 	dream = { color = Color3.fromRGB(160, 140, 255), transparency = 0.76 },
 }
--- lignes de l'aide : clé, touches de la manette, touches du clavier
-type HintRow = { key: string, pad: { Enum.KeyCode }, keys: { Enum.KeyCode } }
+-- lignes de l'aide : clé, touches de la manette, touches du clavier ; group : touches du clavier
+-- groupées dans une seule pastille (lot I, M22 : « W A S D » et « ← ↑ → ↓ », jamais « W » seul)
+type HintRow = { key: string, pad: { Enum.KeyCode }, keys: { Enum.KeyCode }, group: string? }
 local HINTS: { HintRow } = {
-	{ key = "photo.hint.move", pad = { Enum.KeyCode.Thumbstick1 }, keys = { Enum.KeyCode.W } },
-	{ key = "photo.hint.turn", pad = { Enum.KeyCode.Thumbstick2 }, keys = { Enum.KeyCode.Left } },
+	{
+		key = "photo.hint.move",
+		pad = { Enum.KeyCode.Thumbstick1 },
+		keys = { Enum.KeyCode.W },
+		group = "W A S D",
+	},
+	{
+		key = "photo.hint.turn",
+		pad = { Enum.KeyCode.Thumbstick2 },
+		keys = { Enum.KeyCode.Left },
+		group = "← ↑ → ↓",
+	},
 	{
 		key = "photo.hint.zoom",
 		pad = { Enum.KeyCode.ButtonL2, Enum.KeyCode.ButtonR2 },
@@ -248,8 +261,10 @@ local function build()
 	})
 	Widgets.followGlyph(label, glyph.frame, 20, 16, 20)
 
-	-- aide (haut, à gauche)
+	-- aide (haut, à gauche) ; lot I (M22) : largeur de la boîte = son contenu (glyphes réels + texte
+	-- mesuré), jamais plus large que HINT.w (avant : 460 px pour ≈ 330 px de contenu)
 	local rows = #HINTS
+	local rowContent: { () -> number } = {}
 	local box = Widgets.frame({
 		parent = safe,
 		name = "Hint",
@@ -271,14 +286,16 @@ local function build()
 		local x = 0
 		local last: GuiObject? = nil
 		for k, key in row.pad do
-			local g = Widgets.glyph(
-				line,
-				key,
-				row.keys[k],
-				Layout.Glyph.Min,
-				UDim2.new(0, x, 0.5, 0),
-				Vector2.new(0, 0.5)
-			)
+			local g = Glyph.new(line, {
+				gamepad = key,
+				keyboard = row.keys[k],
+				keyboardText = if k == 1 then row.group else nil,
+			}, {
+				size = Layout.Glyph.Min,
+				position = UDim2.new(0, x, 0.5, 0),
+				anchor = Vector2.new(0, 0.5),
+				zIndex = 6,
+			})
 			g.frame.Name = "Glyph" .. k
 			last = g.frame
 			x += Layout.Glyph.Min + HINT.glyphGap
@@ -306,6 +323,50 @@ local function build()
 			Widgets.followGlyph(text, second, first.Size.X.Offset + HINT.glyphGap, HINT.glyphGap, 0)
 		elseif first then
 			Widgets.followGlyph(text, first, 0, HINT.glyphGap, 0)
+		end
+		-- largeur du contenu de la ligne : glyphes à leur largeur réelle, texte mesuré
+		table.insert(rowContent, function(): number
+			local w = 0
+			local g1 = line:FindFirstChild("Glyph1") :: GuiObject?
+			local g2 = line:FindFirstChild("Glyph2") :: GuiObject?
+			if g1 then
+				w += g1.Size.X.Offset + HINT.glyphGap
+			end
+			if g2 then
+				w += g2.Size.X.Offset + HINT.glyphGap
+			end
+			local ok, size = pcall(function()
+				return TextService:GetTextSize(
+					text.Text,
+					HINT.text,
+					Enum.Font.FredokaOne,
+					Vector2.new(1e5, 1e5)
+				)
+			end)
+			local tw = if ok
+					and typeof(size) == "Vector2"
+					and size.X > 0
+				then size.X
+				else Widgets.textEm(text.Text) * HINT.text
+			return w + math.ceil(tw) + 4
+		end)
+	end
+	local function fitBox()
+		local widest = 0
+		for _, f in rowContent do
+			widest = math.max(widest, f())
+		end
+		local w = math.min(HINT.w, widest + 2 * HINT.pad)
+		if box.Size.X.Offset ~= w then
+			box.Size = UDim2.fromOffset(w, box.Size.Y.Offset)
+		end
+	end
+	fitBox()
+	for _, line in box:GetChildren() do
+		for _, g in line:GetChildren() do
+			if string.sub(g.Name, 1, 5) == "Glyph" and g:IsA("GuiObject") then
+				g:GetPropertyChangedSignal("Size"):Connect(fitBox)
+			end
 		end
 	end
 
