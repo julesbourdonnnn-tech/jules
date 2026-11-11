@@ -3757,6 +3757,19 @@ local function metaScreens()
 			end,
 		})
 	end
+	-- lot B5, étape 5 (D28) : la carte des jumelles par-dessus la vue zoomée (caméra sur le ranch regardé,
+	-- atteinte en 0,4 s ; l'outil ne dessine pas la 3D : seule la carte se voit, rien ne s'y ajoute)
+	table.insert(list, {
+		id = "meta.binoculars.zoom",
+		run = function(c)
+			-- cœurs du jour remis à zéro (l'écran précédent en a donné 20)
+			binocularsState(c, { receivedTotal = 0, givenDay = 0, givenTo = {} })
+			c.Clock.advance(1)
+			Gamepad.tap(c.h, Enum.KeyCode.ButtonX)
+			c.h:settle(2)
+			frames(c, 20, 1 / 30)
+		end,
+	})
 	return list
 end
 
@@ -3870,6 +3883,94 @@ local function lifeScreens()
 			frames(c, 2, 0.05)
 		end,
 	})
+	-- Étape 5 : pastille de l'événement avec le nom de chaque météo (10 premières secondes de la
+	-- fenêtre, INT-B5-HUD) ; message « Place en fête : niveau n » (niveau qui monte en partie) ; ligne
+	-- « Mode photo » des Réglages (choisie) ; mode photo : l'aide de 4 lignes, puis le nom de chaque
+	-- filtre (EventState.weather, fete et features.v2 posés DANS le scénario seulement)
+	for kind, name in { "sunny", "sprinkles", "bubbles", "rainbow" } do
+		table.insert(list, {
+			id = "life.hud.weather." .. name,
+			run = function(c)
+				closeAll(c)
+				flushAll(c)
+				unstub(c)
+				c.WSC.EventChanged:Fire(
+					eventStub(
+						c,
+						c.Clock.now(),
+						{ weather = { kind = kind, endsAt = c.Clock.unix() + 200 + kind } }
+					)
+				)
+				refreshHud(c)
+			end,
+		})
+	end
+	table.insert(list, {
+		id = "life.toast.fete",
+		run = function(c)
+			closeAll(c)
+			flushAll(c)
+			unstub(c)
+			c.WSC.EventChanged:Fire(eventStub(c, c.Clock.now(), { fete = { level = 2 } }))
+			frames(c, 2, 0.1)
+			c.WSC.EventChanged:Fire(eventStub(c, c.Clock.now(), { fete = { level = 3 } }))
+			frames(c, 6, 0.1)
+		end,
+	})
+	local function photoEvent(c)
+		local features = table.clone(FEATURES)
+		features.v2 = { PhotoMode = true }
+		c.WSC.EventChanged:Fire(eventStub(c, c.Clock.now(), { features = features }))
+		frames(c, 2, 0.1)
+	end
+	table.insert(list, {
+		id = "life.settings.photo",
+		run = function(c)
+			closeAll(c)
+			flushAll(c)
+			unstub(c)
+			photoEvent(c)
+			open(c, "Settings")
+			local Settings = c.h:require(CLIENT .. "UI.Panels.Settings")
+			local row = Settings._controlFor("photo")
+			if row then
+				c.h.game.GuiService.SelectedObject = row
+			end
+			frames(c, 6, 0.1)
+		end,
+	})
+	table.insert(list, {
+		id = "life.photo.hint",
+		run = function(c)
+			closeAll(c)
+			flushAll(c)
+			unstub(c)
+			photoEvent(c)
+			frames(c, 6, 0.1)
+			c.h:require(CLIENT .. "Controllers.CameraController").photo(true)
+			frames(c, 6, 0.1)
+		end,
+	})
+	for _, filter in { "warm", "pink", "dream", "none" } do
+		table.insert(list, {
+			id = "life.photo.filter." .. filter,
+			run = function(c)
+				local Cam = c.h:require(CLIENT .. "Controllers.CameraController")
+				local Hud = c.h:require(CLIENT .. "UI.PhotoHud")
+				if not Cam.photoOn() then
+					photoEvent(c)
+					Cam.photo(true)
+				end
+				for _ = 1, 4 do
+					if Hud.filter() == filter and Hud.nameShown() then
+						break
+					end
+					Hud.cycleFilter()
+				end
+				frames(c, 3, 0.1)
+			end,
+		})
+	end
 	return list
 end
 

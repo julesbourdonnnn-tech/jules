@@ -638,6 +638,16 @@ return function(T)
 					"ButtonB:image,ButtonL2:image,ButtonR2:image,ButtonX:image,Thumbstick1:image,Thumbstick2:image"
 				)
 				expect(#Gamepad.audit(c.h)).toBe(0)
+				-- budget d'interface (Q4) : l'écran du mode photo, construit à la première entrée, hors du
+				-- chemin méta de Layout_panels
+				local objects = 0
+				for _, d in gui:GetDescendants() do
+					if d:IsA("GuiObject") then
+						objects += 1
+					end
+				end
+				-- 63 objets au lot B5 (journal B5-53) : garde à 64
+				expect(objects <= 64).toBe(true)
 				-- clavier
 				c.h.lastInputType = Enum.UserInputType.Keyboard
 				c.h.game.UserInputService.LastInputTypeChanged:Fire(Enum.UserInputType.Keyboard)

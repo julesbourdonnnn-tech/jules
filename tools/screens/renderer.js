@@ -455,6 +455,9 @@
     DPadDown: { sym: '▼', dpad: true },
     DPadLeft: { sym: '◀', dpad: true },
     DPadRight: { sym: '▶', dpad: true },
+    // sticks (mode photo, lot B5) : rond sombre et lettre du stick, comme l'icône PlayStation
+    Thumbstick1: { sym: 'L', dpad: true },
+    Thumbstick2: { sym: 'R', dpad: true },
   };
 
   function render(dump, options) {

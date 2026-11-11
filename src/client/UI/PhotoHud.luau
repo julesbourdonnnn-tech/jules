@@ -54,9 +54,9 @@ local HINT = { w = 460, row = 64, pad = 16, text = 32, glyphGap = 12 }
 local NAME = { w = 520, h = 80, text = 44, top = 24 }
 -- teinte et opacité de chaque filtre (voile plein écran ; « none » : voile caché)
 local TINTS: { [string]: { color: Color3, transparency: number } } = {
-	warm = { color = Color3.fromRGB(255, 170, 90), transparency = 0.84 },
-	pink = { color = Color3.fromRGB(255, 120, 190), transparency = 0.84 },
-	dream = { color = Color3.fromRGB(160, 140, 255), transparency = 0.8 },
+	warm = { color = Color3.fromRGB(255, 170, 90), transparency = 0.8 },
+	pink = { color = Color3.fromRGB(255, 120, 190), transparency = 0.8 },
+	dream = { color = Color3.fromRGB(160, 140, 255), transparency = 0.76 },
 }
 -- lignes de l'aide : clé, touches de la manette, touches du clavier
 type HintRow = { key: string, pad: { Enum.KeyCode }, keys: { Enum.KeyCode } }
