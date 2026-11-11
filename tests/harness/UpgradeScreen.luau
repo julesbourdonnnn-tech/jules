@@ -121,7 +121,8 @@ function UpgradeScreen.new(Harness, preset: any?)
 	end
 
 	-- Client console ; opts.snap : instantané d'arrivée (nil : interrupteur coupé) ; opts.profile
-	-- (champs en plus) ; opts.ranch : attributs du ranch du joueur ; opts.viewport, opts.lang
+	-- (champs en plus) ; opts.ranch : attributs du ranch du joueur ; opts.viewport, opts.lang ;
+	-- opts.preset : préréglage des interrupteurs v2.0 (tests/harness/Flags, lot I : « v13 » = profil v1)
 	function S.client(opts)
 		opts = opts or {}
 		local profile = deepCopy(opts.profile or {})
@@ -133,6 +134,7 @@ function UpgradeScreen.new(Harness, preset: any?)
 			viewport = opts.viewport,
 			lang = opts.lang,
 			before = opts.before,
+			preset = opts.preset,
 		})
 		local c = {
 			h = h,

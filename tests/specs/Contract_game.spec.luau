@@ -1903,7 +1903,9 @@ return function(T)
 		it(
 			"schéma : coinBuy retiré, packs réservé, moon (EventService), dex.fam dense, plafonds de pet-sitting",
 			function()
-				local h = Harness.new()
+				-- schéma v1 du contrat v1.2 (préréglage « v13 », lot I D2 a / D10) ; la v2 ajoute
+				-- moon.sessions (lot A4), vérifié à la fin
+				local h = Harness.new({ flags = "v13" })
 				local Schema = h:require("ServerScriptService.Server.Data.Schema")
 				local Species = shared(h, "Config.Species")
 				local B = shared(h, "Config.Balance")
@@ -1932,6 +1934,7 @@ return function(T)
 				expect(B.CapsPerFriend.petSit).toBe(20)
 				-- tenue portée : seulement dans squishies[uid].o ; outfits.worn obsolète, toujours vide
 				expect(d.outfits.worn).toEqual({})
+				expect(Schema.defaultsFor(2).moon).toEqual({ lastSession = 0, sessions = 0 })
 			end
 		)
 

@@ -92,4 +92,16 @@ function Flags.apply(h: any, preset: Preset?)
 	Features.reset()
 end
 
+-- Harnais dont chaque Harness.new prend le préréglage (pour Bots.boot, Brains.boot, Chaos.boot qui
+-- reçoivent le module Harness) : Flags.harness(Harness, "v13") = serveur de la v1.3
+function Flags.harness(Harness: any, preset: Preset): any
+	return setmetatable({
+		new = function(options: any?)
+			local o = table.clone(options or {})
+			o.flags = preset
+			return Harness.new(o)
+		end,
+	}, { __index = Harness })
+end
+
 return Flags

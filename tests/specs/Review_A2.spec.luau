@@ -18,6 +18,7 @@
 -- Record R et A jamais en baisse, profils sains, zéro trace).
 -- Les interrupteurs v2.0 sont ouverts DANS le test (Features.set) ; SchemaV2 (figé) dans le harnais
 -- avant le premier require du schéma (recette de DataChaos).
+local Flags = require("../harness/Flags")
 local Bots = require("../harness/Bots")
 local Brains = require("../harness/Brains")
 
@@ -134,7 +135,8 @@ return function(T)
 		it(
 			"tout coupé (serveur v1, profil v1) : même achat qu'en v1.3, UpgradeBought en plus, aucun attribut ni envoi de plus",
 			function()
-				local w = boot({}, nil, Harness)
+				-- serveur de la v1.3 (préréglage « v13 », lot I D2 a)
+				local w = boot({}, nil, Flags.harness(Harness, "v13"))
 				local p = Bots.join(1)
 				w.h:settle(3)
 				Bots.fire("BuyTile", p, "decor")

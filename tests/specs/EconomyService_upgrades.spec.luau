@@ -14,6 +14,7 @@
 --     nuit) ; Grand Splorch d'un profil v2 : Record R jamais sous r.
 -- Les interrupteurs v2.0 sont ouverts DANS le test (Features.set) ; SchemaV2 (figé) dans le harnais
 -- avant le premier require du schéma (recette de DataChaos).
+local Flags = require("../harness/Flags")
 local Bots = require("../harness/Bots")
 local task = require("@lune/task")
 
@@ -72,7 +73,9 @@ return function(T)
 	local function boot(opts)
 		opts = opts or {}
 		local caught = {}
-		local w = Bots.boot(if opts.v1 then Harness else HarnessV2, {
+		-- opts.v1 : serveur de la v1.3 (préréglage « v13 », tests/harness/Flags, lot I D2 a) ; sinon la
+		-- configuration livrée, SchemaV2 ouvert (chemin du lancement)
+		local w = Bots.boot(if opts.v1 then Flags.harness(Harness, "v13") else HarnessV2, {
 			t0 = T0,
 			before = function(w)
 				w.DS.Settings.AUTOSAVE_INTERVAL = 1e6

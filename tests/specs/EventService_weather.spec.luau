@@ -11,6 +11,7 @@
 --     changement d'interrupteur en direct, points comptés interrupteur ouvert seulement, Wobble Party + 2 ;
 --   * moon.sessions + 1 à chaque Goutte de Lune d'un profil v2 ; profil v1 : rien d'écrit.
 local fs = require("@lune/fs")
+local Flags = require("../harness/Flags")
 local Bots = require("../harness/Bots")
 local Brains = require("../harness/Brains")
 local LuauScan = require("../harness/LuauScan")
@@ -36,7 +37,11 @@ return function(T)
 	-- opts : t0, flags (ouverts dans le test), v2 (serveur au schéma v2)
 	local function boot(opts)
 		opts = opts or {}
-		local w = Brains.boot(if opts.v2 then HarnessV2 else Harness, { t0 = opts.t0 or (H0 + 120) })
+		-- opts.v13 : serveur de la v1.3 (préréglage « v13 », lot I D2 a)
+		local w = Brains.boot(
+			if opts.v2 then HarnessV2 elseif opts.v13 then Flags.harness(Harness, "v13") else Harness,
+			{ t0 = opts.t0 or (H0 + 120) }
+		)
 		w.Weather = w.h:require(WEATHER)
 		for _, key in opts.flags or {} do
 			assert(w.Features.set(key, true), key)
@@ -504,7 +509,7 @@ return function(T)
 	-- =========================================================================================
 	describe("EventService_weather › moon.sessions (D8)", function()
 		local function moonDrop(v2)
-			local w = boot({ t0 = MOON - 5, v2 = v2 })
+			local w = boot({ t0 = MOON - 5, v2 = v2, v13 = not v2 })
 			local p = Brains.join(w, 1)
 			local altar = w.WL.plaza("altar")
 			Bots.place(p, Bots.ground(altar.X, altar.Z))

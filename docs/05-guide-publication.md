@@ -254,6 +254,13 @@ Activer la console dans le Creator Hub **seulement après** M6, M9 et M11 réuss
 - Questionnaire de maturité (cible Minimal ; « non » aux objets aléatoires payants) ; langues EN et FR.
 - `StreamingEnabled` coupé, `VirtualCursorMode = Disabled`, `Lighting.Technology = ShadowMap` :
   vérifiés par `Contract_game.spec` (projet) et `scripts/verify-place.luau` (place construite).
+- **Sauvegardes v2 (depuis le lot I, `SchemaV2` ouvert)** : chaque joueur de la v1.3 est migré en v2 à
+  son premier chargement, une seule fois, sans rien perdre (`Migration_I.spec`). Publier la v2.0 avec
+  **« Shut down all servers »** (ou « Migrate to latest update ») pour qu'aucun ancien serveur v1 ne
+  reste allumé : un ancien serveur refuse un profil v2 (le joueur est renvoyé poliment, rien n'est écrit)
+  et le serveur à jour le relit ensuite. **Ne jamais republier une place plus ancienne** une fois une
+  sauvegarde v2 écrite (elle refuserait chaque joueur migré). `SchemaV2` ne se coupe jamais : la coupure
+  d'urgence de LiveOps coupe les autres interrupteurs (docs/04 §27.2).
 - Administrateurs LiveOps et Diagnostics dans `src/server/Data/Admins.luau`.
 - Couche i : clé Open Cloud limitée à la place de test privée, par variable d'environnement, **jamais
   dans le dépôt** (`tools/opencloud/README.md`).

@@ -11,6 +11,7 @@
 --   * API : setRanchOwner, setRanchBuild, setStatue, setGauge, ranchModel, partCount (entrées
 --     hostiles comprises), construction par blocs protégés, groupe de collision, ApiAudit, zéro trace.
 local roblox = require("@lune/roblox")
+local Flags = require("../harness/Flags")
 local ApiAudit = require("../harness/ApiAudit")
 local MockInstance = require("../harness/MockInstance")
 
@@ -1281,7 +1282,7 @@ return function(T)
 			function()
 				local cases = {
 					{ flags = {}, R = 10, harness = HarnessV2 }, -- interrupteur coupé
-					{ flags = { "StarMat" }, R = 10, harness = Harness }, -- profil v1
+					{ flags = { "StarMat" }, R = 10, harness = Flags.harness(Harness, "v13") }, -- profil v1 (serveur v1.3, lot I)
 					{ flags = { "StarMat" }, R = 3, harness = HarnessV2 }, -- r = 3 : aucun niveau ouvert
 				}
 				for i, case in cases do

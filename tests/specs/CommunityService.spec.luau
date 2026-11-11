@@ -5,6 +5,7 @@
 -- plafond), bannières (priorité, 3 au plus, 3 s, 10 s par source, nouveaux discrets), réglages, nom
 -- caché, cosmétiques, unlockSession, emotes, applaudissements (openClapWindow avec spectateurs),
 -- liste de blocage souple, états minutés, zéro trace.
+local Flags = require("../harness/Flags")
 local Bots = require("../harness/Bots")
 local Brains = require("../harness/Brains")
 
@@ -324,8 +325,9 @@ return function(T)
 					w.h:settle(2)
 					return #w.h:sentTo(p, "DataPatch")
 				end
-				-- profil v1 : refusé, interrupteur coupé puis ouvert
-				local w = world()
+				-- profil v1 (serveur de la v1.3, préréglage « v13 », lot I D2 a) : refusé, interrupteur coupé
+				-- puis ouvert
+				local w = world(nil, Flags.harness(Harness, "v13"))
 				local p = owned(w, 1, 1)
 				local changed = 0
 				w.Signals.SettingChanged:Connect(function()

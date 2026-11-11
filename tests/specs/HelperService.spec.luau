@@ -17,6 +17,7 @@
 --   * coût : < 0,5 ms par tick à 16 joueurs × 6 Plopettes (os.clock réel, horloge du jeu figée).
 -- Interrupteur Helpers ouvert DANS le test (Features.set) ; SchemaV2 (figé) ouvert dans le harnais
 -- avant le premier require du schéma (recette de DataChaos).
+local Flags = require("../harness/Flags")
 local Bots = require("../harness/Bots")
 local Brains = require("../harness/Brains")
 
@@ -39,7 +40,10 @@ return function(T)
 	-- opts : v1 (serveur v1), off (Helpers coupé), flags (autres interrupteurs ouverts), t0
 	local function boot(opts)
 		opts = opts or {}
-		local w = Brains.boot(if opts.v1 then Harness else HarnessV2, { t0 = opts.t0 or T0 })
+		-- opts.v1 : serveur de la v1.3 (préréglage « v13 », tests/harness/Flags, lot I D2 a) ; sinon la
+		-- configuration livrée, SchemaV2 ouvert (chemin du lancement)
+		local w =
+			Brains.boot(if opts.v1 then Flags.harness(Harness, "v13") else HarnessV2, { t0 = opts.t0 or T0 })
 		w.Helper = w.h:require(S .. "HelperService")
 		w.Upgrades = w.h:require(L .. "Config.Upgrades")
 		w.Prestige = w.h:require(L .. "Logic.Prestige")

@@ -14,6 +14,7 @@
 --   * tenues v2.0 (D21) : connues d'un profil v2 seulement, toujours bornées par outfits.owned.
 -- Interrupteurs ouverts DANS le test (Features.set) ; SchemaV2 (figé) dans le harnais avant le premier
 -- require du schéma (recette de DataChaos).
+local Flags = require("../harness/Flags")
 local Bots = require("../harness/Bots")
 local Brains = require("../harness/Brains")
 
@@ -36,7 +37,9 @@ return function(T)
 	-- opts : v1 (serveur v1 : profils v1), flags (interrupteurs ouverts)
 	local function boot(opts)
 		opts = opts or {}
-		local w = Brains.boot(if opts.v1 then Harness else HarnessV2, { t0 = T0 })
+		-- opts.v1 : serveur de la v1.3 (préréglage « v13 », tests/harness/Flags, lot I D2 a) ; sinon la
+		-- configuration livrée, SchemaV2 ouvert (chemin du lancement)
+		local w = Brains.boot(if opts.v1 then Flags.harness(Harness, "v13") else HarnessV2, { t0 = T0 })
 		w.Prestige = w.h:require(L .. "Logic.Prestige")
 		w.Odds = w.h:require(L .. "Logic.Odds")
 		w.Invariants = w.h:require(L .. "Logic.Invariants")

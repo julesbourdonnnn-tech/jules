@@ -24,6 +24,7 @@ return function(T)
 		local w = Brains.boot(Harness, {
 			t0 = T0,
 			stubMeta = false,
+			preset = opts.preset, -- préréglage des interrupteurs (tests/harness/Flags, lot I)
 			before = function(w)
 				local Admins = w.h:require("ServerScriptService.Server.Data.Admins")
 				for _, id in opts.admins or {} do
@@ -512,8 +513,9 @@ return function(T)
 		it(
 			"interrupteurs coupés ou profil v1 : sortes liées refusées (rien compté ni envoyé) ; diagnostics de base toujours acceptés",
 			function()
-				-- serveur v1 (lancement) : profil v1, interrupteurs coupés
-				local w = world()
+				-- serveur v1 (préréglage « v13 », lot I D2 a) : profil v1, interrupteurs coupés ; le chemin
+				-- du lancement (profil v2) : cas suivants (worldV2)
+				local w = world({ preset = "v13" })
 				w.RateLimit = w.h:require("ServerScriptService.Server.Util.RateLimit")
 				local p = join(w, 1)
 				local before = #w.h.log.analytics

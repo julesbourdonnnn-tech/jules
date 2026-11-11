@@ -308,7 +308,8 @@ return function(T)
 		it(
 			"aucune clé v2 (configuration livrée), profil v1 : on() faux pour chaque interrupteur, owned() tout faux, v2Profile() faux, aucun Changed",
 			function()
-				local c = client({ profile = {} })
+				-- profil v1 (préréglage « v13 », lot I D2 a) ; profil v2 : cas suivants
+				local c = client({ profile = {}, preset = "v13" })
 				send(c, nil)
 				expect(openList(c)).toBe("")
 				for _, key in LISTED do
@@ -416,7 +417,8 @@ return function(T)
 		it(
 			"v2Profile() : version 2 vrai, version 1 faux, valeurs hostiles faux ; Changed suit la version",
 			function()
-				local c = client({ profile = {} })
+				-- part d'un profil v1 (préréglage « v13 », lot I D2 a)
+				local c = client({ profile = {}, preset = "v13" })
 				expect(c.MF.v2Profile()).toBe(false)
 				patch(c, { version = 2 })
 				expect(c.MF.v2Profile()).toBe(true)

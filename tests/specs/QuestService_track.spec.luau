@@ -7,6 +7,7 @@
 -- givre, puce « Prochain achat », N1 (Record R) ; interrupteurs coupés : profil et envois d'aujourd'hui.
 -- Interrupteurs ouverts DANS le test (Features.set) ; SchemaV2 (figé) dans le harnais avant le premier
 -- require du schéma (recette de DataChaos). Zéro trace.
+local Flags = require("../harness/Flags")
 local Bots = require("../harness/Bots")
 local Brains = require("../harness/Brains")
 
@@ -31,8 +32,12 @@ return function(T)
 	-- opts : v1 (serveur v1 : profils v1), flags (interrupteurs ouverts), t0
 	local function boot(opts)
 		opts = opts or {}
-		local w =
-			Brains.boot(if opts.v1 then Harness else HarnessV2, { t0 = opts.t0 or T0, stubMeta = false })
+		-- opts.v1 : serveur de la v1.3 (préréglage « v13 », tests/harness/Flags, lot I D2 a) ; sinon la
+		-- configuration livrée, SchemaV2 ouvert (chemin du lancement)
+		local w = Brains.boot(
+			if opts.v1 then Flags.harness(Harness, "v13") else HarnessV2,
+			{ t0 = opts.t0 or T0, stubMeta = false }
+		)
 		w.Q = w.h:require(S .. "QuestService")
 		w.QR = w.h:require(L .. "Logic.QuestRules")
 		w.Prestige = w.h:require(L .. "Logic.Prestige")

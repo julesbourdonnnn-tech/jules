@@ -12,8 +12,9 @@ local Enum = roblox.Enum
 return function(T)
 	local describe, it, expect = T.describe, T.it, T.expect
 
-	local function setup(profile)
-		local h = TvAudit.client({ profile = profile })
+	-- preset : préréglage des interrupteurs v2.0 (tests/harness/Flags, lot I ; « v13 » = profil v1)
+	local function setup(profile, preset)
+		local h = TvAudit.client({ profile = profile, preset = preset })
 		return {
 			h = h,
 			PC = TvAudit.mod(h, "UI.PanelController"),
@@ -148,8 +149,9 @@ return function(T)
 				expect(#TvAudit.sent(c.h, "EquipOutfit")).toBe(1)
 				expect(b.Buy.Visible).toBe(false)
 				clean(c)
-				-- profil v1 (interrupteurs coupés) : les tenues de la v2.0 n'existent pas
-				local d = setup({ squishies = {} })
+				-- profil v1 (interrupteurs coupés, préréglage « v13 », lot I D2 a) : les tenues de la v2.0
+				-- n'existent pas
+				local d = setup({ squishies = {} }, "v13")
 				d.PC.open("Settings")
 				d.PC.open("OutfitPreview", "partyHat")
 				expect(d.OP._state().outfit).toBe("plopBib")

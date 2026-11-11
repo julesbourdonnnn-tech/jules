@@ -13,6 +13,7 @@
 --     [Workshop] (« Fanions dorés » achetés) sur un profil v2 seulement ; les 7 attributs du lot A4
 --     (HelperMode, Helpers, GiantTier, DecorGold, GoldPennants, Palette, Cushions) absents tant que
 --     tout est coupé.
+local Flags = require("../harness/Flags")
 local Bots = require("../harness/Bots")
 
 return function(T)
@@ -313,7 +314,12 @@ return function(T)
 		)
 
 		it("profil v1 : DecorGold et GoldPennants jamais posés, même interrupteurs ouverts", function()
-			local w = boot({ "UpgradesScreen", "Confetti", "Workshop", "RanchTiers" }, nil, Harness)
+			-- serveur de la v1.3 (préréglage « v13 », lot I D2 a)
+			local w = boot(
+				{ "UpgradesScreen", "Confetti", "Workshop", "RanchTiers" },
+				nil,
+				Flags.harness(Harness, "v13")
+			)
 			local p = Bots.join(1)
 			local slot = w.Ranch.slotOf(p)
 			expect(w.DS.get(p).version).toBe(1)
