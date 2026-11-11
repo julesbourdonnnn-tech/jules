@@ -67,6 +67,8 @@ local BigPlop = require(Client.World.BigPlop)
 -- palette) et emotes de la v2.0 ; démarrés ici, boucles par image seulement tant qu'ils ont à faire
 local ShowsV2 = require(Client.World.ShowsV2)
 local Emotes = require(Client.World.Emotes)
+-- signaux de la croix de la v1.3 (bulle-icône, PlayEmote ; lot I, étape 5, D27)
+local EmoteBubble = require(Client.World.EmoteBubble)
 local WeatherFx = require(Client.World.WeatherFx)
 local Fete = require(Client.World.Fete)
 
@@ -1412,6 +1414,7 @@ function VFXController.Start()
 		ring = VFXController.ring,
 	})
 	-- v2.0 (lot B5, étape 5) : météo et place en fête (une écoute chacune interrupteurs coupés)
+	Util.guard("EmoteBubble.start", EmoteBubble.start)
 	Util.guard("WeatherFx.start", WeatherFx.start)
 	Util.guard("Fete.start", Fete.start, { burst = VFXController.burst })
 end
@@ -1425,6 +1428,7 @@ function VFXController._stop()
 	Util.guard("BigPlop.stop", BigPlop.stop)
 	Util.guard("ShowsV2.stop", ShowsV2.stop)
 	Util.guard("Emotes.stop", Emotes.stop)
+	Util.guard("EmoteBubble.stop", EmoteBubble.stop)
 	Util.guard("WeatherFx.stop", WeatherFx.stop)
 	Util.guard("Fete.stop", Fete.stop)
 	started = false

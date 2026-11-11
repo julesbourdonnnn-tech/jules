@@ -175,6 +175,18 @@ local KINDS: { [string]: KindDef } = {
 		},
 	},
 	star = { color = Theme.Colors.Gold, prims = star(0.04, 0.04, 0.92, "fill") },
+	-- main ouverte (signal « Salut » de la croix ↑, bulle de World/EmoteBubble ; lot I, étape 5, D27)
+	hand = {
+		color = Color3.fromRGB(255, 205, 150),
+		prims = {
+			box(0.52, 0.66, 0.46, 0.4, "fill", 0.35),
+			seg(0.36, 0.56, 0.36, 0.22, 0.11, "fill", true),
+			seg(0.47, 0.52, 0.47, 0.13, 0.11, "fill", true),
+			seg(0.58, 0.52, 0.58, 0.15, 0.11, "fill", true),
+			seg(0.69, 0.56, 0.69, 0.25, 0.11, "fill", true),
+			seg(0.32, 0.74, 0.16, 0.55, 0.11, "fill", true),
+		},
+	},
 	lock = {
 		color = Color3.fromRGB(200, 196, 225),
 		prims = {

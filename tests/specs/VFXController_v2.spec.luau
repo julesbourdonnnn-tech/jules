@@ -1230,6 +1230,89 @@ return function(T)
 		)
 	end)
 
+	describe("VFXController › signaux de la croix de la v1.3 (lot I, étape 5, D27)", function()
+		it(
+			"bulle-icône 2,5 s au-dessus du joueur (main ↑, cœur →, étoile ←), dans les deux états des interrupteurs ; une par joueur toutes les 2 s ; emote de la v2.0 : rien ici ; à plus de 150 studs : rien ; PlayEmote sur MON personnage seulement ; bulles rendues à la réserve",
+			function()
+				local c = client({ best = BEST })
+				local EB = c.h:require(CLIENT .. "World.EmoteBubble")
+				local Icons = c.h:require(CLIENT .. "UI.Hud.Icons")
+				local played, timers = {}, {}
+				EB._configure({
+					play = function(_, name)
+						table.insert(played, name)
+					end,
+					after = function(seconds, fn)
+						table.insert(timers, { at = c.Clock.now() + seconds, fn = fn })
+					end,
+				})
+				local function flush()
+					for i = #timers, 1, -1 do
+						if timers[i].at <= c.Clock.now() + 1e-9 then
+							table.remove(timers, i).fn()
+						end
+					end
+				end
+				c.event(nil)
+				c.me(c.WL.penSlot(3, 5))
+				local friend = c.h:addPlayer({ userId = 50 })
+				c.h:moveTo(friend, c.WL.penSlot(3, 6) + Vector3.new(0, 3, 0))
+				local far = c.h:addPlayer({ userId = 51 })
+				c.h:moveTo(far, c.WL.penSlot(3, 6) + Vector3.new(400, 3, 0))
+				local function emote(userId, kind, id)
+					c.h:fireClient(REMOTES .. "EmoteShow", { userId = userId, kind = kind, emote = id })
+					c.h:settle(1)
+				end
+				local function iconShown()
+					local folder = c.h.workspace.ClientWorld:FindFirstChild("EmoteBubbles")
+					for _, gui in folder and folder:GetChildren() or {} do
+						if gui.Enabled then
+							expect(gui.Adornee).toBe(friend.Character.HumanoidRootPart)
+							return Icons.kindOf(gui.Back.Icon)
+						end
+					end
+					return nil
+				end
+				-- interrupteurs coupés (v1.3) : ↑ Salut → main
+				emote(50, 1, "wave")
+				expect(EB.stats().live).toBe(1)
+				expect(iconShown()).toBe("hand")
+				-- un 2e signal dans les 2 s : ignoré
+				c.Clock.advance(1)
+				emote(50, 2, "wave")
+				expect(EB.stats().skipped).toBe(1)
+				c.Clock.advance(1.5)
+				flush()
+				expect(EB.stats().live).toBe(0)
+				emote(50, 2, "wave")
+				expect(iconShown()).toBe("heart")
+				c.Clock.advance(2.5)
+				flush()
+				emote(50, 3, "cheer")
+				expect(iconShown()).toBe("star")
+				c.Clock.advance(2.5)
+				flush()
+				-- emote de la v2.0 (sorte 3) : World/Emotes la dessine, aucune bulle
+				c.event({ RecordR = true })
+				emote(50, 3, "splorch")
+				expect(EB.stats().live).toBe(0)
+				-- trop loin
+				emote(51, 1, "wave")
+				expect(EB.stats().live).toBe(0)
+				-- MON signal : PlayEmote("wave") sur mon personnage ; aucun pour les autres
+				expect(played).toEqual({})
+				emote(c.h.localPlayer.UserId, 1, "wave")
+				expect(played).toEqual({ "wave" })
+				expect(EB.stats().shown).toBe(4)
+				c.Clock.advance(3)
+				flush()
+				expect(EB.stats().live).toBe(0)
+				expect(EB.stats().pooled >= 1).toBe(true)
+				c.clean()
+			end
+		)
+	end)
+
 	describe("VFXController v2 › emotes de la v2.0 (lot B5, étape 4)", function()
 		it(
 			"les 6 emotes (croix ←, sorte 3) : effet au-dessus de la tête, 2,5 s au plus, pièces rendues ; refus : sorte 1 ou 2, emote de la v1.3, joueur à plus de 150 studs, aucun interrupteur",
