@@ -16,6 +16,7 @@ local task = require("@lune/task")
 local MockInstance = require("./MockInstance")
 local Services = require("./Services")
 local Signal = require("./Signal")
+local Flags = require("./Flags")
 
 local Harness = {}
 Harness.__index = Harness
@@ -182,14 +183,19 @@ local function mount(h, parent, dirPath: string)
 	end
 end
 
-function Harness.new(options: {
-	mode: string?,
-	touch: boolean?,
-	console: boolean?,
-	viewport: any?,
-	isStudio: boolean?,
-	root: string?,
-}?)
+function Harness.new(
+	options: {
+		mode: string?,
+		touch: boolean?,
+		console: boolean?,
+		viewport: any?,
+		isStudio: boolean?,
+		root: string?,
+		-- préréglage des interrupteurs v2.0 (tests/harness/Flags, lot I) : "launch" (défaut : valeurs
+		-- livrées), "full", "v13", "cut" ou une table de valeurs ; appliqué avant de rendre le harnais
+		flags: any?,
+	}?
+)
 	options = options or {}
 	local h = setmetatable({}, Harness)
 	h.mode = options.mode or "server"
@@ -313,6 +319,10 @@ function Harness.new(options: {
 		ps.Parent = lp
 		MockInstance.onLoadCharacter(lp)
 	end
+	-- interrupteurs du préréglage écrits avant tout require du test (Data/Schema lit Defaults au
+	-- chargement) ; "launch" : rien n'est chargé ni changé
+	h.flags = options.flags or "launch"
+	Flags.apply(h, options.flags)
 	return h
 end
 

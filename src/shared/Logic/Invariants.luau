@@ -431,6 +431,10 @@ function Invariants.profileV2(d: any, R: number, bad: (string) -> ())
 	if not int(d.regainBonusA, 0, A) then
 		bad("regainBonusA")
 	end
+	-- jour de la dernière Ascension (lot I, D5) : entier de [0 ; 1e9], 0 = jamais
+	if not int(d.ascendDay, 0, 1e9) then
+		bad("ascendDay")
+	end
 	-- Confettis : entiers de 0 à 1e9, en poche ≤ total gagné
 	local okConf = int(d.confetti, 0, CONFETTI_MAX)
 	local okTotal = int(d.confettiTotal, 0, CONFETTI_MAX)

@@ -120,9 +120,22 @@ return function(T)
 			for _, id in V.Halo do
 				expect(textOk(S, "halo." .. id)).toBe(true)
 			end
-			for _, id in V.Palettes do
-				expect({ id = id, text = textOk(S, "palette." .. id) }).toEqual({ id = id, text = true })
+			-- nom montré : palette.<id> (Atelier, Record R) ou la clé de la semaine de Cosmetics (lot I, D4 :
+			-- « peachPalette » se nomme weekly.peachPalette)
+			local C = shared(h, "Config.Cosmetics")
+			local weeklyKey = {}
+			for _, def in C.WeeklyRotation do
+				if def.kind == "palette" then
+					weeklyKey[def.id] = def.key
+				end
 			end
+			for _, id in V.Palettes do
+				expect({ id = id, text = textOk(S, weeklyKey[id] or ("palette." .. id)) }).toEqual({
+					id = id,
+					text = true,
+				})
+			end
+			expect(weeklyKey.peachPalette).toBe("weekly.peachPalette")
 			expect(#V.RanchTiersAt).toBe(6)
 			for i = 1, #V.RanchTiersAt do
 				expect(textOk(S, "ranchTier." .. i)).toBe(true)

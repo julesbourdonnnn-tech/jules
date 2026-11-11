@@ -38,8 +38,9 @@
 -- repli Coin) ; les cartes sont celles du lot B3 : aucun texte ici.
 -- Palier (V5, D20) : anneau Neon 0 → 40 studs en 0,6 s, 30 confettis, LevelUp, vibration tierUp, ola
 -- par Personality.wave(slot) si les personnalités sont ouvertes ; 2,5 s ; aucun texte.
--- Palette (D18) : attribut Palette du ranch, « peachPalette » lu « peach » (jusqu'à l'étape I), nom
--- dans Visuals.Palettes ; absent ou inconnu : les couleurs de la v1.3 exactement.
+-- Palette (D18) : attribut Palette du ranch, nom de Visuals.Palettes (même identifiant que
+-- cosmetics.palette du profil : « peachPalette » pour celle de la semaine, lot I, D4) ; absent ou
+-- inconnu : les couleurs de la v1.3 exactement.
 -- Un seul grand spectacle à la fois (V11) : les moments locaux (Petit Splorch, Palier, étapes du
 -- record) restent sans dessin pendant un Rush, un MEGA, un Grand Splorch, une Ascension ou la danse
 -- (le son et la vibration du joueur restent : ils répondent à SON geste). Chaque état a sa coupure dure.
@@ -160,15 +161,13 @@ local PALETTES: { [string]: { Color3 } } = {
 		Color3.fromRGB(80, 160, 255),
 		Color3.fromRGB(255, 255, 255),
 	}),
-	peach = table.freeze({
+	peachPalette = table.freeze({
 		Color3.fromRGB(255, 190, 150),
 		Color3.fromRGB(255, 160, 130),
 		Color3.fromRGB(255, 225, 190),
 		Color3.fromRGB(255, 140, 160),
 	}),
 }
--- noms de la semaine de Cosmetics (« peachPalette ») lus comme ceux de Visuals.Palettes jusqu'à I
-local PALETTE_ALIAS: { [string]: string } = { peachPalette = "peach" }
 local KNOWN_PALETTE: { [string]: boolean } = {}
 for _, name in Visuals.Palettes do
 	KNOWN_PALETTE[name] = true
@@ -385,11 +384,10 @@ function ShowsV2.paletteOf(slot: number): { Color3 }?
 	if not ok or type(raw) ~= "string" or raw == "" or #raw > 32 then
 		return nil
 	end
-	local name = PALETTE_ALIAS[raw] or raw
-	if not KNOWN_PALETTE[name] then
+	if not KNOWN_PALETTE[raw] then
 		return nil
 	end
-	return PALETTES[name]
+	return PALETTES[raw]
 end
 
 -- Gerbe de confettis aux couleurs données, `count` en tout (VFXController.burst : quota des effets)

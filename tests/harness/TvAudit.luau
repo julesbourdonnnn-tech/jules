@@ -85,13 +85,21 @@ end
 
 -- Profil par défaut du schéma v1 (Server/Data/Schema.defaults(), lu une fois dans un harnais serveur
 -- créé AVANT le client : les crochets globaux de MockInstance vont au harnais créé en dernier)
-function TvAudit.defaults()
-	if defaultsCache == nil then
-		local hs = Harness.new({ mode = "server" })
-		defaultsCache = hs:require("ServerScriptService.Server.Data.Schema").defaults()
+-- preset : préréglage des interrupteurs v2.0 (tests/harness/Flags, lot I ; défaut : valeurs livrées,
+-- donc le schéma v2 depuis l'ouverture de SchemaV2)
+function TvAudit.defaults(preset)
+	local key = if type(preset) == "string" then preset else "launch"
+	if type(preset) == "table" or defaultsCache == nil or defaultsCache[key] == nil then
+		local hs = Harness.new({ mode = "server", flags = preset })
+		local d = hs:require("ServerScriptService.Server.Data.Schema").defaults()
 		hs:dispose()
+		if type(preset) == "table" then
+			return d
+		end
+		defaultsCache = defaultsCache or {}
+		defaultsCache[key] = d
 	end
-	return deepCopy(defaultsCache)
+	return deepCopy(defaultsCache[key])
 end
 
 -- Ligne de squishy (Types.SquishyRecord)
@@ -116,7 +124,7 @@ end
 -- complétés par opts.profile (fusion de premier niveau)
 function TvAudit.client(opts)
 	opts = opts or {}
-	local profile = TvAudit.defaults()
+	local profile = TvAudit.defaults(opts.preset)
 	profile.receipts, profile.codes, profile.flags = nil, nil, nil -- clés privées
 	for k, v in opts.profile or {} do
 		profile[k] = v
@@ -129,6 +137,7 @@ function TvAudit.client(opts)
 		console = opts.console ~= false,
 		viewport = opts.viewport,
 		isStudio = opts.isStudio,
+		flags = opts.preset, -- préréglage des interrupteurs v2.0 (tests/harness/Flags, lot I)
 	})
 	h:createRemotes()
 	if opts.before then

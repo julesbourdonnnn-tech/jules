@@ -114,8 +114,10 @@ local Settings = {
 	-- s entre deux réveils pendant l'attente (arrêt du serveur ou reconnexion : essai aussitôt)
 	RELEASE_RETRY_POLL = 0.25,
 	-- grandes tables (Schema.STREAMED_KEYS) : entrées dans l'instantané, puis flux d'entrées
-	-- DataPatch (≈ 65 o par entrée : 50 entrées ≈ 3,3 Ko, 13 Ko/s pendant le flux)
-	SNAPSHOT_INLINE = 50,
+	-- DataPatch (≈ 65 o par entrée : 24 entrées ≈ 1,6 Ko, 13 Ko/s pendant le flux). 24 = les squishies
+	-- visibles au plus (enclos et Bassin, premiers de l'ordre de SquishyService) : lot I (journal I-8),
+	-- le profil v2 (≈ 1,25 Ko de plus) dépassait sinon les 8 Ko de la seconde d'arrivée d'un vétéran
+	SNAPSHOT_INLINE = 24,
 	STREAM_CHUNK = 50,
 	STREAM_INTERVAL = 0.25, -- s entre deux morceaux
 	STREAM_DELAY = 1, -- s avant le premier morceau (la seconde d'arrivée est celle de l'état du monde)

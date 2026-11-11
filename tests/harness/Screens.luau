@@ -198,8 +198,9 @@ local function hookLocalization(c)
 end
 
 -- Client complet démarré pour `profile` (entrée de PROFILES), `lang` ("fr" | "en") et l'état de
--- données `state` ("new" | "mid" | "late" | "huge")
-function Screens.boot(Harness, profile, lang: string, state: string)
+-- données `state` ("new" | "mid" | "late" | "huge") ; `preset` : préréglage des interrupteurs v2.0
+-- (tests/harness/Flags, lot I ; défaut : valeurs livrées)
+function Screens.boot(Harness, profile, lang: string, state: string, preset: any?)
 	EngineProps.install()
 	local c = { profile = profile, lang = lang, state = state, players = {} }
 	local data = Screens.profile(state)
@@ -209,6 +210,7 @@ function Screens.boot(Harness, profile, lang: string, state: string)
 		lang = lang,
 		now = T0,
 		profile = data,
+		preset = preset,
 		before = function(hh)
 			c.h = hh
 			hh.localPlayer.LocaleId = if lang == "fr" then "fr-fr" else "en-us"
@@ -4313,6 +4315,7 @@ function Screens.bootLoading(Harness, profile, lang: string, failed: boolean)
 		mode = "client",
 		console = profile.console == true,
 		viewport = Vector2.new(profile.w, profile.h),
+		flags = profile.preset, -- préréglage des interrupteurs v2.0 (tests/harness/Flags, lot I)
 	})
 	h.localPlayer.LocaleId = if lang == "fr" then "fr-fr" else "en-us"
 	MockInstance.classMethods.ReplicatedFirst = { RemoveDefaultLoadingScreen = function() end }

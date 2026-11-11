@@ -1039,16 +1039,17 @@ return function(T)
 		)
 
 		it(
-			"palette du spectacle : « peachPalette » lu « peach », nom inconnu ou abîmé = couleurs de la v1.3 ; le nuage du Grand Splorch du ranch prend la palette",
+			"palette du spectacle : « peachPalette » (identifiant gardé, lot I D4 ; « peach » n'en est plus un), nom inconnu ou abîmé = couleurs de la v1.3 ; le nuage du Grand Splorch du ranch prend la palette",
 			function()
 				local c = client({ best = BEST })
 				c.event(nil)
 				expect(c.SH.paletteOf(3)).toBeNil()
-				c.attr(3, "Palette", "peach")
+				c.attr(3, "Palette", "peachPalette")
 				local peach = c.SH.paletteOf(3)
 				expect(#peach).toBe(4)
-				c.attr(3, "Palette", "peachPalette")
-				expect(c.SH.paletteOf(3)).toBe(peach)
+				-- l'ancien nom de Visuals.Palettes n'est plus lu (aucun alias : un seul identifiant)
+				c.attr(3, "Palette", "peach")
+				expect(c.SH.paletteOf(3)).toBeNil()
 				for _, bad in { "neon", "", string.rep("a", 40), 3, true } do
 					c.attr(3, "Palette", bad)
 					expect(c.SH.paletteOf(3)).toBeNil()

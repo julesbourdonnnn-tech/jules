@@ -92,9 +92,10 @@ function UpgradeScreen.witness()
 	return deepCopy(WITNESS)
 end
 
-function UpgradeScreen.new(Harness)
+-- preset : préréglage des interrupteurs v2.0 du harnais partagé (tests/harness/Flags, lot I)
+function UpgradeScreen.new(Harness, preset: any?)
 	local S = {}
-	local shared = Harness.new()
+	local shared = Harness.new({ flags = preset })
 	local UpgradeMath = shared:require("ReplicatedStorage.Shared.Logic.UpgradeMath")
 	local Features = shared:require("ReplicatedStorage.Shared.Config.Features")
 	S.UpgradeMath = UpgradeMath

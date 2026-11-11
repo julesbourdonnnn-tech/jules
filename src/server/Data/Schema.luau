@@ -114,6 +114,7 @@ Schema.OWNERS_V2 = {
 	bestR = "SplorchService",
 	regainBonusA = "SplorchService",
 	memoryR = "SplorchService", -- décision INT-A1-MEMORY (lot A2, journal A2-1) : écrit par Prestige.apply
+	ascendDay = "SplorchService", -- lot I (D5, journal I-3) : jour de la dernière Ascension
 	confetti = "EconomyService",
 	confettiTotal = "EconomyService",
 	atelier = "EconomyService",
@@ -174,6 +175,9 @@ local function addV2Defaults(d: { [string]: any })
 	-- Record R au moment du dernier retour au record (entier 0-400, ≤ bestR) : la 1re boucle record
 	-- qui suit le retour (× 1,25, Prestige.firstRecordLoop) est celle où r = bestR = memoryR
 	d.memoryR = 0
+	-- jour de la dernière Ascension (Clock.day(), entier 0-1e9 ; 0 = jamais) : écrit par SplorchService
+	-- à chaque Jelly Ascend, lu pour les jours écoulés de l'événement AscendDone (lot I, D5)
+	d.ascendDay = 0
 	-- Confettis : entiers de 0 à 1e9, confettiTotal ≥ confetti (jamais remis à zéro)
 	d.confetti = 0
 	d.confettiTotal = 0

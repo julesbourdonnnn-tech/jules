@@ -13,7 +13,10 @@ local serde = require("@lune/serde")
 return function(T)
 	local describe, it, expect, Harness = T.describe, T.it, T.expect, T.Harness
 
-	local h = Harness.new()
+	-- serveur v1.3 (préréglage « v13 », lot I D2 a / D10) : Schema.defaults() de ce fichier est le
+	-- profil v1 (entrée de la migration, gardée tant que le code v1 existe) ; les profils v2 sont
+	-- construits par defaultsFor(2) ; le chemin du lancement (serveur v2, vrai DataService) : Migration_I
+	local h = Harness.new({ flags = "v13" })
 	local Repair = h:require("ServerScriptService.Server.Data.ProfileRepair")
 	local Schema = h:require("ServerScriptService.Server.Data.Schema")
 	local Tables = h:require("ReplicatedStorage.Shared.Util.Tables")

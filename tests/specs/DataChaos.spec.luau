@@ -71,6 +71,17 @@ return function(T)
 		end,
 	}, { __index = Harness })
 
+	-- Harnais d'un serveur v1.3 (préréglage « v13 » de tests/harness/Flags, lot I) : SchemaV2 coupé,
+	-- l'ancien serveur d'un déploiement (docs/04 §27.2 règle D3) ; les autres serveurs de ce fichier
+	-- suivent la configuration livrée (SchemaV2 ouvert depuis le lot I)
+	local HarnessV13 = setmetatable({
+		new = function(options)
+			local o = table.clone(options or {})
+			o.flags = "v13"
+			return Harness.new(o)
+		end,
+	}, { __index = Harness })
+
 	local function bootWith(H, shared, jobId, before)
 		local caught = {}
 		local w = Chaos.boot(H, Bots, shared, jobId, {
@@ -105,6 +116,13 @@ return function(T)
 
 	local function server(shared, jobId, before)
 		return bootWith(Harness, shared, jobId, before)
+	end
+
+	-- Serveur v1 (Schema.VERSION = 1) : préréglage « v13 »
+	local function serverV1(shared, jobId, before)
+		local w = bootWith(HarnessV13, shared, jobId, before)
+		assert(w.Schema.VERSION == 1, "serveur v1 attendu")
+		return w
 	end
 
 	-- Serveur v2 (Schema.VERSION = 2)
@@ -283,7 +301,8 @@ return function(T)
 			local p = Bots.join(9)
 			local data = w.DS.get(p)
 			expect(data.coins).toBe(1234)
-			expect(data.version).toBe(1)
+			-- v0 → v2 depuis l'ouverture de SchemaV2 (lot I, journal I-7)
+			expect(data.version).toBe(2)
 			expect(w.Invariants.profile(data)).toEqual({})
 			w.Squishy.give(p, { s = 1, m = 0, st = 0, z = 1 }, "starter")
 			Bots.leave(p)
@@ -441,7 +460,7 @@ return function(T)
 				local probe = Harness.new()
 				local shared = newStore(probe)
 				Chaos.seed(shared, 20, readV1(probe))
-				local w = server(shared, "A")
+				local w = serverV1(shared, "A")
 				expect(w.Schema.VERSION).toBe(1)
 				local p = Bots.join(20)
 				local data = w.DS.get(p)
@@ -834,7 +853,7 @@ return function(T)
 				end)).toBe(true)
 				local writes = #shared.writes
 				local before = shared.data["player_26"]
-				local old = server(shared, "OLD")
+				local old = serverV1(shared, "OLD")
 				local po = Bots.join(26, { wait = false })
 				expect(waitUntil(function()
 					return #old.h.log.kicks == 1

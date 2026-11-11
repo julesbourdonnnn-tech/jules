@@ -34,7 +34,9 @@ local Defaults = {
 	-- (décision par défaut n° 6 : tout au lancement) ; elle est posée à l'étape d'intégration I, dans
 	-- le même lot que la spec qui la vérifie (docs/04 §27.3). JellyAscend (plus haut) en fait partie.
 	-- =========================================================================================
-	SchemaV2 = false, -- schéma v2 et migration v1 → v2 (Data/Schema) ; FIGÉ : jamais changé en direct
+	-- OUVERT au lot I (étape 1, docs/04 §27.2 règle D3) : une fois ouvert, JAMAIS recoupé en production
+	-- (un profil migré ne revient jamais en v1 ; un serveur v1 refuse un profil v2 sans rien écrire)
+	SchemaV2 = true, -- schéma v2 et migration v1 → v2 (Data/Schema) ; FIGÉ : jamais changé en direct
 	UpgradesScreen = false, -- écran Améliorations (4 onglets), BuyUpgrade, puce « Prochain achat »
 	Confetti = false, -- 2e monnaie (gains de Prestige.apply, piste, maîtrise)
 	Workshop = false, -- Atelier de Big Plop (9 lignes) et « Pour le plaisir »

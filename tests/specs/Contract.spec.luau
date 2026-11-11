@@ -336,7 +336,9 @@ return function(T)
 
 	describe("Contrat › Schéma v1", function()
 		it("valeurs par défaut sérialisables, une clé = un propriétaire, clés privées", function()
-			local h = Harness.new()
+			-- serveur v1.3 (préréglage « v13 », lot I D10 : le schéma v1 reste l'entrée de la migration ;
+			-- le schéma écrit au lancement : cas suivant)
+			local h = Harness.new({ flags = "v13" })
 			local Schema = h:require("ServerScriptService.Server.Data.Schema")
 			local d = Schema.defaults()
 			expect(d.version).toBe(1)
@@ -372,6 +374,36 @@ return function(T)
 			expect(d.settings.haloOn).toBeNil()
 			expect(Schema.defaultsFor(2).settings.haloOn).toBe(true)
 		end)
+
+		it(
+			"lancement (SchemaV2 ouvert, lot I) : VERSION 2, même magasin, défauts v2 sérialisables, une clé = un propriétaire",
+			function()
+				local h = Harness.new()
+				local Schema = h:require("ServerScriptService.Server.Data.Schema")
+				local Tables = shared(h, "Util.Tables")
+				local d = Schema.defaults()
+				expect(Schema.VERSION).toBe(2)
+				expect(d.version).toBe(2)
+				-- même magasin : la migration se fait profil par profil au chargement (docs/04 §27.2)
+				expect(Schema.STORE_NAME).toBe("PlayerData_v1")
+				expect(Tables.deepEqual(d, Schema.defaultsFor(2))).toBe(true)
+				local store = h.game.DataStoreService:GetDataStore("SchemaCheck")
+				expect(function()
+					store:SetAsync("k", d)
+				end).notToThrow()
+				for key in d do
+					expect({ key = key, owned = Schema.OWNERS[key] ~= nil }).toEqual({
+						key = key,
+						owned = true,
+					})
+				end
+				for key in Schema.OWNERS do
+					expect(d[key] ~= nil).toBe(true)
+				end
+				expect(Schema.PRIVATE_KEYS).toEqual({ receipts = true, codes = true, flags = true })
+				expect(d.settings.haloOn).toBe(true)
+			end
+		)
 
 		it("migre la sauvegarde-témoin v0 (tests/fixtures/profiles/v0.json) sans rien perdre", function()
 			local h = Harness.new()

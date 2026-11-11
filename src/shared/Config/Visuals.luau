@@ -96,8 +96,11 @@ Visuals.Eyes = {
 } :: { [string]: EyeVersion }
 Visuals.EyeChoice = "A"
 
--- Palettes du spectacle du Grand Splorch : 6 de l'Atelier, 1 du Record R 9, 1 de la semaine
-Visuals.Palettes = { "candy", "mint", "lavender", "rainbow", "softNight", "icing", "fireworks", "peach" }
+-- Palettes du spectacle du Grand Splorch : 6 de l'Atelier, 1 du Record R 9, 1 de la semaine ; chaque
+-- nom = l'identifiant gardé dans cosmetics.palette (lot I, D4 : « peachPalette », celui de
+-- Cosmetics.WeeklyRotation, figé avant la première sauvegarde v2)
+Visuals.Palettes =
+	{ "candy", "mint", "lavender", "rainbow", "softNight", "icing", "fireworks", "peachPalette" }
 
 -- Ciel des Ascensions : A1 à A10 nommés (sky.1 … sky.10), puis une étoile de plus par Ascension
 -- jusqu'à A20 (sky.stars)

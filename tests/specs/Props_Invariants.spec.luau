@@ -5,7 +5,9 @@ return function(T)
 	local describe, it, expect, Harness = T.describe, T.it, T.expect, T.Harness
 	local Props = require("../harness/Props")
 
-	local h = Harness.new()
+	-- serveur v1.3 (préréglage « v13 », lot I D2 a) : Schema.defaults() = profil v1 ; le profil v2
+	-- valide au hasard a son propre cas (defaultsFor(2), Record R ≥ r)
+	local h = Harness.new({ flags = "v13" })
 	local I = h:require("ReplicatedStorage.Shared.Logic.Invariants")
 
 	-- uid = base 36 de nextUid (minuscules)
@@ -22,7 +24,8 @@ return function(T)
 	local Schema = h:require("ServerScriptService.Server.Data.Schema")
 
 	describe("Props › Invariants", function()
-		it("profil valide au hasard (≤ 24 en enclos, ≤ 6 au Bassin…) : aucune violation", function()
+		-- version 1 : Schema.defaults() du serveur v1.3 ; version 2 : defaultsFor(2), Record R = r (lot I)
+		local function randomValid(version)
 			local recGen = Props.map(
 				Props.tuple(
 					Props.int(1, 26),
@@ -53,9 +56,12 @@ return function(T)
 				1500,
 				Props.tuple(Props.array(recGen, 40), Props.number(0, 1e14), Props.int(0, 50)),
 				function(v)
-					local d = Schema.defaults()
+					local d = if version == 1 then Schema.defaults() else Schema.defaultsFor(version)
 					d.coins = math.floor(v[2])
 					d.R = v[3]
+					if version >= 2 then
+						d.bestR = v[3] -- Record R ≥ r (jamais d'Ascension dans ce tirage)
+					end
 					-- capacités du joueur (§17.2 n° 3) : dalle Enclos au maximum et Grand Ranch (24 places,
 					-- Bassin compris), bonus Axolo gagné (6 places au Bassin) : les tirages ci-dessous sont valides
 					d.tiles.pens = 14
@@ -76,6 +82,14 @@ return function(T)
 					return #violations == 0, table.concat(violations, ", ")
 				end
 			)
+		end
+
+		it("profil valide au hasard (≤ 24 en enclos, ≤ 6 au Bassin…) : aucune violation", function()
+			randomValid(1)
+		end)
+
+		it("profil v2 valide au hasard (même tirage, Record R = r ; lot I) : aucune violation", function()
+			randomValid(2)
 		end)
 
 		it("profil abîmé : liste de chaînes, jamais d'erreur", function()

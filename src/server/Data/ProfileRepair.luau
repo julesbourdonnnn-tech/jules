@@ -953,6 +953,8 @@ local function repairProgressionV2(ctx: Ctx, d: { [string]: any }, raw: RawV2)
 		d.memoryR = math.floor(memoryR)
 		fix(ctx, "memoryR")
 	end
+	-- jour de la dernière Ascension (lot I, D5) : entier de [0 ; 1e9] (0 = jamais) ; illisible → 0
+	intField(ctx, d, "ascendDay", 0, 1e9, "ascendDay")
 	-- Confettis : entiers de 0 à 1e9 ; en poche ≤ total gagné (le total, compteur qui ne baisse
 	-- jamais, est relevé : jamais un Confetti de poche perdu)
 	intField(ctx, d, "confetti", 0, CONFETTI_MAX, "confetti")

@@ -274,7 +274,10 @@ return function(T)
 
 		it("petite collection : instantané complet, aucun flux", function()
 			local ctx = boot()
-			seedVeteran(ctx, 3, 30)
+			-- collection de SNAPSHOT_INLINE entrées (24 depuis le lot I, journal I-8 ; 30 avant)
+			local n = ctx.DS.Settings.SNAPSHOT_INLINE
+			expect(n).toBe(24)
+			seedVeteran(ctx, 3, n)
 			local p = join(ctx, 3)
 			local base = #ctx.h:sentTo(p, "DataPatch")
 			for _ = 1, 30 do
@@ -282,7 +285,7 @@ return function(T)
 				ctx.h:step(DT, 1)
 			end
 			ctx.h:settle(2)
-			expect(count(ctx.h:sentTo(p, "DataSnapshot")[1][1].items)).toBe(30)
+			expect(count(ctx.h:sentTo(p, "DataSnapshot")[1][1].items)).toBe(n)
 			for i = base + 1, #ctx.h:sentTo(p, "DataPatch") do
 				local entries = ctx.h:sentTo(p, "DataPatch")[i][3]
 				expect(type(entries) ~= "table" or entries.items == nil).toBe(true)

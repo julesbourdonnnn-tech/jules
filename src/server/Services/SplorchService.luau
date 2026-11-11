@@ -775,6 +775,9 @@ local function burstAscend(show: Show, now: number)
 		diag("PrestigeRefused", hero)
 		return
 	end
+	-- jour de cette Ascension (lot I, D5 : jours écoulés de la suivante pour AscendDone)
+	data.ascendDay = Clock.day()
+	DataService.markDirty(hero, "ascendDay")
 	SquishyService.resetSizes(hero)
 	SquishyService.setWaiting(hero, nil)
 	local regain, fullPen = payout(hero, report)

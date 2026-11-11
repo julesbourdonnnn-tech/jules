@@ -159,6 +159,9 @@ function Soak.run(Harness, opts)
 		t0 = opts.t0 or (1800000000 + 3600 * 24 * 2 + 50),
 		-- paquet meta livré : vrais services par défaut (opts.stubMeta = true : doublures)
 		stubMeta = opts.stubMeta == true,
+		-- préréglage des interrupteurs v2.0 (tests/harness/Flags, lot I) ; opts.flags ouvre en plus
+		-- des clés en direct, après le démarrage
+		preset = opts.preset,
 	})
 	local Invariants = w.h:require("ReplicatedStorage.Shared.Logic.Invariants")
 	local Balance = w.Balance

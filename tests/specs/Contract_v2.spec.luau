@@ -6,8 +6,11 @@
 -- rien (une attente qui change avec le GDD est mise à jour avec lui, raison au journal §27.12).
 local fs = require("@lune/fs")
 local serde = require("@lune/serde")
+local Flags = require("../harness/Flags")
 
--- Interrupteurs des systèmes v2.0 (Config/Features) : tous coupés au départ (docs/04 §27.3)
+-- Interrupteurs des systèmes v2.0 (Config/Features, docs/04 §27.3) : ouverts par groupe au lot I
+-- (OPEN_AT_LAUNCH : les clés déjà ouvertes dans la configuration livrée ; les autres restent coupées
+-- jusqu'à l'étape de leur groupe : progression, méta, monde et vie)
 local V2_FLAGS = {
 	"JellyAscend",
 	"SchemaV2",
@@ -34,6 +37,9 @@ local V2_FLAGS = {
 	"Ambience",
 }
 
+-- Lot I, étape 1 (journal I-4) : SchemaV2 seul (données d'abord ; un profil migré ne revient jamais)
+local OPEN_AT_LAUNCH = { SchemaV2 = true }
+
 local V2_SIGNALS = { "PrestigeApplied", "UpgradeBought", "ConfettiChanged", "RecordReached", "HelperPressed" }
 
 local V2_TYPES = {
@@ -56,6 +62,7 @@ local V2_KEYS = {
 	"bestR",
 	"regainBonusA",
 	"memoryR", -- décision INT-A1-MEMORY (lot A2, docs/04 §27.12 A2-1)
+	"ascendDay", -- jour de la dernière Ascension (lot I, D5, journal I-3)
 	"confetti",
 	"confettiTotal",
 	"atelier",
@@ -220,23 +227,36 @@ return function(T)
 
 	-- ---------------------------------------------------------------------------------------------
 	describe("Contrat v2 › Interrupteurs (le jeu de base joue comme avant)", function()
-		it("chaque système v2.0 a son interrupteur, COUPÉ par défaut", function()
-			local h = Harness.new()
-			local F = shared(h, "Config.Features")
-			F.reset()
-			for _, key in V2_FLAGS do
-				expect({ key = key, default = F.Defaults[key] }).toEqual({ key = key, default = false })
-				expect({ key = key, now = F.get(key) }).toEqual({ key = key, now = false })
+		it(
+			"chaque système v2.0 a son interrupteur : SchemaV2 ouvert au lancement, les autres coupés jusqu'à leur groupe",
+			function()
+				local h = Harness.new()
+				local F = shared(h, "Config.Features")
+				F.reset()
+				for _, key in V2_FLAGS do
+					local want = OPEN_AT_LAUNCH[key] == true
+					expect({ key = key, default = F.Defaults[key] }).toEqual({ key = key, default = want })
+					expect({ key = key, now = F.get(key) }).toEqual({ key = key, now = want })
+				end
+				-- la liste du harnais (tests/harness/Flags) est la même que celle du contrat
+				local listed = {}
+				for _, key in Flags.V2_KEYS do
+					listed[key] = true
+				end
+				expect(#Flags.V2_KEYS).toBe(#V2_FLAGS)
+				for _, key in V2_FLAGS do
+					expect({ key = key, listed = listed[key] == true }).toEqual({ key = key, listed = true })
+				end
+				-- un interrupteur v2.0 se change en direct (LiveOps), sauf SchemaV2 (figé : jamais recoupé)
+				expect(F.set("UpgradesScreen", true)).toBe(true)
+				expect(F.get("UpgradesScreen")).toBe(true)
+				expect(F.set("SchemaV2", false)).toBe(false)
+				expect(F.get("SchemaV2")).toBe(true)
+				expect(F.Static.SchemaV2).toBe(true)
+				F.reset()
+				expect(F.get("UpgradesScreen")).toBe(false)
 			end
-			-- un interrupteur v2.0 se change en direct (LiveOps), sauf SchemaV2 (figé)
-			expect(F.set("UpgradesScreen", true)).toBe(true)
-			expect(F.get("UpgradesScreen")).toBe(true)
-			expect(F.set("SchemaV2", true)).toBe(false)
-			expect(F.get("SchemaV2")).toBe(false)
-			expect(F.Static.SchemaV2).toBe(true)
-			F.reset()
-			expect(F.get("UpgradesScreen")).toBe(false)
-		end)
+		)
 
 		it("chaque interrupteur nommé par la configuration v2.0 existe", function()
 			local h = Harness.new()
@@ -262,7 +282,8 @@ return function(T)
 		it(
 			"schéma : la v1 reste écrite tant que SchemaV2 est coupé (defaults, OWNERS, VERSION)",
 			function()
-				local h = Harness.new()
+				-- serveur v1.3 (préréglage « v13 ») : chemin gardé tant que le code v1 existe (lot I, D10)
+				local h = Harness.new({ flags = "v13" })
 				local Schema = schema(h)
 				local Tables = shared(h, "Util.Tables")
 				expect(Schema.VERSION).toBe(1)
@@ -277,6 +298,24 @@ return function(T)
 				expect(string.find(Schema.OWNERS.ascend, "(réservé", 1, true)).toBe(1)
 			end
 		)
+
+		it("schéma au lancement : SchemaV2 ouvert, la v2 est écrite (defaults, OWNERS, VERSION)", function()
+			local h = Harness.new()
+			local Schema = schema(h)
+			local Tables = shared(h, "Util.Tables")
+			expect(Schema.VERSION).toBe(2)
+			expect(Schema.LATEST).toBe(2)
+			expect(Schema.STORE_NAME).toBe("PlayerData_v1")
+			expect(Schema.defaults().version).toBe(2)
+			expect(Tables.deepEqual(Schema.defaults(), Schema.defaultsFor(2))).toBe(true)
+			expect(Tables.deepEqual(Schema.OWNERS, Schema.ownersFor(2))).toBe(true)
+			for _, key in V2_KEYS do
+				expect({ key = key, v2 = Schema.defaults()[key] ~= nil }).toEqual({ key = key, v2 = true })
+			end
+			expect(Schema.OWNERS.ascend).toBe("SplorchService")
+			expect(Schema.OWNERS.ascendDay).toBe("SplorchService")
+			expect(Schema.defaults().ascendDay).toBe(0)
+		end)
 
 		it(
 			"aucun service du serveur ne branche encore une intention v2.0 (déclarées, jamais écoutées)",
@@ -382,7 +421,9 @@ return function(T)
 		it(
 			"champs du lot A4 : dans defaultsFor(2), jamais dans defaultsV1() ni defaults() ; réglages « since »",
 			function()
-				local h = Harness.new()
+				-- serveur v1.3 (préréglage « v13 », lot I D10 : defaults() d'un serveur v1) ; au lancement,
+				-- defaults() = defaultsFor(2) (cas « schéma au lancement »)
+				local h = Harness.new({ flags = "v13" })
 				local Schema = schema(h)
 				local S = shared(h, "Config.Settings")
 				local C = shared(h, "Config.Cosmetics")
@@ -784,7 +825,8 @@ return function(T)
 		)
 
 		it("jeu de base : sans cible, migrate ne dépasse jamais Schema.VERSION (= 1)", function()
-			local h = Harness.new()
+			-- serveur v1.3 (préréglage « v13 », lot I D10) ; au lancement : Migration_I
+			local h = Harness.new({ flags = "v13" })
 			local Schema = schema(h)
 			local Tables = shared(h, "Util.Tables")
 			local v1 = readV1()
@@ -799,7 +841,8 @@ return function(T)
 
 		it("un serveur v1 ne corrompt jamais un profil v2 : chargement refusé, rien d'écrit", function()
 			T.expectWarning("écrit par un schéma plus récent que v1")
-			local h = Harness.new()
+			-- serveur v1 (préréglage « v13 », lot I D3 : déploiement, ancien serveur encore allumé)
+			local h = Harness.new({ flags = "v13" })
 			local Clock = shared(h, "Util.Clock")
 			Clock.freeze(1800000000)
 			local DS = h:require("ServerScriptService.Server.Services.DataService")

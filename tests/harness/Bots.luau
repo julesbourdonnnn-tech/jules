@@ -65,7 +65,13 @@ end
 -- Le monde retourné devient le monde courant.
 function Bots.boot(Harness, opts)
 	opts = opts or {}
-	local h = Harness.new(opts.harness)
+	-- opts.preset : préréglage des interrupteurs v2.0 (tests/harness/Flags, lot I) ; sinon celui de
+	-- opts.harness.flags, sinon les valeurs livrées
+	local hopts = table.clone(opts.harness or {})
+	if opts.preset ~= nil then
+		hopts.flags = opts.preset
+	end
+	local h = Harness.new(hopts)
 	local w = {
 		h = h,
 		V3 = h.globals.Vector3,
