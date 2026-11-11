@@ -12,7 +12,7 @@ local Enum = roblox.Enum
 local Vector2 = roblox.Vector2
 
 -- garde unique du budget d'interface du jeu ouvert (GDD §12.9, lot I, D21, journal I-35)
-local SESSION_GUARD = 99999
+local SESSION_GUARD = 4150
 
 return function(T)
 	local describe, it, expect = T.describe, T.it, T.expect
@@ -382,51 +382,54 @@ return function(T)
 	-- rail, l'écran Améliorations gardé), (c) tout construit (cas « chemin méta » plus haut, garde 4 650).
 	-- UNE garde : (b) mesuré, arrondi aux 50 du dessus (journal I-35).
 	describe("Layout_panels › budget du jeu ouvert (lot I, D21)", function()
-		it("chargement, pic d'une séance normale (chaque panneau du rail une fois) ; garde unique", function()
-			local UpgradeScreen = require("../harness/UpgradeScreen")
-			local S = UpgradeScreen.new(T.Harness)
-			local profile = TvAudit.richProfile()
-			profile.squishies.u20.z = 3e15
-			profile.version = 2
-			profile.R = 15
-			profile.bestR = 15
-			profile.onboarding = { step = 11, done = true, demoDone = true }
-			local c = S.client({
-				snap = S.snap(1, function(p)
-					p.R = 15
-					p.bestR = 15
-				end),
-				profile = profile,
-				before = TvAudit.enableShop, -- Boutique en vente : son entrée du rail est ouverte aussi
-			})
-			S.event(c, UpgradeScreen.V2_ALL)
-			local h, PC = c.h, c.PC
-			TvAudit.tick(h, 0.5)
-			local atLoad = TvAudit.guiObjects(h)
-			local peak = atLoad
-			local opened = {}
-			for _, entry in PC.entries() do
-				PC.open(entry)
+		it(
+			"chargement, pic d'une séance normale (chaque panneau du rail une fois) ; garde unique",
+			function()
+				local UpgradeScreen = require("../harness/UpgradeScreen")
+				local S = UpgradeScreen.new(T.Harness)
+				local profile = TvAudit.richProfile()
+				profile.squishies.u20.z = 3e15
+				profile.version = 2
+				profile.R = 15
+				profile.bestR = 15
+				profile.onboarding = { step = 11, done = true, demoDone = true }
+				local c = S.client({
+					snap = S.snap(1, function(p)
+						p.R = 15
+						p.bestR = 15
+					end),
+					profile = profile,
+					before = TvAudit.enableShop, -- Boutique en vente : son entrée du rail est ouverte aussi
+				})
+				S.event(c, UpgradeScreen.V2_ALL)
+				local h, PC = c.h, c.PC
 				TvAudit.tick(h, 0.5)
-				peak = math.max(peak, TvAudit.guiObjects(h))
-				table.insert(opened, entry)
-				PC.closeAll()
-				TvAudit.tick(h, 0.5)
-				peak = math.max(peak, TvAudit.guiObjects(h))
-			end
-			print(
-				string.format(
-					"    budget du jeu ouvert : (a) chargement %d, (b) pic d'une séance normale %d (%s)",
-					atLoad,
-					peak,
-					table.concat(opened, ", ")
+				local atLoad = TvAudit.guiObjects(h)
+				local peak = atLoad
+				local opened = {}
+				for _, entry in PC.entries() do
+					PC.open(entry)
+					TvAudit.tick(h, 0.5)
+					peak = math.max(peak, TvAudit.guiObjects(h))
+					table.insert(opened, entry)
+					PC.closeAll()
+					TvAudit.tick(h, 0.5)
+					peak = math.max(peak, TvAudit.guiObjects(h))
+				end
+				print(
+					string.format(
+						"    budget du jeu ouvert : (a) chargement %d, (b) pic d'une séance normale %d (%s)",
+						atLoad,
+						peak,
+						table.concat(opened, ", ")
+					)
 				)
-			)
-			expect(#opened >= 7).toBe(true)
-			expect(atLoad <= 3000).toBe(true)
-			-- garde unique du GDD §12.9 (journal I-35) : (b) mesuré au lot I, arrondi aux 50 du dessus
-			expect(peak <= SESSION_GUARD).toBe(true)
-			S.clean(c, expect)
-		end)
+				expect(#opened >= 7).toBe(true)
+				expect(atLoad <= 3000).toBe(true)
+				-- garde unique du GDD §12.9 (journal I-35) : (b) mesuré au lot I, arrondi aux 50 du dessus
+				expect(peak <= SESSION_GUARD).toBe(true)
+				S.clean(c, expect)
+			end
+		)
 	end)
 end

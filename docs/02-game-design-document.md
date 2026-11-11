@@ -2234,7 +2234,7 @@ Après l'ouverture d'une fenêtre (cet écran, l'aperçu des renaissances et leu
 
 #### 10.7.10 Budget
 
-**1 400 objets d'interface au plus** pour tout l'écran (36 lignes × 32 instances + 3 cartes × 45 + 100 pour le cadre, les onglets et le bandeau = 1 387 ; v2.0 révisé : 6 + 7 + 17 = 30 lignes, la marge reste), construits une fois au chargement ; ombre (`UIShadow`) seulement sur le panneau et les cartes, jamais par ligne. L'interface entière (HUD, panneaux, écran Améliorations) tient dans les 3 000 objets du §12.9.
+**1 400 objets d'interface au plus** pour tout l'écran (36 lignes × 32 instances + 3 cartes × 45 + 100 pour le cadre, les onglets et le bandeau = 1 387 ; v2.0 révisé : 6 + 7 + 17 = 30 lignes, la marge reste), construits une fois au chargement ; ombre (`UIShadow`) seulement sur le panneau et les cartes, jamais par ligne. L'interface entière (HUD, panneaux, écran Améliorations) tient dans le budget du §12.9 (4 150 objets sur une séance normale, mesuré au lot I).
 
 ### 10.8 Les 20 règles « zéro bug d'affichage » et leurs tests *(v2.0 : nouveau)*
 
@@ -2820,7 +2820,7 @@ Appareil de référence : **PS4 et Xbox One de base**, les consoles les plus fai
 |---|---|
 | Images par seconde | **30 stables** sur PS4 et Xbox One avec 16 joueurs, 384 squishies affichables et un Rush complet ; 60 sur PS5, Xbox Series et PC |
 | Pièces de la carte | ≤ 4 500 (prévu ≈ 4 300), toutes ancrées |
-| Instances côté client | ≤ 15 000 dans le `workspace` (carte, squishies, effets ; *v2.0* : + ≈ 2 040 pièces de décor dessinées par le client, §11.5) ; ≤ 3 000 objets d'interface, **dont l'écran Améliorations ≤ 1 400** (v2.0) |
+| Instances côté client | ≤ 15 000 dans le `workspace` (carte, squishies, effets ; *v2.0* : + ≈ 2 040 pièces de décor dessinées par le client, §11.5) ; **≤ 4 150 objets d'interface** sur une séance normale du jeu v2.0 (mesuré au lot I : 1 506 au chargement, écran Améliorations compris ; 4 148 au plus haut quand chaque panneau du rail a été ouvert une fois, chacun gardé une fois construit ; 4 631 si tout est construit, Diagnostics et garde-robe compris), **dont l'écran Améliorations ≤ 1 400** (v2.0). *Pourquoi 4 150 et plus 3 000* : l'écran Améliorations seul fait ≤ 1 400 et il est construit une fois ; les panneaux de la v1.3 et de la v2.0 sont construits à la première ouverture et gardés (tout panneau garde des liaisons et des références à ses objets : le relâcher à la fermeture demande un démontage propre par panneau, pas fait au lancement, à mesurer d'abord sur une vraie console) |
 | Pièces de squishies rendues | ≤ 2 500 ; ≤ 80 squishies en détail complet (12 pièces) et animés à pleine cadence (40 en qualité réduite) ; le reste en 3 ou 1 pièce |
 | Mise à jour des squishies | Un `workspace:BulkMoveTo(..., Enum.BulkMoveMode.FireCFrameChanged)` par image ; 15 Hz entre 60 et 140 studs ; immobiles au-delà |
 | `Highlight` | **≤ 12** sur un client (la limite d'affichage du moteur est 255, d'après la documentation officielle, mais chaque contour coûte cher sur une vieille console) : cible 1, fuites du Rush les plus proches ≤ 6, Mythiques et Secrets les plus proches ≤ 3, Golden 1, réserve 1. Les autres fuites gardent leur anneau et leur traînée |
