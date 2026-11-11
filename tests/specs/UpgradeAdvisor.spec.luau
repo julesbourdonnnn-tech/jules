@@ -9,7 +9,9 @@ return function(T)
 	local describe, it, expect, Harness = T.describe, T.it, T.expect, T.Harness
 	local Props = require("../harness/Props")
 
-	local h = Harness.new()
+	-- interrupteurs v2.0 coupés au départ (préréglage « cut » ; lot I, étape 2, D2 a, journal I-19) :
+	-- chaque cas ouvre ce qu'il prouve
+	local h = Harness.new({ flags = "cut" })
 	local UpgradeAdvisor = h:require("ReplicatedStorage.Shared.Logic.UpgradeAdvisor")
 	local UpgradeMath = h:require("ReplicatedStorage.Shared.Logic.UpgradeMath")
 	local Prestige = h:require("ReplicatedStorage.Shared.Logic.Prestige")

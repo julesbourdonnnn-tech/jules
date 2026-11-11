@@ -9,6 +9,7 @@
 -- Étape 6 (D29) : ClientMetric (faits mesurés par le client) attaqué de même ; 1 000 messages valides
 -- seau vidé : 20 comptés par session au plus, compteurs nommés jamais saturés par un client.
 local Bots = require("../harness/Bots")
+local Flags = require("../harness/Flags")
 local Brains = require("../harness/Brains")
 local Fuzz = require("../harness/Fuzz")
 
@@ -41,13 +42,10 @@ return function(T)
 		"Mastery",
 	}
 
-	local HarnessV2 = setmetatable({
-		new = function(options)
-			local hh = Harness.new(options)
-			hh:require(L .. "Config.Features").Defaults.SchemaV2 = true
-			return hh
-		end,
-	}, { __index = Harness })
+	-- serveur v2 parti de la « coupure d'urgence » (préréglage « cut » : SchemaV2 seul ouvert ; lot I,
+	-- étape 2, D2 a, journal I-19) : chaque cas ouvre lui-même ses interrupteurs (Features.set) et
+	-- Features.reset() revient à « tout coupé » ; le chemin du lancement est couvert par Boot et Soak
+	local HarnessV2 = Flags.harness(Harness, "cut")
 
 	-- p (attaquant) : fanion, banc et gamelle (petits), palette « Bonbon » ; q : fontaine (grand) posée
 	-- sur l'emplacement 9, palette « Menthe » équipée, halo coupé

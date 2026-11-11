@@ -1196,13 +1196,10 @@ return function(T)
 		local Bots = require("../harness/Bots")
 		local T0 = 1800000000
 		local S = "ServerScriptService.Server.Services."
-		local HarnessV2 = setmetatable({
-			new = function(options)
-				local hh = Harness.new(options)
-				hh:require("ReplicatedStorage.Shared.Config.Features").Defaults.SchemaV2 = true
-				return hh
-			end,
-		}, { __index = Harness })
+		-- serveur v2 parti de la « coupure d'urgence » (préréglage « cut » : SchemaV2 seul ouvert ; lot I,
+		-- étape 2, D2 a, journal I-19) : chaque cas ouvre lui-même ses interrupteurs (Features.set) et
+		-- Features.reset() revient à « tout coupé » ; le chemin du lancement est couvert par Boot et Soak
+		local HarnessV2 = Flags.harness(Harness, "cut")
 
 		-- Serveur complet ; le joueur 1 arrive avec un profil au Tapis 12 (r = R, Record R = R)
 		local function boot(flags, R, harness)

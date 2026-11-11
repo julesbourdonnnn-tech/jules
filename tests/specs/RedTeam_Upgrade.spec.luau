@@ -6,6 +6,7 @@
 -- Confetti en trop ou en moins, jamais un niveau au-delà de son plafond, jamais une monnaie négative,
 -- NaN ou au-delà de son plafond, aucune erreur, aucun avertissement imprévu.
 local Bots = require("../harness/Bots")
+local Flags = require("../harness/Flags")
 local Fuzz = require("../harness/Fuzz")
 local Chaos = require("../harness/Chaos")
 local Brains = require("../harness/Brains")
@@ -20,13 +21,10 @@ return function(T)
 	local REMOTE = "ReplicatedStorage.Remotes.BuyUpgrade"
 	local FLAGS = { "UpgradesScreen", "Confetti", "Workshop", "StarMat", "Gloves", "Monuments", "RecordR" }
 
-	local HarnessV2 = setmetatable({
-		new = function(options)
-			local hh = Harness.new(options)
-			hh:require(L .. "Config.Features").Defaults.SchemaV2 = true
-			return hh
-		end,
-	}, { __index = Harness })
+	-- serveur v2 parti de la « coupure d'urgence » (préréglage « cut » : SchemaV2 seul ouvert ; lot I,
+	-- étape 2, D2 a, journal I-19) : chaque cas ouvre lui-même ses interrupteurs (Features.set) et
+	-- Features.reset() revient à « tout coupé » ; le chemin du lancement est couvert par Boot et Soak
+	local HarnessV2 = Flags.harness(Harness, "cut")
 
 	local function rec(extra)
 		local r =

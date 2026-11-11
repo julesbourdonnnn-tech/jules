@@ -52,10 +52,10 @@ end
 function EconomyIO.run(L, job)
 	local Features = L.Features
 	Features.reset()
-	if job.flags then
-		for _, key in EconomyModel.ECON_FLAGS do
-			assert(Features.set(key, true), "interrupteur refusé : " .. key)
-		end
+	-- chaque interrupteur de l'économie posé explicitement (tous ouverts ou tous coupés) : la
+	-- configuration livrée en ouvre une partie depuis le lot I (étape 2, journal I-19)
+	for _, key in EconomyModel.ECON_FLAGS do
+		assert(Features.set(key, job.flags == true), "interrupteur refusé : " .. key)
 	end
 	local out = table.pack(pcall(function()
 		local model = EconomyModel.new(L)

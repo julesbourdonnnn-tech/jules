@@ -84,10 +84,10 @@ return function(T)
 	-- =============================================================================================
 	local function withFlags(on, fn)
 		Features.reset()
-		if on then
-			for _, key in EconomyModel.ECON_FLAGS do
-				assert(Features.set(key, true), "interrupteur refusé : " .. key)
-			end
+		-- chaque interrupteur de l'économie posé explicitement (lot I, étape 2, journal I-19 : la
+		-- configuration livrée en ouvre une partie)
+		for _, key in EconomyModel.ECON_FLAGS do
+			assert(Features.set(key, on == true), "interrupteur refusé : " .. key)
 		end
 		local out = table.pack(pcall(fn))
 		Features.reset()
