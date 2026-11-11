@@ -702,5 +702,43 @@ return function(T)
 				end
 			end
 		)
+
+		it(
+			"aucun require dans un chemin par image (règle B5-62, lot I étape 5) : HelperRenderer.playPop, BigPlop.snapshotNow / anyPayable / _step, CameraController.stepBinoculars / closeBinocularsWindow, et les fonctions par image du lot B5",
+			function()
+				local PATHS = {
+					["src/client/Controllers/HelperRenderer.luau"] = {
+						"local function playPop(",
+						"function HelperRenderer._step(",
+					},
+					["src/client/World/BigPlop.luau"] = {
+						"local function snapshotNow(",
+						"local function anyPayable(",
+						"function BigPlop._step(",
+					},
+					["src/client/Controllers/CameraController.luau"] = {
+						"local function closeBinocularsWindow(",
+						"local function stepBinoculars(",
+						"local function stepPhoto(",
+						"function CameraController._step(",
+					},
+					["src/client/World/ShowsV2.luau"] = { "function ShowsV2._step(" },
+					["src/client/World/Emotes.luau"] = { "function Emotes._step(" },
+					["src/client/World/WeatherFx.luau"] = { "function WeatherFx._step(" },
+					["src/client/World/Fete.luau"] = { "function Fete._step(" },
+				}
+				for path, headers in PATHS do
+					local src = fs.readFile(path)
+					for _, header in headers do
+						local from = string.find(src, header, 1, true)
+						expect({ header, from ~= nil }).toEqual({ header, true })
+						local to = string.find(src, "\nend\n", from, true)
+						local body = string.gsub(string.sub(src, from, to), "%-%-[^\n]*", "")
+						expect({ header, string.find(body, "require(", 1, true) ~= nil }).toEqual({ header, false })
+						expect({ header, string.find(body, "lazy(", 1, true) ~= nil }).toEqual({ header, false })
+					end
+				end
+			end
+		)
 	end)
 end

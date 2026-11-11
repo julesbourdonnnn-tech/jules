@@ -52,32 +52,45 @@ function AscendPath.endpoints(slot: number): (Vector3, Vector3)
 	return start, sky
 end
 
--- Échantillon à l'instant `now` (heures du serveur) ; heures illisibles : posé au départ
+-- Échantillon à l'instant `now` (heures du serveur) ; heures illisibles : posé au départ. `into` : table
+-- réutilisée par l'appelant (rendue remplie, aucune table neuve par image : lot I, étape 5, constat
+-- B5-69 b) ; absente : une table neuve.
+local function fill(into: Sample?, pos: Vector3, grow: number, phase: any): Sample
+	if into then
+		into.pos = pos
+		into.grow = grow
+		into.phase = phase
+		return into
+	end
+	return { pos = pos, grow = grow, phase = phase }
+end
+
 function AscendPath.sample(
 	slot: number,
 	startedAt: number,
 	burstAt: number,
 	endsAt: number,
-	now: number
+	now: number,
+	into: Sample?
 ): Sample
 	local start, sky = AscendPath.endpoints(slot)
 	if not (finite(startedAt) and finite(burstAt) and finite(endsAt) and finite(now)) then
-		return { pos = start, grow = 0, phase = "done" }
+		return fill(into, start, 0, "done")
 	end
 	local burst = math.max(startedAt + 0.1, math.min(burstAt, endsAt))
 	local hoverEnd = math.min(burst + AscendPath.HOVER, endsAt)
 	if now < startedAt then
-		return { pos = start, grow = 0, phase = "rise" }
+		return fill(into, start, 0, "rise")
 	elseif now < burst then
 		local a = sineInOut((now - startedAt) / (burst - startedAt))
-		return { pos = start:Lerp(sky, a), grow = 0, phase = "rise" }
+		return fill(into, start:Lerp(sky, a), 0, "rise")
 	elseif now < hoverEnd then
-		return { pos = sky, grow = 1, phase = "hover" }
+		return fill(into, sky, 1, "hover")
 	elseif now < endsAt then
 		local a = quadOut((now - hoverEnd) / math.max(1e-3, endsAt - hoverEnd))
-		return { pos = sky:Lerp(start, a), grow = 1, phase = "descend" }
+		return fill(into, sky:Lerp(start, a), 1, "descend")
 	end
-	return { pos = start, grow = 1, phase = "done" }
+	return fill(into, start, 1, "done")
 end
 
 return AscendPath

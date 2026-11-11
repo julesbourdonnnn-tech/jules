@@ -1229,7 +1229,9 @@ local function playSound(name: string)
 end
 
 -- Relit les records de MON Étagère : un tour gagné depuis la dernière lecture est annoncé (une fois par
--- séance et par espèce et tour) ; la première lecture ne fait qu'armer (jamais d'annonce au chargement)
+-- séance et par espèce et tour) ; la première lecture ne fait qu'armer (jamais d'annonce au chargement).
+-- Une espèce dont le record APPARAÎT après l'armement déjà au-dessus d'un seuil annonce son plus beau
+-- tour, une fois (lot I, étape 5, décision D23 du plan I ; constat B5-69 d).
 local function scanTrophies()
 	local list = StateController.get("trophies")
 	if type(list) ~= "table" then
@@ -1241,7 +1243,7 @@ local function scanTrophies()
 			local level = levelOf(size)
 			local before = known[species]
 			known[species] = level
-			if armed and before ~= nil and level > before and Species.ById[species] ~= nil then
+			if armed and level > (before or 0) and Species.ById[species] ~= nil then
 				local key = species * 8 + level
 				if not announced[key] and told < ANNOUNCE_MAX then
 					announced[key] = true

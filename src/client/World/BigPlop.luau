@@ -6,7 +6,7 @@
 --
 --   BigPlop.start()      -- VFXController.Start l'appelle (le module n'est pas dans l'ordre du client)
 --   BigPlop.stop()       -- coupe tout, rend chaque instance (fin, specs)
---   BigPlop._step(dt)    -- une image (RenderStepped, seulement tant qu'il y a quelque chose à faire)
+--   BigPlop._step(dt)    -- une image (RenderStepped, seulement tant qu'un spectacle vit)
 --   BigPlop.stats()      -- compteurs (specs, Diagnostics)
 --   BigPlop._state()     -- spectacle en cours (specs)
 --   BigPlop._configure(sources)   -- specs : son, vibration, instantané, attribut, coût d'un hiver
@@ -27,13 +27,15 @@
 -- l'Observatoire, 4 s ; déclencheur = la condition de la carte Conseillé « Jelly Ascend » du lot B2
 -- (attribut AscendReady de mon ranch, instantané de l'écran Améliorations valide, aucun achat de
 -- pièces possible depuis Balance.Ascend.DeclineCardAfter = 300 s), lue 1 fois par seconde au plus,
--- seulement avec JellyAscend ouvert (World/Flags) ; UI/UpgradeSnapshot et Hud/UpgradeView ne sont
--- requis qu'à ce moment (pcall).
+-- seulement avec JellyAscend ouvert (World/Flags), par une minuterie à 1 Hz (task.delay, aucune boucle
+-- par image tant que rien ne se dessine : lot I, étape 5, constat B5-69 c) ; UI/UpgradeSnapshot et
+-- Hud/UpgradeView sont requis une fois dans start() (pcall), jamais dans une image (règle B5-62).
 -- Hiver (V8) : tant que le costume d'hiver est posé (LightingController.resolve(...).winter, le même
 -- test que l'éclairage), l'écharpe d'hiver remplace le nœud papillon et la coiffe est un bonnet (le
 -- casque gagne pendant un chantier).
 -- Interrupteurs coupés : ElementBuilt ne part jamais (aucun élément v2.0), JellyAscend fermé : aucune
--- boucle par image, aucune instance ; deux connexions de signaux seulement (ElementBuilt, Flags).
+-- boucle par image, aucune minuterie, aucune instance ; deux connexions de signaux seulement
+-- (ElementBuilt, Flags).
 -- Système « bigPlop » de Render/VisualBudget : 17 pièces (12 du modèle, coiffe, maillet, 3 points).
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -114,7 +116,10 @@ local connections: { RBXScriptConnection } = {}
 local stepConn: RBXScriptConnection? = nil
 local folder: Folder? = nil
 local gestureDone = false
-local pollAcc = 0
+local timerArmed = false -- minuterie de la condition du geste (1 Hz) en attente
+local timerGen = 0 -- une minuterie d'une génération passée ne fait rien
+local snapshotMod: any = nil -- UI/UpgradeSnapshot, résolu dans start()
+local viewMod: any = nil -- UI/Hud/UpgradeView, résolu dans start()
 local firstSeenAt: number? = nil
 local lastPayableAt: number? = nil
 local declared = false
@@ -132,6 +137,7 @@ local sources: {
 	payable: ((any) -> boolean)?,
 	attr: ((string) -> any)?,
 	winter: (() -> boolean)?,
+	after: ((number, (number) -> (), number) -> ())?,
 } =
 	{}
 
@@ -358,11 +364,16 @@ local function undress(s: Show)
 end
 
 -- =============================================================================================
--- Boucle par image (branchée seulement tant qu'il y a quelque chose à faire, D29)
+-- Boucle par image (branchée seulement tant qu'un spectacle vit, D29) et minuterie à 1 Hz de la
+-- condition du geste (lot I, étape 5 : plus de boucle par image pour une simple lecture, B5-69 c)
 -- =============================================================================================
 
 local function needLoop(): boolean
-	return show ~= nil or (not gestureDone and Flags.on("JellyAscend"))
+	return show ~= nil
+end
+
+local function needPoll(): boolean
+	return not gestureDone and Flags.on("JellyAscend")
 end
 
 local refreshLoop
@@ -479,10 +490,8 @@ local function snapshotNow(): any
 		local ok, snap = pcall(fn)
 		return if ok then snap else nil
 	end
-	local ok, mod = pcall(function(): any
-		return require(Client.UI.UpgradeSnapshot) :: any
-	end)
-	if not ok or type(mod) ~= "table" or type(mod.current) ~= "function" then
+	local mod = snapshotMod
+	if type(mod) ~= "table" or type(mod.current) ~= "function" then
 		return nil
 	end
 	local okSnap, snap = pcall(mod.current)
@@ -495,10 +504,8 @@ local function anyPayable(snap: any): boolean
 		local ok, v = pcall(fn, snap)
 		return ok and v == true
 	end
-	local ok, view = pcall(function(): any
-		return require(Client.UI.Hud.UpgradeView) :: any
-	end)
-	if not ok or type(view) ~= "table" or type(view.anyPayable) ~= "function" then
+	local view = viewMod
+	if type(view) ~= "table" or type(view.anyPayable) ~= "function" then
 		return true -- illisible : jamais de geste
 	end
 	local okP, v = pcall(view.anyPayable, snap)
@@ -598,19 +605,13 @@ local function poll(now: number)
 	startGesture(now)
 end
 
-function BigPlop._step(dt: number)
-	local d = Util.num(dt, 0, 0, 1)
+function BigPlop._step(_dt: number)
 	local now = Clock.now()
 	table.clear(bulkParts)
 	table.clear(bulkCFrames)
 	local s = show
 	if s then
 		stepShow(s, now)
-	end
-	pollAcc += d
-	if pollAcc >= POLL then
-		pollAcc = 0
-		poll(now)
 	end
 	if #bulkParts > 0 then
 		-- appel direct (aucune fermeture créée par image, lot B5 étape 6)
@@ -627,9 +628,51 @@ function BigPlop._step(dt: number)
 	end
 end
 
+local armTimer
+
+-- Une lecture de la minuterie : la condition, puis la suivante dans 1 s si elle sert encore
+local function onTimer(gen: number)
+	if gen ~= timerGen then
+		return
+	end
+	timerArmed = false
+	if not started or not needPoll() then
+		return
+	end
+	Util.guard("BigPlop.poll", poll, Clock.now())
+	armTimer()
+end
+
+function armTimer()
+	if timerArmed or not started or not needPoll() then
+		return
+	end
+	timerArmed = true
+	local gen = timerGen
+	local after = sources.after
+	if after then
+		local ok = pcall(after, POLL, onTimer, gen)
+		if not ok then
+			timerArmed = false
+		end
+	else
+		task.delay(POLL, onTimer, gen)
+	end
+end
+
+local function disarmTimer()
+	timerGen += 1
+	timerArmed = false
+end
+
 function refreshLoop()
 	if not started then
 		return
+	end
+	if needPoll() then
+		armTimer()
+	else
+		disarmTimer()
 	end
 	local need = needLoop()
 	if need and stepConn == nil then
@@ -716,6 +759,15 @@ function BigPlop.start()
 		return
 	end
 	started = true
+	-- modules de l'écran Améliorations : requis ici, une fois (jamais dans une image, règle B5-62)
+	if snapshotMod == nil then
+		local ok, mod = pcall(require, Client.UI.UpgradeSnapshot)
+		snapshotMod = if ok and type(mod) == "table" then mod :: any else nil
+	end
+	if viewMod == nil then
+		local ok, mod = pcall(require, Client.UI.Hud.UpgradeView)
+		viewMod = if ok and type(mod) == "table" then mod :: any else nil
+	end
 	table.insert(
 		connections,
 		RanchRenderer.ElementBuilt:Connect(function(slot: number, id: string)
@@ -745,6 +797,7 @@ function BigPlop.stop()
 	if c then
 		c:Disconnect()
 	end
+	disarmTimer()
 	started = false
 end
 
@@ -759,6 +812,7 @@ function BigPlop.stats(): { [string]: number }
 		refused = counters.refused,
 		live = if show then 1 else 0,
 		looping = if stepConn then 1 else 0,
+		timer = if timerArmed then 1 else 0,
 		connections = #connections + (if stepConn then 1 else 0),
 	}
 end
@@ -792,13 +846,14 @@ function BigPlop._configure(options: any?)
 	sources.payable = if type(o.payable) == "function" then o.payable else nil
 	sources.attr = if type(o.attr) == "function" then o.attr else nil
 	sources.winter = if type(o.winter) == "function" then o.winter else nil
+	sources.after = if type(o.after) == "function" then o.after else nil
 end
 
 function BigPlop._reset()
 	gestureDone = false
 	firstSeenAt = nil
 	lastPayableAt = nil
-	pollAcc = 0
+	disarmTimer()
 	refreshLoop()
 end
 

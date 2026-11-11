@@ -1889,6 +1889,31 @@ return function(T)
 		)
 
 		it(
+			"record d'une espèce qui APPARAÎT après le chargement déjà au-dessus d'un seuil : son plus beau tour annoncé une fois (lot I, étape 5, D23) ; jamais au chargement",
+			function()
+				local c = client()
+				local Util = c.h:require(CLIENT .. "World.Util")
+				local function text(id)
+					return Util.t("trick.new", { name = Util.t("trick." .. id) })
+				end
+				-- Étagère clairsemée : l'espèce 4 n'y est pas encore
+				c.h:fireClient(REMOTES .. "DataSnapshot", { trophies = { [1] = 150 } })
+				drawn3(c)
+				c.flags({ Personalities = true })
+				c.play(2, 30)
+				expect(c.toasts).toEqual({})
+				c.h:fireClient(REMOTES .. "DataPatch", { trophies = { [1] = 150, [4] = 1500 } }, {})
+				expect(c.toasts).toEqual({ text("spin") })
+				c.h:fireClient(REMOTES .. "DataPatch", { trophies = { [1] = 150, [4] = 1500 } }, {})
+				-- une espèce qui apparaît sous le premier seuil : rien
+				c.h:fireClient(REMOTES .. "DataPatch", { trophies = { [1] = 150, [4] = 1500, [6] = 5 } }, {})
+				expect(#c.toasts).toBe(1)
+				expect(c.P.stats().announced).toBe(1)
+				c.clean()
+			end
+		)
+
+		it(
 			"nouveau tour d'une de MES espèces : annoncé une fois par séance et par (espèce, tour), jamais au chargement ni à la réouverture de l'interrupteur ; message trick.new, son TrickPop (repli Pop tant qu'il est muet)",
 			function()
 				local c = client()

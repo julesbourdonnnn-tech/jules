@@ -129,6 +129,7 @@ return function(T)
 			payable = false,
 			ready = true,
 			cold = false,
+			timers = {},
 		}
 		c.BP._configure({
 			play = function(name)
@@ -148,6 +149,10 @@ return function(T)
 			end,
 			winter = function()
 				return c.cold
+			end,
+			-- minuterie à 1 Hz de la condition du geste (lot I, étape 5) : jouée sur l'horloge figée
+			after = function(seconds, fn, gen)
+				table.insert(c.timers, { at = Clock.now() + seconds, fn = fn, gen = gen })
 			end,
 		})
 		-- repères des éléments « dessinés » (RanchRenderer.elementCFrame remplacé : aucun décor v2.0 ici)
@@ -203,6 +208,17 @@ return function(T)
 		end
 		function c.frame(dt)
 			Clock.advance(dt)
+			-- minuteries échues (BigPlop) avant l'image, dans l'ordre d'armement
+			local due = nil
+			for i = #c.timers, 1, -1 do
+				if c.timers[i].at <= Clock.now() + 1e-9 then
+					due = due or {}
+					table.insert(due, 1, table.remove(c.timers, i))
+				end
+			end
+			for _, t in due or {} do
+				t.fn(t.gen)
+			end
 			h.game.RunService.RenderStepped:Fire(dt)
 		end
 		function c.play(seconds, fps)
@@ -323,12 +339,13 @@ return function(T)
 				c.snap = {}
 				c.play(400, 2)
 				local s = c.BP.stats()
-				expect({ s.chantiers, s.gestures, s.live, s.looping, s.connections }).toEqual({
+				expect({ s.chantiers, s.gestures, s.live, s.looping, s.connections, s.timer }).toEqual({
 					0,
 					0,
 					0,
 					0,
 					2,
+					0,
 				})
 				expect(
 					c.h.workspace:FindFirstChild("ClientWorld")
@@ -524,7 +541,9 @@ return function(T)
 				c.event({ JellyAscend = true })
 				c.me(c.WL.penSlot(3, 5))
 				c.snap = {}
-				expect(c.BP.stats().looping).toBe(1)
+				-- lot I, étape 5 (B5-69 c) : la condition se lit à 1 Hz par une minuterie, sans boucle par image
+				expect(c.BP.stats().looping).toBe(0)
+				expect(c.BP.stats().timer).toBe(1)
 				c.play(298, 4)
 				expect(c.BP.stats().gestures).toBe(0)
 				c.play(4, 4)
@@ -553,6 +572,7 @@ return function(T)
 				expect(c.BP._state()).toBeNil()
 				expect(c.instances()).toBe(0)
 				expect(c.BP.stats().looping).toBe(0)
+				expect(c.BP.stats().timer).toBe(0)
 				-- une fois par séance
 				c.play(700, 2)
 				expect(c.BP.stats().gestures).toBe(1)
@@ -717,6 +737,31 @@ return function(T)
 	end)
 
 	describe("VFXController v2 › Petit Splorch (lot B5, étape 4)", function()
+		it(
+			"un dossier de ranch répliqué APRÈS l'ouverture de PetitSplorch reçoit aussi son écoute ; l'interrupteur fermé, plus aucune écoute (lot I, étape 5, constat B5-69 e)",
+			function()
+				local c = client({ me = 2, best = BEST })
+				local list = c.models[5].Parent
+				c.models[5].Parent = nil
+				c.event({ PetitSplorch = true })
+				expect(c.SH.stats().attrConnections).toBe(15)
+				expect(c.SH.stats().listConnection).toBe(1)
+				c.models[5].Parent = list
+				c.h:settle(1)
+				expect(c.SH.stats().attrConnections).toBe(16)
+				local now = c.Clock.now()
+				c.attr(5, "PetitSplorchAt", now)
+				c.attr(3, "PetitSplorchAt", now)
+				expect(c.SH.stats().petits >= 1).toBe(true)
+				c.play(3)
+				c.event(nil)
+				expect(c.SH.stats().attrConnections).toBe(0)
+				expect(c.SH.stats().listConnection).toBe(0)
+				expect(c.SH.stats().connections).toBe(1)
+				c.clean()
+			end
+		)
+
 		it(
 			"propriétaire et voisin nourris des mêmes messages : même copie qui saute, rétrécit et éclate (30 confettis), même état final ; texte, son 1,2 et vibration au propriétaire seul",
 			function()

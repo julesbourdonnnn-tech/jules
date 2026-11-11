@@ -53,6 +53,8 @@ local WorldStateController = require(Client.Controllers.WorldStateController)
 local Util = require(Client.World.Util)
 local SplorchPath = require(Client.World.SplorchPath)
 local AscendPath = require(Client.World.AscendPath)
+-- échantillon réutilisé à chaque image (aucune table neuve, lot I étape 5, B5-69 b)
+local ascendSample: AscendPath.Sample = { pos = Vector3.zero, grow = 0, phase = "done" }
 local Flags = require(Client.World.Flags)
 local AudioController = require(Client.Controllers.AudioController)
 
@@ -782,8 +784,12 @@ local function binoView(slot: number): CFrame
 	return CFrame.lookAt(eye, WorldLayout.toWorld(slot, Vector3.new(0, 0, BINO.LookZ)))
 end
 
+-- UI/Binoculars, résolu quand il nous appelle (CameraController.binoculars) : stepBinoculars ne
+-- requiert jamais rien dans une image (lot I, étape 5 : règle B5-62, constat B5-69 a)
+local binocularsUi: any = nil
+
 local function closeBinocularsWindow()
-	local b = lazy("Binoculars")
+	local b = binocularsUi
 	if b and type(b.close) == "function" then
 		pcall(b.close)
 	end
@@ -811,6 +817,9 @@ function CameraController.binoculars(slot: number?)
 	local cam = camera()
 	if cam == nil then
 		return
+	end
+	if binocularsUi == nil then
+		binocularsUi = lazy("Binoculars")
 	end
 	if
 		not CameraController.takeLease("binoculars", function()
@@ -948,7 +957,7 @@ local function stepAscend(dt: number)
 			return
 		end
 	end
-	local s = AscendPath.sample(tr.slot, tr.startedAt, tr.burstAt, tr.endsAt, now)
+	local s = AscendPath.sample(tr.slot, tr.startedAt, tr.burstAt, tr.endsAt, now, ascendSample)
 	local look = WorldLayout.v2Anchor(tr.slot, "sky").LookVector
 	local flat = Vector3.new(look.X, 0, look.Z)
 	if flat.Magnitude < 1e-3 then

@@ -67,6 +67,8 @@ local Client = script.Parent.Parent
 local Flags = require(Client.World.Flags)
 local Util = require(Client.World.Util)
 local AscendPath = require(Client.World.AscendPath)
+-- échantillon réutilisé à chaque image (aucune table neuve, lot I étape 5, B5-69 b)
+local ascendSample: AscendPath.Sample = { pos = Vector3.zero, grow = 0, phase = "done" }
 local Personality = require(Client.World.Personality)
 local Prefs = require(Client.Util.Prefs)
 local Haptics = require(Client.Util.Haptics)
@@ -217,6 +219,8 @@ local fx: Fx? = nil
 local started = false
 local connections: { RBXScriptConnection } = {}
 local attrConns: { [number]: RBXScriptConnection } = {}
+-- écoute des dossiers de ranch arrivés plus tard (lot I, étape 5, constat B5-69 e)
+local listConn: RBXScriptConnection? = nil
 local stepConn: RBXScriptConnection? = nil
 local petits: { [number]: Petit } = {}
 local ascend: Ascend? = nil
@@ -608,9 +612,24 @@ local function attachPetit()
 			end
 		end
 	end
+	-- un dossier de ranch répliqué après l'ouverture reçoit aussi son écoute
+	if listConn == nil then
+		local root = workspace:FindFirstChild("Wobbleton")
+		local list = root and root:FindFirstChild("Ranches")
+		if list then
+			listConn = list.ChildAdded:Connect(function()
+				Util.guard("ShowsV2.petitList", attachPetit)
+			end)
+		end
+	end
 end
 
 local function detachPetit()
+	local lc = listConn
+	listConn = nil
+	if lc then
+		lc:Disconnect()
+	end
 	for slot, c in attrConns do
 		c:Disconnect()
 		attrConns[slot] = nil
@@ -782,7 +801,7 @@ local function stepAscend(a: Ascend, now: number, dt: number)
 	if h == nil then
 		return
 	end
-	local s = AscendPath.sample(a.slot, a.startedAt, a.burstAt, a.endsAt, now)
+	local s = AscendPath.sample(a.slot, a.startedAt, a.burstAt, a.endsAt, now, ascendSample)
 	if s.grow > 0 and a.newRatio == nil then
 		a.newRatio = newRatio(a, now)
 	end
@@ -1086,7 +1105,8 @@ function ShowsV2.stats(): { [string]: number }
 		rain = if rain then 1 else 0,
 		looping = if stepConn then 1 else 0,
 		attrConnections = n,
-		connections = #connections + n + (if stepConn then 1 else 0),
+		listConnection = if listConn then 1 else 0,
+		connections = #connections + n + (if stepConn then 1 else 0) + (if listConn then 1 else 0),
 	}
 end
 

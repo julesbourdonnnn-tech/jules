@@ -148,6 +148,8 @@ local counters = {
 }
 
 -- Sources remplaçables par les specs : son, gouttes du « pop », rebond du squishy
+local vfxModule: any = nil -- VFXController, résolu dans Start (jamais dans une image)
+
 local sources: {
 	play: ((string) -> ())?,
 	drops: ((Vector3, Color3, number) -> ())?,
@@ -688,7 +690,7 @@ local function onSquishy(slot: number, uid: string)
 	for _, hop in r.hops do
 		if hop.pop == "wait" and hop.uid == uid then
 			if now >= hop.tPress - POP_BEFORE and now <= hop.tPress + POP_AFTER then
-				local rec: any = WorldStateController.squishies(slot)[uid]
+				local rec: any = WorldStateController.squishiesView(slot)[uid] -- sans copie (B5-69 b)
 				if type(rec) == "table" and finite(rec.ready) and rec.ready > hop.tPress then
 					hop.pop = "seen"
 				end
@@ -713,11 +715,9 @@ local function playPop(r: Ranch, hop: Hop)
 		pcall(drops, at, color, POP_DROPS)
 		return
 	end
-	-- VFXController vient après ce module dans l'ordre du client : requis à la demande
-	local ok, vfx = pcall(function(): any
-		return require(Client.Controllers.VFXController) :: any
-	end)
-	if ok and type(vfx) == "table" and type(vfx.blobs) == "function" then
+	-- VFXController : résolu une fois au démarrage (jamais de require dans une image, règle B5-62)
+	local vfx = vfxModule
+	if vfx and type(vfx.blobs) == "function" then
 		Util.guard("VFXController.blobs", vfx.blobs, at, color, POP_DROPS)
 	end
 end
@@ -942,6 +942,12 @@ function HelperRenderer.Start()
 		return
 	end
 	started = true
+	-- VFXController vient après ce module dans l'ordre du client : requis ici, une fois, hors de toute
+	-- image (lot I, étape 5 : règle B5-62, constat B5-69 a)
+	if vfxModule == nil then
+		local ok, mod = pcall(require, Client.Controllers.VFXController)
+		vfxModule = if ok and type(mod) == "table" then mod :: any else nil
+	end
 	if not watchAll() then
 		-- modèles des ranchs pas encore répliqués : revus à chaque patch du miroir jusqu'au dernier
 		watchConn = WorldStateController.RanchChanged:Connect(function()
