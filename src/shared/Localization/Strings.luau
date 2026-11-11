@@ -1321,6 +1321,17 @@ Strings.en = {
 	["hearts.limit"] = "No more hearts today",
 	["photo.on"] = "Photo mode",
 	["photo.exit"] = "Exit photo mode",
+	-- lot B5 (étape 5, D24-D27) : ligne des Réglages, aide et filtres du mode photo
+	["settings.photo.desc"] = "Hide the screen and take nice pictures",
+	["photo.go"] = "Cheese!",
+	["photo.hint.move"] = "Move",
+	["photo.hint.turn"] = "Turn",
+	["photo.hint.zoom"] = "Zoom",
+	["photo.hint.filter"] = "Filter",
+	["photo.filter.none"] = "No filter",
+	["photo.filter.warm"] = "Warm",
+	["photo.filter.pink"] = "Pink",
+	["photo.filter.dream"] = "Dream",
 }
 
 Strings.fr = {
@@ -2630,6 +2641,17 @@ Strings.fr = {
 	["hearts.limit"] = "Plus de cœurs aujourd'hui",
 	["photo.on"] = "Mode photo",
 	["photo.exit"] = "Quitter le mode photo",
+	-- lot B5 (étape 5, D24-D27) : ligne des Réglages, aide et filtres du mode photo
+	["settings.photo.desc"] = "Cache l'écran pour de belles photos",
+	["photo.go"] = "Cheese !",
+	["photo.hint.move"] = "Bouger",
+	["photo.hint.turn"] = "Tourner",
+	["photo.hint.zoom"] = "Zoom",
+	["photo.hint.filter"] = "Filtre",
+	["photo.filter.none"] = "Sans filtre",
+	["photo.filter.warm"] = "Chaud",
+	["photo.filter.pink"] = "Rose",
+	["photo.filter.dream"] = "Rêve",
 }
 
 return Strings

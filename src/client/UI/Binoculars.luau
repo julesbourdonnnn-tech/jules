@@ -11,6 +11,10 @@
 --     Balance.Hearts.PerDay ; le bouton suit le profil répliqué (aucune prédiction) ;
 --   * aucun nom du propriétaire, aucun compteur (GDD §13 : jumelles en lecture seule, sans texte) ;
 --     le zoom de la caméra est au lot B5.
+-- INT-B5-BINOCULARS (lot B5, étape 5 ; plan B5 D28) : open demande la vue des jumelles à
+-- CameraController.binoculars(slot) et chaque fermeture (○, close, interrupteur coupé, propriétaire
+-- parti, fenêtre fermée par FocusGuard) la rend par CameraController.binoculars(nil) ; require
+-- paresseux et gardé (pcall) : sans CameraController, les jumelles marchent comme au lot B3.
 -- Seulement interrupteur Hearts ouvert et profil v2 (UI/MetaFlags) : sinon open() ne fait rien (aucune
 -- fenêtre, aucune intention). Construite une fois, à la première ouverture ; jamais un objet créé ou
 -- détruit pendant qu'elle est ouverte. Le serveur revérifie tout (CommunityService, refus muets).
@@ -270,6 +274,13 @@ local function build()
 	end)
 end
 
+-- INT-B5-BINOCULARS : vue de la caméra sur le ranch regardé (nil : caméra rendue)
+local function cameraView(slot: number?)
+	pcall(function()
+		(require(Client.Controllers.CameraController) :: any).binoculars(slot)
+	end)
+end
+
 local function onWindowClosed(name: string)
 	if name ~= Binoculars.WINDOW then
 		return
@@ -277,6 +288,7 @@ local function onWindowClosed(name: string)
 	opened = false
 	owner = 0
 	current = nil
+	cameraView(nil)
 	local screen = gui
 	if screen then
 		screen.Enabled = false
@@ -341,6 +353,14 @@ function Binoculars.open(ownerId: number): boolean
 		Juice.popIn(f)
 	end
 	AudioController.play("Whoosh")
+	local watched = 0
+	for slot = 1, WorldLayout.Const.Ranches do
+		local okR, r = pcall(WorldStateController.ranch, slot)
+		if okR and type(r) == "table" and r.userId == ownerId then
+			watched = slot
+			break
+		end
+	end
 	FocusGuard.open({
 		name = Binoculars.WINDOW,
 		root = f,
@@ -353,6 +373,9 @@ function Binoculars.open(ownerId: number): boolean
 		end,
 		opener = nil,
 	})
+	if watched > 0 then
+		cameraView(watched)
+	end
 	return true
 end
 

@@ -17,6 +17,10 @@
 --     (Logic/Owned avec les interrupteurs annoncés par le serveur, UI/MetaFlags), nommées par leur clé
 --     de Cosmetics.ListV2 / WeeklyRotation ; interrupteurs coupés : les lignes, les choix et les
 --     intentions de la v1.3, à l'identique.
+-- v2.0 (lot B5, étape 5 ; plan B5 D24 ; INT-B5-SETTINGS) : une ligne « Mode photo » (photo.on) tout
+-- en bas, seulement interrupteur PhotoMode ouvert (UI/MetaFlags) : ✕ sur « Cheese ! » ferme le menu et
+-- entre en mode photo (CameraController.photo(true), require paresseux et gardé) ; interrupteur
+-- coupé : aucune ligne, aucune intention.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -34,8 +38,8 @@ local MetaFlags = require(Client.UI.MetaFlags)
 local Widgets = require(script.Parent.Widgets)
 local Diagnostics = require(script.Parent.Diagnostics)
 
-type Nav = { open: (panel: string, tab: string?) -> (), back: () -> () }
-type Item = { kind: "mode" | "toggle" | "choice", key: string, values: { string }? }
+type Nav = { open: (panel: string, tab: string?) -> (), back: () -> (), closeAll: (() -> ())? }
+type Item = { kind: "mode" | "toggle" | "choice" | "action", key: string, values: { string }? }
 type Row = {
 	title: TextLabel,
 	desc: TextLabel,
@@ -160,6 +164,10 @@ local function buildItems(): { Item }
 	if privateOwner() then
 		table.insert(list, { kind = "toggle", key = "allowRush" })
 	end
+	-- lot B5 (INT-B5-SETTINGS) : mode photo, tout en bas, interrupteur PhotoMode ouvert
+	if MetaFlags.on("PhotoMode") then
+		table.insert(list, { kind = "action", key = "photo" })
+	end
 	return list
 end
 
@@ -218,6 +226,21 @@ local function activateChoice(item: Item)
 		local nextValue = values[(i % #values) + 1]
 		Widgets.send("SetSetting", item.key, nextValue)
 		resyncSoon()
+	elseif item.kind == "action" and item.key == "photo" then
+		-- INT-B5-SETTINGS : le menu se ferme, le mode photo commence (refusé : rien d'autre)
+		if not MetaFlags.on("PhotoMode") then
+			return
+		end
+		local n = nav
+		if n and n.closeAll then
+			n.closeAll()
+		end
+		local ok, camera = pcall(function(): any
+			return require(Client.Controllers.CameraController) :: any
+		end)
+		if ok and type(camera) == "table" and type(camera.photo) == "function" then
+			pcall(camera.photo, true)
+		end
 	end
 end
 
@@ -246,7 +269,7 @@ local function bindRow(row: Row, _frame: Frame, index: number)
 	local room = if wide then TEXT_ROOM_WIDE else TEXT_ROOM
 	row.title.Size = UDim2.new(1, -room, 0, 48)
 	row.desc.Size = UDim2.new(1, -room, 0, 36)
-	Widgets.setText(row.title, "settings." .. item.key)
+	Widgets.setText(row.title, if item.kind == "action" then "photo.on" else "settings." .. item.key)
 	Widgets.setText(row.desc, "settings." .. item.key .. ".desc")
 	local isToggle = item.kind == "toggle"
 	row.toggle.button.Visible = isToggle
@@ -255,7 +278,9 @@ local function bindRow(row: Row, _frame: Frame, index: number)
 		row.toggle.set(settingValue(item.key) == true)
 	else
 		local label = Widgets.buttonLabel(row.choice)
-		if label then
+		if label and item.kind == "action" then
+			Widgets.setText(label, "photo.go")
+		elseif label then
 			Widgets.setRaw(label, choiceText(item))
 		end
 		local values = item.values
