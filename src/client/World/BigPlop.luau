@@ -58,6 +58,8 @@ local LightingController = require(Client.Controllers.LightingController)
 local RanchRenderer = require(Client.Controllers.RanchRenderer)
 local WorldText = require(Client.UI.WorldText)
 local VisualBudget = require(Client.Render.VisualBudget)
+-- lot B5, étape 4 : aucun Chantier ne commence sur un ranch dont le Petit Splorch (ou l'Ascension) se joue
+local ShowsV2 = require(Client.World.ShowsV2)
 
 local BigPlop = {}
 
@@ -641,7 +643,7 @@ local function onElement(slot: any, id: any)
 	if type(slot) ~= "number" or type(id) ~= "string" or #id > 64 or NO_CHANTIER[id] then
 		return
 	end
-	if show ~= nil or bigShow() then
+	if show ~= nil or bigShow() or Util.safe("ShowsV2.busy", false, ShowsV2.busy, slot) then
 		return
 	end
 	if Util.safe("RanchRenderer.detail", "reduced", RanchRenderer.detail, slot) ~= "full" then

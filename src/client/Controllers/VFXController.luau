@@ -63,6 +63,10 @@ local SplorchPath = require(Client.World.SplorchPath)
 -- v2.0 (lot B5, étape 3, D19) : petit Big Plop du client (Chantier, geste vers l'Observatoire) ; sa
 -- boucle par image n'est branchée que tant qu'il a quelque chose à faire (interrupteurs coupés : aucune)
 local BigPlop = require(Client.World.BigPlop)
+-- v2.0 (lot B5, étape 4) : spectacles (Petit Splorch, Jelly Ascend, Pluie d'étoiles, record, Palier,
+-- palette) et emotes de la v2.0 ; démarrés ici, boucles par image seulement tant qu'ils ont à faire
+local ShowsV2 = require(Client.World.ShowsV2)
+local Emotes = require(Client.World.Emotes)
 
 local VFXController = {}
 
@@ -1041,7 +1045,15 @@ local function onSplorch(d: any)
 			play("SplorchCharge")
 		end
 		if once("burst", d.burstAt) then
-			VFXController.blobs(apex, PINK, 60)
+			-- palette du spectacle du ranch (D18, lot B5) : sans attribut Palette, la v1.3 exactement
+			local palette = ShowsV2.paletteOf(slot)
+			if palette then
+				for i = 1, #palette do
+					VFXController.blobs(apex, palette[i], 60 / #palette)
+				end
+			else
+				VFXController.blobs(apex, PINK, 60)
+			end
 			VFXController.ring(apex - Vector3.new(0, 36, 0), WHITE, 80, 0.8)
 			play("SplorchPop")
 			if hero then
@@ -1080,6 +1092,20 @@ local function onGiftRain(d: any)
 		return
 	end
 	local name = Util.displayName(d.heroName, d.heroId)
+	-- v2.0 (lot B5) : Pluie d'étoiles de l'Ascension en cours (étoiles sur la place, son) ; le cadeau
+	-- reste (pièces, capsule, vibration) ; « Pluie d'étoiles ! » est le message de UI/Banners (B3-54)
+	if Util.safe("ShowsV2.starRain", false, ShowsV2.starRain, d) then
+		VFXController.flyCoins(pos + Vector3.new(0, 10, 0), 6 + math.random(0, 4))
+		if type(d.uid) == "string" and d.uid ~= "" then
+			local a = math.random() * math.pi * 2
+			VFXController.capsule(
+				pos + Vector3.new(math.cos(a) * 4, 0, math.sin(a) * 4),
+				Util.num(d.species, 0)
+			)
+		end
+		haptic("catch")
+		return
+	end
 	if d.short == true then
 		-- version courte : cadeau déjà compté ; ni capsule, ni vibration ; un message seulement
 		VFXController.floatText(
@@ -1212,6 +1238,9 @@ local function onCelebrate(payload: any)
 			)
 		end
 		play("Fanfare")
+	elseif type(kind) == "string" then
+		-- sortes de la v2.0 (lot B5, étape 4) : charge vérifiée par World/ShowsV2 (interrupteurs coupés : rien)
+		ShowsV2.celebrate(kind, d)
 	end
 end
 
@@ -1366,6 +1395,20 @@ function VFXController.Start()
 	)
 	task.spawn(checkPolicy)
 	Util.guard("BigPlop.start", BigPlop.start)
+	Util.guard("ShowsV2.start", ShowsV2.start, {
+		burst = VFXController.burst,
+		ring = VFXController.ring,
+		stamp = VFXController.stamp,
+		floatText = VFXController.floatText,
+		flash = function()
+			Util.safe("Juice.flash", nil, Juice.flash, WHITE, 0.3, 0.12)
+		end,
+	})
+	Util.guard("Emotes.start", Emotes.start, {
+		burst = VFXController.burst,
+		blobs = VFXController.blobs,
+		ring = VFXController.ring,
+	})
 end
 
 -- Coupe les connexions (fin de session, specs)
@@ -1375,6 +1418,8 @@ function VFXController._stop()
 	end
 	table.clear(connections)
 	Util.guard("BigPlop.stop", BigPlop.stop)
+	Util.guard("ShowsV2.stop", ShowsV2.stop)
+	Util.guard("Emotes.stop", Emotes.stop)
 	started = false
 end
 

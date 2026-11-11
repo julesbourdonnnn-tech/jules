@@ -1042,6 +1042,8 @@ Strings.en = {
 	["ascend.yes"] = "Yes, Ascend!",
 	["ascend.later"] = "Later",
 	["ascend.show"] = "×3 every loop!",
+	-- tampon du spectacle de la Jelly Ascend (lot B5, étape 4) : {*} = étoile dessinée (UI/Text), {n} = A
+	["ascend.stamp"] = "JELLY ASCEND {*}{n}",
 	["ascend.queued"] = "Your Grand Splorch goes first!",
 	["banner.ascend"] = "{name} did a Jelly Ascend!",
 	["ascend.starRain"] = "Star Rain!",
@@ -2350,6 +2352,8 @@ Strings.fr = {
 	["ascend.yes"] = "Oui, Ascension !",
 	["ascend.later"] = "Plus tard",
 	["ascend.show"] = "×3 à chaque boucle !",
+	-- tampon du spectacle de la Jelly Ascend (lot B5, étape 4) : {*} = étoile dessinée (UI/Text), {n} = A
+	["ascend.stamp"] = "JELLY ASCEND {*}{n}",
 	["ascend.queued"] = "Ton Grand Splorch passe d'abord !",
 	["banner.ascend"] = "{name} a fait une Jelly Ascend !",
 	["ascend.starRain"] = "Pluie d'étoiles !",
