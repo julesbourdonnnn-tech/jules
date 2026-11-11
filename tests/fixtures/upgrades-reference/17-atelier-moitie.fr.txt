@@ -70,7 +70,7 @@ Body.List_workshop.Row_magnet.EffectArrow 784,431,32,32
 Body.List_workshop.Row_magnet.EffectArrow.P1 788,444,22,5
 Body.List_workshop.Row_magnet.EffectArrow.P2 801,449,12,5
 Body.List_workshop.Row_magnet.EffectArrow.P3 801,440,12,5
-Body.List_workshop.Row_magnet.After 820,425,120,44 "11 studs"
+Body.List_workshop.Row_magnet.After 820,425,120,44 "11 pas"
 Body.List_workshop.Row_magnet.LevelA 964,381,140,48 "1/3"
 Body.List_workshop.Row_magnet.LevelArrow 1020,391,28,28
 Body.List_workshop.Row_magnet.Currency 1120,385,40,40
