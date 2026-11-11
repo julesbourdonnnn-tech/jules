@@ -866,6 +866,10 @@ local function stepTravel(dt: number)
 		return
 	end
 	if not tr.leased then
+		-- un seul travelling de spectacle, le plus récent (relecture approfondie B5, journal B5-65) : le
+		-- bail « show » est partagé ; sans ceci, la fin du Grand Splorch rendait la caméra pendant que
+		-- la Jelly Ascend continuait de l'écrire, et sa fin ne la rendait plus (caméra scriptée)
+		ascendTravel = nil
 		-- le bail « show » garde l'état de la caméra (comme baseType avant, à la première image)
 		tr.leased = CameraController.takeLease("show", function()
 			travel = nil
