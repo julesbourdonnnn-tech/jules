@@ -180,6 +180,51 @@ return function(T)
 			clean(h)
 		end)
 
+		-- INT-B5-HUD (lot B5, étape 5 ; plan B5 D22) : nom de la météo 10 s, puis le compte à rebours
+		it(
+			"météo (lot B5) : le nom de chaque sorte 10 s (aussi pour qui arrive pendant), puis le prochain événement ; un événement « en cours » passe avant ; clé absente ou finie : rien ne change",
+			function()
+				local h, HUD, Clock, state = setup()
+				local before = text(h, HUD, "eventPill", "Text")
+				expect(before).toBe("Golden Wobbler 0:30")
+				local names = { "Sunny", "Sprinkle Shower", "Bubble Breeze", "Rainbow" }
+				for kind = 1, 4 do
+					local endsAt = Clock.unix() + 240 + kind
+					state.ev = eventState({ weather = { kind = kind, endsAt = endsAt } })
+					HUD._refresh()
+					expect(text(h, HUD, "eventPill", "Text")).toBe(names[kind])
+					expect(HUD.visible("eventPill")).toBe(true)
+					Clock.advance(9.5)
+					HUD._refresh()
+					expect(text(h, HUD, "eventPill", "Text")).toBe(names[kind])
+					Clock.advance(0.6)
+					HUD._refresh()
+					expect(string.find(text(h, HUD, "eventPill", "Text"), "Golden Wobbler", 1, true)).toBeTruthy()
+					-- la même fenêtre ne revient jamais
+					Clock.advance(30)
+					HUD._refresh()
+					expect(string.find(text(h, HUD, "eventPill", "Text"), names[kind], 1, true)).toBeNil()
+					Clock.advance(-40.1)
+				end
+				-- fenêtre finie (endsAt passé) ou abîmée : rien ne change
+				for _, w in
+					{ { kind = 2, endsAt = Clock.unix() - 1 }, { kind = 9, endsAt = Clock.unix() + 60 }, "x" }
+				do
+					state.ev = eventState({ weather = w })
+					HUD._refresh()
+					expect(text(h, HUD, "eventPill", "Text")).toBe(before)
+				end
+				-- un événement en cours (Wobble Party) passe avant la météo
+				state.ev = eventState({
+					weather = { kind = 4, endsAt = Clock.unix() + 300 },
+					boost = { kind = "wobble", untilT = Clock.now() + 300, byName = "" },
+				})
+				HUD._refresh()
+				expect(text(h, HUD, "eventPill", "Text")).toBe("WOBBLE PARTY ×2 5:00")
+				clean(h)
+			end
+		)
+
 		it("MEGA : pastille et barre seulement si megaSquish est vrai", function()
 			local h, HUD, Clock, state = setup({ now = MEGA_LAND + 10 })
 			state.ev = eventState({

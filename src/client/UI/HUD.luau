@@ -62,6 +62,7 @@ local FusionRules = require(Shared.Logic.FusionRules)
 local QuestRules = require(Shared.Logic.QuestRules)
 local EventClock = require(Shared.Logic.EventClock)
 local WorldLayout = require(Shared.Logic.WorldLayout)
+local AmbienceRules = require(Shared.Logic.AmbienceRules)
 
 local Client = script.Parent.Parent
 local Root = require(Client.UI.Root)
@@ -1132,6 +1133,33 @@ local function computeBadges()
 	HUD.setMenuBadges(bang, Util.num(twins, 0, 0, 999))
 end
 
+-- INT-B5-HUD (lot B5, étape 5 ; plan B5 D22) : nom de la météo (EventState.weather valide) pendant
+-- les WEATHER_PILL premières secondes où ce client voit la fenêtre (aussi pour un joueur qui arrive
+-- pendant), puis le compte à rebours du prochain événement revient ; sans la clé (interrupteur
+-- Weather coupé) : rien ne change
+local WEATHER_PILL = 10
+local weatherSeen = { endsAt = 0, at = 0 }
+
+local function weatherPill(ev: any, now: number): string?
+	local w = ev.weather
+	if type(w) ~= "table" then
+		return nil
+	end
+	local kind = Util.safe("AmbienceRules.fromEvent", nil, AmbienceRules.fromEvent, w, Clock.unix())
+	if type(kind) ~= "string" then
+		return nil
+	end
+	local endsAt = Util.num(w.endsAt, 0)
+	if weatherSeen.endsAt ~= endsAt then
+		weatherSeen.endsAt = endsAt
+		weatherSeen.at = now
+	end
+	if now - weatherSeen.at >= WEATHER_PILL or now < weatherSeen.at then
+		return nil
+	end
+	return Util.t("weather." .. kind)
+end
+
 local function eventPill(now: number): (string, Color3?)
 	local f = features()
 	if f == nil then
@@ -1170,6 +1198,11 @@ local function eventPill(now: number): (string, Color3?)
 		if key then
 			return Util.t(key, { time = Util.clock(untilT - now) }), EVENT_COLORS.party
 		end
+	end
+	-- météo (lot B5) : 10 s, puis le prochain événement
+	local weather = weatherPill(ev, now)
+	if weather then
+		return weather, EVENT_COLORS.next
 	end
 	-- prochain événement
 	local kinds =
