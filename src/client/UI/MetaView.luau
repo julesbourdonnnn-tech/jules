@@ -140,7 +140,8 @@ export type Mastery = {
 	total: number,
 	done: boolean,
 }
--- highlights : « Bienvenue dans la v2 ! » seulement (3 déblocages déjà gagnés, du plus haut)
+-- highlights : « Bienvenue dans la v2 ! » (3 déblocages déjà gagnés, du plus haut) et « Nouveau » d'un
+-- Record R (unlock2 : 3e, 4e et 5e déblocages, lot I, D19 ; la carte rouverte les montre un par ligne)
 export type Card = { title: Text, line: Text?, panel: string?, tab: string?, highlights: { Text }? }
 
 local MAX_R = Balance.Prestige.MaxR
@@ -280,7 +281,6 @@ local UNLOCK_ICONS: { [string]: string } = {
 	["unlock.recordBonus"] = "confetti",
 	["unlock.skin"] = "palette",
 	["unlock.plumeRow"] = "helper",
-	["unlock.fountainPool"] = "decor",
 }
 -- Dessin d'un objet nommé (unlock.item : clé d'un cosmétique v2.0 de Cosmetics.List ou palette)
 local ITEM_ICONS: { [string]: string } = {
@@ -907,9 +907,17 @@ function MetaView.cardText(kind: string, data: any, ctx: Ctx?): Card?
 		if first == nil then
 			return nil
 		end
+		-- lot I (D19) : chaque déblocage du Record R est nommé ; titre = le 1er, ligne = le 2e, les
+		-- suivants (3 au plus : 5 déblocages par Record R au plus, Visuals.RecordTable) dans la carte
+		-- rouverte, un par ligne
+		local more: { Text } = {}
+		for i = 3, math.min(#tiles, 5) do
+			table.insert(more, unlockText(tiles[i], lang))
+		end
 		return {
 			title = text("card.unlockNew", { name = unlockText(first, lang) }),
 			line = if second then unlockText(second, lang) else nil,
+			highlights = if #more > 0 then more else nil,
 		}
 	elseif kind == "trackTier" then
 		local tierN = field(data, "tier")

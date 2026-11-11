@@ -142,6 +142,7 @@ local LINE_H = 76 -- px : ligne de la carte de côté (v1.3)
 local DIALOG_LINE_H = 48 -- px : ligne de la carte rouverte (v1.3)
 local DIALOG_LONG_H = 84 -- px : 2 lignes (corps de « Bienvenue dans la v2 ! »)
 local DIALOG_MORE_H = 84 -- px : déblocages de « Bienvenue » (2 lignes au plus)
+local DIALOG_ROW_H = 42 -- px : une ligne de texte courant de la carte rouverte (unlock2, lot I)
 
 type Entry = { card: Card, seq: number }
 
@@ -307,8 +308,9 @@ local function translate(t: MetaView.Text?): string
 	return Util.t(resolved.key, resolved.vars)
 end
 
--- Déblocages de « Bienvenue dans la v2 ! », traduits, séparés par « · » (carte rouverte)
-local function highlightsText(view: MetaView.Card): string
+-- Déblocages de « Bienvenue dans la v2 ! », traduits, séparés par « · » ; ceux d'un Record R (unlock2,
+-- lot I, D19) un par ligne (carte rouverte) ; rend aussi le nombre de lignes de texte
+local function highlightsText(view: MetaView.Card, perLine: boolean): (string, number)
 	local parts: { string } = {}
 	for _, t in view.highlights or {} do
 		local s = translate(t)
@@ -316,7 +318,10 @@ local function highlightsText(view: MetaView.Card): string
 			table.insert(parts, s)
 		end
 	end
-	return table.concat(parts, " · ")
+	if perLine then
+		return table.concat(parts, "\n"), #parts
+	end
+	return table.concat(parts, " · "), 2
 end
 
 -- =============================================================================================
@@ -951,7 +956,12 @@ local function openDialog(entry: Entry)
 	-- carte de la v1.3 : sa mise en page d'origine
 	local view = cardView(entry.card)
 	local welcome = view ~= nil and entry.card.kind == "welcomeV2"
-	local more = if view ~= nil and welcome then highlightsText(view) else ""
+	-- « Nouveau » d'un Record R (unlock2) : seule autre carte avec des déblocages (MetaView.Card.highlights)
+	local unlockRows = view ~= nil and not welcome and view.highlights ~= nil
+	local more, moreRows = "", 0
+	if view ~= nil and (welcome or unlockRows) then
+		more, moreRows = highlightsText(view, unlockRows)
+	end
 	local lineH = if welcome then DIALOG_LONG_H else DIALOG_LINE_H
 	if view ~= nil then
 		ensureDialogV2(dlg)
@@ -1008,8 +1018,13 @@ local function openDialog(entry: Entry)
 	local height = if hasLine then 280 + (lineH - DIALOG_LINE_H) else 230
 	local moreLabel = dialogMoreV2
 	if more ~= "" and moreLabel then
+		-- « Bienvenue » : 2 lignes au plus ; unlock2 : une ligne par déblocage (3 au plus)
+		local moreH = if unlockRows then DIALOG_ROW_H * moreRows else DIALOG_MORE_H
 		moreLabel.Position = UDim2.fromOffset(32, 92 + lineH + 8)
-		height += DIALOG_MORE_H + 8
+		if moreLabel.Size.Y.Offset ~= moreH then
+			moreLabel.Size = UDim2.new(1, -64, 0, moreH)
+		end
+		height += moreH + 8
 	end
 	dlg.Size = UDim2.fromOffset(width, height)
 	dlg.Visible = true

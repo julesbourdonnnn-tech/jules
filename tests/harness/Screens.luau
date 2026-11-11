@@ -2933,6 +2933,8 @@ Screens.REFERENCE = {
 -- interrupteurs ouverts DANS le scénario), attribut AscendReady de MON ranch ; pires cas : 1,00e300
 -- pièces, nom d'espèce le plus long, Record R 21 / 22 / 30, A = 0 … 9 puis la constellation, file,
 -- carte « Prêt à monter ? »
+-- Lot I (étape 4) : les 13 interrupteurs que le client voit (EventService V2_CLIENT_FLAGS), tous ouverts
+-- comme dans le jeu livré au lancement (Personalities et PhotoMode compris)
 local META_V2 = {
 	RecordR = true,
 	JellyAscend = true,
@@ -2945,7 +2947,10 @@ local META_V2 = {
 	RanchSkins = true,
 	DecoPerso = true,
 	Hearts = true,
+	Personalities = true,
+	PhotoMode = true,
 }
+Screens.LAUNCH_V2 = META_V2
 local META_DONE = { step = 11, done = true, demoDone = true }
 
 local function metaFlags(except)
@@ -3566,6 +3571,11 @@ local function metaScreens()
 	for _, r in { 1, 15, 17 } do
 		cardScreen("unlock2.r" .. r, "unlock2", { recordR = r, keys = {} })
 	end
+	-- lot I (D19) : carte rouverte, chaque déblocage du Record R nommé (3e à 5e un par ligne) : R1 (5
+	-- déblocages : cadeau du Splorch, habillage), R2 (École des Plopettes), R12 (ligne Plume)
+	for _, r in { 1, 2, 12 } do
+		cardScreen("unlock2.open.r" .. r, "unlock2", { recordR = r, keys = {} }, { reopen = true })
+	end
 	cardScreen("trackTier.confetti", "trackTier", { tier = 11, reward = "confetti" })
 	cardScreen("trackTier.drop", "trackTier", { tier = 8, reward = "drop" }, { reopen = true })
 	cardScreen("trackTier.cosmetic", "trackTier", function(c)
@@ -3773,6 +3783,107 @@ local function metaScreens()
 			frames(c, 20, 1 / 30)
 		end,
 	})
+	return list
+end
+
+-- ---------------------------------------------------------------------------------------------
+-- Lot I (étape 4) : le jeu ouvert, tel que le joue le propriétaire. Profil v2 répliqué (version 2,
+-- piste, Carnet, statistiques), instantané de l'écran Améliorations, EventState.features.v2 avec les
+-- 13 interrupteurs du client : le HUD, le menu, chaque panneau du rail et chaque onglet (onglets v2.0
+-- compris : Mon style, Records, piste, Carnet, onglets de l'écran Améliorations)
+-- ---------------------------------------------------------------------------------------------
+local LAUNCH_TABS = {
+	{ "Upgrades", { "suggested", "ranch", "helpers", "workshop" } },
+	{ "Ranch", { "pens", "dodo", "mail", "fuse", "sell", "style" } },
+	{ "Squishydex", { "species", "families", "guide", "records" } },
+	{ "Objectives", { "today", "track", "carnet", "plop" } },
+	{ "Leaderboards", { "stamps" } },
+	{ "Shop", { "passes", "party", "outfits" } },
+	{ "Settings", { "" } },
+	{ "SplorchPreview", { "" } },
+}
+Screens.LAUNCH_TABS = LAUNCH_TABS
+
+function Screens.launchState(c)
+	closeAll(c)
+	flushAll(c)
+	unstub(c)
+	Screens.myRanchModel(c, { HelperMode = "active", AscendReady = false })
+	local snap = Screens.upgradeSnapshot(c, function(p)
+		p.R = 5
+		p.bestR = 12
+		p.ascend = 1
+	end)
+	local WEEK, EPOCH = 604800, 345600
+	local week = math.floor((c.Clock.unix() - EPOCH) / WEEK)
+	c.h:fireClient(REMOTES .. "DataPatch", {
+		onboarding = META_DONE,
+		version = 2,
+		weeklyTrack = {
+			period = week,
+			firstPeriodEnd = EPOCH + (week - 4) * WEEK,
+			points = 9,
+			claimed = { 15 },
+			won = { 0 },
+			challenges = {
+				{ id = 7, p = 1, done = false },
+				{ id = 6, p = 1, done = true },
+				{ id = 12, p = 17, done = false },
+			},
+			play = { 0, 0, 0, 0, 0, 0, 0 },
+			playDay = 0,
+		},
+		carnet = { 15 },
+		stats = {
+			upgradesBought = 600,
+			playSeconds = 400,
+			objectivesClaimed = 30,
+			tracksDone = 1,
+			splorches = 40,
+			bestCombo = 12,
+		},
+	}, {})
+	c.h:fireClient(REMOTES .. "DataPatch", { upgradeSnapshot = snap }, {})
+	frames(c, 3, 0.1)
+	ranchStub(c, "cozy")
+	local features = table.clone(FEATURES)
+	features.v2 = META_V2
+	c.WSC.EventChanged:Fire(eventStub(c, c.Clock.now(), { features = features }))
+	frames(c, 2, 0.1)
+end
+
+local function launchScreens()
+	local list = {}
+	table.insert(list, {
+		id = "launch.hud",
+		run = function(c)
+			Screens.launchState(c)
+			refreshHud(c)
+		end,
+	})
+	table.insert(list, {
+		id = "launch.menu",
+		run = function(c)
+			Screens.launchState(c)
+			c.PC.openMenu()
+			frames(c, 8, 0.1)
+		end,
+	})
+	for _, entry in LAUNCH_TABS do
+		local panel, tabs = entry[1], entry[2]
+		for _, tab in tabs do
+			table.insert(list, {
+				id = "launch." .. panel .. (if tab ~= "" then "." .. tab else ""),
+				run = function(c)
+					Screens.launchState(c)
+					if panel == "Leaderboards" then
+						leaderboards(c, false)
+					end
+					open(c, panel, if tab ~= "" then tab else nil)
+				end,
+			})
+		end
+	end
 	return list
 end
 
@@ -4257,6 +4368,8 @@ function Screens.groups()
 	table.insert(groups, { id = "meta", state = "mid", screens = metaScreens() })
 	-- v2.0 (lot B5) : la vie des squishies (textes nouveaux du lot)
 	table.insert(groups, { id = "life", state = "mid", screens = lifeScreens() })
+	-- lot I (étape 4) : le jeu ouvert (13 interrupteurs du client, profil v2, écran Améliorations)
+	table.insert(groups, { id = "launch", state = "mid", screens = launchScreens() })
 
 	return groups
 end

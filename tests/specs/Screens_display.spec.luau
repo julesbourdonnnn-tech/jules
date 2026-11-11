@@ -83,6 +83,9 @@ return function(T)
 		-- v2.0 (lot B3, étape 2) : écrans de renaissance et de méta (aperçus du Grand Splorch, du Petit
 		-- Splorch et de la Jelly Ascend, onglets, file, carte « Prêt à monter ? »)
 		meta = ALL,
+		-- lot I (étape 4) : le jeu ouvert (13 interrupteurs du client, profil v2) : HUD, menu, chaque
+		-- panneau du rail et chaque onglet
+		launch = ALL,
 	}
 
 	for _, profile in PROFILES do
