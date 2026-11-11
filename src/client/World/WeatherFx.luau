@@ -351,6 +351,11 @@ local function ensureLoop()
 end
 
 local function evaluate()
+	-- relecture B5 (journal B5-63) : aucun EventState reçu (démarrage du client avant le chargement du
+	-- profil) : rien n'est « vu », la fenêtre en cours à l'arrivée reste muette
+	if type(Util.safe("WorldStateController.event", nil, WorldStateController.event)) ~= "table" then
+		return
+	end
 	local kind, endsAt = readWeather()
 	local first = not armed
 	armed = true

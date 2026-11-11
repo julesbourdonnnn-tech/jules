@@ -215,6 +215,12 @@ local function dress(e: Live): boolean
 	return ok
 end
 
+-- Instants des coups de maillet et clés des marques, créés une fois (relecture B5 : aucune table ni
+-- chaîne créée par image pendant une emote)
+local TAP_AT = { 0.3, 0.8, 1.3 }
+local TAP_KEYS = { "tap1", "tap2", "tap3" }
+local RING_KEYS = { "ring1", "ring2", "ring3" }
+
 local function once(e: Live, key: string, at: number): boolean
 	if e.marks[key] or e.t < at then
 		return false
@@ -246,7 +252,7 @@ local function stepOne(e: Live, dt: number): boolean
 		end
 	elseif e.id == "wave" then
 		for i = 1, 3 do
-			if once(e, "ring" .. i, (i - 1) * 0.3) and f then
+			if once(e, RING_KEYS[i], (i - 1) * 0.3) and f then
 				pcall(f.ring, head + Vector3.new(0, (i - 1) * 0.6, 0), CONFETTI[i], 3 + i, 0.5)
 			end
 		end
@@ -266,11 +272,11 @@ local function stepOne(e: Live, dt: number): boolean
 		parts[3].CFrame = CFrame.new(body + Vector3.new(0.18, 0.1, -0.45))
 	elseif e.id == "hammerTap" then
 		local swing = 0
-		for i, at in { 0.3, 0.8, 1.3 } do
+		for i, at in TAP_AT do
 			if t >= at - 0.2 and t < at then
 				swing = (at - t) / 0.2
 			end
-			if once(e, "tap" .. i, at) then
+			if once(e, TAP_KEYS[i], at) then
 				playSound("ChantierTap", "Click")
 			end
 		end

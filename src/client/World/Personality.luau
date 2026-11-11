@@ -362,6 +362,24 @@ local function renderer(): any
 	return nil
 end
 
+-- Mode photo en cours (relecture B5, journal B5-62) : CameraController requis à la demande et gardé
+local cameraModule: any = nil
+local function photoOn(): boolean
+	local m = cameraModule
+	if m == nil then
+		local ok, mod = pcall(function(): any
+			return require(Client.Controllers.CameraController) :: any
+		end)
+		if not ok or type(mod) ~= "table" or type(mod.photoOn) ~= "function" then
+			return false
+		end
+		cameraModule = mod
+		m = mod
+	end
+	local ok, on = pcall(m.photoOn)
+	return ok and on == true
+end
+
 local function handleOf(slot: number, uid: string): SquishyBuilder.Handle?
 	local rr = renderer()
 	if rr == nil then
@@ -1457,7 +1475,12 @@ local function presence(now: number)
 	end
 	local p = root.Position
 	local before = lastPos
-	if before == nil or (p - before).Magnitude > MOVE_EPS or now < lastMoveAt then
+	if photoOn() then
+		-- relecture B5 (journal B5-62) : en mode photo le personnage ne bouge pas (sticks pris par la
+		-- caméra) mais le joueur joue : jamais « immobile », l'attente de 60 s repart de la sortie
+		lastPos = p
+		lastMoveAt = now
+	elseif before == nil or (p - before).Magnitude > MOVE_EPS or now < lastMoveAt then
 		lastPos = p
 		lastMoveAt = now
 		wakeAll()

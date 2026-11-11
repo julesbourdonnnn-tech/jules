@@ -471,6 +471,11 @@ local function readLevel(): number
 end
 
 local function evaluate()
+	-- relecture B5 (journal B5-63) : tant qu'aucun EventState n'est arrivé (le client démarre avant que
+	-- le serveur ait chargé le profil), rien n'est « vu » : le premier état reçu reste le chargement
+	if type(Util.safe("WorldStateController.event", nil, WorldStateController.event)) ~= "table" then
+		return
+	end
 	local level = readLevel()
 	local first = not armed
 	armed = true
