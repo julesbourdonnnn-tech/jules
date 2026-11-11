@@ -858,9 +858,14 @@ function HelperRenderer._step(dt: number)
 		end
 	end
 	if #bulkParts > 0 then
-		local ok, err = pcall(function()
-			workspace:BulkMoveTo(bulkParts, bulkCFrames, Enum.BulkMoveMode.FireCFrameChanged)
-		end)
+		-- appel direct (aucune fermeture créée par image, lot B5 étape 6)
+		local ok, err = pcall(
+			workspace.BulkMoveTo,
+			workspace,
+			bulkParts,
+			bulkCFrames,
+			Enum.BulkMoveMode.FireCFrameChanged
+		)
 		if not ok then
 			Util.raise("HelperRenderer.bulk", tostring(err))
 		end
