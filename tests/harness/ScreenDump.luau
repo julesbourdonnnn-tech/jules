@@ -17,6 +17,7 @@ local roblox = require("@lune/roblox")
 local Layout = require("./Layout")
 local TextFit = require("./TextFit")
 local Props = require("./EngineProps")
+local MockInstance = require("./MockInstance")
 
 local Vector2 = roblox.Vector2
 
@@ -141,7 +142,11 @@ local function textOf(obj, k, rootScale)
 		t = round(Props.get(obj, "TextTransparency") or 0, 3),
 		font = fontOf(Props.get(obj, "FontFace")),
 		key = TextFit.fontKey(Props.get(obj, "FontFace")),
-		size = Props.get(obj, "TextSize"),
+		-- taille dessinée par le moteur (facteur de PreferredTextSize, contraintes) : égale à TextSize à
+		-- Medium ; matrice de nuit à × 1,5 (lot I)
+		size = if (MockInstance.textEngine.factor or 1) ~= 1
+			then MockInstance.renderedTextSize(obj)
+			else Props.get(obj, "TextSize"),
 		scaled = Props.get(obj, "TextScaled") == true,
 		wrapped = Props.get(obj, "TextWrapped") == true,
 		trunc = enumName(Props.get(obj, "TextTruncate")) or "None",

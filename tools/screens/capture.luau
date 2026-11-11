@@ -56,6 +56,19 @@ local function set(list)
 	return out
 end
 
+-- lot I (matrice de nuit) : taille de texte du joueur (--text-size medium | largest : facteur 1,5 de
+-- GuiService.PreferredTextSize, moteur de texte simulé et dessin) et qualité graphique (--quality
+-- normal | low : réglage lowGraphics du profil)
+local textSize = if type(args["text-size"]) == "string" then args["text-size"] else "medium"
+local quality = if type(args.quality) == "string" then args.quality else "normal"
+if textSize ~= "medium" and textSize ~= "largest" then
+	error("--text-size : medium ou largest")
+end
+if quality ~= "normal" and quality ~= "low" then
+	error("--quality : normal ou low")
+end
+Screens.OPTIONS = { textFactor = if textSize == "largest" then 1.5 else 1, lowGraphics = quality == "low" }
+
 local onlyProfiles = set(args.profiles)
 local onlyLangs = set(args.langs)
 local onlyGroups = set(args.groups)

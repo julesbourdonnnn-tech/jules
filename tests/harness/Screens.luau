@@ -200,10 +200,24 @@ end
 -- Client complet démarré pour `profile` (entrée de PROFILES), `lang` ("fr" | "en") et l'état de
 -- données `state` ("new" | "mid" | "late" | "huge") ; `preset` : préréglage des interrupteurs v2.0
 -- (tests/harness/Flags, lot I ; défaut : valeurs livrées)
+-- Options de la matrice de nuit (tools/screens/capture.luau, lot I) : textFactor (facteur de
+-- GuiService.PreferredTextSize, 1 = Medium), lowGraphics (réglage du profil)
+Screens.OPTIONS = { textFactor = 1, lowGraphics = false }
+
 function Screens.boot(Harness, profile, lang: string, state: string, preset: any?)
 	EngineProps.install()
 	local c = { profile = profile, lang = lang, state = state, players = {} }
 	local data = Screens.profile(state)
+	local opts = Screens.OPTIONS
+	MockInstance.textEngine.factor = opts.textFactor or 1
+	if opts.lowGraphics then
+		local settings = TvAudit.defaults(preset).settings
+		for k, v in data.settings or {} do
+			settings[k] = v
+		end
+		settings.lowGraphics = true
+		data.settings = settings
+	end
 	local h = TvAudit.client({
 		console = profile.console == true,
 		viewport = Vector2.new(profile.w, profile.h),
@@ -218,6 +232,9 @@ function Screens.boot(Harness, profile, lang: string, state: string, preset: any
 			TvAudit.enableShop(hh)
 			hookLocalization(c)
 			Screens.realTextService()
+			if (opts.textFactor or 1) > 1 then
+				hh.game.GuiService.PreferredTextSize = Enum.PreferredTextSize.Largest
+			end
 		end,
 	})
 	c.h = h

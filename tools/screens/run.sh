@@ -10,6 +10,7 @@
 #   ./tools/screens/run.sh --profiles tv1080 --langs fr --screens panel.Ranch
 #   ./tools/screens/run.sh --pending               régénère aussi tests/fixtures/TextFitPending.luau
 #   ./tools/screens/run.sh --keys-pending          régénère aussi tests/fixtures/TextFitKeysPending.luau
+#   ./tools/screens/run.sh --text-size largest --quality low   taille de texte × 1,5, graphismes réduits
 # Options transmises à capture.luau : --profiles, --langs, --groups, --screens, --pending,
 # --keys-pending. Option du rendu : --cap screen (autre hypothèse sur les bornes de TextScaled).
 set -euo pipefail
@@ -42,7 +43,7 @@ while [[ $# -gt 0 ]]; do
 		RENDER_ARGS+=("--cap" "$2")
 		shift 2
 		;;
-	--profiles | --langs | --groups | --screens)
+	--profiles | --langs | --groups | --screens | --text-size | --quality)
 		CAPTURE_ARGS+=("$1" "$2")
 		shift 2
 		;;
