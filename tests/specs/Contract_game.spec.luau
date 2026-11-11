@@ -1,6 +1,6 @@
 --!nocheck
--- Contrat du JEU (docs/04, v1.2) : surface d'API des 66 modules des 8 paquets (+ HelperService, lot A3
--- de la v2.0, INT-V2-ORDER), ordres d'initialisation,
+-- Contrat du JEU (docs/04, v1.2) : surface d'API des 66 modules des 8 paquets (+ HelperService, lot A3,
+-- et HelperRenderer, lot B5, de la v2.0, INT-V2-ORDER), ordres d'initialisation,
 -- catalogue des intentions (Config/Intents) et registre des remotes, propriétaires des clés du profil,
 -- données réelles des configurations (26 espèces, raretés, mutations, tables de la Cuve, prix des
 -- dalles, objectifs, paliers, bannières, cosmétiques, sons, vibrations) et disposition télé du HUD.
@@ -408,6 +408,12 @@ local API = {
 		fns = { "Init", "Start", "step", "state", "pause", "resume" },
 		signals = {},
 	},
+	-- v2.0 (lot B5, INT-V2-ORDER ; docs/04 §27.7) : Plopettes dessinées, saut réglé sur tPress
+	["StarterPlayer.StarterPlayerScripts.Client.Controllers.HelperRenderer"] = {
+		pkg = "B5",
+		fns = { "Init", "Start" },
+		signals = {},
+	},
 	["ServerScriptService.Server.Services.QuestService"] = {
 		pkg = "meta",
 		fns = {
@@ -775,6 +781,7 @@ local CLIENT_ORDER = {
 	"Controllers.LightingController",
 	"Controllers.RanchRenderer",
 	"Controllers.ChaseRenderer",
+	"Controllers.HelperRenderer", -- v2.0 (lot B5, INT-V2-ORDER) : juste après ChaseRenderer
 	"Controllers.VFXController",
 	"Controllers.CameraController",
 	"Controllers.PromptController",
@@ -911,7 +918,8 @@ return function(T)
 					})
 				end
 			end
-			expect(count).toBe(67) -- 66 modules des 8 paquets + HelperService (lot A3, INT-V2-ORDER)
+			-- 66 modules des 8 paquets + HelperService (lot A3) + HelperRenderer (lot B5, INT-V2-ORDER)
+			expect(count).toBe(68)
 			expect(#hs.errors + #hc.errors).toBe(0)
 		end)
 
@@ -929,6 +937,7 @@ return function(T)
 					or spec.pkg == "client-hud"
 					or spec.pkg == "client-panels"
 					or spec.pkg == "A3" -- v2.0 : HelperService (docs/04 §27.1)
+					or spec.pkg == "B5" -- v2.0 : HelperRenderer (docs/04 §27.1)
 				expect({ path = path, known = known }).toEqual({ path = path, known = true })
 			end
 		end)

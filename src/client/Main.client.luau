@@ -27,6 +27,7 @@ local ORDER: { ModuleScript } = {
 	Client.Controllers.LightingController, -- world : éclairage, ciel des événements
 	Client.Controllers.RanchRenderer, -- client-world : squishies, ranchs, statue, place
 	Client.Controllers.ChaseRenderer, -- client-world : créatures et poursuites
+	Client.Controllers.HelperRenderer, -- v2.0 (lot B5, INT-V2-ORDER) : Plopettes dans le monde
 	Client.Controllers.VFXController, -- client-world : effets des moments de jeu
 	Client.Controllers.CameraController, -- client-world : travelling du Grand Splorch seulement
 	Client.Controllers.PromptController, -- client-world : cible choisie par le jeu
