@@ -43,8 +43,19 @@ local CLIENT = TvAudit.CLIENT
 
 -- Actions de fenêtre permises derrière une fenêtre (les touches du jeu, elles, doivent être déliées)
 -- (UpgradesMode : □ / E de l'écran Améliorations, lié seulement écran ouvert ; lot B2)
-TvAudit.UI_ACTIONS =
-	{ FocusGuardBack = true, PanelTabs = true, PanelCycle = true, PanelScroll = true, UpgradesMode = true }
+-- actions d'une fenêtre (pas du jeu) : liées seulement tant que leur fenêtre est ouverte ; lot I,
+-- étape 6 : les 4 commandes du mode photo (CameraController, liées à l'entrée, déliées à la sortie)
+TvAudit.UI_ACTIONS = {
+	FocusGuardBack = true,
+	PanelTabs = true,
+	PanelCycle = true,
+	PanelScroll = true,
+	UpgradesMode = true,
+	PhotoMove = true,
+	PhotoTurn = true,
+	PhotoZoom = true,
+	PhotoFilter = true,
+}
 local MENU_KEYS = { ButtonY = true, DPadDown = true, M = true, Semicolon = true }
 local GAME_KEYS = {
 	ButtonX = true,

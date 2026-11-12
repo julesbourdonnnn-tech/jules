@@ -407,7 +407,9 @@ return function(T)
 							v2Keys = {}
 							local v1 = Schema.defaultsFor(1)
 							for key in Schema.defaultsFor(2) do
-								if v1[key] == nil and key ~= "version" then
+								-- bestR exclu : invariant v2 « Record R jamais sous r » tenu même RecordR coupé
+								-- (EconomyService.applySplorch, journal A2-24, docs/04 §27.2) ; vérifié à part
+								if v1[key] == nil and key ~= "version" and key ~= "bestR" then
 									v2Keys[key] = true
 								end
 							end

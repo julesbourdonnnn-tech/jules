@@ -113,6 +113,14 @@ local TAB_H = 56 -- boutons d'onglet dans la zone de 64
 -- son mot à 28 px (taille minimale d'un texte à lire), après le libellé
 local TAB_LOCK = 28
 local TAB_WORD = Layout.Text.Min
+
+-- Écart après un onglet : au moins Spacing.Min, et toujours plus que son grossissement quand il est
+-- choisi (Layout.Focus.Grow, depuis son bord gauche : AnchorPoint 0) ; l'onglet Plopettes verrouillé
+-- (élargi du cadenas et du mot) grossissait de 17,6 px pour 16 px d'écart et mordait sur l'Atelier
+-- (lot I, étape 6, ClientReplay en 4K)
+local function tabGap(width: number): number
+	return math.max(Layout.Spacing.Min, math.ceil(width * (Layout.Focus.Grow - 1)) + 4)
+end
 local CLOSE = 56 -- bouton Fermer (souris ; ○ à la manette)
 local COUNT_TIME = 0.4 -- s : compteur de l'en-tête (pièces, Confettis)
 local MODE_ACTION = "UpgradesMode"
@@ -633,7 +641,7 @@ local function buildTabs(body: Frame)
 		Widgets.corner(underline, UDim.new(0.5, 0))
 		underline.Parent = b
 		tabButtons[id] = b
-		x += width + Layout.Spacing.Min
+		x += width + tabGap(width)
 	end
 	r1Glyph = Widgets.glyph(body, Enum.KeyCode.ButtonR1, nil, glyph, UDim2.fromOffset(x, gy), Vector2.zero)
 	-- au bout de la rangée (D5) : L2 / R2 (panneaux en boucle) et le bouton Fermer de la souris (○)
@@ -1154,7 +1162,7 @@ local function layoutTabs(locked: boolean)
 			text.Size = UDim2.new(1, -(24 + room), 1, -12)
 			text.Position = UDim2.new(0.5, -room / 2, 0.5, 0)
 		end
-		x += width + Layout.Spacing.Min
+		x += width + tabGap(width)
 	end
 	if r1Glyph and r1Glyph.frame then
 		r1Glyph.frame.Position = UDim2.fromOffset(x, T.y + (T.h - glyph) / 2)

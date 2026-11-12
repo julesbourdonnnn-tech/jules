@@ -30,11 +30,11 @@ Body.Tab_helpers.Lock.P1 903,269,18,13
 Body.Tab_helpers.Lock.P2 911,273,3,6
 Body.Tab_helpers.Lock.R1 906,260,12,14
 Body.Tab_helpers.Underline 898,289,0,6
-Body.Tab_workshop 1089,243,182,56 ""
-Body.Tab_workshop.Label 1101,249,158,44 "Atelier"
-Body.Tab_workshop.Underline 1180,289,0,6
-Body.Glyph 1287,247,48,48
-Body.Glyph.Image 1287,247,48,48
+Body.Tab_workshop 1095,243,182,56 ""
+Body.Tab_workshop.Label 1107,249,158,44 "Atelier"
+Body.Tab_workshop.Underline 1186,289,0,6
+Body.Glyph 1293,247,48,48
+Body.Glyph.Image 1293,247,48,48
 Body.Close 1592,243,56,56 ""
 Body.Close.Glyph 1600,251,40,40
 Body.Close.Glyph.Image 1600,251,40,40

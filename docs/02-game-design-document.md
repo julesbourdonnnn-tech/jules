@@ -3631,6 +3631,22 @@ Les aperçus de renaissance, Mon style, la piste, les Défis, le Carnet, les Rec
 - **Budget d'interface** : avec toutes les fenêtres de la v2.0 construites, l'interface entière compte 4 631 objets (écran Améliorations 1 219, chargement 1 506) : les 3 000 du §12.9 ne tiennent pas ; décision du budget demandée au lot I (B2-13).
 - **Non vu à l'image** : la sensation sur une vraie manette PS5 (maintien de 3 s, carte, plan de Déco perso, distance de l'invite des jumelles) : à valider par le propriétaire.
 
+#### Lot I (11 et 12 novembre 2026) : l'ouverture, ce que l'intégration a précisé
+
+Les 23 interrupteurs de la v2.0 sont ouverts dans la configuration livrée, par groupes et dans l'ordre (données, progression, méta, écrans, monde et vie) ; **le jeu que joue le propriétaire est la v2.0** (journal docs/04 §27.12, I-1 à I-55). Chaque interrupteur, sauf le schéma v2, reste coupable en direct (LiveOps) et son chemin coupé reste prouvé.
+
+- **Sauvegardes** (§12.6) : chaque profil de la v1.3 passe en v2 à son premier chargement, une seule fois, sans rien perdre (pièces, squishies, cosmétiques, records, réglages) ; le schéma v2 ne se coupe jamais ; une place plus ancienne ne doit plus jamais être publiée ; publier avec « Shut down all servers » (docs/05).
+- **Coupure d'urgence** : si LiveOps coupe tout sauf le schéma v2, le jeu de base joue sur les profils v2 sans qu'aucune intention v2.0 ne réponde ni qu'aucun champ v2 ne change (prouvé à 16 joueurs).
+- **Noms figés** : la palette de la semaine s'appelle `peachPalette` partout ; la date de la dernière Ascension est gardée (`ascendDay`) pour « AscendDone » (§16).
+- **Raccourci U** (clavier) et puce « Prochain achat » : l'écran Améliorations ouvert depuis le jeu se ferme d'un ○ vers le jeu (§10.6) ; fanions ★ des décorations gardées par l'Atelier jusqu'à 12 (§4.26).
+- **Textes** : en français, « studs » devient « pas » (« Aimant à pièces : 5 → 8 pas ») ; la carte d'un nouveau Record R montre chacun de ses déblocages ; aucune clé v2.0 n'attend plus sa preuve d'affichage.
+- **Budget d'interface** (§12.9) : 4 150 objets sur une séance normale (écran Améliorations construit une fois, les autres panneaux rendus à la fermeture).
+- **Mode photo** : les textes flottants du monde (« z » des Plopettes et des squishies, étiquette du Chantier) se cachent avec le HUD ; une carte qui arrive attend la sortie (§7.5).
+- **Croix de la v1.3** : les 3 signaux de base montrent enfin une bulle-icône dessinée au-dessus du joueur pendant 2,5 s (§6.5).
+- **Éclairage de la place** : `LightingStyle = Soft`, `PrioritizeLightingQuality = false` dans le fichier de la place (§11.3, §12).
+- **Big Plop sur sa scène pendant la danse** (§5.3, §9.4) et **événements relookés pour la télé** (§5.6) : pas faits ici, laissés au lot de QA final (3D à voir sur une vraie console).
+- **Non vu à l'image** : toute la 3D des lots B4 et B5, la caméra, les sons (encore muets pour la v2.0), les vibrations et le vrai rendu des polices : liste du premier essai sur PS5 dans docs/05 §7.
+
 #### Ce qui reste ouvert (aussi au §20.2)
 
 - **Avance du gros acheteur** avec l'Ascension (chiffres refaits après la critique : 15 à 22 % plus tôt ; +9,5 Record R au jour 84) : +4 Record R et +1 Ascension au jour 28 (≈ 20 % plus tôt, comme en v1.3) ; « 1 à 2 R » tient sans Ascension et avec le ×2 Pièces seul (question 8).

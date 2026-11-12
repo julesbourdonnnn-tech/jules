@@ -75,7 +75,7 @@ local function profileFor(w, i, rng)
 		squishies = squishies,
 		edit = if w.soakEdit
 			then function(d)
-				w.soakEdit(d, i)
+				w.soakEdit(d, i, w)
 			end
 			else nil,
 	})

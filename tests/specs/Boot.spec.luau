@@ -939,7 +939,9 @@ return function(T)
 				local v1 = w.Schema.defaultsFor(1)
 				local v2Keys = {}
 				for key in w.Schema.defaultsFor(2) do
-					if v1[key] == nil and key ~= "version" then
+					-- bestR exclu : invariant v2 « Record R jamais sous r » tenu même RecordR coupé
+					-- (EconomyService.applySplorch, journal A2-24, docs/04 §27.2) ; vérifié à part
+					if v1[key] == nil and key ~= "version" and key ~= "bestR" then
 						v2Keys[key] = true
 					end
 				end
@@ -1046,10 +1048,13 @@ return function(T)
 					end
 				end
 				expect(bad).toEqual({})
-				-- champs v2 inchangés
+				-- champs v2 inchangés ; le Record R suit r (jamais dessous), rien d'autre
 				for _, p in players do
 					expect({ id = p.UserId, v2 = v2Of(p) }).toEqual({ id = p.UserId, v2 = before[p] })
+					local d = w.DS.get(p)
+					expect(d.bestR >= d.R).toBe(true)
 				end
+				expect(w.DS.get(players[1]).bestR).toBe(3)
 				-- bilan
 				expect(table.concat(rec.problems, "\n")).toBe("")
 				expect(table.concat(w.problems, "\n")).toBe("")
