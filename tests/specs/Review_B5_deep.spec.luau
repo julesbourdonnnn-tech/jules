@@ -154,7 +154,13 @@ return function(T)
 				local BP = h:require(CLIENT .. "World.BigPlop")
 				local WL = h:require("ReplicatedStorage.Shared.Logic.WorldLayout")
 				local snap = nil
+				-- minuterie de la condition du geste (1 Hz, lot I étape 5, I-40 : plus de lecture par image) :
+				-- menée par l'horloge figée du cas, échue avant chaque image
+				local timers = {}
 				BP._configure({
+					after = function(seconds, fn, gen)
+						table.insert(timers, { at = Clock.now() + seconds, fn = fn, gen = gen })
+					end,
 					play = function() end,
 					haptic = function() end,
 					snapshot = function()
@@ -199,6 +205,12 @@ return function(T)
 					local dt = 1 / (fps or 60)
 					for _ = 1, math.max(1, math.floor(seconds / dt + 0.5)) do
 						Clock.advance(dt)
+						for i = #timers, 1, -1 do
+							if timers[i].at <= Clock.now() + 1e-9 then
+								local t = table.remove(timers, i)
+								t.fn(t.gen)
+							end
+						end
 						h.game.RunService.RenderStepped:Fire(dt)
 					end
 					h:settle(1)
