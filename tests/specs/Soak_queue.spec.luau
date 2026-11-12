@@ -115,8 +115,17 @@ return function(T)
 				local function place(p)
 					Bots.place(p, Brains.atRanch(w, p, 0, 30))
 				end
+				-- Petits Splorch possibles avant le retour au record (r → Record R, hors file) : au-delà, chaque
+				-- boucle est un Grand Splorch record dans la file (5 à 10 min) et n'est plus comptée
+				local capacity = 0
 				for i = 1, VETERANS do
-					local p = Brains.join(w, i, { profile = veteranProfile(i) })
+					local profile = veteranProfile(i)
+					if i == ASCENDER then
+						capacity += math.max(0, profile.bestR - Prestige.startR(1, 0))
+					else
+						capacity += math.max(0, profile.bestR - profile.R)
+					end
+					local p = Brains.join(w, i, { profile = profile })
 					place(p)
 					veterans[p] = { next = w.Clock.now() + rng:NextNumber(5, 40), petits = 0, index = i }
 				end
@@ -180,11 +189,14 @@ return function(T)
 								and w.Splorch.canPrestige(p)
 								and data.ascend >= 1
 							then
-								-- remontée : boucles de 30 à 60 s ; boucle record (Grand Splorch dans la file) : 5 à
-								-- 10 min (33 à 108 min mesurées, GDD §4.27)
+								-- remontée : boucles de 30 à 60 s ; boucle record (Grand Splorch dans la file) : 33 à
+								-- 108 min, la durée mesurée (GDD §4.27). Lot I, étape 6 (I-54) : 5 à 10 min avant ;
+								-- à SOAK_HOURS=6, les 8 vétérans revenus à leur record (≈ 40 min) chargeaient la file
+								-- d'un Grand Splorch record toutes les 1 min en plus du nouveau par minute, deux fois la
+								-- charge du GDD §4.15 : attente médiane 62,6 s ; la forme de 0,5 h ne change pas
 								local record = Prestige.nextKind(data) == "splorch"
 								if record and v.recordDue == nil then
-									v.recordDue = now + rng:NextNumber(300, 600)
+									v.recordDue = now + rng:NextNumber(1980, 6480)
 									continue
 								end
 								v.recordDue = nil
@@ -340,7 +352,16 @@ return function(T)
 					end
 				end
 				expect(queuedAscend).toBe(1)
-				expect(petits >= math.floor(VETERANS * hours * 3600 / 60 * 0.6)).toBe(true)
+				-- au moins 0,6 Petit Splorch par minute et par vétéran, borné par les Petits Splorch possibles
+				-- avant le retour au record (lot I, étape 6, I-54 : à SOAK_HOURS=6 la borne linéaire dépassait
+				-- ce que le scénario permet : chaque vétéran rejoint son Record R en ≈ 40 min)
+				local wanted =
+					math.min(math.floor(VETERANS * hours * 3600 / 60 * 0.6), math.floor(capacity * 0.9))
+				expect({ petits = petits, wanted = wanted, ok = petits >= wanted }).toEqual({
+					petits = petits,
+					wanted = wanted,
+					ok = true,
+				})
 				-- attente médiane du premier Grand Splorch d'un nouveau
 				local m = median(waits)
 				print(
