@@ -18,8 +18,8 @@
 --   * puis, sur cet état réel, le parcours à 3 touches (TvAudit.run : croix, ✕, ○) en 1920 × 1080,
 --     3840 × 2160 et 1280 × 720, en anglais puis en français : aucune faute ; puis le même client au
 --     clavier et à la souris (M, raccourcis, clic, Retour arrière) ;
---   * budgets : objets d'interface ≤ 3 000 après le rejeu, ≤ 4 150 après le parcours de chaque panneau
---     (garde de la séance normale, lot I, I-35), réserves des rendus (RanchRenderer, ChaseRenderer,
+--   * budgets : objets d'interface ≤ 3 000 après le rejeu, ≤ 4 650 après le parcours de chaque écran
+--     (garde « tout construit », lot I, I-35), réserves des rendus (RanchRenderer, ChaseRenderer,
 --     VFXController, UI/WorldText) dans leurs quotas ;
 --   * lot I, étape 6 : le jeu de lancement à la manette seule (écran Améliorations et achat au maintien,
 --     mode photo et ses filtres, jumelles), 3 résolutions × 2 langues ;
@@ -750,9 +750,12 @@ return function(T)
 				expect({ screen = id, reached = reached }).toEqual({ screen = id, reached = true })
 			end
 			expect(TvAudit.screenId(c)).toBe("game")
-			-- chaque panneau du rail ouvert une fois : garde de la séance normale (lot I, étape 4, I-35 :
-			-- 4 150, GDD §12.9, la même que Layout_panels › SESSION_GUARD ; 3 000 avant la décision)
-			expect(TvAudit.guiObjects(c) <= 4150).toBe(true)
+			-- chaque écran atteint à 3 touches (Diagnostics et garde-robe compris) : « tout construit » ;
+			-- garde de non-régression de ce chemin (lot I, étape 4, I-35 : 4 650, Layout_panels › chemin
+			-- méta ; la séance normale, sans Diagnostics, a sa garde de 4 150 ; 3 000 avant la décision)
+			local objects = TvAudit.guiObjects(c)
+			print(`  ClientReplay : {objects} objets d'interface après le parcours à 3 touches`)
+			expect({ objects = objects, ok = objects <= 4650 }).toEqual({ objects = objects, ok = true })
 			clean(c)
 		end)
 	end)
