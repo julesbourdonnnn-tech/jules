@@ -546,7 +546,8 @@ return function(T)
 					local label = b.Label
 					local need = TextFit.width(label.Text, label.FontFace, label.TextSize)
 					expect(need <= b.Size.X.Offset - 24).toBe(true)
-					right = math.max(right, b.Position.X.Offset + b.Size.X.Offset)
+					-- bord droit d'après l'ancre (lot I, I-61 : boutons ancrés en leur centre)
+					right = math.max(right, b.Position.X.Offset + b.Size.X.Offset * (1 - b.AnchorPoint.X))
 				end
 				-- les boutons restent dans la carte (32 px de marge de chaque côté)
 				expect(right <= dlg.Size.X.Offset - 64).toBe(true)
