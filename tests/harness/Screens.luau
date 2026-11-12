@@ -3984,6 +3984,24 @@ local function lifeScreens()
 			frames(c, 10, 0.1)
 		end,
 	})
+	-- Lot I, étape 5 (D27) : bulle-icône des signaux de la croix de la v1.3 (main ↑, cœur →, étoile ←)
+	-- au-dessus de MON personnage (World/EmoteBubble) ; planche `.billboards.png`
+	for kind, name in { "hand", "heart", "star" } do
+		table.insert(list, {
+			id = "life.emote." .. name,
+			run = function(c)
+				closeAll(c)
+				flushAll(c)
+				c.h:fireClient("ReplicatedStorage.Remotes.EmoteShow", {
+					userId = c.h.localPlayer.UserId + 0,
+					kind = kind,
+					emote = if kind == 3 then "cheer" else "wave",
+				})
+				c.h:settle(1)
+				frames(c, 3, 0.1)
+			end,
+		})
+	end
 	-- Étape 4 : textes des spectacles. Tampon « JELLY ASCEND ★A » (clé ascend.stamp, étoile dessinée
 	-- par UI/Text ; A = 999, le plus grand que ShowsV2 écrit) puis « ×3 à chaque boucle ! » (ascend.show),
 	-- comme VFXController.stamp les pose à l'éclat ; petit texte du Petit Splorch au propriétaire

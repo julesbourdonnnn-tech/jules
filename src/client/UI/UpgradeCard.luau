@@ -434,9 +434,13 @@ local function buildCard(root: GuiObject, o: Options): Parts
 	corner(pill, Layout.Corner.Min)
 	p.pill = pill
 	-- glyphe de l'appareil DANS le dessin du bouton : caché avec lui (Glyph gère sa propre visibilité)
+	-- bord DROIT fixé à 152 (lot I, étape 5 : la touche « Enter » du clavier, élargie à 120 px par
+	-- UI/Glyph, mordait sur le mot qui commence à 164 ; ClientReplay, clavier 1080p) : une touche longue
+	-- grandit vers la gauche, dans le bouton ; le glyphe de 48 px de la manette reste à 104
 	p.glyph = Glyph.new(pill, { gamepad = Enum.KeyCode.ButtonA, keyboard = Enum.KeyCode.Return }, {
 		size = 48,
-		position = UDim2.fromOffset(104 - x0, 16),
+		position = UDim2.fromOffset(152 - x0, 16),
+		anchor = Vector2.new(1, 0),
 		zIndex = 6,
 	})
 	p.stateIcon = canvas(root, "StateIcon", 104, 448, 48, STATE_KINDS, 6)
