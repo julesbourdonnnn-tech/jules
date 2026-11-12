@@ -752,6 +752,202 @@ return function(T)
 		end)
 	end)
 
+	-- Lot I, étape 6 (plan I T4) : le jeu de lancement (les 23 interrupteurs v2.0 ouverts) à la manette
+	-- seule, sur l'état réel rejoué : écran Améliorations (△, croix jusqu'à l'entrée, ✕ ; achat au
+	-- maintien de ✕ 0,6 s sur la carte choisie), mode photo (Réglages → « Mode photo », □ change le
+	-- filtre, ○ sort), jumelles (□ devant le portail d'un voisin, △ ouvre le menu par-dessus, ○ le ferme,
+	-- ○ ferme les jumelles) ; 1080p, 4K, 720p × EN, FR ; chaque écran audité (sélection, chevauchements,
+	-- textes, glyphes PlayStation, zone sûre) ; ○ rend toujours la main au jeu ; zéro trace.
+	describe(
+		"ClientReplay › jeu de lancement à la manette (Améliorations, mode photo, jumelles)",
+		function()
+			it(
+				"1080p, 4K, 720p × EN, FR : achat au maintien, filtres du mode photo, jumelles ; aucune faute",
+				function()
+					local c = replayed()
+					local PC = mod(c, "UI.PanelController")
+					local FG = mod(c, "UI.FocusGuard")
+					local Up = mod(c, "UI.Panels.Upgrades")
+					local Cam = mod(c, "Controllers.CameraController")
+					local Hud = mod(c, "UI.PhotoHud")
+					local Bino = mod(c, "UI.Binoculars")
+					local WSC = mod(c, "Controllers.WorldStateController")
+					local WL = c:require("ReplicatedStorage.Shared.Logic.WorldLayout")
+					local K = Enum.KeyCode
+					local issues = {}
+					local function sel()
+						return c.game.GuiService.SelectedObject
+					end
+					local function tap(key)
+						TvAudit.tick(c, 0.5)
+						Gamepad.tap(c, key)
+						TvAudit.tick(c, 0.5)
+					end
+					local function audit(label)
+						Layout.apply(c)
+						for _, issue in TvAudit.check(c, label, nil) do
+							table.insert(issues, issue)
+						end
+					end
+					local function toEntry(name)
+						local target = PC.entryButton(name)
+						if target == nil then
+							return false
+						end
+						for _, key in { K.DPadDown, K.DPadUp } do
+							for _ = 1, 12 do
+								if sel() == target then
+									return true
+								end
+								tap(key)
+							end
+						end
+						return sel() == target
+					end
+					-- portail d'un voisin dont le ranch porte la preuve v2 (BestR) : vue des jumelles
+					local function neighbourSlot()
+						local mine = WSC.mySlot()
+						for slot = 1, 16 do
+							if slot ~= mine and WSC.ranch(slot) ~= nil then
+								return slot
+							end
+						end
+						return nil
+					end
+					expect(PC.available("Upgrades")).toBe(true)
+					local bought, filters, binoculars = 0, 0, 0
+					for _, res in { Vector2.new(1920, 1080), Vector2.new(3840, 2160), Vector2.new(1280, 720) } do
+						TvAudit.setResolution(c, res)
+						for _, lang in { "en", "fr" } do
+							TvAudit.setLanguage(c, lang)
+							local label = `[manette {res.X}x{res.Y} {lang}] `
+							expect(TvAudit.toGame(c)).toBe(true)
+							-- ------------------------------------------------ écran Améliorations
+							tap(K.ButtonY)
+							expect(PC.menuOpen()).toBe(true)
+							expect({ label = label, entry = toEntry("Upgrades") }).toEqual({
+								label = label,
+								entry = true,
+							})
+							tap(K.ButtonA)
+							expect({ label = label, open = Up.isOpen() }).toEqual({
+								label = label,
+								open = true,
+							})
+							audit(label .. "[Upgrades] ")
+							local card = sel()
+							local before = #TvAudit.sent(c, "BuyUpgrade")
+							local ready = card ~= nil and card:GetAttribute("State") == "ready"
+							Gamepad.press(c, K.ButtonA)
+							TvAudit.tick(c, 0.7)
+							Gamepad.release(c, K.ButtonA)
+							TvAudit.tick(c, 0.5)
+							local after = #TvAudit.sent(c, "BuyUpgrade")
+							if ready then
+								expect({ label = label, sent = after - before }).toEqual({
+									label = label,
+									sent = 1,
+								})
+								bought += 1
+							else
+								expect({ label = label, sent = after - before }).toEqual({
+									label = label,
+									sent = 0,
+								})
+							end
+							-- les onglets à L1 / R1 (Plopettes verrouillées comprises), chacun audité
+							for _ = 1, #Up.tabs() do
+								tap(K.ButtonR1)
+								audit(label .. `[Upgrades/{Up.currentTab()}] `)
+							end
+							expect(TvAudit.toGame(c)).toBe(true)
+							expect(Up.isOpen()).toBe(false)
+							-- ------------------------------------------------ mode photo
+							tap(K.ButtonY)
+							expect(toEntry("Settings")).toBe(true)
+							tap(K.ButtonA)
+							expect(PC.current()).toBe("Settings")
+							local function onPhoto()
+								local cur = sel()
+								local row = cur and cur.Parent
+								local title = row and row:FindFirstChild("Title")
+								return cur ~= nil
+									and cur.Name == "Choice"
+									and title ~= nil
+									and title.Text
+										== (if lang == "fr" then "Mode photo" else "Photo mode")
+							end
+							for _ = 1, 24 do
+								if onPhoto() then
+									break
+								end
+								tap(K.DPadDown)
+							end
+							expect({ label = label, row = onPhoto() }).toEqual({ label = label, row = true })
+							tap(K.ButtonA)
+							expect({ label = label, photo = Cam.photoOn() }).toEqual({
+								label = label,
+								photo = true,
+							})
+							audit(label .. "[photo] ")
+							local seenFilters = { [Hud.filter()] = true }
+							for _ = 1, 4 do
+								tap(K.ButtonX)
+								seenFilters[Hud.filter()] = true
+								expect(Cam.photoOn()).toBe(true)
+							end
+							local n = 0
+							for _ in seenFilters do
+								n += 1
+							end
+							expect({ label = label, filters = n }).toEqual({ label = label, filters = 4 })
+							filters += n
+							tap(K.ButtonB)
+							TvAudit.tick(c, 1)
+							expect({ label = label, photo = Cam.photoOn() }).toEqual({
+								label = label,
+								photo = false,
+							})
+							expect(TvAudit.toGame(c)).toBe(true)
+							-- ------------------------------------------------ jumelles
+							local slot = neighbourSlot()
+							expect(slot ~= nil).toBe(true)
+							c:moveTo(c.localPlayer, WL.gateOutside(slot))
+							TvAudit.tick(c, 0.5)
+							tap(K.ButtonX)
+							expect({ label = label, open = Bino.isOpen() }).toEqual({
+								label = label,
+								open = true,
+							})
+							audit(label .. "[binoculars] ")
+							tap(K.ButtonY)
+							expect(PC.menuOpen()).toBe(true)
+							expect(FG.names()).toEqual({ "binoculars", "menu" })
+							tap(K.ButtonB)
+							expect(PC.menuOpen()).toBe(false)
+							expect(Bino.isOpen()).toBe(true)
+							tap(K.ButtonB)
+							expect(Bino.isOpen()).toBe(false)
+							expect(FG.anyOpen()).toBe(false)
+							binoculars += 1
+							-- retour dans son ranch pour la suite
+							c:moveTo(c.localPlayer, WL.toWorld(WSC.mySlot(), Vector3.new(0, 0, 30)))
+							TvAudit.tick(c, 0.5)
+						end
+					end
+					expect(table.concat(issues, "\n")).toBe("")
+					expect(binoculars).toBe(6)
+					expect(filters).toBe(24)
+					expect(TvAudit.screenId(c)).toBe("game")
+					print(
+						`  ClientReplay manette v2.0 : {bought} achats au maintien, {filters} filtres vus, {binoculars} vues des jumelles`
+					)
+					clean(c)
+				end
+			)
+		end
+	)
+
 	describe("ClientReplay › clavier et souris (PC, second)", function()
 		-- Touche du clavier : InputBegan / InputEnded (dernier type d'entrée : clavier), puis CAS
 		local function key(c, keyCode)

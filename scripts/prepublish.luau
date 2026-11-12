@@ -9,6 +9,8 @@
 -- Note INT-PREPUBLISH (docs/04 §22.2) : les articles `hidden = true` (passes ET produits : SeasonPass,
 -- CoinsSmall, CoinsBig) ne sont jamais vendus au lancement et sont ignorés ; la publication est
 -- refusée tant que `Balance.GddValues ~= "1.3"` (valeurs du GDD pas encore reportées, docs/04 §23).
+-- Lot I, étape 6 (plan I C16) : les interrupteurs v2.0 sont ouverts dans la configuration livrée ; la
+-- publication est aussi refusée tant que `Balance.GddValuesV2 ~= "2.0"` (tables v2.0 du GDD v2.0).
 
 local process = require("@lune/process")
 
@@ -23,6 +25,15 @@ if Balance.GddValues ~= EXPECTED_GDD then
 		`❌ Ne publiez pas : Balance.GddValues = {tostring(Balance.GddValues)} (attendu « {EXPECTED_GDD} »).`
 			.. " Les valeurs du GDD ne sont pas encore reportées dans src/shared/Config/Balance.luau"
 			.. " (docs/04 §23)."
+	)
+	process.exit(1)
+end
+local EXPECTED_GDD_V2 = "2.0"
+if Balance.GddValuesV2 ~= EXPECTED_GDD_V2 then
+	print(
+		`❌ Ne publiez pas : Balance.GddValuesV2 = {tostring(Balance.GddValuesV2)} (attendu « {EXPECTED_GDD_V2} »).`
+			.. " Les tables v2.0 du GDD v2.0 ne sont pas reportées dans src/shared/Config/Balance.luau"
+			.. " (docs/04 §27.6, §27.9)."
 	)
 	process.exit(1)
 end

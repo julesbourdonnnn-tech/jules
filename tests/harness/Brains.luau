@@ -411,9 +411,12 @@ end
 Brains.uidsAt = uidsAt
 
 -- Joueur complet : presse chez lui, achète, fusionne, poursuit les créatures (□ et bond), boope au
--- Rush, presse le MEGA, monte, change de mode, lance son Grand Splorch ; erre entre ses actions
-function Brains.player(w, seed)
+-- Rush, presse le MEGA, monte, change de mode, lance son Grand Splorch ; erre entre ses actions.
+-- opts.keepAll (lot I, étape 6 : héros des Ascensions du Soak) : jamais « Tout fusionner » ni lancer
+-- (le lancer au Bassin fusionne) : aucun squishy ne quitte la collection par son propre geste
+function Brains.player(w, seed, opts)
 	local r = rng(seed or 1)
+	local keepAll = opts ~= nil and opts.keepAll == true
 	local target = nil
 	local nextAction = 0
 	return function(p)
@@ -478,7 +481,9 @@ function Brains.player(w, seed)
 		elseif roll < 0.42 then
 			Bots.fire("BuyTile", p, ({ "snack", "decor", "pens" })[r:NextInteger(1, 3)])
 		elseif roll < 0.46 then
-			Bots.fire("FuseAll", p)
+			if not keepAll then
+				Bots.fire("FuseAll", p)
+			end
 		elseif roll < 0.50 then
 			Bots.fire("Ride", p, r:NextNumber() < 0.5)
 		elseif roll < 0.53 then
@@ -506,7 +511,9 @@ function Brains.player(w, seed)
 		elseif roll < 0.76 then
 			Bots.fire("PickUp", p, pens[1] or "1")
 		elseif roll < 0.78 then
-			Bots.fire("Throw", p)
+			if not keepAll then
+				Bots.fire("Throw", p)
+			end
 		elseif roll < 0.80 then
 			Bots.fire("PutDown", p)
 		end

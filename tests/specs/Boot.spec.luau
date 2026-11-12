@@ -691,7 +691,9 @@ return function(T)
 				end
 				local w = world({ harness = Flags.harness(Harness, preset) })
 				local Prestige = w.h:require("ReplicatedStorage.Shared.Logic.Prestige")
-				for _, key in PROGRESSION do
+				-- lot I, étape 6 (plan I T2) : depuis l'étape 5, la configuration livrée ouvre les 23 clés
+				-- v2.0 : ce cas joue le jeu de lancement complet (chaque système), pas seulement la progression
+				for _, key in Flags.V2_KEYS do
 					expect({ key = key, on = w.Features.get(key) }).toEqual({ key = key, on = true })
 				end
 				local seed = 11
@@ -877,6 +879,179 @@ return function(T)
 				playV2(300)
 
 				-- ---------------------------------------------------------------- bilan
+				expect(table.concat(w.problems, "\n")).toBe("")
+				expect(#w.h.log.kicks).toBe(0)
+				local counts = w.D.counts()
+				expect({ errors = counts.errors, warnings = counts.warnings }).toEqual({
+					errors = 0,
+					warnings = 0,
+				})
+				expect(table.concat(zeroTrace(w), "\n")).toBe("")
+			end
+		)
+
+		-- Lot I, étape 6 (plan I D11) : la coupure d'urgence. SchemaV2 ne se coupe jamais ; LiveOps peut
+		-- couper tout le reste en direct. Serveur complet, 16 joueurs (vétérans pilotés par leur cerveau),
+		-- profils v2, chaque autre clé v2.0 coupée ; chaque joueur envoie chaque intention v2.0 (valide et
+		-- hostile) : invariants à chaque tick, zéro trace, aucune réponse (aucun UpgradeResult, aucune
+		-- célébration v2.0, aucun champ v2 dans un DataPatch, aucune clé features.v2), champs v2 des profils
+		-- inchangés ; un Grand Splorch de la v1.3 passe (le jeu de base joue).
+		it(
+			"coupure d'urgence (SchemaV2 ouvert, le reste coupé), 16 joueurs : invariants, zéro trace, aucune intention v2.0 répondue",
+			function()
+				local w = world({ harness = Flags.harness(Harness, "cut") })
+				expect(w.Schema.VERSION).toBe(2)
+				for _, key in Flags.V2_KEYS do
+					expect({ key = key, on = w.Features.get(key) }).toEqual({
+						key = key,
+						on = key == "SchemaV2",
+					})
+				end
+				local rec = Wire.record(w.h, {
+					Clock = w.Clock,
+					remotes = { "UpgradeResult", "Celebrate", "DataPatch", "EventState", "Feedback" },
+				})
+				local seed = 23
+				local players = {}
+				for i = 1, 16 do
+					local profile
+					if i == 1 then
+						-- prêt pour le Grand Splorch de la v1.3 (R 2)
+						profile = Brains.profile(w, {
+							coins = 5000,
+							R = 2,
+							squishies = {
+								{ s = 1, z = 100, bf = 1 },
+								{ s = 4, z = math.ceil(w.Formulas.splorchTarget(2) * 1.05) },
+							},
+						})
+					else
+						profile = veteran(w, i)
+					end
+					players[i] = Brains.join(w, i, { profile = profile })
+				end
+				expect(#w.players).toBe(16)
+				for i = 2, 16 do
+					Bots.setBrain(players[i], Brains.player(w, seed + i))
+				end
+				play(w, 50)
+				-- champs v2 de chaque profil (absents de la v1) au début
+				local v1 = w.Schema.defaultsFor(1)
+				local v2Keys = {}
+				for key in w.Schema.defaultsFor(2) do
+					if v1[key] == nil and key ~= "version" then
+						v2Keys[key] = true
+					end
+				end
+				local Http = w.h.game.HttpService
+				local function v2Of(p)
+					local d = w.DS.get(p)
+					local out = {}
+					for key in v2Keys do
+						out[key] = d[key]
+					end
+					return Http:JSONDecode(Http:JSONEncode(out))
+				end
+				local before = {}
+				for _, p in players do
+					expect(w.DS.get(p).version).toBe(2)
+					before[p] = v2Of(p)
+				end
+				-- chaque intention v2.0, valide et hostile, par chaque joueur
+				local INTENTS = {
+					{ "BuyUpgrade", "snack", 1, 0 },
+					{ "BuyUpgrade", "nope", 1e9, -1 },
+					{ "JellyAscend", true },
+					{ "PlaceDeco", 1, 1 },
+					{ "GiveHeart", 3 },
+					{ "SetPhotoMode", true },
+					{ "SetPhotoMode", false },
+					{ "MenuActivity" },
+					{ "ClientMetric", "upgradeMode", 1 },
+					{ "UiSeen", "nextBuy" },
+					{ "EquipCosmetic", "palette", "peachPalette" },
+					{ "EquipCosmetic", "theme", "marshmallow" },
+					{ "SetSetting", "haloOn", true },
+				}
+				for round = 1, 3 do
+					for _, p in players do
+						for _, intent in INTENTS do
+							w.h:fireServer(R .. intent[1], p, table.unpack(intent, 2))
+						end
+						play(w, 1)
+					end
+					play(w, 20 * round)
+				end
+				-- le Grand Splorch de la v1.3 passe
+				local flyer = nil
+				for uid, r in w.Squishy.records(players[1]) do
+					if r.at == "pen" and w.Squishy.sizeOf(players[1], uid) >= w.Formulas.splorchTarget(2) then
+						flyer = uid
+					end
+				end
+				expect(flyer ~= nil).toBe(true)
+				Bots.fire("GrandSplorch", players[1], false, flyer)
+				for _ = 1, 3000 do
+					play(w, 1)
+					if w.DS.get(players[1]).R == 3 then
+						break
+					end
+				end
+				expect(w.DS.get(players[1]).R).toBe(3)
+				play(w, 100)
+				rec:stop()
+				-- aucune intention v2.0 répondue
+				expect(#rec.sent.UpgradeResult).toBe(0)
+				local V2_KINDS = {
+					petitSplorch = true,
+					ascend = true,
+					tier = true,
+					unlock2 = true,
+					confetti = true,
+					trackTier = true,
+					carnet = true,
+					mastery = true,
+					regainDone = true,
+					recordStep = true,
+					welcomeV2 = true,
+				}
+				local bad = {}
+				for _, sent in rec.sent.Celebrate do
+					local payload = sent.args[1]
+					if type(payload) == "table" and V2_KINDS[payload.kind] then
+						bad["celebrate:" .. payload.kind] = true
+					end
+				end
+				for _, sent in rec.sent.DataPatch do
+					local patch = sent.args[1]
+					if type(patch) == "table" then
+						for key in patch do
+							if v2Keys[key] or key == "upgradeSnapshot" then
+								bad["patch:" .. key] = true
+							end
+						end
+					end
+				end
+				for _, sent in rec.sent.EventState do
+					local st = sent.args[1]
+					if type(st) == "table" and type(st.features) == "table" and st.features.v2 ~= nil then
+						bad["features.v2"] = true
+					end
+				end
+				for _, sent in rec.sent.Feedback do
+					local payload = sent.args[1]
+					local key = if type(payload) == "table" then tostring(payload.key) else ""
+					if string.sub(key, 1, 9) == "upgrades." or string.sub(key, 1, 7) == "ascend." then
+						bad["feedback:" .. key] = true
+					end
+				end
+				expect(bad).toEqual({})
+				-- champs v2 inchangés
+				for _, p in players do
+					expect({ id = p.UserId, v2 = v2Of(p) }).toEqual({ id = p.UserId, v2 = before[p] })
+				end
+				-- bilan
+				expect(table.concat(rec.problems, "\n")).toBe("")
 				expect(table.concat(w.problems, "\n")).toBe("")
 				expect(#w.h.log.kicks).toBe(0)
 				local counts = w.D.counts()

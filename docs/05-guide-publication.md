@@ -1,9 +1,13 @@
-# Raise a Squishy — Guide de publication et tests manuels M1 à M18
+# Raise a Squishy — Guide de publication et tests manuels M1 à M23
 
 *Paquet meta (docs/04 §2, §17.1, remarque A28). Ce guide dit, pas à pas, comment vérifier le jeu avant
-la publication : les portes automatiques, puis les **18 tests manuels** du GDD §18 (préparation, gestes,
-résultat attendu, où regarder dans le panneau Diagnostics), avec une section **PS5 / PS4**. La partie
+la publication : les portes automatiques, puis les **18 tests manuels** du GDD §18 et les **5 tests de la
+v2.0** (M19 à M23 : écran Améliorations, Jelly Ascend, mode photo, jumelles, photos du panneau TextProbe),
+avec une section **PS5 / PS4** et la **liste du premier essai de la v2.0 sur PS5** (§7). La partie
 « vrai moteur Roblox » (Open Cloud) est détaillée dans `tools/opencloud/README.md`.*
+
+*Depuis le lot I (12 novembre 2026), le jeu livré EST la v2.0 : les 23 interrupteurs v2.0 de
+`Config/Features` sont ouverts, `SchemaV2` aussi (docs/04 §27.3).*
 
 ---
 
@@ -12,11 +16,12 @@ résultat attendu, où regarder dans le panneau Diagnostics), avec une section *
 | Porte | Commande | Vert si |
 |---|---|---|
 | Formatage, lint, specs, build, place | `./scripts/check.sh` | « Tout est vert. » : StyLua, Selene (0 erreur, 0 avertissement), toutes les specs Lune (dont `EconomyPacing`, `ZeroLog` actif sur chaque spec du jeu), build Rojo, `verify-place` |
-| Économie v2.0 (nuit) | `./scripts/economy-nightly.sh` (≈ 48 min sur 4 cœurs ; aucun déclencheur automatique) | 20 cas verts (docs/04 §27.9 : clés de queue à leur vraie limite sur 400 joueurs, 140 jours, profils forcés) ; **à lancer à chaque lot qui touche l'économie et avant toute ouverture d'un interrupteur de l'économie v2.0** ; tant que la décision du design sur `shortestLoopSec` (politique « Conseillé ») n'est pas prise, le cas `advisor` reste rouge (GDD Journal v2.0, « Ce qui reste ouvert ») |
+| Économie v2.0 (nuit) | `./scripts/economy-nightly.sh` (≈ 64 min sur 4 cœurs, les 4 cœurs pris : rien d'autre en même temps ; aucun déclencheur automatique) | 20 cas verts (docs/04 §27.9 : clés de queue à leur vraie limite sur 400 joueurs, 140 jours, profils forcés) ; **à lancer à chaque lot qui touche l'économie** et avant chaque publication |
 | Captures de nuit (lot I) | `./scripts/screens-nightly.sh [dossier]` (≈ 6 min ; un seul processus Lune ; jamais en même temps que `check.sh` ni la nuit d'économie) | code 0 et « ✅ matrice de nuit » : le jeu ouvert (groupe `launch` de l'outil d'écrans : HUD, menu, chaque panneau du rail et chaque onglet) à tv1080, tv720, tv2160 × FR, EN × texte Medium et × 1,5 × graphismes normaux et réduits, images dans un dossier temporaire hors de git, synthèse `report.json` (images, défauts relevés) ; code 1 au moindre problème de l'outil. Regarder les images ; les gardes bloquantes restent `TextFit_all`, `Screens_display` et `Upgrades_Reference` (24 états de référence, dans `check.sh`) |
-| Robot de longue durée (nuit) | `SOAK_HOURS=6 ./scripts/soak.sh` | `Soak.spec` : 16 robots, invariants du §17.2 à chaque tick, ≤ 10 ms par tick en moyenne, zéro erreur |
+| Robot de longue durée (nuit) | `SOAK_HOURS=6 ./scripts/soak.sh` (`Soak` et `Soak_queue`) puis `SOAK_HOURS=6 lune run tests/run -- Review_A4` (Soak de tous les interrupteurs, 1,2 h) | `Soak.spec` : 16 robots, configuration de lancement, invariants du §17.2 à chaque tick, Ascensions (Record R jamais en baisse, aucun squishy perdu, Confettis jamais négatifs), ≤ 10 ms par tick en moyenne, zéro erreur ; Plopettes ; coupure d'urgence (SchemaV2 seul ouvert : aucune intention v2.0 répondue) |
 | Vrai moteur (couche i) | `lune run tools/opencloud/run-server-tests` | code 0 ; code 2 = pas de clé (alors les tests manuels ci-dessous la remplacent, et le manque est écrit dans le rapport qualité) |
-| Prépublication | `lune run scripts/prepublish` | chaque article visible de la Boutique a son identifiant ; refus si `Balance.GddValues ~= "1.3"` (note INT-PREPUBLISH) |
+| Prépublication | `lune run scripts/prepublish` | chaque article visible de la Boutique a son identifiant ; refus si `Balance.GddValues ~= "1.3"` (note INT-PREPUBLISH) ou si `Balance.GddValuesV2 ~= "2.0"` (lot I : tables v2.0 du GDD v2.0) |
+| Place construite | `rojo build -o build/Game.rbxl` puis `lune run scripts/verify-place build/Game.rbxl` (dans `check.sh`) | structure valide ; éclairage **v2.0** (`LightingStyle = Soft`, `PrioritizeLightingQuality = false`, pas de `Technology`) ; `--lighting v1.3` vérifie l'ancienne place |
 
 Règle zéro trace pendant **tous** les tests manuels : la fenêtre *Output* de Studio, ou le panneau
 Diagnostics en ligne, reste à **zéro erreur et zéro avertissement**. Une erreur vue devient d'abord une
@@ -49,10 +54,12 @@ spec qui la reproduit (`tests/specs/Fix_*.spec.luau`), puis la correction.
 
 ---
 
-## 3. Les 18 tests manuels
+## 3. Les 23 tests manuels
 
 Chaque test : **préparation**, **gestes**, **attendu**, **Diagnostics** (ce qu'on y lit). Un test est
-réussi si tout l'attendu est vu **et** si Diagnostics ne montre aucune nouvelle ligne.
+réussi si tout l'attendu est vu **et** si Diagnostics ne montre aucune nouvelle ligne. M19 à M23 sont les
+tests de la v2.0 (lot I) ; M7 et M9 passent aussi par les écrans de la v2.0 (écran Améliorations, aperçu
+de l'Ascension, Mon style, piste de la semaine, Carnet, Records, mode photo, jumelles).
 
 ### M1 — Première session seul, 5 min, à la manette seulement
 
@@ -231,6 +238,62 @@ réussi si tout l'attendu est vu **et** si Diagnostics ne montre aucune nouvelle
 - **Diagnostics** : *Ce serveur* : aucun état fermé par son délai (`carry`, `boopHold`, `spectacle`) ;
   *Mon client* : aucune ligne `WaitForChild` arrivée à son délai.
 
+### M19 — Écran Améliorations à la manette (v2.0)
+
+- **Préparation** : profil avec des pièces (au moins une carte « Prêt »), PS5, manette seule.
+- **Gestes** : △ ouvre le menu, croix jusqu'à « Améliorations », ✕ ; puis ressortir et revenir par le
+  kiosque de Big Plop (□ « Atelier » devant lui) et par la puce « Prochain achat » du HUD ; sur une
+  carte prête, **maintenir ✕ 0,6 s** (l'anneau se remplit) ; relâcher trop tôt une autre fois ; L1 / R1
+  sur les 4 onglets ; □ change le mode d'achat (×1, ×10, Max) ; ○.
+- **Attendu** : rien n'est acheté par un simple appui ; l'achat part à la fin de l'anneau, une seule fois ;
+  « En cours » puis le nouveau niveau ; relâché trop tôt : rien ; l'onglet Plopettes verrouillé montre le
+  cadenas et « Record 2 » ; ○ ouvert depuis le kiosque ou la puce rend la main au jeu en un appui, ouvert
+  depuis le menu il revient au menu.
+- **Diagnostics** : aucune ligne ; aucun achat en double dans *Aujourd'hui* (`UpgradeBought`).
+
+### M20 — Jelly Ascend : maintien de 3 s (v2.0)
+
+- **Préparation** : profil de test au Record R 15 (r = Record R), ou `clock` en Studio.
+- **Gestes** : aperçu du Grand Splorch → onglet de l'Ascension ; maintenir ✕ et relâcher à 1 s, puis
+  maintenir 3 s ; à la carte « Prêt à monter ? », choisir « Pas encore » une fois, puis monter.
+- **Attendu** : relâché avant 3 s, rien ; au bout de 3 s, la carte ; « Pas encore » ne coûte rien ; après
+  la montée : ciel et faisceau de l'Observatoire, Record R gardé, Confettis gagnés, aucun squishy perdu ;
+  le Petit Splorch suivant part sans file d'attente.
+- **Diagnostics** : aucune ligne ; *Aujourd'hui* : `AscendDone` une fois.
+
+### M21 — Mode photo et bouton Create (v2.0)
+
+- **Préparation** : PS5, un ranch construit (paliers, Monuments si possible), une météo ou une fête.
+- **Gestes** : Réglages → « Mode photo » → « Cheese ! » ; stick gauche (bouger), stick droit (tourner),
+  L2 / R2 (zoom), □ (les 4 filtres : Sans filtre, Chaud, Rose, Rêve) ; photo avec le bouton **Create**
+  de la manette ; ○ pour sortir. Recommencer pendant qu'une carte arrive.
+- **Attendu** : plus aucun HUD ni texte flottant (« z » des Plopettes, étiquette du Chantier) sur la photo ;
+  le nom du filtre s'affiche 2 s puis disparaît ; la carte attend la sortie du mode photo ; ○ rend
+  l'écran et la caméra comme avant.
+- **Diagnostics** : aucune ligne ; joindre la photo prise avec Create au compte rendu.
+
+### M22 — Jumelles devant le ranch d'un voisin (v2.0)
+
+- **Préparation** : 2 joueurs sur le serveur, dont un ami ; un joueur bloqué si possible.
+- **Gestes** : devant le portail d'un voisin, □ « Regarder » ; ✕ donne un cœur ; △ ouvre le menu
+  par-dessus, ○ le ferme ; ○ ferme les jumelles ; s'éloigner de plus de 14 studs les jumelles ouvertes ;
+  se placer devant le portail du joueur bloqué.
+- **Attendu** : vue zoomée sur le ranch du voisin en moins d'une demi-seconde ; un cœur au plus par jour et
+  par voisin ; s'éloigner referme ; aucune invite « Regarder » devant un joueur bloqué ; ○ rend la caméra
+  exactement comme avant.
+- **Diagnostics** : aucune ligne.
+
+### M23 — Photos du panneau TextProbe (v2.0)
+
+- **Préparation** : PS5 sur la vraie télé à 3 m ; un compte administrateur.
+- **Gestes** : Réglages → Diagnostics → onglet **Texte** ; photographier la télé (bouton Create, puis
+  aussi au téléphone pour avoir la vraie télé) à chacun des 4 réglages « Taille du texte » de Roblox.
+- **Attendu** : les 6 étiquettes témoins tiennent chacune dans sa boîte ; les chiffres (TextBounds,
+  facteurs, échelle) sont lisibles sur la photo.
+- **Diagnostics** : les 4 photos vont avec le compte rendu ; leurs chiffres sont reportés dans
+  `tests/harness/TextMetrics.luau` par l'équipe (mesure du vrai rendu des polices FredokaOne et
+  LuckiestGuy).
+
 ---
 
 ## 4. Section PS5 et PS4 (et Xbox)
@@ -238,7 +301,7 @@ réussi si tout l'attendu est vu **et** si Diagnostics ne montre aucune nouvelle
 | Étape | PS5 | PS4 (ou Xbox One) |
 |---|---|---|
 | Installer | Roblox depuis le PlayStation Store ; compte de test **privé** ; serveur privé du jeu | idem |
-| Tests à faire | M1 (manette), M5 (un achat), M6 (la PS5 du test à 16), **M9** (30 min manette seule), **M11** (télé à 3 m), M14, M18 | **M6** (≥ 30 images/s, qualité adaptative), M11 (lisibilité), M18 |
+| Tests à faire | M1 (manette), M5 (un achat), M6 (la PS5 du test à 16), **M9** (30 min manette seule), **M11** (télé à 3 m), M14, M18, **M19 à M23** (v2.0), puis la liste du §7 | **M6** (≥ 30 images/s, qualité adaptative, 16 ranchs construits), M11 (lisibilité), M18 |
 | Où regarder | panneau Diagnostics → *Mon client* (images par seconde, mémoire, qualité) ; photo du panneau avec le bouton **Create** | idem ; noter si la qualité passe en « réduite » et quand |
 | Réglages de la console | mode Jeu de la télé coupé puis activé ; zone sûre de la PS5 par défaut | idem |
 | Glyphes | PlayStation (□ ○ △ ✕, L1 R1 L2 R2) partout, jamais de lettres Xbox | Xbox (A B X Y) sur Xbox |
@@ -253,8 +316,10 @@ Activer la console dans le Creator Hub **seulement après** M6, M9 et M11 réuss
   `default.project.json`) ; une place réservée aux amis.
 - Types d'appareils : **Ordinateur + Console** ; Téléphone et Tablette décochés ; VR coupée.
 - Questionnaire de maturité (cible Minimal ; « non » aux objets aléatoires payants) ; langues EN et FR.
-- `StreamingEnabled` coupé, `VirtualCursorMode = Disabled`, `Lighting.Technology = ShadowMap` :
-  vérifiés par `Contract_game.spec` (projet) et `scripts/verify-place.luau` (place construite).
+- `StreamingEnabled` coupé, `VirtualCursorMode = Disabled`, `StarterGui.ClipsDescendantsSupportsRotation =
+  Enabled`, éclairage unifié de la v2.0 (`Lighting.LightingStyle = Soft`, `PrioritizeLightingQuality =
+  false`, plus de `Technology`) : vérifiés par `Contract_game.spec` (projet) et `scripts/verify-place.luau`
+  (place construite).
 - **Sauvegardes v2 (depuis le lot I, `SchemaV2` ouvert)** : chaque joueur de la v1.3 est migré en v2 à
   son premier chargement, une seule fois, sans rien perdre (`Migration_I.spec`). Publier la v2.0 avec
   **« Shut down all servers »** (ou « Migrate to latest update ») pour qu'aucun ancien serveur v1 ne
@@ -279,3 +344,68 @@ Réussi : oui / non
 Photo du panneau Diagnostics (Ce serveur, Mon client) : jointe / aucune ligne
 Spec ajoutée pour chaque écart : tests/specs/Fix_<…>.spec.luau
 ```
+
+## 7. Premier essai de la v2.0 sur PS5 : la liste du propriétaire (lot I)
+
+Ici, personne n'a pu voir la 3D, entendre les sons, sentir les vibrations ni voir le vrai rendu des
+textes : les tests automatiques ne regardent que des chiffres et des captures dessinées. Avec la manette,
+regardez chaque ligne et notez « bien » ou ce qui ne va pas (une photo avec le bouton Create aide).
+
+**Le ranch et le monde (3D)**
+1. Le ranch change quand on achète : les 6 paliers du Tapis (petit arc, puis couronne d'étoiles, puis
+   arc-en-ciel), la Cuve, le Pot, la fontaine, les lanternes, le portail arc-en-ciel. Beau ? Rien qui flotte ?
+2. Une fête « palier » joue quand un palier du Tapis monte (anneau et ola des squishies).
+3. Les Monuments (10 dessins) et les objets de Déco perso : à leur place, jolis, rien dans les murs.
+4. L'Observatoire et le kiosque de Big Plop sur la place : faciles à trouver, invite □ « Atelier » claire.
+5. Le halo au-dessus du ranch et le ciel spécial après une Jelly Ascend : beaux, pas trop forts.
+6. Les Plopettes : elles sortent de leur maisonnette, pressent les squishies, font la sieste (« z »).
+7. Les visages des squishies et leurs petites scènes (personnalités) : drôles, jamais bizarres.
+8. Les spectacles : Petit Splorch, Jelly Ascend (faisceau de l'Observatoire), nouveau tour appris.
+9. La météo (pluie, neige, vent…) : jolie, jamais gênante pour jouer.
+10. La place en fête : décorations, ballons, ça monte avec les joueurs.
+11. Les bulles des signaux de la croix (main, cœur, étoile) au-dessus des joueurs, à 10 m et à 50 m.
+
+**La caméra**
+12. La caméra des spectacles (Grand Splorch, Ascension) : on voit bien, puis elle revient toute seule.
+13. Le mode photo (Réglages → Mode photo → Cheese !) : sticks, L2 / R2, □ pour les 4 filtres, ○ pour
+    sortir ; sur la photo, aucun texte qui flotte ; la caméra revient comme avant.
+14. Les jumelles devant le portail d'un voisin (□) : le zoom est doux, pas de mal au cœur ; ○ revient.
+
+**Le son et les vibrations**
+15. Les sons de la v2.0 : beaucoup sont encore **muets exprès** (identifiants vides : Plopettes,
+    Chantier, tours, Ascension, Confettis, météo, fête, Cheese) ; ils seront remplis au lot de QA final.
+    Notez seulement si un son joue faux ou trop fort.
+16. Les vibrations : palier du Tapis, Chantier fini, Jelly Ascend : modérées, au bon moment, coupables
+    dans Réglages.
+
+**Les textes**
+17. Les textes sur la vraie télé (polices FredokaOne et LuckiestGuy) : rien de coupé, lisible à 3 m, en
+    français et en anglais (Réglages → Langue).
+18. Le panneau TextProbe (Réglages → Diagnostics → Texte) : une photo à chacun des 4 réglages « Taille
+    du texte » de Roblox (M23).
+
+**Ce que la v2.0 a changé à l'image de la v1.3** (prévu, à confirmer à l'œil)
+19. Les étoiles au-dessus des squishies sont maintenant dessinées (plus de caractère « ★ »).
+20. La selle et la traînée de la monture se voient enfin (le pack de selles payant).
+21. Le squishy dessiné suit sa tenue, sa mutation et ses étoiles.
+22. Après le travelling du Grand Splorch, la caméra revient exactement comme avant (focale comprise).
+23. L'éclairage de la place est l'éclairage « Soft » (unifié) : couleurs douces, ombres propres, rien de
+    trop sombre la nuit.
+
+**La vitesse**
+24. Avec 16 ranchs construits, sur une **PS4** et une **Xbox One** : au moins 30 images par seconde
+    (Diagnostics → Mon client), même pendant une fête ou un Rush.
+
+**La manette**
+25. Une ligne qui sort de l'écran en bas d'une liste reste atteignable à la croix (Records, piste, Carnet).
+26. Deux boutons côte à côte (dont un un peu plus gros quand il est choisi) : ↑ et ↓ passent bien de l'un
+    à l'autre, la sélection ne se perd jamais.
+
+**Vos trois questions**
+27. Petit Splorch : la copie qui saute est le squishy montré à tous, pas celui que vous avez choisi.
+    Est-ce bien ainsi ? (M42)
+28. MEGA : le GDD dit « les squishies à 120 studs réagissent », mais les enclos sont à 194-219 studs de la
+    place : seuls un squishy porté ou une monture près de la place réagissent. Garder 120 ou passer à 220 ? (M43)
+29. Cascade de construction : le minuteur de 10 s court aussi écran Améliorations ouvert (un joueur qui
+    reste longtemps dans l'écran voit ses achats posés sans cascade). Garder, ou compter les 10 s depuis
+    la fermeture de l'écran ? (M44)

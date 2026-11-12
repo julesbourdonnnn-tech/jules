@@ -137,8 +137,33 @@ return M
 			expect(string.find(old.stdout .. old.stderr, "GddValues", 1, true) ~= nil).toBe(true)
 			local missing = runWith(shop, "return {}")
 			expect(missing.code ~= 0).toBe(true)
-			local ok = runWith(shop, 'return { GddValues = "1.3" }')
+			-- lot I, étape 6 (journal I-48) : la marque v2.0 est aussi exigée depuis l'ouverture
+			local ok = runWith(shop, 'return { GddValues = "1.3", GddValuesV2 = "2.0" }')
 			expect(ok.code).toBe(0)
+		end)
+
+		-- lot I, étape 6 (plan I C16) : interrupteurs v2.0 ouverts dans la configuration livrée, la
+		-- publication exige aussi Balance.GddValuesV2 == « 2.0 » ; le Balance du dépôt passe
+		it("lot I : publication refusée si Balance.GddValuesV2 ~= « 2.0 »", function()
+			local shop = [[
+local M = {}
+M.Passes = { A = { id = 7, price = 1, nameKey = "x", descKey = "x", order = 1 } }
+M.Products = {}
+return M
+]]
+			for _, src in
+				{
+					'return { GddValues = "1.3" }',
+					'return { GddValues = "1.3", GddValuesV2 = "1.9" }',
+					'return { GddValues = "1.3", GddValuesV2 = 2 }',
+				}
+			do
+				local r = runWith(shop, src)
+				expect({ src = src, refused = r.code ~= 0 }).toEqual({ src = src, refused = true })
+				expect(string.find(r.stdout .. r.stderr, "GddValuesV2", 1, true) ~= nil).toBe(true)
+			end
+			local repo = runWith(shop, nil)
+			expect(repo.code).toBe(0)
 		end)
 	end)
 

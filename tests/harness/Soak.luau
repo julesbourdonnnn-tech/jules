@@ -20,7 +20,8 @@
 --   report.problems (liste vide = sain), report.msPerTick, report.ticks
 -- Options v2.0 (lot A3, Soak des Plopettes ; rien de changé sans elles) : opts.flags (interrupteurs
 -- ouverts après le démarrage), opts.edit(d, i) (profil de départ du robot i), opts.check(w, now)
--- (contrôles de plus à chaque tick : liste de problèmes).
+-- (contrôles de plus à chaque tick : liste de problèmes). Lot I, étape 6 : opts.brainFor(w, i, seed)
+-- (cerveau du robot i, aussi à son retour ; nil = cerveau par défaut), opts.edit reçoit aussi w.
 local Bots = require("./Bots")
 local Brains = require("./Brains")
 
@@ -181,10 +182,12 @@ function Soak.run(Harness, opts)
 	local brainsOf = {}
 	local function setBrain(p, i)
 		local kind = i % 8
-		local brain = if kind == 7
-			then Brains.spammer(w, seed + i)
-			elseif kind == 6 then Brains.rider(w, seed + i)
-			else Brains.player(w, seed + i)
+		local brain = if opts.brainFor then opts.brainFor(w, i, seed + i) else nil
+		brain = brain
+			or if kind == 7
+				then Brains.spammer(w, seed + i)
+				elseif kind == 6 then Brains.rider(w, seed + i)
+				else Brains.player(w, seed + i)
 		brainsOf[p] = brain
 		Bots.setBrain(p, brain)
 	end
