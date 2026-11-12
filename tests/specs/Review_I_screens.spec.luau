@@ -7,6 +7,8 @@
 local roblox = require("@lune/roblox")
 local Screens = require("../harness/Screens")
 local Layout = require("../harness/Layout")
+local Gamepad = require("../harness/Gamepad")
+local TvAudit = require("../harness/TvAudit")
 
 local Enum = roblox.Enum
 
@@ -95,7 +97,10 @@ return function(T)
 					local right = (d.x + d.w - (b.x + b.w)) / k
 					local problems = {}
 					if left < 8 or right < 8 then
-						table.insert(problems, string.format("bouton à %.1f / %.1f px des bords", left, right))
+						table.insert(
+							problems,
+							string.format("bouton à %.1f / %.1f px des bords", left, right)
+						)
 					end
 					local buttons = 0
 					for _, o in sel.Parent:GetChildren() do
@@ -104,7 +109,10 @@ return function(T)
 						end
 					end
 					if buttons == 1 and math.abs(left - right) > 2 then
-						table.insert(problems, string.format("bouton seul décentré : %.1f / %.1f px", left, right))
+						table.insert(
+							problems,
+							string.format("bouton seul décentré : %.1f / %.1f px", left, right)
+						)
 					end
 					expect(table.concat(problems, "\n")).toBe("")
 					Harness.disposeAll()
@@ -113,8 +121,113 @@ return function(T)
 		end
 	end)
 
+	-- Parcours à la manette du jeu ouvert (pas un défaut : la preuve du parcours de la relecture) : △ ouvre
+	-- le menu ; chaque entrée du rail atteinte au ↓ ; ✕ ouvre son panneau ; R1 fait le tour de ses onglets
+	-- et revient au premier ; ○ revient au rail sur la même entrée ; ○ rend la main au jeu. Aucune intention
+	-- de jeu envoyée (seules MenuActivity et ClientMetric, qui ne changent rien), aucun achat.
+	describe("Review_I_screens › manette : chaque panneau du jeu ouvert, aller et retour", function()
+		for _, pid in { "tv1080", "tv720", "tv2160" } do
+			it(pid .. " · fr", function()
+				local group = groupOf("launch")
+				local c = Screens.boot(Harness, Screens.profileById(pid), "fr", group.state)
+				Screens.launchState(c)
+				local h = c.h
+				local GuiService = h.game.GuiService
+				local function tap(key)
+					Gamepad.tap(h, key)
+					TvAudit.tick(h, 0.5)
+				end
+				local function selectedName()
+					local s = GuiService.SelectedObject
+					return if s then s.Name else "nil"
+				end
+				local problems = {}
+				tap(Enum.KeyCode.ButtonY)
+				if not c.PC.menuOpen() then
+					table.insert(problems, "△ n'ouvre pas le menu")
+				end
+				local entries = c.PC.entries()
+				local opened = {}
+				for i, entry in entries do
+					if i > 1 then
+						tap(Enum.KeyCode.DPadDown)
+					end
+					if selectedName() ~= "Entry_" .. entry then
+						table.insert(problems, "↓ : " .. selectedName() .. " au lieu de Entry_" .. entry)
+						continue
+					end
+					if entry ~= "SplorchPreview" then
+						tap(Enum.KeyCode.ButtonA)
+						if c.PC.current() ~= entry then
+							table.insert(problems, "✕ sur " .. entry .. " : " .. tostring(c.PC.current()))
+						else
+							opened[entry] = true
+							local mod = h:require(Screens.CLIENT .. "UI.Panels." .. entry)
+							if type(mod.tabs) == "function" and type(mod.currentTab) == "function" then
+								local tabs = mod.tabs()
+								local first = mod.currentTab()
+								for _ = 1, #tabs do
+									tap(Enum.KeyCode.ButtonR1)
+								end
+								if #tabs > 1 and mod.currentTab() ~= first then
+									table.insert(
+										problems,
+										entry
+											.. " : R1 ×"
+											.. #tabs
+											.. " finit sur "
+											.. tostring(mod.currentTab())
+									)
+								end
+							end
+							tap(Enum.KeyCode.ButtonB)
+							if c.PC.current() ~= nil or not c.PC.menuOpen() then
+								table.insert(problems, "○ depuis " .. entry .. " : pas de retour au rail")
+							elseif selectedName() ~= "Entry_" .. entry then
+								table.insert(problems, "○ depuis " .. entry .. " : " .. selectedName())
+							end
+						end
+					end
+				end
+				for _, want in
+					{ "Ranch", "Upgrades", "Squishydex", "Objectives", "Leaderboards", "Shop", "Settings" }
+				do
+					if not opened[want] then
+						table.insert(problems, want .. " jamais ouvert")
+					end
+				end
+				tap(Enum.KeyCode.ButtonB)
+				if c.PC.menuOpen() or GuiService.SelectedObject ~= nil then
+					table.insert(problems, "○ depuis le rail : le menu reste ouvert")
+				end
+				for _, intent in
+					{
+						"BuyUpgrade",
+						"BuyTile",
+						"JellyAscend",
+						"GrandSplorch",
+						"SetMode",
+						"Sell",
+						"Release",
+						"FuseAll",
+						"EquipCosmetic",
+						"PlaceDeco",
+						"ClaimObjective",
+						"ClaimDexReward",
+						"SetSetting",
+					}
+				do
+					if #TvAudit.sent(h, intent) > 0 then
+						table.insert(problems, "intention envoyée : " .. intent)
+					end
+				end
+				expect(table.concat(problems, "\n")).toBe("")
+				Harness.disposeAll()
+			end)
+		end
+	end)
+
 	describe("fin des écrans", function()
 		Screens.finish()
 	end)
-	local _ = Enum
 end
