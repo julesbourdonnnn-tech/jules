@@ -1249,6 +1249,33 @@ function DataService.dropPatchExtra(name: string)
 	end
 end
 
+-- Renvoie chez chaque joueur chargé la valeur dérivée `name` (crochet de setPatchExtra redevenu actif,
+-- par exemple un interrupteur rouvert en direct : relecture du lot I, journal I-56) : un DataPatch qui
+-- ne porte qu'elle. Sans lui, le client l'attendait jusqu'au prochain patch qui touche ce qu'elle montre
+-- (minutes pour un joueur immobile). Un joueur dont le flux d'arrivée la porte encore est sauté (le
+-- premier morceau l'enverra) ; un nom inconnu ou un crochet muet ne fait rien.
+function DataService.pushPatchExtra(name: string)
+	local found: PatchExtra? = nil
+	for _, extra in patchExtras do
+		if extra.name == name then
+			found = extra
+			break
+		end
+	end
+	if found == nil or patchRemote == nil then
+		return
+	end
+	for player, data in profiles do
+		local stream = streams[player]
+		if player.Parent and not (stream and stream.extras) then
+			local value = extraValue(found, player, data, nil)
+			if value ~= nil then
+				patchRemote:FireClient(player, { [name] = value }, {})
+			end
+		end
+	end
+end
+
 -- Enregistre un crochet appelé (sans yield) juste avant chaque sauvegarde du joueur :
 -- autosave, saveNow, départ et BindToClose. `release` vaut true pour la sauvegarde de libération
 -- (départ, BindToClose) : le travail « de départ » doit être fait là, le Player peut encore être

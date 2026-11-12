@@ -921,6 +921,10 @@ function EconomyService.step(now: number)
 		upgradesWasOn = upgradesOn
 		if not upgradesOn then
 			DataService.dropPatchExtra("upgradeSnapshot")
+		else
+			-- rouvert en direct : l'instantané repart aussitôt (relecture du lot I, journal I-56 : sans
+			-- ceci, l'écran, la touche U et la puce attendaient le prochain changement de pièces)
+			DataService.pushPatchExtra("upgradeSnapshot")
 		end
 	end
 	local recordOn = Features.get("RecordR") == true
