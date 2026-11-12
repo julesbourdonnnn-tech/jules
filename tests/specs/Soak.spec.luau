@@ -153,8 +153,12 @@ return function(T)
 										petit += 1
 									end
 									lastA[id], lastR[id] = d.ascend or 0, d.R
-									-- toutes les 5 min (et dès 10 s) : la Jelly Ascend demandée (refus muet sinon)
-									if w.ascendTick % 3000 == 100 then
+									-- toutes les 5 min (et dès 10 s) : la Jelly Ascend demandée (refus muet sinon) ;
+									-- avant la première du héros, toutes les 10 s (relecture du lot I, I-59 : le serveur
+									-- la refuse en silence quand le robot porte un squishy ou n'est pas dans son ranch ;
+									-- 6 essais en 0,5 h ne suffisaient pas toujours, cas rouge 3 fois sur 4)
+									local every = if (ascended[id] or 0) >= 1 then 3000 else 100
+									if w.ascendTick % every == 100 % every then
 										w.h:fireServer("ReplicatedStorage.Remotes.JellyAscend", p, true)
 									end
 								end
