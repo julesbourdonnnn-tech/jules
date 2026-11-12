@@ -1035,9 +1035,13 @@ return function(T)
 			"features.ambience présent seulement interrupteur ouvert ; renvoyé à tous après « feature Ambience=… » d'un administrateur ; recoupé : charge égale à celle d'un serveur témoin",
 			function()
 				local t0 = 1800000000 + 120
-				local wA = Brains.boot(Harness, { t0 = t0 })
+				-- lot I, étape 5 : Ambience est ouvert au lancement ; ce cas prouve le chemin coupé puis
+				-- rouvert en direct (LiveOps), donc les deux serveurs partent avec Ambience coupé (le chemin
+				-- de lancement est couvert par les cas « client » de ce fichier et par Arrival_quiet)
+				local CUT = { Ambience = false }
+				local wA = Brains.boot(Harness, { t0 = t0, preset = CUT })
 				Brains.join(wA, 1)
-				local wB = Brains.boot(Harness, { t0 = t0 })
+				local wB = Brains.boot(Harness, { t0 = t0, preset = CUT })
 				local pB = Brains.join(wB, 1)
 				local qB = Brains.join(wB, 2)
 				wB.meta.admins[1] = true

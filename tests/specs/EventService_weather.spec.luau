@@ -35,12 +35,17 @@ return function(T)
 	}, { __index = Harness })
 
 	-- opts : t0, flags (ouverts dans le test), v2 (serveur au schéma v2)
+	-- Météo et fête coupées (LiveOps) : les cas qui prouvent le chemin coupé partent de là depuis que les
+	-- deux interrupteurs sont ouverts au lancement (lot I, étape 5 ; chemin ouvert : les autres cas)
+	local CUT = { Weather = false, Fete = false }
+
 	local function boot(opts)
 		opts = opts or {}
-		-- opts.v13 : serveur de la v1.3 (préréglage « v13 », lot I D2 a)
+		-- opts.v13 : serveur de la v1.3 (préréglage « v13 », lot I D2 a) ; opts.preset : préréglage table
+		-- (lot I, étape 5 : météo et fête ouvertes au lancement, un cas « coupé » le dit)
 		local w = Brains.boot(
 			if opts.v2 then HarnessV2 elseif opts.v13 then Flags.harness(Harness, "v13") else Harness,
-			{ t0 = opts.t0 or (H0 + 120) }
+			{ t0 = opts.t0 or (H0 + 120), preset = opts.preset }
 		)
 		w.Weather = w.h:require(WEATHER)
 		for _, key in opts.flags or {} do
@@ -250,9 +255,9 @@ return function(T)
 			function()
 				-- deux serveurs au même instant, dans une fenêtre de météo, mêmes joueurs, mêmes faits
 				local t0 = H0 + 3 * 3600 + 8 * 60 + 5
-				local wA = boot({ t0 = t0 })
+				local wA = boot({ t0 = t0, preset = CUT })
 				local pA = Brains.join(wA, 1)
-				local wB = boot({ t0 = t0 })
+				local wB = boot({ t0 = t0, preset = CUT })
 				local pB = Brains.join(wB, 1)
 				Brains.frames(wA, 3)
 				Brains.frames(wB, 3)
@@ -296,7 +301,7 @@ return function(T)
 	describe("EventService_weather › aucun effet sur le jeu", function()
 		-- 1 h de jeu complet à `n` joueurs (cerveaux à graine fixe) ; rend naissances, mutations et pièces
 		local function hour(flagsOn, n)
-			local w = boot({ t0 = H0 + 30 })
+			local w = boot({ t0 = H0 + 30, preset = CUT })
 			if flagsOn then
 				w.Features.set("Weather", true)
 				w.Features.set("Fete", true)
