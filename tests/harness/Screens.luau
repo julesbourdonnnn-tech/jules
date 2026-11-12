@@ -3853,7 +3853,9 @@ function Screens.launchState(c)
 		carnet = { 15 },
 		stats = {
 			upgradesBought = 600,
-			playSeconds = 400,
+			-- lot I (I-60) : un joueur du jeu ouvert (Record 12, une Ascension) a joué des heures : au-delà
+			-- des 10 min qui ouvrent la Boutique (Quests.ShopHiddenUntil), sinon launch.Shop.* restait vide
+			playSeconds = 36000,
 			objectivesClaimed = 30,
 			tracksDone = 1,
 			splorches = 40,

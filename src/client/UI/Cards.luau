@@ -991,11 +991,14 @@ local function openDialog(entry: Entry)
 	local innerW = width - 64
 	local bw = math.floor((innerW - gap * (n - 1)) / n)
 	for i, action in list do
+		-- lot I (I-61) : ancré en son centre : choisi, le bouton grossit des deux côtés (un « OK » seul,
+		-- pleine largeur, grossissait vers la droite et sortait de la carte)
 		local b = Util.button({
 			name = "Action" .. i,
 			parent = row,
 			size = UDim2.fromOffset(bw, Layout.Button.MinHeight),
-			position = UDim2.fromOffset((i - 1) * (bw + gap), 0),
+			position = UDim2.fromOffset((i - 1) * (bw + gap) + bw / 2, Layout.Button.MinHeight / 2),
+			anchor = Vector2.new(0.5, 0.5),
 			text = Util.t(action.key),
 			textSize = Layout.Text.Button,
 			color = if i == 1 then Color3.fromRGB(255, 120, 180) else Theme.Colors.PanelLight,
