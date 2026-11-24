@@ -122,52 +122,15 @@
   }
   const hasDates = (stay) => !!(stay && stay.checkin && stay.checkout);
 
-  /* ---------- Liens de réservation ---------- */
-  function bookingLink(h, src = "", stay = null) {
-    const { CONFIG } = data();
-    let url;
-    try { url = new URL(h.bookingUrl); } catch { url = null; }
-    if (!url) {
-      url = new URL("https://www.booking.com/searchresults.fr.html");
-      url.searchParams.set("ss", `${h.name}, ${h.city}`);
-    }
-    if (CONFIG.booking.aid) url.searchParams.set("aid", CONFIG.booking.aid);
-    if (CONFIG.booking.label) url.searchParams.set("label", [CONFIG.booking.label, src, h.id].filter(Boolean).join("-"));
-    const s = cleanStay(stay);
-    if (s) {
-      if (hasDates(s)) {
-        url.searchParams.set("checkin", s.checkin);
-        url.searchParams.set("checkout", s.checkout);
-      }
-      url.searchParams.set("group_adults", String(s.adults));
-      url.searchParams.set("no_rooms", "1");
-      url.searchParams.set("group_children", "0");
-    }
-    return url.toString();
-  }
-  /* Autres sites de réservation, pour comparer. Ne s'affichent que lorsque ton
-   * identifiant d'affiliation est renseigné dans config.js (sinon ces liens ne
-   * te rapporteraient rien) ou qu'un lien direct est donné pour l'établissement. */
-  function partnerLinks(h, stay = null) {
-    const { CONFIG } = data();
-    const s = cleanStay(stay);
-    const out = [];
-    for (const [key, p] of Object.entries(CONFIG.partners || {})) {
-      const direct = h.partners && h.partners[key];
-      let href = "";
-      if (direct) {
-        const sep = direct.includes("?") ? "&" : "?";
-        href = p.param ? `${direct}${sep}${p.param}` : direct;
-      } else if (p.search && p.param) {
-        const u = new URL(p.search);
-        u.searchParams.set("destination", `${h.name}, ${h.city}`);
-        if (hasDates(s)) { u.searchParams.set("startDate", s.checkin); u.searchParams.set("endDate", s.checkout); }
-        u.searchParams.set("adults", String(s ? s.adults : 2));
-        href = `${u}&${p.param}`;
-      }
-      if (href) out.push({ key, name: p.name, href });
-    }
-    return out;
+  /* ---------- Lien vers l'établissement ----------
+   * Le site ne touche aucune commission : le bouton « Réserver en direct »
+   * mène au site officiel de l'établissement (champ website de hotels.js).
+   * À défaut, une recherche web sur le nom du lieu. */
+  function siteLink(h) {
+    try { return new URL(h.website).toString(); } catch {}
+    const u = new URL("https://www.google.com/search");
+    u.searchParams.set("q", `${h.name} ${h.city} site officiel`);
+    return u.toString();
   }
 
   /* ---------- Conseil de réservation ----------
@@ -201,6 +164,26 @@
     <button type="button" class="fav ${extra} ${on ? "on" : ""}" data-fav="${escapeHtml(h.id)}"
       aria-pressed="${on}" aria-label="Ajouter ${escapeHtml(h.name)} à mes coups de cœur">${HEART}</button>`;
 
+  /* ---------- Avis « Testé » ----------
+   * Un lieu porte le badge « Testé » quand son champ review est rempli
+   * (voir l'exemple commenté en haut de hotels.js). Notes sur 10. */
+  const REVIEW_CRITERIA = [
+    ["accueil", "Accueil"], ["chambre", "Chambre"], ["literie", "Literie"],
+    ["table", "Table"], ["service", "Service"], ["valeur", "Rapport qualité-prix"],
+  ];
+  const MONTHS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
+  const isTested = (h) => !!(h && h.review && h.review.date);
+  function reviewScore(h) {
+    const sc = (h.review && h.review.scores) || {};
+    const v = REVIEW_CRITERIA.map(([k]) => sc[k]).filter((x) => typeof x === "number");
+    return v.length ? Math.round((v.reduce((a, b) => a + b, 0) / v.length) * 10) / 10 : null;
+  }
+  function reviewDate(h) {
+    const [y, m] = String(h.review.date).split("-");
+    return m ? `${MONTHS[Number(m) - 1]} ${y}` : y;
+  }
+  const fmtScore = (n) => String(n).replace(".", ",");
+
   function card(h, { dist = null, reveal = true, fav = false } = {}) {
     const { ENVS, TYPES } = data();
     const url = hotelUrl(h);
@@ -216,6 +199,7 @@
             <button type="button" class="card-nav next" data-slide="1" aria-label="Photo suivante">›</button>
             <div class="card-dots">${photos.map((_, i) => `<span class="${i ? "" : "on"}"></span>`).join("")}</div>` : ""}
           <span class="badge">${escapeHtml(ENVS[h.env].label)}</span>
+          ${isTested(h) ? `<span class="badge badge-tested" title="Séjour testé par ${escapeHtml(data().CONFIG.author.name)}">✓ Testé${reviewScore(h) != null ? ` · ${fmtScore(reviewScore(h))}/10` : ""}</span>` : ""}
           ${favButton(h, "", fav)}
           <button type="button" class="card-compare" data-compare="${escapeHtml(h.id)}" aria-pressed="false" aria-label="Comparer ${escapeHtml(h.name)}" title="Ajouter au comparateur">⇄</button>
           ${dist != null ? `<span class="card-dist">📍 ${formatDistance(dist)}</span>` : ""}
@@ -320,7 +304,8 @@
           ${links.map(([href, label]) => `<a href="${page(href)}">${label}</a>`).join("\n          ")}
           <a href="${page("comparer.html")}">Le comparateur</a>
           <a href="${page("index.html#explorer")}" data-open-near>📍 Près de chez moi</a>
-          <a href="${page("a-propos.html")}" class="menu-small">Qui sommes-nous ?</a>
+          <a href="${page("a-propos.html")}" class="menu-small">Qui suis-je ?</a>
+          <a href="${page("professionnels.html")}" class="menu-small">Vous êtes un établissement ?</a>
         </nav>
       </div>`;
   }
@@ -348,15 +333,15 @@
         </div>
         <div><h4>Ambiances</h4><ul>${envLinks}</ul></div>
         <div><h4>Nos guides</h4><ul>${guideLinks}<li><a href="${page("guides/index.html")}">Tous les guides →</a></li><li><a href="${page("carte.html")}">La carte interactive →</a></li></ul></div>
-        <div><h4>Nuits Singulières</h4><ul><li><a href="${page("quiz.html")}">Le quiz : trouver ma nuit</a></li><li><a href="${page("comparer.html")}">Le comparateur</a></li><li><a href="${page("a-propos.html")}">Qui sommes-nous ?</a></li>${socials}<li><a href="mailto:${escapeHtml(CONFIG.contactEmail)}">${escapeHtml(CONFIG.contactEmail)}</a></li><li><a href="${page("mentions-legales.html")}">Mentions légales</a></li></ul></div>
+        <div><h4>Nuits Singulières</h4><ul><li><a href="${page("quiz.html")}">Le quiz : trouver ma nuit</a></li><li><a href="${page("comparer.html")}">Le comparateur</a></li><li><a href="${page("a-propos.html")}">Qui suis-je ?</a></li><li><a href="${page("professionnels.html")}">Vous êtes un établissement ?</a></li>${socials}<li><a href="mailto:${escapeHtml(CONFIG.contactEmail)}">${escapeHtml(CONFIG.contactEmail)}</a></li><li><a href="${page("mentions-legales.html")}">Mentions légales</a></li></ul></div>
       </div>
-      <p class="disclosure">Ce site contient des liens affiliés : si vous réservez via nos liens, nous percevons une commission du site de réservation, sans aucun surcoût pour vous. Notre sélection est indépendante : aucun établissement ne paie pour y figurer. Les niveaux de budget sont indicatifs ; le tarif final est celui du site de réservation. Photos : © les établissements.</p>
+      <p class="disclosure">Nuits Singulières est un site de conseil indépendant : aucun établissement ne paie pour y figurer, et nous ne touchons aucune commission sur les réservations. Les liens « Réserver en direct » mènent au site officiel de chaque lieu. Les niveaux de budget sont indicatifs. Photos : © les établissements.</p>
       <p class="muted small">© ${new Date().getFullYear()} ${escapeHtml(CONFIG.siteName)}</p>`;
   }
 
   return {
     data, setRoot, root, page, hotelUrl, guideUrl, escapeHtml, formatPrice, formatDistance, distanceKm,
-    FALLBACK, img, budgetOf, budgetHtml, bookingLink, partnerLinks, bookingTip, stayEstimate, capacity,
+    FALLBACK, img, budgetOf, budgetHtml, siteLink, bookingTip, stayEstimate, capacity, REVIEW_CRITERIA, isTested, reviewScore, reviewDate, fmtScore,
     todayIso, addDays, nightsOf, cleanStay, hasDates, tagsOf,
     favButton, card, newsletterForm, socialLinks, guideHotels, guideTitle, guidesFor, guideCard, shareBlock,
     header, footer, baseLayer,

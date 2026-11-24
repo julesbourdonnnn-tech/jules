@@ -77,7 +77,7 @@
             ${row("Sur place", hs.map((h) => list(h.amenities)))}
             ${hs.some((h) => h.season) ? row("Saison", hs.map((h) => h.season ? e(h.season) : `<span class="muted">—</span>`)) : ""}
             ${row("Réserver", hs.map((h) => `
-              <a class="btn btn-primary btn-block" href="${e(NS.bookingLink(h))}" target="_blank" rel="sponsored noopener" data-track="Réservation" data-hotel="${e(h.id)}" data-book="${e(h.id)}">Voir les prix</a>
+              <a class="btn btn-primary btn-block" href="${e(NS.siteLink(h))}" target="_blank" rel="noopener" data-track="Site officiel" data-hotel="${e(h.id)}" data-book="${e(h.id)}">Réserver en direct</a>
               <a class="btn btn-ghost btn-block" href="${NS.hotelUrl(h)}">La fiche complète</a>`), "cmp-cta")}
           </tbody>
         </table>

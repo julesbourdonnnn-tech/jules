@@ -1,7 +1,7 @@
 /*
  * ============================================================
- *  CONFIGURATION DU SITE — c'est ici que tu mets tes identifiants
- *  d'affiliation, tes tarifs et tes réseaux sociaux.
+ *  CONFIGURATION DU SITE — nom, contact, réseaux sociaux,
+ *  newsletter et statistiques.
  * ============================================================
  */
 window.SITE_CONFIG = {
@@ -10,35 +10,15 @@ window.SITE_CONFIG = {
   contactEmail: "contact@nuitsinguliere.com",
   siteUrl: "https://nuitsinguliere.com", // ton nom de domaine, sert aux liens générés dans le Studio
 
-  // Booking.com Affiliate Partner Programme
-  // -> https://www.booking.com/affiliate-program/
-  // Une fois accepté, colle ton "aid" (Affiliate ID) ci-dessous.
-  // Il est ajouté automatiquement à TOUS les liens Booking du site.
-  booking: {
-    aid: "",           // ex : "1234567"
-    label: "site-web", // libre : sert à suivre d'où viennent les clics dans ton tableau de bord
+  // L'auteur des avis (page « Qui suis-je », signature des avis testés)
+  author: {
+    name: "Jules Bourdon",
+    title: "Hôtelier dans le luxe, en France et à l'étranger",
   },
 
-  // Autres sites de réservation, pour que le visiteur compare (optionnels).
-  // Dès que tu renseignes `param` (ton identifiant d'affiliation, sous la
-  // forme "nom=valeur"), un bouton « Comparer sur … » apparaît sur chaque
-  // fiche, avec les dates choisies par le visiteur. Tant que `param` est vide,
-  // le bouton reste caché : un lien non affilié ne te rapporterait rien.
-  // Un lien direct peut aussi être donné par établissement (champ `partners`
-  // de hotels.js), il s'affiche alors même sans identifiant.
-  partners: {
-    expedia:   { name: "Expedia",    param: "", search: "https://www.expedia.fr/Hotel-Search" },
-    hotelscom: { name: "Hotels.com", param: "", search: "https://fr.hotels.com/Hotel-Search" },
-    direct:    { name: "Site officiel", param: "" }, // lien direct vers l'établissement (champ partners.direct)
-  },
-
-  // Idées cadeaux : coffrets séjours insolites (programmes d'affiliation
-  // Wonderbox, Smartbox… via Awin ou CJ). Colle ton lien affilié dans `url` :
-  // le bloc s'affiche alors dans le guide « Offrir une nuit insolite ».
-  gifts: [
-    { name: "Wonderbox", pitch: "Coffrets cadeaux « séjour insolite »", url: "" },
-    { name: "Smartbox",  pitch: "Coffrets cadeaux nuits insolites et week-ends", url: "" },
-  ],
+  // Nuits Singulières est un site de conseil indépendant : aucune affiliation,
+  // aucune commission. Les boutons « Réserver en direct » mènent au site
+  // officiel de chaque établissement (champ website dans js/hotels.js).
 
   /* ---------- Réseaux sociaux (idée 8) ---------- */
   social: {

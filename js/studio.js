@@ -293,7 +293,7 @@
     </td></tr>
   </table>
   <p style="max-width:560px;margin:24px auto 0;font:12px/1.6 Arial,sans-serif;color:#7b847e;text-align:center">
-    ${igLine}    Liens affiliés : nous percevons une commission sur les réservations, sans surcoût pour vous.<br>
+    ${igLine}    Conseils indépendants : aucun établissement ne paie pour figurer dans cette lettre.<br>
     <a href="{{ unsubscribe }}" style="color:#7b847e">Se désinscrire</a>
   </p>
 </td></tr></table>

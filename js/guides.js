@@ -36,7 +36,7 @@
       ],
       faq: [
         ["Quelle est la nuit insolite la plus romantique de France ?", "Tout dépend de vos envies : une bulle transparente pour s'endormir sous les étoiles, le sommet d'un phare face à l'océan, ou une cabane perchée avec jacuzzi privatif. Les adresses de ce guide ont toutes été choisies pour leur intimité."],
-        ["Combien coûte une nuit insolite en amoureux ?", "Comptez généralement de 150 à 450 € la nuit pour deux selon le lieu et la saison. Chaque fiche indique une fourchette de prix, et le tarif exact s'affiche dès que vous choisissez vos dates."],
+        ["Combien coûte une nuit insolite en amoureux ?", "Comptez généralement de 150 à 450 € la nuit pour deux selon le lieu et la saison. Chaque fiche indique une fourchette de prix, et le tarif exact est donné sur le site officiel de l'établissement."],
         ["Quand réserver pour la Saint-Valentin ?", "Le plus tôt possible, idéalement un à deux mois avant : ces lieux comptent souvent très peu de chambres ou de cabanes, et les dates clés partent en premier."],
       ],
       tips: [
@@ -615,7 +615,7 @@
       faq: [
         ["Quelle nuit insolite réserver pour la Saint-Valentin ?", "En hiver, privilégiez un lieu chauffé avec un bain chaud privatif : cabane avec jacuzzi, bain nordique ou chalet-spa. Pour une escapade sans voiture, un hôtel de charme à Paris ou à Lyon est aussi une belle idée."],
         ["Quand réserver pour le 14 février ?", "Idéalement un à deux mois avant, dès début janvier au plus tard. Si le 14 tombe en semaine, le week-end le plus proche est le plus demandé : pensez aussi au week-end suivant, plus calme."],
-        ["Combien coûte une nuit romantique insolite ?", "Comptez de 150 à 450 € la nuit pour deux selon le lieu, souvent avec le petit-déjeuner. Chaque fiche indique une fourchette de prix, et le tarif exact s'affiche dès que vous choisissez vos dates."],
+        ["Combien coûte une nuit romantique insolite ?", "Comptez de 150 à 450 € la nuit pour deux selon le lieu, souvent avec le petit-déjeuner. Chaque fiche indique une fourchette de prix, et le tarif exact est donné sur le site officiel de l'établissement."],
       ],
       tips: [
         "Demandez à l'établissement les attentions possibles (bouteille, fleurs, dîner livré, massage en duo) : elles se réservent souvent à l'avance.",
@@ -792,7 +792,7 @@
         const spa = list.filter((h) => /spa|jacuzzi|bain nordique|sauna/i.test((h.amenities || []).join(" ")));
         const faq = [
           [`Quel est l'hébergement insolite le plus proche ${de} ?`, `Parmi notre sélection, ${first.name} (${first.city}) est le plus proche, à environ ${round(first)} km ${de} à vol d'oiseau. ${first.tagline}.`],
-          [`Combien coûte une nuit insolite près ${de} ?`, lo && hi ? `Selon les adresses de ce guide, comptez ${lo === hi ? lo.range : `de ${lo.range.replace(" la nuit", "")} à ${hi.range}`} pour deux personnes, selon le lieu et la saison.` + (cheap.length ? ` Les plus abordables : ${listFr(cheap.slice(0, 3).map((h) => h.name))}.` : "") + " Le prix exact s'affiche dès que vous choisissez vos dates." : "Le prix exact s'affiche dès que vous choisissez vos dates."],
+          [`Combien coûte une nuit insolite près ${de} ?`, lo && hi ? `Selon les adresses de ce guide, comptez ${lo === hi ? lo.range : `de ${lo.range.replace(" la nuit", "")} à ${hi.range}`} pour deux personnes, selon le lieu et la saison.` + (cheap.length ? ` Les plus abordables : ${listFr(cheap.slice(0, 3).map((h) => h.name))}.` : "") + " Le prix exact est donné sur le site officiel de chaque établissement." : "Le prix exact est donné sur le site officiel de chaque établissement."],
         ];
         if (spa.length) faq.push([`Où dormir avec spa ou jacuzzi près ${de} ?`, `${listFr(spa.slice(0, 4).map((h) => `${h.name} (${h.city})`))} proposent un espace bien-être. Vérifiez sur chaque fiche s'il est privatif ou partagé.`]);
         faq.push(train.length

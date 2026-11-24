@@ -183,7 +183,7 @@
               <p class="quiz-budget">${budgetHtml(r.h)} <span>${e(budgetOf(r.h).range)}</span></p>
               <div class="quiz-card-cta">
                 <a class="btn btn-primary" href="${NS.hotelUrl(r.h)}">Découvrir</a>
-                <a class="btn btn-ghost" href="${e(NS.bookingLink(r.h))}" target="_blank" rel="sponsored noopener" data-track="Réservation" data-hotel="${e(r.h.id)}" data-book="${e(r.h.id)}">Voir les prix</a>
+                <a class="btn btn-ghost" href="${e(NS.siteLink(r.h))}" target="_blank" rel="noopener" data-track="Site officiel" data-hotel="${e(r.h.id)}" data-book="${e(r.h.id)}">Réserver en direct</a>
               </div>
             </div>
           </article>`).join("")}

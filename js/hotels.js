@@ -17,10 +17,21 @@
  *   budget      1 à 4 (voir BUDGETS) : niveau de prix indicatif pour 2 personnes
  *   lat / lng   coordonnées GPS
  *   hero        1 à 6 : place dans le diaporama plein écran de l'accueil (optionnel)
- *   bookingUrl  lien de la fiche Booking.com (vide = recherche Booking par nom)
+ *   website     site officiel de l'établissement (bouton « Réserver en direct »)
  *   tags        envies vérifiées : "famille", "train", "chien" (voir TAGS)
  *   forYou / notForYou   « C'est pour vous si… / Moins pour vous si… »
  *   bookingTip  conseil de réservation (facultatif : sinon déduit automatiquement)
+ *   review      ton avis après un séjour (le lieu reçoit alors le badge « Testé ») :
+ *     review: {
+ *       date: "2026-11",                // mois du séjour (obligatoire)
+ *       stay: "Suite Forêt, 1 nuit",     // ce que tu as testé (facultatif)
+ *       invited: false,                  // true si le séjour a été offert (mention affichée)
+ *       scores: { accueil: 9, chambre: 8, literie: 9, table: 8, service: 9, valeur: 7 }, // sur 10
+ *       verdict: "Une phrase qui résume ton avis",
+ *       text: ["Paragraphe 1", "Paragraphe 2"],
+ *       pros: ["Ce que tu as aimé"], cons: ["Ce que tu as moins aimé"],
+ *       tip: "Le conseil du pro : quelle chambre demander, quand venir…",
+ *     },
  *
  * ============================================================
  */
@@ -88,7 +99,7 @@ window.HOTELS = [
     rooms: "18 suites-lodges",
     forYou: ["Vous rêvez de déconnexion totale, sans écran ni Wi-Fi", "Vous aimez l'art contemporain et la forêt", "Vous voulez un jacuzzi rien qu'à vous"],
     notForYou: ["Vous ne pouvez pas couper le téléphone de tout un week-end", "Vous cherchez l'animation d'un grand hôtel"],
-    photos: 6, bookingUrl: "", partners: {},
+    photos: 6, website: "https://loirevalleylodges.com/",
   },
   {
     id: "pella-roca",
@@ -107,7 +118,7 @@ window.HOTELS = [
     rooms: "4 cabanes perchées",
     forYou: ["Vous cherchez l'intimité absolue, à deux", "Vous rêvez de passer du sauna au jacuzzi face à la vallée"],
     notForYou: ["Vous voyagez avec des enfants", "Vous voulez des restaurants et commerces à pied"],
-    photos: 6, bookingUrl: "", partners: {},
+    photos: 6, website: "https://www.pella-roca.com/",
   },
   {
     id: "cabanes-des-grands-lacs",
@@ -126,7 +137,7 @@ window.HOTELS = [
     rooms: "29 cabanes (perchées, flottantes, sur pilotis)",
     forYou: ["Vous voyagez en famille ou entre amis", "Vous aimez l'eau, les passerelles et les grands espaces"],
     notForYou: ["Vous cherchez le luxe d'un hôtel avec room-service", "Vous avez le vertige"],
-    photos: 6, bookingUrl: "", partners: {}, tags: ["famille"],
+    photos: 6, website: "https://www.cabanesdesgrandslacs.com/", tags: ["famille"],
   },
   {
     id: "dihan",
@@ -145,7 +156,7 @@ window.HOTELS = [
     rooms: "32 hébergements insolites",
     forYou: ["Vous voulez choisir parmi 32 hébergements tous différents", "Vous aimez l'idée d'un lieu engagé et labellisé", "Vous voulez la mer à quelques minutes"],
     notForYou: ["Vous voyagez avec votre chien (les animaux ne sont pas acceptés)", "Vous cherchez un hôtel classique"],
-    photos: 6, bookingUrl: "", partners: {}, tags: ["famille", "spa-prive"],
+    photos: 6, website: "https://www.dihan-evasion.com/", tags: ["famille", "spa-prive"],
   },
   {
     id: "attrap-reves-allauch",
@@ -164,7 +175,7 @@ window.HOTELS = [
     rooms: "Bulles pour 2 personnes, plusieurs ambiances",
     forYou: ["Vous rêvez de vous endormir en regardant les étoiles", "Vous préparez une surprise romantique"],
     notForYou: ["Vous tenez à l'intimité d'une chambre fermée", "Vous voyagez à plus de deux"],
-    photos: 6, bookingUrl: "", partners: {},
+    photos: 6, website: "https://www.attrap-reves.com/",
   },
   {
     id: "les-hautes-roches",
@@ -183,7 +194,7 @@ window.HOTELS = [
     rooms: "12 chambres troglodytiques",
     forYou: ["Vous aimez la gastronomie et les vins de Loire", "Vous rêvez de dormir dans la roche, face au fleuve"],
     notForYou: ["Vous cherchez un lieu isolé en pleine nature", "Vous voulez des chambres très lumineuses"],
-    photos: 5, bookingUrl: "", partners: {},
+    photos: 5, website: "https://www.leshautesroches.com/",
   },
   {
     id: "demeure-de-la-vignole",
@@ -202,7 +213,7 @@ window.HOTELS = [
     rooms: "11 chambres, dont 4 troglodytiques",
     forYou: ["Vous voulez une piscine vraiment unique", "Vous visitez les châteaux et les vignobles de Saumur"],
     notForYou: ["Vous cherchez un service de palace", "Vous n'aimez pas les lieux un peu frais et intimistes"],
-    photos: 6, bookingUrl: "", partners: {},
+    photos: 6, website: "https://www.demeure-vignole.com/",
   },
   {
     id: "rocaminori",
@@ -221,7 +232,7 @@ window.HOTELS = [
     rooms: "15 chambres troglodytiques",
     forYou: ["Vous voulez l'expérience troglodyte sans vous ruiner", "Vous êtes curieux d'architecture souterraine"],
     notForYou: ["Vous avez besoin de beaucoup de lumière naturelle", "Vous cherchez un spa et des activités sur place"],
-    photos: 6, bookingUrl: "", partners: {},
+    photos: 6, website: "https://www.rocaminori-hotel.fr/",
   },
   {
     id: "fontevraud-l-ermitage",
@@ -240,7 +251,7 @@ window.HOTELS = [
     rooms: "54 chambres, dont duplex et chambres mansardées",
     forYou: ["Vous aimez l'histoire et les lieux habités par le temps", "Vous rêvez de flâner seul dans une abbaye, le soir"],
     notForYou: ["Vous cherchez une chambre spacieuse et luxueuse", "Vous préférez les lieux isolés en pleine nature"],
-    photos: 4, bookingUrl: "", partners: {},
+    photos: 4, website: "https://www.fontevraud.fr/fontevraud-lermitage/",
   },
   {
     id: "domaine-des-etangs",
@@ -259,7 +270,7 @@ window.HOTELS = [
     rooms: "Chambres, suites et cottages",
     forYou: ["Vous rêvez de nature à perte de vue et de grand confort", "Vous voyagez en famille ou avec votre chien"],
     notForYou: ["Vous cherchez une petite adresse à prix doux", "Vous voulez sortir à pied le soir"],
-    photos: 6, bookingUrl: "", partners: {}, tags: ["chien", "famille"],
+    photos: 6, website: "https://auberge.com/domaine-des-etangs/", tags: ["chien", "famille"],
   },
 
   // ——————————————————— MER ———————————————————
@@ -280,7 +291,7 @@ window.HOTELS = [
     rooms: "Studio au sommet, maison du gardien et chambre à l'huile (8 pers. max)",
     forYou: ["Vous voulez vivre un rêve d'enfant : dormir tout en haut d'un phare", "Vous partez en famille ou entre amis (jusqu'à 8)"],
     notForYou: ["Vous n'aimez pas les escaliers", "Vous cherchez un petit budget"],
-    photos: 6, bookingUrl: "", partners: {}, tags: ["famille"],
+    photos: 6, website: "https://www.pharedekerbel.com/", tags: ["famille"],
   },
   {
     id: "les-roches-rouges",
@@ -299,7 +310,7 @@ window.HOTELS = [
     rooms: "Chambres et suites avec balcon vue mer",
     forYou: ["Vous rêvez de nager dans l'eau de mer… sans le sable", "Vous aimez le design et l'art de vivre méditerranéen", "Vous voyagez avec votre chien"],
     notForYou: ["Vous cherchez un lieu isolé loin de la route", "Vous voulez un séjour à petit budget"],
-    photos: 6, bookingUrl: "", partners: {}, tags: ["chien"],
+    photos: 6, website: "https://www.beaumier.com/en/properties/les-roches-rouges-hotel/", tags: ["chien"],
   },
   {
     id: "auberge-saint-pierre",
@@ -318,7 +329,7 @@ window.HOTELS = [
     rooms: "Chambres réparties dans des maisons anciennes",
     forYou: ["Vous voulez vivre le Mont-Saint-Michel le soir, sans la foule", "Vous aimez les vieilles pierres et l'histoire"],
     notForYou: ["Vous voyagez avec de gros bagages (le Mont se parcourt à pied)", "Vous cherchez des chambres modernes et spacieuses"],
-    photos: 6, bookingUrl: "", partners: {}, tags: ["train"],
+    photos: 6, website: "https://www.auberge-saint-pierre.fr/", tags: ["train"],
   },
 
   // ——————————————————— VILLE ———————————————————
@@ -339,7 +350,7 @@ window.HOTELS = [
     rooms: "54 chambres et 4 suites",
     forYou: ["Vous voulez une adresse parisienne vraiment originale", "Vous aimez les bars et piscines tendance"],
     notForYou: ["Vous voyagez avec votre chien (les animaux ne sont pas acceptés)", "Vous avez le sommeil très léger"],
-    photos: 5, bookingUrl: "", partners: {}, tags: ["train"],
+    photos: 5, website: "https://www.offparisseine.com/", tags: ["train"],
   },
   {
     id: "hotel-le-corbusier",
@@ -358,7 +369,7 @@ window.HOTELS = [
     rooms: "21 chambres",
     forYou: ["Vous êtes passionné d'architecture", "Vous voulez une adresse insolite à petit prix à Marseille"],
     notForYou: ["Vous cherchez de grandes chambres", "Vous voulez la plage au pied de l'hôtel"],
-    photos: 6, bookingUrl: "", partners: {}, tags: ["train"],
+    photos: 6, website: "https://www.hotellecorbusier.com/", tags: ["train"],
   },
 
   // ——————————————————— MONTAGNE ———————————————————
@@ -379,7 +390,7 @@ window.HOTELS = [
     rooms: "16 chambres, 4 appartements et un dortoir",
     forYou: ["Vous rêvez de dormir au-dessus des nuages", "Vous skiez et voulez être le premier sur les pistes"],
     notForYou: ["Vous cherchez un budget serré", "Vous n'aimez pas l'altitude"],
-    photos: 6, bookingUrl: "", partners: {}, tags: ["famille"],
+    photos: 6, website: "https://www.lerefuge-valdisere.com/", tags: ["famille"],
   },
   {
     id: "village-igloo-val-thorens",
@@ -399,7 +410,7 @@ window.HOTELS = [
     season: "De fin décembre à mi-avril",
     forYou: ["Vous voulez une expérience polaire unique en France", "Vous voyagez en famille ou entre amis"],
     notForYou: ["Vous êtes frileux", "Vous cherchez le confort d'un hôtel classique"],
-    photos: 6, bookingUrl: "", partners: {}, tags: ["famille", "train"],
+    photos: 6, website: "https://village-igloo.fr/", tags: ["famille", "train"],
   },
   // ——————————————————— SUITE ———————————————————
   {
@@ -419,7 +430,7 @@ window.HOTELS = [
     rooms: "4 cabanes perchées",
     forYou: ["Vous cherchez l'intimité d'une cabane sans vis-à-vis", "Vous rêvez d'un bain chaud dans les arbres, même l'hiver"],
     notForYou: ["Vous voyagez avec des enfants", "Vous voulez des restaurants à pied"],
-    photos: 6, bookingUrl: "", partners: {},
+    photos: 6, website: "https://www.alpinest.fr/",
   },
   {
     id: "cabanes-du-moulin",
@@ -438,7 +449,7 @@ window.HOTELS = [
     rooms: "3 cabanes perchées",
     forYou: ["Vous habitez Paris et voulez vous évader sans faire de route", "Vous rêvez d'un jacuzzi perché au-dessus de la rivière"],
     notForYou: ["Vous cherchez un hôtel avec services", "Vous avez le vertige"],
-    photos: 6, bookingUrl: "", partners: {},
+    photos: 6, website: "https://www.lescabanesdumoulin.fr/",
   },
   {
     id: "troglododo",
@@ -457,7 +468,7 @@ window.HOTELS = [
     rooms: "14 chambres, dont 6 troglodytiques",
     forYou: ["Vous voulez dormir dans la roche à petit prix", "Vous visitez les châteaux de la Loire à vélo"],
     notForYou: ["Vous cherchez un spa ou une piscine", "Vous voulez un service hôtelier complet"],
-    photos: 6, bookingUrl: "", partners: {},
+    photos: 6, website: "https://www.troglododo.fr/",
   },
   {
     id: "hotel-particulier-montmartre",
@@ -476,7 +487,7 @@ window.HOTELS = [
     rooms: "5 suites de 35 à 85 m²",
     forYou: ["Vous rêvez d'un Paris secret et romantique", "Vous aimez l'art et les adresses confidentielles"],
     notForYou: ["Vous cherchez un grand hôtel avec spa", "Vous préférez le centre historique de Paris"],
-    photos: 6, bookingUrl: "", partners: {}, tags: ["train"],
+    photos: 6, website: "https://www.hotelparticulier.com/", tags: ["train"],
   },
   {
     id: "cour-des-loges",
@@ -495,7 +506,7 @@ window.HOTELS = [
     rooms: "61 chambres et suites",
     forYou: ["Vous voulez dormir au cœur du Vieux Lyon, classé UNESCO", "Vous aimez les demeures chargées d'histoire", "Vous voyagez avec votre chien"],
     notForYou: ["Vous cherchez la nature et le calme de la campagne", "Vous voyagez avec un petit budget"],
-    photos: 6, bookingUrl: "", partners: {}, tags: ["chien", "train"],
+    photos: 6, website: "https://www.radissonhotels.com/fr-fr/hotels/radisson-collection-cour-des-loges-lyon", tags: ["chien", "train"],
   },
   {
     id: "fermes-de-marie",
@@ -514,7 +525,7 @@ window.HOTELS = [
     rooms: "Chambres, suites et chalet privé",
     forYou: ["Vous rêvez d'un chalet chaleureux au cœur de Megève", "Vous voyagez en famille ou avec votre chien"],
     notForYou: ["Vous cherchez une adresse isolée en altitude", "Vous voyagez avec un petit budget"],
-    photos: 6, bookingUrl: "", partners: {}, tags: ["chien", "famille"],
+    photos: 6, website: "https://www.fermesdemarie.com/", tags: ["chien", "famille"],
   },
   {
     id: "chateau-de-la-resle",
@@ -533,7 +544,7 @@ window.HOTELS = [
     rooms: "2 chambres et 5 suites",
     forYou: ["Vous aimez l'art contemporain et les lieux intimes", "Vous visitez la Bourgogne et le Chablisien"],
     notForYou: ["Vous cherchez un grand hôtel animé", "Vous voyagez avec de jeunes enfants"],
-    photos: 6, bookingUrl: "", partners: {},
+    photos: 6, website: "https://chateaudelaresle.com/",
   },
   {
     id: "chateau-de-mercues",
@@ -552,7 +563,7 @@ window.HOTELS = [
     rooms: "25 chambres et 5 suites",
     forYou: ["Vous aimez le vin et les châteaux perchés", "Vous voyagez avec votre chien"],
     notForYou: ["Vous cherchez un séjour à petit budget", "Vous voulez un lieu très contemporain"],
-    photos: 4, bookingUrl: "", partners: {}, tags: ["chien"],
+    photos: 4, website: "https://chateaudemercues.com/", tags: ["chien"],
   },
   {
     id: "sources-de-caudalie",
@@ -571,7 +582,7 @@ window.HOTELS = [
     rooms: "Chambres et suites signature",
     forYou: ["Vous aimez le vin et le bien-être", "Vous rêvez d'une suite sur pilotis au-dessus de l'eau", "Vous voyagez avec votre chien"],
     notForYou: ["Vous cherchez un petit budget", "Vous préférez les lieux sauvages et isolés"],
-    photos: 6, bookingUrl: "", partners: {}, tags: ["chien"],
+    photos: 6, website: "https://www.sources-caudalie.com/", tags: ["chien"],
   },
   {
     id: "casadelmar",
@@ -590,7 +601,7 @@ window.HOTELS = [
     rooms: "34 chambres et suites",
     forYou: ["Vous rêvez de la Corse côté grand luxe", "Vous voulez chaque matin la mer depuis votre lit"],
     notForYou: ["Vous cherchez un séjour à petit budget", "Vous préférez les lieux rustiques"],
-    photos: 6, bookingUrl: "", partners: {},
+    photos: 6, website: "https://www.casadelmar.fr/",
   },
   {
     id: "la-coorniche",
@@ -609,7 +620,7 @@ window.HOTELS = [
     rooms: "29 chambres et suites",
     forYou: ["Vous rêvez de la dune du Pilat au coucher du soleil", "Vous aimez le design et l'océan"],
     notForYou: ["Vous cherchez un petit budget", "Vous voulez des plages désertes et sauvages"],
-    photos: 6, bookingUrl: "", partners: {},
+    photos: 6, website: "https://lacoorniche.com/",
   },
   // ——————————————————— NOUVELLES ADRESSES ———————————————————
   {
@@ -630,7 +641,7 @@ window.HOTELS = [
     season: "À réserver plusieurs mois à l'avance",
     forYou: ["Vous êtes passionné d'étoiles et d'astronomie", "Vous voulez vivre une nuit vraiment unique au monde"],
     notForYou: ["Vous supportez mal l'altitude", "Vous ne pouvez pas réserver des mois à l'avance"],
-    photos: 6, bookingUrl: "", partners: {},
+    photos: 6, website: "https://picdumidi.com/",
   },
   {
     id: "refuge-du-montenvers",
@@ -649,7 +660,7 @@ window.HOTELS = [
     rooms: "20 chambres, suites et dortoirs",
     forYou: ["Vous rêvez de haute montagne sans être alpiniste", "Vous voulez venir sans voiture, en petit train"],
     notForYou: ["Vous cherchez un hôtel de grand luxe", "Vous voyagez avec un petit budget"],
-    photos: 6, bookingUrl: "", partners: {}, tags: ["famille", "train"],
+    photos: 6, website: "https://www.refugedumontenvers.com/", tags: ["famille", "train"],
   },
   {
     id: "refuge-de-la-traye",
@@ -668,7 +679,7 @@ window.HOTELS = [
     rooms: "Chambres, suites et appartements",
     forYou: ["Vous rêvez de montagne isolée, avec tout le confort", "Vous skiez dans les Trois Vallées"],
     notForYou: ["Vous voyagez avec un petit budget", "Vous préférez l'animation d'une station"],
-    photos: 6, bookingUrl: "", partners: {}, tags: ["famille"],
+    photos: 6, website: "https://www.refugedelatraye.com/", tags: ["famille"],
   },
   {
     id: "refuge-chez-la-tante",
@@ -687,7 +698,7 @@ window.HOTELS = [
     rooms: "20 chambres, dont un penthouse",
     forYou: ["Vous voulez la montagne pour vous seul, face au Mont-Blanc", "Vous skiez et aimez le chalet de luxe"],
     notForYou: ["Vous voyagez avec un petit budget", "Vous voulez sortir en ville le soir"],
-    photos: 6, bookingUrl: "", partners: {},
+    photos: 6, website: "https://www.refugechezlatante.com/",
   },
   {
     id: "molitor",
@@ -706,7 +717,7 @@ window.HOTELS = [
     rooms: "124 chambres et suites",
     forYou: ["Vous rêvez de nager dans une piscine mythique", "Vous aimez l'art urbain et l'Art déco"],
     notForYou: ["Vous cherchez le calme d'un petit hôtel", "Vous voulez loger au cœur du Paris historique"],
-    photos: 6, bookingUrl: "", partners: {}, tags: ["train"],
+    photos: 6, website: "https://www.molitorparis.com/", tags: ["train"],
   },
   {
     id: "maison-souquet",
@@ -725,7 +736,7 @@ window.HOTELS = [
     rooms: "Chambres et suites",
     forYou: ["Vous aimez les lieux à l'histoire sulfureuse", "Vous préparez une escapade romantique à Paris"],
     notForYou: ["Vous cherchez un décor minimaliste", "Vous voyagez avec des enfants"],
-    photos: 3, bookingUrl: "", partners: {}, tags: ["train"],
+    photos: 3, website: "https://www.maisonsouquet.com/", tags: ["train"],
   },
   {
     id: "intercontinental-lyon-hotel-dieu",
@@ -744,7 +755,7 @@ window.HOTELS = [
     rooms: "144 chambres et suites",
     forYou: ["Vous aimez les monuments historiques", "Vous voulez un grand hôtel au cœur de Lyon"],
     notForYou: ["Vous cherchez une petite adresse intime", "Vous préférez la nature"],
-    photos: 6, bookingUrl: "", partners: {}, tags: ["train"],
+    photos: 6, website: "https://lyon.intercontinental.com/", tags: ["train"],
   },
   {
     id: "hotel-de-la-cite-carcassonne",
@@ -763,7 +774,7 @@ window.HOTELS = [
     rooms: "Chambres et suites",
     forYou: ["Vous rêvez d'avoir la Cité médiévale pour vous le soir", "Vous voyagez avec votre chien"],
     notForYou: ["Vous cherchez un décor contemporain", "Vous voyagez avec un petit budget"],
-    photos: 6, bookingUrl: "", partners: {}, tags: ["chien", "train"],
+    photos: 6, website: "https://all.accor.com/hotel/8613/index.fr.shtml", tags: ["chien", "train"],
   },
   {
     id: "grand-controle-versailles",
@@ -782,7 +793,7 @@ window.HOTELS = [
     rooms: "15 chambres et suites",
     forYou: ["Vous rêvez de vivre Versailles comme un invité du roi", "Vous préparez un moment exceptionnel"],
     notForYou: ["Vous voyagez avec un petit budget", "Vous préférez les lieux simples et décontractés"],
-    photos: 6, bookingUrl: "", partners: {}, tags: ["train"],
+    photos: 6, website: "https://airelles.com/fr/destination/chateau-de-versailles-hotel", tags: ["train"],
   },
   {
     id: "ile-louet",
@@ -802,7 +813,7 @@ window.HOTELS = [
     season: "Réservations ouvertes une fois par an (office de tourisme de la baie de Morlaix)",
     forYou: ["Vous rêvez d'une île rien qu'à vous", "Vous partez en famille ou entre amis (jusqu'à 10)"],
     notForYou: ["Vous ne pouvez pas vous organiser longtemps à l'avance", "Vous cherchez un service hôtelier"],
-    photos: 5, bookingUrl: "", partners: {}, tags: ["famille"],
+    photos: 5, website: "https://www.baiedemorlaix.bzh/fr/s-inspirer/ile-louet-vivre-une-experience-unique", tags: ["famille"],
   },
   {
     id: "cap-estel",
@@ -821,7 +832,7 @@ window.HOTELS = [
     rooms: "28 chambres et suites",
     forYou: ["Vous rêvez de la Côte d'Azur les pieds dans l'eau, au calme", "Vous préparez une escapade de prestige"],
     notForYou: ["Vous voyagez avec un petit budget", "Vous voulez des plages de sable"],
-    photos: 6, bookingUrl: "", partners: {}, tags: ["train"],
+    photos: 6, website: "https://www.capestel.com/", tags: ["train"],
   },
   {
     id: "relais-de-chambord",
@@ -840,7 +851,7 @@ window.HOTELS = [
     rooms: "55 chambres et suites, dont une toue cabanée",
     forYou: ["Vous rêvez de vous réveiller face au château de Chambord", "Vous voyagez avec votre chien"],
     notForYou: ["Vous cherchez un lieu très confidentiel", "Vous voyagez avec un petit budget"],
-    photos: 6, bookingUrl: "", partners: {}, tags: ["chien"],
+    photos: 6, website: "https://relaisdechambord.com/", tags: ["chien"],
   },
   {
     id: "toue-cabanee-canal-de-bourgogne",
@@ -859,7 +870,7 @@ window.HOTELS = [
     rooms: "1 toue pour 2 personnes",
     forYou: ["Vous rêvez d'une nuit sur l'eau, rien qu'à deux", "Vous aimez le calme des canaux et le vélo"],
     notForYou: ["Vous voyagez à plus de deux", "Vous cherchez un restaurant sur place"],
-    photos: 6, bookingUrl: "", partners: {},
+    photos: 6, website: "https://leslodgesducanal.fr/la-toue-cabanee/",
   },
   {
     id: "moulin-du-roc",
@@ -878,7 +889,7 @@ window.HOTELS = [
     rooms: "15 chambres",
     forYou: ["Vous aimez les lieux de charme au bord de l'eau", "Vous explorez le Périgord vert", "Vous voyagez avec votre chien"],
     notForYou: ["Vous cherchez un design contemporain", "Vous voulez l'animation d'une ville"],
-    photos: 5, bookingUrl: "", partners: {}, tags: ["chien"],
+    photos: 5, website: "https://www.dordogne-perigord-tourisme.fr/offres/le-moulin-du-roc-champagnac-de-belair-fr-2939663/", tags: ["chien"],
   },
   // ——————————————————— NOUVELLES ADRESSES (septembre 2026) ———————————————————
   {
@@ -898,7 +909,7 @@ window.HOTELS = [
     rooms: "3 bulles pour 2 personnes",
     forYou: ["Vous rêvez d'une nuit sous les étoiles en toute intimité", "Vous voulez un jacuzzi privatif rien qu'à deux"],
     notForYou: ["Vous voyagez avec des enfants", "Vous tenez aux toilettes classiques (elles sont sèches)"],
-    photos: 6, bookingUrl: "", partners: {},
+    photos: 6, website: "https://www.lesbullesdesavoie.com/",
   },
   {
     id: "cabanes-lacustra",
@@ -917,7 +928,7 @@ window.HOTELS = [
     rooms: "4 cabanes sur l'eau (3 couchages)",
     forYou: ["Vous aimez l'aventure et la nature brute", "Vous voulez une nuit insolite à petit prix", "Vous voyagez en famille (3 couchages)"],
     notForYou: ["Vous tenez à une douche dans la cabane", "Vous n'êtes pas à l'aise en canoë"],
-    photos: 6, bookingUrl: "", partners: {}, tags: ["famille"],
+    photos: 6, website: "https://www.cabanes-lacustra.fr/", tags: ["famille"],
   },
   {
     id: "chateau-de-la-treyne",
@@ -936,7 +947,7 @@ window.HOTELS = [
     rooms: "18 chambres et suites",
     forYou: ["Vous rêvez d'un château de conte au-dessus d'une rivière", "Vous aimez la grande table", "Vous voyagez avec votre chien"],
     notForYou: ["Vous voyagez avec un petit budget", "Vous cherchez un décor contemporain"],
-    photos: 6, bookingUrl: "", partners: {}, tags: ["chien"],
+    photos: 6, website: "https://www.chateaudelatreyne.com/", tags: ["chien"],
   },
   {
     id: "ecrin-d-auvergne",
@@ -955,7 +966,7 @@ window.HOTELS = [
     rooms: "Lodges pour 2 personnes",
     forYou: ["Vous cherchez un séjour à deux, au calme absolu", "Vous rêvez d'un bain chaud face aux prairies"],
     notForYou: ["Vous voyagez avec des enfants (réservé aux adultes)", "Vous voulez des restaurants à pied"],
-    photos: 6, bookingUrl: "", partners: {},
+    photos: 6, website: "https://www.ecrin-auvergne.com/",
   },
   {
     id: "etape-en-foret",
@@ -974,7 +985,7 @@ window.HOTELS = [
     rooms: "22 hébergements (2 à 6 personnes)",
     forYou: ["Vous voyagez en famille ou entre amis", "Vous aimez la forêt et les activités en plein air"],
     notForYou: ["Vous cherchez l'intimité d'une adresse confidentielle", "Vous voulez un service hôtelier complet"],
-    photos: 6, bookingUrl: "", partners: {}, tags: ["famille"],
+    photos: 6, website: "https://www.etape-en-foret.com/", tags: ["famille"],
   },
   {
     id: "gare-de-guiscriff",
@@ -993,7 +1004,7 @@ window.HOTELS = [
     rooms: "5 compartiments (jusqu'à 11 personnes)",
     forYou: ["Vous êtes passionné de trains et d'histoire", "Vous voyagez à vélo sur la voie verte", "Vous cherchez une nuit insolite à petit prix"],
     notForYou: ["Vous tenez à une salle de bain privée", "Vous cherchez le luxe"],
-    photos: 6, bookingUrl: "", partners: {}, tags: ["famille"],
+    photos: 6, website: "https://www.lagaredeguiscriff.com/", tags: ["famille"],
   },
   {
     id: "nids-des-vosges",
@@ -1012,7 +1023,7 @@ window.HOTELS = [
     rooms: "14 cabanes perchées",
     forYou: ["Vous rêvez d'une cabane dans les sapins avec bain nordique", "Vous partez en famille ou en tribu (jusqu'à 15 dans la Villa Forêt)"],
     notForYou: ["Vous avez le vertige", "Vous cherchez un hôtel avec restaurant"],
-    photos: 6, bookingUrl: "", partners: {}, tags: ["famille"],
+    photos: 6, website: "https://www.cabanesnidsdesvosges.com/", tags: ["famille"],
   },
   {
     id: "domaine-de-murtoli",
@@ -1032,7 +1043,7 @@ window.HOTELS = [
     season: "Ouvert d'avril à décembre",
     forYou: ["Vous rêvez d'une Corse secrète, loin de tout", "Vous voulez une maison avec piscine rien qu'à vous", "Vous partez en famille ou entre amis"],
     notForYou: ["Vous voyagez avec un petit budget", "Vous voulez sortir le soir en ville"],
-    photos: 6, bookingUrl: "", partners: {}, tags: ["famille"],
+    photos: 6, website: "https://www.murtoli.com/", tags: ["famille"],
   },
   {
     id: "villa-la-coste",
@@ -1051,7 +1062,7 @@ window.HOTELS = [
     rooms: "28 villas-suites",
     forYou: ["Vous aimez l'art contemporain et l'architecture", "Vous rêvez de vignes, de Provence et de grande table"],
     notForYou: ["Vous voyagez avec un petit budget", "Vous cherchez une adresse rustique"],
-    photos: 5, bookingUrl: "", partners: {},
+    photos: 5, website: "https://villalacoste.com/",
   },
   {
     id: "nids-de-chlorofil",
@@ -1071,7 +1082,7 @@ window.HOTELS = [
     season: "Renseignez-vous sur les dates d'ouverture auprès de l'établissement",
     forYou: ["Vous habitez la métropole lilloise et voulez partir sans faire de route", "Vous cherchez une première nuit perchée, à petit prix"],
     notForYou: ["Vous voulez un spa ou un jacuzzi", "Vous avez le vertige"],
-    photos: 4, bookingUrl: "", partners: {}, tags: ["famille"],
+    photos: 4, website: "https://www.chloro-fil.fr/lesnidsdechlorofil/", tags: ["famille"],
   },
   {
     id: "cabanes-de-blanche",
@@ -1091,7 +1102,7 @@ window.HOTELS = [
     season: "Bulles de mi-avril à fin septembre ; cabane perchée ouverte toute l'année",
     forYou: ["Vous préparez une nuit romantique à deux", "Vous rêvez de dormir sous les étoiles avec un bain chaud"],
     notForYou: ["Vous voyagez en famille nombreuse", "Vous cherchez un grand hôtel avec restaurant"],
-    photos: 6, bookingUrl: "", partners: {},
+    photos: 6, website: "https://www.lescabanesdeblanche.com/",
   },
   {
     id: "lieu-dieu",
@@ -1110,7 +1121,7 @@ window.HOTELS = [
     rooms: "Cabane flottante, roulotte, yourte, Goutte d'Ô, maisons et gîtes de groupe",
     forYou: ["Vous aimez les chevaux et les grands espaces", "Vous cherchez une escapade à deux heures de Paris ou de Lille"],
     notForYou: ["Vous voulez un service hôtelier avec restaurant", "Vous cherchez une chambre d'hôtel classique"],
-    photos: 6, bookingUrl: "", partners: {}, tags: ["famille", "chien"],
+    photos: 6, website: "https://www.lieudieu.com/", tags: ["famille", "chien"],
   },
   {
     id: "villa-rene-lalique",
@@ -1129,7 +1140,7 @@ window.HOTELS = [
     rooms: "6 suites",
     forYou: ["Vous aimez les arts décoratifs et la grande cuisine", "Vous voulez marquer une grande occasion"],
     notForYou: ["Vous cherchez une nuit nature et rustique", "Vous voyagez avec un petit budget"],
-    photos: 6, bookingUrl: "", partners: {},
+    photos: 6, website: "https://www.villarenelalique.com/",
   },
   {
     id: "cabanes-du-goutty",
@@ -1148,7 +1159,7 @@ window.HOTELS = [
     rooms: "5 cabanes (2 à 4 personnes)",
     forYou: ["Vous voulez une vraie nuit nature, simple et déconnectée", "Vous partez en famille avec de jeunes aventuriers"],
     notForYou: ["Vous tenez à une salle de bains privée", "Vous voulez un spa ou un restaurant sur place"],
-    photos: 6, bookingUrl: "", partners: {}, tags: ["famille"],
+    photos: 6, website: "https://www.cabanesdugoutty.fr/", tags: ["famille"],
   },
   {
     id: "domaine-du-chatelet",
@@ -1167,7 +1178,7 @@ window.HOTELS = [
     rooms: "Cabanes, roulotte, yourte et gîtes",
     forYou: ["Vous cherchez un week-end à deux avec bain chaud dans les Vosges", "Vous voyagez avec des enfants qui aiment les animaux"],
     notForYou: ["Vous cherchez une adresse de luxe", "Vous voulez un restaurant gastronomique sur place"],
-    photos: 5, bookingUrl: "", partners: {}, tags: ["famille"],
+    photos: 5, website: "https://www.domaineduchatelet.com/", tags: ["famille"],
   },
   {
     id: "cabane-du-perche",
@@ -1187,7 +1198,7 @@ window.HOTELS = [
     season: "Ouvert toute l'année",
     forYou: ["Vous cherchez un anniversaire ou une Saint-Valentin mémorable", "Vous voulez partir de Paris sans passer le week-end sur la route"],
     notForYou: ["Vous voulez des restaurants à pied", "Vous cherchez une grande structure avec activités"],
-    photos: 6, bookingUrl: "", partners: {}, tags: ["famille"],
+    photos: 6, website: "https://www.cabane-dans-arbres.com/", tags: ["famille"],
   },
   {
     id: "landifornia-lodge",
@@ -1207,7 +1218,7 @@ window.HOTELS = [
     season: "Ouvert toute l'année",
     forYou: ["Vous aimez l'esprit slow life et les lieux faits main", "Vous voulez combiner nature et plages de l'Atlantique"],
     notForYou: ["Vous voyagez avec un animal (non accepté)", "Vous avez de très jeunes enfants (cabane de l'étang interdite aux moins de 8 ans)"],
-    photos: 6, bookingUrl: "", partners: {},
+    photos: 6, website: "https://www.landifornia-lodge.com/",
   },
 ];
 

@@ -99,7 +99,7 @@ function hotelFaq(h) {
   const T = TYPES[h.type], b = budgetOf(h), tags = C.tagsOf(h);
   const faq = [
     [`Où se trouve ${h.name} ?`, `${h.name} se trouve à ${h.city} (${h.department}, région ${h.region}). Adresse : ${h.address}.`],
-    [`Combien coûte une nuit à ${h.name} ?`, `Comptez ${b.range} pour deux personnes, à titre indicatif : le prix varie selon la saison, le jour de la semaine et l'hébergement choisi. Indiquez vos dates pour voir le tarif exact et les disponibilités.`],
+    [`Combien coûte une nuit à ${h.name} ?`, `Comptez ${b.range} pour deux personnes, à titre indicatif : le prix varie selon la saison, le jour de la semaine et l'hébergement choisi. Le tarif exact et les disponibilités sont donnés sur le site officiel de l'établissement.`],
     [`Quel type d'hébergement propose ${h.name} ?`, `${T.label} : ${h.rooms.charAt(0).toLowerCase()}${h.rooms.slice(1)}.${h.amenities.length ? ` Sur place : ${h.amenities.slice(0, 5).join(", ").toLowerCase()}.` : ""}`],
     [`Quand réserver ?`, `${C.bookingTip(h)}${h.season ? ` À noter : ${h.season.charAt(0).toLowerCase()}${h.season.slice(1)}.` : ""}`],
   ];
@@ -110,12 +110,42 @@ function hotelFaq(h) {
   return faq;
 }
 
+/* Avis « Testé » : séjour réel de l'auteur, avec mention obligatoire
+ * lorsque le séjour a été offert (loi du 9 juin 2023 sur l'influence). */
+function reviewSection(h) {
+  if (!C.isTested(h)) return "";
+  const R = h.review, score = C.reviewScore(h), A = CONFIG.author;
+  const scores = C.REVIEW_CRITERIA.filter(([k]) => typeof (R.scores || {})[k] === "number");
+  return `
+        <section id="avis" class="review reveal">
+          <div class="review-head">
+            <div>
+              <p class="eyebrow dark">✓ Testé · ${e(C.reviewDate(h))}</p>
+              <h2>L'avis du pro</h2>
+              <p class="review-by">Par <a href="../a-propos.html">${e(A.name)}</a>, ${e(A.title.charAt(0).toLowerCase() + A.title.slice(1))}${R.stay ? ` · ${e(R.stay)}` : ""}</p>
+            </div>
+            ${score != null ? `<p class="review-score"><strong>${C.fmtScore(score)}</strong><span>/10</span></p>` : ""}
+          </div>
+          ${R.verdict ? `<p class="review-verdict">« ${e(R.verdict)} »</p>` : ""}
+          ${scores.length ? `<ul class="review-scores">${scores.map(([k, label]) => `<li><span>${e(label)}</span><i style="--v:${R.scores[k] * 10}%"></i><b>${C.fmtScore(R.scores[k])}</b></li>`).join("")}</ul>` : ""}
+          ${(R.text || []).map((p) => `<p class="body">${e(p)}</p>`).join("\n          ")}
+          ${(R.pros || []).length || (R.cons || []).length ? `
+          <div class="fit">
+            <div class="fit-col fit-yes"><h3>On a aimé</h3><ul>${(R.pros || []).map((x) => `<li>${e(x)}</li>`).join("")}</ul></div>
+            <div class="fit-col fit-no"><h3>On a moins aimé</h3><ul>${(R.cons || []).map((x) => `<li>${e(x)}</li>`).join("")}</ul></div>
+          </div>` : ""}
+          ${R.tip ? `<p class="review-tip"><strong>Le conseil du pro</strong> ${e(R.tip)}</p>` : ""}
+          <p class="review-disclosure">${R.invited
+            ? "Séjour offert par l'établissement. Comme toujours, l'avis est libre : l'établissement ne l'a ni relu ni validé."
+            : "Séjour réservé et payé par nos soins, comme un client ordinaire."} <a href="../a-propos.html#charte">Notre charte</a></p>
+        </section>`;
+}
+
 function hotelPage(h) {
   const T = TYPES[h.type], E = ENVS[h.env], b = budgetOf(h);
   const url = abs(`hotels/${h.id}.html`);
-  const book = C.bookingLink(h);
-  const others = C.partnerLinks(h);
-  const trk = `data-track="Réservation" data-hotel="${e(h.id)}" data-book="${e(h.id)}"`;
+  const book = C.siteLink(h);
+  const trk = `data-track="Site officiel" data-hotel="${e(h.id)}" data-book="${e(h.id)}"`;
   const title = `${h.name} (${h.city}) : nuit insolite, ${T.label.toLowerCase()} | ${CONFIG.siteName}`;
   const description = clip(`${h.tagline}. ${h.description[0]}`);
   const allGuides = C.guidesFor(h);
@@ -139,6 +169,15 @@ function hotelPage(h) {
       priceRange: `${"€".repeat(h.budget)} (${b.range})`,
       amenityFeature: h.amenities.map((a) => ({ "@type": "LocationFeatureSpecification", name: a, value: true })),
       ...(tags.includes("chien") ? { petsAllowed: true } : {}),
+      ...(C.isTested(h) && C.reviewScore(h) != null ? {
+        review: {
+          "@type": "Review",
+          author: { "@type": "Person", name: CONFIG.author.name, url: abs("a-propos.html") },
+          datePublished: h.review.published || `${h.review.date}-01`.slice(0, 10),
+          reviewRating: { "@type": "Rating", ratingValue: C.reviewScore(h), bestRating: 10, worstRating: 0 },
+          ...(h.review.verdict ? { reviewBody: h.review.verdict } : {}),
+        },
+      } : {}),
     },
     {
       "@context": "https://schema.org",
@@ -148,11 +187,10 @@ function hotelPage(h) {
     breadcrumbLd([["Accueil", `${SITE}/`], [E.label, abs(`index.html?env=${h.env}`)], [h.name, url]]),
   ];
 
-  const adultsOptions = [1, 2, 3, 4, 5, 6].map((n) => `<option value="${n}"${n === 2 ? " selected" : ""}>${n} adulte${n > 1 ? "s" : ""}</option>`).join("");
 
   return `${head({ title, description, canonical: url, image: absImg(h.images[0]), type: "place", ld, leaflet: true })}
 <body class="detail" data-hotel="${e(h.id)}">
-  <a class="skip" href="#experience">Aller au contenu</a>
+  <a class="skip" href="${C.isTested(h) ? "#avis" : "#experience"}">Aller au contenu</a>
   <header id="site-header" class="site-header on-dark">${C.header()}</header>
 
   <main id="hotel">
@@ -170,6 +208,7 @@ function hotelPage(h) {
         <p class="card-type light">${T.icon} ${e(T.label)} · ${e(E.label)}</p>
         <h1>${e(h.name)}</h1>
         <p class="d-tagline">${e(h.tagline)}</p>
+        ${C.isTested(h) ? `<a class="d-tested" href="#avis">✓ Testé par ${e(CONFIG.author.name)}${C.reviewScore(h) != null ? ` · <strong>${C.fmtScore(C.reviewScore(h))}/10</strong>` : ""}</a>` : ""}
         <div class="d-meta">
           <span>📍 ${e(h.city)}, ${e(h.region)}</span>
           <span class="dist-chip" data-dist hidden></span>
@@ -177,7 +216,7 @@ function hotelPage(h) {
         </div>
         ${tags.length ? `<ul class="d-tags" aria-label="Envies">${tags.map((t) => `<li>${C.data().TAGS[t].icon} ${e(C.data().TAGS[t].label)}</li>`).join("")}</ul>` : ""}
         <div class="d-actions">
-          <a class="btn btn-primary" href="#reserver" data-scroll-book>Choisir mes dates</a>
+          <a class="btn btn-primary" href="${e(book)}" target="_blank" rel="noopener" ${trk}>Réserver en direct</a>
           <button type="button" class="btn btn-glass" data-open-gallery>▦ ${h.images.length} photos</button>
           ${C.favButton(h, "fav-lg fav-glass")}
           <button type="button" class="btn-round" data-compare="${e(h.id)}" aria-pressed="false" aria-label="Ajouter ${e(h.name)} au comparateur" title="Comparer">⇄</button>
@@ -188,18 +227,20 @@ function hotelPage(h) {
 
     <nav class="d-tabs" id="d-tabs" aria-label="Sections de la page">
       <div class="container d-tabs-inner">
-        <a href="#experience" class="on">L'expérience</a>
+        ${C.isTested(h) ? `<a href="#avis" class="on">L'avis du pro</a>` : ""}
+        <a href="#experience"${C.isTested(h) ? "" : ` class="on"`}>L'expérience</a>
         <a href="#photos">Photos</a>
         <a href="#pour-qui">Pour qui ?</a>
         <a href="#infos">Infos pratiques</a>
         <a href="#questions">Questions</a>
         <a href="#localisation">Localisation</a>
-        <a class="d-tabs-book btn btn-primary" href="${e(book)}" target="_blank" rel="sponsored noopener" ${trk}>Réserver</a>
+        <a class="d-tabs-book btn btn-primary" href="${e(book)}" target="_blank" rel="noopener" ${trk}>Réserver en direct</a>
       </div>
     </nav>
 
     <div class="container detail-layout">
       <article class="detail-content">
+        ${reviewSection(h)}
         <section id="experience">
           <p class="eyebrow dark reveal">Pourquoi on l'aime</p>
           <ul class="highlights">
@@ -273,22 +314,13 @@ function hotelPage(h) {
 
       <aside class="book-card" id="reserver" aria-label="Réservation">
         <p class="book-price">${budgetHtml(h)} <span>${e(b.range)}</span></p>
-        <form class="stay" data-stay data-hotel="${e(h.id)}" autocomplete="off">
-          <div class="stay-dates">
-            <label><span>Arrivée</span><input type="date" name="checkin" aria-label="Date d'arrivée"></label>
-            <label><span>Départ</span><input type="date" name="checkout" aria-label="Date de départ"></label>
-          </div>
-          <label class="stay-guests"><span>Voyageurs</span><select name="adults" data-fancy="form" aria-label="Nombre de voyageurs">${adultsOptions}</select></label>
-          <p class="stay-note" data-stay-note aria-live="polite">Choisissez vos dates : vous arriverez directement sur les tarifs de votre séjour.</p>
-          <button type="button" class="btn-text stay-clear" data-stay-clear>Effacer les dates</button>
-        </form>
-        <a class="btn btn-primary btn-block" href="${e(book)}" target="_blank" rel="sponsored noopener" ${trk}>Voir les prix sur Booking.com</a>
-        ${others.map((o) => `<a class="btn btn-ghost btn-block" href="${e(o.href)}" target="_blank" rel="sponsored noopener" data-track="Partenaire" data-hotel="${e(h.id)}" data-partner="${e(o.key)}">Comparer sur ${e(o.name)}</a>`).join("")}
+        <a class="btn btn-primary btn-block" href="${e(book)}" target="_blank" rel="noopener" ${trk}>Réserver en direct</a>
+        <p class="book-direct">Sur le site officiel de l'établissement : tarifs, disponibilités et conditions à jour.</p>
         <p class="book-tip"><strong>Conseil</strong> ${e(C.bookingTip(h))}</p>
         <ul class="book-perks">
-          <li>✓ Réservation sécurisée chez notre partenaire</li>
-          <li>✓ Aucun frais supplémentaire</li>
-          <li>✓ Annulation selon les conditions de l'offre</li>
+          <li>✓ Réservation directe, sans intermédiaire</li>
+          <li>✓ Aucune commission : nos conseils sont libres</li>
+          <li>✓ Une question ? L'établissement vous répond lui-même</li>
         </ul>
         ${gift ? `<a class="book-gift" href="${C.guideUrl(gift)}">🎁 Envie d'offrir cette nuit ? <span>Nos idées cadeaux →</span></a>` : ""}
       </aside>
@@ -307,8 +339,8 @@ function hotelPage(h) {
 
     <div class="mobile-book">
       <span>${budgetHtml(h)}<small>${e(b.short || "")}</small></span>
-      <a class="btn btn-ghost" href="#reserver" data-scroll-book>Dates</a>
-      <a class="btn btn-primary" href="${e(book)}" target="_blank" rel="sponsored noopener" ${trk}>Réserver</a>
+      <a class="btn btn-ghost" href="#reserver" data-scroll-book>Infos</a>
+      <a class="btn btn-primary" href="${e(book)}" target="_blank" rel="noopener" ${trk}>Réserver en direct</a>
     </div>
   </main>
 
@@ -359,7 +391,7 @@ function guidePage(g) {
 
   const items = list.map((h, i) => {
     const T = TYPES[h.type];
-    const book = C.bookingLink(h);
+    const book = C.siteLink(h);
     return `
       <article class="g-item reveal" id="${e(h.id)}">
         <div class="g-media">
@@ -377,7 +409,7 @@ function guidePage(g) {
           <ul class="g-hl">${h.highlights.map((x) => `<li>${e(x)}</li>`).join("")}</ul>
           <div class="g-cta">
             <a class="btn btn-ghost" href="${C.hotelUrl(h)}">Voir la fiche</a>
-            <a class="btn btn-primary" href="${e(book)}" target="_blank" rel="sponsored noopener" data-track="Réservation" data-hotel="${e(h.id)}" data-book="${e(h.id)}">Voir les disponibilités</a>
+            <a class="btn btn-primary" href="${e(book)}" target="_blank" rel="noopener" data-track="Site officiel" data-hotel="${e(h.id)}" data-book="${e(h.id)}">Réserver en direct</a>
           </div>
         </div>
       </article>`;
@@ -408,15 +440,6 @@ function guidePage(g) {
       </nav>
     </div>
 
-    <form class="stay stay-bar container" data-stay data-empty="Ajoutez vos dates : tous les liens « Voir les disponibilités » de ce guide afficheront les tarifs de votre séjour." autocomplete="off">
-      <p class="stay-bar-title">Vos dates</p>
-      <div class="stay-dates">
-        <label><span>Arrivée</span><input type="date" name="checkin" aria-label="Date d'arrivée"></label>
-        <label><span>Départ</span><input type="date" name="checkout" aria-label="Date de départ"></label>
-      </div>
-      <p class="stay-note" data-stay-note aria-live="polite"></p>
-      <button type="button" class="btn-text stay-clear" data-stay-clear>Effacer</button>
-    </form>
 
     <section class="container g-list" id="liste">${items}
     </section>
@@ -450,10 +473,8 @@ ${g.gift ? giftBlock() : ""}
 `;
 }
 
-/* Bloc « coffrets cadeaux » du guide cadeau : n'affiche que les coffrets
- * dont le lien affilié est renseigné dans config.js (gifts). */
+/* Bloc « comment offrir » du guide cadeau */
 function giftBlock() {
-  const gifts = (CONFIG.gifts || []).filter((x) => x.url);
   return `
     <section class="container g-gift reveal">
       <div>
@@ -465,7 +486,6 @@ function giftBlock() {
         <li><strong>Un bon cadeau de l'établissement</strong><span>Beaucoup de lieux insolites vendent des bons cadeaux, parfois sur leur site : demandez-leur directement.</span></li>
         <li><strong>Un coffret à choisir</strong><span>Pour laisser le choix du lieu et des dates, optez pour un coffret « séjour insolite ».</span></li>
       </ol>
-      ${gifts.length ? `<div class="gift-boxes">${gifts.map((x) => `<a class="gift-box" href="${e(x.url)}" target="_blank" rel="sponsored noopener" data-track="Coffret" data-hotel="${e(x.name)}"><strong>${e(x.name)}</strong><span>${e(x.pitch)}</span><em>Voir les coffrets →</em></a>`).join("")}</div>` : ""}
     </section>`;
 }
 
@@ -572,9 +592,9 @@ function homeFaqData() {
       html: "Le plus tôt possible pour les week-ends, les ponts et les vacances scolaires : beaucoup de lieux insolites ne comptent que quelques cabanes ou chambres. En semaine, le choix est plus large et les prix souvent plus doux.",
     },
     {
-      q: "Est-ce plus cher de réserver via Nuits Singulières ?",
-      a: "Non. Le prix est exactement le même que sur le site de réservation : nous touchons une petite commission de sa part, sans aucun surcoût pour vous. Notre sélection reste indépendante : aucun établissement ne paie pour y figurer.",
-      html: `Non. Le prix est exactement le même que sur le site de réservation : nous touchons une petite commission de sa part, sans aucun surcoût pour vous. Notre sélection reste indépendante : aucun établissement ne paie pour y figurer (<a href="a-propos.html">notre charte</a>).`,
+      q: "Nuits Singulières touche-t-il une commission ?",
+      a: "Non. Nuits Singulières est un site de conseil indépendant, tenu par un professionnel de l'hôtellerie : aucun établissement ne paie pour y figurer, et nous ne touchons rien sur les réservations. Les boutons « Réserver en direct » mènent au site officiel de chaque lieu.",
+      html: `Non. Nuits Singulières est un site de conseil indépendant, tenu par un professionnel de l'hôtellerie : aucun établissement ne paie pour y figurer, et nous ne touchons rien sur les réservations. Les boutons « Réserver en direct » mènent au site officiel de chaque lieu (<a href="a-propos.html">notre charte</a>).`,
     },
   ];
 }
@@ -648,6 +668,7 @@ function sitemap() {
     ["index.html", `${SITE}/`, []],
     ["carte.html", abs("carte.html"), []],
     ["quiz.html", abs("quiz.html"), []],
+    ["professionnels.html", abs("professionnels.html"), []],
     ["a-propos.html", abs("a-propos.html"), []],
     ["guides/index.html", abs("guides/index.html"), []],
     ...guides.map((g) => {

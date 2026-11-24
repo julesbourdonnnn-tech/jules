@@ -1,6 +1,6 @@
 # Nuits Singulières
 
-Site vitrine des hôtels les plus extraordinaires de France (cabanes, bulles, phares, châteaux, igloos…), avec liens d'affiliation vers Booking.com.
+Site de conseil indépendant sur les hôtels les plus extraordinaires de France (cabanes, bulles, phares, châteaux, igloos…), tenu par Jules Bourdon, hôtelier dans le luxe. **Aucune affiliation, aucune commission** : les boutons « Réserver en direct » mènent au site officiel de chaque établissement.
 
 Le site est **100 % statique** (HTML, CSS, JavaScript). Pas de serveur, pas de base de données : on l'héberge gratuitement et on le modifie avec un simple éditeur de texte.
 
@@ -19,26 +19,29 @@ Le site est **100 % statique** (HTML, CSS, JavaScript). Pas de serveur, pas de b
 - **Vue carte sur l'accueil** (OpenStreetMap), synchronisée avec une liste
 - **Fiche immersive** : photo plein écran avec effet de profondeur, onglets qui suivent la lecture, mosaïque de photos, visionneuse plein écran (glisser sur mobile), carte, partage, suggestions similaires, bouton de réservation fixé en bas sur mobile
 - **Animations** douces à l'apparition des sections (désactivées si le visiteur a demandé moins d'animations)
-- **Affiliation** : ton identifiant Booking est ajouté automatiquement à chaque lien. Tu peux aussi ajouter des boutons Expedia, Hotels.com ou « Site officiel ».
+- **Réserver en direct** : chaque fiche renvoie au site officiel de l'établissement (champ `website`). Aucun lien rémunéré.
+- **Avis « Testé »** : après un séjour, ton avis s'affiche en tête de fiche (notes sur 6 critères, points forts et faibles, « le conseil du pro », mention automatique si le séjour était offert) et le lieu reçoit le badge « ✓ Testé » partout sur le site. Voir l'exemple commenté en haut de `js/hotels.js`.
 - **Référencement (SEO)** : titre et description propres à chaque fiche, données structurées `schema.org/Hotel`
 - Liens partageables : les filtres sont dans l'URL (ex. `index.html?env=mer&budget=2&envie=chien`)
-- **Choix des dates** : sur chaque fiche (et en haut de chaque guide), le visiteur choisit ses dates et le nombre de voyageurs ; tous les liens de réservation du site les reprennent (Booking arrive directement sur les bons tarifs). Estimation indicative du séjour et conseil de réservation.
+- **Choix des dates** (comparateur et fiches : désactivé, les dates se choisissent sur le site de l'établissement).
 - **Envies** : « Spa privatif » et « Bien-être » (déduits des équipements), « En tribu », « Sans voiture » et « Avec son chien » (champ `tags`, uniquement quand l'information est vérifiée). Filtres sur l'accueil et la carte.
 - **Pour qui ?** : sur chaque fiche, « C'est pour vous si… / Moins pour vous si… » (champs `forYou` et `notForYou`), puis une FAQ générée à partir des informations vérifiées (avec données structurées `FAQPage` pour Google).
 - **Comparateur** (`comparer.html`) : jusqu'à 3 lieux côte à côte (bouton ⇄ sur les cartes et les fiches), lien partageable.
 - **Quiz** (`quiz.html`) : 5 questions, 3 lieux proposés avec le pourcentage de correspondance et les raisons ; résultats partageables.
 - **En ce moment** : une sélection sur l'accueil qui change selon la saison et les fêtes (Saint-Valentin, fête des mères, Noël).
-- **Qui sommes-nous** (`a-propos.html`) : charte de sélection et transparence sur les commissions.
+- **Qui suis-je** (`a-propos.html`) : ton parcours, ta méthode de test et la charte d'indépendance.
+- **Vous êtes un établissement ?** (`professionnels.html`) : ta démarche auprès des hôtels (gratuit, sans commission, séjours tests signalés), imprimable.
+- **Kit de démarchage** (`demarchage/`, non publié) : modèles d'e-mails aux établissements et grille de test à remplir pendant un séjour.
 - **Menu mobile** complet.
 
 ### Instagram et newsletter
 - Inscription à la newsletter sur l'accueil, chaque fiche, le quiz et le pied de page. Les adresses sont enregistrées par le Worker Cloudflare (`worker/index.js`) dans un stockage privé (KV « nuitsinguliere-newsletter »). Pour les récupérer : crée un secret `NEWSLETTER_KEY` dans Cloudflare (Workers → jules → Paramètres → Variables et secrets), puis ouvre `https://nuitsinguliere.com/api/newsletter.csv?key=TON_SECRET` : tu obtiens un fichier CSV à importer dans Brevo.
 - Section Instagram sur l'accueil et page **lien en bio** `liens.html`
 - **Studio** (`studio.html`, outil interne) : génère les carrousels et stories Instagram avec leur légende, et l'e-mail HTML de la newsletter
-- **Suivi de provenance** : les liens `?src=instagram` / `?src=newsletter` sont ajoutés au libellé Booking. Ton tableau de bord Booking montre ainsi quel canal rapporte.
+- **Suivi de provenance** : les liens `?src=instagram` / `?src=newsletter` sont mémorisés pour la mesure d'audience.
 - Statistiques Plausible optionnelles : visites et clics « Réservation », « Site officiel » et « Téléphone » par hôtel
 
-➡️ Le plan d'action complet (affiliation, outils, calendrier Instagram, règles légales) est dans **[STRATEGIE.md](STRATEGIE.md)**.
+➡️ Le plan d'action (contenu, démarchage des hôtels, Instagram, règles légales) est dans **[STRATEGIE.md](STRATEGIE.md)**.
 
 ## Pages pour Google (générées automatiquement)
 
@@ -72,20 +75,11 @@ Le site est publié par le Worker Cloudflare « jules » (configuration : `wrang
 - **GitHub Pages** : Settings → Pages → Branch `main` → `/ (root)`
 - Achète ensuite un nom de domaine (≈ 10 €/an) et relie-le dans les réglages de l'hébergeur
 
-## Gagner de l'argent : l'affiliation
+## Un site de conseil, sans affiliation
 
-1. Inscris-toi au **Booking.com Affiliate Partner Programme** (https://www.booking.com/affiliate-program/) — il faut généralement avoir le site en ligne avec du contenu.
-2. Récupère ton **aid** (Affiliate ID) et colle-le dans `js/config.js` :
-   ```js
-   booking: { aid: "1234567", label: "site-web" },
-   ```
-3. C'est tout : chaque bouton « Voir les disponibilités » embarque ton identifiant.
+Nuits Singulières ne gagne pas d'argent : pas de publicité, pas de commission, aucun établissement ne paie pour y figurer. C'est ce qui permet de démarcher les hôtels librement (« je ne demande rien en échange ») et de publier des avis crédibles.
 
-> **À savoir sur la « marge »** : avec l'affiliation, tu ne peux pas ajouter ta marge au prix. C'est Booking qui te reverse une partie de sa propre commission sur chaque séjour réalisé (ni annulé, ni no-show). Le client paie le même prix que sur Booking : c'est ce qui rend le modèle honnête et facile à vendre.
-
-Autres programmes à ajouter ensuite : Expedia Group (Expedia, Hotels.com, Vrbo), Agoda, Trip.com, ou des plateformes qui regroupent plusieurs marques comme Travelpayouts ou Awin. Pour Expedia et Hotels.com, renseigne ton identifiant dans `partners` (`js/config.js`) : un bouton « Comparer sur … » apparaît alors sur chaque fiche, avec les dates du visiteur.
-
-**Coffrets cadeaux** : colle tes liens affiliés Wonderbox / Smartbox dans `gifts` (`js/config.js`) : ils s'affichent dans le guide « Offrir une nuit insolite ».
+**Séjours offerts** : la loi du 9 juin 2023 sur l'influence commerciale impose de signaler tout avantage reçu. Mets `invited: true` dans l'avis : la mention « Séjour offert par l'établissement » s'affiche automatiquement.
 
 ## Ajouter ou modifier un établissement
 
@@ -107,8 +101,8 @@ Tout se passe dans `js/hotels.js`. Copie un bloc `{ ... },` et modifie-le :
 | `highlights`, `amenities` | `["Spa", "Piscine"]` | points forts et équipements |
 | `rooms`, `season` | | infos pratiques |
 | `photos` | `5` | nombre de photos dans `assets/hotels/<id>/` |
-| `bookingUrl` | `"https://www.booking.com/hotel/fr/xxx.html"` | lien de la fiche Booking ; si vide, le site ouvre une recherche Booking avec le nom de l'hôtel |
-| `partners` | `{ expedia: "https://…" }` | boutons de réservation secondaires (optionnels) |
+| `website` | `"https://www.cabane-du-lac.fr/"` | site officiel (bouton « Réserver en direct ») ; si vide, une recherche web sur le nom du lieu |
+| `review` | voir l'exemple en haut de `js/hotels.js` | ton avis après un séjour : badge « Testé », notes, conseil du pro |
 
 ### Photos : récupération automatique
 
@@ -138,16 +132,18 @@ Les photos appartiennent aux établissements. Pour une utilisation durable, dema
 index.html            Accueil + recherche + carte + newsletter
 quiz.html             Quiz « Quelle nuit insolite est faite pour vous ? »
 comparer.html         Comparateur (jusqu'à 3 lieux)
-a-propos.html         Qui sommes-nous, charte de sélection
+a-propos.html         Qui suis-je, méthode et charte d'indépendance
 hotels/<id>.html      Fiche de chaque établissement (générée)
 guides/               Guides thématiques (générés)
 hotel.html            Redirige les anciennes adresses hotel.html?id=…
 liens.html            Page « lien en bio » Instagram
 studio.html           Outil interne : visuels Instagram et newsletter
 mentions-legales.html
-STRATEGIE.md          Plan d'action idées 1 et 8
+STRATEGIE.md          Plan d'action (contenu, démarchage, Instagram)
+professionnels.html   Page « Vous êtes un établissement ? »
+demarchage/           Modèles d'e-mails et grille de test (non publié)
 css/style.css
-js/config.js          ← identifiants d'affiliation
+js/config.js          ← nom, contact, auteur des avis, réseaux sociaux
 js/hotels.js          ← la liste des hôtels
 js/core.js            briques d'affichage partagées (site et générateur)
 js/guides.js          ← la liste des guides
@@ -164,7 +160,7 @@ js/comparer.js        logique du comparateur
 
 ## Prochaines étapes conseillées
 
-1. Remplacer les exemples par 30 à 50 vrais hôtels, avec leurs liens Booking
+1. Tester des lieux et publier les premiers avis « Testé »
 2. Générer une vraie page HTML par hôtel pour un meilleur référencement Google (aujourd'hui les fiches sont construites en JavaScript)
 3. Ajouter des pages « guides » (« 10 cabanes perchées à moins de 2 h de Paris ») : c'est ce qui attire le trafic Google
 4. Ajouter la même chose pour les restaurants

@@ -1,71 +1,60 @@
-# Plan d'action : gagner des commissions
+# Plan d'action : un site de conseil d'hôtelier
 
-Le modèle est simple : un visiteur découvre un lieu sur le site, clique sur **« Voir les disponibilités »**, réserve sur Booking.com… et tu touches une commission, **sans surcoût pour lui**. Aucune vente aux hôtels, aucun abonnement.
+Nuits Singulières est le carnet de conseils de Jules Bourdon, hôtelier dans le luxe en France et à l'étranger. **Pas d'argent en jeu** : ni commission, ni publicité, ni paiement des établissements. L'objectif est double :
+
+1. **Aider les voyageurs** à choisir une nuit qui sort de l'ordinaire, avec un regard de professionnel.
+2. **Servir de carte de visite** pour contacter les établissements et tester leurs chambres.
 
 ```
- Google + Instagram + newsletter  ──►  visiteurs  ──►  fiche d'un lieu  ──►  clic Booking  ──►  réservation = commission
+ Repérer un lieu  ──►  fiche « Repéré »  ──►  contact avec l'établissement  ──►  séjour test  ──►  avis « Testé »
 ```
-
-Tout se joue donc sur deux leviers : **amener du monde** et **donner envie de cliquer**.
 
 ---
 
-## 1. Brancher l'affiliation
+## 1. Démarcher les établissements
 
-1. Termine ton inscription sur **CJ** (formulaire W-8BEN, paiement en euros, IBAN) et postule au programme **Booking.com**.
-2. Une fois accepté, récupère ton identifiant d'affiliation et envoie-le-moi (ou colle-le dans `js/config.js`, champ `booking.aid`) : il sera ajouté automatiquement à **tous** les boutons de réservation du site.
-3. Chaque lien porte déjà un **libellé de suivi** (`site-web-<provenance>-<lieu>`) : dans ton tableau de bord, tu verras quel lieu et quel canal (Instagram, newsletter, Google) rapportent.
+- Les modèles d'e-mails sont dans `demarchage/modele-email.md` : premier contact, proposition de séjour test, remerciement.
+- Joins toujours le lien de la page **Vous êtes un établissement ?** : `https://nuitsinguliere.com/professionnels.html`.
+- Commence par les lieux **déjà présents sur le site** : tu peux leur montrer leur fiche, c'est concret et flatteur.
+- Demande l'**autorisation d'utiliser leurs photos** (garde l'e-mail de réponse) : c'est la seule zone grise actuelle du site.
+- Tiens un petit tableau de suivi : établissement, date d'envoi, réponse, séjour prévu.
 
-> Si Booking refuse au début, c'est fréquent pour un site neuf : redemande après 1 à 2 mois, avec du trafic et quelques guides publiés.
+## 2. Tester et publier un avis
 
-Autres programmes à ajouter plus tard (plus de chances de toucher une commission) : Expedia / Hotels.com, Agoda, Trip.com, ou des plateformes qui regroupent plusieurs marques (Awin, Travelpayouts).
+1. Pendant le séjour, remplis la grille `demarchage/grille-de-test.md` (notes sur 10, points forts et faibles, conseil du pro).
+2. Envoie-la-moi : j'ajoute le champ `review` à la fiche (ou fais-le toi-même, l'exemple est en haut de `js/hotels.js`).
+3. La fiche affiche alors l'avis en tête de page, et le lieu reçoit le badge **« ✓ Testé »** partout sur le site.
+4. Envoie le lien à l'établissement pour le remercier : il le partagera souvent.
 
----
+## 3. Faire connaître le site
 
-## 2. Amener des visiteurs
-
-### Google (le plus rentable sur la durée)
-- Déclare `https://ton-domaine/sitemap.xml` dans la **Google Search Console**.
-- Chaque lieu a sa page, chaque thème son guide : plus il y a de lieux et de guides, plus Google t'envoie de monde. Objectif : **60 à 100 lieux** et **20 guides**.
-- Les guides qui marchent le mieux : géographiques (« près de Paris », « en Bretagne ») et par occasion (« Saint-Valentin », « anniversaire », « avec jacuzzi privatif »).
+### Google (le plus important sur la durée)
+- Déclare `https://nuitsinguliere.com/sitemap.xml` dans la **Google Search Console**.
+- Chaque lieu a sa page, chaque thème son guide. Les **avis testés** sont le meilleur contenu possible pour Google : un vrai séjour, signé par un professionnel.
+- Guides de saison à préparer à l'avance : Saint-Valentin (dès janvier), fête des mères, ponts de mai, été, automne, Noël et Nouvel An.
 
 ### Instagram
-| Jour | Format | Contenu |
-|---|---|---|
-| Lundi | Carrousel | Un lieu coup de cœur (généré par le Studio) |
-| Mercredi | Carrousel | Un top : « 5 cabanes à moins de 2 h de Paris » |
-| Vendredi | Carrousel | Idée week-end : un lieu + quoi faire autour |
-| Tous les jours | Story | Sondage « Tu dormirais où ? », lien vers le site |
-
-- Lien en bio : `https://ton-domaine/liens.html?src=instagram`.
-- Tague l'établissement et demande-lui de repartager : c'est gratuit et son audience est déjà intéressée.
-- Pense aux dates clés : Saint-Valentin, fête des mères, ponts de mai, vacances scolaires, Noël.
+- Un séjour test = un carrousel (le Studio du site génère les visuels) + quelques stories pendant le séjour.
+- Tague l'établissement : il repartage souvent, son audience est déjà intéressée.
+- Lien en bio : `https://nuitsinguliere.com/liens.html?src=instagram`.
 
 ### Newsletter
-- Compte **Brevo** gratuit, une lettre par semaine avec 3 lieux (générée par le Studio, onglet Newsletter).
-- Les liens portent `src=newsletter` : tu sais exactement ce qu'elle rapporte.
-
----
-
-## 3. Donner envie de cliquer
-- Des **photos superbes** et des descriptions qui font rêver : c'est ce qui déclenche le clic.
-- Des lieux **réservables sur Booking** en priorité : un lieu absent de Booking ne rapporte rien (le bouton mène alors à une recherche).
-- Quand ton identifiant est actif, renseigne pour chaque lieu le lien exact de sa fiche Booking (champ `bookingUrl` dans `js/hotels.js`) : moins de clics pour le visiteur, plus de réservations.
+- Compte **Brevo** gratuit, une lettre par semaine ou par mois avec tes derniers avis (onglet Newsletter du Studio).
 
 ---
 
 ## 4. Règles à respecter (France)
-- **Liens affiliés** : mention visible sur le site (déjà en pied de page et sur la page lien en bio).
-- **Photos** : uniquement des photos autorisées par les établissements (demande-leur par e-mail, ils acceptent presque toujours) ou libres de droits.
+- **Séjour offert = mention obligatoire** (loi du 9 juin 2023 sur l'influence commerciale) : `invited: true` dans l'avis affiche la mention automatiquement.
+- **Avis libres** : ne jamais soumettre un avis à la relecture de l'établissement, ni accepter de contrepartie pour une meilleure note.
+- **Photos** : uniquement des photos autorisées par les établissements, ou les tiennes.
 - **Newsletter (RGPD)** : consentement à l'inscription et lien de désinscription dans chaque e-mail (déjà prévu).
-- **Déclaration** : déclare tes commissions (micro-entreprise conseillée dès que ça devient régulier).
 
 ---
 
 ## 5. Les chiffres à suivre chaque mois
 | Indicateur | Où | Pourquoi |
 |---|---|---|
-| Visiteurs du site | Plausible ou Cloudflare Web Analytics | ton audience |
-| Clics « Voir les disponibilités » | Plausible (objectif « Réservation ») | tes commissions futures |
-| Réservations et commissions | tableau de bord CJ / Booking, colonne *label* | quel lieu et quel canal rapportent |
+| Visiteurs du site | Cloudflare (mesure d'audience intégrée) ou Plausible | ton audience |
+| Pages trouvées sur Google | Google Search Console | le référencement progresse-t-il ? |
+| Établissements contactés / séjours tests | ton tableau de suivi | ton rythme de tests |
 | Abonnés Instagram et newsletter | Instagram, Brevo | ton audience fidèle |

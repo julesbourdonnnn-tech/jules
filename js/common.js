@@ -12,8 +12,8 @@
 
   /* ---------- Provenance du visiteur ----------
    * Les liens publiés sur Instagram / dans la newsletter portent ?src=instagram
-   * ou ?src=newsletter. On la mémorise pour la session et on l'ajoute au
-   * libellé Booking : ton tableau de bord Booking montre alors quel canal rapporte. */
+   * ou ?src=newsletter. On la mémorise pour la session : la mesure d'audience
+   * montre ainsi quel canal amène des visiteurs. */
   const SRC_KEY = "ns-source";
   (function captureSource() {
     const p = new URLSearchParams(location.search);
@@ -37,17 +37,12 @@
     refreshBookLinks();
     document.dispatchEvent(new CustomEvent("stay:change", { detail: s }));
   }
-  const bookingLink = (h) => C.bookingLink(h, getSource(), getStay());
+  const siteLink = (h) => C.siteLink(h);
+  // Liens « Réserver en direct » : site officiel de l'établissement
   function refreshBookLinks(scope = document) {
-    const stay = getStay();
     scope.querySelectorAll("a[data-book]").forEach((a) => {
       const h = window.HOTELS.find((x) => x.id === a.dataset.book);
-      if (h) a.href = C.bookingLink(h, getSource(), stay);
-    });
-    scope.querySelectorAll("a[data-partner]").forEach((a) => {
-      const h = window.HOTELS.find((x) => x.id === a.dataset.hotel);
-      const p = h && C.partnerLinks(h, stay).find((x) => x.key === a.dataset.partner);
-      if (p) a.href = p.href;
+      if (h) a.href = C.siteLink(h);
     });
   }
   const DATE_FMT = new Intl.DateTimeFormat("fr-FR", { weekday: "short", day: "numeric", month: "short" });
@@ -703,7 +698,7 @@
 
   window.NS = {
     ...C,
-    CONFIG, getSource, track, bookingLink, getStay, setStay, refreshBookLinks, initStayForms, getUserLocation, setUserLocation, geocode, locateBrowser,
+    CONFIG, getSource, track, siteLink, getStay, setStay, refreshBookLinks, initStayForms, getUserLocation, setUserLocation, geocode, locateBrowser,
     getFavs, isFav, toggleFav, favButton, card, syncFavButtons, observeReveal, enhanceSelects, surprise,
     toast, getCompare, setCompare, toggleCompare, syncCompare,
   };
