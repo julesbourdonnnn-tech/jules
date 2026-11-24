@@ -30,7 +30,7 @@
       kicker: "Coup de cœur du moment",
       short: "Le coup de cœur du moment",
       title: (n) => `Le coup de cœur du moment : ${n} adresses que je recommande`,
-      description: "La sélection du moment de Jules Bourdon, hôtelier passé par des maisons 3, 4 et 5 étoiles : les adresses qu'il recommande en ce moment, sans commission ni contrepartie.",
+      description: "La sélection du moment de Jules Bourdon, fondateur de Nuits Singulières et professionnel de l'hôtellerie : les adresses qu'il recommande en ce moment, sans commission ni contrepartie.",
       match: coupDeCoeur,
       sort: (a, b) => (b.review ? 1 : 0) - (a.review ? 1 : 0),
       intro: [
