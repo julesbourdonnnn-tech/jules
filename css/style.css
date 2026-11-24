@@ -1360,3 +1360,4 @@ body.has-compare .site-footer { padding-bottom: 110px; }
   .ask { padding: 22px 18px; }
   .ask-row { grid-template-columns: 1fr; }
 }
+.photo-credit { margin: -8px 0 16px; font-size: .84rem; color: var(--muted); }

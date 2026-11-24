@@ -21,6 +21,7 @@
  *   tags        envies vérifiées : "famille", "train", "chien" (voir TAGS)
  *   forYou / notForYou   « C'est pour vous si… / Moins pour vous si… »
  *   bookingTip  conseil de réservation (facultatif : sinon déduit automatiquement)
+ *   photoCredit auteur des photos quand ce sont les tiennes (ex. "Jules Bourdon")
  *   review      ton avis après un séjour (le lieu reçoit alors le badge « Testé ») :
  *     review: {
  *       date: "2026-11",                // mois du séjour (obligatoire)
@@ -1273,7 +1274,7 @@ window.HOTELS = [
     rooms: "Une quarantaine de chambres, au château et dans les dépendances",
     forYou: ["Vous rêvez d'un week-end de château sans faire des heures de route", "Vous jouez au golf", "Vous aimez les grands parcs"],
     notForYou: ["Vous cherchez l'animation d'une ville"],
-    photos: 0, website: "",
+    photos: 4, website: "", photoCredit: "Jules Bourdon",
     review: {
       date: "2026-03", stay: "Chambre supérieure en dépendance, 2 nuits", invited: false,
       scores: { accueil: 8.5, chambre: 8, literie: 8.5, table: 8.5, service: 8.5, valeur: 8 },
