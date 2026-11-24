@@ -242,10 +242,11 @@
     const has = (h, t) => tagsOf(h).includes(t);
     // Fête des mères : dernier dimanche de mai (sauf Pentecôte : on reste simple)
     const lastSundayMay = (() => { const x = new Date(y, 4, 31); x.setDate(31 - x.getDay()); return x.getDate(); })();
-    if (m === 2 && day <= 14) return {
+    // Saint-Valentin : on en parle dès mi-janvier, quand les couples réservent
+    if ((m === 1 && day >= 15) || (m === 2 && day <= 14)) return {
       kicker: "Saint-Valentin", title: "Une nuit inoubliable pour la Saint-Valentin",
-      text: "Bulles sous les étoiles, cabanes avec jacuzzi, phare face à l'océan : nos adresses les plus romantiques. Réservez vite, elles partent en premier.",
-      guide: "nuit-insolite-en-amoureux",
+      text: "Cabanes avec jacuzzi, bains nordiques sous les étoiles, petits hôtels secrets : nos adresses les plus romantiques. Réservez vite, elles partent en premier.",
+      guide: guideBySlug("saint-valentin-nuit-insolite") ? "saint-valentin-nuit-insolite" : "nuit-insolite-en-amoureux",
     };
     if (m === 5 && day >= 8 && day <= lastSundayMay) return {
       kicker: "Fête des mères", title: "Offrez-lui une nuit hors du commun",
@@ -256,6 +257,11 @@
       kicker: "Noël", title: "Et si vous offriez une nuit insolite ?",
       text: "Sous le sapin, une nuit dans une bulle, un phare ou une cabane-spa : nos idées cadeaux pour tous les budgets.",
       guide: "offrir-une-nuit-insolite",
+    };
+    if (m === 12 && day >= 25) return {
+      kicker: "Nouvel An", title: "Changer d'année dans un lieu hors du commun",
+      text: "Refuge au-dessus des nuages, igloo, cabane avec bain nordique ou palais en ville : nos idées pour un réveillon qu'on n'oublie pas.",
+      guide: "nouvel-an-insolite",
     };
     if (m >= 9 && m <= 11) return {
       kicker: `Automne ${y}`, title: "L'automne au chaud, les pieds dans un bain",

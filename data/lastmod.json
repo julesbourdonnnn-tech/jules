@@ -16,8 +16,8 @@
   "date": "2026-09-25"
  },
  "guides/index.html": {
-  "hash": "51a666e05e4b",
-  "date": "2026-09-25"
+  "hash": "053698747a85",
+  "date": "2026-11-24"
  },
  "guides/nuit-insolite-en-amoureux.html": {
   "hash": "5e9f38fb686c",
@@ -127,6 +127,14 @@
   "hash": "31d08b801c6f",
   "date": "2026-09-25"
  },
+ "guides/nouvel-an-insolite.html": {
+  "hash": "4670d6d348a0",
+  "date": "2026-11-24"
+ },
+ "guides/saint-valentin-nuit-insolite.html": {
+  "hash": "a4d398a8038c",
+  "date": "2026-11-24"
+ },
  "guides/hotels-insolites-auvergne-rhone-alpes.html": {
   "hash": "165ac5d0ed96",
   "date": "2026-09-25"
@@ -216,12 +224,12 @@
   "date": "2026-09-25"
  },
  "hotels/loire-valley-lodges.html": {
-  "hash": "d3470805d34c",
-  "date": "2026-09-25"
+  "hash": "9b2da14582ec",
+  "date": "2026-11-24"
  },
  "hotels/pella-roca.html": {
-  "hash": "eb5394009f27",
-  "date": "2026-09-25"
+  "hash": "1eca0a02b1b4",
+  "date": "2026-11-24"
  },
  "hotels/cabanes-des-grands-lacs.html": {
   "hash": "40ff4e9e1595",
@@ -276,40 +284,40 @@
   "date": "2026-09-25"
  },
  "hotels/refuge-de-solaise.html": {
-  "hash": "c5ed0689ee69",
-  "date": "2026-09-25"
+  "hash": "04a154dd2019",
+  "date": "2026-11-24"
  },
  "hotels/village-igloo-val-thorens.html": {
-  "hash": "01b02c7ec152",
-  "date": "2026-09-25"
+  "hash": "ad6440ee786e",
+  "date": "2026-11-24"
  },
  "hotels/alpinest.html": {
-  "hash": "75eb7a23ec5d",
-  "date": "2026-09-25"
+  "hash": "2c3d44863e91",
+  "date": "2026-11-24"
  },
  "hotels/cabanes-du-moulin.html": {
-  "hash": "093efa0bb387",
-  "date": "2026-09-25"
+  "hash": "18e3ccfc30fd",
+  "date": "2026-11-24"
  },
  "hotels/troglododo.html": {
   "hash": "1ea3ac0c38d9",
   "date": "2026-09-25"
  },
  "hotels/hotel-particulier-montmartre.html": {
-  "hash": "aa94dfdf3bee",
-  "date": "2026-09-25"
+  "hash": "57d5730af51c",
+  "date": "2026-11-24"
  },
  "hotels/cour-des-loges.html": {
-  "hash": "546cee497483",
-  "date": "2026-09-25"
+  "hash": "c30147c4f542",
+  "date": "2026-11-24"
  },
  "hotels/fermes-de-marie.html": {
-  "hash": "5056ecfe78e4",
-  "date": "2026-09-25"
+  "hash": "18a9f95f008e",
+  "date": "2026-11-24"
  },
  "hotels/chateau-de-la-resle.html": {
-  "hash": "6763e6dc6bbc",
-  "date": "2026-09-25"
+  "hash": "c516422de28f",
+  "date": "2026-11-24"
  },
  "hotels/chateau-de-mercues.html": {
   "hash": "f54b8a28788b",
@@ -336,20 +344,20 @@
   "date": "2026-09-25"
  },
  "hotels/refuge-de-la-traye.html": {
-  "hash": "e376f27592b5",
-  "date": "2026-09-25"
+  "hash": "1e3b185494e7",
+  "date": "2026-11-24"
  },
  "hotels/refuge-chez-la-tante.html": {
   "hash": "3cdff0e4e883",
   "date": "2026-09-25"
  },
  "hotels/molitor.html": {
-  "hash": "71ca28b25815",
-  "date": "2026-09-25"
+  "hash": "c33296f5479a",
+  "date": "2026-11-24"
  },
  "hotels/maison-souquet.html": {
-  "hash": "54eb5c2edd31",
-  "date": "2026-09-25"
+  "hash": "03cda0e08342",
+  "date": "2026-11-24"
  },
  "hotels/intercontinental-lyon-hotel-dieu.html": {
   "hash": "29d3d9478645",
@@ -396,8 +404,8 @@
   "date": "2026-09-25"
  },
  "hotels/ecrin-d-auvergne.html": {
-  "hash": "8b33c0c33926",
-  "date": "2026-09-25"
+  "hash": "8088dfde4cfe",
+  "date": "2026-11-24"
  },
  "hotels/etape-en-foret.html": {
   "hash": "e5b04b09c382",
@@ -408,8 +416,8 @@
   "date": "2026-09-25"
  },
  "hotels/nids-des-vosges.html": {
-  "hash": "28510c78530e",
-  "date": "2026-09-25"
+  "hash": "4ebfc8c707eb",
+  "date": "2026-11-24"
  },
  "hotels/domaine-de-murtoli.html": {
   "hash": "720ca01d20af",
@@ -432,8 +440,8 @@
   "date": "2026-09-25"
  },
  "hotels/villa-rene-lalique.html": {
-  "hash": "c3edb25d9353",
-  "date": "2026-09-25"
+  "hash": "275a459f198b",
+  "date": "2026-11-24"
  },
  "hotels/cabanes-du-goutty.html": {
   "hash": "dce664e1f447",
@@ -444,11 +452,11 @@
   "date": "2026-09-25"
  },
  "hotels/cabane-du-perche.html": {
-  "hash": "45cda26dc9d0",
-  "date": "2026-09-25"
+  "hash": "47cf11aa1478",
+  "date": "2026-11-24"
  },
  "hotels/landifornia-lodge.html": {
-  "hash": "2e9e4ee31146",
-  "date": "2026-09-25"
+  "hash": "5cfe266d9989",
+  "date": "2026-11-24"
  }
 }
