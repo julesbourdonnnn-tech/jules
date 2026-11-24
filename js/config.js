@@ -35,8 +35,8 @@ window.SITE_CONFIG = {
    * Les inscriptions sont enregistrées par le Worker Cloudflare du site
    * (worker/index.js). Export CSV : voir README.md (« newsletter.csv »). */
   newsletter: {
-    title: "La lettre des nuits rares",
-    pitch: "Une fois par mois, mes nouvelles adresses, mes séjours tests et un conseil de pro. Gratuit, sans publicité.",
+    title: "La lettre de Jules",
+    pitch: "Une fois par mois : les nouveaux établissements du site, mes derniers avis testés et les hôtels qui rejoignent mes coups de cœur. Gratuit, sans publicité.",
   },
 
   /* ---------- Statistiques ----------

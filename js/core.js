@@ -337,6 +337,7 @@
           ${links.map(([href, label]) => `<a href="${page(href)}">${label}</a>`).join("\n          ")}
           <a href="${page("quiz.html")}">Le quiz</a>
           <a href="${page("comparer.html")}">Le comparateur</a>
+          <a href="${page("index.html#newsletter")}">✉ Recevoir la lettre</a>
           <a href="${page("index.html#explorer")}" data-open-near>📍 Près de chez moi</a>
           <a href="${page("professionnels.html")}" class="menu-small">Vous êtes un établissement ?</a>
         </nav>

@@ -155,6 +155,7 @@
     try {
       const out = await submitForm(form);
       form.classList.add("sent");
+      try { localStorage.setItem("ns-nl", "inscrit"); } catch { /* navigation privée */ }
       msg.textContent = out.already
         ? "Vous êtes déjà inscrit·e : à bientôt ✦"
         : "Merci ! Vous êtes bien inscrit·e. À bientôt ✦";
@@ -170,6 +171,58 @@
       btn.disabled = false;
     }
   });
+
+  /* ---------- Fenêtre « Être tenu informé » ----------
+   * S'affiche une seule fois, après 35 secondes ou aux deux tiers de la page,
+   * jamais pour un inscrit ; si on la ferme, elle ne revient pas avant 30 jours. */
+  function initNewsletterPopup() {
+    if (location.protocol === "file:" && !/[?&]popup=1/.test(location.search)) return;
+    if (/studio|mentions-legales|selection|liens/.test(location.pathname)) return;
+    let state = null;
+    try { state = localStorage.getItem("ns-nl"); } catch { return; }
+    if (state === "inscrit") return;
+    if (state && Date.now() - Number(state) < 30 * 864e5) return;
+    let shown = false, timer;
+    const show = () => {
+      if (shown || document.querySelector(".drawer:not([hidden]), .menu-sheet:not([hidden])")) return;
+      shown = true;
+      clearTimeout(timer);
+      window.removeEventListener("scroll", onScroll);
+      const box = document.createElement("div");
+      box.className = "nl-pop";
+      box.setAttribute("role", "dialog");
+      box.setAttribute("aria-label", "Être tenu informé");
+      box.innerHTML = `
+        <button type="button" class="nl-pop-close" aria-label="Fermer">×</button>
+        <div class="nl-pop-head">
+          <img src="${C.root()}assets/jules/avatar.jpg" alt="" width="52" height="52">
+          <div>
+            <p class="nl-pop-kicker">La lettre de Jules</p>
+            <h3>Être tenu informé</h3>
+          </div>
+        </div>
+        <p class="nl-pop-text">Les nouveaux établissements du site, mes derniers avis testés et les hôtels qui rejoignent mes coups de cœur : une lettre par mois, rien de plus. Pas de compte à créer, juste votre e-mail.</p>
+        ${C.newsletterForm("fenetre", "nl-form-pop")}
+        <button type="button" class="nl-pop-later">Non merci</button>`;
+      document.body.appendChild(box);
+      requestAnimationFrame(() => box.classList.add("open"));
+      const close = () => {
+        try { if (localStorage.getItem("ns-nl") !== "inscrit") localStorage.setItem("ns-nl", String(Date.now())); } catch { /* rien */ }
+        box.classList.remove("open");
+        setTimeout(() => box.remove(), 400);
+      };
+      box.querySelector(".nl-pop-close").addEventListener("click", close);
+      box.querySelector(".nl-pop-later").addEventListener("click", close);
+      document.addEventListener("keydown", (e) => { if (e.key === "Escape") close(); }, { once: true });
+      box.querySelector("form").addEventListener("submit", () => setTimeout(() => { if (box.querySelector(".sent")) setTimeout(close, 2600); }, 1500));
+    };
+    const onScroll = () => {
+      const max = document.documentElement.scrollHeight - innerHeight;
+      if (max > 400 && scrollY / max > 0.66) show();
+    };
+    timer = setTimeout(show, /[?&]popup=1/.test(location.search) ? 300 : 35000);
+    window.addEventListener("scroll", onScroll, { passive: true });
+  }
 
   /* ---------- « Une question pour Jules ? » ---------- */
   const DATE_LONG = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "long", year: "numeric" });
@@ -748,6 +801,7 @@
     refreshBookLinks();
     initStayForms();
     initQuestions();
+    initNewsletterPopup();
     syncCompare();
     syncFavButtons();
     enhanceSelects();
