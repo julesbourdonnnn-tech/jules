@@ -53,7 +53,8 @@
     /* Le mot de Jules */
     .word { padding: 80px 0; background: #fff; }
     .word-grid { display: grid; grid-template-columns: 220px 1fr; gap: 56px; }
-    .word .avatar { width: 200px; height: 240px; border-radius: 4px; font-size: 1.1rem; text-align: center; padding: 16px; line-height: 1.4; }
+    .portrait { width: 240px; height: auto; aspect-ratio: 4 / 5; object-fit: cover; }
+    img.avatar { object-fit: cover; }
     .word h2 { font-size: clamp(1.8rem, 3.4vw, 2.6rem); margin-bottom: 22px; max-width: 22ch; }
     .word p { margin: 0 0 16px; max-width: 62ch; color: var(--ink-soft); }
     .word .first::first-letter { font: 400 3.4rem/0.9 var(--serif); float: left; margin: 6px 10px 0 0; color: var(--accent); }
@@ -123,7 +124,7 @@
       .open figure { order: -1; }
       .open figure img { aspect-ratio: 4 / 3; }
       .word, .sec, .letter { padding: 56px 0; }
-      .word .avatar { width: 120px; height: 140px; font-size: .9rem; }
+      .portrait { width: 160px; }
       .soon div { padding: 28px 22px; } .soon img { min-height: 220px; }
       .picks { grid-template-columns: 1fr; gap: 40px; }
       .pick:first-child { grid-column: auto; grid-row: auto; }
@@ -156,7 +157,7 @@
           <p class="kicker">Le carnet d'un hôtelier</p>
           <h1>Des nuits qui ne ressemblent <em>à aucune autre</em>.</h1>
           <p class="lead">Les lieux les plus singuliers de France, repérés et testés par quelqu'un du métier. Sans publicité, sans commission : seulement des conseils.</p>
-          <div class="sign"><span class="avatar">JB</span><span>Par <strong>Jules Bourdon</strong>, hôtelier dans le luxe, en France et à l'étranger</span></div>
+          <div class="sign"><img class="avatar" src="../assets/jules/avatar.jpg" alt="" width="46" height="46"><span>Par <strong>Jules Bourdon</strong>, hôtelier dans le luxe, en France et à l'étranger</span></div>
         </div>
         <figure>
           <img src="../assets/hotels/phare-de-kerbel/1.jpg" alt="Le phare de Kerbel, en Bretagne">
@@ -167,7 +168,7 @@
 
     <section class="word" id="mot">
       <div class="wrap word-grid">
-        <div class="avatar">Ta photo ici</div>
+        <img class="portrait" src="../assets/jules/portrait.jpg" alt="Jules Bourdon" width="400" height="500">
         <div>
           <p class="kicker">Le mot de Jules</p>
           <h2>Voir un hôtel avec les yeux de quelqu'un qui en fait son métier.</h2>
