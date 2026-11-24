@@ -1304,8 +1304,8 @@ window.HOTELS = [
     amenities: ["Spa", "Restaurants", "Bar", "Parc"],
     rooms: "Chambres et suites, certaines avec terrasse",
     forYou: ["Vous aimez les chevaux et les balades", "Vous voulez visiter Chantilly sans vous presser", "Vous cherchez la campagne sans aller loin"],
-    notForYou: ["Vous cherchez un lieu historique : l'hôtel est contemporain"],
-    photos: 0, website: "https://www.legrandpavillonchantilly.com/fr/",
+    notForYou: ["Vous cherchez l'animation d'une ville"],
+    photos: 3, website: "https://www.legrandpavillonchantilly.com/fr/", photoCredit: "Jules Bourdon et l'établissement",
     review: {
       date: "2026-01", stay: "Chambre Confort avec terrasse, 2 nuits", invited: false,
       scores: { accueil: 8.5, chambre: 9, literie: 8.5, table: 8, service: 8.5, valeur: 8.5 },

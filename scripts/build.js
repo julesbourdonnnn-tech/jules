@@ -260,7 +260,7 @@ function hotelPage(h) {
 
         <section id="photos">
           <h2 class="reveal">En images</h2>
-          ${h.photoCredit ? `<p class="photo-credit reveal">Photos prises pendant mon séjour · © ${e(h.photoCredit)}</p>` : ""}
+          ${h.photoCredit ? `<p class="photo-credit reveal">${/établissement/.test(h.photoCredit) ? "Photos" : "Photos prises pendant mon séjour"} · © ${e(h.photoCredit)}</p>` : ""}
           <div class="mosaic">
             ${h.images.map((src, i) => `<button type="button" class="m-item reveal" data-i="${i}" aria-label="Agrandir la photo ${i + 1}"><img src="${img(src, i % 3 === 0 ? 1800 : 900)}" alt="${e(h.name)}, photo ${i + 1}" loading="lazy" decoding="async"></button>`).join("\n            ")}
           </div>

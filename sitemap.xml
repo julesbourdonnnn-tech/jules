@@ -622,4 +622,9 @@
     <image:image><image:loc>https://nuitsinguliere.com/assets/hotels/chateau-d-augerville/3.jpg</image:loc></image:image>
     <image:image><image:loc>https://nuitsinguliere.com/assets/hotels/chateau-d-augerville/4.jpg</image:loc></image:image>
   </url>
+  <url><loc>https://nuitsinguliere.com/hotels/grand-pavillon-chantilly.html</loc><lastmod>2026-11-24</lastmod>
+    <image:image><image:loc>https://nuitsinguliere.com/assets/hotels/grand-pavillon-chantilly/1.jpg</image:loc></image:image>
+    <image:image><image:loc>https://nuitsinguliere.com/assets/hotels/grand-pavillon-chantilly/2.jpg</image:loc></image:image>
+    <image:image><image:loc>https://nuitsinguliere.com/assets/hotels/grand-pavillon-chantilly/3.jpg</image:loc></image:image>
+  </url>
 </urlset>
