@@ -29,16 +29,16 @@
       cat: "envie",
       kicker: "Coup de cœur du moment",
       short: "Le coup de cœur du moment",
-      title: (n) => `Le coup de cœur du moment : ${n} adresses que je recommande`,
-      description: "La sélection du moment de Jules Bourdon, fondateur de Nuits Singulières et professionnel de l'hôtellerie : les adresses qu'il recommande en ce moment, sans commission ni contrepartie.",
+      title: (n) => `Le coup de cœur du moment : ${n} adresses qui m'ont marqué`,
+      description: "La sélection du moment de Jules Bourdon, fondateur de Nuits Singulières et professionnel de l'hôtellerie : ses adresses préférées du moment, testées ou repérées, sans commission ni contrepartie.",
       match: coupDeCoeur,
       sort: (a, b) => (b.review ? 1 : 0) - (a.review ? 1 : 0),
       intro: [
-        "Voici les adresses que je recommande en ce moment : celles où je n'hésiterais pas à envoyer mes proches. Certaines, je les ai testées, et vous trouverez mon avis complet sur leur fiche ; les autres font partie de mes repérages les plus marquants.",
+        "Voici mes adresses préférées du moment. Celles que j'ai testées, je les recommande en connaissance de cause : vous trouverez mon avis complet sur leur fiche. Les autres sont mes repérages les plus marquants, des lieux si singuliers que j'ai hâte d'y dormir ; elles sont signalées « Repérage ».",
         "Cette sélection change au fil des saisons et de mes séjours. Elle ne s'achète pas : aucun établissement ne paie pour y figurer, et une invitation n'y donne aucun droit.",
       ],
       faq: [
-        ["Comment un hôtel entre-t-il dans le coup de cœur du moment ?", "C'est un choix personnel : un lieu vraiment singulier, que je recommande sans réserve, au moment où je le choisis. Les adresses testées portent en plus le badge « Testé » et mon avis détaillé."],
+        ["Comment un hôtel entre-t-il dans le coup de cœur du moment ?", "C'est un choix personnel : un lieu vraiment singulier, qui m'a marqué, au moment où je le choisis. Les adresses testées portent le badge « Testé » et mon avis détaillé ; les autres sont clairement signalées comme des repérages, où je n'ai pas encore séjourné."],
         ["Un hôtel peut-il payer pour figurer dans cette sélection ?", "Non. Aucun établissement ne paie pour être présenté ou distingué. Quand un séjour m'a été offert, je l'indique clairement sur l'avis, et cela ne change rien à mon jugement."],
       ],
       tips: [

@@ -37,10 +37,10 @@ détaillé. Mes avis restent libres, et si un séjour est offert, je l'indique
 clairement.
 
 Chaque séjour test donne lieu à un avis détaillé et signé, avec le badge
-« Testé ». Les adresses que je recommande sans réserve peuvent rejoindre la
-sélection « Le coup de cœur du moment », mise en avant sur le site. Cette
-distinction ne s'achète pas et ne dépend pas d'une invitation : seule compte
-la qualité du séjour.
+« Testé ». Les adresses qui me marquent le plus, testées ou repérées, peuvent
+rejoindre la sélection « Le coup de cœur du moment », mise en avant sur le site.
+Cette distinction ne s'achète pas et ne dépend pas d'une invitation : seul
+compte le lieu.
 
 Ma démarche est présentée ici : https://nuitsinguliere.com/professionnels.html
 

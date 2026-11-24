@@ -106,7 +106,7 @@
         renderFavs();
       };
       function renderFavs() {
-        const list = NS.getFavs().map((id) => window.HOTELS.find((h) => h.id === id)).filter(Boolean);
+        const list = NS.getFavs().map(NS.hotelById).filter(Boolean);
         $("acct-count").textContent = list.length ? `${list.length} adresse${list.length > 1 ? "s" : ""} gardée${list.length > 1 ? "s" : ""}` : "Aucune adresse pour l'instant";
         $("acct-favs").innerHTML = list.map((h) => NS.card(h, { reveal: false })).join("");
         $("acct-empty").hidden = !!list.length;

@@ -38,10 +38,11 @@
     document.dispatchEvent(new CustomEvent("stay:change", { detail: s }));
   }
   const siteLink = (h) => C.siteLink(h);
+  const hotelById = (id) => window.HOTELS.find((x) => x.id === id) || (window.HOTELS_CLOSED || []).find((x) => x.id === id);
   // Liens « Réserver en direct » : site officiel de l'établissement
   function refreshBookLinks(scope = document) {
     scope.querySelectorAll("a[data-book]").forEach((a) => {
-      const h = window.HOTELS.find((x) => x.id === a.dataset.book);
+      const h = hotelById(a.dataset.book);
       if (h) a.href = C.siteLink(h);
     });
   }
@@ -54,7 +55,7 @@
       form.dataset.ready = "1";
       const inp = form.elements.checkin, out = form.elements.checkout, adults = form.elements.adults;
       const note = form.querySelector("[data-stay-note]");
-      const h = form.dataset.hotel ? window.HOTELS.find((x) => x.id === form.dataset.hotel) : null;
+      const h = form.dataset.hotel ? hotelById(form.dataset.hotel) : null;
       const today = C.todayIso();
       const fill = (s) => {
         inp.min = today;
@@ -789,7 +790,7 @@
   function renderFavDrawer() {
     const list = document.getElementById("fav-list");
     if (!list) return;
-    const favs = getFavs().map((id) => window.HOTELS.find((h) => h.id === id)).filter(Boolean);
+    const favs = getFavs().map(hotelById).filter(Boolean);
     list.innerHTML = favs.length
       ? favs.map((h) => `
           <div class="fav-item">
@@ -878,7 +879,7 @@
     CONFIG, getSource, track, siteLink, getStay, setStay, refreshBookLinks, initStayForms, getUserLocation, setUserLocation, geocode, locateBrowser,
     getFavs, isFav, toggleFav, favButton, card, syncFavButtons, observeReveal, enhanceSelects, surprise,
     toast, getCompare, setCompare, toggleCompare, syncCompare,
-    accountReady, getAccount, accountEnter, accountLogout, accountDelete,
+    accountReady, getAccount, accountEnter, accountLogout, accountDelete, hotelById,
   };
   document.addEventListener("DOMContentLoaded", renderChrome);
 })();

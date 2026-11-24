@@ -22,6 +22,9 @@
  *   forYou / notForYou   « C'est pour vous si… / Moins pour vous si… »
  *   bookingTip  conseil de réservation (facultatif : sinon déduit automatiquement)
  *   coupDeCoeur true : l'adresse fait partie du « coup de cœur du moment » (testée ou non)
+ *   closed      fermeture temporaire : { until: "2026-12-31", label: "Fermé pour rénovation", note: "…" }
+ *               La fiche reste en ligne avec un bandeau, mais le lieu sort des listes,
+ *               des guides et des sélections jusqu'à la date indiquée (comprise).
  *   giftUrl     page des cartes cadeaux de l'établissement (lien « Envie d'offrir cette nuit ? »)
  *   photoCredit auteur des photos quand ce sont les tiennes (ex. "Jules Bourdon")
  *   review      ton avis après un séjour (le lieu reçoit alors le badge « Testé ») :
@@ -203,6 +206,7 @@ window.HOTELS = [
     rooms: "12 chambres troglodytiques",
     forYou: ["Vous aimez la gastronomie et les vins de Loire", "Vous rêvez de dormir dans la roche, face au fleuve"],
     notForYou: ["Vous cherchez un lieu isolé en pleine nature", "Vous voulez des chambres très lumineuses"],
+    closed: { until: "2026-12-31", label: "Fermé pour rénovation jusqu'à fin 2026", note: "L'établissement est annoncé fermé pour travaux du 1er février au 31 décembre 2026 (dates à confirmer auprès de lui). Je remettrai la fiche en avant dès sa réouverture." },
     photos: 5, website: "https://www.leshautesroches.com/",
   },
   {
@@ -362,7 +366,7 @@ window.HOTELS = [
     rooms: "54 chambres et 4 suites",
     forYou: ["Vous voulez une adresse parisienne vraiment originale", "Vous aimez les bars et piscines tendance"],
     notForYou: ["Vous voyagez avec votre chien (les animaux ne sont pas acceptés)", "Vous avez le sommeil très léger"],
-    photos: 5, website: "https://www.offparisseine.com/", tags: ["train"],
+    photos: 4, website: "https://www.offparisseine.com/", tags: ["train"],
   },
   {
     id: "hotel-le-corbusier",
@@ -381,7 +385,7 @@ window.HOTELS = [
     rooms: "21 chambres",
     forYou: ["Vous êtes passionné d'architecture", "Vous voulez une adresse insolite à petit prix à Marseille"],
     notForYou: ["Vous cherchez de grandes chambres", "Vous voulez la plage au pied de l'hôtel"],
-    photos: 6, website: "https://www.hotellecorbusier.com/", tags: ["train"],
+    photos: 5, website: "https://www.hotellecorbusier.com/", tags: ["train"],
   },
 
   // ——————————————————— MONTAGNE ———————————————————
@@ -713,7 +717,7 @@ window.HOTELS = [
     rooms: "20 chambres, dont un penthouse",
     forYou: ["Vous voulez la montagne pour vous seul, face au Mont-Blanc", "Vous skiez et aimez le chalet de luxe"],
     notForYou: ["Vous voyagez avec un petit budget", "Vous voulez sortir en ville le soir"],
-    photos: 6, website: "https://www.refugechezlatante.com/",
+    photos: 5, website: "https://www.refugechezlatante.com/",
   },
   {
     id: "molitor",
@@ -904,7 +908,8 @@ window.HOTELS = [
     rooms: "15 chambres",
     forYou: ["Vous aimez les lieux de charme au bord de l'eau", "Vous explorez le Périgord vert", "Vous voyagez avec votre chien"],
     notForYou: ["Vous cherchez un design contemporain", "Vous voulez l'animation d'une ville"],
-    photos: 5, website: "https://www.dordogne-perigord-tourisme.fr/offres/le-moulin-du-roc-champagnac-de-belair-fr-2939663/", tags: ["chien"],
+    photos: 0, // photos de sites tiers retirées : fiche masquée en attendant les photos officielles (moulinduroc.com)
+    website: "https://www.dordogne-perigord-tourisme.fr/offres/le-moulin-du-roc-champagnac-de-belair-fr-2939663/", tags: ["chien"],
   },
   // ——————————————————— NOUVELLES ADRESSES (septembre 2026) ———————————————————
   {
@@ -1058,7 +1063,7 @@ window.HOTELS = [
     season: "Ouvert d'avril à décembre",
     forYou: ["Vous rêvez d'une Corse secrète, loin de tout", "Vous voulez une maison avec piscine rien qu'à vous", "Vous partez en famille ou entre amis"],
     notForYou: ["Vous voyagez avec un petit budget", "Vous voulez sortir le soir en ville"],
-    photos: 6, website: "https://www.murtoli.com/", tags: ["famille"],
+    photos: 5, website: "https://www.murtoli.com/", tags: ["famille"],
   },
   {
     id: "villa-la-coste",
@@ -1429,3 +1434,12 @@ window.HOTELS.forEach((h) => {
   h.images = Array.from({ length: h.photos || 0 }, (_, i) => `assets/hotels/${h.id}/${i + 1}.jpg`);
 });
 window.HOTELS = window.HOTELS.filter((h) => h.images.length);
+
+/* Fermetures temporaires (champ « closed ») : ces lieux sortent des listes,
+ * mais leur fiche reste générée (window.HOTELS_CLOSED) avec un bandeau. */
+(function () {
+  const today = new Date().toISOString().slice(0, 10);
+  window.HOTELS.forEach((h) => { h.isClosed = !!(h.closed && (!h.closed.until || today <= h.closed.until)); });
+  window.HOTELS_CLOSED = window.HOTELS.filter((h) => h.isClosed);
+  window.HOTELS = window.HOTELS.filter((h) => !h.isClosed);
+})();

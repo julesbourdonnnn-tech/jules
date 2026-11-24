@@ -263,12 +263,13 @@ function hotelPage(h) {
         <a href="#infos">Infos pratiques</a>
         <a href="#questions">Questions</a>
         <a href="#localisation">Localisation</a>
-        <a class="d-tabs-book btn btn-primary" href="${e(book)}" target="_blank" rel="noopener" ${trk}>Réserver en direct</a>
+        <a class="d-tabs-book btn btn-primary" href="${e(book)}" target="_blank" rel="noopener" ${trk}>${h.isClosed ? "Site officiel" : "Réserver en direct"}</a>
       </div>
     </nav>
 
     <div class="container detail-layout">
       <article class="detail-content">
+        ${h.isClosed ? `<p class="closed-banner"><strong>${e(h.closed.label || "Temporairement fermé")}</strong> ${e(h.closed.note || "")}</p>` : ""}
         ${reviewSection(h)}
         <section id="experience">
           ${C.isTested(h) ? "" : `<p class="scout-note reveal"><strong>Repérage</strong> Je n'y ai pas encore séjourné : fiche rédigée à partir des informations de l'établissement.</p>`}
@@ -346,7 +347,10 @@ function hotelPage(h) {
 
       <aside class="book-card" id="reserver" aria-label="Réservation">
         <p class="book-price">${budgetHtml(h)} <span>${e(b.range)}</span></p>
-        <a class="btn btn-primary btn-block" href="${e(book)}" target="_blank" rel="noopener" ${trk}>Réserver en direct</a>
+        ${h.isClosed
+          ? `<p class="book-closed">${e(h.closed.label || "Temporairement fermé")}</p>
+        <a class="btn btn-ghost btn-block" href="${e(book)}" target="_blank" rel="noopener" ${trk}>Suivre la réouverture</a>`
+          : `<a class="btn btn-primary btn-block" href="${e(book)}" target="_blank" rel="noopener" ${trk}>Réserver en direct</a>`}
         <p class="book-direct">Sur le site officiel de l'établissement : tarifs, disponibilités et conditions à jour.</p>
         <p class="book-tip"><strong>Conseil</strong> ${e(C.bookingTip(h))}</p>
         <ul class="book-perks">
@@ -354,7 +358,7 @@ function hotelPage(h) {
           <li>✓ Aucune commission : mes conseils sont libres</li>
           <li>✓ Une question ? L'établissement vous répond lui-même</li>
         </ul>
-        ${h.giftUrl
+        ${h.isClosed ? "" : h.giftUrl
           ? `<a class="book-gift" href="${e(h.giftUrl)}" target="_blank" rel="noopener" data-track="Cartes cadeaux" data-hotel="${e(h.id)}">🎁 Envie d'offrir cette nuit ? <span>Les cartes cadeaux de l'établissement →</span></a>`
           : gift ? `<a class="book-gift" href="${C.guideUrl(gift)}">🎁 Envie d'offrir cette nuit ? <span>Mes idées cadeaux →</span></a>` : ""}
       </aside>
@@ -435,7 +439,7 @@ function guidePage(g) {
         </div>
         <div class="g-body">
           <p class="g-num">${String(i + 1).padStart(2, "0")}</p>
-          <p class="card-type">${T.icon} ${e(T.label)} · ${e(ENVS[h.env].label)}</p>
+          <p class="card-type">${T.icon} ${e(T.label)} · ${e(ENVS[h.env].label)} ${C.isTested(h) ? `<a class="g-status g-tested" href="${C.hotelUrl(h)}#avis">✓ Testé${C.reviewScore(h) != null ? ` · ${C.fmtScore(C.reviewScore(h))}/10` : ""}</a>` : `<span class="g-status">Repérage</span>`}</p>
           <h2><a href="${C.hotelUrl(h)}">${e(h.name)}</a></h2>
           <p class="g-place">📍 ${e(h.city)}, ${e(h.department)} · ${budgetHtml(h)}${g.note ? ` · <span class="g-note">${e(g.note(h))}</span>` : ""}</p>
           <p class="g-tagline">${e(h.tagline)}</p>
@@ -753,12 +757,13 @@ function main() {
   const note = (file, did) => { if (did) changed.push(file); };
 
   // Nettoie les pages d'établissements qui n'existent plus
-  const wanted = new Set(HOTELS.map((h) => `${h.id}.html`));
+  const PAGES = HOTELS.concat(global.HOTELS_CLOSED || []); // fiches des lieux temporairement fermés incluses
+  const wanted = new Set(PAGES.map((h) => `${h.id}.html`));
   const hotelsDir = path.join(ROOT, "hotels");
   if (fs.existsSync(hotelsDir)) {
     for (const f of fs.readdirSync(hotelsDir)) if (f.endsWith(".html") && !wanted.has(f)) { fs.unlinkSync(path.join(hotelsDir, f)); changed.push(`hotels/${f} (supprimé)`); }
   }
-  for (const h of HOTELS) note(`hotels/${h.id}.html`, write(`hotels/${h.id}.html`, hotelPage(h)));
+  for (const h of PAGES) note(`hotels/${h.id}.html`, write(`hotels/${h.id}.html`, hotelPage(h)));
 
   const wantedGuides = new Set(["index.html", ...GUIDES.filter((g) => C.guideHotels(g).length).map((g) => `${g.slug}.html`)]);
   const guidesDir = path.join(ROOT, "guides");

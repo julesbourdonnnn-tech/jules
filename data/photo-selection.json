@@ -119,12 +119,11 @@
   23
  ],
  "hotel-le-corbusier": [
-  16,
-  17,
-  5,
-  13,
-  21,
-  22
+  "https://www.hotellecorbusier.com/wp-content/uploads/2022/05/la-cite-radieuse.jpg",
+  "https://www.hotellecorbusier.com/wp-content/uploads/2022/10/GROS-PLAN-FACADE-JOUR.jpeg",
+  "https://www.hotellecorbusier.com/wp-content/uploads/2023/03/chambre-cabine-7-2.jpg",
+  "https://www.hotellecorbusier.com/wp-content/uploads/2022/10/ENTREE-RESTAURANT.jpeg",
+  "https://www.hotellecorbusier.com/wp-content/uploads/2022/10/FACADE-NUIT-2.jpeg"
  ],
  "cour-des-loges": [
   1,
@@ -167,11 +166,10 @@
   13
  ],
  "off-paris-seine": [
-  1,
-  3,
-  4,
-  6,
-  2
+  "https://cdn.prod.website-files.com/67befba6949ce22a5643fc33/67befba6949ce22a5644003e_OFF%20BY%20NIGHT-24.jpg",
+  "https://cdn.prod.website-files.com/67befba6949ce22a5643fc33/67befba6949ce22a5643ffdb_OFF%202024%20OK%20BD-63%20(1).avif",
+  "https://cdn.prod.website-files.com/645941c4aaa44fd3dfedf4c0/666c554cc68685d92027c239_OFF%202024%20OK%20BD-65%20(1).webp",
+  "https://cdn.prod.website-files.com/67befba6949ce22a5643fc33/6aad4b6adb373c34d4c32e5f_Sans%20titre%20(1000%20x%201000%20px)%20(1).webp"
  ],
  "dihan": [
   2,
@@ -242,12 +240,11 @@
   18
  ],
  "refuge-chez-la-tante": [
-  24,
-  19,
-  2,
-  6,
-  7,
-  5
+  "https://cdn.prod.website-files.com/6878ccdeef580aa514fb0f47/6a9565fe439da14de31ee389_REFUGE-CHEZ-LA-TANTE-PIED-DE-PAGE.png",
+  "https://cdn.prod.website-files.com/6878ccdeef580aa514fb0f47/6878ccdeef580aa514fb10d6_MONTD%27ARBOISJUIN2025J2%C2%A9LABON3-118.jpg",
+  "https://cdn.prod.website-files.com/6878ccdeef580aa514fb0f7e/6a95388de6940e9a9c010147_REFUGE-CHEZ-LA-TANTE-HEADER-BLOC%20(3).png",
+  "https://cdn.prod.website-files.com/6878ccdeef580aa514fb0f7e/6a953b735bd78dccdf64cb81_REFUGE-CHEZ-LA-TANTE-HEADER-BLOC%20(1).png",
+  "https://cdn.prod.website-files.com/6878ccdeef580aa514fb0f7e/6a953889185276914cfaa32e_REFUGE-CHEZ-LA-TANTE-HEADER-BLOC%20(2).png"
  ],
  "molitor": [
   21,
@@ -317,13 +314,6 @@
   9,
   13
  ],
- "moulin-du-roc": [
-  2,
-  1,
-  3,
-  5,
-  4
- ],
  "bulles-de-savoie": [
   19,
   10,
@@ -388,12 +378,11 @@
   7
  ],
  "domaine-de-murtoli": [
-  11,
-  18,
-  7,
-  16,
-  21,
-  23
+  "https://www.lesgrandesmaisonscorses.com/images/photos/murtoli/u-fragnu_pool_aerial_murtoli-camille-moirenc.jpeg",
+  "https://www.lesgrandesmaisonscorses.com/media/yootheme/cache/27/aerial_view_Murtoli_Camille_Moirenc_original-27604060.webp",
+  "https://www.lesgrandesmaisonscorses.com/media/yootheme/cache/ce/A_LICCIA_aerial_pool_mountain_Murtoli_Camille_Moirenc_original-ced5a303.webp",
+  "https://www.lesgrandesmaisonscorses.com/media/yootheme/cache/0d/grotto_restaurant_inside_Murtoli_Camille_Moirenc_2_original-0d2673bd.webp",
+  "https://www.lesgrandesmaisonscorses.com/media/yootheme/cache/47/Hotel_de_la_Ferme_courtyard_Domaine_de_Murtoli_CCamille_MOIRENC_193282_original-47e72790.webp"
  ],
  "lieu-dieu": [
   8,
