@@ -365,10 +365,16 @@
         <div>
           <a class="brand" href="${page("index.html")}"><span class="brand-mark">✦</span><span>${escapeHtml(CONFIG.siteName)}</span></a>
           <p class="muted">${escapeHtml(CONFIG.tagline)}. Une sélection d'adresses rares, choisies une à une.</p>
+          <a class="footer-pro" href="${page("professionnels.html")}">
+            <span class="footer-pro-kicker">Hôteliers et propriétaires</span>
+            <strong>Vous êtes un établissement ?</strong>
+            <span>Accueillez-moi pour un séjour test : un avis de professionnel, des réservations en direct, sans commission.</span>
+            <span class="footer-pro-btn">Découvrir l'espace hôteliers →</span>
+          </a>
         </div>
         <div><h4>Ambiances</h4><ul>${envLinks}</ul></div>
         <div><h4>Mes guides</h4><ul>${guideLinks}<li><a href="${page("guides/index.html")}">Tous les guides →</a></li><li><a href="${page("carte.html")}">La carte interactive →</a></li></ul></div>
-        <div><h4>Nuits Singulières</h4><ul><li><a href="${page("quiz.html")}">Le quiz : trouver ma nuit</a></li><li><a href="${page("comparer.html")}">Le comparateur</a></li><li><a href="${page("a-propos.html")}">Qui suis-je ?</a></li><li><a href="${page("professionnels.html")}">Vous êtes un établissement ?</a></li>${socials}<li><a href="mailto:${escapeHtml(CONFIG.contactEmail)}">${escapeHtml(CONFIG.contactEmail)}</a></li><li><a href="${page("mentions-legales.html")}">Mentions légales</a></li></ul></div>
+        <div><h4>Nuits Singulières</h4><ul><li><a href="${page("quiz.html")}">Le quiz : trouver ma nuit</a></li><li><a href="${page("comparer.html")}">Le comparateur</a></li><li><a href="${page("a-propos.html")}">Qui suis-je ?</a></li>${socials}<li><a href="mailto:${escapeHtml(CONFIG.contactEmail)}">${escapeHtml(CONFIG.contactEmail)}</a></li><li><a href="${page("mentions-legales.html")}">Mentions légales</a></li></ul></div>
       </div>
       <p class="disclosure">Nuits Singulières est un site de conseil indépendant : aucun établissement ne paie pour y figurer, et je ne touche aucune commission sur les réservations. Les liens « Réserver en direct » mènent au site officiel de chaque lieu. Les niveaux de budget sont indicatifs. Photos : © les établissements.</p>
       <p class="muted small">© ${new Date().getFullYear()} ${escapeHtml(CONFIG.siteName)}</p>`;
