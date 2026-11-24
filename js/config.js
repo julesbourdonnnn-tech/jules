@@ -13,7 +13,7 @@ window.SITE_CONFIG = {
   // L'auteur des avis (page « Qui suis-je », signature des avis testés)
   author: {
     name: "Jules Bourdon",
-    title: "Hôtelier dans le luxe, en France et à l'étranger",
+    title: "Hôtelier passé par des maisons 3, 4 et 5 étoiles, en France et à l'étranger",
   },
 
   // Nuits Singulières est un site de conseil indépendant : aucune affiliation,

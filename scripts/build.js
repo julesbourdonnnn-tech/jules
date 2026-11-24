@@ -135,7 +135,7 @@ function reviewSection(h) {
             <div class="fit-col fit-no"><h3>J'ai moins aimé</h3><ul>${(R.cons || []).map((x) => `<li>${e(x)}</li>`).join("")}</ul></div>
           </div>` : ""}
           ${R.tip ? `<p class="review-tip"><strong>Le conseil du pro</strong> ${e(R.tip)}</p>` : ""}
-          <p class="review-disclosure">${R.invited
+          <p class="review-disclosure">${R.disclosure ? `${e(R.disclosure)} ` : ""}${R.invited
             ? "Séjour offert par l'établissement. Comme toujours, l'avis est libre : l'établissement ne l'a ni relu ni validé."
             : "Séjour réservé et payé par mes soins, comme un client ordinaire."} <a href="../a-propos.html#charte">Ma charte</a></p>
         </section>`;
@@ -433,7 +433,7 @@ function guidePage(g) {
 
     <div class="container g-layout">
       <div class="g-intro">
-        <p class="byline"><img src="../assets/jules/avatar.jpg" alt="" width="42" height="42" loading="lazy"><span><a href="../a-propos.html">Par Jules Bourdon</a> <span>Hôtelier dans le luxe, en France et à l'étranger</span></span></p>
+        <p class="byline"><img src="../assets/jules/avatar.jpg" alt="" width="42" height="42" loading="lazy"><span><a href="../a-propos.html">Par Jules Bourdon</a> <span>${e(CONFIG.author.title)}</span></span></p>
         ${g.intro.map((p, i) => `<p class="${i ? "body" : "lead dropcap"}">${e(p)}</p>`).join("\n        ")}
       </div>
       <nav class="g-toc" aria-label="Sommaire">

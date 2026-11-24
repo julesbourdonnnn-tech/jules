@@ -12,8 +12,8 @@ un e-mail court reçoit plus de réponses.
 
 Bonjour [Madame / Monsieur / prénom],
 
-Je m'appelle Jules Bourdon. Je travaille dans l'hôtellerie de luxe, en France
-et à l'étranger, et je tiens à titre personnel Nuits Singulières
+Je m'appelle Jules Bourdon. J'ai travaillé dans plusieurs maisons 3, 4 et
+5 étoiles, en France et à l'étranger, et je tiens à titre personnel Nuits Singulières
 (https://nuitsinguliere.com), un site de conseil qui présente les adresses les
 plus singulières de France.
 
