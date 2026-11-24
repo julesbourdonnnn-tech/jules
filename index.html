@@ -236,48 +236,59 @@
       </div>
     </div>
 
-    <div class="near-box" id="near-box">
-      <div class="near-text">
-        <strong>Les plus proches de chez vous</strong>
-        <span class="muted" id="near-status">Indiquez votre adresse ou votre ville : on trie tout par distance.</span>
+    <div class="finder reveal" id="filters">
+      <div class="finder-bar">
+        <label class="finder-search">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M16 16l4.5 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          <input type="search" id="f-q" placeholder="Un lieu, une ville, une région…" aria-label="Rechercher un établissement, une ville, une région">
+        </label>
+        <div class="finder-field"><span>Ambiance</span><select id="f-env" data-fancy="in-field" aria-label="Ambiance"></select></div>
+        <div class="finder-field"><span>Expérience</span><select id="f-type" data-fancy="in-field" aria-label="Expérience"></select></div>
+        <div class="finder-field"><span>Budget</span><select id="f-budget" data-fancy="in-field" aria-label="Budget"></select></div>
+        <div class="finder-field"><span>Envie</span><select id="f-tag" data-fancy="in-field" aria-label="Envie"></select></div>
       </div>
-      <div class="near-form">
-        <div class="autocomplete">
-          <input type="text" id="near-input" placeholder="Votre adresse, ville ou code postal" autocomplete="off" aria-label="Votre adresse">
-          <ul class="suggestions" id="near-suggestions" role="listbox"></ul>
-        </div>
-        <button class="btn btn-ghost" type="button" id="near-locate" title="Utiliser ma position">◎ Me localiser</button>
-        <select id="near-radius" aria-label="Rayon de recherche" data-fancy="on-dark">
-          <option value="">Toute la France</option>
-          <option value="50">Moins de 50 km</option>
-          <option value="100">Moins de 100 km</option>
-          <option value="200">Moins de 200 km</option>
-          <option value="400">Moins de 400 km</option>
-        </select>
-        <button class="btn-text" type="button" id="near-clear" hidden>Effacer</button>
-      </div>
-    </div>
 
-    <div class="filters" id="filters">
-      <div class="filter-row">
-        <input type="search" id="f-q" placeholder="Rechercher…" aria-label="Rechercher un établissement, une ville, une région">
-        <div class="pills" id="f-env" role="group" aria-label="Ambiance"></div>
-        <div class="pills" id="f-budget" role="group" aria-label="Budget"></div>
-        <select id="f-sort" aria-label="Trier par" data-fancy="pill">
-          <option value="featured">Recommandés</option>
-          <option value="budget-asc">Budget croissant</option>
-          <option value="budget-desc">Budget décroissant</option>
-          <option value="distance">Distance</option>
-          <option value="name">Nom (A → Z)</option>
-        </select>
+      <div class="finder-near" id="near-box">
+        <div class="near-form">
+          <div class="autocomplete">
+            <input type="text" id="near-input" placeholder="Votre ville, adresse ou code postal" autocomplete="off" aria-label="Votre adresse">
+            <ul class="suggestions" id="near-suggestions" role="listbox"></ul>
+          </div>
+          <button class="btn btn-ghost" type="button" id="near-locate" title="Utiliser ma position">Me localiser</button>
+          <select id="near-radius" aria-label="Rayon de recherche" data-fancy="pill">
+            <option value="">Toute la France</option>
+            <option value="50">Moins de 50 km</option>
+            <option value="100">Moins de 100 km</option>
+            <option value="200">Moins de 200 km</option>
+            <option value="400">Moins de 400 km</option>
+          </select>
+          <button class="btn-text" type="button" id="near-clear" hidden>Effacer</button>
+        </div>
+        <p class="near-status" id="near-status"></p>
       </div>
-      <div class="type-chips" id="f-type" role="group" aria-label="Expérience"></div>
-      <div class="tag-chips" id="f-tags" role="group" aria-label="Envies"></div>
     </div>
 
     <div class="results-bar">
-      <p id="results-count" aria-live="polite"></p>
-      <button class="btn-text" type="button" id="reset-top" hidden>Réinitialiser les filtres</button>
+      <div class="results-left">
+        <p id="results-count" aria-live="polite"></p>
+        <div class="finder-active" id="f-active"></div>
+      </div>
+      <div class="results-right">
+        <button class="finder-near-toggle" type="button" id="near-toggle" aria-expanded="false" aria-controls="near-box">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-6.5-6.1-6.5-11A6.5 6.5 0 0 1 18.5 10c0 4.9-6.5 11-6.5 11z" fill="none" stroke="currentColor" stroke-width="1.7"/><circle cx="12" cy="10" r="2.3" fill="currentColor"/></svg>
+          Autour de moi
+        </button>
+        <label class="finder-sort"><span>Trier</span>
+          <select id="f-sort" aria-label="Trier par" data-fancy="pill">
+            <option value="featured">Recommandés</option>
+            <option value="budget-asc">Budget croissant</option>
+            <option value="budget-desc">Budget décroissant</option>
+            <option value="distance">Distance</option>
+            <option value="name">Nom (A → Z)</option>
+          </select>
+        </label>
+        <button class="btn-text" type="button" id="reset-top" hidden>Tout effacer</button>
+      </div>
     </div>
 
     <div class="grid" id="results"></div>

@@ -338,38 +338,45 @@
   }
 
   function renderFilterControls() {
-    $("#f-env").innerHTML = `<button type="button" data-env="">Tout</button>` +
-      Object.entries(ENVS).map(([k, e]) => `<button type="button" data-env="${k}">${escapeHtml(e.label)}</button>`).join("");
-    $("#f-budget").innerHTML = `<button type="button" data-budget="">Tout budget</button>` +
-      Object.entries(BUDGETS).map(([k, b]) => `<button type="button" data-budget="${k}" title="${escapeHtml(b.range)}">${"€".repeat(k)}</button>`).join("");
-    $("#f-type").innerHTML = Object.entries(TYPES).filter(([k]) => count("type", k))
-      .map(([k, t]) => `<button type="button" data-type="${k}">${t.icon} ${escapeHtml(t.label)}</button>`).join("");
-    $("#f-tags").innerHTML = `<span class="tag-chips-label">Envies</span>` + Object.entries(TAGS)
+    const opt = (v, label) => `<option value="${escapeHtml(v)}">${escapeHtml(label)}</option>`;
+    $("#f-env").innerHTML = opt("", "Toutes") + Object.entries(ENVS).map(([k, e]) => opt(k, e.label)).join("");
+    $("#f-type").innerHTML = opt("", "Toutes") + Object.entries(TYPES).filter(([k]) => count("type", k)).map(([k, t]) => opt(k, t.label)).join("");
+    $("#f-budget").innerHTML = opt("", "Tous") + Object.entries(BUDGETS).map(([k, b]) => opt(k, `${"€".repeat(k)} · ${b.short}`)).join("");
+    $("#f-tag").innerHTML = opt("", "Toutes") + Object.entries(TAGS)
       .filter(([k]) => HOTELS.some((h) => tagsOf(h).includes(k)))
-      .map(([k, t]) => `<button type="button" data-tag="${k}" aria-pressed="false">${t.icon} ${escapeHtml(t.short)}</button>`).join("");
+      .map(([k, t]) => opt(k, t.short)).join("");
   }
 
   function syncControls(n) {
     $("#f-q").value = state.q;
     $("#f-sort").value = state.sort;
     $("#f-sort").querySelector('[value="distance"]').disabled = !state.loc;
-    document.querySelectorAll("#f-env button").forEach((b) => b.classList.toggle("active", b.dataset.env === state.env));
-    document.querySelectorAll("#f-budget button").forEach((b) => b.classList.toggle("active", b.dataset.budget === state.budget));
-    document.querySelectorAll("#f-type button").forEach((b) => b.classList.toggle("active", b.dataset.type === state.type));
-    document.querySelectorAll("#f-tags button").forEach((b) => { const on = b.dataset.tag === state.tag; b.classList.toggle("active", on); b.setAttribute("aria-pressed", on); });
+    $("#f-env").value = state.env;
+    $("#f-type").value = state.type;
+    $("#f-budget").value = state.budget;
+    $("#f-tag").value = state.tag || "";
+    const chip = (key, label) => `<button type="button" class="finder-chip" data-clear="${key}" aria-label="Retirer le filtre ${escapeHtml(label)}">${escapeHtml(label)}<span aria-hidden="true">×</span></button>`;
+    $("#f-active").innerHTML = [
+      state.q.trim() && chip("q", `« ${state.q.trim()} »`),
+      state.env && chip("env", ENVS[state.env].label),
+      state.type && chip("type", TYPES[state.type].label),
+      state.budget && chip("budget", `${"€".repeat(state.budget)} · ${BUDGETS[state.budget].short}`),
+      state.tag && chip("tag", TAGS[state.tag].short),
+      state.radius && chip("radius", `Moins de ${state.radius} km`),
+    ].filter(Boolean).join("");
     $("#near-radius").value = state.radius;
     $("#near-radius").disabled = !state.loc;
     $("#near-clear").hidden = !state.loc;
     if (state.loc) $("#near-input").value = state.loc.label;
     $("#near-status").textContent = state.loc
-      ? `Triés par distance depuis : ${state.loc.label}`
-      : "Indiquez votre adresse ou votre ville : on trie tout par distance.";
+      ? `Adresses triées par distance depuis ${state.loc.label}.`
+      : "Indiquez votre ville ou votre adresse : je trie toutes les adresses par distance.";
     $("#near-box").classList.toggle("active", !!state.loc);
+    if (state.loc) setNearOpen(true);
+    $("#near-toggle").classList.toggle("is-on", !!state.loc);
     const active = state.q || state.env || state.type || state.budget || state.tag || state.radius;
     $("#reset-top").hidden = !active;
-    $("#results-count").innerHTML = `<strong>${n}</strong> établissement${n > 1 ? "s" : ""} extraordinaire${n > 1 ? "s" : ""}` +
-      (state.type ? ` · ${escapeHtml(TYPES[state.type].label)}` : "") + (state.env ? ` · ${escapeHtml(ENVS[state.env].label)}` : "") +
-      (state.tag ? ` · ${escapeHtml(TAGS[state.tag].label)}` : "");
+    $("#results-count").innerHTML = `<strong>${n}</strong> adresse${n > 1 ? "s" : ""}`;
   }
 
   let lastKey = "";
@@ -444,6 +451,10 @@
   }
 
   /* ---------- « Près de chez moi » ---------- */
+  function setNearOpen(open) {
+    $("#near-box").classList.toggle("open", open);
+    $("#near-toggle").setAttribute("aria-expanded", String(open));
+  }
   function setLocation(loc) {
     state.loc = loc;
     setUserLocation(loc);
@@ -500,6 +511,7 @@
     document.addEventListener("click", (e) => {
       if (!e.target.closest("[data-open-near]")) return;
       e.preventDefault();
+      setNearOpen(true);
       $("#explorer").scrollIntoView({ behavior: "smooth" });
       setTimeout(() => input.focus({ preventScroll: true }), 600);
     });
@@ -509,6 +521,23 @@
     let t;
     $("#f-q").addEventListener("input", (e) => { clearTimeout(t); t = setTimeout(() => { state.q = e.target.value; render(); }, 120); });
     $("#f-sort").addEventListener("change", (e) => { state.sort = e.target.value; render(); });
+    $("#f-env").addEventListener("change", (e) => { state.env = e.target.value; render(); });
+    $("#f-type").addEventListener("change", (e) => { state.type = e.target.value; render(); });
+    $("#f-budget").addEventListener("change", (e) => { state.budget = e.target.value; render(); });
+    $("#f-tag").addEventListener("change", (e) => { state.tag = e.target.value; render(); });
+    $("#near-toggle").addEventListener("click", () => {
+      const open = !$("#near-box").classList.contains("open");
+      setNearOpen(open);
+      if (open) setTimeout(() => $("#near-input").focus({ preventScroll: true }), 50);
+    });
+    $("#f-active").addEventListener("click", (e) => {
+      const b = e.target.closest("[data-clear]");
+      if (!b) return;
+      const k = b.dataset.clear;
+      state[k] = "";
+      if (k === "q") $("#f-q").value = "";
+      render();
+    });
     $("#filters").addEventListener("click", (e) => {
       const b = e.target.closest("button");
       if (!b) return;
