@@ -129,7 +129,9 @@ function reviewSection(h) {
           ${R.disclosure ? `<p class="review-transparency"><strong>Transparence</strong> ${e(R.disclosure.replace(/^Transparence\s*:\s*/i, ""))}${R.invited ? " Cette nuit m'a été offerte par l'hôtel." : ""}</p>` : ""}
           ${R.verdict ? `<p class="review-verdict">« ${e(R.verdict)} »</p>` : ""}
           ${scores.length ? `<ul class="review-scores">${scores.map(([k, label]) => `<li><span>${e(label)}</span><i style="--v:${R.scores[k] * 10}%"></i><b>${C.fmtScore(R.scores[k])}</b></li>`).join("")}</ul>` : ""}
-          ${(R.text || []).map((p) => `<p class="body">${e(p)}</p>`).join("\n          ")}
+          <div class="review-body">${(R.text || []).map((p) => Array.isArray(p)
+            ? `<div class="review-part"><h3>${e(p[0])}</h3><p>${e(p[1])}</p></div>`
+            : `<p class="body">${e(p)}</p>`).join("")}</div>
           ${(() => {
             const pros = R.pros || [], cons = R.cons || [], know = R.good2know || [];
             const col2 = cons.length ? ["J'ai moins aimé", cons] : know.length ? ["Bon à savoir", know] : null;

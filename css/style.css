@@ -1361,3 +1361,8 @@ body.has-compare .site-footer { padding-bottom: 110px; }
   .ask-row { grid-template-columns: 1fr; }
 }
 .photo-credit { margin: -8px 0 16px; font-size: .84rem; color: var(--muted); }
+.review-body { display: grid; gap: 18px; margin: 4px 0 6px; }
+.review-part { display: grid; grid-template-columns: 9.5rem 1fr; gap: 20px; padding-top: 16px; border-top: 1px solid var(--line); }
+.review-part h3 { margin: 2px 0 0; font: 600 .74rem/1.4 var(--sans); letter-spacing: .14em; text-transform: uppercase; color: var(--terracotta); }
+.review-part p { margin: 0; color: var(--ink-soft); line-height: 1.7; }
+@media (max-width: 700px) { .review-part { grid-template-columns: 1fr; gap: 6px; } }
