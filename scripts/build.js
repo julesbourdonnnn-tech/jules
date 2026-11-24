@@ -126,16 +126,23 @@ function reviewSection(h) {
             </div>
             ${score != null ? `<p class="review-score"><strong>${C.fmtScore(score)}</strong><span>/10</span></p>` : ""}
           </div>
+          ${R.disclosure ? `<p class="review-transparency"><strong>Transparence</strong> ${e(R.disclosure.replace(/^Transparence\s*:\s*/i, ""))}${R.invited ? " Cette nuit m'a été offerte par l'hôtel." : ""}</p>` : ""}
           ${R.verdict ? `<p class="review-verdict">« ${e(R.verdict)} »</p>` : ""}
           ${scores.length ? `<ul class="review-scores">${scores.map(([k, label]) => `<li><span>${e(label)}</span><i style="--v:${R.scores[k] * 10}%"></i><b>${C.fmtScore(R.scores[k])}</b></li>`).join("")}</ul>` : ""}
           ${(R.text || []).map((p) => `<p class="body">${e(p)}</p>`).join("\n          ")}
-          ${(R.pros || []).length || (R.cons || []).length ? `
+          ${(() => {
+            const pros = R.pros || [], cons = R.cons || [], know = R.good2know || [];
+            const col2 = cons.length ? ["J'ai moins aimé", cons] : know.length ? ["Bon à savoir", know] : null;
+            if (!pros.length && !col2) return "";
+            return `
           <div class="fit">
-            <div class="fit-col fit-yes"><h3>J'ai aimé</h3><ul>${(R.pros || []).map((x) => `<li>${e(x)}</li>`).join("")}</ul></div>
-            <div class="fit-col fit-no"><h3>J'ai moins aimé</h3><ul>${(R.cons || []).map((x) => `<li>${e(x)}</li>`).join("")}</ul></div>
-          </div>` : ""}
+            ${pros.length ? `<div class="fit-col fit-yes"><h3>J'ai aimé</h3><ul>${pros.map((x) => `<li>${e(x)}</li>`).join("")}</ul></div>` : ""}
+            ${col2 ? `<div class="fit-col fit-no"><h3>${col2[0]}</h3><ul>${col2[1].map((x) => `<li>${e(x)}</li>`).join("")}</ul></div>` : ""}
+          </div>${cons.length && know.length ? `
+          <p class="review-tip"><strong>Bon à savoir</strong> ${know.map(e).join(" · ")}</p>` : ""}`;
+          })()}
           ${R.tip ? `<p class="review-tip"><strong>Le conseil du pro</strong> ${e(R.tip)}</p>` : ""}
-          <p class="review-disclosure">${R.disclosure ? `${e(R.disclosure)} ` : ""}${R.invited
+          <p class="review-disclosure">${R.invited
             ? "Séjour offert par l'établissement. Comme toujours, l'avis est libre : l'établissement ne l'a ni relu ni validé."
             : "Séjour réservé et payé par mes soins, comme un client ordinaire."} <a href="../a-propos.html#charte">Ma charte</a></p>
         </section>`;

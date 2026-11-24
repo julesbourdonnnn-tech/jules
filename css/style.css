@@ -1323,3 +1323,5 @@ body.has-compare .site-footer { padding-bottom: 110px; }
 }
 .about-portrait { width: 220px; height: auto; aspect-ratio: 4 / 5; object-fit: cover; border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 28px; }
 .g-intro .byline { margin-bottom: 26px; }
+.review-transparency { margin: 0 0 20px; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--line); background: #fff; font-size: .9rem; line-height: 1.5; color: var(--ink-soft); }
+.review-transparency strong { color: var(--terracotta); margin-right: 6px; font-size: .72rem; letter-spacing: .12em; text-transform: uppercase; }
