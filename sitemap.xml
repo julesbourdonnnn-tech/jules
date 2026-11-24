@@ -10,7 +10,7 @@
     <image:image><image:loc>https://nuitsinguliere.com/assets/hotels/chateau-d-augerville/1.jpg</image:loc></image:image>
   </url>
   <url><loc>https://nuitsinguliere.com/guides/nuit-insolite-en-amoureux.html</loc><lastmod>2026-11-24</lastmod>
-    <image:image><image:loc>https://nuitsinguliere.com/assets/hotels/attrap-reves-allauch/1.jpg</image:loc></image:image>
+    <image:image><image:loc>https://nuitsinguliere.com/assets/hotels/phare-de-kerbel/1.jpg</image:loc></image:image>
   </url>
   <url><loc>https://nuitsinguliere.com/guides/cabanes-perchees.html</loc><lastmod>2026-11-24</lastmod>
     <image:image><image:loc>https://nuitsinguliere.com/assets/hotels/loire-valley-lodges/1.jpg</image:loc></image:image>
@@ -115,7 +115,7 @@
     <image:image><image:loc>https://nuitsinguliere.com/assets/hotels/les-roches-rouges/1.jpg</image:loc></image:image>
   </url>
   <url><loc>https://nuitsinguliere.com/guides/hotel-insolite-pres-de-bordeaux.html</loc><lastmod>2026-11-24</lastmod>
-    <image:image><image:loc>https://nuitsinguliere.com/assets/hotels/landifornia-lodge/1.jpg</image:loc></image:image>
+    <image:image><image:loc>https://nuitsinguliere.com/assets/hotels/domaine-des-etangs/1.jpg</image:loc></image:image>
   </url>
   <url><loc>https://nuitsinguliere.com/guides/hotel-insolite-pres-de-toulouse.html</loc><lastmod>2026-11-24</lastmod>
     <image:image><image:loc>https://nuitsinguliere.com/assets/hotels/pella-roca/1.jpg</image:loc></image:image>
@@ -124,7 +124,7 @@
     <image:image><image:loc>https://nuitsinguliere.com/assets/hotels/demeure-de-la-vignole/1.jpg</image:loc></image:image>
   </url>
   <url><loc>https://nuitsinguliere.com/guides/hotel-insolite-pres-de-nice.html</loc><lastmod>2026-11-24</lastmod>
-    <image:image><image:loc>https://nuitsinguliere.com/assets/hotels/attrap-reves-allauch/1.jpg</image:loc></image:image>
+    <image:image><image:loc>https://nuitsinguliere.com/assets/hotels/villa-la-coste/1.jpg</image:loc></image:image>
   </url>
   <url><loc>https://nuitsinguliere.com/guides/hotel-insolite-pres-de-rennes.html</loc><lastmod>2026-11-24</lastmod>
     <image:image><image:loc>https://nuitsinguliere.com/assets/hotels/auberge-saint-pierre/1.jpg</image:loc></image:image>
@@ -160,7 +160,7 @@
     <image:image><image:loc>https://nuitsinguliere.com/assets/hotels/chateau-d-augerville/1.jpg</image:loc></image:image>
   </url>
   <url><loc>https://nuitsinguliere.com/guides/hotel-insolite-pres-de-limoges.html</loc><lastmod>2026-11-24</lastmod>
-    <image:image><image:loc>https://nuitsinguliere.com/assets/hotels/chateau-de-la-treyne/1.jpg</image:loc></image:image>
+    <image:image><image:loc>https://nuitsinguliere.com/assets/hotels/cabanes-lacustra/1.jpg</image:loc></image:image>
   </url>
   <url><loc>https://nuitsinguliere.com/hotels/loire-valley-lodges.html</loc><lastmod>2026-11-24</lastmod>
     <image:image><image:loc>https://nuitsinguliere.com/assets/hotels/loire-valley-lodges/1.jpg</image:loc></image:image>
@@ -193,14 +193,6 @@
     <image:image><image:loc>https://nuitsinguliere.com/assets/hotels/dihan/4.jpg</image:loc></image:image>
     <image:image><image:loc>https://nuitsinguliere.com/assets/hotels/dihan/5.jpg</image:loc></image:image>
     <image:image><image:loc>https://nuitsinguliere.com/assets/hotels/dihan/6.jpg</image:loc></image:image>
-  </url>
-  <url><loc>https://nuitsinguliere.com/hotels/attrap-reves-allauch.html</loc><lastmod>2026-11-24</lastmod>
-    <image:image><image:loc>https://nuitsinguliere.com/assets/hotels/attrap-reves-allauch/1.jpg</image:loc></image:image>
-    <image:image><image:loc>https://nuitsinguliere.com/assets/hotels/attrap-reves-allauch/2.jpg</image:loc></image:image>
-    <image:image><image:loc>https://nuitsinguliere.com/assets/hotels/attrap-reves-allauch/3.jpg</image:loc></image:image>
-    <image:image><image:loc>https://nuitsinguliere.com/assets/hotels/attrap-reves-allauch/4.jpg</image:loc></image:image>
-    <image:image><image:loc>https://nuitsinguliere.com/assets/hotels/attrap-reves-allauch/5.jpg</image:loc></image:image>
-    <image:image><image:loc>https://nuitsinguliere.com/assets/hotels/attrap-reves-allauch/6.jpg</image:loc></image:image>
   </url>
   <url><loc>https://nuitsinguliere.com/hotels/demeure-de-la-vignole.html</loc><lastmod>2026-11-24</lastmod>
     <image:image><image:loc>https://nuitsinguliere.com/assets/hotels/demeure-de-la-vignole/1.jpg</image:loc></image:image>
@@ -469,6 +461,12 @@
     <image:image><image:loc>https://nuitsinguliere.com/assets/hotels/toue-cabanee-canal-de-bourgogne/4.jpg</image:loc></image:image>
     <image:image><image:loc>https://nuitsinguliere.com/assets/hotels/toue-cabanee-canal-de-bourgogne/5.jpg</image:loc></image:image>
     <image:image><image:loc>https://nuitsinguliere.com/assets/hotels/toue-cabanee-canal-de-bourgogne/6.jpg</image:loc></image:image>
+  </url>
+  <url><loc>https://nuitsinguliere.com/hotels/moulin-du-roc.html</loc><lastmod>2026-11-24</lastmod>
+    <image:image><image:loc>https://nuitsinguliere.com/assets/hotels/moulin-du-roc/1.jpg</image:loc></image:image>
+    <image:image><image:loc>https://nuitsinguliere.com/assets/hotels/moulin-du-roc/2.jpg</image:loc></image:image>
+    <image:image><image:loc>https://nuitsinguliere.com/assets/hotels/moulin-du-roc/3.jpg</image:loc></image:image>
+    <image:image><image:loc>https://nuitsinguliere.com/assets/hotels/moulin-du-roc/4.jpg</image:loc></image:image>
   </url>
   <url><loc>https://nuitsinguliere.com/hotels/bulles-de-savoie.html</loc><lastmod>2026-11-24</lastmod>
     <image:image><image:loc>https://nuitsinguliere.com/assets/hotels/bulles-de-savoie/1.jpg</image:loc></image:image>

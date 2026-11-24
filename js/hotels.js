@@ -187,7 +187,8 @@ window.HOTELS = [
     rooms: "Bulles pour 2 personnes, plusieurs ambiances",
     forYou: ["Vous rêvez de vous endormir en regardant les étoiles", "Vous préparez une surprise romantique"],
     notForYou: ["Vous tenez à l'intimité d'une chambre fermée", "Vous voyagez à plus de deux"],
-    photos: 6, website: "https://www.attrap-reves.com/",
+    photos: 0, // photos de sites tiers retirées : fiche masquée en attendant les photos de l'établissement
+    website: "https://www.attrap-reves.com/",
   },
   {
     id: "les-hautes-roches",
@@ -908,8 +909,7 @@ window.HOTELS = [
     rooms: "15 chambres",
     forYou: ["Vous aimez les lieux de charme au bord de l'eau", "Vous explorez le Périgord vert", "Vous voyagez avec votre chien"],
     notForYou: ["Vous cherchez un design contemporain", "Vous voulez l'animation d'une ville"],
-    photos: 0, // photos de sites tiers retirées : fiche masquée en attendant les photos officielles (moulinduroc.com)
-    website: "https://www.dordogne-perigord-tourisme.fr/offres/le-moulin-du-roc-champagnac-de-belair-fr-2939663/", tags: ["chien"],
+    photos: 4, website: "https://www.moulinduroc.com/", tags: ["chien"],
   },
   // ——————————————————— NOUVELLES ADRESSES (septembre 2026) ———————————————————
   {

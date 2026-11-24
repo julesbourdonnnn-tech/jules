@@ -307,7 +307,7 @@
   function renderQuizTeaser() {
     const art = $("#qt-art");
     if (!art) return;
-    const picks = ["attrap-reves-allauch", "phare-de-kerbel", "pella-roca"].map((id) => HOTELS.find((h) => h.id === id)).filter(Boolean);
+    const picks = ["bulles-de-savoie", "phare-de-kerbel", "pella-roca"].map((id) => HOTELS.find((h) => h.id === id)).filter(Boolean);
     art.innerHTML = picks.map((h) => `<img src="${img(h.images[0], 900)}" alt="" loading="lazy">`).join("");
   }
 

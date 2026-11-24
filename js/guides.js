@@ -54,7 +54,7 @@
       title: (n) => `${n} nuits insolites pour un week-end en amoureux`,
       description: "Bulle sous les étoiles, phare, cabane avec jacuzzi, jardin secret à Montmartre : ma sélection d'hébergements insolites pour une escapade à deux en France.",
       ids: ["attrap-reves-allauch", "phare-de-kerbel", "loire-valley-lodges", "pella-roca", "hotel-particulier-montmartre", "les-roches-rouges", "la-coorniche", "alpinest", "cabanes-du-moulin", "les-hautes-roches", "bulles-de-savoie", "ecrin-d-auvergne"],
-      cover: "attrap-reves-allauch",
+      cover: "phare-de-kerbel",
       intro: [
         "Pour un anniversaire, une demande en mariage ou simplement deux jours rien qu'à deux, rien ne vaut un lieu qui sort de l'ordinaire. J'ai rassemblé ici mes adresses les plus romantiques : on s'y endort sous les étoiles, au sommet d'un phare ou dans les arbres, loin de tout.",
         "Elles cultivent toutes l'intimité, avec un décor qu'on n'oublie pas ; plusieurs offrent un spa ou un jacuzzi privatif.",
