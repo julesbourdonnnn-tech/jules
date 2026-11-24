@@ -117,7 +117,7 @@ function hotelFaq(h) {
  * lorsque le séjour a été offert (loi du 9 juin 2023 sur l'influence). */
 function reviewSection(h) {
   if (!C.isTested(h)) return "";
-  const R = h.review, score = C.reviewScore(h), A = CONFIG.author;
+  const R = h.review, score = C.reviewScore(h);
   const scores = C.REVIEW_CRITERIA.filter(([k]) => typeof (R.scores || {})[k] === "number");
   return `
         <section id="avis" class="review reveal">
@@ -125,7 +125,6 @@ function reviewSection(h) {
             <div>
               <p class="eyebrow dark">✓ Testé · ${e(C.reviewDate(h))}${C.isCoupDeCoeur(h) ? ` · <a class="review-heart" href="../guides/coups-de-coeur-de-jules.html">♥ Coup de cœur</a>` : ""}</p>
               <h2>L'avis du pro</h2>
-              <p class="review-by">Par <a href="../a-propos.html">${e(A.name)}</a>, ${e(A.title.charAt(0).toLowerCase() + A.title.slice(1))}${R.stay ? ` · ${e(R.stay)}` : ""}</p>
             </div>
             ${score != null ? `<p class="review-score"><strong>${C.fmtScore(score)}</strong><span>/10</span></p>` : ""}
           </div>
