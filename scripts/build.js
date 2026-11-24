@@ -119,21 +119,33 @@ function reviewSection(h) {
   if (!C.isTested(h)) return "";
   const R = h.review, score = C.reviewScore(h);
   const scores = C.REVIEW_CRITERIA.filter(([k]) => typeof (R.scores || {})[k] === "number");
+  const parts = (R.text || []).map((p) => Array.isArray(p)
+    ? `<div class="review-part"><h3>${e(p[0])}</h3><p>${e(p[1])}</p></div>`
+    : `<p class="body">${e(p)}</p>`);
+  if (R.moment) parts.splice(Math.min(2, parts.length), 0, `<blockquote class="review-moment"><span>Le moment que je retiens</span>« ${e(R.moment)} »</blockquote>`);
+  const reco = R.recommend ? [
+    ["Pour qui", R.recommend.who], ["Quelle chambre", R.recommend.room], ["Quand venir", R.recommend.when],
+    ["Combien de temps", R.recommend.length], ["À ne pas manquer", R.recommend.dontMiss],
+  ].filter(([, v]) => v) : [];
   return `
         <section id="avis" class="review reveal">
           <div class="review-head">
             <div>
               <p class="eyebrow dark">✓ Testé · ${e(C.reviewDate(h))}</p>
-              <h2>L'avis du pro</h2>
+              <h2>${e(R.title || "L'avis du pro")}</h2>
+              ${R.stay ? `<p class="review-stay">Mon séjour : ${e(R.stay)} · ${R.invited ? "offert par l'établissement" : "réservé et payé par mes soins"}</p>` : ""}
             </div>
             ${score != null ? `<p class="review-score"><strong>${C.fmtScore(score)}</strong><span>/10</span></p>` : ""}
           </div>
           ${R.disclosure ? `<p class="review-transparency"><strong>Transparence</strong> ${e(R.disclosure.replace(/^Transparence\s*:\s*/i, ""))}${R.invited ? " Cette nuit m'a été offerte par l'hôtel." : ""}</p>` : ""}
-          ${R.verdict ? `<p class="review-verdict">« ${e(R.verdict)} »</p>` : ""}
-          ${scores.length ? `<ul class="review-scores">${scores.map(([k, label]) => `<li><span>${e(label)}</span><i style="--v:${R.scores[k] * 10}%"></i><b>${C.fmtScore(R.scores[k])}</b></li>`).join("")}</ul>` : ""}
-          <div class="review-body">${(R.text || []).map((p) => Array.isArray(p)
-            ? `<div class="review-part"><h3>${e(p[0])}</h3><p>${e(p[1])}</p></div>`
-            : `<p class="body">${e(p)}</p>`).join("")}</div>
+          ${R.lead ? `<p class="review-lead">${e(R.lead)}</p>` : ""}
+          <div class="review-body">${parts.join("")}</div>
+          ${R.verdict || scores.length ? `
+          <div class="review-verdict-box">
+            <h3>Mon verdict</h3>
+            ${R.verdict ? `<p class="review-verdict">« ${e(R.verdict)} »</p>` : ""}
+            ${scores.length ? `<ul class="review-scores">${scores.map(([k, label]) => `<li><span>${e(label)}</span><i style="--v:${R.scores[k] * 10}%"></i><b>${C.fmtScore(R.scores[k])}</b></li>`).join("")}</ul>` : ""}
+          </div>` : ""}
           ${(() => {
             const pros = R.pros || [], cons = R.cons || [], know = R.good2know || [];
             const col2 = cons.length ? ["J'ai moins aimé", cons] : know.length ? ["Bon à savoir", know] : null;
@@ -145,6 +157,11 @@ function reviewSection(h) {
           </div>${cons.length && know.length ? `
           <p class="review-tip"><strong>Bon à savoir</strong> ${know.map(e).join(" · ")}</p>` : ""}`;
           })()}
+          ${reco.length ? `
+          <div class="review-reco">
+            <h3>Ma recommandation</h3>
+            <dl>${reco.map(([k, v]) => `<div><dt>${e(k)}</dt><dd>${e(v)}</dd></div>`).join("")}</dl>
+          </div>` : ""}
           ${R.tip ? `<p class="review-tip"><strong>Le conseil du pro</strong> ${e(R.tip)}</p>` : ""}
           <p class="review-disclosure">${R.invited
             ? "Séjour offert par l'établissement. Comme toujours, l'avis est libre : l'établissement ne l'a ni relu ni validé."
@@ -186,7 +203,7 @@ function hotelPage(h) {
           author: { "@type": "Person", name: CONFIG.author.name, url: abs("a-propos.html") },
           datePublished: h.review.published || `${h.review.date}-01`.slice(0, 10),
           reviewRating: { "@type": "Rating", ratingValue: C.reviewScore(h), bestRating: 10, worstRating: 0 },
-          ...(h.review.verdict ? { reviewBody: h.review.verdict } : {}),
+          ...(h.review.verdict || h.review.lead ? { name: h.review.title || undefined, reviewBody: [h.review.lead, h.review.verdict].filter(Boolean).join(" ") } : {}),
         },
       } : {}),
     },
