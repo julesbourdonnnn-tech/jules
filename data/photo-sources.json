@@ -431,5 +431,21 @@
    "https://www.landifornia-lodge.com/",
    "https://landifornia-lodge.com/en/"
   ]
+ },
+ {
+  "id": "chateau-d-augerville",
+  "pages": [
+   "https://www.chateau-augerville.com/",
+   "https://www.romantikhotels.com/en/hotels/chateau-golf-and-spa-daugerville",
+   "https://hotelspreference.com/en/chateau-daugerville-golf-and-spa-resort_617"
+  ]
+ },
+ {
+  "id": "le-donjon-etretat",
+  "pages": [
+   "https://www.hoteletretat.com/",
+   "https://www.hoteletretat.com/en",
+   "https://en.normandie-tourisme.fr/hotels/le-donjon-domaine-saint-clair/"
+  ]
  }
 ]

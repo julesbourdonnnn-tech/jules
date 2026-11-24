@@ -4,6 +4,10 @@ name: Photos
 
 on:
   push:
+    # Uniquement sur la branche de travail : la branche publiée de Sable & Pierre
+    # reçoit ensuite le même commit (voir « Enregistrer les résultats »).
+    branches:
+      - claude/french-hotels-marketplace-vqleii
     paths:
       - "data/photo-sources.json"
       - "data/photo-selection.json"
@@ -48,3 +52,6 @@ jobs:
           git commit -m "Photos : mise à jour automatique"
           git pull --rebase origin "${GITHUB_REF_NAME}"
           git push origin "HEAD:${GITHUB_REF_NAME}"
+          # Même commit sur la branche publiée de Sable & Pierre (sans forcer), pour garder les deux branches alignées
+          PROD="claude/gifted-ritchie-r1ffn4"
+          if [ "${GITHUB_REF_NAME}" != "$PROD" ]; then git push origin "HEAD:$PROD" || echo "::warning::$PROD n'a pas pu être alignée."; fi
