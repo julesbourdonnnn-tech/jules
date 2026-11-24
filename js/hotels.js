@@ -1277,7 +1277,7 @@ window.HOTELS = [
     rooms: "Une quarantaine de chambres, au château et dans les dépendances",
     forYou: ["Vous rêvez d'un week-end de château sans faire des heures de route", "Vous jouez au golf", "Vous aimez les grands parcs"],
     notForYou: ["Vous cherchez l'animation d'une ville"],
-    photos: 4, website: "", photoCredit: "Jules Bourdon",
+    photos: 6, website: "https://chateau-augerville.com/",
     review: {
       date: "2026-03", stay: "Chambre supérieure en dépendance, 2 nuits", invited: false,
       scores: { accueil: 8.5, chambre: 8, literie: 8.5, table: 8.5, service: 8.5, valeur: 8 },
@@ -1342,9 +1342,9 @@ window.HOTELS = [
     rooms: "Chambres de caractère, dont certaines avec vue sur la mer",
     forYou: ["Vous aimez les lieux qui ont une âme", "Vous rêvez de vous réveiller face à la mer", "Vous aimez marcher le long des falaises"],
     notForYou: ["Vous voulez être au cœur de l'animation du centre"],
-    photos: 0, website: "https://www.hoteletretat.com/",
+    photos: 6, website: "https://www.hoteletretat.com/",
     review: {
-      date: "2025-03", stay: "Chambre avec vue sur la mer, 2 nuits", invited: false,
+      date: "2025-03", stay: "Chambre avec vue sur la mer, 2 nuits", coupDeCoeur: true, invited: false,
       scores: { accueil: 8.5, chambre: 9, literie: 8.5, table: 8, service: 8.5, valeur: 8 },
       verdict: "Un manoir à donjon perché sur la falaise, face à la mer : un hôtel qui ne ressemble à aucun autre.",
       text: [
