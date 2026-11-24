@@ -8,60 +8,8 @@
   "ou": "data.js"
  },
  {
-  "fr": "Bonjour, j'ai une question sur",
-  "ou": "main.js"
- },
- {
-  "fr": "Bonjour, j'ai une question sur vos maisons.",
-  "ou": "main.js"
- },
- {
-  "fr": "Nous écrire sur WhatsApp",
-  "ou": "main.js"
- },
- {
   "fr": "</div> </div> </section> <section class=\"section\" id=\"equipements\"> <div class=\"wrap\"> <div class=\"section-head\"> <div><span class=\"eyebrow\">Ce que propose la maison</span><h2 class=\"h2\">Tout est <em>prévu</em></h2></div> <p>La liste complète des équipements, telle qu'elle figure sur l'annonce.</p> </div> <div class=\"amenities\">",
   "ou": "house.js"
- },
- {
-  "fr": "> <span><strong>En une fois</strong> ·",
-  "ou": "house.js"
- },
- {
-  "fr": "prélevés automatiquement le",
-  "ou": "house.js"
- },
- {
-  "fr": "(payé)",
-  "ou": "reservation.js"
- },
- {
-  "fr": "(réservé sur votre carte, débité à la confirmation)",
-  "ou": "reservation.js"
- },
- {
-  "fr": "payé. Votre séjour est entièrement réglé.",
-  "ou": "reservation.js"
- },
- {
-  "fr": "votre banque demande une confirmation : merci de le régler avant votre arrivée.",
-  "ou": "reservation.js"
- },
- {
-  "fr": "prélevé automatiquement le",
-  "ou": "reservation.js"
- },
- {
-  "fr": "sur la même carte.",
-  "ou": "reservation.js"
- },
- {
-  "fr": "\">Régler le solde</a></p>",
-  "ou": "reservation.js"
- },
- {
-  "fr": "\" target=\"_blank\" rel=\"noopener\">Télécharger le contrat de location (PDF)</a></p>",
-  "ou": "reservation.js"
  },
  {
   "fr": "<small>01</small>La Maison du Lac",
@@ -86,22 +34,6 @@
  {
   "fr": "La Maison du Lac — Lacanau",
   "ou": "index.html"
- },
- {
-  "fr": "Pour les séjours réservés au moins",
-  "ou": "conditions.html"
- },
- {
-  "fr": "jours à l'avance, vous pouvez payer en 2 fois : un acompte de",
-  "ou": "conditions.html"
- },
- {
-  "fr": "% à la réservation, puis le solde, prélevé automatiquement sur la même carte",
-  "ou": "conditions.html"
- },
- {
-  "fr": "jours avant l'arrivée. Si votre banque demande une confirmation, un lien de paiement vous est envoyé par e-mail. Un contrat de location vous est envoyé avec la confirmation de votre séjour.",
-  "ou": "conditions.html"
  },
  {
   "fr": "<strong>La forêt de pins et les pistes cyclables</strong> : un réseau de pistes sécurisées relie le lac, la forêt et l'océan. Depuis le Moutchic, comptez une vingtaine de minutes à vélo pour rejoindre la plage.",

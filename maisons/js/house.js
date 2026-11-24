@@ -33,6 +33,10 @@
   ];
   // (3e élément de la photo : catégorie déjà calculée, pour les versions traduites)
   const catOf = (cap, cat) => cat || CATS.find((c) => c[2].test(cap))[0];
+  // Visite photo : groupes dans l'ordre d'une visite (extérieur, pièces de vie, chambres, salles de bain)
+  const tourGroups = ["ext", "live", "bed", "bath"]
+    .map((id) => [id, CATS.find((c) => c[0] === id)[1], h.photos.map((p, i) => [p, i]).filter(([p]) => catOf(p[1], p[2]) === id)])
+    .filter((g) => g[2].length);
 
   /* ======================= Rendu de la page ======================= */
   main.innerHTML = `
@@ -50,7 +54,11 @@
         <div class="hero__side">
           <p class="hero__count"><b>${ratingTxt}</b> ★ · ${h.reviewsCount} avis · Coup de cœur voyageurs</p>
           ${price ? `<p class="hero__price">${esc(price)}</p>` : ""}
-          <div class="hero__bars" role="group" aria-label="Choisir une photo">${h.hero.map((n, i) => `<button type="button" aria-label="Photo ${i + 1}"${i === 0 ? ' class="is-active"' : ""}><i></i></button>`).join("")}</div>
+          <div class="hero__nav">
+            <button type="button" class="round-btn round-btn--light hero__arrow" data-hero-step="-1" aria-label="Photo précédente">${icon("left")}</button>
+            <div class="hero__bars" role="group" aria-label="Choisir une photo">${h.hero.map((n, i) => `<button type="button" aria-label="Photo ${i + 1}"${i === 0 ? ' class="is-active"' : ""}><i></i></button>`).join("")}</div>
+            <button type="button" class="round-btn round-btn--light hero__arrow" data-hero-step="1" aria-label="Photo suivante">${icon("arrow")}</button>
+          </div>
           <div class="hero__btns">
             <button type="button" class="btn btn--outline-light" data-open-tour>${icon("grid")} Les ${gallery.length} photos</button>
             <button type="button" class="round-btn round-btn--light" data-share aria-label="Partager cette maison">${icon("share")}</button>
@@ -105,17 +113,20 @@
     <div class="wrap">
       <div class="section-head">
         <div><span class="eyebrow">Plan de la maison</span><h2 class="h2" id="lv-title">Niveau <em>par niveau</em></h2></div>
-        <p>Choisissez un niveau pour voir ce qu'il contient.</p>
+        <p>Ce que vous trouverez à chaque niveau de la maison.</p>
       </div>
-      <div class="levels">
-        <div class="levels__plan">${planSvg()}</div>
-        <div class="levels__info">
-          <div class="levels__tabs" role="tablist" aria-label="Niveaux de la maison">
-            ${h.levels.map((l, i) => `<button type="button" role="tab" id="lv-tab-${i}" aria-controls="lv-panel" aria-selected="${i === 0}" data-level="${i}"${i ? ' tabindex="-1"' : ""}>${esc(l.short)}</button>`).join("")}
+      <ol class="levels">
+        ${h.levels.map((l) => `
+        <li class="level">
+          ${l.photo
+            ? `<button type="button" class="level__photo" data-open-gallery="${idxOf(l.photo)}" aria-label="Agrandir : ${esc(capOf(l.photo))}">${img(key, l.photo, capOf(l.photo), "(max-width: 700px) 100vw, (max-width: 1100px) 50vw, 420px")}<span class="level__zoom" aria-hidden="true">${icon("search")}</span></button>`
+            : `<div class="level__photo level__photo--none" aria-hidden="true">${icon("door")}</div>`}
+          <div class="level__body">
+            <h3 class="h3">${esc(l.name)}</h3>
+            <ul class="level__list">${l.items.map((t) => `<li>${icon("check")}<span>${esc(t)}</span></li>`).join("")}</ul>
           </div>
-          <div class="levels__panel" id="lv-panel" role="tabpanel" aria-live="polite"></div>
-        </div>
-      </div>
+        </li>`).join("")}
+      </ol>
     </div>
   </section>
 
@@ -315,12 +326,18 @@
     <div class="tour__bar">
       <div class="tour__chips" role="group" aria-label="Pièces">
         <button type="button" class="chip" data-cat="all" aria-pressed="true">Tout · ${gallery.length}</button>
-        ${CATS.map(([id, name]) => { const n = h.photos.filter((p) => catOf(p[1], p[2]) === id).length; return n ? `<button type="button" class="chip" data-cat="${id}" aria-pressed="false">${name} · ${n}</button>` : ""; }).join("")}
+        ${tourGroups.map(([id, name, items]) => `<button type="button" class="chip" data-cat="${id}" aria-pressed="false">${name} · ${items.length}</button>`).join("")}
       </div>
       <button type="button" class="round-btn" data-close-tour aria-label="Fermer">${icon("close")}</button>
     </div>
-    <div class="tour__grid" id="tour-grid">
-      ${h.photos.map(([n, cap, cat], i) => `<button type="button" class="tour__item" data-cat="${catOf(cap, cat)}" data-open-gallery="${i}" aria-label="Agrandir : ${esc(cap)}"><img src="${photo(key, n, "md")}" alt="${esc(cap)}" loading="lazy"><span>${esc(cap)}</span></button>`).join("")}
+    <div class="tour__scroll" id="tour-grid">
+      ${tourGroups.map(([id, name, items]) => `
+      <section class="tour__group" data-cat="${id}" aria-label="${esc(name)}">
+        <h3 class="tour__title">${name} <span>${items.length}</span></h3>
+        <div class="tour__grid">
+          ${items.map(([[n, cap], i]) => `<button type="button" class="tour__item" data-open-gallery="${i}" aria-label="Agrandir : ${esc(cap)}">${img(key, n, cap, "(max-width: 700px) 50vw, (max-width: 1400px) 25vw, 340px")}<span>${esc(cap)}</span></button>`).join("")}
+        </div>
+      </section>`).join("")}
     </div>
   </div>
 
@@ -358,65 +375,6 @@
       <div class="stepper__ctl"><button type="button" data-step="${name}" data-d="-1" aria-label="Retirer : ${label}">−</button><output id="n-${name}" aria-live="polite">0</output><button type="button" data-step="${name}" data-d="1" aria-label="Ajouter : ${label}">+</button></div></div>`;
   }
 
-  // Coupe de la maison : un étage par niveau, cliquable
-  function planSvg() {
-    const L = h.levels;
-    const ext = L.findIndex((l) => l.short === "Extérieur");
-    const RANK = { "Étage": 0, "Rez-de-chaussée": 1, "Sous-sol": 2 };
-    const floors = L.map((l, i) => ({ l, i })).filter((x) => x.i !== ext).sort((a, b) => RANK[a.l.short] - RANK[b.l.short]);
-    const W = 420;
-    const fh = 64;
-    const top = 70;
-    // Les niveaux sont listés du haut vers le bas
-    const rows = floors.map((x, k) => {
-      const y = top + k * fh;
-      return `<g class="plan__lvl" data-level="${x.i}" tabindex="-1">
-        <rect x="70" y="${y}" width="280" height="${fh - 6}" rx="2"/>
-        <text x="210" y="${y + fh / 2 + 2}" text-anchor="middle">${esc(x.l.short)}</text></g>`;
-    }).join("");
-    const groundY = top + floors.length * fh - 6;
-    const roof = key === "lacanau"
-      ? `<path class="plan__roof" d="M56 ${top - 4} L210 ${top - 58} L364 ${top - 4}"/>`
-      : `<path class="plan__roof" d="M70 ${top - 6} H350 M150 ${top - 6} L180 ${top - 40} H300 L330 ${top - 6}"/><text class="plan__note" x="240" y="${top - 16}" text-anchor="middle">verrière</text>`;
-    const below = L.some((l) => l.short === "Sous-sol");
-    const garden = ext >= 0
-      ? `<g class="plan__lvl plan__lvl--ext" data-level="${ext}" tabindex="-1"><path d="M0 ${groundY + 2} H70 M350 ${groundY + 2} H${W}"/><rect x="368" y="${groundY - 22}" width="46" height="18" rx="2" class="plan__pool"/><text x="391" y="${groundY + 22}" text-anchor="middle">jardin</text></g>`
-      : "";
-    return `<svg viewBox="0 0 ${W} ${groundY + 40}" role="img" aria-label="Coupe schématique de la maison">
-      ${roof}${rows}
-      <line class="plan__ground" x1="0" x2="${W}" y1="${below ? groundY - fh + 2 : groundY + 2}" y2="${below ? groundY - fh + 2 : groundY + 2}"/>
-      ${garden}
-    </svg>`;
-  }
-
-  /* ======================= Niveaux ======================= */
-  const lvTabs = $$(".levels__tabs [role=tab]");
-  const lvPanel = $("#lv-panel");
-  const showLevel = (i, focus) => {
-    const l = h.levels[i];
-    lvTabs.forEach((t, j) => { t.setAttribute("aria-selected", String(j === i)); t.tabIndex = j === i ? 0 : -1; });
-    $$(".plan__lvl").forEach((g) => g.classList.toggle("is-on", Number(g.dataset.level) === i));
-    lvPanel.setAttribute("aria-labelledby", `lv-tab-${i}`);
-    lvPanel.innerHTML = `
-      ${l.photo ? `<button type="button" class="levels__photo" data-open-gallery="${idxOf(l.photo)}" aria-label="Agrandir : ${esc(capOf(l.photo))}">${img(key, l.photo, capOf(l.photo), "(max-width: 900px) 100vw, 40vw")}</button>` : ""}
-      <h3 class="h3">${esc(l.name)}</h3>
-      <ul class="levels__list">${l.items.map((t) => `<li>${icon("check")}<span>${esc(t)}</span></li>`).join("")}</ul>`;
-    if (focus) lvTabs[i].focus();
-  };
-  lvTabs.forEach((t, i) => {
-    t.addEventListener("click", () => showLevel(i));
-    t.addEventListener("keydown", (e) => {
-      if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
-      e.preventDefault();
-      showLevel((i + (e.key === "ArrowRight" ? 1 : -1) + lvTabs.length) % lvTabs.length, true);
-    });
-  });
-  $$(".plan__lvl").forEach((g) => {
-    g.addEventListener("click", () => showLevel(Number(g.dataset.level)));
-    g.addEventListener("mouseenter", () => showLevel(Number(g.dataset.level)));
-  });
-  showLevel(0);
-
   /* ======================= Diaporama d'ouverture ======================= */
   const slides = $$(".hero__slide");
   const bars = $$(".hero__bars button");
@@ -438,6 +396,22 @@
     if (!reduced) slideTimer = setInterval(() => !document.hidden && goSlide(slide + 1), 6000);
   };
   bars.forEach((b, i) => b.addEventListener("click", () => { goSlide(i); playSlides(); }));
+  // Flèches précédente / suivante
+  $$("[data-hero-step]").forEach((b) => b.addEventListener("click", () => { goSlide(slide + Number(b.dataset.heroStep)); playSlides(); }));
+  // Glisser le doigt (ou la souris) sur la photo pour changer de photo
+  const heroEl = $(".hero");
+  let hx = null;
+  let hy = null;
+  heroEl.addEventListener("pointerdown", (e) => { if (!e.target.closest("button, a")) { hx = e.clientX; hy = e.clientY; } });
+  heroEl.addEventListener("pointerup", (e) => {
+    if (hx === null) return;
+    const dx = e.clientX - hx;
+    const dy = e.clientY - hy;
+    hx = null;
+    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) { goSlide(slide + (dx < 0 ? 1 : -1)); playSlides(); }
+  });
+  heroEl.addEventListener("pointercancel", () => { hx = null; });
+  heroEl.addEventListener("dragstart", (e) => e.preventDefault()); // sinon la souris « attrape » la photo au lieu de la faire glisser
   playSlides();
 
   /* ======================= Photos : visionneuse et visite ======================= */
@@ -462,7 +436,7 @@
       const inTour = !!b.closest("#tour");
       if (inTour) {
         // Dans la visite, la visionneuse suit le filtre en cours
-        const items = $$(".tour__item", tour).filter((x) => !x.hidden);
+        const items = $$(".tour__item", tour).filter((x) => !x.closest(".tour__group").hidden);
         const list = items.map((x) => gallery[Number(x.dataset.openGallery)]);
         SP.openLightbox(list, items.indexOf(b));
       } else SP.openLightbox(gallery, Number(b.dataset.openGallery));
@@ -477,7 +451,7 @@
   });
   $$(".tour__chips .chip", tour).forEach((c) => c.addEventListener("click", () => {
     $$(".tour__chips .chip", tour).forEach((x) => x.setAttribute("aria-pressed", String(x === c)));
-    $$(".tour__item", tour).forEach((it) => { it.hidden = c.dataset.cat !== "all" && it.dataset.cat !== c.dataset.cat; });
+    $$(".tour__group", tour).forEach((g) => { g.hidden = c.dataset.cat !== "all" && g.dataset.cat !== c.dataset.cat; });
     $("#tour-grid").scrollTop = 0;
   }));
 

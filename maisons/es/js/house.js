@@ -33,6 +33,10 @@
   ];
   // (3e élément de la photo : catégorie déjà calculée, pour les versions traduites)
   const catOf = (cap, cat) => cat || CATS.find((c) => c[2].test(cap))[0];
+  // Visite photo : groupes dans l'ordre d'une visite (extérieur, pièces de vie, chambres, salles de bain)
+  const tourGroups = ["ext", "live", "bed", "bath"]
+    .map((id) => [id, CATS.find((c) => c[0] === id)[1], h.photos.map((p, i) => [p, i]).filter(([p]) => catOf(p[1], p[2]) === id)])
+    .filter((g) => g[2].length);
 
   /* ======================= Rendu de la page ======================= */
   main.innerHTML = `
@@ -47,7 +51,8 @@
           <h1><span class="split-line"><span>${esc(firstWord)}</span></span><span class="split-line"><span><em>${esc(lastWords)}</em></span></span></h1>
           <p class="hero__facts">${h.guests} viajeros · ${h.bedrooms} dormitorios · ${h.beds} camas · ${h.bathrooms} baños</p> </div> <div class="hero__side"> <p class="hero__count"><b>${ratingTxt}</b> ★ · ${h.reviewsCount} reseñas · Favorito de los viajeros</p>
           ${price ? `<p class="hero__price">${esc(price)}</p>` : ""}
-          <div class="hero__bars" role="group" aria-label="Elegir una foto">${h.hero.map((n, i) => `<button type="button" aria-label="Photo ${i + 1}"${i === 0 ? ' class="is-active"' : ""}><i></i></button>`).join("")}</div>
+          <div class="hero__nav"> <button type="button" class="round-btn round-btn--light hero__arrow" data-hero-step="-1" aria-label="Foto anterior">${icon("left")}</button> <div class="hero__bars" role="group" aria-label="Elegir una foto">${h.hero.map((n, i) => `<button type="button" aria-label="Photo ${i + 1}"${i === 0 ? ' class="is-active"' : ""}><i></i></button>`).join("")}</div> <button type="button" class="round-btn round-btn--light hero__arrow" data-hero-step="1" aria-label="Foto siguiente">${icon("arrow")}</button>
+          </div>
           <div class="hero__btns">
             <button type="button" class="btn btn--outline-light" data-open-tour>${icon("grid")} Las ${gallery.length} fotos</button> <button type="button" class="round-btn round-btn--light" data-share aria-label="Compartir esta casa">${icon("share")}</button> </div> </div> </div> </div> </section> <nav class="sub-nav" aria-label="Secciones de la página"> <div class="wrap"> <div class="sub-nav__links"> <a href="#maison">La casa</a><a href="#photos">Fotos</a><a href="#chambres">Dormitorios</a><a href="#equipements">Equipamiento</a><a href="#avis">Reseñas</a><a href="#reserver">Disponibilidad</a><a href="#quartier">El barrio</a><a href="#quand">Cuándo venir</a><a href="#infos">Información práctica</a> </div> <a class="btn btn--accent" href="#reserver">Reservar</a> </div> </nav> <section class="section" id="maison"> <div class="wrap"> <div class="intro-grid"> <div> <span class="eyebrow reveal">${esc(h.type)} · ${esc(h.region)}</span>
           <h2 class="h2 reveal" style="margin-top:18px">${esc(h.tagline)}</h2>
@@ -58,9 +63,18 @@
             ${h.highlights.map(([ic, t, s], i) => `<li class="reveal" data-delay="${i}">${icon(ic)}<div><b>${esc(t)}</b><span>${esc(s)}</span></div></li>`).join("")}
           </ul>
           <div class="host-card reveal">
-            <span class="avatar" aria-hidden="true">${icon("award")}</span> <div><b>Favorito de los viajeros</b><span>Uno de los alojamientos favoritos de los viajeros en Airbnb · Superanfitrión</span></div> </div> </aside> </div> </div> </section> <section class="section section--paper levels-section" id="niveaux" aria-labelledby="lv-title"> <div class="wrap"> <div class="section-head"> <div><span class="eyebrow">Plano de la casa</span><h2 class="h2" id="lv-title">Planta <em>por planta</em></h2></div> <p>Elige una planta para ver qué hay en ella.</p> </div> <div class="levels"> <div class="levels__plan">${planSvg()}</div> <div class="levels__info"> <div class="levels__tabs" role="tablist" aria-label="Plantas de la casa">
-            ${h.levels.map((l, i) => `<button type="button" role="tab" id="lv-tab-${i}" aria-controls="lv-panel" aria-selected="${i === 0}" data-level="${i}"${i ? ' tabindex="-1"' : ""}>${esc(l.short)}</button>`).join("")}
-          </div> <div class="levels__panel" id="lv-panel" role="tabpanel" aria-live="polite"></div> </div> </div> </div> </section> <section class="section" id="photos"> <div class="wrap"> <div class="section-head"> <div><span class="eyebrow">En imágenes</span><h2 class="h2">Pasa, <em>está abierto</em></h2></div> <p>Haz clic en una foto para ampliarla y desplázate con las flechas del teclado o deslizando el dedo.</p> </div> <div class="mosaic">
+            <span class="avatar" aria-hidden="true">${icon("award")}</span> <div><b>Favorito de los viajeros</b><span>Uno de los alojamientos favoritos de los viajeros en Airbnb · Superanfitrión</span></div> </div> </aside> </div> </div> </section> <section class="section section--paper levels-section" id="niveaux" aria-labelledby="lv-title"> <div class="wrap"> <div class="section-head"> <div><span class="eyebrow">Plano de la casa</span><h2 class="h2" id="lv-title">Planta <em>por planta</em></h2></div> <p>Cada planta de la casa, en detalle.</p> </div> <ol class="levels">
+        ${h.levels.map((l) => `
+        <li class="level">
+          ${l.photo
+            ? `<button type="button" class="level__photo" data-open-gallery="${idxOf(l.photo)}" aria-label="Ampliar: ${esc(capOf(l.photo))}">${img(key, l.photo, capOf(l.photo), "(max-width: 700px) 100vw, (max-width: 1100px) 50vw, 420px")}<span class="level__zoom" aria-hidden="true">${icon("search")}</span></button>`
+            : `<div class="level__photo level__photo--none" aria-hidden="true">${icon("door")}</div>`}
+          <div class="level__body">
+            <h3 class="h3">${esc(l.name)}</h3>
+            <ul class="level__list">${l.items.map((t) => `<li>${icon("check")}<span>${esc(t)}</span></li>`).join("")}</ul>
+          </div>
+        </li>`).join("")}
+      </ol> </div> </section> <section class="section" id="photos"> <div class="wrap"> <div class="section-head"> <div><span class="eyebrow">En imágenes</span><h2 class="h2">Pasa, <em>está abierto</em></h2></div> <p>Haz clic en una foto para ampliarla y desplázate con las flechas del teclado o deslizando el dedo.</p> </div> <div class="mosaic">
         ${h.photos.slice(0, 10).map(([n, cap], i) => `<button type="button" class="reveal-img" data-open-gallery="${i}" data-label="${esc(cap)}" aria-label="Ampliar: ${esc(cap)}">${img(key, n, cap, "(max-width: 900px) 100vw, 50vw")}</button>`).join("")}
       </div>
       <div class="mosaic-more"><button type="button" class="btn btn--ghost" data-open-tour>${icon("grid")} Visita estancia por estancia · ${gallery.length} fotos</button></div> </div> </section> <section class="section section--paper" id="chambres"> <div class="wrap"> <div class="section-head"> <div><span class="eyebrow">Dónde dormirás</span><h2 class="h2">${h.bedrooms} dormitorios, <em>${h.beds} camas</em></h2></div> <p>${key === "lacanau" ? "Dos dormitorios y un baño en la planta baja, los otros cuatro dormitorios en la planta superior." : "Tres dormitorios, un baño y un aseo en la planta baja; dos dormitorios, un baño con ducha y un aseo en el semisótano; la sala de estar y la terraza en la planta superior."}</p>
@@ -126,11 +140,17 @@
 
   <div class="mbar" id="mbar">
     <div><b>${esc(h.name)}</b><span id="mbar-sub">★ ${ratingTxt} · ${h.reviewsCount} reseñas · ${h.guests} viajeros</span></div> <a class="btn btn--accent" href="#reserver" id="mbar-btn">Ver fechas</a> </div> <div class="tour" id="tour" role="dialog" aria-modal="true" aria-label="Todas las fotos" hidden> <div class="tour__bar"> <div class="tour__chips" role="group" aria-label="Estancias"> <button type="button" class="chip" data-cat="all" aria-pressed="true">Todo · ${gallery.length}</button>
-        ${CATS.map(([id, name]) => { const n = h.photos.filter((p) => catOf(p[1], p[2]) === id).length; return n ? `<button type="button" class="chip" data-cat="${id}" aria-pressed="false">${name} · ${n}</button>` : ""; }).join("")}
+        ${tourGroups.map(([id, name, items]) => `<button type="button" class="chip" data-cat="${id}" aria-pressed="false">${name} · ${items.length}</button>`).join("")}
       </div> <button type="button" class="round-btn" data-close-tour aria-label="Cerrar">${icon("close")}</button>
     </div>
-    <div class="tour__grid" id="tour-grid">
-      ${h.photos.map(([n, cap, cat], i) => `<button type="button" class="tour__item" data-cat="${catOf(cap, cat)}" data-open-gallery="${i}" aria-label="Ampliar: ${esc(cap)}"><img src="${photo(key, n, "md")}" alt="${esc(cap)}" loading="lazy"><span>${esc(cap)}</span></button>`).join("")}
+    <div class="tour__scroll" id="tour-grid">
+      ${tourGroups.map(([id, name, items]) => `
+      <section class="tour__group" data-cat="${id}" aria-label="${esc(name)}">
+        <h3 class="tour__title">${name} <span>${items.length}</span></h3>
+        <div class="tour__grid">
+          ${items.map(([[n, cap], i]) => `<button type="button" class="tour__item" data-open-gallery="${i}" aria-label="Ampliar: ${esc(cap)}">${img(key, n, cap, "(max-width: 700px) 50vw, (max-width: 1400px) 25vw, 340px")}<span>${esc(cap)}</span></button>`).join("")}
+        </div>
+      </section>`).join("")}
     </div> </div> <div class="dialog" id="dialog" aria-hidden="true"> <div class="dialog__bg" data-close></div> <div class="dialog__box" role="dialog" aria-modal="true" aria-labelledby="dlg-title"> <button type="button" class="dialog__close" data-close aria-label="Cerrar">${icon("close")}</button>
       <div id="dlg-form">
         <span class="eyebrow eyebrow--plain">${esc(h.name)}</span> <h2 class="h3" id="dlg-title" style="margin-top:12px">Tu reserva</h2> <div class="form__recap" id="recap"></div> <form class="form" id="form" novalidate> <div class="field"><label for="d-name">Nombre y apellidos</label><input id="d-name" name="nom" autocomplete="name" required maxlength="80"></div> <div class="field"><label for="d-phone">Teléfono</label><input id="d-phone" name="telephone" type="tel" autocomplete="tel" maxlength="30"></div> <div class="field full"><label for="d-email">Correo electrónico</label><input id="d-email" name="email" type="email" autocomplete="email" required maxlength="254"></div> <div class="field full"><label for="d-msg">Unas palabras para nosotros (opcional)</label><textarea id="d-msg" name="message" maxlength="2000" placeholder="El motivo de tu estancia, la hora de llegada, tus preguntas…"></textarea></div> <div class="field full promo" id="promo-box"><label for="d-code">Código promocional (opcional)</label><div class="promo__row"><input id="d-code" name="code" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="30"><button type="button" class="btn btn--small" id="d-code-go">Aplicar</button></div><p class="small promo__msg" id="d-code-msg" aria-live="polite"></p></div> <fieldset class="full pay2" id="pay2" hidden></fieldset> <label class="check full"><input type="checkbox" id="d-cgv" name="conditions" required> <span>Acepto las <a href="conditions.html" target="_blank" rel="noopener">condiciones de reserva</a> y las normas de la casa.</span></label> <input class="hp" type="text" name="bot-field" tabindex="-1" autocomplete="off" aria-hidden="true"> <div class="full"><button type="submit" class="btn btn--accent btn--block" id="d-submit">Continuar</button><p class="booking__msg" id="form-msg" aria-live="polite"></p><p class="small" id="d-note" style="margin-top:12px"></p></div> </form> </div> <div class="form__done" id="dlg-done" hidden>
@@ -141,65 +161,6 @@
     return `<div class="stepper"><div><b>${label}</b><span>${sub}</span></div>
       <div class="stepper__ctl"><button type="button" data-step="${name}" data-d="-1" aria-label="Quitar: ${label}">−</button><output id="n-${name}" aria-live="polite">0</output><button type="button" data-step="${name}" data-d="1" aria-label="Añadir: ${label}">+</button></div></div>`;
   }
-
-  // Coupe de la maison : un étage par niveau, cliquable
-  function planSvg() {
-    const L = h.levels;
-    const ext = L.findIndex((l) => l.short === "Exterior");
-    const RANK = { "Planta superior": 0, "Planta baja": 1, "Semisótano": 2 };
-    const floors = L.map((l, i) => ({ l, i })).filter((x) => x.i !== ext).sort((a, b) => RANK[a.l.short] - RANK[b.l.short]);
-    const W = 420;
-    const fh = 64;
-    const top = 70;
-    // Les niveaux sont listés du haut vers le bas
-    const rows = floors.map((x, k) => {
-      const y = top + k * fh;
-      return `<g class="plan__lvl" data-level="${x.i}" tabindex="-1">
-        <rect x="70" y="${y}" width="280" height="${fh - 6}" rx="2"/>
-        <text x="210" y="${y + fh / 2 + 2}" text-anchor="middle">${esc(x.l.short)}</text></g>`;
-    }).join("");
-    const groundY = top + floors.length * fh - 6;
-    const roof = key === "lacanau"
-      ? `<path class="plan__roof" d="M56 ${top - 4} L210 ${top - 58} L364 ${top - 4}"/>`
-      : `<path class="plan__roof" d="M70 ${top - 6} H350 M150 ${top - 6} L180 ${top - 40} H300 L330 ${top - 6}"/><text class="plan__note" x="240" y="${top - 16}" text-anchor="middle">cristalera</text>`;
-    const below = L.some((l) => l.short === "Semisótano");
-    const garden = ext >= 0
-      ? `<g class="plan__lvl plan__lvl--ext" data-level="${ext}" tabindex="-1"><path d="M0 ${groundY + 2} H70 M350 ${groundY + 2} H${W}"/><rect x="368" y="${groundY - 22}" width="46" height="18" rx="2" class="plan__pool"/><text x="391" y="${groundY + 22}" text-anchor="middle">jardín</text></g>`
-      : "";
-    return `<svg viewBox="0 0 ${W} ${groundY + 40}" role="img" aria-label="Sección esquemática de la casa">
-      ${roof}${rows}
-      <line class="plan__ground" x1="0" x2="${W}" y1="${below ? groundY - fh + 2 : groundY + 2}" y2="${below ? groundY - fh + 2 : groundY + 2}"/>
-      ${garden}
-    </svg>`;
-  }
-
-  /* ======================= Niveaux ======================= */
-  const lvTabs = $$(".levels__tabs [role=tab]");
-  const lvPanel = $("#lv-panel");
-  const showLevel = (i, focus) => {
-    const l = h.levels[i];
-    lvTabs.forEach((t, j) => { t.setAttribute("aria-selected", String(j === i)); t.tabIndex = j === i ? 0 : -1; });
-    $$(".plan__lvl").forEach((g) => g.classList.toggle("is-on", Number(g.dataset.level) === i));
-    lvPanel.setAttribute("aria-labelledby", `lv-tab-${i}`);
-    lvPanel.innerHTML = `
-      ${l.photo ? `<button type="button" class="levels__photo" data-open-gallery="${idxOf(l.photo)}" aria-label="Ampliar: ${esc(capOf(l.photo))}">${img(key, l.photo, capOf(l.photo), "(max-width: 900px) 100vw, 40vw")}</button>` : ""}
-      <h3 class="h3">${esc(l.name)}</h3>
-      <ul class="levels__list">${l.items.map((t) => `<li>${icon("check")}<span>${esc(t)}</span></li>`).join("")}</ul>`;
-    if (focus) lvTabs[i].focus();
-  };
-  lvTabs.forEach((t, i) => {
-    t.addEventListener("click", () => showLevel(i));
-    t.addEventListener("keydown", (e) => {
-      if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
-      e.preventDefault();
-      showLevel((i + (e.key === "ArrowRight" ? 1 : -1) + lvTabs.length) % lvTabs.length, true);
-    });
-  });
-  $$(".plan__lvl").forEach((g) => {
-    g.addEventListener("click", () => showLevel(Number(g.dataset.level)));
-    g.addEventListener("mouseenter", () => showLevel(Number(g.dataset.level)));
-  });
-  showLevel(0);
 
   /* ======================= Diaporama d'ouverture ======================= */
   const slides = $$(".hero__slide");
@@ -222,6 +183,22 @@
     if (!reduced) slideTimer = setInterval(() => !document.hidden && goSlide(slide + 1), 6000);
   };
   bars.forEach((b, i) => b.addEventListener("click", () => { goSlide(i); playSlides(); }));
+  // Flèches précédente / suivante
+  $$("[data-hero-step]").forEach((b) => b.addEventListener("click", () => { goSlide(slide + Number(b.dataset.heroStep)); playSlides(); }));
+  // Glisser le doigt (ou la souris) sur la photo pour changer de photo
+  const heroEl = $(".hero");
+  let hx = null;
+  let hy = null;
+  heroEl.addEventListener("pointerdown", (e) => { if (!e.target.closest("button, a")) { hx = e.clientX; hy = e.clientY; } });
+  heroEl.addEventListener("pointerup", (e) => {
+    if (hx === null) return;
+    const dx = e.clientX - hx;
+    const dy = e.clientY - hy;
+    hx = null;
+    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) { goSlide(slide + (dx < 0 ? 1 : -1)); playSlides(); }
+  });
+  heroEl.addEventListener("pointercancel", () => { hx = null; });
+  heroEl.addEventListener("dragstart", (e) => e.preventDefault()); // sinon la souris « attrape » la photo au lieu de la faire glisser
   playSlides();
 
   /* ======================= Photos : visionneuse et visite ======================= */
@@ -246,7 +223,7 @@
       const inTour = !!b.closest("#tour");
       if (inTour) {
         // Dans la visite, la visionneuse suit le filtre en cours
-        const items = $$(".tour__item", tour).filter((x) => !x.hidden);
+        const items = $$(".tour__item", tour).filter((x) => !x.closest(".tour__group").hidden);
         const list = items.map((x) => gallery[Number(x.dataset.openGallery)]);
         SP.openLightbox(list, items.indexOf(b));
       } else SP.openLightbox(gallery, Number(b.dataset.openGallery));
@@ -261,7 +238,7 @@
   });
   $$(".tour__chips .chip", tour).forEach((c) => c.addEventListener("click", () => {
     $$(".tour__chips .chip", tour).forEach((x) => x.setAttribute("aria-pressed", String(x === c)));
-    $$(".tour__item", tour).forEach((it) => { it.hidden = c.dataset.cat !== "all" && it.dataset.cat !== c.dataset.cat; });
+    $$(".tour__group", tour).forEach((g) => { g.hidden = c.dataset.cat !== "all" && g.dataset.cat !== c.dataset.cat; });
     $("#tour-grid").scrollTop = 0;
   }));
 

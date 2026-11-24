@@ -360,6 +360,14 @@
   "ou": "data.js"
  },
  {
+  "fr": "Climatisation centrale",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Ventilateurs portables",
+  "ou": "data.js"
+ },
+ {
   "fr": "Pratique",
   "ou": "data.js"
  },
@@ -373,10 +381,6 @@
  },
  {
   "fr": "Dépôt de bagages possible",
-  "ou": "data.js"
- },
- {
-  "fr": "Climatisation",
   "ou": "data.js"
  },
  {
@@ -540,7 +544,7 @@
   "ou": "data.js"
  },
  {
-  "fr": "Le salon",
+  "fr": "Le salon et la cheminée",
   "ou": "data.js"
  },
  {
@@ -580,11 +584,59 @@
   "ou": "data.js"
  },
  {
-  "fr": "Le salon, côté cheminée",
+  "fr": "Le jardin et la piscine",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Le salon d'extérieur, à l'abri",
+  "ou": "data.js"
+ },
+ {
+  "fr": "La terrasse en bois",
+  "ou": "data.js"
+ },
+ {
+  "fr": "L'allée du jardin et le portail",
+  "ou": "data.js"
+ },
+ {
+  "fr": "L'allée du jardin, avec la place de stationnement",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Le salon, sous la charpente",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Le salon",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Le salon, ouvert sur la cuisine",
+  "ou": "data.js"
+ },
+ {
+  "fr": "La cheminée",
   "ou": "data.js"
  },
  {
   "fr": "La salle à manger",
+  "ou": "data.js"
+ },
+ {
+  "fr": "La cuisine et son bar",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Le bar de la cuisine",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Détail de la cuisine",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Une chambre sous les toits",
   "ou": "data.js"
  },
  {
@@ -813,6 +865,10 @@
  },
  {
   "fr": "Détecteur de fumée",
+  "ou": "data.js"
+ },
+ {
+  "fr": "Climatisation",
   "ou": "data.js"
  },
  {
@@ -2260,7 +2316,11 @@
   "ou": "house.js"
  },
  {
-  "fr": "<div class=\"hero__bars\" role=\"group\" aria-label=\"Choisir une photo\">",
+  "fr": "<div class=\"hero__nav\"> <button type=\"button\" class=\"round-btn round-btn--light hero__arrow\" data-hero-step=\"-1\" aria-label=\"Photo précédente\">",
+  "ou": "house.js"
+ },
+ {
+  "fr": "</button> <div class=\"hero__bars\" role=\"group\" aria-label=\"Choisir une photo\">",
   "ou": "house.js"
  },
  {
@@ -2268,7 +2328,11 @@
   "ou": "house.js"
  },
  {
-  "fr": "</div> <div class=\"hero__btns\"> <button type=\"button\" class=\"btn btn--outline-light\" data-open-tour>",
+  "fr": "</div> <button type=\"button\" class=\"round-btn round-btn--light hero__arrow\" data-hero-step=\"1\" aria-label=\"Photo suivante\">",
+  "ou": "house.js"
+ },
+ {
+  "fr": "</button> </div> <div class=\"hero__btns\"> <button type=\"button\" class=\"btn btn--outline-light\" data-open-tour>",
   "ou": "house.js"
  },
  {
@@ -2324,27 +2388,43 @@
   "ou": "house.js"
  },
  {
-  "fr": "</span> <div><b>Coup de cœur voyageurs</b><span>L'un des logements préférés des voyageurs sur Airbnb · hôte Superhôte</span></div> </div> </aside> </div> </div> </section> <section class=\"section section--paper levels-section\" id=\"niveaux\" aria-labelledby=\"lv-title\"> <div class=\"wrap\"> <div class=\"section-head\"> <div><span class=\"eyebrow\">Plan de la maison</span><h2 class=\"h2\" id=\"lv-title\">Niveau <em>par niveau</em></h2></div> <p>Choisissez un niveau pour voir ce qu'il contient.</p> </div> <div class=\"levels\"> <div class=\"levels__plan\">",
+  "fr": "</span> <div><b>Coup de cœur voyageurs</b><span>L'un des logements préférés des voyageurs sur Airbnb · hôte Superhôte</span></div> </div> </aside> </div> </div> </section> <section class=\"section section--paper levels-section\" id=\"niveaux\" aria-labelledby=\"lv-title\"> <div class=\"wrap\"> <div class=\"section-head\"> <div><span class=\"eyebrow\">Plan de la maison</span><h2 class=\"h2\" id=\"lv-title\">Niveau <em>par niveau</em></h2></div> <p>Ce que vous trouverez à chaque niveau de la maison.</p> </div> <ol class=\"levels\">",
   "ou": "house.js"
  },
  {
-  "fr": "</div> <div class=\"levels__info\"> <div class=\"levels__tabs\" role=\"tablist\" aria-label=\"Niveaux de la maison\">",
+  "fr": "<li class=\"level\">",
   "ou": "house.js"
  },
  {
-  "fr": "<button type=\"button\" role=\"tab\" id=\"lv-tab-",
+  "fr": "<button type=\"button\" class=\"level__photo\" data-open-gallery=\"",
   "ou": "house.js"
  },
  {
-  "fr": "\" aria-controls=\"lv-panel\" aria-selected=\"",
+  "fr": "(max-width: 700px) 100vw, (max-width: 1100px) 50vw, 420px",
   "ou": "house.js"
  },
  {
-  "fr": "\" data-level=\"",
+  "fr": "<span class=\"level__zoom\" aria-hidden=\"true\">",
   "ou": "house.js"
  },
  {
-  "fr": "</div> <div class=\"levels__panel\" id=\"lv-panel\" role=\"tabpanel\" aria-live=\"polite\"></div> </div> </div> </div> </section> <section class=\"section\" id=\"photos\"> <div class=\"wrap\"> <div class=\"section-head\"> <div><span class=\"eyebrow\">En images</span><h2 class=\"h2\">Entrez, <em>c'est ouvert</em></h2></div> <p>Cliquez sur une photo pour l'agrandir, puis faites défiler avec les flèches du clavier ou en glissant le doigt.</p> </div> <div class=\"mosaic\">",
+  "fr": "<div class=\"level__photo level__photo--none\" aria-hidden=\"true\">",
+  "ou": "house.js"
+ },
+ {
+  "fr": "<div class=\"level__body\"> <h3 class=\"h3\">",
+  "ou": "house.js"
+ },
+ {
+  "fr": "</h3> <ul class=\"level__list\">",
+  "ou": "house.js"
+ },
+ {
+  "fr": "</ul> </div> </li>",
+  "ou": "house.js"
+ },
+ {
+  "fr": "</ol> </div> </section> <section class=\"section\" id=\"photos\"> <div class=\"wrap\"> <div class=\"section-head\"> <div><span class=\"eyebrow\">En images</span><h2 class=\"h2\">Entrez, <em>c'est ouvert</em></h2></div> <p>Cliquez sur une photo pour l'agrandir, puis faites défiler avec les flèches du clavier ou en glissant le doigt.</p> </div> <div class=\"mosaic\">",
   "ou": "house.js"
  },
  {
@@ -2716,19 +2796,31 @@
   "ou": "house.js"
  },
  {
-  "fr": "</button> </div> <div class=\"tour__grid\" id=\"tour-grid\">",
+  "fr": "</button> </div> <div class=\"tour__scroll\" id=\"tour-grid\">",
   "ou": "house.js"
  },
  {
-  "fr": "<button type=\"button\" class=\"tour__item\" data-cat=\"",
+  "fr": "<section class=\"tour__group\" data-cat=\"",
   "ou": "house.js"
  },
  {
-  "fr": "\" data-open-gallery=\"",
+  "fr": "\"> <h3 class=\"tour__title\">",
   "ou": "house.js"
  },
  {
-  "fr": "\" loading=\"lazy\"><span>",
+  "fr": "</span></h3> <div class=\"tour__grid\">",
+  "ou": "house.js"
+ },
+ {
+  "fr": "<button type=\"button\" class=\"tour__item\" data-open-gallery=\"",
+  "ou": "house.js"
+ },
+ {
+  "fr": "(max-width: 700px) 50vw, (max-width: 1400px) 25vw, 340px",
+  "ou": "house.js"
+ },
+ {
+  "fr": "</div> </section>",
   "ou": "house.js"
  },
  {
@@ -2772,91 +2864,11 @@
   "ou": "house.js"
  },
  {
-  "fr": "<g class=\"plan__lvl\" data-level=\"",
-  "ou": "house.js"
- },
- {
-  "fr": "\" tabindex=\"-1\"> <rect x=\"70\" y=\"",
-  "ou": "house.js"
- },
- {
-  "fr": "\" width=\"280\" height=\"",
-  "ou": "house.js"
- },
- {
-  "fr": "\" rx=\"2\"/> <text x=\"210\" y=\"",
-  "ou": "house.js"
- },
- {
-  "fr": "<path class=\"plan__roof\" d=\"M56",
-  "ou": "house.js"
- },
- {
-  "fr": "<path class=\"plan__roof\" d=\"M70",
-  "ou": "house.js"
- },
- {
-  "fr": "\"/><text class=\"plan__note\" x=\"240\" y=\"",
-  "ou": "house.js"
- },
- {
-  "fr": "\" text-anchor=\"middle\">verrière</text>",
-  "ou": "house.js"
- },
- {
-  "fr": "<g class=\"plan__lvl plan__lvl--ext\" data-level=\"",
-  "ou": "house.js"
- },
- {
-  "fr": "\" tabindex=\"-1\"><path d=\"M0",
-  "ou": "house.js"
- },
- {
-  "fr": "\"/><rect x=\"368\" y=\"",
-  "ou": "house.js"
- },
- {
-  "fr": "\" width=\"46\" height=\"18\" rx=\"2\" class=\"plan__pool\"/><text x=\"391\" y=\"",
-  "ou": "house.js"
- },
- {
-  "fr": "\" text-anchor=\"middle\">jardin</text></g>",
-  "ou": "house.js"
- },
- {
-  "fr": "<svg viewBox=\"0 0",
-  "ou": "house.js"
- },
- {
-  "fr": "\" role=\"img\" aria-label=\"Coupe schématique de la maison\">",
-  "ou": "house.js"
- },
- {
-  "fr": "<line class=\"plan__ground\" x1=\"0\" x2=\"",
-  "ou": "house.js"
- },
- {
-  "fr": ".levels__tabs [role=tab]",
-  "ou": "house.js"
- },
- {
-  "fr": "<button type=\"button\" class=\"levels__photo\" data-open-gallery=\"",
-  "ou": "house.js"
- },
- {
-  "fr": "(max-width: 900px) 100vw, 40vw",
-  "ou": "house.js"
- },
- {
-  "fr": "<h3 class=\"h3\">",
-  "ou": "house.js"
- },
- {
-  "fr": "</h3> <ul class=\"levels__list\">",
-  "ou": "house.js"
- },
- {
   "fr": ".hero__bars button",
+  "ou": "house.js"
+ },
+ {
+  "fr": "button, a",
   "ou": "house.js"
  },
  {
@@ -3440,7 +3452,7 @@
   "ou": "reservation.js"
  },
  {
-  "fr": "<p><a class=\"btn btn--ghost\" href=\"",
+  "fr": "<p style=\"margin:0 0 26px\"><a class=\"btn btn--ghost\" href=\"",
   "ou": "reservation.js"
  },
  {
@@ -4000,7 +4012,7 @@
   "ou": "index.html"
  },
  {
-  "fr": "Non. La Maison du Lac a le chauffage central, la Maison de Pierre un chauffage radiant ; les chambres ont des stores ou rideaux occultants.",
+  "fr": "La Maison du Lac, oui : elle a la climatisation centrale et des ventilateurs. La Maison de Pierre, non : elle a un chauffage radiant. Dans les deux maisons, les chambres ont des stores ou rideaux occultants.",
   "ou": "index.html"
  },
  {

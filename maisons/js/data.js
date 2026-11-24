@@ -267,7 +267,7 @@ window.HOUSES = {
     levels: [
       { name: "L'étage", short: "Étage", photo: 2, items: ["La pièce de vie sous verrière : salon, cuisine et salle à manger", "La terrasse", "TV HD 83 pouces et son Bang & Olufsen"] },
       { name: "Le rez-de-chaussée", short: "Rez-de-chaussée", photo: 24, items: ["3 chambres", "1 salle de bain avec baignoire", "1 WC", "L'entrée"] },
-      { name: "Le sous-sol", short: "Sous-sol", photo: null, items: ["2 chambres", "1 salle d'eau", "1 WC", "La buanderie"] },
+      { name: "Le sous-sol", short: "Sous-sol", photo: 23, items: ["2 chambres", "1 salle d'eau", "1 WC", "La buanderie"] },
     ],
     poi: [
       ["walk", "Place Gambetta", 44.8410, -0.5800],
