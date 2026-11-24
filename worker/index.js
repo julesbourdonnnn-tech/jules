@@ -88,7 +88,8 @@ async function hit(request, env) {
 }
 
 async function exportCsv(url, env) {
-  if (!env.NEWSLETTER_KEY || url.searchParams.get("key") !== env.NEWSLETTER_KEY) return new Response("Not found", { status: 404 });
+  const k = url.searchParams.get("key") || "";
+  if (!((env.NEWSLETTER_KEY && k === env.NEWSLETTER_KEY) || isAdmin(env, k))) return new Response("Not found", { status: 404 });
   const rows = [["email", "date", "origine", "source", "pays"]];
   let cursor;
   do {
