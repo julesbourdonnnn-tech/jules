@@ -27,7 +27,7 @@
  *       date: "2026-11",                // mois du séjour (obligatoire)
  *       stay: "Suite Forêt, 1 nuit",     // ce que tu as testé (facultatif)
  *       invited: false,                  // true si le séjour a été offert (mention affichée)
- *       coupDeCoeur: true,               // ton choix : l'hôtel entre dans « Les coups de cœur de Jules » (si note ≥ 8,5)
+ *       coupDeCoeur: true,               // ton choix : l'hôtel entre dans « Les coups de cœur de Jules »
  *       disclosure: "",                  // lien particulier à signaler (ex. « J'ai travaillé dans cet hôtel par le passé. »)
  *       scores: { accueil: 9, chambre: 8, literie: 9, table: 8, service: 9, valeur: 7 }, // sur 10
  *       verdict: "Une phrase qui résume ton avis",

@@ -220,7 +220,7 @@ function hotelPage(h) {
         <p class="card-type light">${T.icon} ${e(T.label)} · ${e(E.label)}</p>
         <h1>${e(h.name)}</h1>
         <p class="d-tagline">${e(h.tagline)}</p>
-        ${C.isTested(h) ? `<a class="d-tested${C.isCoupDeCoeur(h) ? " is-heart" : ""}" href="#avis">${C.isCoupDeCoeur(h) ? "♥ Coup de cœur de" : "✓ Testé par"} ${e(CONFIG.author.name)}${C.reviewScore(h) != null ? ` · <strong>${C.fmtScore(C.reviewScore(h))}/10</strong>` : ""}</a>` : ""}
+        ${C.isTested(h) ? `<a class="d-tested${C.isCoupDeCoeur(h) ? " is-heart" : ""}" href="#avis">${C.isCoupDeCoeur(h) ? `♥ Coup de cœur de ${e(CONFIG.author.name)}` : `✓ Testé par ${e(CONFIG.author.name)}${C.reviewScore(h) != null ? ` · <strong>${C.fmtScore(C.reviewScore(h))}/10</strong>` : ""}`}</a>` : ""}
         <div class="d-meta">
           <span>📍 ${e(h.city)}, ${e(h.region)}</span>
           <span class="dist-chip" data-dist hidden></span>

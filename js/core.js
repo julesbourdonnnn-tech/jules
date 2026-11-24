@@ -183,8 +183,8 @@
     return m ? `${MONTHS[Number(m) - 1]} ${y}` : y;
   }
   const fmtScore = (n) => String(n).replace(".", ",");
-  // Coup de cœur : testé, choisi par Jules, et noté au moins au seuil de config.js
-  const isCoupDeCoeur = (h) => isTested(h) && !!h.review.coupDeCoeur && (reviewScore(h) || 0) >= (data().CONFIG.coupDeCoeurMin || 8.5);
+  // Coup de cœur : hôtel testé et choisi par Jules (review.coupDeCoeur dans hotels.js)
+  const isCoupDeCoeur = (h) => isTested(h) && !!h.review.coupDeCoeur;
 
   function card(h, { dist = null, reveal = true, fav = false } = {}) {
     const { ENVS, TYPES } = data();
@@ -201,7 +201,7 @@
             <button type="button" class="card-nav next" data-slide="1" aria-label="Photo suivante">›</button>
             <div class="card-dots">${photos.map((_, i) => `<span class="${i ? "" : "on"}"></span>`).join("")}</div>` : ""}
           <span class="badge">${escapeHtml(ENVS[h.env].label)}</span>
-          ${isTested(h) ? `<span class="badge badge-tested${isCoupDeCoeur(h) ? " badge-heart" : ""}" title="Séjour testé par ${escapeHtml(data().CONFIG.author.name)}">${isCoupDeCoeur(h) ? "♥ Coup de cœur" : "✓ Testé"}${reviewScore(h) != null ? ` · ${fmtScore(reviewScore(h))}/10` : ""}</span>` : ""}
+          ${isTested(h) ? `<span class="badge badge-tested${isCoupDeCoeur(h) ? " badge-heart" : ""}" title="Séjour testé par ${escapeHtml(data().CONFIG.author.name)}">${isCoupDeCoeur(h) ? "♥ Coup de cœur" : `✓ Testé${reviewScore(h) != null ? ` · ${fmtScore(reviewScore(h))}/10` : ""}`}</span>` : ""}
           ${favButton(h, "", fav)}
           <button type="button" class="card-compare" data-compare="${escapeHtml(h.id)}" aria-pressed="false" aria-label="Comparer ${escapeHtml(h.name)}" title="Ajouter au comparateur">⇄</button>
           ${dist != null ? `<span class="card-dist">📍 ${formatDistance(dist)}</span>` : ""}
