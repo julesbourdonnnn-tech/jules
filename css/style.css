@@ -1369,3 +1369,20 @@ body.has-compare .site-footer { padding-bottom: 110px; }
 .badge.badge-heart { background: var(--terracotta); }
 .d-tested.is-heart { background: rgba(194, 100, 60, .92); }
 .review-heart { color: var(--terracotta); text-decoration: none; border-bottom: 1px solid currentColor; }
+
+/* Qui suis-je : photo et histoire */
+.about-story { display: grid; grid-template-columns: minmax(240px, 5fr) 7fr; gap: 64px; align-items: start; }
+.story-photo { margin: 0; position: sticky; top: 100px; }
+.story-photo img { width: 100%; height: auto; aspect-ratio: 4 / 5; object-fit: cover; border-radius: var(--radius); box-shadow: var(--shadow-lg); }
+.story-photo figcaption { margin-top: 10px; font-size: .82rem; color: var(--muted); }
+.story-text { min-width: 0; max-width: 640px; }
+.story-text h2 { font-size: clamp(2rem, 3.6vw, 2.8rem); margin: 6px 0 22px; text-wrap: balance; }
+.story-text p { color: var(--ink-soft); line-height: 1.75; margin: 0 0 16px; }
+.story-text .lead { color: var(--ink); font-size: 1.15rem; }
+.method-grid { grid-template-columns: repeat(2, 1fr); }
+.about-model { grid-template-columns: 1fr !important; }
+@media (max-width: 860px) {
+  .about-story { grid-template-columns: 1fr; gap: 28px; }
+  .story-photo { position: static; max-width: 320px; }
+  .method-grid { grid-template-columns: 1fr; }
+}

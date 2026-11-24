@@ -81,7 +81,6 @@
         <p class="pro-cta pro-noprint"><a class="btn btn-primary" id="pro-mail" href="#">Écrire à Jules</a> <button type="button" class="btn btn-ghost" onclick="window.print()">Imprimer cette page</button></p>
         <p class="small muted" id="pro-mail-text"></p>
       </div>
-      <div class="about-stats" id="about-stats"></div>
     </section>
   </main>
 
@@ -94,10 +93,6 @@
   <script src="js/common.js"></script>
   <script>
     document.addEventListener("DOMContentLoaded", () => {
-      const H = window.HOTELS, G = window.GUIDES.filter((g) => window.NS.guideHotels(g).length);
-      document.getElementById("about-stats").innerHTML = [
-        [H.length, "lieux présentés"], [new Set(H.map((h) => h.region)).size, "régions de France"], [G.length, "guides thématiques"], ["0 €", "demandé aux établissements"],
-      ].map(([n, l]) => `<div><strong>${n}</strong><span>${l}</span></div>`).join("");
       const email = window.SITE_CONFIG.contactEmail;
       document.getElementById("pro-mail").href = `mailto:${email}?subject=${encodeURIComponent("Mon établissement sur Nuits Singulières")}`;
       document.getElementById("pro-mail-text").textContent = `Ou directement : ${email}`;
