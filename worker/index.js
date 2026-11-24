@@ -15,6 +15,10 @@
  *  GET  /api/admin?key=…      page privée où Jules répond, publie ou supprime
  *  GET  /api/stats?key=…      page privée de statistiques (visites, pages, provenance…)
  *                             (clé : secret ADMIN_KEY, ou à défaut NEWSLETTER_KEY)
+ *  /api/compte…               comptes lecteurs pour retrouver ses favoris (base D1 « STATS »,
+ *                             tables accounts et sessions, créées automatiquement) :
+ *    POST /api/compte/inscription  POST /api/compte/connexion  POST /api/compte/deconnexion
+ *    GET  /api/compte              PUT  /api/compte/favoris    DELETE /api/compte
  * Tout le reste est servi tel quel depuis les fichiers du site.
  */
 const EMAIL = /^[^\s@]{1,64}@[^\s@]{1,190}\.[^\s@]{2,24}$/;
@@ -52,7 +56,7 @@ async function subscribe(request, env) {
 }
 
 // Événements acceptés pour la mesure d'audience (le reste est ignoré)
-const EVENTS = new Set(["vue", "Site officiel", "Cartes cadeaux", "Question", "Newsletter", "Réservation", "Partenaire", "Coffret", "Partage", "Comparateur", "Dates", "Favori", "Quiz", "Quiz terminé", "Surprise"]);
+const EVENTS = new Set(["vue", "Compte", "Site officiel", "Cartes cadeaux", "Question", "Newsletter", "Réservation", "Partenaire", "Coffret", "Partage", "Comparateur", "Dates", "Favori", "Quiz", "Quiz terminé", "Surprise"]);
 const BOT = /bot|crawl|spider|slurp|preview|headless|lighthouse|facebookexternalhit|pingdom|monitor/i;
 
 async function record(env, request, row) {
@@ -176,6 +180,12 @@ async function adminAction(request, env) {
   try { data = await readForm(request); } catch { return new Response("Requête invalide", { status: 400 }); }
   const key = String(data.key || "");
   if (!isAdmin(env, key)) return new Response("Not found", { status: 404 });
+  if (data.action === "reset-password") {
+    const email = clean(data.email, 254).toLowerCase();
+    const temp = env.STATS && EMAIL.test(email) ? await adminResetPassword(env, email) : null;
+    const msg = temp ? `Mot de passe provisoire pour ${escHtml(email)} : <strong>${temp}</strong> (à lui envoyer ; il pourra le garder ou recréer un compte).` : `Aucun compte trouvé pour ${escHtml(email)}.`;
+    return new Response(`<!doctype html><meta charset="utf-8"><meta name="robots" content="noindex"><body style="font:16px system-ui;max-width:640px;margin:40px auto;padding:0 16px"><p>${msg}</p><p><a href="/api/admin?key=${encodeURIComponent(key)}">← Retour</a></p></body>`, { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" } });
+  }
   const qkey = String(data.qkey || "");
   if (!qkey.startsWith("q:")) return new Response("Question introuvable", { status: 400 });
   const back = new Response(null, { status: 303, headers: { Location: `/api/admin?key=${encodeURIComponent(key)}&ok=1#${encodeURIComponent(qkey)}` } });
@@ -194,6 +204,8 @@ async function adminPage(url, env) {
   const key = url.searchParams.get("key") || "";
   if (!isAdmin(env, key)) return new Response("Not found", { status: 404 });
   const all = await listQuestions(env, "q:");
+  let accounts = null;
+  try { if (env.STATS) { await ensureSchema(env); accounts = (await env.STATS.prepare("SELECT COUNT(*) AS n FROM accounts").first()).n; } } catch { /* base indisponible */ }
   const pending = all.filter((q) => q.status !== "published");
   const done = all.filter((q) => q.status === "published");
   const date = (d) => d ? new Date(d).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" }) : "";
@@ -238,6 +250,13 @@ async function adminPage(url, env) {
   ${pending.map(card).join("") || `<p class="empty">Aucune question en attente.</p>`}
   <h2>Publiées (${done.length})</h2>
   ${done.map(card).join("") || `<p class="empty">Aucune réponse publiée pour l'instant.</p>`}
+  <h2>Comptes lecteurs${accounts != null ? ` (${accounts})` : ""}</h2>
+  <p class="lead">Un lecteur a oublié son mot de passe ? Saisissez son adresse : un mot de passe provisoire s'affiche, à lui envoyer par e-mail.</p>
+  <form method="post" action="/api/admin">
+    <input type="hidden" name="key" value="${escHtml(key)}"><input type="hidden" name="action" value="reset-password">
+    <input type="email" name="email" placeholder="adresse du lecteur" required style="padding:8px;min-width:260px">
+    <button type="submit">Créer un mot de passe provisoire</button>
+  </form>
 </main></body></html>`;
   return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store", "X-Robots-Tag": "noindex" } });
 }
@@ -324,6 +343,171 @@ async function statsPage(url, env) {
   return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store", "X-Robots-Tag": "noindex" } });
 }
 
+/* ============================================================
+   COMPTES LECTEURS : retrouver ses favoris sur tous ses appareils
+   Base D1 « STATS » (tables accounts et sessions). Mot de passe haché
+   (PBKDF2-SHA256, sel aléatoire ; nombre d'itérations enregistré avec
+   l'empreinte pour pouvoir l'augmenter plus tard, ex. sur une offre Workers payante) : jamais stocké en clair.
+   Session : cookie HttpOnly « ns_s » ; seule son empreinte est stockée.
+   ============================================================ */
+const SESSION_DAYS = 180;
+const PBKDF2_ITERATIONS = 30000; // ≈ 6 ms : reste sous la limite de temps de calcul de l'offre gratuite
+const HOTEL_ID = /^[a-z0-9-]{1,80}$/;
+let schemaReady = false;
+async function ensureSchema(env) {
+  if (schemaReady) return;
+  await env.STATS.batch([
+    env.STATS.prepare("CREATE TABLE IF NOT EXISTS accounts (id INTEGER PRIMARY KEY AUTOINCREMENT, email TEXT NOT NULL UNIQUE, name TEXT NOT NULL DEFAULT '', salt TEXT NOT NULL, hash TEXT NOT NULL, favs TEXT NOT NULL DEFAULT '[]', created TEXT NOT NULL, last_login TEXT)"),
+    env.STATS.prepare("CREATE TABLE IF NOT EXISTS sessions (token TEXT PRIMARY KEY, account_id INTEGER NOT NULL, created TEXT NOT NULL, expires TEXT NOT NULL)"),
+    env.STATS.prepare("CREATE INDEX IF NOT EXISTS sessions_account ON sessions (account_id)"),
+  ]);
+  schemaReady = true;
+}
+const hex = (buf) => [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
+const randomHex = (n) => hex(crypto.getRandomValues(new Uint8Array(n)));
+async function hashPassword(password, saltHex, iterations = PBKDF2_ITERATIONS) {
+  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(password), "PBKDF2", false, ["deriveBits"]);
+  const salt = new Uint8Array(saltHex.match(/../g).map((h) => parseInt(h, 16)));
+  return hex(await crypto.subtle.deriveBits({ name: "PBKDF2", hash: "SHA-256", salt, iterations }, key, 256));
+}
+const sha256 = async (s) => hex(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s)));
+function sameHex(a, b) {
+  if (a.length !== b.length) return false;
+  let d = 0;
+  for (let i = 0; i < a.length; i++) d |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return d === 0;
+}
+function readCookie(request, name) {
+  const m = (request.headers.get("Cookie") || "").match(new RegExp("(?:^|;\\s*)" + name + "=([^;]+)"));
+  return m ? m[1] : "";
+}
+const sessionCookie = (token, maxAge) =>
+  `ns_s=${token}; Path=/api/compte; HttpOnly; Secure; SameSite=Lax; Max-Age=${maxAge}`;
+const cleanFavs = (list) => [...new Set((Array.isArray(list) ? list : []).map(String).filter((id) => HOTEL_ID.test(id)))].slice(0, 300);
+const publicAccount = (a) => ({ email: a.email, name: a.name, favs: JSON.parse(a.favs || "[]") });
+
+async function tooMany(env, request, bucket, limit) {
+  const ip = request.headers.get("CF-Connecting-IP") || "0";
+  const key = `rl:${bucket}:${ip}`;
+  const n = Number(await env.NEWSLETTER.get(key)) || 0;
+  if (n >= limit) return true;
+  await env.NEWSLETTER.put(key, String(n + 1), { expirationTtl: 900 });
+  return false;
+}
+async function startSession(env, accountId) {
+  const token = randomHex(32);
+  const now = new Date();
+  await env.STATS.prepare("INSERT INTO sessions (token, account_id, created, expires) VALUES (?, ?, ?, ?)")
+    .bind(await sha256(token), accountId, now.toISOString(), new Date(now.getTime() + SESSION_DAYS * 864e5).toISOString()).run();
+  await env.STATS.prepare("UPDATE accounts SET last_login = ? WHERE id = ?").bind(now.toISOString(), accountId).run();
+  return token;
+}
+async function currentAccount(request, env) {
+  const token = readCookie(request, "ns_s");
+  if (!/^[0-9a-f]{64}$/.test(token)) return null;
+  const row = await env.STATS.prepare(
+    "SELECT a.*, s.token AS stoken FROM sessions s JOIN accounts a ON a.id = s.account_id WHERE s.token = ? AND s.expires > ?"
+  ).bind(await sha256(token), new Date().toISOString()).first();
+  return row || null;
+}
+const withCookie = (body, cookie, status = 200) => {
+  const r = json(body, status);
+  r.headers.append("Set-Cookie", cookie);
+  return r;
+};
+
+async function account(request, env, path) {
+  if (!env.STATS) return json({ ok: false, error: "unavailable" }, 503);
+  await ensureSchema(env);
+  const m = request.method;
+  // Les requêtes qui modifient quelque chose doivent venir du site lui-même
+  if (m !== "GET") {
+    const origin = request.headers.get("Origin");
+    if (origin && new URL(origin).host !== new URL(request.url).host) return json({ ok: false, error: "origin" }, 403);
+    if (request.headers.get("Content-Length") > 16384) return json({ ok: false, error: "too_large" }, 413);
+  }
+  let data = {};
+  if (m === "POST" || m === "PUT") {
+    try { data = await request.json(); } catch { return json({ ok: false, error: "bad_request" }, 400); }
+  }
+
+  if (path === "/api/compte/inscription" && m === "POST") {
+    if (data["bot-field"]) return json({ ok: false, error: "bad_request" }, 400);
+    if (await tooMany(env, request, "signup", 8)) return json({ ok: false, error: "rate" }, 429);
+    const email = clean(data.email, 254).toLowerCase();
+    const name = clean(data.name, 60);
+    const password = String(data.password || "");
+    if (!EMAIL.test(email)) return json({ ok: false, error: "invalid_email" }, 400);
+    if (password.length < 8 || password.length > 200) return json({ ok: false, error: "weak_password" }, 400);
+    if (await env.STATS.prepare("SELECT id FROM accounts WHERE email = ?").bind(email).first()) return json({ ok: false, error: "exists" }, 409);
+    const salt = randomHex(16);
+    const favs = cleanFavs(data.favs);
+    const res = await env.STATS.prepare("INSERT INTO accounts (email, name, salt, hash, favs, created) VALUES (?, ?, ?, ?, ?, ?)")
+      .bind(email, name, salt, `${PBKDF2_ITERATIONS}:${await hashPassword(password, salt)}`, JSON.stringify(favs), new Date().toISOString()).run();
+    const id = res.meta.last_row_id;
+    if (data.newsletter && !(await env.NEWSLETTER.get(`sub:${email}`))) {
+      await env.NEWSLETTER.put(`sub:${email}`, JSON.stringify({ email, origine: "/compte.html", source: "compte", date: new Date().toISOString(), pays: (request.cf && request.cf.country) || "" }));
+    }
+    try { await record(env, request, { type: "Compte", path: "/compte.html" }); } catch { /* sans conséquence */ }
+    const token = await startSession(env, id);
+    return withCookie({ ok: true, account: { email, name, favs } }, sessionCookie(token, SESSION_DAYS * 86400));
+  }
+
+  if (path === "/api/compte/connexion" && m === "POST") {
+    if (await tooMany(env, request, "login", 10)) return json({ ok: false, error: "rate" }, 429);
+    const email = clean(data.email, 254).toLowerCase();
+    const a = await env.STATS.prepare("SELECT * FROM accounts WHERE email = ?").bind(email).first();
+    const [iters, stored] = a && a.hash.includes(":") ? [Number(a.hash.split(":")[0]), a.hash.split(":")[1]] : [PBKDF2_ITERATIONS, a ? a.hash : ""];
+    const given = await hashPassword(String(data.password || "").slice(0, 200), a ? a.salt : "00".repeat(16), iters || PBKDF2_ITERATIONS);
+    if (!a || !sameHex(given, stored)) return json({ ok: false, error: "credentials" }, 401);
+    // Favoris notés sur cet appareil avant la connexion : ajoutés au compte
+    const merged = cleanFavs([...JSON.parse(a.favs || "[]"), ...cleanFavs(data.favs)]);
+    if (merged.length !== JSON.parse(a.favs || "[]").length) await env.STATS.prepare("UPDATE accounts SET favs = ? WHERE id = ?").bind(JSON.stringify(merged), a.id).run();
+    const token = await startSession(env, a.id);
+    return withCookie({ ok: true, account: { email: a.email, name: a.name, favs: merged } }, sessionCookie(token, SESSION_DAYS * 86400));
+  }
+
+  if (path === "/api/compte/deconnexion" && m === "POST") {
+    const token = readCookie(request, "ns_s");
+    if (/^[0-9a-f]{64}$/.test(token)) await env.STATS.prepare("DELETE FROM sessions WHERE token = ?").bind(await sha256(token)).run();
+    return withCookie({ ok: true }, sessionCookie("", 0));
+  }
+
+  const a = await currentAccount(request, env);
+  if (!a) return json({ ok: false, error: "auth" }, 401);
+
+  if (path === "/api/compte" && m === "GET") return json({ ok: true, account: publicAccount(a) });
+
+  if (path === "/api/compte/favoris" && m === "PUT") {
+    const favs = cleanFavs(data.favs);
+    await env.STATS.prepare("UPDATE accounts SET favs = ? WHERE id = ?").bind(JSON.stringify(favs), a.id).run();
+    return json({ ok: true, favs });
+  }
+
+  if (path === "/api/compte" && m === "DELETE") {
+    await env.STATS.batch([
+      env.STATS.prepare("DELETE FROM sessions WHERE account_id = ?").bind(a.id),
+      env.STATS.prepare("DELETE FROM accounts WHERE id = ?").bind(a.id),
+    ]);
+    return withCookie({ ok: true }, sessionCookie("", 0));
+  }
+  return json({ ok: false, error: "not_found" }, 404);
+}
+
+/* Mot de passe oublié : Jules génère un mot de passe provisoire depuis sa page privée */
+async function adminResetPassword(env, email) {
+  await ensureSchema(env);
+  const a = await env.STATS.prepare("SELECT id FROM accounts WHERE email = ?").bind(email).first();
+  if (!a) return null;
+  const temp = randomHex(5);
+  const salt = randomHex(16);
+  await env.STATS.batch([
+    env.STATS.prepare("UPDATE accounts SET salt = ?, hash = ? WHERE id = ?").bind(salt, `${PBKDF2_ITERATIONS}:${await hashPassword(temp, salt)}`, a.id),
+    env.STATS.prepare("DELETE FROM sessions WHERE account_id = ?").bind(a.id),
+  ]);
+  return temp;
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -340,6 +524,7 @@ export default {
     if (url.pathname === "/api/questions") return publicQuestions(url, env);
     if (url.pathname === "/api/admin") return request.method === "POST" ? adminAction(request, env) : adminPage(url, env);
     if (url.pathname === "/api/stats") return statsPage(url, env);
+    if (url.pathname === "/api/compte" || url.pathname.startsWith("/api/compte/")) return account(request, env, url.pathname);
     if (url.pathname.startsWith("/api/")) return new Response("Not found", { status: 404 });
     return env.ASSETS.fetch(request);
   },

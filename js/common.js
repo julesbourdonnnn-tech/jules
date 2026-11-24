@@ -177,7 +177,7 @@
    * jamais pour un inscrit ; si on la ferme, elle ne revient pas avant 30 jours. */
   function initNewsletterPopup() {
     if (location.protocol === "file:" && !/[?&]popup=1/.test(location.search)) return;
-    if (/studio|mentions-legales|selection|liens/.test(location.pathname)) return;
+    if (/studio|mentions-legales|selection|liens|compte/.test(location.pathname)) return;
     let state = null;
     try { state = localStorage.getItem("ns-nl"); } catch { return; }
     if (state === "inscrit") return;
@@ -200,7 +200,7 @@
             <h3>Être tenu informé</h3>
           </div>
         </div>
-        <p class="nl-pop-text">Les nouveaux établissements du site, mes derniers avis testés et les hôtels qui rejoignent mes coups de cœur : une lettre par mois, rien de plus. Pas de compte à créer, juste votre e-mail.</p>
+        <p class="nl-pop-text">Les nouveaux établissements du site, mes derniers avis testés et les hôtels qui rejoignent mes coups de cœur : une lettre par mois, rien de plus. Juste votre e-mail, rien d'autre.</p>
         ${C.newsletterForm("fenetre", "nl-form-pop")}
         <button type="button" class="nl-pop-later">Non merci</button>`;
       document.body.appendChild(box);
@@ -717,6 +717,70 @@
     if (e.key === "Escape") { closeSurprise(); toggleDrawer(false); }
   });
 
+  /* ---------- Compte lecteur : retrouver ses favoris sur tous ses appareils ----------
+   * Le Worker (worker/index.js, /api/compte…) garde le compte et les favoris ;
+   * le cookie de session est inaccessible au JavaScript. Ici, on mémorise
+   * seulement qu'on est connecté, pour ne pas interroger le serveur pour rien. */
+  const ACCT_KEY = "ns-acct";
+  let account = null;
+  async function accountApi(method, path, body) {
+    const r = await fetch("/api/compte" + path, {
+      method, credentials: "same-origin",
+      headers: body ? { "Content-Type": "application/json" } : {},
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    const d = await r.json().catch(() => ({}));
+    return { ...d, status: r.status };
+  }
+  function setLocalFavs(favs) {
+    try { localStorage.setItem(FAV_KEY, JSON.stringify(favs)); } catch { /* navigation privée */ }
+    syncFavButtons(); updateFavCount(); renderFavDrawer();
+  }
+  function setAccount(a) {
+    account = a;
+    try { if (a) localStorage.setItem(ACCT_KEY, "1"); else localStorage.removeItem(ACCT_KEY); } catch { /* navigation privée */ }
+    document.querySelectorAll(".nav-account").forEach((el) => el.classList.toggle("on", !!a));
+    renderFavDrawer();
+    document.dispatchEvent(new CustomEvent("account:change", { detail: a }));
+  }
+  const accountReady = (async () => {
+    await new Promise((r) => (document.readyState === "loading" ? document.addEventListener("DOMContentLoaded", r) : r()));
+    let hint = null;
+    try { hint = localStorage.getItem(ACCT_KEY); } catch { /* navigation privée */ }
+    if (!hint || location.protocol === "file:") return null;
+    try {
+      const r = await accountApi("GET", "");
+      if (r.ok) { setLocalFavs(r.account.favs); setAccount(r.account); return account; }
+      if (r.status === 401) setAccount(null);
+    } catch { /* hors ligne : on garde les favoris de l'appareil */ }
+    return null;
+  })();
+  let favSave;
+  document.addEventListener("favs:change", () => {
+    if (!account) return;
+    clearTimeout(favSave);
+    favSave = setTimeout(() => accountApi("PUT", "/favoris", { favs: getFavs() }).then((r) => { if (r.ok) account.favs = r.favs; }).catch(() => {}), 400);
+  });
+  async function accountEnter(kind, data) {
+    const r = await accountApi("POST", kind === "signup" ? "/inscription" : "/connexion", { ...data, favs: getFavs() });
+    if (r.ok) {
+      setLocalFavs(r.account.favs); setAccount(r.account);
+      if (kind === "signup") track("Compte");
+      if (data.newsletter) { try { localStorage.setItem("ns-nl", "inscrit"); } catch { /* navigation privée */ } }
+    }
+    return r;
+  }
+  async function accountLogout() {
+    try { await accountApi("POST", "/deconnexion", {}); } catch { /* déjà déconnecté */ }
+    setAccount(null);
+  }
+  async function accountDelete() {
+    const r = await accountApi("DELETE", "");
+    if (r.ok) setAccount(null);
+    return r;
+  }
+  const getAccount = () => account;
+
   /* ---------- Tiroir des favoris ---------- */
   function updateFavCount() {
     const n = getFavs().length;
@@ -734,6 +798,9 @@
             ${favButton(h, "fav-mini")}
           </div>`).join("")
       : `<p class="muted fav-empty">Touchez le ♡ d'un lieu pour le garder ici. Pratique pour comparer et partager vos envies.</p>`;
+    list.insertAdjacentHTML("beforeend", account
+      ? `<p class="fav-account">✓ Enregistrés dans votre compte, sur tous vos appareils. <a href="${C.page("compte.html")}">Mon compte</a></p>`
+      : `<p class="fav-account">Créez un compte gratuit pour retrouver vos favoris sur tous vos appareils. <a href="${C.page("compte.html")}">Créer mon compte →</a></p>`);
   }
   function toggleDrawer(open) {
     const d = document.getElementById("fav-drawer");
@@ -811,6 +878,7 @@
     CONFIG, getSource, track, siteLink, getStay, setStay, refreshBookLinks, initStayForms, getUserLocation, setUserLocation, geocode, locateBrowser,
     getFavs, isFav, toggleFav, favButton, card, syncFavButtons, observeReveal, enhanceSelects, surprise,
     toast, getCompare, setCompare, toggleCompare, syncCompare,
+    accountReady, getAccount, accountEnter, accountLogout, accountDelete,
   };
   document.addEventListener("DOMContentLoaded", renderChrome);
 })();

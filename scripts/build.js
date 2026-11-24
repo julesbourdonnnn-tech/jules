@@ -271,7 +271,7 @@ function hotelPage(h) {
       <article class="detail-content">
         ${reviewSection(h)}
         <section id="experience">
-          ${C.isTested(h) ? "" : `<p class="byline reveal"><span><a href="../a-propos.html">Par Jules Bourdon</a> <span>Un repérage : je n'y ai pas encore séjourné. Fiche rédigée à partir des informations de l'établissement.</span></span></p>`}
+          ${C.isTested(h) ? "" : `<p class="scout-note reveal"><strong>Repérage</strong> Je n'y ai pas encore séjourné : fiche rédigée à partir des informations de l'établissement.</p>`}
           <p class="eyebrow dark reveal">Pourquoi je l'ai repéré</p>
           <ul class="highlights">
             ${h.highlights.map((x, i) => `<li class="reveal"><span>${["✦", "☾", "❋", "◈"][i % 4]}</span>${e(x)}</li>`).join("\n            ")}
@@ -466,8 +466,8 @@ function guidePage(g) {
 
     <div class="container g-layout">
       <div class="g-intro">
-        <p class="byline"><span><a href="../a-propos.html">Par Jules Bourdon</a> <span>${e(CONFIG.author.title)}</span></span></p>
         ${g.intro.map((p, i) => `<p class="${i ? "body" : "lead dropcap"}">${e(p)}</p>`).join("\n        ")}
+        ${g.slug === "coups-de-coeur-de-jules" ? `<p class="g-account">♡ Touchez le cœur d'une adresse pour la garder dans vos favoris. Avec un <a href="../compte.html">compte gratuit</a>, vous les retrouvez sur tous vos appareils.</p>` : ""}
       </div>
       <nav class="g-toc" aria-label="Sommaire">
         <p class="eyebrow dark">Au sommaire</p>
@@ -738,6 +738,7 @@ const robots = () => `User-agent: *
 Allow: /
 Disallow: /studio.html
 Disallow: /signature.html
+Disallow: /compte.html
 Disallow: /comparer.html
 Disallow: /selection.html
 Disallow: /_review/

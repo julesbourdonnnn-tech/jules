@@ -328,6 +328,7 @@
         ${links.map(([href, label]) => `<a href="${page(href)}">${label}</a>`).join("\n        ")}
         <button type="button" class="nav-icon" data-surprise title="Un lieu au hasard" aria-label="Un lieu au hasard">🎲</button>
         <button type="button" class="nav-icon" id="fav-open" title="Mes favoris" aria-label="Mes favoris">♡<span class="fav-count" hidden></span></button>
+        <a class="nav-icon nav-account" href="${page("compte.html")}" title="Mon compte" aria-label="Mon compte"><svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="8.5" r="3.8"/><path d="M4.5 20c1.4-3.6 4.2-5.4 7.5-5.4s6.1 1.8 7.5 5.4"/></svg></a>
         <a href="${page("index.html#explorer")}" class="nav-cta" data-open-near>Près de chez moi</a>
         <button type="button" class="nav-icon nav-menu" id="menu-open" aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="menu-sheet"><span></span></button>
       </nav>
@@ -336,6 +337,7 @@
           ${links.map(([href, label]) => `<a href="${page(href)}">${label}</a>`).join("\n          ")}
           <a href="${page("quiz.html")}">Le quiz</a>
           <a href="${page("comparer.html")}">Le comparateur</a>
+          <a href="${page("compte.html")}">♡ Mon compte et mes favoris</a>
           <a href="${page("index.html#newsletter")}">✉ Recevoir la lettre</a>
           <a href="${page("index.html#explorer")}" data-open-near>📍 Près de chez moi</a>
           <a href="${page("professionnels.html")}" class="menu-small">Vous êtes un établissement ?</a>

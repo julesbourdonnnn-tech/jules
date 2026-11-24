@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mon compte et mes favoris | Nuits Singulières</title>
+  <meta name="description" content="Créez votre compte gratuit sur Nuits Singulières pour garder vos coups de cœur et retrouver vos hôtels favoris sur tous vos appareils.">
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#0f1a17">
+  <link rel="icon" href="/favicon.ico" sizes="48x48">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/favicon-192.png" type="image/png" sizes="192x192">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;1,9..144,300&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="account-page">
+  <header id="site-header" class="site-header on-dark"></header>
+  <main>
+    <section class="p-hero">
+      <div class="container">
+        <p class="eyebrow">Mon compte</p>
+        <h1 id="acct-title">Gardez vos coups de cœur</h1>
+        <p class="lead" id="acct-lead">Touchez le ♡ d'une adresse pour l'ajouter à vos favoris. Avec un compte gratuit, vous les retrouvez sur votre téléphone comme sur votre ordinateur, quand vous préparez votre prochaine escapade.</p>
+      </div>
+    </section>
+
+    <!-- Visiteur non connecté -->
+    <section class="section container acct-forms" id="acct-out">
+      <form class="acct-card" id="form-signup" novalidate>
+        <h2>Créer mon compte</h2>
+        <p class="muted">Gratuit, en trente secondes. Vos favoris de cet appareil y seront ajoutés.</p>
+        <label>Prénom <input name="name" autocomplete="given-name" maxlength="60"></label>
+        <label>E-mail <input name="email" type="email" autocomplete="email" required></label>
+        <label>Mot de passe <span class="muted">(8 caractères minimum)</span> <input name="password" type="password" autocomplete="new-password" minlength="8" required></label>
+        <label class="acct-check"><input type="checkbox" name="newsletter"> Recevoir « La lettre de Jules », une fois par mois</label>
+        <input class="hp" type="text" name="bot-field" tabindex="-1" autocomplete="off" aria-hidden="true">
+        <button class="btn btn-primary" type="submit">Créer mon compte</button>
+        <p class="acct-msg" role="alert"></p>
+        <p class="acct-note">Votre adresse sert uniquement à garder vos favoris (et à vous envoyer la lettre si vous l'avez demandée). Elle n'est jamais transmise. Vous pouvez supprimer votre compte à tout moment. <a href="mentions-legales.html#compte">En savoir plus</a></p>
+      </form>
+
+      <form class="acct-card" id="form-login" novalidate>
+        <h2>J'ai déjà un compte</h2>
+        <p class="muted">Connectez-vous pour retrouver vos favoris.</p>
+        <label>E-mail <input name="email" type="email" autocomplete="email" required></label>
+        <label>Mot de passe <input name="password" type="password" autocomplete="current-password" required></label>
+        <button class="btn btn-ghost" type="submit">Me connecter</button>
+        <p class="acct-msg" role="alert"></p>
+        <p class="acct-note">Mot de passe oublié ? Écrivez-moi à <a class="js-contact" href="mailto:contact@nuitsinguliere.com">contact@nuitsinguliere.com</a> depuis l'adresse de votre compte : je vous envoie un mot de passe provisoire.</p>
+      </form>
+    </section>
+
+    <!-- Visiteur connecté -->
+    <section class="section container" id="acct-in" hidden>
+      <div class="acct-head">
+        <div>
+          <p class="eyebrow dark">Mes favoris</p>
+          <h2 id="acct-count">Mes adresses</h2>
+          <p class="muted" id="acct-email"></p>
+        </div>
+        <div class="acct-actions">
+          <button class="btn btn-ghost" type="button" id="acct-logout">Me déconnecter</button>
+        </div>
+      </div>
+      <div class="grid" id="acct-favs"></div>
+      <p class="acct-empty" id="acct-empty" hidden>Vous n'avez pas encore de favori. Commencez par <a href="guides/coups-de-coeur-de-jules.html">mon coup de cœur du moment</a> : touchez le ♡ d'une adresse pour la garder ici.</p>
+      <p class="acct-delete"><button type="button" class="link-button" id="acct-delete">Supprimer mon compte</button></p>
+    </section>
+
+    <section class="section container" id="acct-loading">
+      <p class="muted">Chargement…</p>
+    </section>
+  </main>
+  <footer id="site-footer" class="site-footer"></footer>
+
+  <script src="js/config.js"></script>
+  <script src="js/hotels.js"></script>
+  <script src="js/guides.js"></script>
+  <script src="js/core.js"></script>
+  <script src="js/common.js"></script>
+  <script>
+    (function () {
+      const NS = window.NS;
+      const $ = (id) => document.getElementById(id);
+      const ERRORS = {
+        exists: "Un compte existe déjà avec cette adresse : connectez-vous à droite.",
+        invalid_email: "Cette adresse e-mail ne semble pas valide.",
+        weak_password: "Choisissez un mot de passe d'au moins 8 caractères.",
+        credentials: "Adresse ou mot de passe incorrect.",
+        rate: "Trop de tentatives : réessayez dans quelques minutes.",
+      };
+      const show = (a) => {
+        $("acct-loading").hidden = true;
+        $("acct-out").hidden = !!a;
+        $("acct-in").hidden = !a;
+        if (!a) {
+          $("acct-title").textContent = "Gardez vos coups de cœur";
+          return;
+        }
+        $("acct-title").textContent = a.name ? `Bonjour ${a.name}` : "Bonjour";
+        $("acct-lead").textContent = "Voici les adresses que vous avez gardées. Elles vous suivent sur tous vos appareils : il suffit de vous connecter.";
+        $("acct-email").textContent = `Connecté avec ${a.email}`;
+        renderFavs();
+      };
+      function renderFavs() {
+        const list = NS.getFavs().map((id) => window.HOTELS.find((h) => h.id === id)).filter(Boolean);
+        $("acct-count").textContent = list.length ? `${list.length} adresse${list.length > 1 ? "s" : ""} gardée${list.length > 1 ? "s" : ""}` : "Aucune adresse pour l'instant";
+        $("acct-favs").innerHTML = list.map((h) => NS.card(h, { reveal: false })).join("");
+        $("acct-empty").hidden = !!list.length;
+        NS.syncFavButtons();
+      }
+      async function submit(form, kind) {
+        const msg = form.querySelector(".acct-msg");
+        const btn = form.querySelector("button[type=submit]");
+        const data = Object.fromEntries(new FormData(form).entries());
+        data.newsletter = !!data.newsletter;
+        if (kind === "signup" && (data.password || "").length < 8) { msg.textContent = ERRORS.weak_password; return; }
+        msg.textContent = "";
+        btn.disabled = true;
+        try {
+          const r = await NS.accountEnter(kind, data);
+          if (r.ok) { show(r.account); window.scrollTo({ top: 0, behavior: "smooth" }); NS.toast(kind === "signup" ? "Votre compte est créé." : "Vous êtes connecté."); }
+          else msg.textContent = ERRORS[r.error] || "Le service est momentanément indisponible. Réessayez un peu plus tard.";
+        } catch {
+          msg.textContent = "Connexion impossible pour le moment. Vérifiez votre réseau et réessayez.";
+        }
+        btn.disabled = false;
+      }
+      document.addEventListener("DOMContentLoaded", async () => {
+        const mail = NS.CONFIG.contactEmail;
+        document.querySelectorAll(".js-contact").forEach((a) => { a.href = `mailto:${mail}`; a.textContent = mail; });
+        $("form-signup").addEventListener("submit", (e) => { e.preventDefault(); submit(e.target, "signup"); });
+        $("form-login").addEventListener("submit", (e) => { e.preventDefault(); submit(e.target, "login"); });
+        $("acct-logout").addEventListener("click", async () => { await NS.accountLogout(); show(null); NS.toast("Vous êtes déconnecté."); });
+        $("acct-delete").addEventListener("click", async () => {
+          if (!confirm("Supprimer définitivement votre compte ? Vos favoris resteront sur cet appareil.")) return;
+          const r = await NS.accountDelete().catch(() => ({}));
+          if (r.ok) { show(null); NS.toast("Votre compte a été supprimé."); } else NS.toast("La suppression n'a pas abouti : réessayez.");
+        });
+        document.addEventListener("favs:change", () => { if (NS.getAccount()) renderFavs(); });
+        show(await NS.accountReady);
+      });
+    })();
+  </script>
+</body>
+</html>
