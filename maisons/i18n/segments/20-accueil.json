@@ -363,9 +363,9 @@
   "Do the houses have air conditioning?",
   "¿Las casas tienen aire acondicionado?"
  ],
- "Non. La Maison du Lac a le chauffage central, la Maison de Pierre un chauffage radiant ; les chambres ont des stores ou rideaux occultants.": [
-  "No. La Maison du Lac has central heating, La Maison de Pierre radiant heating; the bedrooms have blackout blinds or curtains.",
-  "No. La Maison du Lac tiene calefacción central y la Maison de Pierre calefacción radiante; los dormitorios tienen persianas o cortinas opacas."
+ "La Maison du Lac, oui : elle a la climatisation centrale et des ventilateurs. La Maison de Pierre, non : elle a un chauffage radiant. Dans les deux maisons, les chambres ont des stores ou rideaux occultants.": [
+  "La Maison du Lac does: it has central air conditioning and fans. La Maison de Pierre does not: it has radiant heating. In both houses, the bedrooms have blackout blinds or curtains.",
+  "La Maison du Lac sí: tiene aire acondicionado central y ventiladores. La Maison de Pierre no: tiene calefacción radiante. En las dos casas, los dormitorios tienen persianas o cortinas opacas."
  ],
  "Peut-on venir avec un bébé ?": [
   "Can I come with a baby?",

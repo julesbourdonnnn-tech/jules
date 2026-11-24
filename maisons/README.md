@@ -74,10 +74,12 @@ La GitHub Action **« Maisons — données »** (`.github/workflows/maisons-donn
 
 Tout vient **des deux annonces Airbnb**, sans rien inventer :
 
-- La GitHub Action **« Maisons — photos Airbnb »** (`.github/workflows/maisons-airbnb.yml`, script `scripts/airbnb.py`) télécharge les annonces, les **27 photos de chaque maison** (en trois tailles, au format WebP, bandes noires des captures d'écran retirées) et les avis des voyageurs. Résultats : `assets/photos/`, `data/airbnb/<maison>.json` (détail de l'annonce) et `data/airbnb/raw/<maison>-reviews.json` (avis).
+- La GitHub Action **« Maisons — photos Airbnb »** (`.github/workflows/maisons-airbnb.yml`, script `scripts/airbnb.py`) télécharge les annonces, les photos de chaque maison (**52 pour Lacanau, 27 pour Bordeaux** au 24 novembre 2026 ; en trois tailles, au format WebP, bandes noires des captures d'écran retirées) et les avis des voyageurs. Résultats : `assets/photos/`, `data/airbnb/<maison>.json` (détail de l'annonce) et `data/airbnb/raw/<maison>-reviews.json` (avis).
 - Les textes affichés sont dans **`js/data.js`** : description de l'annonce (mot pour mot), chambres, équipements, règlement, notes, ordre et légendes des photos, avis cités. Les informations sur les environs (`DESTINATIONS`) sont des informations générales, avec des temps de trajet indicatifs.
 
 **Si tu modifies une annonce sur Airbnb** (nouvelles photos, nouvel équipement…) : GitHub → Actions → « Maisons — photos Airbnb » → *Run workflow*. Puis mets à jour `js/data.js` (par exemple ajoute la nouvelle photo dans la liste `photos`). Pour retélécharger des photos déjà présentes, supprime d'abord les fichiers `assets/photos/<maison>/NN-*.webp` correspondants.
+
+⚠️ **Numéros des photos de Lacanau** : depuis la mise à jour du 24 novembre 2026 (annonce passée à 52 photos), les numéros des fichiers ne suivent plus l'ordre de l'annonce. Une photo garde toujours son numéro, et un numéro n'est jamais réutilisé pour une autre photo, car les navigateurs gardent les photos en mémoire 30 jours. Les photos retirées d'Airbnb (01 et 02) ont été supprimées, et les nouvelles ont reçu les numéros 28 à 54. La correspondance avec l'annonce est dans `data/airbnb/lacanau.json` (champ `file` de chaque photo). Le script `airbnb.py` numérote encore selon la position dans l'annonce : pour une prochaine mise à jour des photos de Lacanau, adapte-le d'abord (ou procède comme pour celle-ci : comparer les adresses des photos, puis attribuer les numéros libres suivants).
 
 ## Mise en ligne (Cloudflare)
 
