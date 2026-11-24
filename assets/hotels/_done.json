@@ -260,12 +260,12 @@
   3
  ],
  "hotel-de-la-cite-carcassonne": [
-  1,
-  4,
+  10,
+  6,
+  5,
+  14,
   12,
-  3,
-  2,
-  10
+  8
  ],
  "grand-controle-versailles": [
   6,
@@ -460,5 +460,11 @@
   15,
   9,
   3
+ ],
+ "moulin-du-roc": [
+  1,
+  4,
+  2,
+  6
  ]
 }
