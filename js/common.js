@@ -195,7 +195,6 @@
       box.innerHTML = `
         <button type="button" class="nl-pop-close" aria-label="Fermer">×</button>
         <div class="nl-pop-head">
-          <img src="${C.root()}assets/jules/avatar.jpg" alt="" width="52" height="52">
           <div>
             <p class="nl-pop-kicker">La lettre de Jules</p>
             <h3>Être tenu informé</h3>
@@ -238,7 +237,6 @@
           <p class="ask-who"><strong>${escapeHtml(q.prenom)}</strong> · ${escapeHtml(DATE_LONG.format(new Date(q.date)))}</p>
           <p class="ask-text">${escapeHtml(q.question).replace(/\n/g, "<br>")}</p>
           <div class="ask-answer">
-            <img src="${C.root()}assets/jules/avatar.jpg" alt="" width="32" height="32" loading="lazy">
             <div><p class="ask-who"><strong>Jules</strong> a répondu</p><p>${escapeHtml(q.answer).replace(/\n/g, "<br>")}</p></div>
           </div>
         </article>`).join("");

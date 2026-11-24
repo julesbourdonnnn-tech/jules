@@ -35,8 +35,8 @@ détaillé. Mes avis restent libres, et si un séjour est offert, je l'indique
 clairement.
 
 Chaque séjour test donne lieu à un avis détaillé et signé, avec le badge
-« Testé ». Les établissements que je recommande sans réserve rejoignent la
-sélection « Les coups de cœur de Jules », mise en avant sur le site. Cette
+« Testé ». Les adresses que je recommande sans réserve peuvent rejoindre la
+sélection « Le coup de cœur du moment », mise en avant sur le site. Cette
 distinction ne s'achète pas et ne dépend pas d'une invitation : seule compte
 la qualité du séjour.
 
@@ -97,7 +97,7 @@ Jules Bourdon
 - **Séjour offert = mention obligatoire.** La loi du 9 juin 2023 sur
   l'influence commerciale impose d'indiquer clairement tout avantage reçu.
   Sur le site, mets `invited: true` dans l'avis : la mention s'affiche toute seule.
-- **Coups de cœur :** ne promets jamais une place dans la sélection en échange
-  d'une invitation. Décris la règle (hôtel testé, que tu recommandes sans réserve), rien de plus.
+- **Coup de cœur du moment :** ne promets jamais une place dans la sélection en échange
+  d'une invitation. C'est ton choix personnel, rien de plus.
 - **Photos :** garde une trace écrite (l'e-mail suffit) de chaque autorisation.
 - **Suivi :** note dans un tableau à qui tu as écrit, quand, et la réponse.

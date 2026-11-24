@@ -1468,3 +1468,7 @@ body.has-compare .site-footer { padding-bottom: 110px; }
   .nl-pop { left: 0; right: 0; bottom: 0; width: auto; border-radius: 22px 22px 0 0; padding: 22px max(18px, env(safe-area-inset-left, 0px)) calc(16px + env(safe-area-inset-bottom, 0px)); }
 }
 @media (prefers-reduced-motion: reduce) { .nl-pop { transition: none; } }
+/* « Le mot de Jules » sans photo (le portrait est réservé à « Qui suis-je ») */
+.jules { grid-template-columns: 1fr; justify-items: start; }
+.jules-text { max-width: 760px; }
+.byline { gap: 0; }

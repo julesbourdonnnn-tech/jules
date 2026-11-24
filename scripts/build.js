@@ -123,7 +123,7 @@ function reviewSection(h) {
         <section id="avis" class="review reveal">
           <div class="review-head">
             <div>
-              <p class="eyebrow dark">✓ Testé · ${e(C.reviewDate(h))}${C.isCoupDeCoeur(h) ? ` · <a class="review-heart" href="../guides/coups-de-coeur-de-jules.html">♥ Coup de cœur</a>` : ""}</p>
+              <p class="eyebrow dark">✓ Testé · ${e(C.reviewDate(h))}</p>
               <h2>L'avis du pro</h2>
             </div>
             ${score != null ? `<p class="review-score"><strong>${C.fmtScore(score)}</strong><span>/10</span></p>` : ""}
@@ -219,7 +219,8 @@ function hotelPage(h) {
         <p class="card-type light">${T.icon} ${e(T.label)} · ${e(E.label)}</p>
         <h1>${e(h.name)}</h1>
         <p class="d-tagline">${e(h.tagline)}</p>
-        ${C.isTested(h) ? `<a class="d-tested${C.isCoupDeCoeur(h) ? " is-heart" : ""}" href="#avis">${C.isCoupDeCoeur(h) ? `♥ Coup de cœur de ${e(CONFIG.author.name)}` : `✓ Testé par ${e(CONFIG.author.name)}${C.reviewScore(h) != null ? ` · <strong>${C.fmtScore(C.reviewScore(h))}/10</strong>` : ""}`}</a>` : ""}
+        ${C.isCoupDeCoeur(h) ? `<a class="d-tested is-heart" href="../guides/coups-de-coeur-de-jules.html">♥ Coup de cœur du moment</a>` : ""}
+        ${C.isTested(h) ? `<a class="d-tested" href="#avis">✓ Testé par ${e(CONFIG.author.name)}${C.reviewScore(h) != null ? ` · <strong>${C.fmtScore(C.reviewScore(h))}/10</strong>` : ""}</a>` : ""}
         <div class="d-meta">
           <span>📍 ${e(h.city)}, ${e(h.region)}</span>
           <span class="dist-chip" data-dist hidden></span>
@@ -253,7 +254,7 @@ function hotelPage(h) {
       <article class="detail-content">
         ${reviewSection(h)}
         <section id="experience">
-          ${C.isTested(h) ? "" : `<p class="byline reveal"><img src="../assets/jules/avatar.jpg" alt="" width="42" height="42" loading="lazy"><span><a href="../a-propos.html">Par Jules Bourdon</a> <span>Un repérage : je n'y ai pas encore séjourné. Fiche rédigée à partir des informations de l'établissement.</span></span></p>`}
+          ${C.isTested(h) ? "" : `<p class="byline reveal"><span><a href="../a-propos.html">Par Jules Bourdon</a> <span>Un repérage : je n'y ai pas encore séjourné. Fiche rédigée à partir des informations de l'établissement.</span></span></p>`}
           <p class="eyebrow dark reveal">Pourquoi je l'ai repéré</p>
           <ul class="highlights">
             ${h.highlights.map((x, i) => `<li class="reveal"><span>${["✦", "☾", "❋", "◈"][i % 4]}</span>${e(x)}</li>`).join("\n            ")}
@@ -446,7 +447,7 @@ function guidePage(g) {
 
     <div class="container g-layout">
       <div class="g-intro">
-        <p class="byline"><img src="../assets/jules/avatar.jpg" alt="" width="42" height="42" loading="lazy"><span><a href="../a-propos.html">Par Jules Bourdon</a> <span>${e(CONFIG.author.title)}</span></span></p>
+        <p class="byline"><span><a href="../a-propos.html">Par Jules Bourdon</a> <span>${e(CONFIG.author.title)}</span></span></p>
         ${g.intro.map((p, i) => `<p class="${i ? "body" : "lead dropcap"}">${e(p)}</p>`).join("\n        ")}
       </div>
       <nav class="g-toc" aria-label="Sommaire">

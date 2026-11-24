@@ -183,8 +183,8 @@
     return m ? `${MONTHS[Number(m) - 1]} ${y}` : y;
   }
   const fmtScore = (n) => String(n).replace(".", ",");
-  // Coup de cœur : hôtel testé et choisi par Jules (review.coupDeCoeur dans hotels.js)
-  const isCoupDeCoeur = (h) => isTested(h) && !!h.review.coupDeCoeur;
+  // « Le coup de cœur du moment » : adresses choisies par Jules (coupDeCoeur dans hotels.js)
+  const isCoupDeCoeur = (h) => !!(h && h.coupDeCoeur);
 
   function card(h, { dist = null, reveal = true, fav = false } = {}) {
     const { ENVS, TYPES } = data();
@@ -201,7 +201,7 @@
             <button type="button" class="card-nav next" data-slide="1" aria-label="Photo suivante">›</button>
             <div class="card-dots">${photos.map((_, i) => `<span class="${i ? "" : "on"}"></span>`).join("")}</div>` : ""}
           <span class="badge">${escapeHtml(ENVS[h.env].label)}</span>
-          ${isTested(h) ? `<span class="badge badge-tested${isCoupDeCoeur(h) ? " badge-heart" : ""}" title="Séjour testé par ${escapeHtml(data().CONFIG.author.name)}">${isCoupDeCoeur(h) ? "♥ Coup de cœur" : `✓ Testé${reviewScore(h) != null ? ` · ${fmtScore(reviewScore(h))}/10` : ""}`}</span>` : ""}
+          ${isCoupDeCoeur(h) ? `<span class="badge badge-tested badge-heart">♥ Coup de cœur</span>` : isTested(h) ? `<span class="badge badge-tested" title="Séjour testé par ${escapeHtml(data().CONFIG.author.name)}">✓ Testé${reviewScore(h) != null ? ` · ${fmtScore(reviewScore(h))}/10` : ""}</span>` : ""}
           ${favButton(h, "", fav)}
           <button type="button" class="card-compare" data-compare="${escapeHtml(h.id)}" aria-pressed="false" aria-label="Comparer ${escapeHtml(h.name)}" title="Ajouter au comparateur">⇄</button>
           ${dist != null ? `<span class="card-dist">📍 ${formatDistance(dist)}</span>` : ""}
@@ -224,7 +224,6 @@
     return `
         <section class="ask reveal" id="questions-lecteurs" data-questions="${escapeHtml(pageId)}" data-title="${escapeHtml(title)}">
           <div class="ask-head">
-            <img src="${root()}assets/jules/avatar.jpg" alt="" width="56" height="56" loading="lazy">
             <div>
               <h2>Une question pour Jules ?</h2>
               <p>Une question précise sur ${escapeHtml(subject)} ? Posez-la : je réponds personnellement, et je publie ici les réponses utiles à tous.</p>
@@ -314,7 +313,7 @@
   function header() {
     const { CONFIG } = data();
     const links = [
-      ["guides/coups-de-coeur-de-jules.html", "Coups de cœur"],
+      ["guides/coups-de-coeur-de-jules.html", "Coup de cœur"],
       ["guides/index.html", "Les guides"],
       ["index.html#explorer", "Toutes les adresses"],
       ["carte.html", "La carte"],

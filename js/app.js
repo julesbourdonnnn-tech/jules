@@ -189,7 +189,8 @@
   }
 
   function initSpotlight() {
-    const list = FEATURED.slice(0, 6);
+    const cdc = HOTELS.filter((h) => h.coupDeCoeur);
+    const list = (cdc.length >= 3 ? cdc : FEATURED).slice(0, 8);
     const box = $("#spotlight-box");
     box.innerHTML = `
       <div class="spot-media">${list.map((h, i) => `<img class="${i ? "" : "on"}" src="${img(h.images[0])}" alt="${escapeHtml(h.name)}" loading="lazy" decoding="async">`).join("")}</div>

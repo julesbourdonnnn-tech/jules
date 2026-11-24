@@ -20,29 +20,29 @@
   const plural = (n, one, many) => (n > 1 ? many : one);
   const hasTag = (t) => (h) => (h.tags || []).includes(t);
 
-  // « Les coups de cœur de Jules » : même règle que isCoupDeCoeur (js/core.js)
-  const coupDeCoeur = (h) => !!(h.review && h.review.date && h.review.coupDeCoeur);
+  // « Le coup de cœur du moment » : même règle que isCoupDeCoeur (js/core.js)
+  const coupDeCoeur = (h) => !!h.coupDeCoeur;
 
   global.GUIDES = [
     {
       slug: "coups-de-coeur-de-jules",
       cat: "envie",
-      kicker: "Coups de cœur",
-      short: "Les coups de cœur de Jules",
-      title: (n) => n > 1 ? `Les coups de cœur de Jules : ${n} hôtels testés et recommandés` : "Les coups de cœur de Jules : l'hôtel testé et recommandé",
-      description: "Les hôtels que Jules Bourdon, hôtelier passé par des maisons 3, 4 et 5 étoiles, a testés et recommande sans réserve : une sélection qui ne s'achète pas.",
+      kicker: "Coup de cœur du moment",
+      short: "Le coup de cœur du moment",
+      title: (n) => `Le coup de cœur du moment : ${n} adresses que je recommande`,
+      description: "La sélection du moment de Jules Bourdon, hôtelier passé par des maisons 3, 4 et 5 étoiles : les adresses qu'il recommande en ce moment, sans commission ni contrepartie.",
       match: coupDeCoeur,
-      sort: (a, b) => (b.review.date || "").localeCompare(a.review.date || ""),
+      sort: (a, b) => (b.review ? 1 : 0) - (a.review ? 1 : 0),
       intro: [
-        "Voici les adresses où j'ai séjourné et que je recommande sans réserve : celles où je n'hésiterais pas à envoyer mes proches. Je les ai toutes testées, avec mon regard de professionnel.",
-        "Cette sélection ne s'achète pas : aucun établissement ne paie pour y figurer, et une invitation n'y donne aucun droit. Seule compte la qualité du séjour. Elle s'enrichit à chaque nouveau test.",
+        "Voici les adresses que je recommande en ce moment : celles où je n'hésiterais pas à envoyer mes proches. Certaines, je les ai testées, et vous trouverez mon avis complet sur leur fiche ; les autres font partie de mes repérages les plus marquants.",
+        "Cette sélection change au fil des saisons et de mes séjours. Elle ne s'achète pas : aucun établissement ne paie pour y figurer, et une invitation n'y donne aucun droit.",
       ],
       faq: [
-        ["Comment un hôtel devient-il un coup de cœur ?", "J'y ai séjourné, et j'en suis reparti avec l'envie de le recommander sans réserve. C'est un choix personnel, qui repose uniquement sur la qualité du séjour."],
+        ["Comment un hôtel entre-t-il dans le coup de cœur du moment ?", "C'est un choix personnel : un lieu vraiment singulier, que je recommande sans réserve, au moment où je le choisis. Les adresses testées portent en plus le badge « Testé » et mon avis détaillé."],
         ["Un hôtel peut-il payer pour figurer dans cette sélection ?", "Non. Aucun établissement ne paie pour être présenté ou distingué. Quand un séjour m'a été offert, je l'indique clairement sur l'avis, et cela ne change rien à mon jugement."],
       ],
       tips: [
-        "Lisez l'avis complet de chaque hôtel : le conseil du pro vous dit quelle chambre demander et quand venir.",
+        "Pour les adresses testées, lisez l'avis complet : le conseil du pro vous dit quelle chambre demander et quand venir.",
         "Une question précise sur l'une de ces adresses ? Posez-la en bas de sa fiche : je vous réponds personnellement.",
       ],
     },

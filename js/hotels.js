@@ -21,13 +21,13 @@
  *   tags        envies vérifiées : "famille", "train", "chien" (voir TAGS)
  *   forYou / notForYou   « C'est pour vous si… / Moins pour vous si… »
  *   bookingTip  conseil de réservation (facultatif : sinon déduit automatiquement)
+ *   coupDeCoeur true : l'adresse fait partie du « coup de cœur du moment » (testée ou non)
  *   photoCredit auteur des photos quand ce sont les tiennes (ex. "Jules Bourdon")
  *   review      ton avis après un séjour (le lieu reçoit alors le badge « Testé ») :
  *     review: {
  *       date: "2026-11",                // mois du séjour (obligatoire)
  *       stay: "Suite Forêt, 1 nuit",     // ce que tu as testé (facultatif)
  *       invited: false,                  // true si le séjour a été offert (mention affichée)
- *       coupDeCoeur: true,               // ton choix : l'hôtel entre dans « Les coups de cœur de Jules »
  *       disclosure: "",                  // lien particulier à signaler (ex. « J'ai travaillé dans cet hôtel par le passé. »)
  *       scores: { accueil: 9, chambre: 8, literie: 9, table: 8, service: 9, valeur: 7 }, // sur 10
  *       verdict: "Une phrase qui résume ton avis",
@@ -88,6 +88,7 @@ window.HOTELS = [
   // ——————————————————— CAMPAGNE ———————————————————
   {
     id: "loire-valley-lodges",
+    coupDeCoeur: true,
     name: "Loire Valley Lodges",
     tagline: "Dix-huit cabanes d'artistes perdues dans une forêt de 300 hectares",
     city: "Esvres-sur-Indre", department: "Indre-et-Loire", region: "Centre-Val de Loire",
@@ -240,6 +241,7 @@ window.HOTELS = [
   },
   {
     id: "fontevraud-l-ermitage",
+    coupDeCoeur: true,
     name: "Fontevraud L'Ermitage",
     tagline: "Dormir dans une abbaye royale millénaire, et s'y promener la nuit",
     city: "Fontevraud-l'Abbaye", department: "Maine-et-Loire", region: "Pays de la Loire",
@@ -280,6 +282,7 @@ window.HOTELS = [
   // ——————————————————— MER ———————————————————
   {
     id: "phare-de-kerbel",
+    coupDeCoeur: true,
     name: "Phare de Kerbel",
     tagline: "Le seul phare de France où l'on dort tout en haut",
     city: "Riantec", department: "Morbihan", region: "Bretagne",
@@ -476,6 +479,7 @@ window.HOTELS = [
   },
   {
     id: "hotel-particulier-montmartre",
+    coupDeCoeur: true,
     name: "Hôtel Particulier Montmartre",
     tagline: "Cinq suites d'artistes et le plus grand jardin d'hôtel de Paris",
     city: "Paris", department: "Paris", region: "Île-de-France",
@@ -629,6 +633,7 @@ window.HOTELS = [
   // ——————————————————— NOUVELLES ADRESSES ———————————————————
   {
     id: "pic-du-midi",
+    coupDeCoeur: true,
     name: "Nuit au sommet du Pic du Midi",
     tagline: "Dormir dans un observatoire à 2 877 mètres, au-dessus des Pyrénées",
     city: "La Mongie", department: "Hautes-Pyrénées", region: "Occitanie",
@@ -649,6 +654,7 @@ window.HOTELS = [
   },
   {
     id: "refuge-du-montenvers",
+    coupDeCoeur: true,
     name: "Refuge du Montenvers",
     tagline: "Un refuge de 1880 au bord de la Mer de Glace, accessible en petit train rouge",
     city: "Chamonix-Mont-Blanc", department: "Haute-Savoie", region: "Auvergne-Rhône-Alpes",
@@ -1246,7 +1252,7 @@ window.HOTELS = [
     notForYou: ["Vous cherchez une vue sur les monuments", "Vous préférez les très grands hôtels"],
     photos: 0, website: "https://www.hotelparister.com/",
     review: {
-      date: "2026-11", stay: "Duplex avec terrasse, 1 nuit", coupDeCoeur: true, invited: true,
+      date: "2026-11", stay: "Duplex avec terrasse, 1 nuit", invited: true,
       disclosure: "Transparence : j'ai travaillé au Parister par le passé.",
       scores: { accueil: 9.5, chambre: 9, literie: 9, table: 9.5, service: 9.5, valeur: 8 },
       verdict: "Une parenthèse au cœur du 9e arrondissement : piscine de 20 mètres, jardin intérieur et un petit-déjeuner exceptionnel.",
@@ -1262,6 +1268,7 @@ window.HOTELS = [
   },
   {
     id: "chateau-d-augerville",
+    coupDeCoeur: true,
     name: "Château d'Augerville",
     tagline: "Un château, son parc et son golf, pour s'échapper de Paris le temps d'un week-end",
     city: "Augerville-la-Rivière", department: "Loiret", region: "Centre-Val de Loire",
@@ -1312,7 +1319,7 @@ window.HOTELS = [
     notForYou: ["Vous cherchez l'animation d'une ville"],
     photos: 3, website: "https://www.legrandpavillonchantilly.com/fr/", photoCredit: "Jules Bourdon et l'établissement",
     review: {
-      date: "2026-01", stay: "Chambre Confort avec terrasse, 2 nuits", coupDeCoeur: true, invited: false,
+      date: "2026-01", stay: "Chambre Confort avec terrasse, 2 nuits", invited: false,
       scores: { accueil: 8.5, chambre: 9, literie: 8.5, table: 8, service: 8.5, valeur: 8.5 },
       verdict: "La campagne aux portes de Paris, des chambres réussies, et Chantilly à découvrir à cheval.",
       text: [
@@ -1327,6 +1334,7 @@ window.HOTELS = [
   },
   {
     id: "le-donjon-etretat",
+    coupDeCoeur: true,
     name: "Le Donjon, Domaine Saint-Clair",
     tagline: "Un manoir à donjon perché sur la falaise, face à la mer d'Étretat",
     city: "Étretat", department: "Seine-Maritime", region: "Normandie",
@@ -1344,7 +1352,7 @@ window.HOTELS = [
     notForYou: ["Vous voulez être au cœur de l'animation du centre"],
     photos: 6, website: "https://www.hoteletretat.com/",
     review: {
-      date: "2025-03", stay: "Chambre avec vue sur la mer, 2 nuits", coupDeCoeur: true, invited: false,
+      date: "2025-03", stay: "Chambre avec vue sur la mer, 2 nuits", invited: false,
       scores: { accueil: 8.5, chambre: 9, literie: 8.5, table: 8, service: 8.5, valeur: 8 },
       verdict: "Un manoir à donjon perché sur la falaise, face à la mer : un hôtel qui ne ressemble à aucun autre.",
       text: [
