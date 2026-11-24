@@ -156,8 +156,8 @@
       const out = await submitForm(form);
       form.classList.add("sent");
       msg.textContent = out.already
-        ? "Vous êtes déjà inscrit·e : à dimanche ✦"
-        : "Merci ! Vous êtes bien inscrit·e. À dimanche ✦";
+        ? "Vous êtes déjà inscrit·e : à bientôt ✦"
+        : "Merci ! Vous êtes bien inscrit·e. À bientôt ✦";
       track("Newsletter", { source: getSource() || "direct" });
       form.reset();
     } catch (err) {
@@ -166,6 +166,63 @@
         : err.message === "invalid_email"
           ? "Cette adresse e-mail ne semble pas valide."
           : "Oups, l'inscription a échoué. Réessayez dans un instant.";
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  /* ---------- « Une question pour Jules ? » ---------- */
+  const DATE_LONG = new Intl.DateTimeFormat("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+  async function loadQuestions(box) {
+    const list = box.querySelector("[data-questions-list]");
+    if (!list || location.protocol === "file:") return;
+    try {
+      const res = await fetch(`/api/questions?page=${encodeURIComponent(box.dataset.questions)}`);
+      const out = await res.json();
+      const qs = (out && out.questions) || [];
+      list.innerHTML = qs.map((q) => `
+        <article class="ask-item">
+          <p class="ask-who"><strong>${escapeHtml(q.prenom)}</strong> · ${escapeHtml(DATE_LONG.format(new Date(q.date)))}</p>
+          <p class="ask-text">${escapeHtml(q.question).replace(/\n/g, "<br>")}</p>
+          <div class="ask-answer">
+            <img src="${C.root()}assets/jules/avatar.jpg" alt="" width="32" height="32" loading="lazy">
+            <div><p class="ask-who"><strong>Jules</strong> a répondu</p><p>${escapeHtml(q.answer).replace(/\n/g, "<br>")}</p></div>
+          </div>
+        </article>`).join("");
+    } catch { /* pas de réponses à afficher */ }
+  }
+  function initQuestions() {
+    document.querySelectorAll("[data-questions]").forEach(loadQuestions);
+  }
+  document.addEventListener("submit", async (e) => {
+    const form = e.target.closest("[data-ask]");
+    if (!form) return;
+    e.preventDefault();
+    const box = form.closest("[data-questions]");
+    const msg = form.querySelector(".ask-msg");
+    const btn = form.querySelector('button[type="submit"]');
+    const data = Object.fromEntries(new FormData(form).entries());
+    if ((data.question || "").trim().length < 10) { msg.textContent = "Votre question est un peu courte : précisez-la en quelques mots."; return; }
+    if ((data.prenom || "").trim().length < 2) { msg.textContent = "Indiquez votre prénom."; return; }
+    if (location.protocol === "file:") { msg.textContent = "Les questions fonctionneront une fois le site en ligne."; return; }
+    data.page = box.dataset.questions;
+    data.title = box.dataset.title;
+    btn.disabled = true;
+    msg.textContent = "";
+    try {
+      const res = await fetch("/api/question", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
+      const out = await res.json().catch(() => ({}));
+      if (!res.ok || !out.ok) throw new Error(out.error || String(res.status));
+      form.reset();
+      form.classList.add("sent");
+      msg.textContent = data.email
+        ? "Merci ! Votre question m'est bien parvenue. Je vous préviens par e-mail dès que j'ai répondu."
+        : "Merci ! Votre question m'est bien parvenue. Ma réponse sera publiée ici sous quelques jours.";
+      track("Question", { hotel: data.page });
+    } catch (err) {
+      msg.textContent = err.message === "invalid_email" ? "Cette adresse e-mail ne semble pas valide."
+        : err.message === "slow_down" ? "Une question vient d'être envoyée : patientez une minute avant d'en poser une autre."
+        : "Oups, l'envoi a échoué. Réessayez dans un instant.";
     } finally {
       btn.disabled = false;
     }
@@ -690,6 +747,7 @@
     // Liens de réservation des pages générées : provenance du visiteur et dates choisies
     refreshBookLinks();
     initStayForms();
+    initQuestions();
     syncCompare();
     syncFavButtons();
     enhanceSelects();

@@ -305,6 +305,7 @@ function hotelPage(h) {
           <p class="small muted"><a href="https://www.google.com/maps/dir/?api=1&amp;destination=${h.lat},${h.lng}" target="_blank" rel="noopener">Itinéraire Google Maps →</a></p>
         </section>
 
+        ${C.questionsBlock(`hotels/${h.id}`, h.name, "cette adresse")}
         ${C.shareBlock({ url, title: `${h.name} : ${h.tagline}`, image: absImg(h.images[0]) })}
         ${guides.length || cityGuides.length ? `
         <section class="in-guides reveal">
@@ -464,8 +465,12 @@ ${g.gift ? giftBlock() : ""}
       <h2>Mes conseils</h2>
       <ul>${g.tips.map((t) => `<li>${e(t)}</li>`).join("")}</ul>
       ${C.shareBlock({ url, title, image: cover ? absImg(cover.images[0]) : "", heading: "Partager ce guide" })}
-      <p class="small muted">Les informations de ce guide sont données à titre indicatif : vérifiez les tarifs, les dates d'ouverture et les conditions directement auprès des établissements ou sur le site de réservation.</p>
+      <p class="small muted">Les informations de ce guide sont données à titre indicatif : vérifiez les tarifs, les dates d'ouverture et les conditions directement auprès des établissements.</p>
     </section>
+
+    <div class="container g-ask">
+      ${C.questionsBlock(`guides/${g.slug}`, title, "ce guide ou l'une de ces adresses")}
+    </div>
 
     ${others.length ? `
     <section class="section section-tint">

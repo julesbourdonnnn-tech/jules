@@ -214,6 +214,37 @@
       </article>`;
   }
 
+  /* ---------- « Une question pour Jules ? » ----------
+   * Les questions partent au Worker (worker/index.js), en attente de réponse ;
+   * les réponses publiées sont chargées par js/common.js. */
+  function questionsBlock(pageId, title, subject = "ce lieu") {
+    const { CONFIG } = data();
+    return `
+        <section class="ask reveal" id="questions-lecteurs" data-questions="${escapeHtml(pageId)}" data-title="${escapeHtml(title)}">
+          <div class="ask-head">
+            <img src="${root()}assets/jules/avatar.jpg" alt="" width="56" height="56" loading="lazy">
+            <div>
+              <h2>Une question pour Jules ?</h2>
+              <p>Une question précise sur ${escapeHtml(subject)} ? Posez-la : je réponds personnellement, et je publie ici les réponses utiles à tous.</p>
+            </div>
+          </div>
+          <div class="ask-list" data-questions-list></div>
+          <form class="ask-form" data-ask novalidate>
+            <p class="nl-hp"><label>Ne pas remplir <input name="bot-field" tabindex="-1" autocomplete="off"></label></p>
+            <label class="ask-q"><span>Votre question</span><textarea name="question" rows="4" required minlength="10" maxlength="1200" placeholder="Par exemple : quelle chambre choisir pour un anniversaire ?"></textarea></label>
+            <div class="ask-row">
+              <label><span>Votre prénom</span><input name="prenom" required minlength="2" maxlength="40" autocomplete="given-name"></label>
+              <label><span>E-mail <em>(facultatif, pour être prévenu de ma réponse)</em></span><input type="email" name="email" maxlength="254" autocomplete="email"></label>
+            </div>
+            <div class="ask-send">
+              <button class="btn btn-primary" type="submit">Envoyer ma question</button>
+              <p class="ask-legal">Seuls votre prénom, votre question et ma réponse sont publiés. Votre e-mail reste privé (<a href="${page("mentions-legales.html")}">données personnelles</a>).</p>
+            </div>
+            <p class="ask-msg" role="status"></p>
+          </form>
+        </section>`;
+  }
+
   function newsletterForm(origin, variant = "") {
     const { CONFIG } = data();
     return `
@@ -340,7 +371,7 @@
 
   return {
     data, setRoot, root, page, hotelUrl, guideUrl, escapeHtml, formatPrice, formatDistance, distanceKm,
-    FALLBACK, img, budgetOf, budgetHtml, siteLink, bookingTip, stayEstimate, capacity, REVIEW_CRITERIA, isTested, reviewScore, reviewDate, fmtScore,
+    FALLBACK, img, budgetOf, budgetHtml, siteLink, questionsBlock, bookingTip, stayEstimate, capacity, REVIEW_CRITERIA, isTested, reviewScore, reviewDate, fmtScore,
     todayIso, addDays, nightsOf, cleanStay, hasDates, tagsOf,
     favButton, card, newsletterForm, socialLinks, guideHotels, guideTitle, guidesFor, guideCard, shareBlock,
     header, footer, baseLayer,

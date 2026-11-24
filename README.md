@@ -34,6 +34,11 @@ Le site est **100 % statique** (HTML, CSS, JavaScript). Pas de serveur, pas de b
 - **Kit de démarchage** (`demarchage/`, non publié) : modèles d'e-mails aux établissements et grille de test à remplir pendant un séjour.
 - **Menu mobile** complet.
 
+### « Une question pour Jules ? »
+- Sur chaque fiche et chaque guide, les lecteurs peuvent poser une question. Elle arrive **en attente** : rien n'est publié sans ta réponse.
+- Pour répondre : ouvre `https://nuitsinguliere.com/api/admin?key=TA_CLE` (la clé est le secret `ADMIN_KEY`, ou à défaut `NEWSLETTER_KEY`, dans Cloudflare : Workers → jules → Paramètres → Variables et secrets). Écris ta réponse, puis « Publier la réponse ». Si le lecteur a laissé son e-mail, un lien te permet de lui écrire directement.
+- Les questions sont stockées dans le stockage KV du site (préfixe `q:`), à côté des inscrits à la newsletter (préfixe `sub:`).
+
 ### Instagram et newsletter
 - Inscription à la newsletter sur l'accueil, chaque fiche, le quiz et le pied de page. Les adresses sont enregistrées par le Worker Cloudflare (`worker/index.js`) dans un stockage privé (KV « nuitsinguliere-newsletter »). Pour les récupérer : crée un secret `NEWSLETTER_KEY` dans Cloudflare (Workers → jules → Paramètres → Variables et secrets), puis ouvre `https://nuitsinguliere.com/api/newsletter.csv?key=TON_SECRET` : tu obtiens un fichier CSV à importer dans Brevo.
 - Section Instagram sur l'accueil et page **lien en bio** `liens.html`

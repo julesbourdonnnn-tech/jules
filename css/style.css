@@ -1325,3 +1325,38 @@ body.has-compare .site-footer { padding-bottom: 110px; }
 .g-intro .byline { margin-bottom: 26px; }
 .review-transparency { margin: 0 0 20px; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--line); background: #fff; font-size: .9rem; line-height: 1.5; color: var(--ink-soft); }
 .review-transparency strong { color: var(--terracotta); margin-right: 6px; font-size: .72rem; letter-spacing: .12em; text-transform: uppercase; }
+
+/* ============================================================
+   « UNE QUESTION POUR JULES ? »
+   ============================================================ */
+.ask { margin: 56px 0; padding: 30px; border-radius: var(--radius); background: var(--paper); border: 1px solid var(--line); }
+.g-ask .ask { margin: 24px 0 56px; }
+.ask-head { display: flex; gap: 16px; align-items: flex-start; margin-bottom: 20px; }
+.ask-head img { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; flex: none; }
+.ask-head h2 { font-size: clamp(1.5rem, 2.6vw, 1.9rem); margin: 2px 0 6px; }
+.ask-head p { margin: 0; color: var(--ink-soft); line-height: 1.55; max-width: 60ch; }
+.ask-list { display: grid; gap: 14px; margin-bottom: 22px; }
+.ask-list:empty { display: none; }
+.ask-item { padding: 16px 18px; border-radius: 14px; background: #fff; border: 1px solid var(--line); }
+.ask-who { margin: 0 0 4px; font-size: .82rem; color: var(--muted); }
+.ask-who strong { color: var(--ink); font-weight: 600; }
+.ask-text { margin: 0 0 12px; line-height: 1.55; }
+.ask-answer { display: flex; gap: 12px; padding: 12px 14px; border-radius: 12px; background: #f6efe2; }
+.ask-answer img { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; flex: none; }
+.ask-answer p { margin: 0; line-height: 1.55; }
+.ask-answer .ask-who { margin-bottom: 2px; }
+.ask-form { display: grid; gap: 12px; }
+.ask-form label { display: grid; gap: 6px; font-size: .84rem; font-weight: 600; color: var(--ink); min-width: 0; }
+.ask-form label em { font-style: normal; font-weight: 400; color: var(--muted); }
+.ask-form textarea, .ask-form input:not([name="bot-field"]) { width: 100%; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: #fff; font: inherit; font-weight: 400; font-size: .95rem; color: var(--ink); box-sizing: border-box; }
+.ask-form textarea { resize: vertical; min-height: 110px; }
+.ask-form textarea:focus, .ask-form input:focus { outline: 2px solid var(--terracotta); outline-offset: 1px; border-color: transparent; }
+.ask-row { display: grid; grid-template-columns: 1fr 1.4fr; gap: 12px; }
+.ask-send { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; }
+.ask-legal { margin: 0; flex: 1; min-width: 220px; font-size: .78rem; color: var(--muted); line-height: 1.45; }
+.ask-legal a { color: inherit; }
+.ask-msg { margin: 0; min-height: 1.2em; font-size: .9rem; color: var(--forest); font-weight: 500; }
+@media (max-width: 700px) {
+  .ask { padding: 22px 18px; }
+  .ask-row { grid-template-columns: 1fr; }
+}
