@@ -568,11 +568,30 @@
     });
   }
 
+
+  /* ---------- Le mot de Jules : mes derniers séjours testés ---------- */
+  function renderTested() {
+    const box = $("#jules-tested-list");
+    if (!box) return;
+    const { isTested, reviewScore, reviewDate, fmtScore } = window.NS;
+    const list = HOTELS.filter(isTested).sort((a, b) => String(b.review.date).localeCompare(String(a.review.date))).slice(0, 4);
+    if (!list.length) { box.closest(".jules-tested").hidden = true; return; }
+    box.innerHTML = list.map((h) => {
+      const sc = reviewScore(h);
+      return `<li><a href="${url(h)}#avis">
+        <img src="${img(h.images[0], 400)}" alt="" loading="lazy" width="88" height="88">
+        <span class="jt-txt"><strong>${escapeHtml(h.name)}</strong><span>${escapeHtml(h.city)} · ${escapeHtml(reviewDate(h))}</span>${h.review.title ? `<em>${escapeHtml(h.review.title)}</em>` : ""}</span>
+        ${sc != null ? `<b class="jt-score">${fmtScore(sc)}</b>` : ""}
+      </a></li>`;
+    }).join("");
+  }
+
   document.addEventListener("DOMContentLoaded", () => {
     readUrl();
     initHero();
     renderDiscovery();
     renderSeason();
+    renderTested();
     renderQuizTeaser();
     renderFilterControls();
     initFilters();
