@@ -36,7 +36,7 @@ window.SITE_CONFIG = {
    * (worker/index.js). Export CSV : voir README.md (« newsletter.csv »). */
   newsletter: {
     title: "La lettre des nuits rares",
-    pitch: "Chaque dimanche, 3 adresses extraordinaires et des idées de week-end pour s’évader.",
+    pitch: "Une fois par mois, mes nouvelles adresses, mes séjours tests et un conseil de pro. Gratuit, sans publicité.",
   },
 
   /* ---------- Statistiques ----------

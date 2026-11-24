@@ -223,7 +223,7 @@
         <input type="email" name="email" required placeholder="Votre adresse e-mail" aria-label="Votre adresse e-mail" autocomplete="email">
         <button class="btn btn-primary" type="submit">Je m'abonne</button>
         <p class="nl-msg" role="status"></p>
-        <p class="nl-legal">Gratuit, 1 e-mail par semaine, désinscription en un clic. Votre adresse n'est jamais revendue (<a href="${page("mentions-legales.html")}">données personnelles</a>).</p>
+        <p class="nl-legal">Gratuit, 1 e-mail par mois, désinscription en un clic. Votre adresse n'est jamais revendue (<a href="${page("mentions-legales.html")}">données personnelles</a>).</p>
       </form>`;
   }
 
@@ -281,11 +281,10 @@
   function header() {
     const { CONFIG } = data();
     const links = [
-      ["index.html#destinations", "Ambiances"],
+      ["guides/index.html", "Les guides"],
+      ["index.html#explorer", "Toutes les adresses"],
       ["carte.html", "La carte"],
-      ["guides/index.html", "Guides"],
-      ["quiz.html", "Le quiz"],
-      ["index.html#explorer", "Tous les lieux"],
+      ["a-propos.html", "Qui suis-je ?"],
     ];
     return `
       <a class="brand" href="${page("index.html")}">
@@ -302,9 +301,9 @@
       <div class="menu-sheet" id="menu-sheet" hidden>
         <nav class="menu-panel" aria-label="Menu">
           ${links.map(([href, label]) => `<a href="${page(href)}">${label}</a>`).join("\n          ")}
+          <a href="${page("quiz.html")}">Le quiz</a>
           <a href="${page("comparer.html")}">Le comparateur</a>
           <a href="${page("index.html#explorer")}" data-open-near>📍 Près de chez moi</a>
-          <a href="${page("a-propos.html")}" class="menu-small">Qui suis-je ?</a>
           <a href="${page("professionnels.html")}" class="menu-small">Vous êtes un établissement ?</a>
         </nav>
       </div>`;
@@ -332,10 +331,10 @@
           <p class="muted">${escapeHtml(CONFIG.tagline)}. Une sélection d'adresses rares, choisies une à une.</p>
         </div>
         <div><h4>Ambiances</h4><ul>${envLinks}</ul></div>
-        <div><h4>Nos guides</h4><ul>${guideLinks}<li><a href="${page("guides/index.html")}">Tous les guides →</a></li><li><a href="${page("carte.html")}">La carte interactive →</a></li></ul></div>
+        <div><h4>Mes guides</h4><ul>${guideLinks}<li><a href="${page("guides/index.html")}">Tous les guides →</a></li><li><a href="${page("carte.html")}">La carte interactive →</a></li></ul></div>
         <div><h4>Nuits Singulières</h4><ul><li><a href="${page("quiz.html")}">Le quiz : trouver ma nuit</a></li><li><a href="${page("comparer.html")}">Le comparateur</a></li><li><a href="${page("a-propos.html")}">Qui suis-je ?</a></li><li><a href="${page("professionnels.html")}">Vous êtes un établissement ?</a></li>${socials}<li><a href="mailto:${escapeHtml(CONFIG.contactEmail)}">${escapeHtml(CONFIG.contactEmail)}</a></li><li><a href="${page("mentions-legales.html")}">Mentions légales</a></li></ul></div>
       </div>
-      <p class="disclosure">Nuits Singulières est un site de conseil indépendant : aucun établissement ne paie pour y figurer, et nous ne touchons aucune commission sur les réservations. Les liens « Réserver en direct » mènent au site officiel de chaque lieu. Les niveaux de budget sont indicatifs. Photos : © les établissements.</p>
+      <p class="disclosure">Nuits Singulières est un site de conseil indépendant : aucun établissement ne paie pour y figurer, et je ne touche aucune commission sur les réservations. Les liens « Réserver en direct » mènent au site officiel de chaque lieu. Les niveaux de budget sont indicatifs. Photos : © les établissements.</p>
       <p class="muted small">© ${new Date().getFullYear()} ${escapeHtml(CONFIG.siteName)}</p>`;
   }
 

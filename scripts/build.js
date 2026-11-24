@@ -5,7 +5,7 @@
  *   guides/<slug>.html      les guides thématiques
  *   guides/index.html       la liste des guides
  *   sitemap.xml, robots.txt le plan du site pour les moteurs de recherche
- *   index.html              (blocs « Guides » et « Toutes nos adresses »)
+ *   index.html              (blocs « Guides » et « Toutes mes adresses »)
  *
  * Usage : node scripts/build.js      (aucune dépendance à installer)
  * Lancé automatiquement par la GitHub Action « Build » et par Netlify.
@@ -131,13 +131,13 @@ function reviewSection(h) {
           ${(R.text || []).map((p) => `<p class="body">${e(p)}</p>`).join("\n          ")}
           ${(R.pros || []).length || (R.cons || []).length ? `
           <div class="fit">
-            <div class="fit-col fit-yes"><h3>On a aimé</h3><ul>${(R.pros || []).map((x) => `<li>${e(x)}</li>`).join("")}</ul></div>
-            <div class="fit-col fit-no"><h3>On a moins aimé</h3><ul>${(R.cons || []).map((x) => `<li>${e(x)}</li>`).join("")}</ul></div>
+            <div class="fit-col fit-yes"><h3>J'ai aimé</h3><ul>${(R.pros || []).map((x) => `<li>${e(x)}</li>`).join("")}</ul></div>
+            <div class="fit-col fit-no"><h3>J'ai moins aimé</h3><ul>${(R.cons || []).map((x) => `<li>${e(x)}</li>`).join("")}</ul></div>
           </div>` : ""}
           ${R.tip ? `<p class="review-tip"><strong>Le conseil du pro</strong> ${e(R.tip)}</p>` : ""}
           <p class="review-disclosure">${R.invited
             ? "Séjour offert par l'établissement. Comme toujours, l'avis est libre : l'établissement ne l'a ni relu ni validé."
-            : "Séjour réservé et payé par nos soins, comme un client ordinaire."} <a href="../a-propos.html#charte">Notre charte</a></p>
+            : "Séjour réservé et payé par mes soins, comme un client ordinaire."} <a href="../a-propos.html#charte">Ma charte</a></p>
         </section>`;
 }
 
@@ -242,7 +242,8 @@ function hotelPage(h) {
       <article class="detail-content">
         ${reviewSection(h)}
         <section id="experience">
-          <p class="eyebrow dark reveal">Pourquoi on l'aime</p>
+          ${C.isTested(h) ? "" : `<p class="byline reveal"><img src="../assets/jules/avatar.jpg" alt="" width="42" height="42" loading="lazy"><span><a href="../a-propos.html">Par Jules Bourdon</a> <span>Un repérage : je n'y ai pas encore séjourné. Fiche rédigée à partir des informations de l'établissement.</span></span></p>`}
+          <p class="eyebrow dark reveal">Pourquoi je l'ai repéré</p>
           <ul class="highlights">
             ${h.highlights.map((x, i) => `<li class="reveal"><span>${["✦", "☾", "❋", "◈"][i % 4]}</span>${e(x)}</li>`).join("\n            ")}
           </ul>
@@ -300,7 +301,7 @@ function hotelPage(h) {
         ${C.shareBlock({ url, title: `${h.name} : ${h.tagline}`, image: absImg(h.images[0]) })}
         ${guides.length || cityGuides.length ? `
         <section class="in-guides reveal">
-          <h2>Cette adresse figure dans nos guides</h2>
+          <h2>Cette adresse figure dans mes guides</h2>
           <ul>${guides.map((g) => `<li><a href="${C.guideUrl(g)}">${e(C.guideTitle(g))} →</a></li>`).join("")}</ul>
           ${cityGuides.length ? `<p class="in-cities">Idéal pour un week-end depuis ${cityGuides.map((g) => `<a href="${C.guideUrl(g)}">${e(g.city.name)}</a> <span>(${Math.max(5, Math.round(C.distanceKm(g.city, h) / 5) * 5)} km)</span>`).join(", ")}.</p>` : ""}
         </section>` : ""}
@@ -319,10 +320,10 @@ function hotelPage(h) {
         <p class="book-tip"><strong>Conseil</strong> ${e(C.bookingTip(h))}</p>
         <ul class="book-perks">
           <li>✓ Réservation directe, sans intermédiaire</li>
-          <li>✓ Aucune commission : nos conseils sont libres</li>
+          <li>✓ Aucune commission : mes conseils sont libres</li>
           <li>✓ Une question ? L'établissement vous répond lui-même</li>
         </ul>
-        ${gift ? `<a class="book-gift" href="${C.guideUrl(gift)}">🎁 Envie d'offrir cette nuit ? <span>Nos idées cadeaux →</span></a>` : ""}
+        ${gift ? `<a class="book-gift" href="${C.guideUrl(gift)}">🎁 Envie d'offrir cette nuit ? <span>Mes idées cadeaux →</span></a>` : ""}
       </aside>
     </div>
 
@@ -432,6 +433,7 @@ function guidePage(g) {
 
     <div class="container g-layout">
       <div class="g-intro">
+        <p class="byline"><img src="../assets/jules/avatar.jpg" alt="" width="42" height="42" loading="lazy"><span><a href="../a-propos.html">Par Jules Bourdon</a> <span>Hôtelier dans le luxe, en France et à l'étranger</span></span></p>
         ${g.intro.map((p, i) => `<p class="${i ? "body" : "lead dropcap"}">${e(p)}</p>`).join("\n        ")}
       </div>
       <nav class="g-toc" aria-label="Sommaire">
@@ -452,7 +454,7 @@ ${g.gift ? giftBlock() : ""}
     </section>` : ""}
 
     <section class="container g-tips reveal">
-      <h2>Nos conseils</h2>
+      <h2>Mes conseils</h2>
       <ul>${g.tips.map((t) => `<li>${e(t)}</li>`).join("")}</ul>
       ${C.shareBlock({ url, title, image: cover ? absImg(cover.images[0]) : "", heading: "Partager ce guide" })}
       <p class="small muted">Les informations de ce guide sont données à titre indicatif : vérifiez les tarifs, les dates d'ouverture et les conditions directement auprès des établissements ou sur le site de réservation.</p>
@@ -461,7 +463,7 @@ ${g.gift ? giftBlock() : ""}
     ${others.length ? `
     <section class="section section-tint">
       <div class="container">
-        <div class="section-head"><p class="eyebrow dark">Continuer la lecture</p><h2>Nos autres guides</h2></div>
+        <div class="section-head"><p class="eyebrow dark">Continuer la lecture</p><h2>Mes autres guides</h2></div>
         <div class="guide-grid">${others.slice(0, 6).map(C.guideCard).join("")}</div>
         ${cities.length ? `<p class="city-links"><strong>Nuits insolites près de :</strong> ${cities.map((x) => `<a href="${C.guideUrl(x)}">${e(x.city.name)}</a>`).join(" · ")}</p>` : ""}
       </div>
@@ -494,7 +496,7 @@ function guidesIndexPage() {
   const url = abs("guides/index.html");
   const cover = HOTELS.find((h) => h.hero === 1) || HOTELS[0];
   const title = `Guides des hôtels insolites en France | ${CONFIG.siteName}`;
-  const description = "Cabanes perchées, hôtels troglodytes, nuits en amoureux, week-ends près de Paris, bord de mer, montagne : tous nos guides des hébergements insolites en France.";
+  const description = "Cabanes perchées, hôtels troglodytes, nuits en amoureux, week-ends près de Paris, bord de mer, montagne : tous mes guides des hébergements insolites en France.";
   const ld = [
     {
       "@context": "https://schema.org",
@@ -514,12 +516,12 @@ function guidesIndexPage() {
       <div class="container g-hero-inner">
         <nav class="crumbs" aria-label="Fil d'Ariane"><a href="../index.html">Accueil</a></nav>
         <p class="eyebrow">${visible.length} guides</p>
-        <h1>Nos guides des nuits insolites</h1>
+        <h1>Mes guides des nuits insolites</h1>
         <p class="d-tagline">Des sélections thématiques pour trouver le lieu parfait, selon l'envie, la saison ou la région.</p>
       </div>
     </section>
     <section class="section container guides-index">
-      <p class="lead guides-lead">Hôtels insolites, cabanes perchées, bulles, phares, châteaux ou refuges d'altitude : nos guides rassemblent les adresses les plus extraordinaires de France par envie, par type de lieu et par région, avec des conseils pour bien choisir et bien réserver.</p>
+      <p class="lead guides-lead">Hôtels insolites, cabanes perchées, bulles, phares, châteaux ou refuges d'altitude : mes guides rassemblent les adresses les plus extraordinaires de France par envie, par type de lieu et par région, avec des conseils pour bien choisir et bien réserver.</p>
       ${[["envie", "Par envie et par occasion"], ["lieu", "Par type de lieu"], ["region", "Par région"], ["ville", "Près de chez vous"]].map(([k, label]) => {
         const list = visible.filter((g) => (g.cat || "envie") === k);
         return list.length ? `
@@ -568,23 +570,23 @@ function homeFaqData() {
   return [
     {
       q: "Qu'est-ce qu'un hôtel insolite ?",
-      a: `Un hôtel insolite, ou hébergement hors du commun, est un lieu où l'on dort d'une façon qu'on n'oublie pas : dans une cabane perchée, une bulle transparente sous les étoiles, un phare, un château, une chambre creusée dans la roche, un igloo, un refuge d'altitude ou un bateau. Notre sélection réunit ${n} de ces lieux extraordinaires, dans ${regions} régions de France.`,
-      html: `Un hôtel insolite, ou hébergement hors du commun, est un lieu où l'on dort d'une façon qu'on n'oublie pas : dans une ${link("cabanes-perchees", "cabane perchée")}, une ${link("nuit-sous-les-etoiles", "bulle transparente sous les étoiles")}, un phare, un ${link("dormir-dans-un-chateau", "château")}, une ${link("hotels-troglodytes", "chambre creusée dans la roche")}, un igloo, un ${link("dormir-en-altitude", "refuge d'altitude")} ou un bateau. Notre sélection réunit ${n} de ces lieux extraordinaires, dans ${regions} régions de France.`,
+      a: `Un hôtel insolite, ou hébergement hors du commun, est un lieu où l'on dort d'une façon qu'on n'oublie pas : dans une cabane perchée, une bulle transparente sous les étoiles, un phare, un château, une chambre creusée dans la roche, un igloo, un refuge d'altitude ou un bateau. Ma sélection réunit ${n} de ces lieux extraordinaires, dans ${regions} régions de France.`,
+      html: `Un hôtel insolite, ou hébergement hors du commun, est un lieu où l'on dort d'une façon qu'on n'oublie pas : dans une ${link("cabanes-perchees", "cabane perchée")}, une ${link("nuit-sous-les-etoiles", "bulle transparente sous les étoiles")}, un phare, un ${link("dormir-dans-un-chateau", "château")}, une ${link("hotels-troglodytes", "chambre creusée dans la roche")}, un igloo, un ${link("dormir-en-altitude", "refuge d'altitude")} ou un bateau. Ma sélection réunit ${n} de ces lieux extraordinaires, dans ${regions} régions de France.`,
     },
     {
       q: "Combien coûte une nuit insolite en France ?",
-      a: `Tous les budgets existent : ${small} de nos adresses coûtent moins de 150 € la nuit pour deux (cabanes sur l'eau, wagon-lit de 1926, chambres troglodytes), tandis que les lieux d'exception dépassent 450 €. Chaque fiche indique une fourchette de prix, et le tarif exact s'affiche dès que vous choisissez vos dates.`,
-      html: `Tous les budgets existent : ${small} de nos adresses coûtent moins de 150 € la nuit pour deux (cabanes sur l'eau, wagon-lit de 1926, chambres troglodytes), tandis que les lieux d'exception dépassent 450 €. Chaque fiche indique une fourchette de prix, et le tarif exact s'affiche dès que vous choisissez vos dates. Voir aussi notre guide des ${link("nuits-insolites-petit-budget", "nuits insolites à petit budget")}.`,
+      a: `Tous les budgets existent : ${small} de mes adresses coûtent moins de 150 € la nuit pour deux (cabanes sur l'eau, wagon-lit de 1926, chambres troglodytes), tandis que les lieux d'exception dépassent 450 €. Chaque fiche indique une fourchette de prix ; le tarif exact est donné sur le site de l'établissement.`,
+      html: `Tous les budgets existent : ${small} de mes adresses coûtent moins de 150 € la nuit pour deux (cabanes sur l'eau, wagon-lit de 1926, chambres troglodytes), tandis que les lieux d'exception dépassent 450 €. Chaque fiche indique une fourchette de prix ; le tarif exact est donné sur le site de l'établissement. Voir aussi mon guide des ${link("nuits-insolites-petit-budget", "nuits insolites à petit budget")}.`,
     },
     {
       q: "Où dormir dans un lieu insolite près de chez moi ?",
       a: "Indiquez votre adresse dans « Près de chez moi » : tous les lieux sont triés par distance, avec un filtre de rayon. La carte interactive montre aussi l'ensemble de la sélection, de la Bretagne à la Corse.",
-      html: `Indiquez votre adresse dans <a href="#explorer">« Près de chez moi »</a> : tous les lieux sont triés par distance, avec un filtre de rayon. La <a href="carte.html">carte interactive</a> montre aussi l'ensemble de la sélection, de la Bretagne à la Corse. Depuis Paris, voir nos ${link("week-end-insolite-pres-de-paris", "week-ends insolites près de Paris")}.`,
+      html: `Indiquez votre adresse dans <a href="#explorer">« Près de chez moi »</a> : tous les lieux sont triés par distance, avec un filtre de rayon. La <a href="carte.html">carte interactive</a> montre aussi l'ensemble de la sélection, de la Bretagne à la Corse. Depuis Paris, voir mes ${link("week-end-insolite-pres-de-paris", "week-ends insolites près de Paris")}.`,
     },
     {
       q: "Quels sont les hôtels les plus extraordinaires de France ?",
       a: "Parmi les plus étonnants : l'observatoire du Pic du Midi, où l'on dort à 2 877 mètres, le Phare de Kerbel, dont on occupe le sommet, une voiture-lits de 1926 en gare de Guiscriff, les cabanes sur pilotis du lac de la Ramade qu'on rejoint en canoë, ou encore une île privée dans la baie de Morlaix.",
-      html: `Parmi les plus étonnants : <a href="hotels/pic-du-midi.html">l'observatoire du Pic du Midi</a>, où l'on dort à 2 877 mètres, le <a href="hotels/phare-de-kerbel.html">Phare de Kerbel</a>, dont on occupe le sommet, une <a href="hotels/gare-de-guiscriff.html">voiture-lits de 1926</a> en gare de Guiscriff, les <a href="hotels/cabanes-lacustra.html">cabanes sur pilotis</a> qu'on rejoint en canoë, ou encore une <a href="hotels/ile-louet.html">île privée dans la baie de Morlaix</a>. Pas d'idée précise ? Faites notre <a href="quiz.html">quiz en 5 questions</a>.`,
+      html: `Parmi les plus étonnants : <a href="hotels/pic-du-midi.html">l'observatoire du Pic du Midi</a>, où l'on dort à 2 877 mètres, le <a href="hotels/phare-de-kerbel.html">Phare de Kerbel</a>, dont on occupe le sommet, une <a href="hotels/gare-de-guiscriff.html">voiture-lits de 1926</a> en gare de Guiscriff, les <a href="hotels/cabanes-lacustra.html">cabanes sur pilotis</a> qu'on rejoint en canoë, ou encore une <a href="hotels/ile-louet.html">île privée dans la baie de Morlaix</a>. Pas d'idée précise ? Faites mon <a href="quiz.html">quiz en 5 questions</a>.`,
     },
     {
       q: "Quand réserver une nuit insolite ?",
@@ -593,8 +595,8 @@ function homeFaqData() {
     },
     {
       q: "Nuits Singulières touche-t-il une commission ?",
-      a: "Non. Nuits Singulières est un site de conseil indépendant, tenu par un professionnel de l'hôtellerie : aucun établissement ne paie pour y figurer, et nous ne touchons rien sur les réservations. Les boutons « Réserver en direct » mènent au site officiel de chaque lieu.",
-      html: `Non. Nuits Singulières est un site de conseil indépendant, tenu par un professionnel de l'hôtellerie : aucun établissement ne paie pour y figurer, et nous ne touchons rien sur les réservations. Les boutons « Réserver en direct » mènent au site officiel de chaque lieu (<a href="a-propos.html">notre charte</a>).`,
+      a: "Non. Nuits Singulières est un site de conseil indépendant, tenu par un professionnel de l'hôtellerie : aucun établissement ne paie pour y figurer, et je ne touche rien sur les réservations. Les boutons « Réserver en direct » mènent au site officiel de chaque lieu.",
+      html: `Non. Nuits Singulières est un site de conseil indépendant, tenu par un professionnel de l'hôtellerie : aucun établissement ne paie pour y figurer, et je ne touche rien sur les réservations. Les boutons « Réserver en direct » mènent au site officiel de chaque lieu (<a href="a-propos.html">ma charte</a>).`,
     },
   ];
 }
@@ -604,7 +606,7 @@ function homeFaq() {
     <div class="home-seo-grid">
       <div class="home-seo-intro reveal">
         <p class="eyebrow dark">À savoir</p>
-        <h2>Hôtels insolites en France : nos conseils pour une nuit hors du commun</h2>
+        <h2>Hôtels insolites en France : mes conseils pour une nuit hors du commun</h2>
         <p class="lead">Dormir dans un lieu extraordinaire, c'est offrir à un week-end la saveur d'un vrai voyage. Cabane dans les arbres, bulle face aux étoiles, phare battu par les vents ou château au-dessus d'une rivière : chaque adresse de Nuits Singulières a été choisie pour ce qu'elle a d'unique, du petit budget au grand luxe.</p>
         <p>Ville, campagne, mer ou montagne : explorez par <a href="#destinations">ambiance</a>, par <a href="#experiences">expérience</a> ou par <a href="guides/index.html">guide thématique</a>, comparez jusqu'à trois lieux et réservez au meilleur prix, sans frais supplémentaires.</p>
       </div>

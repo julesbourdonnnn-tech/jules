@@ -1293,3 +1293,33 @@ body.has-compare .site-footer { padding-bottom: 110px; }
   .p-hero, .p-hero * { color: var(--ink) !important; }
   .section { padding: 18px 0 !important; }
 }
+
+/* ============================================================
+   VOIX DU BLOG : Jules sur l'accueil, signatures
+   ============================================================ */
+.hero-title { margin-bottom: 18px; }
+.hero-byline { display: inline-flex; align-items: center; gap: 12px; margin: 0 0 30px; color: rgba(255,255,255,.92); font-size: .95rem; text-decoration: none; text-shadow: 0 1px 12px rgba(0,0,0,.35); }
+.hero-byline img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid rgba(255,255,255,.7); flex: none; }
+.hero-byline strong { font-weight: 600; }
+.jules { display: grid; grid-template-columns: minmax(200px, 300px) 1fr; gap: 64px; align-items: center; }
+.jules-photo { width: 100%; height: auto; aspect-ratio: 4 / 5; object-fit: cover; border-radius: var(--radius); box-shadow: var(--shadow); }
+.jules-text { max-width: 640px; min-width: 0; }
+.jules-text h2 { font-size: clamp(1.9rem, 3.4vw, 2.7rem); margin: 6px 0 20px; text-wrap: balance; }
+.jules-text p { color: var(--ink-soft); line-height: 1.7; }
+.jules-text .lead { font-size: 1.12rem; color: var(--ink); }
+.jules-sign { font: italic 400 1.5rem var(--serif); color: var(--ink) !important; margin-top: 22px; }
+.jules-sign small { display: block; font: .84rem var(--sans); color: var(--muted); margin-top: 4px; font-style: normal; }
+.jules-sign a { color: var(--terracotta); }
+.byline { display: flex; align-items: center; gap: 12px; margin: 0 0 22px; font-size: .9rem; color: var(--ink-soft); }
+.byline img { width: 42px; height: 42px; border-radius: 50%; object-fit: cover; flex: none; }
+.byline a { color: var(--ink); font-weight: 600; text-decoration: none; }
+.byline a:hover { text-decoration: underline; }
+.byline > span { display: block; line-height: 1.4; }
+.byline > span > span { display: block; font-size: .8rem; color: var(--muted); margin-top: 2px; }
+@media (max-width: 760px) {
+  .jules { grid-template-columns: 1fr; gap: 28px; }
+  .jules-photo { max-width: 240px; }
+  .hero-byline { font-size: .86rem; margin-bottom: 22px; }
+}
+.about-portrait { width: 220px; height: auto; aspect-ratio: 4 / 5; object-fit: cover; border-radius: var(--radius); box-shadow: var(--shadow); margin-bottom: 28px; }
+.g-intro .byline { margin-bottom: 26px; }

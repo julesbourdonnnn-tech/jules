@@ -22,7 +22,7 @@
         <h2>Votre comparateur est vide</h2>
         <p class="lead">Touchez le bouton <span class="cmp-icon">⇄</span> sur une fiche ou une carte pour ajouter un lieu (trois au maximum).</p>
         ${favs.length >= 2 ? `<button type="button" class="btn btn-primary" data-from-favs>Comparer mes ${Math.min(favs.length, 3)} premiers coups de cœur</button>` : ""}
-        <p class="eyebrow dark">Pour commencer, nos coups de cœur</p>
+        <p class="eyebrow dark">Pour commencer, mes coups de cœur</p>
         <div class="grid">${picks.map((h) => NS.card(h, { reveal: false })).join("")}</div>
       </div>`;
     NS.syncCompare();
@@ -71,7 +71,7 @@
             ${row("Budget indicatif", hs.map((h) => `${budgetHtml(h)}<br><span class="muted">${e(budgetOf(h).range)}</span>${hs.length > 1 && h.budget === minBudget ? `<br><span class="cmp-best">Le plus doux</span>` : ""}`))}
             ${row("Hébergement", hs.map((h) => e(h.rooms)))}
             ${row("Envies", hs.map((h) => { const t = tagsOf(h); return t.length ? `<ul class="cmp-tags">${t.map((k) => `<li>${TAGS[k].icon} ${e(TAGS[k].short)}</li>`).join("")}</ul>` : `<span class="muted">—</span>`; }))}
-            ${row("Pourquoi on l'aime", hs.map((h) => list(h.highlights)))}
+            ${row("Pourquoi je l'ai repéré", hs.map((h) => list(h.highlights)))}
             ${row("C'est pour vous si…", hs.map((h) => list(h.forYou || [])))}
             ${row("Moins pour vous si…", hs.map((h) => list(h.notForYou || [])))}
             ${row("Sur place", hs.map((h) => list(h.amenities)))}

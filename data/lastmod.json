@@ -1,466 +1,466 @@
 {
  "index.html": {
-  "hash": "514fa17f9ce6",
+  "hash": "b8595e4f63ba",
   "date": "2026-11-24"
  },
  "carte.html": {
-  "hash": "a0ba897629dc",
-  "date": "2026-09-25"
+  "hash": "9ab5ae880af8",
+  "date": "2026-11-24"
  },
  "quiz.html": {
-  "hash": "5627c9fc2706",
-  "date": "2026-09-25"
+  "hash": "da35bee9a8f4",
+  "date": "2026-11-24"
  },
  "professionnels.html": {
   "hash": "09c66f93ecbb",
   "date": "2026-11-24"
  },
  "a-propos.html": {
-  "hash": "5baa43a97780",
+  "hash": "da8600d119dc",
   "date": "2026-11-24"
  },
  "guides/index.html": {
-  "hash": "7427a982e7f3",
+  "hash": "aa8a33ac3375",
   "date": "2026-11-24"
  },
  "guides/nuit-insolite-en-amoureux.html": {
-  "hash": "9ad313788eb8",
+  "hash": "62565023381b",
   "date": "2026-11-24"
  },
  "guides/cabanes-perchees.html": {
-  "hash": "46a36dcc95bc",
+  "hash": "a2aab0c1633e",
   "date": "2026-11-24"
  },
  "guides/week-end-insolite-pres-de-paris.html": {
-  "hash": "2f07bea41e73",
+  "hash": "14512902eda9",
   "date": "2026-11-24"
  },
  "guides/hotels-troglodytes.html": {
-  "hash": "68803b804ca2",
+  "hash": "95433271c510",
   "date": "2026-11-24"
  },
  "guides/spa-jacuzzi-privatif.html": {
-  "hash": "67c139c86ab4",
+  "hash": "8a6054b1a338",
   "date": "2026-11-24"
  },
  "guides/hotels-insolites-bord-de-mer.html": {
-  "hash": "ce9f672a0edf",
+  "hash": "a0b655c9cb04",
   "date": "2026-11-24"
  },
  "guides/hotels-insolites-montagne.html": {
-  "hash": "9ec9aecb3085",
+  "hash": "b44140d9b14b",
   "date": "2026-11-24"
  },
  "guides/dormir-dans-un-chateau.html": {
-  "hash": "4b59280e7e1e",
+  "hash": "56a5f76b71d7",
   "date": "2026-11-24"
  },
  "guides/hotels-insolites-vallee-de-la-loire.html": {
-  "hash": "831fb63e036a",
+  "hash": "b67cb8d5251a",
   "date": "2026-11-24"
  },
  "guides/hotels-insolites-en-ville.html": {
-  "hash": "9655a70b2c21",
+  "hash": "e67538c235a1",
   "date": "2026-11-24"
  },
  "guides/nuits-insolites-petit-budget.html": {
-  "hash": "0768380df42f",
+  "hash": "4b38743bc9de",
   "date": "2026-11-24"
  },
  "guides/hotels-insolites-paris.html": {
-  "hash": "8639588889cb",
+  "hash": "219a7d768861",
   "date": "2026-11-24"
  },
  "guides/dormir-en-altitude.html": {
-  "hash": "51192efac10a",
+  "hash": "d159cb17b303",
   "date": "2026-11-24"
  },
  "guides/nuit-insolite-avec-son-chien.html": {
-  "hash": "dd937d60c16b",
+  "hash": "d8035cfe848b",
   "date": "2026-11-24"
  },
  "guides/nuit-insolite-en-famille.html": {
-  "hash": "11cb47906a71",
+  "hash": "4dd16d0195fd",
   "date": "2026-11-24"
  },
  "guides/nuit-insolite-sans-voiture.html": {
-  "hash": "43b3b69bf534",
+  "hash": "d788d060a70b",
   "date": "2026-11-24"
  },
  "guides/nuit-sous-les-etoiles.html": {
-  "hash": "af6b19cd445e",
+  "hash": "fd329996aeaf",
   "date": "2026-11-24"
  },
  "guides/demande-en-mariage-lieu-insolite.html": {
-  "hash": "bbf5fadc56bf",
+  "hash": "cbdd8c81fba5",
   "date": "2026-11-24"
  },
  "guides/idee-anniversaire-nuit-insolite.html": {
-  "hash": "da89c68e53a8",
+  "hash": "04c241326c60",
   "date": "2026-11-24"
  },
  "guides/offrir-une-nuit-insolite.html": {
-  "hash": "50f1c9fa5e05",
+  "hash": "31d66c2c7507",
   "date": "2026-11-24"
  },
  "guides/hotels-insolites-bretagne.html": {
-  "hash": "645298aab800",
+  "hash": "a3ddb11c2c48",
   "date": "2026-11-24"
  },
  "guides/hotels-insolites-provence-cote-d-azur.html": {
-  "hash": "c696ad942194",
+  "hash": "4d8579787109",
   "date": "2026-11-24"
  },
  "guides/hotels-insolites-occitanie.html": {
-  "hash": "459300f6da3f",
+  "hash": "caf2542ad6f6",
   "date": "2026-11-24"
  },
  "guides/hotels-insolites-nouvelle-aquitaine.html": {
-  "hash": "60e63dc1652e",
+  "hash": "f87463086f04",
   "date": "2026-11-24"
  },
  "guides/hotels-insolites-bourgogne-franche-comte.html": {
-  "hash": "ac154d309d29",
+  "hash": "42b565b7aae3",
   "date": "2026-11-24"
  },
  "guides/week-end-insolite-en-automne.html": {
-  "hash": "16ba77fddbe2",
+  "hash": "dd2de8d47002",
   "date": "2026-11-24"
  },
  "guides/nuit-insolite-en-hiver.html": {
-  "hash": "04fe3e7d8b4e",
+  "hash": "4bef6d0ca9c6",
   "date": "2026-11-24"
  },
  "guides/nouvel-an-insolite.html": {
-  "hash": "b7b36149ad68",
+  "hash": "7e6c1b5773ec",
   "date": "2026-11-24"
  },
  "guides/saint-valentin-nuit-insolite.html": {
-  "hash": "28039719ba28",
+  "hash": "a9aec94c0840",
   "date": "2026-11-24"
  },
  "guides/hotels-insolites-auvergne-rhone-alpes.html": {
-  "hash": "abd46c287f6b",
+  "hash": "386eb5e19a79",
   "date": "2026-11-24"
  },
  "guides/hotels-insolites-grand-est.html": {
-  "hash": "4d3401ef108c",
+  "hash": "8beda75b7117",
   "date": "2026-11-24"
  },
  "guides/hotels-insolites-normandie.html": {
-  "hash": "f10811236690",
+  "hash": "7cf69b3bc277",
   "date": "2026-11-24"
  },
  "guides/hotels-insolites-hauts-de-france.html": {
-  "hash": "0e979a6356db",
+  "hash": "f8416f32dd6a",
   "date": "2026-11-24"
  },
  "guides/hotel-insolite-pres-de-lyon.html": {
-  "hash": "ba9fe70f3b3e",
+  "hash": "3d56569f91ac",
   "date": "2026-11-24"
  },
  "guides/hotel-insolite-pres-de-marseille.html": {
-  "hash": "9cbb50c2052f",
+  "hash": "476e5d7e2579",
   "date": "2026-11-24"
  },
  "guides/hotel-insolite-pres-de-bordeaux.html": {
-  "hash": "bbee3225bc42",
+  "hash": "2f5455ac90e4",
   "date": "2026-11-24"
  },
  "guides/hotel-insolite-pres-de-toulouse.html": {
-  "hash": "069bf57e9256",
+  "hash": "f8436d8375fb",
   "date": "2026-11-24"
  },
  "guides/hotel-insolite-pres-de-nantes.html": {
-  "hash": "fd4eb374ba55",
+  "hash": "3a42b122faa3",
   "date": "2026-11-24"
  },
  "guides/hotel-insolite-pres-de-nice.html": {
-  "hash": "cf245a7fe3c8",
+  "hash": "486f916493e2",
   "date": "2026-11-24"
  },
  "guides/hotel-insolite-pres-de-rennes.html": {
-  "hash": "0c0618b67d33",
+  "hash": "8fe58d2cc815",
   "date": "2026-11-24"
  },
  "guides/hotel-insolite-pres-de-montpellier.html": {
-  "hash": "b49a80653a52",
+  "hash": "36a75e7bb730",
   "date": "2026-11-24"
  },
  "guides/hotel-insolite-pres-de-grenoble.html": {
-  "hash": "288dd49e65d8",
+  "hash": "e9f6db1227d1",
   "date": "2026-11-24"
  },
  "guides/hotel-insolite-pres-de-tours.html": {
-  "hash": "c641c1246fe7",
+  "hash": "b526e991c1ad",
   "date": "2026-11-24"
  },
  "guides/hotel-insolite-pres-de-clermont-ferrand.html": {
-  "hash": "1b50f0ee6b48",
+  "hash": "1487457d3279",
   "date": "2026-11-24"
  },
  "guides/hotel-insolite-pres-de-dijon.html": {
-  "hash": "7be0226f46ab",
+  "hash": "5ceed22310a4",
   "date": "2026-11-24"
  },
  "guides/hotel-insolite-pres-de-lille.html": {
-  "hash": "433cfc282f09",
+  "hash": "153919886df5",
   "date": "2026-11-24"
  },
  "guides/hotel-insolite-pres-de-strasbourg.html": {
-  "hash": "302e16df4693",
+  "hash": "6ea5e5b7ce3b",
   "date": "2026-11-24"
  },
  "guides/hotel-insolite-pres-de-annecy.html": {
-  "hash": "816a18247bf4",
+  "hash": "f2ac38ab52c3",
   "date": "2026-11-24"
  },
  "guides/hotel-insolite-pres-de-angers.html": {
-  "hash": "f4021e568d5d",
+  "hash": "75965d926537",
   "date": "2026-11-24"
  },
  "guides/hotel-insolite-pres-de-orleans.html": {
-  "hash": "523b3efaa373",
+  "hash": "9c3c41f17527",
   "date": "2026-11-24"
  },
  "guides/hotel-insolite-pres-de-limoges.html": {
-  "hash": "0044b26c0f34",
+  "hash": "873ed3657986",
   "date": "2026-11-24"
  },
  "hotels/loire-valley-lodges.html": {
-  "hash": "aff166a56503",
+  "hash": "caca8dc4f5e5",
   "date": "2026-11-24"
  },
  "hotels/pella-roca.html": {
-  "hash": "ebd2c0285f75",
+  "hash": "43a70000eea0",
   "date": "2026-11-24"
  },
  "hotels/cabanes-des-grands-lacs.html": {
-  "hash": "800dae718d67",
+  "hash": "478e1b5d19fc",
   "date": "2026-11-24"
  },
  "hotels/dihan.html": {
-  "hash": "0eea1bc860f3",
+  "hash": "42bd7fa81013",
   "date": "2026-11-24"
  },
  "hotels/attrap-reves-allauch.html": {
-  "hash": "0b7e5086a0c9",
+  "hash": "d797675b7381",
   "date": "2026-11-24"
  },
  "hotels/les-hautes-roches.html": {
-  "hash": "56a46fd6e8f4",
+  "hash": "5fc6ea747a13",
   "date": "2026-11-24"
  },
  "hotels/demeure-de-la-vignole.html": {
-  "hash": "c12a09942166",
+  "hash": "0e0fa9c388d8",
   "date": "2026-11-24"
  },
  "hotels/rocaminori.html": {
-  "hash": "83f04610ebdb",
+  "hash": "51204b070135",
   "date": "2026-11-24"
  },
  "hotels/fontevraud-l-ermitage.html": {
-  "hash": "6affcd722384",
+  "hash": "fb761ef57753",
   "date": "2026-11-24"
  },
  "hotels/domaine-des-etangs.html": {
-  "hash": "959641aa088a",
+  "hash": "af7eff1ff87f",
   "date": "2026-11-24"
  },
  "hotels/phare-de-kerbel.html": {
-  "hash": "706989de6b8e",
+  "hash": "fd2f2f8ac997",
   "date": "2026-11-24"
  },
  "hotels/les-roches-rouges.html": {
-  "hash": "bb5156e61a8c",
+  "hash": "fce7273e147b",
   "date": "2026-11-24"
  },
  "hotels/auberge-saint-pierre.html": {
-  "hash": "1973ed6685f6",
+  "hash": "32583ce973b3",
   "date": "2026-11-24"
  },
  "hotels/off-paris-seine.html": {
-  "hash": "07a44a19a77d",
+  "hash": "f849a7676e6c",
   "date": "2026-11-24"
  },
  "hotels/hotel-le-corbusier.html": {
-  "hash": "02d581aa4ff5",
+  "hash": "1b7ae07b5933",
   "date": "2026-11-24"
  },
  "hotels/refuge-de-solaise.html": {
-  "hash": "b0027e347ac6",
+  "hash": "4b34d09a367b",
   "date": "2026-11-24"
  },
  "hotels/village-igloo-val-thorens.html": {
-  "hash": "f38efe9db173",
+  "hash": "7e10d14a92be",
   "date": "2026-11-24"
  },
  "hotels/alpinest.html": {
-  "hash": "161a5c778970",
+  "hash": "32bcdf31fbea",
   "date": "2026-11-24"
  },
  "hotels/cabanes-du-moulin.html": {
-  "hash": "ca035d05596b",
+  "hash": "e0f1c60614a7",
   "date": "2026-11-24"
  },
  "hotels/troglododo.html": {
-  "hash": "bb7899818e50",
+  "hash": "fd973121d0df",
   "date": "2026-11-24"
  },
  "hotels/hotel-particulier-montmartre.html": {
-  "hash": "2fae0bf86e47",
+  "hash": "1cad18663852",
   "date": "2026-11-24"
  },
  "hotels/cour-des-loges.html": {
-  "hash": "b115f72bf19a",
+  "hash": "61150a4c25fa",
   "date": "2026-11-24"
  },
  "hotels/fermes-de-marie.html": {
-  "hash": "dd19d918ec21",
+  "hash": "ef1629ae096e",
   "date": "2026-11-24"
  },
  "hotels/chateau-de-la-resle.html": {
-  "hash": "f97c250c7fce",
+  "hash": "d5b2643a0315",
   "date": "2026-11-24"
  },
  "hotels/chateau-de-mercues.html": {
-  "hash": "aa2f3902d196",
+  "hash": "df9371b58360",
   "date": "2026-11-24"
  },
  "hotels/sources-de-caudalie.html": {
-  "hash": "c98ca60e6e0f",
+  "hash": "55258b4c9c60",
   "date": "2026-11-24"
  },
  "hotels/casadelmar.html": {
-  "hash": "4579319dacbd",
+  "hash": "6bd7b1489db5",
   "date": "2026-11-24"
  },
  "hotels/la-coorniche.html": {
-  "hash": "96ad6c4281f2",
+  "hash": "5c94c5e802f5",
   "date": "2026-11-24"
  },
  "hotels/pic-du-midi.html": {
-  "hash": "e3bae484a180",
+  "hash": "27af354dc1da",
   "date": "2026-11-24"
  },
  "hotels/refuge-du-montenvers.html": {
-  "hash": "3b44facb09a5",
+  "hash": "172034941678",
   "date": "2026-11-24"
  },
  "hotels/refuge-de-la-traye.html": {
-  "hash": "410182d17dc8",
+  "hash": "70ff63c21023",
   "date": "2026-11-24"
  },
  "hotels/refuge-chez-la-tante.html": {
-  "hash": "759d55c4105b",
+  "hash": "9346b65f2c03",
   "date": "2026-11-24"
  },
  "hotels/molitor.html": {
-  "hash": "2b6c614fc7af",
+  "hash": "6f0630072223",
   "date": "2026-11-24"
  },
  "hotels/maison-souquet.html": {
-  "hash": "77fbbb0aaf15",
+  "hash": "38512181f331",
   "date": "2026-11-24"
  },
  "hotels/intercontinental-lyon-hotel-dieu.html": {
-  "hash": "35e531312257",
+  "hash": "851548f1b3a0",
   "date": "2026-11-24"
  },
  "hotels/hotel-de-la-cite-carcassonne.html": {
-  "hash": "9ea7cc0dcd76",
+  "hash": "e1d3a9f40bad",
   "date": "2026-11-24"
  },
  "hotels/grand-controle-versailles.html": {
-  "hash": "80473d2e3fb0",
+  "hash": "fd1f52e278cd",
   "date": "2026-11-24"
  },
  "hotels/ile-louet.html": {
-  "hash": "1b65b68cd8dc",
+  "hash": "121bcbd2809b",
   "date": "2026-11-24"
  },
  "hotels/cap-estel.html": {
-  "hash": "3fe7b6645740",
+  "hash": "0f559af381e6",
   "date": "2026-11-24"
  },
  "hotels/relais-de-chambord.html": {
-  "hash": "a09e695d4f4c",
+  "hash": "c15cc77b6b37",
   "date": "2026-11-24"
  },
  "hotels/toue-cabanee-canal-de-bourgogne.html": {
-  "hash": "ec0aa092d47a",
+  "hash": "7644609d433e",
   "date": "2026-11-24"
  },
  "hotels/moulin-du-roc.html": {
-  "hash": "e5294cc38b73",
+  "hash": "2db12987c35d",
   "date": "2026-11-24"
  },
  "hotels/bulles-de-savoie.html": {
-  "hash": "593d1e36acad",
+  "hash": "c1801bfa1f2d",
   "date": "2026-11-24"
  },
  "hotels/cabanes-lacustra.html": {
-  "hash": "a53c4a8ebf48",
+  "hash": "ad690f85b2e0",
   "date": "2026-11-24"
  },
  "hotels/chateau-de-la-treyne.html": {
-  "hash": "066d603f74c6",
+  "hash": "15f67d0d8e32",
   "date": "2026-11-24"
  },
  "hotels/ecrin-d-auvergne.html": {
-  "hash": "cc2cfc77b546",
+  "hash": "bd23886f99ea",
   "date": "2026-11-24"
  },
  "hotels/etape-en-foret.html": {
-  "hash": "7ab1e3a0ea52",
+  "hash": "b124aabefada",
   "date": "2026-11-24"
  },
  "hotels/gare-de-guiscriff.html": {
-  "hash": "c247ed936bd9",
+  "hash": "6875a22f54d8",
   "date": "2026-11-24"
  },
  "hotels/nids-des-vosges.html": {
-  "hash": "e00921392f8e",
+  "hash": "b0a75bfa9f03",
   "date": "2026-11-24"
  },
  "hotels/domaine-de-murtoli.html": {
-  "hash": "17b66f1a1519",
+  "hash": "99373f1525de",
   "date": "2026-11-24"
  },
  "hotels/villa-la-coste.html": {
-  "hash": "495111264dbb",
+  "hash": "313420fe0be5",
   "date": "2026-11-24"
  },
  "hotels/nids-de-chlorofil.html": {
-  "hash": "b94a2e72206d",
+  "hash": "ff15226d1f65",
   "date": "2026-11-24"
  },
  "hotels/cabanes-de-blanche.html": {
-  "hash": "63716bf57c2c",
+  "hash": "0cd0a16a46f6",
   "date": "2026-11-24"
  },
  "hotels/lieu-dieu.html": {
-  "hash": "f21b2a34cbf7",
+  "hash": "1cdf565ef095",
   "date": "2026-11-24"
  },
  "hotels/villa-rene-lalique.html": {
-  "hash": "2f90583bef0a",
+  "hash": "3ab5c485b523",
   "date": "2026-11-24"
  },
  "hotels/cabanes-du-goutty.html": {
-  "hash": "872591b05705",
+  "hash": "dfb530bb16c3",
   "date": "2026-11-24"
  },
  "hotels/domaine-du-chatelet.html": {
-  "hash": "6d7c60bed84b",
+  "hash": "103e7518d3ad",
   "date": "2026-11-24"
  },
  "hotels/cabane-du-perche.html": {
-  "hash": "bb3738028c59",
+  "hash": "dc8cb8633a45",
   "date": "2026-11-24"
  },
  "hotels/landifornia-lodge.html": {
-  "hash": "d1d12b8092f3",
+  "hash": "ff163dd662f4",
   "date": "2026-11-24"
  }
 }

@@ -27,11 +27,11 @@
       kicker: "En amoureux",
       short: "Nuits insolites en amoureux",
       title: (n) => `${n} nuits insolites pour un week-end en amoureux`,
-      description: "Bulle sous les étoiles, phare, cabane avec jacuzzi, jardin secret à Montmartre : notre sélection d'hébergements insolites pour une escapade à deux en France.",
+      description: "Bulle sous les étoiles, phare, cabane avec jacuzzi, jardin secret à Montmartre : ma sélection d'hébergements insolites pour une escapade à deux en France.",
       ids: ["attrap-reves-allauch", "phare-de-kerbel", "loire-valley-lodges", "pella-roca", "hotel-particulier-montmartre", "les-roches-rouges", "la-coorniche", "alpinest", "cabanes-du-moulin", "les-hautes-roches", "bulles-de-savoie", "ecrin-d-auvergne"],
       cover: "attrap-reves-allauch",
       intro: [
-        "Pour un anniversaire, une demande en mariage ou simplement deux jours rien qu'à deux, rien ne vaut un lieu qui sort de l'ordinaire. On a rassemblé ici nos adresses les plus romantiques : on s'y endort sous les étoiles, au sommet d'un phare ou dans les arbres, loin de tout.",
+        "Pour un anniversaire, une demande en mariage ou simplement deux jours rien qu'à deux, rien ne vaut un lieu qui sort de l'ordinaire. J'ai rassemblé ici mes adresses les plus romantiques : on s'y endort sous les étoiles, au sommet d'un phare ou dans les arbres, loin de tout.",
         "Elles cultivent toutes l'intimité, avec un décor qu'on n'oublie pas ; plusieurs offrent un spa ou un jacuzzi privatif.",
       ],
       faq: [
@@ -51,11 +51,11 @@
       kicker: "Cabanes perchées",
       short: "Les plus belles cabanes perchées",
       title: (n) => `Les ${n} plus belles cabanes perchées de France`,
-      description: "Cabanes dans les arbres avec jacuzzi, cabanes d'artistes, cabanes flottantes : notre sélection des plus belles cabanes perchées où dormir en France.",
+      description: "Cabanes dans les arbres avec jacuzzi, cabanes d'artistes, cabanes flottantes : ma sélection des plus belles cabanes perchées où dormir en France.",
       match: (h) => h.type === "cabane",
       cover: "loire-valley-lodges",
       intro: [
-        "Dormir dans les arbres, c'est retrouver ses rêves d'enfant avec le confort d'aujourd'hui. Les cabanes de notre sélection vont de l'adresse bohème au véritable hôtel de luxe perché, avec baies vitrées, jacuzzi privatif et dîner livré à la cabane.",
+        "Dormir dans les arbres, c'est retrouver ses rêves d'enfant avec le confort d'aujourd'hui. Les cabanes de ma sélection vont de l'adresse bohème au véritable hôtel de luxe perché, avec baies vitrées, jacuzzi privatif et dîner livré à la cabane.",
         "On y accède par des escaliers, des passerelles suspendues ou des échelles, puis la forêt fait le reste : le chant des oiseaux au réveil, le vent dans les branches, et le silence.",
       ],
       faq: [
@@ -86,7 +86,7 @@
       ],
       faq: [
         ["Où passer un week-end insolite près de Paris ?", "Les adresses de ce guide sont classées de la plus proche à la plus éloignée de Paris : cabanes au bord de la rivière en Seine-et-Marne, hôtels troglodytes et abbaye royale en vallée de la Loire, château en Bourgogne…"],
-        ["Peut-on y aller en train ?", "Plusieurs adresses de la vallée de la Loire sont proches des gares de Tours ou de Saumur. Consultez aussi notre guide des nuits insolites accessibles sans voiture."],
+        ["Peut-on y aller en train ?", "Plusieurs adresses de la vallée de la Loire sont proches des gares de Tours ou de Saumur. Consultez aussi mon guide des nuits insolites accessibles sans voiture."],
       ],
       tips: [
         "Partez le vendredi en fin de matinée ou le samedi tôt pour éviter les bouchons de sortie de Paris.",
@@ -161,7 +161,7 @@
       kicker: "Montagne",
       short: "Hôtels insolites à la montagne",
       title: (n) => `${n} hôtels insolites à la montagne`,
-      description: "L'hôtel le plus haut de France, un village d'igloos, des cabanes-spa et un hameau de fermes d'alpage : nos hébergements insolites à la montagne.",
+      description: "L'hôtel le plus haut de France, un village d'igloos, des cabanes-spa et un hameau de fermes d'alpage : mes hébergements insolites à la montagne.",
       match: (h) => h.env === "montagne",
       cover: "refuge-de-solaise",
       intro: [
@@ -237,7 +237,7 @@
       kicker: "Petits budgets",
       short: "Nuits insolites à petit prix",
       title: (n) => `${n} nuits insolites pour moins de 250 € la nuit`,
-      description: "Troglodytes, cabanes, bulle, hôtel Le Corbusier : les hébergements insolites de notre sélection à moins de 250 € la nuit (budget indicatif).",
+      description: "Troglodytes, cabanes, bulle, hôtel Le Corbusier : les hébergements insolites de ma sélection à moins de 250 € la nuit (budget indicatif).",
       match: (h) => h.budget <= 2,
       sort: (a, b) => a.budget - b.budget,
       cover: "hotel-le-corbusier",
@@ -304,7 +304,7 @@
       match: hasTag("chien"),
       cover: "domaine-des-etangs",
       intro: [
-        "Partir sans son chien, c'est souvent la moitié du plaisir en moins. Bonne nouvelle : plusieurs de nos adresses les plus remarquables l'accueillent volontiers, parfois avec gamelle, panier et friandise qui l'attendent dans la chambre.",
+        "Partir sans son chien, c'est souvent la moitié du plaisir en moins. Bonne nouvelle : plusieurs de mes adresses les plus remarquables l'accueillent volontiers, parfois avec gamelle, panier et friandise qui l'attendent dans la chambre.",
         "Châteaux au-dessus de la Dordogne, domaine de 1 000 hectares, hôtel face à la Méditerranée ou chalets au cœur de Megève : de quoi s'offrir un séjour hors du commun, à trois.",
       ],
       tips: [
@@ -381,7 +381,7 @@
       cover: "phare-de-kerbel",
       intro: [
         "Il y a des questions qu'on ne pose qu'une fois. Autant choisir un décor à la hauteur : le sommet d'un phare face à l'océan, un observatoire au-dessus des nuages, une bulle sous les étoiles ou un château suspendu au-dessus d'une rivière.",
-        "Nous avons choisi des lieux où l'intimité est garantie et où le cadre fait déjà la moitié du travail. À vous de trouver les mots.",
+        "J'ai choisi des lieux où l'intimité est garantie et où le cadre fait déjà la moitié du travail. À vous de trouver les mots.",
       ],
       tips: [
         "Prévenez l'établissement en réservant : beaucoup aiment participer (bouteille au frais, fleurs, table en terrasse, bague glissée au dessert).",
@@ -400,7 +400,7 @@
       cover: "loire-valley-lodges",
       intro: [
         "Pour une date qui compte, un dîner au restaurant ne suffit pas toujours. Offrez plutôt une nuit dont on parlera encore dans dix ans : dans le compartiment d'un train de 1926, sur une île rien que pour vous, dans un igloo ou une cabane qu'on rejoint en canoë.",
-        "On a mêlé ici des adresses pour deux et des lieux à partager en famille ou entre amis, pour tous les budgets.",
+        "J'ai mêlé ici des adresses pour deux et des lieux à partager en famille ou entre amis, pour tous les budgets.",
       ],
       tips: [
         "Pour une surprise, réservez à votre nom et ne dévoilez que la date et la tenue à prévoir.",
@@ -415,12 +415,12 @@
       short: "Offrir une nuit insolite",
       gift: true,
       title: (n) => `Offrir une nuit insolite : ${n} idées cadeaux inoubliables`,
-      description: "Bulle, cabane-spa, phare, observatoire, château : nos idées pour offrir une nuit insolite en France, et comment faire un cadeau réussi (dates, bons cadeaux, coffrets).",
+      description: "Bulle, cabane-spa, phare, observatoire, château : mes idées pour offrir une nuit insolite en France, et comment faire un cadeau réussi (dates, bons cadeaux, coffrets).",
       ids: ["bulles-de-savoie", "pella-roca", "phare-de-kerbel", "pic-du-midi", "loire-valley-lodges", "ecrin-d-auvergne", "toue-cabanee-canal-de-bourgogne", "nids-des-vosges", "hotel-particulier-montmartre", "gare-de-guiscriff"],
       cover: "pella-roca",
       intro: [
         "Saint-Valentin, fête des mères, anniversaire, Noël : une nuit dans un lieu extraordinaire est l'un des cadeaux qui marquent le plus. On n'offre pas un objet, mais un souvenir à vivre.",
-        "Voici nos idées les plus sûres, pour tous les budgets, et trois façons d'offrir : réserver des dates, demander un bon cadeau à l'établissement, ou choisir un coffret pour laisser le choix.",
+        "Voici mes idées les plus sûres, pour tous les budgets, et trois façons d'offrir : réserver des dates, demander un bon cadeau à l'établissement, ou choisir un coffret pour laisser le choix.",
       ],
       tips: [
         "Si vous connaissez les disponibilités de la personne, réservez directement des dates : c'est le cadeau le plus simple et le plus fort.",
@@ -498,7 +498,7 @@
       cover: "la-coorniche",
       intro: [
         "La Nouvelle-Aquitaine a le goût des belles choses : la dune du Pilat au coucher du soleil, les grands crus de Bordeaux, les rivières du Périgord et les forêts profondes de la Charente limousine.",
-        "Nos adresses y cultivent l'art de vivre : design face à l'océan, vinothérapie au milieu des vignes, château de conte de fées et moulin du XVIIe siècle au fil de l'eau.",
+        "Mes adresses y cultivent l'art de vivre : design face à l'océan, vinothérapie au milieu des vignes, château de conte de fées et moulin du XVIIe siècle au fil de l'eau.",
       ],
       tips: [
         "Pour la dune du Pilat, montez au coucher du soleil ou tôt le matin : la lumière est magique et la foule absente.",
@@ -531,12 +531,12 @@
       kicker: "Automne",
       short: "Week-end insolite en automne",
       title: (n) => `Week-end insolite en automne : ${n} adresses pour savourer la saison`,
-      description: "Forêts qui rougissent, vendanges, bains nordiques fumants et cheminées : nos adresses insolites préférées pour un week-end d'automne en France, de la Toussaint à novembre.",
+      description: "Forêts qui rougissent, vendanges, bains nordiques fumants et cheminées : mes adresses insolites préférées pour un week-end d'automne en France, de la Toussaint à novembre.",
       ids: ["cabane-du-perche", "loire-valley-lodges", "landifornia-lodge", "cabanes-du-goutty", "lieu-dieu", "sources-de-caudalie", "villa-la-coste", "domaine-des-etangs", "pella-roca", "nids-des-vosges", "domaine-du-chatelet", "dihan"],
       cover: "cabane-du-perche",
       intro: [
         "L'automne est la plus belle saison des cabanes : les forêts se colorent, la lumière devient dorée, et l'on retrouve avec bonheur le crépitement d'un poêle à bois ou la chaleur d'un bain nordique quand l'air fraîchit. C'est aussi le temps des vendanges dans les vignobles et des brumes du matin sur les étangs.",
-        "Nous avons réuni des adresses qui se vivent particulièrement bien d'octobre à novembre : cabanes en forêt, bains chauds en plein air, domaines viticoles et grands parcs aux arbres centenaires. Idéal pour un pont de la Toussaint ou un week-end de novembre, loin de la foule de l'été.",
+        "J'ai réuni des adresses qui se vivent particulièrement bien d'octobre à novembre : cabanes en forêt, bains chauds en plein air, domaines viticoles et grands parcs aux arbres centenaires. Idéal pour un pont de la Toussaint ou un week-end de novembre, loin de la foule de l'été.",
       ],
       faq: [
         ["Où partir en week-end insolite en automne ?", "En forêt, pour les couleurs, ou dans les vignobles, pour l'ambiance des vendanges. Une cabane avec bain nordique ou spa privatif est idéale : on profite de la nature même quand il fait frais."],
@@ -555,12 +555,12 @@
       kicker: "Hiver",
       short: "Nuit insolite en hiver",
       title: (n) => `Nuit insolite en hiver : ${n} adresses cocon, entre neige et bain chaud`,
-      description: "Igloo sur les pistes, chalet d'altitude, cabane avec bain nordique sous la neige, marchés de Noël d'Alsace ou Fête des Lumières à Lyon : nos nuits insolites préférées pour l'hiver.",
+      description: "Igloo sur les pistes, chalet d'altitude, cabane avec bain nordique sous la neige, marchés de Noël d'Alsace ou Fête des Lumières à Lyon : mes nuits insolites préférées pour l'hiver.",
       ids: ["village-igloo-val-thorens", "refuge-de-solaise", "fermes-de-marie", "domaine-du-chatelet", "cabane-du-perche", "landifornia-lodge", "villa-rene-lalique", "cour-des-loges"],
       cover: "village-igloo-val-thorens",
       intro: [
         "L'hiver est la saison des nuits cocon : un igloo sculpté dans la neige, un refuge au sommet des pistes, un bain chaud fumant sous les flocons, ou une grande maison au coin du feu. Il suffit d'une nuit pour que la saison froide devienne la plus belle de l'année.",
-        "Notre sélection mêle la haute montagne, pour les amoureux de neige, et des adresses de plaine ouvertes toute l'année, parfaites pour les fêtes : les marchés de Noël d'Alsace autour de la Villa René Lalique, ou la Fête des Lumières de Lyon depuis les cours Renaissance du Vieux Lyon.",
+        "Ma sélection mêle la haute montagne, pour les amoureux de neige, et des adresses de plaine ouvertes toute l'année, parfaites pour les fêtes : les marchés de Noël d'Alsace autour de la Villa René Lalique, ou la Fête des Lumières de Lyon depuis les cours Renaissance du Vieux Lyon.",
       ],
       faq: [
         ["Où dormir dans un igloo en France ?", "Le Village Igloo de Val Thorens propose des nuits dans des igloos sculptés, au cœur du domaine skiable, de fin décembre à mi-avril environ. Les places sont rares : réservez tôt."],
@@ -580,12 +580,12 @@
       kicker: "Nouvel An",
       short: "Nouvel An insolite",
       title: (n) => `Nouvel An insolite : ${n} adresses pour changer d'année autrement`,
-      description: "Igloo sur les pistes, refuge d'altitude, cabane avec bain nordique sous les étoiles, palais au cœur de Paris ou de Lyon : nos idées de nuits insolites pour fêter le Nouvel An en France.",
+      description: "Igloo sur les pistes, refuge d'altitude, cabane avec bain nordique sous les étoiles, palais au cœur de Paris ou de Lyon : mes idées de nuits insolites pour fêter le Nouvel An en France.",
       ids: ["village-igloo-val-thorens", "refuge-de-solaise", "refuge-de-la-traye", "fermes-de-marie", "cabane-du-perche", "landifornia-lodge", "nids-des-vosges", "chateau-de-la-resle", "villa-rene-lalique", "cour-des-loges", "maison-souquet", "molitor"],
       cover: "refuge-de-la-traye",
       intro: [
         "Pour passer d'une année à l'autre, il y a la grande soirée en ville… et il y a le réveillon à deux ou entre amis dans un lieu qu'on n'oubliera pas : un refuge au-dessus des nuages, une cabane chauffée où l'on trinque dans un bain nordique, ou une adresse d'exception au cœur de Paris ou de Lyon.",
-        "Nous avons réuni des lieux qui se prêtent bien aux nuits d'hiver : en montagne pour les amoureux de neige, à la campagne pour le calme et le feu de bois, en ville pour ceux qui veulent finir la soirée à pied. Les dîners et soirées du 31 décembre changent chaque année : renseignez-vous directement auprès de l'établissement.",
+        "J'ai réuni des lieux qui se prêtent bien aux nuits d'hiver : en montagne pour les amoureux de neige, à la campagne pour le calme et le feu de bois, en ville pour ceux qui veulent finir la soirée à pied. Les dîners et soirées du 31 décembre changent chaque année : renseignez-vous directement auprès de l'établissement.",
       ],
       faq: [
         ["Où passer un Nouvel An insolite en France ?", "En montagne, dans un refuge d'altitude ou un igloo, pour un réveillon vraiment dépaysant ; à la campagne, dans une cabane avec bain nordique ou spa privatif, pour une soirée à deux au calme ; ou en ville, dans un hôtel historique, pour profiter de la fête sans prendre la voiture."],
@@ -605,7 +605,7 @@
       kicker: "Saint-Valentin",
       short: "Saint-Valentin insolite",
       title: (n) => `Saint-Valentin insolite : ${n} nuits romantiques pour le 14 février`,
-      description: "Cabane avec jacuzzi privatif, bain nordique sous les étoiles, chalet-spa, hôtel secret à Paris : nos nuits insolites les plus romantiques pour fêter la Saint-Valentin en France.",
+      description: "Cabane avec jacuzzi privatif, bain nordique sous les étoiles, chalet-spa, hôtel secret à Paris : mes nuits insolites les plus romantiques pour fêter la Saint-Valentin en France.",
       ids: ["alpinest", "pella-roca", "loire-valley-lodges", "cabanes-du-moulin", "ecrin-d-auvergne", "landifornia-lodge", "cabane-du-perche", "nids-des-vosges", "hotel-particulier-montmartre", "maison-souquet", "cour-des-loges", "villa-rene-lalique"],
       cover: "alpinest",
       intro: [
@@ -777,7 +777,7 @@
         const first = out[0];
         return [
           c.around,
-          `Nous avons retenu ${list.length} adresses à moins de ${Math.ceil(dist(list[list.length - 1]) / 50) * 50} km, classées de la plus proche à la plus lointaine : ${listFr(t)}.` +
+          `J'ai retenu ${list.length} adresses à moins de ${Math.ceil(dist(list[list.length - 1]) / 50) * 50} km, classées de la plus proche à la plus lointaine : ${listFr(t)}.` +
             (first ? ` La plus proche hors de la ville, ${first.name}, se trouve à environ ${round(first)} km ${de} à vol d'oiseau` + (near.length > 1 ? `, et ${near.length} lieux sont à moins de 100 km : de quoi partir le samedi matin sans avoir l'impression de passer le week-end sur la route.` : ".") : ""),
         ];
       },
@@ -791,7 +791,7 @@
         const train = list.filter((h) => (h.tags || []).includes("train"));
         const spa = list.filter((h) => /spa|jacuzzi|bain nordique|sauna/i.test((h.amenities || []).join(" ")));
         const faq = [
-          [`Quel est l'hébergement insolite le plus proche ${de} ?`, `Parmi notre sélection, ${first.name} (${first.city}) est le plus proche, à environ ${round(first)} km ${de} à vol d'oiseau. ${first.tagline}.`],
+          [`Quel est l'hébergement insolite le plus proche ${de} ?`, `Parmi ma sélection, ${first.name} (${first.city}) est le plus proche, à environ ${round(first)} km ${de} à vol d'oiseau. ${first.tagline}.`],
           [`Combien coûte une nuit insolite près ${de} ?`, lo && hi ? `Selon les adresses de ce guide, comptez ${lo === hi ? lo.range : `de ${lo.range.replace(" la nuit", "")} à ${hi.range}`} pour deux personnes, selon le lieu et la saison.` + (cheap.length ? ` Les plus abordables : ${listFr(cheap.slice(0, 3).map((h) => h.name))}.` : "") + " Le prix exact est donné sur le site officiel de chaque établissement." : "Le prix exact est donné sur le site officiel de chaque établissement."],
         ];
         if (spa.length) faq.push([`Où dormir avec spa ou jacuzzi près ${de} ?`, `${listFr(spa.slice(0, 4).map((h) => `${h.name} (${h.city})`))} proposent un espace bien-être. Vérifiez sur chaque fiche s'il est privatif ou partagé.`]);

@@ -11,7 +11,7 @@
 
   const state = { q: "", env: "", type: "", budget: "", tag: "", sort: "featured", radius: "", view: "grid", loc: getUserLocation() };
 
-  // Sélection mise en avant : nos coups de cœur éditoriaux
+  // Sélection mise en avant : mes coups de cœur éditoriaux
   const FEATURED = HOTELS.filter((h) => h.featured);
   const firstOf = (key, val) => FEATURED.find((h) => h[key] === val) || HOTELS.find((h) => h[key] === val);
   const count = (key, val) => HOTELS.filter((h) => h[key] === val).length;
@@ -109,10 +109,6 @@
      SECTIONS DE DÉCOUVERTE
      ============================================================ */
   function renderDiscovery() {
-    // Bandeau défilant
-    const words = Object.values(TYPES).map((t) => `<span>${t.icon} ${escapeHtml(t.label)}</span><i>✦</i>`).join("");
-    $("#marquee").innerHTML = words + words;
-
     // Ambiances en accordéon
     $("#env-grid").innerHTML = Object.entries(ENVS).map(([k, e], i) => {
       const h = HOTELS.find((x) => x.id === e.cover) || firstOf("env", k);
@@ -245,27 +241,27 @@
     // Saint-Valentin : on en parle dès mi-janvier, quand les couples réservent
     if ((m === 1 && day >= 15) || (m === 2 && day <= 14)) return {
       kicker: "Saint-Valentin", title: "Une nuit inoubliable pour la Saint-Valentin",
-      text: "Cabanes avec jacuzzi, bains nordiques sous les étoiles, petits hôtels secrets : nos adresses les plus romantiques. Réservez vite, elles partent en premier.",
+      text: "Cabanes avec jacuzzi, bains nordiques sous les étoiles, petits hôtels secrets : mes adresses les plus romantiques. Réservez vite, elles partent en premier.",
       guide: guideBySlug("saint-valentin-nuit-insolite") ? "saint-valentin-nuit-insolite" : "nuit-insolite-en-amoureux",
     };
     if (m === 5 && day >= 8 && day <= lastSundayMay) return {
       kicker: "Fête des mères", title: "Offrez-lui une nuit hors du commun",
-      text: "Un cadeau qu'on n'oublie pas : une nuit dans un lieu extraordinaire. Nos idées, et comment l'offrir simplement.",
+      text: "Un cadeau qu'on n'oublie pas : une nuit dans un lieu extraordinaire. Mes idées, et comment l'offrir simplement.",
       guide: "offrir-une-nuit-insolite",
     };
     if (m === 12 && day <= 24) return {
       kicker: "Noël", title: "Et si vous offriez une nuit insolite ?",
-      text: "Sous le sapin, une nuit dans une bulle, un phare ou une cabane-spa : nos idées cadeaux pour tous les budgets.",
+      text: "Sous le sapin, une nuit dans une bulle, un phare ou une cabane-spa : mes idées cadeaux pour tous les budgets.",
       guide: "offrir-une-nuit-insolite",
     };
     if (m === 12 && day >= 25) return {
       kicker: "Nouvel An", title: "Changer d'année dans un lieu hors du commun",
-      text: "Refuge au-dessus des nuages, igloo, cabane avec bain nordique ou palais en ville : nos idées pour un réveillon qu'on n'oublie pas.",
+      text: "Refuge au-dessus des nuages, igloo, cabane avec bain nordique ou palais en ville : mes idées pour un réveillon qu'on n'oublie pas.",
       guide: "nouvel-an-insolite",
     };
     if (m >= 9 && m <= 11) return {
       kicker: `Automne ${y}`, title: "L'automne au chaud, les pieds dans un bain",
-      text: "Bains nordiques fumants, forêts qui rougissent, cheminées qui crépitent : nos adresses pour savourer la belle saison des cabanes.",
+      text: "Bains nordiques fumants, forêts qui rougissent, cheminées qui crépitent : mes adresses pour savourer la belle saison des cabanes.",
       guide: "week-end-insolite-en-automne",
       // Hors montagne : entre deux saisons, beaucoup de refuges et chalets sont fermés
       match: (h) => h.env !== "ville" && h.env !== "montagne" && (has(h, "spa-prive") || (has(h, "bien-etre") && ["cabane", "chalet", "chateau", "vignoble"].includes(h.type))),
@@ -331,7 +327,7 @@
       (!state.loc || !state.radius || dist <= Number(state.radius))
     );
     const sorters = {
-      // « Recommandés » : nos coups de cœur d'abord
+      // « Recommandés » : mes coups de cœur d'abord
       featured: (a, b) => (b.h.featured ? 1 : 0) - (a.h.featured ? 1 : 0),
       "budget-asc": (a, b) => a.h.budget - b.h.budget,
       "budget-desc": (a, b) => b.h.budget - a.h.budget,
