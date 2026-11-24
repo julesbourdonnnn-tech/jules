@@ -1,6 +1,8 @@
 # Modèles d'e-mails pour contacter les établissements
 
-À envoyer depuis contact@nuitsinguliere.com (ou ton adresse personnelle).
+À envoyer depuis nuitssingulieres@gmail.com (jamais depuis ton adresse personnelle).
+Les hôtels peuvent aussi t'écrire à contact@nuitsinguliere.com : ces messages
+arrivent dans la même boîte Gmail.
 Remplace ce qui est entre [crochets]. Garde un ton simple et personnel :
 un e-mail court reçoit plus de réponses.
 
@@ -45,7 +47,8 @@ Ma démarche est présentée ici : https://nuitsinguliere.com/professionnels.htm
 Au plaisir d'échanger avec vous,
 
 Jules Bourdon
-Nuits Singulières, https://nuitsinguliere.com
+Nuits Singulières · https://nuitsinguliere.com
+nuitssingulieres@gmail.com
 [téléphone, si tu le souhaites]
 
 ---

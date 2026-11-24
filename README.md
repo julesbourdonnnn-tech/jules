@@ -34,6 +34,11 @@ Le site est **100 % statique** (HTML, CSS, JavaScript). Pas de serveur, pas de b
 - **Kit de démarchage** (`demarchage/`, non publié) : modèles d'e-mails aux établissements et grille de test à remplir pendant un séjour.
 - **Menu mobile** complet.
 
+### Adresses e-mail
+- **contact@nuitsinguliere.com** : affichée sur le site. Ce n'est pas une vraie boîte : Cloudflare (Email → Email Routing) fait suivre les messages vers **nuitssingulieres@gmail.com**.
+- **nuitssingulieres@gmail.com** : la boîte de travail de Jules pour échanger avec les hôtels.
+- Pour la lettre (Brevo), l'expéditeur reste **contact@nuitsinguliere.com**, avec le domaine vérifié dans Brevo.
+
 ### « Une question pour Jules ? »
 - Sur chaque fiche et chaque guide, les lecteurs peuvent poser une question. Elle arrive **en attente** : rien n'est publié sans ta réponse.
 - Pour répondre : ouvre `https://nuitsinguliere.com/api/admin?key=TA_CLE` (la clé est le secret `ADMIN_KEY`, ou à défaut `NEWSLETTER_KEY`, dans Cloudflare : Workers → jules → Paramètres → Variables et secrets). Écris ta réponse, puis « Publier la réponse ». Si le lecteur a laissé son e-mail, un lien te permet de lui écrire directement.
