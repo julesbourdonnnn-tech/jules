@@ -70,7 +70,10 @@ function head({ title, description, canonical, image, type = "website", ld = [],
   ${image ? `<meta property="og:image" content="${e(image)}">\n  <meta name="twitter:card" content="summary_large_image">` : ""}
   <meta name="robots" content="max-image-preview:large">
   <meta name="theme-color" content="#0f1a17">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✦</text></svg>">${FONTS}
+  <link rel="icon" href="/favicon.ico" sizes="48x48">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/favicon-192.png" type="image/png" sizes="192x192">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">${FONTS}
   ${leaflet ? `<link rel="stylesheet" href="../vendor/leaflet/leaflet.css">` : ""}
   <link rel="stylesheet" href="../css/style.css">
   ${ld.map(jsonLd).join("\n  ")}
@@ -641,9 +644,18 @@ function homeHead() {
     "@type": "WebSite",
     name: CONFIG.siteName,
     url: `${SITE}/`,
-    description: CONFIG.tagline,
+    description: "Le carnet de Jules Bourdon, hôtelier : les hôtels les plus singuliers de France, repérés et testés.",
     inLanguage: "fr-FR",
+    alternateName: "Le carnet d'un hôtelier",
     potentialAction: { "@type": "SearchAction", target: `${SITE}/index.html?q={search_term_string}#explorer`, "query-input": "required name=search_term_string" },
+  })}
+  ${jsonLd({
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: CONFIG.siteName,
+    url: `${SITE}/`,
+    logo: `${SITE}/favicon-512.png`,
+    founder: { "@type": "Person", name: CONFIG.author.name, url: `${SITE}/a-propos.html` },
   })}
   ${jsonLd({
     "@context": "https://schema.org",
