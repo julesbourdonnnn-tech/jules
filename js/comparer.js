@@ -21,8 +21,8 @@
       <div class="compare-empty">
         <h2>Votre comparateur est vide</h2>
         <p class="lead">Touchez le bouton <span class="cmp-icon">⇄</span> sur une fiche ou une carte pour ajouter un lieu (trois au maximum).</p>
-        ${favs.length >= 2 ? `<button type="button" class="btn btn-primary" data-from-favs>Comparer mes ${Math.min(favs.length, 3)} premiers coups de cœur</button>` : ""}
-        <p class="eyebrow dark">Pour commencer, mes coups de cœur</p>
+        ${favs.length >= 2 ? `<button type="button" class="btn btn-primary" data-from-favs>Comparer mes ${Math.min(favs.length, 3)} premiers favoris</button>` : ""}
+        <p class="eyebrow dark">Pour commencer, quelques repérages</p>
         <div class="grid">${picks.map((h) => NS.card(h, { reveal: false })).join("")}</div>
       </div>`;
     NS.syncCompare();

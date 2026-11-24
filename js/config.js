@@ -11,6 +11,10 @@ window.SITE_CONFIG = {
   siteUrl: "https://nuitsinguliere.com", // ton nom de domaine, sert aux liens générés dans le Studio
 
   // L'auteur des avis (page « Qui suis-je », signature des avis testés)
+  // « Les coups de cœur de Jules » : hôtels testés, choisis par Jules
+  // (review.coupDeCoeur: true dans hotels.js) et notés au moins à ce seuil.
+  coupDeCoeurMin: 8.5,
+
   author: {
     name: "Jules Bourdon",
     title: "Hôtelier passé par des maisons 3, 4 et 5 étoiles, en France et à l'étranger",

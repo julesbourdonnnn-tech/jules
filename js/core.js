@@ -162,7 +162,7 @@
   const HEART = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.6-9.3C.9 8.3 3 4.5 6.7 4.5c2.1 0 3.6 1.2 4.3 2.4.7-1.2 2.2-2.4 4.3-2.4 3.7 0 5.8 3.8 4.3 7.2C19.5 16.4 12 21 12 21z"/></svg>`;
   const favButton = (h, extra = "", on = false) => `
     <button type="button" class="fav ${extra} ${on ? "on" : ""}" data-fav="${escapeHtml(h.id)}"
-      aria-pressed="${on}" aria-label="Ajouter ${escapeHtml(h.name)} à mes coups de cœur">${HEART}</button>`;
+      aria-pressed="${on}" aria-label="Ajouter ${escapeHtml(h.name)} à mes favoris">${HEART}</button>`;
 
   /* ---------- Avis « Testé » ----------
    * Un lieu porte le badge « Testé » quand son champ review est rempli
@@ -183,6 +183,8 @@
     return m ? `${MONTHS[Number(m) - 1]} ${y}` : y;
   }
   const fmtScore = (n) => String(n).replace(".", ",");
+  // Coup de cœur : testé, choisi par Jules, et noté au moins au seuil de config.js
+  const isCoupDeCoeur = (h) => isTested(h) && !!h.review.coupDeCoeur && (reviewScore(h) || 0) >= (data().CONFIG.coupDeCoeurMin || 8.5);
 
   function card(h, { dist = null, reveal = true, fav = false } = {}) {
     const { ENVS, TYPES } = data();
@@ -199,7 +201,7 @@
             <button type="button" class="card-nav next" data-slide="1" aria-label="Photo suivante">›</button>
             <div class="card-dots">${photos.map((_, i) => `<span class="${i ? "" : "on"}"></span>`).join("")}</div>` : ""}
           <span class="badge">${escapeHtml(ENVS[h.env].label)}</span>
-          ${isTested(h) ? `<span class="badge badge-tested" title="Séjour testé par ${escapeHtml(data().CONFIG.author.name)}">✓ Testé${reviewScore(h) != null ? ` · ${fmtScore(reviewScore(h))}/10` : ""}</span>` : ""}
+          ${isTested(h) ? `<span class="badge badge-tested${isCoupDeCoeur(h) ? " badge-heart" : ""}" title="Séjour testé par ${escapeHtml(data().CONFIG.author.name)}">${isCoupDeCoeur(h) ? "♥ Coup de cœur" : "✓ Testé"}${reviewScore(h) != null ? ` · ${fmtScore(reviewScore(h))}/10` : ""}</span>` : ""}
           ${favButton(h, "", fav)}
           <button type="button" class="card-compare" data-compare="${escapeHtml(h.id)}" aria-pressed="false" aria-label="Comparer ${escapeHtml(h.name)}" title="Ajouter au comparateur">⇄</button>
           ${dist != null ? `<span class="card-dist">📍 ${formatDistance(dist)}</span>` : ""}
@@ -312,6 +314,7 @@
   function header() {
     const { CONFIG } = data();
     const links = [
+      ["guides/coups-de-coeur-de-jules.html", "Coups de cœur"],
       ["guides/index.html", "Les guides"],
       ["index.html#explorer", "Toutes les adresses"],
       ["carte.html", "La carte"],
@@ -325,7 +328,7 @@
       <nav class="nav" aria-label="Navigation principale">
         ${links.map(([href, label]) => `<a href="${page(href)}">${label}</a>`).join("\n        ")}
         <button type="button" class="nav-icon" data-surprise title="Un lieu au hasard" aria-label="Un lieu au hasard">🎲</button>
-        <button type="button" class="nav-icon" id="fav-open" title="Mes coups de cœur" aria-label="Mes coups de cœur">♡<span class="fav-count" hidden></span></button>
+        <button type="button" class="nav-icon" id="fav-open" title="Mes favoris" aria-label="Mes favoris">♡<span class="fav-count" hidden></span></button>
         <a href="${page("index.html#explorer")}" class="nav-cta" data-open-near>Près de chez moi</a>
         <button type="button" class="nav-icon nav-menu" id="menu-open" aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="menu-sheet"><span></span></button>
       </nav>
@@ -371,7 +374,7 @@
 
   return {
     data, setRoot, root, page, hotelUrl, guideUrl, escapeHtml, formatPrice, formatDistance, distanceKm,
-    FALLBACK, img, budgetOf, budgetHtml, siteLink, questionsBlock, bookingTip, stayEstimate, capacity, REVIEW_CRITERIA, isTested, reviewScore, reviewDate, fmtScore,
+    FALLBACK, img, budgetOf, budgetHtml, siteLink, questionsBlock, bookingTip, stayEstimate, capacity, REVIEW_CRITERIA, isTested, isCoupDeCoeur, reviewScore, reviewDate, fmtScore,
     todayIso, addDays, nightsOf, cleanStay, hasDates, tagsOf,
     favButton, card, newsletterForm, socialLinks, guideHotels, guideTitle, guidesFor, guideCard, shareBlock,
     header, footer, baseLayer,

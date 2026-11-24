@@ -34,6 +34,12 @@ heureux de venir découvrir votre établissement pour en publier un avis
 détaillé. Mes avis restent libres, et si un séjour est offert, je l'indique
 clairement.
 
+Chaque séjour test donne lieu à un avis détaillé et signé, avec le badge
+« Testé ». Les établissements qui obtiennent les meilleures notes rejoignent
+la sélection « Les coups de cœur de Jules », mise en avant sur le site. Cette
+distinction ne s'achète pas et ne dépend pas d'une invitation : seule compte
+la qualité du séjour.
+
 Ma démarche est présentée ici : https://nuitsinguliere.com/professionnels.html
 
 Au plaisir d'échanger avec vous,
@@ -60,7 +66,9 @@ Je serais disponible [dates possibles, ex. en semaine en janvier ou février].
   comme la loi le prévoit.
 
 Dans tous les cas, l'avis reste libre et je ne le soumets pas à relecture.
-Je vous enverrai le lien dès sa publication.
+Si le séjour obtient l'une de mes meilleures notes (8,5/10 et plus),
+l'établissement rejoindra « Les coups de cœur de Jules ». Je vous enverrai
+le lien dès la publication.
 
 Bien cordialement,
 
@@ -91,5 +99,7 @@ Jules Bourdon
 - **Séjour offert = mention obligatoire.** La loi du 9 juin 2023 sur
   l'influence commerciale impose d'indiquer clairement tout avantage reçu.
   Sur le site, mets `invited: true` dans l'avis : la mention s'affiche toute seule.
+- **Coups de cœur :** ne promets jamais une place dans la sélection en échange
+  d'une invitation. Décris la règle (testé, 8,5/10 et plus, ton choix), rien de plus.
 - **Photos :** garde une trace écrite (l'e-mail suffit) de chaque autorisation.
 - **Suivi :** note dans un tableau à qui tu as écrit, quand, et la réponse.

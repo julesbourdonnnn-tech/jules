@@ -27,6 +27,7 @@
  *       date: "2026-11",                // mois du séjour (obligatoire)
  *       stay: "Suite Forêt, 1 nuit",     // ce que tu as testé (facultatif)
  *       invited: false,                  // true si le séjour a été offert (mention affichée)
+ *       coupDeCoeur: true,               // ton choix : l'hôtel entre dans « Les coups de cœur de Jules » (si note ≥ 8,5)
  *       disclosure: "",                  // lien particulier à signaler (ex. « J'ai travaillé dans cet hôtel par le passé. »)
  *       scores: { accueil: 9, chambre: 8, literie: 9, table: 8, service: 9, valeur: 7 }, // sur 10
  *       verdict: "Une phrase qui résume ton avis",
@@ -1245,7 +1246,7 @@ window.HOTELS = [
     notForYou: ["Vous cherchez une vue sur les monuments", "Vous préférez les très grands hôtels"],
     photos: 0, website: "https://www.hotelparister.com/",
     review: {
-      date: "2026-11", stay: "Duplex avec terrasse, 1 nuit", invited: true,
+      date: "2026-11", stay: "Duplex avec terrasse, 1 nuit", coupDeCoeur: true, invited: true,
       disclosure: "Transparence : j'ai travaillé au Parister par le passé.",
       scores: { accueil: 9.5, chambre: 9, literie: 9, table: 9.5, service: 9.5, valeur: 8 },
       verdict: "Une parenthèse au cœur du 9e arrondissement : piscine de 20 mètres, jardin intérieur et un petit-déjeuner exceptionnel.",
@@ -1311,7 +1312,7 @@ window.HOTELS = [
     notForYou: ["Vous cherchez l'animation d'une ville"],
     photos: 3, website: "https://www.legrandpavillonchantilly.com/fr/", photoCredit: "Jules Bourdon et l'établissement",
     review: {
-      date: "2026-01", stay: "Chambre Confort avec terrasse, 2 nuits", invited: false,
+      date: "2026-01", stay: "Chambre Confort avec terrasse, 2 nuits", coupDeCoeur: true, invited: false,
       scores: { accueil: 8.5, chambre: 9, literie: 8.5, table: 8, service: 8.5, valeur: 8.5 },
       verdict: "La campagne aux portes de Paris, des chambres réussies, et Chantilly à découvrir à cheval.",
       text: [

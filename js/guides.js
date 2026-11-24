@@ -20,7 +20,38 @@
   const plural = (n, one, many) => (n > 1 ? many : one);
   const hasTag = (t) => (h) => (h.tags || []).includes(t);
 
+  // « Les coups de cœur de Jules » : même règle que isCoupDeCoeur (js/core.js)
+  const CRIT = ["accueil", "chambre", "literie", "table", "service", "valeur"];
+  const reviewScore = (h) => {
+    const sc = (h.review && h.review.scores) || {};
+    const v = CRIT.map((k) => sc[k]).filter((x) => typeof x === "number");
+    return v.length ? Math.round((v.reduce((a, b) => a + b, 0) / v.length) * 10) / 10 : 0;
+  };
+  const coupDeCoeur = (h) => !!(h.review && h.review.date && h.review.coupDeCoeur) && reviewScore(h) >= ((global.SITE_CONFIG || {}).coupDeCoeurMin || 8.5);
+
   global.GUIDES = [
+    {
+      slug: "coups-de-coeur-de-jules",
+      cat: "envie",
+      kicker: "Coups de cœur",
+      short: "Les coups de cœur de Jules",
+      title: (n) => n > 1 ? `Les coups de cœur de Jules : ${n} hôtels testés et recommandés` : "Les coups de cœur de Jules : l'hôtel testé et recommandé",
+      description: "Les hôtels que Jules Bourdon, hôtelier passé par des maisons 3, 4 et 5 étoiles, a testés et recommande sans réserve : une sélection qui ne s'achète pas.",
+      match: coupDeCoeur,
+      sort: (a, b) => reviewScore(b) - reviewScore(a),
+      intro: [
+        "Voici les adresses où j'ai séjourné et que je recommande sans réserve. Elles ont toutes été testées comme un client, notées sur six critères, et ont obtenu au moins 8,5/10.",
+        "Cette sélection ne s'achète pas : aucun établissement ne paie pour y figurer, et une invitation n'y donne aucun droit. Seule compte la qualité du séjour. Elle s'enrichit à chaque nouveau test.",
+      ],
+      faq: [
+        ["Comment un hôtel devient-il un coup de cœur ?", "Je dois y avoir séjourné, l'hôtel doit obtenir au moins 8,5/10 sur mes six critères (accueil, chambre, literie, table, service, rapport qualité-prix), et je dois avoir envie de le recommander sans réserve à mes proches."],
+        ["Un hôtel peut-il payer pour figurer dans cette sélection ?", "Non. Aucun établissement ne paie pour être présenté ou distingué. Quand un séjour m'a été offert, je l'indique clairement sur l'avis, et cela ne change rien à la note."],
+      ],
+      tips: [
+        "Lisez l'avis complet de chaque hôtel : le conseil du pro vous dit quelle chambre demander et quand venir.",
+        "Une question précise sur l'une de ces adresses ? Posez-la en bas de sa fiche : je vous réponds personnellement.",
+      ],
+    },
     {
       slug: "nuit-insolite-en-amoureux",
       cat: "envie",

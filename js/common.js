@@ -716,8 +716,8 @@
       drawer.className = "drawer";
       drawer.hidden = true;
       drawer.innerHTML = `
-        <div class="drawer-panel" role="dialog" aria-modal="true" aria-label="Mes coups de cœur">
-          <div class="drawer-head"><h3>Mes coups de cœur</h3><button type="button" class="drawer-close" aria-label="Fermer">×</button></div>
+        <div class="drawer-panel" role="dialog" aria-modal="true" aria-label="Mes favoris">
+          <div class="drawer-head"><h3>Mes favoris</h3><button type="button" class="drawer-close" aria-label="Fermer">×</button></div>
           <div id="fav-list" class="fav-list"></div>
         </div>`;
       document.body.appendChild(drawer);

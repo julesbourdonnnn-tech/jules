@@ -120,7 +120,7 @@ function reviewSection(h) {
         <section id="avis" class="review reveal">
           <div class="review-head">
             <div>
-              <p class="eyebrow dark">✓ Testé · ${e(C.reviewDate(h))}</p>
+              <p class="eyebrow dark">✓ Testé · ${e(C.reviewDate(h))}${C.isCoupDeCoeur(h) ? ` · <a class="review-heart" href="../guides/coups-de-coeur-de-jules.html">♥ Coup de cœur</a>` : ""}</p>
               <h2>L'avis du pro</h2>
               <p class="review-by">Par <a href="../a-propos.html">${e(A.name)}</a>, ${e(A.title.charAt(0).toLowerCase() + A.title.slice(1))}${R.stay ? ` · ${e(R.stay)}` : ""}</p>
             </div>
@@ -217,7 +217,7 @@ function hotelPage(h) {
         <p class="card-type light">${T.icon} ${e(T.label)} · ${e(E.label)}</p>
         <h1>${e(h.name)}</h1>
         <p class="d-tagline">${e(h.tagline)}</p>
-        ${C.isTested(h) ? `<a class="d-tested" href="#avis">✓ Testé par ${e(CONFIG.author.name)}${C.reviewScore(h) != null ? ` · <strong>${C.fmtScore(C.reviewScore(h))}/10</strong>` : ""}</a>` : ""}
+        ${C.isTested(h) ? `<a class="d-tested${C.isCoupDeCoeur(h) ? " is-heart" : ""}" href="#avis">${C.isCoupDeCoeur(h) ? "♥ Coup de cœur de" : "✓ Testé par"} ${e(CONFIG.author.name)}${C.reviewScore(h) != null ? ` · <strong>${C.fmtScore(C.reviewScore(h))}/10</strong>` : ""}</a>` : ""}
         <div class="d-meta">
           <span>📍 ${e(h.city)}, ${e(h.region)}</span>
           <span class="dist-chip" data-dist hidden></span>
