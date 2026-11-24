@@ -89,7 +89,6 @@ window.HOTELS = [
   // ——————————————————— CAMPAGNE ———————————————————
   {
     id: "loire-valley-lodges",
-    coupDeCoeur: true,
     name: "Loire Valley Lodges",
     tagline: "Dix-huit cabanes d'artistes perdues dans une forêt de 300 hectares",
     city: "Esvres-sur-Indre", department: "Indre-et-Loire", region: "Centre-Val de Loire",
@@ -262,6 +261,7 @@ window.HOTELS = [
   },
   {
     id: "domaine-des-etangs",
+    coupDeCoeur: true,
     name: "Domaine des Étangs",
     tagline: "Un château de conte de fées au milieu de 1 000 hectares d'étangs et de forêts",
     city: "Massignac", department: "Charente", region: "Nouvelle-Aquitaine",
