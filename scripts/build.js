@@ -337,7 +337,9 @@ function hotelPage(h) {
           <li>✓ Aucune commission : mes conseils sont libres</li>
           <li>✓ Une question ? L'établissement vous répond lui-même</li>
         </ul>
-        ${gift ? `<a class="book-gift" href="${C.guideUrl(gift)}">🎁 Envie d'offrir cette nuit ? <span>Mes idées cadeaux →</span></a>` : ""}
+        ${h.giftUrl
+          ? `<a class="book-gift" href="${e(h.giftUrl)}" target="_blank" rel="noopener" data-track="Cartes cadeaux" data-hotel="${e(h.id)}">🎁 Envie d'offrir cette nuit ? <span>Les cartes cadeaux de l'établissement →</span></a>`
+          : gift ? `<a class="book-gift" href="${C.guideUrl(gift)}">🎁 Envie d'offrir cette nuit ? <span>Mes idées cadeaux →</span></a>` : ""}
       </aside>
     </div>
 

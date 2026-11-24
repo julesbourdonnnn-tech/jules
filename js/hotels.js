@@ -22,6 +22,7 @@
  *   forYou / notForYou   « C'est pour vous si… / Moins pour vous si… »
  *   bookingTip  conseil de réservation (facultatif : sinon déduit automatiquement)
  *   coupDeCoeur true : l'adresse fait partie du « coup de cœur du moment » (testée ou non)
+ *   giftUrl     page des cartes cadeaux de l'établissement (lien « Envie d'offrir cette nuit ? »)
  *   photoCredit auteur des photos quand ce sont les tiennes (ex. "Jules Bourdon")
  *   review      ton avis après un séjour (le lieu reçoit alors le badge « Testé ») :
  *     review: {
@@ -104,7 +105,7 @@ window.HOTELS = [
     rooms: "18 suites-lodges",
     forYou: ["Vous rêvez de déconnexion totale, sans écran ni Wi-Fi", "Vous aimez l'art contemporain et la forêt", "Vous voulez un jacuzzi rien qu'à vous"],
     notForYou: ["Vous ne pouvez pas couper le téléphone de tout un week-end", "Vous cherchez l'animation d'un grand hôtel"],
-    photos: 6, website: "https://loirevalleylodges.com/",
+    photos: 6, website: "https://loirevalleylodges.com/", giftUrl: "https://loirevalleylodges.com/nos-cartes-cadeaux/",
   },
   {
     id: "pella-roca",

@@ -52,7 +52,7 @@ async function subscribe(request, env) {
 }
 
 // Événements acceptés pour la mesure d'audience (le reste est ignoré)
-const EVENTS = new Set(["vue", "Site officiel", "Question", "Newsletter", "Réservation", "Partenaire", "Coffret", "Partage", "Comparateur", "Dates", "Favori", "Quiz", "Quiz terminé", "Surprise"]);
+const EVENTS = new Set(["vue", "Site officiel", "Cartes cadeaux", "Question", "Newsletter", "Réservation", "Partenaire", "Coffret", "Partage", "Comparateur", "Dates", "Favori", "Quiz", "Quiz terminé", "Surprise"]);
 const BOT = /bot|crawl|spider|slurp|preview|headless|lighthouse|facebookexternalhit|pingdom|monitor/i;
 
 async function record(env, request, row) {
