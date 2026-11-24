@@ -1250,7 +1250,7 @@ window.HOTELS = [
     rooms: "Chambres, suites et duplex avec terrasse",
     forYou: ["Vous voulez nager en plein Paris", "Vous cherchez une adresse à taille humaine, chaleureuse", "Le petit-déjeuner compte beaucoup pour vous"],
     notForYou: ["Vous cherchez une vue sur les monuments", "Vous préférez les très grands hôtels"],
-    photos: 0, website: "https://www.hotelparister.com/",
+    photos: 6, website: "https://www.hotelparister.com/",
     review: {
       date: "2026-11", stay: "Duplex avec terrasse, 1 nuit", invited: true,
       disclosure: "Transparence : j'ai travaillé au Parister par le passé.",
