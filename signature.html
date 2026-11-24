@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Ma signature e-mail · Nuits Singulières</title>
+  <link rel="icon" href="/favicon.ico" sizes="48x48">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <style>
+    :root { --ink:#16201c; --soft:#46514b; --muted:#7d857f; --line:#e4ddd0; --bg:#f4efe6; --card:#fff; --accent:#c2643c; --forest:#24392f; }
+    body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif; }
+    main { max-width:760px; margin:0 auto; padding:32px 18px 60px; }
+    h1 { font:400 2rem Georgia, serif; margin:0 0 6px; }
+    h2 { font:400 1.3rem Georgia, serif; margin:34px 0 10px; }
+    p { color:var(--soft); }
+    .box { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:24px; }
+    .actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:14px; align-items:center; }
+    button { font:inherit; font-size:.95rem; padding:10px 18px; border-radius:999px; border:1px solid var(--forest); background:var(--forest); color:#fff; cursor:pointer; }
+    button.ghost { background:#fff; color:var(--forest); }
+    .msg { font-size:.9rem; color:var(--forest); }
+    ol { color:var(--soft); padding-left:20px; } li { margin:6px 0; }
+    pre { white-space:pre-wrap; background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; font:15px/1.6 system-ui, sans-serif; margin:0; }
+    code { background:#fff; padding:1px 6px; border-radius:6px; border:1px solid var(--line); }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Ma signature e-mail</h1>
+  <p>Page privée (non référencée). Signature à utiliser dans Gmail pour tous les échanges avec les établissements.</p>
+
+  <h2>1. La signature</h2>
+  <div class="box" id="sig-box">
+<!-- SIGNATURE:DEBUT -->
+<table cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;color:#16201c">
+  <tr>
+    <td style="padding:0 0 12px 0">
+      <div style="font-family:Georgia,'Times New Roman',serif;font-size:20px;line-height:1.2;color:#16201c">Jules Bourdon</div>
+      <div style="font-family:Arial,Helvetica,sans-serif;font-size:13px;font-weight:bold;line-height:1.4;color:#c2643c;padding-top:3px">Fondateur · Nuits Singulières</div>
+      <div style="font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.5;color:#55574f;padding-top:6px">Hôtelier, passé par des maisons 3, 4 et 5 étoiles en France et à l'étranger</div>
+      <div style="font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.5;padding-top:8px">
+        <a href="mailto:contact@nuitsinguliere.com" style="color:#24392f;text-decoration:none">contact@nuitsinguliere.com</a>
+        <span style="color:#c29a5b">&nbsp;·&nbsp;</span>
+        <a href="https://nuitsinguliere.com" style="color:#24392f;text-decoration:none">nuitsinguliere.com</a>
+      </div>
+    </td>
+  </tr>
+  <tr>
+    <td><a href="https://nuitsinguliere.com" style="text-decoration:none"><img src="https://nuitsinguliere.com/assets/signature/banniere.png" width="480" height="120" alt="Nuits Singulières, le carnet d'un hôtelier" style="display:block;border:0;border-radius:6px;width:480px;max-width:100%;height:auto"></a></td>
+  </tr>
+  <tr>
+    <td style="padding-top:8px;font-family:Arial,Helvetica,sans-serif;font-size:11px;line-height:1.4;color:#8a8a80">Conseils indépendants : aucun établissement ne paie pour figurer sur le site.</td>
+  </tr>
+</table>
+<!-- SIGNATURE:FIN -->
+  </div>
+  <div class="actions">
+    <button type="button" id="copy">Copier la signature</button>
+    <button type="button" class="ghost" id="select">Sélectionner seulement</button>
+    <span class="msg" id="msg" role="status"></span>
+  </div>
+
+  <h2>2. L'installer dans Gmail (sur ordinateur)</h2>
+  <ol>
+    <li>Sur cette page, cliquez sur <strong>« Copier la signature »</strong>. Si rien ne se passe, cliquez sur « Sélectionner seulement », puis faites <code>Ctrl + C</code> (ou <code>Cmd + C</code> sur Mac).</li>
+    <li>Ouvrez Gmail avec <strong>nuitssingulieres@gmail.com</strong> : roue dentée, puis <strong>Voir tous les paramètres</strong>, onglet <strong>Général</strong>, rubrique <strong>Signature</strong>.</li>
+    <li>Cliquez sur <strong>« Créer »</strong>, nommez-la « Nuits Singulières », puis collez (<code>Ctrl + V</code>) dans la grande case.</li>
+    <li>Juste en dessous, choisissez cette signature pour les <strong>nouveaux e-mails</strong> et pour les <strong>réponses et transferts</strong>.</li>
+    <li>Tout en bas de la page, cliquez sur <strong>« Enregistrer les modifications »</strong>.</li>
+  </ol>
+
+  <h2>3. Sur l'application Gmail du téléphone</h2>
+  <p>L'application n'accepte qu'une signature en texte simple. Copiez celle-ci : Gmail, menu ☰, <strong>Paramètres</strong>, votre compte, <strong>Signature</strong> (« Signature mobile » sur iPhone).</p>
+  <pre id="sig-text">Jules Bourdon
+Fondateur · Nuits Singulières
+contact@nuitsinguliere.com · nuitsinguliere.com</pre>
+  <div class="actions"><button type="button" class="ghost" id="copy-text">Copier la version texte</button></div>
+</main>
+<script>
+  const box = document.getElementById("sig-box"), msg = document.getElementById("msg");
+  const sigHtml = () => box.innerHTML.split("<!-- SIGNATURE:DEBUT -->")[1].split("<!-- SIGNATURE:FIN -->")[0].trim();
+  const selectBox = () => { const r = document.createRange(); r.selectNodeContents(box); const s = getSelection(); s.removeAllRanges(); s.addRange(r); };
+  document.getElementById("select").addEventListener("click", () => { selectBox(); msg.textContent = "Signature sélectionnée : faites Ctrl + C (ou Cmd + C)."; });
+  document.getElementById("copy").addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.write([new ClipboardItem({ "text/html": new Blob([sigHtml()], { type: "text/html" }), "text/plain": new Blob([document.getElementById("sig-text").textContent], { type: "text/plain" }) })]);
+      msg.textContent = "Copiée ! Collez-la maintenant dans Gmail.";
+    } catch {
+      selectBox();
+      try { document.execCommand("copy"); msg.textContent = "Copiée ! Collez-la maintenant dans Gmail."; }
+      catch { msg.textContent = "Signature sélectionnée : faites Ctrl + C (ou Cmd + C)."; }
+    }
+  });
+  document.getElementById("copy-text").addEventListener("click", async (e) => {
+    try { await navigator.clipboard.writeText(document.getElementById("sig-text").textContent); e.target.textContent = "Copiée !"; }
+    catch { const r = document.createRange(); r.selectNodeContents(document.getElementById("sig-text")); getSelection().removeAllRanges(); getSelection().addRange(r); }
+  });
+</script>
+</body>
+</html>

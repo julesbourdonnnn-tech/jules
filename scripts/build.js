@@ -720,6 +720,7 @@ ${pages.map(([f, u, imgs]) => `  <url><loc>${e(u)}</loc><lastmod>${mods[f].date}
 const robots = () => `User-agent: *
 Allow: /
 Disallow: /studio.html
+Disallow: /signature.html
 Disallow: /comparer.html
 Disallow: /selection.html
 Disallow: /_review/
