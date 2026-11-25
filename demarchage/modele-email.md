@@ -8,48 +8,52 @@ un e-mail court reçoit plus de réponses.
 
 ---
 
-## 1. Premier contact : établissement déjà présent sur le site
+## 1. Premier contact : présenter la fiche (jamais « forcer » l'invitation)
+
+Le premier e-mail est une **présentation** : on invite l'hôtelier à regarder sa fiche
+et à dire si elle lui convient. Le séjour n'est évoqué qu'en une phrase légère, à la fin.
+Pas de liste d'avantages, pas de « j'aimerais venir », pas de coup de cœur promis.
+Environ 180 à 220 mots.
 
 **Objet :** [Nom de l'établissement] sur Nuits Singulières
 
-Bonjour [Madame / Monsieur / prénom],
+Bonjour,
 
-Je m'appelle Jules Bourdon. J'ai travaillé dans plusieurs maisons 3, 4 et
-5 étoiles, en France et à l'étranger, et je tiens à titre personnel Nuits Singulières
-(https://nuitsinguliere.com), un site de conseil qui présente les adresses les
-plus singulières de France.
+Je m'appelle Jules Bourdon. J'ai travaillé plusieurs années dans des maisons
+3, 4 et 5 étoiles, et j'ai créé Nuits Singulières (https://nuitsinguliere.com),
+un site qui présente les adresses les plus singulières de France avec le regard
+d'un hôtelier. Le site est indépendant et gratuit pour les établissements, sans
+aucune commission.
 
-[Nom de l'établissement] y figure déjà, parce que c'est un lieu que j'aime
-beaucoup : [lien vers la fiche, ex. https://nuitsinguliere.com/hotels/xxx.html].
+J'ai consacré une fiche à [Nom]. [Une phrase personnelle sur ce qui rend le lieu
+unique.] [Si coup de cœur : « … et il fait même partie de ma sélection « Le coup
+de cœur du moment ». »]
+Votre fiche : [lien]
 
-Je tenais à vous le dire, et à préciser ma démarche :
-- la présence sur le site est gratuite, je ne demande rien en échange ;
-- je ne touche aucune commission : le bouton « Réserver en direct » mène à
-  votre site officiel ;
-- je serais ravi d'utiliser vos plus belles photos, créditées à votre nom,
-  si vous m'en donnez l'autorisation (ou de remplacer celles qui ne vous
-  conviennent pas) ;
-- si une information de la fiche n'est plus à jour, dites-le-moi.
+N'hésitez pas à y jeter un œil et à me dire si elle vous convient : une
+information à corriger ou une nouveauté à ajouter, je la mets à jour avec
+plaisir. J'ai utilisé quelques photos de votre site officiel, créditées à votre
+nom : dites-moi simplement si vous êtes d'accord, ou si vous préférez m'en
+envoyer d'autres.
 
-Enfin, tester des hôtels est ma passion : si l'occasion se présente, je serais
-heureux de venir découvrir votre établissement pour en publier un avis
-détaillé. Mes avis restent libres, et si un séjour est offert, je l'indique
-clairement.
-
-Chaque séjour test donne lieu à un avis détaillé et signé, avec le badge
-« Testé ». Les adresses qui me marquent le plus, testées ou repérées, peuvent
-rejoindre la sélection « Le coup de cœur du moment », mise en avant sur le site.
-Cette distinction ne s'achète pas et ne dépend pas d'une invitation : seul
-compte le lieu.
-
-Ma démarche est présentée ici : https://nuitsinguliere.com/professionnels.html
+Et si un jour l'occasion se présente de venir passer une nuit chez vous, je
+pourrais vous consacrer un article et un véritable avis de professionnel. C'est
+ce qui donne le plus envie à mes lecteurs de réserver, directement chez vous.
 
 Au plaisir d'échanger avec vous,
 
 Jules Bourdon
-Nuits Singulières · https://nuitsinguliere.com
-nuitssingulieres@gmail.com
-[téléphone, si tu le souhaites]
+Fondateur | Nuits Singulières
+https://nuitsinguliere.com
+
+**Variante : fiche prête mais pas encore en ligne (photos à autoriser)**
+Remplacer le paragraphe « N'hésitez pas… » par : « Avant de la mettre en ligne,
+j'aimerais avoir votre accord pour utiliser quelques-unes de vos photos,
+créditées à votre nom. Je vous envoie volontiers la fiche pour que vous me
+disiez si elle vous convient. »
+
+La mention « séjour offert » et la liberté de l'avis s'expliquent ensuite, quand
+l'établissement propose un séjour (modèle 2).
 
 ---
 
