@@ -13,7 +13,7 @@ un e-mail court reçoit plus de réponses.
 Le premier e-mail est une **présentation** : on invite l'hôtelier à regarder sa fiche
 et à dire si elle lui convient. Le séjour n'est évoqué qu'en une phrase légère, à la fin.
 Pas de liste d'avantages, pas de « j'aimerais venir », pas de coup de cœur promis.
-Environ 180 à 220 mots.
+Environ 220 à 260 mots.
 
 **Objet :** [Nom de l'établissement] sur Nuits Singulières
 
@@ -37,8 +37,12 @@ nom : dites-moi simplement si vous êtes d'accord, ou si vous préférez m'en
 envoyer d'autres.
 
 Et si un jour l'occasion se présente de venir passer une nuit chez vous, je
-pourrais vous consacrer un article et un véritable avis de professionnel. C'est
-ce qui donne le plus envie à mes lecteurs de réserver, directement chez vous.
+pourrais vous consacrer un véritable avis de professionnel, publié en tête de
+votre fiche, ainsi qu'un article dans ma lettre mensuelle. Un séjour raconté par
+quelqu'un du métier, avec ses détails et ses conseils (quelle chambre choisir,
+quand venir), est ce qui donne le plus envie à mes lecteurs de réserver,
+directement sur votre site et sans commission. Je vous partagerais aussi, si vous
+le souhaitez, mes retours d'hôtelier, en toute discrétion.
 
 Au plaisir d'échanger avec vous,
 
