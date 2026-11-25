@@ -11,6 +11,10 @@ Les lecteurs choisissent leur nuit sur Nuits Singulières : chaque fiche doit di
 
 Jules a donné son accord explicite (25 novembre 2026) : les commis **publient directement** les informations confirmées, selon les règles ci-dessous, et lui envoient un compte rendu chaque jour. Lis aussi la compétence `ns-gestion-site` (règles de publication).
 
+## 0. Rythme et ordre de la mission (tous les deux jours)
+
+À chaque passage : **d'abord le contrôle technique** (compétence `ns-agent-technique`, 15 minutes, `node scripts/controle-site.js`), **puis la veille** (45 minutes maximum). Un seul commit pour les deux, un seul compte rendu : la veille, puis le contrôle technique.
+
 ## 1. Préparer
 
 ```bash
