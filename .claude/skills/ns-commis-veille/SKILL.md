@@ -24,6 +24,8 @@ node scripts/veille.js lot 10      # les 10 établissements les moins récemment
 
 Pour chacun, cherche sur le web (recherche web, en français) :
 - **Le site officiel** (champ `website`) : bandeau de fermeture, dates d'ouverture saisonnière, actualités, offres, nouvelles chambres, nouveau chef ou restaurant.
+  Si l'outil WebFetch (ou un agent web-fetch) est disponible, ouvre la page d'accueil et la page « infos pratiques » du site officiel. Sinon, **un résultat de recherche qui provient du domaine officiel de l'établissement compte comme source officielle** (cite l'URL de cette page).
+- Fais **au moins 2 ou 3 recherches par établissement** (fermeture, saison/ouverture, nouveautés ou offres) : une seule recherche ne suffit pas.
 - **Les actualités récentes** : `"<nom>" <ville> fermeture`, `"<nom>" réouverture`, `"<nom>" nouveauté 2026`, `"<nom>" offre`.
 - La presse locale, l'office de tourisme, le guide Michelin, Relais & Châteaux.
 
@@ -62,7 +64,7 @@ Ce qu'on cherche, par ordre d'importance :
 - Fermeture temporaire : ajoute dans la fiche `closed: { until: "AAAA-MM-JJ", label: "Fermé pour travaux jusqu'au …", note: "Phrase avec la source et les dates." }`. Le lieu sort des listes et des guides, sa fiche affiche un bandeau, et il revient seul à la date indiquée.
 - Fermeture définitive confirmée par deux sources : `closed: { label: "Fermé définitivement", note: "…" }` (sans `until`), et signale-le à Jules en tête du compte rendu.
 - Réouverture confirmée : retire le champ `closed`.
-- Fermeture saisonnière normale (ex. refuge fermé l'hiver) : une simple actualité `info` suffit, pas de `closed`.
+- **Fermeture saisonnière** (ex. cabanes fermées l'hiver, refuge fermé hors saison) : c'est une information essentielle pour le lecteur, **publie-la** dès que le site officiel donne les dates de saison, en actualité `fermeture` (« Fermé pour l'hiver depuis le … ; réouverture le … » ou « dates 2027 pas encore annoncées »), avec `until` si la date de réouverture est connue. Pas de champ `closed` : le lieu reste dans les listes.
 
 ## 5. Contrôler et publier
 
