@@ -13,7 +13,7 @@ un e-mail court reçoit plus de réponses.
 Le premier e-mail est une **présentation** : on invite l'hôtelier à regarder sa fiche
 et à dire si elle lui convient. Le séjour n'est évoqué qu'en une phrase légère, à la fin.
 Pas de liste d'avantages, pas de « j'aimerais venir », pas de coup de cœur promis.
-Environ 220 à 260 mots.
+Environ 240 à 280 mots.
 
 **Objet :** [Nom de l'établissement] sur Nuits Singulières
 
@@ -36,13 +36,14 @@ plaisir. J'ai utilisé quelques photos de votre site officiel, créditées à vo
 nom : dites-moi simplement si vous êtes d'accord, ou si vous préférez m'en
 envoyer d'autres.
 
-Et si un jour l'occasion se présente de venir passer une nuit chez vous, je
+Et si vous souhaitiez un jour m'inviter à passer une nuit chez vous, je
 pourrais vous consacrer un véritable avis de professionnel, publié en tête de
 votre fiche, ainsi qu'un article dans ma lettre mensuelle. Un séjour raconté par
 quelqu'un du métier, avec ses détails et ses conseils (quelle chambre choisir,
 quand venir), est ce qui donne le plus envie à mes lecteurs de réserver,
 directement sur votre site et sans commission. Je vous partagerais aussi, si vous
-le souhaitez, mes retours d'hôtelier, en toute discrétion.
+le souhaitez, mes retours d'hôtelier, en toute discrétion. Comme la loi le
+prévoit, l'avis préciserait simplement que la nuit m'a été offerte.
 
 Au plaisir d'échanger avec vous,
 
@@ -56,8 +57,8 @@ j'aimerais avoir votre accord pour utiliser quelques-unes de vos photos,
 créditées à votre nom. Je vous envoie volontiers la fiche pour que vous me
 disiez si elle vous convient. »
 
-La mention « séjour offert » et la liberté de l'avis s'expliquent ensuite, quand
-l'établissement propose un séjour (modèle 2).
+Le séjour proposé est toujours une **invitation** (Jules ne vient pas à ses frais) :
+le dire clairement avec « m'inviter » et « la nuit m'a été offerte », sans insister.
 
 ---
 
