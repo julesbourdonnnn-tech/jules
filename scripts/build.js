@@ -23,6 +23,31 @@ const C = require(path.join(ROOT, "js/core.js"));
 const { CONFIG, HOTELS, ENVS, TYPES, GUIDES } = C.data();
 const { escapeHtml: e, img, budgetHtml, budgetOf, distanceKm } = C;
 const SITE = CONFIG.siteUrl.replace(/\/$/, "");
+// Veille des établissements (commis) : date de vérification et actualités affichées sur les fiches
+const VEILLE = (() => { try { return JSON.parse(fs.readFileSync(path.join(ROOT, "data", "veille.json"), "utf8")).hotels || {}; } catch { return {}; } })();
+const TODAY = new Date().toISOString().slice(0, 10);
+const frDate = (iso) => new Date(`${iso}T12:00:00`).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+const NEWS_LABEL = { fermeture: "Fermeture", reouverture: "Réouverture", nouveaute: "Nouveauté", offre: "Offre en cours", evenement: "Événement", info: "Bon à savoir" };
+function liveNews(h) {
+  const old = new Date(Date.now() - 120 * 864e5).toISOString().slice(0, 10);
+  return ((VEILLE[h.id] || {}).news || [])
+    .filter((n) => (n.until ? n.until >= TODAY : n.date >= old))
+    .sort((a, b) => String(b.date).localeCompare(String(a.date)))
+    .slice(0, 4);
+}
+function newsSection(h) {
+  const list = liveNews(h);
+  if (!list.length) return "";
+  return `
+        <section class="hotel-news reveal" aria-label="Actualités de l'établissement">
+          <p class="eyebrow dark">Les actualités de l'établissement</p>
+          <ul>${list.map((n) => `
+            <li><span class="hn-type hn-${e(n.type)}">${e(NEWS_LABEL[n.type] || "Bon à savoir")}</span>
+              <p>${e(n.text)}${n.until && n.type !== "fermeture" ? ` <span class="hn-until">Jusqu'au ${e(frDate(n.until))}.</span>` : ""}</p>
+              <small>Repéré le ${e(frDate(n.date))} · <a href="${e(n.source)}" target="_blank" rel="noopener nofollow">source</a></small></li>`).join("")}
+          </ul>
+        </section>`;
+}
 const abs = (p) => `${SITE}/${p}`;
 const absImg = (p) => `${SITE}/${p}`;
 
@@ -270,6 +295,7 @@ function hotelPage(h) {
     <div class="container detail-layout">
       <article class="detail-content">
         ${h.isClosed ? `<p class="closed-banner"><strong>${e(h.closed.label || "Temporairement fermé")}</strong> ${e(h.closed.note || "")}</p>` : ""}
+        ${newsSection(h)}
         ${reviewSection(h)}
         <section id="experience">
           ${C.isTested(h) ? "" : `<p class="scout-note reveal"><strong>Repérage</strong> Je n'y ai pas encore séjourné : fiche rédigée à partir des informations de l'établissement.</p>`}
@@ -352,6 +378,7 @@ function hotelPage(h) {
         <a class="btn btn-ghost btn-block" href="${e(book)}" target="_blank" rel="noopener" ${trk}>Suivre la réouverture</a>`
           : `<a class="btn btn-primary btn-block" href="${e(book)}" target="_blank" rel="noopener" ${trk}>Réserver en direct</a>`}
         <p class="book-direct">Sur le site officiel de l'établissement : tarifs, disponibilités et conditions à jour.</p>
+        ${(VEILLE[h.id] || {}).checked ? `<p class="book-checked">✓ Informations vérifiées le ${e(frDate(VEILLE[h.id].checked))}</p>` : ""}
         <p class="book-tip"><strong>Conseil</strong> ${e(C.bookingTip(h))}</p>
         <ul class="book-perks">
           <li>✓ Réservation directe, sans intermédiaire</li>

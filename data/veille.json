@@ -1,0 +1,4 @@
+{
+  "_doc": "Veille des établissements, tenue chaque jour par les commis (voir .claude/skills/ns-commis-veille). checked = date de la dernière vérification ; news = actualités affichées sur la fiche (types : fermeture, reouverture, nouveaute, offre, evenement, info).",
+  "hotels": {}
+}
