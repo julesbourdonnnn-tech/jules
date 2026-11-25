@@ -1,4 +1,45 @@
 {
   "_doc": "Veille des établissements, tenue chaque jour par les commis (voir .claude/skills/ns-commis-veille). checked = date de la dernière vérification ; news = actualités affichées sur la fiche (types : fermeture, reouverture, nouveaute, offre, evenement, info).",
-  "hotels": {}
+  "hotels": {
+    "alpinest": {
+      "news": [],
+      "checked": "2026-11-25"
+    },
+    "auberge-saint-pierre": {
+      "news": [],
+      "checked": "2026-11-25"
+    },
+    "cabanes-des-grands-lacs": {
+      "news": [],
+      "checked": "2026-11-25"
+    },
+    "cabanes-lacustra": {
+      "news": [],
+      "checked": "2026-11-25"
+    },
+    "nids-des-vosges": {
+      "news": [],
+      "checked": "2026-11-25"
+    },
+    "cap-estel": {
+      "news": [],
+      "checked": "2026-11-25"
+    },
+    "casadelmar": {
+      "news": [],
+      "checked": "2026-11-25"
+    },
+    "chateau-d-augerville": {
+      "news": [],
+      "checked": "2026-11-25"
+    },
+    "chateau-de-la-resle": {
+      "news": [],
+      "checked": "2026-11-25"
+    },
+    "chateau-de-la-treyne": {
+      "news": [],
+      "checked": "2026-11-25"
+    }
+  }
 }
