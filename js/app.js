@@ -569,20 +569,24 @@
   }
 
 
-  /* ---------- Le mot de Jules : mes derniers séjours testés ---------- */
+  /* ---------- Les derniers séjours testés ---------- */
   function renderTested() {
-    const box = $("#jules-tested-list");
+    const box = $("#tested-grid");
     if (!box) return;
-    const { isTested, reviewScore, reviewDate, fmtScore } = window.NS;
+    const { isTested, reviewScore, fmtScore } = window.NS;
     const list = HOTELS.filter(isTested).sort((a, b) => String(b.review.date).localeCompare(String(a.review.date))).slice(0, 4);
-    if (!list.length) { box.closest(".jules-tested").hidden = true; return; }
+    if (!list.length) { box.closest("section").hidden = true; return; }
     box.innerHTML = list.map((h) => {
-      const sc = reviewScore(h);
-      return `<li><a href="${url(h)}#avis">
-        <img src="${img(h.images[0], 400)}" alt="" loading="lazy" width="88" height="88">
-        <span class="jt-txt"><strong>${escapeHtml(h.name)}</strong><span>${escapeHtml(h.city)} · ${escapeHtml(reviewDate(h))}</span>${h.review.title ? `<em>${escapeHtml(h.review.title)}</em>` : ""}</span>
-        ${sc != null ? `<b class="jt-score">${fmtScore(sc)}</b>` : ""}
-      </a></li>`;
+      const sc = reviewScore(h), R = h.review;
+      return `<a class="pro-example" href="${url(h)}#avis">
+        <span class="pro-ex-img"><img src="${img(h.images[0], 600)}" alt="" loading="lazy">${sc != null ? `<b>${fmtScore(sc)}<small>/10</small></b>` : ""}</span>
+        <span class="pro-ex-body">
+          <span class="pro-ex-meta">${escapeHtml(h.name)} · ${escapeHtml(h.city)}</span>
+          <strong>${escapeHtml(R.title || R.verdict || "")}</strong>
+          ${R.moment ? `<em>« ${escapeHtml(R.moment)} »</em>` : ""}
+          <span class="pro-ex-link">Lire l'avis →</span>
+        </span>
+      </a>`;
     }).join("");
   }
 

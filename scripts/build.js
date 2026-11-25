@@ -667,9 +667,8 @@ function homeHead() {
     "@type": "WebSite",
     name: CONFIG.siteName,
     url: `${SITE}/`,
-    description: "Le carnet de Jules Bourdon, hôtelier : les hôtels les plus singuliers de France, repérés et testés.",
+    description: "Les hôtels les plus singuliers de France, choisis un à un, repérés et testés.",
     inLanguage: "fr-FR",
-    alternateName: "Le carnet d'un hôtelier",
     potentialAction: { "@type": "SearchAction", target: `${SITE}/index.html?q={search_term_string}#explorer`, "query-input": "required name=search_term_string" },
   })}
   ${jsonLd({

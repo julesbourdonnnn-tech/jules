@@ -1303,7 +1303,6 @@ body.has-compare .site-footer { padding-bottom: 110px; }
 .hero-byline img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid rgba(255,255,255,.7); flex: none; }
 .hero-byline strong { font-weight: 600; }
 .jules { display: grid; grid-template-columns: minmax(200px, 300px) 1fr; gap: 64px; align-items: center; }
-#le-mot { grid-template-columns: 1.15fr 1fr; align-items: start; padding-top: clamp(48px, 6vw, 80px); padding-bottom: clamp(48px, 6vw, 80px); }
 .jules-tested { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: 24px; box-shadow: var(--shadow); }
 .jules-tested ul { list-style: none; margin: 10px 0 18px; padding: 0; display: grid; }
 .jules-tested li + li { border-top: 1px solid var(--line); }
@@ -1500,8 +1499,6 @@ body.has-compare .site-footer { padding-bottom: 110px; }
 /* « Le mot de Jules » sans photo (le portrait est réservé à « Qui suis-je ») */
 .jules { grid-template-columns: 1fr; justify-items: start; }
 .jules-text { max-width: 760px; }
-#le-mot { grid-template-columns: 1.15fr 1fr; justify-items: stretch; gap: clamp(32px, 5vw, 64px); }
-@media (max-width: 900px) { #le-mot { grid-template-columns: 1fr; } }
 @media (max-width: 600px) { .jules-tested { padding: 18px 16px; } .jules-tested li a { grid-template-columns: 60px 1fr auto; gap: 12px; } .jules-tested img { width: 60px; height: 60px; } }
 .byline { gap: 0; }
 
@@ -1616,3 +1613,4 @@ body.has-compare .site-footer { padding-bottom: 110px; }
 .book-closed { margin: 0 0 12px; padding: 10px 14px; border-radius: 12px; background: #fbeee6; color: #a3402a; font-weight: 600; font-size: .92rem; text-align: center; }
 .g-status { display: inline-block; margin-left: 8px; padding: 3px 9px; border-radius: 999px; background: var(--cream); border: 1px solid var(--line); color: var(--muted); font-size: .68rem; letter-spacing: .08em; vertical-align: 1px; text-decoration: none; }
 .g-status.g-tested { background: var(--forest); border-color: var(--forest); color: #fff; }
+.tested-home { padding-top: clamp(48px, 6vw, 80px); padding-bottom: clamp(40px, 5vw, 64px); }
