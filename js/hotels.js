@@ -581,7 +581,8 @@ window.HOTELS = [
     rooms: "25 chambres et 5 suites",
     forYou: ["Vous aimez le vin et les châteaux perchés", "Vous voyagez avec votre chien"],
     notForYou: ["Vous cherchez un séjour à petit budget", "Vous voulez un lieu très contemporain"],
-    photos: 4, website: "https://chateaudemercues.com/", tags: ["chien"],
+    photos: 0, // photos de sites tiers retirées : fiche masquée en attendant les photos de l'établissement
+    website: "https://chateaudemercues.com/", tags: ["chien"],
   },
   {
     id: "sources-de-caudalie",
