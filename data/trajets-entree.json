@@ -1,0 +1,547 @@
+{
+ "alpinest": {
+  "lat": 44.4286,
+  "lng": 5.7178,
+  "gare": {
+   "nom": "Serres",
+   "lat": 44.428,
+   "lng": 5.716
+  }
+ },
+ "auberge-saint-pierre": {
+  "lat": 48.6358,
+  "lng": -1.5105,
+  "gare": {
+   "nom": "Rennes",
+   "lat": 48.103,
+   "lng": -1.672
+  }
+ },
+ "bulles-de-savoie": {
+  "lat": 45.7236,
+  "lng": 5.7361,
+  "gare": {
+   "nom": "Aix-les-Bains-Le Revard",
+   "lat": 45.689,
+   "lng": 5.916
+  }
+ },
+ "cabane-du-perche": {
+  "lat": 48.5042,
+  "lng": 0.6056,
+  "gare": {
+   "nom": "Nogent-le-Rotrou",
+   "lat": 48.32,
+   "lng": 0.82
+  }
+ },
+ "cabanes-de-blanche": {
+  "lat": 50.1936,
+  "lng": 2.6044,
+  "gare": {
+   "nom": "Arras",
+   "lat": 50.286,
+   "lng": 2.781
+  }
+ },
+ "cabanes-des-grands-lacs": {
+  "lat": 47.5333,
+  "lng": 6.3333,
+  "gare": {
+   "nom": "Besançon-Viotte",
+   "lat": 47.247,
+   "lng": 6.022
+  }
+ },
+ "cabanes-du-goutty": {
+  "lat": 48.4953,
+  "lng": 7.1675,
+  "gare": {
+   "nom": "Rothau",
+   "lat": 48.47,
+   "lng": 7.205
+  }
+ },
+ "cabanes-du-moulin": {
+  "lat": 48.9028,
+  "lng": 3.2331,
+  "gare": {
+   "nom": "La Ferté-sous-Jouarre",
+   "lat": 48.949,
+   "lng": 3.127
+  }
+ },
+ "cabanes-lacustra": {
+  "lat": 45.83,
+  "lng": 2.44,
+  "gare": {
+   "nom": "Clermont-Ferrand",
+   "lat": 45.779,
+   "lng": 3.099
+  }
+ },
+ "cap-estel": {
+  "lat": 43.7195,
+  "lng": 7.37,
+  "gare": {
+   "nom": "Èze-sur-Mer",
+   "lat": 43.727,
+   "lng": 7.362
+  }
+ },
+ "casadelmar": {
+  "lat": 41.6166,
+  "lng": 9.3155,
+  "gare": null
+ },
+ "chateau-d-augerville": {
+  "lat": 48.2496,
+  "lng": 2.4286,
+  "gare": {
+   "nom": "Malesherbes",
+   "lat": 48.289,
+   "lng": 2.405
+  }
+ },
+ "chateau-de-la-resle": {
+  "lat": 47.8628,
+  "lng": 3.6817,
+  "gare": {
+   "nom": "Auxerre-Saint-Gervais",
+   "lat": 47.791,
+   "lng": 3.573
+  }
+ },
+ "chateau-de-la-treyne": {
+  "lat": 44.8531,
+  "lng": 1.5236,
+  "gare": {
+   "nom": "Souillac",
+   "lat": 44.894,
+   "lng": 1.487
+  }
+ },
+ "cour-des-loges": {
+  "lat": 45.7631,
+  "lng": 4.8271,
+  "gare": {
+   "nom": "Lyon Part-Dieu",
+   "lat": 45.76,
+   "lng": 4.86
+  }
+ },
+ "demeure-de-la-vignole": {
+  "lat": 47.2236,
+  "lng": 0.0292,
+  "gare": {
+   "nom": "Saumur",
+   "lat": 47.256,
+   "lng": -0.077
+  }
+ },
+ "dihan": {
+  "lat": 47.6509,
+  "lng": -3.0718,
+  "gare": {
+   "nom": "Auray",
+   "lat": 47.666,
+   "lng": -2.982
+  }
+ },
+ "domaine-de-murtoli": {
+  "lat": 41.526,
+  "lng": 8.856,
+  "gare": {
+   "nom": "Ajaccio",
+   "lat": 41.92,
+   "lng": 8.73
+  }
+ },
+ "domaine-des-etangs": {
+  "lat": 45.7797,
+  "lng": 0.6508,
+  "gare": {
+   "nom": "Angoulême",
+   "lat": 45.652,
+   "lng": 0.168
+  }
+ },
+ "domaine-du-chatelet": {
+  "lat": 47.8969,
+  "lng": 6.7422,
+  "gare": {
+   "nom": "Remiremont",
+   "lat": 48.016,
+   "lng": 6.59
+  }
+ },
+ "ecrin-d-auvergne": {
+  "lat": 45.3958,
+  "lng": 2.5686,
+  "gare": {
+   "nom": "Ussel",
+   "lat": 45.548,
+   "lng": 2.309
+  }
+ },
+ "etape-en-foret": {
+  "lat": 48.8325,
+  "lng": -1.0356,
+  "gare": {
+   "nom": "Caen",
+   "lat": 49.176,
+   "lng": -0.346
+  }
+ },
+ "fermes-de-marie": {
+  "lat": 45.8567,
+  "lng": 6.6175,
+  "gare": {
+   "nom": "Saint-Gervais-les-Bains-Le Fayet",
+   "lat": 45.907,
+   "lng": 6.7
+  }
+ },
+ "fontevraud-l-ermitage": {
+  "lat": 47.1817,
+  "lng": 0.0514,
+  "gare": {
+   "nom": "Saumur",
+   "lat": 47.256,
+   "lng": -0.077
+  }
+ },
+ "gare-de-guiscriff": {
+  "lat": 48.0497,
+  "lng": -3.6436,
+  "gare": {
+   "nom": "Lorient",
+   "lat": 47.753,
+   "lng": -3.364
+  }
+ },
+ "grand-controle-versailles": {
+  "lat": 48.8027,
+  "lng": 2.1203,
+  "gare": {
+   "nom": "Versailles-Château-Rive-Gauche",
+   "lat": 48.797,
+   "lng": 2.126
+  }
+ },
+ "grand-pavillon-chantilly": {
+  "lat": 49.1958,
+  "lng": 2.4947,
+  "gare": {
+   "nom": "Chantilly-Gouvieux",
+   "lat": 49.194,
+   "lng": 2.462
+  }
+ },
+ "hotel-de-la-cite-carcassonne": {
+  "lat": 43.206,
+  "lng": 2.3635,
+  "gare": {
+   "nom": "Carcassonne",
+   "lat": 43.215,
+   "lng": 2.351
+  }
+ },
+ "hotel-le-corbusier": {
+  "lat": 43.2613,
+  "lng": 5.3962,
+  "gare": {
+   "nom": "Marseille Saint-Charles",
+   "lat": 43.303,
+   "lng": 5.38
+  }
+ },
+ "hotel-particulier-montmartre": {
+  "lat": 48.8883,
+  "lng": 2.3353,
+  "gare": {
+   "nom": "Paris-Nord",
+   "lat": 48.881,
+   "lng": 2.355
+  }
+ },
+ "ile-louet": {
+  "lat": 48.672,
+  "lng": -3.889,
+  "gare": {
+   "nom": "Morlaix",
+   "lat": 48.58,
+   "lng": -3.827
+  }
+ },
+ "intercontinental-lyon-hotel-dieu": {
+  "lat": 45.7597,
+  "lng": 4.8367,
+  "gare": {
+   "nom": "Lyon-Part-Dieu",
+   "lat": 45.76,
+   "lng": 4.859
+  }
+ },
+ "la-coorniche": {
+  "lat": 44.5808,
+  "lng": -1.209,
+  "gare": {
+   "nom": "Arcachon",
+   "lat": 44.659,
+   "lng": -1.168
+  }
+ },
+ "landifornia-lodge": {
+  "lat": 43.5822,
+  "lng": -1.2689,
+  "gare": {
+   "nom": "Dax",
+   "lat": 43.708,
+   "lng": -1.054
+  }
+ },
+ "le-donjon-etretat": {
+  "lat": 49.7095,
+  "lng": 0.2113,
+  "gare": {
+   "nom": "Le Havre",
+   "lat": 49.493,
+   "lng": 0.123
+  }
+ },
+ "les-hautes-roches": {
+  "lat": 47.413,
+  "lng": 0.7558,
+  "gare": {
+   "nom": "Tours",
+   "lat": 47.388,
+   "lng": 0.694
+  }
+ },
+ "les-roches-rouges": {
+  "lat": 43.4213,
+  "lng": 6.8467,
+  "gare": {
+   "nom": "Saint-Raphaël-Valescure",
+   "lat": 43.422,
+   "lng": 6.771
+  }
+ },
+ "lieu-dieu": {
+  "lat": 50.0133,
+  "lng": 1.5186,
+  "gare": {
+   "nom": "Abbeville",
+   "lat": 50.104,
+   "lng": 1.827
+  }
+ },
+ "loire-valley-lodges": {
+  "lat": 47.2856,
+  "lng": 0.7858,
+  "gare": {
+   "nom": "Saint-Pierre-des-Corps (Tours)",
+   "lat": 47.388,
+   "lng": 0.723
+  }
+ },
+ "maison-souquet": {
+  "lat": 48.8836,
+  "lng": 2.3317,
+  "gare": {
+   "nom": "Paris-Saint-Lazare",
+   "lat": 48.876,
+   "lng": 2.325
+  }
+ },
+ "molitor": {
+  "lat": 48.8455,
+  "lng": 2.2527,
+  "gare": {
+   "nom": "Paris-Montparnasse",
+   "lat": 48.841,
+   "lng": 2.32
+  }
+ },
+ "moulin-du-roc": {
+  "lat": 45.395,
+  "lng": 0.698,
+  "gare": {
+   "nom": "Périgueux",
+   "lat": 45.185,
+   "lng": 0.72
+  }
+ },
+ "nids-de-chlorofil": {
+  "lat": 50.4933,
+  "lng": 3.0419,
+  "gare": {
+   "nom": "Lille-Flandres",
+   "lat": 50.636,
+   "lng": 3.07
+  }
+ },
+ "nids-des-vosges": {
+  "lat": 48.1356,
+  "lng": 6.7572,
+  "gare": {
+   "nom": "Épinal",
+   "lat": 48.178,
+   "lng": 6.449
+  }
+ },
+ "off-paris-seine": {
+  "lat": 48.8413,
+  "lng": 2.3698,
+  "gare": {
+   "nom": "Paris-Austerlitz",
+   "lat": 48.842,
+   "lng": 2.366
+  }
+ },
+ "parister": {
+  "lat": 48.8747,
+  "lng": 2.3447,
+  "gare": {
+   "nom": "Paris Gare du Nord",
+   "lat": 48.881,
+   "lng": 2.355
+  }
+ },
+ "pella-roca": {
+  "lat": 44.1333,
+  "lng": 1.6167,
+  "gare": {
+   "nom": "Caussade",
+   "lat": 44.163,
+   "lng": 1.538
+  }
+ },
+ "phare-de-kerbel": {
+  "lat": 47.7093,
+  "lng": -3.3378,
+  "gare": {
+   "nom": "Lorient",
+   "lat": 47.753,
+   "lng": -3.366
+  }
+ },
+ "pic-du-midi": {
+  "lat": 42.9366,
+  "lng": 0.1411,
+  "gare": {
+   "nom": "Tarbes",
+   "lat": 43.236,
+   "lng": 0.071
+  }
+ },
+ "refuge-chez-la-tante": {
+  "lat": 45.862,
+  "lng": 6.648,
+  "gare": {
+   "nom": "Saint-Gervais-Le Fayet",
+   "lat": 45.907,
+   "lng": 6.7
+  }
+ },
+ "refuge-de-la-traye": {
+  "lat": 45.425,
+  "lng": 6.56,
+  "gare": {
+   "nom": "Moûtiers-Salins-Brides-les-Bains",
+   "lat": 45.486,
+   "lng": 6.531
+  }
+ },
+ "refuge-de-solaise": {
+  "lat": 45.4337,
+  "lng": 6.9929,
+  "gare": {
+   "nom": "Bourg-Saint-Maurice",
+   "lat": 45.618,
+   "lng": 6.769
+  }
+ },
+ "refuge-du-montenvers": {
+  "lat": 45.929,
+  "lng": 6.918,
+  "gare": {
+   "nom": "Chamonix-Mont-Blanc",
+   "lat": 45.923,
+   "lng": 6.87
+  }
+ },
+ "relais-de-chambord": {
+  "lat": 47.6163,
+  "lng": 1.5155,
+  "gare": {
+   "nom": "Blois-Chambord",
+   "lat": 47.585,
+   "lng": 1.34
+  }
+ },
+ "rocaminori": {
+  "lat": 47.2436,
+  "lng": -0.3197,
+  "gare": {
+   "nom": "Saumur",
+   "lat": 47.256,
+   "lng": -0.077
+  }
+ },
+ "sources-de-caudalie": {
+  "lat": 44.7358,
+  "lng": -0.5561,
+  "gare": {
+   "nom": "Bordeaux Saint-Jean",
+   "lat": 44.826,
+   "lng": -0.556
+  }
+ },
+ "toue-cabanee-canal-de-bourgogne": {
+  "lat": 47.463,
+  "lng": 4.447,
+  "gare": {
+   "nom": "Les Laumes-Alésia",
+   "lat": 47.538,
+   "lng": 4.465
+  }
+ },
+ "troglododo": {
+  "lat": 47.2597,
+  "lng": 0.4656,
+  "gare": {
+   "nom": "Azay-le-Rideau",
+   "lat": 47.262,
+   "lng": 0.466
+  }
+ },
+ "villa-la-coste": {
+  "lat": 43.6397,
+  "lng": 5.4069,
+  "gare": {
+   "nom": "Aix-en-Provence TGV",
+   "lat": 43.455,
+   "lng": 5.317
+  }
+ },
+ "villa-rene-lalique": {
+  "lat": 48.9186,
+  "lng": 7.3717,
+  "gare": {
+   "nom": "Saverne",
+   "lat": 48.743,
+   "lng": 7.356
+  }
+ },
+ "village-igloo-val-thorens": {
+  "lat": 45.298,
+  "lng": 6.58,
+  "gare": {
+   "nom": "Moûtiers-Salins-Brides-les-Bains",
+   "lat": 45.487,
+   "lng": 6.532
+  }
+ }
+}

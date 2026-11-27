@@ -9,7 +9,14 @@
   const url = (h) => window.NS.hotelUrl(h);
   const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  const state = { q: "", env: "", type: "", budget: "", tag: "", sort: "featured", radius: "", view: "grid", loc: getUserLocation() };
+  const state = { q: "", env: "", type: "", budget: "", tag: "", from: "", trip: "", equip: "", sort: "featured", radius: "", view: "grid", loc: getUserLocation() };
+  const TRIPS = { "train-90": "Moins de 1 h 30 en train", "train-120": "Moins de 2 h en train", "train-180": "Moins de 3 h en train", "voiture-90": "Moins de 1 h 30 en voiture", "voiture-120": "Moins de 2 h en voiture", "voiture-180": "Moins de 3 h en voiture" };
+  const tripOf = (h) => {
+    if (!state.trip) return null;
+    const [mode, max] = state.trip.split("-");
+    const m = window.NS.tripMinutes(h, state.from || "paris", mode);
+    return m != null && m <= Number(max) ? m : null;
+  };
 
   // Sélection mise en avant : mes coups de cœur éditoriaux
   const FEATURED = HOTELS.filter((h) => h.featured);
@@ -24,12 +31,18 @@
     state.type = TYPES[p.get("type")] ? p.get("type") : "";
     state.budget = BUDGETS[p.get("budget")] ? p.get("budget") : "";
     state.tag = TAGS[p.get("envie")] ? p.get("envie") : "";
+    state.from = window.NS.FROM[p.get("depart")] ? p.get("depart") : "";
+    state.trip = TRIPS[p.get("trajet")] ? p.get("trajet") : "";
+    state.equip = window.NS.EQUIP[p.get("equip")] ? p.get("equip") : "";
     state.sort = p.get("sort") || (state.loc ? "distance" : "featured");
   }
   function writeUrl() {
     const p = new URLSearchParams();
     ["q", "env", "type", "budget"].forEach((k) => state[k] && p.set(k, state[k]));
     if (state.tag) p.set("envie", state.tag);
+    if (state.from) p.set("depart", state.from);
+    if (state.trip) p.set("trajet", state.trip);
+    if (state.equip) p.set("equip", state.equip);
     if (state.sort !== "featured" && state.sort !== "distance") p.set("sort", state.sort);
     const qs = p.toString();
     history.replaceState(null, "", `${location.pathname}${qs ? "?" + qs : ""}${location.hash}`);
@@ -324,6 +337,8 @@
       (!state.type || h.type === state.type) &&
       (!state.budget || String(h.budget) === state.budget) &&
       (!state.tag || tagsOf(h).includes(state.tag)) &&
+      (!state.trip || tripOf(h) != null) &&
+      (!state.equip || window.NS.equipOf(h).includes(state.equip)) &&
       (!q || normalize([h.name, h.city, h.department, h.region, h.tagline, TYPES[h.type].label, ENVS[h.env].label].join(" ")).includes(q)) &&
       (!state.loc || !state.radius || dist <= Number(state.radius))
     );
@@ -335,6 +350,7 @@
       distance: (a, b) => (a.dist ?? 0) - (b.dist ?? 0),
       name: (a, b) => a.h.name.localeCompare(b.h.name, "fr"),
     };
+    if (state.trip && state.sort === "featured") return list.sort((a, b) => tripOf(a.h) - tripOf(b.h));
     return list.sort(sorters[state.sort] || sorters.featured);
   }
 
@@ -346,6 +362,11 @@
     $("#f-tag").innerHTML = opt("", "Toutes") + Object.entries(TAGS)
       .filter(([k]) => HOTELS.some((h) => tagsOf(h).includes(k)))
       .map(([k, t]) => opt(k, t.short)).join("");
+    $("#f-from").innerHTML = opt("", "Paris") + Object.entries(window.NS.FROM).filter(([k]) => k !== "paris").map(([k, c]) => opt(k, c)).join("");
+    $("#f-trip").innerHTML = opt("", "Peu importe") + Object.entries(TRIPS).map(([k, l]) => opt(k, l)).join("");
+    $("#f-equip").innerHTML = opt("", "Peu importe") + Object.entries(window.NS.EQUIP)
+      .filter(([k]) => HOTELS.filter((h) => window.NS.equipOf(h).includes(k)).length >= 3)
+      .map(([k, q]) => opt(k, `${q.icon} ${q.label}`)).join("");
   }
 
   function syncControls(n) {
@@ -356,6 +377,9 @@
     $("#f-type").value = state.type;
     $("#f-budget").value = state.budget;
     $("#f-tag").value = state.tag || "";
+    $("#f-from").value = state.from || "";
+    $("#f-trip").value = state.trip || "";
+    $("#f-equip").value = state.equip || "";
     const chip = (key, label) => `<button type="button" class="finder-chip" data-clear="${key}" aria-label="Retirer le filtre ${escapeHtml(label)}">${escapeHtml(label)}<span aria-hidden="true">×</span></button>`;
     $("#f-active").innerHTML = [
       state.q.trim() && chip("q", `« ${state.q.trim()} »`),
@@ -363,6 +387,8 @@
       state.type && chip("type", TYPES[state.type].label),
       state.budget && chip("budget", `${"€".repeat(state.budget)} · ${BUDGETS[state.budget].short}`),
       state.tag && chip("tag", TAGS[state.tag].short),
+      state.trip && chip("trip", `${TRIPS[state.trip]} depuis ${window.NS.FROM[state.from || "paris"]}`),
+      state.equip && chip("equip", window.NS.EQUIP[state.equip].label),
       state.radius && chip("radius", `Moins de ${state.radius} km`),
     ].filter(Boolean).join("");
     $("#near-radius").value = state.radius;
@@ -375,7 +401,7 @@
     $("#near-box").classList.toggle("active", !!state.loc);
     if (state.loc) setNearOpen(true);
     $("#near-toggle").classList.toggle("is-on", !!state.loc);
-    const active = state.q || state.env || state.type || state.budget || state.tag || state.radius;
+    const active = state.q || state.env || state.type || state.budget || state.tag || state.trip || state.equip || state.radius;
     $("#reset-top").hidden = !active;
     $("#results-count").innerHTML = `<strong>${n}</strong> adresse${n > 1 ? "s" : ""}`;
   }
@@ -396,7 +422,12 @@
     if (state.view === "grid") {
       const grid = $("#results");
       grid.classList.remove("refresh"); void grid.offsetWidth; grid.classList.add("refresh");
-      grid.innerHTML = list.map(({ h, dist }) => card(h, { dist, reveal: false })).join("");
+      grid.innerHTML = list.map(({ h, dist }) => {
+        const m = tripOf(h);
+        const city = window.NS.FROM[state.from || "paris"];
+        const trip = m != null ? (m === 0 ? `📍 En plein ${city}` : `${state.trip.startsWith("train") ? "🚆" : "🚗"} ${window.NS.fmtDuree(m)} depuis ${city}`) : "";
+        return card(h, { dist, reveal: false, trip });
+      }).join("");
       syncCompare();
     } else renderMap(list);
   }
@@ -526,6 +557,9 @@
     $("#f-type").addEventListener("change", (e) => { state.type = e.target.value; render(); });
     $("#f-budget").addEventListener("change", (e) => { state.budget = e.target.value; render(); });
     $("#f-tag").addEventListener("change", (e) => { state.tag = e.target.value; render(); });
+    $("#f-from").addEventListener("change", (e) => { state.from = e.target.value; render(); });
+    $("#f-trip").addEventListener("change", (e) => { state.trip = e.target.value; render(); });
+    $("#f-equip").addEventListener("change", (e) => { state.equip = e.target.value; render(); });
     $("#near-toggle").addEventListener("click", () => {
       const open = !$("#near-box").classList.contains("open");
       setNearOpen(open);
@@ -553,7 +587,7 @@
       document.querySelectorAll(".view-toggle button").forEach((x) => { x.classList.toggle("active", x === b); x.setAttribute("aria-selected", x === b); });
       render();
     }));
-    const reset = () => { Object.assign(state, { q: "", env: "", type: "", budget: "", tag: "", radius: "", sort: state.loc ? "distance" : "featured" }); render(); };
+    const reset = () => { Object.assign(state, { q: "", env: "", type: "", budget: "", tag: "", from: "", trip: "", equip: "", radius: "", sort: state.loc ? "distance" : "featured" }); render(); };
     $("#reset").addEventListener("click", reset);
     $("#reset-top").addEventListener("click", reset);
 
@@ -562,7 +596,7 @@
       const a = e.target.closest(".env-panel, .type-card");
       if (!a) return;
       e.preventDefault();
-      Object.assign(state, { env: a.dataset.env || "", type: a.dataset.type || "", q: "", budget: "", tag: "" });
+      Object.assign(state, { env: a.dataset.env || "", type: a.dataset.type || "", q: "", budget: "", tag: "", trip: "", equip: "" });
       render();
       $("#explorer").scrollIntoView({ behavior: "smooth" });
     });

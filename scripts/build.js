@@ -21,6 +21,56 @@ for (const f of ["js/config.js", "js/hotels.js", "js/guides.js"]) require(path.j
 const C = require(path.join(ROOT, "js/core.js"));
 
 const { CONFIG, HOTELS, ENVS, TYPES, GUIDES } = C.data();
+
+/* ---------- Équipements et trajets ----------
+ * data/hotels-infos.json (équipements vérifiés, gare, trains sourcés) + data/trajets-voiture.json
+ * (temps en voiture calculés par la GitHub Action « Trajets »). Joints à chaque fiche et recopiés
+ * dans js/hotels.js (window.HOTEL_INFOS) pour les filtres du navigateur. */
+const readJson = (rel, fallback) => { try { return JSON.parse(fs.readFileSync(path.join(ROOT, rel), "utf8")); } catch { return fallback; } };
+const INFOS = readJson("data/hotels-infos.json", { hotels: {} }).hotels || {};
+const ROUTES = readJson("data/trajets-voiture.json", {});
+const CORSE = (i) => /corse/i.test(i.acces || "");
+const HOTEL_CITY = Object.fromEntries(HOTELS.concat(global.HOTELS_CLOSED || []).map((h) => [h.id, h.city]));
+function compactInfos(id) {
+  const i = INFOS[id];
+  if (!i) return null;
+  const r = ROUTES[id] || {};
+  const out = { e: i.equip || [] };
+  const t = {};
+  for (const c of ["paris", "lyon", "bordeaux"]) {
+    const tr = (i.train || {})[c];
+    const inTown = tr && tr.min === 0 && (HOTEL_CITY[id] || "") === C.FROM[c];
+    if (tr && typeof tr.min === "number") t[c] = [tr.min, !inTown && typeof r.gare === "number" ? r.gare : 0, tr.sur ? 1 : 0];
+  }
+  if (Object.keys(t).length) out.t = t;
+  if (!CORSE(i)) {
+    const v = {};
+    for (const c of ["paris", "lyon", "bordeaux"]) if (typeof r[c] === "number") v[c] = r[c];
+    if (Object.keys(v).length) out.v = v;
+  }
+  return out;
+}
+for (const h of HOTELS.concat(global.HOTELS_CLOSED || [])) h.infos = compactInfos(h.id);
+function writeInfosBlock() {
+  const file = path.join(ROOT, "js/hotels.js");
+  const src = fs.readFileSync(file, "utf8");
+  const ids = Object.keys(INFOS).sort();
+  const obj = {};
+  for (const id of ids) { const c = compactInfos(id); if (c) obj[id] = c; }
+  const block = `window.HOTEL_INFOS = ${JSON.stringify(obj)};`;
+  const next = src.replace(/(\/\* build:infos:end \*\/)/, "$1").replace(/window\.HOTEL_INFOS = [\s\S]*?;\n\/\* build:infos:end \*\//, `${block}\n/* build:infos:end */`);
+  if (next !== src) fs.writeFileSync(file, next);
+  return next !== src;
+}
+// Entrée du calcul des temps en voiture (GitHub Action « Trajets »)
+function writeRouteInput() {
+  const ent = {};
+  for (const h of HOTELS.concat(global.HOTELS_CLOSED || []).sort((a, b) => a.id.localeCompare(b.id))) {
+    const i = INFOS[h.id] || {};
+    ent[h.id] = { lat: h.lat, lng: h.lng, gare: i.gare || null };
+  }
+  return write("data/trajets-entree.json", JSON.stringify(ent, null, 1) + "\n");
+}
 const { escapeHtml: e, img, budgetHtml, budgetOf, distanceKm } = C;
 const SITE = CONFIG.siteUrl.replace(/\/$/, "");
 // Veille des établissements (commis) : date de vérification et actualités affichées sur les fiches
@@ -131,11 +181,97 @@ function hotelFaq(h) {
     [`Quel type d'hébergement propose ${h.name} ?`, `${T.label} : ${h.rooms.charAt(0).toLowerCase()}${h.rooms.slice(1)}.${h.amenities.length ? ` Sur place : ${h.amenities.slice(0, 5).join(", ").toLowerCase()}.` : ""}`],
     [`Quand réserver ?`, `${C.bookingTip(h)}${h.season ? ` À noter : ${h.season.charAt(0).toLowerCase()}${h.season.slice(1)}.` : ""}`],
   ];
+  {
+    const tp = C.tripMinutes(h, "paris", "train"), cp = C.tripMinutes(h, "paris", "voiture");
+    const I = INFOS[h.id] || {};
+    if (tp || cp) faq.splice(1, 0, [`Comment aller à ${h.name} depuis Paris ?`, [
+      tp ? `En train, comptez ${(I.train && I.train.paris && I.train.paris.sur) ? "" : "environ "}${C.fmtDuree(tp)} jusqu'à l'établissement (train jusqu'à ${I.gare ? I.gare.nom : "la gare la plus proche"}, puis taxi ou voiture).` : "",
+      cp ? `En voiture, environ ${C.fmtDuree(cp)} hors embouteillages.` : "",
+      I.acces ? `À noter : ${I.acces.charAt(0).toLowerCase()}${I.acces.slice(1)}.` : "",
+    ].filter(Boolean).join(" ")]);
+  }
   if (tags.includes("chien")) faq.push([`Les chiens sont-ils acceptés à ${h.name} ?`, "Oui, les chiens sont les bienvenus, généralement avec un supplément par nuit et parfois dans certaines chambres seulement : signalez-le au moment de la réservation."]);
   if (tags.includes("famille")) faq.push([`Peut-on y séjourner en famille ou entre amis ?`, `Oui : ${h.rooms.charAt(0).toLowerCase()}${h.rooms.slice(1)}. Vérifiez la capacité de chaque hébergement et l'âge minimum éventuel au moment de réserver.`]);
   if (tags.includes("train")) faq.push([`Peut-on y aller sans voiture ?`, `Oui, ${h.name} est accessible en train puis en transports en commun (métro, bus, navette ou train de montagne selon le cas). Vérifiez les horaires, surtout le soir.`]);
   if (tags.includes("spa-prive")) faq.push([`Y a-t-il un spa ou un jacuzzi privatif ?`, `Oui : ${h.amenities.filter((a) => /privati/i.test(a)).join(", ").toLowerCase() || "certains hébergements disposent d'un espace de bien-être privatif"}.`]);
   return faq;
+}
+
+/* « Sur place » : équipements vérifiés (data/hotels-infos.json) */
+function equipBlock(h) {
+  const eq = C.equipOf(h);
+  if (!eq.length) return "";
+  const I = INFOS[h.id] || {};
+  return `<div class="equip reveal"><p class="eyebrow dark">Sur place</p><ul>${eq.map((k) => `<li><span aria-hidden="true">${C.EQUIP[k].icon}</span>${e(C.EQUIP[k].label)}${k === "restaurant" && I.restaurant ? ` <small>(${e(I.restaurant)})</small>` : ""}</li>`).join("")}</ul></div>`;
+}
+
+/* Équipements du texte de la fiche qui ne répètent pas une pastille « Sur place » */
+function amenitiesLeft(h) {
+  const eq = C.equipOf(h);
+  if (!eq.length) return h.amenities;
+  const same = new Set(eq.map((k) => C.EQUIP[k].label.toLowerCase()).concat(eq.includes("sauna") ? ["sauna", "hammam", "sauna et hammam"] : []));
+  return h.amenities.filter((a) => !same.has(a.trim().toLowerCase()));
+}
+
+/* « Comment venir » : train (durée sourcée + dernier trajet) et voiture, depuis Paris, Lyon, Bordeaux */
+function accessSection(h) {
+  const I = INFOS[h.id];
+  if (!I) return "";
+  const r = ROUTES[h.id] || {};
+  const g = I.gare && I.gare.nom;
+  let filled = 0;
+  const rows = Object.entries(C.FROM).map(([c, city]) => {
+    const tr = (I.train || {})[c];
+    const leg = typeof r.gare === "number" ? r.gare : null;
+    let train = "—";
+    if (tr && tr.min === 0) {
+      train = h.city === city
+        ? `<strong>Dans ${e(city)}</strong><small>métro, tram ou taxi</small>`
+        : `<strong>${leg ? e(C.fmtDuree(leg)) : `Près de ${e(city)}`}</strong><small>${leg ? `de route depuis la gare de ${e(g)}` : `gare de ${e(g)}`}</small>`;
+    } else if (tr && typeof tr.min === "number") {
+      const total = tr.min + (leg || 0);
+      const toParis = /^paris/i.test(g || "") && c !== "paris";
+      const detail = toParis
+        ? `${C.fmtDuree(tr.min)} de train jusqu'à Paris${/changement|correspondance/i.test(tr.via || "") ? ", changement de gare compris" : ""}${leg ? `, puis ${C.fmtDuree(leg)} en ville` : ""}`
+        : `${C.fmtDuree(tr.min)} de train jusqu'à ${g}${leg ? `, puis ${C.fmtDuree(leg)} de route` : ""}`;
+      train = `<strong>${tr.sur ? "" : "environ "}${C.fmtDuree(total)}</strong><small>${e(detail)}</small>`;
+    } else if (g && !tr && (h.city === city || (c === "paris" && /^paris/i.test(g)) || (c === "lyon" && /^lyon/i.test(g)) || (c === "bordeaux" && /^bordeaux/i.test(g)))) {
+      train = `<strong>Sur place</strong><small>${leg ? `${e(C.fmtDuree(leg))} depuis la gare de ${e(g)}` : `gare de ${e(g)}`}</small>`;
+    }
+    const car = !CORSE(I) && typeof r[c] === "number" ? (h.city === city ? `<strong>Dans ${e(city)}</strong>` : `<strong>${C.fmtDuree(r[c])}</strong>`) : "—";
+    if (train !== "—" || car !== "—") filled++;
+    return `<tr><th scope="row">Depuis ${city}</th><td>${train}</td><td>${car}</td></tr>`;
+  }).join("");
+  const sources = Object.values(I.train || {}).filter((t) => t.source).map((t) => t.source);
+  if (!filled && !I.acces) return "";
+  return `
+        <section id="acces">
+          <h2 class="reveal">Comment venir</h2>
+          ${I.acces ? `<p class="access-special reveal"><strong>Accès</strong> ${e(I.acces)}</p>` : ""}
+          ${filled ? `<div class="table-wrap reveal"><table class="access-table">
+            <thead><tr><th></th><th scope="col">🚆 En train</th><th scope="col">🚗 En voiture</th></tr></thead>
+            <tbody>${rows}</tbody>
+          </table></div>
+          <p class="small muted reveal">Train : trajet le plus rapide habituel${g ? ` jusqu'à la gare la plus pratique (${e(g)})` : ""}, correspondances comprises, puis la route jusqu'à l'établissement (taxi ou voiture). Voiture : itinéraire le plus rapide, hors embouteillages. Temps indicatifs${sources.length ? ", vérifiés sur les sites des transporteurs" : ""} : confirmez vos horaires sur SNCF Connect avant de partir.</p>` : ""}
+        </section>`;
+}
+
+/* « Autour de l'hôtel : mes adresses » : fiches testées uniquement (champ around) */
+function aroundSection(h) {
+  if (!C.isTested(h) || !(h.around || []).length) return "";
+  const ICON = { table: "🍽️", balade: "🥾", visite: "🏛️" };
+  const KIND = { table: "Une table", balade: "Une balade", visite: "Une visite" };
+  return `
+        <section id="autour" class="around reveal">
+          <p class="eyebrow dark">Le week-end clé en main</p>
+          <h2>Autour de l'hôtel : mes adresses</h2>
+          <ul class="around-list">${h.around.map((a) => `
+            <li><span class="around-icon" aria-hidden="true">${ICON[a.kind] || "✦"}</span>
+              <div><p class="around-kind">${e(KIND[a.kind] || "")}${a.where ? ` · ${e(a.where)}` : ""}</p>
+              <h3>${a.url ? `<a href="${e(a.url)}" target="_blank" rel="noopener">${e(a.name)}</a>` : e(a.name)}</h3>
+              <p>${e(a.text)}</p></div></li>`).join("")}
+          </ul>
+        </section>`;
 }
 
 /* Avis « Testé » : séjour réel de l'auteur, avec mention obligatoire
@@ -297,6 +433,7 @@ function hotelPage(h) {
         ${h.isClosed ? `<p class="closed-banner"><strong>${e(h.closed.label || "Temporairement fermé")}</strong> ${e(h.closed.note || "")}</p>` : ""}
         ${newsSection(h)}
         ${reviewSection(h)}
+        ${aroundSection(h)}
         <section id="experience">
           ${C.isTested(h) ? "" : `<p class="scout-note reveal"><strong>Repérage</strong> Je n'y ai pas encore séjourné : fiche rédigée à partir des informations de l'établissement.</p>`}
           <p class="eyebrow dark reveal">Pourquoi je l'ai repéré</p>
@@ -332,7 +469,8 @@ function hotelPage(h) {
 
         <section id="infos">
           <h2 class="reveal">Infos pratiques</h2>
-          ${h.amenities.length ? `<ul class="amenities reveal">${h.amenities.map((a) => `<li>${e(a)}</li>`).join("")}</ul>` : ""}
+          ${equipBlock(h)}
+          ${amenitiesLeft(h).length ? `<ul class="amenities reveal">${amenitiesLeft(h).map((a) => `<li>${e(a)}</li>`).join("")}</ul>` : ""}
           <dl class="facts reveal">
             <div><dt>Hébergement</dt><dd>${e(h.rooms)}</dd></div>
             <div><dt>Budget indicatif</dt><dd>${"€".repeat(h.budget)} · ${e(b.range)}</dd></div>
@@ -341,6 +479,8 @@ function hotelPage(h) {
             <div class="fact-wide"><dt>Quand réserver</dt><dd>${e(C.bookingTip(h))}</dd></div>
           </dl>
         </section>
+
+        ${accessSection(h)}
 
         <section id="questions">
           <h2 class="reveal">Questions fréquentes</h2>
@@ -590,7 +730,7 @@ function guidesIndexPage() {
     </section>
     <section class="section container guides-index">
       <p class="lead guides-lead">Hôtels insolites, cabanes perchées, bulles, phares, châteaux ou refuges d'altitude : mes guides rassemblent les adresses les plus extraordinaires de France par envie, par type de lieu et par région, avec des conseils pour bien choisir et bien réserver.</p>
-      ${[["envie", "Par envie et par occasion"], ["lieu", "Par type de lieu"], ["region", "Par région"], ["ville", "Près de chez vous"]].map(([k, label]) => {
+      ${[["envie", "Par envie et par occasion"], ["lieu", "Par type de lieu"], ["region", "Par région"], ["trajet", "Selon votre temps de trajet"], ["ville", "Près de chez vous"]].map(([k, label]) => {
         const list = visible.filter((g) => (g.cat || "envie") === k);
         return list.length ? `
       <h2 class="guides-cat">${label}</h2>
@@ -781,6 +921,8 @@ function main() {
   C.setRoot("../");
   const changed = [];
   const note = (file, did) => { if (did) changed.push(file); };
+  note("js/hotels.js (équipements et trajets)", writeInfosBlock());
+  note("data/trajets-entree.json", writeRouteInput());
 
   // Nettoie les pages d'établissements qui n'existent plus
   const PAGES = HOTELS.concat(global.HOTELS_CLOSED || []); // fiches des lieux temporairement fermés incluses

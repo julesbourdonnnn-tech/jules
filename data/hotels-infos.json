@@ -1,0 +1,2421 @@
+{
+ "_doc": "Équipements vérifiés, gare la plus pratique, temps de train sourcés et accès particuliers de chaque établissement. Tenu à jour par les commis (compétence ns-commis-veille). equip : vocabulaire fixe (voir EQUIP dans js/core.js). train.<ville> = { min, via, source } jusqu'à la gare ; le dernier trajet gare → établissement et les temps en voiture viennent de data/trajets-voiture.json (calcul automatique).",
+ "hotels": {
+  "loire-valley-lodges": {
+   "equip": [
+    "restaurant",
+    "bar",
+    "spa",
+    "piscine",
+    "jacuzzi-privatif"
+   ],
+   "restaurant": "Ardent",
+   "gare": {
+    "nom": "Saint-Pierre-des-Corps (Tours)",
+    "lat": 47.388,
+    "lng": 0.723
+   },
+   "train": {
+    "paris": {
+     "min": 62,
+     "via": "Paris-Montparnasse, TGV direct (1h02 selon SNCF Connect)",
+     "source": "https://www.sncf-connect.com/train/trajet/paris/saint-pierre-des-corps",
+     "sur": true
+    },
+    "lyon": {
+     "min": 180,
+     "via": "Direct. SNCF Connect : 3h00 (Tours centre : 3h14)",
+     "source": "https://www.sncf-connect.com/fr-be/train/trajet/lyon/saint-pierre-des-corps",
+     "sur": true
+    },
+    "bordeaux": {
+     "min": 111,
+     "via": "TGV INOUI direct, 1h51 au plus rapide (SNCF Connect)",
+     "source": "https://www.sncf-connect.com/train/trajet/bordeaux/saint-pierre-des-corps",
+     "sur": true
+    }
+   },
+   "acces": "",
+   "sources": [
+    "https://guide.michelin.com/be/fr/hotels-stays/Esvres-sur-Indre/loire-valley-lodges-12060",
+    "https://fr.gaultmillau.com/fr/hotels/loire-valley-lodges",
+    "https://www.tourainevaldeloire.com/en/offers/loire-valley-lodges-esvres-en-5258832",
+    "https://numero.com/lifestyle/voyages/loire-valley-lodges-cabanes-arty-et-gastronomie-locale-en-touraine/"
+   ],
+   "verifie": "2026-11-27"
+  },
+  "pella-roca": {
+   "equip": [
+    "petit-dejeuner",
+    "piscine",
+    "jacuzzi-privatif",
+    "sauna"
+   ],
+   "restaurant": "",
+   "gare": {
+    "nom": "Caussade",
+    "lat": 44.163,
+    "lng": 1.538
+   },
+   "train": {
+    "paris": {
+     "min": 292,
+     "via": "Paris-Austerlitz, direct ou une correspondance, 4h52 ; autres sources 4h32 à 5h05",
+     "source": "https://www.l-itineraire.com/train/caussade/paris",
+     "sur": true
+    },
+    "lyon": {
+     "min": 400,
+     "via": "estimation à vérifier",
+     "source": "",
+     "sur": false
+    },
+    "bordeaux": {
+     "min": 127,
+     "via": "Omio : Intercités le plus rapide 2h07 (2h03 sur une autre page) mais SNCF Connect donne 3h54 avec correspondance ; sources contradictoires",
+     "source": "https://www.omio.fr/trains/bordeaux-saint-jean/gare-de-caussade-flpkb",
+     "sur": false
+    }
+   },
+   "acces": "",
+   "sources": [
+    "https://www.tourisme-occitanie.com/fr/fiche/hebergement-locatif/pella-roca-cabane--spa-en-quercy-labastide-de-penne_TFOSITRA2_HLO_5821449/",
+    "https://www.gites-de-france.com/fr/occitanie/tarn-et-garonne/pella-roca-cabane-spa-en-quercy-h82h008165",
+    "https://lefooding.com/hotels/chambre-d-hote-pella-roca-cabane-spa-labastide-de-penne",
+    "https://www.tourisme-tarnetgaronne.fr/en/offers/pella-roca-cabane-spa-en-quercy-labastide-de-penne-en-2358252/"
+   ],
+   "verifie": "2026-11-27"
+  },
+  "cabanes-des-grands-lacs": {
+   "equip": [
+    "petit-dejeuner",
+    "jacuzzi-privatif",
+    "parking",
+    "enfants"
+   ],
+   "restaurant": "",
+   "gare": {
+    "nom": "Besançon-Viotte",
+    "lat": 47.247,
+    "lng": 6.022
+   },
+   "train": {
+    "paris": {
+     "min": 150,
+     "via": "Paris-Gare de Lyon, TGV INOUI direct 2h30",
+     "source": "https://www.omio.fr/trains/paris-gare-de-lyon/gare-de-besancon-viotte-niu4p",
+     "sur": true
+    },
+    "lyon": {
+     "min": 147,
+     "via": "Direct, 2h27 au plus rapide (Trainline/comparateur ; Omio moyenne directs 2h36)",
+     "source": "https://www.omio.fr/trains/lyon-part-dieu/gare-de-besancon-viotte-iy2k4",
+     "sur": true
+    },
+    "bordeaux": {
+     "min": 337,
+     "via": "Kombo/Omio : trajet le plus rapide 5h37, avec correspondance (SNCF Connect CH 6h21)",
+     "source": "https://www.kombo.co/fr/horaires-train-Besancon-Bordeaux",
+     "sur": true
+    }
+   },
+   "acces": "",
+   "sources": [
+    "https://www.cabanesdesgrandslacs.com/en/post/vacances-kids-friendly-en-pleine-nature-le-domaine-ou-les-enfants-peuvent-courir-jouer-et-construire-une-cabane-sans-deranger",
+    "https://en.hautesaonetourisme.com/offers/cabanes-des-grands-lacs-chassey-les-montbozon-en-4909548/",
+    "https://en.francevelotourisme.com/accommodation/lodgings-and-furnished-rentals/cabanes-grands-lacs",
+    "https://lefooding.com/hotels/hotel-coucoo-grands-lacs-chassey-les-montbozon"
+   ],
+   "verifie": "2026-11-27"
+  },
+  "dihan": {
+   "equip": [
+    "petit-dejeuner",
+    "spa",
+    "jacuzzi-privatif",
+    "enfants"
+   ],
+   "restaurant": "",
+   "gare": {
+    "nom": "Auray",
+    "lat": 47.666,
+    "lng": -2.982
+   },
+   "train": {
+    "paris": {
+     "min": 157,
+     "via": "Paris-Montparnasse, TGV direct 2h37",
+     "source": "https://www.kombo.co/fr/horaires-train-Paris-Auray",
+     "sur": true
+    },
+    "lyon": {
+     "min": 331,
+     "via": "Avec correspondance, 5h31 au plus rapide (SNCF Connect, Kombo)",
+     "source": "https://www.sncf-connect.com/train/trajet/lyon/auray",
+     "sur": true
+    },
+    "bordeaux": {
+     "min": 328,
+     "via": "SNCF Connect : train le plus rapide 5h28, avec correspondance(s)",
+     "source": "https://www.sncf-connect.com/train/trajet/bordeaux/auray",
+     "sur": true
+    }
+   },
+   "acces": "",
+   "sources": [
+    "https://morbihan.com/sejourner/les-hebergements/gites-locations-de-vacances/toutes-les-locations/dihan-hotel-de-cabanes-ploemel-fr-4374661/",
+    "https://www.greengo.voyage/hote/dihan-evasion",
+    "https://morbihan.com/offres/dihan-hotel-de-cabanes-ploemel-fr-4374661/"
+   ],
+   "verifie": "2026-11-27"
+  },
+  "demeure-de-la-vignole": {
+   "equip": [
+    "petit-dejeuner",
+    "piscine",
+    "parking",
+    "animaux",
+    "wifi"
+   ],
+   "restaurant": "",
+   "gare": {
+    "nom": "Saumur",
+    "lat": 47.256,
+    "lng": -0.077
+   },
+   "train": {
+    "paris": {
+     "min": 100,
+     "via": "Paris-Montparnasse, TGV direct (1h40 selon SNCF Connect)",
+     "source": "https://www.sncf-connect.com/train/trajet/paris/saumur",
+     "sur": true
+    },
+    "lyon": {
+     "min": 215,
+     "via": "TGV INOUI direct. SNCF Connect : 3h35",
+     "source": "https://www.sncf-connect.com/train/trajet/lyon/saumur",
+     "sur": true
+    },
+    "bordeaux": {
+     "min": 177,
+     "via": "Avec correspondance (Saint-Pierre-des-Corps probable) ; SNCF Connect 2h57 (sens Saumur-Bordeaux), Kombo 2h39, Virail 3h39 : sources divergentes",
+     "source": "https://www.sncf-connect.com/train/trajet/saumur/bordeaux",
+     "sur": false
+    }
+   },
+   "acces": "",
+   "sources": [
+    "https://www.expedia.com/Turquant-Hotels-Logis-Hotel-Demeure-De-La-Vignole.h19711625.Hotel-Information",
+    "https://emmenetonchien.com/hotel-chien-animaux-acceptes/hotel-demeure-de-la-vignole/",
+    "https://www.booking.com/hotel/fr/demeure-de-la-vignole.en-gb.html",
+    "https://www.francevelotourisme.com/sit/objet/1d03a314-7074-50c2-9277-102c9943c9c2"
+   ],
+   "verifie": "2026-11-27"
+  },
+  "rocaminori": {
+   "equip": [
+    "petit-dejeuner",
+    "parking",
+    "wifi"
+   ],
+   "restaurant": "",
+   "gare": {
+    "nom": "Saumur",
+    "lat": 47.256,
+    "lng": -0.077
+   },
+   "train": {
+    "paris": {
+     "min": 100,
+     "via": "Paris-Montparnasse, TGV direct (1h40 selon SNCF Connect)",
+     "source": "https://www.sncf-connect.com/train/trajet/paris/saumur",
+     "sur": true
+    },
+    "lyon": {
+     "min": 215,
+     "via": "TGV INOUI direct. SNCF Connect : 3h35",
+     "source": "https://www.sncf-connect.com/train/trajet/lyon/saumur",
+     "sur": true
+    },
+    "bordeaux": {
+     "min": 177,
+     "via": "Avec correspondance (Saint-Pierre-des-Corps probable) ; SNCF Connect 2h57 (sens Saumur-Bordeaux), Kombo 2h39, Virail 3h39 : sources divergentes",
+     "source": "https://www.sncf-connect.com/train/trajet/saumur/bordeaux",
+     "sur": false
+    }
+   },
+   "acces": "",
+   "sources": [
+    "https://showcaves.com/english/fr/subterranea/Rocaminori.html",
+    "https://www.ot-saumur.fr/en/individual-stays/unusual-escape-in-troglodyte/",
+    "https://atlantic-loire-valley.com/accommodation/hotels/rocaminori-troglo-hotel",
+    "https://www.expedia.com/Louresse-Rochemenier-Hotels-Hotel-Rocaminori.h15871992.Hotel-Information"
+   ],
+   "verifie": "2026-11-27"
+  },
+  "fontevraud-l-ermitage": {
+   "equip": [
+    "restaurant",
+    "petit-dejeuner",
+    "parking"
+   ],
+   "restaurant": "Fontevraud, Le Restaurant",
+   "gare": {
+    "nom": "Saumur",
+    "lat": 47.256,
+    "lng": -0.077
+   },
+   "train": {
+    "paris": {
+     "min": 100,
+     "via": "Paris-Montparnasse, TGV direct (1h40 selon SNCF Connect)",
+     "source": "https://www.sncf-connect.com/train/trajet/paris/saumur",
+     "sur": true
+    },
+    "lyon": {
+     "min": 215,
+     "via": "TGV INOUI direct. SNCF Connect : 3h35",
+     "source": "https://www.sncf-connect.com/train/trajet/lyon/saumur",
+     "sur": true
+    },
+    "bordeaux": {
+     "min": 177,
+     "via": "Avec correspondance (Saint-Pierre-des-Corps probable) ; SNCF Connect 2h57 (sens Saumur-Bordeaux), Kombo 2h39, Virail 3h39 : sources divergentes",
+     "source": "https://www.sncf-connect.com/train/trajet/saumur/bordeaux",
+     "sur": false
+    }
+   },
+   "acces": "",
+   "sources": [
+    "https://guide.michelin.com/ca/fr/hotels-stays/fontevraud-labbaye/fontevraud-lhotel-10994",
+    "https://uk.hotels.com/ho486172/fontevraud-l-hotel-fontevraud-l-abbaye-france",
+    "https://www.fontevraud.fr/fontevraud-lermitage/"
+   ],
+   "verifie": "2026-11-27"
+  },
+  "domaine-des-etangs": {
+   "equip": [
+    "restaurant",
+    "table-etoilee",
+    "spa",
+    "piscine",
+    "animaux",
+    "enfants"
+   ],
+   "restaurant": "Dyades",
+   "gare": {
+    "nom": "Angoulême",
+    "lat": 45.652,
+    "lng": 0.168
+   },
+   "train": {
+    "paris": {
+     "min": 103,
+     "via": "Paris-Montparnasse, TGV direct 1h43 (Liligo 1h35, SNCF Connect 1h47)",
+     "source": "https://www.omio.fr/trains/paris/angouleme",
+     "sur": true
+    },
+    "lyon": {
+     "min": 292,
+     "via": "Correspondance à Massy TGV, 4h52 au plus rapide (SNCF Connect)",
+     "source": "https://www.sncf-connect.com/train/horaires/lyon/angouleme",
+     "sur": true
+    },
+    "bordeaux": {
+     "min": 35,
+     "via": "Direct, train le plus rapide 35 min (SNCF Connect, Ouigo, Omio)",
+     "source": "https://www.sncf-connect.com/train/trajet/bordeaux/angouleme",
+     "sur": true
+    }
+   },
+   "acces": "",
+   "sources": [
+    "https://auberge.com/fr/domaine-des-etangs/hotel-information/",
+    "https://auberge.com/fr/domaine-des-etangs/fact-sheet/",
+    "https://guide.michelin.com/fr/fr/hotels-stays/massignac/domaine-des-etangs-auberge-resorts-collection-168",
+    "https://fr.gaultmillau.com/fr/hotels/hotel-domaine-des-etangs"
+   ],
+   "verifie": "2026-11-27"
+  },
+  "phare-de-kerbel": {
+   "equip": [
+    "piscine",
+    "sauna",
+    "enfants"
+   ],
+   "restaurant": "",
+   "gare": {
+    "nom": "Lorient",
+    "lat": 47.753,
+    "lng": -3.366
+   },
+   "train": {
+    "paris": {
+     "min": 173,
+     "via": "Paris-Montparnasse, TGV direct (2h53 selon SNCF Connect)",
+     "source": "https://www.sncf-connect.com/train/trajet/paris/lorient",
+     "sur": true
+    },
+    "lyon": {
+     "min": 351,
+     "via": "Pas de direct ; TGV via Paris puis Rennes/Vannes/Auray. SNCF Connect : minimum 5h51",
+     "source": "https://www.sncf-connect.com/train/trajet/lyon/lorient",
+     "sur": true
+    },
+    "bordeaux": {
+     "min": 270,
+     "via": "estimation à vérifier",
+     "source": "",
+     "sur": false
+    }
+   },
+   "acces": "",
+   "sources": [
+    "https://morbihan.com/offres/le-phare-de-kerbel-riantec-fr-4374606/",
+    "https://hotels-insolites.com/en/le-phare-de-kerbel.hotel",
+    "https://www.uniqhotels.com/kerbel-lighthouse/"
+   ],
+   "verifie": "2026-11-27"
+  },
+  "les-roches-rouges": {
+   "equip": [
+    "restaurant",
+    "bar",
+    "spa",
+    "piscine",
+    "borne-recharge",
+    "animaux"
+   ],
+   "restaurant": "Estelo",
+   "gare": {
+    "nom": "Saint-Raphaël-Valescure",
+    "lat": 43.422,
+    "lng": 6.771
+   },
+   "train": {
+    "paris": {
+     "min": 280,
+     "via": "Paris-Gare de Lyon, TGV direct (4h40-4h41 selon Omio/OUIGO)",
+     "source": "https://www.omio.fr/trains/paris/saint-raphael-valescure",
+     "sur": true
+    },
+    "lyon": {
+     "min": 216,
+     "via": "TGV direct. SNCF Connect/Trip.com : 3h36-3h37 (Liligo mentionne 3h26 le plus rapide)",
+     "source": "https://www.omio.com/trains/gare-de-lyon-part-dieu/gare-de-saint-raphael-valescure-0ijnl",
+     "sur": true
+    },
+    "bordeaux": {
+     "min": 507,
+     "via": "Intercités + TER avec correspondance, 8h27 (départ 6h10, arrivée 14h37), pas de direct (SNCF Connect)",
+     "source": "https://www.sncf-connect.com/train/horaires/bordeaux/saint-raphael",
+     "sur": true
+    }
+   },
+   "acces": "",
+   "sources": [
+    "https://guide.michelin.com/lu/fr/hotels-stays/saint-raphael/hotel-les-roches-rouges-8508",
+    "https://provence-alpes-cotedazur.com/sejourner/hebergements/tous-les-hebergements/hotels/les-roches-rouges-un-hotel-beaumier-spa-saint-raphael-fr-2881693/",
+    "https://www.saint-raphael.com/en/accommodation/hotel/saint-raphael/les-roches-rouges-639135/",
+    "https://www.myboutiquehotel.com/fr/boutique-hotels-saint-raphael/hotel-les-roches-rouges.html"
+   ],
+   "verifie": "2026-11-27"
+  },
+  "auberge-saint-pierre": {
+   "equip": [
+    "restaurant",
+    "petit-dejeuner",
+    "wifi"
+   ],
+   "restaurant": "",
+   "gare": {
+    "nom": "Rennes",
+    "lat": 48.103,
+    "lng": -1.672
+   },
+   "train": {
+    "paris": {
+     "min": 87,
+     "via": "Paris-Montparnasse, TGV direct (1h27 selon SNCF Connect)",
+     "source": "https://www.sncf-connect.com/train/trajet/paris/rennes",
+     "sur": true
+    },
+    "lyon": {
+     "min": 230,
+     "via": "TGV direct. SNCF Connect : 3h50",
+     "source": "https://www.sncf-connect.com/train/trajet/rennes/lyon",
+     "sur": true
+    },
+    "bordeaux": {
+     "min": 242,
+     "via": "SNCF Connect 4h02 au plus rapide ; autres comparateurs 3h39 (Liligo) et 3h59 (Omio), sources divergentes",
+     "source": "https://www.sncf-connect.com/fr-ch/train/trajet/bordeaux/rennes",
+     "sur": false
+    }
+   },
+   "acces": "Mont insulaire : navette depuis le parking ; car depuis Rennes (ou Pontorson), pas de gare au Mont-Saint-Michel",
+   "sources": [
+    "https://booking.com/hotel/fr/auberge-saint-pierre.html",
+    "https://www.oyster.com/fr/mont-st-michel/hotels/auberge-saint-pierre/",
+    "https://expedia.com/Le-Mont-Saint-Michel-hotels-Auberge-Saint-Pierre.h1174102.Hotel-information"
+   ],
+   "verifie": "2026-11-27"
+  },
+  "off-paris-seine": {
+   "equip": [
+    "restaurant",
+    "bar",
+    "piscine",
+    "climatisation"
+   ],
+   "restaurant": "",
+   "gare": {
+    "nom": "Paris-Austerlitz",
+    "lat": 48.842,
+    "lng": 2.366
+   },
+   "train": {
+    "lyon": {
+     "min": 160,
+     "via": "TGV direct jusqu'à Paris-Gare de Lyon (~1h55) + 45 min pour changement de gare (métro 5/14) vers Austerlitz",
+     "source": "https://www.omio.com/trains/lyon-part-dieu/paris-gare-dausterlitz-9vkg7",
+     "sur": true
+    },
+    "bordeaux": {
+     "min": 168,
+     "via": "TGV direct Bordeaux – Paris-Montparnasse (2 h 03) + 45 min de correspondance dans Paris",
+     "source": "https://www.sncf-connect.com/train/trajet/bordeaux/paris",
+     "sur": true
+    },
+    "paris": {
+     "min": 0,
+     "via": "dans la ville",
+     "source": "",
+     "sur": true
+    }
+   },
+   "acces": "",
+   "sources": [
+    "https://www.myboutiquehotel.com/fr/boutique-hotels-paris/hotel-off-paris-seine.html",
+    "https://guide.michelin.com/fr/fr/hotels-stays/paris/off-paris-seine-8199",
+    "https://www.sortiraparis.com/en/where-to-eat-in-paris/bars-cafes/articles/331523-bar-off-paris-seine-floating-hotel-with-pool-gare-austerlitz-paris-13"
+   ],
+   "verifie": "2026-11-27"
+  },
+  "hotel-le-corbusier": {
+   "equip": [
+    "restaurant",
+    "petit-dejeuner",
+    "wifi"
+   ],
+   "restaurant": "Le Ventre de l'Architecte",
+   "gare": {
+    "nom": "Marseille Saint-Charles",
+    "lat": 43.303,
+    "lng": 5.38
+   },
+   "train": {
+    "paris": {
+     "min": 184,
+     "via": "Paris-Gare de Lyon, TGV direct (3h04 selon SNCF Connect)",
+     "source": "https://www.sncf-connect.com/train/trajet/paris/marseille",
+     "sur": true
+    },
+    "lyon": {
+     "min": 95,
+     "via": "TGV direct. SNCF Connect : trajet le plus court 1h35 (Omio 1h28 et OUIGO 1h40 selon horaires ; L'Itinéraire 1h39-1h40 en TGV inOui)",
+     "source": "https://www.sncf-connect.com/train/trajet/lyon/marseille",
+     "sur": true
+    },
+    "bordeaux": {
+     "min": 320,
+     "via": "estimation à vérifier",
+     "source": "",
+     "sur": false
+    }
+   },
+   "acces": "",
+   "sources": [
+    "https://www.marseille-tourisme.com/offres/corbusier-marseille-fr-2812749/",
+    "https://guide.michelin.com/it/it/hotels-stays/marseille/le-corbusier-hotel-restaurant-10763",
+    "https://www.orbitz.com/Marseille-Hotels-Hotel-Le-Corbusier.h22607420.Hotel-Information"
+   ],
+   "verifie": "2026-11-27"
+  },
+  "refuge-de-solaise": {
+   "equip": [
+    "restaurant",
+    "bar",
+    "spa",
+    "piscine",
+    "enfants"
+   ],
+   "restaurant": "Gigi Val d'Isère / Le Petit Refuge",
+   "gare": {
+    "nom": "Bourg-Saint-Maurice",
+    "lat": 45.618,
+    "lng": 6.769
+   },
+   "train": {
+    "paris": {
+     "min": 289,
+     "via": "Paris-Gare de Lyon, TGV direct 4h49",
+     "source": "https://www.omio.fr/trains/paris/bourg-saint-maurice",
+     "sur": true
+    },
+    "lyon": {
+     "min": 217,
+     "via": "TER avec ou sans changement, 3h37 au plus rapide (SNCF Connect, Omio)",
+     "source": "https://www.sncf-connect.com/fr-lu/train/horaires/lyon/bourg-saint-maurice",
+     "sur": true
+    }
+   },
+   "acces": "Hôtel au sommet de la télécabine de Solaise (accès par remontée mécanique depuis Val-d'Isère) ; navette/bus Bourg-Saint-Maurice - Val-d'Isère environ 50 min en plus",
+   "sources": [
+    "https://guide.michelin.com/nl/nl/hotels-stays/val-disere/le-refuge-de-solaise-11572",
+    "https://fr.gaultmillau.com/en/hotels/le-refuge-de-solaise",
+    "https://booking.com/hotel/fr/le-refuge-de-solaise-val-d-isere.html"
+   ],
+   "verifie": "2026-11-27"
+  },
+  "village-igloo-val-thorens": {
+   "equip": [
+    "restaurant",
+    "petit-dejeuner",
+    "enfants"
+   ],
+   "restaurant": "",
+   "gare": {
+    "nom": "Moûtiers-Salins-Brides-les-Bains",
+    "lat": 45.487,
+    "lng": 6.532
+   },
+   "train": {
+    "paris": {
+     "min": 254,
+     "via": "Paris-Gare de Lyon, TGV INOUI direct (4h14 selon Omio)",
+     "source": "https://www.omio.com/trains/paris/moutiers-salins-brides-les-bains-sfjax",
+     "sur": true
+    },
+    "lyon": {
+     "min": 182,
+     "via": "TER/TGV avec correspondance possible. Omio et Trip.com : 3h02 le plus rapide ; SNCF Connect moyenne 3h24",
+     "source": "https://www.omio.com/trains/lyon/moutiers-salins-brides-les-bains-1x9bj",
+     "sur": true
+    }
+   },
+   "acces": "Village sur piste (Combe de Thorens, 2400 m), ouvert en saison d'hiver uniquement ; navette ou bus Moûtiers - Val Thorens environ 1 h",
+   "sources": [
+    "https://ski.valthorens.com/en/val-thorens-igloo-village/",
+    "https://www.staycation.co/fr/hotels/village-igloo-val-thorens-1930",
+    "https://www.sport-decouverte.com/soiree-nuit-igloo-val-thorens.html"
+   ],
+   "verifie": "2026-11-27"
+  },
+  "alpinest": {
+   "equip": [
+    "petit-dejeuner",
+    "jacuzzi-privatif",
+    "parking",
+    "animaux"
+   ],
+   "restaurant": "",
+   "gare": {
+    "nom": "Serres",
+    "lat": 44.428,
+    "lng": 5.716
+   },
+   "train": {
+    "paris": {
+     "min": 423,
+     "via": "Paris-Gare de Lyon, TGV avec changement à Valence TGV (7h03 selon SNCF Connect), pas de direct",
+     "source": "https://www.sncf-connect.com/train/horaires/paris/serres",
+     "sur": true
+    },
+    "lyon": {
+     "min": 246,
+     "via": "TGV/TER via Valence ou Grenoble, avec correspondance. Trainline : minimum 4h06 (pas de page SNCF dédiée ; Lyon-Veynes 3h25 en comparaison)",
+     "source": "https://www.thetrainline.com/en/train-times/lyon-to-serres",
+     "sur": true
+    }
+   },
+   "acces": "",
+   "sources": [
+    "https://provence-alpes-cotedazur.com/sejourner/hebergements/tous-les-hebergements/gites-et-locations/alpinest-les-cabanes-du-pas-de-la-louve-serres-fr-3923793/",
+    "https://www.greengo.voyage/hote/alpinest-les-cabanes-du-pas-de-la-louve",
+    "https://www.hautes-alpes.net/en/?p=170752"
+   ],
+   "verifie": "2026-11-27"
+  },
+  "cabanes-du-moulin": {
+   "equip": [
+    "jacuzzi-privatif",
+    "parking",
+    "wifi"
+   ],
+   "restaurant": "",
+   "gare": {
+    "nom": "La Ferté-sous-Jouarre",
+    "lat": 48.949,
+    "lng": 3.127
+   },
+   "train": {
+    "paris": {
+     "min": 55,
+     "via": "estimation à vérifier",
+     "source": "",
+     "sur": false
+    },
+    "lyon": {
+     "min": 235,
+     "via": "TGV Lyon-Part-Dieu > Paris-Gare de Lyon, changement de gare (+45 min), puis Transilien depuis Paris-Est. L'Itinéraire annonce 3h55 le plus rapide ; aucune source dédiée SNCF",
+     "source": "https://www.l-itineraire.com/train/ferte-sous-jouarre/lyon",
+     "sur": false
+    },
+    "bordeaux": {
+     "min": 250,
+     "via": "estimation à vérifier",
+     "source": "",
+     "sur": false
+    }
+   },
+   "acces": "",
+   "sources": [
+    "https://www.visitparisregion.com/en/les-cabanes-du-moulin",
+    "https://leguide.ancv.com/ptl/hebergement/hebergement_insolite/les_cabanes_du_moulin/874490001001",
+    "https://www.sortiraparis.com/en/where-to-eat-in-paris/hotel/articles/68631-les-cabanes-du-moulin-treehouses-in-the-ile-de-france-region"
+   ],
+   "verifie": "2026-11-27"
+  },
+  "troglododo": {
+   "equip": [
+    "petit-dejeuner",
+    "parking",
+    "wifi"
+   ],
+   "restaurant": "",
+   "gare": {
+    "nom": "Azay-le-Rideau",
+    "lat": 47.262,
+    "lng": 0.466
+   },
+   "train": {
+    "paris": {
+     "min": 126,
+     "via": "Paris-Montparnasse, TGV jusqu'à Tours puis TER, 2h06",
+     "source": "https://www.sncf-connect.com/train/trajet/azay-le-rideau/paris",
+     "sur": true
+    },
+    "lyon": {
+     "min": 270,
+     "via": "Pas de direct : TGV vers Saint-Pierre-des-Corps/Tours puis TER ; l-itineraire 4h30, Rome2rio 5h, Thetrainline moyenne 7h : sources divergentes, gare peu desservie",
+     "source": "https://www.l-itineraire.com/train/azay-le-rideau/lyon",
+     "sur": false
+    },
+    "bordeaux": {
+     "min": 165,
+     "via": "Combiné : Bordeaux→Saint-Pierre-des-Corps TGV 1h39 le plus rapide (SNCF Connect), + correspondance ~20 min + TER Tours→Azay 27 min (Omio) ; aucune durée de bout en bout trouvée, estimation",
+     "source": "https://www.sncf-connect.com/train/trajet/saint-pierre-des-corps/bordeaux",
+     "sur": false
+    }
+   },
+   "acces": "",
+   "sources": [
+    "https://www.tourainevaldeloire.com/en/preparing-your-stay/accommodation/focus-on/enjoy-a-good-nights-sleep-at-troglododo/",
+    "https://www.francevelotourisme.com/hebergements/hotels/hotel-troglododo",
+    "https://booking.com/hotel/fr/troglododo.html"
+   ],
+   "verifie": "2026-11-27"
+  },
+  "hotel-particulier-montmartre": {
+   "equip": [
+    "restaurant",
+    "petit-dejeuner",
+    "bar",
+    "climatisation",
+    "wifi"
+   ],
+   "restaurant": "Le Grand Salon",
+   "gare": {
+    "nom": "Paris-Nord",
+    "lat": 48.881,
+    "lng": 2.355
+   },
+   "train": {
+    "lyon": {
+     "min": 160,
+     "via": "TGV direct jusqu'à Paris-Gare de Lyon (~1h55) + 45 min pour changement de gare (RER) vers Paris-Nord",
+     "source": "https://www.omio.fr/trains/lyon-part-dieu/paris-gare-du-nord-y8m6k",
+     "sur": true
+    },
+    "bordeaux": {
+     "min": 168,
+     "via": "TGV direct Bordeaux – Paris-Montparnasse (2 h 03) + 45 min de correspondance dans Paris",
+     "source": "https://www.sncf-connect.com/train/trajet/bordeaux/paris",
+     "sur": true
+    },
+    "paris": {
+     "min": 0,
+     "via": "dans la ville",
+     "source": "",
+     "sur": true
+    }
+   },
+   "acces": "",
+   "sources": [
+    "https://www.viamichelin.fr/cartes-plans/hotels/poi/paris-75018-51def952",
+    "https://guide.michelin.com/en/hotels-stays/paris/hotel-particulier-montmartre-397",
+    "https://www.myboutiquehotel.com/fr/boutique-hotels-paris/hotel-particulier-montmartre.html"
+   ],
+   "verifie": "2026-11-27"
+  },
+  "cour-des-loges": {
+   "equip": [
+    "restaurant",
+    "bar",
+    "spa",
+    "piscine",
+    "sauna",
+    "animaux"
+   ],
+   "restaurant": "Les Loges",
+   "gare": {
+    "nom": "Lyon Part-Dieu",
+    "lat": 45.76,
+    "lng": 4.86
+   },
+   "train": {
+    "paris": {
+     "min": 103,
+     "via": "Paris-Gare de Lyon, TGV direct (1h43 selon SNCF Connect)",
+     "source": "https://www.sncf-connect.com/train/trajet/paris/lyon",
+     "sur": true
+    },
+    "bordeaux": {
+     "min": 300,
+     "via": "estimation à vérifier",
+     "source": "",
+     "sur": false
+    },
+    "lyon": {
+     "min": 0,
+     "via": "dans la ville",
+     "source": "",
+     "sur": true
+    }
+   },
+   "acces": "",
+   "sources": [
+    "https://www.radissonhotels.com/fr-fr/hotels/radisson-collection-cour-des-loges-lyon/services",
+    "https://guide.michelin.com/lu/fr/hotels-stays/lyon/hotel-cour-des-loges-51",
+    "https://www.booking.com/hotel/fr/courdesloges.html"
+   ],
+   "verifie": "2026-11-27"
+  },
+  "fermes-de-marie": {
+   "equip": [
+    "restaurant",
+    "bar",
+    "spa",
+    "piscine",
+    "sauna",
+    "parking",
+    "animaux",
+    "enfants"
+   ],
+   "restaurant": "",
+   "gare": {
+    "nom": "Saint-Gervais-les-Bains-Le Fayet",
+    "lat": 45.907,
+    "lng": 6.7
+   },
+   "train": {
+    "paris": {
+     "min": 296,
+     "via": "Paris-Gare de Lyon, TGV Lyria jusqu'à Bellegarde puis TER (4h56 selon SNCF Connect) ; un TGV direct à 5h03 existe",
+     "source": "https://www.sncf-connect.com/train/trajet/paris/saint-gervais-les-bains",
+     "sur": true
+    },
+    "lyon": {
+     "min": 213,
+     "via": "Même gare que la précédente. TER direct, SNCF Connect : 3h33",
+     "source": "https://www.sncf-connect.com/train/horaires/lyon/saint-gervais-les-bains",
+     "sur": true
+    }
+   },
+   "acces": "",
+   "sources": [
+    "https://guide.michelin.com/nl/nl/hotels-stays/megeve/les-fermes-de-marie-1811",
+    "https://auvergnerhonealpes-tourisme.com/en/fiches/les-fermes-de-marie",
+    "https://www.megeve-tourisme.fr/en/hotel/les-fermes-de-marie/"
+   ],
+   "verifie": "2026-11-27"
+  },
+  "chateau-de-la-resle": {
+   "equip": [
+    "restaurant",
+    "spa",
+    "piscine",
+    "sauna"
+   ],
+   "restaurant": "Art de Table",
+   "gare": {
+    "nom": "Auxerre-Saint-Gervais",
+    "lat": 47.791,
+    "lng": 3.573
+   },
+   "train": {
+    "paris": {
+     "min": 99,
+     "via": "Paris-Bercy, TER direct 1h39",
+     "source": "https://www.ter.sncf.com/bourgogne-franche-comte/trajet-paris-auxerre-saint-gervais",
+     "sur": true
+    },
+    "lyon": {
+     "min": 244,
+     "via": "TER/TGV avec ou sans correspondance, 4h04 au plus court observé (SNCF Connect, horaires)",
+     "source": "https://www.sncf-connect.com/train/horaires/lyon/auxerre",
+     "sur": true
+    },
+    "bordeaux": {
+     "min": 307,
+     "via": "SNCF Connect : train le plus rapide 5h07 vers Auxerre (Virail 4h59), correspondance(s) ; exemple 5h31 via Laroche-Migennes",
+     "source": "https://www.sncf-connect.com/train/trajet/bordeaux/auxerre",
+     "sur": true
+    }
+   },
+   "acces": "",
+   "sources": [
+    "https://guide.michelin.com/en/hotels-stays/montigny-la-resle/chateau-de-la-resle-7140",
+    "https://www.designhotels.com/hotels/france/montigny-la-resle-burgundy/chateau-de-la-resle/",
+    "https://www.booking.com/hotel/fr/chateau-de-la-resle.html"
+   ],
+   "verifie": "2026-11-27"
+  },
+  "sources-de-caudalie": {
+   "equip": [
+    "restaurant",
+    "table-etoilee",
+    "bar",
+    "spa",
+    "piscine",
+    "sauna",
+    "borne-recharge",
+    "animaux"
+   ],
+   "restaurant": "La Grand'Vigne",
+   "gare": {
+    "nom": "Bordeaux Saint-Jean",
+    "lat": 44.826,
+    "lng": -0.556
+   },
+   "train": {
+    "paris": {
+     "min": 128,
+     "via": "Paris-Montparnasse, TGV direct 2h08 (Rail Europe 2h03)",
+     "source": "https://www.sncf-connect.com/train/trajet/paris/bordeaux",
+     "sur": true
+    },
+    "lyon": {
+     "min": 263,
+     "via": "4h23 au plus rapide (Liligo/Omio ; autre 4h21 à 4h24), correspondance éventuelle à Massy",
+     "source": "https://www.omio.fr/trains/lyon-part-dieu/bordeaux-saint-jean-po6aa",
+     "sur": true
+    },
+    "bordeaux": {
+     "min": 0,
+     "via": "dans la ville",
+     "source": "",
+     "sur": true
+    }
+   },
+   "acces": "",
+   "sources": [
+    "https://www.sources-hotels.com/bordeaux/en/faq/",
+    "https://www.viamichelin.com/maps/hotels/poi/martillac-33650-e3dad0ae",
+    "https://booking.com/hotel/fr/les-sources-de-caudalie.html"
+   ],
+   "verifie": "2026-11-27"
+  },
+  "casadelmar": {
+   "equip": [
+    "restaurant",
+    "spa",
+    "piscine",
+    "sauna",
+    "parking"
+   ],
+   "restaurant": "",
+   "gare": null,
+   "train": {},
+   "acces": "Corse : avion ou ferry (aucune gare utile à Porto-Vecchio)",
+   "sources": [
+    "https://guide.michelin.com/en/hotels-stays/porto-vecchio/casadelmar-6022",
+    "https://fr.gaultmillau.com/en/hotels/hotel-casadelmar-20137",
+    "https://www.virtuoso.com/hotels/6673269/casadelmar"
+   ],
+   "verifie": "2026-11-27"
+  },
+  "la-coorniche": {
+   "equip": [
+    "restaurant",
+    "petit-dejeuner",
+    "bar",
+    "piscine",
+    "parking",
+    "animaux",
+    "wifi"
+   ],
+   "restaurant": "",
+   "gare": {
+    "nom": "Arcachon",
+    "lat": 44.659,
+    "lng": -1.168
+   },
+   "train": {
+    "paris": {
+     "min": 182,
+     "via": "Paris-Montparnasse, TGV direct 3h02",
+     "source": "https://www.virail.fr/trains-paris-arcachon",
+     "sur": true
+    },
+    "lyon": {
+     "min": 307,
+     "via": "Correspondance(s) via Massy TGV/Bordeaux, 5h07 au plus court (SNCF Connect ; Kombo 5h31)",
+     "source": "https://www.sncf-connect.com/train/trajet/arcachon/lyon",
+     "sur": true
+    },
+    "bordeaux": {
+     "min": 52,
+     "via": "TER direct, 52-53 min habituel (un TGV INOUI à 40 min existe, rare)",
+     "source": "https://www.sncf-connect.com/train/trajet/bordeaux/arcachon",
+     "sur": true
+    }
+   },
+   "acces": "",
+   "sources": [
+    "https://guide.michelin.com/be/fr/hotels-stays/la-teste-de-buch/la-coorniche-11292",
+    "https://fr.gaultmillau.com/fr/hotels/hotel-la-coorniche",
+    "https://www.myboutiquehotel.com/fr/boutique-hotels-pyla-sur-mer/la-co-o-rniche.html",
+    "https://slh.com/hotels/hotel-la-coorniche"
+   ],
+   "verifie": "2026-11-27"
+  },
+  "pic-du-midi": {
+   "equip": [
+    "restaurant",
+    "petit-dejeuner"
+   ],
+   "restaurant": "",
+   "gare": {
+    "nom": "Tarbes",
+    "lat": 43.236,
+    "lng": 0.071
+   },
+   "train": {
+    "paris": {
+     "min": 319,
+     "via": "Paris-Montparnasse, TGV direct (5h19 selon SNCF Connect)",
+     "source": "https://www.sncf-connect.com/fr-lu/train/trajet/paris/tarbes",
+     "sur": true
+    },
+    "lyon": {
+     "min": 359,
+     "via": "Lyon Part-Dieu, trajet le plus rapide 5h59 avec correspondance (SNCF Connect indique 6h29 à une date donnée)",
+     "source": "https://www.kombo.co/fr/horaires-train-Lyon-Tarbes",
+     "sur": true
+    },
+    "bordeaux": {
+     "min": 178,
+     "via": "2h58 au plus rapide (SNCF Connect ; Omio/Virail 2h56)",
+     "source": "https://www.sncf-connect.com/train/trajet/tarbes/bordeaux",
+     "sur": true
+    }
+   },
+   "acces": "Téléphérique depuis La Mongie jusqu'au Pic du Midi, puis téléphérique privatif jusqu'à l'hôtel",
+   "sources": [
+    "https://fr.gaultmillau.com/fr/news/apres-ans-de-fermeture-le-plus-haut-hotel-haut-de-gamme-de-france-vient-de-rouvrir-au-pic-du-midi",
+    "https://www.lechotouristique.com/hebergement/le-plus-haut-hotel-de-france-ouvre-ses-portes-au-pic-du-midi",
+    "https://www.tourisme-occitanie.com/fr/fiche/hotellerie/hotellerie-des-laquets-bagneres-de-bigorre_TFOHOTMIP065V52QQS5/"
+   ],
+   "verifie": "2026-11-27"
+  },
+  "refuge-du-montenvers": {
+   "equip": [
+    "restaurant",
+    "petit-dejeuner",
+    "bar",
+    "animaux",
+    "enfants",
+    "wifi"
+   ],
+   "restaurant": "Le Montenvers",
+   "gare": {
+    "nom": "Chamonix-Mont-Blanc",
+    "lat": 45.923,
+    "lng": 6.87
+   },
+   "train": {
+    "paris": {
+     "min": 333,
+     "via": "TGV puis TER avec correspondance, 5h33 (Trainline, Liligo 5h32) ; SNCF Connect indique 5h55, sources divergentes",
+     "source": "https://www.thetrainline.com/en/train-times/paris-to-chamonix-mont-blanc",
+     "sur": false
+    },
+    "lyon": {
+     "min": 275,
+     "via": "Pas de direct, au moins une correspondance (TER/TGV). SNCF Connect 4h35 ; Kombo 4h31",
+     "source": "https://www.sncf-connect.com/train/trajet/lyon/chamonix-mont-blanc",
+     "sur": true
+    }
+   },
+   "acces": "train à crémaillère du Montenvers depuis Chamonix",
+   "sources": [
+    "https://guide.michelin.com/th/en/hotels-stays/chamonix/refuge-du-montenvers-10034",
+    "https://booking.chamonix.com/en/hotel-361-le-refuge-du-montenvers",
+    "https://www.lastminute.com/hotels/france/chamonix-mont-blanc/refuge-du-montenvers_hid-4531013"
+   ],
+   "verifie": "2026-11-27"
+  },
+  "refuge-de-la-traye": {
+   "equip": [
+    "restaurant",
+    "bar",
+    "spa",
+    "jacuzzi-privatif",
+    "sauna",
+    "animaux",
+    "enfants"
+   ],
+   "restaurant": "La Table de la Traye",
+   "gare": {
+    "nom": "Moûtiers-Salins-Brides-les-Bains",
+    "lat": 45.486,
+    "lng": 6.531
+   },
+   "train": {
+    "paris": {
+     "min": 254,
+     "via": "Paris-Gare de Lyon, TGV INOUI direct (4h14 selon Omio)",
+     "source": "https://www.omio.com/trains/paris/moutiers-salins-brides-les-bains-sfjax",
+     "sur": true
+    },
+    "lyon": {
+     "min": 182,
+     "via": "TER/TGV avec correspondance possible. Omio et Trip.com : 3h02 le plus rapide ; SNCF Connect moyenne 3h24",
+     "source": "https://www.omio.com/trains/lyon/moutiers-salins-brides-les-bains-1x9bj",
+     "sur": true
+    }
+   },
+   "acces": "",
+   "sources": [
+    "https://slh.com/hotels/le-refuge-de-la-traye",
+    "https://auvergnerhonealpes-tourisme.com/en/fiches/chalets-du-refuge-de-la-traye",
+    "https://fr.gaultmillau.com/fr/hotels/refuge-de-la-traye",
+    "https://www.savoie-mont-blanc.com/?p=757124"
+   ],
+   "verifie": "2026-11-27"
+  },
+  "refuge-chez-la-tante": {
+   "equip": [
+    "restaurant",
+    "bar",
+    "spa",
+    "piscine",
+    "sauna"
+   ],
+   "restaurant": "",
+   "gare": {
+    "nom": "Saint-Gervais-Le Fayet",
+    "lat": 45.907,
+    "lng": 6.7
+   },
+   "train": {
+    "paris": {
+     "min": 296,
+     "via": "Paris-Gare de Lyon, TGV Lyria jusqu'à Bellegarde puis TER (4h56 selon SNCF Connect) ; un TGV direct à 5h03 existe",
+     "source": "https://www.sncf-connect.com/train/trajet/paris/saint-gervais-les-bains",
+     "sur": true
+    },
+    "lyon": {
+     "min": 213,
+     "via": "TER direct via Ambérieu/Bellegarde. SNCF Connect : 3h33",
+     "source": "https://www.sncf-connect.com/train/horaires/lyon/saint-gervais-les-bains",
+     "sur": true
+    }
+   },
+   "acces": "télécabines depuis Saint-Gervais (Alpin puis Bettex), accès avant 16h30",
+   "sources": [
+    "https://fr.gaultmillau.com/fr/hotels/refuge-chez-la-tante",
+    "https://tourism.saintgervais.com/i-want-to/sleeping/hotels/refuge-chez-la-tante-mont-darbois-saint-gervais-les-bains-en-5929757/",
+    "https://hautesavoiemontblanc-tourisme.com/offres/refuge-chez-la-tante-mont-darbois-saint-gervais-les-bains-fr-5989398/"
+   ],
+   "verifie": "2026-11-27"
+  },
+  "molitor": {
+   "equip": [
+    "restaurant",
+    "bar",
+    "spa",
+    "piscine",
+    "parking",
+    "animaux",
+    "pmr",
+    "climatisation"
+   ],
+   "restaurant": "Restaurant Molitor",
+   "gare": {
+    "nom": "Paris-Montparnasse",
+    "lat": 48.841,
+    "lng": 2.32
+   },
+   "train": {
+    "lyon": {
+     "min": 160,
+     "via": "TGV direct jusqu'à Paris-Gare de Lyon (~1h55) + 45 min pour changement de gare (métro) vers Montparnasse",
+     "source": "https://www.omio.fr/trains/lyon-part-dieu/paris-gare-de-lyon",
+     "sur": true
+    },
+    "bordeaux": {
+     "min": 123,
+     "via": "TGV direct, 2h03 au plus rapide (Omio, L'Itinéraire ; SNCF Connect 2h08)",
+     "source": "https://www.omio.fr/trains/bordeaux-st-jean/paris-gare-montparnasse",
+     "sur": true
+    },
+    "paris": {
+     "min": 0,
+     "via": "dans la ville",
+     "source": "",
+     "sur": true
+    }
+   },
+   "acces": "",
+   "sources": [
+    "https://all.accor.com/hotel/7326/index.fr.shtml",
+    "https://parisjetaime.com/hebergement/molitor-mgallery-hotel-collection-p3219",
+    "https://guide.michelin.com/en/hotels-stays/paris/hotel-molitor-paris-7710"
+   ],
+   "verifie": "2026-11-27"
+  },
+  "maison-souquet": {
+   "equip": [
+    "petit-dejeuner",
+    "bar",
+    "spa",
+    "sauna"
+   ],
+   "restaurant": "",
+   "gare": {
+    "nom": "Paris-Saint-Lazare",
+    "lat": 48.876,
+    "lng": 2.325
+   },
+   "train": {
+    "lyon": {
+     "min": 160,
+     "via": "TGV direct jusqu'à Paris-Gare de Lyon (~1h55) + 45 min pour changement de gare (métro 14) vers Saint-Lazare",
+     "source": "https://www.omio.fr/trains/lyon-part-dieu/paris-gare-de-lyon",
+     "sur": true
+    },
+    "bordeaux": {
+     "min": 168,
+     "via": "TGV direct Bordeaux – Paris-Montparnasse (2 h 03) + 45 min de correspondance dans Paris",
+     "source": "https://www.sncf-connect.com/train/trajet/bordeaux/paris",
+     "sur": true
+    },
+    "paris": {
+     "min": 0,
+     "via": "dans la ville",
+     "source": "",
+     "sur": true
+    }
+   },
+   "acces": "",
+   "sources": [
+    "https://parisjetaime.com/hebergement/maison-souquet-p282",
+    "https://guide.michelin.com/us/en/hotels-stays/paris/maison-souquet-7832",
+    "https://www.fr.lastminute.com/hotel/france/paris/maison-souquet-hotel-spa_hid-1859048"
+   ],
+   "verifie": "2026-11-27"
+  },
+  "intercontinental-lyon-hotel-dieu": {
+   "equip": [
+    "restaurant",
+    "bar",
+    "parking"
+   ],
+   "restaurant": "Epona",
+   "gare": {
+    "nom": "Lyon-Part-Dieu",
+    "lat": 45.76,
+    "lng": 4.859
+   },
+   "train": {
+    "paris": {
+     "min": 103,
+     "via": "Paris-Gare de Lyon, TGV direct (1h43 selon SNCF Connect)",
+     "source": "https://www.sncf-connect.com/train/trajet/paris/lyon",
+     "sur": true
+    },
+    "bordeaux": {
+     "min": 255,
+     "via": "estimation à vérifier",
+     "source": "",
+     "sur": false
+    },
+    "lyon": {
+     "min": 0,
+     "via": "dans la ville",
+     "source": "",
+     "sur": true
+    }
+   },
+   "acces": "",
+   "sources": [
+    "https://lyon.intercontinental.com/en/useful-informations",
+    "https://www.visiterlyon.com/sejourner/hebergements/hotels/intercontinental-lyon-hotel-dieu",
+    "https://www.ihg.com/intercontinental/hotels/gb/en/lyon/lysha/hoteldetail/amenities"
+   ],
+   "verifie": "2026-11-27"
+  },
+  "hotel-de-la-cite-carcassonne": {
+   "equip": [
+    "restaurant",
+    "bar",
+    "piscine",
+    "parking",
+    "animaux"
+   ],
+   "restaurant": "La Barbacane",
+   "gare": {
+    "nom": "Carcassonne",
+    "lat": 43.215,
+    "lng": 2.351
+   },
+   "train": {
+    "paris": {
+     "min": 309,
+     "via": "Une correspondance (Narbonne ou Toulouse), 5h09 ; autres sources 5h21 à 5h34",
+     "source": "https://www.l-itineraire.com/train/carcassonne/paris",
+     "sur": true
+    },
+    "lyon": {
+     "min": 201,
+     "via": "TGV INOUI direct, 3h21 au plus rapide (L'Itinéraire, Liligo 3h23)",
+     "source": "https://www.l-itineraire.com/train/carcassonne/lyon",
+     "sur": true
+    },
+    "bordeaux": {
+     "min": 195,
+     "via": "Direct (Intercités), le plus rapide 3h15 (SNCF Connect, Omio)",
+     "source": "https://www.sncf-connect.com/train/trajet/bordeaux/carcassonne",
+     "sur": true
+    }
+   },
+   "acces": "",
+   "sources": [
+    "https://all.accor.com/hotel/8613/index.fr.shtml",
+    "https://fr.gaultmillau.com/fr/hotels/hotel-de-la-cite---mgallery",
+    "https://www.tourisme-occitanie.com/fr/fiche/hotellerie/hotel-de-la-cite-carcassonne_TFOHOTLAR011FS000CV/"
+   ],
+   "verifie": "2026-11-27"
+  },
+  "grand-controle-versailles": {
+   "equip": [
+    "restaurant",
+    "spa",
+    "piscine",
+    "sauna",
+    "parking",
+    "animaux"
+   ],
+   "restaurant": "Le Grand Contrôle (Alain Ducasse)",
+   "gare": {
+    "nom": "Versailles-Château-Rive-Gauche",
+    "lat": 48.797,
+    "lng": 2.126
+   },
+   "train": {
+    "paris": {
+     "min": 35,
+     "via": "RER C depuis le centre de Paris (Saint-Michel, Musée d'Orsay...), 30 à 40 min selon les guides ; pas de chiffre officiel trouvé",
+     "source": "https://everyrail.com/fr/trains/paris-versailles/",
+     "sur": false
+    },
+    "lyon": {
+     "min": 141,
+     "via": "TGV direct Lyon Part-Dieu - Versailles-Chantiers 2h21 ; aucun trajet direct vers Rive Gauche trouvé (Rive Gauche non vérifié, passer par Paris/RER C ajouterait du temps)",
+     "source": "https://uk.trip.com/trains/france/route/versailles-chateau-rive-gauche-to-lyon",
+     "sur": false
+    },
+    "bordeaux": {
+     "min": 153,
+     "via": "Versailles-Chantiers",
+     "source": "https://www.sncf-connect.com/train/trajet/versailles/bordeaux",
+     "sur": true
+    }
+   },
+   "acces": "",
+   "sources": [
+    "https://guide.michelin.com/pt/pt_PT/hotels-stays/versailles/airelles-chateau-de-versailles-le-grand-controle-13749",
+    "https://parisjetaime.com/eng/accommodation/airelles-chateau-de-versailles-le-grand-controle-p3293",
+    "https://scottdunn.com/france/hotels/airelles-chateau-de-versailles-le-grand-controle"
+   ],
+   "verifie": "2026-11-27"
+  },
+  "ile-louet": {
+   "equip": [
+    "enfants"
+   ],
+   "restaurant": "",
+   "gare": {
+    "nom": "Morlaix",
+    "lat": 48.58,
+    "lng": -3.827
+   },
+   "train": {
+    "paris": {
+     "min": 177,
+     "via": "Paris-Montparnasse, TGV (2h57 SNCF Connect CH ; 3h08 sur la page FR, sources divergentes)",
+     "source": "https://www.sncf-connect.com/fr-ch/train/trajet/paris/morlaix",
+     "sur": true
+    },
+    "lyon": {
+     "min": 348,
+     "via": "Correspondance(s) (Paris/Rennes). SNCF Connect : plus rapide ~5h48 (autres 6h05-6h12)",
+     "source": "https://www.sncf-connect.com/train/trajet/lyon/morlaix",
+     "sur": true
+    },
+    "bordeaux": {
+     "min": 420,
+     "via": "estimation à vérifier",
+     "source": "",
+     "sur": false
+    }
+   },
+   "acces": "bateau depuis Carantec (barge Carantec Nautisme, 125 EUR A/R, à réserver 15 jours avant)",
+   "sources": [
+    "https://baiedemorlaix.bzh/en/hebergement/la-maison-du-gardien-du-phare-de-lile-louet-hlobre029v521m41-2",
+    "https://www.baiedemorlaix.bzh/en/discover/ile-louet/",
+    "https://www.baiedemorlaix.bzh/en/activite/transfert-vers-lile-louet-par-carantec-nautisme-ascbre029v53xcoz-2/"
+   ],
+   "verifie": "2026-11-27"
+  },
+  "cap-estel": {
+   "equip": [
+    "restaurant",
+    "spa",
+    "piscine",
+    "sauna",
+    "parking",
+    "animaux"
+   ],
+   "restaurant": "La Table du Cap Estel",
+   "gare": {
+    "nom": "Èze-sur-Mer",
+    "lat": 43.727,
+    "lng": 7.362
+   },
+   "train": {
+    "paris": {
+     "min": 367,
+     "via": "Paris-Gare de Lyon, TGV jusqu'à Nice puis TER (6h07 selon Rail Europe)",
+     "source": "https://www.raileurope.com/fr/destinations/paris-eze-train",
+     "sur": true
+    },
+    "lyon": {
+     "min": 294,
+     "via": "Trajet le plus rapide 4h54 avec 2 changements (via Nice, TER) selon L'Itinéraire ; autres sources 5h04 à 5h28 ; pas de direct",
+     "source": "https://www.l-itineraire.com/train/eze/lyon",
+     "sur": false
+    }
+   },
+   "acces": "",
+   "sources": [
+    "https://guide.michelin.com/fr/fr/hotels-stays/eze/cap-estel-5517",
+    "https://www.explorenicecotedazur.com/restaurant/la-table-du-cap-estel/",
+    "https://provence-alpes-cotedazur.com/sejourner/hebergements/tous-les-hebergements/hotels/hotel-cap-estel-eze-fr-2884637/"
+   ],
+   "verifie": "2026-11-27"
+  },
+  "relais-de-chambord": {
+   "equip": [
+    "restaurant",
+    "bar",
+    "spa",
+    "sauna",
+    "parking",
+    "animaux"
+   ],
+   "restaurant": "Le Grand Saint Michel",
+   "gare": {
+    "nom": "Blois-Chambord",
+    "lat": 47.585,
+    "lng": 1.34
+   },
+   "train": {
+    "paris": {
+     "min": 83,
+     "via": "Paris-Austerlitz, direct 1h23",
+     "source": "https://www.kombo.co/fr/horaires-train-Paris-Blois",
+     "sur": true
+    },
+    "lyon": {
+     "min": 236,
+     "via": "Avec correspondance (Paris ou Saint-Pierre-des-Corps), 3h56 (SNCF Connect, Rail.ninja)",
+     "source": "https://www.sncf-connect.com/en-en/train/timetables/lyon/blois",
+     "sur": true
+    },
+    "bordeaux": {
+     "min": 176,
+     "via": "SNCF Connect et Kombo : le plus rapide 2h56, avec correspondance",
+     "source": "https://www.sncf-connect.com/train/trajet/bordeaux/blois",
+     "sur": true
+    }
+   },
+   "acces": "Aucune liaison ferroviaire jusqu'à Chambord : environ 20 km depuis la gare de Blois (taxi/navette, non vérifié)",
+   "sources": [
+    "https://www.booking.com/hotel/fr/relais-de-chambord.html",
+    "https://guide.michelin.com/th/th/hotels-stays/chambord/relais-de-chambord-8942",
+    "https://www.bloischambord.com/en/organizing-your-stay/lodging/hotels/relais-de-chambord-chambord-en-1451290/"
+   ],
+   "verifie": "2026-11-27"
+  },
+  "toue-cabanee-canal-de-bourgogne": {
+   "equip": [
+    "petit-dejeuner",
+    "jacuzzi-privatif",
+    "climatisation"
+   ],
+   "restaurant": "",
+   "gare": {
+    "nom": "Les Laumes-Alésia",
+    "lat": 47.538,
+    "lng": 4.465
+   },
+   "train": {
+    "paris": {
+     "min": 100,
+     "via": "estimation à vérifier",
+     "source": "",
+     "sur": false
+    },
+    "lyon": {
+     "min": 164,
+     "via": "TGV direct 2h41-2h45 (via Dijon : 3h05-3h25). SNCF Connect (Venarey-les-Laumes) : 2h44",
+     "source": "https://www.sncf-connect.com/train/trajet/lyon/venarey-les-laumes",
+     "sur": true
+    },
+    "bordeaux": {
+     "min": 340,
+     "via": "estimation à vérifier",
+     "source": "",
+     "sur": false
+    }
+   },
+   "acces": "",
+   "sources": [
+    "https://www.burgundy-tourism.com/sit/les-lodges-du-canal-de-bourgogne-la-toue-cabanee",
+    "https://www.hotels-insolites.com/en/lodge-canal-bourgogne.hotel",
+    "https://www.fairmoove.fr/product/glamping/bourgogne-franche-comte/cote-d-or/les-lodges-du-canal-de-bourgogne-71261"
+   ],
+   "verifie": "2026-11-27"
+  },
+  "moulin-du-roc": {
+   "equip": [
+    "restaurant",
+    "piscine",
+    "parking",
+    "animaux"
+   ],
+   "restaurant": "Ròda",
+   "gare": {
+    "nom": "Périgueux",
+    "lat": 45.185,
+    "lng": 0.72
+   },
+   "train": {
+    "paris": {
+     "min": 217,
+     "via": "Paris-Austerlitz, direct (3h37 selon SNCF Connect)",
+     "source": "https://www.sncf-connect.com/train/trajet/paris/perigueux",
+     "sur": true
+    },
+    "lyon": {
+     "min": 406,
+     "via": "Pas de direct ; via Limoges/Vierzon ou Paris. Le plus rapide trouvé : 6h46 ",
+     "source": "https://www.l-itineraire.com/train/perigueux/lyon",
+     "sur": true
+    },
+    "bordeaux": {
+     "min": 70,
+     "via": "TER direct, 1h10 au plus rapide (Virail ; SNCF Connect 1h09 dans l'autre sens)",
+     "source": "https://www.virail.fr/trains-bordeaux-perigueux",
+     "sur": true
+    }
+   },
+   "acces": "",
+   "sources": [
+    "https://www.dordogne-perigord-tourisme.fr/offres/le-moulin-du-roc-champagnac-de-belair-fr-2939663/",
+    "https://fr.gaultmillau.com/fr/hotels/hotel-le-moulin-du-roc",
+    "https://www.dordogne-perigord-tourisme.fr/offres/le-moulin-du-roc-restaurant-roda-champagnac-de-belair-fr-2939749/"
+   ],
+   "verifie": "2026-11-27"
+  },
+  "bulles-de-savoie": {
+   "equip": [
+    "jacuzzi-privatif"
+   ],
+   "restaurant": "",
+   "gare": {
+    "nom": "Aix-les-Bains-Le Revard",
+    "lat": 45.689,
+    "lng": 5.916
+   },
+   "train": {
+    "paris": {
+     "min": 192,
+     "via": "Paris-Gare de Lyon, TGV direct 3h12",
+     "source": "https://www.sncf-connect.com/train/trajet/paris/aix-les-bains",
+     "sur": true
+    },
+    "lyon": {
+     "min": 70,
+     "via": "TER direct, 1h10 au plus rapide (SNCF Connect, Trip.com)",
+     "source": "https://www.sncf-connect.com/train/horaires/aix-les-bains/lyon",
+     "sur": true
+    },
+    "bordeaux": {
+     "min": 392,
+     "via": "SNCF Connect (sens Aix-les-Bains→Bordeaux) 6h32 le plus rapide, Trip.com ~6h25 ; correspondance(s), durée prise dans le sens inverse",
+     "source": "https://www.sncf-connect.com/train/trajet/aix-les-bains/bordeaux",
+     "sur": false
+    }
+   },
+   "acces": "",
+   "sources": [
+    "https://auvergnerhonealpes-tourisme.com/en/fiches/the-bubbles-of-savoy",
+    "https://www.chamberymontagnes.com/en/offers/the-bubbles-of-savoy-billieme-en-5939429",
+    "https://savoie-mont-blanc.com/?p=560739"
+   ],
+   "verifie": "2026-11-27"
+  },
+  "cabanes-lacustra": {
+   "equip": [
+    "restaurant",
+    "animaux",
+    "enfants"
+   ],
+   "restaurant": "Lacustra Restaurant",
+   "gare": {
+    "nom": "Clermont-Ferrand",
+    "lat": 45.779,
+    "lng": 3.099
+   },
+   "train": {
+    "paris": {
+     "min": 205,
+     "via": "estimation à vérifier",
+     "source": "",
+     "sur": false
+    },
+    "lyon": {
+     "min": 133,
+     "via": "TER direct, via Roanne/Vichy. TER AURA : trajet le plus court 2h13",
+     "source": "https://www.ter.sncf.com/auvergne-rhone-alpes/trajet-lyon-clermont-ferrand",
+     "sur": true
+    },
+    "bordeaux": {
+     "min": 382,
+     "via": "SNCF Connect : le plus rapide 6h22 (Virail 6h26), avec correspondance",
+     "source": "https://www.sncf-connect.com/train/trajet/bordeaux/clermont-ferrand",
+     "sur": true
+    }
+   },
+   "acces": "",
+   "sources": [
+    "https://auvergnerhonealpes-tourisme.com/en/fiches/cabanes-sur-pilotis-lacustra",
+    "https://auvergnerhonealpes-tourisme.com/en/fiches/lacustra-restaurant",
+    "https://auvergne-destination.com/en/fiches/cabanes-sur-pilotis-lacustra"
+   ],
+   "verifie": "2026-11-27"
+  },
+  "chateau-de-la-treyne": {
+   "equip": [
+    "restaurant",
+    "table-etoilee",
+    "piscine",
+    "parking",
+    "animaux"
+   ],
+   "restaurant": "Le Château de la Treyne",
+   "gare": {
+    "nom": "Souillac",
+    "lat": 44.894,
+    "lng": 1.487
+   },
+   "train": {
+    "paris": {
+     "min": 299,
+     "via": "Paris-Austerlitz, Intercités direct (4h59 selon SNCF Connect)",
+     "source": "https://www.sncf-connect.com/train/trajet/paris/souillac",
+     "sur": true
+    },
+    "lyon": {
+     "min": 379,
+     "via": "Source donne 6h19 pour le sens inverse Souillac→Lyon (trajet le plus rapide, avec correspondances) ; sens Lyon→Souillac non confirmé",
+     "source": "https://www.l-itineraire.com/train/souillac/lyon",
+     "sur": false
+    },
+    "bordeaux": {
+     "min": 164,
+     "via": "Intercités/TER, 2h44 au plus rapide (Omio, sens Souillac-Bordeaux) ; autres sources 3h01 à 3h49, peu de trains",
+     "source": "https://www.omio.fr/trains/souillac/bordeaux-xmexv",
+     "sur": false
+    }
+   },
+   "acces": "",
+   "sources": [
+    "https://guide.michelin.com/en/occitanie/lacave/restaurant/chateau-de-la-treyne",
+    "https://www.relaischateaux.com/restaurant/chateau-de-la-treyne",
+    "https://www.tourisme-occitanie.com/fr/fiche/hotellerie/hotel-restaurant-le-chateau-de-la-treyne-lacave_TFOHOT1076CDT460001/"
+   ],
+   "verifie": "2026-11-27"
+  },
+  "ecrin-d-auvergne": {
+   "equip": [
+    "spa",
+    "jacuzzi-privatif"
+   ],
+   "restaurant": "",
+   "gare": {
+    "nom": "Ussel",
+    "lat": 45.548,
+    "lng": 2.309
+   },
+   "train": {
+    "paris": {
+     "min": 337,
+     "via": "Paris-Austerlitz, Intercités direct (5h37 selon Omio)",
+     "source": "https://www.omio.fr/trains/paris/ussel",
+     "sur": true
+    },
+    "lyon": {
+     "min": 526,
+     "via": "Pas de direct, plusieurs changements (via Limoges/Vierzon), 8h46 ; Rome2rio 9h28, Trainline 9h43",
+     "source": "https://www.l-itineraire.com/train/ussel-19/lyon",
+     "sur": true
+    },
+    "bordeaux": {
+     "min": 254,
+     "via": "TER via Périgueux/Brive, pas de direct ; Rome2rio 4h14 au plus rapide, Omio 4h17 à 5h37, peu de trains",
+     "source": "https://www.rome2rio.com/Train/Bordeaux/Ussel",
+     "sur": false
+    }
+   },
+   "acces": "",
+   "sources": [
+    "https://auvergnerhonealpes-tourisme.com/en/fiches/ecrin-dauvergne-lodges-private-spa",
+    "https://www.greengo.voyage/hote/ecrin-d-auvergne-lodges-et-spa-privatif/logement/lodge-spa-privatif-serenite-cabane",
+    "https://www.expedia.co.uk/Champs-Sur-Tarentaine-Marchal-Hotels-Lecolodge-Ecrin-Dauvergne-Propose-Des-Lodges-Avec-Spa-Privatif-Sur-C.h95310926.Hotel-Information"
+   ],
+   "verifie": "2026-11-27"
+  },
+  "etape-en-foret": {
+   "equip": [
+    "restaurant",
+    "jacuzzi-privatif",
+    "enfants"
+   ],
+   "restaurant": "",
+   "gare": {
+    "nom": "Caen",
+    "lat": 49.176,
+    "lng": -0.346
+   },
+   "train": {
+    "paris": {
+     "min": 114,
+     "via": "Paris-Saint-Lazare, direct 1h54",
+     "source": "https://www.l-itineraire.com/train/paris/caen",
+     "sur": true
+    },
+    "lyon": {
+     "min": 275,
+     "via": "Via Paris Gare de Lyon puis Saint-Lazare (changement de gare), 4h35 au plus rapide (Rome2rio 4h36, SNCF Connect 4h35 à 4h52) ; durée de correspondance supposée incluse dans le calcul d'itinéraire, non ajouté 45 min",
+     "source": "https://www.rome2rio.com/Train/Lyon/Caen",
+     "sur": false
+    },
+    "bordeaux": {
+     "min": 298,
+     "via": "Liligo/L'Itinéraire 4h58, Omio 4h38 à 5h01, SNCF Connect 5h30 : sources divergentes, correspondance via Paris",
+     "source": "https://www.liligo.fr/trains/itineraires/bordeaux/caen",
+     "sur": false
+    }
+   },
+   "acces": "",
+   "sources": [
+    "https://www.greengo.voyage/hote/etape-en-foret-locations-insolites-et-loisirs-nature-sur-un-domaine-de-10ha-normandie-calvados",
+    "https://www.fairmoove.fr/product/glamping/normandie/calvados/letape-en-foret-72265",
+    "https://www.pitchup.com/ca/campsites/france/basse-normandie/calvados/saint_sever_calvados/etape_en_foret"
+   ],
+   "verifie": "2026-11-27"
+  },
+  "gare-de-guiscriff": {
+   "equip": [
+    "petit-dejeuner",
+    "enfants"
+   ],
+   "restaurant": "",
+   "gare": {
+    "nom": "Lorient",
+    "lat": 47.753,
+    "lng": -3.364
+   },
+   "train": {
+    "paris": {
+     "min": 173,
+     "via": "Paris-Montparnasse, TGV direct (2h53 selon SNCF Connect)",
+     "source": "https://www.sncf-connect.com/train/trajet/paris/lorient",
+     "sur": true
+    },
+    "lyon": {
+     "min": 351,
+     "via": "Pas de direct ; TGV via Paris puis Rennes/Vannes/Auray. SNCF Connect : minimum 5h51",
+     "source": "https://www.sncf-connect.com/train/trajet/lyon/lorient",
+     "sur": true
+    },
+    "bordeaux": {
+     "min": 330,
+     "via": "estimation à vérifier",
+     "source": "",
+     "sur": false
+    }
+   },
+   "acces": "",
+   "sources": [
+    "https://morbihan.com/offres/train-couchettes-en-gare-de-guiscriff-guiscriff-fr-4374619",
+    "https://www.lorientbretagnesudtourisme.fr/fr/fiche/train-couchette-a-loisirs-en-gare-de-guiscriff-guiscriff_TFOHTRAINGUISCRIFF",
+    "https://www.connexionfrance.com/magazine/sleep-in-a-100-year-old-railway-carriage-at-a-former-brittany-station/756671"
+   ],
+   "verifie": "2026-11-27"
+  },
+  "nids-des-vosges": {
+   "equip": [
+    "petit-dejeuner",
+    "spa",
+    "jacuzzi-privatif",
+    "sauna",
+    "parking",
+    "enfants"
+   ],
+   "restaurant": "",
+   "gare": {
+    "nom": "Épinal",
+    "lat": 48.178,
+    "lng": 6.449
+   },
+   "train": {
+    "paris": {
+     "min": 138,
+     "via": "Paris-Gare de l'Est, TGV direct (2h18 selon SNCF Connect)",
+     "source": "https://www.sncf-connect.com/train/trajet/paris/epinal",
+     "sur": true
+    },
+    "lyon": {
+     "min": 320,
+     "via": "TGV/direct le plus rapide 5h20 (Kombo) ; autres comparateurs 5h33 à 5h48",
+     "source": "https://www.kombo.co/fr/horaires-train-Epinal-Lyon",
+     "sur": true
+    }
+   },
+   "acces": "",
+   "sources": [
+    "https://www.greengo.voyage/hote/coucoo-cabanes-cabanes-nids-des-vosges",
+    "https://www.jds.fr/champdray/refuge-gite-chalet-montagne/nids-des-vosges-20677_L",
+    "https://leguide.ancv.com/ptl/hebergement/hebergement_insolite/cabanes_nids_des_vosges/940534001001"
+   ],
+   "verifie": "2026-11-27"
+  },
+  "domaine-de-murtoli": {
+   "equip": [
+    "restaurant",
+    "bar",
+    "piscine",
+    "sauna",
+    "parking",
+    "enfants",
+    "wifi"
+   ],
+   "restaurant": "La Table de la Ferme",
+   "gare": {
+    "nom": "Ajaccio",
+    "lat": 41.92,
+    "lng": 8.73
+   },
+   "train": {},
+   "acces": "Corse : avion ou ferry, puis route (environ 1h30 depuis Ajaccio)",
+   "sources": [
+    "https://guide.michelin.com/fr/fr/hotels-stays/sartene/domaine-de-murtoli-10918",
+    "https://murtoli.com/en/hotel-1",
+    "https://www.visit-corsica.com/en/Mon-sejour/Hebergement/Hotels/DOMAINE-DE-MURTOLI"
+   ],
+   "verifie": "2026-11-27"
+  },
+  "villa-la-coste": {
+   "equip": [
+    "restaurant",
+    "spa",
+    "piscine"
+   ],
+   "restaurant": "Louison",
+   "gare": {
+    "nom": "Aix-en-Provence TGV",
+    "lat": 43.455,
+    "lng": 5.317
+   },
+   "train": {
+    "paris": {
+     "min": 175,
+     "via": "Paris-Gare de Lyon, TGV direct 2h55",
+     "source": "https://www.liligo.fr/trains/itineraires/paris/aixenprovence",
+     "sur": true
+    },
+    "lyon": {
+     "min": 87,
+     "via": "TGV INOUI direct, 1h27 au plus rapide (SNCF Connect)",
+     "source": "https://www.sncf-connect.com/train/horaires/lyon/aix-en-provence-tgv",
+     "sur": true
+    },
+    "bordeaux": {
+     "min": 387,
+     "via": "Omio : option la plus rapide 6h27 avec correspondance (SNCF Connect Aix→Bordeaux 6h16, Trainline 6h59 inverse)",
+     "source": "https://www.omio.fr/trains/bordeaux-saint-jean/aix-en-provence-tgv-am7si",
+     "sur": true
+    }
+   },
+   "acces": "",
+   "sources": [
+    "https://guide.michelin.com/sg/en/hotels-stays/aix-en-provence/villa-la-coste-8645",
+    "https://fr.gaultmillau.com/fr/hotels/villa-la-coste",
+    "https://www.france.fr/fr/article/palace-villa-la-coste/"
+   ],
+   "verifie": "2026-11-27"
+  },
+  "nids-de-chlorofil": {
+   "equip": [
+    "petit-dejeuner",
+    "enfants"
+   ],
+   "restaurant": "",
+   "gare": {
+    "nom": "Lille-Flandres",
+    "lat": 50.636,
+    "lng": 3.07
+   },
+   "train": {
+    "paris": {
+     "min": 63,
+     "via": "Paris-Nord, TGV INOUI direct (1h03 vers Lille-Flandres selon Omio)",
+     "source": "https://www.omio.fr/trains/paris-gare-du-nord/lille-flandres",
+     "sur": true
+    },
+    "lyon": {
+     "min": 180,
+     "via": "Lille-Europe TGV direct Lyon Part-Dieu > Lille-Europe, ~3h00-3h10 (SNCF Connect)",
+     "source": "https://www.sncf-connect.com/train/trajet/lyon/lille",
+     "sur": true
+    },
+    "bordeaux": {
+     "min": 330,
+     "via": "estimation à vérifier",
+     "source": "",
+     "sur": false
+    }
+   },
+   "acces": "",
+   "sources": [
+    "https://www.lebonbon.fr/lille/loisirs/a-20-min-de-lille-profite-d-un-weekend-perche-dans-les-arbres/",
+    "https://restaurants-de-france.fr/hotel/fr-fr/fiche/les-nids-de-chlorofil-54170.html",
+    "https://www.parcsetloisirs.fr/parc/accrobranches-phalempin"
+   ],
+   "verifie": "2026-11-27"
+  },
+  "cabanes-de-blanche": {
+   "equip": [
+    "spa",
+    "jacuzzi-privatif"
+   ],
+   "restaurant": "",
+   "gare": {
+    "nom": "Arras",
+    "lat": 50.286,
+    "lng": 2.781
+   },
+   "train": {
+    "paris": {
+     "min": 48,
+     "via": "Paris-Nord, TGV direct 48 min",
+     "source": "https://www.sncf-connect.com/train/trajet/paris/arras",
+     "sur": true
+    },
+    "lyon": {
+     "min": 176,
+     "via": "TGV direct, 2h56 au plus rapide (SNCF Connect, Omio)",
+     "source": "https://www.sncf-connect.com/train/trajet/lyon/arras",
+     "sur": true
+    },
+    "bordeaux": {
+     "min": 234,
+     "via": "SNCF Connect : train le plus rapide 3h54 (Kombo 3h39, Omio 3h48), probablement TGV avec correspondance",
+     "source": "https://www.sncf-connect.com/train/trajet/bordeaux/arras",
+     "sur": true
+    }
+   },
+   "acces": "",
+   "sources": [
+    "https://www.lescabanesdeblanche.com/"
+   ],
+   "verifie": "2026-11-27"
+  },
+  "lieu-dieu": {
+   "equip": [
+    "restaurant",
+    "petit-dejeuner",
+    "bar",
+    "jacuzzi-privatif",
+    "parking",
+    "animaux",
+    "enfants"
+   ],
+   "restaurant": "",
+   "gare": {
+    "nom": "Abbeville",
+    "lat": 50.104,
+    "lng": 1.827
+   },
+   "train": {
+    "paris": {
+     "min": 91,
+     "via": "Paris-Nord, TER direct 1h31",
+     "source": "https://www.kombo.co/fr/horaires-train-Paris-Abbeville",
+     "sur": true
+    },
+    "lyon": {
+     "min": 267,
+     "via": "Avec correspondance à Paris, 4h27 au plus rapide (SNCF Connect, Virail 4h28)",
+     "source": "https://www.sncf-connect.com/train/trajet/abbeville/lyon",
+     "sur": true
+    },
+    "bordeaux": {
+     "min": 288,
+     "via": "SNCF Connect : train le plus rapide 4h48 (Virail 4h52), avec correspondance(s)",
+     "source": "https://www.sncf-connect.com/train/trajet/bordeaux/abbeville",
+     "sur": true
+    }
+   },
+   "acces": "",
+   "sources": [
+    "https://emmenetonchien.com/fiches/hebergement-insolite-chien-animaux-acceptes/le-domaine-du-lieu-dieu/",
+    "https://www.kayak.fr/Beauchamps-Hotels-Domaine-Du-Lieu-Dieu.639891.ksp",
+    "https://www.staycation.co/fr/hotels/lieudieu-cabane-sur-leau-sejour-equestre-hebergements-insolites-5679"
+   ],
+   "verifie": "2026-11-27"
+  },
+  "villa-rene-lalique": {
+   "equip": [
+    "restaurant",
+    "table-etoilee",
+    "bar",
+    "parking"
+   ],
+   "restaurant": "Villa René Lalique",
+   "gare": {
+    "nom": "Saverne",
+    "lat": 48.743,
+    "lng": 7.356
+   },
+   "train": {
+    "paris": {
+     "min": 138,
+     "via": "Paris-Gare de l'Est, TGV direct (2h18 selon SNCF Connect)",
+     "source": "https://www.sncf-connect.com/fr-ch/train/trajet/paris/saverne",
+     "sur": true
+    },
+    "lyon": {
+     "min": 287,
+     "via": "Pas de direct ; TGV vers Strasbourg puis TER. SNCF Connect : 4h47",
+     "source": "https://www.sncf-connect.com/train/trajet/lyon/saverne",
+     "sur": true
+    },
+    "bordeaux": {
+     "min": 355,
+     "via": "Avec correspondance (Paris ou Nancy) ; SNCF Connect 5h55 au plus rapide (sens Saverne-Bordeaux), exemple Bordeaux-Saverne 6h00 via Nancy",
+     "source": "https://www.sncf-connect.com/train/trajet/saverne/bordeaux",
+     "sur": false
+    }
+   },
+   "acces": "",
+   "sources": [
+    "https://guide.michelin.com/en/grand-est/wingen-sur-moder/restaurant/villa-rene-lalique",
+    "https://www.relaischateaux.com/fr/details/villa-rene-lalique-hotel-et-restaurant/",
+    "https://www.viamichelin.pt/web/Pesquisa-Restaurante/Wingen_sur_Moder-67290-Villa_Rene_Lalique-t645yf86"
+   ],
+   "verifie": "2026-11-27"
+  },
+  "cabanes-du-goutty": {
+   "equip": [
+    "enfants"
+   ],
+   "restaurant": "",
+   "gare": {
+    "nom": "Rothau",
+    "lat": 48.47,
+    "lng": 7.205
+   },
+   "train": {
+    "paris": {
+     "min": 207,
+     "via": "Paris-Gare de l'Est, TGV puis TER via Strasbourg (3h27 selon SNCF Connect)",
+     "source": "https://www.sncf-connect.com/train/trajet/paris/rothau",
+     "sur": true
+    },
+    "lyon": {
+     "min": 300,
+     "via": "estimation à vérifier",
+     "source": "",
+     "sur": false
+    }
+   },
+   "acces": "",
+   "sources": [
+    "https://www.valleedelabruche.fr/fr/preparer/passer-1-nuit-et-plus/hotels-chambres/F215001964_chambres-d-hotes-les-cabanes-du-goutty-grandfontaine.html"
+   ],
+   "verifie": "2026-11-27"
+  },
+  "domaine-du-chatelet": {
+   "equip": [
+    "petit-dejeuner",
+    "spa",
+    "jacuzzi-privatif",
+    "sauna",
+    "enfants"
+   ],
+   "restaurant": "",
+   "gare": {
+    "nom": "Remiremont",
+    "lat": 48.016,
+    "lng": 6.59
+   },
+   "train": {
+    "paris": {
+     "min": 162,
+     "via": "Paris-Gare de l'Est, TGV direct (2h42 selon SNCF Connect, quelques trains par jour)",
+     "source": "https://www.sncf-connect.com/fr-be/train/trajet/paris/remiremont",
+     "sur": true
+    },
+    "lyon": {
+     "min": 357,
+     "via": "TGV avec changement à Paris. Source SNCF Connect sens Remiremont > Lyon (5h57, TGV INOUI) ; sens inverse supposé identique",
+     "source": "https://www.sncf-connect.com/train/horaires/remiremont/lyon",
+     "sur": false
+    }
+   },
+   "acces": "",
+   "sources": [
+    "https://www.gites-de-france.com/en/grand-est/vosges/yourte-domaine-du-chatelet-h88g001299",
+    "https://www.gites-de-france.com/en/grand-est/vosges/cabane-dans-les-arbres-domaine-du-chatelet-h88g001293",
+    "https://www.viamichelin.com/maps/hotels/poi/ferdrupt-88360-a4bcfd3b"
+   ],
+   "verifie": "2026-11-27"
+  },
+  "cabane-du-perche": {
+   "equip": [
+    "petit-dejeuner",
+    "jacuzzi-privatif",
+    "enfants"
+   ],
+   "restaurant": "",
+   "gare": {
+    "nom": "Nogent-le-Rotrou",
+    "lat": 48.32,
+    "lng": 0.82
+   },
+   "train": {
+    "paris": {
+     "min": 96,
+     "via": "Paris-Montparnasse, direct (1h36 selon SNCF Connect)",
+     "source": "https://www.sncf-connect.com/fr-ch/train/trajet/paris/nogent-le-rotrou",
+     "sur": true
+    },
+    "lyon": {
+     "min": 223,
+     "via": "TGV puis TER, changement au Mans. SNCF Connect : minimum 3h43",
+     "source": "https://www.sncf-connect.com/train/trajet/lyon/nogent-le-rotrou",
+     "sur": true
+    },
+    "bordeaux": {
+     "min": 330,
+     "via": "estimation à vérifier",
+     "source": "",
+     "sur": false
+    }
+   },
+   "acces": "",
+   "sources": [
+    "https://www.greengo.voyage/hote/la-cabane-du-perche-cabanes-spa-en-normandie",
+    "https://www.parc-naturel-perche.fr/en/hebergements-insolites-english/la-grande-cabane-spa-la-cabane-du-perche-768768"
+   ],
+   "verifie": "2026-11-27"
+  },
+  "landifornia-lodge": {
+   "equip": [
+    "petit-dejeuner",
+    "jacuzzi-privatif",
+    "sauna"
+   ],
+   "restaurant": "",
+   "gare": {
+    "nom": "Dax",
+    "lat": 43.708,
+    "lng": -1.054
+   },
+   "train": {
+    "paris": {
+     "min": 275,
+     "via": "estimation à vérifier",
+     "source": "",
+     "sur": false
+    },
+    "lyon": {
+     "min": 387,
+     "via": "Pas de direct ; SNCF Connect 6h27 (via Paris/Massy). Sources divergentes : Omio 5h15, Virail 5h23, Liligo 5h37 (probablement trajets rares) ; valeur prudente retenue",
+     "source": "https://www.sncf-connect.com/train/trajet/lyon/dax",
+     "sur": false
+    },
+    "bordeaux": {
+     "min": 68,
+     "via": "Le plus rapide 1h08 (SNCF Connect), TGV INOUI 1h09, Omio 1h10",
+     "source": "https://www.sncf-connect.com/train/trajet/bordeaux/dax",
+     "sur": true
+    }
+   },
+   "acces": "",
+   "sources": [
+    "https://www.tourismelandes.com/hebergement-locatif/landifornia-lodge-hloaqu040v50t0z3/",
+    "https://www.guide-des-landes.com/fr/tourisme/se-loger/locations-insolites-chalets-yourtes-cabanes-perchees-roulottes-/saint-martin-de-hinx-269/landifornia-lodge-4754.html"
+   ],
+   "verifie": "2026-11-27"
+  },
+  "parister": {
+   "equip": [
+    "restaurant",
+    "petit-dejeuner",
+    "bar",
+    "spa",
+    "piscine",
+    "sauna",
+    "climatisation"
+   ],
+   "restaurant": "Les Passerelles",
+   "gare": {
+    "nom": "Paris Gare du Nord",
+    "lat": 48.881,
+    "lng": 2.355
+   },
+   "train": {
+    "lyon": {
+     "min": 160,
+     "via": "TGV direct jusqu'à Paris-Gare de Lyon (~1h55) + 45 min pour changement de gare (RER D/métro) vers Gare du Nord",
+     "source": "https://www.omio.fr/trains/lyon-part-dieu/paris-gare-du-nord-y8m6k",
+     "sur": true
+    },
+    "bordeaux": {
+     "min": 168,
+     "via": "TGV direct Bordeaux – Paris-Montparnasse (2 h 03) + 45 min de correspondance dans Paris",
+     "source": "https://www.sncf-connect.com/train/trajet/bordeaux/paris",
+     "sur": true
+    },
+    "paris": {
+     "min": 0,
+     "via": "dans la ville",
+     "source": "",
+     "sur": true
+    }
+   },
+   "acces": "",
+   "sources": [
+    "https://fr.gaultmillau.com/fr/hotels/hotel-parister",
+    "https://parisjetaime.com/hebergement/hotel-parister-p3257"
+   ],
+   "verifie": "2026-11-27"
+  },
+  "chateau-d-augerville": {
+   "equip": [
+    "restaurant",
+    "spa",
+    "piscine",
+    "sauna",
+    "animaux"
+   ],
+   "restaurant": "Jacques Cœur",
+   "gare": {
+    "nom": "Malesherbes",
+    "lat": 48.289,
+    "lng": 2.405
+   },
+   "train": {
+    "paris": {
+     "min": 65,
+     "via": "Paris-Gare de Lyon, train Transilien/RER D direct environ 1 h (une source évoque 1h33 avec changement à Juvisy) ; durée exacte non lisible, valeur approximative",
+     "source": "https://www.horaires-de-trains.fr/horaires_idf-Paris_Gare_de_Lyon-Malesherbes.html",
+     "sur": false
+    },
+    "lyon": {
+     "min": 220,
+     "via": "estimation à vérifier",
+     "source": "",
+     "sur": false
+    },
+    "bordeaux": {
+     "min": 235,
+     "via": "estimation à vérifier",
+     "source": "",
+     "sur": false
+    }
+   },
+   "acces": "",
+   "sources": [
+    "https://fr.gaultmillau.com/fr/hotels/chateau-d-augerville",
+    "https://sp.booking.com/hotel/fr/chateau-d-augerville.html",
+    "https://www.romantikhotels.com/en/hotels/chateau-golf-and-spa-daugerville",
+    "https://www.thehotelguru.com/fr-fr/hotel/chateau-daugerville-fontainebleau"
+   ],
+   "verifie": "2026-11-27"
+  },
+  "grand-pavillon-chantilly": {
+   "equip": [
+    "restaurant",
+    "bar",
+    "spa",
+    "piscine",
+    "sauna"
+   ],
+   "restaurant": "Le Carrousel",
+   "gare": {
+    "nom": "Chantilly-Gouvieux",
+    "lat": 49.194,
+    "lng": 2.462
+   },
+   "train": {
+    "paris": {
+     "min": 30,
+     "via": "estimation à vérifier",
+     "source": "",
+     "sur": false
+    },
+    "lyon": {
+     "min": 187,
+     "via": "Correspondance obligatoire (TGV/TER). SNCF Connect : minimum 3h07",
+     "source": "https://www.sncf-connect.com/train/trajet/lyon/chantilly",
+     "sur": true
+    },
+    "bordeaux": {
+     "min": 207,
+     "via": "SNCF Connect : le plus rapide 3h27, via Paris (correspondance)",
+     "source": "https://www.sncf-connect.com/train/trajet/bordeaux/chantilly",
+     "sur": true
+    }
+   },
+   "acces": "",
+   "sources": [
+    "https://booking.com/hotel/fr/le-grand-pavillon-chantilly-vineuil-saint-firmin.html",
+    "https://fr.gaultmillau.com/fr/hotels/le-grand-pavillon-chantilly",
+    "https://www.lagazettefrance.fr/article/au-grand-pavillon-detente-et-bonne-chere-sont-au-rendez-vous"
+   ],
+   "verifie": "2026-11-27"
+  },
+  "le-donjon-etretat": {
+   "equip": [
+    "restaurant",
+    "piscine",
+    "parking",
+    "animaux"
+   ],
+   "restaurant": "",
+   "gare": {
+    "nom": "Le Havre",
+    "lat": 49.493,
+    "lng": 0.123
+   },
+   "train": {
+    "paris": {
+     "min": 130,
+     "via": "estimation à vérifier",
+     "source": "",
+     "sur": false
+    },
+    "lyon": {
+     "min": 280,
+     "via": "TGV direct (ou via Paris). SNCF Connect, Omio, Rome2rio : 4h40-4h41",
+     "source": "https://www.sncf-connect.com/train/trajet/lyon/le-havre",
+     "sur": true
+    },
+    "bordeaux": {
+     "min": 295,
+     "via": "estimation à vérifier",
+     "source": "",
+     "sur": false
+    }
+   },
+   "acces": "",
+   "sources": [
+    "https://www.lehavre-etretat-tourisme.com/en/fiche/etretat/le-donjon-domaine-saint-clair_TFOHOTNOR076FS0026Q/",
+    "https://www.seine-maritime-tourisme.com/en/offers/le-donjon-domaine-saint-clair-etretat-en-5133983/",
+    "https://fr.gaultmillau.com/fr/hotels/le-donjon"
+   ],
+   "verifie": "2026-11-27"
+  },
+  "les-hautes-roches": {
+   "equip": [
+    "restaurant",
+    "spa",
+    "piscine",
+    "parking"
+   ],
+   "restaurant": "",
+   "gare": {
+    "nom": "Tours",
+    "lat": 47.388,
+    "lng": 0.694
+   },
+   "train": {
+    "paris": {
+     "min": 62,
+     "via": "Paris-Montparnasse, TGV direct (environ 1h02 selon rail.ninja ; SNCF Connect jusqu'à 57 min, d'autres sites 1h10)",
+     "source": "https://rail.ninja/fr/route/paris-to-tours",
+     "sur": true
+    },
+    "lyon": {
+     "min": 194,
+     "via": "TGV INOUI le plus rapide 3h14, direct ou via Saint-Pierre-des-Corps",
+     "source": "https://www.sncf-connect.com/train/trajet/lyon/tours",
+     "sur": true
+    },
+    "bordeaux": {
+     "min": 102,
+     "via": "TGV direct, 1h42 au plus rapide (L'Itinéraire ; Liligo 1h46)",
+     "source": "https://www.l-itineraire.com/train/bordeaux/tours",
+     "sur": true
+    }
+   },
+   "acces": "",
+   "sources": [
+    "https://guide.michelin.com/en/hotels-stays/rochecorbon/hotel-les-hautes-roches-120786-10058",
+    "https://fr.gaultmillau.com/fr/hotels/les-hautes-roches",
+    "https://www.viamichelin.pt/mapas-plantas/hoteis/poi/rochecorbon-37210-dc30bd6e"
+   ],
+   "verifie": "2026-11-27"
+  }
+ }
+}

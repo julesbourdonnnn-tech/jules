@@ -5,7 +5,8 @@
  *  Chaque guide sélectionne automatiquement les établissements de
  *  js/hotels.js qui correspondent à son thème (match) ou une liste
  *  choisie à la main (ids). Les titres s'adaptent au nombre d'adresses.
- *  cat : "envie" | "lieu" | "region" (rubrique de la page des guides).
+ *  cat : "envie" | "lieu" | "region" | "trajet" | "ville" (rubrique de la page des guides).
+ *  min : nombre minimum d'adresses pour publier le guide (sinon il est masqué).
  *  Après modification, les pages sont régénérées par « node scripts/build.js »
  *  (fait automatiquement par la GitHub Action « Build »).
  * ============================================================
@@ -837,4 +838,366 @@
     };
   }
   global.GUIDES.push(...CITIES.map(cityGuide));
+
+  /* ------------------------------------------------------------
+   *  GUIDES PAR ÉQUIPEMENT ET PAR TYPE DE LIEU
+   *  Fondés sur les équipements vérifiés de chaque fiche
+   *  (data/hotels-infos.json, recopiés dans h.infos.e par scripts/build.js).
+   * ------------------------------------------------------------ */
+  const hasEquip = (k) => (h) => ((h.infos && h.infos.e) || []).includes(k);
+  const testedFirst = (a, b) => (b.review ? 1 : 0) - (a.review ? 1 : 0);
+  global.GUIDES.push(
+    {
+      slug: "hotel-insolite-avec-piscine",
+      cat: "envie",
+      kicker: "Piscine",
+      short: "Hôtels insolites avec piscine",
+      title: (n) => `${n} hôtels insolites avec piscine en France`,
+      description: "Piscine Art déco à Paris, bassin d'eau de mer taillé dans la roche de l'Esterel, piscine creusée dans le tuffeau, piscine face à la dune du Pilat : les hôtels insolites où l'on se baigne.",
+      match: hasEquip("piscine"),
+      sort: testedFirst,
+      min: 4,
+      cover: "les-roches-rouges",
+      intro: [
+        "Une piscine change un séjour : on y passe la fin d'après-midi, on y revient le matin avant le petit-déjeuner, et le lieu devient une vraie parenthèse. J'ai réuni ici les adresses de ma sélection qui en ont une, des plus spectaculaires (le bassin Art déco de Molitor, la piscine d'eau de mer des Roches Rouges, celle creusée dans la roche de la Demeure de la Vignole) aux plus discrètes.",
+        "Selon les lieux, la piscine est intérieure ou extérieure, chauffée ou non, ouverte toute l'année ou seulement à la belle saison. Dans le doute, posez la question à l'établissement avant de réserver.",
+      ],
+      faq: [
+        ["Quels hôtels insolites ont une piscine où se baigner en hiver ?", "Les piscines intérieures ou chauffées se profitent toute l'année : c'est le cas notamment de Molitor et du Parister à Paris, des Fermes de Marie à Megève et de la Cour des Loges à Lyon. Les piscines extérieures non chauffées sont en général fermées hors saison."],
+        ["Y a-t-il des cabanes avec piscine ?", "Oui : Loire Valley Lodges a une piscine de 20 mètres au milieu de sa forêt, et Pella Roca une piscine chauffée face à la vallée du Quercy. Pour un bain rien qu'à deux, voyez aussi mon guide des nuits avec spa ou jacuzzi privatif."],
+      ],
+      tips: [
+        "Demandez les horaires de la piscine en arrivant : dans les hôtels de ville, elle ferme souvent en début de soirée.",
+        "En été, réservez tôt les adresses du bord de mer et de Provence : leur piscine fait une bonne part de leur succès.",
+        "Emportez votre maillot même en hiver : piscine intérieure ou bain chaud, c'est souvent le meilleur moment du séjour.",
+      ],
+    },
+    {
+      slug: "hotel-insolite-avec-spa",
+      cat: "envie",
+      kicker: "Spa",
+      short: "Hôtels insolites avec spa",
+      title: (n) => `Hôtels insolites avec spa : ${n} adresses pour se ressourcer`,
+      description: "Spa d'altitude face au Mont-Blanc, vinothérapie au milieu des grands crus, spa d'un château de conte de fées : les hôtels insolites avec spa pour un vrai week-end bien-être.",
+      match: hasEquip("spa"),
+      sort: testedFirst,
+      min: 4,
+      cover: "sources-de-caudalie",
+      intro: [
+        "Un week-end bien-être n'a pas besoin d'être banal. Ces adresses associent un lieu hors du commun et un vrai spa : on passe du sauna au hammam dans un hameau de fermes d'alpage à Megève, on se fait masser au milieu des grands crus de Bordeaux, ou l'on termine la journée au spa d'un château perdu au milieu des étangs de Charente.",
+        "J'y ai aussi rangé les domaines de cabanes dont l'espace bien-être se partage entre les hôtes. Si vous rêvez d'un bain rien qu'à deux, mon guide des nuits avec spa ou jacuzzi privatif est fait pour vous.",
+      ],
+      faq: [
+        ["Le spa est-il compris dans le prix de la chambre ?", "Cela dépend des lieux : l'accès à la piscine, au sauna ou au hammam est souvent inclus pour les clients de l'hôtel, tandis que les soins et les massages sont payants et se réservent à part. Vérifiez-le sur le site officiel au moment de réserver."],
+        ["Peut-on aller au spa sans dormir à l'hôtel ?", "Certains spas d'hôtel accueillent des clients de passage, souvent en semaine et sur réservation, mais les clients de l'hôtel restent prioritaires. Renseignez-vous directement auprès de l'établissement."],
+      ],
+      tips: [
+        "Réservez vos soins en même temps que votre chambre : les créneaux du samedi partent vite.",
+        "Demandez si vous pouvez profiter du spa avant de prendre votre chambre ou après l'avoir rendue : c'est souvent possible.",
+        "Pensez au maillot de bain, et parfois au bonnet si le spa a une piscine.",
+      ],
+    },
+    {
+      slug: "cabane-avec-jacuzzi-privatif",
+      cat: "lieu",
+      kicker: "Cabane & jacuzzi",
+      short: "Cabanes avec jacuzzi privatif",
+      title: (n) => `${n} cabanes et bulles avec jacuzzi ou bain nordique privatif`,
+      description: "Cabane perchée avec jacuzzi sur la terrasse, bulle transparente et son bain chaud, cabane-spa au bord de la rivière : les cabanes avec spa privatif en France, pour deux.",
+      match: (h) => (h.type === "cabane" || h.type === "bulle") && hasEquip("jacuzzi-privatif")(h),
+      min: 4,
+      cover: "cabanes-du-moulin",
+      intro: [
+        "C'est la recherche la plus fréquente pour une nuit insolite, et je comprends pourquoi : une cabane dans les arbres, une terrasse rien qu'à vous et un bain chaud qui vous attend, à l'heure que vous voulez, sous les étoiles ou sous la pluie.",
+        "Selon les adresses, il s'agit d'un jacuzzi, d'un bain nordique chauffé au feu de bois ou d'un spa installé dans la cabane, réservé à votre seul hébergement. Sur certains domaines, seules quelques cabanes en ont un : vérifiez bien le nom de la cabane en réservant.",
+      ],
+      faq: [
+        ["Où trouver une cabane avec jacuzzi près de Paris ?", "Les Cabanes du Moulin, à Orly-sur-Morin en Seine-et-Marne, sont les plus proches de Paris : trois cabanes-spa perchées au bord de la rivière. La Cabane du Perche, avec son bain nordique face aux collines, est une autre belle idée de week-end."],
+        ["Quelle différence entre un jacuzzi et un bain nordique ?", "Le jacuzzi est un bain à bulles chauffé à l'électricité, prêt à toute heure. Le bain nordique est une grande cuve en bois, souvent chauffée au feu de bois, autour de 38 °C : plus rustique, il demande un peu de temps pour chauffer, mais c'est tout son charme."],
+      ],
+      tips: [
+        "Un bain nordique met plusieurs heures à chauffer : prévenez de votre heure d'arrivée pour qu'il soit prêt.",
+        "En hiver, gardez un bonnet : la tête au froid et le corps dans l'eau chaude, c'est tout le plaisir.",
+        "Les week-ends d'hiver et la Saint-Valentin se réservent des mois à l'avance dans ces cabanes : n'attendez pas.",
+      ],
+    },
+    {
+      slug: "hotel-avec-table-etoilee",
+      cat: "envie",
+      kicker: "Gastronomie",
+      short: "Dormir près d'une table étoilée",
+      title: (n) => `Escapade gastronomique : ${n} hôtels d'exception avec table étoilée`,
+      description: "Dîner étoilé, puis monter se coucher : un château en Charente, la maison du maître verrier Lalique, les grands crus de Bordeaux, la vallée de la Dordogne. Mes adresses avec table étoilée.",
+      match: hasEquip("table-etoilee"),
+      min: 3,
+      cover: "villa-rene-lalique",
+      intro: [
+        "Le plus beau des dîners est celui après lequel on n'a pas à reprendre la voiture. Ces adresses abritent une table étoilée par le guide Michelin : on dîne longuement, on se laisse guider sur les vins, puis on monte simplement se coucher.",
+        "Ce sont des lieux d'exception, et leurs prix le sont aussi : une escapade à réserver pour une grande occasion, un anniversaire ou une demande en mariage.",
+      ],
+      faq: [
+        ["Faut-il dormir à l'hôtel pour dîner à sa table étoilée ?", "Non, ces restaurants sont en général ouverts à tous sur réservation. Mais dormir sur place change tout : pas de route de nuit après le dîner, et le petit-déjeuner du lendemain est souvent à la hauteur de la table."],
+        ["Existe-t-il des formules dîner et nuit ?", "Plusieurs de ces établissements proposent des séjours gastronomiques (chambre, dîner et petit-déjeuner) sur leur site officiel. Réserver en direct vous permet aussi de demander la table et l'heure qui vous conviennent."],
+      ],
+      tips: [
+        "Réservez la table en même temps que la chambre : les restaurants étoilés ont peu de couverts, et ferment souvent un ou deux soirs par semaine.",
+        "Signalez allergies et régimes particuliers dès la réservation : la cuisine prépare ses produits à l'avance.",
+        "Prévoyez une tenue un peu habillée : sans être obligatoire, elle fait partie du plaisir de la soirée.",
+      ],
+    },
+    {
+      slug: "hotel-insolite-avec-restaurant",
+      cat: "envie",
+      kicker: "Restaurant sur place",
+      short: "Nuits insolites avec restaurant",
+      title: (n) => `${n} nuits insolites avec restaurant sur place`,
+      description: "Dîner dans une abbaye royale, dans les remparts du Mont-Saint-Michel ou au bord de la Mer de Glace, puis rentrer à pied : les nuits insolites où l'on dîne sur place.",
+      match: hasEquip("restaurant"),
+      sort: testedFirst,
+      min: 4,
+      cover: "fontevraud-l-ermitage",
+      intro: [
+        "Dans une cabane perdue en forêt ou un refuge d'altitude, la question du dîner se pose vite : faut-il reprendre la voiture, de nuit, sur une petite route ? Dans les adresses de ce guide, non. Le restaurant est sur place ou sur le domaine, et l'on rentre à pied après le dessert.",
+        "Du bistrot de refuge à la grande table gastronomique, le style varie beaucoup d'une adresse à l'autre : regardez la carte sur le site officiel avant de partir, et réservez votre table en même temps que votre chambre.",
+      ],
+      faq: [
+        ["Faut-il réserver le dîner à l'avance ?", "Oui, surtout le week-end : ces restaurants ont peu de tables et accueillent parfois aussi des clients de passage. Certains ferment un ou deux soirs par semaine : vérifiez les jours d'ouverture avant de choisir vos dates."],
+        ["Existe-t-il des formules avec le dîner compris ?", "Plusieurs établissements proposent une demi-pension ou une formule « dîner et nuit » sur leur site officiel. C'est souvent plus simple que de réserver séparément, et sans commission quand vous réservez en direct."],
+      ],
+      tips: [
+        "Arrivez avant la fin du service : dans les refuges et les domaines isolés, la cuisine ferme parfois tôt.",
+        "Signalez allergies et régimes particuliers dès la réservation : loin de tout, la cuisine prévoit ses produits à l'avance.",
+        "Demandez une table près de la fenêtre : la vue fait partie du repas.",
+      ],
+    },
+    {
+      slug: "nuit-insolite-avec-sauna",
+      cat: "envie",
+      kicker: "Sauna",
+      short: "Nuits insolites avec sauna",
+      title: (n) => `${n} nuits insolites avec sauna ou hammam`,
+      description: "Sauna privatif dans une cabane des Vosges ou au bord d'un étang landais, hammam d'un hameau d'alpage à Megève, sauna d'un phare breton : les nuits insolites pour se détendre au chaud.",
+      match: hasEquip("sauna"),
+      min: 4,
+      cover: "nids-des-vosges",
+      intro: [
+        "Le sauna est le meilleur ami des nuits insolites : après une journée de randonnée, de ski ou de route, quelques minutes de chaleur et l'on est prêt pour une vraie nuit de sommeil. Dans certaines cabanes, il est même privatif, installé dans la cabane ou au bord de l'eau.",
+        "Ce guide réunit les adresses de ma sélection équipées d'un sauna ou d'un hammam, privatif ou partagé avec les autres hôtes : regardez la fiche et le site officiel pour savoir ce qu'il en est.",
+      ],
+      faq: [
+        ["Quelle différence entre sauna, hammam et bain nordique ?", "Le sauna est une chaleur sèche, de 70 à 100 °C, dans une cabine en bois ; le hammam, une chaleur humide et plus douce, autour de 45 °C ; le bain nordique, une grande cuve d'eau chaude en plein air, autour de 38 °C."],
+        ["Le sauna est-il privatif ?", "Cela dépend : à Pella Roca, aux Nids des Vosges ou à Landifornia Lodge, il est rattaché à certains hébergements ; dans les hôtels, il fait partie du spa et se partage avec les autres clients."],
+      ],
+      tips: [
+        "Buvez beaucoup d'eau, avant comme après chaque séance.",
+        "Alternez chaud et froid : une douche fraîche, un plongeon dans l'étang ou quelques pas dans la neige entre deux séances.",
+        "Évitez le sauna juste après un repas copieux ou un verre de vin.",
+      ],
+    },
+    {
+      slug: "hotel-insolite-de-luxe",
+      cat: "envie",
+      kicker: "Exception",
+      short: "Hôtels insolites de luxe",
+      title: (n) => `Hôtels insolites de luxe : ${n} nuits d'exception en France`,
+      description: "L'hôtel le plus haut de France, une villa sur sa presqu'île, le Grand Contrôle de Versailles, des bergeries corses face à la mer : les nuits insolites les plus luxueuses de ma sélection.",
+      match: (h) => h.budget === 4,
+      sort: testedFirst,
+      min: 4,
+      cover: "cap-estel",
+      intro: [
+        "Le luxe, pour moi, ce n'est ni le marbre ni la dorure : c'est un lieu unique, un service attentif et un souvenir qui reste. Ces adresses ont en commun des cadres que l'on ne trouve nulle part ailleurs : un observatoire à 2 877 mètres, un hameau de chalets que l'on rejoint à ski, le seul hôtel du domaine de Versailles.",
+        "Ce sont les adresses les plus chères de ma sélection. Elles se réservent pour une grande occasion, et elles méritent souvent deux nuits plutôt qu'une.",
+      ],
+      get faq() {
+        const B = (global.BUDGETS || {})[4];
+        return [
+          ["Combien coûte une nuit dans un hôtel insolite de luxe ?", `Pour les adresses de ce guide, comptez ${B ? B.range : "plus de 450 € la nuit"} pour deux personnes, selon la saison et la chambre. Le prix exact est donné sur le site officiel de chaque établissement.`],
+          ["Comment rendre le séjour encore plus mémorable ?", "Réservez en direct et dites pourquoi vous venez (anniversaire, demande en mariage, voyage de noces) : les équipes de ces maisons aiment préparer une attention, et elles le font mieux quand elles le savent à l'avance."],
+        ];
+      },
+      tips: [
+        "Demandez quelle chambre a la plus belle vue : à budget égal, la différence peut être immense.",
+        "Regardez les séjours en semaine ou hors saison : ces lieux y sont parfois nettement plus accessibles.",
+        "Gardez du temps sur place : dans ces maisons, le séjour commence à l'arrivée, pas au dîner.",
+      ],
+    },
+    {
+      slug: "dormir-sur-l-eau",
+      cat: "lieu",
+      kicker: "Sur l'eau",
+      short: "Dormir sur l'eau",
+      title: (n) => `Dormir sur l'eau : ${n} cabanes flottantes, bateaux et hôtels sur l'eau`,
+      description: "Hôtel flottant sur la Seine, bateau-cabane sur le canal de Bourgogne, cabanes sur pilotis rejointes en canoë, cabane flottante près de la baie de Somme : dormir sur l'eau en France.",
+      match: (h) => h.type === "eau" || h.id === "cabanes-des-grands-lacs",
+      min: 3,
+      cover: "cabanes-lacustra",
+      intro: [
+        "S'endormir bercé par le clapotis, ouvrir les volets sur un étang couvert de brume : dormir sur l'eau est sans doute l'une des expériences les plus apaisantes qui soient. Ces adresses le permettent en pleine nature, mais aussi à Paris, sur la Seine.",
+        "Cabane flottante avec bain nordique, toue amarrée devant une maison d'éclusier, cabanes sur pilotis que l'on rejoint en canoë : chacune a sa manière de vous mettre au fil de l'eau.",
+      ],
+      faq: [
+        ["A-t-on le mal de mer en dormant sur l'eau ?", "Non : sur un étang, un canal ou la Seine, l'eau est calme et les hébergements sont amarrés ou posés sur pilotis. On sent tout au plus un léger mouvement, qui berce plus qu'il ne dérange."],
+        ["Peut-on y aller avec des enfants ?", "Pour certaines adresses, oui, avec prudence : l'eau est partout autour. Les cabanes que l'on rejoint en canoë demandent de savoir nager ; demandez à l'établissement l'âge minimum et l'équipement fourni (gilets)."],
+      ],
+      tips: [
+        "Prenez un pull même en été : au bord de l'eau, les soirées sont fraîches.",
+        "Emportez un sac étanche si l'accès se fait en canoë.",
+        "Les moustiques aiment l'eau autant que vous : un répulsif ne prend pas de place.",
+      ],
+    },
+    {
+      slug: "hotel-design-architecture",
+      cat: "lieu",
+      kicker: "Design & architecture",
+      short: "Hôtels design et d'architecte",
+      title: (n) => `Dormir chez un grand architecte : ${n} hôtels design en France`,
+      description: "La Cité radieuse de Le Corbusier, la villa de René Lalique, la piscine Art déco Molitor, un pavillon revu par Philippe Starck, un vignoble signé Tadao Ando : dormir dans l'architecture.",
+      match: (h) => h.type === "design" || h.id === "villa-la-coste",
+      min: 3,
+      cover: "hotel-le-corbusier",
+      intro: [
+        "Certains lieux se visitent ; ceux-ci se vivent, du soir au matin. Dormir dans la Cité radieuse de Le Corbusier, dans la maison que René Lalique s'est fait construire ou autour de la piscine Art déco de Molitor, c'est découvrir une architecture comme ses habitants la voient : à la lumière du matin, sans foule ni horaires de visite.",
+        "Ce guide réunit les adresses de ma sélection où le bâtiment, ou le design, est la vraie raison du voyage.",
+      ],
+      faq: [
+        ["Peut-on dormir dans la Cité radieuse de Le Corbusier ?", "Oui : l'Hôtel Le Corbusier occupe une partie de la Cité radieuse, à Marseille, inscrite au patrimoine mondial de l'UNESCO. C'est même l'une des adresses les plus abordables de ma sélection."],
+        ["Ces lieux se visitent-ils sans y dormir ?", "Certains ouvrent leur restaurant, leur bar ou leurs jardins aux visiteurs, mais les chambres et les espaces privés restent réservés aux clients : c'est tout l'intérêt d'y passer la nuit."],
+      ],
+      tips: [
+        "Demandez s'il existe une visite commentée du bâtiment : certains lieux en proposent à leurs clients.",
+        "Réservez la chambre la plus emblématique quand c'est possible : c'est elle qui raconte l'histoire du lieu.",
+        "Prenez le temps de regarder la lumière changer : ces architectures ont été pensées pour elle.",
+      ],
+    },
+    {
+      slug: "dormir-dans-un-monument-historique",
+      cat: "lieu",
+      kicker: "Lieux d'histoire",
+      short: "Dormir dans un monument historique",
+      title: (n) => `Dormir dans un monument historique : ${n} lieux chargés d'histoire`,
+      description: "Une abbaye royale millénaire, une maison du XVe siècle dans les remparts du Mont-Saint-Michel, un hôpital de huit siècles à Lyon, la Cité de Carcassonne : dormir dans l'histoire.",
+      match: (h) => h.type === "historique",
+      min: 4,
+      cover: "fontevraud-l-ermitage",
+      intro: [
+        "Il y a des lieux où l'on ne fait pas que dormir : on y passe une nuit dans l'histoire. Ici, l'abbaye royale où reposent Aliénor d'Aquitaine et Richard Cœur de Lion ; là, une maison à colombages du XVe siècle dans les remparts du Mont-Saint-Michel ; ailleurs, l'Hôtel-Dieu de Lyon, qui soigna les Lyonnais pendant huit siècles.",
+        "Le grand privilège de ces adresses, c'est le soir : quand les visiteurs sont partis, le lieu est presque à vous. Se promener dans l'abbaye de Fontevraud ou dans les ruelles de la Cité de Carcassonne à la nuit tombée, aucune visite ne le remplace.",
+      ],
+      faq: [
+        ["Peut-on profiter du monument quand on y dort ?", "C'est tout l'intérêt : à Fontevraud, on peut se promener dans l'abbaye à la nuit tombée ; au Mont-Saint-Michel ou dans la Cité de Carcassonne, on a les ruelles presque pour soi le soir et tôt le matin. Les conditions précises (horaires, billets) sont sur le site de chaque établissement."],
+        ["Ces hôtels sont-ils accessibles aux personnes à mobilité réduite ?", "Pas toujours : escaliers anciens, ruelles pavées et bâtiments protégés limitent souvent les aménagements. Si c'est important pour vous, posez la question directement à l'établissement avant de réserver."],
+      ],
+      tips: [
+        "Arrivez en fin d'après-midi, au moment où les visiteurs repartent.",
+        "Levez-vous tôt au moins une fois : le monument au petit matin, sans personne, est inoubliable.",
+        "Voyagez léger : ruelles pavées, escaliers à vis et accès piétons sont la règle dans ces lieux anciens.",
+      ],
+    },
+  );
+
+  /* ------------------------------------------------------------
+   *  GUIDES « À MOINS DE … DE PARIS, LYON, BORDEAUX »
+   *  Classés par temps de trajet réel :
+   *  - train : train le plus rapide jusqu'à la gare (data/hotels-infos.json)
+   *    + route entre la gare et l'hôtel (data/trajets-voiture.json) ;
+   *  - voiture : route depuis le centre-ville (data/trajets-voiture.json,
+   *    calculé par l'Action GitHub « Trajets »).
+   *  Un guide n'est publié qu'avec au moins 4 adresses (min).
+   * ------------------------------------------------------------ */
+  const TRIP_CITY = {
+    paris: { name: "Paris", lat: 48.8566, lng: 2.3522 },
+    lyon: { name: "Lyon", lat: 45.764, lng: 4.8357 },
+    bordeaux: { name: "Bordeaux", lat: 44.8378, lng: -0.5792 },
+  };
+  const tripOf = (h, c, mode) => {
+    const I = h.infos;
+    if (!I) return null;
+    if (mode === "voiture") return I.v && typeof I.v[c] === "number" ? I.v[c] : null;
+    const t = I.t && I.t[c];
+    return t && typeof t[0] === "number" ? t[0] + (t[1] || 0) : null;
+  };
+  const inCityOf = (h, c) => { const t = h.infos && h.infos.t && h.infos.t[c]; return (t && t[0] === 0) || km(TRIP_CITY[c], h) < 12; };
+  const sureOf = (h, c, mode) => mode === "voiture" || !!(h.infos && h.infos.t && h.infos.t[c] && h.infos.t[c][2]);
+  const duree = (m) => (m < 60 ? `${m} min` : `${Math.floor(m / 60)} h${m % 60 ? ` ${String(m % 60).padStart(2, "0")}` : ""}`);
+  const HOURS_WORD = { 120: "deux heures", 150: "deux heures et demie", 180: "trois heures" };
+
+  function tripGuide(c, mode, max) {
+    const F = TRIP_CITY[c];
+    const de = `de ${F.name}`;
+    const train = mode === "train";
+    const lim = duree(max);
+    const t = (h) => tripOf(h, c, mode);
+    const ok = (h) => { const m = t(h); return m != null && m > 0 && m <= max && !inCityOf(h, c); };
+    const pick = () => (global.HOTELS || []).filter(ok).sort((a, b) => t(a) - t(b));
+    const label = (h) => `${sureOf(h, c, mode) ? "" : "environ "}${duree(t(h))}`;
+    return {
+      slug: `week-end-insolite-a-moins-de-${lim.replace(/ /g, "")}-de-${c}-en-${mode}`,
+      cat: "trajet",
+      kicker: train ? `En train depuis ${F.name}` : `En voiture depuis ${F.name}`,
+      short: `À moins de ${lim} ${de} en ${mode}`,
+      title: (n) => `Week-end insolite à moins de ${lim} ${de} en ${mode} : ${n} adresses`,
+      get description() {
+        const names = pick().slice(0, 3).map((h) => h.name);
+        return `Week-end insolite à moins de ${lim} ${de} en ${mode} : ${listFr(names)}… Mes adresses classées par temps de trajet ${train ? "réel, de la gare à la porte" : "en voiture"}, avec prix et conseils.`;
+      },
+      match: ok,
+      sort: (a, b) => t(a) - t(b),
+      min: 4,
+      note: (h) => {
+        const s = label(h);
+        return `${s[0].toUpperCase()}${s.slice(1)} ${train ? "en train" : "de route"} depuis ${F.name}`;
+      },
+      get cover() { const l = pick(); return (l.find((h) => (h.photos || 0) >= 4) || l[0] || {}).id; },
+      get intro() {
+        const list = pick();
+        const first = list[0];
+        const quick = list.filter((h) => t(h) <= 90);
+        return [
+          train
+            ? `Partir ${de} le vendredi soir et dîner ${HOURS_WORD[max] || lim} plus tard dans une cabane ou un château, sans avoir touché un volant : c'est possible, et souvent plus reposant que la route. J'ai classé ici les adresses de ma sélection de la plus rapide à la plus lointaine en train.`
+            : `Pas besoin de traverser la France pour changer d'air. Toutes ces adresses sont à moins de ${lim} de route ${de} : on part le samedi matin, on déjeune en chemin, et l'on a tout l'après-midi pour profiter du lieu.`,
+          (train
+            ? `Le temps indiqué va de la gare de départ à ${F.name} jusqu'à la porte de l'hôtel : le train le plus rapide, correspondances comprises, puis la route entre la gare d'arrivée et l'établissement (taxi, navette ou voiture de location).`
+            : `Les temps de route sont calculés depuis le centre ${de}, par l'itinéraire le plus rapide et sans embouteillages : gardez une marge le vendredi soir et les veilles de vacances.`) +
+            (first ? ` La plus rapide à rejoindre, ${first.name}, est à ${label(first)} ${de}` + (quick.length > 1 ? `, et ${quick.length} adresses sont à moins d'1 h 30.` : ".") : ""),
+        ];
+      },
+      get faq() {
+        const list = pick();
+        if (!list.length) return [];
+        const first = list[0];
+        const noCar = list.filter((h) => (h.tags || []).includes("train"));
+        const faq = [[
+          train ? `Quel hôtel insolite rejoindre le plus vite en train depuis ${F.name} ?` : `Quel hôtel insolite est le plus proche ${de} en voiture ?`,
+          `Dans ma sélection, ${first.name} (${first.city}) : ${label(first)} ${train ? `depuis ${F.name}, trajet entre la gare et l'hôtel compris` : `de route depuis le centre ${de}`}. ${first.tagline}.`,
+        ]];
+        if (train) {
+          faq.push(["Comment sont calculés les temps de trajet ?", "J'additionne le train le plus rapide relevé sur les sites de réservation (SNCF Connect et comparateurs), correspondances comprises, et la route entre la gare d'arrivée et l'hôtel, calculée avec OpenStreetMap. Le trajet jusqu'à votre gare de départ n'est pas compté. Quand un horaire reste à confirmer, j'écris « environ »."]);
+          faq.push(["Faut-il une voiture une fois arrivé ?", noCar.length
+            ? `Pas pour ${listFr(noCar.slice(0, 4).map((h) => h.name))}, ${noCar.length > 1 ? "qui se rejoignent" : "qui se rejoint"} facilement sans voiture. Pour les autres adresses, réservez un taxi ou une voiture de location à la gare, ou demandez à l'établissement s'il organise un transfert.`
+            : "Souvent, oui : réservez un taxi ou une voiture de location à la gare, ou demandez à l'établissement s'il organise un transfert depuis la gare."]);
+        } else {
+          faq.push(["Comment sont calculés les temps de route ?", `Ils sont calculés avec OpenStreetMap, du centre ${de} jusqu'à l'adresse de l'hôtel, par l'itinéraire le plus rapide et sans trafic. Ajoutez une marge les vendredis soir, les veilles de vacances et, l'hiver, sur les routes de montagne.`]);
+        }
+        return faq;
+      },
+      tips: train
+        ? [
+            "Réservez vos billets dès l'ouverture des ventes : les prix montent vite le vendredi soir et le dimanche après-midi.",
+            "Demandez à l'hôtel s'il vient vous chercher à la gare, ou réservez un taxi à l'avance : dans les petites gares, il n'y en a pas toujours à l'arrivée.",
+            "Voyagez léger : un sac souple se range partout, dans le train comme dans une cabane.",
+          ]
+        : [
+            `Partez le samedi tôt ou le vendredi en fin de matinée pour éviter les bouchons de sortie ${de}.`,
+            "Gardez de la marge pour les derniers kilomètres : chemins de terre et petites routes sont fréquents pour les lieux isolés.",
+            "Voiture électrique ? Regardez la rubrique « Sur place » de chaque fiche : j'y indique le parking et la borne de recharge quand l'établissement les signale.",
+          ],
+    };
+  }
+  global.GUIDES.push(...[
+    ["paris", "train", 120], ["paris", "train", 180], ["paris", "voiture", 120], ["paris", "voiture", 180],
+    ["lyon", "train", 180], ["lyon", "voiture", 150],
+    ["bordeaux", "train", 180], ["bordeaux", "voiture", 180],
+  ].map(([c, mode, max]) => tripGuide(c, mode, max)));
 })(typeof window !== "undefined" ? window : globalThis);

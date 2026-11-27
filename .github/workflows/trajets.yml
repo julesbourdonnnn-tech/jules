@@ -1,0 +1,51 @@
+# Calcule les temps de trajet en voiture (scripts/trajets.py) quand data/trajets-entree.json change,
+# régénère les pages, puis pousse le même commit sur les deux branches publiées (sans jamais forcer).
+name: Trajets
+
+on:
+  push:
+    branches:
+      - claude/french-hotels-marketplace-vqleii
+    paths:
+      - "data/trajets-entree.json"
+      - "scripts/trajets.py"
+      - ".github/workflows/trajets.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: trajets
+  cancel-in-progress: false
+
+jobs:
+  trajets:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Calcul des trajets en voiture
+        run: python scripts/trajets.py
+      - name: Régénérer les fiches et les guides avec les nouveaux temps
+        run: node scripts/build.js
+      - name: Enregistrer les résultats (même commit sur les deux branches)
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A -- data/trajets-voiture.json data/trajets-entree.json js/hotels.js hotels guides index.html sitemap.xml robots.txt data/lastmod.json
+          if git diff --cached --quiet; then echo "Rien de nouveau"; exit 0; fi
+          git commit -m "Trajets : temps en voiture calculés, pages régénérées"
+          B1="claude/french-hotels-marketplace-vqleii"; B2="claude/gifted-ritchie-r1ffn4"
+          for i in 1 2 3 4; do
+            git pull --rebase origin "$B1" && git push --atomic origin "HEAD:refs/heads/$B1" "HEAD:refs/heads/$B2" && exit 0
+            sleep $((i * 10))
+          done
+          echo "::error::Publication impossible : les deux branches ne sont peut-être plus alignées."
+          exit 1

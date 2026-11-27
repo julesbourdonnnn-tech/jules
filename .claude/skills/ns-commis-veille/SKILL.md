@@ -45,7 +45,7 @@ Ce qu'on cherche, par ordre d'importance :
 - **Jamais d'invention**, jamais de supposition, jamais de prix précis inventé. Dans le doute, ne publie pas et signale-le dans le compte rendu.
 - Une **offre** a toujours une date de fin (`until`). Sans date de fin connue, mets au plus 30 jours.
 - Les informations datées de plus de 12 mois ne sont pas des actualités.
-- Ne touche jamais aux avis testés (`review`), aux notes, au coup de cœur, aux photos, aux textes de présentation, ni aux dossiers `maisons/` et `le-passe/`.
+- Ne touche jamais aux avis testés (`review`), aux adresses « Autour de l'hôtel » (`around`), aux notes, au coup de cœur, aux photos, aux textes de présentation, ni aux dossiers `maisons/` et `le-passe/`.
 
 ## 4. Enregistrer
 
@@ -70,12 +70,23 @@ Ce qu'on cherche, par ordre d'importance :
 - Réouverture confirmée : retire le champ `closed`.
 - **Fermeture saisonnière** (ex. cabanes fermées l'hiver, refuge fermé hors saison) : c'est une information essentielle pour le lecteur, **publie-la** dès que le site officiel donne les dates de saison, en actualité `fermeture` (« Fermé pour l'hiver depuis le … ; réouverture le … » ou « dates 2027 pas encore annoncées »), avec `until` si la date de réouverture est connue. Pas de champ `closed` : le lieu reste dans les listes.
 
+## 4 bis. Équipements et temps de train (`data/hotels-infos.json`)
+
+Chaque fiche affiche « Sur place » (équipements) et « Comment venir » (train et voiture depuis Paris, Lyon, Bordeaux). Pour chaque établissement de ton lot :
+- **Équipements** (`equip`, vocabulaire fixe : voir `EQUIP` dans `js/core.js`) : vérifie sur le site officiel le restaurant (et son nom dans `restaurant`), la table étoilée (uniquement si le guide Michelin lui donne une étoile), le spa, la piscine, le sauna ou hammam, le jacuzzi ou bain privatif, les chiens, les enfants, le parking. Retire ce qui est démenti, ajoute ce qui est confirmé, cite la page dans `sources`, mets `verifie` à la date du jour. Un équipement retiré ou ajouté peut faire entrer ou sortir le lieu d'un guide (piscine, spa…) : signale-le dans le compte rendu.
+- **Temps de train** à vérifier en priorité (marqués « environ » sur le site) :
+  ```bash
+  node -e 'const I=require("./data/hotels-infos.json").hotels;for(const[id,h]of Object.entries(I))for(const[c,t]of Object.entries(h.train||{}))if(!t.sur)console.log(id,c,t.min,"min ·",t.via)'
+  ```
+  Pour une ligne de ton lot : cherche le trajet le plus rapide habituel (SNCF Connect, comparateurs) jusqu'à la gare indiquée dans `gare`, correspondances comprises. Si deux sources concordent ou si SNCF Connect le donne, mets `min`, `via` (en clair : « TGV direct Paris-Montparnasse, 2 h 08 »), `source` et `sur: true`. Une gare plus pratique ? Change `gare` (nom, lat, lng) : les temps de route se recalculent seuls.
+- **Ne touche pas** aux temps en voiture (`data/trajets-voiture.json`, calculés par l'Action « Trajets ») ni au champ `around` des fiches testées (les adresses de Jules).
+
 ## 5. Contrôler et publier
 
 ```bash
 node scripts/veille.js verifier     # doit afficher ✓
 node scripts/build.js               # régénère les fiches
-git add -A data/veille.json js/hotels.js hotels guides index.html sitemap.xml robots.txt data/lastmod.json
+git add -A data/veille.json data/hotels-infos.json data/trajets-entree.json js/hotels.js hotels guides index.html sitemap.xml robots.txt data/lastmod.json
 git commit -m "Veille du <date> : <n> établissements vérifiés"   # terminer par les lignes d'attribution demandées
 git fetch origin claude/french-hotels-marketplace-vqleii claude/gifted-ritchie-r1ffn4
 git rebase origin/claude/french-hotels-marketplace-vqleii           # si des robots ont poussé entre-temps

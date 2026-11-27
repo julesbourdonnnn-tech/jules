@@ -84,6 +84,44 @@
   const budgetHtml = (h) =>
     `<span class="budget" title="${escapeHtml(budgetOf(h).range)}">${"€".repeat(h.budget)}<span class="budget-off">${"€".repeat(4 - h.budget)}</span></span>`;
 
+  /* ---------- Équipements et trajets (data/hotels-infos.json, data/trajets-voiture.json) ----------
+   * Copiés dans hotels.js (window.HOTEL_INFOS) par scripts/build.js. */
+  const EQUIP = {
+    restaurant: { label: "Restaurant", icon: "🍽️" },
+    "table-etoilee": { label: "Table étoilée", icon: "⭐" },
+    "petit-dejeuner": { label: "Petit-déjeuner", icon: "🥐" },
+    bar: { label: "Bar", icon: "🍸" },
+    spa: { label: "Spa", icon: "🌿" },
+    piscine: { label: "Piscine", icon: "🏊" },
+    "jacuzzi-privatif": { label: "Jacuzzi ou bain privatif", icon: "♨️" },
+    sauna: { label: "Sauna ou hammam", icon: "🧖" },
+    parking: { label: "Parking", icon: "🅿️" },
+    "borne-recharge": { label: "Borne électrique", icon: "🔌" },
+    animaux: { label: "Chiens acceptés", icon: "🐕" },
+    enfants: { label: "Familles bienvenues", icon: "👨‍👩‍👧" },
+    pmr: { label: "Accessible PMR", icon: "♿" },
+    climatisation: { label: "Climatisation", icon: "❄️" },
+    wifi: { label: "Wi-Fi", icon: "📶" },
+  };
+  const FROM = { paris: "Paris", lyon: "Lyon", bordeaux: "Bordeaux" };
+  const infosOf = (h) => (h && (h.infos || (global.HOTEL_INFOS || {})[h.id])) || null;
+  const equipOf = (h) => ((infosOf(h) || {}).e || []).filter((k) => EQUIP[k]);
+  /* Durée totale en minutes depuis une ville, en train (train + dernier trajet en voiture) ou en voiture. */
+  function tripMinutes(h, city, mode) {
+    const I = infosOf(h);
+    if (!I) return null;
+    if (mode === "voiture") return I.v && typeof I.v[city] === "number" ? I.v[city] : null;
+    const t = I.t && I.t[city];
+    if (!t || typeof t[0] !== "number") return null;
+    return t[0] + (t[1] || 0);
+  }
+  function fmtDuree(min) {
+    if (min == null) return "";
+    if (min < 60) return `${min} min`;
+    const hrs = Math.floor(min / 60), m = min % 60;
+    return `${hrs} h${m ? ` ${String(m).padStart(2, "0")}` : ""}`;
+  }
+
   /* ---------- Envies (filtres) ----------
    * Certaines se déduisent des équipements (spa privatif, bien-être), les
    * autres sont renseignées à la main dans hotels.js (champ `tags`). */
@@ -94,6 +132,11 @@
     const am = (h.amenities || []).join(" · ");
     if (PRIVATE_SPA.test(am)) t.add("spa-prive");
     if (WELLNESS.test(am)) t.add("bien-etre");
+    const eq = equipOf(h);
+    if (eq.includes("jacuzzi-privatif")) t.add("spa-prive");
+    if (eq.includes("spa") || eq.includes("sauna")) t.add("bien-etre");
+    if (eq.includes("animaux")) t.add("chien");
+    if (eq.includes("enfants")) t.add("famille");
     const TAGS = global.TAGS || {};
     return Object.keys(TAGS).filter((k) => t.has(k));
   }
@@ -186,7 +229,7 @@
   // « Le coup de cœur du moment » : adresses choisies par Jules (coupDeCoeur dans hotels.js)
   const isCoupDeCoeur = (h) => !!(h && h.coupDeCoeur);
 
-  function card(h, { dist = null, reveal = true, fav = false } = {}) {
+  function card(h, { dist = null, reveal = true, fav = false, trip = "" } = {}) {
     const { ENVS, TYPES } = data();
     const url = hotelUrl(h);
     const photos = h.images.slice(0, 5);
@@ -210,6 +253,7 @@
           <p class="card-type">${TYPES[h.type].icon} ${escapeHtml(TYPES[h.type].label)}</p>
           <h3>${escapeHtml(h.name)}</h3>
           <p class="card-place">${escapeHtml(h.city)} · ${escapeHtml(h.region)}</p>
+          ${trip ? `<p class="card-trip">${escapeHtml(trip)}</p>` : ""}
           <p class="card-tagline">${escapeHtml(h.tagline)}</p>
           <p class="card-foot"><span class="card-price">${budgetHtml(h)}<small>${escapeHtml(budgetOf(h).short || "")}</small></span><span class="card-more">Découvrir →</span></p>
         </a>
@@ -273,6 +317,7 @@
     const { HOTELS } = data();
     let list = g.ids ? g.ids.map((id) => HOTELS.find((h) => h.id === id)).filter(Boolean) : HOTELS.filter(g.match);
     if (g.sort) list = list.slice().sort(g.sort);
+    if (g.min && list.length < g.min) return [];
     return list;
   }
   const guideTitle = (g, n = guideHotels(g).length) => (typeof g.title === "function" ? g.title(n) : g.title);
@@ -383,7 +428,7 @@
   return {
     data, setRoot, root, page, hotelUrl, guideUrl, escapeHtml, formatPrice, formatDistance, distanceKm,
     FALLBACK, img, budgetOf, budgetHtml, siteLink, questionsBlock, bookingTip, stayEstimate, capacity, REVIEW_CRITERIA, isTested, isCoupDeCoeur, reviewScore, reviewDate, fmtScore,
-    todayIso, addDays, nightsOf, cleanStay, hasDates, tagsOf,
+    todayIso, addDays, nightsOf, cleanStay, hasDates, tagsOf, EQUIP, FROM, infosOf, equipOf, tripMinutes, fmtDuree,
     favButton, card, newsletterForm, socialLinks, guideHotels, guideTitle, guidesFor, guideCard, shareBlock,
     header, footer, baseLayer,
   };
