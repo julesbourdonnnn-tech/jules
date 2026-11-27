@@ -644,6 +644,31 @@
   const enhanceSelects = (scope = document) => scope.querySelectorAll("select[data-fancy]").forEach(enhanceSelect);
 
   /* ---------- « Surprenez-moi » ---------- */
+  /* Tirage « paquet de cartes » : tous les lieux passent une fois, dans un ordre
+   * mélangé, avant qu'un même lieu ne revienne. Le paquet est mémorisé dans le
+   * navigateur (il survit aux changements de page) ; sans stockage, il vit en mémoire. */
+  const BAG_KEY = "ns-surprise";
+  let memoryBag = null;
+  function shuffle(a) {
+    for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+    return a;
+  }
+  function nextSurprise(list) {
+    const ids = new Set(list.map((h) => h.id));
+    let bag = null, last = "";
+    try { ({ bag, last } = JSON.parse(localStorage.getItem(BAG_KEY)) || {}); } catch { /* navigation privée */ }
+    if (!Array.isArray(bag)) ({ bag, last } = memoryBag || { bag: [], last: "" });
+    bag = bag.filter((id) => ids.has(id));
+    if (!bag.length) {
+      bag = shuffle([...ids]);
+      // pas deux fois le même lieu d'affilée, même d'un paquet à l'autre
+      if (bag.length > 1 && bag[0] === last) bag.push(bag.shift());
+    }
+    const id = bag.shift();
+    memoryBag = { bag, last: id };
+    try { localStorage.setItem(BAG_KEY, JSON.stringify(memoryBag)); } catch { /* navigation privée */ }
+    return list.find((h) => h.id === id) || list[0];
+  }
   function surprise() {
     const list = window.HOTELS;
     let box = document.getElementById("surprise");
@@ -678,9 +703,7 @@
     const cta = box.querySelector("a.btn");
     sCard.classList.add("rolling");
     cta.setAttribute("aria-disabled", "true");
-    let pick = list[Math.floor(Math.random() * list.length)];
-    if (list.length > 1 && pick.id === box.dataset.pick) pick = list[(list.indexOf(pick) + 1) % list.length];
-    box.dataset.pick = pick.id;
+    const pick = nextSurprise(list);
     // Défilement rapide de photos qui ralentit, comme une machine à sous
     let step = 0;
     const steps = 14;
