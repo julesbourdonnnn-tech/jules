@@ -1,52 +1,99 @@
 {
- "_doc": "Veille des établissements, tenue chaque jour par les commis (voir .claude/skills/ns-commis-veille). checked = date de la dernière vérification ; news = actualités affichées sur la fiche (types : fermeture, reouverture, nouveaute, offre, evenement, info).",
- "hotels": {
-  "alpinest": {
-   "news": [],
-   "checked": "2026-11-25"
-  },
-  "auberge-saint-pierre": {
-   "news": [],
-   "checked": "2026-11-25"
-  },
-  "cabanes-des-grands-lacs": {
-   "news": [
-    {
-     "date": "2026-11-25",
-     "type": "fermeture",
-     "text": "Fermé pour l'hiver depuis le 21 novembre 2026 (saison 2026 : du 20 mars au 21 novembre). Les dates de réouverture 2027 ne sont pas encore annoncées.",
-     "source": "https://www.cabanesdesgrandslacs.com/en/contact-access"
+  "_doc": "Veille des établissements, tenue chaque jour par les commis (voir .claude/skills/ns-commis-veille). checked = date de la dernière vérification ; news = actualités affichées sur la fiche (types : fermeture, reouverture, nouveaute, offre, evenement, info).",
+  "hotels": {
+    "alpinest": {
+      "news": [],
+      "checked": "2026-11-25"
+    },
+    "auberge-saint-pierre": {
+      "news": [],
+      "checked": "2026-11-25"
+    },
+    "cabanes-des-grands-lacs": {
+      "news": [
+        {
+          "date": "2026-11-25",
+          "type": "fermeture",
+          "text": "Fermé pour l'hiver depuis le 21 novembre 2026 (saison 2026 : du 20 mars au 21 novembre). Les dates de réouverture 2027 ne sont pas encore annoncées.",
+          "source": "https://www.cabanesdesgrandslacs.com/en/contact-access"
+        }
+      ],
+      "checked": "2026-11-25"
+    },
+    "cabanes-lacustra": {
+      "news": [],
+      "checked": "2026-11-25"
+    },
+    "nids-des-vosges": {
+      "news": [],
+      "checked": "2026-11-25"
+    },
+    "cap-estel": {
+      "news": [],
+      "checked": "2026-11-25"
+    },
+    "casadelmar": {
+      "news": [],
+      "checked": "2026-11-25"
+    },
+    "chateau-d-augerville": {
+      "news": [],
+      "checked": "2026-11-25"
+    },
+    "chateau-de-la-resle": {
+      "news": [],
+      "checked": "2026-11-25"
+    },
+    "chateau-de-la-treyne": {
+      "news": [],
+      "checked": "2026-11-25"
+    },
+    "cour-des-loges": {
+      "checked": "2026-11-27",
+      "news": []
+    },
+    "dihan": {
+      "checked": "2026-11-27",
+      "news": []
+    },
+    "domaine-de-murtoli": {
+      "checked": "2026-11-27",
+      "news": []
+    },
+    "domaine-des-etangs": {
+      "checked": "2026-11-27",
+      "news": [
+        {
+          "date": "2026-11-27",
+          "type": "info",
+          "text": "Les dates de fermeture d’hiver 2027 ne sont pas encore annoncées par le domaine ; à vérifier avant de réserver.",
+          "source": "https://auberge.com/fr/domaine-des-etangs/faqs/"
+        }
+      ]
+    },
+    "domaine-du-chatelet": {
+      "checked": "2026-11-27",
+      "news": []
+    },
+    "ecrin-d-auvergne": {
+      "checked": "2026-11-27",
+      "news": []
+    },
+    "fontevraud-l-ermitage": {
+      "checked": "2026-11-27",
+      "news": []
+    },
+    "hotel-de-la-cite-carcassonne": {
+      "checked": "2026-11-27",
+      "news": []
+    },
+    "hotel-le-corbusier": {
+      "checked": "2026-11-27",
+      "news": []
+    },
+    "parister": {
+      "checked": "2026-11-27",
+      "news": []
     }
-   ],
-   "checked": "2026-11-25"
-  },
-  "cabanes-lacustra": {
-   "news": [],
-   "checked": "2026-11-25"
-  },
-  "nids-des-vosges": {
-   "news": [],
-   "checked": "2026-11-25"
-  },
-  "cap-estel": {
-   "news": [],
-   "checked": "2026-11-25"
-  },
-  "casadelmar": {
-   "news": [],
-   "checked": "2026-11-25"
-  },
-  "chateau-d-augerville": {
-   "news": [],
-   "checked": "2026-11-25"
-  },
-  "chateau-de-la-resle": {
-   "news": [],
-   "checked": "2026-11-25"
-  },
-  "chateau-de-la-treyne": {
-   "news": [],
-   "checked": "2026-11-25"
   }
- }
 }
