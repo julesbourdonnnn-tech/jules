@@ -284,6 +284,14 @@ async function statsPage(url, env) {
   const actions = await q("SELECT type, COUNT(*) AS n FROM events WHERE type NOT IN ('vue') AND day >= ? GROUP BY type ORDER BY n DESC", day(29));
   let subs = 0, cursor;
   do { const page = await env.NEWSLETTER.list({ prefix: "sub:", cursor }); subs += page.keys.length; cursor = page.list_complete ? null : page.cursor; } while (cursor);
+  // Comptes lecteurs (favoris) : total, créés et actifs sur 30 jours, favoris gardés
+  let acc = null;
+  try {
+    await ensureSchema(env);
+    const since = day(29);
+    acc = await one("SELECT COUNT(*) AS total, COALESCE(SUM(created >= ?),0) AS nouveaux, COALESCE(SUM(last_login >= ?),0) AS actifs, COALESCE(SUM(json_array_length(favs)),0) AS favoris FROM accounts", since, since);
+  } catch { /* base des comptes indisponible */ }
+  const favTop = acc ? await q("SELECT j.value AS hotel, COUNT(*) AS n FROM accounts, json_each(accounts.favs) AS j GROUP BY j.value ORDER BY n DESC LIMIT 8").catch(() => []) : [];
 
   const nf = (n) => Number(n || 0).toLocaleString("fr-FR");
   const max = Math.max(1, ...daily.map((d) => d.visites || 0));
@@ -337,6 +345,7 @@ async function statsPage(url, env) {
     <div class="card"><h2>Écrans et pays</h2>${table(devices, "device", "n")}${table(countries, "country", "n")}</div>
     <div class="card"><h2>Actions des visiteurs</h2>${table(actions, "type", "n")}</div>
     <div class="card"><h2>Lettre</h2><p style="margin:0"><strong style="font:400 1.8rem Georgia, serif">${nf(subs)}</strong> inscrit(s) · <a href="/api/newsletter.csv?key=${encodeURIComponent(key)}">télécharger la liste</a></p></div>
+    <div class="card"><h2>Comptes lecteurs</h2>${acc ? `<p style="margin:0 0 10px"><strong style="font:400 1.8rem Georgia, serif">${nf(acc.total)}</strong> compte(s) créé(s) · ${nf(acc.nouveaux)} sur 30 jours · ${nf(acc.actifs)} connecté(s) sur 30 jours · ${nf(acc.favoris)} favori(s) gardé(s)</p>${favTop.length ? `<p style="margin:0 0 4px;color:var(--muted);font-size:.85rem">Adresses les plus gardées en favori</p>${table(favTop, "hotel", "n")}` : ""}` : `<p class="empty">Pas encore de données.</p>`}</div>
   </div>
   <p class="note">Une visite = une personne qui arrive sur le site (plusieurs pages lues comptent pour une seule visite). Vos propres passages sont comptés aussi. Les robots connus sont exclus. Les tableaux portent sur les 30 derniers jours.</p>
 </main></body></html>`;
