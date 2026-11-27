@@ -1197,7 +1197,7 @@
   }
   global.GUIDES.push(...[
     ["paris", "train", 120], ["paris", "train", 180], ["paris", "voiture", 120], ["paris", "voiture", 180],
-    ["lyon", "train", 180], ["lyon", "voiture", 150],
+    ["lyon", "train", 180], ["lyon", "voiture", 180],
     ["bordeaux", "train", 180], ["bordeaux", "voiture", 180],
   ].map(([c, mode, max]) => tripGuide(c, mode, max)));
 })(typeof window !== "undefined" ? window : globalThis);

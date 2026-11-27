@@ -20,7 +20,7 @@
   "date": "2026-11-24"
  },
  "guides/index.html": {
-  "hash": "ddf447841cc1",
+  "hash": "7eab1db30082",
   "date": "2026-11-27"
  },
  "guides/coups-de-coeur-de-jules.html": {
@@ -291,6 +291,10 @@
   "hash": "00e5b2c7fe3c",
   "date": "2026-11-27"
  },
+ "guides/week-end-insolite-a-moins-de-3h-de-lyon-en-voiture.html": {
+  "hash": "637b67b9e371",
+  "date": "2026-11-27"
+ },
  "guides/week-end-insolite-a-moins-de-3h-de-bordeaux-en-train.html": {
   "hash": "643daf25258d",
   "date": "2026-11-27"
@@ -356,11 +360,11 @@
   "date": "2026-11-27"
  },
  "hotels/village-igloo-val-thorens.html": {
-  "hash": "cfcb2a928e4c",
+  "hash": "644b319348f3",
   "date": "2026-11-27"
  },
  "hotels/alpinest.html": {
-  "hash": "d48d76e894ca",
+  "hash": "c3afc01a6573",
   "date": "2026-11-27"
  },
  "hotels/cabanes-du-moulin.html": {
@@ -380,7 +384,7 @@
   "date": "2026-11-27"
  },
  "hotels/fermes-de-marie.html": {
-  "hash": "e14a91983bff",
+  "hash": "f3ae5fc2df76",
   "date": "2026-11-27"
  },
  "hotels/chateau-de-la-resle.html": {
@@ -404,15 +408,15 @@
   "date": "2026-11-27"
  },
  "hotels/refuge-du-montenvers.html": {
-  "hash": "bee0b7d4b83b",
+  "hash": "c3452e710f88",
   "date": "2026-11-27"
  },
  "hotels/refuge-de-la-traye.html": {
-  "hash": "59a02391a541",
+  "hash": "0c080ce15228",
   "date": "2026-11-27"
  },
  "hotels/refuge-chez-la-tante.html": {
-  "hash": "60ab01b34639",
+  "hash": "fb2c87bf841c",
   "date": "2026-11-27"
  },
  "hotels/molitor.html": {
@@ -448,7 +452,7 @@
   "date": "2026-11-27"
  },
  "hotels/toue-cabanee-canal-de-bourgogne.html": {
-  "hash": "39be80796043",
+  "hash": "8ff5da88c418",
   "date": "2026-11-27"
  },
  "hotels/moulin-du-roc.html": {
@@ -456,7 +460,7 @@
   "date": "2026-11-27"
  },
  "hotels/bulles-de-savoie.html": {
-  "hash": "fb4878afa576",
+  "hash": "a49022bbf8a1",
   "date": "2026-11-27"
  },
  "hotels/cabanes-lacustra.html": {
