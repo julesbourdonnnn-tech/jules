@@ -20,7 +20,7 @@
   "date": "2026-11-24"
  },
  "guides/index.html": {
-  "hash": "713f2043c0df",
+  "hash": "ddf447841cc1",
   "date": "2026-11-27"
  },
  "guides/coups-de-coeur-de-jules.html": {
@@ -272,111 +272,123 @@
   "date": "2026-11-27"
  },
  "guides/week-end-insolite-a-moins-de-2h-de-paris-en-train.html": {
-  "hash": "c01880f68b34",
+  "hash": "94077e067639",
   "date": "2026-11-27"
  },
  "guides/week-end-insolite-a-moins-de-3h-de-paris-en-train.html": {
-  "hash": "6aab3b5f169e",
+  "hash": "e34d172735a6",
+  "date": "2026-11-27"
+ },
+ "guides/week-end-insolite-a-moins-de-2h-de-paris-en-voiture.html": {
+  "hash": "67934053c143",
+  "date": "2026-11-27"
+ },
+ "guides/week-end-insolite-a-moins-de-3h-de-paris-en-voiture.html": {
+  "hash": "b6461274da8a",
   "date": "2026-11-27"
  },
  "guides/week-end-insolite-a-moins-de-3h-de-lyon-en-train.html": {
-  "hash": "c97ce9df920b",
+  "hash": "00e5b2c7fe3c",
   "date": "2026-11-27"
  },
  "guides/week-end-insolite-a-moins-de-3h-de-bordeaux-en-train.html": {
-  "hash": "553f266f0fc5",
+  "hash": "643daf25258d",
+  "date": "2026-11-27"
+ },
+ "guides/week-end-insolite-a-moins-de-3h-de-bordeaux-en-voiture.html": {
+  "hash": "e966c6b68f14",
   "date": "2026-11-27"
  },
  "hotels/loire-valley-lodges.html": {
-  "hash": "ac2048e7e7b9",
+  "hash": "a35300a8c634",
   "date": "2026-11-27"
  },
  "hotels/pella-roca.html": {
-  "hash": "22b4429fa4df",
+  "hash": "fc2a8d6432a6",
   "date": "2026-11-27"
  },
  "hotels/cabanes-des-grands-lacs.html": {
-  "hash": "a13d238650c7",
+  "hash": "765c2f44e13c",
   "date": "2026-11-27"
  },
  "hotels/dihan.html": {
-  "hash": "0e04b2072578",
+  "hash": "0033f78e8e8b",
   "date": "2026-11-27"
  },
  "hotels/demeure-de-la-vignole.html": {
-  "hash": "671c688eac96",
+  "hash": "abd0ced5c5a5",
   "date": "2026-11-27"
  },
  "hotels/rocaminori.html": {
-  "hash": "1efe79e22754",
+  "hash": "ecd7d02ed3f5",
   "date": "2026-11-27"
  },
  "hotels/fontevraud-l-ermitage.html": {
-  "hash": "d1907781dab7",
+  "hash": "05c816f7163f",
   "date": "2026-11-27"
  },
  "hotels/domaine-des-etangs.html": {
-  "hash": "6a74d91db2d8",
+  "hash": "20bea6ab5495",
   "date": "2026-11-27"
  },
  "hotels/phare-de-kerbel.html": {
-  "hash": "695fb59f79ab",
+  "hash": "dfdc2ea2bec1",
   "date": "2026-11-27"
  },
  "hotels/les-roches-rouges.html": {
-  "hash": "3e67c1d411ad",
+  "hash": "aa67d44269a2",
   "date": "2026-11-27"
  },
  "hotels/auberge-saint-pierre.html": {
-  "hash": "7fe592ce24ba",
+  "hash": "e540a77dbbd5",
   "date": "2026-11-27"
  },
  "hotels/off-paris-seine.html": {
-  "hash": "103ada31c4cc",
+  "hash": "420c1d612484",
   "date": "2026-11-27"
  },
  "hotels/hotel-le-corbusier.html": {
-  "hash": "c42467f4d2e9",
+  "hash": "52cef9456a22",
   "date": "2026-11-27"
  },
  "hotels/refuge-de-solaise.html": {
-  "hash": "020e3ddba69d",
+  "hash": "0f61b5ebc81a",
   "date": "2026-11-27"
  },
  "hotels/village-igloo-val-thorens.html": {
-  "hash": "1268118476e5",
+  "hash": "cfcb2a928e4c",
   "date": "2026-11-27"
  },
  "hotels/alpinest.html": {
-  "hash": "d3f6edc0a89f",
+  "hash": "d48d76e894ca",
   "date": "2026-11-27"
  },
  "hotels/cabanes-du-moulin.html": {
-  "hash": "e8b94011bf79",
+  "hash": "fe723d7146bd",
   "date": "2026-11-27"
  },
  "hotels/troglododo.html": {
-  "hash": "5635a347c176",
+  "hash": "12fc55c31770",
   "date": "2026-11-27"
  },
  "hotels/hotel-particulier-montmartre.html": {
-  "hash": "8f9ee67bed54",
+  "hash": "5bb7786fe8e7",
   "date": "2026-11-27"
  },
  "hotels/cour-des-loges.html": {
-  "hash": "6e3f58766067",
+  "hash": "c7b9442b842a",
   "date": "2026-11-27"
  },
  "hotels/fermes-de-marie.html": {
-  "hash": "547aa5055ea8",
+  "hash": "e14a91983bff",
   "date": "2026-11-27"
  },
  "hotels/chateau-de-la-resle.html": {
-  "hash": "0df289611add",
+  "hash": "87511866374d",
   "date": "2026-11-27"
  },
  "hotels/sources-de-caudalie.html": {
-  "hash": "ae5225e019a3",
+  "hash": "6add243ea7e4",
   "date": "2026-11-27"
  },
  "hotels/casadelmar.html": {
@@ -384,91 +396,91 @@
   "date": "2026-11-27"
  },
  "hotels/la-coorniche.html": {
-  "hash": "6172ebee9501",
+  "hash": "d0dd7cb09c33",
   "date": "2026-11-27"
  },
  "hotels/pic-du-midi.html": {
-  "hash": "7c813d4b3bf0",
+  "hash": "aacc50b9c829",
   "date": "2026-11-27"
  },
  "hotels/refuge-du-montenvers.html": {
-  "hash": "9e3e36212f63",
+  "hash": "bee0b7d4b83b",
   "date": "2026-11-27"
  },
  "hotels/refuge-de-la-traye.html": {
-  "hash": "67b77badc071",
+  "hash": "59a02391a541",
   "date": "2026-11-27"
  },
  "hotels/refuge-chez-la-tante.html": {
-  "hash": "ba890c4b18a3",
+  "hash": "60ab01b34639",
   "date": "2026-11-27"
  },
  "hotels/molitor.html": {
-  "hash": "27bbb38e4700",
+  "hash": "27c6009d0a6d",
   "date": "2026-11-27"
  },
  "hotels/maison-souquet.html": {
-  "hash": "4c39841667d9",
+  "hash": "9621fe0cdcb8",
   "date": "2026-11-27"
  },
  "hotels/intercontinental-lyon-hotel-dieu.html": {
-  "hash": "299c98471f07",
+  "hash": "c006dc05372a",
   "date": "2026-11-27"
  },
  "hotels/hotel-de-la-cite-carcassonne.html": {
-  "hash": "5157d7aae95e",
+  "hash": "ab3073271330",
   "date": "2026-11-27"
  },
  "hotels/grand-controle-versailles.html": {
-  "hash": "1e00060a9ba2",
+  "hash": "b13ccbdc93da",
   "date": "2026-11-27"
  },
  "hotels/ile-louet.html": {
-  "hash": "e80b2585534d",
+  "hash": "27934e76e4cc",
   "date": "2026-11-27"
  },
  "hotels/cap-estel.html": {
-  "hash": "0533532c1239",
+  "hash": "c611b264bc79",
   "date": "2026-11-27"
  },
  "hotels/relais-de-chambord.html": {
-  "hash": "77035148fd99",
+  "hash": "882a18bcfdbd",
   "date": "2026-11-27"
  },
  "hotels/toue-cabanee-canal-de-bourgogne.html": {
-  "hash": "7aa86792d6c2",
+  "hash": "39be80796043",
   "date": "2026-11-27"
  },
  "hotels/moulin-du-roc.html": {
-  "hash": "faaaeb0cb9c9",
+  "hash": "a74c715e001d",
   "date": "2026-11-27"
  },
  "hotels/bulles-de-savoie.html": {
-  "hash": "a004f8b678c0",
+  "hash": "fb4878afa576",
   "date": "2026-11-27"
  },
  "hotels/cabanes-lacustra.html": {
-  "hash": "82fad0424ed5",
+  "hash": "dd66fa8c8c26",
   "date": "2026-11-27"
  },
  "hotels/chateau-de-la-treyne.html": {
-  "hash": "9ef2aba11522",
+  "hash": "ea8625f8c681",
   "date": "2026-11-27"
  },
  "hotels/ecrin-d-auvergne.html": {
-  "hash": "c705e469999c",
+  "hash": "36eb35127179",
   "date": "2026-11-27"
  },
  "hotels/etape-en-foret.html": {
-  "hash": "fbc2cf992006",
+  "hash": "4f75c17bf000",
   "date": "2026-11-27"
  },
  "hotels/gare-de-guiscriff.html": {
-  "hash": "c2e52896d235",
+  "hash": "00eb560b3da6",
   "date": "2026-11-27"
  },
  "hotels/nids-des-vosges.html": {
-  "hash": "ca23da472083",
+  "hash": "3fac2a4abb19",
   "date": "2026-11-27"
  },
  "hotels/domaine-de-murtoli.html": {
@@ -476,55 +488,55 @@
   "date": "2026-11-27"
  },
  "hotels/villa-la-coste.html": {
-  "hash": "2945594b0b47",
+  "hash": "6e5252ba65d6",
   "date": "2026-11-27"
  },
  "hotels/nids-de-chlorofil.html": {
-  "hash": "1e3280ffd92b",
+  "hash": "8251d02bc179",
   "date": "2026-11-27"
  },
  "hotels/cabanes-de-blanche.html": {
-  "hash": "7d836974b8f9",
+  "hash": "0812429e134c",
   "date": "2026-11-27"
  },
  "hotels/lieu-dieu.html": {
-  "hash": "bb273bb4e3e4",
+  "hash": "8214cb060491",
   "date": "2026-11-27"
  },
  "hotels/villa-rene-lalique.html": {
-  "hash": "3d3180779d3c",
+  "hash": "eca150ab544e",
   "date": "2026-11-27"
  },
  "hotels/cabanes-du-goutty.html": {
-  "hash": "4c82e292ecec",
+  "hash": "93536ef9b290",
   "date": "2026-11-27"
  },
  "hotels/domaine-du-chatelet.html": {
-  "hash": "d3d9b8b2bd51",
+  "hash": "49a2ee2730f8",
   "date": "2026-11-27"
  },
  "hotels/cabane-du-perche.html": {
-  "hash": "7934cba2f1dd",
+  "hash": "bbab1f0c4595",
   "date": "2026-11-27"
  },
  "hotels/landifornia-lodge.html": {
-  "hash": "36230a574cf0",
+  "hash": "16d61c86fae7",
   "date": "2026-11-27"
  },
  "hotels/parister.html": {
-  "hash": "507ab7bc57a0",
+  "hash": "d336bf699aaa",
   "date": "2026-11-27"
  },
  "hotels/chateau-d-augerville.html": {
-  "hash": "ed58fb874b45",
+  "hash": "bdadbef221e8",
   "date": "2026-11-27"
  },
  "hotels/grand-pavillon-chantilly.html": {
-  "hash": "4976c9b16edf",
+  "hash": "25a25e321b75",
   "date": "2026-11-27"
  },
  "hotels/le-donjon-etretat.html": {
-  "hash": "0bd8e548b10d",
+  "hash": "1c8cd590b621",
   "date": "2026-11-27"
  }
 }

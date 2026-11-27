@@ -1,0 +1,368 @@
+{
+ "_calcul": "2026-11-27",
+ "alpinest": {
+  "paris": 452,
+  "lyon": 172,
+  "bordeaux": 459,
+  "gare": 1
+ },
+ "auberge-saint-pierre": {
+  "paris": 270,
+  "lyon": 526,
+  "bordeaux": 386,
+  "gare": 100
+ },
+ "bulles-de-savoie": {
+  "paris": 353,
+  "lyon": 90,
+  "bordeaux": 437,
+  "gare": 35
+ },
+ "cabane-du-perche": {
+  "paris": 144,
+  "lyon": 390,
+  "bordeaux": 334,
+  "gare": 35
+ },
+ "cabanes-de-blanche": {
+  "paris": 139,
+  "lyon": 417,
+  "bordeaux": 490,
+  "gare": 29
+ },
+ "cabanes-des-grands-lacs": {
+  "paris": 302,
+  "lyon": 213,
+  "bordeaux": 510,
+  "gare": 69
+ },
+ "cabanes-du-goutty": {
+  "paris": 323,
+  "lyon": 324,
+  "bordeaux": 616,
+  "gare": 12
+ },
+ "cabanes-du-moulin": {
+  "paris": 68,
+  "lyon": 321,
+  "bordeaux": 413,
+  "gare": 15
+ },
+ "cabanes-lacustra": {
+  "paris": 298,
+  "lyon": 184,
+  "bordeaux": 237,
+  "gare": 73
+ },
+ "cap-estel": {
+  "paris": 609,
+  "lyon": 322,
+  "bordeaux": 521,
+  "gare": 11
+ },
+ "casadelmar": {
+  "paris": 1203,
+  "lyon": 916,
+  "bordeaux": 1115
+ },
+ "chateau-d-augerville": {
+  "paris": 77,
+  "lyon": 262,
+  "bordeaux": 333,
+  "gare": 8
+ },
+ "chateau-de-la-resle": {
+  "paris": 127,
+  "lyon": 197,
+  "bordeaux": 387,
+  "gare": 18
+ },
+ "chateau-de-la-treyne": {
+  "paris": 339,
+  "lyon": 265,
+  "bordeaux": 165,
+  "gare": 10
+ },
+ "cour-des-loges": {
+  "paris": 296,
+  "lyon": 5,
+  "bordeaux": 356,
+  "gare": 10
+ },
+ "demeure-de-la-vignole": {
+  "paris": 205,
+  "lyon": 336,
+  "bordeaux": 230,
+  "gare": 13
+ },
+ "dihan": {
+  "paris": 328,
+  "lyon": 515,
+  "bordeaux": 315,
+  "gare": 11
+ },
+ "domaine-de-murtoli": {
+  "paris": 1263,
+  "lyon": 976,
+  "bordeaux": 1174,
+  "gare": 101
+ },
+ "domaine-des-etangs": {
+  "paris": 300,
+  "lyon": 316,
+  "bordeaux": 131,
+  "gare": 45
+ },
+ "domaine-du-chatelet": {
+  "paris": 301,
+  "lyon": 256,
+  "bordeaux": 553,
+  "gare": 24
+ },
+ "ecrin-d-auvergne": {
+  "paris": 321,
+  "lyon": 193,
+  "bordeaux": 218,
+  "gare": 36
+ },
+ "etape-en-foret": {
+  "paris": 215,
+  "lyon": 487,
+  "bordeaux": 378,
+  "gare": 63
+ },
+ "fermes-de-marie": {
+  "paris": 388,
+  "lyon": 143,
+  "bordeaux": 490,
+  "gare": 20
+ },
+ "fontevraud-l-ermitage": {
+  "paris": 210,
+  "lyon": 340,
+  "bordeaux": 223,
+  "gare": 19
+ },
+ "gare-de-guiscriff": {
+  "paris": 376,
+  "lyon": 577,
+  "bordeaux": 377,
+  "gare": 50
+ },
+ "grand-controle-versailles": {
+  "paris": 40,
+  "lyon": 294,
+  "bordeaux": 359,
+  "gare": 2
+ },
+ "grand-pavillon-chantilly": {
+  "paris": 58,
+  "lyon": 337,
+  "bordeaux": 410,
+  "gare": 7
+ },
+ "hotel-de-la-cite-carcassonne": {
+  "paris": 492,
+  "lyon": 283,
+  "bordeaux": 216,
+  "gare": 9
+ },
+ "hotel-le-corbusier": {
+  "paris": 500,
+  "lyon": 212,
+  "bordeaux": 411,
+  "gare": 11
+ },
+ "hotel-particulier-montmartre": {
+  "paris": 14,
+  "lyon": 306,
+  "bordeaux": 379,
+  "gare": 7
+ },
+ "ile-louet": {
+  "paris": 377,
+  "lyon": 608,
+  "bordeaux": 445,
+  "gare": 25
+ },
+ "intercontinental-lyon-hotel-dieu": {
+  "paris": 296,
+  "lyon": 4,
+  "bordeaux": 355,
+  "gare": 7
+ },
+ "la-coorniche": {
+  "paris": 414,
+  "lyon": 401,
+  "bordeaux": 55,
+  "gare": 14
+ },
+ "landifornia-lodge": {
+  "paris": 471,
+  "lyon": 458,
+  "bordeaux": 113,
+  "gare": 33
+ },
+ "le-donjon-etretat": {
+  "paris": 162,
+  "lyon": 435,
+  "bordeaux": 438,
+  "gare": 36
+ },
+ "les-hautes-roches": {
+  "paris": 161,
+  "lyon": 313,
+  "bordeaux": 222,
+  "gare": 15
+ },
+ "les-roches-rouges": {
+  "paris": 568,
+  "lyon": 281,
+  "bordeaux": 480,
+  "gare": 14
+ },
+ "lieu-dieu": {
+  "paris": 160,
+  "lyon": 437,
+  "bordeaux": 466,
+  "gare": 35
+ },
+ "loire-valley-lodges": {
+  "paris": 174,
+  "lyon": 297,
+  "bordeaux": 215,
+  "gare": 22
+ },
+ "maison-souquet": {
+  "paris": 11,
+  "lyon": 303,
+  "bordeaux": 376,
+  "gare": 5
+ },
+ "molitor": {
+  "paris": 21,
+  "lyon": 294,
+  "bordeaux": 361,
+  "gare": 16
+ },
+ "moulin-du-roc": {
+  "paris": 337,
+  "lyon": 314,
+  "bordeaux": 123,
+  "gare": 38
+ },
+ "nids-de-chlorofil": {
+  "paris": 145,
+  "lyon": 413,
+  "bordeaux": 497,
+  "gare": 25
+ },
+ "nids-des-vosges": {
+  "paris": 299,
+  "lyon": 280,
+  "bordeaux": 576,
+  "gare": 41
+ },
+ "off-paris-seine": {
+  "paris": 9,
+  "lyon": 292,
+  "bordeaux": 365,
+  "gare": 1
+ },
+ "parister": {
+  "paris": 9,
+  "lyon": 301,
+  "bordeaux": 374,
+  "gare": 5
+ },
+ "pella-roca": {
+  "paris": 393,
+  "lyon": 319,
+  "bordeaux": 164,
+  "gare": 11
+ },
+ "phare-de-kerbel": {
+  "paris": 339,
+  "lyon": 537,
+  "bordeaux": 337,
+  "gare": 20
+ },
+ "pic-du-midi": {
+  "paris": 558,
+  "lyon": 458,
+  "bordeaux": 211,
+  "gare": 58
+ },
+ "refuge-chez-la-tante": {
+  "paris": 398,
+  "lyon": 154,
+  "bordeaux": 501,
+  "gare": 30
+ },
+ "refuge-de-la-traye": {
+  "paris": 423,
+  "lyon": 142,
+  "bordeaux": 489,
+  "gare": 16
+ },
+ "refuge-de-solaise": {
+  "paris": 510,
+  "lyon": 229,
+  "bordeaux": 576,
+  "gare": 81
+ },
+ "refuge-du-montenvers": {
+  "paris": 396,
+  "lyon": 160,
+  "bordeaux": 503,
+  "gare": 7
+ },
+ "relais-de-chambord": {
+  "paris": 132,
+  "lyon": 292,
+  "bordeaux": 272,
+  "gare": 24
+ },
+ "rocaminori": {
+  "paris": 218,
+  "lyon": 360,
+  "bordeaux": 223,
+  "gare": 26
+ },
+ "sources-de-caudalie": {
+  "paris": 375,
+  "lyon": 362,
+  "bordeaux": 21,
+  "gare": 18
+ },
+ "toue-cabanee-canal-de-bourgogne": {
+  "paris": 174,
+  "lyon": 157,
+  "bordeaux": 434,
+  "gare": 14
+ },
+ "troglododo": {
+  "paris": 181,
+  "lyon": 312,
+  "bordeaux": 219,
+  "gare": 1
+ },
+ "villa-la-coste": {
+  "paris": 492,
+  "lyon": 205,
+  "bordeaux": 409,
+  "gare": 42
+ },
+ "villa-rene-lalique": {
+  "paris": 285,
+  "lyon": 345,
+  "bordeaux": 630,
+  "gare": 35
+ },
+ "village-igloo-val-thorens": {
+  "paris": 445,
+  "lyon": 165,
+  "bordeaux": 511,
+  "gare": 40
+ }
+}
